@@ -43,4 +43,5 @@ Bug Fixes:
 * [#4727] Fixed item pipes not keeping the "Items Traversing" trigger on during the same tick that they eject items into the next pipe.
 * Fixed engines voiding power they couldn't send.
 * Fixed fragile fluid shard items that contain a buildcraft heatable fluid having an extra "%s".
+* Fixed not being able to place a pipe when a player is in the same block as the pipe (but not in the same bounding box as a pipe)
 

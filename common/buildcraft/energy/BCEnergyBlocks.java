@@ -11,8 +11,6 @@ import net.minecraft.block.material.Material;
 import buildcraft.api.enums.EnumEngineType;
 import buildcraft.api.enums.EnumSpring;
 
-import buildcraft.lib.BCLibConfig;
-import buildcraft.lib.BCLibConfig.PowerMode;
 import buildcraft.lib.item.ItemBlockBC_Neptune;
 import buildcraft.lib.registry.RegistrationHelper;
 
@@ -35,12 +33,12 @@ public class BCEnergyBlocks {
         if (BCCoreBlocks.engine != null) {
             BCCoreBlocks.engine.registerEngine(EnumEngineType.STONE, TileEngineStone_BC8::new);
             BCCoreBlocks.engine.registerEngine(EnumEngineType.IRON, TileEngineIron_BC8::new);
-            if (BCLibConfig.powerMode == PowerMode.MJ_ONLY && BCEnergyConfig.enableRfEngine) {
+            if (BCEnergyConfig.enableRfEngine) {
                 BCCoreBlocks.engine.registerEngine(EnumEngineType.RF, TileEngineRF::new);
             }
         }
 
-        if (BCLibConfig.powerMode == PowerMode.MJ_ONLY && BCEnergyConfig.enableMjDynamo) {
+        if (BCEnergyConfig.enableMjDynamo) {
             mjDynamo = HELPER.addForcedBlock(new BlockDynamoMJ(Material.IRON, "block.mj_dynamo"));
             HELPER.addForcedItem(new ItemBlockBC_Neptune(mjDynamo));
             HELPER.registerTile(TileDynamoMJ.class, "tile.mj_dynamo");

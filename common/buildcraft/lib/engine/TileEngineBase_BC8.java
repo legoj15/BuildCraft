@@ -23,6 +23,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.biome.Biome;
 
 import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.energy.CapabilityEnergy;
+import net.minecraftforge.energy.IEnergyStorage;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
@@ -33,6 +35,7 @@ import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjCapabilityHelper;
+import buildcraft.api.mj.MjToRfAutoConvertor;
 import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.lib.block.VanillaRotationHandlers;
@@ -523,6 +526,9 @@ public abstract class TileEngineBase_BC8 extends TileBC_Neptune implements ITick
         IMjReceiver rec = tile.getCapability(MjAPI.CAP_RECEIVER, side.getOpposite());
         if (rec != null && rec.canConnect(mjConnector) && mjConnector.canConnect(rec)) {
             return rec;
+        } else if (MjAPI.isRfAutoConversionEnabled()) {
+            IEnergyStorage rf = tile.getCapability(CapabilityEnergy.ENERGY, side.getOpposite());
+            return MjToRfAutoConvertor.createReceiver(rf);
         } else {
             return null;
         }
@@ -559,12 +565,7 @@ public abstract class TileEngineBase_BC8 extends TileBC_Neptune implements ITick
             return null;
         }
 
-        IMjReceiver recv = next.getCapability(MjAPI.CAP_RECEIVER, side.getOpposite());
-        if (recv != null && recv.canConnect(mjConnector) && mjConnector.canConnect(recv)) {
-            return recv;
-        } else {
-            return null;
-        }
+        return getReceiverToPower(next, side);
     }
 
     @Override

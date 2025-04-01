@@ -237,8 +237,8 @@ public class BCEnergyConfig {
                 enableOilSpouts = propEnableOilSpouts.getBoolean();
                 enableOilBurn = propEnableOilBurn.getBoolean();
                 oilIsSticky = propOilIsSticky.getBoolean();
-                enableRfEngine = propEnableRfEngine.getBoolean() && BCLibConfig.powerMode == PowerMode.MJ_ONLY;
-                enableMjDynamo = propEnableMjDynamo.getBoolean() && BCLibConfig.powerMode == PowerMode.MJ_ONLY;
+                enableRfEngine = propEnableRfEngine.getBoolean();
+                enableMjDynamo = propEnableMjDynamo.getBoolean();
 
                 smallSpoutMinHeight = propSmallSpoutMinHeight.getInt();
                 smallSpoutMaxHeight = propSmallSpoutMaxHeight.getInt();

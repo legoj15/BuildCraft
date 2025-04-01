@@ -17,13 +17,15 @@ import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumFacing.Axis;
 import net.minecraft.util.text.TextFormatting;
 
+import buildcraft.api.mj.IMjToRfStatus;
+import buildcraft.api.mj.MjRfConversion;
+
 import buildcraft.lib.chunkload.IChunkLoadingTile;
 import buildcraft.lib.chunkload.IChunkLoadingTile.LoadType;
 import buildcraft.lib.client.sprite.AtlasSpriteSwappable;
 import buildcraft.lib.client.sprite.AtlasSpriteVariants;
 import buildcraft.lib.misc.ColourUtil;
 import buildcraft.lib.misc.LocaleUtil;
-import buildcraft.lib.mj.MjRfConversion;
 
 /** Configuration file for lib. In order to keep lib as close to being just a library mod as possible, these are not set
  * by a config file, but instead by BC Core. Feel free to set them yourself, from your own configs, if you do not depend
@@ -195,11 +197,30 @@ public class BCLibConfig {
 
     public enum PowerMode {
         /** MJ &lt;-&gt; RF conversion disabled, all machines require MJ exclusively to operate. */
-        MJ_ONLY,
+        MJ_ONLY(false),
         /** MJ &lt;-&gt; RF conversion enabled, machines accept both MJ and RF. */
-        MJ_AUTOCONVERT_RF,
+        MJ_AUTOCONVERT_RF(true),
         /** MJ &lt;-&gt; RF conversion enabled, machines accept both MJ and RF. Additionally machines will display power
          * amounts in RF rather than MJ. */
-        DISPLAY_RF;
+        DISPLAY_RF(true);
+
+        final boolean autoconvert;
+
+        private PowerMode(boolean autoconvert) {
+            this.autoconvert = autoconvert;
+        }
+    }
+
+    public static final class MjToRfStatus implements IMjToRfStatus {
+
+        @Override
+        public MjRfConversion getConversion() {
+            return BCLibConfig.mjRfConversion;
+        }
+
+        @Override
+        public boolean isAutoconvertEnabled() {
+            return powerMode.autoconvert;
+        }
     }
 }

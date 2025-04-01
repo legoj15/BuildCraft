@@ -26,14 +26,15 @@ import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 
 import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.energy.CapabilityEnergy;
 import net.minecraftforge.fml.relauncher.Side;
 
 import buildcraft.api.core.EnumPipePart;
-import buildcraft.api.core.SafeTimeTracker;
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjPassiveProvider;
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.mj.MjToRfAutoConvertor;
 import buildcraft.api.tiles.IDebuggable;
 import buildcraft.api.transport.pipe.IFlowPower;
 import buildcraft.api.transport.pipe.IPipe;
@@ -47,8 +48,6 @@ import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.MathUtil;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.misc.data.AverageInt;
-
-import buildcraft.core.BCCoreConfig;
 
 public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
     private static final long DEFAULT_MAX_POWER = MjAPI.MJ * 10;
@@ -304,9 +303,7 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
                                 PipeFlowPower oFlow = (PipeFlowPower) neighbour.getFlow();
                                 leftover = oFlow.sections.get(face2.getOpposite()).receivePowerInternal(watts);
                             } else {
-                                IMjReceiver receiver = pipe.getHolder().getCapabilityFromPipe(
-                                    face2, MjAPI.CAP_RECEIVER
-                                );
+                                IMjReceiver receiver = getReceiver(face2);
                                 if (receiver != null && receiver.canReceive()) {
                                     leftover = receiver.receivePower(watts, false);
                                 }
@@ -338,7 +335,7 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
             if (pipe.getConnectedType(face) != ConnectedType.TILE) {
                 continue;
             }
-            IMjReceiver recv = pipe.getHolder().getCapabilityFromPipe(face, MjAPI.CAP_RECEIVER);
+            IMjReceiver recv = getReceiver(face);
             if (recv != null && recv.canReceive()) {
                 long requested = recv.getPowerRequested();
                 if (requested > 0) {
@@ -393,6 +390,15 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
             sendPayload(NET_POWER_AMOUNTS);
         }
 
+    }
+
+    private IMjReceiver getReceiver(EnumFacing side) {
+        IMjReceiver receiver = pipe.getHolder().getCapabilityFromPipe(side, MjAPI.CAP_RECEIVER);
+        if (receiver == null && MjAPI.isRfAutoConversionEnabled()) {
+            receiver = MjToRfAutoConvertor
+                .createReceiver(pipe.getHolder().getCapabilityFromPipe(side, CapabilityEnergy.ENERGY));
+        }
+        return receiver;
     }
 
     private void step() {

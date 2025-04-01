@@ -10,6 +10,7 @@ import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
 
 import javax.annotation.Nullable;
 
@@ -21,6 +22,8 @@ import net.minecraft.block.state.BlockFaceShape;
 import net.minecraft.block.state.BlockStateContainer;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.WorldClient;
+import net.minecraft.client.particle.ParticleBlockDust;
 import net.minecraft.client.particle.ParticleDigging;
 import net.minecraft.client.particle.ParticleManager;
 import net.minecraft.client.renderer.block.model.BakedQuad;
@@ -38,6 +41,7 @@ import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
+import net.minecraft.util.EnumParticleTypes;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -52,6 +56,7 @@ import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.property.ExtendedBlockState;
 import net.minecraftforge.common.property.IExtendedBlockState;
 import net.minecraftforge.common.property.IUnlistedProperty;
+import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
@@ -72,9 +77,12 @@ import buildcraft.lib.misc.BoundingBoxUtil;
 import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.SpriteUtil;
 import buildcraft.lib.misc.VecUtil;
+import buildcraft.lib.net.IPayloadWriter;
+import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.lib.prop.UnlistedNonNullProperty;
 import buildcraft.lib.tile.TileBC_Neptune;
 
+import buildcraft.energy.BCEnergyProxy;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.client.model.PipeModelCacheBase;
 import buildcraft.transport.client.model.PipeModelCachePluggable;
@@ -85,8 +93,8 @@ import buildcraft.transport.tile.TilePipeHolder;
 import buildcraft.transport.wire.EnumWireBetween;
 
 public class BlockPipeHolder extends BlockBCTile_Neptune implements ICustomPaintHandler {
-    public static final IUnlistedProperty<WeakReference<TilePipeHolder>> PROP_TILE =
-        new UnlistedNonNullProperty<>("tile");
+    public static final IUnlistedProperty<WeakReference<TilePipeHolder>> PROP_TILE
+        = new UnlistedNonNullProperty<>("tile");
 
     private static final AxisAlignedBB BOX_CENTER = new AxisAlignedBB(0.25, 0.25, 0.25, 0.75, 0.75, 0.75);
     private static final AxisAlignedBB BOX_DOWN = new AxisAlignedBB(0.25, 0, 0.25, 0.75, 0.25, 0.75);
@@ -97,9 +105,8 @@ public class BlockPipeHolder extends BlockBCTile_Neptune implements ICustomPaint
     private static final AxisAlignedBB BOX_EAST = new AxisAlignedBB(0.75, 0.25, 0.25, 1, 0.75, 0.75);
     private static final AxisAlignedBB[] BOX_FACES = { BOX_DOWN, BOX_UP, BOX_NORTH, BOX_SOUTH, BOX_WEST, BOX_EAST };
 
-    private static final ResourceLocation ADVANCEMENT_LOGIC_TRANSPORTATION = new ResourceLocation(
-        "buildcrafttransport:logic_transportation"
-    );
+    private static final ResourceLocation ADVANCEMENT_LOGIC_TRANSPORTATION
+        = new ResourceLocation("buildcrafttransport:logic_transportation");
 
     public BlockPipeHolder(Material material, String id) {
         super(material, id);
@@ -149,8 +156,10 @@ public class BlockPipeHolder extends BlockBCTile_Neptune implements ICustomPaint
     }
 
     @Override
-    public void addCollisionBoxToList(IBlockState state, World world, BlockPos pos, AxisAlignedBB entityBox,
-        List<AxisAlignedBB> collidingBoxes, Entity entityIn, boolean isPistonMoving) {
+    public void addCollisionBoxToList(
+        IBlockState state, World world, BlockPos pos, AxisAlignedBB entityBox, List<AxisAlignedBB> collidingBoxes,
+        Entity entityIn, boolean isPistonMoving
+    ) {
         TilePipeHolder tile = getPipe(world, pos, false);
         if (tile == null) {
             addCollisionBoxToList(pos, entityBox, collidingBoxes, FULL_BLOCK_AABB);
@@ -289,8 +298,9 @@ public class BlockPipeHolder extends BlockBCTile_Neptune implements ICustomPaint
         return best;
     }
 
-    private RayTraceResult computeTrace(RayTraceResult lastBest, BlockPos pos, Vec3d start, Vec3d end,
-        AxisAlignedBB aabb, int part) {
+    private RayTraceResult computeTrace(
+        RayTraceResult lastBest, BlockPos pos, Vec3d start, Vec3d end, AxisAlignedBB aabb, int part
+    ) {
         RayTraceResult next = super.rayTrace(pos, start, end, aabb);
         if (next == null) {
             return lastBest;
@@ -392,8 +402,9 @@ public class BlockPipeHolder extends BlockBCTile_Neptune implements ICustomPaint
     }
 
     @Override
-    public ItemStack getPickBlock(IBlockState state, RayTraceResult target, World world, BlockPos pos,
-        EntityPlayer player) {
+    public ItemStack getPickBlock(
+        IBlockState state, RayTraceResult target, World world, BlockPos pos, EntityPlayer player
+    ) {
         TilePipeHolder tile = getPipe(world, pos, false);
         if (tile == null || target == null) {
             return ItemStack.EMPTY;
@@ -427,16 +438,19 @@ public class BlockPipeHolder extends BlockBCTile_Neptune implements ICustomPaint
             if (part != null && tile.wireManager.getColorOfPart(part) != null) {
                 return new ItemStack(BCTransportItems.wire, 1, tile.wireManager.getColorOfPart(part).getMetadata());
             } else if (between != null && tile.wireManager.getColorOfPart(between.parts[0]) != null) {
-                return new ItemStack(BCTransportItems.wire, 1,
-                    tile.wireManager.getColorOfPart(between.parts[0]).getMetadata());
+                return new ItemStack(
+                    BCTransportItems.wire, 1, tile.wireManager.getColorOfPart(between.parts[0]).getMetadata()
+                );
             }
         }
         return ItemStack.EMPTY;
     }
 
     @Override
-    public boolean onBlockActivated(World world, BlockPos pos, IBlockState state, EntityPlayer player, EnumHand hand,
-        EnumFacing side, float hitX, float hitY, float hitZ) {
+    public boolean onBlockActivated(
+        World world, BlockPos pos, IBlockState state, EntityPlayer player, EnumHand hand, EnumFacing side, float hitX,
+        float hitY, float hitZ
+    ) {
         TilePipeHolder tile = getPipe(world, pos, false);
         if (tile == null) {
             return false;
@@ -487,13 +501,14 @@ public class BlockPipeHolder extends BlockBCTile_Neptune implements ICustomPaint
                     attachTile = getPipe(world, node.pos, false);
                 }
             } else {
-                wirePart = EnumWirePart.get((trace.hitVec.x % 1 + 1) % 1 > 0.5, (trace.hitVec.y % 1 + 1) % 1 > 0.5,
-                    (trace.hitVec.z % 1 + 1) % 1 > 0.5);
+                wirePart = EnumWirePart.get(
+                    (trace.hitVec.x % 1 + 1) % 1 > 0.5, (trace.hitVec.y % 1 + 1) % 1 > 0.5,
+                    (trace.hitVec.z % 1 + 1) % 1 > 0.5
+                );
             }
             if (wirePart != null && attachTile != null) {
                 EnumDyeColor colour = EnumDyeColor.byMetadata(held.getMetadata());
-                boolean attached =
-                    attachTile.getWireManager().addPart(wirePart, colour);
+                boolean attached = attachTile.getWireManager().addPart(wirePart, colour);
                 attachTile.scheduleNetworkUpdate(IPipeHolder.PipeMessageReceiver.WIRES);
                 if (attached) {
                     WireNode from = new WireNode(attachTile.getPipePos(), wirePart);
@@ -543,8 +558,9 @@ public class BlockPipeHolder extends BlockBCTile_Neptune implements ICustomPaint
     }
 
     @Override
-    public boolean removedByPlayer(IBlockState state, World world, BlockPos pos, EntityPlayer player,
-        boolean willHarvest) {
+    public boolean removedByPlayer(
+        IBlockState state, World world, BlockPos pos, EntityPlayer player, boolean willHarvest
+    ) {
         if (world.isRemote) {
             return false;
         }
@@ -581,8 +597,12 @@ public class BlockPipeHolder extends BlockBCTile_Neptune implements ICustomPaint
             tile.scheduleNetworkUpdate(IPipeHolder.PipeMessageReceiver.WIRES);
             return false;
         } else if (between != null) {
-            toDrop.add(new ItemStack(BCTransportItems.wire, between.to == null ? 2 : 1,
-                tile.wireManager.getColorOfPart(between.parts[0]).getMetadata()));
+            toDrop.add(
+                new ItemStack(
+                    BCTransportItems.wire, between.to == null ? 2 : 1,
+                    tile.wireManager.getColorOfPart(between.parts[0]).getMetadata()
+                )
+            );
             if (between.to == null) {
                 tile.wireManager.removeParts(Arrays.asList(between.parts));
             } else {
@@ -606,8 +626,9 @@ public class BlockPipeHolder extends BlockBCTile_Neptune implements ICustomPaint
     }
 
     @Override
-    public void getDrops(NonNullList<ItemStack> toDrop, IBlockAccess world, BlockPos pos, IBlockState state,
-        int fortune) {
+    public void getDrops(
+        NonNullList<ItemStack> toDrop, IBlockAccess world, BlockPos pos, IBlockState state, int fortune
+    ) {
         TilePipeHolder tile = getPipe(world, pos, false);
         for (EnumFacing face : EnumFacing.VALUES) {
             PipePluggable pluggable = tile.getPluggable(face);
@@ -658,8 +679,9 @@ public class BlockPipeHolder extends BlockBCTile_Neptune implements ICustomPaint
     }
 
     @Override
-    public void harvestBlock(World world, EntityPlayer player, BlockPos pos, IBlockState state, @Nullable TileEntity te,
-        ItemStack stack) {
+    public void harvestBlock(
+        World world, EntityPlayer player, BlockPos pos, IBlockState state, @Nullable TileEntity te, ItemStack stack
+    ) {
         player.addStat(StatList.getBlockStats(this));
         player.addExhaustion(0.005F);
     }
@@ -730,13 +752,116 @@ public class BlockPipeHolder extends BlockBCTile_Neptune implements ICustomPaint
     // Block overrides
 
     @Override
-    public boolean addLandingEffects(IBlockState state, WorldServer worldObj, BlockPos blockPosition,
-        IBlockState iblockstate, EntityLivingBase entity, int numberOfParticles) {
-        return super.addLandingEffects(state, worldObj, blockPosition, iblockstate, entity, numberOfParticles);
+    public boolean addLandingEffects(
+        IBlockState state, WorldServer world, BlockPos pos, IBlockState iblockstate, EntityLivingBase entity,
+        int numberOfParticles
+    ) {
+        TileEntity te = world.getTileEntity(pos);
+        if (te instanceof TilePipeHolder) {
+            TilePipeHolder pipeHolder = ((TilePipeHolder) te);
+
+            pipeHolder.createAndSendMessage(TilePipeHolder.NET_CREATE_LANDING_PARTICLE, new IPayloadWriter() {
+
+                @Override
+                public void write(PacketBufferBC buffer) {
+                    buffer.writeDouble(entity.posX);
+                    buffer.writeDouble(entity.posY);
+                    buffer.writeDouble(entity.posZ);
+                    buffer.writeInt(numberOfParticles);
+                }
+            });
+            return true;
+        }
+
+        return super.addLandingEffects(state, world, pos, iblockstate, entity, numberOfParticles);
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public boolean addRunningEffects(IBlockState state, World world, BlockPos pos, Entity entity) {
+        if (!world.isRemote) {
+            return super.addRunningEffects(state, world, pos, entity);
+        }
+
+        TileEntity te = world.getTileEntity(pos);
+        if (te instanceof TilePipeHolder) {
+            TilePipeHolder pipeHolder = ((TilePipeHolder) te);
+
+            spawnRunningParticles(pipeHolder, entity.posX, entity.getEntityBoundingBox().minY, entity.posZ, entity.width, entity.motionX, entity.motionZ);
+
+            return true;
+        }
+
+        return super.addRunningEffects(state, world, pos, entity);
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static void spawnLandingParticles(
+        TilePipeHolder pipe, double posX, double posY, double posZ, int numberOfParticles
+    ) {
+        int subHit = 0;
+        if (pipe.getPluggable(EnumFacing.UP) != null) {
+            subHit = 6 + 1 + EnumFacing.UP.ordinal();
+        }
+        HitSpriteInfo info = getHitSpriteInfo(subHit, pipe);
+        if (info != null) {
+
+            Random random = pipe.getWorld().rand;
+
+            for (int i = 0; i < numberOfParticles; i++) {
+
+                double speedX = random.nextGaussian() * 0.15;
+                double speedY = random.nextGaussian() * 0.15;
+                double speedZ = random.nextGaussian() * 0.15;
+
+                ParticleDigging particle
+                    = new ParticleBlockDust(pipe.getWorld(), posX, posY, posZ, speedX, speedY, speedZ, pipe.getCurrentState()) {
+                        // Just to make the constructor public
+                    };
+                particle.setBlockPos(pipe.getPos());
+                particle.setParticleTexture(info.sprite);
+
+                Minecraft.getMinecraft().effectRenderer.addEffect(particle);
+            }
+        }
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static void spawnRunningParticles(TilePipeHolder pipe, double posX, double posY, double posZ, float entityWidth, double motionX, double motionZ) {
+        int subHit = 0;
+        if (pipe.getPluggable(EnumFacing.UP) != null) {
+            subHit = 6 + 1 + EnumFacing.UP.ordinal();
+        }
+        HitSpriteInfo info = getHitSpriteInfo(subHit, pipe);
+        if (info != null) {
+
+            Random random = pipe.getWorld().rand;
+
+            posX += (random.nextFloat() - 0.5) * entityWidth;
+            posY += 0.1;
+            posZ += (random.nextFloat() - 0.5) * entityWidth;
+
+            double speedX = motionX * -0.4;
+            double speedY = 0.15;
+            double speedZ = motionZ * -0.4;
+
+            ParticleDigging particle
+                = new ParticleBlockDust(pipe.getWorld(), posX, posY, posZ, speedX, speedY, speedZ, pipe.getCurrentState()) {
+                    // Just to make the constructor public
+                };
+            particle.setBlockPos(pipe.getPos());
+            particle.setParticleTexture(info.sprite);
+
+            Minecraft.getMinecraft().effectRenderer.addEffect(particle);
+        }
     }
 
     private static HitSpriteInfo getHitSpriteInfo(RayTraceResult target, TilePipeHolder pipeHolder) {
-        int p = target.subHit;
+        return getHitSpriteInfo(target.subHit, pipeHolder);
+    }
+
+    private static HitSpriteInfo getHitSpriteInfo(int subHit, TilePipeHolder pipeHolder) {
+        int p = subHit;
         AxisAlignedBB aabb = null;
         TextureAtlasSprite sprite = SpriteUtil.missingSprite();
         if (0 <= p && p <= 6) {
@@ -911,8 +1036,9 @@ public class BlockPipeHolder extends BlockBCTile_Neptune implements ICustomPaint
     // paint
 
     @Override
-    public EnumActionResult attemptPaint(World world, BlockPos pos, IBlockState state, Vec3d hitPos, EnumFacing hitSide,
-        EnumDyeColor paintColour) {
+    public EnumActionResult attemptPaint(
+        World world, BlockPos pos, IBlockState state, Vec3d hitPos, EnumFacing hitSide, EnumDyeColor paintColour
+    ) {
         TilePipeHolder tile = getPipe(world, pos, true);
         if (tile == null) {
             return EnumActionResult.PASS;

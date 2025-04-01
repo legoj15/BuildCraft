@@ -66,4 +66,3 @@ Bug Fixes:
 * Fixed fragile fluid shard items that contain a buildcraft heatable fluid having an extra "%s".
 * Fixed not being able to place a pipe when a player is in the same block as the pipe (but not in the same bounding box as a pipe)
 * Fixed pipes not having running particles.
-

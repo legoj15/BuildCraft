@@ -39,3 +39,21 @@ license_checker/out/**
 
 # For some annoying reason the tests creates a log file in "/logs/latest.txt"
 logs
+
+# AntiGravity Temporary scripts and workspaces
+.agents/
+.vscode/
+*_replace*.py
+auto_comment*.py
+*_errors*.py
+dump_errors.py
+*-errors*.txt
+*-verbose.txt
+compile_errors*.txt
+dump_errors.txt
+auto_disable_log.txt
+core_auto_disable.py
+generate_core_replace_scripts.py
+find_resourcelocation.py
+comment_errors.py
+gradle-debug.log

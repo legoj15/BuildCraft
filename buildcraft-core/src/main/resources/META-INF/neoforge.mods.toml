@@ -1,0 +1,31 @@
+modLoader="javafml"
+loaderVersion="[2,]"
+license="MIT"
+
+[[mods]]
+modId="buildcraftcore"
+version="1.21.11-8.0.0"
+displayName="BuildCraft Core"
+description='''
+The core module for BuildCraft 8.
+'''
+[[dependencies.buildcraftcore]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1.0,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.buildcraftcore]]
+    modId="buildcraftapi"
+    type="required"
+    versionRange="*"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.buildcraftcore]]
+    modId="buildcraftlib"
+    type="required"
+    versionRange="*"
+    ordering="NONE"
+    side="BOTH"

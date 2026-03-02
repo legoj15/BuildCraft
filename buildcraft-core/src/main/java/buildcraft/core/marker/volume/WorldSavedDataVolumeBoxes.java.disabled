@@ -1,0 +1,138 @@
+/*
+ * Copyright (c) 2017 SpaceToad and the BuildCraft team
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
+ */
+
+package buildcraft.core.marker.volume;
+
+import net.minecraft.resources.Identifier;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.storage.MapStorage;
+import net.minecraft.world.storage.LevelSavedData;
+
+import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.net.MessageManager;
+
+public class LevelSavedDataVolumeBoxes extends LevelSavedData {
+    private static final String DATA_NAME = "buildcraft_volume_boxes";
+    /**
+     * Used to assign {@link LevelSavedDataVolumeBoxes#world} to pass it to {@link VolumeBox},
+     * as we can't pass it other way ({@link MapStorage} can call only constructor with one {@link String} argument
+     * and then it calls NBT deserialization method,
+     * giving us no chance to set the {@link LevelSavedDataVolumeBoxes#world} field).
+     */
+    private static Level currentLevel;
+    public final Level world = currentLevel;
+    public final List<VolumeBox> volumeBoxes = new ArrayList<>();
+
+    public LevelSavedDataVolumeBoxes() {
+        super(DATA_NAME);
+    }
+
+    @SuppressWarnings("unused")
+    public LevelSavedDataVolumeBoxes(String name) {
+        super(name);
+    }
+
+    public VolumeBox getVolumeBoxAt(BlockPos pos) {
+        return volumeBoxes.stream().filter(volumeBox -> volumeBox.box.contains(pos)).findFirst().orElse(null);
+    }
+
+    public void addVolumeBox(BlockPos pos) {
+        volumeBoxes.add(new VolumeBox(world, pos));
+    }
+
+    public VolumeBox getVolumeBoxFromId(UUID id) {
+        return volumeBoxes.stream().filter(volumeBox -> volumeBox.id.equals(id)).findFirst().orElse(null);
+    }
+
+    public VolumeBox getCurrentEditing(Player player) {
+        return volumeBoxes.stream().filter(volumeBox -> volumeBox.isEditingBy(player)).findFirst().orElse(null);
+    }
+
+    public void tick() {
+        AtomicBoolean dirty = new AtomicBoolean(false);
+        volumeBoxes.stream().filter(VolumeBox::isEditing).forEach(volumeBox -> {
+            Player player = volumeBox.getPlayer(world);
+            if (player == null) {
+                volumeBox.pauseEditing();
+                dirty.set(true);
+            } else {
+                AABB oldAabb = volumeBox.box.getBoundingBox();
+                volumeBox.box.reset();
+                volumeBox.box.extendToEncompass(volumeBox.getHeld());
+                BlockPos lookingAt = new BlockPos(
+                    player.getPositionVector()
+                        .addVector(0, player.getEyeHeight(), 0)
+                        .add(player.getLookVec().scale(volumeBox.getDist()))
+                );
+                volumeBox.box.extendToEncompass(lookingAt);
+                if (!volumeBox.box.getBoundingBox().equals(oldAabb)) {
+                    dirty.set(true);
+                }
+            }
+        });
+        for (VolumeBox volumeBox : volumeBoxes) {
+            List<Lock> locksToRemove = new ArrayList<>(volumeBox.locks).stream()
+                .filter(lock -> !lock.cause.stillWorks(world))
+                .collect(Collectors.toList());
+            if (!locksToRemove.isEmpty()) {
+                volumeBox.locks.removeAll(locksToRemove);
+                dirty.set(true);
+            }
+        }
+        if (dirty.get()) {
+            markDirty();
+        }
+    }
+
+    @Override
+    public void markDirty() {
+        super.markDirty();
+        MessageManager.sendToDimension(new MessageVolumeBoxes(volumeBoxes), world.provider.getDimension());
+    }
+
+    @SuppressWarnings("NullableProblems")
+    @Override
+    public CompoundTag writeToNBT(CompoundTag nbt) {
+        nbt.put("volumeBoxes", NBTUtilBC.writeCompoundList(volumeBoxes.stream().map(VolumeBox::writeToNBT)));
+        return nbt;
+    }
+
+    @SuppressWarnings("NullableProblems")
+    @Override
+    public void readFromNBT(CompoundTag nbt) {
+        volumeBoxes.clear();
+        NBTUtilBC.readCompoundList(nbt.get("volumeBoxes"))
+            .map(volumeBoxTag -> new VolumeBox(world, volumeBoxTag))
+            .forEach(volumeBoxes::add);
+    }
+
+    public static LevelSavedDataVolumeBoxes get(Level world) {
+        if (world.isRemote) {
+            throw new IllegalArgumentException("Tried to create a world saved data instance on the client!");
+        }
+        MapStorage storage = world.getPerLevelStorage();
+        currentLevel = world;
+        LevelSavedDataVolumeBoxes instance = (LevelSavedDataVolumeBoxes)
+            storage.getOrLoadData(LevelSavedDataVolumeBoxes.class, DATA_NAME);
+        if (instance == null) {
+            instance = new LevelSavedDataVolumeBoxes();
+            storage.setData(DATA_NAME, instance);
+        }
+        currentLevel = null;
+        return instance;
+    }
+}

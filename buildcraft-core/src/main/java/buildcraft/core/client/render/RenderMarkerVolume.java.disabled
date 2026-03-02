@@ -1,0 +1,102 @@
+/* Copyright (c) 2016 SpaceToad and the BuildCraft team
+ * 
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+package buildcraft.core.client.render;
+
+import net.minecraft.resources.Identifier;
+
+import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
+
+import net.minecraft.client.Minecraft;
+
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Direction.Axis;
+import net.minecraft.world.phys.Vec3;
+
+import buildcraft.lib.client.render.DetachedRenderer;
+import buildcraft.lib.client.render.laser.LaserData_BC8;
+import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
+import buildcraft.lib.client.render.laser.LaserRenderer_BC8;
+import buildcraft.lib.misc.VecUtil;
+
+import buildcraft.core.BCCoreConfig;
+import buildcraft.core.client.BuildCraftLaserManager;
+import buildcraft.core.marker.VolumeConnection;
+import buildcraft.core.tile.TileMarkerVolume;
+
+public class RenderMarkerVolume extends TileEntitySpecialRenderer<TileMarkerVolume> {
+    private static final double SCALE = 1 / 16.2; // smaller than normal lasers
+
+    public static final RenderMarkerVolume INSTANCE = new RenderMarkerVolume();
+
+    private static final LaserType LASER_TYPE = BuildCraftLaserManager.MARKER_VOLUME_SIGNAL;
+    private static final Vec3 VEC_HALF = new Vec3(0.5, 0.5, 0.5);
+
+    @Override
+    public boolean isGlobalRenderer(TileMarkerVolume te) {
+        return true;
+    }
+
+    @Override
+    public void render(TileMarkerVolume marker, double tileX, double tileY, double tileZ, float partialTicks, int destroyStage, float alpha) {
+        if (marker == null || !marker.isShowingSignals()) return;
+
+        Minecraft.getInstance().getProfiler().push("bc");
+        Minecraft.getInstance().getProfiler().push("marker");
+        Minecraft.getInstance().getProfiler().push("volume");
+
+        DetachedRenderer.fromLevelOriginPre(Minecraft.getInstance().player, partialTicks);
+        // RenderSystem.disableStandardItemLighting() removed in 1.21;
+        Minecraft.getInstance().renderEngine.bindTexture(TextureAtlas.LOCATION_BLOCKS_TEXTURE);
+
+        VolumeConnection volume = marker.getCurrentConnection();
+        Set<Axis> taken = volume == null ? ImmutableSet.of() : volume.getConnectedAxis();
+
+        Vec3 start = VecUtil.add(VEC_HALF, marker.getPos());
+        for (Direction face : Direction.VALUES) {
+            if (taken.contains(face.getAxis())) {
+                continue;
+            }
+            Vec3 end = VecUtil.offset(start, face, BCCoreConfig.markerMaxDistance);
+            renderLaser(start, end, face.getAxis());
+        }
+
+        // RenderSystem.enableStandardItemLighting() removed in 1.21;
+        DetachedRenderer.fromLevelOriginPost();
+
+        Minecraft.getInstance().getProfiler().pop();
+        Minecraft.getInstance().getProfiler().pop();
+        Minecraft.getInstance().getProfiler().pop();
+    }
+
+    private static void renderLaser(Vec3 min, Vec3 max, Axis axis) {
+        Direction faceForMin = VecUtil.getFacing(axis, true);
+        Direction faceForMax = VecUtil.getFacing(axis, false);
+        Vec3 one = offset(min, faceForMin);
+        Vec3 two = offset(max, faceForMax);
+        LaserData_BC8 data = new LaserData_BC8(LASER_TYPE, one, two, SCALE);
+        LaserRenderer_BC8.renderLaserStatic(data);
+    }
+
+    private static Vec3 offset(Vec3 vec, Direction face) {
+        double by = 1 / 16.0;
+        if (face == Direction.DOWN) {
+            return vec.addVector(0, -by, 0);
+        } else if (face == Direction.UP) {
+            return vec.addVector(0, by, 0);
+        } else if (face == Direction.EAST) {
+            return vec.addVector(by, 0, 0);
+        } else if (face == Direction.WEST) {
+            return vec.addVector(-by, 0, 0);
+        } else if (face == Direction.SOUTH) {
+            return vec.addVector(0, 0, by);
+        } else {// North
+            return vec.addVector(0, 0, -by);
+        }
+    }
+}

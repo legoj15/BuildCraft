@@ -1,0 +1,58 @@
+/*
+ * Copyright (c) 2017 SpaceToad and the BuildCraft team
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
+ */
+
+package buildcraft.lib.chunkload;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
+
+import buildcraft.api.core.BCLog;
+import buildcraft.lib.BCLibConfig;
+import buildcraft.lib.misc.data.LevelPos;
+
+/**
+ * Chunk loading manager stub for NeoForge 1.21.
+ * The old ForgeChunkManager TicketHelper API was removed.
+ * TODO: Re-implement using net.neoforged.neoforge.common.world.ForceChunkSetupEventHandler or similar.
+ */
+public class ChunkLoaderManager {
+
+    public static <T extends BlockEntity & IChunkLoadingTile> void loadChunksForTile(T tile) {
+        if (!canLoadFor(tile)) {
+            releaseChunksFor(tile);
+            return;
+        }
+        updateChunksFor(tile);
+    }
+
+    public static <T extends BlockEntity & IChunkLoadingTile> void releaseChunksFor(T tile) {
+        // TODO: Re-implement chunk release with NeoForge 1.21 forced chunk API
+        BCLog.logger.debug("[lib.chunkloading] releaseChunksFor called (stub) for {}", tile.getClass().getName());
+    }
+
+    private static <T extends BlockEntity & IChunkLoadingTile> void updateChunksFor(T tile) {
+        // TODO: Re-implement chunk forcing with NeoForge 1.21 forced chunk API
+        BCLog.logger.debug("[lib.chunkloading] updateChunksFor called (stub) for {}", tile.getClass().getName());
+    }
+
+    public static <T extends BlockEntity & IChunkLoadingTile> Set<ChunkPos> getChunksToLoad(T tile) {
+        Set<ChunkPos> chunksToLoad = tile.getChunksToLoad();
+        Set<ChunkPos> chunkPoses = new HashSet<>(chunksToLoad != null ? chunksToLoad : Collections.emptyList());
+        chunkPoses.add(new ChunkPos(tile.getBlockPos()));
+        return chunkPoses;
+    }
+
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    private static boolean canLoadFor(IChunkLoadingTile tile) {
+        return BCLibConfig.chunkLoadingLevel.canLoad(tile.getLoadType());
+    }
+}

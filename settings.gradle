@@ -1,1 +1,14 @@
-include 'sub_projects:expression'
+pluginManagement {
+    repositories {
+        mavenLocal()
+        maven { url = 'https://maven.neoforged.net/releases' }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'BuildCraft'
+
+include 'buildcraft-api'
+include 'buildcraft-lib'
+include 'buildcraft-core'

@@ -1,0 +1,45 @@
+/* Copyright (c) 2016 SpaceToad and the BuildCraft team
+ * 
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+package buildcraft.lib.item;
+
+import net.minecraft.resources.Identifier;
+
+
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+
+import net.minecraft.world.item.Item;
+
+
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+
+import buildcraft.api.core.BCLog;
+
+import buildcraft.lib.registry.CreativeTabManager;
+import buildcraft.lib.registry.RegistryConfig;
+import buildcraft.lib.registry.TagManager;
+import buildcraft.lib.registry.TagManager.EnumTagType;
+
+public interface IItemBuildCraft {
+    String id();
+
+    default void init() {
+        Item thisItem = (Item) this;
+        // thisItem.setUnlocalizedName - removed in 1.18+; use translation key in lang files
+        // thisItem.setRegistryName - removed in 1.18+; use DeferredRegister
+        // thisItem.setCreativeTab - removed in 1.19.3+; use CreativeModeTab via DeferredRegister
+    }
+
+    /** Sets up all of the model information for this item. This is called multiple times, and you *must* make sure that
+     * you add all the same values each time. Use {@link #addVariant(Int2ObjectOpenHashMap, int, String)} to help get
+     * everything correct. */
+    // addModelVariants/addVariant/registerVariants - removed in 1.18+
+    // Item model variants per damage meta are no longer supported.
+    // Use data generation (ItemModels) for item model definitions instead.
+    @Deprecated
+    default void addModelVariants() {
+        // Stub - model variants are now handled via data generation
+    }
+}

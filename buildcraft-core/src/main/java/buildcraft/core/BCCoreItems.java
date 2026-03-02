@@ -7,23 +7,28 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.entity.EquipmentSlot;
 import buildcraft.core.item.ItemGoggles;
 import buildcraft.core.item.ItemWrench_Neptune;
+import buildcraft.core.item.ItemFragileFluidContainer;
 
 public class BCCoreItems {
-    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCCore.MODID);
+        public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCCore.MODID);
 
-    public static final DeferredItem<ItemWrench_Neptune> WRENCH = ITEMS.registerItem("wrench",
-            ItemWrench_Neptune::new, props -> props.stacksTo(1));
+        public static final DeferredItem<ItemWrench_Neptune> WRENCH = ITEMS.registerItem("wrench",
+                        ItemWrench_Neptune::new, props -> props.stacksTo(1));
 
-    public static final DeferredItem<ItemGoggles> GOGGLES = ITEMS.registerItem("goggles",
-            ItemGoggles::new, props -> props.stacksTo(1).durability(0).equippable(EquipmentSlot.HEAD));
+        public static final DeferredItem<ItemGoggles> GOGGLES = ITEMS.registerItem("goggles",
+                        ItemGoggles::new, props -> props.stacksTo(1).durability(0).equippable(EquipmentSlot.HEAD));
 
-    public static final DeferredItem<net.minecraft.world.item.BlockItem> SPRING = ITEMS
-            .registerSimpleBlockItem("spring", BCCoreBlocks.SPRING);
+        public static final DeferredItem<ItemFragileFluidContainer> FRAGILE_FLUID_CONTAINER = ITEMS.registerItem(
+                        "fragile_fluid_container",
+                        ItemFragileFluidContainer::new, props -> props);
 
-    public static void init(IEventBus modEventBus) {
-        ITEMS.register(modEventBus);
-    }
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> SPRING = ITEMS
+                        .registerSimpleBlockItem("spring", BCCoreBlocks.SPRING);
 
-    public static void preInit() {
-    }
+        public static void init(IEventBus modEventBus) {
+                ITEMS.register(modEventBus);
+        }
+
+        public static void preInit() {
+        }
 }

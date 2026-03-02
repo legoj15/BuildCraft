@@ -1,0 +1,59 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Task :dependencies
+
+------------------------------------------------------------
+Root project 'BuildCraft'
+------------------------------------------------------------
+
+annotationProcessor - Annotation processors and their dependencies for source set 'main'.
+No dependencies
+
+compileClasspath - Compile classpath for source set 'main'.
+No dependencies
+
+compileOnly - Compile-only dependencies for the 'main' feature. (n)
+No dependencies
+
+default - Configuration for default artifacts. (n)
+No dependencies
+
+implementation - Implementation dependencies for the 'main' feature. (n)
+No dependencies
+
+mainSourceElements - List of source directories contained in the Main SourceSet. (n)
+No dependencies
+
+runtimeClasspath - Runtime classpath of source set 'main'.
+No dependencies
+
+runtimeElements - Runtime elements for the 'main' feature. (n)
+No dependencies
+
+runtimeOnly - Runtime-only dependencies for the 'main' feature. (n)
+No dependencies
+
+testAnnotationProcessor - Annotation processors and their dependencies for source set 'test'.
+No dependencies
+
+testCompileClasspath - Compile classpath for source set 'test'.
+No dependencies
+
+testCompileOnly - Compile only dependencies for source set 'test'. (n)
+No dependencies
+
+testImplementation - Implementation only dependencies for source set 'test'. (n)
+No dependencies
+
+testRuntimeClasspath - Runtime classpath of source set 'test'.
+No dependencies
+
+testRuntimeOnly - Runtime only dependencies for source set 'test'. (n)
+No dependencies
+
+A web-based, searchable dependency report is available by adding the --scan option.
+
+BUILD SUCCESSFUL in 5s
+1 actionable task: 1 executed
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.3.1/userguide/configuration_cache_enabling.html

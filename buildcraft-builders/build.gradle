@@ -1,0 +1,42 @@
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+        resources {
+            srcDirs = ['src/main/resources']
+        }
+    }
+}
+
+dependencies {
+    implementation project(':buildcraft-api')
+    implementation project(':buildcraft-lib')
+    implementation project(':buildcraft-core')
+}
+
+// ─── Dev Run Configuration ───────────────────────────────────────────────────
+// Launch the game directly from Gradle with all modules loaded.
+// Usage: ./gradlew :buildcraft-builders:runClient
+neoForge {
+    runs {
+        client {
+            client()
+        }
+    }
+
+    mods {
+        buildcraftbuilders {
+            sourceSet sourceSets.main
+        }
+        buildcraftcore {
+            sourceSet project(':buildcraft-core').sourceSets.main
+        }
+        buildcraftapi {
+            sourceSet project(':buildcraft-api').sourceSets.main
+        }
+        buildcraftlib {
+            sourceSet project(':buildcraft-lib').sourceSets.main
+        }
+    }
+}

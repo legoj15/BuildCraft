@@ -14,7 +14,7 @@ while loop_count < 20:
     sys.stdout.flush()
     
     # Run gradle
-    result = subprocess.run([gradle_cmd, "buildcraft-lib:compileJava", "--console=plain"], capture_output=True, text=True)
+    result = subprocess.run([gradle_cmd, "buildcraft-builders:compileJava", "--console=plain"], capture_output=True, text=True)
     output = result.stdout + result.stderr
     
     if result.returncode == 0:

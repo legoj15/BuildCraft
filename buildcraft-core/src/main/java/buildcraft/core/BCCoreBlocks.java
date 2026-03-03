@@ -7,6 +7,8 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 
 import buildcraft.core.block.BlockMarkerPath;
 import buildcraft.core.block.BlockSpring;
+import buildcraft.core.block.BlockEngineRedstone_BC8;
+import buildcraft.core.block.BlockEngineCreative;
 
 public class BCCoreBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCCore.MODID);
@@ -28,6 +30,14 @@ public class BCCoreBlocks {
     public static final DeferredBlock<BlockMarkerPath> MARKER_PATH = BLOCKS.registerBlock(
             "marker_path",
             BlockMarkerPath::new, BlockBehaviour.Properties.of());
+
+    public static final DeferredBlock<BlockEngineRedstone_BC8> ENGINE_REDSTONE = BLOCKS.registerBlock(
+            "engine_redstone",
+            BlockEngineRedstone_BC8::new, BlockBehaviour.Properties.of().strength(3.0f));
+
+    public static final DeferredBlock<BlockEngineCreative> ENGINE_CREATIVE = BLOCKS.registerBlock(
+            "engine_creative",
+            BlockEngineCreative::new, BlockBehaviour.Properties.of().strength(3.0f));
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

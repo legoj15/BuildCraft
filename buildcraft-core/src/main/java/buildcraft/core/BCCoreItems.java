@@ -42,6 +42,12 @@ public class BCCoreItems {
                         "paintbrush",
                         ItemPaintbrush_BC8::new, props -> props.stacksTo(1));
 
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> ENGINE_REDSTONE = ITEMS
+                        .registerSimpleBlockItem("engine_redstone", BCCoreBlocks.ENGINE_REDSTONE);
+
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> ENGINE_CREATIVE = ITEMS
+                        .registerSimpleBlockItem("engine_creative", BCCoreBlocks.ENGINE_CREATIVE);
+
         public static final DeferredItem<net.minecraft.world.item.BlockItem> SPRING = ITEMS
                         .registerSimpleBlockItem("spring", BCCoreBlocks.SPRING);
 

@@ -8,6 +8,9 @@ import net.minecraft.world.entity.EquipmentSlot;
 import buildcraft.core.item.ItemGoggles;
 import buildcraft.core.item.ItemWrench_Neptune;
 import buildcraft.core.item.ItemFragileFluidContainer;
+import buildcraft.core.item.ItemMarkerConnector;
+import buildcraft.core.item.ItemVolumeBox;
+import buildcraft.core.item.ItemMapLocation;
 
 public class BCCoreItems {
         public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCCore.MODID);
@@ -21,6 +24,18 @@ public class BCCoreItems {
         public static final DeferredItem<ItemFragileFluidContainer> FRAGILE_FLUID_CONTAINER = ITEMS.registerItem(
                         "fragile_fluid_container",
                         ItemFragileFluidContainer::new, props -> props);
+
+        public static final DeferredItem<ItemMarkerConnector> MARKER_CONNECTOR = ITEMS.registerItem(
+                        "marker_connector",
+                        ItemMarkerConnector::new, props -> props.stacksTo(1));
+
+        public static final DeferredItem<ItemVolumeBox> VOLUME_BOX = ITEMS.registerItem(
+                        "volume_box",
+                        ItemVolumeBox::new, props -> props.stacksTo(16));
+
+        public static final DeferredItem<ItemMapLocation> MAP_LOCATION = ITEMS.registerItem(
+                        "map_location",
+                        ItemMapLocation::new, props -> props.stacksTo(16));
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> SPRING = ITEMS
                         .registerSimpleBlockItem("spring", BCCoreBlocks.SPRING);

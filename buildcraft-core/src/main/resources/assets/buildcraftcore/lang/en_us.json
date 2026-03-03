@@ -1,7 +1,16 @@
 {
     "item.buildcraftcore.wrench": "Wrench",
     "item.buildcraftcore.goggles": "Robot Goggles",
+    "item.buildcraftcore.fragile_fluid_container": "Fragile Fluid Container",
+    "item.buildcraftcore.paintbrush": "Paintbrush",
+    "item.buildcraftcore.marker_connector": "Marker Connector",
+    "item.buildcraftcore.volume_box": "Volume Box",
+    "item.buildcraftcore.map_location": "Map Location",
     "block.buildcraftcore.spring": "Spring",
     "block.buildcraftcore.decoration": "BuildCraft Decoration Block",
-    "item.buildcraftcore.fragile_fluid_container": "Fragile Fluid Container"
+    "block.buildcraftcore.marker_volume": "Volume Marker",
+    "block.buildcraftcore.marker_path": "Path Marker",
+    "block.buildcraftcore.engine_redstone": "Redstone Engine",
+    "block.buildcraftcore.engine_creative": "Creative Engine",
+    "chat.pipe.power.iron.mode": "Engine output: %s MJ"
 }

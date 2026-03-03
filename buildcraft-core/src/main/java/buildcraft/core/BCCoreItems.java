@@ -48,6 +48,15 @@ public class BCCoreItems {
         public static final DeferredItem<net.minecraft.world.item.BlockItem> ENGINE_CREATIVE = ITEMS
                         .registerSimpleBlockItem("engine_creative", BCCoreBlocks.ENGINE_CREATIVE);
 
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> MARKER_VOLUME = ITEMS
+                        .registerSimpleBlockItem("marker_volume", BCCoreBlocks.MARKER_VOLUME);
+
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> MARKER_PATH = ITEMS
+                        .registerSimpleBlockItem("marker_path", BCCoreBlocks.MARKER_PATH);
+
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATION = ITEMS
+                        .registerSimpleBlockItem("decoration", BCCoreBlocks.DECORATION);
+
         public static final DeferredItem<net.minecraft.world.item.BlockItem> SPRING = ITEMS
                         .registerSimpleBlockItem("spring", BCCoreBlocks.SPRING);
 

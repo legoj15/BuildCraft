@@ -2,5 +2,6 @@
     "item.buildcraftcore.wrench": "Wrench",
     "item.buildcraftcore.goggles": "Robot Goggles",
     "block.buildcraftcore.spring": "Spring",
-    "block.buildcraftcore.decoration": "BuildCraft Decoration Block"
+    "block.buildcraftcore.decoration": "BuildCraft Decoration Block",
+    "item.buildcraftcore.fragile_fluid_container": "Fragile Fluid Container"
 }

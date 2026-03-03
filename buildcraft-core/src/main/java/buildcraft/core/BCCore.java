@@ -39,6 +39,7 @@ public class BCCore {
         DATA_COMPONENTS.register(modEventBus);
         BCCoreBlocks.init(modEventBus);
         BCCoreBlockEntities.init(modEventBus);
+        BCCoreFeatures.init(modEventBus);
 
         modEventBus.addListener(this::preInit);
         modEventBus.addListener(this::init);

@@ -174,7 +174,7 @@ public class PositionUtil {
         if (from.getOpposite() == to) {
             return Rotation.CLOCKWISE_180;
         }
-        if (from.rotateAround(axis) == to) {
+        if (from.getClockWise(axis) == to) {
             return Rotation.CLOCKWISE_90;
         } else {
             return Rotation.COUNTERCLOCKWISE_90;
@@ -198,7 +198,7 @@ public class PositionUtil {
             // Vanilla gives us 90 for free.
             from = from.getOpposite();
         }
-        return from.rotateAround(axis);
+        return from.getClockWise(axis);
     }
 
     /** Rotates a given vector by the given rotation, in a given axis. This relies on the behaviour of
@@ -214,9 +214,9 @@ public class PositionUtil {
         Direction newUp = PositionUtil.rotateFacing(Direction.UP, axis, rotation);
         Direction newSouth = PositionUtil.rotateFacing(Direction.SOUTH, axis, rotation);
 
-        rotated = VecUtil.replaceValue(rotated, newEast.getAxis(), numEast * newEast.getAxisDirection().getOffset());
-        rotated = VecUtil.replaceValue(rotated, newUp.getAxis(), numUp * newUp.getAxisDirection().getOffset());
-        rotated = VecUtil.replaceValue(rotated, newSouth.getAxis(), numSouth * newSouth.getAxisDirection().getOffset());
+        rotated = VecUtil.replaceValue(rotated, newEast.getAxis(), numEast * newEast.getAxisDirection().getStep());
+        rotated = VecUtil.replaceValue(rotated, newUp.getAxis(), numUp * newUp.getAxisDirection().getStep());
+        rotated = VecUtil.replaceValue(rotated, newSouth.getAxis(), numSouth * newSouth.getAxisDirection().getStep());
 
         return rotated;
     }
@@ -234,9 +234,9 @@ public class PositionUtil {
         Direction newUp = PositionUtil.rotateFacing(Direction.UP, axis, rotation);
         Direction newSouth = PositionUtil.rotateFacing(Direction.SOUTH, axis, rotation);
 
-        rotated = VecUtil.replaceValue(rotated, newEast.getAxis(), numEast * newEast.getAxisDirection().getOffset());
-        rotated = VecUtil.replaceValue(rotated, newUp.getAxis(), numUp * newUp.getAxisDirection().getOffset());
-        rotated = VecUtil.replaceValue(rotated, newSouth.getAxis(), numSouth * newSouth.getAxisDirection().getOffset());
+        rotated = VecUtil.replaceValue(rotated, newEast.getAxis(), numEast * newEast.getAxisDirection().getStep());
+        rotated = VecUtil.replaceValue(rotated, newUp.getAxis(), numUp * newUp.getAxisDirection().getStep());
+        rotated = VecUtil.replaceValue(rotated, newSouth.getAxis(), numSouth * newSouth.getAxisDirection().getStep());
 
         return rotated;
     }
@@ -253,8 +253,8 @@ public class PositionUtil {
             Vec3 b = line.interpolate(ib);
             va = closestPointOnLineToPoint(a, start, direction);
             vb = closestPointOnLineToPoint(b, start, direction);
-            da = a.squareDistanceTo(va);
-            db = b.squareDistanceTo(vb);
+            da = a.distanceToSqr(va);
+            db = b.distanceToSqr(vb);
             if (da < db) {
                 // We work out the square root at the end to get the actual distance
                 best = a;
@@ -475,17 +475,17 @@ public class PositionUtil {
             if (dx >= count) {
                 changed = true;
                 dx -= count;
-                current = current.add(ddx, 0, 0);
+                current = current.offset(ddx, 0, 0);
             }
             if (dy >= count) {
                 changed = true;
                 dy -= count;
-                current = current.add(0, ddy, 0);
+                current = current.offset(0, ddy, 0);
             }
             if (dz >= count) {
                 changed = true;
                 dz -= count;
-                current = current.add(0, 0, ddz);
+                current = current.offset(0, 0, ddz);
             }
 
             if (changed) {

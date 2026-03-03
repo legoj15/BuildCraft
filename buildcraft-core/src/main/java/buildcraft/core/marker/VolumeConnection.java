@@ -4,8 +4,6 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.core.marker;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -24,7 +22,6 @@ import buildcraft.lib.misc.PositionUtil;
 import buildcraft.lib.misc.data.Box;
 
 import buildcraft.core.BCCoreConfig;
-import buildcraft.core.client.BuildCraftLaserManager;
 
 public class VolumeConnection extends MarkerConnection<VolumeConnection> {
     private static final double RENDER_SCALE = 1 / 16.05;
@@ -48,7 +45,7 @@ public class VolumeConnection extends MarkerConnection<VolumeConnection> {
         Direction directOffset = PositionUtil.getDirectFacingOffset(from, to);
         if (directOffset == null) return false;
         for (int i = 1; i <= BCCoreConfig.markerMaxDistance; i++) {
-            BlockPos offset = from.offset(directOffset, i);
+            BlockPos offset = from.relative(directOffset, i);
             if (offset.equals(to)) return true;
             if (subCache.hasLoadedOrUnloadedMarker(offset)) return false;
         }
@@ -167,7 +164,8 @@ public class VolumeConnection extends MarkerConnection<VolumeConnection> {
 
     @Override
     @OnlyIn(Dist.CLIENT)
-    public void renderInLevel() {
-        LaserBoxRenderer.renderLaserBoxStatic(box, BuildCraftLaserManager.MARKER_VOLUME_CONNECTED, true);
+    public void renderInWorld() {
+        // Rendering is handled client-side through block entity renderer when implemented
+        // LaserBoxRenderer.renderLaserBoxStatic(box, BuildCraftLaserManager.MARKER_VOLUME_CONNECTED, true);
     }
 }

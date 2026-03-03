@@ -5,6 +5,7 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
+import buildcraft.core.block.BlockMarkerPath;
 import buildcraft.core.block.BlockSpring;
 
 public class BCCoreBlocks {
@@ -19,6 +20,14 @@ public class BCCoreBlocks {
                     .lightLevel(state -> state.hasProperty(buildcraft.core.block.BlockDecoration.DECORATED_TYPE)
                             ? state.getValue(buildcraft.core.block.BlockDecoration.DECORATED_TYPE).lightValue
                             : 0));
+
+    public static final DeferredBlock<buildcraft.core.block.BlockMarkerVolume> MARKER_VOLUME = BLOCKS.registerBlock(
+            "marker_volume",
+            buildcraft.core.block.BlockMarkerVolume::new, BlockBehaviour.Properties.of());
+
+    public static final DeferredBlock<BlockMarkerPath> MARKER_PATH = BLOCKS.registerBlock(
+            "marker_path",
+            BlockMarkerPath::new, BlockBehaviour.Properties.of());
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

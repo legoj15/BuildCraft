@@ -4,39 +4,33 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.core.marker;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
-import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
 import buildcraft.lib.marker.MarkerCache;
 import buildcraft.lib.marker.MarkerSubCache;
 import buildcraft.lib.net.MessageMarker;
 
 import buildcraft.core.BCCoreConfig;
-import buildcraft.core.client.BuildCraftLaserManager;
 
 public class VolumeSubCache extends MarkerSubCache<VolumeConnection> {
     public VolumeSubCache(Level world) {
         super(world, MarkerCache.CACHES.indexOf(VolumeCache.INSTANCE));
-        VolumeSavedData data = (VolumeSavedData) world.getPerLevelStorage().getOrLoadData(VolumeSavedData.class, VolumeSavedData.NAME);
-        if (data == null) {
-            data = new VolumeSavedData();
-            world.getPerLevelStorage().setData(VolumeSavedData.NAME, data);
+        VolumeSavedData data = VolumeSavedData.getOrCreate(world);
+        for (BlockPos pos : data.markerPositions) {
+            loadMarker(pos, null);
         }
-        data.loadInto(this);
     }
 
     @Override
@@ -86,10 +80,10 @@ public class VolumeSubCache extends MarkerSubCache<VolumeConnection> {
         }
 
         ImmutableList.Builder<BlockPos> valids = ImmutableList.builder();
-        for (Direction face : Direction.VALUES) {
+        for (Direction face : Direction.values()) {
             if (taken.contains(face.getAxis())) continue;
             for (int i = 1; i <= BCCoreConfig.markerMaxDistance; i++) {
-                BlockPos toTry = from.offset(face, i);
+                BlockPos toTry = from.relative(face, i);
                 if (hasLoadedOrUnloadedMarker(toTry)) {
                     if (!canConnect(from, toTry)) break;
                     valids.add(toTry);
@@ -102,32 +96,8 @@ public class VolumeSubCache extends MarkerSubCache<VolumeConnection> {
 
     @Override
     @OnlyIn(Dist.CLIENT)
-    public LaserType getPossibleLaserType() {
-        return BuildCraftLaserManager.MARKER_VOLUME_POSSIBLE;
-    }
-
-    @Override
-    @OnlyIn(Dist.CLIENT)
     protected boolean handleMessage(MessageMarker message) {
-        List<BlockPos> positions = message.positions;
-        if (message.connection) {
-            if (message.add) {
-                for (BlockPos p : positions) {
-                    VolumeConnection existing = this.getConnection(p);
-                    destroyConnection(existing);
-                }
-                VolumeConnection con = new VolumeConnection(this, positions);
-                addConnection(con);
-            } else { // removing from a connection
-                for (BlockPos p : positions) {
-                    VolumeConnection existing = this.getConnection(p);
-                    if (existing != null) {
-                        existing.removeMarker(p);
-                        refreshConnection(existing);
-                    }
-                }
-            }
-        }
+        // MessageMarker is currently a stub — networking is not yet ported
         return false;
     }
 }

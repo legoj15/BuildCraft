@@ -1,7 +1,5 @@
 package buildcraft.lib.misc.data;
 
-import net.minecraft.resources.Identifier;
-
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 

@@ -17,7 +17,7 @@ import net.minecraft.world.phys.AABB;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
-import buildcraft.lib.net.PacketBufferBC;
+// import buildcraft.lib.net.PacketBufferBC;
 
 public abstract class Addon {
     public VolumeBox volumeBox;
@@ -27,10 +27,10 @@ public abstract class Addon {
 
     public EnumAddonSlot getSlot() {
         return volumeBox.addons.entrySet().stream()
-            .filter(slotAddon -> slotAddon.getValue() == this)
-            .findFirst()
-            .orElseThrow(IllegalStateException::new)
-            .getKey();
+                .filter(slotAddon -> slotAddon.getValue() == this)
+                .findFirst()
+                .orElseThrow(IllegalStateException::new)
+                .getKey();
     }
 
     public AABB getBoundingBox() {
@@ -40,7 +40,7 @@ public abstract class Addon {
     @SuppressWarnings("WeakerAccess")
     public boolean canBePlaceInto(VolumeBox volumeBox) {
         return !(this instanceof ISingleAddon &&
-            volumeBox.addons.values().stream().anyMatch(addon -> addon.getClass() == getClass()));
+                volumeBox.addons.values().stream().anyMatch(addon -> addon.getClass() == getClass()));
     }
 
     public void onAdded() {
@@ -62,7 +62,7 @@ public abstract class Addon {
     public void postReadFromNbt() {
     }
 
-    public abstract void toBytes(PacketBufferBC buf);
-
-    public abstract void fromBytes(PacketBufferBC buf) throws IOException;
+    // public abstract void toBytes(PacketBufferBC buf);
+    //
+    // public abstract void fromBytes(PacketBufferBC buf) throws IOException;
 }

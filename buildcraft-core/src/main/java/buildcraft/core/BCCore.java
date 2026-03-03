@@ -15,6 +15,9 @@ import net.neoforged.neoforge.fluids.SimpleFluidContent;
 import java.util.function.Supplier;
 // import buildcraft.lib.BCLib;
 // import buildcraft.lib.BCLibItems;
+import buildcraft.lib.marker.MarkerCache;
+import buildcraft.core.marker.PathCache;
+import buildcraft.core.marker.VolumeCache;
 
 @Mod(BCCore.MODID)
 public class BCCore {
@@ -35,6 +38,7 @@ public class BCCore {
         BCCoreItems.ITEMS.register(modEventBus);
         DATA_COMPONENTS.register(modEventBus);
         BCCoreBlocks.init(modEventBus);
+        BCCoreBlockEntities.init(modEventBus);
 
         modEventBus.addListener(this::preInit);
         modEventBus.addListener(this::init);
@@ -45,6 +49,9 @@ public class BCCore {
     private void preInit(FMLCommonSetupEvent event) {
         // BCCoreConfig.preInit(cfgFolder);
         // CreativeTabBC tab = CreativeTabManager.createTab("buildcraft.main");
+
+        MarkerCache.registerCache(VolumeCache.INSTANCE);
+        MarkerCache.registerCache(PathCache.INSTANCE);
 
         BCCoreItems.preInit();
         BCCoreStatements.preInit();

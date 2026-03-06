@@ -54,8 +54,24 @@ public class BCCoreItems {
         public static final DeferredItem<net.minecraft.world.item.BlockItem> MARKER_PATH = ITEMS
                         .registerSimpleBlockItem("marker_path", BCCoreBlocks.MARKER_PATH);
 
-        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATION = ITEMS
-                        .registerSimpleBlockItem("decoration", BCCoreBlocks.DECORATION);
+        // Decorated block items
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_DESTROY = ITEMS
+                        .registerSimpleBlockItem("decorated_destroy", BCCoreBlocks.DECORATED_DESTROY);
+
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_BLUEPRINT = ITEMS
+                        .registerSimpleBlockItem("decorated_blueprint", BCCoreBlocks.DECORATED_BLUEPRINT);
+
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_TEMPLATE = ITEMS
+                        .registerSimpleBlockItem("decorated_template", BCCoreBlocks.DECORATED_TEMPLATE);
+
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_PAPER = ITEMS
+                        .registerSimpleBlockItem("decorated_paper", BCCoreBlocks.DECORATED_PAPER);
+
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_LEATHER = ITEMS
+                        .registerSimpleBlockItem("decorated_leather", BCCoreBlocks.DECORATED_LEATHER);
+
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_LASER = ITEMS
+                        .registerSimpleBlockItem("decorated_laser", BCCoreBlocks.DECORATED_LASER);
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> SPRING_WATER = ITEMS
                         .registerSimpleBlockItem("spring_water", BCCoreBlocks.SPRING_WATER);

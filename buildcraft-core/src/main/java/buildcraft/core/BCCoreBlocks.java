@@ -3,6 +3,7 @@ package buildcraft.core;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.bus.api.IEventBus;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
 import buildcraft.api.enums.EnumSpring;
@@ -20,12 +21,24 @@ public class BCCoreBlocks {
     public static final DeferredBlock<BlockSpring> SPRING_OIL = BLOCKS.registerBlock("spring_oil",
             props -> new BlockSpring(EnumSpring.OIL, props), BlockBehaviour.Properties.of());
 
-    public static final DeferredBlock<buildcraft.core.block.BlockDecoration> DECORATION = BLOCKS.registerBlock(
-            "decoration",
-            buildcraft.core.block.BlockDecoration::new, BlockBehaviour.Properties.of()
-                    .lightLevel(state -> state.hasProperty(buildcraft.core.block.BlockDecoration.DECORATED_TYPE)
-                            ? state.getValue(buildcraft.core.block.BlockDecoration.DECORATED_TYPE).lightValue
-                            : 0));
+    // Decorated blocks — mirrors 1.12.2's buildcraftcore:decorated meta variants
+    public static final DeferredBlock<Block> DECORATED_DESTROY = BLOCKS.registerSimpleBlock(
+            "decorated_destroy", BlockBehaviour.Properties.of().strength(3.0f));
+
+    public static final DeferredBlock<Block> DECORATED_BLUEPRINT = BLOCKS.registerSimpleBlock(
+            "decorated_blueprint", BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10));
+
+    public static final DeferredBlock<Block> DECORATED_TEMPLATE = BLOCKS.registerSimpleBlock(
+            "decorated_template", BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10));
+
+    public static final DeferredBlock<Block> DECORATED_PAPER = BLOCKS.registerSimpleBlock(
+            "decorated_paper", BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10));
+
+    public static final DeferredBlock<Block> DECORATED_LEATHER = BLOCKS.registerSimpleBlock(
+            "decorated_leather", BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10));
+
+    public static final DeferredBlock<Block> DECORATED_LASER = BLOCKS.registerSimpleBlock(
+            "decorated_laser", BlockBehaviour.Properties.of().strength(3.0f));
 
     public static final DeferredBlock<buildcraft.core.block.BlockMarkerVolume> MARKER_VOLUME = BLOCKS.registerBlock(
             "marker_volume",

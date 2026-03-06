@@ -102,7 +102,12 @@ public class BCCore {
             event.accept(BCCoreItems.MAP_LOCATION);
             event.accept(BCCoreItems.SPRING_WATER);
             event.accept(BCCoreItems.SPRING_OIL);
-            event.accept(BCCoreItems.DECORATION);
+            event.accept(BCCoreItems.DECORATED_DESTROY);
+            event.accept(BCCoreItems.DECORATED_BLUEPRINT);
+            event.accept(BCCoreItems.DECORATED_TEMPLATE);
+            event.accept(BCCoreItems.DECORATED_PAPER);
+            event.accept(BCCoreItems.DECORATED_LEATHER);
+            event.accept(BCCoreItems.DECORATED_LASER);
             event.accept(BCCoreItems.MARKER_VOLUME);
             event.accept(BCCoreItems.MARKER_PATH);
             event.accept(BCCoreItems.ENGINE_REDSTONE);

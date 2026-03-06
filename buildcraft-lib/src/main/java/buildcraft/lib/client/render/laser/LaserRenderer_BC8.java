@@ -55,10 +55,12 @@ public class LaserRenderer_BC8 {
 
         consumer.addVertex(matrix, (float) x1, (float) y1, (float) z1)
                 .setColor(type.red, type.green, type.blue, type.alpha)
-                .setNormal(nx, ny, nz);
+                .setNormal(nx, ny, nz)
+                .setLineWidth(type.lineWidth);
         consumer.addVertex(matrix, (float) x2, (float) y2, (float) z2)
                 .setColor(type.red, type.green, type.blue, type.alpha)
-                .setNormal(nx, ny, nz);
+                .setNormal(nx, ny, nz)
+                .setLineWidth(type.lineWidth);
     }
 
     /**

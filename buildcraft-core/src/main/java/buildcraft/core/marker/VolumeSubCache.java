@@ -97,7 +97,25 @@ public class VolumeSubCache extends MarkerSubCache<VolumeConnection> {
     @Override
     @OnlyIn(Dist.CLIENT)
     protected boolean handleMessage(MessageMarker message) {
-        // MessageMarker is currently a stub — networking is not yet ported
+        List<BlockPos> positions = message.positions();
+        if (message.connection()) {
+            if (message.add()) {
+                for (BlockPos p : positions) {
+                    VolumeConnection existing = this.getConnection(p);
+                    destroyConnection(existing);
+                }
+                VolumeConnection con = new VolumeConnection(this, positions);
+                addConnection(con);
+            } else { // removing from a connection
+                for (BlockPos p : positions) {
+                    VolumeConnection existing = this.getConnection(p);
+                    if (existing != null) {
+                        existing.removeMarker(p);
+                        refreshConnection(existing);
+                    }
+                }
+            }
+        }
         return false;
     }
 }

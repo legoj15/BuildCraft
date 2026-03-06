@@ -88,7 +88,25 @@ public class PathSubCache extends MarkerSubCache<PathConnection> {
     @Override
     @OnlyIn(Dist.CLIENT)
     protected boolean handleMessage(MessageMarker message) {
-        // MessageMarker is currently a stub — networking is not yet ported
+        List<BlockPos> positions = message.positions();
+        if (message.connection()) {
+            if (message.add()) {
+                for (BlockPos p : positions) {
+                    PathConnection existing = this.getConnection(p);
+                    destroyConnection(existing);
+                }
+                PathConnection con = new PathConnection(this, positions);
+                addConnection(con);
+            } else { // removing from a connection
+                for (BlockPos p : positions) {
+                    PathConnection existing = this.getConnection(p);
+                    if (existing != null) {
+                        existing.removeMarker(p);
+                        refreshConnection(existing);
+                    }
+                }
+            }
+        }
         return false;
     }
 }

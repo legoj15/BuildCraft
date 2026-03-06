@@ -9,6 +9,7 @@ import net.minecraft.core.registries.Registries;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.minecraft.core.component.DataComponentType;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
@@ -40,11 +41,13 @@ public class BCCore {
         BCCoreBlocks.init(modEventBus);
         BCCoreBlockEntities.init(modEventBus);
         BCCoreFeatures.init(modEventBus);
+        BCCoreCreativeTabs.init(modEventBus);
 
         modEventBus.addListener(this::preInit);
         modEventBus.addListener(this::init);
         modEventBus.addListener(this::postInit);
         modEventBus.addListener(this::registerCapabilities);
+        modEventBus.addListener(this::buildCreativeTabContents);
     }
 
     private void preInit(FMLCommonSetupEvent event) {
@@ -87,5 +90,22 @@ public class BCCore {
                     }
                 },
                 BCCoreItems.FRAGILE_FLUID_CONTAINER);
+    }
+
+    private void buildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {
+        if (event.getTabKey() == BCCoreCreativeTabs.MAIN_TAB_KEY) {
+            event.accept(BCCoreItems.WRENCH);
+            event.accept(BCCoreItems.PAINTBRUSH);
+            event.accept(BCCoreItems.GOGGLES);
+            event.accept(BCCoreItems.MARKER_CONNECTOR);
+            event.accept(BCCoreItems.VOLUME_BOX);
+            event.accept(BCCoreItems.MAP_LOCATION);
+            event.accept(BCCoreItems.SPRING);
+            event.accept(BCCoreItems.DECORATION);
+            event.accept(BCCoreItems.MARKER_VOLUME);
+            event.accept(BCCoreItems.MARKER_PATH);
+            event.accept(BCCoreItems.ENGINE_REDSTONE);
+            event.accept(BCCoreItems.ENGINE_CREATIVE);
+        }
     }
 }

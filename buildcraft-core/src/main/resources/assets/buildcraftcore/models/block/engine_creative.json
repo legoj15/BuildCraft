@@ -1,6 +1,7 @@
 {
-    "parent": "minecraft:block/cube_all",
+    "parent": "buildcraftcore:block/engine_base",
     "textures": {
-        "all": "buildcraftcore:block/engine_creative"
+        "back": "buildcraftcore:block/engine/creative_back",
+        "side": "buildcraftcore:block/engine/creative_side"
     }
 }

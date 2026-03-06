@@ -13,6 +13,7 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -60,14 +61,33 @@ public class ItemPaintbrush_BC8 extends Item {
 
     private static void setBrushData(ItemStack stack, @Nullable DyeColor colour, int usesLeft) {
         if (colour == null || usesLeft <= 0) {
-            // Clean brush — remove custom data entirely
+            // Clean brush — remove custom data and model data entirely
             stack.remove(DataComponents.CUSTOM_DATA);
+            stack.remove(DataComponents.CUSTOM_MODEL_DATA);
             return;
         }
         CompoundTag tag = new CompoundTag();
         tag.putInt(TAG_COLOUR, colour.ordinal());
         tag.putInt(TAG_USES, usesLeft);
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        // Set CUSTOM_MODEL_DATA for the range_dispatch item model selector.
+        // Values 1-16 map to DyeColor ordinals + 1 (0 = clean/fallback).
+        // In 1.21.4+, CustomModelData takes (floats, flags, strings, colors).
+        stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(
+                java.util.List.of((float) (colour.ordinal() + 1)),
+                java.util.List.of(),
+                java.util.List.of(),
+                java.util.List.of()
+        ));
+    }
+
+    /** Create a pre-colored paintbrush stack (for creative tab population). */
+    public static ItemStack createColoredStack(Item paintbrushItem, @Nullable DyeColor colour) {
+        ItemStack stack = new ItemStack(paintbrushItem);
+        if (colour != null) {
+            setBrushData(stack, colour, MAX_USES);
+        }
+        return stack;
     }
 
     // --- Item overrides ---

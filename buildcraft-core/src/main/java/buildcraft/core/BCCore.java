@@ -11,6 +11,8 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraft.world.item.DyeColor;
+import buildcraft.core.item.ItemPaintbrush_BC8;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.minecraft.core.component.DataComponentType;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
@@ -122,7 +124,11 @@ public class BCCore {
     private void buildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == BCCoreCreativeTabs.MAIN_TAB_KEY) {
             event.accept(BCCoreItems.WRENCH);
-            event.accept(BCCoreItems.PAINTBRUSH);
+            // Paintbrush: clean + 16 dye colours (matches 1.12 creative menu)
+            event.accept(ItemPaintbrush_BC8.createColoredStack(BCCoreItems.PAINTBRUSH.get(), null));
+            for (DyeColor colour : DyeColor.values()) {
+                event.accept(ItemPaintbrush_BC8.createColoredStack(BCCoreItems.PAINTBRUSH.get(), colour));
+            }
             event.accept(BCCoreItems.GOGGLES);
             event.accept(BCCoreItems.MARKER_CONNECTOR);
             event.accept(BCCoreItems.VOLUME_BOX);

@@ -20,6 +20,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
@@ -27,12 +28,11 @@ import net.minecraft.resources.ResourceKey;
 
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import buildcraft.api.core.BCDebugging;
 import buildcraft.api.core.BCLog;
 
-// import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
-import buildcraft.lib.net.MessageManager;
 import buildcraft.lib.net.MessageMarker;
 import buildcraft.lib.tile.TileMarker;
 
@@ -56,21 +56,15 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
         if (isServer) {// Sanity Check
             // Send ALL loaded markers
             if (!tileCache.isEmpty()) {
-                // MessageMarker message = new MessageMarker();
-                // message.add = true;
-                // message.connection = false;
-                // message.cacheId = cacheId;
-                // message.positions.addAll(tileCache.keySet());
-                // MessageManager.sendTo(message, player);
+                List<BlockPos> positions = new ArrayList<>(tileCache.keySet());
+                MessageMarker message = new MessageMarker(true, false, cacheId, positions);
+                PacketDistributor.sendToPlayer(player, message);
             }
             // Send ALL connections.
             for (C connection : connectionToPos.keySet()) {
-                // MessageMarker message = new MessageMarker();
-                // message.add = true;
-                // message.connection = true;
-                // message.cacheId = cacheId;
-                // message.positions.addAll(connection.getMarkerPositions());
-                // MessageManager.sendTo(message, player);
+                List<BlockPos> positions = new ArrayList<>(connection.getMarkerPositions());
+                MessageMarker message = new MessageMarker(true, true, cacheId, positions);
+                PacketDistributor.sendToPlayer(player, message);
             }
         }
     }
@@ -96,14 +90,10 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
             BCLog.logger.info("[lib.marker.full] Set a marker at " + pos + " as " + marker);
         }
         if (isServer && !did) {
-            // MessageMarker message = new MessageMarker();
-            // message.add = true;
-            // message.connection = false;
-            // message.multiple = false;
-            // message.cacheId = cacheId;
-            // message.count = 1;
-            // message.positions.add(pos);
-            // MessageManager.sendToDimension(message, dimensionId);
+            List<BlockPos> positions = new ArrayList<>();
+            positions.add(pos);
+            MessageMarker message = new MessageMarker(true, false, cacheId, positions);
+            sendToDimension(message);
         }
     }
 
@@ -122,14 +112,10 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
             refreshConnection(connection);
         }
         if (isServer) {
-            // MessageMarker message = new MessageMarker();
-            // message.add = false;
-            // message.connection = false;
-            // message.multiple = false;
-            // message.cacheId = cacheId;
-            // message.count = 1;
-            // message.positions.add(pos);
-            // MessageManager.sendToDimension(message, dimensionId);
+            List<BlockPos> positions = new ArrayList<>();
+            positions.add(pos);
+            MessageMarker message = new MessageMarker(false, false, cacheId, positions);
+            sendToDimension(message);
         }
     }
 
@@ -241,14 +227,9 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
             posToConnection.remove(p);
         }
         if (isServer && set.size() > 0) {
-            // MessageMarker message = new MessageMarker();
-            // message.add = false;
-            // message.connection = true;
-            // message.cacheId = cacheId;
-            // message.positions.addAll(set);
-            // message.count = message.positions.size();
-            // message.multiple = message.count > 1;
-            // MessageManager.sendToDimension(message, dimensionId);
+            List<BlockPos> positions = new ArrayList<>(set);
+            MessageMarker message = new MessageMarker(false, true, cacheId, positions);
+            sendToDimension(message);
         }
     }
 
@@ -269,14 +250,23 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
             posToConnection.put(p, connection);
         }
         if (isServer && lastSeen.size() > 0) {
-            // MessageMarker message = new MessageMarker();
-            // message.add = true;
-            // message.connection = true;
-            // message.cacheId = cacheId;
-            // message.positions.addAll(connection.getMarkerPositions());
-            // message.count = message.positions.size();
-            // message.multiple = message.count > 1;
-            // MessageManager.sendToDimension(message, dimensionId);
+            List<BlockPos> positions = new ArrayList<>(connection.getMarkerPositions());
+            MessageMarker message = new MessageMarker(true, true, cacheId, positions);
+            sendToDimension(message);
+        }
+    }
+
+    /**
+     * Sends a MessageMarker to all players in this subcache's dimension.
+     * Resolves the ServerLevel from the dimension key via the current server.
+     */
+    private void sendToDimension(MessageMarker message) {
+        net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server != null) {
+            ServerLevel level = server.getLevel(dimensionId);
+            if (level != null) {
+                PacketDistributor.sendToPlayersInDimension(level, message);
+            }
         }
     }
 
@@ -298,25 +288,23 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
 
     @OnlyIn(Dist.CLIENT)
     public final void handleMessageMain(MessageMarker message) {
-        /*
-         * if (handleMessage(message)) {
-         * return;
-         * }
-         * if (!message.connection) {
-         * List<BlockPos> positions = message.positions;
-         * if (message.add) {
-         * for (BlockPos p : positions) {
-         * if (!hasLoadedOrUnloadedMarker(p)) {
-         * loadMarker(p, null);
-         * }
-         * }
-         * } else {
-         * for (BlockPos p : positions) {
-         * removeMarker(p);
-         * }
-         * }
-         * }
-         */
+        if (handleMessage(message)) {
+            return;
+        }
+        if (!message.connection()) {
+            List<BlockPos> positions = message.positions();
+            if (message.add()) {
+                for (BlockPos p : positions) {
+                    if (!hasLoadedOrUnloadedMarker(p)) {
+                        loadMarker(p, null);
+                    }
+                }
+            } else {
+                for (BlockPos p : positions) {
+                    removeMarker(p);
+                }
+            }
+        }
     }
 
     @OnlyIn(Dist.CLIENT)

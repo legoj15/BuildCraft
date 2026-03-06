@@ -3,6 +3,7 @@ package buildcraft.core;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.core.registries.Registries;
@@ -17,6 +18,7 @@ import java.util.function.Supplier;
 // import buildcraft.lib.BCLib;
 // import buildcraft.lib.BCLibItems;
 import buildcraft.lib.marker.MarkerCache;
+import buildcraft.lib.net.MessageMarker;
 import buildcraft.core.marker.PathCache;
 import buildcraft.core.marker.VolumeCache;
 
@@ -48,6 +50,7 @@ public class BCCore {
         modEventBus.addListener(this::postInit);
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::buildCreativeTabContents);
+        modEventBus.addListener(this::registerPayloads);
     }
 
     private void preInit(FMLCommonSetupEvent event) {
@@ -76,6 +79,15 @@ public class BCCore {
         // BCCoreConfig.saveConfigs();
         // BCCoreProxy.getProxy().fmlPostInit();
         // BCCoreConfig.postInit();
+    }
+
+    private void registerPayloads(RegisterPayloadHandlersEvent event) {
+        final PayloadRegistrar registrar = event.registrar("1");
+        registrar.playToClient(
+                MessageMarker.TYPE,
+                MessageMarker.STREAM_CODEC,
+                MessageMarker::handle
+        );
     }
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {

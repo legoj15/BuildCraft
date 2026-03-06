@@ -30,6 +30,7 @@ import net.minecraft.world.phys.shapes.Shapes;
 import org.jetbrains.annotations.Nullable;
 
 import buildcraft.api.properties.BuildCraftProperties;
+import buildcraft.lib.tile.TileMarker;
 
 public abstract class BlockMarkerBase extends Block implements EntityBlock {
     private static final Map<Direction, VoxelShape> BOUNDING_BOXES = new EnumMap<>(Direction.class);
@@ -114,6 +115,16 @@ public abstract class BlockMarkerBase extends Block implements EntityBlock {
         if (!world.getBlockState(neighborPos).isFaceSturdy(world, neighborPos, sideOn)) {
             world.destroyBlock(pos, true);
         }
+    }
+
+    // 1.21.11: playerWillDestroy fires before block is removed — use it to clean up marker connections
+    @Override
+    public BlockState playerWillDestroy(Level world, BlockPos pos, BlockState state, net.minecraft.world.entity.player.Player player) {
+        BlockEntity tile = world.getBlockEntity(pos);
+        if (tile instanceof TileMarker<?> marker) {
+            marker.onRemove();
+        }
+        return super.playerWillDestroy(world, pos, state, player);
     }
 
     @Override

@@ -16,7 +16,6 @@ import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 import buildcraft.api.enums.EnumSpring;
-import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.core.BCCoreBlocks;
 
 /**
@@ -25,7 +24,7 @@ import buildcraft.core.BCCoreBlocks;
  *
  * Placement logic:
  * - Scans Y 0–4 for bedrock at the placed position
- * - Replaces one bedrock with a spring block (SPRING_TYPE=WATER)
+ * - Replaces one bedrock with a water spring block
  * - Fills blocks upward with water until air is reached
  */
 public class SpringFeature extends Feature<NoneFeatureConfiguration> {
@@ -63,9 +62,8 @@ public class SpringFeature extends Feature<NoneFeatureConfiguration> {
 
             BlockPos springPos = new BlockPos(posX, placeY, posZ);
 
-            // Place the spring block
-            BlockState springState = BCCoreBlocks.SPRING.get().defaultBlockState()
-                    .setValue(BuildCraftProperties.SPRING_TYPE, EnumSpring.WATER);
+            // Place the water spring block
+            BlockState springState = BCCoreBlocks.SPRING_WATER.get().defaultBlockState();
             level.setBlock(springPos, springState, 3);
 
             // Fill upward with water until we hit air

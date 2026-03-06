@@ -7,39 +7,31 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.Property;
 
 import buildcraft.api.enums.EnumSpring;
-import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.lib.misc.data.XorShift128Random;
 
 public class BlockSpring extends Block {
-    public static final Property<EnumSpring> SPRING_TYPE = BuildCraftProperties.SPRING_TYPE;
     public static final XorShift128Random rand = new XorShift128Random();
 
-    public BlockSpring(BlockBehaviour.Properties properties) {
+    private final EnumSpring springType;
+
+    public BlockSpring(EnumSpring springType, BlockBehaviour.Properties properties) {
         super(properties
                 .strength(-1.0F, 3600000.0F) // Unbreakable, very high blast resistance
                 .sound(SoundType.STONE)
                 .randomTicks() // Equivalent to setTickRandomly(true)
         );
-        this.registerDefaultState(this.stateDefinition.any().setValue(SPRING_TYPE, EnumSpring.WATER));
+        this.springType = springType;
     }
 
-    @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(SPRING_TYPE);
-    }
-
-    @Override
-    public boolean isRandomlyTicking(BlockState state) {
-        return true;
+    public EnumSpring getSpringType() {
+        return springType;
     }
 
     @Override
     public void randomTick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
-        generateSpringBlock(level, pos, state);
+        generateSpringBlock(level, pos);
     }
 
     @Override
@@ -47,21 +39,19 @@ public class BlockSpring extends Block {
             boolean isMoving) {
         super.onPlace(state, level, pos, oldState, isMoving);
         // Schedule the next tick based on the spring type's tick rate
-        level.scheduleTick(pos, this, state.getValue(SPRING_TYPE).tickRate);
+        level.scheduleTick(pos, this, springType.tickRate);
     }
 
     @Override
     public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
-        generateSpringBlock(level, pos, state);
+        generateSpringBlock(level, pos);
     }
 
-    private void generateSpringBlock(ServerLevel level, BlockPos pos, BlockState state) {
-        EnumSpring spring = state.getValue(SPRING_TYPE);
-
+    private void generateSpringBlock(ServerLevel level, BlockPos pos) {
         // Always reschedule for the continuous active tick
-        level.scheduleTick(pos, this, spring.tickRate);
+        level.scheduleTick(pos, this, springType.tickRate);
 
-        if (!spring.canGen || spring.liquidBlock == null) {
+        if (!springType.canGen || springType.liquidBlock == null) {
             return;
         }
 
@@ -70,10 +60,10 @@ public class BlockSpring extends Block {
             return;
         }
 
-        if (spring.chance != -1 && rand.nextInt(spring.chance) != 0) {
+        if (springType.chance != -1 && rand.nextInt(springType.chance) != 0) {
             return;
         }
 
-        level.setBlock(upPos, spring.liquidBlock, 3);
+        level.setBlock(upPos, springType.liquidBlock, 3);
     }
 }

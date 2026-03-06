@@ -57,8 +57,11 @@ public class BCCoreItems {
         public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATION = ITEMS
                         .registerSimpleBlockItem("decoration", BCCoreBlocks.DECORATION);
 
-        public static final DeferredItem<net.minecraft.world.item.BlockItem> SPRING = ITEMS
-                        .registerSimpleBlockItem("spring", BCCoreBlocks.SPRING);
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> SPRING_WATER = ITEMS
+                        .registerSimpleBlockItem("spring_water", BCCoreBlocks.SPRING_WATER);
+
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> SPRING_OIL = ITEMS
+                        .registerSimpleBlockItem("spring_oil", BCCoreBlocks.SPRING_OIL);
 
         public static void init(IEventBus modEventBus) {
                 ITEMS.register(modEventBus);

@@ -5,6 +5,7 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
+import buildcraft.api.enums.EnumSpring;
 import buildcraft.core.block.BlockMarkerPath;
 import buildcraft.core.block.BlockSpring;
 import buildcraft.core.block.BlockEngineRedstone_BC8;
@@ -13,8 +14,11 @@ import buildcraft.core.block.BlockEngineCreative;
 public class BCCoreBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCCore.MODID);
 
-    public static final DeferredBlock<BlockSpring> SPRING = BLOCKS.registerBlock("spring",
-            BlockSpring::new, BlockBehaviour.Properties.of());
+    public static final DeferredBlock<BlockSpring> SPRING_WATER = BLOCKS.registerBlock("spring_water",
+            props -> new BlockSpring(EnumSpring.WATER, props), BlockBehaviour.Properties.of());
+
+    public static final DeferredBlock<BlockSpring> SPRING_OIL = BLOCKS.registerBlock("spring_oil",
+            props -> new BlockSpring(EnumSpring.OIL, props), BlockBehaviour.Properties.of());
 
     public static final DeferredBlock<buildcraft.core.block.BlockDecoration> DECORATION = BLOCKS.registerBlock(
             "decoration",

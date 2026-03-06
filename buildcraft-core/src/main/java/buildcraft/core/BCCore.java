@@ -100,7 +100,8 @@ public class BCCore {
             event.accept(BCCoreItems.MARKER_CONNECTOR);
             event.accept(BCCoreItems.VOLUME_BOX);
             event.accept(BCCoreItems.MAP_LOCATION);
-            event.accept(BCCoreItems.SPRING);
+            event.accept(BCCoreItems.SPRING_WATER);
+            event.accept(BCCoreItems.SPRING_OIL);
             event.accept(BCCoreItems.DECORATION);
             event.accept(BCCoreItems.MARKER_VOLUME);
             event.accept(BCCoreItems.MARKER_PATH);

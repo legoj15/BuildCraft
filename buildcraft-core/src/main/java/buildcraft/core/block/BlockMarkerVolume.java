@@ -5,10 +5,13 @@
 package buildcraft.core.block;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 
 import buildcraft.lib.block.BlockMarkerBase;
 import buildcraft.core.tile.TileMarkerVolume;
@@ -21,6 +24,18 @@ public class BlockMarkerVolume extends BlockMarkerBase {
     @Override
     public BlockEntity createTileEntity(BlockPos pos, BlockState state) {
         return new TileMarkerVolume(pos, state);
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos,
+            Player player, BlockHitResult hitResult) {
+        if (!world.isClientSide()) {
+            BlockEntity tile = world.getBlockEntity(pos);
+            if (tile instanceof TileMarkerVolume volume) {
+                volume.onManualConnectionAttempt(player);
+            }
+        }
+        return InteractionResult.SUCCESS;
     }
 
     @Override

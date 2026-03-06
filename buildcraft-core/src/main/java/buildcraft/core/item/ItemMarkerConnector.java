@@ -57,12 +57,16 @@ public class ItemMarkerConnector extends Item {
         if (!level.isClientSide()) {
             for (MarkerCache<?> cache : MarkerCache.CACHES) {
                 if (interactCache(cache.getSubCache(level), player)) {
-                    player.swing(hand);
-                    break;
+                    return InteractionResult.SUCCESS;
                 }
             }
         }
-        return onUseVolumeBoxes(level, player);
+        InteractionResult volumeResult = onUseVolumeBoxes(level, player);
+        if (volumeResult.consumesAction()) {
+            return volumeResult;
+        }
+        // Always consume the action so the player gets swing feedback
+        return InteractionResult.SUCCESS;
     }
 
     private static <S extends MarkerSubCache<?>> boolean interactCache(S cache, Player player) {

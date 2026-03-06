@@ -84,6 +84,11 @@ public abstract class BlockMarkerBase extends Block implements EntityBlock {
         return BOUNDING_BOXES.getOrDefault(direction, Shapes.block());
     }
 
+    @Override
+    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
+        return Shapes.empty();
+    }
+
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {

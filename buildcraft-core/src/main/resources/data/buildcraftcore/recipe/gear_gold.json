@@ -1,0 +1,21 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "group": "buildcraft_gears",
+    "pattern": [
+        " g ",
+        "gGg",
+        " g "
+    ],
+    "key": {
+        "g": {
+            "tag": "c:ingots/gold"
+        },
+        "G": {
+            "item": "buildcraftcore:gear_iron"
+        }
+    },
+    "result": {
+        "id": "buildcraftcore:gear_gold",
+        "count": 1
+    }
+}

@@ -19,5 +19,10 @@
     "block.buildcraftcore.engine_redstone": "Redstone Engine",
     "block.buildcraftcore.engine_creative": "Creative Engine",
     "chat.pipe.power.iron.mode": "Engine output: %s MJ",
+    "item.buildcraftcore.gear_wood": "Wood Gear",
+    "item.buildcraftcore.gear_stone": "Stone Gear",
+    "item.buildcraftcore.gear_iron": "Iron Gear",
+    "item.buildcraftcore.gear_gold": "Gold Gear",
+    "item.buildcraftcore.gear_diamond": "Diamond Gear",
     "itemGroup.buildcraft.main": "BuildCraft"
 }

@@ -139,6 +139,12 @@ public class BCCore {
             event.accept(BCCoreItems.MARKER_PATH);
             event.accept(BCCoreItems.ENGINE_REDSTONE);
             event.accept(BCCoreItems.ENGINE_CREATIVE);
+            // Gears
+            event.accept(BCCoreItems.GEAR_WOOD);
+            event.accept(BCCoreItems.GEAR_STONE);
+            event.accept(BCCoreItems.GEAR_IRON);
+            event.accept(BCCoreItems.GEAR_GOLD);
+            event.accept(BCCoreItems.GEAR_DIAMOND);
         }
     }
 }

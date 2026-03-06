@@ -42,6 +42,13 @@ public class BCCoreItems {
                         "paintbrush",
                         ItemPaintbrush_BC8::new, props -> props.stacksTo(1));
 
+        // Gear items
+        public static final DeferredItem<Item> GEAR_WOOD = ITEMS.registerItem("gear_wood", Item::new, p -> p);
+        public static final DeferredItem<Item> GEAR_STONE = ITEMS.registerItem("gear_stone", Item::new, p -> p);
+        public static final DeferredItem<Item> GEAR_IRON = ITEMS.registerItem("gear_iron", Item::new, p -> p);
+        public static final DeferredItem<Item> GEAR_GOLD = ITEMS.registerItem("gear_gold", Item::new, p -> p);
+        public static final DeferredItem<Item> GEAR_DIAMOND = ITEMS.registerItem("gear_diamond", Item::new, p -> p);
+
         public static final DeferredItem<net.minecraft.world.item.BlockItem> ENGINE_REDSTONE = ITEMS
                         .registerSimpleBlockItem("engine_redstone", BCCoreBlocks.ENGINE_REDSTONE);
 

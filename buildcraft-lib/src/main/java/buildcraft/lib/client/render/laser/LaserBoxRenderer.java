@@ -1,2 +1,121 @@
+/*
+ * Copyright (c) 2017 SpaceToad and the BuildCraft team
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
+ */
 package buildcraft.lib.client.render.laser;
-public class LaserBoxRenderer {}
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Direction.Axis;
+import net.minecraft.world.phys.Vec3;
+
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+
+import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
+import buildcraft.lib.misc.VecUtil;
+import buildcraft.lib.misc.data.Box;
+
+/**
+ * Renders a laser box — 12 edges of a bounding box drawn as laser lines.
+ */
+@OnlyIn(Dist.CLIENT)
+public class LaserBoxRenderer {
+    private static final double RENDER_SCALE = 1 / 16.05;
+
+    public static void renderLaserBoxStatic(PoseStack poseStack, Box box, LaserType type, boolean center, Vec3 cameraPos) {
+        if (box == null || box.min() == null || box.max() == null) {
+            return;
+        }
+
+        List<LaserData_BC8> datas = makeLaserBox(box, type, center);
+
+        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+        VertexConsumer consumer = bufferSource.getBuffer(RenderTypes.lines());
+        for (LaserData_BC8 data : datas) {
+            LaserRenderer_BC8.renderLaser(poseStack, consumer, data, cameraPos);
+        }
+        bufferSource.endBatch(RenderTypes.lines());
+    }
+
+    private static List<LaserData_BC8> makeLaserBox(Box box, LaserType type, boolean center) {
+        boolean renderX = !center || box.size().getX() > 1;
+        boolean renderY = !center || box.size().getY() > 1;
+        boolean renderZ = !center || box.size().getZ() > 1;
+
+        Vec3 min = Vec3.atLowerCornerOf(box.min()).add(center ? VecUtil.VEC_HALF : Vec3.ZERO);
+        Vec3 max = Vec3.atLowerCornerOf(box.max()).add(center ? VecUtil.VEC_HALF : VecUtil.VEC_ONE);
+
+        List<LaserData_BC8> datas = new ArrayList<>();
+
+        Vec3[][][] vecs = new Vec3[2][2][2];
+        vecs[0][0][0] = new Vec3(min.x, min.y, min.z);
+        vecs[1][0][0] = new Vec3(max.x, min.y, min.z);
+        vecs[0][1][0] = new Vec3(min.x, max.y, min.z);
+        vecs[1][1][0] = new Vec3(max.x, max.y, min.z);
+        vecs[0][0][1] = new Vec3(min.x, min.y, max.z);
+        vecs[1][0][1] = new Vec3(max.x, min.y, max.z);
+        vecs[0][1][1] = new Vec3(min.x, max.y, max.z);
+        vecs[1][1][1] = new Vec3(max.x, max.y, max.z);
+
+        if (renderX) {
+            datas.add(makeLaser(type, vecs[0][0][0], vecs[1][0][0], Axis.X));
+            if (renderY) {
+                datas.add(makeLaser(type, vecs[0][1][0], vecs[1][1][0], Axis.X));
+                if (renderZ) {
+                    datas.add(makeLaser(type, vecs[0][1][1], vecs[1][1][1], Axis.X));
+                }
+            }
+            if (renderZ) {
+                datas.add(makeLaser(type, vecs[0][0][1], vecs[1][0][1], Axis.X));
+            }
+        }
+
+        if (renderY) {
+            datas.add(makeLaser(type, vecs[0][0][0], vecs[0][1][0], Axis.Y));
+            if (renderX) {
+                datas.add(makeLaser(type, vecs[1][0][0], vecs[1][1][0], Axis.Y));
+                if (renderZ) {
+                    datas.add(makeLaser(type, vecs[1][0][1], vecs[1][1][1], Axis.Y));
+                }
+            }
+            if (renderZ) {
+                datas.add(makeLaser(type, vecs[0][0][1], vecs[0][1][1], Axis.Y));
+            }
+        }
+
+        if (renderZ) {
+            datas.add(makeLaser(type, vecs[0][0][0], vecs[0][0][1], Axis.Z));
+            if (renderX) {
+                datas.add(makeLaser(type, vecs[1][0][0], vecs[1][0][1], Axis.Z));
+                if (renderY) {
+                    datas.add(makeLaser(type, vecs[1][1][0], vecs[1][1][1], Axis.Z));
+                }
+            }
+            if (renderY) {
+                datas.add(makeLaser(type, vecs[0][1][0], vecs[0][1][1], Axis.Z));
+            }
+        }
+
+        return datas;
+    }
+
+    private static LaserData_BC8 makeLaser(LaserType type, Vec3 min, Vec3 max, Axis axis) {
+        Direction faceForMin = VecUtil.getFacing(axis, true);
+        Direction faceForMax = VecUtil.getFacing(axis, false);
+        Vec3 dirMin = Vec3.atLowerCornerOf(faceForMin.getUnitVec3i());
+        Vec3 dirMax = Vec3.atLowerCornerOf(faceForMax.getUnitVec3i());
+        Vec3 one = min.add(dirMin.scale(1 / 16D));
+        Vec3 two = max.add(dirMax.scale(1 / 16D));
+        return new LaserData_BC8(type, one, two, RENDER_SCALE);
+    }
+}

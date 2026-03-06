@@ -17,9 +17,14 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
+import buildcraft.lib.client.render.MarkerRenderer;
+import buildcraft.lib.client.render.laser.LaserData_BC8;
+import buildcraft.lib.client.render.laser.LaserRenderer_BC8;
 import buildcraft.lib.marker.MarkerConnection;
 import buildcraft.lib.marker.MarkerSubCache;
 import buildcraft.lib.misc.VecUtil;
+
+import buildcraft.core.client.BuildCraftLaserManager;
 
 public class PathConnection extends MarkerConnection<PathConnection> {
     private static final double RENDER_SCALE = 1 / 16.05;
@@ -221,11 +226,10 @@ public class PathConnection extends MarkerConnection<PathConnection> {
 
     @OnlyIn(Dist.CLIENT)
     private static void renderLaser(Vec3 from, Vec3 to) {
-        // TODO: re-enable once BuildCraftLaserManager is ported
-        // Vec3 one = offset(from, to);
-        // Vec3 two = offset(to, from);
-        // LaserData_BC8 data = new LaserData_BC8(BuildCraftLaserManager.MARKER_PATH_CONNECTED, one, two, RENDER_SCALE);
-        // LaserRenderer_BC8.renderLaserStatic(data);
+        Vec3 one = offset(from, to);
+        Vec3 two = offset(to, from);
+        LaserData_BC8 data = new LaserData_BC8(BuildCraftLaserManager.MARKER_PATH_CONNECTED, one, two, RENDER_SCALE);
+        LaserRenderer_BC8.renderLaserStatic(MarkerRenderer.getPoseStack(), data, MarkerRenderer.getCameraPos());
     }
 
     @OnlyIn(Dist.CLIENT)

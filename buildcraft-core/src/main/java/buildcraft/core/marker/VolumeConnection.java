@@ -16,12 +16,14 @@ import net.minecraft.core.BlockPos;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
+import buildcraft.lib.client.render.MarkerRenderer;
 import buildcraft.lib.client.render.laser.LaserBoxRenderer;
 import buildcraft.lib.marker.MarkerConnection;
 import buildcraft.lib.misc.PositionUtil;
 import buildcraft.lib.misc.data.Box;
 
 import buildcraft.core.BCCoreConfig;
+import buildcraft.core.client.BuildCraftLaserManager;
 
 public class VolumeConnection extends MarkerConnection<VolumeConnection> {
     private static final double RENDER_SCALE = 1 / 16.05;
@@ -165,7 +167,9 @@ public class VolumeConnection extends MarkerConnection<VolumeConnection> {
     @Override
     @OnlyIn(Dist.CLIENT)
     public void renderInWorld() {
-        // Rendering is handled client-side through block entity renderer when implemented
-        // LaserBoxRenderer.renderLaserBoxStatic(box, BuildCraftLaserManager.MARKER_VOLUME_CONNECTED, true);
+        LaserBoxRenderer.renderLaserBoxStatic(
+                MarkerRenderer.getPoseStack(), box,
+                BuildCraftLaserManager.MARKER_VOLUME_CONNECTED, true,
+                MarkerRenderer.getCameraPos());
     }
 }

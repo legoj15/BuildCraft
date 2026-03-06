@@ -15,6 +15,9 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import net.minecraft.core.component.DataComponentType;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
 import java.util.function.Supplier;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.api.distmarker.Dist;
 // import buildcraft.lib.BCLib;
 // import buildcraft.lib.BCLibItems;
 import buildcraft.lib.marker.MarkerCache;
@@ -51,6 +54,14 @@ public class BCCore {
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::buildCreativeTabContents);
         modEventBus.addListener(this::registerPayloads);
+
+        // Register client-side rendering event on the GAME event bus (not mod bus)
+        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+            NeoForge.EVENT_BUS.addListener(
+                    net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentBlocks.class,
+                    event -> buildcraft.lib.client.render.MarkerRenderer.onRenderLevelStage(event)
+            );
+        }
     }
 
     private void preInit(FMLCommonSetupEvent event) {

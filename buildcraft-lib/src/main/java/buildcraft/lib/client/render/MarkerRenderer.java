@@ -15,12 +15,14 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
+import buildcraft.lib.client.render.laser.LaserBoxRenderer;
+import buildcraft.lib.client.render.laser.LaserData_BC8;
 import buildcraft.lib.marker.MarkerCache;
 import buildcraft.lib.marker.MarkerConnection;
 import buildcraft.lib.marker.MarkerSubCache;
 
 /**
- * Renders all marker connections in the world.
+ * Renders all marker connections and volume boxes in the world.
  * Hooked into NeoForge's RenderLevelStageEvent.AfterTranslucentBlocks.
  */
 @OnlyIn(Dist.CLIENT)
@@ -46,8 +48,32 @@ public class MarkerRenderer {
             }
         }
 
+        // Render all client-side VolumeBoxes
+        renderVolumeBoxes();
+
         currentPoseStack = null;
         currentCameraPos = null;
+    }
+
+    /**
+     * Renders all volume boxes from ClientVolumeBoxes.
+     * Uses reflection-free approach: the BCCore module calls this via the public API.
+     */
+    private static void renderVolumeBoxes() {
+        // VolumeBox rendering is handled by VolumeBoxRenderer in buildcraft-core
+        // since ClientVolumeBoxes is in buildcraft-core and cannot be referenced from buildcraft-lib.
+        // The renderer is registered separately.
+        if (volumeBoxRenderCallback != null) {
+            volumeBoxRenderCallback.run();
+        }
+    }
+
+    /** Callback for rendering volume boxes, set by buildcraft-core */
+    private static Runnable volumeBoxRenderCallback;
+
+    /** Called by buildcraft-core to register the volume box rendering callback */
+    public static void setVolumeBoxRenderCallback(Runnable callback) {
+        volumeBoxRenderCallback = callback;
     }
 
     /** Called by connection renderInWorld() implementations to get the current PoseStack */

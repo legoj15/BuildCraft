@@ -61,6 +61,10 @@ public class BCCore {
                     net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentBlocks.class,
                     event -> buildcraft.lib.client.render.MarkerRenderer.onRenderLevelStage(event)
             );
+            // Register volume box rendering callback
+            buildcraft.lib.client.render.MarkerRenderer.setVolumeBoxRenderCallback(
+                    buildcraft.core.client.VolumeBoxRenderer::renderAll
+            );
         }
     }
 

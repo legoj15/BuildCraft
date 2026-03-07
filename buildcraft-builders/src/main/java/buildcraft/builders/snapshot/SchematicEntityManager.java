@@ -10,8 +10,8 @@ import javax.annotation.Nonnull;
 
 import com.google.common.collect.Lists;
 
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.Identifier;
 
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.schematics.ISchematicEntity;
@@ -33,36 +33,36 @@ public class SchematicEntityManager {
     }
 
     @SuppressWarnings("WeakerAccess")
-    public static <S extends ISchematicEntity> S createCleanCopy(S schematicBlock) {
+    public static <S extends ISchematicEntity> S createCleanCopy(S schematicEntity) {
         return SchematicEntityFactoryRegistry
-            .getFactoryByInstance(schematicBlock)
+            .getFactoryByInstance(schematicEntity)
             .supplier
             .get();
     }
 
     @Nonnull
-    public static <S extends ISchematicEntity> NBTTagCompound writeToNBT(S schematicEntity) {
-        NBTTagCompound schematicEntityTag = new NBTTagCompound();
-        schematicEntityTag.setString(
+    public static <S extends ISchematicEntity> CompoundTag writeToNBT(S schematicEntity) {
+        CompoundTag schematicEntityTag = new CompoundTag();
+        schematicEntityTag.putString(
             "name",
             SchematicEntityFactoryRegistry
                 .getFactoryByInstance(schematicEntity)
                 .name
                 .toString()
         );
-        schematicEntityTag.setTag("data", schematicEntity.serializeNBT());
+        schematicEntityTag.put("data", schematicEntity.serializeNBT());
         return schematicEntityTag;
     }
 
     @Nonnull
-    public static ISchematicEntity readFromNBT(NBTTagCompound schematicEntityTag) throws InvalidInputDataException {
-        ResourceLocation name = new ResourceLocation(schematicEntityTag.getString("name"));
+    public static ISchematicEntity readFromNBT(CompoundTag schematicEntityTag) throws InvalidInputDataException {
+        Identifier name = Identifier.parse(schematicEntityTag.getStringOr("name", ""));
         SchematicEntityFactory<?> factory = SchematicEntityFactoryRegistry.getFactoryByName(name);
         if (factory == null) {
             throw new InvalidInputDataException("Unknown schematic type " + name);
         }
         ISchematicEntity schematicEntity = factory.supplier.get();
-        NBTTagCompound data = schematicEntityTag.getCompoundTag("data");
+        CompoundTag data = schematicEntityTag.getCompoundOrEmpty("data");
         try {
             schematicEntity.deserializeNBT(data);
             return schematicEntity;

@@ -10,8 +10,8 @@ import javax.annotation.Nonnull;
 
 import com.google.common.collect.Lists;
 
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.Identifier;
 
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.schematics.ISchematicBlock;
@@ -41,28 +41,28 @@ public class SchematicBlockManager {
     }
 
     @Nonnull
-    public static <S extends ISchematicBlock> NBTTagCompound writeToNBT(S schematicBlock) {
-        NBTTagCompound schematicBlockTag = new NBTTagCompound();
-        schematicBlockTag.setString(
+    public static <S extends ISchematicBlock> CompoundTag writeToNBT(S schematicBlock) {
+        CompoundTag schematicBlockTag = new CompoundTag();
+        schematicBlockTag.putString(
             "name",
             SchematicBlockFactoryRegistry
                 .getFactoryByInstance(schematicBlock)
                 .name
                 .toString()
         );
-        schematicBlockTag.setTag("data", schematicBlock.serializeNBT());
+        schematicBlockTag.put("data", schematicBlock.serializeNBT());
         return schematicBlockTag;
     }
 
     @Nonnull
-    public static ISchematicBlock readFromNBT(NBTTagCompound schematicBlockTag) throws InvalidInputDataException {
-        ResourceLocation name = new ResourceLocation(schematicBlockTag.getString("name"));
+    public static ISchematicBlock readFromNBT(CompoundTag schematicBlockTag) throws InvalidInputDataException {
+        Identifier name = Identifier.parse(schematicBlockTag.getStringOr("name", ""));
         SchematicBlockFactory<?> factory = SchematicBlockFactoryRegistry.getFactoryByName(name);
         if (factory == null) {
             throw new InvalidInputDataException("Unknown schematic type " + name);
         }
         ISchematicBlock schematicBlock = factory.supplier.get();
-        NBTTagCompound data = schematicBlockTag.getCompoundTag("data");
+        CompoundTag data = schematicBlockTag.getCompoundOrEmpty("data");
         try {
             schematicBlock.deserializeNBT(data);
             return schematicBlock;

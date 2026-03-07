@@ -6,10 +6,10 @@
 
 package buildcraft.builders.snapshot;
 
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.Rotation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Rotation;
 
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.schematics.ISchematicBlock;
@@ -36,32 +36,32 @@ public final class SchematicBlockAir implements ISchematicBlock {
     }
 
     @Override
-    public boolean canBuild(World world, BlockPos blockPos) {
+    public boolean canBuild(Level level, BlockPos blockPos) {
         return false;
     }
 
     @Override
-    public boolean build(World world, BlockPos blockPos) {
+    public boolean build(Level level, BlockPos blockPos) {
         return true;
     }
 
     @Override
-    public boolean buildWithoutChecks(World world, BlockPos blockPos) {
+    public boolean buildWithoutChecks(Level level, BlockPos blockPos) {
         return true;
     }
 
     @Override
-    public boolean isBuilt(World world, BlockPos blockPos) {
+    public boolean isBuilt(Level level, BlockPos blockPos) {
         return true;
     }
 
     @Override
-    public NBTTagCompound serializeNBT() {
-        return new NBTTagCompound();
+    public CompoundTag serializeNBT() {
+        return new CompoundTag();
     }
 
     @Override
-    public void deserializeNBT(NBTTagCompound nbt) throws InvalidInputDataException {
+    public void deserializeNBT(CompoundTag nbt) throws InvalidInputDataException {
     }
 
     @Override

@@ -60,8 +60,7 @@ public class Blueprint extends Snapshot {
     @Override
     public CompoundTag serializeNBT() {
         CompoundTag nbt = super.serializeNBT();
-        // TODO: Phase D — SchematicBlockManager.writeToNBT
-        // nbt.put("palette", NBTUtilBC.writeCompoundList(palette.stream().map(SchematicBlockManager::writeToNBT)));
+        nbt.put("palette", NBTUtilBC.writeCompoundList(palette.stream().map(SchematicBlockManager::writeToNBT)));
         ListTag list = new ListTag();
         for (int z = 0; z < size.getZ(); z++) {
             for (int y = 0; y < size.getY(); y++) {
@@ -71,8 +70,7 @@ public class Blueprint extends Snapshot {
             }
         }
         nbt.put("data", list);
-        // TODO: Phase D — SchematicEntityManager.writeToNBT
-        // nbt.put("entities", NBTUtilBC.writeCompoundList(entities.stream().map(SchematicEntityManager::writeToNBT)));
+        nbt.put("entities", NBTUtilBC.writeCompoundList(entities.stream().map(SchematicEntityManager::writeToNBT)));
         return nbt;
     }
 
@@ -80,11 +78,10 @@ public class Blueprint extends Snapshot {
     public void deserializeNBT(CompoundTag nbt) throws InvalidInputDataException {
         super.deserializeNBT(nbt);
         palette.clear();
-        // TODO: Phase D — SchematicBlockManager.readFromNBT
-        // for (CompoundTag schematicBlockTag :
-        //     NBTUtilBC.readCompoundList(nbt.get("palette")).collect(Collectors.toList())) {
-        //     palette.add(SchematicBlockManager.readFromNBT(schematicBlockTag));
-        // }
+        for (CompoundTag schematicBlockTag :
+            NBTUtilBC.readCompoundList(nbt.get("palette")).collect(Collectors.toList())) {
+            palette.add(SchematicBlockManager.readFromNBT(schematicBlockTag));
+        }
         data = new int[Snapshot.getDataSize(size)];
 
         // Support both ListTag and IntArray for data
@@ -118,11 +115,11 @@ public class Blueprint extends Snapshot {
                 }
             }
         }
-        // TODO: Phase D — SchematicEntityManager.readFromNBT
-        // for (CompoundTag schematicEntityTag :
-        //     NBTUtilBC.readCompoundList(nbt.get("entities")).collect(Collectors.toList())) {
-        //     entities.add(SchematicEntityManager.readFromNBT(schematicEntityTag));
-        // }
+        entities.clear();
+        for (CompoundTag schematicEntityTag :
+            NBTUtilBC.readCompoundList(nbt.get("entities")).collect(Collectors.toList())) {
+            entities.add(SchematicEntityManager.readFromNBT(schematicEntityTag));
+        }
     }
 
     @Override

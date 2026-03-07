@@ -13,9 +13,11 @@ import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.DoubleTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.world.phys.Vec3;
 
 public class NBTUtilBC {
 
@@ -83,6 +85,47 @@ public class NBTUtilBC {
                     .mapToObj(i -> {
                         Tag element = listTag.get(i);
                         return element instanceof CompoundTag ct ? ct : new CompoundTag();
+                    });
+        }
+        return Stream.empty();
+    }
+
+    // Vec3 serialization
+
+    public static ListTag writeVec3(Vec3 vec) {
+        ListTag list = new ListTag();
+        list.add(DoubleTag.valueOf(vec.x));
+        list.add(DoubleTag.valueOf(vec.y));
+        list.add(DoubleTag.valueOf(vec.z));
+        return list;
+    }
+
+    @Nullable
+    public static Vec3 readVec3(@Nullable Tag tag) {
+        if (tag instanceof ListTag listTag && listTag.size() >= 3) {
+            return new Vec3(
+                listTag.getDoubleOr(0, 0.0),
+                listTag.getDoubleOr(1, 0.0),
+                listTag.getDoubleOr(2, 0.0)
+            );
+        }
+        return null;
+    }
+
+    // String list serialization
+
+    public static ListTag writeStringList(Stream<String> stream) {
+        ListTag list = new ListTag();
+        stream.map(StringTag::valueOf).forEach(list::add);
+        return list;
+    }
+
+    public static Stream<String> readStringList(@Nullable Tag tag) {
+        if (tag instanceof ListTag listTag) {
+            return IntStream.range(0, listTag.size())
+                    .mapToObj(i -> {
+                        Tag element = listTag.get(i);
+                        return element instanceof StringTag st ? st.value() : "";
                     });
         }
         return Stream.empty();

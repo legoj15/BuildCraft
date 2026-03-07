@@ -3,5 +3,6 @@
     "item.buildcraftlib.guide_note": "Guide Note",
     "buildcraft.guide.book.buildcraftcore_main": "BuildCraft Guide Book",
     "buildcraft.guide.book.buildcraftlib_config": "BuildCraft Configuration Guide",
-    "buildcraft.guide.not_available": "Guide book not yet available."
+    "buildcraft.guide.not_available": "Guide book not yet available.",
+    "item.buildcraftlib.debugger": "Debugger"
 }

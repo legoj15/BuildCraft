@@ -8,6 +8,7 @@ package buildcraft.lib;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import buildcraft.lib.item.ItemDebugger;
 import buildcraft.lib.item.ItemGuide;
 import buildcraft.lib.item.ItemGuideNote;
 
@@ -19,4 +20,7 @@ public class BCLibItems {
 
     public static final DeferredItem<ItemGuideNote> GUIDE_NOTE = ITEMS.registerItem("guide_note",
             ItemGuideNote::new, props -> props.stacksTo(1));
+
+    public static final DeferredItem<ItemDebugger> DEBUGGER = ITEMS.registerItem("debugger",
+            ItemDebugger::new, props -> props.stacksTo(1));
 }

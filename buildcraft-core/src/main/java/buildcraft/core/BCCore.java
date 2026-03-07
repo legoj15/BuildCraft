@@ -157,6 +157,7 @@ public class BCCore {
             event.accept(BCLibItems.GUIDE); // "BuildCraft Guide Book" (default, no component)
             event.accept(ItemGuide.createForBook(BCLibItems.GUIDE.get(), "buildcraftlib:config")); // "BuildCraft Configuration Guide"
             event.accept(BCLibItems.GUIDE_NOTE);
+            event.accept(BCLibItems.DEBUGGER);
         }
     }
 }

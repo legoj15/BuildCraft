@@ -6,8 +6,6 @@
 
 package buildcraft.lib.gui.pos;
 
-import net.minecraft.resources.Identifier;
-
 /** An immutable {@link IGuiArea}. */
 public final class GuiRectangle implements IGuiArea {
     /** A rectangle where all of the fields are set to 0. */

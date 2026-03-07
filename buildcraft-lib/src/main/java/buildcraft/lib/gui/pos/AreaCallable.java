@@ -1,7 +1,5 @@
 package buildcraft.lib.gui.pos;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.function.DoubleSupplier;
 
 public class AreaCallable implements IGuiArea {

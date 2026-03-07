@@ -6,10 +6,7 @@
 
 package buildcraft.lib.gui.pos;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.function.DoubleSupplier;
-
 
 /** Defines a single point somewhere on the screen. */
 public interface IGuiPosition {
@@ -18,23 +15,14 @@ public interface IGuiPosition {
     double getY();
 
     default IGuiPosition offset(DoubleSupplier x, DoubleSupplier y) {
-        if (x instanceof IConstantNode && y instanceof IConstantNode) {
-            return offset(x.getAsDouble(), y.getAsDouble());
-        }
         return offset(new PositionCallable(x, y));
     }
 
     default IGuiPosition offset(double x, DoubleSupplier y) {
-        if (y instanceof IConstantNode) {
-            return offset(x, y.getAsDouble());
-        }
         return offset(new PositionCallable(x, y));
     }
 
     default IGuiPosition offset(DoubleSupplier x, double y) {
-        if (x instanceof IConstantNode) {
-            return offset(x.getAsDouble(), y);
-        }
         return offset(new PositionCallable(x, y));
     }
 
@@ -47,9 +35,6 @@ public interface IGuiPosition {
     }
 
     static IGuiPosition create(DoubleSupplier x, DoubleSupplier y) {
-        if (x instanceof IConstantNode && y instanceof IConstantNode) {
-            return new PositionAbsolute(x.getAsDouble(), y.getAsDouble());
-        }
         return new PositionCallable(x, y);
     }
 }

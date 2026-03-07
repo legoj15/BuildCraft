@@ -6,10 +6,9 @@
 
 package buildcraft.lib.client.sprite;
 
-import net.minecraft.resources.Identifier;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.world.InteractionResult;
+
+import net.minecraft.resources.Identifier;
 
 import buildcraft.api.core.render.ISprite;
 
@@ -36,7 +35,8 @@ public class SpriteRaw implements ISprite {
 
     @Override
     public void bindTexture() {
-        Minecraft.getInstance().renderEngine.bindTexture(location);
+        // In 1.21+, texture binding is handled through RenderType/GuiGraphics.
+        // This is a no-op stub until the rendering pipeline is modernized.
     }
 
     @Override

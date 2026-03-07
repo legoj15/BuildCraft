@@ -6,8 +6,6 @@
 
 package buildcraft.lib.gui.pos;
 
-import net.minecraft.resources.Identifier;
-
 public final class MousePosition implements IGuiPosition {
     private double x = -10, y = -10;
 

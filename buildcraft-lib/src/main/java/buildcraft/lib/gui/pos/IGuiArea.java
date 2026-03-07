@@ -6,10 +6,7 @@
 
 package buildcraft.lib.gui.pos;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.function.DoubleSupplier;
-
 
 /** Defines an area somewhere on the screen. */
 public interface IGuiArea extends IGuiPosition {
@@ -94,18 +91,12 @@ public interface IGuiArea extends IGuiPosition {
 
     @Override
     default IGuiArea offset(double x, DoubleSupplier y) {
-        if (y instanceof IConstantNode) {
-            return offset(x, y.getAsDouble());
-        }
-        return offset(NodeConstantDouble.of(x), y);
+        return create(() -> getX() + x, () -> getY() + y.getAsDouble(), this::getWidth, this::getHeight);
     }
 
     @Override
     default IGuiArea offset(DoubleSupplier x, double y) {
-        if (x instanceof IConstantNode) {
-            return offset(x.getAsDouble(), y);
-        }
-        return offset(x, NodeConstantDouble.of(y));
+        return create(() -> getX() + x.getAsDouble(), () -> getY() + y, this::getWidth, this::getHeight);
     }
 
     @Override
@@ -136,16 +127,10 @@ public interface IGuiArea extends IGuiPosition {
     }
 
     default IGuiArea expand(DoubleSupplier by) {
-        if (by instanceof IConstantNode) {
-            return expand(by.getAsDouble());
-        }
         return expand(by, by);
     }
 
     default IGuiArea expand(DoubleSupplier dX, DoubleSupplier dY) {
-        if (dX instanceof IConstantNode && dY instanceof IConstantNode) {
-            return expand(dX.getAsDouble(), dY.getAsDouble());
-        }
         return create(//
             () -> getX() - dX.getAsDouble(), //
             () -> getY() - dY.getAsDouble(), //
@@ -159,17 +144,10 @@ public interface IGuiArea extends IGuiPosition {
     }
 
     static IGuiArea create(DoubleSupplier width, DoubleSupplier height) {
-        if (width instanceof IConstantNode && height instanceof IConstantNode) {
-            return new GuiRectangle(width.getAsDouble(), height.getAsDouble());
-        }
         return new AreaCallable(width, height);
     }
 
     static IGuiArea create(DoubleSupplier x, DoubleSupplier y, DoubleSupplier width, DoubleSupplier height) {
-        if (x instanceof IConstantNode && y instanceof IConstantNode && width instanceof IConstantNode
-            && height instanceof IConstantNode) {
-            return new GuiRectangle(x.getAsDouble(), y.getAsDouble(), width.getAsDouble(), height.getAsDouble());
-        }
         return new AreaCallable(x, y, width, height);
     }
 

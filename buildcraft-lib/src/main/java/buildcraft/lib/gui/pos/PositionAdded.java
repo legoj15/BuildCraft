@@ -6,8 +6,6 @@
 
 package buildcraft.lib.gui.pos;
 
-import net.minecraft.resources.Identifier;
-
 public class PositionAdded implements IGuiPosition {
     private final IGuiPosition a, b;
 

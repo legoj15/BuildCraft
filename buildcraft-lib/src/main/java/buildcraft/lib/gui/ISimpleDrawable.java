@@ -6,8 +6,6 @@
 
 package buildcraft.lib.gui;
 
-import net.minecraft.resources.Identifier;
-
 import buildcraft.lib.gui.pos.IGuiPosition;
 
 @FunctionalInterface

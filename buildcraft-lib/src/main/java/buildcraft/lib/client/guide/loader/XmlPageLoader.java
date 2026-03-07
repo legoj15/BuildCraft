@@ -12,6 +12,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 
@@ -21,21 +22,18 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.nbt.TagParser;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.ChatFormatting;
-
-import net.minecraft.tags.ItemTags;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.registry.IScriptableRegistry.OptionallyDisabled;
 
-import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.GuideManager;
 import buildcraft.lib.client.guide.GuidePageRegistry;
@@ -63,8 +61,6 @@ import buildcraft.lib.client.guide.ref.GuideGroupSet;
 import buildcraft.lib.client.guide.ref.GuideGroupSet.GroupDirection;
 import buildcraft.lib.gui.ISimpleDrawable;
 import buildcraft.lib.misc.LocaleUtil;
-import buildcraft.lib.misc.data.ProfilerBC;
-import buildcraft.lib.misc.data.ProfilerBC.IProfilerSection;
 
 // This isn't a proper XML loader - there isn't a root tag.
 // Instead it just assumes everything is a paragraph, unless more specific tags are given
@@ -74,25 +70,17 @@ public enum XmlPageLoader implements IPageLoaderText {
     public static final Map<String, SpecialParser> TAG_FACTORIES = new HashMap<>();
     public static final Map<String, MultiPartJoiner> GUIDE_PART_MULTIS = new HashMap<>();
 
-    /** Used to show "in-game" guide information, narrated from the perspective of the player. (As if they were actively
-     * researching how everything worked). The inverse is for a more formal, wikipedia-like tone used to convey the
-     * information, pure and simple.
-     * <p>
-     * This is enabled by default in-game, and always disabled in exports. */
+    /** Used to show "in-game" guide information, narrated from the perspective of the player. */
     public static boolean SHOW_LORE = true;
 
-    /** Used to show extra "hints" that the described thing can be used for, or different ways of using it in
-     * combinations with other blocks/items. Essentially this is for "recommended usages" of different things. (As
-     * working this out is part of the fun it is not required. As such this is disabled by default, but toggle-able
-     * in-game and planned to be toggle-able when exported. */
+    /** Used to show extra "hints" that the described thing can be used for. */
     public static boolean SHOW_HINTS = false;
 
-    /** Used to show all of the numbers used when calculating various things, like pipe flow rate, extraction rate,
-     * pulse rate, etc.
-     * <p>
-     * Disabled by default, but toggle-able in-game and planned to be toggle-able when exported. */
+    /** Used to show all of the numbers used when calculating various things. */
+    public static boolean SHOW_DETAIL = false; // Was BCLibConfig.guideShowDetail
+
     public static boolean shouldShowDetail() {
-        return BCLibConfig.guideShowDetail;
+        return SHOW_DETAIL;
     }
 
     private static final class GuideTextFactory implements GuidePartFactory {
@@ -144,8 +132,8 @@ public enum XmlPageLoader implements IPageLoaderText {
         putMulti("usages", XmlPageLoader::loadAllUsages);
         putMulti("recipes_usages", XmlPageLoader::loadAllRecipesAndUsages);
         putSingle("image", XmlPageLoader::loadImage);
-        putCode("json_insn"/* , CodeDisplay.JSON_INSN */);
-        putCode("guide_md"/* , CodeDisplay.MARKDOWN */);
+        putCode("json_insn");
+        putCode("guide_md");
     }
 
     public static void putDuelMultiPartType(String name, BooleanSupplier isVisible) {
@@ -182,13 +170,6 @@ public enum XmlPageLoader implements IPageLoaderText {
                     lines.set(i, ChatFormatting.DARK_PURPLE + str);
                     continue;
                 }
-                // FIXME: This doesn't really work properly! We will need to use the same system that the rest of the
-                // xml does for this...
-                // (So basically generate colour tags around everything that we want to change)
-                // TODO: Move this outside of this method! (We might need to do it directly in the main loadPage so that
-                // everything is simpler)
-                // and then we only need a map of lang name to a def class with all of the formatting defs.
-                // (And customisable syntax highlighting? Why?)
                 str = str.replace("{", ChatFormatting.DARK_GREEN + "{" + ChatFormatting.RESET);
                 str = str.replace("}", ChatFormatting.DARK_GREEN + "}" + ChatFormatting.RESET);
                 str = str.replaceAll("\"(.+)\"", ChatFormatting.DARK_BLUE + "$0" + ChatFormatting.RESET);
@@ -215,38 +196,16 @@ public enum XmlPageLoader implements IPageLoaderText {
     @Override
     public GuidePageFactory loadPage(BufferedReader reader, Identifier name, PageEntry<?> entry, ProfilerFiller prof)
         throws IOException {
-        try (IProfilerSection p = new ProfilerBC(prof).start("xml")) {
+        prof.push("xml");
+        try {
             return loadPage0(reader, name, entry, prof);
+        } finally {
+            prof.pop();
         }
     }
 
     private static GuidePageFactory loadPage0(BufferedReader reader, Identifier name, PageEntry<?> entry,
         ProfilerFiller prof) throws IOException, InvalidInputDataException {
-        // Needs to support:
-        // - start/end tags (such as <lore></lore>)
-        // - nested tags (such as <lore>Spooky<bold> Skeletons</bold></lore>)
-        // full tag set:
-        // - Multi-nestling
-        // - - <lore>
-        // - - <description>
-        // - - <hint>
-        // - - <note>
-        // - - <recipes>
-        // - Compressed into single (text)
-        // - - <bold>
-        // - - <italic>
-        // - - <underline>
-        // - - <strikethrough>
-        // - Other
-        // - - <new_page/>
-        // - - <chapter name="some.i18n.name"/>
-        // - - <recipe stack="" type=""/>
-        // - - <recipes stack=""/>
-        // - - <usages stack=""/>
-        // - - <recipes_usages stack=""/>
-        // - - <image src="" width="" height=""/>
-
-        // TODO: Flesh out the notes system, so that notes store in ItemGuideNote, and can be opened in a gui.
 
         Deque<List<GuidePartFactory>> nestedParts = new ArrayDeque<>();
         Deque<XmlTag> nestedTags = new ArrayDeque<>();
@@ -332,11 +291,11 @@ public enum XmlPageLoader implements IPageLoaderText {
                 if (c == '<') {
                     XmlTag currentTag = parseTag(line.substring(i));
                     if (currentTag != null) {
-                        ChatFormatting formatting = ChatFormatting.getValueByName(currentTag.name.replace("_", ""));
+                        ChatFormatting formatting = ChatFormatting.getByName(currentTag.name.replace("_", ""));
                         if (formatting != null) {
                             if (currentTag.state == XmlTagState.END) {
                                 formattingElements.remove(formatting);
-                                if (formatColours.peek() == formatting) {
+                                if (!formatColours.isEmpty() && formatColours.peek() == formatting) {
                                     formatColours.remove();
                                 }
                             } else if (currentTag.state == XmlTagState.START) {
@@ -347,7 +306,7 @@ public enum XmlPageLoader implements IPageLoaderText {
                                 }
                             }
                             completeLine += ChatFormatting.RESET;
-                            if (formatColours.peek() != null) {
+                            if (!formatColours.isEmpty() && formatColours.peek() != null) {
                                 completeLine += formatColours.peek();
                             }
                             for (ChatFormatting format : formattingElements) {
@@ -424,22 +383,24 @@ public enum XmlPageLoader implements IPageLoaderText {
                 }
                 String key = attribs.substring(0, index);
                 String after = attribs.substring(index + 1);
-                ITokenizingContext tokenCtx = ITokenizingContext.createFromString(after);
-                TokenResult result = TokenizerDefaults.GOBBLER_QUOTE.tokenizePart(tokenCtx);
-                int totalLength = index + 1;
+                // Simplified attribute parsing: handle quoted and unquoted values
                 String value;
-                if (result instanceof ResultConsume) {
-                    value = tokenCtx.get(((ResultConsume) result).length);
-                    totalLength += value.length();
-                    value = value.substring(1, value.length() - 1);
-                } else {
-                    result = TokenizerDefaults.GOBBLER_WORD.tokenizePart(tokenCtx);
-                    if (result instanceof ResultConsume) {
-                        value = tokenCtx.get(((ResultConsume) result).length);
-                        totalLength += value.length();
-                    } else {
+                int totalLength = index + 1;
+                if (after.startsWith("\"")) {
+                    int closeQuote = after.indexOf('"', 1);
+                    if (closeQuote < 0) {
                         throw new InvalidInputDataException("Not a valid tag value " + after);
                     }
+                    value = after.substring(1, closeQuote);
+                    totalLength += closeQuote + 1;
+                } else {
+                    int spaceIdx = after.indexOf(' ');
+                    if (spaceIdx < 0) {
+                        value = after;
+                    } else {
+                        value = after.substring(0, spaceIdx);
+                    }
+                    totalLength += value.length();
                 }
                 attributes.put(key, value);
                 attribs = attribs.substring(totalLength);
@@ -503,8 +464,8 @@ public enum XmlPageLoader implements IPageLoaderText {
             int intLevel = Integer.parseInt(level);
             return chapter(name, intLevel);
         } catch (NumberFormatException nfe) {
-            String str = "§4" + tag.originalString + "§r";
-            str = str.replace(level, "§c" + level + "§4");
+            String str = "\u00a74" + tag.originalString + "\u00a7r";
+            str = str.replace(level, "\u00a7c" + level + "\u00a74");
             return new GuideTextFactory(str);
         }
     }
@@ -519,7 +480,7 @@ public enum XmlPageLoader implements IPageLoaderText {
         final PageLink link;
         if (type == null) {
             Identifier location = Identifier.parse(to);
-            PageEntry<?> entry = GuidePageRegistry.INSTANCE.getReloadableEntryMap().get(location);
+            PageEntry<?> entry = (PageEntry<?>) GuidePageRegistry.INSTANCE.getReloadableEntryMap().get(location);
             if (entry == null) {
                 BCLog.logger.warn("[lib.guide.loader.xml] Found a link tag to an unknown page! " + tag);
                 return null;
@@ -535,7 +496,8 @@ public enum XmlPageLoader implements IPageLoaderText {
         } else {
             PageValueType<?> valueType = GuidePageRegistry.INSTANCE.types.get(type);
             if (valueType != null) {
-                OptionallyDisabled<PageLink> linkq = valueType.createLink(to, prof);
+                @SuppressWarnings("unchecked")
+                OptionallyDisabled<PageLink> linkq = (OptionallyDisabled<PageLink>) (OptionallyDisabled<?>) valueType.createLink(to, prof);
                 if (linkq.isPresent()) {
                     link = linkq.get();
                 } else {
@@ -588,7 +550,7 @@ public enum XmlPageLoader implements IPageLoaderText {
             return null;
         }
         String type = tag.get("type");
-        if (type == null) {
+        if (type != null) {
             IStackRecipes recipes = RecipeLookupHelper.handlerTypes.get(type);
             if (recipes == null) {
                 BCLog.logger.warn(
@@ -602,7 +564,7 @@ public enum XmlPageLoader implements IPageLoaderText {
                 }
             }
         }
-        List<GuidePartFactory> list = RecipeLookupHelper.getAllRecipes(stack, prof);
+        List<GuidePartFactory> list = RecipeLookupHelper.getAllRecipes(stack);
         if (list.isEmpty()) {
             return null;
         } else {
@@ -615,7 +577,7 @@ public enum XmlPageLoader implements IPageLoaderText {
         if (stack == null) {
             return null;
         }
-        return RecipeLookupHelper.getAllRecipes(stack, prof);
+        return RecipeLookupHelper.getAllRecipes(stack);
     }
 
     private static List<GuidePartFactory> loadAllUsages(XmlTag tag, ProfilerFiller prof) {
@@ -623,7 +585,7 @@ public enum XmlPageLoader implements IPageLoaderText {
         if (stack == null) {
             return null;
         }
-        return RecipeLookupHelper.getAllUsages(stack, prof);
+        return RecipeLookupHelper.getAllUsages(stack);
     }
 
     private static List<GuidePartFactory> loadAllRecipesAndUsages(XmlTag tag, ProfilerFiller prof) {
@@ -637,18 +599,17 @@ public enum XmlPageLoader implements IPageLoaderText {
             try {
                 chapterLevel = Integer.parseInt(chapterLevelStr);
             } catch (NumberFormatException nfe) {
-                String str = "§4" + tag.originalString + "§r";
-                str = str.replace(chapterLevelStr, "§c" + chapterLevelStr + "§4");
+                String str = "\u00a74" + tag.originalString + "\u00a7r";
+                str = str.replace(chapterLevelStr, "\u00a7c" + chapterLevelStr + "\u00a74");
                 return Collections.singletonList(new GuideTextFactory(str));
             }
         }
-        return loadAllCrafting(stack, prof, chapterLevel);
+        return loadAllCrafting(stack, chapterLevel);
     }
 
-    public static List<GuidePartFactory> loadAllCrafting(@Nonnull ItemStack stack, ProfilerFiller prof, int chapterLevel) {
-        prof.push("recipes");
+    public static List<GuidePartFactory> loadAllCrafting(@Nonnull ItemStack stack, int chapterLevel) {
         List<GuidePartFactory> list = new ArrayList<>();
-        List<GuidePartFactory> recipeParts = RecipeLookupHelper.getAllRecipes(stack, prof);
+        List<GuidePartFactory> recipeParts = RecipeLookupHelper.getAllRecipes(stack);
         if (recipeParts.size() > 0) {
             list.add(GuidePartNewPage::new);
             if (recipeParts.size() == 1) {
@@ -658,8 +619,7 @@ public enum XmlPageLoader implements IPageLoaderText {
             }
             list.addAll(recipeParts);
         }
-        prof.endStartSection("uses");
-        List<GuidePartFactory> usageParts = RecipeLookupHelper.getAllUsages(stack, prof);
+        List<GuidePartFactory> usageParts = RecipeLookupHelper.getAllUsages(stack);
         // Ensure we don't have any duplicate recipes
         usageParts.removeAll(recipeParts);
         if (usageParts.size() > 0) {
@@ -673,12 +633,11 @@ public enum XmlPageLoader implements IPageLoaderText {
             }
             list.addAll(usageParts);
         }
-        prof.pop();
         return list;
     }
 
-    public static void appendAllCrafting(ItemStack stack, List<GuidePart> parts, GuiGuide gui, ProfilerFiller prof) {
-        List<GuidePartFactory> recipeFactories = RecipeLookupHelper.getAllRecipes(stack, prof);
+    public static void appendAllCrafting(ItemStack stack, List<GuidePart> parts, GuiGuide gui) {
+        List<GuidePartFactory> recipeFactories = RecipeLookupHelper.getAllRecipes(stack);
         List<GuidePart> recipeParts = new ArrayList<>();
         for (GuidePartFactory factory : recipeFactories) {
             recipeParts.add(factory.createNew(gui));
@@ -693,7 +652,7 @@ public enum XmlPageLoader implements IPageLoaderText {
             }
             parts.addAll(recipeParts);
         }
-        List<GuidePartFactory> usageFactories = RecipeLookupHelper.getAllUsages(stack, prof);
+        List<GuidePartFactory> usageFactories = RecipeLookupHelper.getAllUsages(stack);
         List<GuidePart> usageParts = new ArrayList<>();
         for (GuidePartFactory factory : usageFactories) {
             usageParts.add(factory.createNew(gui));
@@ -747,20 +706,18 @@ public enum XmlPageLoader implements IPageLoaderText {
     public static ItemStack loadItemStack(XmlTag tag) {
         String id = tag.get("stack");
         String count = tag.get("count");
-        String data = tag.get("data");
         String nbt = tag.get("nbt");
         if (id == null) {
             BCLog.logger.warn("[lib.guide.loader.xml] Missing 'stack' for an itemstack from " + tag);
             return null;
         }
-        ItemStack stack = null;
-        Item item = Item.getByNameOrId(id.trim());
-        if (item != null) {
-            stack = new ItemStack(item);
-        } else {
+        Identifier itemId = Identifier.parse(id.trim());
+        Optional<Item> optionalItem = BuiltInRegistries.ITEM.getOptional(itemId);
+        if (optionalItem.isEmpty()) {
             BCLog.logger.warn("[lib.guide.loader.xml] " + id + " was not a valid item!");
             return null;
         }
+        ItemStack stack = new ItemStack(optionalItem.get());
 
         if (count != null) {
             int stackSize = 1;
@@ -772,25 +729,12 @@ public enum XmlPageLoader implements IPageLoaderText {
             stack.setCount(stackSize);
         }
 
-        if (data != null) {
-            try {
-                int meta = Integer.parseInt(data.trim());
-                if (meta == -1) {
-                    // Use oredict
-                    meta = ItemTags.WILDCARD_VALUE;
-                }
-                stack = new ItemStack(stack.getItem(), stack.getCount(), meta);
-            } catch (NumberFormatException nfe) {
-                BCLog.logger.warn("[lib.guide.loader.xml] " + data + " was not a valid number: " + nfe.getMessage());
-            }
-        }
+        // "data" attribute (metadata) ignored — metadata does not exist in 1.21
 
         if (nbt != null) {
-            try {
-                stack.setTagCompound(TagParser.parseTag(nbt));
-            } catch (CommandSyntaxException e) {
-                BCLog.logger.warn("[lib.guide.loader.xml] " + nbt + " was not a valid nbt tag: " + e.getMessage());
-            }
+            // In 1.21, item components replace NBT on stacks.
+            // Legacy NBT parsing is not supported. Log and ignore.
+            BCLog.logger.info("[lib.guide.loader.xml] NBT attribute on item stacks is not supported in 1.21, ignoring: " + nbt);
         }
         return stack;
     }

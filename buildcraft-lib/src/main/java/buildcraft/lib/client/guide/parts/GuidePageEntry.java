@@ -6,8 +6,6 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.world.InteractionResult;
-
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.GuideManager;
 import buildcraft.lib.client.guide.entry.PageEntry;

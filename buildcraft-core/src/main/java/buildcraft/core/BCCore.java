@@ -20,12 +20,13 @@ import java.util.function.Supplier;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
-// import buildcraft.lib.BCLib;
-// import buildcraft.lib.BCLibItems;
+
 import buildcraft.lib.marker.MarkerCache;
 import buildcraft.lib.net.MessageMarker;
 import buildcraft.core.marker.PathCache;
 import buildcraft.core.marker.VolumeCache;
+import buildcraft.lib.BCLibItems;
+import buildcraft.lib.item.ItemGuide;
 
 @Mod(BCCore.MODID)
 public class BCCore {
@@ -152,6 +153,10 @@ public class BCCore {
             event.accept(BCCoreItems.GEAR_IRON);
             event.accept(BCCoreItems.GEAR_GOLD);
             event.accept(BCCoreItems.GEAR_DIAMOND);
+            // Guide books (buildcraftlib items)
+            event.accept(BCLibItems.GUIDE); // "BuildCraft Guide Book" (default, no component)
+            event.accept(ItemGuide.createForBook(BCLibItems.GUIDE.get(), "buildcraftlib:config")); // "BuildCraft Configuration Guide"
+            event.accept(BCLibItems.GUIDE_NOTE);
         }
     }
 }

@@ -1,2 +1,35 @@
+/*
+ * Copyright (c) 2017 SpaceToad and the BuildCraft team
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
+ */
 package buildcraft.lib;
-public class BCLib {}
+
+import java.util.function.Supplier;
+
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.registries.Registries;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.registries.DeferredRegister;
+
+@Mod(BCLib.MODID)
+public class BCLib {
+    public static final String MODID = "buildcraftlib";
+
+    // --- Data Components ---
+    public static final DeferredRegister.DataComponents DATA_COMPONENTS =
+            DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, MODID);
+
+    /** Stores the guide book name (e.g. "buildcraftcore:main" or "buildcraftlib:config"). */
+    public static final Supplier<DataComponentType<String>> GUIDE_BOOK_NAME = DATA_COMPONENTS
+            .registerComponentType("guide_book_name", builder -> builder
+                    .persistent(com.mojang.serialization.Codec.STRING)
+                    .networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8));
+
+    public BCLib(IEventBus modEventBus, ModContainer modContainer) {
+        BCLibItems.ITEMS.register(modEventBus);
+        DATA_COMPONENTS.register(modEventBus);
+    }
+}

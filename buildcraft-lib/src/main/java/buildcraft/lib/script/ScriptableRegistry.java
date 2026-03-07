@@ -30,17 +30,15 @@ import com.google.gson.JsonSyntaxException;
 
 import org.apache.commons.io.IOUtils;
 
-import net.minecraft.util.GsonHelper;
-import net.minecraft.world.InteractionResult;
 
 import net.neoforged.fml.ModList;
-import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.loading.FMLPaths;
+import net.neoforged.neoforgespi.language.IModInfo;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.api.registry.IReloadableRegistryManager;
 import buildcraft.api.registry.IScriptableRegistry;
 
-import buildcraft.lib.BCLibProxy;
 import buildcraft.lib.misc.JsonUtil;
 import buildcraft.lib.misc.TimeUtil;
 import buildcraft.lib.script.SimpleScript.ScriptAction;
@@ -114,28 +112,20 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
         List<FileSystem> openFileSystems = new ArrayList<>();
         Map<File, Path> loadedFiles = new HashMap<>();
         List<Path> jarRoots = new ArrayList<>();
-        for (ModContainer container : Loader.instance().getActiveModList()) {
-            File source = container.getSource();
+        for (IModInfo modInfo : ModList.get().getMods()) {
+            // In NeoForge, mod files are accessed through the ModFileInfo system
+            var modFile = ModList.get().getModFileById(modInfo.getModId());
+            if (modFile == null) continue;
+            File source = modFile.getFile().getFilePath().toFile();
             if (!source.exists()) {
                 continue;
             }
             visitFile(openFileSystems, loadedFiles, jarRoots, source);
         }
 
-        switch (manager.getType()) {
-            case RESOURCE_PACK: {
-                for (File rpFile : BCLibProxy.getProxy().getLoadedResourcePackFiles()) {
-                    visitFile(openFileSystems, loadedFiles, null, rpFile);
-                }
-                break;
-            }
-            case DATA_PACK: {
-                // TODO(1.13): Load from datapacks as well!
-                break;
-            }
-        }
+        // Resource pack loading deferred — NeoForge handles resource packs differently
 
-        File baseFile = new File(Loader.instance().getConfigDir(), "buildcraft/scripts");
+        File baseFile = new File(FMLPaths.CONFIGDIR.get().toFile(), "buildcraft/scripts");
         if (!baseFile.isDirectory()) {
             baseFile.mkdirs();
         }
@@ -338,7 +328,7 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
     private void loadReloadable(Identifier name, Gson gson, JsonObject json) throws JsonSyntaxException {
         String type = "";
         if (json.has("type")) {
-            type = GsonHelper.getString(json, "type");
+            type = json.get("type").getAsString();
         }
         IEntryDeserializer<? extends E> deserializer = getCustomDeserializers().get(type);
         if (deserializer != null) {

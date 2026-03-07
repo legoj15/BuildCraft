@@ -1,7 +1,5 @@
 package buildcraft.lib.script;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -13,7 +11,7 @@ import com.google.common.collect.HashBiMap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-
+import net.neoforged.neoforge.common.NeoForge;
 
 import buildcraft.api.registry.BuildCraftRegistryManager;
 import buildcraft.api.registry.EventBuildCraftReload;
@@ -85,16 +83,16 @@ public enum ReloadableRegistryManager implements IReloadableRegistryManager {
         }
         try {
             isReloading = true;
-            MinecraftForge.EVENT_BUS.post(new EventBuildCraftReload.BeforeClear(this, set));
+            NeoForge.EVENT_BUS.post(new EventBuildCraftReload.BeforeClear(this, set));
             set.forEach(registry -> registry.getReloadableEntryMap().clear());
 
-            MinecraftForge.EVENT_BUS.post(new EventBuildCraftReload.PreLoad(this, set));
+            NeoForge.EVENT_BUS.post(new EventBuildCraftReload.PreLoad(this, set));
 
             GsonBuilder builder = new GsonBuilder();
             // register our own types here, so that others can replace them
             JsonUtil.registerTypeAdaptors(builder);
 
-            MinecraftForge.EVENT_BUS.post(new EventBuildCraftReload.PopulateGson(this, set, builder));
+            NeoForge.EVENT_BUS.post(new EventBuildCraftReload.PopulateGson(this, set, builder));
             Gson gson = builder.create();
 
             for (IReloadableRegistry<?> registry : set) {
@@ -103,12 +101,12 @@ public enum ReloadableRegistryManager implements IReloadableRegistryManager {
                 }
             }
 
-            MinecraftForge.EVENT_BUS.post(new EventBuildCraftReload.PostLoad(this, set));
+            NeoForge.EVENT_BUS.post(new EventBuildCraftReload.PostLoad(this, set));
         } finally {
             reloadCount++;
             isReloading = false;
         }
-        MinecraftForge.EVENT_BUS.post(new EventBuildCraftReload.FinishLoad(this, set));
+        NeoForge.EVENT_BUS.post(new EventBuildCraftReload.FinishLoad(this, set));
     }
 
     @Override

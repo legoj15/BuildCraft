@@ -26,27 +26,24 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 
-import net.minecraft.world.InteractionResult;
-
 import net.neoforged.fml.ModList;
+import net.neoforged.fml.loading.FMLPaths;
 
 import buildcraft.api.core.BCDebugging;
 import buildcraft.api.core.BCLog;
 
-import buildcraft.lib.BCLibProxy;
 import buildcraft.lib.script.ScriptAliasFunction.AliasBuilder;
 
 public class SimpleScript {
 
     public static final boolean DEBUG = BCDebugging.shouldDebugLog("lib.script");
-    // private static final Object CONTEXT = DefaultContexts.createWithAll("scripts");
+    // Expression system CONTEXT removed — conditional evaluation uses direct checks below
 
     static final Gson GSON = new Gson();
     static final Map<String, ScriptActionLoader> functions = new HashMap<>();
     static BufferedWriter logWriter;
 
     static {
-        CONTEXT.put_s_b("is_mod_loaded", Loader::isModLoaded);
         // Functions:
 
         // Debug: turns on script debugging
@@ -79,7 +76,7 @@ public class SimpleScript {
             if (json == null) {
                 json = script.loadJson(name);
             }
-            Identifier id = Identifier.parse(script.domain, name);
+            Identifier id = Identifier.fromNamespaceAndPath(script.domain, name);
             return ImmutableList.of(new ScriptActionAdd(id, json));
         });
         functions.put("remove", script -> {
@@ -105,7 +102,7 @@ public class SimpleScript {
             if (json == null) {
                 json = script.loadJson(toAdd);
             }
-            Identifier id = Identifier.parse(script.domain, toAdd);
+            Identifier id = Identifier.fromNamespaceAndPath(script.domain, toAdd);
             return ImmutableList.of(new ScriptActionReplace(toRemove, id, json, false));
         });
         functions.put("modify", script -> {
@@ -123,7 +120,7 @@ public class SimpleScript {
             if (json == null) {
                 json = script.loadJson(toAdd);
             }
-            Identifier id = Identifier.parse(script.domain, toAdd);
+            Identifier id = Identifier.fromNamespaceAndPath(script.domain, toAdd);
             return ImmutableList.of(new ScriptActionReplace(toRemove, id, json, true));
         });
     }
@@ -213,12 +210,16 @@ public class SimpleScript {
                     }
                     String func = conditional.joinLines(false);
                     boolean shouldCall = false;
-                    try {
-                        shouldCall = GenericExpressionCompiler.compileExpressionBoolean(func, CONTEXT).evaluate();
-                        log("(" + func + ") = " + shouldCall);
-                    } catch (InvalidExpressionException e) {
-                        log("Invalid " + e.getMessage());
-                        e.printStackTrace();
+                    // Expression system not available — simple evaluation for is_mod_loaded
+                    if (func.startsWith("is_mod_loaded(") && func.endsWith(")")) {
+                        String modId = func.substring("is_mod_loaded(".length(), func.length() - 1)
+                            .replace("\"", "").replace("'", "").trim();
+                        shouldCall = ModList.get().isLoaded(modId);
+                        log("(" + func + ") = " + shouldCall + " (simple eval)");
+                    } else {
+                        // Unknown conditional expression, default to true
+                        shouldCall = true;
+                        log("(" + func + ") = true (expression system unavailable, defaulting to true)");
                     }
                     if (!shouldCall) {
                         skipLevel++;
@@ -534,7 +535,7 @@ public class SimpleScript {
     }
 
     public static AutoCloseable createLogFile(String path) {
-        logDir = new File(BCLibProxy.getProxy().getGameDirectory(), "logs/buildcraft/scripts");
+        logDir = FMLPaths.GAMEDIR.get().resolve("logs/buildcraft/scripts").toFile();
         try {
             logDir.mkdirs();
             File logFile = new File(logDir, path + ".log");

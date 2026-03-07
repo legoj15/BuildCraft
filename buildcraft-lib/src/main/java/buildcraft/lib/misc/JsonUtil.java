@@ -213,4 +213,24 @@ public class JsonUtil {
                 return new IntArrayTag(ints);
             });
     }
+
+    /** Registers GSON type adaptors for scripting. Delegates to {@link #registerNbtSerializersDeserializers}. */
+    public static GsonBuilder registerTypeAdaptors(GsonBuilder builder) {
+        return registerNbtSerializersDeserializers(builder);
+    }
+
+    /** Merges two JSON objects, with child properties overriding parent properties.
+     * Used by the script framework's "modify" action to inherit tags from a base entry. */
+    public static JsonObject inheritTags(JsonObject parent, JsonObject child) {
+        JsonObject result = new JsonObject();
+        // Copy all parent properties
+        for (Map.Entry<String, JsonElement> entry : parent.entrySet()) {
+            result.add(entry.getKey(), entry.getValue());
+        }
+        // Override/add with child properties
+        for (Map.Entry<String, JsonElement> entry : child.entrySet()) {
+            result.add(entry.getKey(), entry.getValue());
+        }
+        return result;
+    }
 }

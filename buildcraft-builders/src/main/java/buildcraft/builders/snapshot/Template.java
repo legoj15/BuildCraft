@@ -11,9 +11,9 @@ import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.Rotation;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Rotation;
 
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.enums.EnumSnapshotType;
@@ -44,16 +44,16 @@ public class Template extends Snapshot {
     }
 
     @Override
-    public NBTTagCompound serializeNBT() {
-        NBTTagCompound nbt = super.serializeNBT();
-        nbt.setByteArray("data", data.toByteArray());
+    public CompoundTag serializeNBT() {
+        CompoundTag nbt = super.serializeNBT();
+        nbt.putByteArray("data", data.toByteArray());
         return nbt;
     }
 
     @Override
-    public void deserializeNBT(NBTTagCompound nbt) throws InvalidInputDataException {
+    public void deserializeNBT(CompoundTag nbt) throws InvalidInputDataException {
         super.deserializeNBT(nbt);
-        data = BitSet.valueOf(nbt.getByteArray("data"));
+        data = BitSet.valueOf(nbt.getByteArray("data").orElse(new byte[0]));
         if (data.length() > getDataSize()) {
             throw new InvalidInputDataException(
                 "Serialized data has length of " + data.length() +
@@ -153,7 +153,7 @@ public class Template extends Snapshot {
             checkPos(fromX, y, fromZ);
             checkPos(toX, y, toZ);
             for (int z = fromZ; z <= toZ; z++) {
-                setLineX(fromX, toX, y, z, true);
+                setLineX(fromX, toX, y, z, value);
             }
         }
 
@@ -162,7 +162,7 @@ public class Template extends Snapshot {
             checkPos(fromX, fromY, z);
             checkPos(toX, toY, z);
             for (int y = fromY; y <= toY; y++) {
-                setLineX(fromX, toX, y, z, true);
+                setLineX(fromX, toX, y, z, value);
             }
         }
 

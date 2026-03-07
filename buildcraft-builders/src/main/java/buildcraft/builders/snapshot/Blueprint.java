@@ -17,15 +17,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagInt;
-import net.minecraft.nbt.NBTTagList;
-import net.minecraft.util.Rotation;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.IntTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Rotation;
 
-import net.minecraftforge.common.util.Constants;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.enums.EnumSnapshotType;
@@ -58,47 +58,46 @@ public class Blueprint extends Snapshot {
     }
 
     @Override
-    public NBTTagCompound serializeNBT() {
-        NBTTagCompound nbt = super.serializeNBT();
-        nbt.setTag("palette", NBTUtilBC.writeCompoundList(palette.stream().map(SchematicBlockManager::writeToNBT)));
-        NBTTagList list = new NBTTagList();
+    public CompoundTag serializeNBT() {
+        CompoundTag nbt = super.serializeNBT();
+        // TODO: Phase D — SchematicBlockManager.writeToNBT
+        // nbt.put("palette", NBTUtilBC.writeCompoundList(palette.stream().map(SchematicBlockManager::writeToNBT)));
+        ListTag list = new ListTag();
         for (int z = 0; z < size.getZ(); z++) {
             for (int y = 0; y < size.getY(); y++) {
                 for (int x = 0; x < size.getX(); x++) {
-                    list.appendTag(new NBTTagInt(data[posToIndex(x, y, z)]));
+                    list.add(IntTag.valueOf(data[posToIndex(x, y, z)]));
                 }
             }
         }
-        nbt.setTag("data", list);
-        nbt.setTag("entities", NBTUtilBC.writeCompoundList(entities.stream().map(SchematicEntityManager::writeToNBT)));
+        nbt.put("data", list);
+        // TODO: Phase D — SchematicEntityManager.writeToNBT
+        // nbt.put("entities", NBTUtilBC.writeCompoundList(entities.stream().map(SchematicEntityManager::writeToNBT)));
         return nbt;
     }
 
     @Override
-    public void deserializeNBT(NBTTagCompound nbt) throws InvalidInputDataException {
+    public void deserializeNBT(CompoundTag nbt) throws InvalidInputDataException {
         super.deserializeNBT(nbt);
         palette.clear();
-        for (NBTTagCompound schematicBlockTag :
-            NBTUtilBC.readCompoundList(nbt.getTag("palette")).collect(Collectors.toList())) {
-            // TODO: Allow reading blueprints partially - invalid elements should be replaced with air
-            // (Although this needs to add a "pass-through" ISchematicBlock that will store the
-            // invalid NBTTagCompound and show up in the tooltip as an error, so that we can migrate
-            // schematics through mod additions/deletions)
-            palette.add(SchematicBlockManager.readFromNBT(schematicBlockTag));
-        }
+        // TODO: Phase D — SchematicBlockManager.readFromNBT
+        // for (CompoundTag schematicBlockTag :
+        //     NBTUtilBC.readCompoundList(nbt.get("palette")).collect(Collectors.toList())) {
+        //     palette.add(SchematicBlockManager.readFromNBT(schematicBlockTag));
+        // }
         data = new int[Snapshot.getDataSize(size)];
-        NBTTagList serializedDataList = nbt.hasKey("data", Constants.NBT.TAG_LIST)
-            ? nbt.getTagList("data", Constants.NBT.TAG_INT)
-            : null;
-        int[] serializedDataIntArray = nbt.hasKey("data", Constants.NBT.TAG_INT_ARRAY)
-            ? nbt.getIntArray("data")
-            : null;
+
+        // Support both ListTag and IntArray for data
+        Tag dataTag = nbt.get("data");
+        ListTag serializedDataList = dataTag instanceof ListTag lt ? lt : null;
+        int[] serializedDataIntArray = nbt.getIntArray("data").orElse(null);
+
         if (serializedDataIntArray == null && serializedDataList == null) {
             throw new InvalidInputDataException("Can't read a blueprint with no data!");
         }
         int serializedDataLength = serializedDataList == null
             ? serializedDataIntArray.length
-            : serializedDataList.tagCount();
+            : serializedDataList.size();
         if (serializedDataLength != getDataSize()) {
             throw new InvalidInputDataException(
                 "Serialized data has length of " + serializedDataLength +
@@ -109,16 +108,21 @@ public class Blueprint extends Snapshot {
         for (int z = 0; z < size.getZ(); z++) {
             for (int y = 0; y < size.getY(); y++) {
                 for (int x = 0; x < size.getX(); x++) {
-                    data[posToIndex(x, y, z)] = serializedDataList == null
-                        ? serializedDataIntArray[posToIndex(x, y, z)]
-                        : serializedDataList.getIntAt(posToIndex(x, y, z));
+                    int idx = posToIndex(x, y, z);
+                    if (serializedDataList != null) {
+                        Tag element = serializedDataList.get(idx);
+                        data[idx] = element instanceof IntTag it ? it.value() : 0;
+                    } else {
+                        data[idx] = serializedDataIntArray[idx];
+                    }
                 }
             }
         }
-        for (NBTTagCompound schematicEntityTag :
-            NBTUtilBC.readCompoundList(nbt.getTag("entities")).collect(Collectors.toList())) {
-            entities.add(SchematicEntityManager.readFromNBT(schematicEntityTag));
-        }
+        // TODO: Phase D — SchematicEntityManager.readFromNBT
+        // for (CompoundTag schematicEntityTag :
+        //     NBTUtilBC.readCompoundList(nbt.get("entities")).collect(Collectors.toList())) {
+        //     entities.add(SchematicEntityManager.readFromNBT(schematicEntityTag));
+        // }
     }
 
     @Override
@@ -135,11 +139,10 @@ public class Blueprint extends Snapshot {
         public final Map<ISchematicEntity, List<ItemStack>> entitiesRequiredItems;
         public final Map<ISchematicEntity, List<FluidStack>> entitiesRequiredFluids;
 
+        @SuppressWarnings("unchecked")
         public BuildingInfo(BlockPos basePos, Rotation rotation) {
             super(basePos, rotation);
-            // noinspection unchecked
             toPlaceRequiredItems = (List<ItemStack>[]) new List<?>[getDataSize()];
-            // noinspection unchecked
             toPlaceRequiredFluids = (List<FluidStack>[]) new List<?>[getDataSize()];
             rotatedPalette = ImmutableList.copyOf(
                 palette.stream()

@@ -124,17 +124,17 @@ public class BCCore {
 
     private void buildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == BCCoreCreativeTabs.MAIN_TAB_KEY) {
-            event.accept(BCCoreItems.WRENCH);
-            // Paintbrush: clean + 16 dye colours (matches 1.12 creative menu)
-            event.accept(ItemPaintbrush_BC8.createColoredStack(BCCoreItems.PAINTBRUSH.get(), null));
-            for (DyeColor colour : DyeColor.values()) {
-                event.accept(ItemPaintbrush_BC8.createColoredStack(BCCoreItems.PAINTBRUSH.get(), colour));
-            }
-            event.accept(BCCoreItems.GOGGLES);
-            event.accept(BCCoreItems.MARKER_CONNECTOR);
-            event.accept(BCCoreItems.VOLUME_BOX);
-            event.accept(BCCoreItems.MAP_LOCATION);
-            event.accept(BCCoreItems.LIST);
+            // Ordered to match 1.12.2 runtime sequence:
+            // buildcraftlib loads before buildcraftcore (dependency),
+            // then BCCoreBlocks.preInit() runs before BCCoreItems.preInit().
+
+            // --- Lib items (registered by buildcraftlib, loads first) ---
+            event.accept(BCLibItems.GUIDE);
+            event.accept(ItemGuide.createForBook(BCLibItems.GUIDE.get(), "buildcraftlib:config"));
+            event.accept(BCLibItems.GUIDE_NOTE);
+            event.accept(BCLibItems.DEBUGGER);
+
+            // --- Blocks (registered in BCCoreBlocks.preInit order) ---
             event.accept(BCCoreItems.SPRING_WATER);
             event.accept(BCCoreItems.SPRING_OIL);
             event.accept(BCCoreItems.DECORATED_DESTROY);
@@ -147,17 +147,24 @@ public class BCCore {
             event.accept(BCCoreItems.MARKER_PATH);
             event.accept(BCCoreItems.ENGINE_REDSTONE);
             event.accept(BCCoreItems.ENGINE_CREATIVE);
-            // Gears
+
+            // --- Items (registered in BCCoreItems.preInit order) ---
+            event.accept(BCCoreItems.WRENCH);
             event.accept(BCCoreItems.GEAR_WOOD);
             event.accept(BCCoreItems.GEAR_STONE);
             event.accept(BCCoreItems.GEAR_IRON);
             event.accept(BCCoreItems.GEAR_GOLD);
             event.accept(BCCoreItems.GEAR_DIAMOND);
-            // Guide books (buildcraftlib items)
-            event.accept(BCLibItems.GUIDE); // "BuildCraft Guide Book" (default, no component)
-            event.accept(ItemGuide.createForBook(BCLibItems.GUIDE.get(), "buildcraftlib:config")); // "BuildCraft Configuration Guide"
-            event.accept(BCLibItems.GUIDE_NOTE);
-            event.accept(BCLibItems.DEBUGGER);
+            // Paintbrush: clean + 16 dye colours
+            event.accept(ItemPaintbrush_BC8.createColoredStack(BCCoreItems.PAINTBRUSH.get(), null));
+            for (DyeColor colour : DyeColor.values()) {
+                event.accept(ItemPaintbrush_BC8.createColoredStack(BCCoreItems.PAINTBRUSH.get(), colour));
+            }
+            event.accept(BCCoreItems.LIST);
+            event.accept(BCCoreItems.MAP_LOCATION);
+            event.accept(BCCoreItems.MARKER_CONNECTOR);
+            event.accept(BCCoreItems.VOLUME_BOX);
+            event.accept(BCCoreItems.GOGGLES);
         }
     }
 }

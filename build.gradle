@@ -33,6 +33,7 @@ def modulePackagePrefixes = [
     'buildcraft-api' : 'buildcraft.api.',
     'buildcraft-lib' : 'buildcraft.lib.',
     'buildcraft-core': 'buildcraft.core.',
+    'buildcraft-builders': 'buildcraft.builders.',
 ]
 
 tasks.register('checkSplitPackages') {

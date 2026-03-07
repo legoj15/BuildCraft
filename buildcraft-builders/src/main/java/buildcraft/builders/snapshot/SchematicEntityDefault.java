@@ -6,10 +6,14 @@
 
 package buildcraft.builders.snapshot;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -49,8 +53,14 @@ public class SchematicEntityDefault implements ISchematicEntity {
 
     public static boolean predicate(SchematicEntityContext context) {
         Identifier registryName = BuiltInRegistries.ENTITY_TYPE.getKey(context.entity.getType());
-        // TODO: RulesLoader integration — for now accept all entities from known domains
-        return registryName != null;
+        if (registryName == null) return false;
+        if (!RulesLoader.READ_DOMAINS.contains(registryName.getNamespace())) return false;
+        TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, context.world.registryAccess());
+        context.entity.save(output);
+        CompoundTag entityNbt = output.buildResult();
+        return RulesLoader.getRules(registryName, entityNbt)
+            .stream()
+            .anyMatch(rule -> rule.capture);
     }
 
     @Override
@@ -76,15 +86,32 @@ public class SchematicEntityDefault implements ISchematicEntity {
     @Nonnull
     @Override
     public List<ItemStack> computeRequiredItems() {
-        // TODO: RulesLoader integration — for now return empty
-        return Collections.emptyList();
+        Identifier entityId = Identifier.parse(entityNbt.getStringOr("id", ""));
+        Set<JsonRule> rules = RulesLoader.getRules(entityId, entityNbt);
+        if (rules.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return rules.stream()
+            .map(rule -> rule.requiredExtractors)
+            .filter(Objects::nonNull)
+            .flatMap(Collection::stream)
+            .flatMap(extractor -> extractor.extractItemsFromEntity(entityNbt).stream())
+            .filter(stack -> !stack.isEmpty())
+            .collect(Collectors.toList());
     }
 
     @Nonnull
     @Override
     public List<FluidStack> computeRequiredFluids() {
-        // TODO: RulesLoader integration
-        return Collections.emptyList();
+        Identifier entityId = Identifier.parse(entityNbt.getStringOr("id", ""));
+        Set<JsonRule> rules = RulesLoader.getRules(entityId, entityNbt);
+        return rules.stream()
+            .map(rule -> rule.requiredExtractors)
+            .filter(Objects::nonNull)
+            .flatMap(Collection::stream)
+            .flatMap(extractor -> extractor.extractFluidsFromEntity(entityNbt).stream())
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
     }
 
     @Override

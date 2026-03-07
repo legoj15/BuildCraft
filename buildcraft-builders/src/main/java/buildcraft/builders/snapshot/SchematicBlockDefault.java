@@ -7,10 +7,13 @@
 package buildcraft.builders.snapshot;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
@@ -65,34 +68,115 @@ public class SchematicBlockDefault implements ISchematicBlock {
             return false;
         }
         Identifier registryName = BuiltInRegistries.BLOCK.getKey(context.block);
-        // TODO: RulesLoader integration — for now accept all non-air blocks from known domains
-        return registryName != null;
+        if (registryName == null) return false;
+        if (!RulesLoader.READ_DOMAINS.contains(registryName.getNamespace())) return false;
+        BlockEntity be = context.world.getBlockEntity(context.pos);
+        CompoundTag beNbt = be != null
+            ? be.saveWithoutMetadata(context.world.registryAccess())
+            : null;
+        return RulesLoader.getRules(context.blockState, beNbt)
+            .stream()
+            .noneMatch(rule -> rule.ignore);
+    }
+
+    @SuppressWarnings({"unused", "WeakerAccess"})
+    protected void setRequiredBlockOffsets(SchematicBlockContext context, Set<JsonRule> rules) {
+        requiredBlockOffsets.clear();
+        rules.stream()
+            .map(rule -> rule.requiredBlockOffsets)
+            .filter(Objects::nonNull)
+            .flatMap(Collection::stream)
+            .forEach(requiredBlockOffsets::add);
+        if (context.block instanceof FallingBlock) {
+            requiredBlockOffsets.add(new BlockPos(0, -1, 0));
+        }
+    }
+
+    @SuppressWarnings({"unused", "WeakerAccess"})
+    protected void setBlockState(SchematicBlockContext context, Set<JsonRule> rules) {
+        blockState = context.blockState;
+    }
+
+    @SuppressWarnings({"unused", "WeakerAccess"})
+    protected void setIgnoredProperties(SchematicBlockContext context, Set<JsonRule> rules) {
+        ignoredProperties.clear();
+        rules.stream()
+            .map(rule -> rule.ignoredProperties)
+            .filter(Objects::nonNull)
+            .flatMap(List::stream)
+            .flatMap(propertyName ->
+                context.blockState.getProperties().stream()
+                    .filter(property -> property.getName().equals(propertyName))
+            )
+            .forEach(ignoredProperties::add);
+    }
+
+    @SuppressWarnings({"unused", "WeakerAccess"})
+    protected void setTileNbt(SchematicBlockContext context, Set<JsonRule> rules) {
+        tileNbt = null;
+        BlockEntity tileEntity = context.world.getBlockEntity(context.pos);
+        if (tileEntity != null) {
+            tileNbt = tileEntity.saveWithoutMetadata(context.world.registryAccess());
+        }
+    }
+
+    @SuppressWarnings({"unused", "WeakerAccess"})
+    protected void setPlaceBlock(SchematicBlockContext context, Set<JsonRule> rules) {
+        placeBlock = rules.stream()
+            .map(rule -> rule.placeBlock)
+            .filter(Objects::nonNull)
+            .findFirst()
+            .map(Identifier::parse)
+            .map(BuiltInRegistries.BLOCK::getValue)
+            .orElse(context.block);
+    }
+
+    @SuppressWarnings({"unused", "WeakerAccess"})
+    protected void setUpdateBlockOffsets(SchematicBlockContext context, Set<JsonRule> rules) {
+        updateBlockOffsets.clear();
+        if (rules.stream().map(rule -> rule.updateBlockOffsets).anyMatch(Objects::nonNull)) {
+            rules.stream()
+                .map(rule -> rule.updateBlockOffsets)
+                .filter(Objects::nonNull)
+                .flatMap(Collection::stream)
+                .forEach(updateBlockOffsets::add);
+        } else {
+            Stream.of(Direction.values())
+                .map(Direction::getUnitVec3i)
+                .map(BlockPos::new)
+                .forEach(updateBlockOffsets::add);
+            updateBlockOffsets.add(BlockPos.ZERO);
+        }
+    }
+
+    @SuppressWarnings({"unused", "WeakerAccess"})
+    protected void setCanBeReplacedWithBlocks(SchematicBlockContext context, Set<JsonRule> rules) {
+        canBeReplacedWithBlocks.clear();
+        rules.stream()
+            .map(rule -> rule.canBeReplacedWithBlocks)
+            .filter(Objects::nonNull)
+            .flatMap(Collection::stream)
+            .map(Identifier::parse)
+            .map(BuiltInRegistries.BLOCK::getValue)
+            .forEach(canBeReplacedWithBlocks::add);
+        canBeReplacedWithBlocks.add(context.block);
+        canBeReplacedWithBlocks.add(placeBlock);
     }
 
     @Override
     public void init(SchematicBlockContext context) {
-        // TODO: RulesLoader integration — for now capture state directly
-        requiredBlockOffsets.clear();
-        if (context.block instanceof FallingBlock) {
-            requiredBlockOffsets.add(new BlockPos(0, -1, 0));
-        }
-        blockState = context.blockState;
-        ignoredProperties.clear();
-        tileNbt = null;
         BlockEntity be = context.world.getBlockEntity(context.pos);
-        if (be != null) {
-            tileNbt = be.saveWithoutMetadata(context.world.registryAccess());
-        }
-        placeBlock = context.block;
-        updateBlockOffsets.clear();
-        Stream.of(Direction.values())
-            .map(Direction::getUnitVec3i)
-            .map(BlockPos::new)
-            .forEach(updateBlockOffsets::add);
-        updateBlockOffsets.add(BlockPos.ZERO);
-        canBeReplacedWithBlocks.clear();
-        canBeReplacedWithBlocks.add(context.block);
-        canBeReplacedWithBlocks.add(placeBlock);
+        CompoundTag beNbt = be != null
+            ? be.saveWithoutMetadata(context.world.registryAccess())
+            : null;
+        Set<JsonRule> rules = RulesLoader.getRules(context.blockState, beNbt);
+        setRequiredBlockOffsets(context, rules);
+        setBlockState(context, rules);
+        setIgnoredProperties(context, rules);
+        setTileNbt(context, rules);
+        setPlaceBlock(context, rules);
+        setUpdateBlockOffsets(context, rules);
+        setCanBeReplacedWithBlocks(context, rules);
     }
 
     @Nonnull
@@ -104,19 +188,32 @@ public class SchematicBlockDefault implements ISchematicBlock {
     @Nonnull
     @Override
     public List<ItemStack> computeRequiredItems() {
-        // TODO: RulesLoader integration — for now return block's default drop
-        if (blockState == null || blockState.isAir()) {
-            return Collections.emptyList();
-        }
-        ItemStack stack = new ItemStack(blockState.getBlock());
-        return stack.isEmpty() ? Collections.emptyList() : Collections.singletonList(stack);
+        Set<JsonRule> rules = RulesLoader.getRules(blockState, tileNbt);
+        List<List<RequiredExtractor>> extractorLists = rules.stream()
+            .map(rule -> rule.requiredExtractors)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+        return (
+            extractorLists.isEmpty()
+                ? Stream.of(new RequiredExtractorItemFromBlock())
+                : extractorLists.stream().flatMap(Collection::stream)
+        )
+            .flatMap(extractor -> extractor.extractItemsFromBlock(blockState, tileNbt).stream())
+            .filter(stack -> !stack.isEmpty())
+            .collect(Collectors.toList());
     }
 
     @Nonnull
     @Override
     public List<FluidStack> computeRequiredFluids() {
-        // TODO: RulesLoader integration
-        return Collections.emptyList();
+        Set<JsonRule> rules = RulesLoader.getRules(blockState, tileNbt);
+        return rules.stream()
+            .map(rule -> rule.requiredExtractors)
+            .filter(Objects::nonNull)
+            .flatMap(Collection::stream)
+            .flatMap(extractor -> extractor.extractFluidsFromBlock(blockState, tileNbt).stream())
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
     }
 
     @Override

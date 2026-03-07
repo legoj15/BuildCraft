@@ -1,7 +1,5 @@
 package buildcraft.lib.client.guide.node;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.Set;
 
 import javax.annotation.Nullable;
@@ -40,10 +38,10 @@ public final class FormatSegment {
     public String toString() {
         StringBuilder miscStr = new StringBuilder();
         for (ChatFormatting format : misc) {
-            miscStr.append(format.getFriendlyName());
+            miscStr.append(format.getName());
             miscStr.append(' ');
         }
-        return (colour == null ? "" : (colour.getFriendlyName() + ""))//
+        return (colour == null ? "" : (colour.getName() + ""))
             + miscStr + text;
     }
 }

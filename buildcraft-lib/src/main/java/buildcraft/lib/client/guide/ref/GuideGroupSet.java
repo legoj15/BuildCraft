@@ -6,10 +6,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import net.minecraft.world.InteractionResult;
-
 import buildcraft.lib.client.guide.entry.PageValue;
-import buildcraft.lib.misc.LocaleUtil;
 
 public final class GuideGroupSet {
 
@@ -25,11 +22,7 @@ public final class GuideGroupSet {
     }
 
     public final Identifier group;
-
-    /** Everything that points to this group, and so will include this group in pages. */
     public final List<PageValue<?>> sources;
-
-    /** Everything that is in the group, and will be displayed under this group. */
     public final List<PageValue<?>> entries;
 
     public GuideGroupSet(Identifier group) {
@@ -39,8 +32,9 @@ public final class GuideGroupSet {
     }
 
     public String getTitle(GroupDirection dir) {
-        String post = group.getResourceDomain() + "." + group.getResourcePath();
-        return LocaleUtil.localize(dir.localePrefix + post);
+        // LocaleUtil.localize not ported — return raw key
+        String post = group.getNamespace() + "." + group.getPath();
+        return dir.localePrefix + post;
     }
 
     public List<PageValue<?>> getValues(GroupDirection direction) {
@@ -49,45 +43,33 @@ public final class GuideGroupSet {
 
     public GuideGroupSet addSingle(Object value) {
         PageValue<?> entry = GuideGroupManager.toPageValue(value);
-        if (entry != null) {
-            entries.add(entry);
-        }
+        if (entry != null) entries.add(entry);
         return this;
     }
 
     public GuideGroupSet addArray(Object... values) {
-        for (Object value : values) {
-            addSingle(value);
-        }
+        for (Object value : values) addSingle(value);
         return this;
     }
 
     public GuideGroupSet addCollection(Collection<? extends Object> values) {
-        for (Object value : values) {
-            addSingle(value);
-        }
+        for (Object value : values) addSingle(value);
         return this;
     }
 
     public GuideGroupSet addKey(Object value) {
         PageValue<?> entry = GuideGroupManager.toPageValue(value);
-        if (entry != null) {
-            sources.add(entry);
-        }
+        if (entry != null) sources.add(entry);
         return this;
     }
 
     public GuideGroupSet addKeyArray(Object... values) {
-        for (Object value : values) {
-            addKey(value);
-        }
+        for (Object value : values) addKey(value);
         return this;
     }
 
     public GuideGroupSet addKeyCollection(Collection<? extends Object> values) {
-        for (Object value : values) {
-            addKey(value);
-        }
+        for (Object value : values) addKey(value);
         return this;
     }
 }

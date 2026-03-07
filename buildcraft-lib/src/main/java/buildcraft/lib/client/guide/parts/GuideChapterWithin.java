@@ -6,8 +6,6 @@
 
 package buildcraft.lib.client.guide.parts;
 
-import net.minecraft.resources.Identifier;
-
 import buildcraft.lib.client.guide.GuiGuide;
 
 public class GuideChapterWithin extends GuideChapter {
@@ -33,13 +31,7 @@ public class GuideChapterWithin extends GuideChapter {
 
     @Override
     protected boolean onClick() {
-        if (lastPage != -1) {
-            GuidePageBase page = gui.getCurrentPage();
-            if (page.getChapters().contains(this)) {
-                page.goToPage(lastPage);
-                return true;
-            }
-        }
+        // GuiGuide.getCurrentPage() not available until full UI port
         return false;
     }
 }

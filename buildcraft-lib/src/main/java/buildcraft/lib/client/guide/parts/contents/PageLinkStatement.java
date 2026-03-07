@@ -1,7 +1,5 @@
 package buildcraft.lib.client.guide.parts.contents;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -18,7 +16,6 @@ import buildcraft.lib.client.guide.entry.PageValue;
 import buildcraft.lib.client.guide.parts.GuidePage;
 import buildcraft.lib.client.guide.parts.GuidePageFactory;
 import buildcraft.lib.gui.ISimpleDrawable;
-import buildcraft.lib.gui.statement.GuiElementStatementSource;
 
 public class PageLinkStatement extends PageLink {
 
@@ -37,16 +34,15 @@ public class PageLinkStatement extends PageLink {
         } else {
             this.tooltip = tip;
             String joinedTooltip = tip.stream().collect(Collectors.joining(" ", "", ""));
-            this.searchText = ChatFormatting.getTextWithoutFormattingCodes(joinedTooltip).toLowerCase(Locale.ROOT);
+            this.searchText = ChatFormatting.stripFormatting(joinedTooltip).toLowerCase(Locale.ROOT);
         }
     }
 
     private static PageLine createPageLine(IStatement statement) {
-        ISimpleDrawable icon = (x, y) -> GuiElementStatementSource.drawGuiSlot(statement, x, y);
-
+        // GuiElementStatementSource.drawGuiSlot not ported — use null icon
         List<String> tooltip = statement.getTooltip();
         String title = tooltip.isEmpty() ? statement.getUniqueTag() : tooltip.get(0);
-        return new PageLine(icon, icon, 2, title, true);
+        return new PageLine(null, null, 2, title, true);
     }
 
     @Override
@@ -61,7 +57,6 @@ public class PageLinkStatement extends PageLink {
 
     @Override
     public GuidePageFactory getFactoryLink() {
-        // TODO: Populate this with useful information!
         return g -> new GuidePage(g, ImmutableList.of(), new PageValue<>(PageEntryStatement.INSTANCE, statement));
     }
 }

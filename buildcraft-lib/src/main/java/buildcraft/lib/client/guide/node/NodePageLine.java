@@ -6,8 +6,6 @@
 
 package buildcraft.lib.client.guide.node;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -95,8 +93,6 @@ public class NodePageLine implements Comparable<NodePageLine> {
         private NodePageLine current;
         private int childrenDone = 0;
 
-        // TODO: Somehow make this use "isVisible"
-
         NodePartIterator() {
             current = NodePageLine.this;
         }
@@ -115,7 +111,6 @@ public class NodePageLine implements Comparable<NodePageLine> {
             NodePageLine next = this.current;
             int visited = this.childrenDone;
             while (visited == next.getChildren().size()) {
-                // Go to the parent
                 NodePageLine child = next;
                 next = next.parent;
                 if (next == null) {

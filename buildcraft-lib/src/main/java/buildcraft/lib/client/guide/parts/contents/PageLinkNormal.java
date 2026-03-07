@@ -1,7 +1,5 @@
 package buildcraft.lib.client.guide.parts.contents;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.List;
 
 import net.minecraft.ChatFormatting;
@@ -22,7 +20,7 @@ public class PageLinkNormal extends PageLink {
     }
 
     private static String strip(String text) {
-        return ChatFormatting.getTextWithoutFormattingCodes(text.trim());
+        return ChatFormatting.stripFormatting(text.trim());
     }
 
     @Override

@@ -6,8 +6,6 @@
 
 package buildcraft.lib.client.guide.parts;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.List;
 
 import buildcraft.lib.client.guide.GuiGuide;

@@ -1,22 +1,14 @@
 package buildcraft.lib.client.guide.parts.contents;
 
-import net.minecraft.resources.Identifier;
-
 public interface IContentsLeaf extends IContentsNode {
     @Override
-    default void calcVisibility() {
-        // NO-OP
-    }
+    default void calcVisibility() {}
 
     @Override
-    default void sort() {
-        // NO-OP
-    }
+    default void sort() {}
 
     @Override
-    default void addChild(IContentsNode node) {
-        // NO-OP
-    }
+    default void addChild(IContentsNode node) {}
 
     @Override
     default IContentsNode[] getVisibleChildren() {

@@ -1,7 +1,5 @@
 package buildcraft.lib.client.guide.node;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -86,23 +84,17 @@ public class FormatString {
         return new FormatString(segments.toArray(new FormatSegment[0]));
     }
 
-    /** @return An array of length 1 or 2, with this wrapped down onto the next line. Note that this only wraps a single
-     *         line. */
     public FormatString[] wrap(IFontRenderer font, int maxWidth) {
         return wrap(font, maxWidth, true);
     }
 
-    /** @return An array of length 1 or 2, with this wrapped down onto the next line. Note that this only wraps a single
-     *         line. */
     public FormatString[] wrap(IFontRenderer font, int maxWidth, boolean onWords) {
         List<FormatSegment> thisLine = new ArrayList<>();
         int widthUsed = 0;
 
         for (int segmentIndex = 0; segmentIndex < segments.length; segmentIndex++) {
             FormatSegment segment = segments[segmentIndex];
-
-            // TODO: Ensure that this segment doesn't join with the NEXT segment as a word!
-            int width = font.width(segment.toFormatString());
+            int width = font.getStringWidth(segment.toFormatString());
             if (width + widthUsed <= maxWidth) {
                 thisLine.add(segment);
                 widthUsed += width;
@@ -117,7 +109,7 @@ public class FormatString {
                             continue;
                         }
                         String subText = text.substring(0, i);
-                        int w = font.width(subText);
+                        int w = font.getStringWidth(subText);
                         if (w + widthUsed <= maxWidth) {
                             allowedLength = i;
                             break outer;
@@ -139,9 +131,9 @@ public class FormatString {
                     for (int j = 1; j < left; j++) {
                         next[j] = segments[segmentIndex + j];
                     }
-                    return new FormatString[] { //
-                        new FormatString(thisLine.toArray(new FormatSegment[0])), //
-                        new FormatString(next)//
+                    return new FormatString[] {
+                        new FormatString(thisLine.toArray(new FormatSegment[0])),
+                        new FormatString(next)
                     };
                 } else {
                     int left = segments.length - segmentIndex;
@@ -149,9 +141,9 @@ public class FormatString {
                     for (int j = 0; j < left; j++) {
                         next[j] = segments[j + 1];
                     }
-                    return new FormatString[] { //
-                        new FormatString(thisLine.toArray(new FormatSegment[0])), //
-                        new FormatString(next)//
+                    return new FormatString[] {
+                        new FormatString(thisLine.toArray(new FormatSegment[0])),
+                        new FormatString(next)
                     };
                 }
             }

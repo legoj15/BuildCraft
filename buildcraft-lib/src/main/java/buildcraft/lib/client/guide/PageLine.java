@@ -1,12 +1,11 @@
 /*
  * Copyright (c) 2017 SpaceToad and the BuildCraft team
- * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
- * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the MPL was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/
  */
 
 package buildcraft.lib.client.guide;
-
-import net.minecraft.resources.Identifier;
 
 import java.util.List;
 import java.util.function.Supplier;
@@ -17,11 +16,9 @@ import buildcraft.lib.gui.ISimpleDrawable;
 
 /** Stores information about a single line of text. This may be displayed as more than a single line though. */
 public class PageLine implements Comparable<PageLine> {
-    /** Can be any of the boxes, any icon with dimensions different to these will render incorrectly. */
     public ISimpleDrawable startIcon;
     public ISimpleDrawable startIconHovered;
     public final int indent;
-    /** This will be wrapped automatically when it is rendered. */
     public final String text;
     public final boolean link;
 

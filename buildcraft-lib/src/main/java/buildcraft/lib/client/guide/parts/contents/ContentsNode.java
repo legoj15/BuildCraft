@@ -1,9 +1,8 @@
 package buildcraft.lib.client.guide.parts.contents;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +17,6 @@ import buildcraft.lib.client.guide.PageLine;
 import buildcraft.lib.client.guide.parts.GuideChapterWithin;
 import buildcraft.lib.client.guide.parts.GuidePart;
 import buildcraft.lib.client.guide.parts.GuideText;
-import buildcraft.lib.misc.StringUtilBC;
 
 public class ContentsNode implements IContentsNode {
 
@@ -71,12 +69,11 @@ public class ContentsNode implements IContentsNode {
 
     @Override
     public void sort() {
-        if (!needsSorting) {
-            return;
-        }
+        if (!needsSorting) return;
         needsSorting = false;
         sortedNodes = nodes.values().toArray(new IContentsNode[0]);
-        Arrays.sort(sortedNodes, StringUtilBC.compareBasicReadable(IContentsNode::getSearchName));
+        // StringUtilBC.compareBasicReadable not ported — use simple string compare
+        Arrays.sort(sortedNodes, Comparator.comparing(IContentsNode::getSearchName, String.CASE_INSENSITIVE_ORDER));
         for (IContentsNode node : sortedNodes) {
             node.sort();
         }

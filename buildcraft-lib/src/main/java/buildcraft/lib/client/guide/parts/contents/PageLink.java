@@ -1,7 +1,5 @@
 package buildcraft.lib.client.guide.parts.contents;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -33,7 +31,6 @@ public abstract class PageLink implements IContentsLeaf {
         return lowerCaseName;
     }
 
-    /** @return The tooltip to be shown if it is different to the search name and displayed text. */
     @Nullable
     protected List<String> getTooltip() {
         return null;

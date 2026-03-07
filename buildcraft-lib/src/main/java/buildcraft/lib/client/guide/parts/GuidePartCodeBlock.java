@@ -1,14 +1,10 @@
 package buildcraft.lib.client.guide.parts;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.ArrayList;
 import java.util.List;
 
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-
-import net.minecraft.client.gui.Gui;
 
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.font.IFontRenderer;
@@ -25,11 +21,12 @@ public class GuidePartCodeBlock extends GuidePart {
     @Override
     public PagePosition renderIntoArea(int x, int y, int width, int height, PagePosition current, int index) {
         IFontRenderer font = gui.getCurrentFont();
+        if (font == null) return current;
 
         List<String> wrappedLines = new ArrayList<>();
         IntList lineNumbers = new IntArrayList();
 
-        int lineNumberWidth = font.width(Integer.toString(lines.size() - 1));
+        int lineNumberWidth = font.getStringWidth(Integer.toString(lines.size() - 1));
         int widthForDecoration = 8 + lineNumberWidth;
         int innerMaxWidth = 0;
 
@@ -39,7 +36,7 @@ public class GuidePartCodeBlock extends GuidePart {
             wrappedLines.addAll(wrapped);
             for (int j = 0; j < wrapped.size(); j++) {
                 lineNumbers.add(j == 0 ? (i + 1) : -1);
-                innerMaxWidth = Math.max(innerMaxWidth, font.width(wrapped.get(j)));
+                innerMaxWidth = Math.max(innerMaxWidth, font.getStringWidth(wrapped.get(j)));
             }
         }
 
@@ -47,36 +44,26 @@ public class GuidePartCodeBlock extends GuidePart {
         int outerHeight = innerHeight + 6;
         current = current.guaranteeSpace(outerHeight, height);
         if (index == current.page) {
-            int outerWidth = innerMaxWidth + 8;
-
-            // FIXME: this displays too low! (or maybe text is too high?)
             int _y = y + current.pixel;
-            GuiGuide.BOX_CODE_SLICED.draw(x + lineNumberWidth + 5, _y, outerWidth, outerHeight);
+            GuiGuide.BOX_CODE_SLICED.draw(x + lineNumberWidth + 5, _y, innerMaxWidth + 8, outerHeight);
             _y += 4;
-            // try (AutoGlScissor scissor = GuiUtil.scissor(x, _y, width, height)) {
             boolean darken = true;
             for (int i = 0; i < wrappedLines.size(); i++) {
                 String line = wrappedLines.get(i);
-                int number = lineNumbers.get(i);
+                int number = lineNumbers.getInt(i);
                 if (number != -1) {
                     darken = !darken;
                     if (wrappedLines.size() > 1) {
                         String ns = Integer.toString(number);
-                        int addX = lineNumberWidth - font.width(ns);
+                        int addX = lineNumberWidth - font.getStringWidth(ns);
                         font.drawString(ns, x + 4 + addX, _y, 0);
                     }
                 }
                 int _x = x + 8 + lineNumberWidth;
-                if (darken) {
-                    // Gui.drawRect -> use GuiGraphics in 1.21+
-                    // TODO: Gui.drawRect(_x - 2, _y - 1, _x + innerMaxWidth + 4, _y +
-                    // font.getMaxFontHeight() + 1, 0xFF_F0_F0_F0);
-                }
+                // Darkened background rendering deferred (needs GuiGraphics)
                 font.drawString(line, _x, _y, 0);
                 _y += font.getMaxFontHeight() + 2;
             }
-
-            // }
         }
         current = current.nextLine(outerHeight, height);
         return current;

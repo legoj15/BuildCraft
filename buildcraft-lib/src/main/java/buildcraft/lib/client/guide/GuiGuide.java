@@ -99,6 +99,9 @@ public class GuiGuide extends Screen {
     private final List<GuideChapter> chapters = new ArrayList<>();
     private GuidePageBase currentPage;
     private IFontRenderer currentFont = FontManager.INSTANCE.getOrLoadFont("SansSerif", 9);
+    public TypeOrder sortingOrder = SORTING_TYPES[0];
+    public GuideContentsData bookData = GuideContentsData.EMPTY;
+    public int minX, minY;
 
     public GuiGuide() {
         this((GuideBook) null);

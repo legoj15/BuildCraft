@@ -28,6 +28,10 @@ public final class PageEntry<T> extends PageValue<T> {
         this.typeTags = new JsonTypeTags(name.getNamespace(), tagType, subType);
     }
 
+    public PageValue<T> toPageValue() {
+        return new PageValue<>(type, value);
+    }
+
     @Override
     public String toString() {
         return value.getClass().getSimpleName() + ": " + value;

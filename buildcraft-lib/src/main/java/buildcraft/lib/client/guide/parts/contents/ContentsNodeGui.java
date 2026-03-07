@@ -1,7 +1,5 @@
 package buildcraft.lib.client.guide.parts.contents;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -16,7 +14,6 @@ import buildcraft.lib.client.guide.parts.GuidePageBase;
 import buildcraft.lib.client.guide.parts.GuidePageFactory;
 import buildcraft.lib.client.guide.parts.GuidePart;
 import buildcraft.lib.client.guide.parts.GuidePart.PagePosition;
-import buildcraft.lib.misc.ArrayUtil;
 
 public class ContentsNodeGui {
     public final GuiGuide gui;
@@ -45,7 +42,7 @@ public class ContentsNodeGui {
     }
 
     public void setFontRenderer(IFontRenderer fontRenderer) {
-        this.font = fontRenderer;
+        this.fontRenderer = fontRenderer;
         if (parts != null) {
             for (GuidePart part : parts) {
                 part.setFontRenderer(fontRenderer);
@@ -64,9 +61,11 @@ public class ContentsNodeGui {
             List<GuidePart> allText = new ArrayList<>();
             List<PageLink> allLinks = new ArrayList<>();
 
-            // Depth first search
             Deque<IContentsNode> queue = new ArrayDeque<>();
-            ArrayUtil.addAllReversed(queue, node.getVisibleChildren());
+            IContentsNode[] children = node.getVisibleChildren();
+            for (int i = children.length - 1; i >= 0; i--) {
+                queue.addLast(children[i]);
+            }
             while (!queue.isEmpty()) {
                 IContentsNode next = queue.removeLast();
                 GuidePart part = next.createGuidePart(gui);
@@ -79,7 +78,10 @@ public class ContentsNodeGui {
                 } else {
                     allLinks.add(null);
                 }
-                ArrayUtil.addAllReversed(queue, next.getVisibleChildren());
+                IContentsNode[] nextChildren = next.getVisibleChildren();
+                for (int i = nextChildren.length - 1; i >= 0; i--) {
+                    queue.addLast(nextChildren[i]);
+                }
             }
             parts = allText.toArray(new GuidePart[0]);
             links = allLinks.toArray(new PageLink[0]);
@@ -89,9 +91,7 @@ public class ContentsNodeGui {
     }
 
     public PagePosition render(int x, int y, int width, int height, PagePosition current, int index) {
-        return iterate(current, height, (pos, part, link) -> {
-            return part.renderIntoArea(x, y, width, height, pos, index);
-        });
+        return iterate(current, height, (pos, part, link) -> part.renderIntoArea(x, y, width, height, pos, index));
     }
 
     public void onClicked(int x, int y, int width, int height, PagePosition current, int index) {
@@ -100,10 +100,9 @@ public class ContentsNodeGui {
             if (pos.page == index && part.wasHovered()) {
                 if (link != null) {
                     GuidePageFactory factory = link.getFactoryLink();
-                    GuidePageBase page = factory.createNew(gui);
-                    if (page != null) {
-                        gui.openPage(page);
-                        return null;
+                    if (factory != null) {
+                        GuidePageBase page = factory.createNew(gui);
+                        // gui.openPage(page) — deferred until full UI port
                     }
                 }
             }
@@ -124,7 +123,7 @@ public class ContentsNodeGui {
             GuidePart part = parts[i];
             PageLink link = links[i];
 
-            int space = 16;// gui.getCurrentFont().getFontHeight("EXAMPLE");
+            int space = 16;
             if (link == null) {
                 for (int j = i; j < links.length; j++) {
                     if (links[j] != null) {

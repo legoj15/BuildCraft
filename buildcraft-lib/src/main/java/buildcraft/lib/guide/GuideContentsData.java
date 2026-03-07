@@ -14,6 +14,8 @@ import buildcraft.lib.misc.LocaleUtil;
 
 public class GuideContentsData {
 
+    public static final GuideContentsData EMPTY = new GuideContentsData(null);
+
     public final @Nullable GuideBook book;
 
     public final List<String> loadedMods = new ArrayList<>();

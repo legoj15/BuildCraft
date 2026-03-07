@@ -1,7 +1,5 @@
 package buildcraft.lib.client.guide.parts;
 
-import net.minecraft.resources.Identifier;
-
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.parts.contents.PageLink;
 
@@ -25,9 +23,9 @@ public class GuidePartLink extends GuidePart {
         PagePosition pos = renderLine(current, link.text, x, y, width, height, -1);
         if (pos.page == index && wasHovered()) {
             GuidePageFactory factory = link.getFactoryLink();
-            GuidePageBase page = factory.createNew(gui);
-            if (page != null) {
-                gui.openPage(page);
+            if (factory != null) {
+                GuidePageBase page = factory.createNew(gui);
+                // gui.openPage(page) — deferred until full UI port
             }
         }
         return pos;

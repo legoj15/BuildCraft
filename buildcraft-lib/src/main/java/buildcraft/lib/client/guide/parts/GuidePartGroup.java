@@ -1,7 +1,5 @@
 package buildcraft.lib.client.guide.parts;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.List;
 
 import buildcraft.lib.client.guide.GuiGuide;
@@ -44,9 +42,7 @@ public class GuidePartGroup extends GuidePart {
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        if (obj == null || getClass() != obj.getClass()) {
-            return false;
-        }
+        if (obj == null || getClass() != obj.getClass()) return false;
         GuidePartGroup other = (GuidePartGroup) obj;
         return group == other.group;
     }
@@ -61,7 +57,9 @@ public class GuidePartGroup extends GuidePart {
 
     @Override
     public PagePosition renderIntoArea(int x, int y, int width, int height, PagePosition current, int index) {
-        current = current.guaranteeSpace(getFontRenderer().getMaxFontHeight() * 4, height);
+        if (getFontRenderer() != null) {
+            current = current.guaranteeSpace(getFontRenderer().getMaxFontHeight() * 4, height);
+        }
         for (GuideText text : texts) {
             current = text.renderIntoArea(x, y, width, height, current, index);
         }
@@ -71,7 +69,9 @@ public class GuidePartGroup extends GuidePart {
     @Override
     public PagePosition handleMouseClick(int x, int y, int width, int height, PagePosition current, int index,
         int mouseX, int mouseY) {
-        current = current.guaranteeSpace(getFontRenderer().getMaxFontHeight() * 4, height);
+        if (getFontRenderer() != null) {
+            current = current.guaranteeSpace(getFontRenderer().getMaxFontHeight() * 4, height);
+        }
         for (int i = 0; i < texts.length; i++) {
             GuideText text = texts[i];
             current = text.handleMouseClick(x, y, width, height, current, index, mouseX, mouseY);
@@ -79,7 +79,7 @@ public class GuidePartGroup extends GuidePart {
                 Object value = values[i - 1];
                 GuidePageFactory factory = GuideManager.INSTANCE.getFactoryFor(value);
                 if (factory != null) {
-                    gui.openPage(factory.createNew(gui));
+                    // gui.openPage(factory.createNew(gui)) — deferred until full UI port
                     return new PagePosition(Integer.MAX_VALUE / 4, 0);
                 }
             }

@@ -133,6 +133,7 @@ public class BCCore {
             event.accept(BCCoreItems.MARKER_CONNECTOR);
             event.accept(BCCoreItems.VOLUME_BOX);
             event.accept(BCCoreItems.MAP_LOCATION);
+            event.accept(BCCoreItems.LIST);
             event.accept(BCCoreItems.SPRING_WATER);
             event.accept(BCCoreItems.SPRING_OIL);
             event.accept(BCCoreItems.DECORATED_DESTROY);

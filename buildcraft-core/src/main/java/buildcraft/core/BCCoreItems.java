@@ -12,6 +12,7 @@ import buildcraft.core.item.ItemMarkerConnector;
 import buildcraft.core.item.ItemVolumeBox;
 import buildcraft.core.item.ItemMapLocation;
 import buildcraft.core.item.ItemPaintbrush_BC8;
+import buildcraft.core.item.ItemList_BC8;
 
 public class BCCoreItems {
         public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCCore.MODID);
@@ -41,6 +42,10 @@ public class BCCoreItems {
         public static final DeferredItem<ItemPaintbrush_BC8> PAINTBRUSH = ITEMS.registerItem(
                         "paintbrush",
                         ItemPaintbrush_BC8::new, props -> props.stacksTo(1));
+
+        public static final DeferredItem<ItemList_BC8> LIST = ITEMS.registerItem(
+                        "list",
+                        ItemList_BC8::new, props -> props.stacksTo(1));
 
         // Gear items
         public static final DeferredItem<Item> GEAR_WOOD = ITEMS.registerItem("gear_wood", Item::new, p -> p);

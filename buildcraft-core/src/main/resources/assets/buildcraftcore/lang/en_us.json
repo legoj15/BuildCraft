@@ -24,5 +24,6 @@
     "item.buildcraftcore.gear_iron": "Iron Gear",
     "item.buildcraftcore.gear_gold": "Gold Gear",
     "item.buildcraftcore.gear_diamond": "Diamond Gear",
+    "item.buildcraftcore.list": "List",
     "itemGroup.buildcraft.main": "BuildCraft"
 }

@@ -251,14 +251,15 @@ public class ItemMapLocation extends Item implements IMapLocation {
 
         BlockEntity tile = level.getBlockEntity(pos);
         CompoundTag cpt = getCustomTag(modified);
+        MapLocationType newType;
 
         if (tile instanceof IPathProvider) {
             List<BlockPos> path = ((IPathProvider) tile).getPath();
 
             if (path.size() > 1 && path.get(0).equals(path.get(path.size() - 1))) {
-                setTypeToStack(modified, MapLocationType.PATH_REPEATING);
+                newType = MapLocationType.PATH_REPEATING;
             } else {
-                setTypeToStack(modified, MapLocationType.PATH);
+                newType = MapLocationType.PATH;
             }
 
             ListTag pathNBT = new ListTag();
@@ -267,7 +268,7 @@ public class ItemMapLocation extends Item implements IMapLocation {
             }
             cpt.put("path", pathNBT);
         } else if (tile instanceof IAreaProvider) {
-            setTypeToStack(modified, MapLocationType.AREA);
+            newType = MapLocationType.AREA;
 
             IAreaProvider areaTile = (IAreaProvider) tile;
 
@@ -278,7 +279,7 @@ public class ItemMapLocation extends Item implements IMapLocation {
             cpt.putInt("yMax", areaTile.max().getY());
             cpt.putInt("zMax", areaTile.max().getZ());
         } else {
-            setTypeToStack(modified, MapLocationType.SPOT);
+            newType = MapLocationType.SPOT;
 
             cpt.putByte("side", (byte) side.ordinal());
             cpt.putInt("x", pos.getX());
@@ -286,8 +287,9 @@ public class ItemMapLocation extends Item implements IMapLocation {
             cpt.putInt("z", pos.getZ());
         }
 
+        cpt.putString(TAG_MAP_TYPE, newType.name());
         setCustomTag(modified, cpt);
-        updateModelData(modified, getTypeFromStack(modified));
+        updateModelData(modified, newType);
 
         if (modified != stack) {
             // We split the stack; give the modified single item back to the player

@@ -6,8 +6,6 @@
 
 package buildcraft.lib.client.guide.font;
 
-import net.minecraft.resources.Identifier;
-
 import java.awt.Font;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,16 +18,6 @@ public enum FontManager {
     private final Map<String, IFontRenderer> fonts = new HashMap<>();
 
     public IFontRenderer getOrLoadFont(String name, int size) {
-        // if (fonts.containsKey(name)) {
-        // return fonts.get(name);
-        // }
-
-        // Try to get a Font object
-
-        // Font font = new Font(name, Font.PLAIN, size);
-        // GuideFont value = new GuideFont(font);
-        // fonts.put(name, value);
-        // return value;
         if (ENABLE_SMOOTH_FONT) {
             return new GuideFont(new Font(name, 0, size));
         } else {

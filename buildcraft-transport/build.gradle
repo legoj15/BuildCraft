@@ -14,6 +14,3 @@ dependencies {
     implementation project(':buildcraft-lib')
     implementation project(':buildcraft-core')
 }
-
-// Dev run configuration has been moved to :buildcraft-all
-// Usage: ./gradlew :buildcraft-all:runClient

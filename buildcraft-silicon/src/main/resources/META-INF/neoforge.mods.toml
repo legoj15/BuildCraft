@@ -1,0 +1,24 @@
+modLoader="javafml"
+loaderVersion="[2,]"
+license="MIT"
+
+[[mods]]
+modId="buildcraftsilicon"
+version="1.21.11-8.0.0"
+displayName="BuildCraft Silicon"
+description='''
+The silicon module for BuildCraft 8. (Stub)
+'''
+[[dependencies.buildcraftsilicon]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1.0,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.buildcraftsilicon]]
+    modId="buildcraftcore"
+    type="required"
+    versionRange="*"
+    ordering="NONE"
+    side="BOTH"

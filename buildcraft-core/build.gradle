@@ -14,25 +14,5 @@ dependencies {
     implementation project(':buildcraft-lib')
 }
 
-// ─── Dev Run Configuration ───────────────────────────────────────────────────
-// Launch the game directly from Gradle with all 3 modules loaded.
-// Usage: ./gradlew :buildcraft-core:runClient
-neoForge {
-    runs {
-        client {
-            client()
-        }
-    }
-
-    mods {
-        buildcraftcore {
-            sourceSet sourceSets.main
-        }
-        buildcraftapi {
-            sourceSet project(':buildcraft-api').sourceSets.main
-        }
-        buildcraftlib {
-            sourceSet project(':buildcraft-lib').sourceSets.main
-        }
-    }
-}
+// Dev run configuration has been moved to :buildcraft-all
+// Usage: ./gradlew :buildcraft-all:runClient

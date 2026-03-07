@@ -1,0 +1,67 @@
+// ─── BuildCraft All ──────────────────────────────────────────────────────────
+// Assembly module that brings all BuildCraft sub-modules together into a single
+// runClient and a single JAR output.  This is the sole entry point for testing.
+// Usage: ./gradlew :buildcraft-all:runClient
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+        resources {
+            srcDirs = ['src/main/resources']
+        }
+    }
+}
+
+dependencies {
+    implementation project(':buildcraft-api')
+    implementation project(':buildcraft-lib')
+    implementation project(':buildcraft-core')
+    implementation project(':buildcraft-builders')
+    implementation project(':buildcraft-energy')
+    implementation project(':buildcraft-factory')
+    implementation project(':buildcraft-transport')
+    implementation project(':buildcraft-silicon')
+    implementation project(':buildcraft-robotics')
+}
+
+// ─── Dev Run Configuration ───────────────────────────────────────────────────
+// Single runClient that loads ALL BuildCraft modules.
+neoForge {
+    runs {
+        client {
+            client()
+        }
+    }
+
+    mods {
+        buildcraftapi {
+            sourceSet project(':buildcraft-api').sourceSets.main
+        }
+        buildcraftlib {
+            sourceSet project(':buildcraft-lib').sourceSets.main
+        }
+        buildcraftcore {
+            sourceSet project(':buildcraft-core').sourceSets.main
+        }
+        buildcraftbuilders {
+            sourceSet project(':buildcraft-builders').sourceSets.main
+        }
+        buildcraftenergy {
+            sourceSet project(':buildcraft-energy').sourceSets.main
+        }
+        buildcraftfactory {
+            sourceSet project(':buildcraft-factory').sourceSets.main
+        }
+        buildcrafttransport {
+            sourceSet project(':buildcraft-transport').sourceSets.main
+        }
+        buildcraftsilicon {
+            sourceSet project(':buildcraft-silicon').sourceSets.main
+        }
+        buildcraftrobotics {
+            sourceSet project(':buildcraft-robotics').sourceSets.main
+        }
+    }
+}

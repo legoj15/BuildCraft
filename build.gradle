@@ -34,6 +34,11 @@ def modulePackagePrefixes = [
     'buildcraft-lib' : 'buildcraft.lib.',
     'buildcraft-core': 'buildcraft.core.',
     'buildcraft-builders': 'buildcraft.builders.',
+    'buildcraft-energy': 'buildcraft.energy.',
+    'buildcraft-factory': 'buildcraft.factory.',
+    'buildcraft-transport': 'buildcraft.transport.',
+    'buildcraft-silicon': 'buildcraft.silicon.',
+    'buildcraft-robotics': 'buildcraft.robotics.',
 ]
 
 tasks.register('checkSplitPackages') {

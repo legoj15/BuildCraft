@@ -20,8 +20,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.level.storage.ValueInput;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import buildcraft.core.BCCoreBlockEntities;
 
@@ -77,7 +75,6 @@ public class TileMarkerVolume extends TileMarker<VolumeConnection> implements IT
     }
 
     @Nonnull
-    @OnlyIn(Dist.CLIENT)
     public AABB getRenderBoundingBox() {
         return new AABB(Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY,
                 Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);

@@ -14,8 +14,6 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import buildcraft.lib.client.render.MarkerRenderer;
 import buildcraft.lib.client.render.laser.LaserData_BC8;
@@ -206,7 +204,6 @@ public class PathConnection extends MarkerConnection<PathConnection> {
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
     public void renderInWorld() {
         BlockPos last = null;
         for (BlockPos p : positions) {
@@ -224,7 +221,6 @@ public class PathConnection extends MarkerConnection<PathConnection> {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
     private static void renderLaser(Vec3 from, Vec3 to) {
         Vec3 one = offset(from, to);
         Vec3 two = offset(to, from);
@@ -232,7 +228,6 @@ public class PathConnection extends MarkerConnection<PathConnection> {
         LaserRenderer_BC8.renderLaserStatic(MarkerRenderer.getPoseStack(), data, MarkerRenderer.getCameraPos());
     }
 
-    @OnlyIn(Dist.CLIENT)
     private static Vec3 offset(Vec3 from, Vec3 to) {
         Vec3 dir = to.subtract(from).normalize();
         return from.add(VecUtil.scale(dir, 0.125));

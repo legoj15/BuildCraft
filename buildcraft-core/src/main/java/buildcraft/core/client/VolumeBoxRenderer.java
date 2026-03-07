@@ -5,8 +5,6 @@
  */
 package buildcraft.core.client;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import buildcraft.lib.client.render.MarkerRenderer;
 import buildcraft.lib.client.render.laser.LaserBoxRenderer;
@@ -17,7 +15,6 @@ import buildcraft.core.marker.volume.VolumeBox;
 /**
  * Renders all client-side VolumeBoxes as laser box outlines.
  */
-@OnlyIn(Dist.CLIENT)
 public class VolumeBoxRenderer {
 
     /** Renders all volume boxes from ClientVolumeBoxes using LaserBoxRenderer. */

@@ -26,8 +26,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.resources.ResourceKey;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import buildcraft.api.core.BCDebugging;
@@ -286,7 +284,6 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
     // @OnlyIn(Dist.CLIENT)
     // public abstract LaserType getPossibleLaserType();
 
-    @OnlyIn(Dist.CLIENT)
     public final void handleMessageMain(MessageMarker message) {
         if (handleMessage(message)) {
             return;
@@ -307,6 +304,5 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
     protected abstract boolean handleMessage(MessageMarker message);
 }

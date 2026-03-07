@@ -8,16 +8,11 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.component.TooltipDisplay;
 import java.util.function.Consumer;
-import net.neoforged.neoforge.fluids.SimpleFluidContent;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import buildcraft.api.items.IItemFluidShard;
 import buildcraft.core.BCCore;
@@ -40,7 +35,6 @@ public class ItemFragileFluidContainer extends Item implements IItemFluidShard {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
             Consumer<Component> tooltip, TooltipFlag flagIn) {

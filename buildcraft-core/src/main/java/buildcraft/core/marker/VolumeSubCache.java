@@ -15,8 +15,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import buildcraft.lib.marker.MarkerCache;
 import buildcraft.lib.marker.MarkerSubCache;
@@ -95,7 +93,6 @@ public class VolumeSubCache extends MarkerSubCache<VolumeConnection> {
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
     protected boolean handleMessage(MessageMarker message) {
         List<BlockPos> positions = message.positions();
         if (message.connection()) {

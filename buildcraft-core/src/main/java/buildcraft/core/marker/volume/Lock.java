@@ -17,8 +17,6 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import buildcraft.lib.client.render.laser.LaserData_BC8;
 
@@ -211,21 +209,18 @@ public class Lock {
 
             public enum EnumType {
                 STRIPES_WRITE {
-                    @OnlyIn(Dist.CLIENT)
                     @Override
                     public LaserData_BC8 getLaserData(double scale) {
                         return null; // BuildCraftLaserManager.STRIPES_WRITE
                     }
                 },
                 STRIPES_READ {
-                    @OnlyIn(Dist.CLIENT)
                     @Override
                     public LaserData_BC8 getLaserData(double scale) {
                         return null; // BuildCraftLaserManager.STRIPES_READ
                     }
                 };
 
-                @OnlyIn(Dist.CLIENT)
                 public abstract LaserData_BC8 getLaserData(double scale);
             }
         }

@@ -23,8 +23,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.Vec3i;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import buildcraft.api.core.IAreaProvider;
 import buildcraft.api.core.IBox;
@@ -42,10 +40,8 @@ public class Box implements IBox {
     // Client side cache: used to compare current laser type with previously
     // rendered data.
 
-    @OnlyIn(Dist.CLIENT)
     public LaserData_BC8[] laserData;
 
-    @OnlyIn(Dist.CLIENT)
     public BlockPos lastMin, lastMax;
 
 //    @OnlyIn(Dist.CLIENT)

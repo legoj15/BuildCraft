@@ -9,14 +9,11 @@ import java.util.Objects;
 
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 /**
  * Holds information about a single laser beam in the world:
  * its visual type, position (start/end), its scale, and rendering flags.
  */
-@OnlyIn(Dist.CLIENT)
 public class LaserData_BC8 {
     public final LaserType laserType;
     public final Vec3 start, end;

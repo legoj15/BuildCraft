@@ -11,8 +11,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
 import buildcraft.lib.client.render.laser.LaserBoxRenderer;
@@ -25,7 +23,6 @@ import buildcraft.lib.marker.MarkerSubCache;
  * Renders all marker connections and volume boxes in the world.
  * Hooked into NeoForge's RenderLevelStageEvent.AfterTranslucentBlocks.
  */
-@OnlyIn(Dist.CLIENT)
 public class MarkerRenderer {
     public static final MarkerRenderer INSTANCE = new MarkerRenderer();
 

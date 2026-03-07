@@ -13,8 +13,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.core.BlockPos;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import buildcraft.lib.client.render.MarkerRenderer;
 import buildcraft.lib.client.render.laser.LaserBoxRenderer;
@@ -165,7 +163,6 @@ public class VolumeConnection extends MarkerConnection<VolumeConnection> {
     // ###########
 
     @Override
-    @OnlyIn(Dist.CLIENT)
     public void renderInWorld() {
         LaserBoxRenderer.renderLaserBoxStatic(
                 MarkerRenderer.getPoseStack(), box,

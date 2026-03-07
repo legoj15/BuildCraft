@@ -31,8 +31,6 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.core.component.DataComponents;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import buildcraft.api.core.IAreaProvider;
 import buildcraft.api.core.IBox;
@@ -127,7 +125,6 @@ public class ItemMapLocation extends Item implements IMapLocation {
 
     // --- Tooltip ---
 
-    @OnlyIn(Dist.CLIENT)
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
             Consumer<Component> tooltip, TooltipFlag flag) {

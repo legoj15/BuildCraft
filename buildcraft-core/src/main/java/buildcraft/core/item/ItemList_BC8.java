@@ -22,8 +22,6 @@ import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import buildcraft.api.items.IList;
 
@@ -76,7 +74,6 @@ public class ItemList_BC8 extends Item implements IList {
         return InteractionResult.SUCCESS;
     }
 
-    @OnlyIn(Dist.CLIENT)
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
             Consumer<Component> tooltip, TooltipFlag flag) {

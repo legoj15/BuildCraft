@@ -13,8 +13,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import org.joml.Matrix4f;
 
@@ -23,7 +21,6 @@ import org.joml.Matrix4f;
  * This is a simplified 1.21 port — the 1.12 version used
  * GL display lists with textured quads.
  */
-@OnlyIn(Dist.CLIENT)
 public class LaserRenderer_BC8 {
 
     /**

@@ -6,25 +6,25 @@
 
 package buildcraft.lib.misc;
 
-import net.minecraft.resources.Identifier;
-
 import javax.annotation.Nonnull;
 
 import net.minecraft.world.item.ItemStack;
 
+/** An immutable key type for ItemStacks, suitable for use as Map keys. */
 public class ItemStackKey {
-    public static final ItemStackKey EMPTY = new ItemStackKey(StackUtil.EMPTY);
+    public static final ItemStackKey EMPTY = new ItemStackKey(ItemStack.EMPTY);
 
     public final @Nonnull ItemStack baseStack;
     private final int hash;
 
     public ItemStackKey(@Nonnull ItemStack stack) {
         if (stack.isEmpty()) {
-            baseStack = StackUtil.EMPTY;
+            baseStack = ItemStack.EMPTY;
             hash = 0;
         } else {
             this.baseStack = stack.copy();
-            this.hash = StackUtil.hash(baseStack);
+            // In 1.21, no metadata — hash by item identity and components
+            this.hash = ItemStack.hashItemAndComponents(baseStack);
         }
     }
 
@@ -40,13 +40,8 @@ public class ItemStackKey {
         if (obj.getClass() != this.getClass()) return false;
         ItemStackKey other = (ItemStackKey) obj;
         if (hash != other.hash) return false;
-        if (baseStack.getItem() != other.baseStack.getItem()) {
-            return false;
-        }
-        if (baseStack.getMetadata() != other.baseStack.getMetadata()) {
-            return false;
-        }
-        return baseStack.serializeNBT().equals(other.baseStack.serializeNBT());
+        // In 1.21, use ItemStack.isSameItemSameComponents for full equality
+        return ItemStack.isSameItemSameComponents(baseStack, other.baseStack);
     }
 
     @Override

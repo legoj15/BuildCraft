@@ -1,0 +1,110 @@
+package buildcraft.lib.client.guide.entry;
+
+import net.minecraft.resources.Identifier;
+
+import java.util.Collections;
+import java.util.List;
+
+import javax.annotation.Nullable;
+
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
+
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.core.registries.BuiltInRegistries;
+
+import buildcraft.api.registry.IScriptableRegistry.OptionallyDisabled;
+
+import buildcraft.lib.client.guide.data.JsonTypeTags;
+import buildcraft.lib.gui.GuiStack;
+import buildcraft.lib.gui.ISimpleDrawable;
+import buildcraft.lib.misc.ItemStackKey;
+
+/** Guide page entry type for items/item stacks. Handles deserialisation from JSON,
+ * matching logic, and icon rendering via {@link GuiStack}. */
+public class PageEntryItemStack extends PageValueType<ItemStackValueFilter> {
+
+    public static final PageEntryItemStack INSTANCE = new PageEntryItemStack();
+    private static final JsonTypeTags TAGS = new JsonTypeTags("buildcraft.guide.contents.item_stacks");
+
+    @Override
+    public Class<ItemStackValueFilter> getEntryClass() {
+        return ItemStackValueFilter.class;
+    }
+
+    @Override
+    protected boolean isValid(ItemStackValueFilter typed) {
+        return !typed.stack.baseStack.isEmpty();
+    }
+
+    @Override
+    public void iterateAllDefault(IEntryLinkConsumer consumer, ProfilerFiller prof) {
+        // Deferred — full item iteration requires GuideManager and contents system
+        // Will be implemented when the contents page system is ported
+    }
+
+    @Override
+    public OptionallyDisabled<PageEntry<ItemStackValueFilter>> deserialize(Identifier name, JsonObject json,
+        JsonDeserializationContext ctx) {
+        if (!json.has("stack")) {
+            throw new JsonSyntaxException(
+                "Expected either a string or an object for 'stack', but got nothing for " + json
+            );
+        }
+        String str = json.get("stack").getAsString();
+        if (str.startsWith("(") && str.endsWith(")")) {
+            str = str.substring(1, str.length() - 1);
+        }
+        Identifier loc = Identifier.parse(str);
+        Item item = BuiltInRegistries.ITEM.get(loc).map(ref -> ref.value()).orElse(null);
+        if (item == null) {
+            throw new JsonSyntaxException("Unknown item " + str);
+        }
+        ItemStack stack = new ItemStack(item);
+        ItemStackValueFilter filter = new ItemStackValueFilter(new ItemStackKey(stack), false, false);
+        return new OptionallyDisabled<>(new PageEntry<>(this, name, json, filter));
+    }
+
+    @Override
+    public String getTitle(ItemStackValueFilter value) {
+        return value.stack.baseStack.getHoverName().getString();
+    }
+
+    @Override
+    public List<String> getTooltip(ItemStackValueFilter value) {
+        return Collections.singletonList(value.stack.baseStack.getHoverName().getString());
+    }
+
+    @Override
+    public boolean matches(ItemStackValueFilter entry, Object obj) {
+        if (obj instanceof ItemStackValueFilter) {
+            obj = ((ItemStackValueFilter) obj).stack.baseStack;
+        }
+        if (obj instanceof ItemStackKey) {
+            obj = ((ItemStackKey) obj).baseStack;
+        }
+        if (obj instanceof ItemStack) {
+            ItemStack base = entry.stack.baseStack;
+            ItemStack test = (ItemStack) obj;
+            if (base.isEmpty() || test.isEmpty()) {
+                return false;
+            }
+            return base.getItem() == test.getItem();
+        }
+        return false;
+    }
+
+    @Override
+    @Nullable
+    public ISimpleDrawable createDrawable(ItemStackValueFilter value) {
+        return new GuiStack(value.stack.baseStack);
+    }
+
+    @Override
+    public Object getBasicValue(ItemStackValueFilter value) {
+        return value.stack.baseStack.getItem();
+    }
+}

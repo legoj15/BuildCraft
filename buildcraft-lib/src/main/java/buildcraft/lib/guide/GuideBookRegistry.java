@@ -4,8 +4,6 @@ import net.minecraft.resources.Identifier;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.world.InteractionResult;
-
 import buildcraft.lib.script.ScriptableRegistry;
 
 public class GuideBookRegistry extends ScriptableRegistry<GuideBook> {
@@ -20,6 +18,7 @@ public class GuideBookRegistry extends ScriptableRegistry<GuideBook> {
     @Nullable
     public GuideBook getBook(String bookName) {
         Identifier loc = Identifier.parse(bookName);
+        // getReloadableEntryMap returns Map<Object, E>, use Identifier key
         GuideBook guideBook = getReloadableEntryMap().get(loc);
         if (guideBook != null) {
             return guideBook;

@@ -5,11 +5,12 @@ import net.minecraft.resources.Identifier;
 import java.util.Collections;
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
 
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.world.InteractionResult;
 
 import buildcraft.api.registry.IScriptableRegistry.OptionallyDisabled;
 
@@ -39,6 +40,7 @@ public class PageEntryExternal extends PageValueType<String> {
     }
 
     @Override
+    @Nullable
     public ISimpleDrawable createDrawable(String value) {
         return null;
     }

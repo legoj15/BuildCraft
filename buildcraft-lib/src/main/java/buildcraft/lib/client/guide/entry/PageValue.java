@@ -1,7 +1,5 @@
 package buildcraft.lib.client.guide.entry;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.List;
 import java.util.Objects;
 
@@ -9,9 +7,7 @@ import javax.annotation.Nullable;
 
 import com.google.gson.JsonObject;
 
-import buildcraft.lib.client.guide.GuideManager;
 import buildcraft.lib.gui.ISimpleDrawable;
-import buildcraft.lib.misc.JsonUtil;
 
 public class PageValue<T> {
 
@@ -26,7 +22,11 @@ public class PageValue<T> {
     }
 
     public static String getTitle(JsonObject json) {
-        return JsonUtil.getTextComponent(json, "title", "buildcraft.guide.page.").getFormattedText();
+        // JsonUtil.getTextComponent not yet available — use raw title field
+        if (json.has("title")) {
+            return json.get("title").getAsString();
+        }
+        return "untitled";
     }
 
     /** @param test An unknown object.
@@ -40,8 +40,6 @@ public class PageValue<T> {
         return type.createDrawable(value);
     }
 
-    /** @return A value to be added to {@link GuideManager#objectsAdded} so that
-     *         {@link IEntryIterable#iterateAllDefault(IEntryLinkConsumer)} can ignore similar entries. */
     public Object getBasicValue() {
         return type.getBasicValue(value);
     }

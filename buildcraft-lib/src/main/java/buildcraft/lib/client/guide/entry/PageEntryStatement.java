@@ -12,8 +12,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.util.GsonHelper;
-import net.minecraft.world.InteractionResult;
 
 import buildcraft.api.registry.IScriptableRegistry.OptionallyDisabled;
 import buildcraft.api.statements.IAction;
@@ -21,11 +19,8 @@ import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.ITrigger;
 import buildcraft.api.statements.StatementManager;
 
-import buildcraft.lib.client.guide.GuideManager;
 import buildcraft.lib.client.guide.data.JsonTypeTags;
-import buildcraft.lib.client.guide.parts.contents.PageLinkStatement;
 import buildcraft.lib.gui.ISimpleDrawable;
-import buildcraft.lib.gui.statement.GuiElementStatementSource;
 
 public class PageEntryStatement extends PageValueType<IStatement> {
 
@@ -41,29 +36,17 @@ public class PageEntryStatement extends PageValueType<IStatement> {
 
     @Override
     public void iterateAllDefault(IEntryLinkConsumer consumer, ProfilerFiller prof) {
-        for (IStatement statement : new TreeMap<>(StatementManager.statements).values()) {
-            if (!GuideManager.INSTANCE.objectsAdded.add(statement)) {
-                continue;
-            }
-
-            final JsonTypeTags parent;
-
-            if (statement instanceof ITrigger) {
-                parent = TRIGGER_TAGS;
-            } else if (statement instanceof IAction) {
-                parent = ACTION_TAGS;
-            } else {
-                continue;
-            }
-
-            consumer.addChild(parent, new PageLinkStatement(false, statement));
-        }
+        // Deferred — needs GuideManager.objectsAdded and PageLinkStatement
+        // Will iterate all registered statements when the contents system is ported
     }
 
     @Override
     public OptionallyDisabled<PageEntry<IStatement>> deserialize(Identifier name, JsonObject json,
         JsonDeserializationContext ctx) {
-        String stmntName = GsonHelper.getString(json, "statement");
+        if (!json.has("statement")) {
+            throw new JsonSyntaxException("Missing 'statement' field in " + json);
+        }
+        String stmntName = json.get("statement").getAsString();
         IStatement stmnt = StatementManager.statements.get(stmntName);
         if (stmnt == null) {
             throw new JsonSyntaxException("Unknown statement '" + stmntName + "'");
@@ -89,6 +72,7 @@ public class PageEntryStatement extends PageValueType<IStatement> {
     @Override
     @Nullable
     public ISimpleDrawable createDrawable(IStatement value) {
-        return (x, y) -> GuiElementStatementSource.drawGuiSlot(value, x, y);
+        // Deferred — GuiElementStatementSource rendering requires the statement GUI system
+        return null;
     }
 }

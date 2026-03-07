@@ -1,7 +1,5 @@
 package buildcraft.lib.client.guide.entry;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.Objects;
 
 import net.minecraft.world.item.ItemStack;
@@ -15,7 +13,8 @@ public class ItemStackValueFilter {
     public final boolean matchMeta;
 
     public ItemStackValueFilter(ItemStack stack) {
-        this(new ItemStackKey(stack), stack.getHasSubtypes(), false);
+        // In 1.21, items no longer have subtypes/metadata — always match by item identity
+        this(new ItemStackKey(stack), false, false);
     }
 
     public ItemStackValueFilter(ItemStackKey stack, boolean matchMeta, boolean matchNbt) {

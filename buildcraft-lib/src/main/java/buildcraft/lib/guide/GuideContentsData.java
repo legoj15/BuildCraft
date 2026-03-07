@@ -1,7 +1,5 @@
 package buildcraft.lib.guide;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -13,7 +11,6 @@ import javax.annotation.Nullable;
 import buildcraft.api.BCModules;
 
 import buildcraft.lib.misc.LocaleUtil;
-import buildcraft.lib.misc.ModUtil;
 
 public class GuideContentsData {
 
@@ -38,12 +35,8 @@ public class GuideContentsData {
             if (bcMod != null) {
                 bcmods.add(bcMod);
             } else {
-                String name = ModUtil.getNameOfMod(domain);
-                if (name != null) {
-                    loadedMods.add(name);
-                } else {
-                    loadedOther.add(LocaleUtil.localize(domain + ".compat.buildcraft.guide.domain_name"));
-                }
+                // ModUtil.getNameOfMod not yet ported — use domain as fallback
+                loadedMods.add(domain);
             }
         }
         Collections.sort(loadedMods);

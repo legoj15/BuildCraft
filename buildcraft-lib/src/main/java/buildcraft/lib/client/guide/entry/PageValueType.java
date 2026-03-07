@@ -17,16 +17,13 @@ import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
 
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.world.InteractionResult;
 
 import buildcraft.api.registry.IScriptableRegistry.OptionallyDisabled;
 
-import buildcraft.lib.client.guide.GuiGuide;
-import buildcraft.lib.client.guide.GuideManager;
-import buildcraft.lib.client.guide.parts.GuidePart;
-import buildcraft.lib.client.guide.parts.contents.PageLink;
 import buildcraft.lib.gui.ISimpleDrawable;
 
+/** Abstract base for guide page value types. Subclasses define how to deserialize, display, and match
+ * entries of a specific type (item stacks, statements, external pages, etc.). */
 public abstract class PageValueType<T> {
 
     public abstract OptionallyDisabled<PageEntry<T>> deserialize(Identifier name, JsonObject json,
@@ -41,8 +38,6 @@ public abstract class PageValueType<T> {
     @Nullable
     public abstract ISimpleDrawable createDrawable(T value);
 
-    /** @return A value to be added to {@link GuideManager#objectsAdded} so that
-     *         {@link IEntryIterable#iterateAllDefault(IEntryLinkConsumer)} can ignore similar entries. */
     public Object getBasicValue(T value) {
         return value;
     }
@@ -54,8 +49,8 @@ public abstract class PageValueType<T> {
     public abstract void iterateAllDefault(IEntryLinkConsumer consumer, ProfilerFiller prof);
 
     /** @param to Something that identifies what this should link to.
-     * @return Either the {@link PageLink}, or the error for why the given "to" doesn't result in a valid link. */
-    public OptionallyDisabled<PageLink> createLink(String to, ProfilerFiller prof) {
+     * @return Either success or the error reason. */
+    public OptionallyDisabled<Object> createLink(String to, ProfilerFiller prof) {
         return new OptionallyDisabled<>(getClass().getSimpleName() + " doesn't support links");
     }
 
@@ -73,7 +68,9 @@ public abstract class PageValueType<T> {
         return true;
     }
 
-    public void addPageEntries(T value, GuiGuide gui, List<GuidePart> parts) {
-
+    /** Override to add page entries when this entry is viewed.
+     * Deferred until GuiGuide and GuidePart are ported. */
+    public void addPageEntries(T value, Object gui, List<?> parts) {
+        // Stub — rendering system not yet ported
     }
 }

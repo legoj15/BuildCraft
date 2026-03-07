@@ -4,11 +4,7 @@ import net.minecraft.resources.Identifier;
 
 import com.google.gson.JsonObject;
 
-import net.minecraft.util.GsonHelper;
-import net.minecraft.world.InteractionResult;
-
 import buildcraft.lib.client.guide.data.JsonTypeTags;
-import buildcraft.lib.misc.JsonUtil;
 
 public final class PageEntry<T> extends PageValue<T> {
 
@@ -23,10 +19,13 @@ public final class PageEntry<T> extends PageValue<T> {
 
     public PageEntry(PageValueType<T> type, Identifier name, JsonObject json, T value) {
         super(type, value);
-        this.book = JsonUtil.getIdentifier(json, "book");
-        String tagType = GsonHelper.getString(json, "tag_type");
-        String subType = GsonHelper.getString(json, "tag_subtype");
-        this.typeTags = new JsonTypeTags(name.getResourceDomain(), tagType, subType);
+        // Read book identifier from JSON
+        this.book = json.has("book")
+            ? Identifier.parse(json.get("book").getAsString())
+            : Identifier.parse("buildcraft:guide");
+        String tagType = json.has("tag_type") ? json.get("tag_type").getAsString() : "";
+        String subType = json.has("tag_subtype") ? json.get("tag_subtype").getAsString() : "";
+        this.typeTags = new JsonTypeTags(name.getNamespace(), tagType, subType);
     }
 
     @Override

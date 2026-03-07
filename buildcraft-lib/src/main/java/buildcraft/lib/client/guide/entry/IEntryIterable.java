@@ -1,7 +1,5 @@
 package buildcraft.lib.client.guide.entry;
 
-import net.minecraft.resources.Identifier;
-
 @FunctionalInterface
 public interface IEntryIterable {
     void iterateAllDefault(IEntryLinkConsumer consumer);

@@ -5,6 +5,7 @@
  */
 package buildcraft.lib.misc;
 
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -14,12 +15,25 @@ import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.DoubleTag;
+import net.minecraft.nbt.EndTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.phys.Vec3;
 
 public class NBTUtilBC {
+
+    /** Sentinel value representing "no NBT value found". Use EndTag.INSTANCE. */
+    public static final Tag NBT_NULL = EndTag.INSTANCE;
+
+    /** Returns Optional.empty() if tag is null or is NBT_NULL, otherwise Optional.of(tag). */
+    @SuppressWarnings("unchecked")
+    public static <T extends Tag> Optional<T> toOptional(@Nullable T tag) {
+        if (tag == null || tag == NBT_NULL || tag.getId() == Tag.TAG_END) {
+            return Optional.empty();
+        }
+        return Optional.of(tag);
+    }
 
     // BlockPos serialization
 

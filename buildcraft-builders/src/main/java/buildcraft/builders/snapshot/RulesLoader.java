@@ -28,17 +28,17 @@ import com.google.gson.reflect.TypeToken;
 
 import org.apache.commons.lang3.tuple.Pair;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
 
-import net.minecraftforge.fml.common.Loader;
-import net.minecraftforge.fml.common.ModContainer;
+import net.neoforged.fml.ModList;
+import net.neoforged.neoforgespi.language.IModInfo;
 
-import buildcraft.lib.BCLib;
-import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.JsonUtil;
 
 public class RulesLoader {
@@ -63,7 +63,7 @@ public class RulesLoader {
     @SuppressWarnings("WeakerAccess")
     public static final Set<String> READ_DOMAINS = new HashSet<>();
     @SuppressWarnings("ConstantConditions")
-    private static final LoadingCache<Pair<IBlockState, NBTTagCompound>, Set<JsonRule>>
+    private static final LoadingCache<Pair<BlockState, CompoundTag>, Set<JsonRule>>
         BLOCK_RULES_CACHE = CacheBuilder.newBuilder()
         .expireAfterAccess(5, TimeUnit.MINUTES)
         .build(CacheLoader.from(pair -> getBlockRulesInternal(pair.getLeft(), pair.getRight())));
@@ -71,14 +71,11 @@ public class RulesLoader {
     public static void loadAll() {
         RULES.clear();
         READ_DOMAINS.clear();
-        for (ModContainer modContainer : Loader.instance().getModList()) {
-            String domain = modContainer.getModId();
+        for (IModInfo modInfo : ModList.get().getMods()) {
+            String domain = modInfo.getModId();
             if (!READ_DOMAINS.contains(domain)) {
                 String base = "assets/" + domain + "/compat/buildcraft/builders/";
-                if (modContainer.getMod() == null) {
-                    continue;
-                }
-                InputStream inputStream = modContainer.getMod().getClass().getClassLoader().getResourceAsStream(
+                InputStream inputStream = RulesLoader.class.getClassLoader().getResourceAsStream(
                     base + "index.json"
                 );
                 if (inputStream != null) {
@@ -89,8 +86,7 @@ public class RulesLoader {
                     ).stream()
                         .map(name -> base + name + ".json")
                         .map(name -> {
-                            InputStream resourceAsStream = modContainer.getMod()
-                                .getClass()
+                            InputStream resourceAsStream = RulesLoader.class
                                 .getClassLoader()
                                 .getResourceAsStream(name);
                             if (resourceAsStream == null) {
@@ -119,12 +115,13 @@ public class RulesLoader {
         READ_DOMAINS.add("buildcraftrobotics");
         READ_DOMAINS.add("buildcraftsilicon");
         READ_DOMAINS.add("buildcrafttransport");
-        if (!BCLib.DEV) {
+        // TODO: Replace with BCLib.DEV when implemented
+        if (true) {
             READ_DOMAINS.removeIf(domain -> domain.startsWith("buildcraft"));
         }
     }
 
-    private static Set<JsonRule> getBlockRulesInternal(IBlockState blockState, NBTTagCompound tileNbt) {
+    private static Set<JsonRule> getBlockRulesInternal(BlockState blockState, CompoundTag tileNbt) {
         return RulesLoader.RULES.stream()
             .filter(rule -> rule.selectors != null)
             .filter(rule ->
@@ -133,11 +130,13 @@ public class RulesLoader {
                         selector.matches(
                             base -> {
                                 boolean complex = base.contains("[");
-                                return Block.getBlockFromName(
+                                Identifier blockId = Identifier.parse(
                                     complex
                                         ? base.substring(0, base.indexOf("["))
                                         : base
-                                ) == blockState.getBlock() &&
+                                );
+                                Block block = BuiltInRegistries.BLOCK.getValue(blockId);
+                                return block == blockState.getBlock() &&
                                     (!complex ||
                                         Arrays.stream(
                                             base.substring(
@@ -148,11 +147,11 @@ public class RulesLoader {
                                         )
                                             .map(nameValue -> nameValue.split("="))
                                             .allMatch(nameValue ->
-                                                blockState.getPropertyKeys().stream()
+                                                blockState.getProperties().stream()
                                                     .filter(property -> property.getName().equals(nameValue[0]))
                                                     .findFirst()
                                                     .map(property ->
-                                                        BlockUtil.getPropertyStringValue(
+                                                        getPropertyStringValue(
                                                             blockState,
                                                             property
                                                         )
@@ -162,7 +161,7 @@ public class RulesLoader {
                                             )
                                     );
                             },
-                            tileNbt == null ? new NBTTagCompound() : tileNbt
+                            tileNbt == null ? new CompoundTag() : tileNbt
                         )
                     )
             )
@@ -170,13 +169,12 @@ public class RulesLoader {
     }
 
     @SuppressWarnings("WeakerAccess")
-    public static Set<JsonRule> getRules(IBlockState blockState, NBTTagCompound tileNbt) {
+    public static Set<JsonRule> getRules(BlockState blockState, CompoundTag tileNbt) {
         return BLOCK_RULES_CACHE.getUnchecked(Pair.of(blockState, tileNbt));
     }
 
     @SuppressWarnings("WeakerAccess")
-    public static Set<JsonRule> getRules(ResourceLocation entityId, NBTTagCompound tileNbt) {
-        // noinspection ConstantConditions
+    public static Set<JsonRule> getRules(Identifier entityId, CompoundTag tileNbt) {
         return RulesLoader.RULES.stream()
             .filter(rule -> rule.selectors != null)
             .filter(rule ->
@@ -184,5 +182,11 @@ public class RulesLoader {
                     .anyMatch(selector -> selector.matches(entityId.toString()::equals, tileNbt))
             )
             .collect(Collectors.toCollection(HashSet::new));
+    }
+
+    /** Get the string value of a property from a block state. */
+    @SuppressWarnings("unchecked")
+    private static <T extends Comparable<T>> String getPropertyStringValue(BlockState state, Property<T> property) {
+        return property.getName(state.getValue(property));
     }
 }

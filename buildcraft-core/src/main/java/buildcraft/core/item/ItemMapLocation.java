@@ -17,6 +17,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.nbt.CompoundTag;
@@ -74,6 +75,24 @@ public class ItemMapLocation extends Item implements IMapLocation {
             tag.putString(TAG_MAP_TYPE, type.name());
             return CustomData.of(tag);
         });
+    }
+
+    /**
+     * Update the CustomModelData component to match the current MapLocationType.
+     * CLEAN = 0 (fallback, remove component), SPOT = 1, AREA = 2, PATH = 3, ZONE = 4, PATH_REPEATING = 5.
+     */
+    private static void updateModelData(@Nonnull ItemStack stack, MapLocationType type) {
+        if (type == MapLocationType.CLEAN) {
+            stack.remove(DataComponents.CUSTOM_MODEL_DATA);
+        } else {
+            // ordinal: CLEAN=0, SPOT=1, AREA=2, PATH=3, ZONE=4, PATH_REPEATING=5
+            stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(
+                    java.util.List.of((float) type.ordinal()),
+                    java.util.List.of(),
+                    java.util.List.of(),
+                    java.util.List.of()
+            ));
+        }
     }
 
     private static CompoundTag getCustomTag(@Nonnull ItemStack stack) {
@@ -199,6 +218,7 @@ public class ItemMapLocation extends Item implements IMapLocation {
         } else {
             setCustomTag(stack, nbt);
         }
+        updateModelData(stack, MapLocationType.CLEAN);
         return InteractionResult.SUCCESS;
     }
 
@@ -267,6 +287,7 @@ public class ItemMapLocation extends Item implements IMapLocation {
         }
 
         setCustomTag(modified, cpt);
+        updateModelData(modified, getTypeFromStack(modified));
 
         if (modified != stack) {
             // We split the stack; give the modified single item back to the player

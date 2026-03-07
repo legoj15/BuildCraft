@@ -73,6 +73,10 @@ public class GuiGuide extends Screen {
     public static final GuiIcon PAGE_RIGHT = new GuiIcon(new SpriteRaw(RIGHT_PAGE, 0, 0, 193, 248, 256), 256);
     public static final GuiIcon NOTE_PAGE = new GuiIcon(new SpriteRaw(NOTE, 0, 0, 131, 164, 256), 256);
 
+    /** The text area within the left page (used for centering recipe grids) */
+    public static final GuiRectangle PAGE_LEFT_TEXT = new GuiRectangle(0, 0, 170, 220);
+    public static final GuiRectangle PAGE_RIGHT_TEXT = new GuiRectangle(0, 0, 170, 220);
+
     public static final TypeOrder[] SORTING_TYPES = {
         new TypeOrder("buildcraft.guide.order.source"),
         new TypeOrder("buildcraft.guide.order.type"),

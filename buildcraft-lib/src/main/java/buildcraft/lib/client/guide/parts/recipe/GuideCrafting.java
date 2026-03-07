@@ -1,27 +1,13 @@
-/*
- * Copyright (c) 2017 SpaceToad and the BuildCraft team
- * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
- * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
- */
-
 package buildcraft.lib.client.guide.parts.recipe;
-
-import net.minecraft.resources.Identifier;
 
 import java.util.Arrays;
 
-import javax.annotation.Nonnull;
-
-import com.mojang.blaze3d.systems.RenderSystem;
-
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
 
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.parts.GuidePartItem;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.pos.GuiRectangle;
-import buildcraft.lib.misc.data.NonNullMatrix;
 import buildcraft.lib.recipe.ChangingItemStack;
 
 public class GuideCrafting extends GuidePartItem {
@@ -44,18 +30,6 @@ public class GuideCrafting extends GuidePartItem {
     private final ChangingItemStack output;
     private final int hash;
 
-    GuideCrafting(GuiGuide gui, NonNullMatrix<Ingredient> input, @Nonnull ItemStack output) {
-        super(gui);
-        this.input = new ChangingItemStack[input.getWidth()][input.getHeight()];
-        for (int x = 0; x < input.getWidth(); x++) {
-            for (int y = 0; y < input.getHeight(); y++) {
-                this.input[x][y] = new ChangingItemStack(input.get(x, y));
-            }
-        }
-        this.output = new ChangingItemStack(output);
-        this.hash = Arrays.deepHashCode(new Object[] { input, output });
-    }
-
     GuideCrafting(GuiGuide gui, ChangingItemStack[][] input, ChangingItemStack output) {
         super(gui);
         this.input = input;
@@ -72,9 +46,7 @@ public class GuideCrafting extends GuidePartItem {
     public boolean equals(Object obj) {
         if (obj == this) return true;
         if (obj == null) return false;
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
+        if (getClass() != obj.getClass()) return false;
         GuideCrafting other = (GuideCrafting) obj;
         return Arrays.deepEquals(input, other.input) && output.equals(other.output);
     }
@@ -88,20 +60,13 @@ public class GuideCrafting extends GuidePartItem {
         y += OFFSET.y + current.pixel;
         if (current.page == index) {
             CRAFTING_GRID.drawAt(x, y);
-            // Render the item
-            RenderSystem.enableRescaleNormal();
-            RenderSystem.enableGUIStandardItemLighting();
             for (int itemX = 0; itemX < input.length; itemX++) {
                 for (int itemY = 0; itemY < input[itemX].length; itemY++) {
                     GuiRectangle rect = ITEM_POSITION[itemX][itemY];
                     drawItemStack(input[itemX][itemY].get(), x + (int) rect.x, y + (int) rect.y);
                 }
             }
-
             drawItemStack(output.get(), x + (int) OUT_POSITION.x, y + (int) OUT_POSITION.y);
-
-            // RenderSystem.disableStandardItemLighting() removed in 1.21;
-            RenderSystem.disableRescaleNormal();
         }
         current = current.nextLine(PIXEL_HEIGHT, height);
         return current;
@@ -122,7 +87,6 @@ public class GuideCrafting extends GuidePartItem {
                     testClickItemStack(input[itemX][itemY].get(), x + (int) rect.x, y + (int) rect.y);
                 }
             }
-
             testClickItemStack(output.get(), x + (int) OUT_POSITION.x, y + (int) OUT_POSITION.y);
         }
         current = current.nextLine(PIXEL_HEIGHT, height);

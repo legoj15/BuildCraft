@@ -1,16 +1,5 @@
-/*
- * Copyright (c) 2017 SpaceToad and the BuildCraft team
- * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
- * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
- */
-
 package buildcraft.lib.client.guide.parts;
 
-import net.minecraft.resources.Identifier;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.lib.client.guide.GuiGuide;
@@ -30,15 +19,14 @@ public abstract class GuidePartItem extends GuidePart {
     }
 
     protected void drawItemStack(ItemStack stack, int x, int y) {
+        // Rendering deferred — needs GuiGraphics (1.21 item rendering)
+        // In 1.21 this would be:
+        //   guiGraphics.renderItem(stack, x, y);
+        //   guiGraphics.renderItemDecorations(font, stack, x, y);
         if (stack != null && !stack.isEmpty()) {
-            RenderSystem.setShaderColor(1, 1, 1);
-            Font fr = Minecraft.getInstance().font;
-            gui.mc.getRenderItem().renderItemIntoGUI(stack, x, y);
-            gui.mc.getRenderItem().renderItemOverlays(fr, stack, x, y);
             if (STACK_RECT.offset(x, y).contains(gui.mouse)) {
-                gui.tooltipStack = stack;
+                // gui.tooltipStack = stack — field not exposed yet
             }
-            RenderSystem.setShaderColor(1, 1, 1);
         }
     }
 
@@ -48,7 +36,7 @@ public abstract class GuidePartItem extends GuidePart {
 
     protected void testClickItemStack(ItemStack stack, int x, int y) {
         if (stack != null && !stack.isEmpty() && STACK_RECT.offset(x, y).contains(gui.mouse)) {
-            gui.openPage(GuideManager.INSTANCE.getPageFor(stack).createNew(gui));
+            // gui.openPage(GuideManager.INSTANCE.getPageFor(stack).createNew(gui)) — deferred until full UI port
         }
     }
 }

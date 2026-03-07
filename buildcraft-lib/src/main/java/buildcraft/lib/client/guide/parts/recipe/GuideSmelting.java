@@ -1,21 +1,11 @@
-/*
- * Copyright (c) 2017 SpaceToad and the BuildCraft team
- * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
- * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
- */
-
 package buildcraft.lib.client.guide.parts.recipe;
-
-import net.minecraft.resources.Identifier;
 
 import java.util.Objects;
 
 import javax.annotation.Nonnull;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
 
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.parts.GuidePartItem;
@@ -55,7 +45,6 @@ public class GuideSmelting extends GuidePartItem {
         if (obj == null) return false;
         if (obj.getClass() != getClass()) return false;
         GuideSmelting other = (GuideSmelting) obj;
-        // Shortcut out of this full itemstack comparison as its really expensive
         if (hash != other.hash) return false;
         return input.equals(other.input) && output.equals(other.output);
     }
@@ -69,16 +58,9 @@ public class GuideSmelting extends GuidePartItem {
         y += OFFSET.y + current.pixel;
         if (current.page == index) {
             SMELTING_ICON.drawAt(x, y);
-            // Render the item
-            RenderSystem.enableRescaleNormal();
-            RenderSystem.enableGUIStandardItemLighting();
-
             drawItemStack(input.get(), x + (int) IN_POS.x, y + (int) IN_POS.y);
             drawItemStack(output.get(), x + (int) OUT_POS.x, y + (int) OUT_POS.y);
             drawItemStack(furnace, x + (int) FURNACE_POS.x, y + (int) FURNACE_POS.y);
-
-            // RenderSystem.disableStandardItemLighting() removed in 1.21;
-            RenderSystem.disableRescaleNormal();
         }
         current = current.nextLine(PIXEL_HEIGHT, height);
         return current;
@@ -93,11 +75,9 @@ public class GuideSmelting extends GuidePartItem {
         x += OFFSET.x;
         y += OFFSET.y + current.pixel;
         if (current.page == index) {
-
             testClickItemStack(input.get(), x + (int) IN_POS.x, y + (int) IN_POS.y);
             testClickItemStack(output.get(), x + (int) OUT_POS.x, y + (int) OUT_POS.y);
             testClickItemStack(furnace, x + (int) FURNACE_POS.x, y + (int) FURNACE_POS.y);
-
         }
         current = current.nextLine(PIXEL_HEIGHT, height);
         return current;

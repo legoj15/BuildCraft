@@ -1,24 +1,12 @@
-/*
- * Copyright (c) 2017 SpaceToad and the BuildCraft team
- * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
- * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
- */
-
 package buildcraft.lib.client.guide.parts.recipe;
-
-import net.minecraft.resources.Identifier;
 
 import java.util.Arrays;
 import java.util.Collections;
-
-import com.mojang.blaze3d.systems.RenderSystem;
-
 
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.parts.GuidePartItem;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.pos.GuiRectangle;
-import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.recipe.ChangingItemStack;
 import buildcraft.lib.recipe.ChangingObject;
 
@@ -61,9 +49,7 @@ public class GuideAssembly extends GuidePartItem {
     public boolean equals(Object obj) {
         if (obj == this) return true;
         if (obj == null) return false;
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
+        if (getClass() != obj.getClass()) return false;
         GuideAssembly other = (GuideAssembly) obj;
         return Arrays.equals(input, other.input) && output.equals(other.output) && mjCost.equals(other.mjCost);
     }
@@ -77,22 +63,16 @@ public class GuideAssembly extends GuidePartItem {
         y += OFFSET.y + current.pixel;
         if (current.page == index) {
             INPUT_LIST.drawAt(x, y);
-            // Render the item
-            RenderSystem.enableRescaleNormal();
-            RenderSystem.enableGUIStandardItemLighting();
             for (int i = 0; i < input.length; i++) {
                 GuiRectangle rect = ITEM_POSITION[i];
                 drawItemStack(input[i].get(), x + (int) rect.x, y + (int) rect.y);
             }
-
             drawItemStack(output.get(), x + (int) OUT_POSITION.x, y + (int) OUT_POSITION.y);
 
             if (MJ_POSITION.offset(x, y).contains(gui.mouse)) {
-                gui.tooltips.add(Collections.singletonList(LocaleUtil.localizeMj(mjCost.get())));
+                // LocaleUtil.localizeMj not ported — show raw MJ value
+                gui.tooltips.add(Collections.singletonList(mjCost.get() + " MJ"));
             }
-
-            // RenderSystem.disableStandardItemLighting() removed in 1.21;
-            RenderSystem.disableRescaleNormal();
         }
         current = current.nextLine(PIXEL_HEIGHT, height);
         return current;
@@ -111,7 +91,6 @@ public class GuideAssembly extends GuidePartItem {
                 GuiRectangle rect = ITEM_POSITION[i];
                 testClickItemStack(input[i].get(), x + (int) rect.x, y + (int) rect.y);
             }
-
             testClickItemStack(output.get(), x + (int) OUT_POSITION.x, y + (int) OUT_POSITION.y);
         }
         current = current.nextLine(PIXEL_HEIGHT, height);

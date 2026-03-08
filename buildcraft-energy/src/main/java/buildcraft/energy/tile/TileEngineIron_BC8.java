@@ -270,30 +270,64 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
             && BuildcraftFuelRegistry.coolant.getCoolant(fluid) != null;
     }
 
-    // --- Fluid handler for external access (pipes, hoppers, etc.) ---
+    // --- Combined IFluidHandler for capability exposure ---
 
     /**
-     * Fill fuel or coolant tanks from external sources.
-     * Tries fuel first, then coolant.
+     * Combined handler exposing 3 tanks: fuel (0), coolant (1), residue (2).
+     * Fuel and coolant tanks accept fills; residue tank allows drains.
      */
-    public int fill(FluidStack resource, IFluidHandler.FluidAction action) {
-        int filled = tankFuel.fill(resource, action);
-        if (filled == 0) {
-            filled = tankCoolant.fill(resource, action);
+    public final IFluidHandler combinedFluidHandler = new IFluidHandler() {
+        @Override
+        public int getTanks() { return 3; }
+
+        @Override
+        public FluidStack getFluidInTank(int tank) {
+            return switch (tank) {
+                case 0 -> tankFuel.getFluid();
+                case 1 -> tankCoolant.getFluid();
+                case 2 -> tankResidue.getFluid();
+                default -> FluidStack.EMPTY;
+            };
         }
-        return filled;
-    }
 
-    /**
-     * Drain from the residue tank (the only externally drainable tank).
-     */
-    public FluidStack drain(int maxDrain, IFluidHandler.FluidAction action) {
-        return tankResidue.drain(maxDrain, action);
-    }
+        @Override
+        public int getTankCapacity(int tank) { return MAX_FLUID; }
 
-    public FluidStack drain(FluidStack resource, IFluidHandler.FluidAction action) {
-        return tankResidue.drain(resource, action);
-    }
+        @Override
+        public boolean isFluidValid(int tank, FluidStack stack) {
+            return switch (tank) {
+                case 0 -> isValidFuel(stack);
+                case 1 -> isValidCoolant(stack);
+                default -> false;
+            };
+        }
+
+        @Override
+        public int fill(FluidStack resource, FluidAction action) {
+            // Try fuel first, then coolant
+            int filled = tankFuel.fill(resource, action);
+            if (filled == 0) {
+                filled = tankCoolant.fill(resource, action);
+            }
+            if (filled > 0 && action.execute()) setChanged();
+            return filled;
+        }
+
+        @Override
+        public FluidStack drain(FluidStack resource, FluidAction action) {
+            // Only allow draining from residue
+            FluidStack drained = tankResidue.drain(resource, action);
+            if (!drained.isEmpty() && action.execute()) setChanged();
+            return drained;
+        }
+
+        @Override
+        public FluidStack drain(int maxDrain, FluidAction action) {
+            FluidStack drained = tankResidue.drain(maxDrain, action);
+            if (!drained.isEmpty() && action.execute()) setChanged();
+            return drained;
+        }
+    };
 
 
     // --- NBT ---

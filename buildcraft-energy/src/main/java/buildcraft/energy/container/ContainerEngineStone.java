@@ -16,6 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import buildcraft.energy.BCEnergyMenuTypes;
 import buildcraft.energy.tile.TileEngineStone_BC8;
 import buildcraft.lib.gui.ContainerBC_Neptune;
+import buildcraft.lib.engine.TileEngineBase_BC8;
 
 public class ContainerEngineStone extends ContainerBC_Neptune {
     public final TileEngineStone_BC8 engine;
@@ -77,7 +78,10 @@ public class ContainerEngineStone extends ContainerBC_Neptune {
                 }
             };
         } else {
-            this.data = new SimpleContainerData(DATA_COUNT);
+            SimpleContainerData clientData = new SimpleContainerData(DATA_COUNT);
+            // Pre-seed heat with MIN_HEAT so ledger shows 20°C, not 0°C, before first sync
+            clientData.set(DATA_HEAT, Float.floatToIntBits(TileEngineBase_BC8.MIN_HEAT));
+            this.data = clientData;
         }
 
         addDataSlots(this.data);

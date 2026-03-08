@@ -287,8 +287,9 @@ public class GuiGuide extends Screen {
         minY = (this.height - BOOK_COVER.height) / 2;
         mouse.setMousePosition(mouseX, mouseY);
 
-        // Draw darkened background
-        this.renderBackground(graphics, mouseX, mouseY, partialTicks);
+        // NeoForge 1.21.11: renderBackground is called by the parent
+        // Screen.renderWithTooltipAndSubtitles, so we must NOT call it here
+        // (calling it twice causes "Can only blur once per frame").
 
         try {
             if (isOpen) {

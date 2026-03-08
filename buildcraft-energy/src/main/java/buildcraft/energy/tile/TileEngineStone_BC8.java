@@ -79,16 +79,7 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
             if (getPowerStage() != EnumPowerStage.OVERHEAT) {
                 long output = getCurrentOutput();
                 addPower(output);
-
-                // Heat up while burning (matches 1.12 behavior)
-                heat = Math.min(heat + 0.2f, MAX_HEAT);
             }
-        }
-
-        // Passive cooling towards MIN_HEAT
-        if (heat > MIN_HEAT) {
-            heat -= 0.1f;
-            if (heat < MIN_HEAT) heat = MIN_HEAT;
         }
 
         // Try to consume new fuel

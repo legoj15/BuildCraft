@@ -97,9 +97,9 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
         return Math.max(0.16f * getHeatLevel(), 0.01f);
     }
 
-    /** Update the heat level. Default: passive cooling towards MIN_HEAT. */
+    /** Update heat level. In 1.12, heat is directly proportional to stored power. */
     public void updateHeatLevel() {
-        // Default: no-op; subclasses manage heat themselves
+        heat = (float) (((MAX_HEAT - MIN_HEAT) * getEnergyLevel()) + MIN_HEAT);
     }
 
     /** Compute the power stage based on current heat. */
@@ -108,7 +108,7 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
         if (heatLevel < 0.25f) return EnumPowerStage.BLUE;
         if (heatLevel < 0.5f) return EnumPowerStage.GREEN;
         if (heatLevel < 0.75f) return EnumPowerStage.YELLOW;
-        if (heatLevel < 1.0f) return EnumPowerStage.RED;
+        if (heatLevel < 0.85f) return EnumPowerStage.RED;
         return EnumPowerStage.OVERHEAT;
     }
 

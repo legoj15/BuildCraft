@@ -55,8 +55,8 @@ public class ContainerEngineIron extends ContainerBC_Neptune {
                         case DATA_HEAT -> Float.floatToIntBits(engine.getHeat());
                         case DATA_POWER_STAGE -> engine.getPowerStage().ordinal();
                         case DATA_BURNING -> engine.isBurning() ? 1 : 0;
-                        case DATA_CURRENT_OUTPUT_HI -> (int) (engine.getCurrentOutput() >>> 32);
-                        case DATA_CURRENT_OUTPUT_LO -> (int) (engine.getCurrentOutput() & 0xFFFFFFFFL);
+                        case DATA_CURRENT_OUTPUT_HI -> (int) (engine.currentOutput >>> 32);
+                        case DATA_CURRENT_OUTPUT_LO -> (int) (engine.currentOutput & 0xFFFFFFFFL);
                         case DATA_FUEL_AMOUNT -> engine.tankFuel.getFluidAmount();
                         case DATA_COOLANT_AMOUNT -> engine.tankCoolant.getFluidAmount();
                         case DATA_RESIDUE_AMOUNT -> engine.tankResidue.getFluidAmount();

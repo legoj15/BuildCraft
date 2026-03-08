@@ -86,8 +86,12 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         ListTag list = new ListTag();
         for (ItemStack stack : stacks) {
             CompoundTag itemNbt = new CompoundTag();
-            stack.save(itemNbt);
-            list.appendTag(itemNbt);
+            if (!stack.isEmpty()) {
+                net.minecraft.resources.Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+                itemNbt.putString("id", itemId.toString());
+                itemNbt.putInt("count", stack.getCount());
+            }
+            list.add(itemNbt);
         }
         nbt.put("items", list);
         return nbt;
@@ -95,9 +99,22 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
 
     @Override
     public void deserializeNBT(CompoundTag nbt) {
-        ListTag list = nbt.getList("items", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        ListTag list = nbt.getList("items").orElseGet(ListTag::new);
         for (int i = 0; i < list.size() && i < getSlots(); i++) {
-            setStackInternal(i, ItemStack.parseOptional(net.minecraft.core.HolderLookup.Provider.create(java.util.stream.Stream.empty()), list.getCompound(i)).orElse(net.minecraft.world.item.ItemStack.EMPTY));
+            CompoundTag itemNbt = list.getCompound(i).orElseGet(CompoundTag::new);
+            ItemStack stack = ItemStack.EMPTY;
+            if (itemNbt.contains("id")) {
+                String idStr = itemNbt.getString("id").orElse("");
+                net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(idStr);
+                if (id != null) {
+                    net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(id);
+                    int count = itemNbt.getInt("count").orElse(1);
+                    if (item != null && item != net.minecraft.world.item.Items.AIR) {
+                        stack = new ItemStack(item, count);
+                    }
+                }
+            }
+            setStackInternal(i, stack);
         }
         for (int i = list.size(); i < getSlots(); i++) {
             setStackInternal(i, StackUtil.EMPTY);
@@ -144,13 +161,13 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
                 CrashReport report = new CrashReport("Inserting an item (buildcraft:ItemHandlerSimple)",
                     new IllegalStateException("Conflicting Insertion!"));
                 CrashReportCategory cat = report.addCategory("Inventory details");
-                cat.addDetail("Existing Item", current);
-                cat.addDetail("Inserting Item", stack);
-                cat.addDetail("To Set", result.toSet);
-                cat.addDetail("To Return", result.toReturn);
-                cat.addDetail("Slot", slot);
-                cat.addDetail("Checker", checker.getClass());
-                cat.addDetail("Inserter", inserter.getClass());
+                cat.setDetail("Existing Item", current.toString());
+                cat.setDetail("Inserting Item", stack.toString());
+                cat.setDetail("To Set", result.toSet.toString());
+                cat.setDetail("To Return", result.toReturn.toString());
+                cat.setDetail("Slot", String.valueOf(slot));
+                cat.setDetail("Checker", checker.getClass().toString());
+                cat.setDetail("Inserter", inserter.getClass().toString());
                 throw new RuntimeException("Conflicting Insertion! See log for details.");
             } else if (!simulate) {
                 setStackInternal(slot, result.toSet);
@@ -276,5 +293,10 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
     @Override
     public String toString() {
         return "ItemHandlerSimple " + stacks;
+    }
+
+    @Override
+    public boolean isItemValid(int slot, ItemStack stack) {
+        return canSet(slot, stack);
     }
 }

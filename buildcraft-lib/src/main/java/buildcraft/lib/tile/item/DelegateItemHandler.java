@@ -6,8 +6,6 @@
 
 package buildcraft.lib.tile.item;
 
-import net.minecraft.resources.Identifier;
-
 import javax.annotation.Nonnull;
 
 import net.minecraft.world.item.ItemStack;
@@ -52,6 +50,11 @@ public class DelegateItemHandler implements IItemHandlerModifiable, IItemHandler
     @Override
     public int getSlotLimit(int slot) {
         return delegate.getSlotLimit(slot);
+    }
+
+    @Override
+    public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
+        return delegate.isItemValid(slot, stack);
     }
 
     @Override

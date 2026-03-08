@@ -6,9 +6,9 @@
 
 package buildcraft.lib.net;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.network.FriendlyByteBuf;
 
 @FunctionalInterface
 public interface IPayloadWriter {
-    void write(PacketBufferBC buffer);
+    void write(FriendlyByteBuf buffer);
 }

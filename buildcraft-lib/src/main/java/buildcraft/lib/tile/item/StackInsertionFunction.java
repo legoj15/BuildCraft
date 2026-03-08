@@ -37,7 +37,7 @@ public interface StackInsertionFunction {
                 if (toInsert.getCount() <= maxSize) {
                     return new InsertionResult(toInsert, StackUtil.EMPTY);
                 } else {
-                    ItemStack inserted = toInsert.splitStack(maxSize);
+                    ItemStack inserted = toInsert.split(maxSize);
                     return new InsertionResult(inserted, toInsert);
                 }
             } else if (addingTo.getCount() == maxStackSize) {

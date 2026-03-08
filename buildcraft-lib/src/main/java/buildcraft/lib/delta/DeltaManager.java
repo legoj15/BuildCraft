@@ -95,7 +95,7 @@ public class DeltaManager {
     public void readFromNBT(CompoundTag nbt) {
         for (List<DeltaInt> innerList : deltas.values()) {
             for (DeltaInt delta : innerList) {
-                delta.readFromNBT(nbt.getCompound(delta.name));
+                delta.readFromNBT(nbt.getCompound(delta.name).orElseGet(CompoundTag::new));
             }
         }
     }

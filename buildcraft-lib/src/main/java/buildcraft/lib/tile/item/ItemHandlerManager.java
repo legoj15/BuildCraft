@@ -24,7 +24,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 
-import net.neoforged.neoforge.capabilities.BlockCapability;
 
 import buildcraft.lib.misc.INBTSerializable;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -32,7 +31,6 @@ import net.neoforged.neoforge.items.IItemHandlerModifiable;
 
 import buildcraft.api.core.EnumPipePart;
 
-import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.misc.InventoryUtil;
 
 public class ItemHandlerManager implements INBTSerializable<CompoundTag> {
@@ -128,22 +126,10 @@ public class ItemHandlerManager implements INBTSerializable<CompoundTag> {
         }
     }
 
-    @Override
-    public boolean hasCapability(BlockCapability<?, ?> capability, Direction facing) {
-        if (capability == CapUtil.CAP_ITEMS) {
-            Wrapper wrapper = wrappers.get(EnumPipePart.fromFacing(facing));
-            return wrapper.combined != null;
-        }
-        return false;
-    }
-
-    @Override
-    public <T> T getCapability(BlockCapability<T, ?> capability, Direction facing) {
-        if (capability == CapUtil.CAP_ITEMS) {
-            Wrapper wrapper = wrappers.get(EnumPipePart.fromFacing(facing));
-            return CapUtil.CAP_ITEMS.cast(wrapper.combined);
-        }
-        return null;
+    /** Gets the combined item handler for the given direction, or null if none. */
+    public IItemHandler getItemHandler(Direction facing) {
+        Wrapper wrapper = wrappers.get(EnumPipePart.fromFacing(facing));
+        return wrapper.combined;
     }
 
     @Override
@@ -160,7 +146,7 @@ public class ItemHandlerManager implements INBTSerializable<CompoundTag> {
     public void deserializeNBT(CompoundTag nbt) {
         for (Entry<String, INBTSerializable<CompoundTag>> entry : handlers.entrySet()) {
             String key = entry.getKey();
-            entry.getValue().deserializeNBT(nbt.getCompound(key));
+            entry.getValue().deserializeNBT(nbt.getCompound(key).orElseGet(CompoundTag::new));
         }
     }
 

@@ -6,8 +6,6 @@
 
 package buildcraft.lib.gui.slot;
 
-import net.minecraft.resources.Identifier;
-
 import javax.annotation.Nonnull;
 
 import net.minecraft.world.entity.player.Player;
@@ -33,17 +31,17 @@ public class SlotPhantom extends SlotBase implements IPhantomSlot {
     }
 
     @Override
-    public boolean canTakeStack(Player par1EntityPlayer) {
+    public boolean mayPickup(Player player) {
         return false;
     }
 
     @Override
-    public boolean isItemValid(@Nonnull ItemStack stack) {
+    public boolean mayPlace(@Nonnull ItemStack stack) {
         return false;
     }
 
     @Override
-    public int getSlotStackLimit() {
+    public int getMaxStackSize() {
         return 1;
     }
 }

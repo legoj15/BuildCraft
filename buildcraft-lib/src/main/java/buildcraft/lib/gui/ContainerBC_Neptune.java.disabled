@@ -18,7 +18,6 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -40,8 +39,7 @@ import buildcraft.lib.gui.slot.SlotPhantom;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.misc.data.IdAllocator;
 import buildcraft.lib.net.IPayloadWriter;
-import buildcraft.lib.net.MessageContainer;
-import buildcraft.lib.net.MessageManager;
+
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.lib.tile.item.IItemHandlerAdv;
 
@@ -79,12 +77,12 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
     protected void addFullPlayerInventory(int startX, int startY) {
         for (int sy = 0; sy < 3; sy++) {
             for (int sx = 0; sx < 9; sx++) {
-                addSlotToContainer(new Slot(player.getInventory(), sx + sy * 9 + 9, startX + sx * 18, startY + sy * 18));
+                addSlot(new Slot(player.getInventory(), sx + sy * 9 + 9, startX + sx * 18, startY + sy * 18));
             }
         }
 
         for (int sx = 0; sx < 9; sx++) {
-            addSlotToContainer(new Slot(player.getInventory(), sx, startX + sx * 18, startY + 58));
+            addSlot(new Slot(player.getInventory(), sx, startX + sx * 18, startY + 58));
         }
     }
 
@@ -102,12 +100,12 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
         return ImmutableList.copyOf(widgets);
     }
 
-    @Nullable
     @Override
-    public ItemStack slotClick(int slotId, int dragType, ClickType clickType, Player player) {
+    public void clicked(int slotId, int dragType, ClickType clickType, Player player) {
         Slot slot = slotId < 0 ? null : this.slots.get(slotId);
         if (slot == null) {
-            return super.slotClick(slotId, dragType, clickType, player);
+            super.clicked(slotId, dragType, clickType, player);
+            return;
         }
 
         ItemStack playerStack = player.containerMenu.getCarried();
@@ -126,18 +124,18 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
                     slot.set(stack);
                 }
             }
-            return playerStack;
+            return;
         }
-        return super.slotClick(slotId, dragType, clickType, player);
+        super.clicked(slotId, dragType, clickType, player);
     }
 
     @Override
-    public ItemStack transferStackInSlot(Player playerIn, int index) {
+    public ItemStack quickMoveStack(Player playerIn, int index) {
         ItemStack itemstack = ItemStack.EMPTY;
         Slot slot = this.slots.get(index);
         Slot firstSlot = this.slots.get(0);
         int playerInventorySize = 36;
-        boolean playerInventoryFirst = firstSlot.inventory instanceof Inventory;
+        boolean playerInventoryFirst = firstSlot.container instanceof Inventory;
 
         if (slot != null && slot.hasItem()) {
             ItemStack itemstack1 = slot.getItem();
@@ -202,18 +200,19 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
     }
 
     public final void sendMessage(int id) {
-        Dist side = player.level().isClientSide ? Dist.CLIENT : Dist.SERVER;
+        Dist side = player.level().isClientSide() ? Dist.CLIENT : Dist.SERVER;
         sendMessage(id, (buffer) -> writeMessage(id, buffer, side));
     }
 
     public final void sendMessage(int id, IPayloadWriter writer) {
-        PacketBufferBC payload = PacketBufferBC.write(writer);
-        MessageContainer message = new MessageContainer(windowId, id, payload);
-        if (player.level().isClientSide) {
-            MessageManager.sendToServer(message);
-        } else {
-            MessageManager.sendTo(message, (ServerPlayer) player);
-        }
+        // TODO: Port MessageContainer / MessageManager networking
+        // PacketBufferBC payload = PacketBufferBC.write(writer);
+        // MessageContainer message = new MessageContainer(windowId, id, payload);
+        // if (player.level().isClientSide) {
+        //     MessageManager.sendToServer(message);
+        // } else {
+        //     MessageManager.sendTo(message, (ServerPlayer) player);
+        // }
     }
 
     public void writeMessage(int id, PacketBufferBC buffer, Dist side) {}
@@ -251,7 +250,8 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
 
     private void readSingleSetPhantom(PacketBufferBC buffer, IPayloadContext ctx) throws IOException {
         int idx = buffer.readVarInt();
-        ItemStack stack = buffer.readItemStack();
+        // TODO: Port readItemStack for PacketBufferBC
+        ItemStack stack = ItemStack.EMPTY; // buffer.readItemStack();
         if (idx >= 0 && idx < slots.size()) {
             Slot s = slots.get(idx);
             if (s instanceof SlotPhantom) {
@@ -260,10 +260,8 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
                 if (handler instanceof IItemHandlerModifiable && handler.canSet(ph.handlerIndex, stack)) {
                     ((IItemHandlerModifiable) handler).setStackInSlot(ph.handlerIndex, stack);
                 } else {
-                    // log rather than throw an exception because of bugged/naughty clients
                     String s2 = "[lib.container] Received an illegal phantom slot setting request! ";
-                    s2 += "[The item handler disallowed the replacement] (Client = ";
-                    s2 += ctx.getServerHandler().player.getName() + ", slot_index = " + idx;
+                    s2 += "[The item handler disallowed the replacement] (slot_index = " + idx;
                     s2 += ", stack = " + stack + ")";
                     BCLog.logger.warn(s2);
                 }
@@ -271,10 +269,8 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
             }
         }
 
-        // log rather than throw an exception because of bugged/naughty clients
         String s2 = "[lib.container] Received an illegal phantom slot setting request! ";
-        s2 += "[Didn't find a phantom slot for the given index] (Client = ";
-        s2 += ctx.getServerHandler().player.getName() + ", slot_index = " + idx;
+        s2 += "[Didn't find a phantom slot for the given index] (slot_index = " + idx;
         s2 += ", stack = " + stack + ")";
         BCLog.logger.warn(s2);
     }
@@ -313,7 +309,7 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
     /** @throws IllegalArgumentException if a phantom slot cannot be found */
     private int findPhantomSlot(IItemHandler handler, int index) {
         int i = 0;
-        for (Slot slot : inventorySlots) {
+        for (Slot slot : slots) {
             if (slot instanceof SlotPhantom) {
                 SlotPhantom ph = (SlotPhantom) slot;
                 if (ph.itemHandler == handler && ph.handlerIndex == index) {
@@ -326,7 +322,7 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
     }
 
     public void sendSetPhantomSlot(SlotPhantom slot, ItemStack to) {
-        int index = inventorySlots.indexOf(slot);
+        int index = slots.indexOf(slot);
         if (index == -1) {
             throw new IllegalArgumentException("Couldn't find a slot for " + slot + " in " + getClass());
         }
@@ -336,7 +332,8 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
     private void sendSetPhantomSlot(int phIndex, ItemStack to) {
         sendMessage(NET_SET_PHANTOM, (buffer) -> {
             buffer.writeVarInt(phIndex);
-            buffer.writeItemStack(to);
+            // TODO: Port writeItemStack for PacketBufferBC
+            // buffer.writeItemStack(to);
         });
     }
 
@@ -348,9 +345,10 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
             buffer.writeByte(indexes.length);
             for (int i = 0; i < indexes.length; i++) {
                 int index = indexes[i];
-                ItemStack stack = stacks.get(i);
+                // ItemStack stack = stacks.get(i);
                 buffer.writeVarInt(index);
-                buffer.writeItemStack(stack);
+                // TODO: Port writeItemStack for PacketBufferBC
+                // buffer.writeItemStack(stack);
             }
         });
     }

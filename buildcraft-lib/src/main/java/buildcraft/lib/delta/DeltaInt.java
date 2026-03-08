@@ -152,37 +152,37 @@ public class DeltaInt {
     }
 
     public void readFromNBT(CompoundTag nbt) {
-        tick = nbt.getLong("tick");
-        staticStartValue = nbt.getInteger("static-start");
-        staticEndValue = nbt.getInteger("static-end");
+        tick = nbt.getLongOr("tick", 0L);
+        staticStartValue = nbt.getIntOr("static-start", 0);
+        staticEndValue = nbt.getIntOr("static-end", 0);
         // dynamic is calculated every tick so there is no need to read + write it
         changingEntries.clear();
-        ListTag list = nbt.getTagList("changing", Constants.NBT.TAG_COMPOUND);
-        for (int i = 0; i < list.tagCount(); i++) {
-            CompoundTag entryNbt = list.getCompoundTagAt(i);
-            long start = entryNbt.getLong("start");
-            long end = entryNbt.getLong("end");
-            int delta = entryNbt.getInteger("delta");
+        ListTag list = nbt.getList("changing").orElseGet(ListTag::new);
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag entryNbt = list.getCompound(i).orElseGet(CompoundTag::new);
+            long start = entryNbt.getLongOr("start", 0L);
+            long end = entryNbt.getLongOr("end", 0L);
+            int delta = entryNbt.getIntOr("delta", 0);
             DeltaIntEntry entry = new DeltaIntEntry(start, end, delta);
-            entry.hasStarted = entryNbt.getBoolean("started");
+            entry.hasStarted = entryNbt.getBooleanOr("started", false);
             changingEntries.add(entry);
         }
     }
 
     public CompoundTag writeToNBT() {
         CompoundTag nbt = new CompoundTag();
-        nbt.setLong("tick", tick);
-        nbt.setInteger("static-start", staticStartValue);
-        nbt.setInteger("static-end", staticEndValue);
+        nbt.putLong("tick", tick);
+        nbt.putInt("static-start", staticStartValue);
+        nbt.putInt("static-end", staticEndValue);
         // dynamic is calculated every tick so there is no need to read + write it
         ListTag list = new ListTag();
         for (DeltaIntEntry entry : changingEntries) {
             CompoundTag entryNbt = new CompoundTag();
-            entryNbt.setLong("start", entry.startTick);
-            entryNbt.setLong("end", entry.endTick);
-            entryNbt.setInteger("delta", entry.delta);
-            entryNbt.setBoolean("started", entry.hasStarted);
-            list.appendTag(entryNbt);
+            entryNbt.putLong("start", entry.startTick);
+            entryNbt.putLong("end", entry.endTick);
+            entryNbt.putInt("delta", entry.delta);
+            entryNbt.putBoolean("started", entry.hasStarted);
+            list.add(entryNbt);
         }
         nbt.put("changing", list);
         return nbt;

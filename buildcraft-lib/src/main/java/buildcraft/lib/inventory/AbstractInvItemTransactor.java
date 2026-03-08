@@ -67,7 +67,7 @@ public abstract class AbstractInvItemTransactor implements IItemTransactor {
                 if (stack.isEmpty()) return StackUtil.EMPTY;
             }
         }
-        for (int slot : emptySlots.toArray()) {
+        for (int slot : emptySlots.toIntArray()) {
             stack = insert(slot, stack, simulate);
             if (stack.isEmpty()) return StackUtil.EMPTY;
         }
@@ -88,7 +88,7 @@ public abstract class AbstractInvItemTransactor implements IItemTransactor {
                 if (stack.isEmpty()) break;
             }
         }
-        for (int slot : emptySlots.toArray()) {
+        for (int slot : emptySlots.toIntArray()) {
             stack = insert(slot, stack, true);
             insertedSlots.add(slot);
             if (stack.isEmpty()) break;
@@ -97,7 +97,7 @@ public abstract class AbstractInvItemTransactor implements IItemTransactor {
             return stack;
         }
         if (simulate) return StackUtil.EMPTY;
-        for (int slot : insertedSlots.toArray()) {
+        for (int slot : insertedSlots.toIntArray()) {
             before = insert(slot, before, false);
         }
         if (!before.isEmpty()) {
@@ -149,7 +149,7 @@ public abstract class AbstractInvItemTransactor implements IItemTransactor {
 
         ItemStack total = StackUtil.EMPTY;
         if (min <= totalSize) {
-            for (int slot : valids.toArray()) {
+            for (int slot : valids.toIntArray()) {
                 ItemStack extracted = extract(slot, filter, 1, max - total.getCount(), simulate);
                 if (total.isEmpty()) {
                     total = extracted.copy();

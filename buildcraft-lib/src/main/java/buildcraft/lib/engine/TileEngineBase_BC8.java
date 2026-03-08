@@ -114,6 +114,12 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
 
     // --- Heat helpers ---
 
+    /** @return The raw heat value in °C (MIN_HEAT to MAX_HEAT, i.e. 20-250). */
+    public float getHeat() {
+        return heat;
+    }
+
+    /** @return Normalized heat level as a 0.0-1.0 ratio of (heat - MIN_HEAT) / (MAX_HEAT - MIN_HEAT). */
     public float getHeatLevel() {
         return (heat - MIN_HEAT) / (MAX_HEAT - MIN_HEAT);
     }

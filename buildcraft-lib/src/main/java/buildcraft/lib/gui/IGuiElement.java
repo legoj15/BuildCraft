@@ -6,21 +6,15 @@
 
 package buildcraft.lib.gui;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
-
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import buildcraft.lib.gui.elem.ToolTip;
 import buildcraft.lib.gui.help.ElementHelpInfo.HelpPosition;
 import buildcraft.lib.gui.pos.IGuiArea;
 
-/** Defines an element that can be irendered, that exists inside of a rectangle. */
-@OnlyIn(Dist.CLIENT)
+/** Defines an element that can be rendered, that exists inside of a rectangle. */
 public interface IGuiElement extends IGuiArea, ITooltipElement, IHelpElement {
     default void drawBackground(float partialTicks) {}
 
@@ -28,9 +22,6 @@ public interface IGuiElement extends IGuiArea, ITooltipElement, IHelpElement {
 
     default void tick() {}
 
-    /** {@inheritDoc}
-     * <p>
-     * This is called EVEN IF the mouse is not inside your width and height! */
     @Override
     default void addToolTips(List<ToolTip> tooltips) {}
 
@@ -45,10 +36,6 @@ public interface IGuiElement extends IGuiArea, ITooltipElement, IHelpElement {
         }
     }
 
-    /** Add debugging information to the list. Note that a lot of elements will be called for this, so keep the amount
-     * of information minimal.
-     * 
-     * @return An identifier for this element (usually a name) */
     default String getDebugInfo(List<String> info) {
         return toString();
     }

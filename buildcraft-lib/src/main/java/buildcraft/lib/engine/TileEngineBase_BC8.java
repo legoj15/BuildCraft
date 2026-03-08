@@ -33,6 +33,9 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
     // --- Engine state ---
     protected Direction orientation = Direction.UP;
     protected long power = 0;
+
+    /** Getter for the stored power in micro-MJ. */
+    public long getPower() { return power; }
     protected float heat = MIN_HEAT;
     protected float progress = 0;
     protected int progressPart = 0;

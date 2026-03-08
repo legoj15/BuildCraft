@@ -6,9 +6,8 @@
 
 package buildcraft.lib.gui.elem;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.RandomAccess;
@@ -16,7 +15,6 @@ import java.util.RandomAccess;
 import com.google.common.collect.ForwardingList;
 
 import buildcraft.lib.misc.LocaleUtil;
-import buildcraft.lib.misc.StringUtilBC;
 
 public class ToolTip extends ForwardingList<String> implements RandomAccess {
 
@@ -31,7 +29,8 @@ public class ToolTip extends ForwardingList<String> implements RandomAccess {
         List<String> allLines = new ArrayList<>();
         for (String key : localeKeys) {
             String localized = LocaleUtil.localize(key);
-            allLines.addAll(StringUtilBC.splitIntoLines(localized));
+            // Inline splitIntoLines — split on \n
+            Collections.addAll(allLines, localized.split("\n"));
         }
         return new ToolTip(allLines);
     }

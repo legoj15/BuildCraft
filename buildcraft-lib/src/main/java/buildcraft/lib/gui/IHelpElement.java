@@ -1,7 +1,5 @@
 package buildcraft.lib.gui;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.List;
 
 import buildcraft.lib.gui.help.ElementHelpInfo.HelpPosition;

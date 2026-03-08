@@ -1,7 +1,5 @@
 package buildcraft.lib.gui;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,19 +8,14 @@ import buildcraft.lib.gui.help.ElementHelpInfo.HelpPosition;
 import buildcraft.lib.gui.pos.IGuiPosition;
 
 public interface IContainingElement extends IInteractionElement {
-    /** @return The backing list of the contained elements. Must be modifiable, and changes must be reflected by future
-     *         calls. */
+    /** @return The backing list of the contained elements. Must be modifiable. */
     List<IGuiElement> getChildElements();
 
     default IGuiPosition getChildElementPosition() {
         return this;
     }
 
-    /** Called after {@link #getChildElements()} is added to, possibly last (so it might not be called after every
-     * addition). */
-    default void calculateSizes() {
-
-    }
+    default void calculateSizes() {}
 
     @Override
     default void addToolTips(List<ToolTip> tooltips) {

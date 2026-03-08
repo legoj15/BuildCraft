@@ -1,12 +1,12 @@
 package buildcraft.lib.misc;
 
 import buildcraft.api.mj.MjAPI;
+import net.minecraft.client.resources.language.I18n;
 
-/** Localization utility. Currently a passthrough stub — returns the key as-is.
- *  Will be wired to Minecraft's I18n when the client layer is ported. */
+/** Localization utility. Uses Minecraft's I18n for translation. */
 public class LocaleUtil {
     public static String localize(String key) {
-        return key;
+        return I18n.get(key);
     }
 
     /** Format MJ value for display (e.g. "5.00 MJ") */

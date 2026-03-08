@@ -6,8 +6,6 @@
 
 package buildcraft.lib.net;
 
-import net.minecraft.resources.Identifier;
-
 import com.google.common.base.Charsets;
 
 import io.netty.buffer.ByteBuf;
@@ -119,24 +117,7 @@ public class PacketBufferBC extends FriendlyByteBuf {
 
         writePartialBitsBegin();
 
-        // - length = 10
-        // - bits = 0123456789
-
-        // current
-        // (# = already written, _ is not yet written)
-        // - in buffer [######## _#######]
-        // - writePartialCache = "_#######"
-        // - writePartialOffset = 7
-
-        // want we want:
-        // - in buffer [######## 0###### 12345678 _______9 ]
-        // - writePartialCache = "_______9"
-        // - writePartialOffset = 1
-
-        // first stage: take the toppermost bits and append them to the cache (if the cache contains bits)
         if (writePartialOffset > 0) {
-
-            // top length = 8 - (num bits in cache) or length, whichever is SMALLER
             int availableBits = 8 - writePartialOffset;
 
             if (availableBits >= length) {
@@ -146,43 +127,29 @@ public class PacketBufferBC extends FriendlyByteBuf {
                 writePartialCache |= bitsToWrite << writePartialOffset;
                 setByte(writePartialIndex, writePartialCache);
                 writePartialOffset += length;
-                // we just wrote out the entire length, no need to do anything else.
                 return this;
-            } else { // topLength < length -- we will still need to be writing out more bits after this
-                // length = 10
-                // topLength = 1
-                // value = __01 2345 6789
-                // want == ____ ____ ___0
-                // mask == ____ ____ ___1
-                // shift back = 9
-
+            } else {
                 int mask = (1 << availableBits) - 1;
-
                 int shift = length - availableBits;
-
                 int bitsToWrite = (value >>> shift) & mask;
 
                 writePartialCache |= bitsToWrite << writePartialOffset;
                 setByte(writePartialIndex, writePartialCache);
 
-                // we finished a byte, reset values so that the next write will reset and create a new byte
                 writePartialCache = 0;
                 writePartialOffset = 8;
 
-                // now shift the value down ready for the next iteration
                 length -= availableBits;
             }
         }
 
         while (length >= 8) {
-            // write out full 8 bit chunks of the length until we reach 0
             writePartialBitsBegin();
 
             int byteToWrite = (value >>> (length - 8)) & 0xFF;
 
             setByte(writePartialIndex, byteToWrite);
 
-            // we finished a byte, reset values so that the next write will reset and create a new byte
             writePartialCache = 0;
             writePartialOffset = 8;
 
@@ -190,7 +157,6 @@ public class PacketBufferBC extends FriendlyByteBuf {
         }
 
         if (length > 0) {
-            // we have a few bits left over to append
             writePartialBitsBegin();
 
             int mask = (1 << length) - 1;
@@ -217,21 +183,16 @@ public class PacketBufferBC extends FriendlyByteBuf {
         int value = 0;
 
         if (readPartialOffset > 0) {
-            // If we have bits left at the top of the buffer...
             int availableBits = 8 - readPartialOffset;
             if (availableBits >= length) {
-                // If the wanted bits are completely contained within the cache
                 int mask = (1 << length) - 1;
                 value = (readPartialCache >>> readPartialOffset) & mask;
                 readPartialOffset += length;
                 return value;
             } else {
-                // If we need to read more bits than are available in the cache
                 int bitsRead = readPartialCache >>> readPartialOffset;
 
                 value = bitsRead;
-
-                // We finished reading a byte, reset values so the next step will read them properly
 
                 readPartialCache = 0;
                 readPartialOffset = 8;
@@ -261,25 +222,27 @@ public class PacketBufferBC extends FriendlyByteBuf {
         return value;
     }
 
-    @Override
+    /** Compact enum serialization using bit-packing. Not @Override — removed from FriendlyByteBuf in 1.21. */
     public PacketBufferBC writeEnumValue(Enum<?> value) {
         Enum<?>[] possible = value.getDeclaringClass().getEnumConstants();
         if (possible == null) throw new IllegalArgumentException("Not an enum " + value.getClass());
-        if (possible.length == 0) throw new IllegalArgumentException("Tried to write an enum value without any values! How did you do this?");
+        if (possible.length == 0) throw new IllegalArgumentException("Tried to write an enum value without any values!");
         if (possible.length == 1) return this;
-        writeFixedBits(value.ordinal(), Mth.log2DeBruijn(possible.length));
+        int bits = Integer.SIZE - Integer.numberOfLeadingZeros(possible.length - 1);
+        if (bits < 1) bits = 1;
+        writeFixedBits(value.ordinal(), bits);
         return this;
     }
 
-    @Override
+    /** Compact enum deserialization using bit-packing. Not @Override — removed from FriendlyByteBuf in 1.21. */
     public <E extends Enum<E>> E readEnumValue(Class<E> enumClass) {
-        // No need to lookup the declaring class as you cannot refer to sub-classes of Enum.
         E[] enums = enumClass.getEnumConstants();
         if (enums == null) throw new IllegalArgumentException("Not an enum " + enumClass);
-        if (enums.length == 0) throw new IllegalArgumentException("Tried to read an enum value without any values! How did you do this?");
+        if (enums.length == 0) throw new IllegalArgumentException("Tried to read an enum value without any values!");
         if (enums.length == 1) return enums[0];
-        int length = Mth.log2DeBruijn(enums.length);
-        int index = readFixedBits(length);
+        int bits = Integer.SIZE - Integer.numberOfLeadingZeros(enums.length - 1);
+        if (bits < 1) bits = 1;
+        int index = readFixedBits(bits);
         return enums[index];
     }
 
@@ -289,9 +252,10 @@ public class PacketBufferBC extends FriendlyByteBuf {
     public String readString() {
         int length = readVarInt();
         byte[] array = new byte[length];
-        for (int i =0; i < length; i++) {
+        for (int i = 0; i < length; i++) {
             array[i] = readByte();
         }
         return new String(array, Charsets.UTF_8);
     }
 }
+

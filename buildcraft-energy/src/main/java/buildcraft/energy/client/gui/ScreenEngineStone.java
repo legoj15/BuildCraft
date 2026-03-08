@@ -11,9 +11,17 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.energy.container.ContainerEngineStone;
+import buildcraft.lib.gui.BuildCraftGui;
+import buildcraft.lib.gui.ledger.LedgerEngine;
+import buildcraft.lib.gui.ledger.LedgerHelp;
+import buildcraft.lib.gui.pos.IGuiArea;
 
 public class ScreenEngineStone extends AbstractContainerScreen<ContainerEngineStone> {
     private static final Identifier TEXTURE = Identifier.parse("buildcraftenergy:textures/gui/steam_engine_gui.png");
+
+    private BuildCraftGui mainGui;
+    private LedgerEngine ledgerPower;
+    private LedgerHelp ledgerHelp;
 
     public ScreenEngineStone(ContainerEngineStone menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title);
@@ -22,38 +30,64 @@ public class ScreenEngineStone extends AbstractContainerScreen<ContainerEngineSt
     }
 
     @Override
-    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        // Draw main GUI background
-        guiGraphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+    protected void init() {
+        super.init();
+        IGuiArea rootArea = BuildCraftGui.createWindowedArea(this);
+        mainGui = new BuildCraftGui(this, rootArea);
+
+        if (menu.engine != null) {
+            // Power ledger on the right side
+            ledgerPower = new LedgerEngine(mainGui, menu.engine, true);
+            ledgerPower.setPosition(leftPos + imageWidth, topPos + 5);
+            mainGui.shownElements.add(ledgerPower);
+
+            // Help ledger below the power ledger
+            ledgerHelp = new LedgerHelp(mainGui, true,
+                "gui.buildcraft.stirling_engine.help"
+            );
+            ledgerHelp.setPosition(leftPos + imageWidth, topPos + 30);
+            mainGui.shownElements.add(ledgerHelp);
+        }
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        if (mainGui != null) mainGui.tick();
+    }
+
+    @Override
+    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+        graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
 
         // Draw flame animation
         if (menu.isBurning()) {
             float progress = menu.getBurnProgress();
             int flameHeight = (int) Math.ceil(progress * 14);
-            // Flame source is at (176, 0) in the texture, 14x14 pixels
-            guiGraphics.blit(TEXTURE,
-                leftPos + 81,                          // x: flame position
-                topPos + 25 + 14 - flameHeight,        // y: bottom-aligned
-                176,                                   // u: source x in texture
-                14 - flameHeight,                      // v: source y in texture
-                14,                                    // width
-                flameHeight + 2,                       // height
-                256, 256                               // texture dimensions
+            graphics.blit(TEXTURE,
+                leftPos + 81,
+                topPos + 25 + 14 - flameHeight,
+                176,
+                14 - flameHeight,
+                14,
+                flameHeight + 2,
+                256, 256
             );
         }
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        renderTooltip(guiGraphics, mouseX, mouseY);
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.render(graphics, mouseX, mouseY, partialTick);
+        // Draw ledgers on top of everything else
+        if (ledgerPower != null) ledgerPower.drawWithGraphics(graphics);
+        if (ledgerHelp != null) ledgerHelp.drawWithGraphics(graphics);
+        renderTooltip(graphics, mouseX, mouseY);
     }
 
     @Override
-    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        // Title centered at top
-        guiGraphics.drawString(font, title, (imageWidth - font.width(title)) / 2, 6, 0x404040, false);
-        // "Inventory" label
-        guiGraphics.drawString(font, playerInventoryTitle, 8, imageHeight - 96 + 2, 0x404040, false);
+    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+        graphics.drawString(font, title, (imageWidth - font.width(title)) / 2, 6, 0x404040, false);
+        graphics.drawString(font, playerInventoryTitle, 8, imageHeight - 96 + 2, 0x404040, false);
     }
 }

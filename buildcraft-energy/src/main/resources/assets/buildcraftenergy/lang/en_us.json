@@ -94,5 +94,8 @@
     "gui.power": "Power",
     "gui.currentOutput": "Current Output",
     "gui.stored": "Stored",
-    "gui.heat": "Heat"
+    "gui.heat": "Heat",
+    "gui.owner": "Owner",
+    "gui.help": "Help",
+    "gui.buildcraft.stirling_engine.help": "Burns solid fuel to produce MJ power. Heat increases output. Overheating may cause damage."
 }

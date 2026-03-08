@@ -21,10 +21,15 @@ public class ContainerEngineStone extends ContainerBC_Neptune {
     public final TileEngineStone_BC8 engine;
     private final ContainerData data;
 
-    // Data indices
+    // Data indices — ContainerData only supports int, so longs are split into hi/lo
     private static final int DATA_BURN_TIME = 0;
     private static final int DATA_TOTAL_BURN_TIME = 1;
-    private static final int DATA_COUNT = 2;
+    private static final int DATA_POWER_HI = 2;
+    private static final int DATA_POWER_LO = 3;
+    private static final int DATA_HEAT = 4;         // float → Float.floatToIntBits
+    private static final int DATA_OUTPUT_HI = 5;
+    private static final int DATA_OUTPUT_LO = 6;
+    private static final int DATA_COUNT = 7;
 
     // Client-side constructor (from network)
     public ContainerEngineStone(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
@@ -36,7 +41,7 @@ public class ContainerEngineStone extends ContainerBC_Neptune {
         super(BCEnergyMenuTypes.ENGINE_STONE.get(), containerId, playerInv.player);
         this.engine = engine;
 
-        // Create container data for syncing burn time to client
+        // Create container data for syncing engine state to client
         if (engine != null && engine.getLevel() != null && !engine.getLevel().isClientSide()) {
             this.data = new ContainerData() {
                 @Override
@@ -44,6 +49,11 @@ public class ContainerEngineStone extends ContainerBC_Neptune {
                     return switch (index) {
                         case DATA_BURN_TIME -> engine.burnTime;
                         case DATA_TOTAL_BURN_TIME -> engine.totalBurnTime;
+                        case DATA_POWER_HI -> (int) (engine.getPower() >>> 32);
+                        case DATA_POWER_LO -> (int) (engine.getPower() & 0xFFFFFFFFL);
+                        case DATA_HEAT -> Float.floatToIntBits(engine.getHeatLevel());
+                        case DATA_OUTPUT_HI -> (int) (engine.getCurrentOutput() >>> 32);
+                        case DATA_OUTPUT_LO -> (int) (engine.getCurrentOutput() & 0xFFFFFFFFL);
                         default -> 0;
                     };
                 }
@@ -53,6 +63,7 @@ public class ContainerEngineStone extends ContainerBC_Neptune {
                     switch (index) {
                         case DATA_BURN_TIME -> engine.burnTime = value;
                         case DATA_TOTAL_BURN_TIME -> engine.totalBurnTime = value;
+                        // Other fields are read-only on client
                     }
                 }
 
@@ -85,7 +96,7 @@ public class ContainerEngineStone extends ContainerBC_Neptune {
         return null;
     }
 
-    // --- Accessors for the screen ---
+    // --- Accessors for the screen (use synced ContainerData, not direct tile access) ---
 
     public int getBurnTime() {
         return data.get(DATA_BURN_TIME);
@@ -103,6 +114,21 @@ public class ContainerEngineStone extends ContainerBC_Neptune {
         int total = getTotalBurnTime();
         if (total <= 0) return 0;
         return (float) getBurnTime() / total;
+    }
+
+    /** Synced power in micro-MJ (reconstructed from hi/lo ints). */
+    public long getSyncedPower() {
+        return ((long) data.get(DATA_POWER_HI) << 32) | (data.get(DATA_POWER_LO) & 0xFFFFFFFFL);
+    }
+
+    /** Synced heat level (reconstructed from float bits). */
+    public float getSyncedHeat() {
+        return Float.intBitsToFloat(data.get(DATA_HEAT));
+    }
+
+    /** Synced current output in micro-MJ/tick (reconstructed from hi/lo ints). */
+    public long getSyncedCurrentOutput() {
+        return ((long) data.get(DATA_OUTPUT_HI) << 32) | (data.get(DATA_OUTPUT_LO) & 0xFFFFFFFFL);
     }
 
     // --- Standard menu overrides ---

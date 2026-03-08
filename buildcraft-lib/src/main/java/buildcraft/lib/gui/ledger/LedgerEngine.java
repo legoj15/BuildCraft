@@ -6,28 +6,33 @@
 
 package buildcraft.lib.gui.ledger;
 
-import buildcraft.lib.engine.TileEngineBase_BC8;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
+
 import buildcraft.lib.gui.BuildCraftGui;
 import buildcraft.lib.misc.LocaleUtil;
 
+/**
+ * Ledger that displays engine power stats: current output, stored power, and heat.
+ * Uses supplier functions so data can come from synced ContainerData (client)
+ * or directly from the tile entity (server/single-player).
+ */
 public class LedgerEngine extends Ledger_Neptune {
     private static final int HEADER_COLOUR = 0xE1C92F;
     private static final int SUB_HEADER_COLOUR = 0xAAAF78;
     private static final int TEXT_COLOUR = 0xFFFFFF;
 
-    private final TileEngineBase_BC8 engine;
-
-    public LedgerEngine(BuildCraftGui gui, TileEngineBase_BC8 engine, boolean expandPositive) {
+    public LedgerEngine(BuildCraftGui gui, LongSupplier currentOutput, LongSupplier storedPower,
+                        Supplier<Float> heatLevel, boolean expandPositive) {
         super(gui, HEADER_COLOUR, expandPositive);
-        this.engine = engine;
         this.title = LocaleUtil.localize("gui.power");
 
         appendText(LocaleUtil.localize("gui.currentOutput") + ":", SUB_HEADER_COLOUR).setDropShadow(true);
-        appendText(() -> LocaleUtil.localizeMjFlow(engine.getCurrentOutput()), TEXT_COLOUR);
+        appendText(() -> LocaleUtil.localizeMjFlow(currentOutput.getAsLong()), TEXT_COLOUR);
         appendText(LocaleUtil.localize("gui.stored") + ":", SUB_HEADER_COLOUR).setDropShadow(true);
-        appendText(() -> LocaleUtil.localizeMj(engine.getPower()), TEXT_COLOUR);
+        appendText(() -> LocaleUtil.localizeMj(storedPower.getAsLong()), TEXT_COLOUR);
         appendText(LocaleUtil.localize("gui.heat") + ":", SUB_HEADER_COLOUR).setDropShadow(true);
-        appendText(() -> String.format("%.0f%%", engine.getHeatLevel() * 100), TEXT_COLOUR);
+        appendText(() -> String.format("%.1f \u00B0C", heatLevel.get()), TEXT_COLOUR);
 
         calculateMaxSize();
     }

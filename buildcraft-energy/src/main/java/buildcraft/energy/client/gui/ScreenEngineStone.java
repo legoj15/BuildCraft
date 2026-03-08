@@ -34,8 +34,13 @@ public class ScreenEngineStone extends GuiBC8<ContainerEngineStone> {
     @Override
     protected void initGuiElements() {
         if (menu.engine != null) {
-            // Power ledger on the right side
-            LedgerEngine ledgerPower = new LedgerEngine(mainGui, menu.engine, true);
+            // Power ledger on the right side — reads from synced ContainerData
+            LedgerEngine ledgerPower = new LedgerEngine(mainGui,
+                menu::getSyncedCurrentOutput,
+                menu::getSyncedPower,
+                menu::getSyncedHeat,
+                true
+            );
             ledgerPower.setPosition(mainGui.rootElement.getX() + mainGui.rootElement.getWidth(), mainGui.rootElement.getY() + 5);
             mainGui.shownElements.add(ledgerPower);
 

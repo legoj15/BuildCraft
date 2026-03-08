@@ -9,45 +9,60 @@ import buildcraft.energy.BCEnergy;
 import buildcraft.energy.BCEnergyFluids;
 
 /**
- * Client-side fluid rendering extensions for oil.
- * This class is manually registered on the mod event bus from {@link BCEnergy}.
+ * Client-side fluid rendering extensions for oil at all temperature levels.
+ * Registered manually on the mod event bus from {@link BCEnergy}.
  *
- * Matches the 1.12 AtlasSpriteFluid approach: vanilla water textures recolored via tint.
- * Crude oil 1.12 colors: tex_light=0x505050, tex_dark=0x050505.
- * We use the average as a single tint since NeoForge only supports one tint value.
+ * Uses vanilla water textures + tint color (matching 1.12 AtlasSpriteFluid approach).
+ * Higher heat → slightly lighter tint (more visible oil).
  */
 public class BCEnergyFluidsClient {
 
+    private static final Identifier WATER_STILL = Identifier.withDefaultNamespace("block/water_still");
+    private static final Identifier WATER_FLOW = Identifier.withDefaultNamespace("block/water_flow");
+    private static final Identifier WATER_OVERLAY = Identifier.withDefaultNamespace("block/water_overlay");
+
     @SubscribeEvent
     public static void onRegisterClientExtensions(RegisterClientExtensionsEvent event) {
-        event.registerFluidType(new IClientFluidTypeExtensions() {
-            // Use vanilla water textures — 1.12 AtlasSpriteFluid worked by recoloring
-            // the water texture with light/dark oil colors. NeoForge achieves this via tint.
-            private static final Identifier STILL = Identifier.withDefaultNamespace("block/water_still");
-            private static final Identifier FLOWING = Identifier.withDefaultNamespace("block/water_flow");
-            private static final Identifier OVERLAY = Identifier.withDefaultNamespace("block/water_overlay");
+        // Oil (Cool) — heat_0: darkest tint
+        registerWaterTintedFluid(event, BCEnergyFluids.OIL_FLUID_TYPE.get(), 0xFF2A2A2A);
 
+        // Oil (Hot) — heat_1: slightly lighter
+        registerWaterTintedFluid(event, BCEnergyFluids.OIL_HEAT_1_FLUID_TYPE.get(), 0xFF3A3A3A);
+
+        // Oil (Searing) — heat_2: lighter still
+        registerWaterTintedFluid(event, BCEnergyFluids.OIL_HEAT_2_FLUID_TYPE.get(), 0xFF4A4A4A);
+    }
+
+    /**
+     * Registers a fluid type that renders as tinted vanilla water textures.
+     *
+     * @param event the registration event
+     * @param fluidType the fluid type to register
+     * @param tintColor ARGB tint color (applied multiplicatively to water textures)
+     */
+    private static void registerWaterTintedFluid(RegisterClientExtensionsEvent event,
+                                                  net.neoforged.neoforge.fluids.FluidType fluidType,
+                                                  int tintColor) {
+        event.registerFluidType(new IClientFluidTypeExtensions() {
             @Override
             public Identifier getStillTexture() {
-                return STILL;
+                return WATER_STILL;
             }
 
             @Override
             public Identifier getFlowingTexture() {
-                return FLOWING;
+                return WATER_FLOW;
             }
 
             @Override
             public Identifier getOverlayTexture() {
-                return OVERLAY;
+                return WATER_OVERLAY;
             }
 
             @Override
             public int getTintColor() {
-                // Crude oil tint (ARGB): between 1.12 tex_light (0x505050) and tex_dark (0x050505)
-                // Using 0x2A2A2A — a dark gray that's visible in both world blocks and bucket items
-                return 0xFF2A2A2A;
+                return tintColor;
             }
-        }, BCEnergyFluids.OIL_FLUID_TYPE.get());
+        }, fluidType);
     }
 }

@@ -1,5 +1,11 @@
 {
-    "fluid_type.buildcraftenergy.oil": "Oil (Cool)",
+    "fluid_type.buildcraftenergy.oil": "Oil (§bCool§r)",
+    "fluid_type.buildcraftenergy.oil_heat_1": "Oil (§6Hot§r)",
+    "fluid_type.buildcraftenergy.oil_heat_2": "Oil (§cSearing§r)",
     "block.buildcraftenergy.oil": "Oil",
-    "item.buildcraftenergy.oil_bucket": "Oil (Cool) Bucket"
+    "block.buildcraftenergy.oil_heat_1": "Oil",
+    "block.buildcraftenergy.oil_heat_2": "Oil",
+    "item.buildcraftenergy.oil_bucket": "Oil (§bCool§r) Bucket",
+    "item.buildcraftenergy.oil_heat_1_bucket": "Oil (§6Hot§r) Bucket",
+    "item.buildcraftenergy.oil_heat_2_bucket": "Oil (§cSearing§r) Bucket"
 }

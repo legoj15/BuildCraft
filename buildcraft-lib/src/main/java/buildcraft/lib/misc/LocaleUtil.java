@@ -15,10 +15,10 @@ public class LocaleUtil {
         return String.format("%.2f MJ", mj);
     }
 
-    /** Format MJ/t flow for display (e.g. "5.00 MJ/t") */
+    /** Format MJ/t flow for display as MJ/s (per second = ×20 ticks), matching 1.12 format */
     public static String localizeMjFlow(long microMjPerTick) {
-        double mj = microMjPerTick / (double) MjAPI.MJ;
-        return String.format("%.2f MJ/t", mj);
+        double mjPerSecond = (microMjPerTick / (double) MjAPI.MJ) * 20.0;
+        return String.format("%.2f MJ/s", mjPerSecond);
     }
 
     /** Format MJ/t flow for display (e.g. "5.00 MJ/t") */

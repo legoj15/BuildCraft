@@ -44,6 +44,7 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
 
     protected boolean checkOrientation = true;
     protected boolean checkRedstonePower = true;
+    protected int redstonePollTimer = 0;
 
     private EnumPowerStage powerStage = EnumPowerStage.BLUE;
 
@@ -164,6 +165,14 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
     // --- Tick logic ---
 
     public static <T extends TileEngineBase_BC8> void serverTick(Level level, BlockPos pos, BlockState state, T engine) {
+        // Periodically poll redstone state every 10 ticks as workaround for
+        // neighborChanged not being called in NeoForge 1.21.11
+        engine.redstonePollTimer++;
+        if (engine.redstonePollTimer >= 10) {
+            engine.redstonePollTimer = 0;
+            engine.checkRedstonePower = true;
+        }
+
         if (engine.checkRedstonePower) {
             engine.checkRedstoneLevel();
         }

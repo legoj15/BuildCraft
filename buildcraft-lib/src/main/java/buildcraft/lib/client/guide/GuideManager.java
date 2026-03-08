@@ -374,9 +374,17 @@ public enum GuideManager {
     }
 
     public ContentsNodeGui getGuiContents(GuiGuide gui, GuidePageContents guidePageContents, TypeOrder sortingOrder) {
+        if (contents.isEmpty()) {
+            // Contents not yet generated — trigger a reload
+            reload();
+        }
         Map<TypeOrder, ContentsNode> map = contents.get(gui.book);
         if (map == null) {
-            throw new IllegalStateException("Unknown book " + gui.book);
+            // Fall back to the "all books" entry (null key)
+            map = contents.get(null);
+        }
+        if (map == null) {
+            throw new IllegalStateException("Unknown book " + gui.book + " and no fallback contents available");
         }
         ContentsNode node = map.get(sortingOrder);
         if (node == null) {

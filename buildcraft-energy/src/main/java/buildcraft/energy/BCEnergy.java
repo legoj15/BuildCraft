@@ -41,7 +41,7 @@ public class BCEnergy {
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
             // Wire the oil spring enum to our fluid and tile entity
-            EnumSpring.OIL.liquidBlock = BCEnergyFluids.OIL_BLOCK.get().defaultBlockState();
+            EnumSpring.OIL.liquidBlock = BCEnergyFluids.OIL_COOL.block().get().defaultBlockState();
             EnumSpring.OIL.tileConstructor = () -> {
                 // This is used by BlockSpring to create the tile entity
                 // We return null here — the block entity is created via BlockEntityType

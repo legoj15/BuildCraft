@@ -5,15 +5,13 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 
-import buildcraft.energy.BCEnergy;
 import buildcraft.energy.BCEnergyFluids;
 
 /**
- * Client-side fluid rendering extensions for oil at all temperature levels.
- * Registered manually on the mod event bus from {@link BCEnergy}.
+ * Client-side fluid rendering extensions for all BuildCraft energy fluids.
+ * Registered manually on the mod event bus from BCEnergy.
  *
- * Uses vanilla water textures + tint color (matching 1.12 AtlasSpriteFluid approach).
- * Higher heat → slightly lighter tint (more visible oil).
+ * Uses vanilla water textures + computed tint color for each fluid variant.
  */
 public class BCEnergyFluidsClient {
 
@@ -23,46 +21,29 @@ public class BCEnergyFluidsClient {
 
     @SubscribeEvent
     public static void onRegisterClientExtensions(RegisterClientExtensionsEvent event) {
-        // Oil (Cool) — heat_0: darkest tint
-        registerWaterTintedFluid(event, BCEnergyFluids.OIL_FLUID_TYPE.get(), 0xFF2A2A2A);
+        for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
+            final int tint = entry.tintColor();
+            event.registerFluidType(new IClientFluidTypeExtensions() {
+                @Override
+                public Identifier getStillTexture() {
+                    return WATER_STILL;
+                }
 
-        // Oil (Hot) — heat_1: slightly lighter
-        registerWaterTintedFluid(event, BCEnergyFluids.OIL_HEAT_1_FLUID_TYPE.get(), 0xFF3A3A3A);
+                @Override
+                public Identifier getFlowingTexture() {
+                    return WATER_FLOW;
+                }
 
-        // Oil (Searing) — heat_2: lighter still
-        registerWaterTintedFluid(event, BCEnergyFluids.OIL_HEAT_2_FLUID_TYPE.get(), 0xFF4A4A4A);
-    }
+                @Override
+                public Identifier getOverlayTexture() {
+                    return WATER_OVERLAY;
+                }
 
-    /**
-     * Registers a fluid type that renders as tinted vanilla water textures.
-     *
-     * @param event the registration event
-     * @param fluidType the fluid type to register
-     * @param tintColor ARGB tint color (applied multiplicatively to water textures)
-     */
-    private static void registerWaterTintedFluid(RegisterClientExtensionsEvent event,
-                                                  net.neoforged.neoforge.fluids.FluidType fluidType,
-                                                  int tintColor) {
-        event.registerFluidType(new IClientFluidTypeExtensions() {
-            @Override
-            public Identifier getStillTexture() {
-                return WATER_STILL;
-            }
-
-            @Override
-            public Identifier getFlowingTexture() {
-                return WATER_FLOW;
-            }
-
-            @Override
-            public Identifier getOverlayTexture() {
-                return WATER_OVERLAY;
-            }
-
-            @Override
-            public int getTintColor() {
-                return tintColor;
-            }
-        }, fluidType);
+                @Override
+                public int getTintColor() {
+                    return tint;
+                }
+            }, entry.fluidType().get());
+        }
     }
 }

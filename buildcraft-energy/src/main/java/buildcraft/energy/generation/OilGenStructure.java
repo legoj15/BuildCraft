@@ -55,7 +55,7 @@ public abstract class OilGenStructure {
     }
 
     public static void setOil(LevelAccessor level, BlockPos pos) {
-        level.setBlock(pos, BCEnergyFluids.OIL_SOURCE.get().defaultFluidState().createLegacyBlock(), 2);
+        level.setBlock(pos, BCEnergyFluids.OIL_COOL.source().get().defaultFluidState().createLegacyBlock(), 2);
     }
 
     public enum ReplaceType {

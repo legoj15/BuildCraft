@@ -8,6 +8,7 @@ package buildcraft.lib.gui;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
@@ -53,6 +54,7 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTicks, int mouseX, int mouseY) {
+        GuiIcon.setGuiGraphics(graphics);
         mainGui.drawBackgroundLayer(partialTicks, mouseX, mouseY, () -> {
             drawBackgroundTexture(graphics);
         });
@@ -61,8 +63,20 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
+        GuiIcon.setGuiGraphics(graphics);
         super.render(graphics, mouseX, mouseY, partialTicks);
         this.renderTooltip(graphics, mouseX, mouseY);
+    }
+
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        int mouseX = (int) event.x();
+        int mouseY = (int) event.y();
+        int button = event.button();
+        if (mainGui.onMouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override

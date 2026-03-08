@@ -15,12 +15,14 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 
 import buildcraft.lib.gui.BuildCraftGui;
+import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.IGuiElement;
+import buildcraft.lib.gui.IInteractionElement;
 import buildcraft.lib.gui.pos.IGuiArea;
 
 /** Base class for collapsible side panels (ledgers) in the GUI.
  *  Renders as a colored rectangle with title and text entries. */
-public class Ledger_Neptune implements IGuiElement {
+public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     protected final BuildCraftGui gui;
     protected final int colour;
     protected final boolean expandPositive;
@@ -99,10 +101,12 @@ public class Ledger_Neptune implements IGuiElement {
 
     @Override
     public void drawBackground(float partialTicks) {
-        // Drawing is done in drawWithGraphics — elements need a GuiGraphics param
+        GuiGraphics graphics = GuiIcon.getGuiGraphics();
+        if (graphics == null) return;
+        drawWithGraphics(graphics);
     }
 
-    /** Draw this ledger. Called by GuiBC8 after rendering. */
+    /** Draw this ledger with the given GuiGraphics. */
     public void drawWithGraphics(GuiGraphics graphics) {
         int x = (int) getX();
         int y = (int) getY();
@@ -142,17 +146,23 @@ public class Ledger_Neptune implements IGuiElement {
         }
     }
 
-    /** Toggle the ledger open/closed when clicked. */
-    public boolean handleClick(double mouseX, double mouseY) {
+    @Override
+    public void onMouseClicked(int button) {
+        double mouseX = gui.mouse.getX();
+        double mouseY = gui.mouse.getY();
         if (contains(mouseX, mouseY)) {
             isOpen = !isOpen;
             if (isOpen) {
                 calculateMaxSize();
             }
-            return true;
         }
-        return false;
     }
+
+    @Override
+    public void onMouseDragged(int button, long timeSinceLastClick) {}
+
+    @Override
+    public void onMouseReleased(int button) {}
 
     @Override
     public double getX() {

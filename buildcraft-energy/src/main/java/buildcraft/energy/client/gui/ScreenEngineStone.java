@@ -5,70 +5,63 @@
 package buildcraft.energy.client.gui;
 
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.energy.container.ContainerEngineStone;
-import buildcraft.lib.gui.BuildCraftGui;
+import buildcraft.lib.gui.GuiBC8;
+import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.ledger.LedgerEngine;
 import buildcraft.lib.gui.ledger.LedgerHelp;
+import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.gui.pos.IGuiArea;
+import buildcraft.lib.misc.LocaleUtil;
 
-public class ScreenEngineStone extends AbstractContainerScreen<ContainerEngineStone> {
+public class ScreenEngineStone extends GuiBC8<ContainerEngineStone> {
     private static final Identifier TEXTURE = Identifier.parse("buildcraftenergy:textures/gui/steam_engine_gui.png");
+    private static final int SIZE_X = 176, SIZE_Y = 166;
+    private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
 
-    private BuildCraftGui mainGui;
-    private LedgerEngine ledgerPower;
-    private LedgerHelp ledgerHelp;
+    private final IGuiArea flameRect;
 
     public ScreenEngineStone(ContainerEngineStone menu, Inventory playerInv, Component title) {
-        super(menu, playerInv, title);
-        imageWidth = 176;
-        imageHeight = 166;
+        super(menu, playerInv, title, SIZE_X, SIZE_Y);
+        this.flameRect = new GuiRectangle(81, 25, 14, 14).offset(mainGui.rootElement);
     }
 
     @Override
-    protected void init() {
-        super.init();
-        IGuiArea rootArea = BuildCraftGui.createWindowedArea(this);
-        mainGui = new BuildCraftGui(this, rootArea);
-
+    protected void initGuiElements() {
         if (menu.engine != null) {
             // Power ledger on the right side
-            ledgerPower = new LedgerEngine(mainGui, menu.engine, true);
-            ledgerPower.setPosition(leftPos + imageWidth, topPos + 5);
+            LedgerEngine ledgerPower = new LedgerEngine(mainGui, menu.engine, true);
+            ledgerPower.setPosition(mainGui.rootElement.getX() + mainGui.rootElement.getWidth(), mainGui.rootElement.getY() + 5);
             mainGui.shownElements.add(ledgerPower);
 
             // Help ledger below the power ledger
-            ledgerHelp = new LedgerHelp(mainGui, true,
+            LedgerHelp ledgerHelp = new LedgerHelp(mainGui, true,
                 "gui.buildcraft.stirling_engine.help"
             );
-            ledgerHelp.setPosition(leftPos + imageWidth, topPos + 30);
+            ledgerHelp.setPosition(mainGui.rootElement.getX() + mainGui.rootElement.getWidth(), mainGui.rootElement.getY() + 30);
             mainGui.shownElements.add(ledgerHelp);
         }
     }
 
     @Override
-    protected void containerTick() {
-        super.containerTick();
-        if (mainGui != null) mainGui.tick();
-    }
-
-    @Override
-    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+    protected void drawBackgroundTexture(GuiGraphics graphics) {
+        ICON_GUI.drawAt(mainGui.rootElement);
 
         // Draw flame animation
         if (menu.isBurning()) {
             float progress = menu.getBurnProgress();
             int flameHeight = (int) Math.ceil(progress * 14);
-            graphics.blit(TEXTURE,
-                leftPos + 81,
-                topPos + 25 + 14 - flameHeight,
-                176,
-                14 - flameHeight,
+            graphics.blit(
+                RenderPipelines.GUI_TEXTURED, TEXTURE,
+                (int) flameRect.getX(),
+                (int) (flameRect.getY() + flameRect.getHeight() - flameHeight),
+                176f,
+                (float) (14 - flameHeight),
                 14,
                 flameHeight + 2,
                 256, 256
@@ -77,17 +70,11 @@ public class ScreenEngineStone extends AbstractContainerScreen<ContainerEngineSt
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.render(graphics, mouseX, mouseY, partialTick);
-        // Draw ledgers on top of everything else
-        if (ledgerPower != null) ledgerPower.drawWithGraphics(graphics);
-        if (ledgerHelp != null) ledgerHelp.drawWithGraphics(graphics);
-        renderTooltip(graphics, mouseX, mouseY);
-    }
-
-    @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.drawString(font, title, (imageWidth - font.width(title)) / 2, 6, 0x404040, false);
+        String str = LocaleUtil.localize("tile.engineStone.name");
+        int strWidth = font.width(str);
+        int titleX = (imageWidth - strWidth) / 2;
+        graphics.drawString(font, str, titleX, 6, 0x404040, false);
         graphics.drawString(font, playerInventoryTitle, 8, imageHeight - 96 + 2, 0x404040, false);
     }
 }

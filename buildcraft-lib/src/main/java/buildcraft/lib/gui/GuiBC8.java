@@ -81,7 +81,8 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        // Don't draw default labels — BC draws its own via elements
+        // Default: let subclasses override to draw custom labels.
+        // If not overridden, vanilla draws this.title and playerInventoryTitle.
     }
 
     /** Draw the background texture. Override this to blit your GUI background. */

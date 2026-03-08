@@ -25,4 +25,14 @@ public class LocaleUtil {
     public static String localizeMjFlow(double mjPerTick) {
         return String.format("%.2f MJ/t", mjPerTick);
     }
+
+    /** Format heat level for display (e.g. "20.00 °C"), matching 1.12's format. */
+    public static String localizeHeat(double heat) {
+        return String.format("%.2f \u00B0C", heat);
+    }
+
+    /** Format heat level for display from a float value. */
+    public static String localizeHeat(float heat) {
+        return localizeHeat((double) heat);
+    }
 }

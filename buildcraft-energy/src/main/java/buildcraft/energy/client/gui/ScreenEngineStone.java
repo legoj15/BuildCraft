@@ -15,6 +15,7 @@ import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.ledger.LedgerEngine;
 import buildcraft.lib.gui.ledger.LedgerHelp;
+import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.gui.pos.IGuiArea;
 import buildcraft.lib.misc.LocaleUtil;
@@ -34,22 +35,20 @@ public class ScreenEngineStone extends GuiBC8<ContainerEngineStone> {
     @Override
     protected void initGuiElements() {
         if (menu.engine != null) {
-            // Power ledger on the right side — reads from synced ContainerData
-            LedgerEngine ledgerPower = new LedgerEngine(mainGui,
+            // Power ledger on the right side (auto-stacked via Ledger_Neptune)
+            mainGui.shownElements.add(new LedgerEngine(mainGui,
                 menu::getSyncedCurrentOutput,
                 menu::getSyncedPower,
                 menu::getSyncedHeat,
+                menu::getSyncedPowerStage,
+                menu::isSyncedBurningEngine,
                 true
-            );
-            ledgerPower.setPosition(mainGui.rootElement.getX() + mainGui.rootElement.getWidth(), mainGui.rootElement.getY() + 5);
-            mainGui.shownElements.add(ledgerPower);
+            ));
 
-            // Help ledger below the power ledger
-            LedgerHelp ledgerHelp = new LedgerHelp(mainGui, true,
+            // Help ledger on the LEFT side (auto-stacked via Ledger_Neptune)
+            mainGui.shownElements.add(new LedgerHelp(mainGui,
                 "gui.buildcraft.stirling_engine.help"
-            );
-            ledgerHelp.setPosition(mainGui.rootElement.getX() + mainGui.rootElement.getWidth(), mainGui.rootElement.getY() + 30);
-            mainGui.shownElements.add(ledgerHelp);
+            ));
         }
     }
 

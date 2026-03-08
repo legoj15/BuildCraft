@@ -29,7 +29,9 @@ public class ContainerEngineStone extends ContainerBC_Neptune {
     private static final int DATA_HEAT = 4;         // float → Float.floatToIntBits
     private static final int DATA_OUTPUT_HI = 5;
     private static final int DATA_OUTPUT_LO = 6;
-    private static final int DATA_COUNT = 7;
+    private static final int DATA_POWER_STAGE = 7;  // EnumPowerStage ordinal
+    private static final int DATA_IS_BURNING_ENGINE = 8; // 1 if engine is actively burning
+    private static final int DATA_COUNT = 9;
 
     // Client-side constructor (from network)
     public ContainerEngineStone(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
@@ -54,6 +56,8 @@ public class ContainerEngineStone extends ContainerBC_Neptune {
                         case DATA_HEAT -> Float.floatToIntBits(engine.getHeatLevel());
                         case DATA_OUTPUT_HI -> (int) (engine.getCurrentOutput() >>> 32);
                         case DATA_OUTPUT_LO -> (int) (engine.getCurrentOutput() & 0xFFFFFFFFL);
+                        case DATA_POWER_STAGE -> engine.getPowerStage().ordinal();
+                        case DATA_IS_BURNING_ENGINE -> engine.isBurning() ? 1 : 0;
                         default -> 0;
                     };
                 }
@@ -124,6 +128,19 @@ public class ContainerEngineStone extends ContainerBC_Neptune {
     /** Synced heat level (reconstructed from float bits). */
     public float getSyncedHeat() {
         return Float.intBitsToFloat(data.get(DATA_HEAT));
+    }
+
+    /** Synced power stage (for icon display). */
+    public buildcraft.api.enums.EnumPowerStage getSyncedPowerStage() {
+        int ordinal = data.get(DATA_POWER_STAGE);
+        buildcraft.api.enums.EnumPowerStage[] values = buildcraft.api.enums.EnumPowerStage.values();
+        if (ordinal >= 0 && ordinal < values.length) return values[ordinal];
+        return buildcraft.api.enums.EnumPowerStage.BLUE;
+    }
+
+    /** Synced engine-on state (for icon display). */
+    public boolean isSyncedBurningEngine() {
+        return data.get(DATA_IS_BURNING_ENGINE) != 0;
     }
 
     /** Synced current output in micro-MJ/tick (reconstructed from hi/lo ints). */

@@ -14,6 +14,10 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import buildcraft.api.fuels.BuildcraftFuelRegistry;
+import buildcraft.lib.fluid.FuelRegistry;
+import buildcraft.lib.fluid.CoolantRegistry;
+
 @Mod(BCLib.MODID)
 public class BCLib {
     public static final String MODID = "buildcraftlib";
@@ -29,6 +33,10 @@ public class BCLib {
                     .networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8));
 
     public BCLib(IEventBus modEventBus, ModContainer modContainer) {
+        // Wire fuel/coolant registries
+        BuildcraftFuelRegistry.fuel = FuelRegistry.INSTANCE;
+        BuildcraftFuelRegistry.coolant = CoolantRegistry.INSTANCE;
+
         BCLibItems.ITEMS.register(modEventBus);
         DATA_COMPONENTS.register(modEventBus);
     }

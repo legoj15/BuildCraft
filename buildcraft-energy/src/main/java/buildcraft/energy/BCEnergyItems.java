@@ -12,6 +12,9 @@ public class BCEnergyItems {
     public static final DeferredItem<BlockItem> ENGINE_STONE = ITEMS.registerSimpleBlockItem(
             BCEnergyBlocks.ENGINE_STONE);
 
+    public static final DeferredItem<BlockItem> ENGINE_IRON = ITEMS.registerSimpleBlockItem(
+            BCEnergyBlocks.ENGINE_IRON);
+
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);
     }

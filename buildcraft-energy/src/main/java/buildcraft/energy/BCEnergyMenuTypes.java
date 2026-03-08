@@ -9,6 +9,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import java.util.function.Supplier;
 
 import buildcraft.energy.container.ContainerEngineStone;
+import buildcraft.energy.container.ContainerEngineIron;
 
 public class BCEnergyMenuTypes {
     public static final DeferredRegister<MenuType<?>> MENU_TYPES =
@@ -18,7 +19,12 @@ public class BCEnergyMenuTypes {
             "engine_stone",
             () -> IMenuTypeExtension.create(ContainerEngineStone::new));
 
+    public static final Supplier<MenuType<ContainerEngineIron>> ENGINE_IRON = MENU_TYPES.register(
+            "engine_iron",
+            () -> IMenuTypeExtension.create(ContainerEngineIron::new));
+
     public static void init(IEventBus modEventBus) {
         MENU_TYPES.register(modEventBus);
     }
 }
+

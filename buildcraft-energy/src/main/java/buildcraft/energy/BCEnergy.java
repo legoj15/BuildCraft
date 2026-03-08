@@ -47,14 +47,18 @@ public class BCEnergy {
     }
 
     private void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
-        // Add engine to the BuildCraft creative tab
+        // Add engines to the BuildCraft creative tab
         if (event.getTabKey() == buildcraft.core.BCCoreCreativeTabs.MAIN_TAB_KEY) {
             event.accept(BCEnergyItems.ENGINE_STONE);
+            event.accept(BCEnergyItems.ENGINE_IRON);
         }
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
+            // Register fuel and coolant definitions
+            BCEnergyRecipes.init();
+
             // Wire the oil spring enum to our fluid and tile entity
             EnumSpring.OIL.liquidBlock = BCEnergyFluids.OIL_COOL.block().get().defaultBlockState();
             EnumSpring.OIL.tileConstructor = () -> {

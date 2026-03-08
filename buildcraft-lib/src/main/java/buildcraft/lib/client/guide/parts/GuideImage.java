@@ -3,9 +3,9 @@ package buildcraft.lib.client.guide.parts;
 import buildcraft.api.core.render.ISprite;
 
 import buildcraft.lib.client.guide.GuiGuide;
+import buildcraft.lib.gui.GuiIcon;
 
-/** Renders an image in the guide book.
- * Stubbed — needs GuiSpriteScaled and GuiGuide.BORDER_* constants for proper rendering. */
+/** Renders an image in the guide book. */
 public class GuideImage extends GuidePart {
     public static final int PIXEL_HEIGHT = 42;
     final ISprite sprite;
@@ -24,7 +24,10 @@ public class GuideImage extends GuidePart {
             current = current.nextPage();
         }
         if (index == current.page) {
-            // Rendering stubbed — needs GuiSpriteScaled and GuiGuide border constants
+            // Center the image within the page width
+            int imgX = x + (width - this.width) / 2;
+            int imgY = y + current.pixel;
+            GuiIcon.drawAt(sprite, imgX, imgY, this.width, this.height);
         }
         return current.nextLine(this.height + 1, height);
     }

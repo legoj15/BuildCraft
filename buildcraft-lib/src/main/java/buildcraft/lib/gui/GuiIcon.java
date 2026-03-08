@@ -31,6 +31,11 @@ public class GuiIcon implements ISimpleDrawable {
         currentGraphics = graphics;
     }
 
+    /** Get the current GuiGraphics context (set each frame by GuiGuide). */
+    public static GuiGraphics getGuiGraphics() {
+        return currentGraphics;
+    }
+
     public GuiIcon(ISprite sprite, int textureSize) {
         this.sprite = sprite;
         this.textureSize = textureSize;

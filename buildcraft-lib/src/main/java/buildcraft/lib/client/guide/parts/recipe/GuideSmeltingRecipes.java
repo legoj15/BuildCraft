@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2017 SpaceToad and the BuildCraft team
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
+ */
+
 package buildcraft.lib.client.guide.parts.recipe;
 
 import java.util.ArrayList;
@@ -8,26 +14,76 @@ import javax.annotation.Nonnull;
 import com.google.common.collect.ImmutableList;
 
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.AbstractCookingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeManager;
+import net.minecraft.world.item.crafting.SmeltingRecipe;
+import net.minecraft.world.level.block.Blocks;
 
 import buildcraft.lib.client.guide.parts.GuidePartFactory;
 
 /** Smelting recipe lookup for the guide book.
- * 
- * Stubbed — the 1.21 Recipe API changed radically (see GuideCraftingRecipes for details).
- * 
- * TODO: Rewrite using 1.21 RecipeManager.getRecipes() + SmeltingRecipe */
+ *
+ * Uses RecipeManager.getRecipes() + instanceof filtering for SmeltingRecipe.
+ * Uses AT-opened AbstractCookingRecipe.result and .ingredient fields. */
 public enum GuideSmeltingRecipes implements IStackRecipes {
     INSTANCE;
 
     @Override
     public List<GuidePartFactory> getUsages(@Nonnull ItemStack stack) {
-        // Stubbed — needs 1.21 Recipe API rewrite
-        return ImmutableList.of();
+        RecipeManager manager = GuideCraftingRecipes.getRecipeManager();
+        if (manager == null) return ImmutableList.of();
+
+        // If the target is a furnace, show all smelting recipes
+        if (stack.is(Blocks.FURNACE.asItem())) {
+            List<GuidePartFactory> list = new ArrayList<>();
+            for (RecipeHolder<?> holder : manager.getRecipes()) {
+                if (holder.value() instanceof SmeltingRecipe smelt) {
+                    ItemStack output = smelt.result;
+                    if (!output.isEmpty()) {
+                        list.add(new GuideSmeltingFactory(getIngredientStack(smelt), output));
+                    }
+                }
+            }
+            return list;
+        }
+
+        // Check if the target is used as an ingredient in any smelting recipe
+        List<GuidePartFactory> list = new ArrayList<>();
+        for (RecipeHolder<?> holder : manager.getRecipes()) {
+            if (holder.value() instanceof SmeltingRecipe smelt) {
+                if (smelt.input.test(stack)) {
+                    ItemStack output = smelt.result;
+                    if (!output.isEmpty()) {
+                        list.add(new GuideSmeltingFactory(stack, output));
+                    }
+                }
+            }
+        }
+        return list.isEmpty() ? null : list;
     }
 
     @Override
     public List<GuidePartFactory> getRecipes(@Nonnull ItemStack stack) {
-        // Stubbed — needs 1.21 Recipe API rewrite
-        return ImmutableList.of();
+        RecipeManager manager = GuideCraftingRecipes.getRecipeManager();
+        if (manager == null) return ImmutableList.of();
+
+        List<GuidePartFactory> list = new ArrayList<>();
+        for (RecipeHolder<?> holder : manager.getRecipes()) {
+            if (holder.value() instanceof SmeltingRecipe smelt) {
+                ItemStack output = smelt.result;
+                if (!output.isEmpty() && ItemStack.isSameItem(stack, output)) {
+                    list.add(new GuideSmeltingFactory(getIngredientStack(smelt), output));
+                }
+            }
+        }
+        return list;
+    }
+
+    /** Get a representative ItemStack from a cooking recipe's ingredient for display.
+     * Uses the AT-opened AbstractCookingRecipe.ingredient field. */
+    private static ItemStack getIngredientStack(AbstractCookingRecipe recipe) {
+        return GuideCraftingFactory.ingredientToChanging(recipe.input)
+            .get().baseStack;
     }
 }

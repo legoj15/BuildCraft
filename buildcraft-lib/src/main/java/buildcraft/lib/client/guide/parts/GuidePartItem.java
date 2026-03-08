@@ -1,9 +1,12 @@
 package buildcraft.lib.client.guide.parts;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.GuideManager;
+import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.misc.ItemStackKey;
 
@@ -19,14 +22,16 @@ public abstract class GuidePartItem extends GuidePart {
     }
 
     protected void drawItemStack(ItemStack stack, int x, int y) {
-        // Rendering deferred — needs GuiGraphics (1.21 item rendering)
-        // In 1.21 this would be:
-        //   guiGraphics.renderItem(stack, x, y);
-        //   guiGraphics.renderItemDecorations(font, stack, x, y);
-        if (stack != null && !stack.isEmpty()) {
-            if (STACK_RECT.offset(x, y).contains(gui.mouse)) {
-                // gui.tooltipStack = stack — field not exposed yet
-            }
+        if (stack == null || stack.isEmpty()) return;
+
+        GuiGraphics graphics = GuiIcon.getGuiGraphics();
+        if (graphics != null) {
+            graphics.renderItem(stack, x, y);
+            graphics.renderItemDecorations(Minecraft.getInstance().font, stack, x, y);
+        }
+
+        if (STACK_RECT.offset(x, y).contains(gui.mouse)) {
+            gui.tooltipStack = stack;
         }
     }
 
@@ -36,7 +41,10 @@ public abstract class GuidePartItem extends GuidePart {
 
     protected void testClickItemStack(ItemStack stack, int x, int y) {
         if (stack != null && !stack.isEmpty() && STACK_RECT.offset(x, y).contains(gui.mouse)) {
-            // gui.openPage(GuideManager.INSTANCE.getPageFor(stack).createNew(gui)) — deferred until full UI port
+            GuidePageFactory factory = GuideManager.INSTANCE.getPageFor(stack);
+            if (factory != null) {
+                gui.openPage(factory.createNew(gui));
+            }
         }
     }
 }

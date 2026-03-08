@@ -19,6 +19,12 @@ subprojects {
 
     neoForge {
         version = '21.11.38-beta'
+
+        // Load access transformers from any subproject that has the file
+        def atFile = project.file('src/main/resources/META-INF/accesstransformer.cfg')
+        if (atFile.exists()) {
+            accessTransformers.from(atFile)
+        }
     }
 
     dependencies {

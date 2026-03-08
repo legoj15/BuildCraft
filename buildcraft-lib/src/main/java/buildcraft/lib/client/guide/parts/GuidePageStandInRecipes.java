@@ -13,6 +13,7 @@ import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.entry.ItemStackValueFilter;
 import buildcraft.lib.client.guide.entry.PageEntryItemStack;
 import buildcraft.lib.client.guide.entry.PageValue;
+import buildcraft.lib.client.guide.parts.recipe.RecipeLookupHelper;
 
 @Deprecated
 public class GuidePageStandInRecipes extends GuidePage {
@@ -22,8 +23,35 @@ public class GuidePageStandInRecipes extends GuidePage {
 
     @Nonnull
     public static GuidePageFactory createFactory(@Nonnull ItemStack stack) {
-        // XmlPageLoader.loadAllCrafting not ported — return simple "No recipes" page
-        return (gui) -> new GuidePageStandInRecipes(gui, ImmutableList.of(new GuideText(gui, "No recipes!")), stack);
+        return (gui) -> {
+            List<GuidePart> parts = new ArrayList<>();
+            // Try to find recipes that produce this item
+            List<GuidePartFactory> recipes = RecipeLookupHelper.getAllRecipes(stack);
+            if (!recipes.isEmpty()) {
+                parts.add(new GuideText(gui, "Recipes:"));
+                for (GuidePartFactory factory : recipes) {
+                    GuidePart part = factory.createNew(gui);
+                    if (part != null) {
+                        parts.add(part);
+                    }
+                }
+            }
+            // Try to find recipes that use this item as an ingredient
+            List<GuidePartFactory> usages = RecipeLookupHelper.getAllUsages(stack);
+            if (!usages.isEmpty()) {
+                parts.add(new GuideText(gui, "Usages:"));
+                for (GuidePartFactory factory : usages) {
+                    GuidePart part = factory.createNew(gui);
+                    if (part != null) {
+                        parts.add(part);
+                    }
+                }
+            }
+            if (parts.isEmpty()) {
+                parts.add(new GuideText(gui, "No recipes found."));
+            }
+            return new GuidePageStandInRecipes(gui, parts, stack);
+        };
     }
 
     @Override

@@ -88,5 +88,11 @@
     "block.buildcraftenergy.fuel_gaseous_heat_2": "Gaseous Fuel",
     "item.buildcraftenergy.fuel_gaseous_bucket": "Gaseous Fuel (§bCool§r) Bucket",
     "item.buildcraftenergy.fuel_gaseous_heat_1_bucket": "Gaseous Fuel (§6Hot§r) Bucket",
-    "item.buildcraftenergy.fuel_gaseous_heat_2_bucket": "Gaseous Fuel (§cSearing§r) Bucket"
+    "item.buildcraftenergy.fuel_gaseous_heat_2_bucket": "Gaseous Fuel (§cSearing§r) Bucket",
+    "block.buildcraftenergy.engine_stone": "Stirling Engine",
+    "tile.engineStone.name": "Stirling Engine",
+    "gui.power": "Power",
+    "gui.currentOutput": "Current Output",
+    "gui.stored": "Stored",
+    "gui.heat": "Heat"
 }

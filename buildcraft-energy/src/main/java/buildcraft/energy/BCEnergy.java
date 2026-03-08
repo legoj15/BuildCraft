@@ -6,6 +6,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,17 +26,31 @@ public class BCEnergy {
 
         // Register all deferred registries
         BCEnergyFluids.init(modEventBus);
+        BCEnergyBlocks.init(modEventBus);
+        BCEnergyItems.init(modEventBus);
         BCEnergyBlockEntities.init(modEventBus);
+        BCEnergyMenuTypes.init(modEventBus);
 
         // Register client-side extensions on the mod event bus
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
             modEventBus.register(BCEnergyFluidsClient.class);
+            modEventBus.register(buildcraft.energy.client.BCEnergyClient.class);
         }
+
+        // Creative tab
+        modEventBus.addListener(this::addCreativeTabItems);
 
         // Setup event for things that need registries to be frozen
         modEventBus.addListener(this::commonSetup);
 
         LOGGER.info("BuildCraft Energy initialized");
+    }
+
+    private void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
+        // Add engine to the BuildCraft creative tab
+        if (event.getTabKey() == buildcraft.core.BCCoreCreativeTabs.MAIN_TAB_KEY) {
+            event.accept(BCEnergyItems.ENGINE_STONE);
+        }
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

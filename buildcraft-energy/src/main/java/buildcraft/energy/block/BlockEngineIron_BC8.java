@@ -61,8 +61,10 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
             }
         }
 
-        // Not a bucket — fall through to useWithoutItem (opens GUI)
-        return InteractionResult.PASS;
+        // Not a fluid container — open GUI (same as useWithoutItem)
+        // We can't return PASS here because that invokes the item's useOn,
+        // not useWithoutItem, so the GUI would never open when holding items.
+        return openGui(state, level, pos, player);
     }
 
     /**
@@ -72,6 +74,11 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
             Player player, BlockHitResult hitResult) {
+        return openGui(state, level, pos, player);
+    }
+
+    /** Open the combustion engine GUI for the given player. */
+    private InteractionResult openGui(BlockState state, Level level, BlockPos pos, Player player) {
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }

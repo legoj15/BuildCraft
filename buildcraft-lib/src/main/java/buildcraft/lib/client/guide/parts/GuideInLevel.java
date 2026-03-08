@@ -6,11 +6,11 @@
 
 package buildcraft.lib.client.guide.parts;
 
-import net.minecraft.resources.Identifier;
-
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.world.LevelState;
 
+/** Renders a 3D in-world scene within the guide book.
+ * Stubbed — 3D rendering in guide pages requires a full rendering pipeline. */
 public class GuideInLevel extends GuidePart {
     private boolean fullscreen = false;
     private final LevelState state;
@@ -23,13 +23,14 @@ public class GuideInLevel extends GuidePart {
 
     @Override
     public PagePosition renderIntoArea(int x, int y, int width, int height, PagePosition current, int index) {
-        // TODO Auto-generated method stub
-        throw new AbstractMethodError("Implement this!");
+        // Stubbed — 3D in-world rendering not yet implemented
+        return current;
     }
-    
+
     @Override
-    public PagePosition handleMouseClick(int x, int y, int width, int height, PagePosition current, int index, int mouseX, int mouseY) {
-        // TODO Auto-generated method stub
-        throw new AbstractMethodError("Implement this!");
+    public PagePosition handleMouseClick(int x, int y, int width, int height, PagePosition current, int index,
+        int mouseX, int mouseY) {
+        // Stubbed — 3D in-world interaction not yet implemented
+        return current;
     }
 }

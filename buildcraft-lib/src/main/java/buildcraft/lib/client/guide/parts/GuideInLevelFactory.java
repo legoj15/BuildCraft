@@ -6,11 +6,11 @@
 
 package buildcraft.lib.client.guide.parts;
 
-import net.minecraft.resources.Identifier;
-
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.world.LevelInfo;
 
+/** Factory for creating GuideInLevel instances.
+ * Stubbed — returns null until 3D rendering is implemented. */
 public class GuideInLevelFactory implements GuidePartFactory {
     private final LevelInfo info;
 
@@ -20,6 +20,7 @@ public class GuideInLevelFactory implements GuidePartFactory {
 
     @Override
     public GuideInLevel createNew(GuiGuide gui) {
+        // Stubbed — 3D in-world rendering not yet implemented
         return null;
     }
 }

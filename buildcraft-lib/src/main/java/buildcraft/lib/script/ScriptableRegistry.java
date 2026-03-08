@@ -121,6 +121,20 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
                 continue;
             }
             visitFile(openFileSystems, loadedFiles, jarRoots, source);
+
+            // NeoForge dev environment fix: modFile.getFilePath() points to
+            // build/classes/java/main which has no assets/ — the resources are at
+            // build/resources/main. Try the sibling resources directory too.
+            if (source.isDirectory()) {
+                String sourcePath = source.getAbsolutePath();
+                if (sourcePath.endsWith("classes" + File.separator + "java" + File.separator + "main")) {
+                    File resourcesDir = new File(source.getParentFile().getParentFile().getParentFile(),
+                        "resources" + File.separator + "main");
+                    if (resourcesDir.isDirectory()) {
+                        visitFile(openFileSystems, loadedFiles, jarRoots, resourcesDir);
+                    }
+                }
+            }
         }
 
         // Resource pack loading deferred — NeoForge handles resource packs differently
@@ -199,6 +213,7 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
                     String scriptDomain = subFolder.getFileName().toString().replace("/", "");
                     Path scriptDir = subFolder.resolve(postPath);
                     Path scriptFile = subFolder.resolve(postPath + ".txt");
+
                     if (!Files.exists(scriptFile)) {
                         // TODO: Load "as if" the script file wasn't missing!
                         continue;
@@ -330,6 +345,7 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
         if (json.has("type")) {
             type = json.get("type").getAsString();
         }
+
         IEntryDeserializer<? extends E> deserializer = getCustomDeserializers().get(type);
         if (deserializer != null) {
             OptionallyDisabled<? extends E> optional = deserializer.deserialize(name, json, gson::fromJson);

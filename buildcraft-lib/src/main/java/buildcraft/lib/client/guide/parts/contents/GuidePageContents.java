@@ -65,7 +65,7 @@ public class GuidePageContents extends GuidePageBase {
     protected void renderPage(int x, int y, int width, int height, int index) {
         // Search bar, order buttons, and front page rendering deferred until full UI port
         // (needs EditBox, ConfigurableFontRenderer, RenderUtil, BCLibConfig, XmlPageLoader)
-        PagePosition pos = new PagePosition(2, 0);
+        PagePosition pos = new PagePosition(0, 0);
         pos = contents.render(x, y, width, height, pos, index);
         if (numPages == -1) {
             numPages = pos.page + 1;

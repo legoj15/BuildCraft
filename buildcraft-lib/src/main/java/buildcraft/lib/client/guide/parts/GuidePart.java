@@ -139,7 +139,7 @@ public abstract class GuidePart {
                     renderTooltip();
                 }
                 if (fontRenderer != null) {
-                    fontRenderer.drawString(text, _x, _y, 0);
+                    fontRenderer.drawString(text, _x, _y, 0xFF000000);
                 }
             }
             next = strings.length == 1 ? null : strings[1];

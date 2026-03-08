@@ -415,7 +415,7 @@ public class GuiGuide extends Screen {
             } else {
                 x = (this.width - titleWidth) / 2;
             }
-            currentFont.drawString(title, x, minY + 12, 0x90816a);
+            currentFont.drawString(title, x, minY + 12, 0xFF90816a);
         }
 
         // Reset state for content rendering

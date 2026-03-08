@@ -1,6 +1,6 @@
 ~{buildcraft/json/insn}
 
-import "buildcraftlib:util"
+import "buildcraftlib:util" "buildcraftcore:main"
 
 gear "gear_wood"
 gear "gear_stone"

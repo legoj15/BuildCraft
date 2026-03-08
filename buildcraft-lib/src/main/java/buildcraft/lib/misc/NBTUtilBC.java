@@ -10,10 +10,14 @@ import java.util.UUID;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.nbt.DoubleTag;
 import net.minecraft.nbt.EndTag;
 import net.minecraft.nbt.ListTag;
@@ -33,6 +37,29 @@ public class NBTUtilBC {
             return Optional.empty();
         }
         return Optional.of(tag);
+    }
+
+    // Item NBT data (replaces 1.12.2 stack.getTagCompound() pattern)
+
+    /** Returns a copy of the item's custom data compound tag, or a new empty tag if none exists.
+     * Note: Unlike 1.12.2, this returns a COPY. Use {@link #setItemData} to write changes back. */
+    @Nonnull
+    public static CompoundTag getItemData(@Nonnull ItemStack stack) {
+        if (stack.isEmpty()) {
+            return new CompoundTag();
+        }
+        CustomData customData = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
+        return customData.copyTag();
+    }
+
+    /** Writes the given compound tag back to the item's custom data component.
+     * If the tag is empty, the custom data component is removed entirely. */
+    public static void setItemData(@Nonnull ItemStack stack, CompoundTag tag) {
+        if (tag.isEmpty()) {
+            stack.remove(DataComponents.CUSTOM_DATA);
+        } else {
+            stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        }
     }
 
     // BlockPos serialization

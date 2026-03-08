@@ -50,6 +50,7 @@ public class BCBuilders {
             // ordering="AFTER" in neoforge.mods.toml ensures this fires after BCCore
             event.accept(BCBuildersItems.BLUEPRINT_CLEAN);
             event.accept(BCBuildersItems.TEMPLATE_CLEAN);
+            event.accept(BCBuildersItems.SCHEMATIC_SINGLE_CLEAN);
         }
     }
 }

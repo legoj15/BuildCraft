@@ -3,6 +3,8 @@
     "item.buildcraftbuilders.blueprint_used": "Blueprint",
     "item.buildcraftbuilders.template_clean": "Template",
     "item.buildcraftbuilders.template_used": "Template",
+    "item.buildcraftbuilders.schematic_single_clean": "Single Block Schematic",
+    "item.buildcraftbuilders.schematic_single_used": "Single Block Schematic",
     "item.blueprint.blank": "Blank",
     "item.blueprint.author": "Author:"
 }

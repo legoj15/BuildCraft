@@ -4,10 +4,13 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.api.distmarker.Dist;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import buildcraft.api.enums.EnumSpring;
+import buildcraft.energy.client.BCEnergyFluidsClient;
 import buildcraft.energy.tile.TileSpringOil;
 
 @Mod(BCEnergy.MODID)
@@ -23,6 +26,11 @@ public class BCEnergy {
         // Register all deferred registries
         BCEnergyFluids.init(modEventBus);
         BCEnergyBlockEntities.init(modEventBus);
+
+        // Register client-side extensions on the mod event bus
+        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+            modEventBus.register(BCEnergyFluidsClient.class);
+        }
 
         // Setup event for things that need registries to be frozen
         modEventBus.addListener(this::commonSetup);

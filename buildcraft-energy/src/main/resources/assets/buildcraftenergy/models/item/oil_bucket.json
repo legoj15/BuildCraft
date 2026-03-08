@@ -1,0 +1,9 @@
+{
+    "parent": "neoforge:item/bucket_drip",
+    "loader": "neoforge:fluid_container",
+    "fluid": "buildcraftenergy:oil",
+    "flip_gas": false,
+    "apply_tint": true,
+    "cover_is_mask": true,
+    "apply_fluid_luminosity": true
+}

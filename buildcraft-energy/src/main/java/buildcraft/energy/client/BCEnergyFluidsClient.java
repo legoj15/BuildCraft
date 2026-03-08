@@ -1,16 +1,17 @@
 package buildcraft.energy.client;
 
 import net.minecraft.resources.Identifier;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 
 import buildcraft.energy.BCEnergy;
 import buildcraft.energy.BCEnergyFluids;
 
-@EventBusSubscriber(modid = BCEnergy.MODID, value = Dist.CLIENT)
+/**
+ * Client-side fluid rendering extensions for oil.
+ * This class is manually registered on the mod event bus from {@link BCEnergy}.
+ */
 public class BCEnergyFluidsClient {
 
     @SubscribeEvent
@@ -31,8 +32,8 @@ public class BCEnergyFluidsClient {
 
             @Override
             public int getTintColor() {
-                // Dark oil tint (ARGB) — from 1.12 texDark=0x050505
-                return 0xFF050505;
+                // White tint — textures are already pre-colored with oil's dark palette
+                return 0xFFFFFFFF;
             }
         }, BCEnergyFluids.OIL_FLUID_TYPE.get());
     }

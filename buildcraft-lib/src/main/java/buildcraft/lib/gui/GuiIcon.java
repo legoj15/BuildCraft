@@ -6,8 +6,8 @@
 
 package buildcraft.lib.gui;
 
-
-
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
 
@@ -22,6 +22,14 @@ public class GuiIcon implements ISimpleDrawable {
     public final ISprite sprite;
     public final int textureSize;
     public final int width, height;
+
+    /** The GuiGraphics context — set by GuiGuide at the start of each render frame. */
+    private static GuiGraphics currentGraphics;
+
+    /** Set the GuiGraphics context for all GuiIcon rendering. */
+    public static void setGuiGraphics(GuiGraphics graphics) {
+        currentGraphics = graphics;
+    }
 
     public GuiIcon(ISprite sprite, int textureSize) {
         this.sprite = sprite;
@@ -58,27 +66,50 @@ public class GuiIcon implements ISimpleDrawable {
         this.drawScaledInside(x, y, this.width, this.height);
     }
 
+    public void drawAt(IGuiArea area) {
+        drawAt(area.getX(), area.getY());
+    }
+
     public void drawScaledInside(IGuiArea element) {
         drawScaledInside(element.getX(), element.getY(), element.getWidth(), element.getHeight());
     }
 
-    /** Draw this icon scaled to fit the given rectangle.
-     * <p>
-     * TODO: Implement modern rendering using GuiGraphics / BufferBuilder when the guide GUI is wired up.
-     * Currently a no-op stub. */
     public void drawScaledInside(double x, double y, double drawnWidth, double drawnHeight) {
-        // Rendering stub — will be implemented when GuiGuide is ported.
+        draw(sprite, x, y, x + drawnWidth, y + drawnHeight);
     }
 
-    /** Draw this icon cut (clipped) to fit the given rectangle.
-     * <p>
-     * TODO: Implement modern rendering when the guide GUI is wired up. */
+    /** Draws this icon as a perspective-warped quad (used for book flip animation).
+     * In NeoForge 1.21 we approximate with a bounding-box blit since the old
+     * GL11 perspective-correct texturing API is not available. */
+    public void drawCustomQuad(double x1, double y1, double x2, double y2,
+            double x3, double y3, double x4, double y4) {
+        double xMin = Math.min(Math.min(x1, x2), Math.min(x3, x4));
+        double yMin = Math.min(Math.min(y1, y2), Math.min(y3, y4));
+        double xMax = Math.max(Math.max(x1, x2), Math.max(x3, x4));
+        double yMax = Math.max(Math.max(y1, y2), Math.max(y3, y4));
+        draw(sprite, xMin, yMin, xMax, yMax);
+    }
+
     public void drawCutInside(IGuiArea element) {
         drawCutInside(element.getX(), element.getY(), element.getWidth(), element.getHeight());
     }
 
     public void drawCutInside(double x, double y, double displayWidth, double displayHeight) {
-        // Rendering stub — will be implemented when GuiGuide is ported.
+        displayWidth = Math.min(this.width, displayWidth);
+        displayHeight = Math.min(this.height, displayHeight);
+
+        if (currentGraphics == null || !(sprite instanceof SpriteRaw raw)) return;
+
+        float uPixel = (float) (raw.uMin * textureSize);
+        float vPixel = (float) (raw.vMin * textureSize);
+
+        currentGraphics.blit(
+            RenderPipelines.GUI_TEXTURED, raw.location,
+            (int) x, (int) y,
+            uPixel, vPixel,
+            (int) displayWidth, (int) displayHeight,
+            textureSize, textureSize
+        );
     }
 
     public static void drawAt(ISprite sprite, double x, double y, double size) {
@@ -89,10 +120,59 @@ public class GuiIcon implements ISimpleDrawable {
         draw(sprite, x, y, x + width, y + height);
     }
 
-    /** Draw a sprite filling the given rectangle.
-     * <p>
-     * TODO: Implement modern rendering when the guide GUI is wired up. */
     public static void draw(ISprite sprite, double xMin, double yMin, double xMax, double yMax) {
-        // Rendering stub — will be implemented when GuiGuide is ported.
+        if (currentGraphics == null) return;
+        if (!(sprite instanceof SpriteRaw raw)) return;
+
+        float uPixel = (float) (raw.uMin * raw.texSize);
+        float vPixel = (float) (raw.vMin * raw.texSize);
+        float uWidth = (float) (raw.width * raw.texSize);
+        float vHeight = (float) (raw.height * raw.texSize);
+        int drawWidth = (int) (xMax - xMin);
+        int drawHeight = (int) (yMax - yMin);
+
+        currentGraphics.blit(
+            RenderPipelines.GUI_TEXTURED, raw.location,
+            (int) xMin, (int) yMin,
+            uPixel, vPixel,
+            drawWidth, drawHeight,
+            (int) uWidth, (int) vHeight,
+            raw.texSize, raw.texSize
+        );
+    }
+
+    /** Draw a quad with the texture already bound — used by SpriteNineSliced. */
+    public static void drawBoundQuad(double xMin, double yMin, double xMax, double yMax,
+            double uMin, double vMin, double uMax, double vMax) {
+        if (currentGraphics == null || lastBoundLocation == null) return;
+
+        int drawW = (int) (xMax - xMin);
+        int drawH = (int) (yMax - yMin);
+        float uPx = (float) (uMin * lastBoundTexSize);
+        float vPx = (float) (vMin * lastBoundTexSize);
+        int uW = (int) ((uMax - uMin) * lastBoundTexSize);
+        int vH = (int) ((vMax - vMin) * lastBoundTexSize);
+
+        currentGraphics.blit(
+            RenderPipelines.GUI_TEXTURED, lastBoundLocation,
+            (int) xMin, (int) yMin,
+            uPx, vPx,
+            drawW, drawH,
+            uW, vH,
+            lastBoundTexSize, lastBoundTexSize
+        );
+    }
+
+    /** Track the last bound texture location for drawBoundQuad. */
+    static Identifier lastBoundLocation;
+    static int lastBoundTexSize = 256;
+
+    public static void setLastBoundLocation(Identifier location) {
+        lastBoundLocation = location;
+    }
+
+    public static void setLastBoundLocation(Identifier location, int texSize) {
+        lastBoundLocation = location;
+        lastBoundTexSize = texSize;
     }
 }

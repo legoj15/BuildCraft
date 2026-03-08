@@ -11,12 +11,23 @@ import java.util.List;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
-/** Implements a font that delegates to Minecraft's own {@link Font}. */
+/** Implements a font that delegates to Minecraft's own {@link Font}.
+ * Requires a {@link GuiGraphics} context to be set via {@link #setGuiGraphics} before
+ * any draw calls can render visually. */
 public enum MinecraftFont implements IFontRenderer {
     INSTANCE;
+
+    /** The current GuiGraphics context — set by GuiGuide during rendering. */
+    private static GuiGraphics currentGraphics;
+
+    /** Set the GuiGraphics context for all font rendering. Must be called each frame. */
+    public static void setGuiGraphics(GuiGraphics graphics) {
+        currentGraphics = graphics;
+    }
 
     private static Font getFontRenderer() {
         return Minecraft.getInstance().font;
@@ -39,13 +50,23 @@ public enum MinecraftFont implements IFontRenderer {
 
     @Override
     public int drawString(String text, int x, int y, int colour, boolean shadow, boolean centered, float scale) {
-        // Rendering stub — in 1.21, drawString requires a GuiGraphics context.
-        // This will be properly implemented when GuiGuide passes its GuiGraphics down.
-        // For now, return the width as if we drew it.
-        int width = (int) (getStringWidth(text) * scale);
-        if (centered) {
-            return width;
+        if (currentGraphics == null) {
+            // No graphics context — return width as if we drew it
+            return (int) (getStringWidth(text) * scale);
         }
+        Font font = getFontRenderer();
+        int width = (int) (font.width(text) * scale);
+
+        int drawX = x;
+        if (centered) {
+            drawX = x - width / 2;
+        }
+
+        // Note: in NeoForge 1.21.11, GuiGraphics.pose() returns Matrix3x2fStack
+        // which does not have pushPose/popPose. For scaled text we skip the transform
+        // and just draw at the given position for now.
+        currentGraphics.drawString(font, text, drawX, y, colour, shadow);
+
         return width;
     }
 
@@ -56,7 +77,6 @@ public enum MinecraftFont implements IFontRenderer {
         List<FormattedCharSequence> wrapped = font.split(Component.literal(text), scaledWidth);
         List<String> result = new ArrayList<>(wrapped.size());
         for (FormattedCharSequence seq : wrapped) {
-            // Extract the string content from the FormattedCharSequence
             StringBuilder sb = new StringBuilder();
             seq.accept((index, style, codePoint) -> {
                 sb.appendCodePoint(codePoint);

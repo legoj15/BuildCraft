@@ -5,6 +5,7 @@
  */
 package buildcraft.lib.item;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -14,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 import buildcraft.lib.BCLib;
+import buildcraft.lib.client.guide.GuiGuide;
 
 /**
  * The BuildCraft guide book item. In 1.12 this supported multiple "books" via
@@ -30,9 +32,10 @@ public class ItemGuide extends Item {
 
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
-        if (!level.isClientSide()) {
-            player.displayClientMessage(
-                    Component.translatable("buildcraft.guide.not_available"), true);
+        if (level.isClientSide()) {
+            ItemStack stack = player.getItemInHand(hand);
+            String bookName = getBookName(stack);
+            Minecraft.getInstance().setScreen(new GuiGuide(bookName));
         }
         return InteractionResult.SUCCESS;
     }

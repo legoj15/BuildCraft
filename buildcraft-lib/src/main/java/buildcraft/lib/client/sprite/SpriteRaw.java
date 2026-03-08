@@ -11,11 +11,13 @@ package buildcraft.lib.client.sprite;
 import net.minecraft.resources.Identifier;
 
 import buildcraft.api.core.render.ISprite;
+import buildcraft.lib.gui.GuiIcon;
 
 /** Defines a sprite that is taken directly from the given resource location. */
 public class SpriteRaw implements ISprite {
     public final Identifier location;
     public final double uMin, vMin, width, height;
+    public final int texSize;
 
     public SpriteRaw(Identifier location, double xMin, double yMin, double width, double height, double textureSize) {
         this.location = location;
@@ -23,6 +25,7 @@ public class SpriteRaw implements ISprite {
         this.vMin = yMin / textureSize;
         this.width = width / textureSize;
         this.height = height / textureSize;
+        this.texSize = (int) textureSize;
     }
 
     public SpriteRaw(Identifier location, double xMin, double yMin, double width, double height) {
@@ -31,12 +34,12 @@ public class SpriteRaw implements ISprite {
         this.vMin = yMin;
         this.width = width;
         this.height = height;
+        this.texSize = 256;
     }
 
     @Override
     public void bindTexture() {
-        // In 1.21+, texture binding is handled through RenderType/GuiGraphics.
-        // This is a no-op stub until the rendering pipeline is modernized.
+        GuiIcon.setLastBoundLocation(location);
     }
 
     @Override

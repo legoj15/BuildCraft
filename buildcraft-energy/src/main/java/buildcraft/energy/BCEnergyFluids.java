@@ -66,8 +66,8 @@ public class BCEnergyFluids {
             FLUIDS.register("oil_flowing", () -> new BaseFlowingFluid.Flowing(oilProperties()));
 
     // --- Oil Block ---
-    public static final DeferredBlock<LiquidBlock> OIL_BLOCK = BLOCKS.register("oil",
-            () -> new LiquidBlock(OIL_SOURCE.get(), BlockBehaviour.Properties.of()
+    public static final DeferredBlock<LiquidBlock> OIL_BLOCK = BLOCKS.registerBlock("oil",
+            props -> new LiquidBlock(OIL_SOURCE.get(), props
                     .mapColor(MapColor.COLOR_BLACK)
                     .replaceable()
                     .strength(100.0F)
@@ -75,15 +75,14 @@ public class BCEnergyFluids {
                     .noLootTable()
                     .liquid()
                     .lightLevel(s -> 0)
-            ));
+            ), BlockBehaviour.Properties.of());
 
     // --- Oil Bucket ---
-    public static final DeferredItem<BucketItem> OIL_BUCKET = ITEMS.register("oil_bucket",
-            () -> new BucketItem(OIL_SOURCE.get(),
-                    new Item.Properties()
-                            .craftRemainder(Items.BUCKET)
-                            .stacksTo(1)
-            ));
+    public static final DeferredItem<BucketItem> OIL_BUCKET = ITEMS.registerItem("oil_bucket",
+            props -> new BucketItem(OIL_SOURCE.get(), props
+                    .craftRemainder(Items.BUCKET)
+                    .stacksTo(1)
+            ), new Item.Properties());
 
     /** Build properties lazily to avoid forward reference issues. */
     private static BaseFlowingFluid.Properties oilProperties() {

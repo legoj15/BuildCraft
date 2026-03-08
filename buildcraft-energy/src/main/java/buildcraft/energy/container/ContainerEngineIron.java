@@ -9,11 +9,12 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerData;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.inventory.SimpleContainerData;
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.energy.BCEnergyMenuTypes;
 import buildcraft.energy.tile.TileEngineIron_BC8;
+import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 
 /**
@@ -42,36 +43,45 @@ public class ContainerEngineIron extends ContainerBC_Neptune {
         super(BCEnergyMenuTypes.ENGINE_IRON.get(), containerId, playerInv.player);
         this.engine = engine;
 
-        this.data = new ContainerData() {
-            @Override
-            public int get(int index) {
-                return switch (index) {
-                    case DATA_POWER_HI -> (int) (engine.getPower() >> 32);
-                    case DATA_POWER_LO -> (int) (engine.getPower() & 0xFFFFFFFFL);
-                    case DATA_HEAT -> Float.floatToIntBits(engine.getHeat());
-                    case DATA_POWER_STAGE -> engine.getPowerStage().ordinal();
-                    case DATA_BURNING -> engine.isBurning() ? 1 : 0;
-                    case DATA_CURRENT_OUTPUT_HI -> (int) (engine.getCurrentOutput() >> 32);
-                    case DATA_CURRENT_OUTPUT_LO -> (int) (engine.getCurrentOutput() & 0xFFFFFFFFL);
-                    case DATA_FUEL_AMOUNT -> engine.tankFuel.getFluidAmount();
-                    case DATA_COOLANT_AMOUNT -> engine.tankCoolant.getFluidAmount();
-                    case DATA_RESIDUE_AMOUNT -> engine.tankResidue.getFluidAmount();
-                    default -> 0;
-                };
-            }
+        // Server side: read live values from the tile entity
+        // Client side: use SimpleContainerData so set() actually stores values
+        if (engine != null && engine.getLevel() != null && !engine.getLevel().isClientSide()) {
+            this.data = new ContainerData() {
+                @Override
+                public int get(int index) {
+                    return switch (index) {
+                        case DATA_POWER_HI -> (int) (engine.getPower() >>> 32);
+                        case DATA_POWER_LO -> (int) (engine.getPower() & 0xFFFFFFFFL);
+                        case DATA_HEAT -> Float.floatToIntBits(engine.getHeat());
+                        case DATA_POWER_STAGE -> engine.getPowerStage().ordinal();
+                        case DATA_BURNING -> engine.isBurning() ? 1 : 0;
+                        case DATA_CURRENT_OUTPUT_HI -> (int) (engine.getCurrentOutput() >>> 32);
+                        case DATA_CURRENT_OUTPUT_LO -> (int) (engine.getCurrentOutput() & 0xFFFFFFFFL);
+                        case DATA_FUEL_AMOUNT -> engine.tankFuel.getFluidAmount();
+                        case DATA_COOLANT_AMOUNT -> engine.tankCoolant.getFluidAmount();
+                        case DATA_RESIDUE_AMOUNT -> engine.tankResidue.getFluidAmount();
+                        default -> 0;
+                    };
+                }
 
-            @Override
-            public void set(int index, int value) {
-                // Server→client sync only
-            }
+                @Override
+                public void set(int index, int value) {
+                    // Server-side: no-op (values are read from engine directly)
+                }
 
-            @Override
-            public int getCount() {
-                return DATA_COUNT;
-            }
-        };
+                @Override
+                public int getCount() {
+                    return DATA_COUNT;
+                }
+            };
+        } else {
+            // Client-side: SimpleContainerData stores values written by sync packets
+            SimpleContainerData clientData = new SimpleContainerData(DATA_COUNT);
+            clientData.set(DATA_HEAT, Float.floatToIntBits(TileEngineBase_BC8.MIN_HEAT));
+            this.data = clientData;
+        }
 
-        addDataSlots(data);
+        addDataSlots(this.data);
 
         // Player inventory — positioned at standard location
         addFullPlayerInventory(8, 95);

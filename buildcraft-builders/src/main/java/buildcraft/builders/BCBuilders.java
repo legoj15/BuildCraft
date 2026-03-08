@@ -51,6 +51,7 @@ public class BCBuilders {
             event.accept(BCBuildersItems.BLUEPRINT_CLEAN);
             event.accept(BCBuildersItems.TEMPLATE_CLEAN);
             event.accept(BCBuildersItems.SCHEMATIC_SINGLE_CLEAN);
+            event.accept(BCBuildersItems.FILLER_PLANNER);
         }
     }
 }

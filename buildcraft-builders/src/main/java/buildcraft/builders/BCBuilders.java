@@ -9,8 +9,12 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 
+import buildcraft.api.filler.FillerManager;
+import buildcraft.builders.gui.GuiFiller;
+import buildcraft.builders.registry.FillerRegistry;
 import buildcraft.core.BCCoreCreativeTabs;
 
 @Mod(BCBuilders.MODID)
@@ -24,6 +28,8 @@ public class BCBuilders {
 
         BCBuildersBlocks.init(modEventBus);
         BCBuildersItems.init(modEventBus);
+        BCBuildersBlockEntities.init(modEventBus);
+        BCBuildersMenuTypes.init(modEventBus);
 
         BCBuildersConfig.register(modContainer);
 
@@ -31,6 +37,7 @@ public class BCBuilders {
         modEventBus.addListener(this::init);
         modEventBus.addListener(this::postInit);
         modEventBus.addListener(this::buildCreativeTabContents);
+        modEventBus.addListener(this::registerMenuScreens);
     }
 
     private void preInit(FMLCommonSetupEvent event) {
@@ -38,7 +45,7 @@ public class BCBuilders {
     }
 
     private void init(FMLCommonSetupEvent event) {
-        // Future: BCBuildersRegistries.init()
+        FillerManager.registry = FillerRegistry.INSTANCE;
     }
 
     private void postInit(FMLLoadCompleteEvent event) {
@@ -52,6 +59,11 @@ public class BCBuilders {
             event.accept(BCBuildersItems.TEMPLATE_CLEAN);
             event.accept(BCBuildersItems.SCHEMATIC_SINGLE_CLEAN);
             event.accept(BCBuildersItems.FILLER_PLANNER);
+            event.accept(BCBuildersBlocks.FILLER);
         }
+    }
+
+    private void registerMenuScreens(RegisterMenuScreensEvent event) {
+        event.register(BCBuildersMenuTypes.FILLER.get(), GuiFiller::new);
     }
 }

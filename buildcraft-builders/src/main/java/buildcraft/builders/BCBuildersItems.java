@@ -9,12 +9,18 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.api.enums.EnumSnapshotType;
+import net.minecraft.world.item.BlockItem;
+import net.neoforged.neoforge.registries.DeferredBlock;
+
 import buildcraft.builders.item.ItemFillerPlanner;
 import buildcraft.builders.item.ItemSchematicSingle;
 import buildcraft.builders.item.ItemSnapshot;
 
 public class BCBuildersItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCBuilders.MODID);
+
+    public static final DeferredItem<BlockItem> FILLER = ITEMS
+            .registerSimpleBlockItem("filler", BCBuildersBlocks.FILLER);
 
     public static final DeferredItem<ItemSnapshot> BLUEPRINT_CLEAN = ITEMS.registerItem(
             "blueprint_clean",

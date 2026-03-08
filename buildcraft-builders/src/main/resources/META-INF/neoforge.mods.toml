@@ -20,19 +20,20 @@ The builders module for BuildCraft 8.
     modId="buildcraftapi"
     type="required"
     versionRange="*"
-    ordering="NONE"
+    ordering="AFTER"
     side="BOTH"
 
 [[dependencies.buildcraftbuilders]]
     modId="buildcraftlib"
     type="required"
     versionRange="*"
-    ordering="NONE"
+    ordering="AFTER"
     side="BOTH"
 
 [[dependencies.buildcraftbuilders]]
     modId="buildcraftcore"
     type="required"
     versionRange="*"
-    ordering="NONE"
+    ordering="AFTER"
     side="BOTH"
+

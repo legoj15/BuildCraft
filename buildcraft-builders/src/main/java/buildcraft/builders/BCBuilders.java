@@ -47,7 +47,7 @@ public class BCBuilders {
 
     private void buildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == BCCoreCreativeTabs.MAIN_TAB_KEY) {
-            // Snapshot items — only clean variants appear in creative (matching 1.12.2)
+            // ordering="AFTER" in neoforge.mods.toml ensures this fires after BCCore
             event.accept(BCBuildersItems.BLUEPRINT_CLEAN);
             event.accept(BCBuildersItems.TEMPLATE_CLEAN);
         }

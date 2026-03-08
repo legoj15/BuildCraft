@@ -1,0 +1,8 @@
+{
+    "item.buildcraftbuilders.blueprint_clean": "Blueprint",
+    "item.buildcraftbuilders.blueprint_used": "Blueprint",
+    "item.buildcraftbuilders.template_clean": "Template",
+    "item.buildcraftbuilders.template_used": "Template",
+    "item.blueprint.blank": "Blank",
+    "item.blueprint.author": "Author:"
+}

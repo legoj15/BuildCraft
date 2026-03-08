@@ -47,7 +47,9 @@ public class BCBuilders {
 
     private void buildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == BCCoreCreativeTabs.MAIN_TAB_KEY) {
-            // Items and blocks will be added here in later phases
+            // Snapshot items — only clean variants appear in creative (matching 1.12.2)
+            event.accept(BCBuildersItems.BLUEPRINT_CLEAN);
+            event.accept(BCBuildersItems.TEMPLATE_CLEAN);
         }
     }
 }

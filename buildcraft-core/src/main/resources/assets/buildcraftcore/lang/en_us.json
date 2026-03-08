@@ -17,6 +17,8 @@
     "block.buildcraftcore.marker_volume": "Land Mark",
     "block.buildcraftcore.marker_path": "Path Mark",
     "block.buildcraftcore.engine_redstone": "Redstone Engine",
+    "block.buildcraftcore.engine_stone": "Stirling Engine",
+    "block.buildcraftcore.engine_iron": "Combustion Engine",
     "block.buildcraftcore.engine_creative": "Creative Engine",
     "chat.pipe.power.iron.mode": "Engine output: %s MJ",
     "item.buildcraftcore.gear_wood": "Wood Gear",

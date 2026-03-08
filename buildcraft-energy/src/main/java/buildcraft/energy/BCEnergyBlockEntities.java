@@ -13,23 +13,28 @@ import buildcraft.energy.tile.TileEngineStone_BC8;
 import buildcraft.energy.tile.TileEngineIron_BC8;
 
 public class BCEnergyBlockEntities {
+    // Spring oil stays under buildcraftenergy namespace
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, BCEnergy.MODID);
+
+    // Engine block entities register under buildcraftcore namespace to match 1.12.2
+    public static final DeferredRegister<BlockEntityType<?>> CORE_BLOCK_ENTITIES =
+            DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, "buildcraftcore");
 
     public static final Supplier<BlockEntityType<TileSpringOil>> SPRING_OIL = BLOCK_ENTITIES.register(
             "spring_oil",
             () -> new BlockEntityType<>(TileSpringOil::new, BCCoreBlocks.SPRING_OIL.get()));
 
-    public static final Supplier<BlockEntityType<TileEngineStone_BC8>> ENGINE_STONE = BLOCK_ENTITIES.register(
+    public static final Supplier<BlockEntityType<TileEngineStone_BC8>> ENGINE_STONE = CORE_BLOCK_ENTITIES.register(
             "engine_stone",
             () -> new BlockEntityType<>(TileEngineStone_BC8::new, BCEnergyBlocks.ENGINE_STONE.get()));
 
-    public static final Supplier<BlockEntityType<TileEngineIron_BC8>> ENGINE_IRON = BLOCK_ENTITIES.register(
+    public static final Supplier<BlockEntityType<TileEngineIron_BC8>> ENGINE_IRON = CORE_BLOCK_ENTITIES.register(
             "engine_iron",
             () -> new BlockEntityType<>(TileEngineIron_BC8::new, BCEnergyBlocks.ENGINE_IRON.get()));
 
     public static void init(IEventBus modEventBus) {
         BLOCK_ENTITIES.register(modEventBus);
+        CORE_BLOCK_ENTITIES.register(modEventBus);
     }
 }
-

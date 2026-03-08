@@ -1,6 +1,6 @@
 {
     "model": {
         "type": "minecraft:model",
-        "model": "buildcraftenergy:item/engine_iron"
+        "model": "buildcraftcore:item/engine_stone"
     }
 }

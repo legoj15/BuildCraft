@@ -47,10 +47,18 @@ public class BCEnergy {
     }
 
     private void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
-        // Add engines to the BuildCraft creative tab
+        // Insert engines after the redstone engine to match 1.12.2 order:
+        // Redstone Engine, Stirling Engine, Combustion Engine, Creative Engine
         if (event.getTabKey() == buildcraft.core.BCCoreCreativeTabs.MAIN_TAB_KEY) {
-            event.accept(BCEnergyItems.ENGINE_STONE);
-            event.accept(BCEnergyItems.ENGINE_IRON);
+            net.minecraft.world.item.ItemStack redstoneAnchor = new net.minecraft.world.item.ItemStack(
+                    buildcraft.core.BCCoreItems.ENGINE_REDSTONE.get());
+            net.minecraft.world.item.ItemStack stoneStack = new net.minecraft.world.item.ItemStack(
+                    BCEnergyItems.ENGINE_STONE.get());
+            net.minecraft.world.item.ItemStack ironStack = new net.minecraft.world.item.ItemStack(
+                    BCEnergyItems.ENGINE_IRON.get());
+
+            event.insertAfter(redstoneAnchor, stoneStack, net.minecraft.world.item.CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+            event.insertAfter(stoneStack, ironStack, net.minecraft.world.item.CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
         }
     }
 

@@ -7,7 +7,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 
 public class BCEnergyItems {
-    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCEnergy.MODID);
+    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems("buildcraftcore");
 
     public static final DeferredItem<BlockItem> ENGINE_STONE = ITEMS.registerSimpleBlockItem(
             BCEnergyBlocks.ENGINE_STONE);

@@ -137,7 +137,6 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
                             return;
                         }
                     }
-                    currentOutput = currentFuel.getPowerPerCycle();
                     addPower(currentFuel.getPowerPerCycle());
                     heat += (float) (currentFuel.getPowerPerCycle() * HEAT_PER_MJ / MjAPI.MJ);
                 }

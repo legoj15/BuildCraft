@@ -6,8 +6,6 @@
 
 package buildcraft.core.marker.volume;
 
-import net.minecraft.resources.Identifier;
-
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.world.entity.player.Player;
 

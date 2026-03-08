@@ -9,6 +9,7 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.api.enums.EnumSnapshotType;
+import buildcraft.builders.item.ItemFillerPlanner;
 import buildcraft.builders.item.ItemSchematicSingle;
 import buildcraft.builders.item.ItemSnapshot;
 
@@ -43,6 +44,11 @@ public class BCBuildersItems {
     public static final DeferredItem<ItemSchematicSingle> SCHEMATIC_SINGLE_USED = ITEMS.registerItem(
             "schematic_single_used",
             props -> new ItemSchematicSingle(props, true),
+            props -> props.stacksTo(1));
+
+    public static final DeferredItem<ItemFillerPlanner> FILLER_PLANNER = ITEMS.registerItem(
+            "filler_planner",
+            ItemFillerPlanner::new,
             props -> props.stacksTo(1));
 
     public static void init(IEventBus modEventBus) {

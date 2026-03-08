@@ -1,14 +1,12 @@
 package buildcraft.energy.client.sprite;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Optional;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-
+import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.serialization.MapCodec;
 
 import net.minecraft.client.renderer.texture.atlas.SpriteSource;
@@ -17,28 +15,33 @@ import net.minecraft.server.packs.resources.IoSupplier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import buildcraft.energy.BCEnergy;
 
 /**
  * A custom {@link SpriteSource} that replicates 1.12's {@code AtlasSpriteFluid} recoloring.
  *
  * <p>At atlas stitching time, loads the vanilla water_still and water_flow textures,
- * applies the 1.12 recoloring formula per pixel, and registers the result as a new sprite.
+ * applies the 1.12 recoloring formula per pixel, and registers the recolored sprites.
  *
  * <p>Formula: {@code result = (dark * (256 - data) + light * data) / 256}
  * where {@code data} is the source pixel brightness (0=black, 255=white).
+ *
+ * <p>NativeImage pixel format is ABGR: {@code (A << 24) | (B << 16) | (G << 8) | R}
  */
 public class FluidRecolorSpriteSource implements SpriteSource {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(FluidRecolorSpriteSource.class);
+
     public static final Identifier ID = Identifier.fromNamespaceAndPath(BCEnergy.MODID, "fluid_recolor");
 
-    // No codec fields needed — this source is self-contained, not JSON-driven
     public static final MapCodec<FluidRecolorSpriteSource> CODEC =
             MapCodec.unit(FluidRecolorSpriteSource::new);
 
-    // 1.12 fluid data: name, tex_light, tex_dark
-    // All 10 fluid types × 3 heat levels = 30 variants
-    private static final String[] FLUID_NAMES = {
+    // 1.12 fluid data
+    private static final String[] NAMES = {
         "oil", "oil_residue", "oil_heavy", "oil_dense", "oil_distilled",
         "fuel_dense", "fuel_mixed_heavy", "fuel_light", "fuel_mixed_light", "fuel_gaseous"
     };
@@ -55,33 +58,36 @@ public class FluidRecolorSpriteSource implements SpriteSource {
 
     @Override
     public void run(ResourceManager resourceManager, Output output) {
+        LOGGER.info("[energy.sprite] FluidRecolorSpriteSource running...");
+
         // Load vanilla water textures
-        Identifier waterStillId = Identifier.withDefaultNamespace("textures/block/water_still.png");
-        Identifier waterFlowId = Identifier.withDefaultNamespace("textures/block/water_flow.png");
+        Identifier waterStillPath = Identifier.withDefaultNamespace("textures/block/water_still.png");
+        Identifier waterFlowPath = Identifier.withDefaultNamespace("textures/block/water_flow.png");
 
-        Optional<Resource> waterStillRes = resourceManager.getResource(waterStillId);
-        Optional<Resource> waterFlowRes = resourceManager.getResource(waterFlowId);
+        var waterStillOpt = resourceManager.getResource(waterStillPath);
+        var waterFlowOpt = resourceManager.getResource(waterFlowPath);
 
-        if (waterStillRes.isEmpty() || waterFlowRes.isEmpty()) {
-            org.slf4j.LoggerFactory.getLogger(FluidRecolorSpriteSource.class)
-                    .error("[energy.sprite] Cannot find vanilla water textures!");
+        if (waterStillOpt.isEmpty() || waterFlowOpt.isEmpty()) {
+            LOGGER.error("[energy.sprite] Cannot find vanilla water textures!");
             return;
         }
 
-        // Read base images
-        BufferedImage waterStill, waterFlow;
+        Resource waterStillRes = waterStillOpt.get();
+        Resource waterFlowRes = waterFlowOpt.get();
+
+        NativeImage waterStill, waterFlow;
         try {
-            waterStill = ImageIO.read(waterStillRes.get().open());
-            waterFlow = ImageIO.read(waterFlowRes.get().open());
+            waterStill = NativeImage.read(waterStillRes.open());
+            waterFlow = NativeImage.read(waterFlowRes.open());
         } catch (IOException e) {
-            org.slf4j.LoggerFactory.getLogger(FluidRecolorSpriteSource.class)
-                    .error("[energy.sprite] Failed to read water textures", e);
+            LOGGER.error("[energy.sprite] Failed to read water textures", e);
             return;
         }
 
-        // Generate recolored textures for each fluid variant
-        for (int i = 0; i < FLUID_NAMES.length; i++) {
-            String baseName = FLUID_NAMES[i];
+        int generated = 0;
+
+        for (int i = 0; i < NAMES.length; i++) {
+            String baseName = NAMES[i];
             int light = TEX_LIGHT[i];
             int dark = TEX_DARK[i];
 
@@ -89,53 +95,64 @@ public class FluidRecolorSpriteSource implements SpriteSource {
                 String suffix = heat == 0 ? "" : "_heat_" + heat;
                 String fullName = baseName + suffix;
 
-                // Generate still texture
-                BufferedImage recoloredStill = recolourImage(waterStill, light, dark);
+                // Generate recolored still texture
+                NativeImage recoloredStill = recolourImage(waterStill, light, dark);
                 Identifier stillId = Identifier.fromNamespaceAndPath(
                         BCEnergy.MODID, "block/fluid/" + fullName + "_still");
-                addRecoloredSprite(output, stillId, recoloredStill,
-                        waterStillRes.get());
+                addSpriteFromImage(output, stillId, recoloredStill, waterStillRes);
 
-                // Generate flow texture
-                BufferedImage recoloredFlow = recolourImage(waterFlow, light, dark);
+                // Generate recolored flow texture
+                NativeImage recoloredFlow = recolourImage(waterFlow, light, dark);
                 Identifier flowId = Identifier.fromNamespaceAndPath(
                         BCEnergy.MODID, "block/fluid/" + fullName + "_flow");
-                addRecoloredSprite(output, flowId, recoloredFlow,
-                        waterFlowRes.get());
+                addSpriteFromImage(output, flowId, recoloredFlow, waterFlowRes);
+
+                generated++;
             }
         }
+
+        waterStill.close();
+        waterFlow.close();
+
+        LOGGER.info("[energy.sprite] Generated {} fluid texture variants ({} sprites)",
+                generated, generated * 2);
     }
 
     /**
-     * Add a recolored sprite to the atlas output by wrapping the image bytes
-     * in a Resource that reuses the original water texture's metadata.
+     * Write a NativeImage to a temp file, read the PNG bytes, and add to the atlas.
+     * The original Resource is used to inherit animation metadata.
      */
-    private void addRecoloredSprite(Output output, Identifier id,
-                                     BufferedImage image, Resource originalResource) {
-        // Encode image to PNG bytes
-        byte[] pngBytes;
+    private void addSpriteFromImage(Output output, Identifier id,
+                                     NativeImage image, Resource originalResource) {
         try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ImageIO.write(image, "png", baos);
-            pngBytes = baos.toByteArray();
-        } catch (IOException e) {
-            return;
-        }
+            // Write to temp file (NativeImage only supports file-based PNG export)
+            Path tempFile = Files.createTempFile("bc_fluid_", ".png");
+            try {
+                image.writeToFile(tempFile);
+                byte[] pngBytes = Files.readAllBytes(tempFile);
 
-        // Create a Resource wrapping the recolored PNG, reusing original metadata
-        IoSupplier<InputStream> ioSupplier = () -> new ByteArrayInputStream(pngBytes);
-        Resource resource = new Resource(originalResource.source(), ioSupplier, originalResource::metadata);
-        output.add(id, resource);
+                IoSupplier<InputStream> pngSupplier = () -> new ByteArrayInputStream(pngBytes);
+                Resource resource = new Resource(
+                        originalResource.source(), pngSupplier, originalResource::metadata);
+                output.add(id, resource);
+            } finally {
+                Files.deleteIfExists(tempFile);
+                image.close();
+            }
+        } catch (IOException e) {
+            LOGGER.error("[energy.sprite] Failed to encode texture for {}", id, e);
+        }
     }
 
     /**
-     * Apply the 1.12 AtlasSpriteFluid recoloring to every pixel.
-     * Formula: result = (dark * (256 - data) + light * data) / 256
+     * Apply the 1.12 AtlasSpriteFluid recoloring formula to every pixel.
+     *
+     * <p>NativeImage pixel format is ABGR: {@code (A << 24) | (B << 16) | (G << 8) | R}
      */
-    private BufferedImage recolourImage(BufferedImage source, int lightRgb, int darkRgb) {
+    private NativeImage recolourImage(NativeImage source, int lightRgb, int darkRgb) {
         int w = source.getWidth();
         int h = source.getHeight();
-        BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        NativeImage result = new NativeImage(w, h, false);
 
         int lr = (lightRgb >> 16) & 0xFF;
         int lg = (lightRgb >> 8) & 0xFF;
@@ -146,21 +163,24 @@ public class FluidRecolorSpriteSource implements SpriteSource {
 
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
-                int argb = source.getRGB(x, y);
-                int a = (argb >> 24) & 0xFF;
+                int abgr = source.getPixel(x, y);
+                int a = (abgr >> 24) & 0xFF;
+                int b = (abgr >> 16) & 0xFF;
+                int g = (abgr >> 8) & 0xFF;
+                int r = abgr & 0xFF;
+
                 if (a == 0) {
-                    result.setRGB(x, y, 0);
+                    result.setPixel(x, y, 0);
                     continue;
                 }
-                int r = (argb >> 16) & 0xFF;
-                int g = (argb >> 8) & 0xFF;
-                int b = argb & 0xFF;
 
+                // 1.12 formula: result = (dark * (256 - data) + light * data) / 256
                 int nr = (dr * (256 - r) + lr * r) / 256;
                 int ng = (dg * (256 - g) + lg * g) / 256;
                 int nb = (db * (256 - b) + lb * b) / 256;
 
-                result.setRGB(x, y, (0xFF << 24) | (nr << 16) | (ng << 8) | nb);
+                // Pack back to ABGR
+                result.setPixel(x, y, (0xFF << 24) | (nb << 16) | (ng << 8) | nr);
             }
         }
         return result;

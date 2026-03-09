@@ -1,6 +1,7 @@
 {
     "render_type": "minecraft:cutout",
     "textures": {
+        "particle": "buildcraftbuilders:block/frame/default",
         "all": "buildcraftbuilders:block/frame/default"
     },
     "elements": [

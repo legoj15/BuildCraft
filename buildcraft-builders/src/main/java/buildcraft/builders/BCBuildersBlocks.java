@@ -11,6 +11,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.builders.block.BlockArchitectTable;
 import buildcraft.builders.block.BlockBuilder;
+import buildcraft.builders.block.BlockElectronicLibrary;
 import buildcraft.builders.block.BlockFiller;
 
 public class BCBuildersBlocks {
@@ -27,6 +28,10 @@ public class BCBuildersBlocks {
     public static final DeferredBlock<BlockArchitectTable> ARCHITECT = BLOCKS.registerBlock(
             "architect",
             BlockArchitectTable::new, BlockBehaviour.Properties.of().strength(5.0f, 10.0f));
+
+    public static final DeferredBlock<BlockElectronicLibrary> LIBRARY = BLOCKS.registerBlock(
+            "library",
+            BlockElectronicLibrary::new, BlockBehaviour.Properties.of().strength(5.0f, 10.0f));
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

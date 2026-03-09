@@ -10,6 +10,7 @@ import java.util.function.Supplier;
 
 import buildcraft.builders.container.ContainerArchitectTable;
 import buildcraft.builders.container.ContainerBuilder;
+import buildcraft.builders.container.ContainerElectronicLibrary;
 import buildcraft.builders.container.ContainerFiller;
 
 public class BCBuildersMenuTypes {
@@ -27,6 +28,10 @@ public class BCBuildersMenuTypes {
     public static final Supplier<MenuType<ContainerArchitectTable>> ARCHITECT = MENU_TYPES.register(
             "architect",
             () -> IMenuTypeExtension.create(ContainerArchitectTable::new));
+
+    public static final Supplier<MenuType<ContainerElectronicLibrary>> LIBRARY = MENU_TYPES.register(
+            "library",
+            () -> IMenuTypeExtension.create(ContainerElectronicLibrary::new));
 
     public static void init(IEventBus modEventBus) {
         MENU_TYPES.register(modEventBus);

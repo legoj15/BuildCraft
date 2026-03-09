@@ -14,6 +14,7 @@ import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 
 import buildcraft.api.filler.FillerManager;
 import buildcraft.builders.gui.GuiArchitectTable;
+import buildcraft.builders.gui.GuiElectronicLibrary;
 import buildcraft.builders.gui.GuiFiller;
 import buildcraft.builders.gui.GuiBuilder;
 import buildcraft.builders.registry.FillerRegistry;
@@ -64,6 +65,7 @@ public class BCBuilders {
             event.accept(BCBuildersBlocks.FILLER);
             event.accept(BCBuildersBlocks.BUILDER);
             event.accept(BCBuildersBlocks.ARCHITECT);
+            event.accept(BCBuildersBlocks.LIBRARY);
         }
     }
 
@@ -71,5 +73,6 @@ public class BCBuilders {
         event.register(BCBuildersMenuTypes.FILLER.get(), GuiFiller::new);
         event.register(BCBuildersMenuTypes.BUILDER.get(), GuiBuilder::new);
         event.register(BCBuildersMenuTypes.ARCHITECT.get(), GuiArchitectTable::new);
+        event.register(BCBuildersMenuTypes.LIBRARY.get(), GuiElectronicLibrary::new);
     }
 }

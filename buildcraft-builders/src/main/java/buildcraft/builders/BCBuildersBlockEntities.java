@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 
 import buildcraft.builders.tile.TileArchitectTable;
 import buildcraft.builders.tile.TileBuilder;
+import buildcraft.builders.tile.TileElectronicLibrary;
 import buildcraft.builders.tile.TileFiller;
 
 public class BCBuildersBlockEntities {
@@ -26,6 +27,10 @@ public class BCBuildersBlockEntities {
     public static final Supplier<BlockEntityType<TileArchitectTable>> ARCHITECT = BLOCK_ENTITIES.register(
             "architect",
             () -> new BlockEntityType<>(TileArchitectTable::new, BCBuildersBlocks.ARCHITECT.get()));
+
+    public static final Supplier<BlockEntityType<TileElectronicLibrary>> LIBRARY = BLOCK_ENTITIES.register(
+            "library",
+            () -> new BlockEntityType<>(TileElectronicLibrary::new, BCBuildersBlocks.LIBRARY.get()));
 
     public static void init(IEventBus modEventBus) {
         BLOCK_ENTITIES.register(modEventBus);

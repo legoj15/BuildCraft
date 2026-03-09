@@ -11,6 +11,8 @@
     "block.buildcraftbuilders.filler": "Filler",
     "block.buildcraftbuilders.builder": "Builder",
     "block.buildcraftbuilders.architect": "Architect Table",
+    "block.buildcraftbuilders.library": "Electronic Library",
+    "tile.buildcraftbuilders.library.name": "Electronic Library",
     "tile.architect.tip": "Not usable in survival",
     "tile.architect.rotate": "Rotate: On",
     "tile.architect.norotate": "Rotate: Off",

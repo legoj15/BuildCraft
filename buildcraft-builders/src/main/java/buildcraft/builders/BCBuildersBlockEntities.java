@@ -7,6 +7,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.function.Supplier;
 
+import buildcraft.builders.tile.TileBuilder;
 import buildcraft.builders.tile.TileFiller;
 
 public class BCBuildersBlockEntities {
@@ -16,6 +17,10 @@ public class BCBuildersBlockEntities {
     public static final Supplier<BlockEntityType<TileFiller>> FILLER = BLOCK_ENTITIES.register(
             "filler",
             () -> new BlockEntityType<>(TileFiller::new, BCBuildersBlocks.FILLER.get()));
+
+    public static final Supplier<BlockEntityType<TileBuilder>> BUILDER = BLOCK_ENTITIES.register(
+            "builder",
+            () -> new BlockEntityType<>(TileBuilder::new, BCBuildersBlocks.BUILDER.get()));
 
     public static void init(IEventBus modEventBus) {
         BLOCK_ENTITIES.register(modEventBus);

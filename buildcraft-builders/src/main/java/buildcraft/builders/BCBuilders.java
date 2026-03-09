@@ -60,6 +60,7 @@ public class BCBuilders {
             event.accept(BCBuildersItems.SCHEMATIC_SINGLE_CLEAN);
             event.accept(BCBuildersItems.FILLER_PLANNER);
             event.accept(BCBuildersBlocks.FILLER);
+            event.accept(BCBuildersBlocks.BUILDER);
         }
     }
 

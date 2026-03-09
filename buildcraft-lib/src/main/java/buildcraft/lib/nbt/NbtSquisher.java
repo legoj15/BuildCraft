@@ -1,2 +1,24 @@
 package buildcraft.lib.nbt;
-public class NbtSquisher {}
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtAccounter;
+
+/**
+ * Simple NbtSquisher implementation that delegates to Minecraft's NbtIo.
+ * In 1.12.2 this had custom compression formats, but for now we use vanilla NBT I/O.
+ */
+public class NbtSquisher {
+
+    public static CompoundTag expand(InputStream stream) throws IOException {
+        return NbtIo.readCompressed(stream, NbtAccounter.unlimitedHeap());
+    }
+
+    public static void squishVanilla(CompoundTag nbt, OutputStream stream) throws IOException {
+        NbtIo.writeCompressed(nbt, stream);
+    }
+}

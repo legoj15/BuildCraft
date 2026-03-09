@@ -47,6 +47,8 @@ import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.BCDebugging;
 import buildcraft.api.core.IAreaProvider;
+import buildcraft.api.mj.IMjPowerReceiver;
+import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
 import buildcraft.api.tiles.IDebuggable;
@@ -62,6 +64,7 @@ import buildcraft.lib.misc.data.AxisOrder;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.misc.data.BoxIterator;
 import buildcraft.lib.misc.data.EnumAxisOrder;
+import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.tile.TileBC_Neptune;
 
 import net.minecraft.world.level.block.Block;
@@ -77,11 +80,12 @@ import buildcraft.core.marker.VolumeConnection;
 import buildcraft.core.marker.VolumeSubCache;
 import buildcraft.core.tile.TileMarkerVolume;
 
-public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoadingTile {
+public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoadingTile, IMjPowerReceiver {
     public static final boolean DEBUG_QUARRY = BCDebugging.shouldDebugLog("builders.quarry");
     private static final long MAX_POWER_PER_TICK = 512 * MjAPI.MJ;
 
     private final MjBattery battery = new MjBattery(24000 * MjAPI.MJ);
+    private final MjBatteryReceiver mjReceiver = new MjBatteryReceiver(battery);
     public final Box frameBox = new Box();
     private final Box miningBox = new Box();
     private BoxIterator boxIterator;
@@ -104,6 +108,12 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
 
     public TileQuarry(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.QUARRY.get(), pos, state);
+    }
+
+    @Override
+    @Nullable
+    public IMjReceiver getMjReceiver(@Nonnull Direction face) {
+        return mjReceiver;
     }
 
     @Nonnull

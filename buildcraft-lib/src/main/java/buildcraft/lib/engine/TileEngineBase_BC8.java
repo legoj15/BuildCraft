@@ -6,6 +6,7 @@
 package buildcraft.lib.engine;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -18,6 +19,9 @@ import net.minecraft.world.level.storage.ValueOutput;
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.mj.IMjConnector;
+import buildcraft.api.mj.IMjPowerReceiver;
+import buildcraft.api.mj.IMjReceiver;
+import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
 
 /**
@@ -33,6 +37,7 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
     // --- Engine state ---
     protected Direction orientation = Direction.UP;
     protected long power = 0;
+    public long currentOutput = 0;
 
     /** Getter for the stored power in micro-MJ. */
     public long getPower() { return power; }
@@ -168,6 +173,77 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
         return mjConnector;
     }
 
+    // --- Power extraction & transfer (ported from 1.12.2) ---
+
+    /**
+     * Extract power from the engine's internal buffer.
+     * @param min Minimum amount to extract (returns 0 if buffer is below this)
+     * @param max Maximum amount to extract
+     * @param doExtract If true, actually deduct the power
+     * @return The amount extracted
+     */
+    public long extractPower(long min, long max, boolean doExtract) {
+        if (power < min) return 0;
+        long actualMax = Math.min(max, maxPowerExtracted());
+        if (actualMax < min) return 0;
+        long extracted = Math.min(power, actualMax);
+        if (doExtract) {
+            power -= extracted;
+        }
+        return extracted;
+    }
+
+    /**
+     * Look up the MJ receiver on the adjacent block in the given direction.
+     * Uses the IMjPowerReceiver interface on the neighboring tile entity.
+     */
+    @Nullable
+    public IMjReceiver getReceiverToPower(Direction side) {
+        if (level == null) return null;
+        BlockPos targetPos = getBlockPos().relative(side);
+        BlockEntity tile = level.getBlockEntity(targetPos);
+        if (tile == null) return null;
+
+        // Engine chaining: if the adjacent tile is the same engine type facing the same way, skip
+        if (tile.getClass() == getClass()) {
+            TileEngineBase_BC8 otherEngine = (TileEngineBase_BC8) tile;
+            if (side != otherEngine.orientation) {
+                return null; // not facing the same direction — can't chain
+            }
+            // For now, don't support chaining (matching 1.21.11 getMaxChainLength() = 0)
+            return null;
+        }
+
+        if (tile instanceof IMjPowerReceiver provider) {
+            IMjReceiver receiver = provider.getMjReceiver(side.getOpposite());
+            if (receiver != null && receiver.canConnect(getMjConnector()) && getMjConnector().canConnect(receiver)) {
+                return receiver;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Send power from this engine to the given receiver.
+     * Matches the 1.12.2 sendPower() behavior.
+     */
+    protected void sendPower(@Nullable IMjReceiver receiver) {
+        if (receiver == null) {
+            currentOutput = 0;
+            return;
+        }
+        long requested = receiver.getPowerRequested();
+        long extracted = extractPower(0, requested, false);
+        if (extracted > 0) {
+            long excess = receiver.receivePower(extracted, false);
+            long actualSent = extracted - excess;
+            extractPower(actualSent, actualSent, true);
+            currentOutput = actualSent;
+        } else {
+            currentOutput = 0;
+        }
+    }
+
     // --- Tick logic ---
 
     public static <T extends TileEngineBase_BC8> void serverTick(Level level, BlockPos pos, BlockState state, T engine) {
@@ -196,22 +272,52 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
             return;
         }
 
+        // Bleed off power when not redstone-powered (1.12.2 parity)
+        if (!engine.isRedstonePowered) {
+            if (engine.power > MjAPI.MJ) {
+                engine.power -= MjAPI.MJ;
+            } else if (engine.power > 0) {
+                engine.power = 0;
+            }
+        }
+
         engine.engineUpdate();
+
+        // --- Power transfer to adjacent receiver ---
+        IMjReceiver receiver = engine.getReceiverToPower(engine.orientation);
+        boolean pulsedPower = receiver instanceof IMjRedstoneReceiver;
 
         // Piston animation (server side)
         if (engine.progressPart != 0) {
             engine.progress += (float) engine.getPistonSpeed();
             if (engine.progress > 0.5f && engine.progressPart == 1) {
                 engine.progressPart = 2;
+                // Pulsed power: send at piston midpoint
+                if (pulsedPower) {
+                    engine.sendPower(receiver);
+                }
             } else if (engine.progress >= 1.0f) {
                 engine.progress = 0;
                 engine.progressPart = 0;
             }
         } else if (engine.isRedstonePowered && engine.isBurning()) {
-            engine.progressPart = 1;
-            engine.setPumping(true);
+            if (engine.extractPower(0, engine.maxPowerExtracted(), false) > 0) {
+                engine.progressPart = 1;
+                engine.setPumping(true);
+            } else {
+                engine.setPumping(false);
+            }
         } else {
             engine.setPumping(false);
+        }
+
+        // Constant power: send every tick (when not pulsed)
+        if (!pulsedPower) {
+            if (engine.isRedstonePowered && engine.isBurning()) {
+                engine.sendPower(receiver);
+            } else {
+                engine.currentOutput = 0;
+            }
         }
 
         engine.setChanged();

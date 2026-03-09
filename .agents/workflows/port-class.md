@@ -61,12 +61,43 @@ public MyItem(Item.Properties properties) {
     - `buildcraft-core`: `buildcraft-core/src/main/resources/META-INF/neoforge.mods.toml`
 21. If the new class introduces a cross-module dependency, add it to the `[[dependencies.*]]` section.
 
+## Assets & Localization (REQUIRED — do NOT skip)
+
+Every new block or item needs ALL of the following assets. Missing any one of these will cause invisible items, purple/black checkerboard textures, or untranslated names in-game.
+
+### For every new Item:
+22. **`items/<id>.json`** — item definition wrapper (NeoForge 1.21.11 requirement):
+    ```json
+    { "model": { "type": "minecraft:model", "model": "<modid>:item/<id>" } }
+    ```
+23. **`models/item/<id>.json`** — the actual item model (parent + textures).
+24. **`textures/item/<id>.png`** — the item texture (singular `item/`, not `items/`).
+25. **`lang/en_us.json`** — add `"item.<modid>.<id>": "Display Name"`.
+
+### For every new Block:
+26. **`items/<id>.json`** — item definition wrapper for the BlockItem:
+    ```json
+    { "model": { "type": "minecraft:model", "model": "<modid>:item/<id>" } }
+    ```
+27. **`models/item/<id>.json`** — item model (usually `"parent": "<modid>:block/<id>"`).
+28. **`blockstates/<id>.json`** — blockstate JSON mapping properties to models.
+29. **`models/block/<id>.json`** — block model (parent + textures).
+30. **`textures/block/<id>/`** — block texture PNG(s) (singular `block/`, not `blocks/`).
+31. **`lang/en_us.json`** — add `"block.<modid>.<id>": "Display Name"`.
+
+### For blocks/items with GUIs:
+32. **`textures/gui/<name>.png`** — GUI background texture.
+33. **`lang/en_us.json`** — add GUI title key (e.g. `"tile.<modid>.<id>.name": "Display Name"`).
+
+### For blocks/items in creative tab:
+34. Add `event.accept(BCXxxBlocks.<ID>)` or `event.accept(BCXxxItems.<ID>)` in the module's `buildCreativeTabContents` handler.
+
 ## Compile & Test
 
 // turbo
-22. Run `./gradlew checkSplitPackages` to verify no package conflicts.
+35. Run `./gradlew checkSplitPackages` to verify no package conflicts.
 // turbo
-23. Run `./gradlew build -x test` to compile.
+36. Run `./gradlew build -x test` to compile.
 // turbo
-24. Run `./gradlew :buildcraft-core:runClient` to launch the game and verify the class loads.
-25. Check the game log for errors related to the new class.
+37. Run `./gradlew :buildcraft-all:runClient` to launch the game and verify the class loads.
+38. Check the game log for errors related to the new class.

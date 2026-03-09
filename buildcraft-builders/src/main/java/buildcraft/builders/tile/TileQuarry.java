@@ -21,6 +21,8 @@ import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.ImmutableList;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -43,6 +45,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.BCDebugging;
@@ -54,6 +57,7 @@ import buildcraft.api.tiles.IDebuggable;
 import buildcraft.lib.chunkload.ChunkLoaderManager;
 import buildcraft.lib.chunkload.IChunkLoadingTile;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.BoundingBoxUtil;
 import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.MathUtil;
@@ -104,6 +108,9 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     private long debugPowerRate = 0;
     private double blockPercentSoFar;
     private double moveDistanceSoFar;
+
+    private List<AABB> collisionBoxes = ImmutableList.of();
+    private Vec3 collisionDrillPos;
 
     public TileQuarry(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.QUARRY.get(), pos, state);
@@ -435,7 +442,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         if (level == null) return;
 
         if (drillPos == null) {
-            drillPos = null;
+            collisionBoxes = ImmutableList.of();
+            collisionDrillPos = null;
         }
 
         if (level.isClientSide()) {
@@ -584,6 +592,37 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
             }
         }
+    }
+
+    /** Returns collision boxes for the quarry's moving drill rig, allowing players to walk on it.
+     *  Produces 3 AABBs: 2 horizontal crossbeams (X-axis and Z-axis at the top) and 1 vertical column. */
+    public List<AABB> getCollisionBoxes() {
+        if (drillPos != null && drillPos != collisionDrillPos && frameBox.isInitialized()) {
+            Vec3 fMax = VecUtil.convertCenter(frameBox.max());
+            Vec3 fMin = VecUtil.replaceValue(VecUtil.convertCenter(frameBox.min()), Direction.Axis.Y, fMax.y);
+            collisionBoxes = ImmutableList.of(
+                // X-axis beam (runs along Z)
+                BoundingBoxUtil.makeFrom(
+                    VecUtil.replaceValue(fMin, Direction.Axis.X, drillPos.x + 0.5),
+                    VecUtil.replaceValue(fMax, Direction.Axis.X, drillPos.x + 0.5),
+                    0.25
+                ),
+                // Z-axis beam (runs along X)
+                BoundingBoxUtil.makeFrom(
+                    VecUtil.replaceValue(fMin, Direction.Axis.Z, drillPos.z + 0.5),
+                    VecUtil.replaceValue(fMax, Direction.Axis.Z, drillPos.z + 0.5),
+                    0.25
+                ),
+                // Vertical column from drill to top
+                BoundingBoxUtil.makeFrom(
+                    drillPos.add(0.5, 0, 0.5),
+                    VecUtil.replaceValue(drillPos, Direction.Axis.Y, fMax.y).add(0.5, 0, 0.5),
+                    0.25
+                )
+            );
+            collisionDrillPos = drillPos;
+        }
+        return collisionBoxes;
     }
 
     // NBT

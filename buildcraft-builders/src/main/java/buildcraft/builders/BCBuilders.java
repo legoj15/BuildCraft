@@ -9,12 +9,15 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 
 import buildcraft.api.filler.FillerManager;
+import buildcraft.api.mj.MjAPI;
 import buildcraft.builders.gui.GuiArchitectTable;
 import buildcraft.builders.gui.GuiElectronicLibrary;
 import buildcraft.builders.gui.GuiFiller;
@@ -22,6 +25,7 @@ import buildcraft.builders.gui.GuiReplacer;
 import buildcraft.builders.gui.GuiBuilder;
 import buildcraft.builders.registry.FillerRegistry;
 import buildcraft.core.BCCoreCreativeTabs;
+import buildcraft.lib.mj.MjBatteryEnergyHandler;
 
 @Mod(BCBuilders.MODID)
 public class BCBuilders {
@@ -42,6 +46,7 @@ public class BCBuilders {
         modEventBus.addListener(this::preInit);
         modEventBus.addListener(this::init);
         modEventBus.addListener(this::postInit);
+        modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::buildCreativeTabContents);
         modEventBus.addListener(this::registerMenuScreens);
 
@@ -50,9 +55,27 @@ public class BCBuilders {
             event -> BCBuildersEventDist.INSTANCE.renderAllQuarries(event));
     }
 
+
     private void preInit(FMLCommonSetupEvent event) {
         BCBuildersRecipes.init();
     }
+
+    private void registerCapabilities(RegisterCapabilitiesEvent event) {
+        // MJ receiver capability: quarry accepts MJ power on any face
+        event.registerBlockEntity(
+            MjAPI.CAP_RECEIVER,
+            BCBuildersBlockEntities.QUARRY.get(),
+            (quarry, direction) -> quarry.getMjReceiver()
+        );
+
+        // FE/RF energy capability: quarry also accepts FE power (auto-converted to MJ)
+        event.registerBlockEntity(
+            Capabilities.Energy.BLOCK,
+            BCBuildersBlockEntities.QUARRY.get(),
+            (quarry, direction) -> new MjBatteryEnergyHandler(quarry.getBattery())
+        );
+    }
+
 
     private void init(FMLCommonSetupEvent event) {
         FillerManager.registry = FillerRegistry.INSTANCE;

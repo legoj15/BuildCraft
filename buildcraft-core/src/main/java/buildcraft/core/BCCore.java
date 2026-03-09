@@ -120,6 +120,18 @@ public class BCCore {
                     }
                 },
                 BCCoreItems.FRAGILE_FLUID_CONTAINER);
+
+        // MJ connector capability for engines
+        event.registerBlockEntity(
+            buildcraft.api.mj.MjAPI.CAP_CONNECTOR,
+            BCCoreBlockEntities.ENGINE_REDSTONE.get(),
+            (engine, direction) -> engine.getMjConnector()
+        );
+        event.registerBlockEntity(
+            buildcraft.api.mj.MjAPI.CAP_CONNECTOR,
+            BCCoreBlockEntities.ENGINE_CREATIVE.get(),
+            (engine, direction) -> engine.getMjConnector()
+        );
     }
 
     private void buildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {

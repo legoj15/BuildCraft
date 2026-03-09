@@ -19,10 +19,13 @@ import net.minecraft.world.level.storage.ValueOutput;
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.mj.IMjConnector;
-import buildcraft.api.mj.IMjPowerReceiver;
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.mj.MjToRfAutoConvertor;
+
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.transfer.energy.EnergyHandler;
 
 /**
  * Abstract base class for all BuildCraft engines.
@@ -195,7 +198,7 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
 
     /**
      * Look up the MJ receiver on the adjacent block in the given direction.
-     * Uses the IMjPowerReceiver interface on the neighboring tile entity.
+     * Uses NeoForge BlockCapability lookup, with FE/RF fallback for cross-mod compatibility.
      */
     @Nullable
     public IMjReceiver getReceiverToPower(Direction side) {
@@ -206,20 +209,24 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
 
         // Engine chaining: if the adjacent tile is the same engine type facing the same way, skip
         if (tile.getClass() == getClass()) {
-            TileEngineBase_BC8 otherEngine = (TileEngineBase_BC8) tile;
-            if (side != otherEngine.orientation) {
-                return null; // not facing the same direction — can't chain
-            }
-            // For now, don't support chaining (matching 1.21.11 getMaxChainLength() = 0)
             return null;
         }
 
-        if (tile instanceof IMjPowerReceiver provider) {
-            IMjReceiver receiver = provider.getMjReceiver(side.getOpposite());
-            if (receiver != null && receiver.canConnect(getMjConnector()) && getMjConnector().canConnect(receiver)) {
-                return receiver;
+        // 1. Try native MJ capability
+        IMjReceiver receiver = level.getCapability(MjAPI.CAP_RECEIVER, targetPos, side.getOpposite());
+        if (receiver != null && receiver.canConnect(getMjConnector()) && getMjConnector().canConnect(receiver)) {
+            return receiver;
+        }
+
+        // 2. Fallback: try NeoForge FE/RF energy and auto-convert
+        EnergyHandler feHandler = level.getCapability(Capabilities.Energy.BLOCK, targetPos, side.getOpposite());
+        if (feHandler != null) {
+            IMjReceiver feReceiver = MjToRfAutoConvertor.createReceiver(feHandler);
+            if (feReceiver != null && feReceiver.canConnect(getMjConnector())) {
+                return feReceiver;
             }
         }
+
         return null;
     }
 

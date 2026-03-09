@@ -47,8 +47,6 @@ import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.BCDebugging;
 import buildcraft.api.core.IAreaProvider;
-import buildcraft.api.mj.IMjPowerReceiver;
-import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
 import buildcraft.api.tiles.IDebuggable;
@@ -80,7 +78,7 @@ import buildcraft.core.marker.VolumeConnection;
 import buildcraft.core.marker.VolumeSubCache;
 import buildcraft.core.tile.TileMarkerVolume;
 
-public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoadingTile, IMjPowerReceiver {
+public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoadingTile {
     public static final boolean DEBUG_QUARRY = BCDebugging.shouldDebugLog("builders.quarry");
     private static final long MAX_POWER_PER_TICK = 512 * MjAPI.MJ;
 
@@ -110,10 +108,14 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         super(BCBuildersBlockEntities.QUARRY.get(), pos, state);
     }
 
-    @Override
-    @Nullable
-    public IMjReceiver getMjReceiver(@Nonnull Direction face) {
+    /** Returns the MjBatteryReceiver for capability registration. */
+    public MjBatteryReceiver getMjReceiver() {
         return mjReceiver;
+    }
+
+    /** Returns the internal MjBattery for capability registration. */
+    public MjBattery getBattery() {
+        return battery;
     }
 
     @Nonnull

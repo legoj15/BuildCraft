@@ -28,6 +28,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -288,6 +291,11 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         miningBox.setMin(new BlockPos(min.getX() + 1, minY, min.getZ() + 1));
         miningBox.setMax(new BlockPos(max.getX() - 1, max.getY() - 1, max.getZ() - 1));
         updatePoses();
+        // Sync to client so beams render
+        setChanged();
+        if (level != null && !level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
     }
 
     private boolean canMine(BlockPos blockPos) {
@@ -558,6 +566,9 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         debugPowerRate -= max;
         if (sendUpdate) {
             setChanged();
+            if (level != null && !level.isClientSide()) {
+                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            }
         }
     }
 
@@ -638,6 +649,61 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             output.putBoolean("hasDrill", false);
         }
         output.putBoolean("firstChecked", firstChecked);
+    }
+
+    // Network sync — sends all data to client for rendering
+
+    public CompoundTag getUpdateTag() {
+        CompoundTag tag = new CompoundTag();
+        // Frame box
+        if (frameBox.isInitialized()) {
+            tag.putBoolean("frame_init", true);
+            tag.putInt("frame_minX", frameBox.min().getX());
+            tag.putInt("frame_minY", frameBox.min().getY());
+            tag.putInt("frame_minZ", frameBox.min().getZ());
+            tag.putInt("frame_maxX", frameBox.max().getX());
+            tag.putInt("frame_maxY", frameBox.max().getY());
+            tag.putInt("frame_maxZ", frameBox.max().getZ());
+        }
+        // Mining box
+        if (miningBox.isInitialized()) {
+            tag.putBoolean("box_init", true);
+            tag.putInt("box_minX", miningBox.min().getX());
+            tag.putInt("box_minY", miningBox.min().getY());
+            tag.putInt("box_minZ", miningBox.min().getZ());
+            tag.putInt("box_maxX", miningBox.max().getX());
+            tag.putInt("box_maxY", miningBox.max().getY());
+            tag.putInt("box_maxZ", miningBox.max().getZ());
+        }
+        // Drill position
+        if (drillPos != null) {
+            tag.putBoolean("hasDrill", true);
+            tag.putDouble("drillX", drillPos.x);
+            tag.putDouble("drillY", drillPos.y);
+            tag.putDouble("drillZ", drillPos.z);
+        }
+        // Current task info for client rendering
+        if (currentTask != null) {
+            int taskId = -1;
+            for (EnumTaskType type : EnumTaskType.values()) {
+                if (type.clazz == currentTask.getClass()) {
+                    taskId = type.ordinal();
+                    break;
+                }
+            }
+            tag.putByte("currentTaskId", (byte) taskId);
+            if (currentTask instanceof TaskBreakBlock tb) {
+                tag.putInt("task_breakX", tb.breakPos.getX());
+                tag.putInt("task_breakY", tb.breakPos.getY());
+                tag.putInt("task_breakZ", tb.breakPos.getZ());
+            }
+        }
+        return tag;
+    }
+
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
     }
 
     @Override

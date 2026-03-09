@@ -13,6 +13,7 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 
 import buildcraft.api.filler.FillerManager;
+import buildcraft.builders.gui.GuiArchitectTable;
 import buildcraft.builders.gui.GuiFiller;
 import buildcraft.builders.gui.GuiBuilder;
 import buildcraft.builders.registry.FillerRegistry;
@@ -62,11 +63,13 @@ public class BCBuilders {
             event.accept(BCBuildersItems.FILLER_PLANNER);
             event.accept(BCBuildersBlocks.FILLER);
             event.accept(BCBuildersBlocks.BUILDER);
+            event.accept(BCBuildersBlocks.ARCHITECT);
         }
     }
 
     private void registerMenuScreens(RegisterMenuScreensEvent event) {
         event.register(BCBuildersMenuTypes.FILLER.get(), GuiFiller::new);
         event.register(BCBuildersMenuTypes.BUILDER.get(), GuiBuilder::new);
+        event.register(BCBuildersMenuTypes.ARCHITECT.get(), GuiArchitectTable::new);
     }
 }

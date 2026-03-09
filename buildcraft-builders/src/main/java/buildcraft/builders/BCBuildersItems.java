@@ -25,6 +25,9 @@ public class BCBuildersItems {
     public static final DeferredItem<BlockItem> BUILDER = ITEMS
             .registerSimpleBlockItem("builder", BCBuildersBlocks.BUILDER);
 
+    public static final DeferredItem<BlockItem> ARCHITECT = ITEMS
+            .registerSimpleBlockItem("architect", BCBuildersBlocks.ARCHITECT);
+
     public static final DeferredItem<ItemSnapshot> BLUEPRINT_CLEAN = ITEMS.registerItem(
             "blueprint_clean",
             props -> new ItemSnapshot(props, EnumSnapshotType.BLUEPRINT, false),

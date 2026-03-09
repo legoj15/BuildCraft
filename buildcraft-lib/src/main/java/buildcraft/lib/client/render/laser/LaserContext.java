@@ -78,20 +78,37 @@ public class LaserContext {
         if (useNormalColour) {
             normal.set((float) nx, (float) ny, (float) nz, 0);
             matrix.transform(normal);
-            n[0] = normal.x;
-            n[1] = normal.y;
-            n[2] = normal.z;
+            // Normalize to unit length — the matrix includes scale, so the normal
+            // is shortened. We need unit normals for both diffuse calculation and
+            // for the vertex consumer (entity shader uses them for lighting).
+            float len = (float) Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+            if (len > 0) {
+                n[0] = normal.x / len;
+                n[1] = normal.y / len;
+                n[2] = normal.z / len;
+            } else {
+                n[0] = 0;
+                n[1] = 1;
+                n[2] = 0;
+            }
             diffuse = diffuseLight(n[0], n[1], n[2]);
         }
     }
 
-    /** Compute diffuse lighting factor from the normal direction.
-     * Matches vanilla Minecraft's directional shading. */
-    private static float diffuseLight(float nx, float ny, float nz) {
-        // Vanilla-style diffuse: weighted sum of absolute normal components
-        // Y-up faces are brightest (1.0), X faces (0.6), Z faces (0.8)
-        return Math.min(1.0f,
-            nx * nx * 0.6f + ny * ny * (ny > 0 ? 1.0f : 0.5f) + nz * nz * 0.8f);
+    /** Compute diffuse lighting factor from a UNIT normal direction.
+     * Matches vanilla Minecraft's directional shading (from MutableQuad). */
+    private static float diffuseLight(float x, float y, float z) {
+        boolean up = y >= 0;
+        float xx = x * x;
+        float yy = y * y;
+        float zz = z * z;
+        float t = xx + yy + zz;
+        if (t == 0) return 1.0f;
+        float light = (xx * 0.6f + zz * 0.8f) / t;
+        float yyt = yy / t;
+        if (!up) yyt *= 0.5f;
+        light += yyt;
+        return light;
     }
 
     private int index = 0;

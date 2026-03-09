@@ -1,7 +1,6 @@
 {
     "multipart": [
         {
-            "comment": "Base north face: show unless dead-end-north or straight N-S",
             "when": {
                 "OR": [
                     {
@@ -22,11 +21,10 @@
                 ]
             },
             "apply": {
-                "model": "buildcraftbuilders:block/frame/base_face"
+                "model": "buildcraftbuilders:block/frame/base_face_north"
             }
         },
         {
-            "comment": "Base south face: show unless dead-end-south or straight N-S",
             "when": {
                 "OR": [
                     {
@@ -47,12 +45,10 @@
                 ]
             },
             "apply": {
-                "model": "buildcraftbuilders:block/frame/base_face",
-                "y": 180
+                "model": "buildcraftbuilders:block/frame/base_face_south"
             }
         },
         {
-            "comment": "Base east face: show unless dead-end-east or straight E-W",
             "when": {
                 "OR": [
                     {
@@ -73,12 +69,10 @@
                 ]
             },
             "apply": {
-                "model": "buildcraftbuilders:block/frame/base_face",
-                "y": 270
+                "model": "buildcraftbuilders:block/frame/base_face_east"
             }
         },
         {
-            "comment": "Base west face: show unless dead-end-west or straight E-W",
             "when": {
                 "OR": [
                     {
@@ -99,12 +93,10 @@
                 ]
             },
             "apply": {
-                "model": "buildcraftbuilders:block/frame/base_face",
-                "y": 90
+                "model": "buildcraftbuilders:block/frame/base_face_west"
             }
         },
         {
-            "comment": "Base up face: show unless dead-end-up or straight U-D",
             "when": {
                 "OR": [
                     {
@@ -125,12 +117,10 @@
                 ]
             },
             "apply": {
-                "model": "buildcraftbuilders:block/frame/base_face",
-                "x": 270
+                "model": "buildcraftbuilders:block/frame/base_face_up"
             }
         },
         {
-            "comment": "Base down face: show unless dead-end-down or straight U-D",
             "when": {
                 "OR": [
                     {
@@ -151,8 +141,7 @@
                 ]
             },
             "apply": {
-                "model": "buildcraftbuilders:block/frame/base_face",
-                "x": 90
+                "model": "buildcraftbuilders:block/frame/base_face_down"
             }
         },
         {

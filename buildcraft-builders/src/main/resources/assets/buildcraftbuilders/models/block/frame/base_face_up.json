@@ -1,0 +1,42 @@
+{
+    "render_type": "minecraft:cutout",
+    "textures": {
+        "all": "buildcraftbuilders:block/frame/default"
+    },
+    "elements": [
+        {
+            "from": [
+                4,
+                4,
+                4
+            ],
+            "to": [
+                12,
+                12,
+                12
+            ],
+            "faces": {
+                "up": {
+                    "texture": "#all"
+                }
+            }
+        },
+        {
+            "from": [
+                12,
+                12,
+                12
+            ],
+            "to": [
+                4,
+                4,
+                4
+            ],
+            "faces": {
+                "up": {
+                    "texture": "#all"
+                }
+            }
+        }
+    ]
+}

@@ -10,6 +10,8 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 
 import buildcraft.api.filler.FillerManager;
@@ -42,6 +44,10 @@ public class BCBuilders {
         modEventBus.addListener(this::postInit);
         modEventBus.addListener(this::buildCreativeTabContents);
         modEventBus.addListener(this::registerMenuScreens);
+
+        // Register quarry rendering via game event bus (not mod bus)
+        NeoForge.EVENT_BUS.addListener(RenderLevelStageEvent.AfterTranslucentBlocks.class,
+            event -> BCBuildersEventDist.INSTANCE.renderAllQuarries(event));
     }
 
     private void preInit(FMLCommonSetupEvent event) {

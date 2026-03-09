@@ -6,13 +6,10 @@
 
 package buildcraft.builders.client.render;
 
-import buildcraft.builders.tile.TileQuarry;
-
 /**
- * Renderer for the quarry block entity.
- * Deferred stub — the full BER requires confirming BlockEntityRenderer's
- * type parameter count in 1.21.11. Frame/drill laser rendering will be
- * implemented once the BER infrastructure is verified.
+ * Quarry rendering is handled by BCBuildersEventDist via RenderLevelStageEvent
+ * rather than a BER, because the 1.21.11 BER API uses a render state pattern
+ * that is not compatible with the quarry's world-space laser line rendering.
  */
 public class RenderQuarry {
 

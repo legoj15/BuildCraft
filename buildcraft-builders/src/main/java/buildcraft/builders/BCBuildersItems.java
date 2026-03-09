@@ -19,6 +19,9 @@ import buildcraft.builders.item.ItemSnapshot;
 public class BCBuildersItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCBuilders.MODID);
 
+    public static final DeferredItem<BlockItem> FRAME = ITEMS
+            .registerSimpleBlockItem("frame", BCBuildersBlocks.FRAME);
+
     public static final DeferredItem<BlockItem> FILLER = ITEMS
             .registerSimpleBlockItem("filler", BCBuildersBlocks.FILLER);
 

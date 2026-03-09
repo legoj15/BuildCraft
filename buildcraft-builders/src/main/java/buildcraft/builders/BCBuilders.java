@@ -68,6 +68,7 @@ public class BCBuilders {
             event.accept(BCBuildersBlocks.ARCHITECT);
             event.accept(BCBuildersBlocks.LIBRARY);
             event.accept(BCBuildersBlocks.REPLACER);
+            event.accept(BCBuildersBlocks.FRAME);
         }
     }
 

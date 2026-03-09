@@ -24,5 +24,6 @@
     "tile.architect.noexcavate": "Excavate: Off",
     "advancements.buildcraftbuilders.architect.title": "Architect",
     "advancements.buildcraftbuilders.architect.description": "Scan an area with an architect table and record it in a blueprint/template",
-    "block.buildcraftbuilders.replacer": "Replacer"
+    "block.buildcraftbuilders.replacer": "Replacer",
+    "block.buildcraftbuilders.frame": "Frame"
 }

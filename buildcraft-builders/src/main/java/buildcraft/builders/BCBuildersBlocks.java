@@ -13,10 +13,15 @@ import buildcraft.builders.block.BlockArchitectTable;
 import buildcraft.builders.block.BlockBuilder;
 import buildcraft.builders.block.BlockElectronicLibrary;
 import buildcraft.builders.block.BlockFiller;
+import buildcraft.builders.block.BlockFrame;
 import buildcraft.builders.block.BlockReplacer;
 
 public class BCBuildersBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCBuilders.MODID);
+
+    public static final DeferredBlock<BlockFrame> FRAME = BLOCKS.registerBlock(
+            "frame",
+            BlockFrame::new, BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion());
 
     public static final DeferredBlock<BlockFiller> FILLER = BLOCKS.registerBlock(
             "filler",

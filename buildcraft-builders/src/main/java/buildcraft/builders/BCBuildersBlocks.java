@@ -14,6 +14,7 @@ import buildcraft.builders.block.BlockBuilder;
 import buildcraft.builders.block.BlockElectronicLibrary;
 import buildcraft.builders.block.BlockFiller;
 import buildcraft.builders.block.BlockFrame;
+import buildcraft.builders.block.BlockQuarry;
 import buildcraft.builders.block.BlockReplacer;
 
 public class BCBuildersBlocks {
@@ -42,6 +43,10 @@ public class BCBuildersBlocks {
     public static final DeferredBlock<BlockReplacer> REPLACER = BLOCKS.registerBlock(
             "replacer",
             BlockReplacer::new, BlockBehaviour.Properties.of().strength(5.0f, 10.0f));
+
+    public static final DeferredBlock<BlockQuarry> QUARRY = BLOCKS.registerBlock(
+            "quarry",
+            BlockQuarry::new, BlockBehaviour.Properties.of().strength(5.0f, 10.0f));
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

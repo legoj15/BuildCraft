@@ -25,5 +25,6 @@
     "advancements.buildcraftbuilders.architect.title": "Architect",
     "advancements.buildcraftbuilders.architect.description": "Scan an area with an architect table and record it in a blueprint/template",
     "block.buildcraftbuilders.replacer": "Replacer",
+    "block.buildcraftbuilders.quarry": "Quarry",
     "block.buildcraftbuilders.frame": "Frame"
 }

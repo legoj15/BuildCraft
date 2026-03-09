@@ -11,6 +11,7 @@ import buildcraft.builders.tile.TileArchitectTable;
 import buildcraft.builders.tile.TileBuilder;
 import buildcraft.builders.tile.TileElectronicLibrary;
 import buildcraft.builders.tile.TileFiller;
+import buildcraft.builders.tile.TileQuarry;
 import buildcraft.builders.tile.TileReplacer;
 
 public class BCBuildersBlockEntities {
@@ -36,6 +37,10 @@ public class BCBuildersBlockEntities {
     public static final Supplier<BlockEntityType<TileReplacer>> REPLACER = BLOCK_ENTITIES.register(
             "replacer",
             () -> new BlockEntityType<>(TileReplacer::new, BCBuildersBlocks.REPLACER.get()));
+
+    public static final Supplier<BlockEntityType<TileQuarry>> QUARRY = BLOCK_ENTITIES.register(
+            "quarry",
+            () -> new BlockEntityType<>(TileQuarry::new, BCBuildersBlocks.QUARRY.get()));
 
     public static void init(IEventBus modEventBus) {
         BLOCK_ENTITIES.register(modEventBus);

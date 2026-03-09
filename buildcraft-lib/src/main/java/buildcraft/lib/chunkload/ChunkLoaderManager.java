@@ -11,18 +11,14 @@ import java.util.HashSet;
 import java.util.Set;
 
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.Level;
 
 import buildcraft.api.core.BCLog;
-import buildcraft.lib.BCLibConfig;
-import buildcraft.lib.misc.data.LevelPos;
 
 /**
  * Chunk loading manager stub for NeoForge 1.21.
  * The old ForgeChunkManager TicketHelper API was removed.
- * TODO: Re-implement using net.neoforged.neoforge.common.world.ForceChunkSetupEventHandler or similar.
+ * TODO: Re-implement using NeoForge forced chunk loading API.
  */
 public class ChunkLoaderManager {
 
@@ -53,6 +49,7 @@ public class ChunkLoaderManager {
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private static boolean canLoadFor(IChunkLoadingTile tile) {
-        return BCLibConfig.chunkLoadingLevel.canLoad(tile.getLoadType());
+        // BCLibConfig is not ported yet — always allow chunk loading for now
+        return tile.getLoadType() != null;
     }
 }

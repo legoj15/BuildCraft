@@ -1,8 +1,158 @@
 {
     "multipart": [
         {
+            "comment": "Base north face: show unless dead-end-north or straight N-S",
+            "when": {
+                "OR": [
+                    {
+                        "connected_north": "false"
+                    },
+                    {
+                        "connected_east": "true"
+                    },
+                    {
+                        "connected_west": "true"
+                    },
+                    {
+                        "connected_up": "true"
+                    },
+                    {
+                        "connected_down": "true"
+                    }
+                ]
+            },
             "apply": {
-                "model": "buildcraftbuilders:block/frame/base"
+                "model": "buildcraftbuilders:block/frame/base_face"
+            }
+        },
+        {
+            "comment": "Base south face: show unless dead-end-south or straight N-S",
+            "when": {
+                "OR": [
+                    {
+                        "connected_south": "false"
+                    },
+                    {
+                        "connected_east": "true"
+                    },
+                    {
+                        "connected_west": "true"
+                    },
+                    {
+                        "connected_up": "true"
+                    },
+                    {
+                        "connected_down": "true"
+                    }
+                ]
+            },
+            "apply": {
+                "model": "buildcraftbuilders:block/frame/base_face",
+                "y": 180
+            }
+        },
+        {
+            "comment": "Base east face: show unless dead-end-east or straight E-W",
+            "when": {
+                "OR": [
+                    {
+                        "connected_east": "false"
+                    },
+                    {
+                        "connected_north": "true"
+                    },
+                    {
+                        "connected_south": "true"
+                    },
+                    {
+                        "connected_up": "true"
+                    },
+                    {
+                        "connected_down": "true"
+                    }
+                ]
+            },
+            "apply": {
+                "model": "buildcraftbuilders:block/frame/base_face",
+                "y": 270
+            }
+        },
+        {
+            "comment": "Base west face: show unless dead-end-west or straight E-W",
+            "when": {
+                "OR": [
+                    {
+                        "connected_west": "false"
+                    },
+                    {
+                        "connected_north": "true"
+                    },
+                    {
+                        "connected_south": "true"
+                    },
+                    {
+                        "connected_up": "true"
+                    },
+                    {
+                        "connected_down": "true"
+                    }
+                ]
+            },
+            "apply": {
+                "model": "buildcraftbuilders:block/frame/base_face",
+                "y": 90
+            }
+        },
+        {
+            "comment": "Base up face: show unless dead-end-up or straight U-D",
+            "when": {
+                "OR": [
+                    {
+                        "connected_up": "false"
+                    },
+                    {
+                        "connected_north": "true"
+                    },
+                    {
+                        "connected_south": "true"
+                    },
+                    {
+                        "connected_east": "true"
+                    },
+                    {
+                        "connected_west": "true"
+                    }
+                ]
+            },
+            "apply": {
+                "model": "buildcraftbuilders:block/frame/base_face",
+                "x": 270
+            }
+        },
+        {
+            "comment": "Base down face: show unless dead-end-down or straight U-D",
+            "when": {
+                "OR": [
+                    {
+                        "connected_down": "false"
+                    },
+                    {
+                        "connected_north": "true"
+                    },
+                    {
+                        "connected_south": "true"
+                    },
+                    {
+                        "connected_east": "true"
+                    },
+                    {
+                        "connected_west": "true"
+                    }
+                ]
+            },
+            "apply": {
+                "model": "buildcraftbuilders:block/frame/base_face",
+                "x": 90
             }
         },
         {

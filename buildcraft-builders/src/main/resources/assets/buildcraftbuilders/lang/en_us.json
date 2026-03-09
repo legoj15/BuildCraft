@@ -7,5 +7,6 @@
     "item.buildcraftbuilders.schematic_single_used": "Single Block Schematic",
     "item.blueprint.blank": "Blank",
     "item.blueprint.author": "Author:",
-    "item.buildcraftbuilders.filler_planner": "Filler Planner"
+    "item.buildcraftbuilders.filler_planner": "Filler Planner",
+    "block.buildcraftbuilders.filler": "Filler"
 }

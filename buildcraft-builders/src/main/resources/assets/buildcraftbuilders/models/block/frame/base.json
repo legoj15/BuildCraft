@@ -1,6 +1,8 @@
 {
-    "parent": "block/cube_all",
     "render_type": "minecraft:cutout",
+    "textures": {
+        "all": "buildcraftbuilders:block/frame/default"
+    },
     "elements": [
         {
             "from": [
@@ -10,7 +12,7 @@
             ],
             "to": [
                 12,
-                12,
+                4.01,
                 12
             ],
             "faces": {
@@ -19,13 +21,41 @@
                 },
                 "up": {
                     "texture": "#all"
-                },
-                "north": {
+                }
+            }
+        },
+        {
+            "from": [
+                4,
+                11.99,
+                4
+            ],
+            "to": [
+                12,
+                12,
+                12
+            ],
+            "faces": {
+                "up": {
                     "texture": "#all"
                 },
-                "south": {
+                "down": {
                     "texture": "#all"
-                },
+                }
+            }
+        },
+        {
+            "from": [
+                4,
+                4,
+                4
+            ],
+            "to": [
+                4.01,
+                12,
+                12
+            ],
+            "faces": {
                 "west": {
                     "texture": "#all"
                 },
@@ -36,38 +66,63 @@
         },
         {
             "from": [
+                11.99,
+                4,
+                4
+            ],
+            "to": [
                 12,
                 12,
                 12
             ],
-            "to": [
+            "faces": {
+                "east": {
+                    "texture": "#all"
+                },
+                "west": {
+                    "texture": "#all"
+                }
+            }
+        },
+        {
+            "from": [
                 4,
                 4,
                 4
             ],
+            "to": [
+                12,
+                12,
+                4.01
+            ],
             "faces": {
-                "down": {
-                    "texture": "#all"
-                },
-                "up": {
-                    "texture": "#all"
-                },
                 "north": {
                     "texture": "#all"
                 },
                 "south": {
                     "texture": "#all"
-                },
-                "west": {
+                }
+            }
+        },
+        {
+            "from": [
+                4,
+                4,
+                11.99
+            ],
+            "to": [
+                12,
+                12,
+                12
+            ],
+            "faces": {
+                "north": {
                     "texture": "#all"
                 },
-                "east": {
+                "south": {
                     "texture": "#all"
                 }
             }
         }
-    ],
-    "textures": {
-        "all": "buildcraftbuilders:block/frame/default"
-    }
+    ]
 }

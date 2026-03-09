@@ -6,7 +6,7 @@
     "elements": [
         {
             "from": [
-                4,
+                11.99,
                 4,
                 4
             ],
@@ -18,22 +18,8 @@
             "faces": {
                 "east": {
                     "texture": "#all"
-                }
-            }
-        },
-        {
-            "from": [
-                12,
-                12,
-                12
-            ],
-            "to": [
-                4,
-                4,
-                4
-            ],
-            "faces": {
-                "east": {
+                },
+                "west": {
                     "texture": "#all"
                 }
             }

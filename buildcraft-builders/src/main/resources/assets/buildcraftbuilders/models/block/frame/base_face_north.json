@@ -13,27 +13,13 @@
             "to": [
                 12,
                 12,
-                12
+                4.01
             ],
             "faces": {
                 "north": {
                     "texture": "#all"
-                }
-            }
-        },
-        {
-            "from": [
-                12,
-                12,
-                12
-            ],
-            "to": [
-                4,
-                4,
-                4
-            ],
-            "faces": {
-                "north": {
+                },
+                "south": {
                     "texture": "#all"
                 }
             }

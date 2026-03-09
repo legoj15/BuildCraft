@@ -1,6 +1,8 @@
 {
-    "parent": "block/cube_all",
     "render_type": "minecraft:cutout",
+    "textures": {
+        "all": "buildcraftbuilders:block/frame/default"
+    },
     "elements": [
         {
             "from": [
@@ -10,7 +12,7 @@
             ],
             "to": [
                 12,
-                12,
+                4.01,
                 4
             ],
             "faces": {
@@ -19,7 +21,41 @@
                 },
                 "up": {
                     "texture": "#all"
+                }
+            }
+        },
+        {
+            "from": [
+                4,
+                11.99,
+                0
+            ],
+            "to": [
+                12,
+                12,
+                4
+            ],
+            "faces": {
+                "up": {
+                    "texture": "#all"
                 },
+                "down": {
+                    "texture": "#all"
+                }
+            }
+        },
+        {
+            "from": [
+                4,
+                4,
+                0
+            ],
+            "to": [
+                4.01,
+                12,
+                4
+            ],
+            "faces": {
                 "west": {
                     "texture": "#all"
                 },
@@ -30,32 +66,23 @@
         },
         {
             "from": [
+                11.99,
+                4,
+                0
+            ],
+            "to": [
                 12,
                 12,
                 4
             ],
-            "to": [
-                4,
-                4,
-                0
-            ],
             "faces": {
-                "down": {
-                    "texture": "#all"
-                },
-                "up": {
+                "east": {
                     "texture": "#all"
                 },
                 "west": {
                     "texture": "#all"
-                },
-                "east": {
-                    "texture": "#all"
                 }
             }
         }
-    ],
-    "textures": {
-        "all": "buildcraftbuilders:block/frame/default"
-    }
+    ]
 }

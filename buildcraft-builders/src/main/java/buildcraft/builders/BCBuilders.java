@@ -14,6 +14,7 @@ import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 
 import buildcraft.api.filler.FillerManager;
 import buildcraft.builders.gui.GuiFiller;
+import buildcraft.builders.gui.GuiBuilder;
 import buildcraft.builders.registry.FillerRegistry;
 import buildcraft.core.BCCoreCreativeTabs;
 
@@ -66,5 +67,6 @@ public class BCBuilders {
 
     private void registerMenuScreens(RegisterMenuScreensEvent event) {
         event.register(BCBuildersMenuTypes.FILLER.get(), GuiFiller::new);
+        event.register(BCBuildersMenuTypes.BUILDER.get(), GuiBuilder::new);
     }
 }

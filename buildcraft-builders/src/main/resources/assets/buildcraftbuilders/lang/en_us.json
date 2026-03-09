@@ -8,5 +8,6 @@
     "item.blueprint.blank": "Blank",
     "item.blueprint.author": "Author:",
     "item.buildcraftbuilders.filler_planner": "Filler Planner",
-    "block.buildcraftbuilders.filler": "Filler"
+    "block.buildcraftbuilders.filler": "Filler",
+    "block.buildcraftbuilders.builder": "Builder"
 }

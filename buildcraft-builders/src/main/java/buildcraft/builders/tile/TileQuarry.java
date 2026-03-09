@@ -54,6 +54,7 @@ import buildcraft.api.tiles.IDebuggable;
 import buildcraft.lib.chunkload.ChunkLoaderManager;
 import buildcraft.lib.chunkload.IChunkLoadingTile;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.MathUtil;
 import buildcraft.lib.misc.NBTUtilBC;
@@ -942,7 +943,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                 );
                 if (stacks.isPresent()) {
                     if (drillPos != null) {
-                        stacks.get().forEach(stack -> Block.popResource(level, worldPosition, stack));
+                        stacks.get().forEach(stack -> InventoryUtil.addToBestAcceptor(level, worldPosition, null, stack));
                     }
                 }
                 check(breakPos);

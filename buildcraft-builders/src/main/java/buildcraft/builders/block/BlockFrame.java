@@ -14,9 +14,11 @@ import com.mojang.serialization.MapCodec;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
@@ -86,14 +88,15 @@ public class BlockFrame extends Block {
         return computeConnections(context.getLevel(), context.getClickedPos(), defaultBlockState());
     }
 
-    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
-            BlockPos neighborPos, boolean movedByPiston) {
-        if (!level.isClientSide()) {
-            BlockState newState = computeConnections(level, pos, state);
-            if (newState != state) {
-                level.setBlock(pos, newState, Block.UPDATE_ALL);
-            }
+    @Override
+    protected BlockState updateShape(BlockState state, LevelReader level,
+            ScheduledTickAccess scheduledTickAccess, BlockPos pos, Direction direction,
+            BlockPos neighborPos, BlockState neighborState, RandomSource random) {
+        Property<Boolean> prop = CONNECTED_MAP.get(direction);
+        if (prop != null) {
+            state = state.setValue(prop, canConnectTo(level, neighborPos));
         }
+        return state;
     }
 
     // --- Shape / Rendering ---

@@ -24,7 +24,7 @@ import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.misc.data.Box;
 
 /**
- * Renders a laser box — 12 edges of a bounding box drawn as laser lines.
+ * Renders a laser box — 12 edges of a bounding box drawn as laser beams.
  */
 public class LaserBoxRenderer {
     private static final double RENDER_SCALE = 1 / 16.05;
@@ -37,11 +37,11 @@ public class LaserBoxRenderer {
         List<LaserData_BC8> datas = makeLaserBox(box, type, center);
 
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer consumer = bufferSource.getBuffer(RenderTypes.lines());
+        VertexConsumer consumer = bufferSource.getBuffer(RenderTypes.LINES);
         for (LaserData_BC8 data : datas) {
             LaserRenderer_BC8.renderLaser(poseStack, consumer, data, cameraPos);
         }
-        bufferSource.endBatch(RenderTypes.lines());
+        bufferSource.endBatch(RenderTypes.LINES);
     }
 
     private static List<LaserData_BC8> makeLaserBox(Box box, LaserType type, boolean center) {

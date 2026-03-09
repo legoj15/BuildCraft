@@ -26,6 +26,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
@@ -577,24 +578,27 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
-        CompoundTag boxTag = miningBox.writeToNBT();
-        CompoundTag frameTag = frameBox.writeToNBT();
-        // Store sub-tags inline
-        output.putInt("box_minX", boxTag.getIntOr("minX", 0));
-        output.putInt("box_minY", boxTag.getIntOr("minY", 0));
-        output.putInt("box_minZ", boxTag.getIntOr("minZ", 0));
-        output.putInt("box_maxX", boxTag.getIntOr("maxX", 0));
-        output.putInt("box_maxY", boxTag.getIntOr("maxY", 0));
-        output.putInt("box_maxZ", boxTag.getIntOr("maxZ", 0));
+        // Mining box — write coordinates directly (Box.writeToNBT uses nested tags that don't work with flat ValueOutput)
         output.putBoolean("box_init", miningBox.isInitialized());
+        if (miningBox.isInitialized()) {
+            output.putInt("box_minX", miningBox.min().getX());
+            output.putInt("box_minY", miningBox.min().getY());
+            output.putInt("box_minZ", miningBox.min().getZ());
+            output.putInt("box_maxX", miningBox.max().getX());
+            output.putInt("box_maxY", miningBox.max().getY());
+            output.putInt("box_maxZ", miningBox.max().getZ());
+        }
 
-        output.putInt("frame_minX", frameTag.getIntOr("minX", 0));
-        output.putInt("frame_minY", frameTag.getIntOr("minY", 0));
-        output.putInt("frame_minZ", frameTag.getIntOr("minZ", 0));
-        output.putInt("frame_maxX", frameTag.getIntOr("maxX", 0));
-        output.putInt("frame_maxY", frameTag.getIntOr("maxY", 0));
-        output.putInt("frame_maxZ", frameTag.getIntOr("maxZ", 0));
+        // Frame box — write coordinates directly
         output.putBoolean("frame_init", frameBox.isInitialized());
+        if (frameBox.isInitialized()) {
+            output.putInt("frame_minX", frameBox.min().getX());
+            output.putInt("frame_minY", frameBox.min().getY());
+            output.putInt("frame_minZ", frameBox.min().getZ());
+            output.putInt("frame_maxX", frameBox.max().getX());
+            output.putInt("frame_maxY", frameBox.max().getY());
+            output.putInt("frame_maxZ", frameBox.max().getZ());
+        }
 
         if (boxIterator != null) {
             // Store boxIterator as a sub-compound tag via CompoundTag
@@ -652,53 +656,14 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     }
 
     // Network sync — sends all data to client for rendering
+    // In 1.21.11, getUpdateTag(HolderLookup.Provider) is called by
+    // ClientboundBlockEntityDataPacket.create(this) to serialize data for the client.
+    // We delegate to saveCustomOnly() which calls saveAdditional(ValueOutput),
+    // ensuring all frame/mining box data is included in the network packet.
 
-    public CompoundTag getUpdateTag() {
-        CompoundTag tag = new CompoundTag();
-        // Frame box
-        if (frameBox.isInitialized()) {
-            tag.putBoolean("frame_init", true);
-            tag.putInt("frame_minX", frameBox.min().getX());
-            tag.putInt("frame_minY", frameBox.min().getY());
-            tag.putInt("frame_minZ", frameBox.min().getZ());
-            tag.putInt("frame_maxX", frameBox.max().getX());
-            tag.putInt("frame_maxY", frameBox.max().getY());
-            tag.putInt("frame_maxZ", frameBox.max().getZ());
-        }
-        // Mining box
-        if (miningBox.isInitialized()) {
-            tag.putBoolean("box_init", true);
-            tag.putInt("box_minX", miningBox.min().getX());
-            tag.putInt("box_minY", miningBox.min().getY());
-            tag.putInt("box_minZ", miningBox.min().getZ());
-            tag.putInt("box_maxX", miningBox.max().getX());
-            tag.putInt("box_maxY", miningBox.max().getY());
-            tag.putInt("box_maxZ", miningBox.max().getZ());
-        }
-        // Drill position
-        if (drillPos != null) {
-            tag.putBoolean("hasDrill", true);
-            tag.putDouble("drillX", drillPos.x);
-            tag.putDouble("drillY", drillPos.y);
-            tag.putDouble("drillZ", drillPos.z);
-        }
-        // Current task info for client rendering
-        if (currentTask != null) {
-            int taskId = -1;
-            for (EnumTaskType type : EnumTaskType.values()) {
-                if (type.clazz == currentTask.getClass()) {
-                    taskId = type.ordinal();
-                    break;
-                }
-            }
-            tag.putByte("currentTaskId", (byte) taskId);
-            if (currentTask instanceof TaskBreakBlock tb) {
-                tag.putInt("task_breakX", tb.breakPos.getX());
-                tag.putInt("task_breakY", tb.breakPos.getY());
-                tag.putInt("task_breakZ", tb.breakPos.getZ());
-            }
-        }
-        return tag;
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        return this.saveCustomOnly(registries);
     }
 
     @Override

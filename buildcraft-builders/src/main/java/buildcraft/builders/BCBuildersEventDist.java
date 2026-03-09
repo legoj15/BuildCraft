@@ -66,7 +66,9 @@ public enum BCBuildersEventDist {
         if (mc.player == null || mc.level == null) return;
 
         Deque<WeakReference<TileQuarry>> quarries = allQuarries.get(mc.level);
-        if (quarries == null || quarries.isEmpty()) return;
+        if (quarries == null || quarries.isEmpty()) {
+            return;
+        }
 
         Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
         PoseStack poseStack = event.getPoseStack();

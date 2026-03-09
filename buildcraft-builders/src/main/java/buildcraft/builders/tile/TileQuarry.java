@@ -765,6 +765,9 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         if (taskId >= 0 && taskId < EnumTaskType.values().length) {
             currentTask = EnumTaskType.values()[taskId].supplier.apply(this);
             currentTask.power = input.getLongOr("task_power", 0L);
+            // Initialize client interpolation from the synced power to avoid yOffset jumps
+            currentTask.clientPower = currentTask.power;
+            currentTask.prevClientPower = currentTask.power;
             if (currentTask instanceof TaskBreakBlock tb) {
                 tb.breakPos = new BlockPos(
                     input.getIntOr("task_breakX", 0),

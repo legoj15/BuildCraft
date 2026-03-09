@@ -80,9 +80,9 @@ public class LaserRenderer_BC8 {
      */
     public static void renderLaserStatic(PoseStack poseStack, LaserData_BC8 data, Vec3 cameraPos) {
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-        // Use entitySolid with the block atlas so our laser sprites show up
+        // Use entityTranslucent with the block atlas so laser sprites render with transparency
         VertexConsumer consumer = bufferSource.getBuffer(
-                RenderTypes.entitySolid(TextureAtlas.LOCATION_BLOCKS));
+                RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
         renderLaser(poseStack, consumer, data, cameraPos);
         bufferSource.endBatch();
     }

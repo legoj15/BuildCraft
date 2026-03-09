@@ -31,6 +31,9 @@ public class BCBuildersItems {
     public static final DeferredItem<BlockItem> LIBRARY = ITEMS
             .registerSimpleBlockItem("library", BCBuildersBlocks.LIBRARY);
 
+    public static final DeferredItem<BlockItem> REPLACER = ITEMS
+            .registerSimpleBlockItem("replacer", BCBuildersBlocks.REPLACER);
+
     public static final DeferredItem<ItemSnapshot> BLUEPRINT_CLEAN = ITEMS.registerItem(
             "blueprint_clean",
             props -> new ItemSnapshot(props, EnumSnapshotType.BLUEPRINT, false),

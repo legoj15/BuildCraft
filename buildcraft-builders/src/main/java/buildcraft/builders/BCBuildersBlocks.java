@@ -13,6 +13,7 @@ import buildcraft.builders.block.BlockArchitectTable;
 import buildcraft.builders.block.BlockBuilder;
 import buildcraft.builders.block.BlockElectronicLibrary;
 import buildcraft.builders.block.BlockFiller;
+import buildcraft.builders.block.BlockReplacer;
 
 public class BCBuildersBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCBuilders.MODID);
@@ -32,6 +33,10 @@ public class BCBuildersBlocks {
     public static final DeferredBlock<BlockElectronicLibrary> LIBRARY = BLOCKS.registerBlock(
             "library",
             BlockElectronicLibrary::new, BlockBehaviour.Properties.of().strength(5.0f, 10.0f));
+
+    public static final DeferredBlock<BlockReplacer> REPLACER = BLOCKS.registerBlock(
+            "replacer",
+            BlockReplacer::new, BlockBehaviour.Properties.of().strength(5.0f, 10.0f));
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

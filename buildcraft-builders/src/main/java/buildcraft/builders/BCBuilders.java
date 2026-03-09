@@ -16,6 +16,7 @@ import buildcraft.api.filler.FillerManager;
 import buildcraft.builders.gui.GuiArchitectTable;
 import buildcraft.builders.gui.GuiElectronicLibrary;
 import buildcraft.builders.gui.GuiFiller;
+import buildcraft.builders.gui.GuiReplacer;
 import buildcraft.builders.gui.GuiBuilder;
 import buildcraft.builders.registry.FillerRegistry;
 import buildcraft.core.BCCoreCreativeTabs;
@@ -66,6 +67,7 @@ public class BCBuilders {
             event.accept(BCBuildersBlocks.BUILDER);
             event.accept(BCBuildersBlocks.ARCHITECT);
             event.accept(BCBuildersBlocks.LIBRARY);
+            event.accept(BCBuildersBlocks.REPLACER);
         }
     }
 
@@ -74,5 +76,6 @@ public class BCBuilders {
         event.register(BCBuildersMenuTypes.BUILDER.get(), GuiBuilder::new);
         event.register(BCBuildersMenuTypes.ARCHITECT.get(), GuiArchitectTable::new);
         event.register(BCBuildersMenuTypes.LIBRARY.get(), GuiElectronicLibrary::new);
+        event.register(BCBuildersMenuTypes.REPLACER.get(), GuiReplacer::new);
     }
 }

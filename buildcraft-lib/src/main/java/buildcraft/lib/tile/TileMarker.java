@@ -51,12 +51,6 @@ public abstract class TileMarker<C extends MarkerConnection<C>> extends BlockEnt
     public void setRemoved() {
         super.setRemoved();
         if (level != null && !level.isClientSide()) {
-            getLocalCache().unloadMarker(getBlockPos());
-        }
-    }
-
-    public void onRemove() {
-        if (level != null && !level.isClientSide()) {
             getLocalCache().removeMarker(getBlockPos());
         }
     }

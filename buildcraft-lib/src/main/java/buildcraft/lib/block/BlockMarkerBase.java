@@ -117,15 +117,6 @@ public abstract class BlockMarkerBase extends Block implements EntityBlock {
         }
     }
 
-    // 1.21.11: playerWillDestroy fires before block is removed — use it to clean up marker connections
-    @Override
-    public BlockState playerWillDestroy(Level world, BlockPos pos, BlockState state, net.minecraft.world.entity.player.Player player) {
-        BlockEntity tile = world.getBlockEntity(pos);
-        if (tile instanceof TileMarker<?> marker) {
-            marker.onRemove();
-        }
-        return super.playerWillDestroy(world, pos, state, player);
-    }
 
     @Override
     public BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rot) {

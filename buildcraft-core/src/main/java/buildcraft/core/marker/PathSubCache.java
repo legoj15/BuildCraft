@@ -25,6 +25,13 @@ public class PathSubCache extends MarkerSubCache<PathConnection> {
         for (BlockPos pos : data.markerPositions) {
             loadMarker(pos, null);
         }
+        for (java.util.List<BlockPos> connectionPositions : data.markerConnections) {
+            if (connectionPositions.size() >= 2) {
+                addConnection(new PathConnection(this, connectionPositions));
+            }
+        }
+        data.setSubCache(this);
+        data.setDirty();
     }
 
     @Override

@@ -29,6 +29,13 @@ public class VolumeSubCache extends MarkerSubCache<VolumeConnection> {
         for (BlockPos pos : data.markerPositions) {
             loadMarker(pos, null);
         }
+        for (java.util.List<BlockPos> connectionPositions : data.markerConnections) {
+            if (connectionPositions.size() >= 2) {
+                addConnection(new VolumeConnection(this, connectionPositions));
+            }
+        }
+        data.setSubCache(this);
+        data.setDirty();
     }
 
     @Override

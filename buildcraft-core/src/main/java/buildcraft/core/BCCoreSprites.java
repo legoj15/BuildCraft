@@ -18,10 +18,29 @@ import buildcraft.core.statements.TriggerInventory;
 import buildcraft.core.statements.TriggerInventoryLevel;
 
 /**
- * Sprite holder stubs for all statement icons.
- * These will be wired to real texture atlas lookups when the client rendering layer is ported.
+ * Sprite holder definitions for BuildCraft Core.
+ * Includes laser textures, statement icons, and trigger/action sprites.
  */
 public class BCCoreSprites {
+    // Laser textures — marker connections
+    public static final SpriteHolder MARKER_VOLUME_CONNECTED = h("lasers/marker_volume_connected");
+    public static final SpriteHolder MARKER_VOLUME_POSSIBLE = h("lasers/marker_volume_possible");
+    public static final SpriteHolder MARKER_VOLUME_SIGNAL = h("lasers/marker_volume_signal");
+    public static final SpriteHolder MARKER_PATH_CONNECTED = h("lasers/marker_path_connected");
+    public static final SpriteHolder MARKER_PATH_POSSIBLE = h("lasers/marker_path_possible");
+    public static final SpriteHolder MARKER_DEFAULT_POSSIBLE = h("lasers/marker_default_possible");
+
+    // Laser textures — stripes
+    public static final SpriteHolder STRIPES_READ = h("lasers/stripes_read");
+    public static final SpriteHolder STRIPES_WRITE = h("lasers/stripes_write");
+    public static final SpriteHolder STRIPES_WRITE_DIRECTION = h("lasers/stripes_write_direction");
+
+    // Laser textures — power levels
+    public static final SpriteHolder LASER_POWER_LOW = h("lasers/power_low");
+    public static final SpriteHolder LASER_POWER_MED = h("lasers/power_med");
+    public static final SpriteHolder LASER_POWER_HIGH = h("lasers/power_high");
+    public static final SpriteHolder LASER_POWER_FULL = h("lasers/power_full");
+
     // Triggers
     public static final SpriteHolder TRIGGER_MACHINE_ACTIVE = h("triggers/trigger_machine_active");
     public static final SpriteHolder TRIGGER_MACHINE_INACTIVE = h("triggers/trigger_machine_inactive");

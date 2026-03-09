@@ -1,0 +1,56 @@
+{
+    "sources": [
+        {
+            "type": "minecraft:single",
+            "resource": "buildcraftcore:lasers/marker_default_possible"
+        },
+        {
+            "type": "minecraft:single",
+            "resource": "buildcraftcore:lasers/marker_path_connected"
+        },
+        {
+            "type": "minecraft:single",
+            "resource": "buildcraftcore:lasers/marker_path_possible"
+        },
+        {
+            "type": "minecraft:single",
+            "resource": "buildcraftcore:lasers/marker_volume_connected"
+        },
+        {
+            "type": "minecraft:single",
+            "resource": "buildcraftcore:lasers/marker_volume_possible"
+        },
+        {
+            "type": "minecraft:single",
+            "resource": "buildcraftcore:lasers/marker_volume_signal"
+        },
+        {
+            "type": "minecraft:single",
+            "resource": "buildcraftcore:lasers/power_full"
+        },
+        {
+            "type": "minecraft:single",
+            "resource": "buildcraftcore:lasers/power_high"
+        },
+        {
+            "type": "minecraft:single",
+            "resource": "buildcraftcore:lasers/power_low"
+        },
+        {
+            "type": "minecraft:single",
+            "resource": "buildcraftcore:lasers/power_med"
+        },
+        {
+            "type": "minecraft:single",
+            "resource": "buildcraftcore:lasers/stripes_read"
+        },
+        {
+            "type": "minecraft:single",
+            "resource": "buildcraftcore:lasers/stripes_write"
+        },
+        {
+            "type": "minecraft:single",
+            "resource": "buildcraftcore:lasers/stripes_write_direction"
+        }
+    ]
+}

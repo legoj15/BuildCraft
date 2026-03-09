@@ -5,106 +5,100 @@
  */
 package buildcraft.lib.client.render.laser;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.phys.Vec3;
 
-import org.joml.Matrix4f;
+import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
 
 /**
- * Renders laser beams between two points using colored lines.
- * Uses RenderTypes.LINES with POSITION_COLOR_NORMAL_LINEWIDTH vertex format.
+ * Renders textured laser beams between two points using quads.
+ * Restores the 1.12.2 3D beam appearance with tiled texture patterns.
  */
 public class LaserRenderer_BC8 {
+    private static final Map<LaserType, CompiledLaserType> COMPILED_LASER_TYPES = new HashMap<>();
 
-    /** Default line width for laser beams. */
-    private static final float LINE_WIDTH = 2.0f;
+    public static void clearModels() {
+        COMPILED_LASER_TYPES.clear();
+    }
+
+    private static CompiledLaserType compileType(LaserType laserType) {
+        return COMPILED_LASER_TYPES.computeIfAbsent(laserType, CompiledLaserType::new);
+    }
 
     /**
-     * Renders a laser beam as colored lines between two world positions.
-     * Uses LINES render type which requires position, color, normal, and lineWidth per vertex.
+     * Renders a laser beam as textured quads to the given VertexConsumer.
+     * The consumer should be from a render type that supports POSITION_COLOR_TEX_LIGHTMAP_NORMAL
+     * (e.g. entitySolid or similar).
      */
     public static void renderLaser(PoseStack poseStack, VertexConsumer consumer,
             LaserData_BC8 data, Vec3 cameraPos) {
-        LaserData_BC8.LaserType type = data.laserType;
+        // Create an ILaserRenderer that writes directly to the VertexConsumer
+        ILaserRenderer vertexWriter = (x, y, z, u, v, lmap, nx, ny, nz, colour) -> {
+            // Offset by camera position for world-space rendering
+            float rx = (float) (x - cameraPos.x);
+            float ry = (float) (y - cameraPos.y);
+            float rz = (float) (z - cameraPos.z);
 
-        double x1 = data.start.x - cameraPos.x;
-        double y1 = data.start.y - cameraPos.y;
-        double z1 = data.start.z - cameraPos.z;
-        double x2 = data.end.x - cameraPos.x;
-        double y2 = data.end.y - cameraPos.y;
-        double z2 = data.end.z - cameraPos.z;
+            // colour is a diffuse multiplier (0..1)
+            int r = (int) (colour * 255);
+            int g = (int) (colour * 255);
+            int b = (int) (colour * 255);
+            int a = 255;
 
-        Matrix4f matrix = poseStack.last().pose();
+            consumer.addVertex(poseStack.last().pose(), rx, ry, rz)
+                    .setColor(r, g, b, a)
+                    .setUv((float) u, (float) v)
+                    .setOverlay(OverlayTexture.NO_OVERLAY)
+                    .setLight(lmap)
+                    .setNormal(poseStack.last(), nx, ny, nz);
+        };
 
-        // Direction vector for the line (used as normal)
-        float dx = (float) (x2 - x1);
-        float dy = (float) (y2 - y1);
-        float dz = (float) (z2 - z1);
-        float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (len < 0.001f) return;
-        float nx = dx / len;
-        float ny = dy / len;
-        float nz = dz / len;
-
-        int r = (int) (type.red * 255);
-        int g = (int) (type.green * 255);
-        int b = (int) (type.blue * 255);
-        int a = (int) (type.alpha * 255);
-
-        float lineWidth = Math.max(LINE_WIDTH, type.lineWidth);
-
-        // Main line
-        consumer.addVertex(matrix, (float) x1, (float) y1, (float) z1)
-                .setColor(r, g, b, a)
-                .setNormal(nx, ny, nz)
-                .setLineWidth(lineWidth);
-        consumer.addVertex(matrix, (float) x2, (float) y2, (float) z2)
-                .setColor(r, g, b, a)
-                .setNormal(nx, ny, nz)
-                .setLineWidth(lineWidth);
-
-        // Additional offset lines to create a thicker beam appearance
-        float halfWidth = type.lineWidth / 32.0f;
-        Vec3 dir = new Vec3(dx, dy, dz).normalize();
-        Vec3 up = Math.abs(dir.y) < 0.99 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
-        Vec3 right = dir.cross(up).normalize().scale(halfWidth);
-        Vec3 upVec = dir.cross(right).normalize().scale(halfWidth);
-
-        // Render 4 more offset lines to make the beam thicker
-        addOffsetLine(consumer, matrix, x1, y1, z1, x2, y2, z2, right.x, right.y, right.z, nx, ny, nz, r, g, b, a, lineWidth);
-        addOffsetLine(consumer, matrix, x1, y1, z1, x2, y2, z2, -right.x, -right.y, -right.z, nx, ny, nz, r, g, b, a, lineWidth);
-        addOffsetLine(consumer, matrix, x1, y1, z1, x2, y2, z2, upVec.x, upVec.y, upVec.z, nx, ny, nz, r, g, b, a, lineWidth);
-        addOffsetLine(consumer, matrix, x1, y1, z1, x2, y2, z2, -upVec.x, -upVec.y, -upVec.z, nx, ny, nz, r, g, b, a, lineWidth);
-    }
-
-    private static void addOffsetLine(VertexConsumer consumer, Matrix4f matrix,
-            double x1, double y1, double z1, double x2, double y2, double z2,
-            double ox, double oy, double oz,
-            float nx, float ny, float nz,
-            int r, int g, int b, int a, float lineWidth) {
-        consumer.addVertex(matrix, (float)(x1+ox), (float)(y1+oy), (float)(z1+oz))
-                .setColor(r, g, b, a)
-                .setNormal(nx, ny, nz)
-                .setLineWidth(lineWidth);
-        consumer.addVertex(matrix, (float)(x2+ox), (float)(y2+oy), (float)(z2+oz))
-                .setColor(r, g, b, a)
-                .setNormal(nx, ny, nz)
-                .setLineWidth(lineWidth);
+        // Build the geometry
+        LaserContext ctx = new LaserContext(vertexWriter, data, data.enableDiffuse, data.doubleFace);
+        CompiledLaserType type = compileType(data.laserType);
+        type.bakeFor(ctx);
     }
 
     /**
-     * Renders a single laser beam, creates a buffer source and flushes immediately.
-     * Convenience method for standalone rendering (outside a batched pass).
+     * Renders a single laser beam, creating a buffer source and flushing immediately.
+     * Uses entitySolid render type with the block atlas texture.
      */
     public static void renderLaserStatic(PoseStack poseStack, LaserData_BC8 data, Vec3 cameraPos) {
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer consumer = bufferSource.getBuffer(RenderTypes.LINES);
+        // Use entitySolid with the block atlas so our laser sprites show up
+        VertexConsumer consumer = bufferSource.getBuffer(
+                RenderTypes.entitySolid(TextureAtlas.LOCATION_BLOCKS));
         renderLaser(poseStack, consumer, data, cameraPos);
-        bufferSource.endBatch(RenderTypes.LINES);
+        bufferSource.endBatch();
+    }
+
+    /**
+     * Computes the combined lightmap value for a position in the world.
+     * Samples block light and sky light from surrounding blocks.
+     */
+    public static int computeLightmap(double x, double y, double z, int minBlockLight) {
+        Level level = Minecraft.getInstance().level;
+        if (level == null) return LightTexture.FULL_BRIGHT;
+
+        BlockPos pos = BlockPos.containing(x, y, z);
+        int blockLight = minBlockLight >= 15 ? 15 :
+                Math.max(minBlockLight, level.getBrightness(LightLayer.BLOCK, pos));
+        int skyLight = level.getBrightness(LightLayer.SKY, pos);
+        return LightTexture.pack(blockLight, skyLight);
     }
 }

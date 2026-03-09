@@ -9,5 +9,17 @@
     "item.blueprint.author": "Author:",
     "item.buildcraftbuilders.filler_planner": "Filler Planner",
     "block.buildcraftbuilders.filler": "Filler",
-    "block.buildcraftbuilders.builder": "Builder"
+    "block.buildcraftbuilders.builder": "Builder",
+    "block.buildcraftbuilders.architect": "Architect Table",
+    "tile.architect.tip": "Not usable in survival",
+    "tile.architect.rotate": "Rotate: On",
+    "tile.architect.norotate": "Rotate: Off",
+    "tile.architect.allowCreative": "Mode: Creative",
+    "tile.architect.noallowCreative": "Mode: Survival",
+    "tile.architect.tooltip.allowCreative.1": "Creative allows all blocks - Creative Mode only!",
+    "tile.architect.tooltip.allowCreative.2": "Survival ignores all unsupported blocks",
+    "tile.architect.excavate": "Excavate: On",
+    "tile.architect.noexcavate": "Excavate: Off",
+    "advancements.buildcraftbuilders.architect.title": "Architect",
+    "advancements.buildcraftbuilders.architect.description": "Scan an area with an architect table and record it in a blueprint/template"
 }

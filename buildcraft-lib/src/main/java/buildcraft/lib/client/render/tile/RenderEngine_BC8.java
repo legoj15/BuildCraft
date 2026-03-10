@@ -130,11 +130,12 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
                 trunkSprite, light, overlay);
 
         // 3. Chamber: [3,4,3] to [13,4+progressSize,13] (animated, sides only)
+        //    1.12.2 UV: [3, progress_size, 13, 0] — center 10px of texture, V inverted
         if (progressBlocks > 0.001f) {
             float cy0 = 0.25f;
             float cy1 = 0.25f + progressBlocks;
-            renderBox(buffer, pose, 3/16f, cy0, 3/16f, 13/16f, cy1, 13/16f,
-                    chamberSprite, chamberSprite, chamberSprite, light, overlay);
+            renderChamber(buffer, pose, 3/16f, cy0, 3/16f, 13/16f, cy1, 13/16f,
+                    chamberSprite, progressSize, light, overlay);
         }
 
         // 4. Piston head: [0,4+progressSize,0] to [16,8+progressSize,16]
@@ -219,6 +220,47 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
                 x1, y1, z1,  zw, 0,
                 x1, y0, z1,  zw, yh,
                 x1, y0, z0,  0, yh);
+    }
+
+    /**
+     * Render the chamber (animated piston shaft) with 1.12.2 UV mapping.
+     * 1.12.2 UV: [3, progress_size, 13, 0] — center 10px of texture, V inverted.
+     * Only renders the 4 side faces (no top/bottom caps).
+     */
+    private void renderChamber(VertexConsumer b, PoseStack.Pose pose,
+                               float x0, float y0, float z0, float x1, float y1, float z1,
+                               TextureAtlasSprite sprite, float progressSize,
+                               int light, int overlay) {
+        // 1.12.2: UV [3, progressSize, 13, 0] for all 4 sides
+        // U range: pixel 3 to 13 (center 10px of 16px texture)
+        // V range: progressSize to 0 (inverted — texture grows from top down)
+        float u0 = 3, u1 = 13;
+        float v0 = progressSize, v1 = 0;
+
+        // North (Z-)
+        face(b, pose, sprite, light, overlay, 0.8f, 0, 0, -1,
+                x0, y1, z0,  u0, v1,
+                x1, y1, z0,  u1, v1,
+                x1, y0, z0,  u1, v0,
+                x0, y0, z0,  u0, v0);
+        // South (Z+)
+        face(b, pose, sprite, light, overlay, 0.8f, 0, 0, 1,
+                x1, y1, z1,  u0, v1,
+                x0, y1, z1,  u1, v1,
+                x0, y0, z1,  u1, v0,
+                x1, y0, z1,  u0, v0);
+        // West (X-)
+        face(b, pose, sprite, light, overlay, 0.6f, -1, 0, 0,
+                x0, y1, z1,  u0, v1,
+                x0, y1, z0,  u1, v1,
+                x0, y0, z0,  u1, v0,
+                x0, y0, z1,  u0, v0);
+        // East (X+)
+        face(b, pose, sprite, light, overlay, 0.6f, 1, 0, 0,
+                x1, y1, z0,  u0, v1,
+                x1, y1, z1,  u1, v1,
+                x1, y0, z1,  u1, v0,
+                x1, y0, z0,  u0, v0);
     }
 
     /**

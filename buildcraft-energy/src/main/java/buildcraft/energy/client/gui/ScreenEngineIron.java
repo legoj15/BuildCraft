@@ -198,4 +198,31 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
                 null);
         }
     }
+
+    @Override
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        // Check if click is within any of the 3 tank areas
+        if (isTankClicked(mouseX, mouseY, TANK_FUEL_X, TANK_FUEL_Y)) {
+            menu.widgetFuel.sendClick();
+            return true;
+        }
+        if (isTankClicked(mouseX, mouseY, TANK_COOLANT_X, TANK_COOLANT_Y)) {
+            menu.widgetCoolant.sendClick();
+            return true;
+        }
+        if (isTankClicked(mouseX, mouseY, TANK_RESIDUE_X, TANK_RESIDUE_Y)) {
+            menu.widgetResidue.sendClick();
+            return true;
+        }
+        return super.mouseClicked(event, doubleClick);
+    }
+
+    private boolean isTankClicked(double mouseX, double mouseY, int tankX, int tankY) {
+        int absX = leftPos + tankX;
+        int absY = topPos + tankY;
+        return mouseX >= absX && mouseX < absX + TANK_WIDTH
+            && mouseY >= absY && mouseY < absY + TANK_HEIGHT;
+    }
 }

@@ -9,6 +9,11 @@ package buildcraft.lib.gui;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.collect.ImmutableList;
+
+import io.netty.buffer.Unpooled;
+
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -17,13 +22,23 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
+import buildcraft.api.core.BCLog;
 import buildcraft.lib.gui.slot.SlotPhantom;
+import buildcraft.lib.net.IPayloadWriter;
+import buildcraft.lib.net.MessageContainerPayload;
+import buildcraft.lib.net.PacketBufferBC;
 
 /**
  * Base container class for all BuildCraft GUIs.
- * Provides shift-click logic, phantom slot handling, and widget sync.
+ * Provides shift-click logic, phantom slot handling, and widget sync via
+ * {@link MessageContainerPayload}.
  */
 public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
+
+    public static final int NET_WIDGET = 0;
 
     public final Player player;
     private final List<Widget_Neptune<?>> widgets = new ArrayList<>();
@@ -53,6 +68,79 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
         widgets.add(widget);
         return widget;
     }
+
+    public ImmutableList<Widget_Neptune<?>> getWidgets() {
+        return ImmutableList.copyOf(widgets);
+    }
+
+    // --- Networking ---
+
+    /**
+     * Send a container message to the other side (client↔server).
+     * The writer serializes the payload into a {@link PacketBufferBC}.
+     */
+    public final void sendMessage(int id, IPayloadWriter writer) {
+        PacketBufferBC buffer = new PacketBufferBC(Unpooled.buffer());
+        writer.write(buffer);
+        byte[] bytes = new byte[buffer.readableBytes()];
+        buffer.readBytes(bytes);
+        buffer.release();
+
+        MessageContainerPayload payload = new MessageContainerPayload(containerId, id, bytes);
+        if (player.level().isClientSide()) {
+            net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(payload);
+        } else if (player instanceof ServerPlayer serverPlayer) {
+            PacketDistributor.sendToPlayer(serverPlayer, payload);
+        }
+    }
+
+    /**
+     * Package-private: called by {@link Widget_Neptune#sendWidgetData} to route
+     * widget data through the container's networking.
+     */
+    void sendWidgetData(Widget_Neptune<?> widget, IPayloadWriter writer) {
+        int widgetId = widgets.indexOf(widget);
+        if (widgetId == -1) {
+            BCLog.logger.warn("[lib.container] sendWidgetData: widget not found! ("
+                + (widget == null ? "null" : widget.getClass()) + ") in " + getClass());
+            return;
+        }
+        sendMessage(NET_WIDGET, (buf) -> {
+            buf.writeShort(widgetId);
+            writer.write(buf);
+        });
+    }
+
+    /**
+     * Handle an incoming container message. Called by {@link MessageContainerPayload#handle}.
+     *
+     * @param id       the message ID
+     * @param buffer   the payload buffer
+     * @param isClient true if we're on the client side
+     * @param ctx      the payload context
+     */
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+        if (id == NET_WIDGET) {
+            int widgetId = buffer.readUnsignedShort();
+            if (widgetId < 0 || widgetId >= widgets.size()) {
+                BCLog.logger.warn("[lib.container] Received invalid widget ID " + widgetId
+                    + " (have " + widgets.size() + " widgets)");
+                return;
+            }
+            Widget_Neptune<?> widget = widgets.get(widgetId);
+            try {
+                if (isClient) {
+                    widget.handleWidgetDataClient(ctx, buffer);
+                } else {
+                    widget.handleWidgetDataServer(ctx, buffer);
+                }
+            } catch (Exception e) {
+                BCLog.logger.warn("[lib.container] Error handling widget data for widget " + widgetId, e);
+            }
+        }
+    }
+
+    // --- Slot handling ---
 
     @Override
     public void clicked(int slotId, int dragType, ClickType clickType, Player player) {

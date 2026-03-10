@@ -7,9 +7,12 @@
 package buildcraft.lib.gui;
 
 import buildcraft.lib.net.IPayloadWriter;
+import buildcraft.lib.net.PacketBufferBC;
+
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /** Defines some sort of separate element that exists on both the server and client. Doesn't draw directly.
- *  Used for syncing custom data (e.g. tank contents, progress) between server containers and client screens. */
+ *  Used for syncing custom data (e.g. tank clicks, progress) between server containers and client screens. */
 public abstract class Widget_Neptune<C extends ContainerBC_Neptune> {
     public final C container;
 
@@ -21,8 +24,18 @@ public abstract class Widget_Neptune<C extends ContainerBC_Neptune> {
         return container.player.level().isClientSide();
     }
 
-    /** Send widget data to the other side. Stub until networking is ported. */
+    /** Send widget data to the other side via the container's networking pipeline. */
     protected final void sendWidgetData(IPayloadWriter writer) {
-        // No-op until networking ported
+        container.sendWidgetData(this, writer);
+    }
+
+    /** Handle widget data received on the SERVER. Override in subclasses. */
+    public void handleWidgetDataServer(IPayloadContext ctx, PacketBufferBC buffer) {
+        // Default: no-op
+    }
+
+    /** Handle widget data received on the CLIENT. Override in subclasses. */
+    public void handleWidgetDataClient(IPayloadContext ctx, PacketBufferBC buffer) {
+        // Default: no-op
     }
 }

@@ -19,6 +19,7 @@ import buildcraft.energy.BCEnergyMenuTypes;
 import buildcraft.energy.tile.TileEngineIron_BC8;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.gui.ContainerBC_Neptune;
+import buildcraft.lib.gui.widget.WidgetFluidTank;
 
 /**
  * Container (menu) for the combustion engine GUI.
@@ -27,6 +28,11 @@ import buildcraft.lib.gui.ContainerBC_Neptune;
 public class ContainerEngineIron extends ContainerBC_Neptune {
     public final TileEngineIron_BC8 engine;
     private final ContainerData data;
+
+    // Widget indices (in registration order) for screen to reference
+    public final WidgetFluidTank widgetFuel;
+    public final WidgetFluidTank widgetCoolant;
+    public final WidgetFluidTank widgetResidue;
 
     // Data slot indices
     private static final int DATA_POWER_HI = 0;
@@ -94,6 +100,11 @@ public class ContainerEngineIron extends ContainerBC_Neptune {
 
         // Player inventory — positioned at standard location
         addFullPlayerInventory(8, 95);
+
+        // Register fluid tank widgets for in-GUI bucket interaction
+        widgetFuel = addWidget(new WidgetFluidTank(this, engine.tankFuel));
+        widgetCoolant = addWidget(new WidgetFluidTank(this, engine.tankCoolant));
+        widgetResidue = addWidget(new WidgetFluidTank(this, engine.tankResidue));
     }
 
     /** Client constructor (from network buffer) */

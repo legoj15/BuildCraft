@@ -22,6 +22,7 @@ import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
 
 import buildcraft.lib.marker.MarkerCache;
+import buildcraft.lib.net.MessageContainerPayload;
 import buildcraft.lib.net.MessageMarker;
 import buildcraft.core.marker.PathCache;
 import buildcraft.core.marker.VolumeCache;
@@ -124,6 +125,12 @@ public class BCCore {
                 MessageMarker.TYPE,
                 MessageMarker.STREAM_CODEC,
                 MessageMarker::handle
+        );
+        registrar.playBidirectional(
+                MessageContainerPayload.TYPE,
+                MessageContainerPayload.STREAM_CODEC,
+                MessageContainerPayload::handle,
+                MessageContainerPayload::handle
         );
     }
 

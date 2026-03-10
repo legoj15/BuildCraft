@@ -56,7 +56,12 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
             return isValidCoolant(stack);
         }
     };
-    public final FluidTank tankResidue = new FluidTank(MAX_FLUID);
+    public final FluidTank tankResidue = new FluidTank(MAX_FLUID) {
+        @Override
+        public boolean isFluidValid(FluidStack stack) {
+            return isResidue(stack);
+        }
+    };
 
     private int penaltyCooling = 0;
     private boolean lastPowered = false;
@@ -267,6 +272,17 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
     private boolean isValidCoolant(FluidStack fluid) {
         return BuildcraftFuelRegistry.coolant != null
             && BuildcraftFuelRegistry.coolant.getCoolant(fluid) != null;
+    }
+
+    private boolean isResidue(FluidStack fluid) {
+        // On the client, trust the server
+        if (level != null && level.isClientSide()) {
+            return true;
+        }
+        if (currentFuel instanceof IDirtyFuel dirtyFuel) {
+            return FluidStack.isSameFluid(fluid, dirtyFuel.getResidue());
+        }
+        return false;
     }
 
     // --- Combined IFluidHandler for capability exposure ---

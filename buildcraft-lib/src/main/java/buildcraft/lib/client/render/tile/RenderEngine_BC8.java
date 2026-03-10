@@ -242,30 +242,30 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
                 x1, y0, z1,  0, 8,
                 x0, y0, z1,  8, 8,
                 x0, y0, z0,  8, 0);
-        // North (Z-) - side UV: U reversed to match Minecraft JSON convention
+        // North (Z-) - side UV 8-16, 0-12
         face(b, pose, sprite, light, overlay, 0.8f, 0, 0, -1,
-                x0, y1, z0,  16, 0,
-                x1, y1, z0,  8, 0,
-                x1, y0, z0,  8, 12,
-                x0, y0, z0,  16, 12);
-        // South (Z+) - side UV: U reversed
-        face(b, pose, sprite, light, overlay, 0.8f, 0, 0, 1,
-                x1, y1, z1,  16, 0,
-                x0, y1, z1,  8, 0,
-                x0, y0, z1,  8, 12,
-                x1, y0, z1,  16, 12);
-        // West (X-) - side UV: U reversed
-        face(b, pose, sprite, light, overlay, 0.6f, -1, 0, 0,
-                x0, y1, z1,  16, 0,
                 x0, y1, z0,  8, 0,
-                x0, y0, z0,  8, 12,
-                x0, y0, z1,  16, 12);
-        // East (X+) - side UV: U reversed
-        face(b, pose, sprite, light, overlay, 0.6f, 1, 0, 0,
                 x1, y1, z0,  16, 0,
+                x1, y0, z0,  16, 12,
+                x0, y0, z0,  8, 12);
+        // South (Z+) - side UV 8-16, 0-12
+        face(b, pose, sprite, light, overlay, 0.8f, 0, 0, 1,
                 x1, y1, z1,  8, 0,
-                x1, y0, z1,  8, 12,
-                x1, y0, z0,  16, 12);
+                x0, y1, z1,  16, 0,
+                x0, y0, z1,  16, 12,
+                x1, y0, z1,  8, 12);
+        // West (X-) - side UV 8-16, 0-12
+        face(b, pose, sprite, light, overlay, 0.6f, -1, 0, 0,
+                x0, y1, z1,  8, 0,
+                x0, y1, z0,  16, 0,
+                x0, y0, z0,  16, 12,
+                x0, y0, z1,  8, 12);
+        // East (X+) - side UV 8-16, 0-12
+        face(b, pose, sprite, light, overlay, 0.6f, 1, 0, 0,
+                x1, y1, z0,  8, 0,
+                x1, y1, z1,  16, 0,
+                x1, y0, z1,  16, 12,
+                x1, y0, z0,  8, 12);
     }
 
     /** Emit a single quad with 4 vertices. UV coords are in pixels (0-16). */

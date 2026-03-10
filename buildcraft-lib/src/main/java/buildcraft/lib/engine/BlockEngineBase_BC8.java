@@ -72,6 +72,12 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock {
         return true;
     }
 
+    @Override
+    protected net.minecraft.world.level.block.RenderShape getRenderShape(BlockState state) {
+        // BER handles all in-world rendering; prevent block model from rendering (eliminates z-fighting)
+        return net.minecraft.world.level.block.RenderShape.INVISIBLE;
+    }
+
     // --- Block Entity ---
 
     @Nullable

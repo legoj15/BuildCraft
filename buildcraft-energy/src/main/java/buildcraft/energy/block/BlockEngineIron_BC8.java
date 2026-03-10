@@ -48,9 +48,9 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        // Skip wrenches and pipes — let base class handle them
+        // Wrenches — delegate to base class for rotation
         if (!stack.isEmpty() && stack.getItem() instanceof IToolWrench) {
-            return InteractionResult.PASS;
+            return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
         }
 
         // Try bucket interaction

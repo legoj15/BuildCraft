@@ -50,19 +50,19 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
     @Override
     protected void initGuiElements() {
         if (menu.engine != null) {
-            // Power ledger on the right side
+            // Ownership ledger on the right side (on top, matching 1.12.2 standardLedgerInit order)
+            mainGui.shownElements.add(new LedgerOwnership(mainGui,
+                () -> menu.engine != null ? menu.engine.getOwner() : null,
+                true
+            ));
+
+            // Power ledger on the right side (below ownership)
             mainGui.shownElements.add(new LedgerEngine(mainGui,
                 menu::getSyncedCurrentOutput,
                 menu::getSyncedPower,
                 menu::getSyncedHeat,
                 menu::getSyncedPowerStage,
                 menu::isSyncedBurning,
-                true
-            ));
-
-            // Ownership ledger on the right side (below power)
-            mainGui.shownElements.add(new LedgerOwnership(mainGui,
-                () -> menu.engine != null ? menu.engine.getOwner() : null,
                 true
             ));
 

@@ -78,9 +78,10 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
         int light = 15728880; // full brightness fallback
         int overlay = OverlayTexture.NO_OVERLAY;
 
-        // Get a vertex consumer - SubmitNodeCollector wraps a MultiBufferSource
-        net.minecraft.client.renderer.MultiBufferSource mbs = (net.minecraft.client.renderer.MultiBufferSource) collector;
-        VertexConsumer buffer = mbs.getBuffer(
+        // Get a vertex consumer from the render buffer source (same pattern as LaserRenderer_BC8)
+        net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource =
+                Minecraft.getInstance().renderBuffers().bufferSource();
+        VertexConsumer buffer = bufferSource.getBuffer(
                 net.minecraft.client.renderer.rendertype.RenderTypes.entitySolid(TextureAtlas.LOCATION_BLOCKS));
         PoseStack.Pose pose = poseStack.last();
 
@@ -103,6 +104,7 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
         renderBox(buffer, pose, 0, 4 + progressPixels, 0, 16, 8 + progressPixels, 16,
                 backSprite, sideSprite, light, overlay);
 
+        bufferSource.endBatch();
         poseStack.popPose();
     }
 

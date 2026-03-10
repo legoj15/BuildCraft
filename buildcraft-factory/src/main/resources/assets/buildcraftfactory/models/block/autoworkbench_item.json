@@ -1,0 +1,12 @@
+{
+    "parent": "block/cube",
+    "textures": {
+        "particle": "buildcraftfactory:block/auto_workbench_item/side",
+        "up": "buildcraftfactory:block/auto_workbench_item/top",
+        "down": "buildcraftfactory:block/auto_workbench_item/top",
+        "north": "buildcraftfactory:block/auto_workbench_item/side",
+        "east": "buildcraftfactory:block/auto_workbench_item/side",
+        "south": "buildcraftfactory:block/auto_workbench_item/side",
+        "west": "buildcraftfactory:block/auto_workbench_item/side"
+    }
+}

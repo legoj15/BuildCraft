@@ -10,6 +10,11 @@ import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -49,6 +54,16 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
     protected int progressPart = 0;
     protected boolean isPumping = false;
     protected boolean isRedstonePowered = false;
+
+    // Client-side animation state
+    private float lastProgress = 0;
+    private float clientProgress = 0;
+    private boolean clientIsPumping = false;
+
+    // Track previous render-relevant state for detecting changes
+    Direction prevOrientation = Direction.UP;
+    boolean prevIsPumping = false;
+    EnumPowerStage prevPowerStage = EnumPowerStage.BLUE;
 
     protected boolean checkOrientation = true;
     protected boolean checkRedstonePower = true;
@@ -328,6 +343,24 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
         }
 
         engine.setChanged();
+
+        // Sync render-relevant state changes to client
+        boolean needsSync = false;
+        if (engine.orientation != engine.prevOrientation) {
+            engine.prevOrientation = engine.orientation;
+            needsSync = true;
+        }
+        if (engine.isPumping != engine.prevIsPumping) {
+            engine.prevIsPumping = engine.isPumping;
+            needsSync = true;
+        }
+        if (engine.getPowerStage() != engine.prevPowerStage) {
+            engine.prevPowerStage = engine.getPowerStage();
+            needsSync = true;
+        }
+        if (needsSync) {
+            level.sendBlockUpdated(pos, state, state, 3);
+        }
     }
 
     // --- Redstone ---
@@ -371,6 +404,52 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
     public void rotateOrientation() {
         int next = (orientation.ordinal() + 1) % 6;
         setOrientation(Direction.values()[next]);
+    }
+
+    // --- Client tick ---
+
+    public void clientTick() {
+        lastProgress = clientProgress;
+        clientIsPumping = isPumping;
+        if (clientIsPumping) {
+            clientProgress += (float) getPistonSpeed();
+            if (clientProgress >= 1.0f) {
+                clientProgress = 0;
+            }
+        } else {
+            // When not pumping, smoothly retract to 0
+            if (clientProgress > 0) {
+                clientProgress -= 0.02f;
+                if (clientProgress < 0) clientProgress = 0;
+            }
+        }
+    }
+
+    /**
+     * Get the interpolated piston progress for rendering.
+     * @param partialTicks fractional tick for smooth animation
+     * @return progress value 0.0 to 1.0
+     */
+    public float getProgressClient(float partialTicks) {
+        // Handle wrapping (progress reset from ~1.0 to 0)
+        if (lastProgress > 0.8f && clientProgress < 0.2f) {
+            // Wrapping case: interpolate through 1.0
+            float interp = lastProgress + (1.0f + clientProgress - lastProgress) * partialTicks;
+            return interp >= 1.0f ? interp - 1.0f : interp;
+        }
+        return lastProgress + (clientProgress - lastProgress) * partialTicks;
+    }
+
+    // --- Network sync ---
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        return this.saveCustomOnly(registries);
+    }
+
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
     }
 
     // --- NBT ---

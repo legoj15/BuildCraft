@@ -68,6 +68,25 @@ public class BCCore {
             buildcraft.lib.client.render.MarkerRenderer.setVolumeBoxRenderCallback(
                     buildcraft.core.client.VolumeBoxRenderer::renderAll
             );
+            // Register engine BERs on the mod bus
+            modEventBus.addListener(
+                    net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterRenderers.class,
+                    event -> {
+                        var trunkMap = buildcraft.lib.client.render.tile.RenderEngine_BC8.defaultTrunkTextures();
+                        event.registerBlockEntityRenderer(BCCoreBlockEntities.ENGINE_REDSTONE.get(),
+                                ctx -> new buildcraft.lib.client.render.tile.RenderEngine_BC8(
+                                        net.minecraft.resources.Identifier.parse("buildcraftcore:block/engine/wood_back"),
+                                        net.minecraft.resources.Identifier.parse("buildcraftcore:block/engine/wood_side"),
+                                        net.minecraft.resources.Identifier.parse("buildcraftcore:block/engine/chamber_base"),
+                                        trunkMap));
+                        event.registerBlockEntityRenderer(BCCoreBlockEntities.ENGINE_CREATIVE.get(),
+                                ctx -> new buildcraft.lib.client.render.tile.RenderEngine_BC8(
+                                        net.minecraft.resources.Identifier.parse("buildcraftcore:block/engine/creative_back"),
+                                        net.minecraft.resources.Identifier.parse("buildcraftcore:block/engine/creative_side"),
+                                        net.minecraft.resources.Identifier.parse("buildcraftcore:block/engine/chamber_base"),
+                                        trunkMap));
+                    }
+            );
         }
     }
 

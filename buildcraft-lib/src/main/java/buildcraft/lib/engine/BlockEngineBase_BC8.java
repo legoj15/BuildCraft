@@ -71,8 +71,13 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock {
                     TileEngineBase_BC8.serverTick(lvl, pos, st, engine);
                 }
             };
+        } else {
+            return (lvl, pos, st, be) -> {
+                if (be instanceof TileEngineBase_BC8 engine) {
+                    engine.clientTick();
+                }
+            };
         }
-        return null;
     }
 
     // --- Interaction ---

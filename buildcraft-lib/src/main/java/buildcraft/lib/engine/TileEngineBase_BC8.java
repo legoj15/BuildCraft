@@ -418,9 +418,40 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
         setChanged();
     }
 
+    /**
+     * Freely rotate to the next direction (cycles all 6).
+     * Used internally for auto-orientation.
+     */
     public void rotateOrientation() {
         int next = (orientation.ordinal() + 1) % 6;
         setOrientation(Direction.values()[next]);
+    }
+
+    /**
+     * Attempt to rotate to the next valid receiver direction.
+     * Matches 1.12.2 TileEngineBase_BC8.attemptRotation():
+     * iterates all 6 directions starting from current, only rotates
+     * if a valid MJ receiver exists in the target direction.
+     * @return true if rotation succeeded
+     */
+    public boolean attemptRotation() {
+        Direction current = orientation;
+        Direction[] dirs = Direction.values();
+        for (int i = 0; i < 6; i++) {
+            current = dirs[(current.ordinal() + 1) % 6];
+            if (isFacingReceiver(current)) {
+                if (current != orientation) {
+                    setOrientation(current);
+                    return true;
+                }
+                return false; // same direction, no change
+            }
+        }
+        return false; // no valid receiver found
+    }
+
+    private boolean isFacingReceiver(Direction dir) {
+        return getReceiverToPower(dir) != null;
     }
 
     // --- Client tick ---

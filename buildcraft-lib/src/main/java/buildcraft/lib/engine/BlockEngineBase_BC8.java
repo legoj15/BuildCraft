@@ -103,20 +103,35 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock {
         }
     }
 
-    // --- Interaction ---
-
+    /**
+     * Handle wrench interactions on the base engine.
+     * 
+     * 1.12.2 parity:
+     * - Crouch + wrench: attemptRotation() — rotate to next valid MJ receiver
+     * - Normal wrench: PASS — let subclasses handle (creative=output, stone/iron/redstone=subclass behavior)
+     */
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
         if (stack.getItem() instanceof IToolWrench) {
-            if (!level.isClientSide()) {
-                BlockEntity be = level.getBlockEntity(pos);
-                if (be instanceof TileEngineBase_BC8 engine) {
-                    engine.rotateOrientation();
-                    level.setBlock(pos, state.setValue(BuildCraftProperties.BLOCK_FACING_6, engine.getOrientation()), 3);
+            if (player.isShiftKeyDown()) {
+                // Crouch + wrench = rotate to next valid receiver (all engine types)
+                if (!level.isClientSide()) {
+                    BlockEntity be = level.getBlockEntity(pos);
+                    if (be instanceof TileEngineBase_BC8 engine) {
+                        if (engine.attemptRotation()) {
+                            level.setBlock(pos, state.setValue(
+                                    BuildCraftProperties.BLOCK_FACING_6, engine.getOrientation()), 3);
+                        }
+                    }
                 }
+                return InteractionResult.SUCCESS;
             }
-            return InteractionResult.SUCCESS;
+            // Non-crouching wrench: PASS to let subclasses handle
+            // (redstone engine will fall through to attemptRotation below,
+            //  creative engine overrides to cycle output,
+            //  stone/iron engines let it pass to open GUI)
+            return InteractionResult.PASS;
         }
         return InteractionResult.PASS;
     }

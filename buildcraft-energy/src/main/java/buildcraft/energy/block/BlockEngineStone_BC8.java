@@ -10,13 +10,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
-import buildcraft.api.tools.IToolWrench;
 import buildcraft.energy.tile.TileEngineStone_BC8;
 import buildcraft.lib.engine.BlockEngineBase_BC8;
 
@@ -31,16 +29,15 @@ public class BlockEngineStone_BC8 extends BlockEngineBase_BC8 {
         return new TileEngineStone_BC8(pos, state);
     }
 
+    /**
+     * Empty hand right-click opens GUI.
+     * Wrench interaction is handled by the base class:
+     * - Crouch+wrench = rotate to next valid receiver
+     * - Normal wrench = PASS (falls through, Minecraft tries useWithoutItem next)
+     */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
             Player player, BlockHitResult hitResult) {
-        // Check wrench first (handled by base class)
-        ItemStack heldItem = player.getMainHandItem();
-        if (!heldItem.isEmpty() && heldItem.getItem() instanceof IToolWrench) {
-            return super.useWithoutItem(state, level, pos, player, hitResult);
-        }
-
-        // Open GUI
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }

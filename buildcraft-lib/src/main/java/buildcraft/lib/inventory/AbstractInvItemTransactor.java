@@ -161,6 +161,13 @@ public abstract class AbstractInvItemTransactor implements IItemTransactor {
         return total;
     }
 
+    /** @return True if the entire stack can be inserted into this inventory without any leftover. */
+    public boolean canFullyAccept(@Nonnull ItemStack stack) {
+        if (stack.isEmpty()) return true;
+        ItemStack leftover = insert(stack.copy(), true, true);
+        return leftover.isEmpty();
+    }
+
     @Override
     public String toString() {
         ItemStack[] stacks = new ItemStack[getSlots()];

@@ -93,6 +93,14 @@ public class StackUtil {
         return mergeCount;
     }
 
+    /** Checks if two stacks match by item identity and components (1.21 equivalent of the old
+     * damage+NBT matching). In 1.21 there is no metadata or OreDictionary, so this is equivalent
+     * to {@link #canMerge(ItemStack, ItemStack)} but explicitly named for filter/recipe usage. */
+    public static boolean isMatchingItem(@Nonnull ItemStack base, @Nonnull ItemStack comparison) {
+        if (base.isEmpty() || comparison.isEmpty()) return false;
+        return ItemStack.isSameItemSameComponents(base, comparison);
+    }
+
     /** @return An empty, nonnull list that cannot be modified */
     public static NonNullList<ItemStack> listOf() {
         return NonNullList.withSize(0, EMPTY);

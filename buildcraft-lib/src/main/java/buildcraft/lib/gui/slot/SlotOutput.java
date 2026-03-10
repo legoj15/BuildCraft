@@ -6,8 +6,6 @@
 
 package buildcraft.lib.gui.slot;
 
-import net.minecraft.resources.Identifier;
-
 import javax.annotation.Nonnull;
 
 import net.minecraft.world.item.ItemStack;
@@ -21,7 +19,7 @@ public class SlotOutput extends SlotBase {
     }
 
     @Override
-    public boolean isItemValid(@Nonnull ItemStack itemstack) {
+    public boolean mayPlace(@Nonnull ItemStack itemstack) {
         return false;
     }
 }

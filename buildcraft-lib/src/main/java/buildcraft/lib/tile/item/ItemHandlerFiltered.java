@@ -1,7 +1,5 @@
 package buildcraft.lib.tile.item;
 
-import net.minecraft.resources.Identifier;
-
 import net.minecraft.world.item.ItemStack;
 
 import net.neoforged.neoforge.items.IItemHandler;

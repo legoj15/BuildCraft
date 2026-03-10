@@ -6,8 +6,6 @@
 
 package buildcraft.lib.inventory.filter;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.Arrays;
 
 import javax.annotation.Nonnull;

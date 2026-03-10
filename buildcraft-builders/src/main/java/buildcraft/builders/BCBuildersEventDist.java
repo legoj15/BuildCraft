@@ -167,48 +167,47 @@ public enum BCBuildersEventDist {
                 tile.clientDrillPos.subtract(tile.prevClientDrillPos).scale(partialTicks)
             );
 
-            // Small offset to prevent Z-fighting with physical frame block geometry
-            double frameY = max.getY() + 0.5 + 0.005;
+            double frameY = max.getY() + 0.5;
 
             // Z-axis frame beams
             LaserRenderer_BC8.renderLaserStatic(poseStack,
                 new LaserData_BC8(FRAME,
                     new Vec3(interpolatedPos.x + 0.5, frameY, interpolatedPos.z),
                     new Vec3(interpolatedPos.x + 0.5, frameY, max.getZ() + 12 / 16D),
-                    1 / 16D, true, true, 0),
+                    1 / 16D),
                 cameraPos);
             LaserRenderer_BC8.renderLaserStatic(poseStack,
                 new LaserData_BC8(FRAME,
                     new Vec3(interpolatedPos.x + 0.5, frameY, interpolatedPos.z),
                     new Vec3(interpolatedPos.x + 0.5, frameY, min.getZ() + 4 / 16D),
-                    1 / 16D, true, true, 0),
+                    1 / 16D),
                 cameraPos);
             // X-axis frame beams
             LaserRenderer_BC8.renderLaserStatic(poseStack,
                 new LaserData_BC8(FRAME,
                     new Vec3(interpolatedPos.x, frameY, interpolatedPos.z + 0.5),
                     new Vec3(max.getX() + 12 / 16D, frameY, interpolatedPos.z + 0.5),
-                    1 / 16D, true, true, 0),
+                    1 / 16D),
                 cameraPos);
             LaserRenderer_BC8.renderLaserStatic(poseStack,
                 new LaserData_BC8(FRAME,
                     new Vec3(interpolatedPos.x, frameY, interpolatedPos.z + 0.5),
                     new Vec3(min.getX() + 4 / 16D, frameY, interpolatedPos.z + 0.5),
-                    1 / 16D, true, true, 0),
+                    1 / 16D),
                 cameraPos);
             // Vertical column beam (drill column to top)
             LaserRenderer_BC8.renderLaserStatic(poseStack,
                 new LaserData_BC8(FRAME_BOTTOM,
                     new Vec3(interpolatedPos.x + 0.5, interpolatedPos.y + 1 + 4 / 16D, interpolatedPos.z + 0.5),
                     new Vec3(interpolatedPos.x + 0.5, max.getY() + 0.5, interpolatedPos.z + 0.5),
-                    1 / 16D, true, true, 0),
+                    1 / 16D),
                 cameraPos);
             // Drill head beam
             LaserRenderer_BC8.renderLaserStatic(poseStack,
                 new LaserData_BC8(DRILL,
                     new Vec3(interpolatedPos.x + 0.5, interpolatedPos.y + 1 + yOffset, interpolatedPos.z + 0.5),
                     new Vec3(interpolatedPos.x + 0.5, interpolatedPos.y + yOffset, interpolatedPos.z + 0.5),
-                    1 / 16D, true, true, 0),
+                    1 / 16D),
                 cameraPos);
         } else {
             // No drill yet — show the whole frame box as laser outline (caution stripes)

@@ -7,6 +7,7 @@ package buildcraft.core.block;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -30,21 +31,22 @@ public class BlockEngineCreative extends BlockEngineBase_BC8 {
         return new TileEngineCreative(pos, state);
     }
 
+    /**
+     * Override wrench behavior: creative engine cycles output power instead of rotating.
+     * This matches 1.12.2's TileEngineCreative.onActivated() behavior.
+     */
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
-            Player player, BlockHitResult hitResult) {
-        if (level.isClientSide()) {
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+            Player player, InteractionHand hand, BlockHitResult hitResult) {
+        if (stack.getItem() instanceof IToolWrench) {
+            if (!level.isClientSide()) {
+                BlockEntity be = level.getBlockEntity(pos);
+                if (be instanceof TileEngineCreative creative) {
+                    creative.onWrenchInteract(player);
+                }
+            }
             return InteractionResult.SUCCESS;
         }
-        // Wrench on creative engine cycles the output level
-        ItemStack heldItem = player.getMainHandItem();
-        if (!heldItem.isEmpty() && heldItem.getItem() instanceof IToolWrench) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TileEngineCreative creative) {
-                creative.onWrenchInteract(player);
-                return InteractionResult.SUCCESS;
-            }
-        }
-        return super.useWithoutItem(state, level, pos, player, hitResult);
+        return InteractionResult.PASS;
     }
 }

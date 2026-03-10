@@ -115,9 +115,16 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
         return 0;
     }
 
-    /** @return The piston animation speed, in progress-per-tick */
+    /** @return The piston animation speed, in progress-per-tick.
+     *  From 1.12.2: stage-based speeds. */
     public double getPistonSpeed() {
-        return Math.max(0.16f * getHeatLevel(), 0.01f);
+        switch (getPowerStage()) {
+            case BLUE:   return 0.02;
+            case GREEN:  return 0.04;
+            case YELLOW: return 0.08;
+            case RED:    return 0.12;
+            default:     return 0;
+        }
     }
 
     /** Update heat level. In 1.12, heat is directly proportional to stored power. */

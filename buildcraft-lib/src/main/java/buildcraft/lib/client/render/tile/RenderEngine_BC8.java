@@ -113,10 +113,9 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
         renderBox(buffer, pose, 0, 0, 0, 1, 0.25f, 1,
                 backSprite, backSprite, sideSprite, light, overlay);
 
-        // 2. Trunk: 8px wide center pole, full height above base
-        //    Top/bottom = trunk texture top region, sides = trunk texture side region
-        renderTrunk(buffer, pose, 0.25f, 0.25f, 0.25f, 0.75f, 1f, 0.75f,
-                trunkSprite, light, overlay);
+        // 2. Trunk: 8px wide center pole, full height above base (uniform texture)
+        renderBox(buffer, pose, 0.25f, 0.25f, 0.25f, 0.75f, 1f, 0.75f,
+                trunkSprite, trunkSprite, trunkSprite, light, overlay);
 
         // 3. Chamber: 10px wide, animated height above base (translucent piston chamber)
         float chamberTop = 0.25f + pProgress;
@@ -205,55 +204,6 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
                 x1, y1, z1,  zw, 0,
                 x1, y0, z1,  zw, yh,
                 x1, y0, z0,  0, yh);
-    }
-
-    /**
-     * Render the trunk with separate UV regions for top/bottom vs sides.
-     * Trunk textures use: top-left quadrant (0-8, 0-8) for caps, right half (8-16, 0-12) for sides.
-     */
-    private void renderTrunk(VertexConsumer b, PoseStack.Pose pose,
-                             float x0, float y0, float z0, float x1, float y1, float z1,
-                             TextureAtlasSprite sprite, int light, int overlay) {
-        // Top/bottom caps use UV 0..8, 0..8 (the 8x8 top-left region)
-        // Top (Y+)
-        face(b, pose, sprite, light, overlay, 1.0f, 0, 1, 0,
-                x0, y1, z0,  0, 0,
-                x0, y1, z1,  0, 8,
-                x1, y1, z1,  8, 8,
-                x1, y1, z0,  8, 0);
-        // Bottom (Y-)
-        face(b, pose, sprite, light, overlay, 0.5f, 0, -1, 0,
-                x1, y0, z0,  0, 0,
-                x1, y0, z1,  0, 8,
-                x0, y0, z1,  8, 8,
-                x0, y0, z0,  8, 0);
-
-        // Side faces use UV 0..8, 0..12 (8px wide, 12px tall side column)
-        float sideW = 8, sideH = 12;
-        // North (Z-)
-        face(b, pose, sprite, light, overlay, 0.8f, 0, 0, -1,
-                x0, y1, z0,  0, 0,
-                x1, y1, z0,  sideW, 0,
-                x1, y0, z0,  sideW, sideH,
-                x0, y0, z0,  0, sideH);
-        // South (Z+)
-        face(b, pose, sprite, light, overlay, 0.8f, 0, 0, 1,
-                x1, y1, z1,  0, 0,
-                x0, y1, z1,  sideW, 0,
-                x0, y0, z1,  sideW, sideH,
-                x1, y0, z1,  0, sideH);
-        // West (X-)
-        face(b, pose, sprite, light, overlay, 0.6f, -1, 0, 0,
-                x0, y1, z1,  0, 0,
-                x0, y1, z0,  sideW, 0,
-                x0, y0, z0,  sideW, sideH,
-                x0, y0, z1,  0, sideH);
-        // East (X+)
-        face(b, pose, sprite, light, overlay, 0.6f, 1, 0, 0,
-                x1, y1, z0,  0, 0,
-                x1, y1, z1,  sideW, 0,
-                x1, y0, z1,  sideW, sideH,
-                x1, y0, z0,  0, sideH);
     }
 
     /** Emit a single quad with 4 vertices. UV coords are in pixels (0-16). */

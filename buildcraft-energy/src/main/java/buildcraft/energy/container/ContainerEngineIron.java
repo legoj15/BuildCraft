@@ -5,9 +5,12 @@
  */
 package buildcraft.energy.container;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.SimpleContainerData;
 
@@ -36,7 +39,10 @@ public class ContainerEngineIron extends ContainerBC_Neptune {
     private static final int DATA_FUEL_AMOUNT = 7;
     private static final int DATA_COOLANT_AMOUNT = 8;
     private static final int DATA_RESIDUE_AMOUNT = 9;
-    private static final int DATA_COUNT = 10;
+    private static final int DATA_FUEL_FLUID_ID = 10;
+    private static final int DATA_COOLANT_FLUID_ID = 11;
+    private static final int DATA_RESIDUE_FLUID_ID = 12;
+    private static final int DATA_COUNT = 13;
 
     /** Server constructor */
     public ContainerEngineIron(int containerId, Inventory playerInv, TileEngineIron_BC8 engine) {
@@ -60,6 +66,9 @@ public class ContainerEngineIron extends ContainerBC_Neptune {
                         case DATA_FUEL_AMOUNT -> engine.tankFuel.getFluidAmount();
                         case DATA_COOLANT_AMOUNT -> engine.tankCoolant.getFluidAmount();
                         case DATA_RESIDUE_AMOUNT -> engine.tankResidue.getFluidAmount();
+                        case DATA_FUEL_FLUID_ID -> getFluidRegistryId(engine.tankFuel.getFluid());
+                        case DATA_COOLANT_FLUID_ID -> getFluidRegistryId(engine.tankCoolant.getFluid());
+                        case DATA_RESIDUE_FLUID_ID -> getFluidRegistryId(engine.tankResidue.getFluid());
                         default -> 0;
                     };
                 }
@@ -136,6 +145,29 @@ public class ContainerEngineIron extends ContainerBC_Neptune {
 
     public int getSyncedResidueAmount() {
         return data.get(DATA_RESIDUE_AMOUNT);
+    }
+
+    public Fluid getSyncedFuelFluid() {
+        return getFluidFromRegistryId(data.get(DATA_FUEL_FLUID_ID));
+    }
+
+    public Fluid getSyncedCoolantFluid() {
+        return getFluidFromRegistryId(data.get(DATA_COOLANT_FLUID_ID));
+    }
+
+    public Fluid getSyncedResidueFluid() {
+        return getFluidFromRegistryId(data.get(DATA_RESIDUE_FLUID_ID));
+    }
+
+    private static int getFluidRegistryId(net.neoforged.neoforge.fluids.FluidStack stack) {
+        if (stack.isEmpty()) return -1;
+        return BuiltInRegistries.FLUID.getId(stack.getFluid());
+    }
+
+    private static Fluid getFluidFromRegistryId(int id) {
+        if (id < 0) return Fluids.EMPTY;
+        Fluid fluid = BuiltInRegistries.FLUID.byId(id);
+        return fluid != null ? fluid : Fluids.EMPTY;
     }
 
     @Override

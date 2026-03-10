@@ -5,13 +5,18 @@
  */
 package buildcraft.lib.engine;
 
+import java.util.UUID;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
+import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -41,6 +46,10 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
 
     public static final float MIN_HEAT = 20f;
     public static final float MAX_HEAT = 250f;
+
+    // --- Owner tracking (ported from 1.12.2 TileBC_Neptune) ---
+    @Nullable
+    private GameProfile owner;
 
     // --- Engine state ---
     protected Direction orientation = Direction.UP;
@@ -107,6 +116,28 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
     /** Creates the MJ connector for this engine. Called once lazily. */
     @Nonnull
     protected abstract IMjConnector createConnector();
+
+    // --- Owner tracking ---
+
+    /**
+     * Called when the block is placed by a living entity.
+     * Sets the owner to the placing player's GameProfile.
+     * Matches 1.12.2 TileBC_Neptune.onPlacedBy() behavior.
+     */
+    public void onPlacedBy(@Nullable LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
+        if (placer instanceof net.minecraft.world.entity.player.Player player) {
+            owner = player.getGameProfile();
+        }
+    }
+
+    @Nullable
+    public GameProfile getOwner() {
+        return owner;
+    }
+
+    public void setOwner(@Nullable GameProfile owner) {
+        this.owner = owner;
+    }
 
     // --- Overridable methods ---
 
@@ -511,6 +542,13 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
         output.putBoolean("isPumping", isPumping);
         output.putBoolean("isRedstonePowered", isRedstonePowered);
         output.putByte("powerStage", (byte) powerStage.ordinal());
+        // Owner persistence (matches 1.12.2 TileBC_Neptune)
+        if (owner != null && owner.id() != null) {
+            output.putString("ownerUUID", owner.id().toString());
+            if (owner.name() != null) {
+                output.putString("ownerName", owner.name());
+            }
+        }
     }
 
     @Override
@@ -525,5 +563,16 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
         isRedstonePowered = input.getBooleanOr("isRedstonePowered", false);
         int ps = input.getByteOr("powerStage", (byte) 0);
         powerStage = EnumPowerStage.VALUES[Math.min(ps, EnumPowerStage.VALUES.length - 1)];
+        // Owner persistence (matches 1.12.2 TileBC_Neptune)
+        String uuidStr = input.getStringOr("ownerUUID", "");
+        if (!uuidStr.isEmpty()) {
+            try {
+                UUID uuid = UUID.fromString(uuidStr);
+                String name = input.getStringOr("ownerName", "Unknown");
+                owner = new GameProfile(uuid, name);
+            } catch (IllegalArgumentException e) {
+                owner = null;
+            }
+        }
     }
 }

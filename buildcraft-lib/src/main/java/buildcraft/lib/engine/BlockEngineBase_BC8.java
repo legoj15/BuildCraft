@@ -13,6 +13,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -89,6 +90,24 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock, 
     @Nullable
     @Override
     public abstract BlockEntity newBlockEntity(BlockPos pos, BlockState state);
+
+    // --- Block Placement ---
+
+    /**
+     * Called after the block is placed. Sets the owner on the engine tile entity.
+     * Matches 1.12.2 where Block.onBlockPlacedBy() called tile.onPlacedBy().
+     */
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
+            @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (!level.isClientSide()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileEngineBase_BC8 engine) {
+                engine.onPlacedBy(placer, stack);
+            }
+        }
+    }
 
     @SuppressWarnings("unchecked")
     @Nullable

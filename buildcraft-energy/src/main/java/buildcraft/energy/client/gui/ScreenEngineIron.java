@@ -24,6 +24,7 @@ import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.ledger.LedgerEngine;
 import buildcraft.lib.gui.ledger.LedgerHelp;
+import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.misc.LocaleUtil;
 
 /**
@@ -56,6 +57,12 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
                 menu::getSyncedHeat,
                 menu::getSyncedPowerStage,
                 menu::isSyncedBurning,
+                true
+            ));
+
+            // Ownership ledger on the right side (below power)
+            mainGui.shownElements.add(new LedgerOwnership(mainGui,
+                () -> menu.engine != null ? menu.engine.getOwner() : null,
                 true
             ));
 

@@ -97,5 +97,6 @@
     "gui.heat": "Heat",
     "gui.owner": "Owner",
     "gui.help": "Help",
-    "gui.buildcraft.stirling_engine.help": "Burns solid fuel to produce MJ power. Heat increases output. Overheating may cause damage."
+    "gui.buildcraft.stirling_engine.help": "Burns solid fuel to produce MJ power. Heat increases output. Overheating may cause damage.",
+    "gui.buildcraft.combustion_engine.help": "Burns liquid fuel to produce MJ power. Requires coolant to prevent overheating. Higher temperature fuels produce more power."
 }

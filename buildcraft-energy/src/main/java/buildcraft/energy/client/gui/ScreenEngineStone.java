@@ -45,6 +45,12 @@ public class ScreenEngineStone extends GuiBC8<ContainerEngineStone> {
                 true
             ));
 
+            // Ownership ledger on the right side (below power)
+            mainGui.shownElements.add(new LedgerOwnership(mainGui,
+                () -> menu.engine != null ? menu.engine.getOwner() : null,
+                true
+            ));
+
             // Help ledger on the LEFT side (auto-stacked via Ledger_Neptune)
             mainGui.shownElements.add(new LedgerHelp(mainGui,
                 "gui.buildcraft.stirling_engine.help"

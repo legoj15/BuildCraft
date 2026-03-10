@@ -29,14 +29,19 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.item.context.BlockPlaceContext;
 
+import buildcraft.api.blocks.ICustomRotationHandler;
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.api.tools.IToolWrench;
 
 /**
  * Abstract base block for all BuildCraft engine blocks.
  * Provides directional facing, wrench rotation, and block entity ticker hookup.
+ *
+ * Implements ICustomRotationHandler so the wrench item's useOn() can dispatch
+ * rotation via CustomRotationHelper.attemptRotateBlock(). This is the 1.12.2
+ * mechanism for wrench rotation — it fires for ALL wrench clicks (normal and crouch).
  */
-public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock {
+public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock, ICustomRotationHandler {
 
     public BlockEngineBase_BC8(Properties properties) {
         super(properties.noOcclusion());
@@ -104,37 +109,42 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock {
         }
     }
 
+    // --- ICustomRotationHandler ---
+
+    /**
+     * Called by the wrench item's useOn() via CustomRotationHelper.attemptRotateBlock().
+     * This is the 1.12.2 mechanism for wrench rotation — works for all engine types.
+     * Rotates to the next valid MJ receiver direction.
+     */
+    @Override
+    public InteractionResult attemptRotation(Level world, BlockPos pos, BlockState state, Direction sideWrenched) {
+        if (world.isClientSide()) return InteractionResult.SUCCESS;
+        BlockEntity be = world.getBlockEntity(pos);
+        if (be instanceof TileEngineBase_BC8 engine) {
+            if (engine.attemptRotation()) {
+                world.setBlock(pos, state.setValue(
+                        BuildCraftProperties.BLOCK_FACING_6, engine.getOrientation()), 3);
+                return InteractionResult.SUCCESS;
+            }
+        }
+        return InteractionResult.FAIL;
+    }
+
     // --- Interaction ---
 
     /**
-     * Handle wrench interactions on the base engine.
+     * Handle item interactions on the engine block.
+     * Base class returns PASS for everything — subclasses override for:
+     * - Creative engine: normal wrench cycles output
+     * - Stone/Iron engine: non-wrench items can open GUI
+     * - Redstone engine: normal wrench also rotates
      *
-     * 1.12.2 parity:
-     * - Crouch + wrench: attemptRotation() — rotate to next valid MJ receiver
-     * - Normal wrench: PASS — let subclasses handle (creative=output, stone/iron open GUI, redstone rotates)
-     *
-     * Base class returns PASS for everything else so subclasses can handle non-wrench interactions.
+     * Crouch+wrench rotation is handled by ICustomRotationHandler.attemptRotation()
+     * via the wrench item's useOn() path, NOT through this method.
      */
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (stack.getItem() instanceof IToolWrench) {
-            if (player.isShiftKeyDown()) {
-                // Crouch + wrench = rotate to next valid receiver (all engine types)
-                if (!level.isClientSide()) {
-                    BlockEntity be = level.getBlockEntity(pos);
-                    if (be instanceof TileEngineBase_BC8 engine) {
-                        if (engine.attemptRotation()) {
-                            level.setBlock(pos, state.setValue(
-                                    BuildCraftProperties.BLOCK_FACING_6, engine.getOrientation()), 3);
-                        }
-                    }
-                }
-                return InteractionResult.SUCCESS;
-            }
-            // Non-crouching wrench: PASS to let subclasses handle
-            return InteractionResult.PASS;
-        }
         return InteractionResult.PASS;
     }
 

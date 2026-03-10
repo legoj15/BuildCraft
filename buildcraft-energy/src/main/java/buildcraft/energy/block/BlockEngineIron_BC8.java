@@ -48,8 +48,12 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        // Wrenches — delegate to base class for rotation
+        // Wrenches: non-crouching wrench opens GUI (matches 1.12.2)
+        // Crouch+wrench falls through to PASS -> Item.useOn() -> ICustomRotationHandler rotation
         if (!stack.isEmpty() && stack.getItem() instanceof IToolWrench) {
+            if (!player.isShiftKeyDown()) {
+                return openGui(state, level, pos, player);
+            }
             return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
         }
 

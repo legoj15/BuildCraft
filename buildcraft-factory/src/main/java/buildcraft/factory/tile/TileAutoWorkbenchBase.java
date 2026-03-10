@@ -6,6 +6,8 @@
 
 package buildcraft.factory.tile;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
@@ -15,6 +17,8 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 import buildcraft.api.core.EnumPipePart;
+import buildcraft.api.mj.IMjConnector;
+import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
 import buildcraft.api.tiles.IHasWork;
@@ -38,6 +42,25 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
     public final WorkbenchCrafting crafting;
 
     private final MjBattery mjBattery = new MjBattery(1024 * MjAPI.MJ);
+
+    /** MJ receiver adapter — wraps the battery for the capability system. */
+    private final IMjReceiver mjReceiver = new IMjReceiver() {
+        @Override
+        public long getPowerRequested() {
+            // Request power up to the battery's remaining capacity
+            return mjBattery.getCapacity() - mjBattery.getStored();
+        }
+
+        @Override
+        public long receivePower(long microJoules, boolean simulate) {
+            return mjBattery.addPowerChecking(microJoules, simulate);
+        }
+
+        @Override
+        public boolean canConnect(@Nonnull IMjConnector other) {
+            return true;
+        }
+    };
 
     private long mjCostRemaining = 0;
     private boolean isActive = false;
@@ -80,6 +103,11 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
     // region MJ
     public MjBattery getMjBattery() {
         return mjBattery;
+    }
+
+    /** @return The IMjReceiver for capability registration. */
+    public IMjReceiver getMjReceiver() {
+        return mjReceiver;
     }
     // endregion
 

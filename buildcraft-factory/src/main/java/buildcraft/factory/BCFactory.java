@@ -5,10 +5,13 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import buildcraft.api.mj.MjAPI;
 
 @Mod(BCFactory.MODID)
 public class BCFactory {
@@ -31,10 +34,27 @@ public class BCFactory {
             modEventBus.register(buildcraft.factory.client.BCFactoryClient.class);
         }
 
-        // Creative tab items
+        // Register capabilities and creative tab
+        modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::addCreativeTabItems);
 
         LOGGER.info("BuildCraft Factory initialized");
+    }
+
+    private void registerCapabilities(RegisterCapabilitiesEvent event) {
+        // MJ receiver capability — allows engines to detect and send power to the auto workbench
+        event.registerBlockEntity(
+            MjAPI.CAP_RECEIVER,
+            BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
+            (workbench, direction) -> workbench.getMjReceiver()
+        );
+
+        // MJ connector capability — allows visual connection checks
+        event.registerBlockEntity(
+            MjAPI.CAP_CONNECTOR,
+            BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
+            (workbench, direction) -> workbench.getMjReceiver()
+        );
     }
 
     private void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {

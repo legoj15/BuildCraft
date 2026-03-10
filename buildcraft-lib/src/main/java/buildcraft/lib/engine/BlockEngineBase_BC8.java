@@ -9,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.InteractionResult;
@@ -35,9 +36,6 @@ import buildcraft.api.tools.IToolWrench;
  * Provides directional facing, wrench rotation, and block entity ticker hookup.
  */
 public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock {
-
-    // Non-full-cube shape to prevent neighbor face culling
-    private static final VoxelShape ENGINE_SHAPE = Shapes.box(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
 
     public BlockEngineBase_BC8(Properties properties) {
         super(properties.noOcclusion());
@@ -66,7 +64,7 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock {
 
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return ENGINE_SHAPE;
+        return Shapes.block();
     }
 
     @Override
@@ -102,16 +100,13 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock {
     // --- Interaction ---
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
-            Player player, BlockHitResult hitResult) {
-        // Wrench rotation - check if player is holding a wrench
-        ItemStack heldItem = player.getMainHandItem();
-        if (!heldItem.isEmpty() && heldItem.getItem() instanceof IToolWrench) {
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+            Player player, InteractionHand hand, BlockHitResult hitResult) {
+        if (stack.getItem() instanceof IToolWrench) {
             if (!level.isClientSide()) {
                 BlockEntity be = level.getBlockEntity(pos);
                 if (be instanceof TileEngineBase_BC8 engine) {
                     engine.rotateOrientation();
-                    // Sync the blockstate facing to the tile orientation
                     level.setBlock(pos, state.setValue(BuildCraftProperties.BLOCK_FACING_6, engine.getOrientation()), 3);
                 }
             }

@@ -39,7 +39,7 @@ public class SpriteRaw implements ISprite {
 
     @Override
     public void bindTexture() {
-        GuiIcon.setLastBoundLocation(location);
+        GuiIcon.setLastBoundLocation(location, texSize);
     }
 
     @Override

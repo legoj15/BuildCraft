@@ -149,6 +149,12 @@ public class GuiIcon implements ISimpleDrawable {
     /** Draw a quad with the texture already bound — used by SpriteNineSliced. */
     public static void drawBoundQuad(double xMin, double yMin, double xMax, double yMax,
             double uMin, double vMin, double uMax, double vMax) {
+        drawBoundQuadTinted(xMin, yMin, xMax, yMax, uMin, vMin, uMax, vMax, 0xFFFFFFFF);
+    }
+
+    /** Draw a tinted quad with the texture already bound — used by SpriteNineSliced.drawTinted(). */
+    public static void drawBoundQuadTinted(double xMin, double yMin, double xMax, double yMax,
+            double uMin, double vMin, double uMax, double vMax, int colour) {
         if (currentGraphics == null || lastBoundLocation == null) return;
 
         int drawW = (int) (xMax - xMin);
@@ -164,7 +170,8 @@ public class GuiIcon implements ISimpleDrawable {
             uPx, vPx,
             drawW, drawH,
             uW, vH,
-            lastBoundTexSize, lastBoundTexSize
+            lastBoundTexSize, lastBoundTexSize,
+            colour
         );
     }
 

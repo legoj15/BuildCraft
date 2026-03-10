@@ -54,6 +54,11 @@ public class SpriteNineSliced {
 
     /** Draw this nine-sliced sprite at the given position with the given size. */
     public void draw(double x, double y, double width, double height) {
+        drawTinted(x, y, width, height, 0xFFFFFFFF);
+    }
+
+    /** Draw this nine-sliced sprite with a colour tint (ARGB). */
+    public void drawTinted(double x, double y, double width, double height, int colour) {
         sprite.bindTexture();
 
         // Pixel sizes of the fixed borders
@@ -86,23 +91,22 @@ public class SpriteNineSliced {
 
         // Draw all 9 regions
         // Top row
-        drawSlice(x0, y0, x1, y1, u0, v0, u1, v1); // top-left corner
-        drawSlice(x1, y0, x2, y1, u1, v0, u2, v1); // top edge
-        drawSlice(x2, y0, x3, y1, u2, v0, u3, v1); // top-right corner
+        drawSlice(x0, y0, x1, y1, u0, v0, u1, v1, colour);
+        drawSlice(x1, y0, x2, y1, u1, v0, u2, v1, colour);
+        drawSlice(x2, y0, x3, y1, u2, v0, u3, v1, colour);
         // Middle row
-        drawSlice(x0, y1, x1, y2, u0, v1, u1, v2); // left edge
-        drawSlice(x1, y1, x2, y2, u1, v1, u2, v2); // center
-        drawSlice(x2, y1, x3, y2, u2, v1, u3, v2); // right edge
+        drawSlice(x0, y1, x1, y2, u0, v1, u1, v2, colour);
+        drawSlice(x1, y1, x2, y2, u1, v1, u2, v2, colour);
+        drawSlice(x2, y1, x3, y2, u2, v1, u3, v2, colour);
         // Bottom row
-        drawSlice(x0, y2, x1, y3, u0, v2, u1, v3); // bottom-left corner
-        drawSlice(x1, y2, x2, y3, u1, v2, u2, v3); // bottom edge
-        drawSlice(x2, y2, x3, y3, u2, v2, u3, v3); // bottom-right corner
+        drawSlice(x0, y2, x1, y3, u0, v2, u1, v3, colour);
+        drawSlice(x1, y2, x2, y3, u1, v2, u2, v3, colour);
+        drawSlice(x2, y2, x3, y3, u2, v2, u3, v3, colour);
     }
 
     private static void drawSlice(double xMin, double yMin, double xMax, double yMax,
-            double uMin, double vMin, double uMax, double vMax) {
+            double uMin, double vMin, double uMax, double vMax, int colour) {
         if (xMax <= xMin || yMax <= yMin) return;
-        // Re-use GuiIcon's static quad drawing — the texture is already bound
-        GuiIcon.drawBoundQuad(xMin, yMin, xMax, yMax, uMin, vMin, uMax, vMax);
+        GuiIcon.drawBoundQuadTinted(xMin, yMin, xMax, yMax, uMin, vMin, uMax, vMax, colour);
     }
 }

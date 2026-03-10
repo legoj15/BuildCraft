@@ -10,6 +10,8 @@ import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.lib.gui.BuildCraftGui;
@@ -27,11 +29,11 @@ public class LedgerEngine extends Ledger_Neptune {
     private static final int SUB_HEADER_COLOUR = 0xAAAFB8;
     private static final int TEXT_COLOUR = 0x000000;
 
-    // Icon colours for power stages (used since BCLibSprites aren't ported)
-    private static final int ICON_INACTIVE = 0x808080;   // grey
-    private static final int ICON_ACTIVE   = 0x44AA44;   // green
-    private static final int ICON_WARM     = 0xDD8800;   // orange
-    private static final int ICON_OVERHEAT = 0xDD2200;   // red
+    // Engine status icon textures (from 1.12.2 BCLibSprites)
+    private static final Identifier ICON_ACTIVE = Identifier.parse("buildcraftlib:textures/icons/engine_active.png");
+    private static final Identifier ICON_INACTIVE = Identifier.parse("buildcraftlib:textures/icons/engine_inactive.png");
+    private static final Identifier ICON_WARM = Identifier.parse("buildcraftlib:textures/icons/engine_warm.png");
+    private static final Identifier ICON_OVERHEAT = Identifier.parse("buildcraftlib:textures/icons/engine_overheat.png");
 
     private final Supplier<EnumPowerStage> powerStageSupplier;
     private final Supplier<Boolean> engineOnSupplier;
@@ -61,28 +63,23 @@ public class LedgerEngine extends Ledger_Neptune {
 
     @Override
     protected void drawIcon(double x, double y, GuiGraphics graphics) {
-        // Draw a 16x16 coloured square as the power-stage icon
-        int iconColour;
+        // Select the appropriate engine status icon based on power stage
+        // Matches 1.12.2 LedgerEngine.drawIcon() logic
+        Identifier icon;
         EnumPowerStage stage = powerStageSupplier.get();
         switch (stage) {
             case OVERHEAT:
-                iconColour = ICON_OVERHEAT;
+                icon = ICON_OVERHEAT;
                 break;
             case RED:
             case YELLOW:
-                iconColour = ICON_WARM;
+                icon = ICON_WARM;
                 break;
             default:
-                iconColour = engineOnSupplier.get() ? ICON_ACTIVE : ICON_INACTIVE;
+                icon = engineOnSupplier.get() ? ICON_ACTIVE : ICON_INACTIVE;
         }
-        graphics.fill((int) x, (int) y, (int) x + 16, (int) y + 16, 0xFF000000 | iconColour);
-
-        // Draw a small lightning bolt shape to indicate it's a power icon
-        int cx = (int) x + 6;
-        int cy = (int) y + 3;
-        // Simple 2-pixel wide bolt
-        graphics.fill(cx, cy, cx + 4, cy + 4, 0xFFFFFF00);
-        graphics.fill(cx - 1, cy + 4, cx + 3, cy + 5, 0xFFFFFF00);
-        graphics.fill(cx + 1, cy + 5, cx + 5, cy + 9, 0xFFFFFF00);
+        // Blit the 16x16 icon texture
+        graphics.blit(RenderPipelines.GUI_TEXTURED, icon,
+            (int) x, (int) y, 0f, 0f, 16, 16, 16, 16);
     }
 }

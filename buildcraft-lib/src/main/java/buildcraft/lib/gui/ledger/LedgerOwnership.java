@@ -10,15 +10,17 @@ import java.util.function.Supplier;
 
 import com.mojang.authlib.GameProfile;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
 
 import buildcraft.lib.gui.BuildCraftGui;
 
 /** Ledger that shows the owner (player who placed the block). */
 public class LedgerOwnership extends Ledger_Neptune {
     private static final int COLOUR = 0xD1C07D;
+    // Default Steve skin texture for the player head icon
+    private static final Identifier SKIN_TEXTURE = Identifier.parse("textures/entity/player/wide/steve.png");
 
     public LedgerOwnership(BuildCraftGui gui, Supplier<GameProfile> ownerSupplier, boolean expandPositive) {
         super(gui, COLOUR, expandPositive);
@@ -34,14 +36,10 @@ public class LedgerOwnership extends Ledger_Neptune {
 
     @Override
     protected void drawIcon(double x, double y, GuiGraphics graphics) {
-        // Draw a simple player-head icon (tan square with dark "face" features)
-        int ix = (int) x, iy = (int) y;
-        // Head background
-        graphics.fill(ix + 2, iy + 1, ix + 14, iy + 15, 0xFFD4A574);
-        // Eyes
-        graphics.fill(ix + 4, iy + 5, ix + 7, iy + 8, 0xFF3D2817);
-        graphics.fill(ix + 9, iy + 5, ix + 12, iy + 8, 0xFF3D2817);
-        // Mouth
-        graphics.fill(ix + 5, iy + 10, ix + 11, iy + 12, 0xFF3D2817);
+        // Blit the 8x8 face region from the Steve skin texture, scaled to 16x16
+        // Skin face is at u=8, v=8 in the 64x64 skin texture
+        graphics.blit(RenderPipelines.GUI_TEXTURED, SKIN_TEXTURE,
+            (int) x, (int) y, 8f, 8f, 16, 16, 8, 8, 64, 64);
     }
 }
+

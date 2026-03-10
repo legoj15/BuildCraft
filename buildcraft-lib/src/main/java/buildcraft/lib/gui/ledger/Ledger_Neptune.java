@@ -11,11 +11,16 @@ import java.util.List;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 
+import buildcraft.api.core.render.ISprite;
+import buildcraft.lib.client.sprite.SpriteNineSliced;
+import buildcraft.lib.client.sprite.SpriteRaw;
 import buildcraft.lib.gui.BuildCraftGui;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.IGuiElement;
@@ -28,6 +33,16 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     public static final int LEDGER_GAP = 4;
     public static final int CLOSED_WIDTH = 2 + 16 + LEDGER_GAP;   // 22
     public static final int CLOSED_HEIGHT = LEDGER_GAP + 16 + LEDGER_GAP; // 24
+
+    // 9-sliced ledger background sprites (matches 1.12.2 BCLibSprites.LEDGER_LEFT/RIGHT)
+    private static final ISprite SPRITE_LEFT = new SpriteRaw(
+        Identifier.parse("buildcraftlib:textures/icons/ledger_left.png"), 0, 0, 1.0, 1.0);
+    private static final ISprite SPRITE_RIGHT = new SpriteRaw(
+        Identifier.parse("buildcraftlib:textures/icons/ledger_right.png"), 0, 0, 1.0, 1.0);
+    private static final SpriteNineSliced SPRITE_SPLIT_LEFT =
+        new SpriteNineSliced(SPRITE_LEFT, 4.0/16, 4.0/16, 12.0/16, 12.0/16, 1.0);
+    private static final SpriteNineSliced SPRITE_SPLIT_RIGHT =
+        new SpriteNineSliced(SPRITE_RIGHT, 4.0/16, 4.0/16, 12.0/16, 12.0/16, 1.0);
 
     public final BuildCraftGui gui;
     public final int colour;
@@ -181,16 +196,11 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
 
         if (w <= 0 || h <= 0) return;
 
-        // Draw background rectangle with alpha
-        int bgColour = (0xCC << 24) | (colour & 0xFFFFFF);
-        graphics.fill(x, y, x + w, y + h, bgColour);
-
-        // Draw border
-        int borderColour = (0xFF << 24) | (colour & 0xFFFFFF);
-        graphics.fill(x, y, x + w, y + 1, borderColour);
-        graphics.fill(x, y + h - 1, x + w, y + h, borderColour);
-        graphics.fill(x, y, x + 1, y + h, borderColour);
-        graphics.fill(x + w - 1, y, x + w, y + h, borderColour);
+        // Draw 9-sliced ledger background sprite with colour tinting
+        // Matches 1.12.2: RenderUtil.setGLColorFromIntPlusAlpha(colour) → split.draw()
+        SpriteNineSliced split = expandPositive ? SPRITE_SPLIT_RIGHT : SPRITE_SPLIT_LEFT;
+        int tintColour = 0xFF000000 | (colour & 0xFFFFFF);
+        split.drawTinted(startX, startY, interpWidth, interpHeight, tintColour);
 
         // Draw icon (always visible)
         double iconX = positionLedgerIconStart.getX();
@@ -223,6 +233,20 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
                 }
                 textY += font.lineHeight + 3;
             }
+        }
+
+        // Draw tooltip when ledger is closed/closing and mouse hovers over it
+        // Matches 1.12.2 Ledger_Neptune.addToolTips() behavior
+        if (!shouldDrawOpen() && contains(gui.mouse.getX(), gui.mouse.getY())) {
+            Font font2 = Minecraft.getInstance().font;
+            var titleComp = net.minecraft.network.chat.Component.literal(getTitle());
+            var tooltipLine = net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
+                .create(titleComp.getVisualOrderText());
+            graphics.renderTooltip(font2,
+                java.util.List.of(tooltipLine),
+                (int) gui.mouse.getX(), (int) gui.mouse.getY(),
+                net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner.INSTANCE,
+                null);
         }
     }
 

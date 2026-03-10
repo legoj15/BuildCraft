@@ -8,27 +8,19 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Fluid;
-import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.BlockHitResult;
-
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.energy.tile.TileEngineIron_BC8;
 import buildcraft.lib.engine.BlockEngineBase_BC8;
+import buildcraft.lib.misc.FluidUtilBC;
 
 public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
     public BlockEngineIron_BC8(Properties properties) {
@@ -43,7 +35,10 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
 
     /**
      * Called when the player right-clicks with an item in hand.
-     * Handles bucket fill/drain before falling through to GUI opening.
+     * Handles fluid container fill/drain before falling through to GUI opening.
+     * Uses FluidUtilBC.onTankActivated which handles ALL fluid container types
+     * (buckets, tanks, etc.) via NeoForge's FluidUtil.getFluidHandler — matching
+     * the 1.12.2 behavior where super.onActivated() used FluidUtil.interactWithFluidHandler.
      */
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
@@ -57,10 +52,10 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
             return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
         }
 
-        // Try bucket interaction
+        // Try fluid container interaction (buckets, tanks, etc.)
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TileEngineIron_BC8 engine) {
-            if (tryFluidInteraction(player, hand, engine, level, pos)) {
+            if (FluidUtilBC.onTankActivated(player, pos, hand, engine.combinedFluidHandler)) {
                 return InteractionResult.SUCCESS;
             }
         }
@@ -98,137 +93,5 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
             );
         }
         return InteractionResult.SUCCESS;
-    }
-
-    /**
-     * Handle bucket fluid interaction — filling or draining.
-     * Mimics 1.12.2 behavior:
-     *   - Full bucket → empties into tank, gives player empty bucket
-     *   - Empty bucket → fills from tank, gives player full bucket
-     */
-    private boolean tryFluidInteraction(Player player, InteractionHand hand,
-            TileEngineIron_BC8 engine, Level level, BlockPos pos) {
-        ItemStack held = player.getItemInHand(hand);
-        if (held.isEmpty()) return false;
-        if (!(held.getItem() instanceof BucketItem bucket)) return false;
-
-        Fluid bucketFluid = bucket.content;
-
-        if (bucketFluid != Fluids.EMPTY) {
-            // --- FILL: bucket has fluid → try to fill tank ---
-            return tryFillFromBucket(player, hand, held, bucketFluid, engine, level, pos);
-        } else {
-            // --- DRAIN: empty bucket → try to drain from tank ---
-            return tryDrainIntoBucket(player, hand, engine, level, pos);
-        }
-    }
-
-    /**
-     * Fill engine tanks from a full bucket.
-     */
-    private boolean tryFillFromBucket(Player player, InteractionHand hand, ItemStack held,
-            Fluid bucketFluid, TileEngineIron_BC8 engine, Level level, BlockPos pos) {
-        FluidStack fluidStack = new FluidStack(bucketFluid, 1000);
-
-        // Simulate first to make sure there's room
-        int simulated = engine.combinedFluidHandler.fill(fluidStack, IFluidHandler.FluidAction.SIMULATE);
-        if (simulated < 1000) {
-            return false; // not enough room for a full bucket
-        }
-
-        if (level.isClientSide()) {
-            return true; // client side just returns success to show animation
-        }
-
-
-        // Actually fill the tank
-        engine.combinedFluidHandler.fill(fluidStack, IFluidHandler.FluidAction.EXECUTE);
-
-        // Replace the bucket if in survival
-        if (!player.getAbilities().instabuild) {
-            if (held.getCount() == 1) {
-                player.setItemInHand(hand, new ItemStack(Items.BUCKET));
-            } else {
-                held.shrink(1);
-                ItemStack emptyBucket = new ItemStack(Items.BUCKET);
-                if (!player.getInventory().add(emptyBucket)) {
-                    player.drop(emptyBucket, false);
-                }
-            }
-        }
-
-        level.playSound(null, pos, SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 1.0f, 1.0f);
-        return true;
-    }
-
-    /**
-     * Drain engine tanks into an empty bucket.
-     * Tries fuel first, then coolant, then residue.
-     */
-    private boolean tryDrainIntoBucket(Player player, InteractionHand hand,
-            TileEngineIron_BC8 engine, Level level, BlockPos pos) {
-        // Try draining 1000 mB from each tank in order: fuel, coolant, residue
-        FluidStack drained = tryDrainTank(engine.tankFuel, 1000);
-        if (drained.isEmpty()) {
-            drained = tryDrainTank(engine.tankCoolant, 1000);
-        }
-        if (drained.isEmpty()) {
-            drained = tryDrainTank(engine.tankResidue, 1000);
-        }
-
-        if (drained.isEmpty() || drained.getAmount() < 1000) {
-            return false; // not enough for a full bucket
-        }
-
-        if (level.isClientSide()) {
-            return true;
-        }
-
-        // Actually drain
-        Fluid fluid = drained.getFluid();
-        FluidStack actualDrain = null;
-        if (engine.tankFuel.getFluidAmount() >= 1000 && FluidStack.isSameFluid(engine.tankFuel.getFluid(), drained)) {
-            actualDrain = engine.tankFuel.drain(1000, IFluidHandler.FluidAction.EXECUTE);
-        } else if (engine.tankCoolant.getFluidAmount() >= 1000 && FluidStack.isSameFluid(engine.tankCoolant.getFluid(), drained)) {
-            actualDrain = engine.tankCoolant.drain(1000, IFluidHandler.FluidAction.EXECUTE);
-        } else if (engine.tankResidue.getFluidAmount() >= 1000 && FluidStack.isSameFluid(engine.tankResidue.getFluid(), drained)) {
-            actualDrain = engine.tankResidue.drain(1000, IFluidHandler.FluidAction.EXECUTE);
-        }
-
-        if (actualDrain == null || actualDrain.isEmpty()) {
-            return false;
-        }
-
-        // Convert the fluid to a bucket item
-        ItemStack filledBucket = new ItemStack(fluid.getBucket());
-        if (filledBucket.isEmpty()) {
-            // This fluid doesn't have a bucket form — refund the drain
-            // (This shouldn't normally happen for BuildCraft fluids that have buckets)
-            return false;
-        }
-
-        // Replace the empty bucket
-        if (!player.getAbilities().instabuild) {
-            ItemStack held = player.getItemInHand(hand);
-            if (held.getCount() == 1) {
-                player.setItemInHand(hand, filledBucket);
-            } else {
-                held.shrink(1);
-                if (!player.getInventory().add(filledBucket)) {
-                    player.drop(filledBucket, false);
-                }
-            }
-        }
-
-        level.playSound(null, pos, SoundEvents.BUCKET_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
-        engine.setChanged();
-        return true;
-    }
-
-    /**
-     * Simulate draining a specific tank and return what would be drained.
-     */
-    private FluidStack tryDrainTank(net.neoforged.neoforge.fluids.capability.templates.FluidTank tank, int amount) {
-        return tank.drain(amount, IFluidHandler.FluidAction.SIMULATE);
     }
 }

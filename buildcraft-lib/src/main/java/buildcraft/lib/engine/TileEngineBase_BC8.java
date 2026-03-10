@@ -290,15 +290,14 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
 
         if (engine.checkOrientation) {
             engine.checkOrientation = false;
-            // Auto-orient towards a valid receiver (1.12.2 parity)
-            for (Direction dir : Direction.values()) {
-                IMjReceiver receiver = engine.getReceiverToPower(dir);
-                if (receiver != null) {
-                    engine.orientation = dir;
+            // 1.12.2 parity: rotateIfInvalid() — only rotate if current direction is invalid
+            if (engine.getReceiverToPower(engine.orientation) == null) {
+                // Current direction invalid, try to find a valid one
+                if (engine.attemptRotation()) {
                     level.setBlock(pos, state.setValue(
-                            buildcraft.api.properties.BuildCraftProperties.BLOCK_FACING_6, dir), 3);
+                            buildcraft.api.properties.BuildCraftProperties.BLOCK_FACING_6,
+                            engine.orientation), 3);
                     level.sendBlockUpdated(pos, state, state, 3);
-                    break;
                 }
             }
         }

@@ -32,13 +32,19 @@ public class BlockEngineCreative extends BlockEngineBase_BC8 {
     }
 
     /**
-     * Override wrench behavior: creative engine cycles output power instead of rotating.
-     * This matches 1.12.2's TileEngineCreative.onActivated() behavior.
+     * 1.12.2 parity:
+     * - Crouch + wrench: rotate to next valid receiver (delegate to base class)
+     * - Normal wrench: cycle output power (creative engine specific)
      */
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
         if (stack.getItem() instanceof IToolWrench) {
+            if (player.isShiftKeyDown()) {
+                // Crouch + wrench = rotate to next valid receiver (base class handles this)
+                return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
+            }
+            // Normal wrench = cycle output power
             if (!level.isClientSide()) {
                 BlockEntity be = level.getBlockEntity(pos);
                 if (be instanceof TileEngineCreative creative) {

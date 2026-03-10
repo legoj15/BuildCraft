@@ -254,17 +254,19 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
                 x0, y0, z1,  16, 12,
                 x1, y0, z1,  8, 12);
         // West (X-) - side UV 8-16, 0-12
+        // Viewed from outside (facing east): left=z0, right=z1
         face(b, pose, sprite, light, overlay, 0.6f, -1, 0, 0,
-                x0, y1, z1,  8, 0,
-                x0, y1, z0,  16, 0,
-                x0, y0, z0,  16, 12,
-                x0, y0, z1,  8, 12);
+                x0, y1, z0,  8, 0,
+                x0, y1, z1,  16, 0,
+                x0, y0, z1,  16, 12,
+                x0, y0, z0,  8, 12);
         // East (X+) - side UV 8-16, 0-12
+        // Viewed from outside (facing west): left=z1, right=z0
         face(b, pose, sprite, light, overlay, 0.6f, 1, 0, 0,
-                x1, y1, z0,  8, 0,
-                x1, y1, z1,  16, 0,
-                x1, y0, z1,  16, 12,
-                x1, y0, z0,  8, 12);
+                x1, y1, z1,  8, 0,
+                x1, y1, z0,  16, 0,
+                x1, y0, z0,  16, 12,
+                x1, y0, z1,  8, 12);
     }
 
     /** Emit a single quad with 4 vertices. UV coords are in pixels (0-16). */

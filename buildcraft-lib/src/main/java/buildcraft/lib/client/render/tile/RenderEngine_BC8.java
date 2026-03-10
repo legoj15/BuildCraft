@@ -223,50 +223,49 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
 
     /**
      * Render the trunk with correct 1.12.2 UV regions.
+     * Uses the exact same vertex winding as renderBox (which works correctly).
      * Caps (top/bottom): UV 0-8, 0-8 (top-left quadrant of texture)
      * Sides: UV 8-16, 0-12 (right half of texture)
      */
     private void renderTrunk(VertexConsumer b, PoseStack.Pose pose,
                              float x0, float y0, float z0, float x1, float y1, float z1,
                              TextureAtlasSprite sprite, int light, int overlay) {
-        // Top (Y+) - cap UV 0-8, 0-8
+        // Top (Y+) - cap UV 0-8, 0-8 (same winding as renderBox top)
         face(b, pose, sprite, light, overlay, 1.0f, 0, 1, 0,
                 x0, y1, z0,  0, 0,
                 x0, y1, z1,  0, 8,
                 x1, y1, z1,  8, 8,
                 x1, y1, z0,  8, 0);
-        // Bottom (Y-) - cap UV 0-8, 0-8
+        // Bottom (Y-) - cap UV 0-8, 0-8 (same winding as renderBox bottom)
         face(b, pose, sprite, light, overlay, 0.5f, 0, -1, 0,
                 x1, y0, z0,  0, 0,
                 x1, y0, z1,  0, 8,
                 x0, y0, z1,  8, 8,
                 x0, y0, z0,  8, 0);
-        // North (Z-) - side UV 8-16, 0-12
+        // North (Z-) - side UV 8-16, 0-12 (same winding as renderBox north)
         face(b, pose, sprite, light, overlay, 0.8f, 0, 0, -1,
                 x0, y1, z0,  8, 0,
                 x1, y1, z0,  16, 0,
                 x1, y0, z0,  16, 12,
                 x0, y0, z0,  8, 12);
-        // South (Z+) - side UV 8-16, 0-12
+        // South (Z+) - side UV 8-16, 0-12 (same winding as renderBox south)
         face(b, pose, sprite, light, overlay, 0.8f, 0, 0, 1,
                 x1, y1, z1,  8, 0,
                 x0, y1, z1,  16, 0,
                 x0, y0, z1,  16, 12,
                 x1, y0, z1,  8, 12);
-        // West (X-) - side UV 8-16, 0-12
-        // Viewed from outside (facing east): left=z0, right=z1
+        // West (X-) - side UV 8-16, 0-12 (same winding as renderBox west)
         face(b, pose, sprite, light, overlay, 0.6f, -1, 0, 0,
-                x0, y1, z0,  8, 0,
-                x0, y1, z1,  16, 0,
-                x0, y0, z1,  16, 12,
-                x0, y0, z0,  8, 12);
-        // East (X+) - side UV 8-16, 0-12
-        // Viewed from outside (facing west): left=z1, right=z0
+                x0, y1, z1,  8, 0,
+                x0, y1, z0,  16, 0,
+                x0, y0, z0,  16, 12,
+                x0, y0, z1,  8, 12);
+        // East (X+) - side UV 8-16, 0-12 (same winding as renderBox east)
         face(b, pose, sprite, light, overlay, 0.6f, 1, 0, 0,
-                x1, y1, z1,  8, 0,
-                x1, y1, z0,  16, 0,
-                x1, y0, z0,  16, 12,
-                x1, y0, z1,  8, 12);
+                x1, y1, z0,  8, 0,
+                x1, y1, z1,  16, 0,
+                x1, y0, z1,  16, 12,
+                x1, y0, z0,  8, 12);
     }
 
     /** Emit a single quad with 4 vertices. UV coords are in pixels (0-16). */

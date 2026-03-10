@@ -102,7 +102,8 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
 
     /**
      * Render the fluid's still texture tiled into the given rectangle.
-     * Uses NeoForge's IClientFluidTypeExtensions for the texture location.
+     * Uses NeoForge's IClientFluidTypeExtensions for the texture location
+     * and tint color (fluid textures are grayscale; color comes from tinting).
      */
     private void drawFluidTexture(GuiGraphics graphics, int x, int y, int width, int height, Fluid fluid) {
         IClientFluidTypeExtensions fluidExt = IClientFluidTypeExtensions.of(fluid);
@@ -113,11 +114,13 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
             .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
 
+        // Get the fluid's tint color (ARGB packed int)
+        int tintColor = fluidExt.getTintColor();
+
         // Enable scissor to clip to the tank area
         graphics.enableScissor(x, y, x + width, y + height);
 
         // Tile the 16x16 sprite to fill the rectangle
-        // Use the atlas texture location and sprite UV coordinates for blit
         int spriteSize = 16;
         float uMin = sprite.getU0();
         float vMin = sprite.getV0();
@@ -130,13 +133,15 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
             for (int tileX = x; tileX < x + width; tileX += spriteSize) {
                 int drawW = Math.min(spriteSize, x + width - tileX);
                 int drawH = Math.min(spriteSize, y + height - tileY);
+                // Use the blit overload with a color parameter for tinting
                 graphics.blit(
                     net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
                     TextureAtlas.LOCATION_BLOCKS,
                     tileX, tileY,
                     sprite.getU0() * atlasWidth, sprite.getV0() * atlasHeight,
                     drawW, drawH,
-                    atlasWidth, atlasHeight
+                    atlasWidth, atlasHeight,
+                    tintColor
                 );
             }
         }

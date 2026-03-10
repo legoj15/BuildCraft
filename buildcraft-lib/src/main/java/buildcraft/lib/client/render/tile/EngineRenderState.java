@@ -6,24 +6,18 @@
 package buildcraft.lib.client.render.tile;
 
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 
 import buildcraft.api.enums.EnumPowerStage;
 
-import net.minecraft.resources.Identifier;
-
 /**
  * Render state snapshot for engine block entities.
- * Populated each frame by extractRenderState() in RenderEngine_BC8.
+ * Fields are populated each frame by TileEngineBase_BC8.collectRenderState().
  */
 public class EngineRenderState extends BlockEntityRenderState {
+    public BlockPos blockPos;
     public float progress;
     public EnumPowerStage powerStage = EnumPowerStage.BLUE;
     public Direction facing = Direction.UP;
-
-    // Per-engine-type textures, set by the renderer based on the engine type
-    public Identifier backTexture;
-    public Identifier sideTexture;
-    public Identifier trunkTexture;
-    public Identifier chamberTexture;
 }

@@ -10,16 +10,19 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
-import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.lib.engine.TileEngineBase_BC8;
@@ -29,13 +32,11 @@ import java.util.Map;
 /**
  * Block Entity Renderer for all BuildCraft engines.
  * Renders the 4-part engine model: base plate, trunk, chamber, and piston head.
- * Configured per engine type via texture identifiers passed at construction.
  */
 public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8, EngineRenderState> {
 
-    private static final float PIXEL = 1.0f / 16.0f;
+    private static final float P = 1.0f / 16.0f; // pixel to block unit
 
-    // Per-engine-type textures
     private final Identifier backTexture;
     private final Identifier sideTexture;
     private final Identifier chamberTexture;
@@ -57,51 +58,63 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
     @Override
     public void submit(EngineRenderState state, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
+        // Read engine data from the world directly since extractRenderState is not called
+        Level level = Minecraft.getInstance().level;
+        if (level == null) return;
+        BlockPos pos = state.blockPos;
+        if (pos == null) return;
+        BlockEntity be = level.getBlockEntity(pos);
+        if (!(be instanceof TileEngineBase_BC8 engine)) return;
+
+        float partialTick = 1.0f; // full tick — client-side animation handles interpolation
+        Direction facing = engine.getOrientation();
+        float progress = engine.getProgressClient(partialTick);
+        EnumPowerStage powerStage = engine.getPowerStage();
+
         poseStack.pushPose();
 
         // Apply directional rotation - engine model is authored facing UP
-        applyDirectionalRotation(poseStack, state.facing);
+        applyDirectionalRotation(poseStack, facing);
 
-        float progressPixels = state.progress * 8.0f; // 0 to 8 pixels of piston travel
+        float pProgress = progress * 8.0f * P; // 0 to 0.5 blocks of piston travel
 
-        // Determine trunk texture from power stage (use renderer's own fields, not state)
-        EnumPowerStage stage = state.powerStage != null ? state.powerStage : EnumPowerStage.BLUE;
-        Identifier trunkTex = trunkTextures.getOrDefault(stage, trunkTextures.get(EnumPowerStage.BLUE));
+        // Determine trunk texture from power stage
+        Identifier trunkTex = trunkTextures.getOrDefault(powerStage, trunkTextures.get(EnumPowerStage.BLUE));
 
-        // Get sprites from the block atlas (using renderer's fields directly)
+        // Get sprites from the block atlas
         TextureAtlasSprite backSprite = getSprite(backTexture);
         TextureAtlasSprite sideSprite = getSprite(sideTexture);
         TextureAtlasSprite trunkSprite = getSprite(trunkTex);
         TextureAtlasSprite chamberSprite = getSprite(chamberTexture);
 
-        // Get light from the block entity position
-        int light = 15728880; // full brightness fallback
+        // Get combined light at the engine's position
+        int light = LevelRenderer.getLightColor(level, pos);
         int overlay = OverlayTexture.NO_OVERLAY;
 
-        // Get a vertex consumer from the render buffer source (same pattern as LaserRenderer_BC8)
-        net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource =
+        // Get vertex consumer
+        MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer buffer = bufferSource.getBuffer(
                 net.minecraft.client.renderer.rendertype.RenderTypes.entitySolid(TextureAtlas.LOCATION_BLOCKS));
         PoseStack.Pose pose = poseStack.last();
 
-        // 1. Base plate: 0,0,0 to 16,4,16
-        renderBox(buffer, pose, 0, 0, 0, 16, 4, 16,
+        // 1. Base plate: 0,0,0 to 1,0.25,1
+        renderBox(buffer, pose, 0, 0, 0, 1, 0.25f, 1,
                 backSprite, sideSprite, light, overlay);
 
-        // 2. Trunk: 4,4,4 to 12,16,12 (static)
-        renderTrunk(buffer, pose, 4, 4, 4, 12, 16, 12,
-                trunkSprite, light, overlay);
+        // 2. Trunk: 0.25,0.25,0.25 to 0.75,1,0.75 (static center pole)
+        renderBox(buffer, pose, 0.25f, 0.25f, 0.25f, 0.75f, 1f, 0.75f,
+                trunkSprite, trunkSprite, light, overlay);
 
-        // 3. Chamber: 3,4,3 to 13,4+progressPixels,13 (animated)
-        float chamberTop = 4 + progressPixels;
-        if (chamberTop > 4.01f) {
-            renderChamber(buffer, pose, 3, 4, 3, 13, chamberTop, 13,
-                    chamberSprite, light, overlay);
+        // 3. Chamber: 0.1875,0.25,0.1875 to 0.8125,0.25+pProgress,0.8125 (animated)
+        float chamberTop = 0.25f + pProgress;
+        if (pProgress > 0.001f) {
+            renderBox(buffer, pose, 0.1875f, 0.25f, 0.1875f, 0.8125f, chamberTop, 0.8125f,
+                    chamberSprite, chamberSprite, light, overlay);
         }
 
-        // 4. Piston head: 0,4+progressPixels,0 to 16,8+progressPixels,16 (animated)
-        renderBox(buffer, pose, 0, 4 + progressPixels, 0, 16, 8 + progressPixels, 16,
+        // 4. Piston head: 0,0.25+pProgress,0 to 1,0.5+pProgress,1 (animated)
+        renderBox(buffer, pose, 0, 0.25f + pProgress, 0, 1, 0.5f + pProgress, 1,
                 backSprite, sideSprite, light, overlay);
 
         bufferSource.endBatch();
@@ -113,9 +126,9 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
         switch (facing) {
             case DOWN -> poseStack.mulPose(Axis.XP.rotationDegrees(180));
             case NORTH -> { poseStack.mulPose(Axis.XP.rotationDegrees(90)); poseStack.mulPose(Axis.YP.rotationDegrees(180)); }
-            case SOUTH -> poseStack.mulPose(Axis.XP.rotationDegrees(90));
-            case WEST -> { poseStack.mulPose(Axis.XP.rotationDegrees(90)); poseStack.mulPose(Axis.YP.rotationDegrees(90)); }
-            case EAST -> { poseStack.mulPose(Axis.XP.rotationDegrees(90)); poseStack.mulPose(Axis.YP.rotationDegrees(270)); }
+            case SOUTH -> poseStack.mulPose(Axis.XP.rotationDegrees(-90));
+            case WEST -> poseStack.mulPose(Axis.ZP.rotationDegrees(-90));
+            case EAST -> poseStack.mulPose(Axis.ZP.rotationDegrees(90));
             default -> {} // UP is default, no rotation needed
         }
         poseStack.translate(-0.5f, -0.5f, -0.5f);
@@ -127,141 +140,107 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
         return atlas.getSprite(texture);
     }
 
-    // --- Quad rendering helpers ---
-    // All coordinates in pixels (0-16), converted to block units (0-1)
-
-    private void renderBox(VertexConsumer buffer, PoseStack.Pose pose,
+    /**
+     * Render a box with 6 faces. topBottomSprite is used for Y+ and Y-,
+     * sideSprite is used for all 4 side faces.
+     * Coordinates are in block units (0-1).
+     */
+    private void renderBox(VertexConsumer b, PoseStack.Pose pose,
                            float x0, float y0, float z0, float x1, float y1, float z1,
-                           TextureAtlasSprite topBottomSprite, TextureAtlasSprite sideSprite,
+                           TextureAtlasSprite topBot, TextureAtlasSprite side,
                            int light, int overlay) {
-        float px0 = x0 * PIXEL, py0 = y0 * PIXEL, pz0 = z0 * PIXEL;
-        float px1 = x1 * PIXEL, py1 = y1 * PIXEL, pz1 = z1 * PIXEL;
+        // UV coordinates in 0-1 range mapped to face dimensions (pixels)
+        float uSideW = (x1 - x0) * 16f;
+        float uSideH = (y1 - y0) * 16f;
+        float zSideW = (z1 - z0) * 16f;
+        float topW = (x1 - x0) * 16f;
+        float topH = (z1 - z0) * 16f;
 
-        // Top face (Y+)
-        quad(buffer, pose, px0, py1, pz0, px1, py1, pz1, 0, 1, 0, topBottomSprite,
-                x0, z0, x1, z1, light, overlay);
-        // Bottom face (Y-)
-        quad(buffer, pose, px0, py0, pz1, px1, py0, pz0, 0, -1, 0, topBottomSprite,
-                x0, z0, x1, z1, light, overlay);
-        // North face (Z-)
-        quad(buffer, pose, px1, py1, pz0, px0, py0, pz0, 0, 0, -1, sideSprite,
-                x0, 16 - y1, x1, 16 - y0, light, overlay);
-        // South face (Z+)
-        quad(buffer, pose, px0, py1, pz1, px1, py0, pz1, 0, 0, 1, sideSprite,
-                x0, 16 - y1, x1, 16 - y0, light, overlay);
-        // West face (X-)
-        quad(buffer, pose, px0, py1, pz0, px0, py0, pz1, -1, 0, 0, sideSprite,
-                z0, 16 - y1, z1, 16 - y0, light, overlay);
-        // East face (X+)
-        quad(buffer, pose, px1, py1, pz1, px1, py0, pz0, 1, 0, 0, sideSprite,
-                z0, 16 - y1, z1, 16 - y0, light, overlay);
+        // Top face (Y+) - normal (0,1,0)
+        quadYP(b, pose, x0, y1, z0, x1, z1, topBot, 0, 0, topW, topH, light, overlay);
+        // Bottom face (Y-) - normal (0,-1,0)
+        quadYN(b, pose, x0, y0, z0, x1, z1, topBot, 0, 0, topW, topH, light, overlay);
+        // North face (Z-) - normal (0,0,-1)
+        quadZN(b, pose, x0, y0, z0, x1, y1, side, 0, 0, uSideW, uSideH, light, overlay);
+        // South face (Z+) - normal (0,0,1)
+        quadZP(b, pose, x0, y0, z1, x1, y1, side, 0, 0, uSideW, uSideH, light, overlay);
+        // West face (X-) - normal (-1,0,0)
+        quadXN(b, pose, x0, y0, z0, y1, z1, side, 0, 0, zSideW, uSideH, light, overlay);
+        // East face (X+) - normal (1,0,0)
+        quadXP(b, pose, x1, y0, z0, y1, z1, side, 0, 0, zSideW, uSideH, light, overlay);
     }
 
-    private void renderTrunk(VertexConsumer buffer, PoseStack.Pose pose,
-                             float x0, float y0, float z0, float x1, float y1, float z1,
-                             TextureAtlasSprite sprite, int light, int overlay) {
-        float px0 = x0 * PIXEL, py0 = y0 * PIXEL, pz0 = z0 * PIXEL;
-        float px1 = x1 * PIXEL, py1 = y1 * PIXEL, pz1 = z1 * PIXEL;
-
-        // Top + Bottom
-        quad(buffer, pose, px0, py1, pz0, px1, py1, pz1, 0, 1, 0, sprite,
-                0, 0, 8, 8, light, overlay);
-        quad(buffer, pose, px0, py0, pz1, px1, py0, pz0, 0, -1, 0, sprite,
-                0, 0, 8, 8, light, overlay);
-        // 4 sides - UV from column 8..16 of the trunk texture
-        quad(buffer, pose, px1, py1, pz0, px0, py0, pz0, 0, 0, -1, sprite,
-                8, 0, 16, 12, light, overlay);
-        quad(buffer, pose, px0, py1, pz1, px1, py0, pz1, 0, 0, 1, sprite,
-                8, 0, 16, 12, light, overlay);
-        quad(buffer, pose, px0, py1, pz0, px0, py0, pz1, -1, 0, 0, sprite,
-                8, 0, 16, 12, light, overlay);
-        quad(buffer, pose, px1, py1, pz1, px1, py0, pz0, 1, 0, 0, sprite,
-                8, 0, 16, 12, light, overlay);
+    // Y+ face: vertices at y, spanning x0..x1, z0..z1
+    private void quadYP(VertexConsumer b, PoseStack.Pose p, float x0, float y, float z0, float x1, float z1,
+                        TextureAtlasSprite s, float u0, float v0, float u1, float v1, int light, int ov) {
+        float su0 = s.getU(u0/16f), su1 = s.getU(u1/16f), sv0 = s.getV(v0/16f), sv1 = s.getV(v1/16f);
+        vertex(b, p, x0, y, z0, su0, sv0, 0, 1, 0, light, ov);
+        vertex(b, p, x0, y, z1, su0, sv1, 0, 1, 0, light, ov);
+        vertex(b, p, x1, y, z1, su1, sv1, 0, 1, 0, light, ov);
+        vertex(b, p, x1, y, z0, su1, sv0, 0, 1, 0, light, ov);
     }
 
-    private void renderChamber(VertexConsumer buffer, PoseStack.Pose pose,
-                               float x0, float y0, float z0, float x1, float y1, float z1,
-                               TextureAtlasSprite sprite, int light, int overlay) {
-        float px0 = x0 * PIXEL, py0 = y0 * PIXEL, pz0 = z0 * PIXEL;
-        float px1 = x1 * PIXEL, py1 = y1 * PIXEL, pz1 = z1 * PIXEL;
-        float uvHeight = y1 - y0;
-
-        // 4 sides only (no top/bottom for chamber)
-        quad(buffer, pose, px1, py1, pz0, px0, py0, pz0, 0, 0, -1, sprite,
-                x0, 0, x1, uvHeight, light, overlay);
-        quad(buffer, pose, px0, py1, pz1, px1, py0, pz1, 0, 0, 1, sprite,
-                x0, 0, x1, uvHeight, light, overlay);
-        quad(buffer, pose, px0, py1, pz0, px0, py0, pz1, -1, 0, 0, sprite,
-                z0, 0, z1, uvHeight, light, overlay);
-        quad(buffer, pose, px1, py1, pz1, px1, py0, pz0, 1, 0, 0, sprite,
-                z0, 0, z1, uvHeight, light, overlay);
+    // Y- face: vertices at y, spanning x0..x1, z0..z1
+    private void quadYN(VertexConsumer b, PoseStack.Pose p, float x0, float y, float z0, float x1, float z1,
+                        TextureAtlasSprite s, float u0, float v0, float u1, float v1, int light, int ov) {
+        float su0 = s.getU(u0/16f), su1 = s.getU(u1/16f), sv0 = s.getV(v0/16f), sv1 = s.getV(v1/16f);
+        vertex(b, p, x0, y, z1, su0, sv1, 0, -1, 0, light, ov);
+        vertex(b, p, x0, y, z0, su0, sv0, 0, -1, 0, light, ov);
+        vertex(b, p, x1, y, z0, su1, sv0, 0, -1, 0, light, ov);
+        vertex(b, p, x1, y, z1, su1, sv1, 0, -1, 0, light, ov);
     }
 
-    private void quad(VertexConsumer buffer, PoseStack.Pose pose,
-                      float x0, float y0, float z0,
-                      float x1, float y1, float z1,
-                      float nx, float ny, float nz,
-                      TextureAtlasSprite sprite,
-                      float u0Px, float v0Px, float u1Px, float v1Px,
-                      int light, int overlay) {
-        float u0 = sprite.getU(u0Px / 16f);
-        float v0 = sprite.getV(v0Px / 16f);
-        float u1 = sprite.getU(u1Px / 16f);
-        float v1 = sprite.getV(v1Px / 16f);
-
-        if (ny != 0) {
-            float y = (ny > 0) ? Math.max(y0, y1) : Math.min(y0, y1);
-            if (ny > 0) {
-                vertex(buffer, pose, x0, y, z0, u0, v0, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x0, y, z1, u0, v1, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x1, y, z1, u1, v1, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x1, y, z0, u1, v0, nx, ny, nz, light, overlay);
-            } else {
-                vertex(buffer, pose, x0, y, z1, u0, v1, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x0, y, z0, u0, v0, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x1, y, z0, u1, v0, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x1, y, z1, u1, v1, nx, ny, nz, light, overlay);
-            }
-        } else if (nz != 0) {
-            float z = (nz > 0) ? Math.max(z0, z1) : Math.min(z0, z1);
-            if (nz > 0) {
-                vertex(buffer, pose, x0, y0, z, u0, v1, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x0, y1, z, u0, v0, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x1, y1, z, u1, v0, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x1, y0, z, u1, v1, nx, ny, nz, light, overlay);
-            } else {
-                vertex(buffer, pose, x1, y0, z, u1, v1, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x1, y1, z, u1, v0, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x0, y1, z, u0, v0, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x0, y0, z, u0, v1, nx, ny, nz, light, overlay);
-            }
-        } else {
-            float x = (nx > 0) ? Math.max(x0, x1) : Math.min(x0, x1);
-            if (nx > 0) {
-                vertex(buffer, pose, x, y0, z0, u0, v1, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x, y1, z0, u0, v0, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x, y1, z1, u1, v0, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x, y0, z1, u1, v1, nx, ny, nz, light, overlay);
-            } else {
-                vertex(buffer, pose, x, y0, z1, u1, v1, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x, y1, z1, u1, v0, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x, y1, z0, u0, v0, nx, ny, nz, light, overlay);
-                vertex(buffer, pose, x, y0, z0, u0, v1, nx, ny, nz, light, overlay);
-            }
-        }
+    // Z- (north) face: vertices at z, spanning x0..x1, y0..y1
+    private void quadZN(VertexConsumer b, PoseStack.Pose p, float x0, float y0, float z, float x1, float y1,
+                        TextureAtlasSprite s, float u0, float v0, float u1, float v1, int light, int ov) {
+        float su0 = s.getU(u0/16f), su1 = s.getU(u1/16f), sv0 = s.getV(v0/16f), sv1 = s.getV(v1/16f);
+        vertex(b, p, x1, y1, z, su0, sv0, 0, 0, -1, light, ov);
+        vertex(b, p, x1, y0, z, su0, sv1, 0, 0, -1, light, ov);
+        vertex(b, p, x0, y0, z, su1, sv1, 0, 0, -1, light, ov);
+        vertex(b, p, x0, y1, z, su1, sv0, 0, 0, -1, light, ov);
     }
 
-    private void vertex(VertexConsumer buffer, PoseStack.Pose pose,
+    // Z+ (south) face: vertices at z, spanning x0..x1, y0..y1
+    private void quadZP(VertexConsumer b, PoseStack.Pose p, float x0, float y0, float z, float x1, float y1,
+                        TextureAtlasSprite s, float u0, float v0, float u1, float v1, int light, int ov) {
+        float su0 = s.getU(u0/16f), su1 = s.getU(u1/16f), sv0 = s.getV(v0/16f), sv1 = s.getV(v1/16f);
+        vertex(b, p, x0, y1, z, su0, sv0, 0, 0, 1, light, ov);
+        vertex(b, p, x0, y0, z, su0, sv1, 0, 0, 1, light, ov);
+        vertex(b, p, x1, y0, z, su1, sv1, 0, 0, 1, light, ov);
+        vertex(b, p, x1, y1, z, su1, sv0, 0, 0, 1, light, ov);
+    }
+
+    // X- (west) face: vertices at x, spanning z0..z1, y0..y1
+    private void quadXN(VertexConsumer b, PoseStack.Pose p, float x, float y0, float z0, float y1, float z1,
+                        TextureAtlasSprite s, float u0, float v0, float u1, float v1, int light, int ov) {
+        float su0 = s.getU(u0/16f), su1 = s.getU(u1/16f), sv0 = s.getV(v0/16f), sv1 = s.getV(v1/16f);
+        vertex(b, p, x, y1, z0, su0, sv0, -1, 0, 0, light, ov);
+        vertex(b, p, x, y0, z0, su0, sv1, -1, 0, 0, light, ov);
+        vertex(b, p, x, y0, z1, su1, sv1, -1, 0, 0, light, ov);
+        vertex(b, p, x, y1, z1, su1, sv0, -1, 0, 0, light, ov);
+    }
+
+    // X+ (east) face: vertices at x, spanning z0..z1, y0..y1
+    private void quadXP(VertexConsumer b, PoseStack.Pose p, float x, float y0, float z0, float y1, float z1,
+                        TextureAtlasSprite s, float u0, float v0, float u1, float v1, int light, int ov) {
+        float su0 = s.getU(u0/16f), su1 = s.getU(u1/16f), sv0 = s.getV(v0/16f), sv1 = s.getV(v1/16f);
+        vertex(b, p, x, y1, z1, su0, sv0, 1, 0, 0, light, ov);
+        vertex(b, p, x, y0, z1, su0, sv1, 1, 0, 0, light, ov);
+        vertex(b, p, x, y0, z0, su1, sv1, 1, 0, 0, light, ov);
+        vertex(b, p, x, y1, z0, su1, sv0, 1, 0, 0, light, ov);
+    }
+
+    private void vertex(VertexConsumer b, PoseStack.Pose p,
                         float x, float y, float z,
                         float u, float v,
                         float nx, float ny, float nz,
                         int light, int overlay) {
-        buffer.addVertex(pose, x, y, z)
-                .setColor(1.0f, 1.0f, 1.0f, 1.0f)
-                .setUv(u, v)
-                .setOverlay(overlay)
-                .setLight(light)
-                .setNormal(pose, nx, ny, nz);
+        b.addVertex(p, x, y, z)
+         .setColor(1.0f, 1.0f, 1.0f, 1.0f)
+         .setUv(u, v)
+         .setOverlay(overlay)
+         .setLight(light)
+         .setNormal(p, nx, ny, nz);
     }
 
     // --- Static helpers for creating trunk texture maps ---

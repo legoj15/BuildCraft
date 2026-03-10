@@ -12,6 +12,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -21,6 +22,9 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.item.context.BlockPlaceContext;
 
 import buildcraft.api.properties.BuildCraftProperties;
@@ -32,8 +36,11 @@ import buildcraft.api.tools.IToolWrench;
  */
 public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock {
 
+    // Non-full-cube shape to prevent neighbor face culling
+    private static final VoxelShape ENGINE_SHAPE = Shapes.box(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+
     public BlockEngineBase_BC8(Properties properties) {
-        super(properties);
+        super(properties.noOcclusion());
         registerDefaultState(defaultBlockState()
             .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP));
     }
@@ -53,6 +60,18 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock {
     public BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rot) {
         return state.setValue(BuildCraftProperties.BLOCK_FACING_6,
             rot.rotate(state.getValue(BuildCraftProperties.BLOCK_FACING_6)));
+    }
+
+    // --- Shape / Occlusion ---
+
+    @Override
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return ENGINE_SHAPE;
+    }
+
+    @Override
+    public boolean useShapeForLightOcclusion(BlockState state) {
+        return true;
     }
 
     // --- Block Entity ---
@@ -85,17 +104,16 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
             Player player, BlockHitResult hitResult) {
-        if (level.isClientSide()) {
-            return InteractionResult.SUCCESS;
-        }
-
+        // Wrench rotation - check if player is holding a wrench
         ItemStack heldItem = player.getMainHandItem();
         if (!heldItem.isEmpty() && heldItem.getItem() instanceof IToolWrench) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TileEngineBase_BC8 engine) {
-                engine.rotateOrientation();
-                // Sync the blockstate facing to the tile orientation
-                level.setBlock(pos, state.setValue(BuildCraftProperties.BLOCK_FACING_6, engine.getOrientation()), 3);
+            if (!level.isClientSide()) {
+                BlockEntity be = level.getBlockEntity(pos);
+                if (be instanceof TileEngineBase_BC8 engine) {
+                    engine.rotateOrientation();
+                    // Sync the blockstate facing to the tile orientation
+                    level.setBlock(pos, state.setValue(BuildCraftProperties.BLOCK_FACING_6, engine.getOrientation()), 3);
+                }
             }
             return InteractionResult.SUCCESS;
         }

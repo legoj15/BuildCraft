@@ -233,34 +233,35 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
                                int light, int overlay) {
         // 1.12.2: UV [3, progressSize, 13, 0] for all 4 sides
         // U range: pixel 3 to 13 (center 10px of 16px texture)
-        // V range: progressSize to 0 (inverted — texture grows from top down)
+        // V: anchored at base (v=0 at bottom), reveals more at top (v=progressSize)
         float u0 = 3, u1 = 13;
-        float v0 = progressSize, v1 = 0;
+        float vTop = progressSize;  // top of chamber (moving with piston)
+        float vBot = 0;             // bottom of chamber (fixed at base)
 
         // North (Z-)
         face(b, pose, sprite, light, overlay, 0.8f, 0, 0, -1,
-                x0, y1, z0,  u0, v1,
-                x1, y1, z0,  u1, v1,
-                x1, y0, z0,  u1, v0,
-                x0, y0, z0,  u0, v0);
+                x0, y1, z0,  u0, vTop,
+                x1, y1, z0,  u1, vTop,
+                x1, y0, z0,  u1, vBot,
+                x0, y0, z0,  u0, vBot);
         // South (Z+)
         face(b, pose, sprite, light, overlay, 0.8f, 0, 0, 1,
-                x1, y1, z1,  u0, v1,
-                x0, y1, z1,  u1, v1,
-                x0, y0, z1,  u1, v0,
-                x1, y0, z1,  u0, v0);
+                x1, y1, z1,  u0, vTop,
+                x0, y1, z1,  u1, vTop,
+                x0, y0, z1,  u1, vBot,
+                x1, y0, z1,  u0, vBot);
         // West (X-)
         face(b, pose, sprite, light, overlay, 0.6f, -1, 0, 0,
-                x0, y1, z1,  u0, v1,
-                x0, y1, z0,  u1, v1,
-                x0, y0, z0,  u1, v0,
-                x0, y0, z1,  u0, v0);
+                x0, y1, z1,  u0, vTop,
+                x0, y1, z0,  u1, vTop,
+                x0, y0, z0,  u1, vBot,
+                x0, y0, z1,  u0, vBot);
         // East (X+)
         face(b, pose, sprite, light, overlay, 0.6f, 1, 0, 0,
-                x1, y1, z0,  u0, v1,
-                x1, y1, z1,  u1, v1,
-                x1, y0, z1,  u1, v0,
-                x1, y0, z0,  u0, v0);
+                x1, y1, z0,  u0, vTop,
+                x1, y1, z1,  u1, vTop,
+                x1, y0, z1,  u1, vBot,
+                x1, y0, z0,  u0, vBot);
     }
 
     /**

@@ -22,6 +22,7 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.redstone.Orientation;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -103,12 +104,16 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock {
         }
     }
 
+    // --- Interaction ---
+
     /**
      * Handle wrench interactions on the base engine.
-     * 
+     *
      * 1.12.2 parity:
      * - Crouch + wrench: attemptRotation() — rotate to next valid MJ receiver
-     * - Normal wrench: PASS — let subclasses handle (creative=output, stone/iron/redstone=subclass behavior)
+     * - Normal wrench: PASS — let subclasses handle (creative=output, stone/iron open GUI, redstone rotates)
+     *
+     * Base class returns PASS for everything else so subclasses can handle non-wrench interactions.
      */
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
@@ -128,9 +133,6 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock {
                 return InteractionResult.SUCCESS;
             }
             // Non-crouching wrench: PASS to let subclasses handle
-            // (redstone engine will fall through to attemptRotation below,
-            //  creative engine overrides to cycle output,
-            //  stone/iron engines let it pass to open GUI)
             return InteractionResult.PASS;
         }
         return InteractionResult.PASS;
@@ -138,8 +140,14 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock {
 
     // --- Neighbor changes ---
 
-    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block blockIn,
-            BlockPos fromPos, boolean isMoving) {
+    /**
+     * Called when an adjacent block changes. Triggers engine re-orientation check
+     * and redstone state update.
+     * NeoForge 1.21.11 signature: uses Orientation instead of BlockPos.
+     */
+    @Override
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block blockIn,
+            @Nullable Orientation orientation, boolean isMoving) {
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TileEngineBase_BC8 engine) {
             engine.onNeighborUpdate();

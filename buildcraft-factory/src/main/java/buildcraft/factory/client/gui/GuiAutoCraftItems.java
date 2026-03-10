@@ -6,37 +6,51 @@
 
 package buildcraft.factory.client.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.factory.container.ContainerAutoCraftItems;
 import buildcraft.lib.gui.GuiBC8;
+import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.ledger.LedgerHelp;
+import buildcraft.lib.gui.ledger.LedgerOwnership;
 
 public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     private static final Identifier TEXTURE =
             Identifier.parse("buildcraftfactory:textures/gui/autobench_item.png");
+    private static final int SIZE_X = 176, SIZE_Y = 197;
+    private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
 
     public GuiAutoCraftItems(ContainerAutoCraftItems menu, Inventory playerInv, Component title) {
-        super(menu, playerInv, title);
-        // 1.12.2 GUI dimensions: 176 x 237
-        this.imageWidth = 176;
-        this.imageHeight = 237;
-        this.inventoryLabelY = this.imageHeight - 94;
+        super(menu, playerInv, title, SIZE_X, SIZE_Y);
     }
 
     @Override
     protected void initGuiElements() {
-        // TODO: Add recipe book button and progress bar
+        if (menu.tile != null) {
+            // Ownership ledger on the right side
+            mainGui.shownElements.add(new LedgerOwnership(mainGui,
+                () -> menu.tile != null ? menu.tile.getOwner() : null,
+                true
+            ));
+
+            // Help ledger on the left side
+            mainGui.shownElements.add(new LedgerHelp(mainGui,
+                "gui.buildcraft.autoworkbench.help"
+            ));
+        }
     }
 
     @Override
-    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        int x = this.leftPos;
-        int y = this.topPos;
-        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, x, y, 0.0F, 0.0F,
-                this.imageWidth, this.imageHeight, 256, 256);
+    protected void drawBackgroundTexture(GuiGraphics graphics) {
+        ICON_GUI.drawAt(mainGui.rootElement);
+    }
+
+    @Override
+    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+        // No labels — matches 1.12.2 which only has the GUI texture
     }
 }

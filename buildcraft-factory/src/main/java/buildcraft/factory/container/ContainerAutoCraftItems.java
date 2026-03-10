@@ -30,27 +30,24 @@ public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchIt
     public ContainerAutoCraftItems(int containerId, Inventory playerInv, TileAutoWorkbenchItems tile) {
         super(BCFactoryMenuTypes.AUTO_WORKBENCH_ITEMS.get(), containerId, playerInv.player, tile);
 
-        // Blueprint phantom slots (3x3 grid) — top-left at (30, 17)
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 3; col++) {
-                addSlot(new SlotPhantom(tile.invBlueprint, col + row * 3,
-                        30 + col * 18, 17 + row * 18, false));
-            }
-        }
-
-        // Result output slot at (124, 35)
+        // Result output slot at (124, 35) — matches 1.12.2
         addSlot(new SlotOutput(tile.invResult, 0, 124, 35));
 
-        // Materials slots (3x3) — at (30, 85)
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 3; col++) {
-                addSlot(new SlotBase(tile.invMaterials, col + row * 3,
-                        30 + col * 18, 85 + row * 18));
+        // Blueprint phantom slots (3x3 grid) — top-left at (30, 17) — matches 1.12.2
+        for (int y = 0; y < 3; y++) {
+            for (int x = 0; x < 3; x++) {
+                addSlot(new SlotPhantom(tile.invBlueprint, x + y * 3,
+                        30 + x * 18, 17 + y * 18, false));
             }
         }
 
-        // Player inventory at y=153
-        addFullPlayerInventory(8, 153);
+        // Materials slots — single row of 9 at (8 + x*18, 84) — matches 1.12.2
+        for (int x = 0; x < 9; x++) {
+            addSlot(new SlotBase(tile.invMaterials, x, 8 + x * 18, 84));
+        }
+
+        // Player inventory at (8, 115) — matches 1.12.2
+        addFullPlayerInventory(8, 115);
     }
 
     private static TileAutoWorkbenchItems getTile(Inventory playerInv, FriendlyByteBuf buf) {

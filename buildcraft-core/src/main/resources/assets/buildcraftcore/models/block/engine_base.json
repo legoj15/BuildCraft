@@ -1,3 +1,5 @@
-{\r\n    "textures": {\r\n        "particle": "buildcraftcore:block/engine/wood_back"\r\n
-    }\r\n
-}\r\n
+{
+    "textures": {
+        "particle": "buildcraftcore:block/engine/wood_back"
+    }
+}

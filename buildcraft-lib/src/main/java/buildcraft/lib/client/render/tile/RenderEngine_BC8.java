@@ -54,17 +54,6 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
         return new EngineRenderState();
     }
 
-    public void extractRenderState(TileEngineBase_BC8 engine, EngineRenderState state, float partialTick) {
-        state.progress = engine.getProgressClient(partialTick);
-        state.powerStage = engine.getPowerStage();
-        state.facing = engine.getOrientation();
-        state.backTexture = backTexture;
-        state.sideTexture = sideTexture;
-        state.chamberTexture = chamberTexture;
-        state.trunkTexture = trunkTextures.getOrDefault(state.powerStage,
-                trunkTextures.get(EnumPowerStage.BLUE));
-    }
-
     @Override
     public void submit(EngineRenderState state, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
@@ -75,11 +64,15 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
 
         float progressPixels = state.progress * 8.0f; // 0 to 8 pixels of piston travel
 
-        // Get sprites from the block atlas
-        TextureAtlasSprite backSprite = getSprite(state.backTexture);
-        TextureAtlasSprite sideSprite = getSprite(state.sideTexture);
-        TextureAtlasSprite trunkSprite = getSprite(state.trunkTexture);
-        TextureAtlasSprite chamberSprite = getSprite(state.chamberTexture);
+        // Determine trunk texture from power stage (use renderer's own fields, not state)
+        EnumPowerStage stage = state.powerStage != null ? state.powerStage : EnumPowerStage.BLUE;
+        Identifier trunkTex = trunkTextures.getOrDefault(stage, trunkTextures.get(EnumPowerStage.BLUE));
+
+        // Get sprites from the block atlas (using renderer's fields directly)
+        TextureAtlasSprite backSprite = getSprite(backTexture);
+        TextureAtlasSprite sideSprite = getSprite(sideTexture);
+        TextureAtlasSprite trunkSprite = getSprite(trunkTex);
+        TextureAtlasSprite chamberSprite = getSprite(chamberTexture);
 
         // Get light from the block entity position
         int light = 15728880; // full brightness fallback

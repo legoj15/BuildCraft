@@ -338,7 +338,7 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
                 engine.progress = 0;
                 engine.progressPart = 0;
             }
-        } else if (engine.isRedstonePowered && engine.isBurning()) {
+        } else if (engine.isRedstonePowered && engine.isBurning() && receiver != null) {
             if (engine.extractPower(0, engine.maxPowerExtracted(), false) > 0) {
                 engine.progressPart = 1;
                 engine.setPumping(true);

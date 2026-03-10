@@ -345,7 +345,8 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
                 EnumPowerStage.GREEN, Identifier.parse("buildcraftlib:block/engine/trunk_green"),
                 EnumPowerStage.YELLOW, Identifier.parse("buildcraftlib:block/engine/trunk_yellow"),
                 EnumPowerStage.RED, Identifier.parse("buildcraftlib:block/engine/trunk_red"),
-                EnumPowerStage.OVERHEAT, Identifier.parse("buildcraftlib:block/engine/trunk_overheat")
+                EnumPowerStage.OVERHEAT, Identifier.parse("buildcraftlib:block/engine/trunk_overheat"),
+                EnumPowerStage.BLACK, Identifier.parse("buildcraftlib:block/engine/trunk_black")
         );
     }
 }

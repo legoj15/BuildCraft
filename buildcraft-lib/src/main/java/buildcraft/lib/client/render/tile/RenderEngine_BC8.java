@@ -24,6 +24,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.lib.engine.TileEngineBase_BC8;
@@ -58,9 +59,17 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
     @Override
     public void submit(EngineRenderState state, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
-        // BlockEntityRenderState.blockPos is set by the framework
-        BlockPos pos = state.blockPos;
-        if (pos == null) return;
+        // Derive block position from PoseStack translation + camera position
+        // The PoseStack is pre-translated to (blockX - camX, blockY - camY, blockZ - camZ)
+        // Use Math.round() instead of floor() to avoid floating-point precision errors
+        Vec3 camPos = cameraState.pos;
+        if (camPos == null) return;
+        org.joml.Vector3f t = new org.joml.Vector3f();
+        poseStack.last().pose().getTranslation(t);
+        BlockPos pos = new BlockPos(
+                Math.round((float)(camPos.x + t.x)),
+                Math.round((float)(camPos.y + t.y)),
+                Math.round((float)(camPos.z + t.z)));
 
         Level level = Minecraft.getInstance().level;
         if (level == null) return;

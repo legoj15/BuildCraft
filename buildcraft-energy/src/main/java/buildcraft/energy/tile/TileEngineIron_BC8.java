@@ -314,15 +314,28 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
 
         @Override
         public FluidStack drain(FluidStack resource, FluidAction action) {
-            // Only allow draining from residue
-            FluidStack drained = tankResidue.drain(resource, action);
+            // Try draining from all tanks: fuel, coolant, residue
+            FluidStack drained = tankFuel.drain(resource, action);
+            if (drained.isEmpty()) {
+                drained = tankCoolant.drain(resource, action);
+            }
+            if (drained.isEmpty()) {
+                drained = tankResidue.drain(resource, action);
+            }
             if (!drained.isEmpty() && action.execute()) setChanged();
             return drained;
         }
 
         @Override
         public FluidStack drain(int maxDrain, FluidAction action) {
-            FluidStack drained = tankResidue.drain(maxDrain, action);
+            // Try draining from all tanks: fuel, coolant, residue
+            FluidStack drained = tankFuel.drain(maxDrain, action);
+            if (drained.isEmpty()) {
+                drained = tankCoolant.drain(maxDrain, action);
+            }
+            if (drained.isEmpty()) {
+                drained = tankResidue.drain(maxDrain, action);
+            }
             if (!drained.isEmpty() && action.execute()) setChanged();
             return drained;
         }

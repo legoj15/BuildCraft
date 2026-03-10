@@ -77,13 +77,13 @@ public class BCCore {
                                 ctx -> new buildcraft.lib.client.render.tile.RenderEngine_BC8(
                                         net.minecraft.resources.Identifier.parse("buildcraftcore:block/engine/wood_back"),
                                         net.minecraft.resources.Identifier.parse("buildcraftcore:block/engine/wood_side"),
-                                        net.minecraft.resources.Identifier.parse("buildcraftcore:block/engine/chamber_base"),
+                                        net.minecraft.resources.Identifier.parse("buildcraftlib:block/engine/chamber_base"),
                                         trunkMap));
                         event.registerBlockEntityRenderer(BCCoreBlockEntities.ENGINE_CREATIVE.get(),
                                 ctx -> new buildcraft.lib.client.render.tile.RenderEngine_BC8(
                                         net.minecraft.resources.Identifier.parse("buildcraftcore:block/engine/creative_back"),
                                         net.minecraft.resources.Identifier.parse("buildcraftcore:block/engine/creative_side"),
-                                        net.minecraft.resources.Identifier.parse("buildcraftcore:block/engine/chamber_base"),
+                                        net.minecraft.resources.Identifier.parse("buildcraftlib:block/engine/chamber_base"),
                                         trunkMap));
                     }
             );

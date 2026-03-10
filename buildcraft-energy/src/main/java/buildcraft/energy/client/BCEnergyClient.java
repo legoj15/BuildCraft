@@ -26,13 +26,13 @@ public class BCEnergyClient {
                 ctx -> new RenderEngine_BC8(
                         Identifier.parse("buildcraftenergy:block/engine/stone_back"),
                         Identifier.parse("buildcraftenergy:block/engine/stone_side"),
-                        Identifier.parse("buildcraftcore:block/engine/chamber_base"),
+                        Identifier.parse("buildcraftlib:block/engine/chamber_base"),
                         trunkMap));
         event.registerBlockEntityRenderer(BCEnergyBlockEntities.ENGINE_IRON.get(),
                 ctx -> new RenderEngine_BC8(
                         Identifier.parse("buildcraftenergy:block/engine/iron_back"),
                         Identifier.parse("buildcraftenergy:block/engine/iron_side"),
-                        Identifier.parse("buildcraftcore:block/engine/chamber_base"),
+                        Identifier.parse("buildcraftlib:block/engine/chamber_base"),
                         trunkMap));
     }
 }

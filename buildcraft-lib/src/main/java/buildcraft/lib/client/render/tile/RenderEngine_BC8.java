@@ -341,11 +341,11 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
 
     public static Map<EnumPowerStage, Identifier> defaultTrunkTextures() {
         return Map.of(
-                EnumPowerStage.BLUE, Identifier.parse("buildcraftcore:block/engine/trunk_blue"),
-                EnumPowerStage.GREEN, Identifier.parse("buildcraftcore:block/engine/trunk_green"),
-                EnumPowerStage.YELLOW, Identifier.parse("buildcraftcore:block/engine/trunk_yellow"),
-                EnumPowerStage.RED, Identifier.parse("buildcraftcore:block/engine/trunk_red"),
-                EnumPowerStage.OVERHEAT, Identifier.parse("buildcraftcore:block/engine/trunk_overheat")
+                EnumPowerStage.BLUE, Identifier.parse("buildcraftlib:block/engine/trunk_blue"),
+                EnumPowerStage.GREEN, Identifier.parse("buildcraftlib:block/engine/trunk_green"),
+                EnumPowerStage.YELLOW, Identifier.parse("buildcraftlib:block/engine/trunk_yellow"),
+                EnumPowerStage.RED, Identifier.parse("buildcraftlib:block/engine/trunk_red"),
+                EnumPowerStage.OVERHEAT, Identifier.parse("buildcraftlib:block/engine/trunk_overheat")
         );
     }
 }

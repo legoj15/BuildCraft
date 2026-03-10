@@ -86,7 +86,7 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
         // Apply directional rotation - engine model is authored facing UP
         applyDirectionalRotation(poseStack, facing);
 
-        float pProgress = progress * 0.5f; // 0 to 0.5 blocks of piston travel
+
 
         // Determine trunk texture from power stage
         Identifier trunkTex = trunkTextures.getOrDefault(powerStage, trunkTextures.get(EnumPowerStage.BLUE));
@@ -107,25 +107,40 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
         VertexConsumer buffer = bufferSource.getBuffer(Sheets.cutoutBlockSheet());
         PoseStack.Pose pose = poseStack.last();
 
+        // --- 1.12.2 parity: triangle wave for piston animation ---
+        // Expression: progress_size = (progress > 0.5 ? ((1-progress) * 15.99) : (progress * 15.99))
+        // This maps progress 0->0.5->1 to visual size 0->~8->0 pixels (triangle wave)
+        float progressSize;
+        if (progress > 0.5f) {
+            progressSize = (1.0f - progress) * (8 * 2 - 0.01f);
+        } else {
+            progressSize = progress * (8 * 2 - 0.01f);
+        }
+        float progressBlocks = progressSize / 16.0f; // convert pixels to block units
+
         // --- Engine geometry (in block units, 0-1) ---
 
-        // 1. Base plate: full-width, 4px tall
+        // 1. Base plate: [0,0,0] to [16,4,16]
         renderBox(buffer, pose, 0, 0, 0, 1, 0.25f, 1,
                 backSprite, backSprite, sideSprite, light, overlay);
 
-        // 2. Trunk: 8px wide center pole, full height above base (uniform texture)
-        renderBox(buffer, pose, 0.25f, 0.25f, 0.25f, 0.75f, 1f, 0.75f,
-                trunkSprite, trunkSprite, trunkSprite, light, overlay);
+        // 2. Trunk: [4,4,4] to [12,16,12] (static center pole)
+        //    UV: caps = 0-8,0-8 / sides = 8-16,0-12
+        renderTrunk(buffer, pose, 0.25f, 0.25f, 0.25f, 0.75f, 1f, 0.75f,
+                trunkSprite, light, overlay);
 
-        // 3. Chamber: 10px wide, animated height above base (translucent piston chamber)
-        float chamberTop = 0.25f + pProgress;
-        if (pProgress > 0.001f) {
-            renderBox(buffer, pose, 0.1875f, 0.25f, 0.1875f, 0.8125f, chamberTop, 0.8125f,
+        // 3. Chamber: [3,4,3] to [13,4+progressSize,13] (animated, sides only)
+        if (progressBlocks > 0.001f) {
+            float cy0 = 0.25f;
+            float cy1 = 0.25f + progressBlocks;
+            renderBox(buffer, pose, 3/16f, cy0, 3/16f, 13/16f, cy1, 13/16f,
                     chamberSprite, chamberSprite, chamberSprite, light, overlay);
         }
 
-        // 4. Piston head: full-width, 4px tall, slides with progress
-        renderBox(buffer, pose, 0, 0.25f + pProgress, 0, 1, 0.5f + pProgress, 1,
+        // 4. Piston head: [0,4+progressSize,0] to [16,8+progressSize,16]
+        float py0 = 0.25f + progressBlocks;
+        float py1 = 0.5f + progressBlocks;
+        renderBox(buffer, pose, 0, py0, 0, 1, py1, 1,
                 backSprite, backSprite, sideSprite, light, overlay);
 
         bufferSource.endBatch();
@@ -204,6 +219,52 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
                 x1, y1, z1,  zw, 0,
                 x1, y0, z1,  zw, yh,
                 x1, y0, z0,  0, yh);
+    }
+
+    /**
+     * Render the trunk with correct 1.12.2 UV regions.
+     * Caps (top/bottom): UV 0-8, 0-8 (top-left quadrant of texture)
+     * Sides: UV 8-16, 0-12 (right half of texture)
+     */
+    private void renderTrunk(VertexConsumer b, PoseStack.Pose pose,
+                             float x0, float y0, float z0, float x1, float y1, float z1,
+                             TextureAtlasSprite sprite, int light, int overlay) {
+        // Top (Y+) - cap UV 0-8, 0-8
+        face(b, pose, sprite, light, overlay, 1.0f, 0, 1, 0,
+                x0, y1, z0,  0, 0,
+                x0, y1, z1,  0, 8,
+                x1, y1, z1,  8, 8,
+                x1, y1, z0,  8, 0);
+        // Bottom (Y-) - cap UV 0-8, 0-8
+        face(b, pose, sprite, light, overlay, 0.5f, 0, -1, 0,
+                x1, y0, z0,  0, 0,
+                x1, y0, z1,  0, 8,
+                x0, y0, z1,  8, 8,
+                x0, y0, z0,  8, 0);
+        // North (Z-) - side UV 8-16, 0-12
+        face(b, pose, sprite, light, overlay, 0.8f, 0, 0, -1,
+                x0, y1, z0,  8, 0,
+                x1, y1, z0,  16, 0,
+                x1, y0, z0,  16, 12,
+                x0, y0, z0,  8, 12);
+        // South (Z+) - side UV 8-16, 0-12
+        face(b, pose, sprite, light, overlay, 0.8f, 0, 0, 1,
+                x1, y1, z1,  8, 0,
+                x0, y1, z1,  16, 0,
+                x0, y0, z1,  16, 12,
+                x1, y0, z1,  8, 12);
+        // West (X-) - side UV 8-16, 0-12
+        face(b, pose, sprite, light, overlay, 0.6f, -1, 0, 0,
+                x0, y1, z1,  8, 0,
+                x0, y1, z0,  16, 0,
+                x0, y0, z0,  16, 12,
+                x0, y0, z1,  8, 12);
+        // East (X+) - side UV 8-16, 0-12
+        face(b, pose, sprite, light, overlay, 0.6f, 1, 0, 0,
+                x1, y1, z0,  8, 0,
+                x1, y1, z1,  16, 0,
+                x1, y0, z1,  16, 12,
+                x1, y0, z0,  8, 12);
     }
 
     /** Emit a single quad with 4 vertices. UV coords are in pixels (0-16). */

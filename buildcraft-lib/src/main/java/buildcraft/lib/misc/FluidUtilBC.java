@@ -30,6 +30,7 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IFluidHandlerAdv;
@@ -40,6 +41,7 @@ public class FluidUtilBC {
      * Pushes fluid from the given FluidTank to all adjacent fluid-capable blocks.
      * Uses NeoForge 1.21.11's Capabilities.Fluid.BLOCK with ResourceHandler API.
      */
+    @SuppressWarnings("removal")
     public static void pushFluidToNeighbors(Level level, BlockPos pos, FluidTank tank) {
         if (tank.getFluidAmount() <= 0) return;
         for (Direction dir : Direction.values()) {
@@ -54,14 +56,16 @@ public class FluidUtilBC {
 
             FluidResource resource = FluidResource.of(inTank);
             int amountToTry = Math.min(tank.getFluidAmount(), 1000);
-            // Simulate insert to find how much the neighbor can accept
-            int accepted = neighbor.insert(resource, amountToTry, null);
-            if (accepted > 0) {
-                // Actually drain from our tank
-                FluidStack drained = tank.drain(accepted,
-                        net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
-                // The insert already committed (null = auto-commit transaction)
-                // If drain gave less than expected, we have a mismatch but this is rare
+
+            try (Transaction tx = Transaction.openRoot()) {
+                int accepted = neighbor.insert(resource, amountToTry, tx);
+                if (accepted > 0) {
+                    FluidStack drained = tank.drain(accepted,
+                            net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+                    if (!drained.isEmpty() && drained.getAmount() > 0) {
+                        tx.commit();
+                    }
+                }
             }
         }
     }

@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import buildcraft.api.mj.MjAPI;
+import buildcraft.lib.misc.FluidTankResourceHandler;
 
 @Mod(BCFactory.MODID)
 public class BCFactory {
@@ -79,6 +80,23 @@ public class BCFactory {
             MjAPI.CAP_CONNECTOR,
             BCFactoryBlockEntities.PUMP.get(),
             (pump, direction) -> pump.getMjReceiver()
+        );
+
+        // Fluid capabilities — expose FluidTank as ResourceHandler<FluidResource>
+        event.registerBlockEntity(
+            Capabilities.Fluid.BLOCK,
+            BCFactoryBlockEntities.TANK.get(),
+            (tank, direction) -> new FluidTankResourceHandler(tank.tank)
+        );
+        event.registerBlockEntity(
+            Capabilities.Fluid.BLOCK,
+            BCFactoryBlockEntities.PUMP.get(),
+            (pump, direction) -> new FluidTankResourceHandler(pump.getTank())
+        );
+        event.registerBlockEntity(
+            Capabilities.Fluid.BLOCK,
+            BCFactoryBlockEntities.FLOOD_GATE.get(),
+            (floodGate, direction) -> new FluidTankResourceHandler(floodGate.getTank())
         );
     }
 

@@ -15,10 +15,13 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -43,6 +46,7 @@ public class TileTank extends BlockEntity implements MenuProvider {
     public final FluidTank tank = new FluidTank(16_000); // 16 buckets
 
     private int lastComparatorLevel;
+    private int lastSyncedAmount = -1;
 
     public TileTank(BlockPos pos, BlockState state) {
         super(BCFactoryBlockEntities.TANK.get(), pos, state);
@@ -61,11 +65,32 @@ public class TileTank extends BlockEntity implements MenuProvider {
     public void serverTick() {
         if (level == null || level.isClientSide()) return;
 
+        int currentAmount = tank.getFluidAmount();
+
+        // Sync to client when fluid contents change
+        if (currentAmount != lastSyncedAmount) {
+            lastSyncedAmount = currentAmount;
+            setChanged();
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+        }
+
         int compLevel = getComparatorLevel();
         if (compLevel != lastComparatorLevel) {
             lastComparatorLevel = compLevel;
             setChanged();
         }
+    }
+
+    // --- Client Sync ---
+
+    @Override
+    public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+        return this.saveCustomOnly(registries);
+    }
+
+    @Override
+    public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
     }
 
     // --- Tank Column Balancing ---

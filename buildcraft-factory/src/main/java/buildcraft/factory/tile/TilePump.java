@@ -339,9 +339,9 @@ public class TilePump extends TileMiner {
 
     @Override
     public void setRemoved() {
-        if (level != null && !level.isClientSide()) {
-            onRemove();
-        }
+        // Do NOT call onRemove() here — setRemoved() is also called during chunk
+        // unload/save, and removing tubes mid-serialization causes a save hang.
+        // Tube cleanup is handled by BlockPump.playerWillDestroy() instead.
         super.setRemoved();
     }
 

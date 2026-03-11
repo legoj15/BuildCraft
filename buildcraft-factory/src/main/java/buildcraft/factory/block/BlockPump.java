@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.factory.BCFactoryBlockEntities;
+import buildcraft.factory.tile.TileMiner;
 import buildcraft.factory.tile.TilePump;
 
 /**
@@ -60,5 +61,18 @@ public class BlockPump extends BaseEntityBlock {
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
+    }
+
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state,
+            net.minecraft.world.entity.player.Player player) {
+        // Clean up tubes below when the pump is explicitly broken
+        if (!level.isClientSide()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileMiner miner) {
+                miner.onRemove();
+            }
+        }
+        return super.playerWillDestroy(level, pos, state, player);
     }
 }

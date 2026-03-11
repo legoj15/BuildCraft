@@ -11,6 +11,7 @@ import buildcraft.factory.tile.TileAutoWorkbenchItems;
 import buildcraft.factory.tile.TileMiningWell;
 import buildcraft.factory.tile.TileFloodGate;
 import buildcraft.factory.tile.TilePump;
+import buildcraft.factory.tile.TileTank;
 
 public class BCFactoryBlockEntities {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
@@ -35,6 +36,11 @@ public class BCFactoryBlockEntities {
             BLOCK_ENTITIES.register("flood_gate",
                     () -> new BlockEntityType<>(TileFloodGate::new,
                             BCFactoryBlocks.FLOOD_GATE.get()));
+
+    public static final Supplier<BlockEntityType<TileTank>> TANK =
+            BLOCK_ENTITIES.register("tank",
+                    () -> new BlockEntityType<>(TileTank::new,
+                            BCFactoryBlocks.TANK.get()));
 
     public static void init(IEventBus modEventBus) {
         BLOCK_ENTITIES.register(modEventBus);

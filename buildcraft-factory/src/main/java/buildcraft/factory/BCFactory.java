@@ -5,6 +5,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraft.world.item.ItemStack;
@@ -87,6 +88,7 @@ public class BCFactory {
             event.accept(new ItemStack(BCFactoryItems.MINING_WELL.get()));
             event.accept(new ItemStack(BCFactoryItems.PUMP.get()));
             event.accept(new ItemStack(BCFactoryItems.FLOOD_GATE.get()));
+            event.accept(new ItemStack(BCFactoryItems.TANK.get()));
         }
     }
 }

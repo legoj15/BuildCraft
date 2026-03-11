@@ -4,5 +4,6 @@
     "block.buildcraftfactory.mining_well": "Mining Well",
     "block.buildcraftfactory.tube": "Tube",
     "block.buildcraftfactory.pump": "Pump",
-    "block.buildcraftfactory.flood_gate": "Flood Gate"
+    "block.buildcraftfactory.flood_gate": "Flood Gate",
+    "block.buildcraftfactory.tank": "Tank"
 }

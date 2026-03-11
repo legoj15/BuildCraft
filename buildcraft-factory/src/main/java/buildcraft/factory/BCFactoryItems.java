@@ -20,6 +20,9 @@ public class BCFactoryItems {
     public static final DeferredItem<BlockItem> FLOOD_GATE = ITEMS.registerSimpleBlockItem(
             BCFactoryBlocks.FLOOD_GATE);
 
+    public static final DeferredItem<BlockItem> TANK = ITEMS.registerSimpleBlockItem(
+            BCFactoryBlocks.TANK);
+
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);
     }

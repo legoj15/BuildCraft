@@ -9,6 +9,7 @@ import buildcraft.factory.block.BlockAutoWorkbenchItems;
 import buildcraft.factory.block.BlockMiningWell;
 import buildcraft.factory.block.BlockFloodGate;
 import buildcraft.factory.block.BlockPump;
+import buildcraft.factory.block.BlockTank;
 import buildcraft.factory.block.BlockTube;
 
 public class BCFactoryBlocks {
@@ -33,6 +34,11 @@ public class BCFactoryBlocks {
             "flood_gate",
             BlockFloodGate::new,
             BlockBehaviour.Properties.of().strength(5.0f, 10.0f));
+
+    public static final DeferredBlock<BlockTank> TANK = BLOCKS.registerBlock(
+            "tank",
+            BlockTank::new,
+            BlockBehaviour.Properties.of().strength(0.3f).noOcclusion());
 
     public static final DeferredBlock<BlockTube> TUBE = BLOCKS.registerBlock(
             "tube",

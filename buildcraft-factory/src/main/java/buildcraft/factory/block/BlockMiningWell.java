@@ -26,6 +26,7 @@ import net.minecraft.world.level.block.state.properties.Property;
 
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.factory.BCFactoryBlockEntities;
+import buildcraft.factory.tile.TileMiner;
 import buildcraft.factory.tile.TileMiningWell;
 
 public class BlockMiningWell extends BaseEntityBlock {
@@ -74,5 +75,18 @@ public class BlockMiningWell extends BaseEntityBlock {
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
+    }
+
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state,
+            net.minecraft.world.entity.player.Player player) {
+        // Clean up tubes below when the mining well is explicitly broken
+        if (!level.isClientSide()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileMiner miner) {
+                miner.onRemove();
+            }
+        }
+        return super.playerWillDestroy(level, pos, state, player);
     }
 }

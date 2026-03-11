@@ -14,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.FluidState;
 
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjReceiver;
@@ -65,6 +66,11 @@ public class TileMiningWell extends TileMiner {
                     level.destroyBlockProgress(currentPos.hashCode(), currentPos, (int) ((progress * 9) / target));
                 }
             }
+        } else if (currentPos != null && !canBreak()) {
+            // Current target is no longer breakable (already mined, became fluid, etc.)
+            // Reset progress and immediately look for the next target
+            progress = 0;
+            nextPos();
         } else if (shouldCheck || recheckCooldown <= 0) {
             nextPos();
             if (currentPos == null) {
@@ -82,10 +88,14 @@ public class TileMiningWell extends TileMiner {
         }
 
         Fluid fluid = BlockUtil.getFluidWithFlowing(level, currentPos);
-        // In 1.21 we don't have getViscosity directly; water has viscosity 1000.
-        // Skip high-viscosity fluids (lava = 6000). Water (1000) is fine.
-        // For simplicity: if it's a fluid, skip it (mining well shouldn't mine fluids)
-        return fluid == null;
+        if (fluid == null) {
+            return true; // Not a fluid, can break
+        }
+        // Match 1.12.2: allow mining water (low-viscosity fluids) but not lava
+        // In 1.21, water is the default fluid; lava has high flow speed
+        FluidState fluidState = level.getFluidState(currentPos);
+        return fluidState.is(net.minecraft.world.level.material.Fluids.WATER)
+            || fluidState.is(net.minecraft.world.level.material.Fluids.FLOWING_WATER);
     }
 
     private void nextPos() {
@@ -101,7 +111,13 @@ public class TileMiningWell extends TileMiner {
             if (canBreak()) {
                 updateLength();
                 return;
-            } else if (!level.isEmptyBlock(currentPos) && !level.getBlockState(currentPos).is(BCFactoryBlocks.TUBE.get())) {
+            } else if (level.isEmptyBlock(currentPos)
+                    || level.getBlockState(currentPos).is(BCFactoryBlocks.TUBE.get())
+                    || !level.getFluidState(currentPos).isEmpty()) {
+                // Air, tubes, or any fluid → keep scanning down
+                continue;
+            } else {
+                // Hit an unbreakable solid block (e.g. bedrock)
                 break;
             }
         }
@@ -112,7 +128,9 @@ public class TileMiningWell extends TileMiner {
     @Override
     public void setRemoved() {
         if (level != null && !level.isClientSide()) {
-            onRemove();
+            // Only clear break progress overlay — do NOT remove tubes here.
+            // Tubes are removed by onRemove() which is called only when the
+            // mining well block itself is explicitly broken (not on chunk unload).
             if (currentPos != null) {
                 level.destroyBlockProgress(currentPos.hashCode(), currentPos, -1);
             }

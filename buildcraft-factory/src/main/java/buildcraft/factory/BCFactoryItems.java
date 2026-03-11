@@ -17,6 +17,9 @@ public class BCFactoryItems {
     public static final DeferredItem<BlockItem> PUMP = ITEMS.registerSimpleBlockItem(
             BCFactoryBlocks.PUMP);
 
+    public static final DeferredItem<BlockItem> FLOOD_GATE = ITEMS.registerSimpleBlockItem(
+            BCFactoryBlocks.FLOOD_GATE);
+
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);
     }

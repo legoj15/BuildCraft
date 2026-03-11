@@ -86,6 +86,7 @@ public class BCFactory {
             event.accept(new ItemStack(BCFactoryItems.AUTOWORKBENCH_ITEM.get()));
             event.accept(new ItemStack(BCFactoryItems.MINING_WELL.get()));
             event.accept(new ItemStack(BCFactoryItems.PUMP.get()));
+            event.accept(new ItemStack(BCFactoryItems.FLOOD_GATE.get()));
         }
     }
 }

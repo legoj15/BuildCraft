@@ -7,6 +7,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 
 import buildcraft.factory.block.BlockAutoWorkbenchItems;
 import buildcraft.factory.block.BlockMiningWell;
+import buildcraft.factory.block.BlockFloodGate;
 import buildcraft.factory.block.BlockPump;
 import buildcraft.factory.block.BlockTube;
 
@@ -26,6 +27,11 @@ public class BCFactoryBlocks {
     public static final DeferredBlock<BlockPump> PUMP = BLOCKS.registerBlock(
             "pump",
             BlockPump::new,
+            BlockBehaviour.Properties.of().strength(5.0f, 10.0f));
+
+    public static final DeferredBlock<BlockFloodGate> FLOOD_GATE = BLOCKS.registerBlock(
+            "flood_gate",
+            BlockFloodGate::new,
             BlockBehaviour.Properties.of().strength(5.0f, 10.0f));
 
     public static final DeferredBlock<BlockTube> TUBE = BLOCKS.registerBlock(

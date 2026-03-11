@@ -74,6 +74,19 @@ public class BlockUtil {
     }
 
     /**
+     * Returns the fluid from a BlockState only if it is a full source block.
+     * Returns null for flowing fluid or non-fluid blockstates.
+     */
+    @Nullable
+    public static Fluid getFluidWithoutFlowing(BlockState state) {
+        FluidState fluidState = state.getFluidState();
+        if (!fluidState.isEmpty() && fluidState.isSource()) {
+            return fluidState.getType();
+        }
+        return null;
+    }
+
+    /**
      * Drains a fluid source block from the world.
      *
      * @param world    the level

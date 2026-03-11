@@ -9,6 +9,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
 import buildcraft.factory.tile.TileMiningWell;
+import buildcraft.factory.tile.TileFloodGate;
 import buildcraft.factory.tile.TilePump;
 
 public class BCFactoryBlockEntities {
@@ -29,6 +30,11 @@ public class BCFactoryBlockEntities {
             BLOCK_ENTITIES.register("pump",
                     () -> new BlockEntityType<>(TilePump::new,
                             BCFactoryBlocks.PUMP.get()));
+
+    public static final Supplier<BlockEntityType<TileFloodGate>> FLOOD_GATE =
+            BLOCK_ENTITIES.register("flood_gate",
+                    () -> new BlockEntityType<>(TileFloodGate::new,
+                            BCFactoryBlocks.FLOOD_GATE.get()));
 
     public static void init(IEventBus modEventBus) {
         BLOCK_ENTITIES.register(modEventBus);

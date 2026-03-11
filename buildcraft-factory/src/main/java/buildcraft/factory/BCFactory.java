@@ -55,11 +55,24 @@ public class BCFactory {
             BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
             (workbench, direction) -> workbench.getMjReceiver()
         );
+
+        // MJ capabilities for the mining well
+        event.registerBlockEntity(
+            MjAPI.CAP_RECEIVER,
+            BCFactoryBlockEntities.MINING_WELL.get(),
+            (miner, direction) -> miner.getMjReceiver()
+        );
+        event.registerBlockEntity(
+            MjAPI.CAP_CONNECTOR,
+            BCFactoryBlockEntities.MINING_WELL.get(),
+            (miner, direction) -> miner.getMjReceiver()
+        );
     }
 
     private void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == buildcraft.core.BCCoreCreativeTabs.MAIN_TAB_KEY) {
             event.accept(new ItemStack(BCFactoryItems.AUTOWORKBENCH_ITEM.get()));
+            event.accept(new ItemStack(BCFactoryItems.MINING_WELL.get()));
         }
     }
 }

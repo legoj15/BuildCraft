@@ -1,4 +1,6 @@
 {
     "block.buildcraftfactory.autoworkbench_item": "Auto Workbench",
-    "tile.autoWorkbenchBlock.name": "Auto Workbench"
+    "tile.autoWorkbenchBlock.name": "Auto Workbench",
+    "block.buildcraftfactory.mining_well": "Mining Well",
+    "block.buildcraftfactory.tube": "Tube"
 }

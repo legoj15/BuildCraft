@@ -8,6 +8,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
+import buildcraft.factory.tile.TileMiningWell;
 
 public class BCFactoryBlockEntities {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
@@ -17,6 +18,11 @@ public class BCFactoryBlockEntities {
             BLOCK_ENTITIES.register("autoworkbench_item",
                     () -> new BlockEntityType<>(TileAutoWorkbenchItems::new,
                             BCFactoryBlocks.AUTOWORKBENCH_ITEM.get()));
+
+    public static final Supplier<BlockEntityType<TileMiningWell>> MINING_WELL =
+            BLOCK_ENTITIES.register("mining_well",
+                    () -> new BlockEntityType<>(TileMiningWell::new,
+                            BCFactoryBlocks.MINING_WELL.get()));
 
     public static void init(IEventBus modEventBus) {
         BLOCK_ENTITIES.register(modEventBus);

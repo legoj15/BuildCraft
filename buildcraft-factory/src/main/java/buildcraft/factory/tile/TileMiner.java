@@ -157,7 +157,7 @@ public abstract class TileMiner extends TileBC_Neptune {
         }
         output.putInt("wantedLength", wantedLength);
         output.putInt("progress", progress);
-        output.store("battery", net.minecraft.nbt.CompoundTag.CODEC, battery.serializeNBT());
+        output.putLong("mjStored", battery.getStored());
     }
 
     @Override
@@ -173,6 +173,6 @@ public abstract class TileMiner extends TileBC_Neptune {
         }
         wantedLength = input.getIntOr("wantedLength", 0);
         progress = input.getIntOr("progress", 0);
-        input.read("battery", net.minecraft.nbt.CompoundTag.CODEC).ifPresent(battery::deserializeNBT);
+        battery.addPowerChecking(input.getLongOr("mjStored", 0L), false);
     }
 }

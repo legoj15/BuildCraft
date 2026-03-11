@@ -9,6 +9,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
 import buildcraft.factory.tile.TileMiningWell;
+import buildcraft.factory.tile.TilePump;
 
 public class BCFactoryBlockEntities {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
@@ -23,6 +24,11 @@ public class BCFactoryBlockEntities {
             BLOCK_ENTITIES.register("mining_well",
                     () -> new BlockEntityType<>(TileMiningWell::new,
                             BCFactoryBlocks.MINING_WELL.get()));
+
+    public static final Supplier<BlockEntityType<TilePump>> PUMP =
+            BLOCK_ENTITIES.register("pump",
+                    () -> new BlockEntityType<>(TilePump::new,
+                            BCFactoryBlocks.PUMP.get()));
 
     public static void init(IEventBus modEventBus) {
         BLOCK_ENTITIES.register(modEventBus);

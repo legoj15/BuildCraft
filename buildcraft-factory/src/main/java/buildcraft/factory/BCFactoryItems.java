@@ -14,6 +14,9 @@ public class BCFactoryItems {
     public static final DeferredItem<BlockItem> MINING_WELL = ITEMS.registerSimpleBlockItem(
             BCFactoryBlocks.MINING_WELL);
 
+    public static final DeferredItem<BlockItem> PUMP = ITEMS.registerSimpleBlockItem(
+            BCFactoryBlocks.PUMP);
+
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);
     }

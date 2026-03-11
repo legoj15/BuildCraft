@@ -30,6 +30,8 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 
+import net.neoforged.neoforge.fluids.FluidStack;
+
 import buildcraft.api.mj.MjAPI;
 
 public class BlockUtil {
@@ -56,6 +58,40 @@ public class BlockUtil {
             return fluidState.getType();
         }
         return getFluidWithFlowing(world.getBlockState(pos).getBlock());
+    }
+
+    /**
+     * Returns the fluid at a world position only if it is a full source block.
+     * Returns null for flowing fluid or non-fluid blocks.
+     */
+    @Nullable
+    public static Fluid getFluid(Level world, BlockPos pos) {
+        FluidState fluidState = world.getFluidState(pos);
+        if (!fluidState.isEmpty() && fluidState.isSource()) {
+            return fluidState.getType();
+        }
+        return null;
+    }
+
+    /**
+     * Drains a fluid source block from the world.
+     *
+     * @param world    the level
+     * @param pos      the position to drain
+     * @param doDrain  if true, actually removes the block; if false, simulates only
+     * @return a FluidStack of 1000mB if a source block was present, or null
+     */
+    @Nullable
+    public static FluidStack drainBlock(Level world, BlockPos pos, boolean doDrain) {
+        FluidState fluidState = world.getFluidState(pos);
+        if (fluidState.isEmpty() || !fluidState.isSource()) {
+            return null;
+        }
+        Fluid fluid = fluidState.getType();
+        if (doDrain) {
+            world.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+        }
+        return new FluidStack(fluid, 1000);
     }
 
     /** Creates a comparator that falls back to coordinate comparison when the parent reports equality,

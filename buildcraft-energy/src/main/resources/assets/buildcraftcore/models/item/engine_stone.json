@@ -3,6 +3,6 @@
     "textures": {
         "back": "buildcraftenergy:block/engine/stone_back",
         "side": "buildcraftenergy:block/engine/stone_side",
-        "trunk": "buildcraftlib:block/engine/trunk_green"
+        "trunk": "buildcraftlib:block/engine/trunk_blue"
     }
 }

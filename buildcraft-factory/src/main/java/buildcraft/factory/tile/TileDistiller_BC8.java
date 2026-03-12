@@ -19,6 +19,7 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -58,6 +59,11 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
     private IDistillationRecipe currentRecipe;
     private long distillPower = 0;
     private boolean isActive = false;
+
+    // Client-sync tracking — send block updates when fluid contents change
+    private int lastSyncedIn = -1;
+    private int lastSyncedGas = -1;
+    private int lastSyncedLiquid = -1;
 
     public TileDistiller_BC8(BlockPos pos, BlockState state) {
         super(BCFactoryBlockEntities.DISTILLER.get(), pos, state);
@@ -158,7 +164,17 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
             }
         }
 
-        setChanged();
+        // Send client sync when fluid amounts change
+        int curIn = tankIn.getFluidAmount();
+        int curGas = tankGasOut.getFluidAmount();
+        int curLiq = tankLiquidOut.getFluidAmount();
+        if (curIn != lastSyncedIn || curGas != lastSyncedGas || curLiq != lastSyncedLiquid) {
+            lastSyncedIn = curIn;
+            lastSyncedGas = curGas;
+            lastSyncedLiquid = curLiq;
+            setChanged();
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+        }
     }
 
     // --- MenuProvider ---

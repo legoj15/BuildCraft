@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
@@ -29,7 +28,6 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 
-import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
 
@@ -38,6 +36,7 @@ import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.lib.mj.MjRedstoneBatteryReceiver;
 
 /**
  * Pump tile entity. Searches downward for fluids, then uses BFS flood-fill to
@@ -82,33 +81,13 @@ public class TilePump extends TileMiner {
     /** The position just below the bottom of the pump tube. */
     private BlockPos targetPos;
 
-    private IMjReceiver mjReceiver;
-
     public TilePump(BlockPos pos, BlockState state) {
         super(BCFactoryBlockEntities.PUMP.get(), pos, state);
     }
 
     @Override
     protected IMjReceiver createMjReceiver() {
-        if (mjReceiver == null) {
-            mjReceiver = new IMjReceiver() {
-                @Override
-                public long getPowerRequested() {
-                    return battery.getCapacity() - battery.getStored();
-                }
-
-                @Override
-                public long receivePower(long microJoules, boolean simulate) {
-                    return battery.addPowerChecking(microJoules, simulate);
-                }
-
-                @Override
-                public boolean canConnect(@Nonnull IMjConnector other) {
-                    return true;
-                }
-            };
-        }
-        return mjReceiver;
+        return new MjRedstoneBatteryReceiver(battery);
     }
 
     public FluidTank getTank() {

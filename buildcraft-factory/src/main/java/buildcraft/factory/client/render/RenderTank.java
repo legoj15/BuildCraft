@@ -109,7 +109,7 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
 
         MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer buffer = bufferSource.getBuffer(Sheets.cutoutBlockSheet());
+        VertexConsumer buffer = bufferSource.getBuffer(Sheets.translucentBlockItemSheet());
         PoseStack.Pose pose = poseStack.last();
 
         boolean renderBottom = !connectedDown;
@@ -133,7 +133,7 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
                 1, 0, 0, r, g, b, a, light, overlay);
 
         if (renderTop) {
-            quadHorizontal(pose, buffer, sprite, MIN_XZ, MAX_XZ, MIN_XZ, MAX_XZ, fluidTop,
+            quadHorizontal(pose, buffer, sprite, MIN_XZ, MAX_XZ, MAX_XZ, MIN_XZ, fluidTop,
                     0, 1, 0, r, g, b, a, light, overlay);
         }
         if (renderBottom) {

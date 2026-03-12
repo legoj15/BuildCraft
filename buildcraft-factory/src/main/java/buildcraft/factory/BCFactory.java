@@ -113,6 +113,29 @@ public class BCFactory {
 
         // Item handler capability for the chute — not needed since the chute
         // manages its own item pickup/insertion logic directly
+
+        // MJ capabilities for the distiller
+        event.registerBlockEntity(
+            MjAPI.CAP_RECEIVER,
+            BCFactoryBlockEntities.DISTILLER.get(),
+            (distiller, direction) -> distiller.getMjReceiver()
+        );
+        event.registerBlockEntity(
+            MjAPI.CAP_CONNECTOR,
+            BCFactoryBlockEntities.DISTILLER.get(),
+            (distiller, direction) -> distiller.getMjReceiver()
+        );
+
+        // Fluid capabilities for the distiller (directional)
+        // Horizontal sides → input tank, UP → gas out, DOWN → liquid out
+        event.registerBlockEntity(
+            Capabilities.Fluid.BLOCK,
+            BCFactoryBlockEntities.DISTILLER.get(),
+            (distiller, direction) -> {
+                net.neoforged.neoforge.fluids.capability.templates.FluidTank tank = distiller.getTankForSide(direction);
+                return tank != null ? new FluidTankResourceHandler(tank) : null;
+            }
+        );
     }
 
     private void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
@@ -123,6 +146,7 @@ public class BCFactory {
             event.accept(new ItemStack(BCFactoryItems.FLOOD_GATE.get()));
             event.accept(new ItemStack(BCFactoryItems.TANK.get()));
             event.accept(new ItemStack(BCFactoryItems.CHUTE.get()));
+            event.accept(new ItemStack(BCFactoryItems.DISTILLER.get()));
         }
     }
 }

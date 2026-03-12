@@ -10,6 +10,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.factory.container.ContainerAutoCraftItems;
 import buildcraft.factory.container.ContainerChute;
+import buildcraft.factory.container.ContainerDistiller;
 import buildcraft.factory.container.ContainerTank;
 
 public class BCFactoryMenuTypes {
@@ -27,6 +28,10 @@ public class BCFactoryMenuTypes {
     public static final Supplier<MenuType<ContainerChute>> CHUTE =
             MENU_TYPES.register("chute",
                     () -> IMenuTypeExtension.create(ContainerChute::new));
+
+    public static final Supplier<MenuType<ContainerDistiller>> DISTILLER =
+            MENU_TYPES.register("distiller",
+                    () -> IMenuTypeExtension.create(ContainerDistiller::new));
 
     public static void init(IEventBus modEventBus) {
         MENU_TYPES.register(modEventBus);

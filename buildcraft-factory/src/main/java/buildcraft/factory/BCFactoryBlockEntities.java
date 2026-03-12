@@ -13,6 +13,7 @@ import buildcraft.factory.tile.TileFloodGate;
 import buildcraft.factory.tile.TilePump;
 import buildcraft.factory.tile.TileTank;
 import buildcraft.factory.tile.TileChute;
+import buildcraft.factory.tile.TileDistiller_BC8;
 
 public class BCFactoryBlockEntities {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
@@ -47,6 +48,11 @@ public class BCFactoryBlockEntities {
             BLOCK_ENTITIES.register("chute",
                     () -> new BlockEntityType<>(TileChute::new,
                             BCFactoryBlocks.CHUTE.get()));
+
+    public static final Supplier<BlockEntityType<TileDistiller_BC8>> DISTILLER =
+            BLOCK_ENTITIES.register("distiller",
+                    () -> new BlockEntityType<>(TileDistiller_BC8::new,
+                            BCFactoryBlocks.DISTILLER.get()));
 
     public static void init(IEventBus modEventBus) {
         BLOCK_ENTITIES.register(modEventBus);

@@ -12,6 +12,7 @@ import buildcraft.factory.block.BlockPump;
 import buildcraft.factory.block.BlockTank;
 import buildcraft.factory.block.BlockTube;
 import buildcraft.factory.block.BlockChute;
+import buildcraft.factory.block.BlockDistiller;
 
 public class BCFactoryBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCFactory.MODID);
@@ -49,6 +50,11 @@ public class BCFactoryBlocks {
     public static final DeferredBlock<BlockChute> CHUTE = BLOCKS.registerBlock(
             "chute",
             BlockChute::new,
+            BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion());
+
+    public static final DeferredBlock<BlockDistiller> DISTILLER = BLOCKS.registerBlock(
+            "distiller",
+            BlockDistiller::new,
             BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion());
 
     public static void init(IEventBus modEventBus) {

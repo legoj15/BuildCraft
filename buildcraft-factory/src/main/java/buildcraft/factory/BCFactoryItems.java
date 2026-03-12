@@ -26,6 +26,9 @@ public class BCFactoryItems {
     public static final DeferredItem<BlockItem> CHUTE = ITEMS.registerSimpleBlockItem(
             BCFactoryBlocks.CHUTE);
 
+    public static final DeferredItem<BlockItem> DISTILLER = ITEMS.registerSimpleBlockItem(
+            BCFactoryBlocks.DISTILLER);
+
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);
     }

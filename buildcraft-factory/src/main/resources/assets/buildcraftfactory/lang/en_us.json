@@ -6,5 +6,6 @@
     "block.buildcraftfactory.pump": "Pump",
     "block.buildcraftfactory.flood_gate": "Flood Gate",
     "block.buildcraftfactory.tank": "Tank",
-    "block.buildcraftfactory.chute": "Chute"
+    "block.buildcraftfactory.chute": "Chute",
+    "block.buildcraftfactory.distiller": "Distiller"
 }

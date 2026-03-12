@@ -167,6 +167,119 @@ public class TileTank extends BlockEntity implements MenuProvider {
         return new ArrayList<>(tanks);
     }
 
+    // --- Column-Aware IFluidHandler (for bucket interaction / legacy APIs) ---
+
+    /**
+     * Returns an {@link net.neoforged.neoforge.fluids.capability.IFluidHandler} that fills/drains
+     * across the entire vertical column. Used by bucket interaction and any code
+     * that works with the legacy IFluidHandler API.
+     */
+    @SuppressWarnings("removal")
+    public net.neoforged.neoforge.fluids.capability.IFluidHandler getColumnFluidHandler() {
+        return new net.neoforged.neoforge.fluids.capability.IFluidHandler() {
+            @Override
+            public int getTanks() {
+                return 1;
+            }
+
+            @Override
+            public FluidStack getFluidInTank(int tankIndex) {
+                // Return combined fluid from the column
+                FluidStack result = FluidStack.EMPTY;
+                for (TileTank t : getTankColumn()) {
+                    FluidStack held = t.tank.getFluid();
+                    if (!held.isEmpty()) {
+                        if (result.isEmpty()) {
+                            result = held.copy();
+                        } else {
+                            result.grow(held.getAmount());
+                        }
+                    }
+                }
+                return result;
+            }
+
+            @Override
+            public int getTankCapacity(int tankIndex) {
+                int total = 0;
+                for (TileTank t : getTankColumn()) {
+                    total += t.tank.getCapacity();
+                }
+                return total;
+            }
+
+            @Override
+            public boolean isFluidValid(int tankIndex, FluidStack stack) {
+                return !stack.isEmpty();
+            }
+
+            @Override
+            public int fill(FluidStack resource, FluidAction action) {
+                if (resource.isEmpty()) return 0;
+                List<TileTank> tanks = getTankColumn();
+                // Check compatibility
+                for (TileTank t : tanks) {
+                    FluidStack current = t.tank.getFluid();
+                    if (!current.isEmpty() && !FluidStack.isSameFluidSameComponents(current, resource)) {
+                        return 0;
+                    }
+                }
+                // Fill bottom to top
+                int remaining = resource.getAmount();
+                int totalFilled = 0;
+                for (TileTank t : tanks) {
+                    if (remaining <= 0) break;
+                    int filled = t.tank.fill(resource.copyWithAmount(remaining), action);
+                    remaining -= filled;
+                    totalFilled += filled;
+                }
+                return totalFilled;
+            }
+
+            @Override
+            public FluidStack drain(FluidStack resource, FluidAction action) {
+                if (resource.isEmpty()) return FluidStack.EMPTY;
+                List<TileTank> tanks = getTankColumn();
+                // Drain top to bottom
+                int remaining = resource.getAmount();
+                int totalDrained = 0;
+                for (int i = tanks.size() - 1; i >= 0; i--) {
+                    if (remaining <= 0) break;
+                    TileTank t = tanks.get(i);
+                    FluidStack drained = t.tank.drain(resource.copyWithAmount(remaining), action);
+                    if (!drained.isEmpty()) {
+                        remaining -= drained.getAmount();
+                        totalDrained += drained.getAmount();
+                    }
+                }
+                return totalDrained > 0 ? resource.copyWithAmount(totalDrained) : FluidStack.EMPTY;
+            }
+
+            @Override
+            public FluidStack drain(int maxDrain, FluidAction action) {
+                if (maxDrain <= 0) return FluidStack.EMPTY;
+                List<TileTank> tanks = getTankColumn();
+                // Drain top to bottom
+                FluidStack result = FluidStack.EMPTY;
+                int remaining = maxDrain;
+                for (int i = tanks.size() - 1; i >= 0; i--) {
+                    if (remaining <= 0) break;
+                    TileTank t = tanks.get(i);
+                    FluidStack drained = t.tank.drain(remaining, action);
+                    if (!drained.isEmpty()) {
+                        if (result.isEmpty()) {
+                            result = drained.copy();
+                        } else {
+                            result.grow(drained.getAmount());
+                        }
+                        remaining -= drained.getAmount();
+                    }
+                }
+                return result;
+            }
+        };
+    }
+
     // --- Save / Load ---
 
     @Override

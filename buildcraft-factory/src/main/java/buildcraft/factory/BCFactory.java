@@ -82,11 +82,11 @@ public class BCFactory {
             (pump, direction) -> pump.getMjReceiver()
         );
 
-        // Fluid capabilities — expose FluidTank as ResourceHandler<FluidResource>
+        // Fluid capabilities — expose tank column as ResourceHandler<FluidResource>
         event.registerBlockEntity(
             Capabilities.Fluid.BLOCK,
             BCFactoryBlockEntities.TANK.get(),
-            (tank, direction) -> new FluidTankResourceHandler(tank.tank)
+            (tank, direction) -> new buildcraft.factory.tile.TankColumnResourceHandler(tank)
         );
         event.registerBlockEntity(
             Capabilities.Fluid.BLOCK,

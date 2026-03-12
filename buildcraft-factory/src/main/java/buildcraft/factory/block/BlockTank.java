@@ -139,8 +139,9 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
         if (!(be instanceof TileTank tank)) {
             return InteractionResult.PASS;
         }
-        // Try bucket interaction first
-        boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, tank.tank);
+        // Try bucket interaction first — use column-aware handler so buckets
+        // fill/drain across the entire tank stack
+        boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, tank.getColumnFluidHandler());
         if (didChange) {
             return InteractionResult.SUCCESS;
         }

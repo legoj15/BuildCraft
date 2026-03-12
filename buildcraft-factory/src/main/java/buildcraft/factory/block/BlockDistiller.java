@@ -30,8 +30,11 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
+import net.minecraft.core.NonNullList;
+
 import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 
+import buildcraft.api.items.FluidItemDrops;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileDistiller_BC8;
 import buildcraft.lib.misc.FluidUtilBC;
@@ -122,5 +125,24 @@ public class BlockDistiller extends BaseEntityBlock {
             }
         }
         return InteractionResult.SUCCESS;
+    }
+
+    // --- Block removal: drop fluid shards ---
+
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        if (!level.isClientSide()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileDistiller_BC8 distiller) {
+                NonNullList<ItemStack> toDrop = NonNullList.create();
+                FluidItemDrops.addFluidDrops(toDrop, distiller.getTankIn());
+                FluidItemDrops.addFluidDrops(toDrop, distiller.getTankGasOut());
+                FluidItemDrops.addFluidDrops(toDrop, distiller.getTankLiquidOut());
+                for (ItemStack drop : toDrop) {
+                    Block.popResource(level, pos, drop);
+                }
+            }
+        }
+        return super.playerWillDestroy(level, pos, state, player);
     }
 }

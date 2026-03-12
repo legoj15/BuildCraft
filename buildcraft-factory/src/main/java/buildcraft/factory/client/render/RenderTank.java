@@ -115,17 +115,21 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
         boolean renderBottom = !connectedDown;
         boolean renderTop = !connectedUp || fillRatio < 1.0f;
 
-        // North face
-        quad(pose, buffer, sprite, MIN_XZ, minY, MIN_XZ, MAX_XZ, fluidTop, MIN_XZ,
+        // North face (facing -Z: CCW from outside)
+        quad(pose, buffer, sprite, MIN_XZ, fluidTop, MIN_XZ, MAX_XZ, fluidTop, MIN_XZ,
+                MAX_XZ, minY, MIN_XZ, MIN_XZ, minY, MIN_XZ,
                 0, 0, -1, r, g, b, a, light, overlay);
-        // South face
-        quad(pose, buffer, sprite, MAX_XZ, minY, MAX_XZ, MIN_XZ, fluidTop, MAX_XZ,
+        // South face (facing +Z: CCW from outside)
+        quad(pose, buffer, sprite, MIN_XZ, minY, MAX_XZ, MAX_XZ, minY, MAX_XZ,
+                MAX_XZ, fluidTop, MAX_XZ, MIN_XZ, fluidTop, MAX_XZ,
                 0, 0, 1, r, g, b, a, light, overlay);
-        // West face
-        quad(pose, buffer, sprite, MIN_XZ, minY, MAX_XZ, MIN_XZ, fluidTop, MIN_XZ,
+        // West face (facing -X: CCW from outside)
+        quad(pose, buffer, sprite, MIN_XZ, minY, MIN_XZ, MIN_XZ, minY, MAX_XZ,
+                MIN_XZ, fluidTop, MAX_XZ, MIN_XZ, fluidTop, MIN_XZ,
                 -1, 0, 0, r, g, b, a, light, overlay);
-        // East face
-        quad(pose, buffer, sprite, MAX_XZ, minY, MIN_XZ, MAX_XZ, fluidTop, MAX_XZ,
+        // East face (facing +X: CCW from outside)
+        quad(pose, buffer, sprite, MAX_XZ, fluidTop, MIN_XZ, MAX_XZ, fluidTop, MAX_XZ,
+                MAX_XZ, minY, MAX_XZ, MAX_XZ, minY, MIN_XZ,
                 1, 0, 0, r, g, b, a, light, overlay);
 
         if (renderTop) {
@@ -141,6 +145,9 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
         poseStack.popPose();
     }
 
+    /** Checks if the shared face between this tank and its neighbor should be hidden.
+     *  Ported from 1.12.2 isFullyConnected: the face is only hidden when the neighbor
+     *  is full OR the direction is UP (a tank above with any matching fluid connects seamlessly downward). */
     private static boolean isConnectedFluid(TileTank tile, Direction direction) {
         if (tile.getLevel() == null) return false;
         BlockPos neighborPos = tile.getBlockPos().relative(direction);
@@ -150,26 +157,33 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
             FluidStack otherFluid = otherTank.tank.getFluid();
             FluidStack thisFluid = tile.tank.getFluid();
             if (otherFluid.isEmpty() || thisFluid.isEmpty()) return false;
-            return FluidStack.isSameFluidSameComponents(thisFluid, otherFluid);
+            if (!FluidStack.isSameFluidSameComponents(thisFluid, otherFluid)) return false;
+            // Only hide the shared face if the neighbor is full, or we are looking upward
+            // (a tank above with any amount of matching fluid should seamlessly connect)
+            return otherTank.tank.getFluidAmount() >= otherTank.tank.getCapacity()
+                    || direction == Direction.UP;
         }
         return false;
     }
 
+    /** Emit a vertical quad with 4 explicit vertices (CCW winding from outside).
+     *  UV maps the sprite at natural scale: U spans u0→u1 across the width,
+     *  V uses v1 (bottom of sprite) at the bottom of the quad and v0 (top of sprite)
+     *  at the top, so the texture is clipped rather than stretched. */
     private static void quad(PoseStack.Pose pose, VertexConsumer builder, TextureAtlasSprite sprite,
             float x1, float y1, float z1, float x2, float y2, float z2,
+            float x3, float y3, float z3, float x4, float y4, float z4,
             float nx, float ny, float nz,
             float r, float g, float b, float a, int light, int overlay) {
         float u0 = sprite.getU0();
         float u1 = sprite.getU1();
         float v0 = sprite.getV0();
         float v1 = sprite.getV1();
-        float height = y2 - y1;
-        float vScaled = v0 + (v1 - v0) * height;
 
-        builder.addVertex(pose, x1, y1, z1).setColor(r, g, b, a).setUv(u0, v1).setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x2, y1, z2).setColor(r, g, b, a).setUv(u1, v1).setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x2, y2, z2).setColor(r, g, b, a).setUv(u1, vScaled).setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x1, y2, z1).setColor(r, g, b, a).setUv(u0, vScaled).setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
+        builder.addVertex(pose, x1, y1, z1).setColor(r, g, b, a).setUv(u0, v0).setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
+        builder.addVertex(pose, x2, y2, z2).setColor(r, g, b, a).setUv(u1, v0).setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
+        builder.addVertex(pose, x3, y3, z3).setColor(r, g, b, a).setUv(u1, v1).setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
+        builder.addVertex(pose, x4, y4, z4).setColor(r, g, b, a).setUv(u0, v1).setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
     }
 
     private static void quadHorizontal(PoseStack.Pose pose, VertexConsumer builder, TextureAtlasSprite sprite,

@@ -11,6 +11,7 @@ import buildcraft.factory.block.BlockFloodGate;
 import buildcraft.factory.block.BlockPump;
 import buildcraft.factory.block.BlockTank;
 import buildcraft.factory.block.BlockTube;
+import buildcraft.factory.block.BlockChute;
 
 public class BCFactoryBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCFactory.MODID);
@@ -44,6 +45,11 @@ public class BCFactoryBlocks {
             "tube",
             BlockTube::new,
             BlockBehaviour.Properties.of().destroyTime(-1.0f).noOcclusion());
+
+    public static final DeferredBlock<BlockChute> CHUTE = BLOCKS.registerBlock(
+            "chute",
+            BlockChute::new,
+            BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion());
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

@@ -12,6 +12,7 @@ import buildcraft.factory.tile.TileMiningWell;
 import buildcraft.factory.tile.TileFloodGate;
 import buildcraft.factory.tile.TilePump;
 import buildcraft.factory.tile.TileTank;
+import buildcraft.factory.tile.TileChute;
 
 public class BCFactoryBlockEntities {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
@@ -41,6 +42,11 @@ public class BCFactoryBlockEntities {
             BLOCK_ENTITIES.register("tank",
                     () -> new BlockEntityType<>(TileTank::new,
                             BCFactoryBlocks.TANK.get()));
+
+    public static final Supplier<BlockEntityType<TileChute>> CHUTE =
+            BLOCK_ENTITIES.register("chute",
+                    () -> new BlockEntityType<>(TileChute::new,
+                            BCFactoryBlocks.CHUTE.get()));
 
     public static void init(IEventBus modEventBus) {
         BLOCK_ENTITIES.register(modEventBus);

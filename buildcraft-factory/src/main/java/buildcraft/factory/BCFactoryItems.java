@@ -23,6 +23,9 @@ public class BCFactoryItems {
     public static final DeferredItem<BlockItem> TANK = ITEMS.registerSimpleBlockItem(
             BCFactoryBlocks.TANK);
 
+    public static final DeferredItem<BlockItem> CHUTE = ITEMS.registerSimpleBlockItem(
+            BCFactoryBlocks.CHUTE);
+
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);
     }

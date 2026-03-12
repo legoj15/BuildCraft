@@ -98,6 +98,21 @@ public class BCFactory {
             BCFactoryBlockEntities.FLOOD_GATE.get(),
             (floodGate, direction) -> new FluidTankResourceHandler(floodGate.getTank())
         );
+
+        // MJ capabilities for the chute
+        event.registerBlockEntity(
+            MjAPI.CAP_RECEIVER,
+            BCFactoryBlockEntities.CHUTE.get(),
+            (chute, direction) -> chute.getMjReceiver()
+        );
+        event.registerBlockEntity(
+            MjAPI.CAP_CONNECTOR,
+            BCFactoryBlockEntities.CHUTE.get(),
+            (chute, direction) -> chute.getMjReceiver()
+        );
+
+        // Item handler capability for the chute — not needed since the chute
+        // manages its own item pickup/insertion logic directly
     }
 
     private void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
@@ -107,6 +122,7 @@ public class BCFactory {
             event.accept(new ItemStack(BCFactoryItems.PUMP.get()));
             event.accept(new ItemStack(BCFactoryItems.FLOOD_GATE.get()));
             event.accept(new ItemStack(BCFactoryItems.TANK.get()));
+            event.accept(new ItemStack(BCFactoryItems.CHUTE.get()));
         }
     }
 }

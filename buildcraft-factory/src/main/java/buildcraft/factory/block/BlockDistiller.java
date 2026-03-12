@@ -12,8 +12,10 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -28,8 +30,11 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
+import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileDistiller_BC8;
+import buildcraft.lib.misc.FluidUtilBC;
 
 /**
  * The Distiller block. Distills input fluids into gas (output up) and liquid
@@ -80,6 +85,31 @@ public class BlockDistiller extends BaseEntityBlock {
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
+    }
+
+    @Override
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+            Player player, InteractionHand hand, BlockHitResult hitResult) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (!(be instanceof TileDistiller_BC8 distiller)) {
+            return InteractionResult.PASS;
+        }
+        // Try bucket/fluid container interaction with the hit side's tank
+        // Horizontal sides → input, UP → gas out, DOWN → liquid out
+        Direction hitSide = hitResult.getDirection();
+        FluidTank tank = distiller.getTankForSide(hitSide);
+        if (tank != null) {
+            @SuppressWarnings("removal")
+            boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, tank);
+            if (didChange) {
+                return InteractionResult.SUCCESS;
+            }
+        }
+        // No fluid interaction — open the GUI
+        if (!level.isClientSide()) {
+            player.openMenu(distiller, pos);
+        }
+        return InteractionResult.SUCCESS;
     }
 
     @Override

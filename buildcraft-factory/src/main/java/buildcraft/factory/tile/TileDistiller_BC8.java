@@ -35,6 +35,7 @@ import buildcraft.api.mj.MjBattery;
 import buildcraft.api.recipes.BuildcraftRecipeRegistry;
 import buildcraft.api.recipes.IRefineryRecipeManager;
 import buildcraft.api.recipes.IRefineryRecipeManager.IDistillationRecipe;
+import buildcraft.lib.fluid.FluidSmoother;
 
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.container.ContainerDistiller;
@@ -55,6 +56,11 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
 
     private final MjBattery mjBattery = new MjBattery(1024 * MjAPI.MJ);
     private final IMjReceiver mjReceiver = new MjBatteryReceiver(mjBattery);
+
+    // Client-side fluid smoothers for render interpolation
+    private final FluidSmoother smoothIn = new FluidSmoother(tankIn);
+    private final FluidSmoother smoothGasOut = new FluidSmoother(tankGasOut);
+    private final FluidSmoother smoothLiquidOut = new FluidSmoother(tankLiquidOut);
 
     private IDistillationRecipe currentRecipe;
     private long distillPower = 0;
@@ -97,6 +103,27 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
         if (side == Direction.UP) return tankGasOut;
         if (side == Direction.DOWN) return tankLiquidOut;
         return tankIn;
+    }
+
+    // --- Fluid Smoothers (for rendering) ---
+
+    public FluidSmoother getSmoothIn() {
+        return smoothIn;
+    }
+
+    public FluidSmoother getSmoothGasOut() {
+        return smoothGasOut;
+    }
+
+    public FluidSmoother getSmoothLiquidOut() {
+        return smoothLiquidOut;
+    }
+
+    /** Call from a client-side ticker to advance fluid smoothing. */
+    public void clientTick() {
+        smoothIn.tick();
+        smoothGasOut.tick();
+        smoothLiquidOut.tick();
     }
 
     // --- Recipe Filtering ---

@@ -1,2 +1,122 @@
+/*
+ * Copyright (c) 2017 SpaceToad and the BuildCraft team
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
+ */
+
 package buildcraft.lib.fluid;
-public abstract class FluidSmoother {}
+
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+
+/**
+ * Provides smooth client-side interpolation of fluid tank levels for rendering.
+ * <p>
+ * The server sets the target amount via block entity sync packets. Each client
+ * tick, the displayed amount moves toward the target at a rate proportional to
+ * the distance, producing a smooth fill/drain animation instead of sudden jumps.
+ * <p>
+ * Simplified port of the 1.12.2 FluidSmoother that works with the standard
+ * NeoForge {@link FluidTank} and {@code sendBlockUpdated()} sync mechanism.
+ */
+@SuppressWarnings("removal")
+public class FluidSmoother {
+
+    private final FluidTank tank;
+
+    /** The amount currently displayed on the client. */
+    private double displayAmount;
+    /** The previous tick's display amount, for per-frame interpolation. */
+    private double displayAmountPrev;
+    /** Whether the smoother has been initialized with a starting value. */
+    private boolean initialized = false;
+
+    public FluidSmoother(FluidTank tank) {
+        this.tank = tank;
+    }
+
+    /**
+     * Call every tick (client-side). Moves the display amount toward the
+     * tank's actual amount, producing a smooth transition.
+     */
+    public void tick() {
+        int target = tank.getFluidAmount();
+
+        if (!initialized) {
+            displayAmount = target;
+            displayAmountPrev = target;
+            initialized = true;
+            return;
+        }
+
+        displayAmountPrev = displayAmount;
+
+        if (displayAmount != target) {
+            double delta = target - displayAmount;
+            // Move by at least 1 mB, or ~20% of the remaining distance per tick
+            // This gives a nice ease-out curve that converges in ~10-15 ticks
+            double step = Math.max(1.0, Math.abs(delta) * 0.2);
+            if (Math.abs(delta) <= step) {
+                displayAmount = target;
+            } else {
+                displayAmount += Math.signum(delta) * step;
+            }
+        }
+    }
+
+    /**
+     * Resets the smoother so the display amount immediately snaps to the
+     * current tank level without any interpolation.
+     */
+    public void resetSmoothing() {
+        displayAmount = tank.getFluidAmount();
+        displayAmountPrev = displayAmount;
+        initialized = true;
+    }
+
+    /**
+     * Returns the interpolated fluid amount for rendering at the given
+     * partial tick fraction.
+     *
+     * @param partialTicks fractional tick progress (0.0 to 1.0)
+     * @return smoothed fluid amount
+     */
+    public double getAmount(double partialTicks) {
+        return displayAmountPrev + (displayAmount - displayAmountPrev) * partialTicks;
+    }
+
+    /**
+     * Returns the tank's fluid stack (type only — use {@link #getAmount} for
+     * the smoothed quantity).
+     */
+    public FluidStack getFluid() {
+        return tank.getFluid();
+    }
+
+    /** Delegate for {@link FluidTank#getCapacity()}. */
+    public int getCapacity() {
+        return tank.getCapacity();
+    }
+
+    /** Returns the raw (non-smoothed) current display amount. */
+    public double getDisplayAmount() {
+        return displayAmount;
+    }
+
+    /**
+     * Result record for convenience rendering methods.
+     */
+    public record FluidStackInterp(FluidStack fluid, double amount) {}
+
+    /**
+     * Returns a combined fluid type + smoothed amount for rendering,
+     * or {@code null} if the tank is empty.
+     */
+    public FluidStackInterp getFluidForRender(double partialTicks) {
+        FluidStack fluid = tank.getFluid();
+        if (fluid.isEmpty()) {
+            return null;
+        }
+        return new FluidStackInterp(fluid, getAmount(partialTicks));
+    }
+}

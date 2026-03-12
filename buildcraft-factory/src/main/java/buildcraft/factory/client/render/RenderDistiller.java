@@ -37,6 +37,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 
 import buildcraft.factory.tile.TileDistiller_BC8;
+import buildcraft.lib.fluid.FluidSmoother;
 
 /**
  * Block entity renderer for the distiller. Renders the fluid inside the three
@@ -102,21 +103,25 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
         MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
 
-        renderTankFluid(tile.getTankIn(), sizes.tankIn, poseStack, bufferSource, light);
-        renderTankFluid(tile.getTankGasOut(), sizes.tankGasOut, poseStack, bufferSource, light);
-        renderTankFluid(tile.getTankLiquidOut(), sizes.tankLiquidOut, poseStack, bufferSource, light);
+        // FluidSmoother handles tick-based interpolation; use 0 for partial ticks
+        float partialTicks = 0f;
+
+        renderSmoothedFluid(tile.getSmoothIn(), sizes.tankIn, poseStack, bufferSource, light, partialTicks);
+        renderSmoothedFluid(tile.getSmoothGasOut(), sizes.tankGasOut, poseStack, bufferSource, light, partialTicks);
+        renderSmoothedFluid(tile.getSmoothLiquidOut(), sizes.tankLiquidOut, poseStack, bufferSource, light, partialTicks);
 
         bufferSource.endBatch();
         poseStack.popPose();
     }
 
-    private static void renderTankFluid(FluidTank tank, TankBounds bounds, PoseStack poseStack,
-                                         MultiBufferSource.BufferSource bufferSource, int light) {
-        FluidStack fluid = tank.getFluid();
-        if (fluid.isEmpty()) return;
-        int amount = tank.getFluidAmount();
-        int capacity = tank.getCapacity();
-        if (amount <= 0 || capacity <= 0) return;
+    private static void renderSmoothedFluid(FluidSmoother smoother, TankBounds bounds, PoseStack poseStack,
+                                             MultiBufferSource.BufferSource bufferSource, int light, float partialTicks) {
+        FluidSmoother.FluidStackInterp interp = smoother.getFluidForRender(partialTicks);
+        if (interp == null || interp.amount() <= 0) return;
+
+        FluidStack fluid = interp.fluid();
+        int capacity = smoother.getCapacity();
+        if (capacity <= 0) return;
 
         IClientFluidTypeExtensions fluidExt = IClientFluidTypeExtensions.of(fluid.getFluid());
         Identifier stillTexture = fluidExt.getStillTexture(fluid);
@@ -133,7 +138,7 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
         float b = (color & 0xFF) / 255.0f;
         if (a <= 0) a = 1.0f;
 
-        float fillRatio = (float) amount / capacity;
+        float fillRatio = (float) (interp.amount() / capacity);
 
         // Shrink bounds slightly for z-fighting avoidance
         float shrink = 1.0f / 64.0f;

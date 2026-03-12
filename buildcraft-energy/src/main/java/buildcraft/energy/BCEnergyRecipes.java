@@ -15,9 +15,12 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.fuels.BuildcraftFuelRegistry;
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.recipes.BuildcraftRecipeRegistry;
+import buildcraft.api.recipes.IRefineryRecipeManager.IDistillationRecipe;
+import buildcraft.lib.misc.MathUtil;
 
 /**
- * Registers all fuel and coolant definitions for the combustion engine.
+ * Registers all fuel, coolant, and distillation recipe definitions.
  * Ported from 1.12.2 BCEnergyRecipes.
  */
 public class BCEnergyRecipes {
@@ -64,18 +67,95 @@ public class BCEnergyRecipes {
 
         // Oil distilled (clean)
         addFuel("oil_distilled", _gas_light_dense, 1, 5);
+
+        // --- Distillation recipes ---
+        if (BuildcraftRecipeRegistry.refineryRecipes != null) {
+            FluidStack[] gas_light_dense_residue = createFluidStacks("oil", _oil);
+            FluidStack[] gas_light_dense = createFluidStacks("oil_distilled", _gas_light_dense);
+            FluidStack[] gas_light = createFluidStacks("fuel_mixed_light", _gas_light);
+            FluidStack[] gas = createFluidStacks("fuel_gaseous", _gas);
+            FluidStack[] light_dense_residue = createFluidStacks("oil_heavy", _light_dense_residue);
+            FluidStack[] light_dense = createFluidStacks("fuel_mixed_heavy", _light_dense);
+            FluidStack[] light = createFluidStacks("fuel_light", _light);
+            FluidStack[] dense_residue = createFluidStacks("oil_dense", _dense_residue);
+            FluidStack[] dense = createFluidStacks("fuel_dense", _dense);
+            FluidStack[] residue = createFluidStacks("oil_residue", _residue);
+
+            addDistillation(gas_light_dense_residue, gas, light_dense_residue, 0, 32 * MjAPI.MJ);
+            addDistillation(gas_light_dense_residue, gas_light, dense_residue, 1, 16 * MjAPI.MJ);
+            addDistillation(gas_light_dense_residue, gas_light_dense, residue, 2, 12 * MjAPI.MJ);
+
+            addDistillation(gas_light_dense, gas, light_dense, 0, 24 * MjAPI.MJ);
+            addDistillation(gas_light_dense, gas_light, dense, 1, 16 * MjAPI.MJ);
+
+            addDistillation(gas_light, gas, light, 0, 24 * MjAPI.MJ);
+
+            addDistillation(light_dense_residue, light, dense_residue, 1, 16 * MjAPI.MJ);
+            addDistillation(light_dense_residue, light_dense, residue, 2, 12 * MjAPI.MJ);
+
+            addDistillation(light_dense, light, dense, 1, 16 * MjAPI.MJ);
+
+            addDistillation(dense_residue, dense, residue, 2, 12 * MjAPI.MJ);
+        }
+    }
+
+    /**
+     * Find the fluid source for a given base name at a specific heat level.
+     * Names: "oil" → heat 0 = "oil", heat 1 = "oil_heat_1", heat 2 = "oil_heat_2".
+     */
+    private static Fluid findFluidByHeat(String baseName, int heat) {
+        String regName = baseName + (heat == 0 ? "" : "_heat_" + heat);
+        for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
+            if (entry.name().equals(regName)) {
+                return entry.source().get();
+            }
+        }
+        return null;
     }
 
     /**
      * Find the cool (heat=0) variant of a named fluid from BCEnergyFluids.
      */
     private static Fluid findFluid(String baseName) {
-        for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
-            if (entry.name().equals(baseName)) {
-                return entry.source().get();
-            }
+        return findFluidByHeat(baseName, 0);
+    }
+
+    /**
+     * Creates a FluidStack array with one entry per heat level (0, 1, 2),
+     * matching the 1.12.2 pattern where each fluid has 3 temperature variants.
+     */
+    private static FluidStack[] createFluidStacks(String baseName, int amount) {
+        FluidStack[] arr = new FluidStack[3];
+        for (int heat = 0; heat < 3; heat++) {
+            Fluid fluid = findFluidByHeat(baseName, heat);
+            arr[heat] = fluid != null ? new FluidStack(fluid, amount) : FluidStack.EMPTY;
         }
-        return null;
+        return arr;
+    }
+
+    private static void addDistillation(FluidStack[] in, FluidStack[] outGas, FluidStack[] outLiquid,
+            int heat, long mjCost) {
+        FluidStack _in = in[heat];
+        FluidStack _outGas = outGas[heat];
+        FluidStack _outLiquid = outLiquid[heat];
+        if (_in.isEmpty() || _outGas.isEmpty() || _outLiquid.isEmpty()) {
+            return; // fluid was disabled
+        }
+        IDistillationRecipe existing =
+            BuildcraftRecipeRegistry.refineryRecipes.getDistillationRegistry().getRecipeForInput(_in);
+        if (existing != null) {
+            return; // already registered
+        }
+        // Simplify amounts by dividing by highest common factor
+        int hcf = MathUtil.findHighestCommonFactor(_in.getAmount(), _outGas.getAmount());
+        hcf = MathUtil.findHighestCommonFactor(hcf, _outLiquid.getAmount());
+        if (hcf > 1) {
+            _in = _in.copyWithAmount(_in.getAmount() / hcf);
+            _outGas = _outGas.copyWithAmount(_outGas.getAmount() / hcf);
+            _outLiquid = _outLiquid.copyWithAmount(_outLiquid.getAmount() / hcf);
+            mjCost /= hcf;
+        }
+        BuildcraftRecipeRegistry.refineryRecipes.addDistillationRecipe(_in, _outGas, _outLiquid, mjCost);
     }
 
     private static void addFuel(String baseName, int amountDiff, int multiplier, int boostOver4) {
@@ -101,3 +181,4 @@ public class BCEnergyRecipes {
         }
     }
 }
+

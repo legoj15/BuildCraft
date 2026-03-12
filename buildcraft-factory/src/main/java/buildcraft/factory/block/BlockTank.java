@@ -92,6 +92,16 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
         return SHAPE;
     }
 
+    // Cull top/bottom glass faces between vertically adjacent tanks.
+    // Port of 1.12.2's shouldSideBeRendered: side.getAxis() != Y || !(neighbor instanceof ITankBlockConnector)
+    @Override
+    protected boolean skipRendering(BlockState state, BlockState adjacentState, Direction side) {
+        if (side.getAxis() == Direction.Axis.Y && adjacentState.getBlock() instanceof ITankBlockConnector) {
+            return true;
+        }
+        return super.skipRendering(state, adjacentState, side);
+    }
+
     // --- Block state from neighbors ---
 
     @Override

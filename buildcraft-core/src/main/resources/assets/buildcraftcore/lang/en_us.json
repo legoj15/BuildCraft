@@ -2,6 +2,7 @@
     "item.buildcraftcore.wrench": "Wrench",
     "item.buildcraftcore.goggles": "Robot Goggles",
     "item.buildcraftcore.fragile_fluid_container": "Fragile Fluid Container",
+    "item.buildcraftcore.fragile_fluid_container.name": "Fragile %s Shard",
     "item.buildcraftcore.paintbrush": "Paintbrush",
     "item.buildcraftcore.marker_connector": "Marker Connector",
     "item.buildcraftcore.volume_box": "Volume Box",

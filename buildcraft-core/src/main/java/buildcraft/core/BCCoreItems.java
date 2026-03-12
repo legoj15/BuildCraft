@@ -13,6 +13,7 @@ import buildcraft.core.item.ItemVolumeBox;
 import buildcraft.core.item.ItemMapLocation;
 import buildcraft.core.item.ItemPaintbrush_BC8;
 import buildcraft.core.item.ItemList_BC8;
+import buildcraft.api.items.FluidItemDrops;
 
 public class BCCoreItems {
         public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCCore.MODID);
@@ -96,5 +97,6 @@ public class BCCoreItems {
         }
 
         public static void preInit() {
+                FluidItemDrops.item = FRAGILE_FLUID_CONTAINER.get();
         }
 }

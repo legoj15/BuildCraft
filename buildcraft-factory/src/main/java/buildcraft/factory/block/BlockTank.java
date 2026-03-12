@@ -31,6 +31,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
+import net.minecraft.core.NonNullList;
+
+import buildcraft.api.items.FluidItemDrops;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileTank;
 import buildcraft.lib.misc.FluidUtilBC;
@@ -151,5 +154,23 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
             player.openMenu(tank, pos);
         }
         return InteractionResult.SUCCESS;
+    }
+
+    // --- Block removal: drop fluid shards ---
+
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state,
+            net.minecraft.world.entity.player.Player player) {
+        if (!level.isClientSide()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileTank tank) {
+                NonNullList<ItemStack> toDrop = NonNullList.create();
+                FluidItemDrops.addFluidDrops(toDrop, tank.tank);
+                for (ItemStack drop : toDrop) {
+                    Block.popResource(level, pos, drop);
+                }
+            }
+        }
+        return super.playerWillDestroy(level, pos, state, player);
     }
 }

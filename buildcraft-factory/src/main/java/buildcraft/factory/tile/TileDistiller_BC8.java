@@ -48,7 +48,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
 
     public static final long MAX_MJ_PER_TICK = 6 * MjAPI.MJ;
 
-    private final FluidTank tankIn = new FluidTank(4000, this::isDistillableFluid);
+    private final FluidTank tankIn = new FluidTank(4000);
     private final FluidTank tankGasOut = new FluidTank(4000);
     private final FluidTank tankLiquidOut = new FluidTank(4000);
 

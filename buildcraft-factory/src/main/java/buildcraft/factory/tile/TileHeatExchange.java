@@ -79,7 +79,21 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
 
     @Nullable
     public ExchangeSection getSection() {
-        return section;
+        if (section != null) return section;
+        Direction thisFacing = getFacing();
+        if (thisFacing == null || level == null) return null;
+        Direction dirToStart = thisFacing.getClockWise();
+        for (int i = 1; i < 6; i++) {
+            BlockEntity neighbour = level.getBlockEntity(worldPosition.relative(dirToStart, i));
+            if (neighbour instanceof TileHeatExchange other) {
+                if (other.section instanceof ExchangeSectionStart s) {
+                    return s;
+                }
+            } else {
+                break;
+            }
+        }
+        return null;
     }
 
     public void markCheckNeighbours() {

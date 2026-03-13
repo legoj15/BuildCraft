@@ -109,9 +109,9 @@ public class BlockHeatExchange extends BaseEntityBlock {
     }
 
     private BlockState updateConnections(BlockState state, LevelReader level, BlockPos pos, Direction facing) {
-        // Left = rotateY from facing, Right = rotateYCCW from facing
-        boolean connectLeft = doesNeighbourConnect(level, pos, facing, facing.getClockWise());
-        boolean connectRight = doesNeighbourConnect(level, pos, facing, facing.getCounterClockWise());
+        // Left = counter-clockwise, Right = clockwise
+        boolean connectLeft = doesNeighbourConnect(level, pos, facing, facing.getCounterClockWise());
+        boolean connectRight = doesNeighbourConnect(level, pos, facing, facing.getClockWise());
         return state
                 .setValue(CONNECTED_LEFT, connectLeft)
                 .setValue(CONNECTED_RIGHT, connectRight);

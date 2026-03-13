@@ -1,4 +1,5 @@
 {
+    "render_type": "minecraft:translucent",
     "textures": {
         "sprite_a": "buildcraftfactory:block/heat_exchange/sprite_a",
         "particle": "buildcraftfactory:block/heat_exchange/sprite_a"

@@ -50,6 +50,11 @@ public class BCLib {
             modEventBus.addListener(
                 net.neoforged.neoforge.client.event.ModelEvent.BakingCompleted.class,
                 event -> {
+                    // onTextureStitchPre loads the JSON variable models from disk
+                    java.util.HashSet<net.minecraft.resources.Identifier> sprites = new java.util.HashSet<>();
+                    buildcraft.lib.client.model.ModelHolderRegistry.onTextureStitchPre(sprites);
+                    // onModelBake tells model holders to finalize (NO-OP for variable models, but
+                    // needed for static ModelHolder subclasses)
                     buildcraft.lib.client.model.ModelHolderRegistry.onModelBake();
                     buildcraft.lib.misc.data.ModelVariableData.onModelBake();
                 }

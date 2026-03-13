@@ -42,9 +42,13 @@ public class DebugOverlayRenderer {
         int lineHeight = font.lineHeight + 2; // 9 + 2 = 11, matching vanilla debug spacing
 
         // Render left side — start below vanilla debug text
-        // Vanilla uses roughly the bottom half area, so we start at a reasonable offset
-        // We'll render at the bottom of the left side, going up from 2/3 of screen height
-        int leftY = mc.getWindow().getGuiScaledHeight() * 2 / 3;
+        // Try to start at the halfway point, but if the text is too long,
+        // shift it up so it doesn't clip off the bottom of the screen.
+        int leftHeight = leftLines.size() * lineHeight;
+        int leftY = mc.getWindow().getGuiScaledHeight() / 2;
+        if (leftY + leftHeight > mc.getWindow().getGuiScaledHeight()) {
+            leftY = Math.max(5, mc.getWindow().getGuiScaledHeight() - leftHeight - 5);
+        }
         for (String line : leftLines) {
             if (line.isEmpty()) {
                 leftY += lineHeight;
@@ -58,7 +62,11 @@ public class DebugOverlayRenderer {
         }
 
         // Render right side
-        int rightY = mc.getWindow().getGuiScaledHeight() * 2 / 3;
+        int rightHeight = rightLines.size() * lineHeight;
+        int rightY = mc.getWindow().getGuiScaledHeight() / 2;
+        if (rightY + rightHeight > mc.getWindow().getGuiScaledHeight()) {
+            rightY = Math.max(5, mc.getWindow().getGuiScaledHeight() - rightHeight - 5);
+        }
         int screenWidth = mc.getWindow().getGuiScaledWidth();
         for (String line : rightLines) {
             if (line.isEmpty()) {

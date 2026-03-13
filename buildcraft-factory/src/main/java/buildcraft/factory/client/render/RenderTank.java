@@ -31,6 +31,7 @@ import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtension
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.factory.tile.TileTank;
+import buildcraft.lib.misc.FluidUtilBC;
 
 /**
  * Block entity renderer for the tank. Renders the fluid inside the tank
@@ -100,7 +101,18 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
         float minY = connectedDown ? MIN_Y_CONNECTED : MIN_Y;
         float maxYFull = connectedUp ? MAX_Y_CONNECTED : MAX_Y;
         float fillRatio = (float) amount / capacity;
-        float fluidTop = minY + (maxYFull - minY) * fillRatio;
+
+        boolean gaseous = FluidUtilBC.isGaseous(fluid);
+        float fluidTop, fluidBottom;
+        if (gaseous) {
+            // Gaseous: fluid renders at the top, filling downward
+            fluidTop = maxYFull;
+            fluidBottom = maxYFull - (maxYFull - minY) * fillRatio;
+        } else {
+            // Liquid: fluid renders at the bottom, filling upward
+            fluidBottom = minY;
+            fluidTop = minY + (maxYFull - minY) * fillRatio;
+        }
 
         int light = LevelRenderer.getLightColor(level, pos);
         int overlay = OverlayTexture.NO_OVERLAY;
@@ -120,19 +132,19 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
 
         // North face (facing -Z: CCW from outside)
         quad(pose, buffer, sprite, MIN_XZ, fluidTop, MIN_XZ, MAX_XZ, fluidTop, MIN_XZ,
-                MAX_XZ, minY, MIN_XZ, MIN_XZ, minY, MIN_XZ,
+                MAX_XZ, fluidBottom, MIN_XZ, MIN_XZ, fluidBottom, MIN_XZ,
                 0, 0, -1, r, g, b, a, light, overlay);
         // South face (facing +Z: CCW from outside)
-        quad(pose, buffer, sprite, MIN_XZ, minY, MAX_XZ, MAX_XZ, minY, MAX_XZ,
+        quad(pose, buffer, sprite, MIN_XZ, fluidBottom, MAX_XZ, MAX_XZ, fluidBottom, MAX_XZ,
                 MAX_XZ, fluidTop, MAX_XZ, MIN_XZ, fluidTop, MAX_XZ,
                 0, 0, 1, r, g, b, a, light, overlay);
         // West face (facing -X: CCW from outside)
-        quad(pose, buffer, sprite, MIN_XZ, minY, MIN_XZ, MIN_XZ, minY, MAX_XZ,
+        quad(pose, buffer, sprite, MIN_XZ, fluidBottom, MIN_XZ, MIN_XZ, fluidBottom, MAX_XZ,
                 MIN_XZ, fluidTop, MAX_XZ, MIN_XZ, fluidTop, MIN_XZ,
                 -1, 0, 0, r, g, b, a, light, overlay);
         // East face (facing +X: CCW from outside)
         quad(pose, buffer, sprite, MAX_XZ, fluidTop, MIN_XZ, MAX_XZ, fluidTop, MAX_XZ,
-                MAX_XZ, minY, MAX_XZ, MAX_XZ, minY, MIN_XZ,
+                MAX_XZ, fluidBottom, MAX_XZ, MAX_XZ, fluidBottom, MIN_XZ,
                 1, 0, 0, r, g, b, a, light, overlay);
 
         if (renderTop) {
@@ -140,7 +152,13 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
                     0, 1, 0, r, g, b, a, light, overlay);
         }
         if (renderBottom) {
-            quadHorizontal(pose, buffer, sprite, MIN_XZ, MAX_XZ, MAX_XZ, MIN_XZ, minY,
+            quadHorizontal(pose, buffer, sprite, MIN_XZ, MAX_XZ, MAX_XZ, MIN_XZ, fluidBottom,
+                    0, -1, 0, r, g, b, a, light, overlay);
+        }
+        // Render the "open" face for non-full gaseous fluid (bottom face visible)
+        // or non-full liquid (top face visible when not connected up)
+        if (gaseous && fillRatio < 1.0f && !connectedDown) {
+            quadHorizontal(pose, buffer, sprite, MIN_XZ, MAX_XZ, MAX_XZ, MIN_XZ, fluidBottom,
                     0, -1, 0, r, g, b, a, light, overlay);
         }
 
@@ -150,7 +168,8 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
 
     /** Checks if the shared face between this tank and its neighbor should be hidden.
      *  Ported from 1.12.2 isFullyConnected: the face is only hidden when the neighbor
-     *  is full OR the direction is UP (a tank above with any matching fluid connects seamlessly downward). */
+     *  is full OR the direction is UP (for liquids) / DOWN (for gases).
+     *  For gaseous fluids, the direction check is inverted (matching 1.12.2 behavior). */
     private static boolean isConnectedFluid(TileTank tile, Direction direction) {
         if (tile.getLevel() == null) return false;
         BlockPos neighborPos = tile.getBlockPos().relative(direction);
@@ -161,10 +180,12 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
             FluidStack thisFluid = tile.tank.getFluid();
             if (otherFluid.isEmpty() || thisFluid.isEmpty()) return false;
             if (!FluidStack.isSameFluidSameComponents(thisFluid, otherFluid)) return false;
-            // Only hide the shared face if the neighbor is full, or we are looking upward
-            // (a tank above with any amount of matching fluid should seamlessly connect)
+
+            // For gaseous fluids, invert the direction check:
+            // a tank below with matching gas connects seamlessly (gas floats up)
+            Direction checkDir = FluidUtilBC.isGaseous(thisFluid) ? direction.getOpposite() : direction;
             return otherTank.tank.getFluidAmount() >= otherTank.tank.getCapacity()
-                    || direction == Direction.UP;
+                    || checkDir == Direction.UP;
         }
         return false;
     }

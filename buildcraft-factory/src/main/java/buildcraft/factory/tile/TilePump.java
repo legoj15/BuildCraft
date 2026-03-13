@@ -26,6 +26,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 import net.neoforged.neoforge.fluids.FluidStack;
+import buildcraft.lib.misc.FluidUtilBC;
 import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 
 import buildcraft.api.mj.IMjReceiver;
@@ -132,9 +133,7 @@ public class TilePump extends TileMiner implements IDebuggable {
     }
 
     private void buildQueue0(Fluid queueFluid, List<BlockPos> nextPosesToCheck, Set<BlockPos> checked) {
-        // In 1.21 we don't have Fluid.isGaseous() directly. For now, assume normal search.
-        // TODO: add gaseous fluid detection if needed
-        Direction[] directions = SEARCH_NORMAL;
+        Direction[] directions = FluidUtilBC.isGaseous(queueFluid) ? SEARCH_GASEOUS : SEARCH_NORMAL;
         boolean isWater = !BCCoreConfig.pumpsConsumeWater
                 && FluidUtilBC.areFluidsEqual(queueFluid, Fluids.WATER);
         final int maxLengthSquared = BCCoreConfig.pumpMaxDistance * BCCoreConfig.pumpMaxDistance;

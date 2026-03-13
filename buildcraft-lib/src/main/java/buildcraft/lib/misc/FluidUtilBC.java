@@ -153,6 +153,21 @@ public class FluidUtilBC {
         return stack.getAmount() + " mB " + net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(stack.getFluid());
     }
 
+    /**
+     * Returns whether the given fluid is gaseous (lighter than air).
+     * In NeoForge 1.21.11 this checks {@code FluidType.isLighterThanAir()},
+     * which returns true when density ≤ 0 — equivalent to the old
+     * {@code Fluid.isGaseous()} from Forge 1.12.2.
+     */
+    public static boolean isGaseous(FluidStack fluid) {
+        return !fluid.isEmpty() && fluid.getFluid().getFluidType().isLighterThanAir();
+    }
+
+    /** Overload for bare {@link Fluid} instances. */
+    public static boolean isGaseous(Fluid fluid) {
+        return fluid != null && fluid.getFluidType().isLighterThanAir();
+    }
+
     public static boolean onTankActivated(Player player, BlockPos pos, InteractionHand hand,
         IFluidHandler fluidHandler) {
         ItemStack held = player.getItemInHand(hand);

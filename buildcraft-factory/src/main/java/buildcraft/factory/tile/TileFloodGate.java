@@ -48,8 +48,7 @@ public class TileFloodGate extends BlockEntity {
         Direction.WEST, Direction.EAST
     };
 
-    // For gaseous fluids (not used yet — 1.21.11 has no Fluid.isGaseous())
-    @SuppressWarnings("unused")
+    // For gaseous fluids — searches upward instead of downward
     private static final Direction[] SEARCH_GASEOUS = new Direction[] {
         Direction.UP, Direction.NORTH, Direction.SOUTH,
         Direction.WEST, Direction.EAST
@@ -95,8 +94,7 @@ public class TileFloodGate extends BlockEntity {
             nextPosesToCheck.add(offset);
             paths.put(offset, ImmutableList.of(offset));
         }
-        // TODO: detect gaseous fluids and use SEARCH_GASEOUS
-        Direction[] directions = SEARCH_NORMAL;
+        Direction[] directions = FluidUtilBC.isGaseous(fluid) ? SEARCH_GASEOUS : SEARCH_NORMAL;
 
         outer:
         while (!nextPosesToCheck.isEmpty()) {

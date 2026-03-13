@@ -121,7 +121,8 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
     // --- Tank Column Balancing ---
 
     /** Moves fluids around to their preferred positions. For liquid fluids this
-     * will move everything as low as possible. */
+     * will move everything as low as possible. For gaseous fluids this will
+     * move everything as high as possible. */
     public void balanceTankFluids() {
         List<TileTank> tanks = getTankColumn();
         FluidStack fluid = FluidStack.EMPTY;
@@ -136,13 +137,25 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
         }
         if (fluid.isEmpty()) return;
 
-        // Move fluid downward (liquids)
-        TileTank prev = null;
-        for (TileTank tile : tanks) {
-            if (prev != null) {
-                FluidUtilBC.move(tile.tank, prev.tank);
+        if (FluidUtilBC.isGaseous(fluid)) {
+            // Move fluid upward (gaseous) — iterate from bottom, move to the tank above
+            TileTank prev = null;
+            for (int i = tanks.size() - 1; i >= 0; i--) {
+                TileTank tile = tanks.get(i);
+                if (prev != null) {
+                    FluidUtilBC.move(tile.tank, prev.tank);
+                }
+                prev = tile;
             }
-            prev = tile;
+        } else {
+            // Move fluid downward (liquids)
+            TileTank prev = null;
+            for (TileTank tile : tanks) {
+                if (prev != null) {
+                    FluidUtilBC.move(tile.tank, prev.tank);
+                }
+                prev = tile;
+            }
         }
     }
 
@@ -249,14 +262,24 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
                         return 0;
                     }
                 }
-                // Fill bottom to top
+                // Fill bottom to top for liquids, top to bottom for gases
+                boolean gaseous = FluidUtilBC.isGaseous(resource);
                 int remaining = resource.getAmount();
                 int totalFilled = 0;
-                for (TileTank t : tanks) {
-                    if (remaining <= 0) break;
-                    int filled = t.tank.fill(resource.copyWithAmount(remaining), action);
-                    remaining -= filled;
-                    totalFilled += filled;
+                if (gaseous) {
+                    for (int i = tanks.size() - 1; i >= 0; i--) {
+                        if (remaining <= 0) break;
+                        int filled = tanks.get(i).tank.fill(resource.copyWithAmount(remaining), action);
+                        remaining -= filled;
+                        totalFilled += filled;
+                    }
+                } else {
+                    for (TileTank t : tanks) {
+                        if (remaining <= 0) break;
+                        int filled = t.tank.fill(resource.copyWithAmount(remaining), action);
+                        remaining -= filled;
+                        totalFilled += filled;
+                    }
                 }
                 return totalFilled;
             }
@@ -265,16 +288,28 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
             public FluidStack drain(FluidStack resource, FluidAction action) {
                 if (resource.isEmpty()) return FluidStack.EMPTY;
                 List<TileTank> tanks = getTankColumn();
-                // Drain top to bottom
+                // Drain top to bottom for liquids, bottom to top for gases
+                boolean gaseous = FluidUtilBC.isGaseous(resource);
                 int remaining = resource.getAmount();
                 int totalDrained = 0;
-                for (int i = tanks.size() - 1; i >= 0; i--) {
-                    if (remaining <= 0) break;
-                    TileTank t = tanks.get(i);
-                    FluidStack drained = t.tank.drain(resource.copyWithAmount(remaining), action);
-                    if (!drained.isEmpty()) {
-                        remaining -= drained.getAmount();
-                        totalDrained += drained.getAmount();
+                if (gaseous) {
+                    for (TileTank t : tanks) {
+                        if (remaining <= 0) break;
+                        FluidStack drained = t.tank.drain(resource.copyWithAmount(remaining), action);
+                        if (!drained.isEmpty()) {
+                            remaining -= drained.getAmount();
+                            totalDrained += drained.getAmount();
+                        }
+                    }
+                } else {
+                    for (int i = tanks.size() - 1; i >= 0; i--) {
+                        if (remaining <= 0) break;
+                        TileTank t = tanks.get(i);
+                        FluidStack drained = t.tank.drain(resource.copyWithAmount(remaining), action);
+                        if (!drained.isEmpty()) {
+                            remaining -= drained.getAmount();
+                            totalDrained += drained.getAmount();
+                        }
                     }
                 }
                 return totalDrained > 0 ? resource.copyWithAmount(totalDrained) : FluidStack.EMPTY;
@@ -284,20 +319,45 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
             public FluidStack drain(int maxDrain, FluidAction action) {
                 if (maxDrain <= 0) return FluidStack.EMPTY;
                 List<TileTank> tanks = getTankColumn();
-                // Drain top to bottom
+                // Find the fluid type first to determine gaseous
+                FluidStack sampleFluid = FluidStack.EMPTY;
+                for (TileTank t : tanks) {
+                    if (!t.tank.getFluid().isEmpty()) {
+                        sampleFluid = t.tank.getFluid();
+                        break;
+                    }
+                }
+                if (sampleFluid.isEmpty()) return FluidStack.EMPTY;
+                // Drain top to bottom for liquids, bottom to top for gases
+                boolean gaseous = FluidUtilBC.isGaseous(sampleFluid);
                 FluidStack result = FluidStack.EMPTY;
                 int remaining = maxDrain;
-                for (int i = tanks.size() - 1; i >= 0; i--) {
-                    if (remaining <= 0) break;
-                    TileTank t = tanks.get(i);
-                    FluidStack drained = t.tank.drain(remaining, action);
-                    if (!drained.isEmpty()) {
-                        if (result.isEmpty()) {
-                            result = drained.copy();
-                        } else {
-                            result.grow(drained.getAmount());
+                if (gaseous) {
+                    for (TileTank t : tanks) {
+                        if (remaining <= 0) break;
+                        FluidStack drained = t.tank.drain(remaining, action);
+                        if (!drained.isEmpty()) {
+                            if (result.isEmpty()) {
+                                result = drained.copy();
+                            } else {
+                                result.grow(drained.getAmount());
+                            }
+                            remaining -= drained.getAmount();
                         }
-                        remaining -= drained.getAmount();
+                    }
+                } else {
+                    for (int i = tanks.size() - 1; i >= 0; i--) {
+                        if (remaining <= 0) break;
+                        TileTank t = tanks.get(i);
+                        FluidStack drained = t.tank.drain(remaining, action);
+                        if (!drained.isEmpty()) {
+                            if (result.isEmpty()) {
+                                result = drained.copy();
+                            } else {
+                                result.grow(drained.getAmount());
+                            }
+                            remaining -= drained.getAmount();
+                        }
                     }
                 }
                 return result;

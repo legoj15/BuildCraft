@@ -142,6 +142,27 @@ public class MutableQuad {
         return toBakedBlock();
     }
 
+    /** Renders this quad directly into the given VertexConsumer, applying the given PoseStack transform.
+     * The tex_u/tex_v values should already be atlas-mapped (via texFromSprite). */
+    public void render(com.mojang.blaze3d.vertex.PoseStack.Pose pose, VertexConsumer buffer) {
+        renderVertex(pose, buffer, vertex_0);
+        renderVertex(pose, buffer, vertex_1);
+        renderVertex(pose, buffer, vertex_2);
+        renderVertex(pose, buffer, vertex_3);
+    }
+
+    private static void renderVertex(com.mojang.blaze3d.vertex.PoseStack.Pose pose, VertexConsumer buffer, MutableVertex v) {
+        Vector3f pos = new Vector3f(v.position_x, v.position_y, v.position_z);
+        pose.pose().transformPosition(pos);
+        Vector3f norm = new Vector3f(v.normal_x, v.normal_y, v.normal_z);
+        pose.normal().transform(norm);
+        buffer.addVertex(pos.x, pos.y, pos.z)
+              .setColor(v.colour_r, v.colour_g, v.colour_b, v.colour_a)
+              .setUv(v.tex_u, v.tex_v)
+              .setUv2(v.light_block << 4, v.light_sky << 4)
+              .setNormal(norm.x, norm.y, norm.z);
+    }
+
     /** Reads a BakedQuad's data into this MutableQuad. */
     public MutableQuad fromBakedBlock(BakedQuad quad) {
         tintIndex = quad.tintIndex();

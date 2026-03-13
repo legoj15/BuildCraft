@@ -91,6 +91,7 @@ public class ModelHolderVariable extends ModelHolder {
         // NO-OP: we bake every time get{Cutout/Translucent}Quads is called as this is a variable model
     }
 
+    private boolean loggedTextureLookup = false;
     private TexturedFace lookupTexture(String lookup) {
         int attempts = 0;
         JsonTexture texture = new JsonTexture(lookup);
@@ -111,6 +112,13 @@ public class ModelHolderVariable extends ModelHolder {
             }
         } else {
             sprite = atlas.getSprite(Identifier.parse(lookup));
+        }
+        if (!loggedTextureLookup) {
+            loggedTextureLookup = true;
+            BCLog.logger.info("[lib.model.holder] Texture lookup for model " + modelLocation
+                + ": lookup='" + lookup + "' sprite=" + sprite.contents().name()
+                + " u0=" + sprite.getU0() + " v0=" + sprite.getV0()
+                + " u1=" + sprite.getU1() + " v1=" + sprite.getV1());
         }
         TexturedFace face = new TexturedFace();
         face.sprite = sprite;

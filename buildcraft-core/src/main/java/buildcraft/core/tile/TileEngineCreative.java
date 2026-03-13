@@ -106,6 +106,9 @@ public class TileEngineCreative extends TileEngineBase_BC8 {
         player.displayClientMessage(
             Component.translatable("chat.pipe.power.iron.mode", OUTPUTS[currentOutputIndex]), true);
         setChanged();
+        // Sync to client so animation speed updates immediately
+        BlockState state = getBlockState();
+        level.sendBlockUpdated(getBlockPos(), state, state, 3);
         return true;
     }
 

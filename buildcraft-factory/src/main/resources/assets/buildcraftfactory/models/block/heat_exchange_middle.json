@@ -1,0 +1,30 @@
+{
+    "textures": {
+        "sprite_a": "buildcraftfactory:block/heat_exchange/sprite_a",
+        "particle": "buildcraftfactory:block/heat_exchange/sprite_a"
+    },
+    "elements": [
+        {
+            "comment": "Inner Pipe",
+            "from": [0, 4, 4],
+            "to": [16, 12, 12],
+            "faces": {
+                "up":    { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
+                "down":  { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
+                "north": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
+                "south": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" }
+            }
+        },
+        {
+            "comment": "Outer Pipe",
+            "from": [ 0, 2, 2 ],
+            "to": [ 16, 14, 14 ],
+            "faces": {
+                "up":    { "uv": [ 0, 4, 16, 16 ], "texture": "#sprite_a" },
+                "down":  { "uv": [ 0, 4, 16, 16 ], "texture": "#sprite_a" },
+                "north": { "uv": [ 0, 4, 16, 16 ], "texture": "#sprite_a" },
+                "south": { "uv": [ 0, 4, 16, 16 ], "texture": "#sprite_a" }
+            }
+        }
+    ]
+}

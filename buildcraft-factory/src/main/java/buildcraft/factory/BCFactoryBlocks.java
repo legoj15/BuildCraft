@@ -13,6 +13,7 @@ import buildcraft.factory.block.BlockTank;
 import buildcraft.factory.block.BlockTube;
 import buildcraft.factory.block.BlockChute;
 import buildcraft.factory.block.BlockDistiller;
+import buildcraft.factory.block.BlockHeatExchange;
 
 public class BCFactoryBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCFactory.MODID);
@@ -55,6 +56,11 @@ public class BCFactoryBlocks {
     public static final DeferredBlock<BlockDistiller> DISTILLER = BLOCKS.registerBlock(
             "distiller",
             BlockDistiller::new,
+            BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion());
+
+    public static final DeferredBlock<BlockHeatExchange> HEAT_EXCHANGE = BLOCKS.registerBlock(
+            "heat_exchange",
+            BlockHeatExchange::new,
             BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion());
 
     public static void init(IEventBus modEventBus) {

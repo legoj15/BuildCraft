@@ -29,6 +29,9 @@ public class BCFactoryItems {
     public static final DeferredItem<BlockItem> DISTILLER = ITEMS.registerSimpleBlockItem(
             BCFactoryBlocks.DISTILLER);
 
+    public static final DeferredItem<BlockItem> HEAT_EXCHANGE = ITEMS.registerSimpleBlockItem(
+            BCFactoryBlocks.HEAT_EXCHANGE);
+
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);
     }

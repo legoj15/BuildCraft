@@ -136,6 +136,18 @@ public class BCFactory {
                 return tank != null ? new FluidTankResourceHandler(tank) : null;
             }
         );
+
+        // Fluid capabilities for the heat exchanger (section-based)
+        event.registerBlockEntity(
+            Capabilities.Fluid.BLOCK,
+            BCFactoryBlockEntities.HEAT_EXCHANGE.get(),
+            (heatExchange, direction) -> {
+                buildcraft.factory.tile.TileHeatExchange.ExchangeSection section = heatExchange.getSection();
+                if (section == null) return null;
+                // Expose input tank for fluid insertion
+                return new FluidTankResourceHandler(section.tankInput);
+            }
+        );
     }
 
     private void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
@@ -147,6 +159,7 @@ public class BCFactory {
             event.accept(new ItemStack(BCFactoryItems.TANK.get()));
             event.accept(new ItemStack(BCFactoryItems.CHUTE.get()));
             event.accept(new ItemStack(BCFactoryItems.DISTILLER.get()));
+            event.accept(new ItemStack(BCFactoryItems.HEAT_EXCHANGE.get()));
         }
     }
 }

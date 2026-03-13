@@ -7,5 +7,6 @@
     "block.buildcraftfactory.flood_gate": "Flood Gate",
     "block.buildcraftfactory.tank": "Tank",
     "block.buildcraftfactory.chute": "Chute",
-    "block.buildcraftfactory.distiller": "Distiller"
+    "block.buildcraftfactory.distiller": "Distiller",
+    "block.buildcraftfactory.heat_exchange": "Heat Exchanger"
 }

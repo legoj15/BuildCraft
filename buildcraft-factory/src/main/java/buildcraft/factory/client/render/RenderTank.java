@@ -169,38 +169,58 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
         return false;
     }
 
-    /** Emit a vertical quad with 4 explicit vertices (CCW winding from outside).
-     *  UV maps the sprite at natural scale: U spans u0→u1 across the width,
-     *  V uses v1 (bottom of sprite) at the bottom of the quad and v0 (top of sprite)
-     *  at the top, so the texture is clipped rather than stretched. */
+    /** Emit a vertical quad with position-based UV mapping.
+     *  UV is derived from the vertex's block-space position, so the texture
+     *  renders at natural 1:1 scale and clips at face edges — matching the
+     *  1.12.2 FluidRenderer.TexMap behavior. For N/S faces U comes from X
+     *  and V from Y; for E/W faces U comes from Z and V from Y. */
     private static void quad(PoseStack.Pose pose, VertexConsumer builder, TextureAtlasSprite sprite,
             float x1, float y1, float z1, float x2, float y2, float z2,
             float x3, float y3, float z3, float x4, float y4, float z4,
             float nx, float ny, float nz,
             float r, float g, float b, float a, int light, int overlay) {
-        float u0 = sprite.getU0();
-        float u1 = sprite.getU1();
-        float v0 = sprite.getV0();
-        float v1 = sprite.getV1();
-
-        builder.addVertex(pose, x1, y1, z1).setColor(r, g, b, a).setUv(u0, v0).setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x2, y2, z2).setColor(r, g, b, a).setUv(u1, v0).setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x3, y3, z3).setColor(r, g, b, a).setUv(u1, v1).setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x4, y4, z4).setColor(r, g, b, a).setUv(u0, v1).setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
+        builder.addVertex(pose, x1, y1, z1).setColor(r, g, b, a)
+                .setUv(posU(sprite, nx, x1, z1), posV(sprite, y1))
+                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
+        builder.addVertex(pose, x2, y2, z2).setColor(r, g, b, a)
+                .setUv(posU(sprite, nx, x2, z2), posV(sprite, y2))
+                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
+        builder.addVertex(pose, x3, y3, z3).setColor(r, g, b, a)
+                .setUv(posU(sprite, nx, x3, z3), posV(sprite, y3))
+                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
+        builder.addVertex(pose, x4, y4, z4).setColor(r, g, b, a)
+                .setUv(posU(sprite, nx, x4, z4), posV(sprite, y4))
+                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
     }
 
+    /** Emit a horizontal quad with position-based UV mapping.
+     *  U derives from X position, V from Z position — matching TexMap.XZ. */
     private static void quadHorizontal(PoseStack.Pose pose, VertexConsumer builder, TextureAtlasSprite sprite,
             float x1, float x2, float z1, float z2, float y,
             float nx, float ny, float nz,
             float r, float g, float b, float a, int light, int overlay) {
-        float u0 = sprite.getU0();
-        float u1 = sprite.getU1();
-        float v0 = sprite.getV0();
-        float v1 = sprite.getV1();
+        builder.addVertex(pose, x1, y, z1).setColor(r, g, b, a)
+                .setUv(sprite.getU(x1), sprite.getV(z1))
+                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
+        builder.addVertex(pose, x2, y, z1).setColor(r, g, b, a)
+                .setUv(sprite.getU(x2), sprite.getV(z1))
+                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
+        builder.addVertex(pose, x2, y, z2).setColor(r, g, b, a)
+                .setUv(sprite.getU(x2), sprite.getV(z2))
+                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
+        builder.addVertex(pose, x1, y, z2).setColor(r, g, b, a)
+                .setUv(sprite.getU(x1), sprite.getV(z2))
+                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
+    }
 
-        builder.addVertex(pose, x1, y, z1).setColor(r, g, b, a).setUv(u0, v0).setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x2, y, z1).setColor(r, g, b, a).setUv(u1, v0).setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x2, y, z2).setColor(r, g, b, a).setUv(u1, v1).setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x1, y, z2).setColor(r, g, b, a).setUv(u0, v1).setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
+    /** Compute U coordinate from position. For N/S faces (nx==0) U comes from X;
+     *  for E/W faces (nx!=0) U comes from Z. */
+    private static float posU(TextureAtlasSprite sprite, float nx, float x, float z) {
+        return sprite.getU(nx != 0 ? z : x);
+    }
+
+    /** Compute V coordinate from Y position (1-y to flip top-to-bottom). */
+    private static float posV(TextureAtlasSprite sprite, float y) {
+        return sprite.getV(1.0f - y);
     }
 }

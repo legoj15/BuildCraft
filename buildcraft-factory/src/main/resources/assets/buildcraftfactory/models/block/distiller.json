@@ -43,6 +43,10 @@
     ],
     "textures": {
         "sprite_a": "buildcraftfactory:block/distiller/tank_sprite_a",
-        "sprite_b": "buildcraftfactory:block/distiller/tank_sprite_b"
+        "sprite_b": "buildcraftfactory:block/distiller/tank_sprite_b",
+        "power_a": "buildcraftfactory:block/distiller/power_sprite_a",
+        "power_b": "buildcraftfactory:block/distiller/power_sprite_b",
+        "power_c": "buildcraftfactory:block/distiller/power_sprite_c",
+        "power_d": "buildcraftfactory:block/distiller/power_sprite_d"
     }
 }

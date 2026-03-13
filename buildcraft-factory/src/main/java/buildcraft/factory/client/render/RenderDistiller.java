@@ -328,16 +328,16 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
                 maxX, cubeMinY, maxZ, maxX, cubeMinY, minZ,
                 1, 0, 0, r, g, b, a, light, overlay,
                 ewU0, ewV0, ewU1, ewV0, ewU1, ewV1, ewU0, ewV1);
-        // Top face (+Y)
-        quadUV(pose, buffer, minX, cubeMaxY, minZ, maxX, cubeMaxY, minZ,
-                maxX, cubeMaxY, maxZ, minX, cubeMaxY, maxZ,
+        // Top face (+Y) — CW from above so it faces up
+        quadUV(pose, buffer, minX, cubeMaxY, maxZ, maxX, cubeMaxY, maxZ,
+                maxX, cubeMaxY, minZ, minX, cubeMaxY, minZ,
                 0, 1, 0, r, g, b, a, light, overlay,
-                udU0, udV0, udU1, udV0, udU1, udV1, udU0, udV1);
-        // Bottom face (-Y)
-        quadUV(pose, buffer, minX, cubeMinY, maxZ, maxX, cubeMinY, maxZ,
-                maxX, cubeMinY, minZ, minX, cubeMinY, minZ,
-                0, -1, 0, r, g, b, a, light, overlay,
                 udU0, udV1, udU1, udV1, udU1, udV0, udU0, udV0);
+        // Bottom face (-Y) — CW from below so it faces down
+        quadUV(pose, buffer, minX, cubeMinY, minZ, maxX, cubeMinY, minZ,
+                maxX, cubeMinY, maxZ, minX, cubeMinY, maxZ,
+                0, -1, 0, r, g, b, a, light, overlay,
+                udU0, udV0, udU1, udV0, udU1, udV1, udU0, udV1);
     }
 
     // --- Quad helpers ---

@@ -239,7 +239,12 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
         if (currentRecipe == null || !isActive) {
             powerAvgSmoothed += (long) ((0 - powerAvgSmoothed) * 0.05);
         }
-        powerAvgClient = Math.min(powerAvgSmoothed, MAX_MJ_PER_TICK);
+        // Round to nearest 0.5 MJ before syncing (matches 1.12.2 rounding)
+        // This prevents EWMA values just below a threshold (e.g. 1,999,999)
+        // from causing the texture index to drop by one level.
+        long halfMJ = MjAPI.MJ / 2; // 500,000
+        powerAvgClient = Math.round(powerAvgSmoothed / (double) halfMJ) * halfMJ;
+        powerAvgClient = Math.min(powerAvgClient, MAX_MJ_PER_TICK);
 
         // Send client sync when fluid amounts or active state change
         int curIn = tankIn.getFluidAmount();

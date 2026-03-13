@@ -1,180 +1,54 @@
 {
     "variants": {
-        "connected_left=false,connected_right=false,facing=north,part=start": {
-            "model": "buildcraftfactory:block/heat_exchange_joiner",
-            "y": 180
-        },
-        "connected_left=false,connected_right=false,facing=north,part=middle": {
-            "model": "buildcraftfactory:block/heat_exchange_middle"
-        },
-        "connected_left=false,connected_right=false,facing=north,part=end": {
-            "model": "buildcraftfactory:block/heat_exchange_end"
-        },
-        "connected_left=false,connected_right=false,facing=east,part=start": {
-            "model": "buildcraftfactory:block/heat_exchange_joiner",
-            "y": 270
-        },
-        "connected_left=false,connected_right=false,facing=east,part=middle": {
-            "model": "buildcraftfactory:block/heat_exchange_middle",
-            "y": 90
-        },
-        "connected_left=false,connected_right=false,facing=east,part=end": {
-            "model": "buildcraftfactory:block/heat_exchange_end",
-            "y": 90
-        },
-        "connected_left=false,connected_right=false,facing=south,part=start": {
-            "model": "buildcraftfactory:block/heat_exchange_joiner"
-        },
-        "connected_left=false,connected_right=false,facing=south,part=middle": {
-            "model": "buildcraftfactory:block/heat_exchange_middle"
-        },
-        "connected_left=false,connected_right=false,facing=south,part=end": {
-            "model": "buildcraftfactory:block/heat_exchange_end",
-            "y": 180
-        },
-        "connected_left=false,connected_right=false,facing=west,part=start": {
-            "model": "buildcraftfactory:block/heat_exchange_joiner",
-            "y": 90
-        },
-        "connected_left=false,connected_right=false,facing=west,part=middle": {
-            "model": "buildcraftfactory:block/heat_exchange_middle",
-            "y": 90
-        },
-        "connected_left=false,connected_right=false,facing=west,part=end": {
-            "model": "buildcraftfactory:block/heat_exchange_end",
-            "y": 270
-        },
-        "connected_left=false,connected_right=true,facing=north,part=start": {
-            "model": "buildcraftfactory:block/heat_exchange_joiner",
-            "y": 180
-        },
-        "connected_left=false,connected_right=true,facing=north,part=middle": {
-            "model": "buildcraftfactory:block/heat_exchange_middle"
-        },
-        "connected_left=false,connected_right=true,facing=north,part=end": {
-            "model": "buildcraftfactory:block/heat_exchange_end"
-        },
-        "connected_left=false,connected_right=true,facing=east,part=start": {
-            "model": "buildcraftfactory:block/heat_exchange_joiner",
-            "y": 270
-        },
-        "connected_left=false,connected_right=true,facing=east,part=middle": {
-            "model": "buildcraftfactory:block/heat_exchange_middle",
-            "y": 90
-        },
-        "connected_left=false,connected_right=true,facing=east,part=end": {
-            "model": "buildcraftfactory:block/heat_exchange_end",
-            "y": 90
-        },
-        "connected_left=false,connected_right=true,facing=south,part=start": {
-            "model": "buildcraftfactory:block/heat_exchange_joiner"
-        },
-        "connected_left=false,connected_right=true,facing=south,part=middle": {
-            "model": "buildcraftfactory:block/heat_exchange_middle"
-        },
-        "connected_left=false,connected_right=true,facing=south,part=end": {
-            "model": "buildcraftfactory:block/heat_exchange_end",
-            "y": 180
-        },
-        "connected_left=false,connected_right=true,facing=west,part=start": {
-            "model": "buildcraftfactory:block/heat_exchange_joiner",
-            "y": 90
-        },
-        "connected_left=false,connected_right=true,facing=west,part=middle": {
-            "model": "buildcraftfactory:block/heat_exchange_middle",
-            "y": 90
-        },
-        "connected_left=false,connected_right=true,facing=west,part=end": {
-            "model": "buildcraftfactory:block/heat_exchange_end",
-            "y": 270
-        },
-        "connected_left=true,connected_right=false,facing=north,part=start": {
-            "model": "buildcraftfactory:block/heat_exchange_joiner",
-            "y": 180
-        },
-        "connected_left=true,connected_right=false,facing=north,part=middle": {
-            "model": "buildcraftfactory:block/heat_exchange_middle"
-        },
-        "connected_left=true,connected_right=false,facing=north,part=end": {
-            "model": "buildcraftfactory:block/heat_exchange_end"
-        },
-        "connected_left=true,connected_right=false,facing=east,part=start": {
-            "model": "buildcraftfactory:block/heat_exchange_joiner",
-            "y": 270
-        },
-        "connected_left=true,connected_right=false,facing=east,part=middle": {
-            "model": "buildcraftfactory:block/heat_exchange_middle",
-            "y": 90
-        },
-        "connected_left=true,connected_right=false,facing=east,part=end": {
-            "model": "buildcraftfactory:block/heat_exchange_end",
-            "y": 90
-        },
-        "connected_left=true,connected_right=false,facing=south,part=start": {
-            "model": "buildcraftfactory:block/heat_exchange_joiner"
-        },
-        "connected_left=true,connected_right=false,facing=south,part=middle": {
-            "model": "buildcraftfactory:block/heat_exchange_middle"
-        },
-        "connected_left=true,connected_right=false,facing=south,part=end": {
-            "model": "buildcraftfactory:block/heat_exchange_end",
-            "y": 180
-        },
-        "connected_left=true,connected_right=false,facing=west,part=start": {
-            "model": "buildcraftfactory:block/heat_exchange_joiner",
-            "y": 90
-        },
-        "connected_left=true,connected_right=false,facing=west,part=middle": {
-            "model": "buildcraftfactory:block/heat_exchange_middle",
-            "y": 90
-        },
-        "connected_left=true,connected_right=false,facing=west,part=end": {
-            "model": "buildcraftfactory:block/heat_exchange_end",
-            "y": 270
-        },
-        "connected_left=true,connected_right=true,facing=north,part=start": {
-            "model": "buildcraftfactory:block/heat_exchange_joiner",
-            "y": 180
-        },
-        "connected_left=true,connected_right=true,facing=north,part=middle": {
-            "model": "buildcraftfactory:block/heat_exchange_middle"
-        },
-        "connected_left=true,connected_right=true,facing=north,part=end": {
-            "model": "buildcraftfactory:block/heat_exchange_end"
-        },
-        "connected_left=true,connected_right=true,facing=east,part=start": {
-            "model": "buildcraftfactory:block/heat_exchange_joiner",
-            "y": 270
-        },
-        "connected_left=true,connected_right=true,facing=east,part=middle": {
-            "model": "buildcraftfactory:block/heat_exchange_middle",
-            "y": 90
-        },
-        "connected_left=true,connected_right=true,facing=east,part=end": {
-            "model": "buildcraftfactory:block/heat_exchange_end",
-            "y": 90
-        },
-        "connected_left=true,connected_right=true,facing=south,part=start": {
-            "model": "buildcraftfactory:block/heat_exchange_joiner"
-        },
-        "connected_left=true,connected_right=true,facing=south,part=middle": {
-            "model": "buildcraftfactory:block/heat_exchange_middle"
-        },
-        "connected_left=true,connected_right=true,facing=south,part=end": {
-            "model": "buildcraftfactory:block/heat_exchange_end",
-            "y": 180
-        },
-        "connected_left=true,connected_right=true,facing=west,part=start": {
-            "model": "buildcraftfactory:block/heat_exchange_joiner",
-            "y": 90
-        },
-        "connected_left=true,connected_right=true,facing=west,part=middle": {
-            "model": "buildcraftfactory:block/heat_exchange_middle",
-            "y": 90
-        },
-        "connected_left=true,connected_right=true,facing=west,part=end": {
-            "model": "buildcraftfactory:block/heat_exchange_end",
-            "y": 270
-        }
+        "connected_left=false,connected_right=false,facing=north,part=start": { "model": "buildcraftfactory:block/heat_exchange_joiner", "y": 270 },
+        "connected_left=false,connected_right=false,facing=east,part=start":  { "model": "buildcraftfactory:block/heat_exchange_joiner" },
+        "connected_left=false,connected_right=false,facing=south,part=start": { "model": "buildcraftfactory:block/heat_exchange_joiner", "y": 90 },
+        "connected_left=false,connected_right=false,facing=west,part=start":  { "model": "buildcraftfactory:block/heat_exchange_joiner", "y": 180 },
+        "connected_left=true,connected_right=false,facing=north,part=start":  { "model": "buildcraftfactory:block/heat_exchange_joiner", "y": 270 },
+        "connected_left=true,connected_right=false,facing=east,part=start":   { "model": "buildcraftfactory:block/heat_exchange_joiner" },
+        "connected_left=true,connected_right=false,facing=south,part=start":  { "model": "buildcraftfactory:block/heat_exchange_joiner", "y": 90 },
+        "connected_left=true,connected_right=false,facing=west,part=start":   { "model": "buildcraftfactory:block/heat_exchange_joiner", "y": 180 },
+        "connected_left=false,connected_right=true,facing=north,part=start":  { "model": "buildcraftfactory:block/heat_exchange_joiner", "y": 270 },
+        "connected_left=false,connected_right=true,facing=east,part=start":   { "model": "buildcraftfactory:block/heat_exchange_joiner" },
+        "connected_left=false,connected_right=true,facing=south,part=start":  { "model": "buildcraftfactory:block/heat_exchange_joiner", "y": 90 },
+        "connected_left=false,connected_right=true,facing=west,part=start":   { "model": "buildcraftfactory:block/heat_exchange_joiner", "y": 180 },
+        "connected_left=true,connected_right=true,facing=north,part=start":   { "model": "buildcraftfactory:block/heat_exchange_joiner", "y": 270 },
+        "connected_left=true,connected_right=true,facing=east,part=start":    { "model": "buildcraftfactory:block/heat_exchange_joiner" },
+        "connected_left=true,connected_right=true,facing=south,part=start":   { "model": "buildcraftfactory:block/heat_exchange_joiner", "y": 90 },
+        "connected_left=true,connected_right=true,facing=west,part=start":    { "model": "buildcraftfactory:block/heat_exchange_joiner", "y": 180 },
+
+        "connected_left=false,connected_right=false,facing=north,part=end": { "model": "buildcraftfactory:block/heat_exchange_joiner", "x": 180, "y": 270 },
+        "connected_left=false,connected_right=false,facing=east,part=end":  { "model": "buildcraftfactory:block/heat_exchange_joiner", "x": 180 },
+        "connected_left=false,connected_right=false,facing=south,part=end": { "model": "buildcraftfactory:block/heat_exchange_joiner", "x": 180, "y": 90 },
+        "connected_left=false,connected_right=false,facing=west,part=end":  { "model": "buildcraftfactory:block/heat_exchange_joiner", "x": 180, "y": 180 },
+        "connected_left=true,connected_right=false,facing=north,part=end":  { "model": "buildcraftfactory:block/heat_exchange_joiner", "x": 180, "y": 270 },
+        "connected_left=true,connected_right=false,facing=east,part=end":   { "model": "buildcraftfactory:block/heat_exchange_joiner", "x": 180 },
+        "connected_left=true,connected_right=false,facing=south,part=end":  { "model": "buildcraftfactory:block/heat_exchange_joiner", "x": 180, "y": 90 },
+        "connected_left=true,connected_right=false,facing=west,part=end":   { "model": "buildcraftfactory:block/heat_exchange_joiner", "x": 180, "y": 180 },
+        "connected_left=false,connected_right=true,facing=north,part=end":  { "model": "buildcraftfactory:block/heat_exchange_joiner", "x": 180, "y": 270 },
+        "connected_left=false,connected_right=true,facing=east,part=end":   { "model": "buildcraftfactory:block/heat_exchange_joiner", "x": 180 },
+        "connected_left=false,connected_right=true,facing=south,part=end":  { "model": "buildcraftfactory:block/heat_exchange_joiner", "x": 180, "y": 90 },
+        "connected_left=false,connected_right=true,facing=west,part=end":   { "model": "buildcraftfactory:block/heat_exchange_joiner", "x": 180, "y": 180 },
+        "connected_left=true,connected_right=true,facing=north,part=end":   { "model": "buildcraftfactory:block/heat_exchange_joiner", "x": 180, "y": 270 },
+        "connected_left=true,connected_right=true,facing=east,part=end":    { "model": "buildcraftfactory:block/heat_exchange_joiner", "x": 180 },
+        "connected_left=true,connected_right=true,facing=south,part=end":   { "model": "buildcraftfactory:block/heat_exchange_joiner", "x": 180, "y": 90 },
+        "connected_left=true,connected_right=true,facing=west,part=end":    { "model": "buildcraftfactory:block/heat_exchange_joiner", "x": 180, "y": 180 },
+
+        "connected_left=false,connected_right=false,facing=north,part=middle": { "model": "buildcraftfactory:block/heat_exchange_middle", "y": 270 },
+        "connected_left=false,connected_right=false,facing=east,part=middle":  { "model": "buildcraftfactory:block/heat_exchange_middle" },
+        "connected_left=false,connected_right=false,facing=south,part=middle": { "model": "buildcraftfactory:block/heat_exchange_middle", "y": 90 },
+        "connected_left=false,connected_right=false,facing=west,part=middle":  { "model": "buildcraftfactory:block/heat_exchange_middle", "y": 180 },
+        "connected_left=true,connected_right=false,facing=north,part=middle":  { "model": "buildcraftfactory:block/heat_exchange_middle", "y": 270 },
+        "connected_left=true,connected_right=false,facing=east,part=middle":   { "model": "buildcraftfactory:block/heat_exchange_middle" },
+        "connected_left=true,connected_right=false,facing=south,part=middle":  { "model": "buildcraftfactory:block/heat_exchange_middle", "y": 90 },
+        "connected_left=true,connected_right=false,facing=west,part=middle":   { "model": "buildcraftfactory:block/heat_exchange_middle", "y": 180 },
+        "connected_left=false,connected_right=true,facing=north,part=middle":  { "model": "buildcraftfactory:block/heat_exchange_middle", "y": 270 },
+        "connected_left=false,connected_right=true,facing=east,part=middle":   { "model": "buildcraftfactory:block/heat_exchange_middle" },
+        "connected_left=false,connected_right=true,facing=south,part=middle":  { "model": "buildcraftfactory:block/heat_exchange_middle", "y": 90 },
+        "connected_left=false,connected_right=true,facing=west,part=middle":   { "model": "buildcraftfactory:block/heat_exchange_middle", "y": 180 },
+        "connected_left=true,connected_right=true,facing=north,part=middle":   { "model": "buildcraftfactory:block/heat_exchange_middle", "y": 270 },
+        "connected_left=true,connected_right=true,facing=east,part=middle":    { "model": "buildcraftfactory:block/heat_exchange_middle" },
+        "connected_left=true,connected_right=true,facing=south,part=middle":   { "model": "buildcraftfactory:block/heat_exchange_middle", "y": 90 },
+        "connected_left=true,connected_right=true,facing=west,part=middle":    { "model": "buildcraftfactory:block/heat_exchange_middle", "y": 180 }
     }
 }

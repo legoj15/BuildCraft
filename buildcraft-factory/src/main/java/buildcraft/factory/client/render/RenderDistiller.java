@@ -234,12 +234,13 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
         double st2Mod1 = st2 - Math.floor(st2);
         float y2 = (float) (1.0 - Math.abs(st2Mod1 - 0.5) * 2.0);
 
-        // Select power texture (0=off, 1-6 based on powerAvg)
+        // Select power texture (0=off, 1-6 based on powerAvg in micro-MJ)
         int texIndex;
         if (powerAvg <= 0) {
             texIndex = 0; // off
         } else {
-            texIndex = (int) Math.min(powerAvg, 6);
+            texIndex = (int) (powerAvg * 6 / TileDistiller_BC8.MAX_MJ_PER_TICK);
+            texIndex = Math.max(1, Math.min(texIndex, 6));
         }
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()

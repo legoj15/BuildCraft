@@ -66,9 +66,9 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
     private long distillPower = 0;
     private boolean isActive = false;
 
-    // Power average tracking (matching 1.12.2 AverageLong behavior)
-    private long powerAvgAccum = 0;
-    private int powerAvgCount = 0;
+    // Power average: exponential moving average in micro-MJ,
+    // approximating 1.12.2's AverageLong(100) rolling average.
+    private long powerAvgSmoothed = 0;
     private long powerAvgClient = 0;
 
     // Client-side animation state for power indicator cubes
@@ -136,7 +136,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
         return isActive;
     }
 
-    /** Returns the client-synced power average in MJ units (0-6). */
+    /** Returns the client-synced power average in micro-MJ. */
     public long getPowerAvgClient() {
         return powerAvgClient;
     }
@@ -153,9 +153,9 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
         smoothLiquidOut.tick();
 
         // Advance power cube animation (matches 1.12.2 expression logic)
-        long powerMax = MAX_MJ_PER_TICK / MjAPI.MJ; // = 6
-        double changeSpeed = isActive && powerMax > 0
-                ? (powerAvgClient * 0.06 / powerMax)
+        // powerAvgClient is in micro-MJ, MAX_MJ_PER_TICK is in micro-MJ
+        double changeSpeed = isActive && MAX_MJ_PER_TICK > 0
+                ? ((double) powerAvgClient / MAX_MJ_PER_TICK) * 0.06
                 : 0.01;
         if (isActive) {
             animState += changeSpeed;
@@ -216,8 +216,8 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
                 max /= mjBattery.getCapacity() / 2;
                 max = Math.min(max, MAX_MJ_PER_TICK);
                 long power = mjBattery.extractPower(0, max);
-                powerAvgAccum += max;
-                powerAvgCount++;
+                // Feed into EWMA (alpha ≈ 0.05 for ~20-tick smoothing)
+                powerAvgSmoothed += (long) ((max - powerAvgSmoothed) * 0.05);
                 distillPower += power;
                 isActive = power > 0;
                 long powerReq = currentRecipe.powerRequired();
@@ -235,16 +235,11 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
             }
         }
 
-        // Update power average (simplified rolling average)
-        if (powerAvgCount > 0) {
-            powerAvgClient = powerAvgAccum / powerAvgCount / MjAPI.MJ;
-            powerAvgClient = Math.min(powerAvgClient, MAX_MJ_PER_TICK / MjAPI.MJ);
-        } else {
-            powerAvgClient = 0;
+        // When idle, decay the EWMA toward zero
+        if (currentRecipe == null || !isActive) {
+            powerAvgSmoothed += (long) ((0 - powerAvgSmoothed) * 0.05);
         }
-        // Reset accumulator each tick (simplified from 1.12.2's 100-tick window)
-        powerAvgAccum = 0;
-        powerAvgCount = 0;
+        powerAvgClient = Math.min(powerAvgSmoothed, MAX_MJ_PER_TICK);
 
         // Send client sync when fluid amounts or active state change
         int curIn = tankIn.getFluidAmount();

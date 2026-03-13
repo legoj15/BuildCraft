@@ -344,16 +344,38 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
                 maxX, cubeMinY, maxZ, maxX, cubeMinY, minZ,
                 1, 0, 0, r, g, b, a, light, overlay,
                 ewU0, sideV0, ewU1, sideV0, ewU1, sideV1, ewU0, sideV1);
+        // Top/bottom face UV rotation: in default WEST facing (sizeX=8, sizeZ=4), U maps
+        // along X and V along Z. After rotation (sizeX=4, sizeZ=8), we rotate the UV 90°
+        // to match how 1.12.2's builtin:rotate_facing transforms the UVs.
+        boolean rotated = pcb.sizeX < pcb.sizeZ;
+
         // Top face (+Y) — CW from above so it faces up
-        quadUV(pose, buffer, minX, cubeMaxY, maxZ, maxX, cubeMaxY, maxZ,
-                maxX, cubeMaxY, minZ, minX, cubeMaxY, minZ,
-                0, 1, 0, r, g, b, a, light, overlay,
-                udU0, udV1, udU1, udV1, udU1, udV0, udU0, udV0);
+        // Vertices: (minX,maxZ) → (maxX,maxZ) → (maxX,minZ) → (minX,minZ)
+        if (!rotated) {
+            quadUV(pose, buffer, minX, cubeMaxY, maxZ, maxX, cubeMaxY, maxZ,
+                    maxX, cubeMaxY, minZ, minX, cubeMaxY, minZ,
+                    0, 1, 0, r, g, b, a, light, overlay,
+                    udU0, udV1, udU1, udV1, udU1, udV0, udU0, udV0);
+        } else {
+            // Rotate UV 90° CW
+            quadUV(pose, buffer, minX, cubeMaxY, maxZ, maxX, cubeMaxY, maxZ,
+                    maxX, cubeMaxY, minZ, minX, cubeMaxY, minZ,
+                    0, 1, 0, r, g, b, a, light, overlay,
+                    udU0, udV0, udU0, udV1, udU1, udV1, udU1, udV0);
+        }
         // Bottom face (-Y) — CW from below so it faces down
-        quadUV(pose, buffer, minX, cubeMinY, minZ, maxX, cubeMinY, minZ,
-                maxX, cubeMinY, maxZ, minX, cubeMinY, maxZ,
-                0, -1, 0, r, g, b, a, light, overlay,
-                udU0, udV0, udU1, udV0, udU1, udV1, udU0, udV1);
+        // Vertices: (minX,minZ) → (maxX,minZ) → (maxX,maxZ) → (minX,maxZ)
+        if (!rotated) {
+            quadUV(pose, buffer, minX, cubeMinY, minZ, maxX, cubeMinY, minZ,
+                    maxX, cubeMinY, maxZ, minX, cubeMinY, maxZ,
+                    0, -1, 0, r, g, b, a, light, overlay,
+                    udU0, udV0, udU1, udV0, udU1, udV1, udU0, udV1);
+        } else {
+            quadUV(pose, buffer, minX, cubeMinY, minZ, maxX, cubeMinY, minZ,
+                    maxX, cubeMinY, maxZ, minX, cubeMinY, maxZ,
+                    0, -1, 0, r, g, b, a, light, overlay,
+                    udU1, udV0, udU1, udV1, udU0, udV1, udU0, udV0);
+        }
     }
 
     // --- Quad helpers ---

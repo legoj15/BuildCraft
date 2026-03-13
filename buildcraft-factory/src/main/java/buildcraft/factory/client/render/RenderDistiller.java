@@ -273,13 +273,13 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
         float minZ = pcb.minZ / 16.0f;
         float maxZ = (pcb.minZ + pcb.sizeZ) / 16.0f;
 
-        // UV regions from the sprite (each power_sprite is 16x16, split into top/bottom halves)
-        // Face UVs from the 1.12.2 model:
-        //   north/south: (4,8)→(12,16) pixel coords on the 16x16 texture
-        //   east/west:   (0,8)→(4,16) pixel coords
-        //   up/down:     (4,0)→(12,8) pixel coords
-        // The "top half" or "bottom half" selection shifts the V coordinates.
-        // In atlas space, we interpolate between sprite U0/V0 and U1/V1.
+        // The 1.12.2 model assigns UV regions based on face pixel width:
+        //   8-pixel-wide face (wide):  UV [4, 8, 12, 16] in face UV space
+        //   4-pixel-wide face (narrow): UV [0, 8, 4, 16] in face UV space
+        //   top/bottom faces:          UV [4, 0, 12, 8] in face UV space
+        // After rotation, sizeX and sizeZ swap, so N/S face width = sizeX, E/W face width = sizeZ.
+        // We select UV based on the actual pixel width, not the face name.
+
         float sprU0 = sprite.getU0();
         float sprU1 = sprite.getU1();
         float sprV0 = sprite.getV0();
@@ -287,22 +287,38 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
         float sprURange = sprU1 - sprU0;
         float sprVRange = sprV1 - sprV0;
 
-        // If topHalf: use V 0→0.5 of sprite; if bottomHalf: use V 0.5→1.0
+        // Sub-region: topHalf uses V [0, 0.5] of sprite, bottomHalf uses V [0.5, 1.0]
         float vBase = topHalf ? 0 : 0.5f;
 
-        // North/South face UVs: pixel (4,8)→(12,16) → normalized (0.25, 0.5)→(0.75, 1.0), shift by half
-        float nsU0 = sprU0 + sprURange * (4.0f / 16.0f);
-        float nsU1 = sprU0 + sprURange * (12.0f / 16.0f);
-        float nsV0 = sprV0 + sprVRange * (vBase + 8.0f / 32.0f);
-        float nsV1 = sprV0 + sprVRange * (vBase + 16.0f / 32.0f);
+        // Vertical face V is always the same (lower half of sub-region)
+        float sideV0 = sprV0 + sprVRange * (vBase + 8.0f / 32.0f);
+        float sideV1 = sprV0 + sprVRange * (vBase + 16.0f / 32.0f);
 
-        // East/West face UVs: pixel (0,8)→(4,16) → normalized (0, 0.5)→(0.25, 1.0)
-        float ewU0 = sprU0 + sprURange * (0.0f / 16.0f);
-        float ewU1 = sprU0 + sprURange * (4.0f / 16.0f);
-        float ewV0 = sprV0 + sprVRange * (vBase + 8.0f / 32.0f);
-        float ewV1 = sprV0 + sprVRange * (vBase + 16.0f / 32.0f);
+        // Compute UV for N/S faces (span sizeX pixels wide)
+        float nsU0, nsU1;
+        if (pcb.sizeX >= 8) {
+            // Wide: UV U [4/16, 12/16]
+            nsU0 = sprU0 + sprURange * (4.0f / 16.0f);
+            nsU1 = sprU0 + sprURange * (12.0f / 16.0f);
+        } else {
+            // Narrow: UV U [0/16, 4/16]
+            nsU0 = sprU0 + sprURange * (0.0f / 16.0f);
+            nsU1 = sprU0 + sprURange * (4.0f / 16.0f);
+        }
 
-        // Up/Down face UVs: pixel (4,0)→(12,8) → normalized (0.25, 0)→(0.75, 0.5)
+        // Compute UV for E/W faces (span sizeZ pixels wide)
+        float ewU0, ewU1;
+        if (pcb.sizeZ >= 8) {
+            // Wide: UV U [4/16, 12/16]
+            ewU0 = sprU0 + sprURange * (4.0f / 16.0f);
+            ewU1 = sprU0 + sprURange * (12.0f / 16.0f);
+        } else {
+            // Narrow: UV U [0/16, 4/16]
+            ewU0 = sprU0 + sprURange * (0.0f / 16.0f);
+            ewU1 = sprU0 + sprURange * (4.0f / 16.0f);
+        }
+
+        // Up/Down face UVs (upper half of sub-region): pixel (4,0)→(12,8)
         float udU0 = sprU0 + sprURange * (4.0f / 16.0f);
         float udU1 = sprU0 + sprURange * (12.0f / 16.0f);
         float udV0 = sprV0 + sprVRange * (vBase + 0.0f / 32.0f);
@@ -312,22 +328,22 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
         quadUV(pose, buffer, minX, cubeMaxY, minZ, maxX, cubeMaxY, minZ,
                 maxX, cubeMinY, minZ, minX, cubeMinY, minZ,
                 0, 0, -1, r, g, b, a, light, overlay,
-                nsU0, nsV0, nsU1, nsV0, nsU1, nsV1, nsU0, nsV1);
+                nsU0, sideV0, nsU1, sideV0, nsU1, sideV1, nsU0, sideV1);
         // South face (+Z)
         quadUV(pose, buffer, minX, cubeMinY, maxZ, maxX, cubeMinY, maxZ,
                 maxX, cubeMaxY, maxZ, minX, cubeMaxY, maxZ,
                 0, 0, 1, r, g, b, a, light, overlay,
-                nsU0, nsV1, nsU1, nsV1, nsU1, nsV0, nsU0, nsV0);
+                nsU0, sideV1, nsU1, sideV1, nsU1, sideV0, nsU0, sideV0);
         // West face (-X)
         quadUV(pose, buffer, minX, cubeMinY, minZ, minX, cubeMinY, maxZ,
                 minX, cubeMaxY, maxZ, minX, cubeMaxY, minZ,
                 -1, 0, 0, r, g, b, a, light, overlay,
-                ewU0, ewV1, ewU1, ewV1, ewU1, ewV0, ewU0, ewV0);
+                ewU0, sideV1, ewU1, sideV1, ewU1, sideV0, ewU0, sideV0);
         // East face (+X)
         quadUV(pose, buffer, maxX, cubeMaxY, minZ, maxX, cubeMaxY, maxZ,
                 maxX, cubeMinY, maxZ, maxX, cubeMinY, minZ,
                 1, 0, 0, r, g, b, a, light, overlay,
-                ewU0, ewV0, ewU1, ewV0, ewU1, ewV1, ewU0, ewV1);
+                ewU0, sideV0, ewU1, sideV0, ewU1, sideV1, ewU0, sideV1);
         // Top face (+Y) — CW from above so it faces up
         quadUV(pose, buffer, minX, cubeMaxY, maxZ, maxX, cubeMaxY, maxZ,
                 maxX, cubeMaxY, minZ, minX, cubeMaxY, minZ,

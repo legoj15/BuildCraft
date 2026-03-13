@@ -3,5 +3,5 @@
         "#back":"buildcraftenergy:block/engine/stone_back",
         "#side":"buildcraftenergy:block/engine/stone_side"
     },
-    "parent":"buildcraftlib:models/block/engine_base"
+    "parent":"buildcraftlib:models/bc/engine_base"
 }

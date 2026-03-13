@@ -3,5 +3,5 @@
         "#back":"buildcraftcore:block/engine/creative_back",
         "#side":"buildcraftcore:block/engine/creative_side"
     },
-    "parent":"buildcraftlib:models/block/engine_base"
+    "parent":"buildcraftlib:models/bc/engine_base"
 }

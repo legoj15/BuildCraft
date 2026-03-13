@@ -44,5 +44,16 @@ public class BCLib {
 
         BCLibItems.ITEMS.register(modEventBus);
         DATA_COMPONENTS.register(modEventBus);
+
+        // Wire ModelHolderRegistry into NeoForge model baking lifecycle
+        if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
+            modEventBus.addListener(
+                net.neoforged.neoforge.client.event.ModelEvent.BakingCompleted.class,
+                event -> {
+                    buildcraft.lib.client.model.ModelHolderRegistry.onModelBake();
+                    buildcraft.lib.misc.data.ModelVariableData.onModelBake();
+                }
+            );
+        }
     }
 }

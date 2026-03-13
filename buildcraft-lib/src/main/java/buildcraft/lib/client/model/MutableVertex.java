@@ -17,8 +17,8 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.Vec3i;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+
+
 
 import buildcraft.api.core.render.ISprite;
 
@@ -33,7 +33,6 @@ import buildcraft.api.core.render.ISprite;
  * will take in 3 doubles and set them to the position element, and {@link #colouri(int, int, int, int)} will take in 4
  * int's and set them to the colour elements.
  */
-@OnlyIn(Dist.CLIENT)
 public class MutableVertex {
     /** The position of this vertex. */
     public float position_x, position_y, position_z;

@@ -43,11 +43,11 @@ public class BCEnergyModels {
         ENGINE_STAGE = fnCtx.putVariableObject("stage", EnumPowerStage.class);
         ENGINE_FACING = fnCtx.putVariableObject("direction", Direction.class);
         ENGINE_STONE = new ModelHolderVariable(
-            "buildcraftenergy:models/block/engine_stone.json",
+            "buildcraftenergy:models/bc/engine_stone.json",
             fnCtx
         );
         ENGINE_IRON = new ModelHolderVariable(
-            "buildcraftenergy:models/block/engine_iron.json",
+            "buildcraftenergy:models/bc/engine_iron.json",
             fnCtx
         );
     }

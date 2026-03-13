@@ -3,5 +3,5 @@
         "#back":"buildcraftcore:block/engine/wood_back",
         "#side":"buildcraftcore:block/engine/wood_side"
     },
-    "parent":"buildcraftlib:models/block/engine_base"
+    "parent":"buildcraftlib:models/bc/engine_base"
 }

@@ -9,6 +9,7 @@ import net.minecraft.resources.Identifier;
 import javax.annotation.Nonnull;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.mj.IMjConnector;
@@ -104,5 +105,17 @@ public class TileEngineRedstone_BC8 extends TileEngineBase_BC8 {
     @Override
     public long getCurrentOutput() {
         return MjAPI.MJ / 20;
+    }
+
+    // --- IDebuggable ---
+
+    @Override
+    public void getDebugInfo(java.util.List<String> left, java.util.List<String> right, Direction side) {
+        super.getDebugInfo(left, right, side);
+    }
+
+    @Override
+    public void getClientDebugInfo(java.util.List<String> left, java.util.List<String> right, Direction side) {
+        super.getClientDebugInfo(left, right, side);
     }
 }

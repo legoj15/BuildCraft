@@ -35,6 +35,7 @@ import buildcraft.api.mj.MjBattery;
 import buildcraft.api.recipes.BuildcraftRecipeRegistry;
 import buildcraft.api.recipes.IRefineryRecipeManager;
 import buildcraft.api.recipes.IRefineryRecipeManager.IDistillationRecipe;
+import buildcraft.api.tiles.IDebuggable;
 import buildcraft.lib.fluid.FluidSmoother;
 
 import buildcraft.factory.BCFactoryBlockEntities;
@@ -46,7 +47,7 @@ import buildcraft.lib.mj.MjBatteryReceiver;
  * two fluid outputs (gas + liquid) via distillation recipes.
  * Ported from 1.12.2 TileDistiller_BC8.
  */
-public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
+public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDebuggable {
 
     public static final long MAX_MJ_PER_TICK = 6 * MjAPI.MJ;
 
@@ -261,6 +262,20 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
             setChanged();
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }
+    }
+
+    // --- IDebuggable ---
+
+    @Override
+    public void getDebugInfo(java.util.List<String> left, java.util.List<String> right, Direction side) {
+        // We use fluid stacks here to represent the contents
+        left.add("In = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankIn.getFluid()));
+        left.add("GasOut = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankGasOut.getFluid()));
+        left.add("LiquidOut = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankLiquidOut.getFluid()));
+        left.add("Battery = " + mjBattery.getDebugString());
+        left.add("Progress = " + MjAPI.formatMj(distillPower));
+        left.add("Rate = " + buildcraft.lib.misc.LocaleUtil.localizeMjFlow(powerAvgClient));
+        left.add("CurrRecipe = " + currentRecipe);
     }
 
     // --- MenuProvider ---

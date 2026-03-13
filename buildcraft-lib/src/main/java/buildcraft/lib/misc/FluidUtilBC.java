@@ -145,6 +145,14 @@ public class FluidUtilBC {
         return drained.copyWithAmount(accepted);
     }
 
+    /** @return A debug string representation of the given fluid stack, or "empty" if empty. */
+    public static String getDebugString(FluidStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            return "empty";
+        }
+        return stack.getAmount() + " mB " + net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(stack.getFluid());
+    }
+
     public static boolean onTankActivated(Player player, BlockPos pos, InteractionHand hand,
         IFluidHandler fluidHandler) {
         ItemStack held = player.getItemInHand(hand);

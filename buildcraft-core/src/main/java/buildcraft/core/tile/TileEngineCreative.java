@@ -13,6 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.core.Direction;
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.mj.IMjConnector;
@@ -110,6 +111,19 @@ public class TileEngineCreative extends TileEngineBase_BC8 {
         BlockState state = getBlockState();
         level.sendBlockUpdated(getBlockPos(), state, state, 3);
         return true;
+    }
+
+    // --- IDebuggable ---
+
+    @Override
+    public void getDebugInfo(java.util.List<String> left, java.util.List<String> right, Direction side) {
+        super.getDebugInfo(left, right, side);
+        left.add("Output = " + MjAPI.formatMj(getCurrentOutput()) + "/t");
+    }
+
+    @Override
+    public void getClientDebugInfo(java.util.List<String> left, java.util.List<String> right, Direction side) {
+        super.getClientDebugInfo(left, right, side);
     }
 
     // --- NBT ---

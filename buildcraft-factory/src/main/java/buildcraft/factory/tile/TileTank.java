@@ -33,6 +33,7 @@ import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.container.ContainerTank;
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.api.tiles.IDebuggable;
 
 /**
  * Tank tile entity. Stacks vertically with other tanks to form a multi-block
@@ -40,7 +41,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  * Each individual tank holds 16 buckets (16,000 mB).
  * Ported from 1.12.2 TileTank.
  */
-public class TileTank extends BlockEntity implements MenuProvider {
+public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
 
     @SuppressWarnings("removal")
     public final FluidTank tank = new FluidTank(16_000); // 16 buckets
@@ -79,6 +80,14 @@ public class TileTank extends BlockEntity implements MenuProvider {
             lastComparatorLevel = compLevel;
             setChanged();
         }
+    }
+
+    // IDebuggable
+
+    @Override
+    public void getDebugInfo(List<String> left, List<String> right, Direction side) {
+        left.add("fluid = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tank.getFluid()));
+        // smoothedTank.getDebugInfo(left, right, side); // smoothedTank is not defined in this context
     }
 
     // --- Client Sync ---

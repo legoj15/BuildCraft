@@ -33,6 +33,9 @@ import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjToRfAutoConvertor;
+import buildcraft.api.tiles.IDebuggable;
+
+import buildcraft.lib.misc.LocaleUtil;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
@@ -42,7 +45,7 @@ import net.neoforged.neoforge.transfer.energy.EnergyHandler;
  * Provides tick logic, heat management, MJ power accumulation,
  * piston animation state, redstone sensitivity, and NBT persistence.
  */
-public abstract class TileEngineBase_BC8 extends BlockEntity {
+public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebuggable {
 
     public static final float MIN_HEAT = 20f;
     public static final float MAX_HEAT = 250f;
@@ -532,6 +535,24 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    // --- IDebuggable ---
+
+    @Override
+    public void getDebugInfo(java.util.List<String> left, java.util.List<String> right, Direction side) {
+        left.add("facing = " + orientation);
+        left.add("heat = " + LocaleUtil.localizeHeat(heat) + " -- " + String.format("%.2f %%", getHeatLevel() * 100f));
+        left.add("power = " + LocaleUtil.localizeMj(power));
+        left.add("stage = " + getPowerStage());
+        left.add("progress = " + progress);
+        left.add("last = " + LocaleUtil.localizeMjFlow(currentOutput));
+    }
+
+    @Override
+    public void getClientDebugInfo(java.util.List<String> left, java.util.List<String> right, Direction side) {
+        left.add("Current Model Variables:");
+        clientModelData.addDebugInfo(left);
     }
 
     // --- NBT ---

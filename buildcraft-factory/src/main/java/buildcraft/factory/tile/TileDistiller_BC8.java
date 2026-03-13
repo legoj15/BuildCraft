@@ -66,10 +66,21 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
     private long distillPower = 0;
     private boolean isActive = false;
 
-    // Client-sync tracking — send block updates when fluid contents change
+    // Power average tracking (matching 1.12.2 AverageLong behavior)
+    private long powerAvgAccum = 0;
+    private int powerAvgCount = 0;
+    private long powerAvgClient = 0;
+
+    // Client-side animation state for power indicator cubes
+    // Matches 1.12.2 expression: state increments when active, decays when inactive
+    private double animState = 0;
+
+    // Client-sync tracking — send block updates when fluid contents or active state change
     private int lastSyncedIn = -1;
     private int lastSyncedGas = -1;
     private int lastSyncedLiquid = -1;
+    private boolean lastSyncedActive = false;
+    private long lastSyncedPower = -1;
 
     public TileDistiller_BC8(BlockPos pos, BlockState state) {
         super(BCFactoryBlockEntities.DISTILLER.get(), pos, state);
@@ -119,11 +130,42 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
         return smoothLiquidOut;
     }
 
-    /** Call from a client-side ticker to advance fluid smoothing. */
+    // --- Animation Accessors (for renderer) ---
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    /** Returns the client-synced power average in MJ units (0-6). */
+    public long getPowerAvgClient() {
+        return powerAvgClient;
+    }
+
+    /** Returns the current animation phase for power indicator cubes. */
+    public double getAnimState() {
+        return animState;
+    }
+
+    /** Call from a client-side ticker to advance fluid smoothing and power animation. */
     public void clientTick() {
         smoothIn.tick();
         smoothGasOut.tick();
         smoothLiquidOut.tick();
+
+        // Advance power cube animation (matches 1.12.2 expression logic)
+        long powerMax = MAX_MJ_PER_TICK / MjAPI.MJ; // = 6
+        double changeSpeed = isActive && powerMax > 0
+                ? (powerAvgClient * 0.06 / powerMax)
+                : 0.01;
+        if (isActive) {
+            animState += changeSpeed;
+            // Wrap around: once state >= 1.5, subtract 1 to loop between 0.5 and 1.5
+            if (animState >= 1.5) {
+                animState -= 1.0;
+            }
+        } else {
+            animState = animState > changeSpeed ? animState - changeSpeed : 0;
+        }
     }
 
     // --- Recipe Filtering ---
@@ -174,6 +216,8 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
                 max /= mjBattery.getCapacity() / 2;
                 max = Math.min(max, MAX_MJ_PER_TICK);
                 long power = mjBattery.extractPower(0, max);
+                powerAvgAccum += max;
+                powerAvgCount++;
                 distillPower += power;
                 isActive = power > 0;
                 long powerReq = currentRecipe.powerRequired();
@@ -191,14 +235,29 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
             }
         }
 
-        // Send client sync when fluid amounts change
+        // Update power average (simplified rolling average)
+        if (powerAvgCount > 0) {
+            powerAvgClient = powerAvgAccum / powerAvgCount / MjAPI.MJ;
+            powerAvgClient = Math.min(powerAvgClient, MAX_MJ_PER_TICK / MjAPI.MJ);
+        } else {
+            powerAvgClient = 0;
+        }
+        // Reset accumulator each tick (simplified from 1.12.2's 100-tick window)
+        powerAvgAccum = 0;
+        powerAvgCount = 0;
+
+        // Send client sync when fluid amounts or active state change
         int curIn = tankIn.getFluidAmount();
         int curGas = tankGasOut.getFluidAmount();
         int curLiq = tankLiquidOut.getFluidAmount();
-        if (curIn != lastSyncedIn || curGas != lastSyncedGas || curLiq != lastSyncedLiquid) {
+        boolean needsSync = curIn != lastSyncedIn || curGas != lastSyncedGas || curLiq != lastSyncedLiquid
+                || isActive != lastSyncedActive || powerAvgClient != lastSyncedPower;
+        if (needsSync) {
             lastSyncedIn = curIn;
             lastSyncedGas = curGas;
             lastSyncedLiquid = curLiq;
+            lastSyncedActive = isActive;
+            lastSyncedPower = powerAvgClient;
             setChanged();
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }
@@ -235,6 +294,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
         output.putLong("mjStored", mjBattery.getStored());
         output.putLong("distillPower", distillPower);
         output.putBoolean("isActive", isActive);
+        output.putLong("powerAvgClient", powerAvgClient);
     }
 
     @Override
@@ -246,6 +306,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider {
         mjBattery.addPowerChecking(input.getLongOr("mjStored", 0L), false);
         distillPower = input.getLongOr("distillPower", 0L);
         isActive = input.getBooleanOr("isActive", false);
+        powerAvgClient = input.getLongOr("powerAvgClient", 0L);
     }
 
     // --- Network Sync ---

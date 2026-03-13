@@ -27,7 +27,8 @@ public class DebugOverlayRenderer {
      */
     public static void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
         Minecraft mc = Minecraft.getInstance();
-        if (!mc.gui.getDebugOverlay().showDebugScreen()) {
+
+        if (mc.debugEntries == null || !mc.debugEntries.isOverlayVisible()) {
             return;
         }
 

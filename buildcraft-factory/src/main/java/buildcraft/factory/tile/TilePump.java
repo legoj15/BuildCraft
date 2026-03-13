@@ -37,13 +37,14 @@ import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.mj.MjRedstoneBatteryReceiver;
+import buildcraft.api.tiles.IDebuggable;
 
 /**
  * Pump tile entity. Searches downward for fluids, then uses BFS flood-fill to
  * find connected source blocks and drains them using MJ power.
  * Ported from 1.12.2 TilePump.
  */
-public class TilePump extends TileMiner {
+public class TilePump extends TileMiner implements IDebuggable {
 
     private static final Direction[] SEARCH_NORMAL = new Direction[] {
         Direction.UP, Direction.NORTH, Direction.SOUTH,
@@ -312,6 +313,37 @@ public class TilePump extends TileMiner {
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         // Oil spring pos would be loaded here once oil springs are ported
+    }
+
+    // --- IDebuggable ---
+
+    @Override
+    public void getDebugInfo(List<String> left, List<String> right, Direction side) {
+        // TileMiner fields (matches 1.12.2 super.getDebugInfo)
+        left.add("battery = " + battery.getDebugString());
+        left.add("current = " + currentPos);
+        left.add("wantedLength = " + wantedLength);
+        left.add("currentLength = " + currentLength);
+        left.add("lastLength = " + lastLength);
+        left.add("isComplete = " + isComplete());
+        left.add("progress = " + MjAPI.formatMj((long) progress));
+        // TilePump-specific fields
+        left.add("fluid = " + FluidUtilBC.getDebugString(tank.getFluid()));
+        left.add("queue size = " + queue.size());
+        left.add("infinite = " + isInfiniteWaterSource);
+    }
+
+    @Override
+    public void getClientDebugInfo(List<String> left, List<String> right, Direction side) {
+        left.add("battery = " + battery.getDebugString());
+        left.add("current = " + currentPos);
+        left.add("wantedLength = " + wantedLength);
+        left.add("currentLength = " + currentLength);
+        left.add("isComplete = " + isComplete());
+        left.add("progress = " + MjAPI.formatMj((long) progress));
+        left.add("fluid = " + FluidUtilBC.getDebugString(tank.getFluid()));
+        left.add("queue size = " + queue.size());
+        left.add("infinite = " + isInfiniteWaterSource);
     }
 
     // --- Cleanup ---

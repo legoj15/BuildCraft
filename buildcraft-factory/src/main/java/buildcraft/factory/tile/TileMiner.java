@@ -32,9 +32,9 @@ public abstract class TileMiner extends TileBC_Neptune {
     @Nullable
     protected BlockPos currentPos = null;
 
-    private int wantedLength = 0;
-    private double currentLength = 0;
-    private double lastLength = 0;
+    protected int wantedLength = 0;
+    protected double currentLength = 0;
+    protected double lastLength = 0;
     private int offset;
 
     protected boolean isComplete = false;

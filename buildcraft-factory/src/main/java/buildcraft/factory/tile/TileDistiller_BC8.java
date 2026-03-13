@@ -278,6 +278,29 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         left.add("CurrRecipe = " + currentRecipe);
     }
 
+    @Override
+    public void getClientDebugInfo(java.util.List<String> left, java.util.List<String> right, Direction side) {
+        if (smoothIn != null) smoothIn.getDebugInfo(left, right, side);
+        if (smoothGasOut != null) smoothGasOut.getDebugInfo(left, right, side);
+        if (smoothLiquidOut != null) smoothLiquidOut.getDebugInfo(left, right, side);
+
+        // Model Variables (matches 1.12.2 setClientModelVariables output)
+        Direction facing = Direction.WEST;
+        if (level != null) {
+            BlockState state = level.getBlockState(worldPosition);
+            if (state.hasProperty(buildcraft.factory.block.BlockDistiller.FACING)) {
+                facing = state.getValue(buildcraft.factory.block.BlockDistiller.FACING);
+            }
+        }
+        left.add("Model Variables:");
+        left.add("  facing = " + facing);
+        left.add("  active = " + isActive);
+        left.add("  power_average = " + (powerAvgClient / MjAPI.MJ));
+        left.add("  power_max = " + (MAX_MJ_PER_TICK / MjAPI.MJ));
+        left.add("Current Model Variables:");
+        left.add("  animState = " + String.format("%.4f", animState));
+    }
+
     // --- MenuProvider ---
 
     @Override

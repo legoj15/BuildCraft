@@ -103,6 +103,15 @@ public class FluidSmoother {
         return displayAmount;
     }
 
+    public void getDebugInfo(java.util.List<String> left, java.util.List<String> right, net.minecraft.core.Direction side) {
+        String contents = (tank.getFluid() != null && !tank.getFluid().isEmpty()) ? "Fluid" : "Empty";
+        left.add("smooth = " + String.format("%.1f", displayAmount) + " / " + target() + " (" + contents + ")");
+    }
+
+    private int target() {
+        return tank.getFluidAmount();
+    }
+
     /**
      * Result record for convenience rendering methods.
      */

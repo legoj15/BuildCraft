@@ -33,6 +33,7 @@ import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.container.ContainerTank;
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.lib.fluid.FluidSmoother;
 import buildcraft.api.tiles.IDebuggable;
 
 /**
@@ -45,6 +46,7 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
 
     @SuppressWarnings("removal")
     public final FluidTank tank = new FluidTank(16_000); // 16 buckets
+    public final FluidSmoother smoothedTank = new FluidSmoother(tank);
 
     private int lastComparatorLevel;
     private int lastSyncedAmount = -1;
@@ -82,12 +84,26 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
         }
     }
 
+    public void clientTick() {
+        smoothedTank.tick();
+    }
+
     // IDebuggable
 
     @Override
     public void getDebugInfo(List<String> left, List<String> right, Direction side) {
+        String contents = (!tank.getFluid().isEmpty()) ? "Fluid" : "Empty";
         left.add("fluid = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tank.getFluid()));
-        // smoothedTank.getDebugInfo(left, right, side); // smoothedTank is not defined in this context
+        left.add("current = " + tank.getFluidAmount() + " of " + contents);
+        left.add("lastSent = " + lastSyncedAmount + " of " + ((!tank.getFluid().isEmpty()) ? "Something" : "Nothing"));
+    }
+
+    @Override
+    public void getClientDebugInfo(List<String> left, List<String> right, Direction side) {
+        if (smoothedTank != null) {
+            smoothedTank.getDebugInfo(left, right, side);
+            left.add("shown = " + (int) smoothedTank.getDisplayAmount() + ", target = " + tank.getFluidAmount());
+        }
     }
 
     // --- Client Sync ---

@@ -1,5 +1,5 @@
 {
     "textures": {
-        "particle": "buildcraftenergy:block/engine/iron_back"
+        "particle": "buildcraftcore:block/engine/iron_back"
     }
 }

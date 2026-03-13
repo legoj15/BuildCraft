@@ -37,6 +37,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.factory.tile.TileDistiller_BC8;
 import buildcraft.lib.fluid.FluidSmoother;
+import buildcraft.lib.misc.FluidUtilBC;
 
 /**
  * Block entity renderer for the distiller. Renders the fluid inside the three
@@ -185,8 +186,18 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
         float maxY = bounds.maxY / 16.0f - shrink;
         float maxZ = bounds.maxZ / 16.0f - shrink;
 
-        // Scale fluid height by fill ratio
-        float fluidTop = minY + (maxY - minY) * fillRatio;
+        // Scale fluid height by fill ratio, with gaseous fluids at the top
+        boolean gaseous = FluidUtilBC.isGaseous(fluid);
+        float fluidTop, fluidBottom;
+        if (gaseous) {
+            // Gaseous: fluid renders at the top of the compartment, filling downward
+            fluidTop = maxY;
+            fluidBottom = maxY - (maxY - minY) * fillRatio;
+        } else {
+            // Liquid: fluid renders at the bottom, filling upward
+            fluidBottom = minY;
+            fluidTop = minY + (maxY - minY) * fillRatio;
+        }
 
         VertexConsumer buffer = bufferSource.getBuffer(
                 a < 1.0f ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
@@ -195,25 +206,25 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
 
         // North face (-Z)
         quad(pose, buffer, sprite, minX, fluidTop, minZ, maxX, fluidTop, minZ,
-                maxX, minY, minZ, minX, minY, minZ,
+                maxX, fluidBottom, minZ, minX, fluidBottom, minZ,
                 0, 0, -1, r, g, b, a, light, overlay);
         // South face (+Z)
-        quad(pose, buffer, sprite, minX, minY, maxZ, maxX, minY, maxZ,
+        quad(pose, buffer, sprite, minX, fluidBottom, maxZ, maxX, fluidBottom, maxZ,
                 maxX, fluidTop, maxZ, minX, fluidTop, maxZ,
                 0, 0, 1, r, g, b, a, light, overlay);
         // West face (-X)
-        quad(pose, buffer, sprite, minX, minY, minZ, minX, minY, maxZ,
+        quad(pose, buffer, sprite, minX, fluidBottom, minZ, minX, fluidBottom, maxZ,
                 minX, fluidTop, maxZ, minX, fluidTop, minZ,
                 -1, 0, 0, r, g, b, a, light, overlay);
         // East face (+X)
         quad(pose, buffer, sprite, maxX, fluidTop, minZ, maxX, fluidTop, maxZ,
-                maxX, minY, maxZ, maxX, minY, minZ,
+                maxX, fluidBottom, maxZ, maxX, fluidBottom, minZ,
                 1, 0, 0, r, g, b, a, light, overlay);
         // Top face
         quadHorizontal(pose, buffer, sprite, minX, maxX, maxZ, minZ, fluidTop,
                 0, 1, 0, r, g, b, a, light, overlay);
         // Bottom face
-        quadHorizontal(pose, buffer, sprite, minX, maxX, maxZ, minZ, minY,
+        quadHorizontal(pose, buffer, sprite, minX, maxX, maxZ, minZ, fluidBottom,
                 0, -1, 0, r, g, b, a, light, overlay);
     }
 

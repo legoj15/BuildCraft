@@ -23,6 +23,8 @@ import net.neoforged.api.distmarker.Dist;
 
 import buildcraft.lib.marker.MarkerCache;
 import buildcraft.lib.net.MessageContainerPayload;
+import buildcraft.lib.net.MessageDebugRequest;
+import buildcraft.lib.net.MessageDebugResponse;
 import buildcraft.lib.net.MessageMarker;
 import buildcraft.core.marker.PathCache;
 import buildcraft.core.marker.VolumeCache;
@@ -81,6 +83,21 @@ public class BCCore {
                                         BCCoreModels::getCreativeEngineQuads));
                     }
             );
+            // F3 debug overlay: tick handler for polling IDebuggable + sending server requests
+            NeoForge.EVENT_BUS.addListener(
+                    net.neoforged.neoforge.client.event.ClientTickEvent.Post.class,
+                    event -> buildcraft.core.client.DebugOverlayHelper.onClientTick()
+            );
+            // F3 debug overlay: register the overlay layer on the mod bus
+            modEventBus.addListener(
+                    net.neoforged.neoforge.client.event.RegisterGuiLayersEvent.class,
+                    event -> {
+                        event.registerAboveAll(
+                            net.minecraft.resources.Identifier.parse("buildcraftcore:debug_overlay"),
+                            buildcraft.core.client.DebugOverlayRenderer::render
+                        );
+                    }
+            );
         }
     }
 
@@ -124,6 +141,17 @@ public class BCCore {
                 MessageContainerPayload.STREAM_CODEC,
                 MessageContainerPayload::handle,
                 MessageContainerPayload::handle
+        );
+        // F3 debug overlay networking
+        registrar.playToServer(
+                MessageDebugRequest.TYPE,
+                MessageDebugRequest.STREAM_CODEC,
+                MessageDebugRequest::handle
+        );
+        registrar.playToClient(
+                MessageDebugResponse.TYPE,
+                MessageDebugResponse.STREAM_CODEC,
+                MessageDebugResponse::handle
         );
     }
 

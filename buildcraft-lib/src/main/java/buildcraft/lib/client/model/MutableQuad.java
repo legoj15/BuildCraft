@@ -6,24 +6,22 @@
 
 package buildcraft.lib.client.model;
 
-import net.minecraft.resources.Identifier;
-
 import org.joml.Matrix4f;
-import org.joml.Vector2f; // was Vector2f
-// Vector2f replaced by Vector2f
 import org.joml.Vector2f;
-// Vector4f replaced by Vector4f
-import org.joml.Vector4f;
 import org.joml.Vector3f;
+import org.joml.Vector3fc;
+import org.joml.Vector4f;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.model.geom.builders.UVPair;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import net.minecraft.core.Direction;
-import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.Vec3i;
-
+import net.minecraft.util.ARGB;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.client.model.quad.BakedColors;
+import net.neoforged.neoforge.client.model.quad.BakedNormals;
 
 /** Holds all of the information necessary to make a {@link BakedQuad}. This provides a variety of methods to quickly
  * set or get different elements. This currently holds 4 {@link MutableVertex}. */
@@ -39,6 +37,8 @@ public class MutableQuad {
     private Direction face = null;
     private boolean shade = false;
     private TextureAtlasSprite sprite = null;
+    private int lightEmission = 0;
+    private boolean hasAmbientOcclusion = true;
 
     public MutableQuad() {}
 
@@ -61,6 +61,8 @@ public class MutableQuad {
         face = from.face;
         shade = from.shade;
         sprite = from.sprite;
+        lightEmission = from.lightEmission;
+        hasAmbientOcclusion = from.hasAmbientOcclusion;
         vertex_0.copyFrom(from.vertex_0);
         vertex_1.copyFrom(from.vertex_1);
         vertex_2.copyFrom(from.vertex_2);
@@ -102,56 +104,81 @@ public class MutableQuad {
         return this.sprite;
     }
 
+    // ############################
+    //
+    // BakedQuad conversion
+    //
+    // NeoForge 1.21.11: BakedQuad uses Vector3fc positions,
+    // packed long UVs, BakedNormals, BakedColors
+    //
+    // ############################
+
+    /** Converts this MutableQuad into a NeoForge 1.21.11 BakedQuad. */
     public BakedQuad toBakedBlock() {
-        int[] data = new int[28];
-        vertex_0.toBakedBlock(data, 0);
-        vertex_1.toBakedBlock(data, 7);
-        vertex_2.toBakedBlock(data, 14);
-        vertex_3.toBakedBlock(data, 21);
-        return new BakedQuad(data, tintIndex, face, sprite, shade, DefaultVertexFormat.BLOCK);
+        return new BakedQuad(
+            vertex_0.positionvf(), vertex_1.positionvf(),
+            vertex_2.positionvf(), vertex_3.positionvf(),
+            UVPair.pack(vertex_0.tex_u, vertex_0.tex_v),
+            UVPair.pack(vertex_1.tex_u, vertex_1.tex_v),
+            UVPair.pack(vertex_2.tex_u, vertex_2.tex_v),
+            UVPair.pack(vertex_3.tex_u, vertex_3.tex_v),
+            tintIndex, face, sprite, shade, lightEmission,
+            BakedNormals.of(
+                vertex_0.normalToPackedInt(), vertex_1.normalToPackedInt(),
+                vertex_2.normalToPackedInt(), vertex_3.normalToPackedInt()
+            ),
+            BakedColors.of(
+                ARGB.color(vertex_0.colour_a, vertex_0.colour_r, vertex_0.colour_g, vertex_0.colour_b),
+                ARGB.color(vertex_1.colour_a, vertex_1.colour_r, vertex_1.colour_g, vertex_1.colour_b),
+                ARGB.color(vertex_2.colour_a, vertex_2.colour_r, vertex_2.colour_g, vertex_2.colour_b),
+                ARGB.color(vertex_3.colour_a, vertex_3.colour_r, vertex_3.colour_g, vertex_3.colour_b)
+            ),
+            hasAmbientOcclusion
+        );
     }
 
+    /** In 1.21.11, block and item use the same vertex format. Alias for {@link #toBakedBlock()}. */
     public BakedQuad toBakedItem() {
-        int[] data = new int[28];
-        vertex_0.toBakedItem(data, 0);
-        vertex_1.toBakedItem(data, 7);
-        vertex_2.toBakedItem(data, 14);
-        vertex_3.toBakedItem(data, 21);
-        return new BakedQuad(data, tintIndex, face, sprite, shade, DefaultVertexFormat.ITEM);
+        return toBakedBlock();
     }
 
+    /** Reads a BakedQuad's data into this MutableQuad. */
     public MutableQuad fromBakedBlock(BakedQuad quad) {
-        tintIndex = quad.getTintIndex();
-        face = quad.getFace();
-        sprite = quad.getSprite();
-        shade = quad.shouldApplyDiffuseLighting();
+        tintIndex = quad.tintIndex();
+        face = quad.direction();
+        sprite = quad.sprite();
+        shade = quad.shade();
+        lightEmission = quad.lightEmission();
+        hasAmbientOcclusion = quad.hasAmbientOcclusion();
 
-        int[] data = quad.getVertexData();
-        int stride = data.length / 4;
-
-        vertex_0.fromBakedBlock(data, 0);
-        vertex_1.fromBakedBlock(data, stride);
-        vertex_2.fromBakedBlock(data, stride * 2);
-        vertex_3.fromBakedBlock(data, stride * 3);
+        readVertexFromBaked(vertex_0, quad.position0(), quad.packedUV0(),
+            quad.bakedNormals().normal(0), quad.bakedColors().color(0));
+        readVertexFromBaked(vertex_1, quad.position1(), quad.packedUV1(),
+            quad.bakedNormals().normal(1), quad.bakedColors().color(1));
+        readVertexFromBaked(vertex_2, quad.position2(), quad.packedUV2(),
+            quad.bakedNormals().normal(2), quad.bakedColors().color(2));
+        readVertexFromBaked(vertex_3, quad.position3(), quad.packedUV3(),
+            quad.bakedNormals().normal(3), quad.bakedColors().color(3));
 
         return this;
     }
 
+    private static void readVertexFromBaked(MutableVertex v, Vector3fc pos, long packedUV,
+            int packedNormal, int argbColor) {
+        v.positionf(pos.x(), pos.y(), pos.z());
+        // UVPair.pack stores two floats in a long; unpack manually
+        v.texf(Float.intBitsToFloat((int) (packedUV >> 32)), Float.intBitsToFloat((int) packedUV));
+        v.normali(packedNormal);
+        // BakedColors stores ARGB, convert to our r/g/b/a shorts
+        v.colour_a = (short) ((argbColor >> 24) & 0xFF);
+        v.colour_r = (short) ((argbColor >> 16) & 0xFF);
+        v.colour_g = (short) ((argbColor >> 8) & 0xFF);
+        v.colour_b = (short) (argbColor & 0xFF);
+    }
+
+    /** Alias for {@link #fromBakedBlock(BakedQuad)}. */
     public MutableQuad fromBakedItem(BakedQuad quad) {
-        tintIndex = quad.getTintIndex();
-        face = quad.getFace();
-        sprite = quad.getSprite();
-        shade = quad.shouldApplyDiffuseLighting();
-
-        int[] data = quad.getVertexData();
-        int stride = data.length / 4;
-
-        vertex_0.fromBakedItem(data, 0);
-        vertex_1.fromBakedItem(data, stride);
-        vertex_2.fromBakedItem(data, stride * 2);
-        vertex_3.fromBakedItem(data, stride * 3);
-
-        return this;
+        return fromBakedBlock(quad);
     }
 
     public void render(VertexConsumer bb) {
@@ -161,6 +188,12 @@ public class MutableQuad {
         vertex_3.render(bb);
     }
 
+    // ############################
+    //
+    // Normal / Diffuse calculations
+    //
+    // ############################
+
     public Vector3f getCalculatedNormal() {
         Vector3f a = new Vector3f(vertex_1.positionvf());
         a.sub(vertex_0.positionvf());
@@ -169,7 +202,7 @@ public class MutableQuad {
         b.sub(vertex_0.positionvf());
 
         Vector3f c = new Vector3f();
-        c.cross(a, b);
+        c.set(a).cross(b);
         return c;
     }
 
@@ -268,10 +301,6 @@ public class MutableQuad {
     //
     // ############################
 
-    /* Position */
-
-    // Note that you cannot set all of the position elements at once, so this is left empty
-
     /* Normal */
 
     /** Sets the normal for all vertices to the specified float coordinates. */
@@ -298,10 +327,7 @@ public class MutableQuad {
         return normald(vec.x, vec.y, vec.z);
     }
 
-    /** Sets the normal for all vertices to the specified {@link VecDouble}, using
-     * {@link VecDouble#a},{@link VecDouble#b}, and {@link VecDouble#c} */
-    // public MutableQuad normalvd(VecDouble vec) {
-            // }
+    // VecDouble normalvd removed: expression subproject not on buildcraft-lib classpath
 
     /** @return A new {@link Vector3f} with the normal of the first vertex. Only useful if the normal is expected to be
      *         the same for every vertex. */
@@ -341,8 +367,7 @@ public class MutableQuad {
         return this;
     }
 
-    // public MutableQuad colourvl(VecLong vec) {
-            // }
+    // VecLong colourvl removed: expression subproject not on buildcraft-lib classpath
 
     public MutableQuad colourvf(Vector4f vec) {
         return colourf(vec.x, vec.y, vec.z, vec.w);
@@ -553,28 +578,28 @@ public class MutableQuad {
         // @formatter:off
         switch (from.getAxis()) {
             case X: {
-                int mult = from.getFrontOffsetX();
+                int mult = from.getStepX();
                 switch (to.getAxis()) {
                     case X: rotateY_180(); break;
-                    case Y: rotateZ_90(mult * to.getFrontOffsetY()); break;
-                    case Z: rotateY_90(mult * to.getFrontOffsetZ()); break;
+                    case Y: rotateZ_90(mult * to.getStepY()); break;
+                    case Z: rotateY_90(mult * to.getStepZ()); break;
                 }
                 break;
             }
             case Y: {
-                int mult = from.getFrontOffsetY();
+                int mult = from.getStepY();
                 switch (to.getAxis()) {
-                    case X: rotateZ_90(-mult * to.getFrontOffsetX()); break;
+                    case X: rotateZ_90(-mult * to.getStepX()); break;
                     case Y: rotateZ_180(); break;
-                    case Z: rotateX_90(mult * to.getFrontOffsetZ()); break;
+                    case Z: rotateX_90(mult * to.getStepZ()); break;
                 }
                 break;
             }
             case Z: {
-                int mult = -from.getFrontOffsetZ();
+                int mult = -from.getStepZ();
                 switch (to.getAxis()) {
-                    case X: rotateY_90(mult * to.getFrontOffsetX()); break;
-                    case Y: rotateX_90(mult * to.getFrontOffsetY()); break;
+                    case X: rotateY_90(mult * to.getStepX()); break;
+                    case Y: rotateX_90(mult * to.getStepY()); break;
                     case Z: rotateY_180(); break;
                 }
                 break;

@@ -6,27 +6,13 @@
 
 package buildcraft.lib.client.model;
 
-import net.minecraft.resources.Identifier;
-
 import org.joml.Matrix4f;
-import org.joml.Vector2f; // was Vector2f
-import org.joml.Vector3f; // was Vector3f
-import org.joml.Vector4f; // was Vector4f
-// Vector2f replaced by Vector2f
 import org.joml.Vector2f;
-// Vector3f replaced by Vector3f
 import org.joml.Vector3f;
-// Vector4f replaced by Vector4f
 import org.joml.Vector4f;
-// Vector3f already imported via org.joml
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormatElement;
-// EnumUsage removed in 1.21
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.Vec3i;
@@ -37,36 +23,23 @@ import net.neoforged.api.distmarker.OnlyIn;
 import buildcraft.api.core.render.ISprite;
 
 /**
- * Holds all of the information necessary to make one of the verticies in a
- * {@link BakedQuad}. This provides a variety
- * of methods to quickly set or get different elements. This should be used with
- * {@link MutableQuad} to make a face, or
+ * Holds all of the information necessary to make one of the vertices in a {@link BakedQuad}. This provides a variety
+ * of methods to quickly set or get different elements. This should be used with {@link MutableQuad} to make a face, or
  * by itself if you only need to define a single vertex. <br>
- * This currently holds the 3D position, normal, colour, 2D texture, skylight
- * and blocklight. Note that you don't have
- * to use all of the elements for this to work - the extra elements come with
- * sensible defaults. <br>
- * All of the mutating methods are in the form {@literal <element><type>}, where
- * {@literal <element>} is the element to
- * set/get, and {@literal <type>} is the type that they should be set as. So
- * {@link #positiond(double, double, double)}
- * will take in 3 doubles and set them to the position element, and
- * {@link #colouri(int, int, int, int)} will take in 4
+ * This currently holds the 3D position, normal, colour, 2D texture, skylight and blocklight. Note that you don't have
+ * to use all of the elements for this to work - the extra elements come with sensible defaults. <br>
+ * All of the mutating methods are in the form {@literal <element><type>}, where {@literal <element>} is the element to
+ * set/get, and {@literal <type>} is the type that they should be set as. So {@link #positiond(double, double, double)}
+ * will take in 3 doubles and set them to the position element, and {@link #colouri(int, int, int, int)} will take in 4
  * int's and set them to the colour elements.
  */
 @OnlyIn(Dist.CLIENT)
 public class MutableVertex {
     /** The position of this vertex. */
     public float position_x, position_y, position_z;
-    /**
-     * The normal of this vertex. Might not be normalised. Default value is [0, 1,
-     * 0].
-     */
+    /** The normal of this vertex. Might not be normalised. Default value is [0, 1, 0]. */
     public float normal_x, normal_y, normal_z;
-    /**
-     * The colour of this vertex, where each one is a number in the range 0-255.
-     * Default value is 255.
-     */
+    /** The colour of this vertex, where each one is a number in the range 0-255. Default value is 255. */
     public short colour_r, colour_g, colour_b, colour_a;
     /** The texture co-ord of this vertex. Should usually be between 0-1 */
     public float tex_u, tex_v;
@@ -119,6 +92,20 @@ public class MutableVertex {
         return this;
     }
 
+    // ############################
+    //
+    // Baked quad serialization
+    // 1.21 BLOCK format: 8 ints per vertex
+    //   [0-2] position (3 floats)
+    //   [3]   colour (RGBA packed)
+    //   [4-5] texture UV (2 floats)
+    //   [6]   lightmap UV (packed)
+    //   [7]   normal (packed byte x/y/z)
+    //
+    // ############################
+
+    /** Writes this vertex into the given int array at the specified offset using the 1.21 BLOCK vertex format
+     * (8 ints per vertex). */
     public void toBakedBlock(int[] data, int offset) {
         // POSITION_3F
         data[offset + 0] = Float.floatToRawIntBits(position_x);
@@ -129,24 +116,19 @@ public class MutableVertex {
         // TEX_2F
         data[offset + 4] = Float.floatToRawIntBits(tex_u);
         data[offset + 5] = Float.floatToRawIntBits(tex_v);
-        // TEX_2S
+        // TEX_2S (lightmap)
         data[offset + 6] = lightc();
-    }
-
-    public void toBakedItem(int[] data, int offset) {
-        // POSITION_3F
-        data[offset + 0] = Float.floatToRawIntBits(position_x);
-        data[offset + 1] = Float.floatToRawIntBits(position_y);
-        data[offset + 2] = Float.floatToRawIntBits(position_z);
-        // COLOR_4UB
-        data[offset + 3] = colourRGBA();
-        // TEX_2F
-        data[offset + 4] = Float.floatToRawIntBits(tex_u);
-        data[offset + 5] = Float.floatToRawIntBits(tex_v);
         // NORMAL_3B
-        data[offset + 6] = normalToPackedInt();
+        data[offset + 7] = normalToPackedInt();
     }
 
+    /** Alias for {@link #toBakedBlock(int[], int)} — in 1.21 block and item use the same vertex format. */
+    public void toBakedItem(int[] data, int offset) {
+        toBakedBlock(data, offset);
+    }
+
+    /** Reads this vertex from the given int array at the specified offset using the 1.21 BLOCK vertex format
+     * (8 ints per vertex). */
     public void fromBakedBlock(int[] data, int offset) {
         // POSITION_3F
         position_x = Float.intBitsToFloat(data[offset + 0]);
@@ -157,46 +139,36 @@ public class MutableVertex {
         // TEX_2F
         tex_u = Float.intBitsToFloat(data[offset + 4]);
         tex_v = Float.intBitsToFloat(data[offset + 5]);
-        // TEX_2S
+        // TEX_2S (lightmap)
         lighti(data[offset + 6]);
-        normalf(0, 1, 0);
-    }
-
-    public void fromBakedItem(int[] data, int offset) {
-        // POSITION_3F
-        position_x = Float.intBitsToFloat(data[offset + 0]);
-        position_y = Float.intBitsToFloat(data[offset + 1]);
-        position_z = Float.intBitsToFloat(data[offset + 2]);
-        // COLOR_4UB
-        colouri(data[offset + 3]);
-        // TEX_2F
-        tex_u = Float.intBitsToFloat(data[offset + 4]);
-        tex_v = Float.intBitsToFloat(data[offset + 5]);
         // NORMAL_3B
-        normali(data[offset + 6]);
-        lightf(1, 1);
+        normali(data[offset + 7]);
     }
 
-    // Rendering
+    /** Alias for {@link #fromBakedBlock(int[], int)} — in 1.21 block and item use the same vertex format. */
+    public void fromBakedItem(int[] data, int offset) {
+        fromBakedBlock(data, offset);
+    }
 
+    // ############################
+    //
+    // Rendering via VertexConsumer
+    //
+    // ############################
+
+    /** Renders this vertex into the given {@link VertexConsumer} using the chained BLOCK format API. */
     public void render(VertexConsumer bb) {
-        // In 1.21 VertexFormat is not queryable; just render as block by default
         renderAsBlock(bb);
     }
 
-    /**
-     * Renders this vertex into the given {@link VertexConsumer}, assuming that the
-     * {@link VertexFormat} is
-     * {@link DefaultVertexFormat#BLOCK}.
-     * <p>
-     * Slight performance increase over {@link #render(VertexConsumer)}.
-     */
+    /** Renders this vertex into the given {@link VertexConsumer}, assuming that the format is BLOCK.
+     * Uses the 1.21 chained vertex API. */
     public void renderAsBlock(VertexConsumer bb) {
-        renderPosition(bb);
-        renderColour(bb);
-        renderTex(bb);
-        renderLightMap(bb);
-        // bb.endVertex() stub
+        bb.addVertex(position_x, position_y, position_z)
+          .setColor(colour_r, colour_g, colour_b, colour_a)
+          .setUv(tex_u, tex_v)
+          .setUv2(light_block << 4, light_sky << 4)
+          .setNormal(normal_x, normal_y, normal_z);
     }
 
     public void renderPosition(VertexConsumer bb) {
@@ -204,26 +176,30 @@ public class MutableVertex {
     }
 
     public void renderNormal(VertexConsumer bb) {
-        // bb.normal stub - use bb.setNormal in chained API
+        bb.setNormal(normal_x, normal_y, normal_z);
     }
 
     public void renderColour(VertexConsumer bb) {
-        // bb.color stub
+        bb.setColor(colour_r, colour_g, colour_b, colour_a);
     }
 
     public void renderTex(VertexConsumer bb) {
-        // bb.tex stub
+        bb.setUv(tex_u, tex_v);
     }
 
     public void renderTex(VertexConsumer bb, ISprite sprite) {
-        // bb.tex(sprite) stub
+        bb.setUv((float) sprite.getInterpU(tex_u), (float) sprite.getInterpV(tex_v));
     }
 
     public void renderLightMap(VertexConsumer bb) {
-        // bb.lightmap stub
+        bb.setUv2(light_block << 4, light_sky << 4);
     }
 
-    // Mutating
+    // ############################
+    //
+    // Mutating — Position
+    //
+    // ############################
 
     public MutableVertex positionv(Vector3f vec) {
         return positionf(vec.x, vec.y, vec.z);
@@ -244,21 +220,21 @@ public class MutableVertex {
         return new Vector3f(position_x, position_y, position_z);
     }
 
-    /**
-     * Sets the current normal for this vertex based off the given vector.<br>
-     * Note: This calls {@link #normalf(float, float, float)} internally, so refer
-     * to that for more warnings.
-     * 
-     * @see #normalf(float, float, float)
-     */
+    // ############################
+    //
+    // Mutating — Normal
+    //
+    // ############################
+
+    /** Sets the current normal for this vertex based off the given vector.<br>
+     * Note: This calls {@link #normalf(float, float, float)} internally, so refer to that for more warnings.
+     *
+     * @see #normalf(float, float, float) */
     public MutableVertex normalv(Vector3f vec) {
         return normalf(vec.x, vec.y, vec.z);
     }
 
-    /**
-     * Sets the current normal given the x, y, and z coordinates. These are NOT
-     * normalised or checked.
-     */
+    /** Sets the current normal given the x, y, and z coordinates. These are NOT normalised or checked. */
     public MutableVertex normalf(float x, float y, float z) {
         normal_x = x;
         normal_y = y;
@@ -267,9 +243,9 @@ public class MutableVertex {
     }
 
     public MutableVertex normali(int combined) {
-        normal_x = ((combined >> 0) & 0xFF) / 0x7f;
-        normal_y = ((combined >> 8) & 0xFF) / 0x7f;
-        normal_z = ((combined >> 16) & 0xFF) / 0x7f;
+        normal_x = ((byte) (combined & 0xFF)) / 127.0f;
+        normal_y = ((byte) ((combined >> 8) & 0xFF)) / 127.0f;
+        normal_z = ((byte) ((combined >> 16) & 0xFF)) / 127.0f;
         return this;
     }
 
@@ -277,9 +253,7 @@ public class MutableVertex {
         return normalf(-normal_x, -normal_y, -normal_z);
     }
 
-    /**
-     * @return The current normal vector of this vertex. This might be normalised.
-     */
+    /** @return The current normal vector of this vertex. This might be normalised. */
     public Vector3f normal() {
         return new Vector3f(normal_x, normal_y, normal_z);
     }
@@ -291,9 +265,15 @@ public class MutableVertex {
     }
 
     private static int normalAsByte(float norm, int offset) {
-        int as = (int) (norm * 0x7f);
-        return as << offset;
+        int as = (byte) (Mth.clamp(norm, -1.0f, 1.0f) * 127.0f);
+        return (as & 0xFF) << offset;
     }
+
+    // ############################
+    //
+    // Mutating — Colour
+    //
+    // ############################
 
     public MutableVertex colourv(Vector4f vec) {
         return colourf(vec.x, vec.y, vec.z, vec.w);
@@ -358,13 +338,16 @@ public class MutableVertex {
         return this;
     }
 
-    /**
-     * Multiplies the colour by
-     * {@link MutableQuad#diffuseLight(float, float, float)} for the normal.
-     */
+    /** Multiplies the colour by {@link MutableQuad#diffuseLight(float, float, float)} for the normal. */
     public MutableVertex multShade() {
         return multColourd(MutableQuad.diffuseLight(normal_x, normal_y, normal_z));
     }
+
+    // ############################
+    //
+    // Mutating — Texture
+    //
+    // ############################
 
     public MutableVertex texFromSprite(TextureAtlasSprite sprite) {
         tex_u = sprite.getU(tex_u * 16);
@@ -386,6 +369,12 @@ public class MutableVertex {
         return new Vector2f(tex_u, tex_v);
     }
 
+    // ############################
+    //
+    // Mutating — Light
+    //
+    // ############################
+
     public MutableVertex lightv(Vector2f vec) {
         return lightf(vec.x, vec.y);
     }
@@ -395,7 +384,7 @@ public class MutableVertex {
     }
 
     public MutableVertex lighti(int combined) {
-        return lighti(combined >> 4, combined >> 20);
+        return lighti((combined >> 4) & 0xF, (combined >> 20) & 0xF);
     }
 
     public MutableVertex lighti(int block, int sky) {
@@ -413,12 +402,18 @@ public class MutableVertex {
     }
 
     public int lightc() {
-        return light_block << 4 + light_sky << 20;
+        return (light_block << 4) | (light_sky << 20);
     }
 
     public int[] lighti() {
         return new int[] { light_block, light_sky };
     }
+
+    // ############################
+    //
+    // Transforms
+    //
+    // ############################
 
     public MutableVertex transform(Matrix4f matrix) {
         Vector3f point = positionvf();
@@ -483,6 +478,12 @@ public class MutableVertex {
         return scalef((float) x, (float) y, (float) z);
     }
 
+    // ############################
+    //
+    // Rotations
+    //
+    // ############################
+
     /** Rotates around the X axis by angle. */
     public void rotateX(float angle) {
         float cos = Mth.cos(angle);
@@ -525,13 +526,10 @@ public class MutableVertex {
         position_y = x * -sin + y * cos;
     }
 
-    /**
-     * Rotates this vertex around the X axis 90 degrees.
-     * 
-     * @param scale The multiplier for scaling. Positive values will rotate
-     *              clockwise, negative values rotate
-     *              anti-clockwise.
-     */
+    /** Rotates this vertex around the X axis 90 degrees.
+     *
+     * @param scale The multiplier for scaling. Positive values will rotate clockwise, negative values rotate
+     *            anti-clockwise. */
     public MutableVertex rotateX_90(float scale) {
         float ym = scale;
         float zm = -ym;
@@ -546,13 +544,10 @@ public class MutableVertex {
         return this;
     }
 
-    /**
-     * Rotates this vertex around the Y axis 90 degrees.
-     * 
-     * @param scale The multiplier for scaling. Positive values will rotate
-     *              clockwise, negative values rotate
-     *              anti-clockwise.
-     */
+    /** Rotates this vertex around the Y axis 90 degrees.
+     *
+     * @param scale The multiplier for scaling. Positive values will rotate clockwise, negative values rotate
+     *            anti-clockwise. */
     public MutableVertex rotateY_90(float scale) {
         float xm = scale;
         float zm = -xm;
@@ -567,13 +562,10 @@ public class MutableVertex {
         return this;
     }
 
-    /**
-     * Rotates this vertex around the Z axis 90 degrees.
-     * 
-     * @param scale The multiplier for scaling. Positive values will rotate
-     *              clockwise, negative values rotate
-     *              anti-clockwise.
-     */
+    /** Rotates this vertex around the Z axis 90 degrees.
+     *
+     * @param scale The multiplier for scaling. Positive values will rotate clockwise, negative values rotate
+     *            anti-clockwise. */
     public MutableVertex rotateZ_90(float scale) {
         float xm = scale;
         float ym = -xm;

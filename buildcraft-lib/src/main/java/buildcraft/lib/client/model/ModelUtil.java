@@ -6,12 +6,7 @@
 
 package buildcraft.lib.client.model;
 
-import net.minecraft.resources.Identifier;
-
-import org.joml.Vector3f; // was Vector3f
-// Vector3f replaced by Vector3f
 import org.joml.Vector3f;
-// Vector3f already imported via org.joml
 
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
@@ -84,7 +79,8 @@ public class ModelUtil {
         public UvFaceData faceData = new UvFaceData();
     }
 
-    public static MutableQuad createFace(Direction face, Vector3f a, Vector3f b, Vector3f c, Vector3f d, UvFaceData uvs) {
+    public static MutableQuad createFace(Direction face, Vector3f a, Vector3f b, Vector3f c, Vector3f d,
+            UvFaceData uvs) {
         MutableQuad quad = new MutableQuad(-1, face);
         if (uvs == null) {
             uvs = UvFaceData.DEFAULT;
@@ -103,14 +99,14 @@ public class ModelUtil {
         return quad;
     }
 
-    public static <T extends Vector3f> MutableQuad createFace(Direction face, T[] points, UvFaceData uvs) {
+    public static MutableQuad createFace(Direction face, Vector3f[] points, UvFaceData uvs) {
         return createFace(face, points[0], points[1], points[2], points[3], uvs);
     }
 
     public static MutableQuad createFace(Direction face, Vector3f center, Vector3f radius, UvFaceData uvs) {
         Vector3f[] points = getPointsForFace(face, center, radius);
         return createFace(face, points, uvs).normalf(
-            face.getFrontOffsetX(), face.getFrontOffsetY(), face.getFrontOffsetZ()
+            face.getStepX(), face.getStepY(), face.getStepZ()
         );
     }
 
@@ -124,7 +120,6 @@ public class ModelUtil {
     }
 
     public static void mapBoxToUvs(AABB box, Direction side, UvFaceData uvs) {
-        // TODO: Fix these!
         switch (side) {
             case WEST: /* -X */ {
                 uvs.minU = (float) box.minZ;
@@ -177,7 +172,7 @@ public class ModelUtil {
     public static Vector3f[] getPointsForFace(Direction face, Vector3f center, Vector3f radius) {
         Vector3f centerOfFace = new Vector3f(center);
         Vector3f faceAdd = new Vector3f(
-            face.getFrontOffsetX() * radius.x, face.getFrontOffsetY() * radius.y, face.getFrontOffsetZ() * radius.z
+            face.getStepX() * radius.x, face.getStepY() * radius.y, face.getStepZ() * radius.z
         );
         centerOfFace.add(faceAdd);
         Vector3f faceRadius = new Vector3f(radius);
@@ -190,9 +185,10 @@ public class ModelUtil {
     }
 
     public static Vector3f[] getPoints(Vector3f centerFace, Vector3f faceRadius) {
-        Vector3f[] array = { new Vector3f(centerFace), new Vector3f(centerFace), new Vector3f(centerFace), new Vector3f(
-            centerFace
-        ) };
+        Vector3f[] array = {
+            new Vector3f(centerFace), new Vector3f(centerFace),
+            new Vector3f(centerFace), new Vector3f(centerFace)
+        };
         array[0].add(addOrNegate(faceRadius, false, false));
         array[1].add(addOrNegate(faceRadius, false, true));
         array[2].add(addOrNegate(faceRadius, true, true));
@@ -205,8 +201,7 @@ public class ModelUtil {
         float x = coord.x * (u ? 1 : -1);
         float y = coord.y * (v ? -1 : 1);
         float z = coord.z * (zisv ? (v ? -1 : 1) : (u ? 1 : -1));
-        Vector3f neg = new Vector3f(x, y, z);
-        return neg;
+        return new Vector3f(x, y, z);
     }
 
     public static boolean shouldInvertForRender(Direction face) {

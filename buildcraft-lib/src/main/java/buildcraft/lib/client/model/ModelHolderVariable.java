@@ -39,6 +39,7 @@ public class ModelHolderVariable extends ModelHolder {
     private final FunctionContext context;
     private JsonVariableModel rawModel;
     private boolean unseen = true;
+    private boolean loadAttempted = false;
 
     public ModelHolderVariable(String modelLocation, FunctionContext context) {
         super(modelLocation);
@@ -54,9 +55,26 @@ public class ModelHolderVariable extends ModelHolder {
     protected void onTextureStitchPre(Set<Identifier> toRegisterSprites) {
         rawModel = null;
         failReason = null;
+        loadAttempted = false;
 
+        loadModelFromDisk();
+        if (rawModel != null) {
+            rawModel.onTextureStitchPre(modelLocation, toRegisterSprites);
+        }
+    }
+
+    /** Lazily loads the model from disk if it hasn't been loaded yet. */
+    private void ensureLoaded() {
+        if (rawModel == null && !loadAttempted) {
+            loadModelFromDisk();
+        }
+    }
+
+    private void loadModelFromDisk() {
+        loadAttempted = true;
         try {
             rawModel = JsonVariableModel.deserialize(modelLocation, context);
+            BCLog.logger.info("[lib.model.holder] Successfully loaded variable model " + modelLocation);
         } catch (JsonParseException jse) {
             rawModel = null;
             failReason = "The model had errors: " + jse.getMessage();
@@ -65,9 +83,6 @@ public class ModelHolderVariable extends ModelHolder {
             rawModel = null;
             failReason = "The model did not exist in any resource pack: " + io.getMessage();
             BCLog.logger.warn("[lib.model.holder] Failed to load the model " + modelLocation + " because ", io);
-        }
-        if (rawModel != null) {
-            rawModel.onTextureStitchPre(modelLocation, toRegisterSprites);
         }
     }
 
@@ -106,7 +121,10 @@ public class ModelHolderVariable extends ModelHolder {
     private void printNoModelWarning() {
         if (unseen) {
             unseen = false;
-            String warnText = "[lib.model.holder] Tried to use the model " + modelLocation + " before it was baked!";
+            String warnText = "[lib.model.holder] Tried to use the model " + modelLocation + " but it failed to load!";
+            if (failReason != null) {
+                warnText += " Reason: " + failReason;
+            }
             if (ModelHolderRegistry.DEBUG) {
                 BCLog.logger.warn(warnText, new Throwable());
             } else {
@@ -117,6 +135,7 @@ public class ModelHolderVariable extends ModelHolder {
 
     @Nullable
     public JsonVariableModel getModel() {
+        ensureLoaded();
         if (rawModel == null) {
             printNoModelWarning();
         }
@@ -124,6 +143,7 @@ public class ModelHolderVariable extends ModelHolder {
     }
 
     public ITickableNode[] createTickableNodes() {
+        ensureLoaded();
         if (rawModel == null) {
             printNoModelWarning();
             return new ITickableNode[0];
@@ -132,6 +152,7 @@ public class ModelHolderVariable extends ModelHolder {
     }
 
     public MutableQuad[] getCutoutQuads() {
+        ensureLoaded();
         if (rawModel == null) {
             printNoModelWarning();
             return MutableQuad.EMPTY_ARRAY;
@@ -140,6 +161,7 @@ public class ModelHolderVariable extends ModelHolder {
     }
 
     public MutableQuad[] getTranslucentQuads() {
+        ensureLoaded();
         if (rawModel == null) {
             printNoModelWarning();
             return MutableQuad.EMPTY_ARRAY;
@@ -147,3 +169,4 @@ public class ModelHolderVariable extends ModelHolder {
         return rawModel.bakePart(rawModel.translucentElements, this::lookupTexture);
     }
 }
+

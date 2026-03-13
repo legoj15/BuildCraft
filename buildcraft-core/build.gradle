@@ -12,6 +12,7 @@ sourceSets {
 dependencies {
     implementation project(':buildcraft-api')
     implementation project(':buildcraft-lib')
+    implementation files("${rootDir}/sub_projects/expression/build/libs/buildcraft-libexpression-0.9.3-pre.4.jar")
 }
 
 // Dev run configuration has been moved to :buildcraft-all

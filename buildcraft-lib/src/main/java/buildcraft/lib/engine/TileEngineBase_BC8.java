@@ -80,6 +80,9 @@ public abstract class TileEngineBase_BC8 extends BlockEntity {
 
     private EnumPowerStage powerStage = EnumPowerStage.BLUE;
 
+    /** Client-side model variable data for animated model rendering. */
+    public final buildcraft.lib.misc.data.ModelVariableData clientModelData = new buildcraft.lib.misc.data.ModelVariableData();
+
     // Lazy-initialized connector
     private IMjConnector mjConnector;
 

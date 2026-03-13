@@ -6,11 +6,13 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 
 import buildcraft.energy.BCEnergyBlockEntities;
 import buildcraft.energy.BCEnergyMenuTypes;
+import buildcraft.energy.BCEnergyModels;
 import buildcraft.energy.client.gui.ScreenEngineStone;
 import buildcraft.energy.client.gui.ScreenEngineIron;
+import buildcraft.energy.tile.TileEngineIron_BC8;
+import buildcraft.energy.tile.TileEngineStone_BC8;
+import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.client.render.tile.RenderEngine_BC8;
-
-import net.minecraft.resources.Identifier;
 
 public class BCEnergyClient {
     @SubscribeEvent
@@ -21,18 +23,19 @@ public class BCEnergyClient {
 
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        var trunkMap = RenderEngine_BC8.defaultTrunkTextures();
         event.registerBlockEntityRenderer(BCEnergyBlockEntities.ENGINE_STONE.get(),
-                ctx -> new RenderEngine_BC8(
-                        Identifier.parse("buildcraftenergy:block/engine/stone_back"),
-                        Identifier.parse("buildcraftenergy:block/engine/stone_side"),
-                        Identifier.parse("buildcraftlib:block/engine/chamber_base"),
-                        trunkMap));
+                ctx -> new RenderEngine_BC8((engine, pt) -> {
+                    if (engine instanceof TileEngineStone_BC8 stone) {
+                        return BCEnergyModels.getStoneEngineQuads(stone, pt);
+                    }
+                    return MutableQuad.EMPTY_ARRAY;
+                }));
         event.registerBlockEntityRenderer(BCEnergyBlockEntities.ENGINE_IRON.get(),
-                ctx -> new RenderEngine_BC8(
-                        Identifier.parse("buildcraftenergy:block/engine/iron_back"),
-                        Identifier.parse("buildcraftenergy:block/engine/iron_side"),
-                        Identifier.parse("buildcraftlib:block/engine/chamber_base"),
-                        trunkMap));
+                ctx -> new RenderEngine_BC8((engine, pt) -> {
+                    if (engine instanceof TileEngineIron_BC8 iron) {
+                        return BCEnergyModels.getIronEngineQuads(iron, pt);
+                    }
+                    return MutableQuad.EMPTY_ARRAY;
+                }));
     }
 }

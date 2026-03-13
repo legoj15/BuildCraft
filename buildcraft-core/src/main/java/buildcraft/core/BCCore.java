@@ -73,19 +73,12 @@ public class BCCore {
             modEventBus.addListener(
                     net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterRenderers.class,
                     event -> {
-                        var trunkMap = buildcraft.lib.client.render.tile.RenderEngine_BC8.defaultTrunkTextures();
                         event.registerBlockEntityRenderer(BCCoreBlockEntities.ENGINE_REDSTONE.get(),
                                 ctx -> new buildcraft.lib.client.render.tile.RenderEngine_BC8(
-                                        net.minecraft.resources.Identifier.parse("buildcraftcore:block/engine/wood_back"),
-                                        net.minecraft.resources.Identifier.parse("buildcraftcore:block/engine/wood_side"),
-                                        net.minecraft.resources.Identifier.parse("buildcraftlib:block/engine/chamber_base"),
-                                        trunkMap));
+                                        BCCoreModels::getWoodEngineQuads));
                         event.registerBlockEntityRenderer(BCCoreBlockEntities.ENGINE_CREATIVE.get(),
                                 ctx -> new buildcraft.lib.client.render.tile.RenderEngine_BC8(
-                                        net.minecraft.resources.Identifier.parse("buildcraftcore:block/engine/creative_back"),
-                                        net.minecraft.resources.Identifier.parse("buildcraftcore:block/engine/creative_side"),
-                                        net.minecraft.resources.Identifier.parse("buildcraftlib:block/engine/chamber_base"),
-                                        trunkMap));
+                                        BCCoreModels::getCreativeEngineQuads));
                     }
             );
         }

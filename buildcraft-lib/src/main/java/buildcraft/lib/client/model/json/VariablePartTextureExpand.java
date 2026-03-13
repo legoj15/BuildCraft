@@ -1,28 +1,26 @@
 package buildcraft.lib.client.model.json;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonObject;
 
-import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.IBakedModel;
-import net.minecraft.client.renderer.block.model.ModelRotation;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import net.minecraft.core.Direction;
-import net.minecraft.world.InteractionResult;
-
-import net.neoforged.neoforge.client.model.ItemLayerModel;
 
 import buildcraft.api.core.BCLog;
 
+import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.client.model.json.JsonVariableModel.ITextureGetter;
 import buildcraft.lib.client.model.json.VariablePartCuboidBase.VariableFaceData;
+import buildcraft.lib.expression.FunctionContext;
+import buildcraft.lib.expression.api.IExpressionNode.INodeBoolean;
+import buildcraft.lib.expression.api.IExpressionNode.INodeDouble;
+import buildcraft.lib.expression.api.IExpressionNode.INodeLong;
+import buildcraft.lib.expression.api.IExpressionNode.INodeObject;
+import buildcraft.lib.expression.node.value.NodeConstantBoolean;
+import buildcraft.lib.expression.node.value.NodeConstantLong;
 import buildcraft.lib.misc.RenderUtil;
 
 public class VariablePartTextureExpand extends JsonVariableModelPart {
@@ -52,31 +50,36 @@ public class VariablePartTextureExpand extends JsonVariableModelPart {
         if (visible.evaluate()) {
             float[] f = bakePosition(from);
             float[] t = bakePosition(to);
-            float[] size = { t[0] - f[0], t[1] - f[1], t[2], f[2] };
+            float sizeX = t[0] - f[0];
+            float sizeY = t[1] - f[1];
+            float sizeZ = t[2] - f[2];
             boolean s = shade.evaluate();
             int l = (int) (light.evaluate() & 15);
             int rgba = RenderUtil.swapARGBforABGR((int) colour.evaluate());
 
             VariableFaceData data = faceUv.evaluate(spriteLookup);
-            // TODO: Use the UV data! (only take part of the texture)
-            ItemLayerModel model = new ItemLayerModel(ImmutableList.of(Identifier.parse(".")));
-            IBakedModel baked = model.bake(ModelRotation.X0_Y0, DefaultVertexFormat.ITEM, (loc) -> data.sprite);
-            List<BakedQuad> quads = baked.getQuads(null, null, 0);
-            for (BakedQuad q : quads) {
-                MutableQuad mut = new MutableQuad();
-                mut.fromBakedItem(q);
-                mut.translated(0, 0, -(7.5 / 16.0));
-                mut.scaled(1, 1, 16);
-                mut.rotate(Direction.SOUTH, evaluateFace(this.face), 0.5f, 0.5f, 0.5f);
-                mut.scalef(size[0], size[1], size[2]);
-                mut.translated(f[0], f[1], f[2]);
-                mut.setCalculatedNormal();
-                mut.setShade(s);
-                mut.lighti(l, 0);
-                mut.colouri(rgba);
-                mut.setSprite(data.sprite);
-                addTo.add(mut);
+            Direction evalFace = evaluateFace(this.face);
+
+            // Create a single quad on the evaluated face, then scale/translate it
+            org.joml.Vector3f center = new org.joml.Vector3f(
+                    f[0] + sizeX / 2, f[1] + sizeY / 2, f[2] + sizeZ / 2);
+            org.joml.Vector3f radius = new org.joml.Vector3f(
+                    sizeX / 2, sizeY / 2, sizeZ / 2);
+
+            MutableQuad quad = ModelUtil.createFace(evalFace, center, radius, data.uvs);
+            quad.texFromSprite(data.sprite);
+            quad.setSprite(data.sprite);
+            quad.rotateTextureUp(data.rotations);
+            quad.setCalculatedNormal();
+            quad.setShade(s);
+            quad.lighti(l, 0);
+            quad.colouri(rgba);
+            if (data.bothSides) {
+                addTo.add(quad.copyAndInvertNormal());
+            } else if (data.invertNormal) {
+                quad = quad.copyAndInvertNormal();
             }
+            addTo.add(quad);
         }
     }
 

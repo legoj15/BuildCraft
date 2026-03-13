@@ -11,4 +11,5 @@ sourceSets {
 
 dependencies {
     implementation project(':buildcraft-api')
+    implementation files("${rootDir}/sub_projects/expression/build/libs/buildcraft-libexpression-0.9.3-pre.4.jar")
 }

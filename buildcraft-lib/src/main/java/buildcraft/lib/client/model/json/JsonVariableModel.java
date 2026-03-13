@@ -27,9 +27,9 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonSyntaxException;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.util.GsonHelper;
-import net.minecraft.world.InteractionResult;
 
 import buildcraft.api.core.BCLog;
 
@@ -38,12 +38,9 @@ import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.ModelUtil.TexturedFace;
 import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.client.model.ResourceLoaderContext;
-import buildcraft.lib.client.reload.ReloadManager;
-import buildcraft.lib.client.reload.ReloadSource;
-import buildcraft.lib.client.reload.SourceType;
+import buildcraft.lib.expression.FunctionContext;
 import buildcraft.lib.json.JsonVariableObject;
 import buildcraft.lib.misc.JsonUtil;
-import buildcraft.lib.misc.SpriteUtil;
 
 /** {@link JsonModel} but any element can change depending on variables. */
 public class JsonVariableModel extends JsonVariableObject {
@@ -99,11 +96,11 @@ public class JsonVariableModel extends JsonVariableObject {
 
         if (obj.has("values")) {
             fnCtx = new FunctionContext(fnCtx);
-            putVariables(GsonHelper.getJsonObject(obj, "values"), fnCtx);
+            putVariables(GsonHelper.getAsJsonObject(obj, "values"), fnCtx);
         }
 
         if (obj.has("parent")) {
-            String parentName = GsonHelper.getString(obj, "parent");
+            String parentName = GsonHelper.getAsString(obj, "parent");
             parentName += ".json";
             Identifier from = Identifier.parse(parentName);
             JsonVariableModel parent;
@@ -113,26 +110,26 @@ public class JsonVariableModel extends JsonVariableObject {
                 throw new JsonParseException("Didn't find the parent '" + parentName + "'!", e);
             }
             ambf = parent.ambientOcclusion;
-            if (!GsonHelper.getBoolean(obj, "textures_reset", false)) {
+            if (!GsonHelper.getAsBoolean(obj, "textures_reset", false)) {
                 textures.putAll(parent.textures);
             }
             variables.putAll(parent.variables);
-            if (!GsonHelper.getBoolean(obj, "cutout_replace", false)) {
+            if (!GsonHelper.getAsBoolean(obj, "cutout_replace", false)) {
                 Collections.addAll(cutout, parent.cutoutElements);
             }
-            if (!GsonHelper.getBoolean(obj, "translucent_replace", false)) {
+            if (!GsonHelper.getAsBoolean(obj, "translucent_replace", false)) {
                 Collections.addAll(translucent, parent.translucentElements);
             }
-            if (!GsonHelper.getBoolean(obj, "rules_replace", false)) {
+            if (!GsonHelper.getAsBoolean(obj, "rules_replace", false)) {
                 Collections.addAll(rulesP, parent.rules);
             }
         }
 
-        ambientOcclusion = GsonHelper.getBoolean(obj, "ambientocclusion", ambf);
+        ambientOcclusion = GsonHelper.getAsBoolean(obj, "ambientocclusion", ambf);
         deserializeTextures(obj.get("textures"));
         if (obj.has("variables")) {
             fnCtx = new FunctionContext(fnCtx);
-            putVariables(GsonHelper.getJsonObject(obj, "variables"), fnCtx);
+            putVariables(GsonHelper.getAsJsonObject(obj, "variables"), fnCtx);
         }
         finaliseVariables();
 
@@ -171,19 +168,15 @@ public class JsonVariableModel extends JsonVariableObject {
         if (ModelHolderRegistry.DEBUG) {
             BCLog.logger.info("[lib.model] The model " + modelLocation + " requires these sprites:");
         }
-        ReloadSource srcModel = new ReloadSource(modelLocation, SourceType.MODEL);
-        for (Entry<String, JsonTexture> entry : textures.entrySet()) {
+        for (Map.Entry<String, JsonTexture> entry : textures.entrySet()) {
             JsonTexture lookup = entry.getValue();
             String location = lookup.location;
             if (location.startsWith("#") || location.startsWith("~")) {
-                // its somewhere else in the map so we don't need to register it twice
+                // it's somewhere else in the map so we don't need to register it twice
                 continue;
             }
             Identifier textureLoc = Identifier.parse(location);
             toRegisterSprites.add(textureLoc);
-            // Allow transitive deps
-            ReloadSource srcSprite = new ReloadSource(SpriteUtil.transformLocation(textureLoc), SourceType.SPRITE);
-            ReloadManager.INSTANCE.addDependency(srcSprite, srcModel);
             if (ModelHolderRegistry.DEBUG) {
                 BCLog.logger.info("[lib.model]  - " + location);
             }
@@ -223,7 +216,9 @@ public class JsonVariableModel extends JsonVariableObject {
             attempts++;
         }
         lookup = texture.location;
-        sprite = Minecraft.getInstance().getTextureMapBlocks().getAtlasSprite(lookup);
+        TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
+                .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+        sprite = atlas.getSprite(Identifier.parse(lookup));
         TexturedFace face = new TexturedFace();
         face.sprite = sprite;
         face.faceData = texture.faceData;

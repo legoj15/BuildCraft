@@ -24,14 +24,12 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 
-import net.minecraft.client.renderer.block.model.ModelBlock;
 import net.minecraft.util.GsonHelper;
-import net.minecraft.world.InteractionResult;
 
 import buildcraft.lib.client.model.ResourceLoaderContext;
 import buildcraft.lib.misc.JsonUtil;
 
-/** {@link ModelBlock} but with different/additional features */
+/** Custom model format with different/additional features (replaces vanilla ModelBlock). */
 public class JsonModel {
     public final boolean ambientOcclusion;
     public final Map<String, String> textures;
@@ -81,7 +79,7 @@ public class JsonModel {
     }
 
     public JsonModel(JsonObject obj, ResourceLoaderContext ctx) throws JsonParseException, IOException {
-        ambientOcclusion = GsonHelper.getBoolean(obj, "ambientocclusion", false);
+        ambientOcclusion = GsonHelper.getAsBoolean(obj, "ambientocclusion", false);
         textures = JsonUtil.getSubAsImmutableMap(obj, "textures", new TypeToken<HashMap<String, String>>() {});
         if (obj.has("elements")) {
             cutoutElements = deserializePartArray(obj, "elements", false, ctx);

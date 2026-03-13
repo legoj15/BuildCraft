@@ -10,7 +10,7 @@ import net.minecraft.resources.Identifier;
 
 import java.util.Set;
 
-import net.minecraft.world.InteractionResult;
+
 
 /** Defines an object that will hold a model, and is automatically refreshed from the filesystem when the client reloads
  * all of its resources. */

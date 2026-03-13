@@ -13,6 +13,20 @@ import com.google.gson.JsonSyntaxException;
 
 import net.minecraft.util.GsonHelper;
 
+import buildcraft.lib.expression.FunctionContext;
+import buildcraft.lib.expression.InternalCompiler;
+import buildcraft.lib.expression.api.IConstantNode;
+import buildcraft.lib.expression.api.IExpressionNode;
+import buildcraft.lib.expression.api.IExpressionNode.INodeBoolean;
+import buildcraft.lib.expression.api.IExpressionNode.INodeDouble;
+import buildcraft.lib.expression.api.IExpressionNode.INodeLong;
+import buildcraft.lib.expression.api.IExpressionNode.INodeObject;
+import buildcraft.lib.expression.api.InvalidExpressionException;
+import buildcraft.lib.expression.api.NodeTypes;
+import buildcraft.lib.expression.node.value.ITickableNode;
+import buildcraft.lib.expression.node.value.NodeStateful;
+import buildcraft.lib.expression.node.value.NodeStateful.IGetterFunc;
+import buildcraft.lib.expression.node.value.NodeUpdatable;
 
 public class JsonVariableObject {
 
@@ -36,10 +50,10 @@ public class JsonVariableObject {
             if (value.isJsonObject()) {
                 JsonObject objValue = value.getAsJsonObject();
                 value = objValue.get("value");
-                type = GsonHelper.getString(objValue, "type");
-                getter = GsonHelper.getString(objValue, "getter");
+                type = GsonHelper.getAsString(objValue, "type");
+                getter = GsonHelper.getAsString(objValue, "getter");
                 if (objValue.has("rounder")) {
-                    rounder = GsonHelper.getString(objValue, "rounder");
+                    rounder = GsonHelper.getAsString(objValue, "rounder");
                 }
             }
 

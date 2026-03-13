@@ -21,6 +21,12 @@ import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.ModelUtil.UvFaceData;
 import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.client.model.json.JsonVariableModel.ITextureGetter;
+import buildcraft.lib.expression.FunctionContext;
+import buildcraft.lib.expression.api.IExpressionNode.INodeBoolean;
+import buildcraft.lib.expression.api.IExpressionNode.INodeDouble;
+import buildcraft.lib.expression.api.IExpressionNode.INodeLong;
+import buildcraft.lib.expression.node.value.NodeConstantBoolean;
+import buildcraft.lib.expression.node.value.NodeConstantLong;
 import buildcraft.lib.misc.RenderUtil;
 
 public abstract class VariablePartCuboidBase extends JsonVariableModelPart {
@@ -48,12 +54,12 @@ public abstract class VariablePartCuboidBase extends JsonVariableModelPart {
             boolean s = shade.evaluate();
             int l = (int) (light.evaluate() & 15);
             int rgba = RenderUtil.swapARGBforABGR((int) colour.evaluate());
-            for (Direction face : Direction.VALUES) {
+            for (Direction face : Direction.values()) {
                 VariableFaceData data = getFaceData(face, spriteLookup);
                 if (data != null) {
-                    Vector3f radius = new Vector3f(t[0] - f[0], t[1] - f[1], t[2] - f[2]);
-                    radius.scale(0.5f);
-                    Vector3f center = new Vector3f(f);
+                    org.joml.Vector3f radius = new org.joml.Vector3f(t[0] - f[0], t[1] - f[1], t[2] - f[2]);
+                    radius.mul(0.5f);
+                    org.joml.Vector3f center = new org.joml.Vector3f(f[0], f[1], f[2]);
                     center.add(radius);
                     MutableQuad quad = ModelUtil.createFace(face, center, radius, data.uvs);
                     quad.rotateTextureUp(data.rotations);

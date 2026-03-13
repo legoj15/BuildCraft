@@ -6,21 +6,23 @@
 
 package buildcraft.lib.client.model.json;
 
-import net.minecraft.resources.Identifier;
-
 import com.google.gson.JsonObject;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.core.Direction;
-
-
+import net.minecraft.resources.Identifier;
 
 import buildcraft.lib.client.model.json.JsonVariableModel.ITextureGetter;
+import buildcraft.lib.expression.FunctionContext;
 
 public class VariablePartLed extends VariablePartCuboidBase {
     private static final VariableFaceData FACE_DATA = new VariableFaceData();
 
     static {
-        FACE_DATA.sprite = ModelLoader.White.INSTANCE;
+        // Use the white/missing texture sprite as a solid-color LED indicator
+        // The sprite will be set on first use via lazy init
         FACE_DATA.uvs.minU = 1 / 16.0f;
         FACE_DATA.uvs.minV = 2 / 16.0f;
         FACE_DATA.uvs.maxU = 1 / 16.0f;
@@ -33,6 +35,11 @@ public class VariablePartLed extends VariablePartCuboidBase {
 
     @Override
     protected VariableFaceData getFaceData(Direction side, ITextureGetter spriteLookup) {
+        if (FACE_DATA.sprite == null) {
+            TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
+                    .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+            FACE_DATA.sprite = atlas.getSprite(MissingTextureAtlasSprite.getLocation());
+        }
         FACE_DATA.uvs.minU = 1 / 16.0f;
         FACE_DATA.uvs.minV = 2 / 16.0f;
         FACE_DATA.uvs.maxU = 1 / 16.0f;

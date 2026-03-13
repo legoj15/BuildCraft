@@ -11,6 +11,7 @@ import com.google.gson.JsonSyntaxException;
 import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.client.model.ResourceLoaderContext;
 import buildcraft.lib.client.model.json.JsonVariableModel.ITextureGetter;
+import buildcraft.lib.expression.FunctionContext;
 
 public class VariablePartContainer extends JsonVariableModelPart {
 

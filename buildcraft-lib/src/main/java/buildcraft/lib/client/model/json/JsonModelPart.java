@@ -17,14 +17,14 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSyntaxException;
 
-import net.minecraft.client.renderer.block.model.BlockPart;
+
 import net.minecraft.core.Direction;
 import net.minecraft.util.GsonHelper;
 
 import buildcraft.lib.client.model.ResourceLoaderContext;
 import buildcraft.lib.misc.JsonUtil;
 
-/** {@link BlockPart} but with a few extra features */
+/** Custom model part format with a few extra features (replaces vanilla BlockPart). */
 public class JsonModelPart {
     public final JsonQuad[] quads;
 
@@ -73,14 +73,14 @@ public class JsonModelPart {
     private static JsonQuad[] readCuboid(JsonObject obj) {
         float[] from = readFloatPositionSmaller(obj, "from");
         float[] to = readFloatPositionSmaller(obj, "to");
-        boolean shade = GsonHelper.getBoolean(obj, "shade", false);
+        boolean shade = GsonHelper.getAsBoolean(obj, "shade", false);
 
         if (obj.has("faces")) {
             JsonElement faces = obj.get("faces");
             if (faces.isJsonObject()) {
                 JsonObject jFaces = faces.getAsJsonObject();
                 List<JsonQuad> quads = new ArrayList<>();
-                for (Direction face : Direction.VALUES) {
+                for (Direction face : Direction.values()) {
                     if (jFaces.has(face.getName())) {
                         JsonElement jFace = jFaces.get(face.getName());
                         if (!jFace.isJsonObject()) {

@@ -18,6 +18,7 @@ import com.google.gson.JsonSyntaxException;
 import net.minecraft.core.Direction;
 
 import buildcraft.lib.client.model.json.JsonVariableModel.ITextureGetter;
+import buildcraft.lib.expression.FunctionContext;
 import buildcraft.lib.misc.JsonUtil;
 
 public class VariablePartCuboid extends VariablePartCuboidBase {
@@ -41,7 +42,7 @@ public class VariablePartCuboid extends VariablePartCuboidBase {
             throw new JsonSyntaxException("Expected between 1 and 6 faces, got '" + elem + "'");
         }
         JsonObject jFaces = elem.getAsJsonObject();
-        for (Direction face : Direction.VALUES) {
+        for (Direction face : Direction.values()) {
             if (jFaces.has(face.getName())) {
                 JsonElement jFace = jFaces.get(face.getName());
                 if (!jFace.isJsonObject()) {

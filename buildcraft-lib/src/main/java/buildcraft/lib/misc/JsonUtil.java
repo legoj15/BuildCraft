@@ -233,4 +233,68 @@ public class JsonUtil {
         }
         return result;
     }
+
+    // --- Helper methods for the animated model system ---
+
+    /** Gets a sub-element as a float array by parsing string values. */
+    public static float[] getSubAsFloatArray(JsonObject obj, String member) {
+        if (!obj.has(member)) {
+            throw new com.google.gson.JsonSyntaxException("Required member '" + member + "' in '" + obj + "'");
+        }
+        JsonElement elem = obj.get(member);
+        if (elem.isJsonArray()) {
+            JsonArray arr = elem.getAsJsonArray();
+            float[] result = new float[arr.size()];
+            for (int i = 0; i < result.length; i++) {
+                result[i] = arr.get(i).getAsFloat();
+            }
+            return result;
+        } else {
+            throw new com.google.gson.JsonSyntaxException("Expected an array for '" + member + "', got " + elem);
+        }
+    }
+
+    /** Gets a sub-element as a string array by parsing string values. */
+    public static String[] getSubAsStringArray(JsonObject obj, String member) {
+        if (!obj.has(member)) {
+            throw new com.google.gson.JsonSyntaxException("Required member '" + member + "' in '" + obj + "'");
+        }
+        JsonElement elem = obj.get(member);
+        if (elem.isJsonArray()) {
+            JsonArray arr = elem.getAsJsonArray();
+            String[] result = new String[arr.size()];
+            for (int i = 0; i < result.length; i++) {
+                result[i] = arr.get(i).getAsString();
+            }
+            return result;
+        } else {
+            throw new com.google.gson.JsonSyntaxException("Expected an array for '" + member + "', got " + elem);
+        }
+    }
+
+    /** Gets a sub-element as an immutable map using a TypeToken. */
+    public static <T extends Map<?, ?>> T getSubAsImmutableMap(JsonObject obj, String member, TypeToken<T> token) {
+        if (!obj.has(member)) {
+            @SuppressWarnings("unchecked")
+            T empty = (T) java.util.Collections.emptyMap();
+            return empty;
+        }
+        return new Gson().fromJson(obj.get(member), token.getType());
+    }
+
+    /** Gets the string value of a JsonElement. */
+    public static String getAsString(JsonElement elem) {
+        if (elem.isJsonPrimitive() && elem.getAsJsonPrimitive().isString()) {
+            return elem.getAsString();
+        }
+        return elem.toString();
+    }
+
+    /** Inline any $ref or inheritance custom syntax in JSON models. For now, just return as-is. */
+    public static JsonObject inlineCustom(JsonObject obj) {
+        // The original BuildCraft implementation resolved "$ref" entries for model inheritance.
+        // Since the variable model system handles its own "parent" field, this is a pass-through.
+        return obj;
+    }
 }
+

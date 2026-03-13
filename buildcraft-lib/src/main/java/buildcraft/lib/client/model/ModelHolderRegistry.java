@@ -14,30 +14,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import net.minecraft.client.renderer.texture.TextureAtlas;
-import net.minecraft.world.InteractionResult;
-
-import net.neoforged.fml.ModList;
-import net.neoforged.fml.common.LoaderState;
-
 import buildcraft.api.core.BCDebugging;
 import buildcraft.api.core.BCLog;
-
-import buildcraft.lib.client.sprite.AtlasSpriteVariants;
 
 public class ModelHolderRegistry {
     public static final boolean DEBUG = BCDebugging.shouldDebugLog("lib.model.holder");
 
     static final List<ModelHolder> HOLDERS = new ArrayList<>();
 
-    public static void onTextureStitchPre(TextureAtlas map) {
-        Set<Identifier> toStitch = new HashSet<>();
+    public static void onTextureStitchPre(Set<Identifier> toRegisterSprites) {
         for (ModelHolder holder : HOLDERS) {
-            holder.onTextureStitchPre(toStitch);
-        }
-
-        for (Identifier res : toStitch) {
-            map.setTextureEntry(AtlasSpriteVariants.createForConfig(res));
+            holder.onTextureStitchPre(toRegisterSprites);
         }
     }
 
@@ -45,10 +32,9 @@ public class ModelHolderRegistry {
         for (ModelHolder holder : HOLDERS) {
             holder.onModelBake();
         }
-        if (DEBUG && Loader.instance().isInState(LoaderState.AVAILABLE)) {
+        if (DEBUG) {
             BCLog.logger.info("[lib.model.holder] List of registered Models:");
-            List<ModelHolder> holders = new ArrayList<>();
-            holders.addAll(HOLDERS);
+            List<ModelHolder> holders = new ArrayList<>(HOLDERS);
             holders.sort(Comparator.comparing(a -> a.modelLocation.toString()));
 
             for (ModelHolder holder : holders) {
@@ -58,7 +44,6 @@ public class ModelHolderRegistry {
                 } else if (!holder.hasBakedQuads()) {
                     status += "(Model was registered too late)";
                 }
-
                 BCLog.logger.info("  - " + holder.modelLocation + status);
             }
             BCLog.logger.info("[lib.model.holder] Total of " + HOLDERS.size() + " models");

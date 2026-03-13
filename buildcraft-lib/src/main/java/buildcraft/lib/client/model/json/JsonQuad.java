@@ -33,9 +33,9 @@ public class JsonQuad {
 
     public JsonQuad(JsonObject obj, float[] from, float[] to, Direction face) {
         this.face = face;
-        tint = GsonHelper.getInt(obj, "tintindex", -1);
-        texture = GsonHelper.getString(obj, "texture");
-        int rotation = GsonHelper.getInt(obj, "rotation", 0);
+        tint = GsonHelper.getAsInt(obj, "tintindex", -1);
+        texture = GsonHelper.getAsString(obj, "texture");
+        int rotation = GsonHelper.getAsInt(obj, "rotation", 0);
         float[] uv = JsonUtil.getSubAsFloatArray(obj, "uv");
         if (uv.length != 4) {
             throw new JsonSyntaxException("Expected exactly 4 floats, but got " + Arrays.toString(uv));
@@ -45,9 +45,9 @@ public class JsonQuad {
         uvs.minV = uv[1] / 16f;
         uvs.maxU = uv[2] / 16f;
         uvs.maxV = uv[3] / 16f;
-        Vector3f radius = new Vector3f(to[0] - from[0], to[1] - from[1], to[2] - from[2]);
-        radius.scale(0.5f);
-        Vector3f center = new Vector3f(from);
+        org.joml.Vector3f radius = new org.joml.Vector3f(to[0] - from[0], to[1] - from[1], to[2] - from[2]);
+        radius.mul(0.5f);
+        org.joml.Vector3f center = new org.joml.Vector3f(from[0], from[1], from[2]);
         center.add(radius);
         MutableQuad quad = ModelUtil.createFace(face, center, radius, uvs);
         quad.rotateTextureUp(rotation);

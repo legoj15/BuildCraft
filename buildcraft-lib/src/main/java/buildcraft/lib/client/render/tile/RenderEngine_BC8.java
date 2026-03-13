@@ -79,12 +79,11 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
                 Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer buffer = bufferSource.getBuffer(Sheets.cutoutBlockSheet());
 
-        // Render each MutableQuad directly via VertexConsumer.
-        // The tex_u/tex_v are already atlas-mapped by texFromSprite(), so we
-        // use renderAsBlock() which writes raw UV values without re-mapping.
+        // Render each MutableQuad as a BakedQuad
         for (MutableQuad quad : quads) {
             quad.maxLighti(light, 0);
-            quad.render(poseStack.last(), buffer);
+            BakedQuad baked = quad.toBakedBlock();
+            buffer.putBulkData(poseStack.last(), baked, 1.0f, 1.0f, 1.0f, 1.0f, light, OverlayTexture.NO_OVERLAY);
         }
 
         bufferSource.endBatch();

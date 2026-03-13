@@ -349,8 +349,8 @@ public class MutableVertex {
     // ############################
 
     public MutableVertex texFromSprite(TextureAtlasSprite sprite) {
-        tex_u = sprite.getU(tex_u * 16);
-        tex_v = sprite.getV(tex_v * 16);
+        tex_u = sprite.getU(tex_u);
+        tex_v = sprite.getV(tex_v);
         return this;
     }
 

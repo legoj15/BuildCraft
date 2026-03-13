@@ -159,6 +159,7 @@ public class MutableQuad {
         buffer.addVertex(pos.x, pos.y, pos.z)
               .setColor(v.colour_r, v.colour_g, v.colour_b, v.colour_a)
               .setUv(v.tex_u, v.tex_v)
+              .setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY)
               .setUv2(v.light_block << 4, v.light_sky << 4)
               .setNormal(norm.x, norm.y, norm.z);
     }

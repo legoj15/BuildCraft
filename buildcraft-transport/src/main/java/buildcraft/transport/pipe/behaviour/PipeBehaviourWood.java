@@ -5,24 +5,21 @@ import javax.annotation.Nullable;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.Direction;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.HitResult;
 
-import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
-import buildcraft.api.mj.MjBattery;
 import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IPipe;
-import buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver;
 import buildcraft.api.transport.pipe.PipeBehaviour;
 import buildcraft.api.transport.pipe.PipeEventHandler;
 import buildcraft.api.transport.pipe.PipeEventItem;
 import buildcraft.api.transport.pipe.PipeFlow;
 
 public class PipeBehaviourWood extends PipeBehaviourDirectional implements IMjRedstoneReceiver {
-    private final MjBattery battery = new MjBattery(1024 * MjAPI.MJ);
+
+    /** Cost per item extracted, matching 1.12.2's BCTransportConfig.mjPerItem default (1 MJ per item). */
+    private static final long MJ_PER_ITEM = MjAPI.MJ;
 
     public PipeBehaviourWood(IPipe pipe) {
         super(pipe);
@@ -30,14 +27,6 @@ public class PipeBehaviourWood extends PipeBehaviourDirectional implements IMjRe
 
     public PipeBehaviourWood(IPipe pipe, CompoundTag nbt) {
         super(pipe, nbt);
-        battery.deserializeNBT(nbt.getCompoundOrEmpty("battery"));
-    }
-
-    @Override
-    public CompoundTag writeToNbt() {
-        CompoundTag nbt = super.writeToNbt();
-        nbt.put("battery", battery.serializeNBT());
-        return nbt;
     }
 
     @Override
@@ -51,28 +40,28 @@ public class PipeBehaviourWood extends PipeBehaviourDirectional implements IMjRe
             && pipe.getConnectedType(dir) == IPipe.ConnectedType.TILE;
     }
 
-    @Override
-    public void onTick() {
-        super.onTick();
-        if (pipe.getHolder().getPipeWorld().isClientSide()) {
-            return;
-        }
-        Direction dir = getCurrentDir();
-        if (dir != null) {
-            long potential = battery.extractPower(0, MjAPI.MJ);
-            if (potential > 0) {
-                PipeFlow flow = pipe.getFlow();
-                if (flow instanceof IFlowItems) {
-                    int maxItems = (int) (potential / (MjAPI.MJ / 2));
-                    if (maxItems > 0) {
-                        int extracted = extractItems((IFlowItems) flow, dir, maxItems, false);
-                        if (extracted > 0) {
-                            battery.extractPower(0, extracted * (MjAPI.MJ / 2));
-                        }
+    // No onTick extraction — 1.12.2 extracts items directly in receivePower()
+
+    /**
+     * Attempt to extract items (or simulate extraction) using the given power budget.
+     * Returns the leftover power that was NOT consumed.
+     * Matches 1.12.2's PipeBehaviourWood.extract(long, boolean).
+     */
+    protected long extract(long power, boolean simulate) {
+        if (power > 0 && getCurrentDir() != null) {
+            PipeFlow flow = pipe.getFlow();
+            if (flow instanceof IFlowItems) {
+                IFlowItems itemFlow = (IFlowItems) flow;
+                int maxItems = (int) (power / MJ_PER_ITEM);
+                if (maxItems > 0) {
+                    int extracted = extractItems(itemFlow, getCurrentDir(), maxItems, simulate);
+                    if (extracted > 0) {
+                        return power - extracted * MJ_PER_ITEM;
                     }
                 }
             }
         }
+        return power;
     }
 
     protected int extractItems(IFlowItems flow, Direction dir, int count, boolean simulate) {
@@ -88,19 +77,25 @@ public class PipeBehaviourWood extends PipeBehaviourDirectional implements IMjRe
 
     @Override
     public long getPowerRequested() {
-        return battery.getCapacity() - battery.getStored();
+        // Only request power if we can actually extract items right now.
+        // This is the key difference from the battery model:
+        // simulate an extraction to see if items exist, and request only
+        // as much power as we'd actually consume.
+        final long power = 512 * MjAPI.MJ;
+        return power - extract(power, true);
     }
 
     @Override
     public long receivePower(long microJoules, boolean simulate) {
-        return battery.addPowerChecking(microJoules, simulate);
+        // Directly extract items when power is delivered.
+        // Returns leftover power that was not consumed.
+        return extract(microJoules, simulate);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getCapability(@Nonnull Object capability, Direction facing) {
         // Expose this wood pipe as an MJ receiver/connector so engines can discover it
-        // (matches 1.12.2 MjCapabilityHelper behavior)
         if (capability == MjAPI.CAP_RECEIVER || capability == MjAPI.CAP_CONNECTOR) {
             return (T) this;
         }

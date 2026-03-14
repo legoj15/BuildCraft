@@ -2,11 +2,17 @@ package buildcraft.transport.pipe.behaviour;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.HitResult;
 
 import buildcraft.api.core.EnumPipePart;
@@ -14,7 +20,10 @@ import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.PipeBehaviour;
 import buildcraft.api.transport.pipe.PipeFaceTex;
 
-import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.tile.item.ItemHandlerSimple;
+
+import buildcraft.transport.BCTransportMenuTypes;
+import buildcraft.transport.container.ContainerDiamondPipe;
 
 /** Base class for diamond (sorting) and diamond-wood (emerald/filtered extraction) pipes.
  * Provides a filter inventory per direction. */
@@ -22,10 +31,8 @@ public abstract class PipeBehaviourDiamond extends PipeBehaviour {
 
     public static final int FILTERS_PER_SIDE = 9;
 
-    /** Simplified filter inventory — stores 54 slots (9 per direction).
-     * In 1.12.2 this was ItemHandlerSimple; here we use a flat NonNullList until
-     * ItemHandlerSimple is ported. */
-    public final NonNullList<ItemStack> filterStacks = NonNullList.withSize(FILTERS_PER_SIDE * 6, ItemStack.EMPTY);
+    /** Filter inventory — 54 phantom slots (9 per direction). */
+    public final ItemHandlerSimple filters = new ItemHandlerSimple(FILTERS_PER_SIDE * 6);
 
     public PipeBehaviourDiamond(IPipe pipe) {
         super(pipe);
@@ -34,26 +41,15 @@ public abstract class PipeBehaviourDiamond extends PipeBehaviour {
     public PipeBehaviourDiamond(IPipe pipe, CompoundTag nbt) {
         super(pipe, nbt);
         CompoundTag filtersTag = nbt.getCompoundOrEmpty("filters");
-        for (int i = 0; i < filterStacks.size(); i++) {
-            String key = "slot" + i;
-            CompoundTag itemTag = filtersTag.getCompoundOrEmpty(key);
-            if (!itemTag.isEmpty()) {
-                filterStacks.set(i, NBTUtilBC.itemStackFromNBT(itemTag));
-            }
+        if (!filtersTag.isEmpty()) {
+            filters.deserializeNBT(filtersTag);
         }
     }
 
     @Override
     public CompoundTag writeToNbt() {
         CompoundTag nbt = super.writeToNbt();
-        CompoundTag filtersTag = new CompoundTag();
-        for (int i = 0; i < filterStacks.size(); i++) {
-            ItemStack stack = filterStacks.get(i);
-            if (!stack.isEmpty()) {
-                filtersTag.put("slot" + i, NBTUtilBC.itemStackToNBT(stack));
-            }
-        }
-        nbt.put("filters", filtersTag);
+        nbt.put("filters", filters.serializeNBT());
         return nbt;
     }
 
@@ -65,16 +61,24 @@ public abstract class PipeBehaviourDiamond extends PipeBehaviour {
     @Override
     public boolean onPipeActivate(Player player, HitResult trace, float hitX, float hitY, float hitZ,
         EnumPipePart part) {
-        // GUI opening — BCTransportGuis not yet ported
-        return false;
+        if (!player.level().isClientSide() && player instanceof ServerPlayer serverPlayer) {
+            final PipeBehaviourDiamond self = this;
+            serverPlayer.openMenu(new MenuProvider() {
+                @Override
+                public Component getDisplayName() {
+                    return Component.translatable("gui.buildcrafttransport.pipe_diamond.title");
+                }
+
+                @Override
+                public AbstractContainerMenu createMenu(int containerId, Inventory playerInv, Player p) {
+                    return new ContainerDiamondPipe(containerId, playerInv, self);
+                }
+            }, (buf) -> {
+                buf.writeBlockPos(pipe.getHolder().getPipePos());
+            });
+        }
+        return true;
     }
 
-    @Override
-    public void addDrops(NonNullList<ItemStack> toDrop, int fortune) {
-        for (ItemStack stack : filterStacks) {
-            if (!stack.isEmpty()) {
-                toDrop.add(stack);
-            }
-        }
-    }
+    // Phantom slots — filter contents are NOT real items and should not drop.
 }

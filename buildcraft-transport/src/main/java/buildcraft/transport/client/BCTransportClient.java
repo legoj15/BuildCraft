@@ -8,6 +8,7 @@ import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsE
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportMenuTypes;
+import buildcraft.transport.client.gui.GuiDiamondPipe;
 import buildcraft.transport.client.gui.GuiFilteredBuffer;
 import buildcraft.transport.client.render.PipeFlowRendererFluids;
 import buildcraft.transport.client.render.PipeFlowRendererItems;
@@ -23,6 +24,7 @@ public class BCTransportClient {
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(BCTransportMenuTypes.FILTERED_BUFFER.get(), GuiFilteredBuffer::new);
+        event.register(BCTransportMenuTypes.DIAMOND_PIPE.get(), GuiDiamondPipe::new);
     }
 
     @SubscribeEvent

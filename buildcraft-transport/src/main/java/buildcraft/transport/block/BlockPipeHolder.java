@@ -119,14 +119,40 @@ public class BlockPipeHolder extends Block implements EntityBlock {
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TilePipeHolder tile && tile.getPipe() != null) {
             var pipe = tile.getPipe();
+            buildcraft.api.core.EnumPipePart hitPart = getHitPart(tile, hitResult);
             if (pipe.getBehaviour().onPipeActivate(player, hitResult, 
                     (float) hitResult.getLocation().x, (float) hitResult.getLocation().y, 
                     (float) hitResult.getLocation().z, 
-                    buildcraft.api.core.EnumPipePart.CENTER)) {
+                    hitPart)) {
                 return InteractionResult.SUCCESS;
             }
         }
         return InteractionResult.PASS;
+    }
+
+    /**
+     * Determines which pipe segment (center or directional arm) the player clicked on.
+     * Converts the hit location to block-local coordinates and tests against each connected
+     * arm's AABB. Returns the matching {@link buildcraft.api.core.EnumPipePart}, or CENTER
+     * if no arm contains the hit point.
+     */
+    private static buildcraft.api.core.EnumPipePart getHitPart(TilePipeHolder tile, BlockHitResult hitResult) {
+        double localX = hitResult.getLocation().x - hitResult.getBlockPos().getX();
+        double localY = hitResult.getLocation().y - hitResult.getBlockPos().getY();
+        double localZ = hitResult.getLocation().z - hitResult.getBlockPos().getZ();
+
+        var pipe = tile.getPipe();
+        if (pipe != null) {
+            for (Direction dir : Direction.values()) {
+                if (pipe.isConnected(dir)) {
+                    VoxelShape arm = ARMS[dir.ordinal()];
+                    if (arm.bounds().contains(localX, localY, localZ)) {
+                        return buildcraft.api.core.EnumPipePart.fromFacing(dir);
+                    }
+                }
+            }
+        }
+        return buildcraft.api.core.EnumPipePart.CENTER;
     }
 
     // Block removal — drops pipe item

@@ -66,7 +66,10 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
             if (camPos == null) return;
             org.joml.Vector3f t = new org.joml.Vector3f();
             poseStack.last().pose().getTranslation(t);
-            BlockPos pos = BlockPos.containing(camPos.x + t.x, camPos.y + t.y, camPos.z + t.z);
+            BlockPos pos = new BlockPos(
+                Math.round((float) (camPos.x + t.x)),
+                Math.round((float) (camPos.y + t.y)),
+                Math.round((float) (camPos.z + t.z)));
 
             level = Minecraft.getInstance().level;
             if (level == null) return;
@@ -77,10 +80,9 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         }
         if (level == null) return;
 
-        // Get the buffer for rendering
-        MultiBufferSource.BufferSource bufferSource =
-            Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer buffer = bufferSource.getBuffer(Sheets.cutoutBlockSheet());
+        // Get the buffer for rendering — use the shared buffer source, do NOT endBatch()
+        VertexConsumer buffer = Minecraft.getInstance().renderBuffers().bufferSource()
+            .getBuffer(Sheets.cutoutBlockSheet());
         int light = LevelRenderer.getLightColor(level, pipe.getBlockPos());
 
         poseStack.pushPose();
@@ -94,7 +96,6 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         // --- Render flow + behaviour content ---
         renderContents(pipe, 0, 0, 0, 0, buffer);
 
-        bufferSource.endBatch();
         poseStack.popPose();
     }
 

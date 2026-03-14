@@ -1,7 +1,7 @@
 {
     "sources": [
         {
-            "type": "directory",
+            "type": "minecraft:directory",
             "source": "pipes",
             "prefix": "pipes/"
         }

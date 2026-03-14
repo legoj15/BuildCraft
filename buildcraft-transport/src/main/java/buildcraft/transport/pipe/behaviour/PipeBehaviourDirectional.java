@@ -63,12 +63,24 @@ public abstract class PipeBehaviourDirectional extends PipeBehaviour {
     @Override
     public boolean onPipeActivate(Player player, HitResult trace, float hitX, float hitY, float hitZ,
         EnumPipePart part) {
-        // Wrench interaction — simplified (EntityUtil.getWrenchHand not yet ported)
-        if (part == EnumPipePart.CENTER) {
-            return advanceFacing();
-        } else if (part.face != getCurrentDir() && canFaceDirection(part.face)) {
-            setCurrentDir(part.face);
-            return true;
+        // 1.12.2: only respond when player holds a wrench (EntityUtil.getWrenchHand)
+        if (isHoldingWrench(player)) {
+            if (part == EnumPipePart.CENTER) {
+                return advanceFacing();
+            } else if (part.face != getCurrentDir() && canFaceDirection(part.face)) {
+                setCurrentDir(part.face);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Check if the player is holding a wrench in either hand. */
+    private static boolean isHoldingWrench(Player player) {
+        for (net.minecraft.world.InteractionHand hand : net.minecraft.world.InteractionHand.values()) {
+            if (player.getItemInHand(hand).getItem() instanceof buildcraft.api.tools.IToolWrench) {
+                return true;
+            }
         }
         return false;
     }

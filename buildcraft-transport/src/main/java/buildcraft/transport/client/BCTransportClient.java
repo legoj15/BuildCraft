@@ -3,8 +3,10 @@ package buildcraft.transport.client;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 
 import buildcraft.transport.BCTransportBlockEntities;
+import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportMenuTypes;
 import buildcraft.transport.client.gui.GuiFilteredBuffer;
 import buildcraft.transport.client.render.PipeFlowRendererFluids;
@@ -30,6 +32,11 @@ public class BCTransportClient {
         registerFlowRenderers();
     }
 
+    @SubscribeEvent
+    public static void registerClientExtensions(RegisterClientExtensionsEvent event) {
+        event.registerBlock(PipeHolderClientExtensions.INSTANCE, BCTransportBlocks.PIPE_HOLDER.get());
+    }
+
     /** Called during mod init to register pipe flow renderers. */
     public static void registerFlowRenderers() {
         PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowPower.class, PipeFlowRendererPower.INSTANCE);
@@ -38,3 +45,4 @@ public class BCTransportClient {
         PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowFluids.class, PipeFlowRendererFluids.INSTANCE);
     }
 }
+

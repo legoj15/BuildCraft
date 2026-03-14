@@ -6,17 +6,18 @@
 
 package buildcraft.transport.client.render;
 
+
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.state.CameraRenderState;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
@@ -30,12 +31,14 @@ import buildcraft.api.transport.pipe.PipeFlow;
 import buildcraft.api.transport.pluggable.IPlugDynamicRenderer;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
+
 import buildcraft.transport.client.PipeRegistryClient;
+import buildcraft.transport.client.model.ModelPipe;
 import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.tile.TilePipeHolder;
 
-/** BlockEntityRenderer for pipe holder blocks. Renders dynamic pipe content
- *  (wire, pluggables, fluid/item/power flow) via registered renderers. */
+/** BlockEntityRenderer for pipe holder blocks. Renders the pipe body geometry
+ *  plus dynamic content (pluggables, fluid/item/power flow) via registered renderers. */
 public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, PipeHolderRenderState> {
 
     public RenderPipeHolder(BlockEntityRendererProvider.Context context) {
@@ -69,17 +72,26 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         MultiBufferSource.BufferSource bufferSource =
             Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer buffer = bufferSource.getBuffer(Sheets.cutoutBlockSheet());
+        int light = LevelRenderer.getLightColor(level, pos);
 
         poseStack.pushPose();
 
-        // Render pluggables
+        // --- Render pipe body (static model from cache) ---
+        renderPipeBody(pipe, buffer, light);
+
+        // --- Render pluggables ---
         renderPluggables(pipe, 0, 0, 0, 0, buffer);
 
-        // Render flow + behaviour content
+        // --- Render flow + behaviour content ---
         renderContents(pipe, 0, 0, 0, 0, buffer);
 
         bufferSource.endBatch();
         poseStack.popPose();
+    }
+
+    /** Emit the cached pipe body quads (cutout layer). */
+    private static void renderPipeBody(TilePipeHolder pipe, VertexConsumer buffer, int light) {
+        ModelPipe.renderDirect(pipe, buffer, light);
     }
 
     private static void renderPluggables(TilePipeHolder pipe, double x, double y, double z,

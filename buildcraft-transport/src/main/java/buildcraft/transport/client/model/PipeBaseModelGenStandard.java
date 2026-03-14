@@ -181,7 +181,7 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
     // Model Usage
 
     @Override
-    public List<BakedQuad> generateCutout(PipeBaseCutoutKey key) {
+    public List<MutableQuad> generateCutoutMutable(PipeBaseCutoutKey key) {
         List<MutableQuad> quads = new ArrayList<>();
 
         TextureAtlasSprite[] spriteArray = key.definition != null ? ensureSprites(key.definition) : null;
@@ -221,6 +221,12 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
                 }
             }
         }
+        return quads;
+    }
+
+    @Override
+    public List<BakedQuad> generateCutout(PipeBaseCutoutKey key) {
+        List<MutableQuad> quads = generateCutoutMutable(key);
         List<BakedQuad> bakedQuads = new ArrayList<>();
         for (MutableQuad q : quads) {
             bakedQuads.add(q.toBakedBlock());

@@ -6,6 +6,7 @@
 
 package buildcraft.transport.client.model;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.client.renderer.block.model.BakedQuad;
@@ -13,6 +14,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 import buildcraft.api.transport.pipe.PipeDefinition;
 
+import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.config.DetailedConfigOption;
 
 import buildcraft.transport.client.model.PipeModelCacheBase.PipeBaseCutoutKey;
@@ -26,4 +28,11 @@ public interface IPipeBaseModelGen {
     List<BakedQuad> generateTranslucent(PipeBaseTranslucentKey key);
 
     TextureAtlasSprite[] getItemSprites(PipeDefinition def);
+
+    /** Returns the raw MutableQuad list for direct VertexConsumer rendering (BER path).
+     *  Default implementation generates cutout BakedQuads and creates empty list —
+     *  override for optimal rendering. */
+    default List<MutableQuad> generateCutoutMutable(PipeBaseCutoutKey key) {
+        return new ArrayList<>();
+    }
 }

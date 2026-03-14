@@ -8,10 +8,16 @@ package buildcraft.transport.client.model;
 
 import java.util.List;
 
+import com.mojang.blaze3d.vertex.VertexConsumer;
+
 import com.google.common.collect.ImmutableList;
 
 import net.minecraft.client.renderer.block.model.BakedQuad;
 
+import buildcraft.lib.client.model.MutableQuad;
+
+import buildcraft.transport.client.model.PipeModelCacheBase.PipeBaseCutoutKey;
+import buildcraft.transport.client.model.key.PipeModelKey;
 import buildcraft.transport.tile.TilePipeHolder;
 
 /** Utility class that generates BakedQuads for placed pipe blocks. Delegates to the model
@@ -34,5 +40,19 @@ public class ModelPipe {
             return ImmutableList.of();
         }
         return PipeModelCacheAll.getTranslucentModel(tile);
+    }
+
+    /** Renders the pipe body (cutout layer) directly into a VertexConsumer,
+     *  bypassing the BakedQuad conversion. Used by the BER. */
+    public static void renderDirect(TilePipeHolder tile, VertexConsumer buffer, int light) {
+        if (tile == null || tile.getPipe() == null) return;
+        PipeModelKey modelKey = tile.getPipe().getModel();
+        if (modelKey == null) return;
+        PipeBaseCutoutKey key = new PipeBaseCutoutKey(modelKey);
+        List<MutableQuad> quads = PipeModelCacheBase.generator.generateCutoutMutable(key);
+        for (MutableQuad q : quads) {
+            q.lighti(light);
+            q.render(buffer);
+        }
     }
 }

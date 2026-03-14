@@ -50,17 +50,18 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
         return SPRITES.get(def);
     }
 
-    /** Ensure sprites are populated for a pipe definition. Call from bake methods. */
+    /** Ensure sprites are populated for a pipe definition. Resolves from the block atlas
+     *  using the texture names in PipeDefinition.textures[]. */
     private static TextureAtlasSprite[] ensureSprites(PipeDefinition def) {
         TextureAtlasSprite[] cached = SPRITES.get(def);
         if (cached != null) return cached;
-        // Lazy init — just fill with missing sprites for now
-        // (In 1.12.2 this was done in onTextureStitchPre; in NeoForge 1.21 sprites
-        //  are resolved differently — this works as a runtime fallback)
+        TextureAtlasSprite missing = SpriteUtil.missingSprite();
         TextureAtlasSprite[] array = new TextureAtlasSprite[def.textures.length];
         for (int i = 0; i < array.length; i++) {
-            // TODO: resolve actual sprites from the atlas using def.textures[i]
-            array[i] = SpriteUtil.missingSprite();
+            array[i] = SpriteUtil.getSprite(def.textures[i]);
+            if (array[i] == null) {
+                array[i] = missing;
+            }
         }
         SPRITES.put(def, array);
         return array;

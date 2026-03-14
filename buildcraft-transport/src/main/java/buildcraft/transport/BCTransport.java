@@ -41,6 +41,7 @@ public class BCTransport {
     private void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == buildcraft.core.BCCoreCreativeTabs.MAIN_TAB_KEY) {
             event.accept(new ItemStack(BCTransportItems.FILTERED_BUFFER.get()));
+            event.accept(new ItemStack(BCTransportItems.WATERPROOF.get()));
         }
     }
 }

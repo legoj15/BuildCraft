@@ -1,0 +1,258 @@
+/*
+ * Copyright (c) 2017 SpaceToad and the BuildCraft team
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
+ */
+
+package buildcraft.transport;
+
+import java.util.Arrays;
+
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.core.Direction;
+
+import buildcraft.api.transport.pipe.PipeApi;
+import buildcraft.api.transport.pipe.PipeDefinition;
+import buildcraft.api.transport.pipe.PipeDefinition.IPipeCreator;
+import buildcraft.api.transport.pipe.PipeDefinition.IPipeLoader;
+import buildcraft.api.transport.pipe.PipeDefinition.PipeDefinitionBuilder;
+import buildcraft.api.transport.pipe.PipeFlowType;
+
+import buildcraft.transport.pipe.PipeRegistry;
+import buildcraft.transport.pipe.flow.PipeFlowItems;
+import buildcraft.transport.pipe.flow.PipeFlowStructure;
+import buildcraft.transport.pipe.behaviour.*;
+
+public class BCTransportPipes {
+    private static final String MODID = BCTransport.MODID;
+
+    public static PipeDefinition structure;
+
+    public static PipeDefinition woodItem;
+    public static PipeDefinition woodFluid;
+    public static PipeDefinition woodPower;
+
+    public static PipeDefinition stoneItem;
+    public static PipeDefinition stoneFluid;
+    public static PipeDefinition stonePower;
+
+    public static PipeDefinition cobbleItem;
+    public static PipeDefinition cobbleFluid;
+    public static PipeDefinition cobblePower;
+
+    public static PipeDefinition quartzItem;
+    public static PipeDefinition quartzFluid;
+    public static PipeDefinition quartzPower;
+
+    public static PipeDefinition goldItem;
+    public static PipeDefinition goldFluid;
+    public static PipeDefinition goldPower;
+
+    public static PipeDefinition sandstoneItem;
+    public static PipeDefinition sandstoneFluid;
+    public static PipeDefinition sandstonePower;
+
+    public static PipeDefinition ironItem;
+    public static PipeDefinition ironFluid;
+    public static PipeDefinition ironPower;
+
+    public static PipeDefinition diamondItem;
+    public static PipeDefinition diamondFluid;
+    public static PipeDefinition diamondPower;
+
+    public static PipeDefinition diaWoodItem;
+    public static PipeDefinition diaWoodFluid;
+    public static PipeDefinition diaWoodPower;
+
+    public static PipeDefinition clayItem;
+    public static PipeDefinition clayFluid;
+
+    public static PipeDefinition voidItem;
+    public static PipeDefinition voidFluid;
+
+    public static PipeDefinition obsidianItem;
+
+    public static PipeDefinition lapisItem;
+    public static PipeDefinition daizuliItem;
+    public static PipeDefinition emzuliItem;
+    public static PipeDefinition stripesItem;
+
+    public static void preInit() {
+        // Initialize flow types
+        PipeApi.flowStructure = new PipeFlowType(PipeFlowStructure::new, PipeFlowStructure::new);
+        PipeApi.flowItems = new PipeFlowType(PipeFlowItems::new, PipeFlowItems::new);
+        // Fluid/Power flows are not yet ported — use null placeholders
+        // They will be set when those flow classes are ported
+
+        // Set the pipe registry
+        PipeApi.pipeRegistry = PipeRegistry.INSTANCE;
+
+        DefinitionBuilder builder = new DefinitionBuilder();
+
+        // === Structure pipe ===
+        builder.logic(PipeBehaviourStructure::new, PipeBehaviourStructure::new);
+        builder.builder.enableBorderColouring();
+        structure = builder.idTex("structure").flow(PipeApi.flowStructure).define();
+        builder.builder.enableColouring();
+
+        // === Wood pipes ===
+        builder.logic(PipeBehaviourWood::new, PipeBehaviourWood::new).texSuffixes("_clear", "_filled");
+        builder.builder.itemTex(0, 0, 1);
+        woodItem = builder.idTexPrefix("wood_item").flowItem().define();
+        // woodFluid and woodPower require PipeFlowFluid/PipeFlowPower
+        // woodFluid = builder.idTexPrefix("wood_fluid").flowFluid().define();
+        // woodPower = builder.idTexPrefix("wood_power").flowPower().define();
+        builder.builder.itemTex(0);
+
+        // === Stone pipes ===
+        builder.logic(PipeBehaviourStone::new, PipeBehaviourStone::new);
+        stoneItem = builder.idTex("stone_item").flowItem().define();
+        // stoneFluid = builder.idTex("stone_fluid").flowFluid().define();
+        // stonePower = builder.idTex("stone_power").flowPower().define();
+
+        // === Cobblestone pipes ===
+        builder.logic(PipeBehaviourCobble::new, PipeBehaviourCobble::new);
+        cobbleItem = builder.idTex("cobblestone_item").flowItem().define();
+
+        // === Quartz pipes ===
+        builder.logic(PipeBehaviourQuartz::new, PipeBehaviourQuartz::new);
+        quartzItem = builder.idTex("quartz_item").flowItem().define();
+
+        // === Gold pipes ===
+        builder.logic(PipeBehaviourGold::new, PipeBehaviourGold::new);
+        goldItem = builder.idTex("gold_item").flowItem().define();
+
+        // === Sandstone pipes ===
+        builder.logic(PipeBehaviourSandstone::new, PipeBehaviourSandstone::new);
+        sandstoneItem = builder.idTex("sandstone_item").flowItem().define();
+
+        // === Iron pipes ===
+        builder.logic(PipeBehaviourIron::new, PipeBehaviourIron::new).texSuffixes("_clear", "_filled");
+        builder.builder.itemTex(0, 0, 1);
+        ironItem = builder.idTexPrefix("iron_item").flowItem().define();
+        builder.builder.itemTex(0);
+
+        // === Diamond pipes ===
+        String[] diamondTextureSuffixes = new String[8];
+        diamondTextureSuffixes[0] = "";
+        diamondTextureSuffixes[7] = "_itemstack";
+        for (Direction face : Direction.values()) {
+            diamondTextureSuffixes[face.ordinal() + 1] = "_" + face.getName();
+        }
+
+        builder.logic(PipeBehaviourDiamondItem::new, PipeBehaviourDiamondItem::new).texSuffixes(diamondTextureSuffixes);
+        builder.builder.itemTex(7);
+        diamondItem = builder.idTexPrefix("diamond_item").flowItem().define();
+        builder.builder.itemTex(0);
+
+        // === Diamond-wood (emerald) pipes ===
+        builder.logic(PipeBehaviourWoodDiamond::new, PipeBehaviourWoodDiamond::new).texSuffixes("_clear", "_filled");
+        builder.builder.itemTex(0, 0, 1);
+        diaWoodItem = builder.idTexPrefix("diamond_wood_item").flowItem().define();
+        builder.builder.itemTex(0);
+
+        // === Clay pipes ===
+        builder.logic(PipeBehaviourClay::new, PipeBehaviourClay::new);
+        clayItem = builder.idTex("clay_item").flowItem().define();
+
+        // === Void pipes ===
+        builder.logic(PipeBehaviourVoid::new, PipeBehaviourVoid::new);
+        voidItem = builder.idTex("void_item").flowItem().define();
+
+        // === Obsidian pipes ===
+        builder.logic(PipeBehaviourObsidian::new, PipeBehaviourObsidian::new);
+        obsidianItem = builder.idTex("obsidian_item").flowItem().define();
+
+        // === Lapis pipes ===
+        DyeColor[] colourArray = DyeColor.values();
+        String[] texSuffix = new String[16];
+        for (int i = 0; i < 16; i++) {
+            texSuffix[i] = "_" + colourArray[i].getName();
+        }
+
+        builder.logic(PipeBehaviourLapis::new, PipeBehaviourLapis::new).texSuffixes(texSuffix);
+        lapisItem = builder.idTexPrefix("lapis_item").flowItem().define();
+
+        // === Daizuli pipes ===
+        String[] texSuffixPlus = Arrays.copyOf(texSuffix, 17);
+        texSuffixPlus[16] = "_filled";
+
+        builder.logic(PipeBehaviourDaizuli::new, PipeBehaviourDaizuli::new).texSuffixes(texSuffixPlus);
+        builder.builder.itemTex(0, 0, 16);
+        daizuliItem = builder.idTexPrefix("daizuli_item").flowItem().define();
+
+        // === Emzuli pipes ===
+        builder.logic(PipeBehaviourEmzuli::new, PipeBehaviourEmzuli::new).texSuffixes("_clear", "_filled");
+        builder.builder.itemTex(0, 0, 1);
+        emzuliItem = builder.idTexPrefix("emzuli_item").flowItem().define();
+
+        // === Stripes pipes ===
+        builder.builder.itemTex(0);
+        builder.logic(PipeBehaviourStripes::new, PipeBehaviourStripes::new);
+        stripesItem = builder.idTex("stripes_item").flowItem().define();
+    }
+
+    private static class DefinitionBuilder {
+        public final PipeDefinitionBuilder builder = new PipeDefinitionBuilder();
+
+        public DefinitionBuilder idTexPrefix(String both) {
+            return id(both).texPrefix(both);
+        }
+
+        public DefinitionBuilder idTex(String both) {
+            return id(both).tex(both);
+        }
+
+        public DefinitionBuilder id(String post) {
+            builder.identifier = MODID + ":" + post;
+            return this;
+        }
+
+        public DefinitionBuilder tex(String prefix, String... suffixes) {
+            return texPrefix(prefix).texSuffixes(suffixes);
+        }
+
+        public DefinitionBuilder texPrefix(String prefix) {
+            builder.texturePrefix = MODID + ":pipes/" + prefix;
+            return this;
+        }
+
+        public DefinitionBuilder texSuffixes(String... suffixes) {
+            if (suffixes.length == 0) {
+                builder.textureSuffixes = new String[] { "" };
+            } else {
+                builder.textureSuffixes = suffixes;
+            }
+            return this;
+        }
+
+        public DefinitionBuilder logic(IPipeCreator creator, IPipeLoader loader) {
+            builder.logicConstructor = creator;
+            builder.logicLoader = loader;
+            return this;
+        }
+
+        public DefinitionBuilder flowItem() {
+            return flow(PipeApi.flowItems);
+        }
+
+        public DefinitionBuilder flowFluid() {
+            return flow(PipeApi.flowFluids);
+        }
+
+        public DefinitionBuilder flowPower() {
+            return flow(PipeApi.flowPower);
+        }
+
+        public DefinitionBuilder flow(PipeFlowType flow) {
+            builder.flow(flow);
+            return this;
+        }
+
+        public PipeDefinition define() {
+            PipeDefinition def = new PipeDefinition(builder);
+            PipeRegistry.INSTANCE.registerPipe(def);
+            return def;
+        }
+    }
+}

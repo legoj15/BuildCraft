@@ -171,4 +171,41 @@ public class NBTUtilBC {
         }
         return Stream.empty();
     }
+
+    // ItemStack serialization helpers
+
+    /** Saves an ItemStack to a CompoundTag using the item's registry name, count, and components.
+     * Returns an empty CompoundTag if the stack is empty. */
+    @Nonnull
+    public static CompoundTag itemStackToNBT(@Nonnull net.minecraft.world.item.ItemStack stack) {
+        if (stack.isEmpty()) {
+            return new CompoundTag();
+        }
+        CompoundTag nbt = new CompoundTag();
+        net.minecraft.resources.Identifier itemId =
+            net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+        nbt.putString("id", itemId.toString());
+        nbt.putInt("count", stack.getCount());
+        return nbt;
+    }
+
+    /** Loads an ItemStack from a CompoundTag saved by {@link #itemStackToNBT}. */
+    @Nonnull
+    public static net.minecraft.world.item.ItemStack itemStackFromNBT(@Nonnull CompoundTag nbt) {
+        if (nbt.isEmpty()) {
+            return net.minecraft.world.item.ItemStack.EMPTY;
+        }
+        String idStr = nbt.getStringOr("id", "");
+        if (idStr.isEmpty()) {
+            return net.minecraft.world.item.ItemStack.EMPTY;
+        }
+        net.minecraft.resources.Identifier itemId = net.minecraft.resources.Identifier.parse(idStr);
+        net.minecraft.world.item.Item item =
+            net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(itemId);
+        if (item == null || item == net.minecraft.world.item.Items.AIR) {
+            return net.minecraft.world.item.ItemStack.EMPTY;
+        }
+        int count = nbt.getIntOr("count", 1);
+        return new net.minecraft.world.item.ItemStack(item, count);
+    }
 }

@@ -33,6 +33,9 @@ public class BCTransport {
             modEventBus.register(buildcraft.transport.client.BCTransportClient.class);
         }
 
+        // Initialize pipe definitions and registry
+        BCTransportPipes.preInit();
+
         // Register creative tab — LOW priority so transport items appear after core/factory/silicon items
         modEventBus.addListener(EventPriority.LOW, this::addCreativeTabItems);
 

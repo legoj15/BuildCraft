@@ -101,6 +101,18 @@ public class StackUtil {
         return ItemStack.isSameItemSameComponents(base, comparison);
     }
 
+    /** Checks if two stacks match by item identity and components.
+     * Named "OrList" for 1.12.2 compat — in 1.21 there is no OreDictionary,
+     * so this is identical to {@link #isMatchingItem(ItemStack, ItemStack)}. */
+    public static boolean isMatchingItemOrList(@Nonnull ItemStack filter, @Nonnull ItemStack toTest) {
+        return isMatchingItem(filter, toTest);
+    }
+
+    /** Alias for {@link #isMatchingItemOrList(ItemStack, ItemStack)}. */
+    public static boolean matchesStackOrList(@Nonnull ItemStack filter, @Nonnull ItemStack toTest) {
+        return isMatchingItemOrList(filter, toTest);
+    }
+
     /** @return An empty, nonnull list that cannot be modified */
     public static NonNullList<ItemStack> listOf() {
         return NonNullList.withSize(0, EMPTY);

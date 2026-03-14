@@ -51,6 +51,10 @@ import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.pipe.PipeEventBus;
 
 public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebuggable {
+    /** ModelData property that passes this tile reference to ModelPipe for baked model generation. */
+    public static final net.neoforged.neoforge.model.data.ModelProperty<TilePipeHolder> PIPE_MODEL_DATA =
+        new net.neoforged.neoforge.model.data.ModelProperty<>();
+
     public final PipeEventBus eventBus = new PipeEventBus();
     private Pipe pipe;
     private boolean scheduleRenderUpdate = true;
@@ -313,5 +317,12 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
             left.add("Pipe:");
             pipe.getDebugInfo(left, right, side);
         }
+    }
+
+    @Override
+    public net.neoforged.neoforge.model.data.ModelData getModelData() {
+        return net.neoforged.neoforge.model.data.ModelData.builder()
+            .with(PIPE_MODEL_DATA, this)
+            .build();
     }
 }

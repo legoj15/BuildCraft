@@ -363,4 +363,16 @@ public final class Pipe implements IPipe, IDebuggable {
             right.add(face + " = " + types.get(face) + ", " + getConnectedDist(face));
         }
     }
+
+    /** Client-side: generate the model key for this pipe's current state. */
+    public buildcraft.transport.client.model.key.PipeModelKey getModel() {
+        PipeFaceTex[] sides = new PipeFaceTex[6];
+        float[] mc = new float[6];
+        for (Direction face : Direction.values()) {
+            int i = face.ordinal();
+            sides[i] = behaviour.getTextureData(face);
+            mc[i] = getConnectedDist(face);
+        }
+        return new buildcraft.transport.client.model.key.PipeModelKey(definition, behaviour.getTextureData(null), sides, mc, colour);
+    }
 }

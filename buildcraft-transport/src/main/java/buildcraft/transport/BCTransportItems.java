@@ -38,7 +38,9 @@ public class BCTransportItems {
     public static final DeferredItem<ItemPipeHolder> PIPE_WOOD_ITEM = ITEMS.registerItem("pipe_wood_item",
             props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
                     BCTransportPipes.woodItem, props).registerWithPipeApi());
-    public static final DeferredItem<Item> PIPE_COBBLE_ITEM = ITEMS.registerItem("pipe_cobble_item", Item::new);
+    public static final DeferredItem<ItemPipeHolder> PIPE_COBBLE_ITEM = ITEMS.registerItem("pipe_cobble_item",
+            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
+                    BCTransportPipes.cobbleItem, props).registerWithPipeApi());
     public static final DeferredItem<Item> PIPE_STONE_ITEM = ITEMS.registerItem("pipe_stone_item", Item::new);
     public static final DeferredItem<Item> PIPE_QUARTZ_ITEM = ITEMS.registerItem("pipe_quartz_item", Item::new);
     public static final DeferredItem<Item> PIPE_IRON_ITEM = ITEMS.registerItem("pipe_iron_item", Item::new);

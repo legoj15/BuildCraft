@@ -18,16 +18,12 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-
 import com.mojang.math.Axis;
 
 /**
  * Utility for rendering item stacks inside pipes as 3D models.
  * Uses NeoForge 1.21.11 ItemModelResolver + ItemStackRenderState.submit() API.
  */
-@OnlyIn(Dist.CLIENT)
 public class ItemRenderUtil {
 
     private static final Random modelOffsetRandom = new Random(0);
@@ -95,8 +91,8 @@ public class ItemRenderUtil {
 
             currentPoseStack.translate(x + dx, y + dy, z + dz);
 
-            // Scale to pipe item size (0.35x of FIXED = no auto-scale)
-            currentPoseStack.scale(0.35f, 0.35f, 0.35f);
+            // Scale to pipe item size (FIXED display applies ~0.5x, so 0.60 * 0.5 ≈ 0.30 matching 1.12.2)
+            currentPoseStack.scale(0.60f, 0.60f, 0.60f);
 
             // Rotate to face the travel direction
             applyDirectionRotation(currentPoseStack, dir);

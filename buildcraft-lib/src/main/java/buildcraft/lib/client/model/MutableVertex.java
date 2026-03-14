@@ -12,6 +12,7 @@ import org.joml.Vector3f;
 import org.joml.Vector4f;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
@@ -166,6 +167,7 @@ public class MutableVertex {
         bb.addVertex(position_x, position_y, position_z)
           .setColor(colour_r, colour_g, colour_b, colour_a)
           .setUv(tex_u, tex_v)
+          .setOverlay(OverlayTexture.NO_OVERLAY)
           .setUv2(light_block << 4, light_sky << 4)
           .setNormal(normal_x, normal_y, normal_z);
     }

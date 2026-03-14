@@ -71,7 +71,9 @@ public class BCTransportItems {
     public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_WOOD_ITEM = ITEMS.registerItem("pipe_diamond_wood_item",
             props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
                     BCTransportPipes.diaWoodItem, props).registerWithPipeApi());
-    public static final DeferredItem<Item> PIPE_LAPIS_ITEM = ITEMS.registerItem("pipe_lapis_item", Item::new);
+    public static final DeferredItem<ItemPipeHolder> PIPE_LAPIS_ITEM = ITEMS.registerItem("pipe_lapis_item",
+            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
+                    BCTransportPipes.lapisItem, props).registerWithPipeApi());
     public static final DeferredItem<Item> PIPE_DAIZULI_ITEM = ITEMS.registerItem("pipe_daizuli_item", Item::new);
     public static final DeferredItem<Item> PIPE_EMZULI_ITEM = ITEMS.registerItem("pipe_emzuli_item", Item::new);
     public static final DeferredItem<Item> PIPE_STRIPES_ITEM = ITEMS.registerItem("pipe_stripes_item", Item::new);

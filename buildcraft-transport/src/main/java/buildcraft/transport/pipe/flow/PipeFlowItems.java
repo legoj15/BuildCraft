@@ -41,6 +41,7 @@ import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipe.ConnectedType;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.PipeEventItem;
+import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeFlow;
 
 import buildcraft.lib.misc.StackUtil;
@@ -266,6 +267,15 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
     }
 
     // PipeFlow
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T> T getCapability(@Nonnull Object capability, Direction facing) {
+        if (capability == PipeApi.CAP_INJECTABLE) {
+            return (T) this;
+        }
+        return super.getCapability(capability, facing);
+    }
 
     @Override
     public boolean canConnect(Direction face, PipeFlow other) {

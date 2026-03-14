@@ -74,6 +74,15 @@ public class BCBuilders {
             BCBuildersBlockEntities.QUARRY.get(),
             (quarry, direction) -> new MjBatteryEnergyHandler(quarry.getBattery())
         );
+
+        // Item handler capability: expose an empty handler so item transport pipes
+        // recognize the quarry as a valid connection target.
+        // In 1.12.2 this was AutomaticProvidingTransactor via CAP_ITEM_TRANSACTOR.
+        event.registerBlockEntity(
+            Capabilities.Item.BLOCK,
+            BCBuildersBlockEntities.QUARRY.get(),
+            (quarry, direction) -> net.neoforged.neoforge.transfer.EmptyResourceHandler.instance()
+        );
     }
 
 

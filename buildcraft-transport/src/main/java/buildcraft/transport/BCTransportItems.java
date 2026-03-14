@@ -41,8 +41,12 @@ public class BCTransportItems {
     public static final DeferredItem<ItemPipeHolder> PIPE_COBBLE_ITEM = ITEMS.registerItem("pipe_cobble_item",
             props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
                     BCTransportPipes.cobbleItem, props).registerWithPipeApi());
-    public static final DeferredItem<Item> PIPE_STONE_ITEM = ITEMS.registerItem("pipe_stone_item", Item::new);
-    public static final DeferredItem<Item> PIPE_QUARTZ_ITEM = ITEMS.registerItem("pipe_quartz_item", Item::new);
+    public static final DeferredItem<ItemPipeHolder> PIPE_STONE_ITEM = ITEMS.registerItem("pipe_stone_item",
+            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
+                    BCTransportPipes.stoneItem, props).registerWithPipeApi());
+    public static final DeferredItem<ItemPipeHolder> PIPE_QUARTZ_ITEM = ITEMS.registerItem("pipe_quartz_item",
+            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
+                    BCTransportPipes.quartzItem, props).registerWithPipeApi());
     public static final DeferredItem<Item> PIPE_IRON_ITEM = ITEMS.registerItem("pipe_iron_item", Item::new);
     public static final DeferredItem<Item> PIPE_GOLD_ITEM = ITEMS.registerItem("pipe_gold_item", Item::new);
     public static final DeferredItem<Item> PIPE_CLAY_ITEM = ITEMS.registerItem("pipe_clay_item", Item::new);

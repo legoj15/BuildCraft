@@ -35,7 +35,7 @@ public class BCSilicon {
 
         // Register capabilities and creative tab
         modEventBus.addListener(this::registerCapabilities);
-        modEventBus.addListener(this::addCreativeTabItems);
+        modEventBus.addListener(net.neoforged.bus.api.EventPriority.LOWEST, this::addCreativeTabItems);
 
         LOGGER.info("BuildCraft Silicon initialized");
     }

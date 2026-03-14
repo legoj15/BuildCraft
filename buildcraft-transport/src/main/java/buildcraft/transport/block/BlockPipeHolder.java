@@ -114,12 +114,12 @@ public class BlockPipeHolder extends Block implements EntityBlock {
                     double lz = blockHit.getLocation().z - pos.getZ();
 
                     // If the hit point is outside the center's 0.25–0.75 range, it's in an arm
-                    if (ly < 0.25 && pipe.isConnected(Direction.DOWN))  return Shapes.or(CENTER, ARMS[Direction.DOWN.ordinal()]);
-                    if (ly > 0.75 && pipe.isConnected(Direction.UP))    return Shapes.or(CENTER, ARMS[Direction.UP.ordinal()]);
-                    if (lz < 0.25 && pipe.isConnected(Direction.NORTH)) return Shapes.or(CENTER, ARMS[Direction.NORTH.ordinal()]);
-                    if (lz > 0.75 && pipe.isConnected(Direction.SOUTH)) return Shapes.or(CENTER, ARMS[Direction.SOUTH.ordinal()]);
-                    if (lx < 0.25 && pipe.isConnected(Direction.WEST))  return Shapes.or(CENTER, ARMS[Direction.WEST.ordinal()]);
-                    if (lx > 0.75 && pipe.isConnected(Direction.EAST))  return Shapes.or(CENTER, ARMS[Direction.EAST.ordinal()]);
+                    if (ly < 0.25 && pipe.isConnected(Direction.DOWN))  return ARMS[Direction.DOWN.ordinal()];
+                    if (ly > 0.75 && pipe.isConnected(Direction.UP))    return ARMS[Direction.UP.ordinal()];
+                    if (lz < 0.25 && pipe.isConnected(Direction.NORTH)) return ARMS[Direction.NORTH.ordinal()];
+                    if (lz > 0.75 && pipe.isConnected(Direction.SOUTH)) return ARMS[Direction.SOUTH.ordinal()];
+                    if (lx < 0.25 && pipe.isConnected(Direction.WEST))  return ARMS[Direction.WEST.ordinal()];
+                    if (lx > 0.75 && pipe.isConnected(Direction.EAST))  return ARMS[Direction.EAST.ordinal()];
 
                     // Hit is in the center region — return just the center
                     return CENTER;

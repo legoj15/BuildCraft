@@ -22,3 +22,10 @@ The robotics module for BuildCraft 8. (Stub)
     versionRange="*"
     ordering="NONE"
     side="BOTH"
+
+[[dependencies.buildcraftrobotics]]
+    modId="buildcraftfactory"
+    type="optional"
+    versionRange="*"
+    ordering="AFTER"
+    side="BOTH"

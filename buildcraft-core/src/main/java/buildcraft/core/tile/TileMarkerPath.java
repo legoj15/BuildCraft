@@ -7,6 +7,8 @@ package buildcraft.core.tile;
 import com.google.common.collect.ImmutableList;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.core.IPathProvider;
@@ -38,7 +40,11 @@ public class TileMarkerPath extends TileMarker<PathConnection> implements IPathP
             return;
         }
         for (BlockPos pos : getPath()) {
-            level.destroyBlock(pos, true);
+            BlockState markerState = level.getBlockState(pos);
+            if (!markerState.isAir()) {
+                Block.popResource(level, pos, new ItemStack(markerState.getBlock()));
+                level.destroyBlock(pos, false);
+            }
         }
     }
 

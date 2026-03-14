@@ -16,6 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.level.storage.ValueInput;
@@ -140,7 +141,11 @@ public class TileMarkerVolume extends TileMarker<VolumeConnection> implements IT
         if (connection != null) {
             List<BlockPos> allPositions = ImmutableList.copyOf(connection.getMarkerPositions());
             for (BlockPos p : allPositions) {
-                level.destroyBlock(p, true);
+                BlockState markerState = level.getBlockState(p);
+                if (!markerState.isAir()) {
+                    Block.popResource(level, p, new ItemStack(markerState.getBlock()));
+                    level.destroyBlock(p, false);
+                }
             }
         }
     }

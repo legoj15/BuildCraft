@@ -19,6 +19,12 @@ public class BCTransportItems {
     /** Pipe Sealant — used to craft fluid pipes from item pipes. */
     public static final DeferredItem<Item> WATERPROOF = ITEMS.registerItem("waterproof", Item::new);
 
+    /** Plug — blocks a pipe face, preventing connections. */
+    public static final DeferredItem<Item> PLUG_BLOCKER = ITEMS.registerItem("plug_blocker", Item::new);
+
+    /** Power Adaptor Plug — allows MJ to pass into a pipe from adjacents. */
+    public static final DeferredItem<Item> PLUG_POWER_ADAPTOR = ITEMS.registerItem("plug_power_adaptor", Item::new);
+
     // -- Pipe Items --
     // PIPE_WOOD_ITEM uses ItemPipeHolder to tie the item to the pipe_holder block + pipe definition.
     // Other pipes remain simple Item stubs until they are individually ported.

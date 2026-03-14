@@ -14,25 +14,37 @@ import buildcraft.api.statements.StatementManager;
 import buildcraft.lib.misc.ColourUtil;
 
 import buildcraft.transport.pipe.behaviour.PipeBehaviourEmzuli.SlotIndex;
+import buildcraft.transport.pipe.behaviour.PipeBehaviourLimiter;
 import buildcraft.transport.statements.ActionExtractionPreset;
 import buildcraft.transport.statements.ActionParameterSignal;
 import buildcraft.transport.statements.ActionPipeColor;
 import buildcraft.transport.statements.ActionPipeDirection;
 import buildcraft.transport.statements.ActionPipeSignal;
+import buildcraft.transport.statements.ActionPowerLimit;
+import buildcraft.transport.statements.ActionProviderPipes;
+import buildcraft.transport.statements.TriggerFluidsTraversing;
 import buildcraft.transport.statements.TriggerItemsTraversing;
 import buildcraft.transport.statements.TriggerParameterSignal;
 import buildcraft.transport.statements.TriggerPipeSignal;
+import buildcraft.transport.statements.TriggerPowerRequested;
+import buildcraft.transport.statements.TriggerProviderPipes;
 
-/** Instantiates and holds all transport-module statement singletons.
- * Power-limit statements are excluded until PipeFlowPower/PipeFlowRedstoneFlux are ported. */
+/** Instantiates and holds all transport-module statement singletons. */
 public class BCTransportStatements {
 
     public static final TriggerPipeSignal[] TRIGGER_PIPE_SIGNAL;
     public static final TriggerItemsTraversing TRIGGER_ITEMS_TRAVERSING;
+    public static final TriggerFluidsTraversing TRIGGER_FLUIDS_TRAVERSING;
+    public static final TriggerPowerRequested TRIGGER_POWER_REQUESTED;
     public static final ActionPipeSignal[] ACTION_PIPE_SIGNAL;
     public static final ActionPipeColor[] ACTION_PIPE_COLOUR;
     public static final ActionExtractionPreset[] ACTION_EXTRACTION_PRESET;
     public static final ActionPipeDirection[] ACTION_PIPE_DIRECTION;
+
+    public static final ActionPowerLimit[] ACTION_IRON_POWER_LIMIT;
+    public static final ActionPowerLimit[] ACTION_DIAMOND_POWER_LIMIT;
+    public static final ActionPowerLimit[] ACTION_IRON_RF_LIMIT;
+    public static final ActionPowerLimit[] ACTION_DIAMOND_RF_LIMIT;
 
     static {
         TRIGGER_PIPE_SIGNAL = new TriggerPipeSignal[2 * ColourUtil.COLOURS.length];
@@ -62,13 +74,29 @@ public class BCTransportStatements {
         }
 
         TRIGGER_ITEMS_TRAVERSING = new TriggerItemsTraversing();
+        TRIGGER_FLUIDS_TRAVERSING = new TriggerFluidsTraversing();
+        TRIGGER_POWER_REQUESTED = new TriggerPowerRequested();
+
+        int numLevels = PipeBehaviourLimiter.MAX_SHIFT + 1;
+
+        ACTION_IRON_POWER_LIMIT = new ActionPowerLimit[numLevels];
+        ACTION_DIAMOND_POWER_LIMIT = new ActionPowerLimit[numLevels];
+        ACTION_IRON_RF_LIMIT = new ActionPowerLimit[numLevels];
+        ACTION_DIAMOND_RF_LIMIT = new ActionPowerLimit[numLevels];
+
+        for (int i = 0; i < numLevels; i++) {
+            ACTION_IRON_POWER_LIMIT[i] = new ActionPowerLimit.ActionIronPowerLimit(i);
+            ACTION_DIAMOND_POWER_LIMIT[i] = new ActionPowerLimit.ActionDiamondPowerLimit(i);
+            ACTION_IRON_RF_LIMIT[i] = new ActionPowerLimit.ActionIronRfLimit(i);
+            ACTION_DIAMOND_RF_LIMIT[i] = new ActionPowerLimit.ActionDiamondRfLimit(i);
+        }
 
         StatementManager.registerParameter(TriggerParameterSignal::readFromNbt, TriggerParameterSignal::readFromBuf);
         StatementManager.registerParameter(ActionParameterSignal::readFromNbt);
     }
 
     public static void preInit() {
-        // Trigger/action providers are excluded until ActionProviderPipes and TriggerProviderPipes are ported
-        // (they depend on PipeFlowPower, PipeFlowRedstoneFlux, BCTransportConfig)
+        StatementManager.registerActionProvider(ActionProviderPipes.INSTANCE);
+        StatementManager.registerTriggerProvider(TriggerProviderPipes.INSTANCE);
     }
 }

@@ -16,10 +16,10 @@ import buildcraft.lib.client.sprite.SpriteHolderRegistry;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.ColourUtil;
 
+import buildcraft.transport.pipe.behaviour.PipeBehaviourLimiter;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourEmzuli.SlotIndex;
 
-/** Sprite holders for all transport-module statement icons and pipe overlay sprites.
- * Power-limit sprites are excluded until PipeFlowPower/PipeFlowRedstoneFlux are ported. */
+/** Sprite holders for all transport-module statement icons and pipe overlay sprites. */
 public class BCTransportSprites {
     public static final SpriteHolder EMPTY_FILTERED_BUFFER_SLOT;
     public static final SpriteHolder NOTHING_FILTERED_BUFFER_SLOT;
@@ -28,6 +28,11 @@ public class BCTransportSprites {
     public static final SpriteHolder PIPE_COLOUR_BORDER_INNER;
 
     public static final SpriteHolder TRIGGER_ITEMS_TRAVERSING;
+    public static final SpriteHolder TRIGGER_FLUIDS_TRAVERSING;
+    public static final SpriteHolder TRIGGER_POWER_REQUESTED;
+
+    public static final SpriteHolder[] POWER_LIMIT;
+    public static final SpriteHolder[] POWER_LIMIT_RF;
 
     public static final SpriteHolder[] ACTION_PIPE_COLOUR;
     public static final EnumMap<SlotIndex, SpriteHolder> ACTION_EXTRACTION_PRESET;
@@ -73,6 +78,16 @@ public class BCTransportSprites {
         POWER_FLOW = getHolder("pipes/power_flow");
 
         TRIGGER_ITEMS_TRAVERSING = getHolder("transport", "triggers/trigger_pipecontents_containsitems");
+        TRIGGER_FLUIDS_TRAVERSING = getHolder("transport", "triggers/trigger_pipecontents_containsfluids");
+        TRIGGER_POWER_REQUESTED = getHolder("transport", "triggers/trigger_pipecontents_requestsenergy");
+
+        int numLevels = PipeBehaviourLimiter.MAX_SHIFT + 1;
+        POWER_LIMIT = new SpriteHolder[numLevels];
+        POWER_LIMIT_RF = new SpriteHolder[numLevels];
+        for (int i = 0; i < numLevels; i++) {
+            POWER_LIMIT[i] = getHolder("transport", "triggers/trigger_limiter_" + i);
+            POWER_LIMIT_RF[i] = getHolder("transport", "triggers/trigger_limiter_rf_" + i);
+        }
     }
 
     private static SpriteHolder getHolder(String loc) {

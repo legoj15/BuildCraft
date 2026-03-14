@@ -77,6 +77,10 @@ public class BCTransportPipes {
     public static PipeDefinition emzuliItem;
     public static PipeDefinition stripesItem;
 
+    // RF pipe definitions — null until RF pipe type registration is ported
+    public static PipeDefinition ironRf;
+    public static PipeDefinition diamondRf;
+
     public static void preInit() {
         // Initialize flow types
         PipeApi.flowStructure = new PipeFlowType(PipeFlowStructure::new, PipeFlowStructure::new);

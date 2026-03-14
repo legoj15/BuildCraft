@@ -87,20 +87,32 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
                 pipe = new Pipe(this, pipeTag);
                 eventBus.registerHandler(pipe.behaviour);
                 eventBus.registerHandler(pipe.flow);
+                org.slf4j.LoggerFactory.getLogger(TilePipeHolder.class)
+                    .info("[PipeDebug] loadAdditional: pipe created from NBT at {} (def={})", worldPosition, pipe.getDefinition().identifier);
             } catch (InvalidInputDataException e) {
-                e.printStackTrace();
+                org.slf4j.LoggerFactory.getLogger(TilePipeHolder.class)
+                    .error("[PipeDebug] loadAdditional: FAILED to create pipe from NBT at {}", worldPosition, e);
                 pipe = null;
             }
         });
+        if (pipe == null) {
+            org.slf4j.LoggerFactory.getLogger(TilePipeHolder.class)
+                .warn("[PipeDebug] loadAdditional: pipe is NULL after load at {} (no 'pipe' key in NBT?)", worldPosition);
+        }
     }
 
     @Override
     public void onLoad() {
         super.onLoad();
-        // Refresh model data so the baked model has access to this tile on chunk load.
-        // Without this, pipes loaded from disk are invisible until broken and replaced.
+        if (pipe != null) {
+            pipe.onLoad();
+        }
+        // Refresh model data and schedule render update
         requestModelDataUpdate();
         scheduleRenderUpdate = true;
+        boolean isClient = level != null && level.isClientSide();
+        org.slf4j.LoggerFactory.getLogger(TilePipeHolder.class)
+            .info("[PipeDebug] onLoad: pipe={} at {} (client={})", pipe != null ? pipe.getDefinition().identifier : "NULL", worldPosition, isClient);
     }
 
     // --- Client sync ---

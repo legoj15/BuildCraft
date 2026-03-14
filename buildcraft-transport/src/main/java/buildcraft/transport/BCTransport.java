@@ -1,5 +1,6 @@
 package buildcraft.transport;
 
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -31,8 +32,8 @@ public class BCTransport {
             modEventBus.register(buildcraft.transport.client.BCTransportClient.class);
         }
 
-        // Register creative tab
-        modEventBus.addListener(this::addCreativeTabItems);
+        // Register creative tab — LOW priority so transport items appear after robotics (Zone Planner)
+        modEventBus.addListener(EventPriority.LOW, this::addCreativeTabItems);
 
         LOGGER.info("BuildCraft Transport initialized");
     }

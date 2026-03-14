@@ -96,6 +96,17 @@ public class PipeBehaviourWood extends PipeBehaviourDirectional implements IMjRe
         return battery.addPowerChecking(microJoules, simulate);
     }
 
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T> T getCapability(@Nonnull Object capability, Direction facing) {
+        // Expose this wood pipe as an MJ receiver/connector so engines can discover it
+        // (matches 1.12.2 MjCapabilityHelper behavior)
+        if (capability == MjAPI.CAP_RECEIVER || capability == MjAPI.CAP_CONNECTOR) {
+            return (T) this;
+        }
+        return super.getCapability(capability, facing);
+    }
+
     // Prevent connecting to another wood pipe
     @Override
     public boolean canConnect(Direction face, PipeBehaviour other) {

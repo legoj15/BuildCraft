@@ -39,6 +39,7 @@ import buildcraft.api.transport.pipe.PipeEventItem;
 import buildcraft.api.transport.pipe.PipeFlow;
 
 import buildcraft.lib.misc.StackUtil;
+import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.misc.data.DelayedList;
 
 import buildcraft.transport.pipe.behaviour.PipeBehaviourStone;
@@ -165,9 +166,9 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
 
     @Override
     public boolean canConnect(Direction face, BlockEntity oTile) {
-        // Simplified — check if the tile has an item handler capability
-        // Full implementation would use ItemTransactorHelper
-        return oTile != null;
+        // Only connect to tiles that have an item handler capability
+        // (matches 1.12.2: ItemTransactorHelper.getTransactor(oTile) != NoSpaceTransactor.INSTANCE)
+        return pipe.getHolder().getCapabilityFromPipe(face, CapUtil.CAP_ITEMS) != null;
     }
 
     @Override

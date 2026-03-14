@@ -6,10 +6,16 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import buildcraft.api.mj.IMjConnector;
+import buildcraft.api.mj.IMjReceiver;
+import buildcraft.api.mj.MjAPI;
+import buildcraft.transport.pipe.Pipe;
 
 @Mod(BCTransport.MODID)
 public class BCTransport {
@@ -38,6 +44,9 @@ public class BCTransport {
 
         // Register creative tab — LOW priority so transport items appear after core/factory/silicon items
         modEventBus.addListener(EventPriority.LOW, this::addCreativeTabItems);
+
+        // Register NeoForge capabilities for pipe holders
+        modEventBus.addListener(this::registerCapabilities);
 
         LOGGER.info("BuildCraft Transport initialized");
     }
@@ -96,5 +105,32 @@ public class BCTransport {
             event.accept(BCTransportItems.PIPE_DIAMOND_POWER.get());
             event.accept(BCTransportItems.PIPE_DIAMOND_WOOD_POWER.get());
         }
+    }
+
+    private void registerCapabilities(RegisterCapabilitiesEvent event) {
+        // MJ Receiver — needed for engines to discover wood pipes as power consumers
+        event.registerBlockEntity(
+            MjAPI.CAP_RECEIVER, BCTransportBlockEntities.PIPE_HOLDER.get(),
+            (tile, side) -> {
+                Pipe pipe = tile.getPipe();
+                if (pipe == null || side == null) return null;
+                // Check behaviour first (wood pipe), then flow (power pipe)
+                IMjReceiver r = pipe.getBehaviour().getCapability(MjAPI.CAP_RECEIVER, side);
+                if (r != null) return r;
+                return pipe.getFlow().getCapability(MjAPI.CAP_RECEIVER, side);
+            }
+        );
+
+        // MJ Connector — needed for power pipe connection checks
+        event.registerBlockEntity(
+            MjAPI.CAP_CONNECTOR, BCTransportBlockEntities.PIPE_HOLDER.get(),
+            (tile, side) -> {
+                Pipe pipe = tile.getPipe();
+                if (pipe == null || side == null) return null;
+                IMjConnector c = pipe.getBehaviour().getCapability(MjAPI.CAP_CONNECTOR, side);
+                if (c != null) return c;
+                return pipe.getFlow().getCapability(MjAPI.CAP_CONNECTOR, side);
+            }
+        );
     }
 }

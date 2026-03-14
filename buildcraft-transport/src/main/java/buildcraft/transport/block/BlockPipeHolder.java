@@ -42,13 +42,16 @@ public class BlockPipeHolder extends Block implements EntityBlock {
 
     // Center box: 4/16 → 12/16 (i.e. 0.25→0.75)
     private static final VoxelShape CENTER = Block.box(4, 4, 4, 12, 12, 12);
-    // Connection arms for each direction
-    private static final VoxelShape ARM_DOWN  = Block.box(4, 0, 4, 12, 4, 12);
-    private static final VoxelShape ARM_UP    = Block.box(4, 12, 4, 12, 16, 12);
-    private static final VoxelShape ARM_NORTH = Block.box(4, 4, 0, 12, 12, 4);
-    private static final VoxelShape ARM_SOUTH = Block.box(4, 4, 12, 12, 12, 16);
-    private static final VoxelShape ARM_WEST  = Block.box(0, 4, 4, 4, 12, 12);
-    private static final VoxelShape ARM_EAST  = Block.box(12, 4, 4, 16, 12, 12);
+    // Connection arms for each direction.
+    // A 0.01-pixel epsilon gap prevents Shapes.or() from merging arms with the center,
+    // giving the wireframe outline visible segment edges like 1.12.2.
+    private static final double E = 0.01;
+    private static final VoxelShape ARM_DOWN  = Block.box(4, 0, 4, 12, 4 - E, 12);
+    private static final VoxelShape ARM_UP    = Block.box(4, 12 + E, 4, 12, 16, 12);
+    private static final VoxelShape ARM_NORTH = Block.box(4, 4, 0, 12, 12, 4 - E);
+    private static final VoxelShape ARM_SOUTH = Block.box(4, 4, 12 + E, 12, 12, 16);
+    private static final VoxelShape ARM_WEST  = Block.box(0, 4, 4, 4 - E, 12, 12);
+    private static final VoxelShape ARM_EAST  = Block.box(12 + E, 4, 4, 16, 12, 12);
     private static final VoxelShape[] ARMS = { ARM_DOWN, ARM_UP, ARM_NORTH, ARM_SOUTH, ARM_WEST, ARM_EAST };
 
     public BlockPipeHolder(Properties props) {
@@ -132,25 +135,22 @@ public class BlockPipeHolder extends Block implements EntityBlock {
 
     /**
      * Determines which pipe segment (center or directional arm) the player clicked on.
-     * Converts the hit location to block-local coordinates and tests against each connected
-     * arm's AABB. Returns the matching {@link buildcraft.api.core.EnumPipePart}, or CENTER
-     * if no arm contains the hit point.
+     * The center occupies 0.25–0.75 in all axes; if the hit point is outside that range
+     * in any axis, it must be in the arm extending in that direction.
      */
     private static buildcraft.api.core.EnumPipePart getHitPart(TilePipeHolder tile, BlockHitResult hitResult) {
-        double localX = hitResult.getLocation().x - hitResult.getBlockPos().getX();
-        double localY = hitResult.getLocation().y - hitResult.getBlockPos().getY();
-        double localZ = hitResult.getLocation().z - hitResult.getBlockPos().getZ();
+        double lx = hitResult.getLocation().x - hitResult.getBlockPos().getX();
+        double ly = hitResult.getLocation().y - hitResult.getBlockPos().getY();
+        double lz = hitResult.getLocation().z - hitResult.getBlockPos().getZ();
 
         var pipe = tile.getPipe();
         if (pipe != null) {
-            for (Direction dir : Direction.values()) {
-                if (pipe.isConnected(dir)) {
-                    VoxelShape arm = ARMS[dir.ordinal()];
-                    if (arm.bounds().contains(localX, localY, localZ)) {
-                        return buildcraft.api.core.EnumPipePart.fromFacing(dir);
-                    }
-                }
-            }
+            if (ly < 0.25 && pipe.isConnected(Direction.DOWN))  return buildcraft.api.core.EnumPipePart.fromFacing(Direction.DOWN);
+            if (ly > 0.75 && pipe.isConnected(Direction.UP))    return buildcraft.api.core.EnumPipePart.fromFacing(Direction.UP);
+            if (lz < 0.25 && pipe.isConnected(Direction.NORTH)) return buildcraft.api.core.EnumPipePart.fromFacing(Direction.NORTH);
+            if (lz > 0.75 && pipe.isConnected(Direction.SOUTH)) return buildcraft.api.core.EnumPipePart.fromFacing(Direction.SOUTH);
+            if (lx < 0.25 && pipe.isConnected(Direction.WEST))  return buildcraft.api.core.EnumPipePart.fromFacing(Direction.WEST);
+            if (lx > 0.75 && pipe.isConnected(Direction.EAST))  return buildcraft.api.core.EnumPipePart.fromFacing(Direction.EAST);
         }
         return buildcraft.api.core.EnumPipePart.CENTER;
     }

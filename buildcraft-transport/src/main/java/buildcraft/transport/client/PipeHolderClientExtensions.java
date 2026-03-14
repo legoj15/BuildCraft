@@ -1,5 +1,7 @@
 package buildcraft.transport.client;
 
+import net.minecraft.client.Minecraft;
+
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.client.particle.SingleQuadParticle;
@@ -76,6 +78,40 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
         // For hit effects, we let vanilla handle the particle spawning
         // but the destroy effect (which is much more visible) uses the correct texture.
         return false;
+    }
+
+    /**
+     * Spawns a sprint particle with the correct pipe texture.
+     * Called from BlockPipeHolder.addRunningEffects.
+     * @return true if a particle was spawned, false to fall back to vanilla.
+     */
+    public static boolean spawnRunningParticle(Level level, BlockPos pos, double entityX, double entityZ,
+                                               double entityWidth, double motionX, double motionZ, double minY) {
+        if (!level.isClientSide()) return false;
+        var be = level.getBlockEntity(pos);
+        if (!(be instanceof TilePipeHolder tile) || tile.getPipe() == null) return false;
+
+        PipeDefinition def = tile.getPipe().getDefinition();
+        TextureAtlasSprite sprite = null;
+        if (def.textures != null && def.textures.length > 0) {
+            sprite = SpriteUtil.getSprite(def.textures[0]);
+            if (sprite == SpriteUtil.missingSprite()) sprite = null;
+        }
+        if (sprite == null) return false;
+
+        var random = level.getRandom();
+        double x = entityX + (random.nextFloat() - 0.5) * entityWidth;
+        double y = minY + 0.1;
+        double z = entityZ + (random.nextFloat() - 0.5) * entityWidth;
+
+        PipeBreakParticle particle = new PipeBreakParticle(
+            (ClientLevel) level, x, y, z,
+            -motionX * 4.0, 1.5, -motionZ * 4.0,
+            sprite
+        );
+        particle.setLifetime(particle.getLifetime() / 2);
+        Minecraft.getInstance().particleEngine.add(particle);
+        return true;
     }
 
     /**

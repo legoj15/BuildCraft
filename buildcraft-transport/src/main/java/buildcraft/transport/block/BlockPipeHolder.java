@@ -166,26 +166,16 @@ public class BlockPipeHolder extends Block implements EntityBlock {
     }
 
     // Sprint particles — pipes use INVISIBLE render shape so vanilla won't create particles.
-    // We override to spawn them manually, matching 1.12.2 behaviour.
+    // We delegate to PipeHolderClientExtensions which resolves the correct pipe-specific texture.
     @Override
     public boolean addRunningEffects(BlockState state, Level level, BlockPos pos, Entity entity) {
         if (level.isClientSide()) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TilePipeHolder tile && tile.getPipe() != null) {
-                // Spawn a BLOCK particle using the block state — the client particle engine
-                // will use the pipe's particle texture (set via our block model).
-                var random = level.getRandom();
-                double x = entity.getX() + (random.nextFloat() - 0.5) * entity.getBbWidth();
-                double y = entity.getBoundingBox().minY + 0.1;
-                double z = entity.getZ() + (random.nextFloat() - 0.5) * entity.getBbWidth();
-                level.addParticle(
-                    new net.minecraft.core.particles.BlockParticleOption(
-                        net.minecraft.core.particles.ParticleTypes.BLOCK, state),
-                    x, y, z,
-                    -entity.getDeltaMovement().x * 4.0, 1.5, -entity.getDeltaMovement().z * 4.0
-                );
-                return true;
-            }
+            return buildcraft.transport.client.PipeHolderClientExtensions.spawnRunningParticle(
+                level, pos,
+                entity.getX(), entity.getZ(), entity.getBbWidth(),
+                entity.getDeltaMovement().x, entity.getDeltaMovement().z,
+                entity.getBoundingBox().minY
+            );
         }
         return false;
     }

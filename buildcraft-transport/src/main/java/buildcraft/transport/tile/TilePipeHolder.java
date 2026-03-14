@@ -210,8 +210,31 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     @Nullable
     @Override
+    @SuppressWarnings("unchecked")
     public <T> T getCapabilityFromPipe(Direction side, @Nonnull Object capability) {
-        return null; // Capabilities not yet ported
+        if (level == null || side == null) return null;
+        BlockPos neighborPos = worldPosition.relative(side);
+        if (capability instanceof net.neoforged.neoforge.capabilities.BlockCapability<?, ?> blockCap) {
+            // Route block capabilities to the NeoForge capability system
+            try {
+                return (T) level.getCapability(
+                    (net.neoforged.neoforge.capabilities.BlockCapability) blockCap,
+                    neighborPos, side.getOpposite());
+            } catch (ClassCastException e) {
+                return null;
+            }
+        }
+        // For non-BlockCapability tokens (e.g. MjAPI.CAP_RECEIVER),
+        // check if the neighboring tile implements the requested interface directly
+        BlockEntity neighbor = level.getBlockEntity(neighborPos);
+        if (neighbor == null) return null;
+        // MJ capabilities: check if the neighbor pipe's flow exposes them
+        IPipe neighborPipe = getNeighbourPipe(side);
+        if (neighborPipe != null && neighborPipe.getFlow() != null) {
+            T result = neighborPipe.getFlow().getCapability(capability, side.getOpposite());
+            if (result != null) return result;
+        }
+        return null;
     }
 
     @Override

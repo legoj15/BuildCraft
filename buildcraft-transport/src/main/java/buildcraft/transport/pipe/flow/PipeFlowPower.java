@@ -119,9 +119,8 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
     @Override
     public boolean canConnect(Direction face, BlockEntity oTile) {
         // Check if tile has MJ connector capability on opposite side
-        IMjPassiveProvider provider = null; // capability lookup stubbed
-        IMjConnector connector = null; // capability lookup stubbed
-        return false; // Fully functional after capability conversion is ported
+        IMjConnector connector = pipe.getHolder().getCapabilityFromPipe(face, MjAPI.CAP_CONNECTOR);
+        return connector != null;
     }
 
     @Override

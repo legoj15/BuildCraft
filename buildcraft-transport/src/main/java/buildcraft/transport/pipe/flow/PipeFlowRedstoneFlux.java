@@ -37,6 +37,7 @@ import buildcraft.api.transport.pipe.PipeApi.RedstoneFluxTransferInfo;
 import buildcraft.api.transport.pipe.PipeEventRedstoneFlux;
 import buildcraft.api.transport.pipe.PipeFlow;
 
+import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.misc.data.AverageInt;
 
@@ -111,8 +112,7 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
 
     @Override
     public boolean canConnect(Direction face, BlockEntity oTile) {
-        // Capability lookup stubbed — will return true when energy cap lookup is ported
-        return false;
+        return pipe.getHolder().getCapabilityFromPipe(face, CapUtil.CAP_ENERGY) != null;
     }
 
     @Override

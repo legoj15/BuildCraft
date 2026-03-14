@@ -138,8 +138,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
 
     @Override
     public boolean canConnect(Direction face, BlockEntity oTile) {
-        // Capability lookup stubbed — will use NeoForge fluid capability when ported
-        return false;
+        return pipe.getHolder().getCapabilityFromPipe(face, CapUtil.CAP_FLUIDS) != null;
     }
 
     @Override

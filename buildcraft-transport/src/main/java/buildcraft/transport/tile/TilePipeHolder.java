@@ -94,6 +94,15 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         });
     }
 
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        // Refresh model data so the baked model has access to this tile on chunk load.
+        // Without this, pipes loaded from disk are invisible until broken and replaced.
+        requestModelDataUpdate();
+        scheduleRenderUpdate = true;
+    }
+
     // --- Client sync ---
 
     @Override

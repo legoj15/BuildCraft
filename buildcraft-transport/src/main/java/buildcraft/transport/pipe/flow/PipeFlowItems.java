@@ -47,6 +47,8 @@ import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.misc.data.DelayedList;
 
+import buildcraft.transport.net.PipeItemMessageQueue;
+import buildcraft.transport.net.MessageMultiPipeItem.TravellingItemData;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourStone;
 
 public final class PipeFlowItems extends PipeFlow implements IFlowItems {
@@ -92,10 +94,36 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
         return nbt;
     }
 
-    // Network — stubbed (PipeItemMessageQueue not yet ported)
+    // Network
 
     void sendItemDataToClient(TravellingItem item) {
-        // Stub — networking not yet ported
+        Level world = pipe.getHolder().getPipeWorld();
+        if (world.isClientSide()) return;
+        int ttd = item.timeToDest > Short.MAX_VALUE ? Short.MAX_VALUE : item.timeToDest;
+        PipeItemMessageQueue.appendTravellingItem(
+            world, pipe.getHolder().getPipePos(),
+            item.stack, item.stack.getCount(),
+            item.toCenter, item.side, item.colour, ttd
+        );
+    }
+
+    /** Called on the client when a batched item packet arrives. */
+    public void handleClientReceivedItems(List<TravellingItemData> list) {
+        for (TravellingItemData data : list) {
+            handleClientReceivedItem(data);
+        }
+    }
+
+    private void handleClientReceivedItem(TravellingItemData data) {
+        TravellingItem item = new TravellingItem(data.stack);
+        item.stackSize = data.stackCount;
+        item.toCenter = data.toCenter;
+        item.side = data.side;
+        item.colour = data.colour;
+        item.timeToDest = data.timeToDest;
+        item.tickStarted = pipe.getHolder().getPipeWorld().getGameTime() + 1;
+        item.tickFinished = item.tickStarted + item.timeToDest;
+        items.add(item.timeToDest + 1, item);
     }
 
     @Override

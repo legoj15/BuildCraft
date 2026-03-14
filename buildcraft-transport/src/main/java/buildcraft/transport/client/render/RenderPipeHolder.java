@@ -30,6 +30,7 @@ import buildcraft.api.transport.pipe.PipeFlow;
 import buildcraft.api.transport.pluggable.IPlugDynamicRenderer;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
+import buildcraft.lib.client.render.ItemRenderUtil;
 import buildcraft.transport.client.PipeRegistryClient;
 import buildcraft.transport.client.model.ModelPipe;
 import buildcraft.transport.pipe.Pipe;
@@ -94,8 +95,13 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         // --- Render pluggables ---
         renderPluggables(pipe, 0, 0, 0, 0, buffer);
 
+        // --- Set up ItemRenderUtil batch state for item flow rendering ---
+        ItemRenderUtil.beginItemBatch(poseStack, collector, light);
+
         // --- Render flow + behaviour content ---
         renderContents(pipe, 0, 0, 0, 0, buffer);
+
+        ItemRenderUtil.endItemBatch();
 
         // Flush the buffer — without this, quads are enqueued but never drawn
         bufferSource.endBatch();

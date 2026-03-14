@@ -12,10 +12,12 @@ import org.joml.Vector3f;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.transport.pipe.IPipeFlowRenderer;
@@ -23,14 +25,15 @@ import buildcraft.api.transport.pipe.IPipeFlowRenderer;
 import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.ModelUtil.UvFaceData;
 import buildcraft.lib.client.model.MutableQuad;
+import buildcraft.lib.client.render.ItemRenderUtil;
 import buildcraft.lib.misc.ColourUtil;
 
 import buildcraft.transport.BCTransportSprites;
 import buildcraft.transport.pipe.flow.PipeFlowItems;
 import buildcraft.transport.pipe.flow.TravellingItem;
 
-/** Renders items travelling through item pipes. Currently only renders the colour
- *  overlay box — full item rendering requires ItemRenderUtil which isn't yet ported. */
+/** Renders items travelling through item pipes. Renders 3D item models and
+ *  colour overlay boxes for dye-tagged items. */
 public enum PipeFlowRendererItems implements IPipeFlowRenderer<PipeFlowItems> {
     INSTANCE;
 
@@ -60,16 +63,28 @@ public enum PipeFlowRendererItems implements IPipeFlowRenderer<PipeFlowItems> {
         Level world = flow.pipe.getHolder().getPipeWorld();
         if (world == null) return;
         long now = world.getGameTime();
+        BlockPos pipePos = flow.pipe.getHolder().getPipePos();
+        int lightc = world.getBrightness(LightLayer.BLOCK, pipePos)
+                | (world.getBrightness(LightLayer.SKY, pipePos) << 16);
 
         List<TravellingItem> toRender = flow.getAllItemsForRender();
 
         for (TravellingItem item : toRender) {
             Vec3 pos = item.getRenderPosition(BlockPos.ZERO, now, partialTicks, flow);
 
-            // TODO: Render the actual item stack when ItemRenderUtil is ported
-            // ItemStack stack = item.clientItemLink.get();
-            // if (stack != null && !stack.isEmpty()) { ... }
+            // Render the actual item stack model
+            ItemStack stack = item.clientItemLink.get();
+            if (stack == null || stack.isEmpty()) {
+                // Fallback: try the server-side stack field (works for items arriving via packet)
+                stack = item.getStack();
+            }
+            if (stack != null && !stack.isEmpty()) {
+                ItemRenderUtil.renderItemStack(x + pos.x, y + pos.y, z + pos.z,
+                        stack, item.stackSize > 0 ? item.stackSize : stack.getCount(),
+                        lightc, item.getRenderDirection(now, partialTicks), bb);
+            }
 
+            // Render colour overlay box for dye-tagged items
             if (item.colour != null) {
                 int col = ColourUtil.getLightHex(item.colour);
                 int r = (col >> 16) & 0xFF;
@@ -80,14 +95,12 @@ public enum PipeFlowRendererItems implements IPipeFlowRenderer<PipeFlowItems> {
                     MutableQuad q2 = new MutableQuad(q);
                     q2.lighti(15, 15);
                     q2.multColouri(r, g, b, 255);
-                    // Translate to item position
-                    q2.vertex_0.translatef((float)(x + pos.x), (float)(y + pos.y), (float)(z + pos.z));
-                    q2.vertex_1.translatef((float)(x + pos.x), (float)(y + pos.y), (float)(z + pos.z));
-                    q2.vertex_2.translatef((float)(x + pos.x), (float)(y + pos.y), (float)(z + pos.z));
-                    q2.vertex_3.translatef((float)(x + pos.x), (float)(y + pos.y), (float)(z + pos.z));
+                    q2.translatef((float)(x + pos.x), (float)(y + pos.y), (float)(z + pos.z));
                     q2.render(bb);
                 }
             }
         }
+
+        ItemRenderUtil.endItemBatch();
     }
 }

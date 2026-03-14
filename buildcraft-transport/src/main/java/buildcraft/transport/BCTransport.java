@@ -7,7 +7,11 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +19,8 @@ import org.slf4j.LoggerFactory;
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
+import buildcraft.transport.net.MessageMultiPipeItem;
+import buildcraft.transport.net.PipeItemMessageQueue;
 import buildcraft.transport.pipe.Pipe;
 
 @Mod(BCTransport.MODID)
@@ -47,6 +53,13 @@ public class BCTransport {
 
         // Register NeoForge capabilities for pipe holders
         modEventBus.addListener(this::registerCapabilities);
+
+        // Register network payloads
+        modEventBus.addListener(this::registerPayloads);
+
+        // Register server tick event for flushing pipe item packets
+        NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class,
+                event -> PipeItemMessageQueue.serverTick());
 
         LOGGER.info("BuildCraft Transport initialized");
     }
@@ -105,6 +118,15 @@ public class BCTransport {
             event.accept(BCTransportItems.PIPE_DIAMOND_POWER.get());
             event.accept(BCTransportItems.PIPE_DIAMOND_WOOD_POWER.get());
         }
+    }
+
+    private void registerPayloads(RegisterPayloadHandlersEvent event) {
+        final PayloadRegistrar registrar = event.registrar("1");
+        registrar.playToClient(
+                MessageMultiPipeItem.TYPE,
+                MessageMultiPipeItem.STREAM_CODEC,
+                MessageMultiPipeItem::handle
+        );
     }
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {

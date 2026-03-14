@@ -192,6 +192,12 @@ public class TravellingItem {
         return true;
     }
 
+    /** Returns the server-side ItemStack. Used as a fallback when rendering items
+     *  that were created from direct packet data rather than the cache link system. */
+    public ItemStack getStack() {
+        return stack;
+    }
+
     // EnumSet serialization helpers
 
     private static <E extends Enum<E>> net.minecraft.nbt.ListTag writeEnumSet(EnumSet<E> set, Class<E> clazz) {

@@ -26,6 +26,8 @@ public class BCTransportClient {
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(BCTransportBlockEntities.PIPE_HOLDER.get(), RenderPipeHolder::new);
+        // Register flow renderers so PipeRegistryClient can dispatch render calls
+        registerFlowRenderers();
     }
 
     /** Called during mod init to register pipe flow renderers. */

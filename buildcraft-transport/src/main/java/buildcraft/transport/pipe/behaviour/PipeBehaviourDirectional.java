@@ -115,7 +115,8 @@ public abstract class PipeBehaviourDirectional extends PipeBehaviour {
             return;
         }
         this.currentDir = EnumPipePart.fromFacing(setTo);
-        if (!pipe.getHolder().getPipeWorld().isClientSide()) {
+        // Guard: level may be null during loadAdditional() (deserialization before setLevel)
+        if (pipe.getHolder().getPipeWorld() != null && !pipe.getHolder().getPipeWorld().isClientSide()) {
             pipe.getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
         }
     }

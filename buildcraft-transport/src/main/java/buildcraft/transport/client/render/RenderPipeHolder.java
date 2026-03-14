@@ -86,7 +86,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         poseStack.pushPose();
 
         // --- Render pipe body (static model from cache) ---
-        renderPipeBody(pipe, buffer, light);
+        renderPipeBody(pipe, poseStack, buffer, light);
 
         // --- Render pluggables ---
         renderPluggables(pipe, 0, 0, 0, 0, buffer);
@@ -99,8 +99,8 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
     }
 
     /** Emit the cached pipe body quads (cutout layer). */
-    private static void renderPipeBody(TilePipeHolder pipe, VertexConsumer buffer, int light) {
-        ModelPipe.renderDirect(pipe, buffer, light);
+    private static void renderPipeBody(TilePipeHolder pipe, PoseStack poseStack, VertexConsumer buffer, int light) {
+        ModelPipe.renderDirect(pipe, poseStack.last(), buffer, light);
     }
 
     private static void renderPluggables(TilePipeHolder pipe, double x, double y, double z,

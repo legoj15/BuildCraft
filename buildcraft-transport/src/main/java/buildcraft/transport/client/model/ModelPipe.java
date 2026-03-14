@@ -8,6 +8,7 @@ package buildcraft.transport.client.model;
 
 import java.util.List;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import com.google.common.collect.ImmutableList;
@@ -43,8 +44,9 @@ public class ModelPipe {
     }
 
     /** Renders the pipe body (cutout layer) directly into a VertexConsumer,
-     *  bypassing the BakedQuad conversion. Used by the BER. */
-    public static void renderDirect(TilePipeHolder tile, VertexConsumer buffer, int light) {
+     *  bypassing the BakedQuad conversion. Used by the BER.
+     *  @param pose the PoseStack.Pose to transform vertices from block-local to camera-relative space */
+    public static void renderDirect(TilePipeHolder tile, PoseStack.Pose pose, VertexConsumer buffer, int light) {
         if (tile == null || tile.getPipe() == null) return;
         PipeModelKey modelKey = tile.getPipe().getModel();
         if (modelKey == null) return;
@@ -52,7 +54,7 @@ public class ModelPipe {
         List<MutableQuad> quads = PipeModelCacheBase.generator.generateCutoutMutable(key);
         for (MutableQuad q : quads) {
             q.lighti(light);
-            q.render(buffer);
+            q.render(pose, buffer);
         }
     }
 }

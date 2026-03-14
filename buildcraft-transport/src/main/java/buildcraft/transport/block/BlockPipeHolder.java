@@ -76,8 +76,11 @@ public class BlockPipeHolder extends Block implements EntityBlock {
 
     // Shape
 
-    @Override
-    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
+    /**
+     * Returns the full composite shape (center + all connected arms).
+     * Used for entity collision and server-side logic.
+     */
+    private VoxelShape getFullShape(BlockGetter level, BlockPos pos) {
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TilePipeHolder tile && tile.getPipe() != null) {
             VoxelShape shape = CENTER;
@@ -90,6 +93,49 @@ public class BlockPipeHolder extends Block implements EntityBlock {
             return shape;
         }
         return CENTER;
+    }
+
+    /**
+     * Selection/outline shape. On the client, returns only the hovered segment's shape
+     * so that the wireframe outline highlights just that segment (like 1.12.2).
+     * Falls back to the full composite for ray tracing when no segment is targeted.
+     */
+    @Override
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TilePipeHolder tile && tile.getPipe() != null) {
+            // Client-side per-segment highlighting
+            if (level instanceof net.minecraft.world.level.Level realLevel && realLevel.isClientSide()) {
+                net.minecraft.world.phys.HitResult hit = net.minecraft.client.Minecraft.getInstance().hitResult;
+                if (hit instanceof BlockHitResult blockHit && pos.equals(blockHit.getBlockPos())) {
+                    var pipe = tile.getPipe();
+                    double lx = blockHit.getLocation().x - pos.getX();
+                    double ly = blockHit.getLocation().y - pos.getY();
+                    double lz = blockHit.getLocation().z - pos.getZ();
+
+                    // If the hit point is outside the center's 0.25–0.75 range, it's in an arm
+                    if (ly < 0.25 && pipe.isConnected(Direction.DOWN))  return Shapes.or(CENTER, ARMS[Direction.DOWN.ordinal()]);
+                    if (ly > 0.75 && pipe.isConnected(Direction.UP))    return Shapes.or(CENTER, ARMS[Direction.UP.ordinal()]);
+                    if (lz < 0.25 && pipe.isConnected(Direction.NORTH)) return Shapes.or(CENTER, ARMS[Direction.NORTH.ordinal()]);
+                    if (lz > 0.75 && pipe.isConnected(Direction.SOUTH)) return Shapes.or(CENTER, ARMS[Direction.SOUTH.ordinal()]);
+                    if (lx < 0.25 && pipe.isConnected(Direction.WEST))  return Shapes.or(CENTER, ARMS[Direction.WEST.ordinal()]);
+                    if (lx > 0.75 && pipe.isConnected(Direction.EAST))  return Shapes.or(CENTER, ARMS[Direction.EAST.ordinal()]);
+
+                    // Hit is in the center region — return just the center
+                    return CENTER;
+                }
+            }
+        }
+        // Server-side or no hit info: return full composite for ray tracing
+        return getFullShape(level, pos);
+    }
+
+    /**
+     * Collision shape — always the full composite so entities collide with all segments.
+     */
+    @Override
+    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
+        return getFullShape(level, pos);
     }
 
     // Rendering — invisible (no baked model), rendered by BER later

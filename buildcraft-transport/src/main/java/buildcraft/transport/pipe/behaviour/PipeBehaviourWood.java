@@ -31,7 +31,8 @@ public class PipeBehaviourWood extends PipeBehaviourDirectional implements IMjRe
 
     @Override
     public int getTextureIndex(@Nullable Direction face) {
-        return face == currentDir.face ? 0 : 1;
+        // 1.12.2: TEX_FILLED(1) for extraction face, TEX_CLEAR(0) for others
+        return (face != null && face == currentDir.face) ? 1 : 0;
     }
 
     @Override

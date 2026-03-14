@@ -59,18 +59,14 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
         TextureAtlasSprite[] array = new TextureAtlasSprite[def.textures.length];
         boolean allResolved = true;
         for (int i = 0; i < array.length; i++) {
-            String texName = def.textures[i];
-            array[i] = SpriteUtil.getSprite(texName);
+            array[i] = SpriteUtil.getSprite(def.textures[i]);
             if (array[i] == null || array[i] == missing) {
-                System.out.println("[pipe.sprites] FAILED to resolve: '" + texName + "'");
                 array[i] = missing;
                 allResolved = false;
-            } else {
-                System.out.println("[pipe.sprites] Resolved: '" + texName + "' -> " + array[i].contents().name());
             }
         }
         // Only cache if all sprites resolved successfully — allows re-resolution
-        // when atlas is reloaded or sprites become available
+        // when atlas is reloaded or sprites become available later
         if (allResolved) {
             SPRITES.put(def, array);
         }

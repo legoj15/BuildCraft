@@ -29,6 +29,11 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
+
 import buildcraft.api.core.IStackFilter;
 import buildcraft.api.transport.IInjectable;
 import buildcraft.api.transport.pipe.IFlowItems;
@@ -116,10 +121,85 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
             return 0;
         }
 
-        // Simplified extraction — ItemTransactorHelper not yet fully ported
-        // In the full implementation, this extracts from adjacent inventories
-        // via IItemTransactor.extract()
-        return 0;
+        // Get the item handler from the adjacent tile via NeoForge capability
+        IPipeHolder holder = pipe.getHolder();
+        Level level = holder.getPipeWorld();
+        BlockPos neighborPos = holder.getPipePos().relative(from);
+        @SuppressWarnings("unchecked")
+        ResourceHandler<ItemResource> handler = (ResourceHandler<ItemResource>) level.getCapability(
+            Capabilities.Item.BLOCK, neighborPos, from.getOpposite());
+        if (handler == null) {
+            return 0;
+        }
+
+        // Find a matching stack to extract (simulate first)
+        ItemStack possible = ItemStack.EMPTY;
+        int sourceSlot = -1;
+        for (int i = 0; i < handler.size(); i++) {
+            ItemResource res = handler.getResource(i);
+            if (res.isEmpty()) continue;
+            int available = handler.getAmountAsInt(i);
+            if (available <= 0) continue;
+            ItemStack slotStack = res.toStack(Math.min(available, count));
+            if (filter.matches(slotStack)) {
+                // Simulate extraction to verify
+                try (Transaction tx = Transaction.openRoot()) {
+                    int extracted = handler.extract(i, res, Math.min(available, count), tx);
+                    if (extracted > 0) {
+                        possible = res.toStack(extracted);
+                        sourceSlot = i;
+                        // tx auto-aborts on close (no commit)
+                    }
+                }
+                break;
+            }
+        }
+
+        if (possible.isEmpty() || sourceSlot < 0) {
+            return 0;
+        }
+        if (possible.getCount() > possible.getMaxStackSize()) {
+            possible.setCount(possible.getMaxStackSize());
+            count = possible.getMaxStackSize();
+        }
+
+        // Fire TryInsert event to let behaviours filter/limit
+        PipeEventItem.TryInsert tryInsert = new PipeEventItem.TryInsert(holder, this, colour, from, possible);
+        holder.fireEvent(tryInsert);
+        if (tryInsert.isCanceled() || tryInsert.accepted <= 0) {
+            return 0;
+        }
+
+        count = Math.min(count, tryInsert.accepted);
+
+        // Actually extract items
+        ItemResource resource = ItemResource.of(possible);
+        int actuallyExtracted;
+        if (simulate) {
+            try (Transaction tx = Transaction.openRoot()) {
+                actuallyExtracted = handler.extract(sourceSlot, resource, count, tx);
+                // tx auto-aborts
+            }
+        } else {
+            try (Transaction tx = Transaction.openRoot()) {
+                actuallyExtracted = handler.extract(sourceSlot, resource, count, tx);
+                if (actuallyExtracted > 0) {
+                    tx.commit();
+                }
+            }
+        }
+
+        if (actuallyExtracted <= 0) {
+            return 0;
+        }
+
+        ItemStack stack = resource.toStack(actuallyExtracted);
+
+        if (!simulate) {
+            insertItemEvents(stack, colour, EXTRACT_SPEED, from);
+        }
+
+        return actuallyExtracted;
     }
 
     @Override
@@ -328,12 +408,27 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
                     break;
                 }
                 case TILE: {
-                    // Simplified — would use ItemTransactorHelper/IInjectable
-                    // For now, try to insert into the tile's item handler
+                    // Insert items into the adjacent tile's item handler
                     BlockEntity tile = pipe.getConnectedTile(item.side);
                     if (tile != null) {
-                        // Stub: item delivery to tile entities
-                        // Will be implemented when ItemTransactorHelper is ported
+                        Level level = holder.getPipeWorld();
+                        BlockPos neighborPos = holder.getPipePos().relative(item.side);
+                        @SuppressWarnings("unchecked")
+                        ResourceHandler<ItemResource> tileHandler = (ResourceHandler<ItemResource>) level.getCapability(
+                            Capabilities.Item.BLOCK, neighborPos, oppositeSide);
+                        if (tileHandler != null) {
+                            ItemResource resource = ItemResource.of(excess);
+                            try (Transaction tx = Transaction.openRoot()) {
+                                int inserted = tileHandler.insert(resource, excess.getCount(), tx);
+                                if (inserted > 0) {
+                                    tx.commit();
+                                    excess.shrink(inserted);
+                                    if (excess.isEmpty()) {
+                                        excess = ItemStack.EMPTY;
+                                    }
+                                }
+                            }
+                        }
                     }
                     break;
                 }

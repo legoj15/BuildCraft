@@ -6,6 +6,8 @@ import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 
+import buildcraft.transport.item.ItemPipeHolder;
+
 public class BCTransportItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCTransport.MODID);
 
@@ -18,14 +20,16 @@ public class BCTransportItems {
     public static final DeferredItem<Item> WATERPROOF = ITEMS.registerItem("waterproof", Item::new);
 
     // -- Pipe Items --
-    // These are simple Item stubs until the full PipeDefinition/PipeRegistry system is ported.
-    // Registry names match the 1.12.2 identifiers for asset compatibility.
+    // PIPE_WOOD_ITEM uses ItemPipeHolder to tie the item to the pipe_holder block + pipe definition.
+    // Other pipes remain simple Item stubs until they are individually ported.
 
     // Structure
     public static final DeferredItem<Item> PIPE_STRUCTURE = ITEMS.registerItem("pipe_structure", Item::new);
 
     // Item transport pipes
-    public static final DeferredItem<Item> PIPE_WOOD_ITEM = ITEMS.registerItem("pipe_wood_item", Item::new);
+    public static final DeferredItem<ItemPipeHolder> PIPE_WOOD_ITEM = ITEMS.register("pipe_wood_item",
+            () -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
+                    BCTransportPipes.woodItem, new Item.Properties()).registerWithPipeApi());
     public static final DeferredItem<Item> PIPE_COBBLE_ITEM = ITEMS.registerItem("pipe_cobble_item", Item::new);
     public static final DeferredItem<Item> PIPE_STONE_ITEM = ITEMS.registerItem("pipe_stone_item", Item::new);
     public static final DeferredItem<Item> PIPE_QUARTZ_ITEM = ITEMS.registerItem("pipe_quartz_item", Item::new);

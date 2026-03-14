@@ -6,6 +6,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
 import buildcraft.transport.block.BlockFilteredBuffer;
+import buildcraft.transport.block.BlockPipeHolder;
 
 public class BCTransportBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCTransport.MODID);
@@ -14,6 +15,14 @@ public class BCTransportBlocks {
             "filtered_buffer",
             BlockFilteredBuffer::new,
             BlockBehaviour.Properties.of().strength(5.0f, 10.0f));
+
+    public static final DeferredBlock<BlockPipeHolder> PIPE_HOLDER = BLOCKS.registerBlock(
+            "pipe_holder",
+            BlockPipeHolder::new,
+            BlockBehaviour.Properties.of()
+                .strength(0.25f, 3.0f)
+                .noOcclusion()
+                .dynamicShape());
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

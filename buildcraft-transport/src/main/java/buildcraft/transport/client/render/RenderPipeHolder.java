@@ -6,7 +6,6 @@
 
 package buildcraft.transport.client.render;
 
-
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
@@ -31,7 +30,6 @@ import buildcraft.api.transport.pipe.PipeFlow;
 import buildcraft.api.transport.pluggable.IPlugDynamicRenderer;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
-
 import buildcraft.transport.client.PipeRegistryClient;
 import buildcraft.transport.client.model.ModelPipe;
 import buildcraft.transport.pipe.Pipe;
@@ -49,30 +47,41 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         return new PipeHolderRenderState();
     }
 
+    /** Populate render state with tile reference (if framework supports this). */
+    public void extractRenderState(TilePipeHolder blockEntity, PipeHolderRenderState renderState, float partialTick) {
+        renderState.pipe = blockEntity;
+    }
+
     @Override
     public void submit(PipeHolderRenderState renderState, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
-        // Resolve camera position to find the correct tile
-        Vec3 camPos = cameraState.pos;
-        if (camPos == null) return;
-        org.joml.Vector3f t = new org.joml.Vector3f();
-        poseStack.last().pose().getTranslation(t);
-        BlockPos pos = new BlockPos(
-            Math.round((float)(camPos.x + t.x)),
-            Math.round((float)(camPos.y + t.y)),
-            Math.round((float)(camPos.z + t.z)));
+        // Try render state first (if extractRenderState was called), else fall back to BlockPos lookup
+        TilePipeHolder pipe = renderState.pipe;
+        Level level;
+        if (pipe != null) {
+            level = pipe.getLevel();
+        } else {
+            // Fallback: derive BlockPos from PoseStack + camera
+            Vec3 camPos = cameraState.pos;
+            if (camPos == null) return;
+            org.joml.Vector3f t = new org.joml.Vector3f();
+            poseStack.last().pose().getTranslation(t);
+            BlockPos pos = BlockPos.containing(camPos.x + t.x, camPos.y + t.y, camPos.z + t.z);
 
-        Level level = Minecraft.getInstance().level;
+            level = Minecraft.getInstance().level;
+            if (level == null) return;
+
+            BlockEntity be = level.getBlockEntity(pos);
+            if (!(be instanceof TilePipeHolder holder)) return;
+            pipe = holder;
+        }
         if (level == null) return;
-
-        BlockEntity be = level.getBlockEntity(pos);
-        if (!(be instanceof TilePipeHolder pipe)) return;
 
         // Get the buffer for rendering
         MultiBufferSource.BufferSource bufferSource =
             Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer buffer = bufferSource.getBuffer(Sheets.cutoutBlockSheet());
-        int light = LevelRenderer.getLightColor(level, pos);
+        int light = LevelRenderer.getLightColor(level, pipe.getBlockPos());
 
         poseStack.pushPose();
 

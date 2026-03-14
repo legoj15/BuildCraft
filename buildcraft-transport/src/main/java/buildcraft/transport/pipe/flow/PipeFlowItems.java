@@ -57,7 +57,8 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
     public PipeFlowItems(IPipe pipe, CompoundTag nbt) {
         super(pipe, nbt);
         ListTag list = nbt.getListOrEmpty("items");
-        long tickNow = pipe.getHolder().getPipeWorld().getGameTime();
+        Level world = pipe.getHolder().getPipeWorld();
+        long tickNow = world != null ? world.getGameTime() : 0;
         for (int i = 0; i < list.size(); i++) {
             Tag element = list.get(i);
             if (element instanceof CompoundTag compound) {

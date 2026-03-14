@@ -1,0 +1,8 @@
+{
+    "parent": "buildcrafttransport:item/pipe_item",
+    "textures": {
+        "top": "buildcrafttransport:item/pipe_lapis_item",
+        "center": "buildcrafttransport:item/pipe_lapis_item",
+        "bottom": "buildcrafttransport:item/pipe_lapis_item"
+    }
+}

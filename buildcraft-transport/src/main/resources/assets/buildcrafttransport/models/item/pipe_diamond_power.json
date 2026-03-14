@@ -1,0 +1,8 @@
+{
+    "parent": "buildcrafttransport:item/pipe_item",
+    "textures": {
+        "top": "buildcrafttransport:item/pipe_diamond_power",
+        "center": "buildcrafttransport:item/pipe_diamond_power",
+        "bottom": "buildcrafttransport:item/pipe_diamond_power"
+    }
+}

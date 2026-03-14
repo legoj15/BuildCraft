@@ -39,5 +39,6 @@
     "item.buildcrafttransport.pipe_sandstone_power": "Sandstone Kinesis Pipe",
     "item.buildcrafttransport.pipe_diamond_power": "Diamond Kinesis Pipe",
     "item.buildcrafttransport.pipe_diamond_wood_power": "Wooden Diamond Kinesis Pipe",
-    "gui.buildcrafttransport.pipe_diamond.title": "Filters"
+    "gui.buildcrafttransport.pipe_diamond.title": "Filters",
+    "gui.buildcrafttransport.pipe_diamond_wood.title": "Emerald Pipe"
 }

@@ -20,5 +20,5 @@ The transport module for BuildCraft 8. (Stub)
     modId="buildcraftcore"
     type="required"
     versionRange="*"
-    ordering="NONE"
+    ordering="AFTER"
     side="BOTH"

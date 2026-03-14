@@ -8,5 +8,8 @@
     "block.buildcraftfactory.tank": "Tank",
     "block.buildcraftfactory.chute": "Chute",
     "block.buildcraftfactory.distiller": "Distiller",
-    "block.buildcraftfactory.heat_exchange": "Heat Exchanger"
+    "block.buildcraftfactory.heat_exchange": "Heat Exchanger",
+    "block.buildcraftfactory.water_gel": "Gelled Water",
+    "item.buildcraftfactory.water_gel_spawn": "Water Gellifier",
+    "item.buildcraftfactory.gelled_water": "Gelled Water"
 }

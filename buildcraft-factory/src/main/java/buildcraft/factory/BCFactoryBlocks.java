@@ -14,6 +14,7 @@ import buildcraft.factory.block.BlockTube;
 import buildcraft.factory.block.BlockChute;
 import buildcraft.factory.block.BlockDistiller;
 import buildcraft.factory.block.BlockHeatExchange;
+import buildcraft.factory.block.BlockWaterGel;
 
 public class BCFactoryBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCFactory.MODID);
@@ -62,6 +63,13 @@ public class BCFactoryBlocks {
             "heat_exchange",
             BlockHeatExchange::new,
             BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion());
+
+    public static final DeferredBlock<BlockWaterGel> WATER_GEL = BLOCKS.registerBlock(
+            "water_gel",
+            BlockWaterGel::new,
+            BlockBehaviour.Properties.of()
+                    .strength(0.6f)
+                    .sound(net.minecraft.world.level.block.SoundType.SLIME_BLOCK));
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

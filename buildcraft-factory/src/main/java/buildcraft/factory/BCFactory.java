@@ -160,6 +160,8 @@ public class BCFactory {
             event.accept(new ItemStack(BCFactoryItems.CHUTE.get()));
             event.accept(new ItemStack(BCFactoryItems.DISTILLER.get()));
             event.accept(new ItemStack(BCFactoryItems.HEAT_EXCHANGE.get()));
+            event.accept(new ItemStack(BCFactoryItems.WATER_GEL_SPAWN.get()));
+            event.accept(new ItemStack(BCFactoryItems.GELLED_WATER.get()));
         }
     }
 }

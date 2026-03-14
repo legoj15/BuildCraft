@@ -33,7 +33,7 @@ public class SpriteHolderRegistry {
             return resourceLocation;
         }
 
-        private TextureAtlasSprite getSprite() {
+        public TextureAtlasSprite getSprite() {
             if (cachedSprite == null) {
                 try {
                     TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()

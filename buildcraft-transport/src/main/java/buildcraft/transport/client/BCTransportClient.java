@@ -7,7 +7,15 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportMenuTypes;
 import buildcraft.transport.client.gui.GuiFilteredBuffer;
+import buildcraft.transport.client.render.PipeFlowRendererFluids;
+import buildcraft.transport.client.render.PipeFlowRendererItems;
+import buildcraft.transport.client.render.PipeFlowRendererPower;
+import buildcraft.transport.client.render.PipeFlowRendererRf;
 import buildcraft.transport.client.render.RenderPipeHolder;
+import buildcraft.transport.pipe.flow.PipeFlowFluids;
+import buildcraft.transport.pipe.flow.PipeFlowItems;
+import buildcraft.transport.pipe.flow.PipeFlowPower;
+import buildcraft.transport.pipe.flow.PipeFlowRedstoneFlux;
 
 public class BCTransportClient {
     @SubscribeEvent
@@ -18,5 +26,13 @@ public class BCTransportClient {
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(BCTransportBlockEntities.PIPE_HOLDER.get(), RenderPipeHolder::new);
+    }
+
+    /** Called during mod init to register pipe flow renderers. */
+    public static void registerFlowRenderers() {
+        PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowPower.class, PipeFlowRendererPower.INSTANCE);
+        PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowRedstoneFlux.class, PipeFlowRendererRf.INSTANCE);
+        PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowItems.class, PipeFlowRendererItems.INSTANCE);
+        PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowFluids.class, PipeFlowRendererFluids.INSTANCE);
     }
 }

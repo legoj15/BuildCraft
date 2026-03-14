@@ -13,11 +13,11 @@ import org.joml.Vector3f;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.transport.pipe.IPipeFlowRenderer;
@@ -64,8 +64,7 @@ public enum PipeFlowRendererItems implements IPipeFlowRenderer<PipeFlowItems> {
         if (world == null) return;
         long now = world.getGameTime();
         BlockPos pipePos = flow.pipe.getHolder().getPipePos();
-        int lightc = world.getBrightness(LightLayer.BLOCK, pipePos)
-                | (world.getBrightness(LightLayer.SKY, pipePos) << 16);
+        int lightc = LevelRenderer.getLightColor(world, pipePos);
 
         List<TravellingItem> toRender = flow.getAllItemsForRender();
 

@@ -70,7 +70,7 @@ public class ItemRenderUtil {
         // Populate the render state from the ItemStack
         ItemModelResolver resolver = Minecraft.getInstance().getItemModelResolver();
         renderState.clear();
-        resolver.updateForTopItem(renderState, stack, ItemDisplayContext.GROUND,
+        resolver.updateForTopItem(renderState, stack, ItemDisplayContext.FIXED,
                 Minecraft.getInstance().level, null, 0);
 
         if (renderState.isEmpty()) {
@@ -95,8 +95,8 @@ public class ItemRenderUtil {
 
             currentPoseStack.translate(x + dx, y + dy, z + dz);
 
-            // Scale to pipe item size (0.3x)
-            currentPoseStack.scale(0.30f, 0.30f, 0.30f);
+            // Scale to pipe item size (0.35x of FIXED = no auto-scale)
+            currentPoseStack.scale(0.35f, 0.35f, 0.35f);
 
             // Rotate to face the travel direction
             applyDirectionRotation(currentPoseStack, dir);

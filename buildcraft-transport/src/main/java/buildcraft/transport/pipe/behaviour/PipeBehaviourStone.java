@@ -7,8 +7,8 @@ import buildcraft.api.transport.pipe.PipeEventHandler;
 import buildcraft.api.transport.pipe.PipeEventItem;
 
 public class PipeBehaviourStone extends PipeBehaviourSeparate {
-    public static final double SPEED_DELTA = 0.004;
-    public static final double SPEED_TARGET = 0.03;
+    public static final double SPEED_DELTA = 0.008;
+    public static final double SPEED_TARGET = 0.01;
 
     public PipeBehaviourStone(IPipe pipe) {
         super(pipe);

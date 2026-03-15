@@ -61,6 +61,19 @@ public class BCEnergy {
                 engine.tankFuel, engine.tankCoolant, engine.tankResidue
             )
         );
+
+        // MJ connector capability for stone and iron engines — needed for power pipe
+        // connection detection (matches the registrations in BCCore for redstone/creative engines)
+        event.registerBlockEntity(
+            buildcraft.api.mj.MjAPI.CAP_CONNECTOR,
+            BCEnergyBlockEntities.ENGINE_STONE.get(),
+            (engine, direction) -> engine.getMjConnector()
+        );
+        event.registerBlockEntity(
+            buildcraft.api.mj.MjAPI.CAP_CONNECTOR,
+            BCEnergyBlockEntities.ENGINE_IRON.get(),
+            (engine, direction) -> engine.getMjConnector()
+        );
     }
 
     private void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {

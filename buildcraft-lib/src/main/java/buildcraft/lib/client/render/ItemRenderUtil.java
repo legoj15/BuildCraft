@@ -41,6 +41,12 @@ public class ItemRenderUtil {
         currentLight = light;
     }
 
+    /** Returns the current PoseStack set by beginItemBatch, or null if not in a batch.
+     *  Used by overlay renderers (e.g. colour boxes) that need PoseStack transforms. */
+    public static PoseStack getCurrentPoseStack() {
+        return currentPoseStack;
+    }
+
     /**
      * Renders a single item stack at the given local coordinates.
      * Must call beginItemBatch() first.

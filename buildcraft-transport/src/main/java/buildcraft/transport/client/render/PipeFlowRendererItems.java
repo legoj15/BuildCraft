@@ -10,6 +10,7 @@ import java.util.List;
 
 import org.joml.Vector3f;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
@@ -89,19 +90,24 @@ public enum PipeFlowRendererItems implements IPipeFlowRenderer<PipeFlowItems> {
                         lightc, item.getRenderDirection(now, partialTicks), bb);
             }
 
-            // Render colour overlay box for dye-tagged items
+            // Render colour overlay box for dye-tagged items using PoseStack transforms
             if (item.colour != null) {
-                int col = ColourUtil.getLightHex(item.colour);
-                int r = (col >> 16) & 0xFF;
-                int g = (col >> 8) & 0xFF;
-                int b = col & 0xFF;
-                for (MutableQuad q : COLOURED_QUADS) {
-                    if (q == null) continue;
-                    MutableQuad q2 = new MutableQuad(q);
-                    q2.lighti(15, 15);
-                    q2.multColouri(r, g, b, 255);
-                    q2.translatef((float)(x + pos.x), (float)(y + pos.y), (float)(z + pos.z));
-                    q2.render(bb);
+                PoseStack ps = ItemRenderUtil.getCurrentPoseStack();
+                if (ps != null) {
+                    int col = ColourUtil.getLightHex(item.colour);
+                    int r = (col >> 16) & 0xFF;
+                    int g = (col >> 8) & 0xFF;
+                    int b_col = col & 0xFF;
+                    ps.pushPose();
+                    ps.translate(x + pos.x, y + pos.y, z + pos.z);
+                    for (MutableQuad q : COLOURED_QUADS) {
+                        if (q == null) continue;
+                        MutableQuad q2 = new MutableQuad(q);
+                        q2.lighti(15, 15);
+                        q2.multColouri(r, g, b_col, 255);
+                        q2.render(ps.last(), bb);
+                    }
+                    ps.popPose();
                 }
             }
         }

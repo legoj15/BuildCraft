@@ -412,6 +412,10 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             section.currentTime = 0;
             section.ticksInDirection = 0;
         }
+        // Schedule client sync so the fluid type reaches the client-side instance
+        if (pipe.getHolder().getPipeWorld() != null && !pipe.getHolder().getPipeWorld().isClientSide()) {
+            pipe.getHolder().scheduleRenderUpdate();
+        }
     }
 
     @Override
@@ -475,7 +479,10 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
 
         if (send && tracker.markTimeIfDelay(world)) {
-            sendPayload(NET_FLUID_AMOUNTS);
+            // Use NeoForge block entity sync instead of broken custom networking
+            // This triggers sendBlockUpdated() in TilePipeHolder.tick(), which sends
+            // updated NBT (including fluid_id and section amounts) to the client
+            pipe.getHolder().scheduleRenderUpdate();
         }
     }
 

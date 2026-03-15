@@ -18,6 +18,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
 import buildcraft.api.tools.IToolWrench;
+import buildcraft.api.transport.pipe.IItemPipe;
 import buildcraft.energy.tile.TileEngineStone_BC8;
 import buildcraft.lib.engine.BlockEngineBase_BC8;
 
@@ -45,6 +46,10 @@ public class BlockEngineStone_BC8 extends BlockEngineBase_BC8 {
         // Let base class handle crouch+wrench for rotation
         if (stack.getItem() instanceof IToolWrench && player.isShiftKeyDown()) {
             return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
+        }
+        // Do not open GUI when holding a pipe — let the pipe be placed (1.12.2 parity)
+        if (stack.getItem() instanceof IItemPipe) {
+            return InteractionResult.PASS;
         }
         // Everything else (including non-crouching wrench) opens GUI
         return openGui(state, level, pos, player);

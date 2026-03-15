@@ -18,6 +18,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
 import buildcraft.api.tools.IToolWrench;
+import buildcraft.api.transport.pipe.IItemPipe;
 import buildcraft.energy.tile.TileEngineIron_BC8;
 import buildcraft.lib.engine.BlockEngineBase_BC8;
 import buildcraft.lib.misc.FluidUtilBC;
@@ -58,6 +59,11 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
             if (FluidUtilBC.onTankActivated(player, pos, hand, engine.combinedFluidHandler)) {
                 return InteractionResult.SUCCESS;
             }
+        }
+
+        // Do not open GUI when holding a pipe — let the pipe be placed (1.12.2 parity)
+        if (stack.getItem() instanceof IItemPipe) {
+            return InteractionResult.PASS;
         }
 
         // Not a fluid container — open GUI (same as useWithoutItem)

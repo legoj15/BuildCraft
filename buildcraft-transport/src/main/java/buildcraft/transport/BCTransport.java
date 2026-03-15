@@ -16,12 +16,17 @@ import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import buildcraft.api.core.EnumHandlerPriority;
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjReceiver;
+import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.transport.net.MessageMultiPipeItem;
 import buildcraft.transport.net.PipeItemMessageQueue;
 import buildcraft.transport.pipe.Pipe;
+import buildcraft.transport.pipe.StripesRegistry;
+import buildcraft.transport.stripes.*;
 
 @Mod(BCTransport.MODID)
 public class BCTransport {
@@ -47,6 +52,9 @@ public class BCTransport {
 
         // Initialize pipe definitions and registry
         BCTransportPipes.preInit();
+
+        // Initialize stripes registry and handlers
+        initStripesRegistry();
 
         // Register creative tab — LOW priority so transport items appear after core/factory/silicon items
         modEventBus.addListener(EventPriority.LOW, this::addCreativeTabItems);
@@ -143,6 +151,18 @@ public class BCTransport {
             }
         );
 
+        // MJ Redstone Receiver — needed for stripes pipe to receive MJ via redstone engines
+        event.registerBlockEntity(
+            MjAPI.CAP_REDSTONE_RECEIVER, BCTransportBlockEntities.PIPE_HOLDER.get(),
+            (tile, side) -> {
+                Pipe pipe = tile.getPipe();
+                if (pipe == null || side == null) return null;
+                IMjRedstoneReceiver r = pipe.getBehaviour().getCapability(MjAPI.CAP_REDSTONE_RECEIVER, side);
+                if (r != null) return r;
+                return pipe.getFlow().getCapability(MjAPI.CAP_REDSTONE_RECEIVER, side);
+            }
+        );
+
         // MJ Connector — needed for power pipe connection checks
         event.registerBlockEntity(
             MjAPI.CAP_CONNECTOR, BCTransportBlockEntities.PIPE_HOLDER.get(),
@@ -154,5 +174,22 @@ public class BCTransport {
                 return pipe.getFlow().getCapability(MjAPI.CAP_CONNECTOR, side);
             }
         );
+    }
+
+    private void initStripesRegistry() {
+        PipeApi.stripeRegistry = StripesRegistry.INSTANCE;
+
+        // Item use stripes handlers
+        PipeApi.stripeRegistry.addHandler(StripesHandlerPlant.INSTANCE);
+        PipeApi.stripeRegistry.addHandler(StripesHandlerShears.INSTANCE);
+        PipeApi.stripeRegistry.addHandler(new StripesHandlerPipes());
+        PipeApi.stripeRegistry.addHandler(StripesHandlerEntityInteract.INSTANCE, EnumHandlerPriority.LOW);
+        PipeApi.stripeRegistry.addHandler(StripesHandlerHoe.INSTANCE);
+        PipeApi.stripeRegistry.addHandler(StripesHandlerDispenser.INSTANCE, EnumHandlerPriority.LOW);
+        PipeApi.stripeRegistry.addHandler(StripesHandlerPlaceBlock.INSTANCE, EnumHandlerPriority.LOW);
+        PipeApi.stripeRegistry.addHandler(StripesHandlerUse.INSTANCE, EnumHandlerPriority.LOW);
+
+        // Block breaking stripes handlers
+        PipeApi.stripeRegistry.addHandler(StripesHandlerMinecartDestroy.INSTANCE);
     }
 }

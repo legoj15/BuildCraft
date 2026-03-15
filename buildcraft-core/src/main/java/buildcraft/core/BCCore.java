@@ -105,6 +105,37 @@ public class BCCore {
         // BCCoreConfig.preInit(cfgFolder);
         // CreativeTabBC tab = CreativeTabManager.createTab("buildcraft.main");
 
+        // Initialize the fake player provider for modules that need FakePlayer instances
+        buildcraft.api.core.BuildCraftAPI.fakePlayerProvider = new buildcraft.api.core.IFakePlayerProvider() {
+            private static final com.mojang.authlib.GameProfile BC_PROFILE =
+                new com.mojang.authlib.GameProfile(
+                    java.util.UUID.nameUUIDFromBytes("BuildCraft".getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                    "[BuildCraft]"
+                );
+
+            @Override
+            public net.neoforged.neoforge.common.util.FakePlayer getBuildCraftPlayer(
+                    net.minecraft.server.level.ServerLevel world) {
+                return new net.neoforged.neoforge.common.util.FakePlayer(world, BC_PROFILE);
+            }
+
+            @Override
+            public net.neoforged.neoforge.common.util.FakePlayer getFakePlayer(
+                    net.minecraft.server.level.ServerLevel world, com.mojang.authlib.GameProfile profile) {
+                return new net.neoforged.neoforge.common.util.FakePlayer(world, profile);
+            }
+
+            @Override
+            public net.neoforged.neoforge.common.util.FakePlayer getFakePlayer(
+                    net.minecraft.server.level.ServerLevel world, com.mojang.authlib.GameProfile profile,
+                    net.minecraft.core.BlockPos pos) {
+                net.neoforged.neoforge.common.util.FakePlayer player =
+                    new net.neoforged.neoforge.common.util.FakePlayer(world, profile);
+                player.setPos(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+                return player;
+            }
+        };
+
         MarkerCache.registerCache(VolumeCache.INSTANCE);
         MarkerCache.registerCache(PathCache.INSTANCE);
 

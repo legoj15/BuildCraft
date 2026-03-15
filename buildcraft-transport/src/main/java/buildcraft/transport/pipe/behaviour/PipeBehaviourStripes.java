@@ -7,29 +7,44 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.core.Direction;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 
+import net.neoforged.neoforge.common.util.FakePlayer;
+
+import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
+import buildcraft.api.transport.IStripesActivator;
 import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver;
+import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeBehaviour;
+import buildcraft.api.transport.pipe.PipeEventActionActivate;
+import buildcraft.api.transport.pipe.PipeEventHandler;
+import buildcraft.api.transport.pipe.PipeEventItem;
+import buildcraft.api.transport.pipe.PipeEventStatement;
 import buildcraft.api.transport.pipe.PipeFlow;
+import buildcraft.api.transport.pluggable.PipePluggable;
 
+import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 
-/** Stripes pipe — places/breaks blocks in the world using MJ power.
- * Heavily stubbed — FakePlayer, BlockUtil, IStripesActivator, PipeApi.stripeRegistry not yet ported. */
-public class PipeBehaviourStripes extends PipeBehaviour implements IMjRedstoneReceiver {
+import buildcraft.transport.BCTransportStatements;
+
+public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActivator, IMjRedstoneReceiver {
     private final MjBattery battery = new MjBattery(256 * MjAPI.MJ);
 
     @Nullable
     public Direction direction = null;
-    private int progress;
+    private long progress;
 
     public PipeBehaviourStripes(IPipe pipe) {
         super(pipe);
@@ -64,11 +79,36 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IMjRedstoneRe
         buffer.writeByte(direction == null ? -1 : direction.ordinal());
     }
 
+    // Direction management
+
     private void setDirection(@Nullable Direction newValue) {
         if (direction != newValue) {
             direction = newValue;
             if (!pipe.getHolder().getPipeWorld().isClientSide()) {
                 pipe.getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
+            }
+        }
+    }
+
+    // Statement actions
+
+    @PipeEventHandler
+    public void addInternalActions(PipeEventStatement.AddActionInternal event) {
+        for (Direction face : Direction.values()) {
+            if (!pipe.isConnected(face)) {
+                PipePluggable plug = pipe.getHolder().getPluggable(face);
+                if (plug == null || !plug.isBlocking()) {
+                    event.actions.add(BCTransportStatements.ACTION_PIPE_DIRECTION[face.ordinal()]);
+                }
+            }
+        }
+    }
+
+    @PipeEventHandler
+    public void onActionActivate(PipeEventActionActivate event) {
+        for (Direction face : Direction.values()) {
+            if (event.action == BCTransportStatements.ACTION_PIPE_DIRECTION[face.ordinal()]) {
+                setDirection(face);
             }
         }
     }
@@ -89,6 +129,8 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IMjRedstoneRe
     public long receivePower(long microJoules, boolean simulate) {
         return battery.addPowerChecking(microJoules, simulate);
     }
+
+    // Pipe behaviour
 
     @Override
     public boolean canConnect(Direction face, PipeBehaviour other) {
@@ -117,9 +159,92 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IMjRedstoneRe
                 setDirection(null);
             }
         }
-        // Block breaking and stripes logic stubbed
-        // Requires: FakePlayer, BlockUtil.breakBlockAndGetDrops(), PipeApi.stripeRegistry
+        battery.tick(world, pipe.getHolder().getPipePos());
+        if (direction != null) {
+            BlockPos offset = pos.relative(direction);
+            long target = BlockUtil.computeBlockBreakPower(world, offset);
+            if (target > 0) {
+                int offsetHash = offset.hashCode();
+                if (progress < target) {
+                    progress += battery.extractPower(0, Math.min(target - progress, MjAPI.MJ * 10));
+                    if (progress > 0) {
+                        world.destroyBlockProgress(offsetHash, offset, (int) (progress * 9 / target));
+                    }
+                } else {
+                    BlockUtil.breakBlockAndGetDrops(
+                        (ServerLevel) world,
+                        offset,
+                        new ItemStack(Items.DIAMOND_PICKAXE),
+                        pipe.getHolder().getOwner()
+                    ).ifPresent(stacks -> stacks.forEach(stack -> sendItem(stack, direction)));
+                    progress = 0;
+                }
+            }
+        } else {
+            progress = 0;
+        }
     }
 
-    // Drop handler and sendItem stubbed — IStripesActivator not yet ported
+    @PipeEventHandler
+    public void onDrop(PipeEventItem.Drop event) {
+        if (direction == null) {
+            return;
+        }
+        IPipeHolder holder = pipe.getHolder();
+        Level world = holder.getPipeWorld();
+        BlockPos pos = holder.getPipePos();
+        if (world.isClientSide() || !(world instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        FakePlayer player = BuildCraftAPI.fakePlayerProvider.getFakePlayer(
+            serverLevel, holder.getOwner(), pos
+        );
+        player.getInventory().clearContent();
+        player.getInventory().setItem(player.getInventory().getSelectedSlot(), event.getStack());
+        if (PipeApi.stripeRegistry != null &&
+            PipeApi.stripeRegistry.handleItem(world, pos, direction, event.getStack(), player, this)) {
+            event.setStack(ItemStack.EMPTY);
+            for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                ItemStack stack = player.getInventory().removeItemNoUpdate(i);
+                if (!stack.isEmpty()) {
+                    sendItem(stack, direction);
+                }
+            }
+        }
+    }
+
+    // IStripesActivator
+
+    @Override
+    public void dropItem(@Nonnull ItemStack stack, Direction direction) {
+        InventoryUtil.drop(pipe.getHolder().getPipeWorld(), pipe.getHolder().getPipePos(), stack);
+    }
+
+    @Override
+    public boolean sendItem(@Nonnull ItemStack stack, Direction from) {
+        PipeFlow flow = pipe.getFlow();
+        if (flow instanceof IFlowItems) {
+            ((IFlowItems) flow).insertItemsForce(stack, from, null, 0.02);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    // Capabilities
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T getCapability(@Nonnull Object capability, Direction facing) {
+        if (capability == MjAPI.CAP_REDSTONE_RECEIVER) {
+            return (T) this;
+        }
+        if (capability == MjAPI.CAP_RECEIVER) {
+            return (T) this;
+        }
+        if (capability == MjAPI.CAP_CONNECTOR) {
+            return (T) this;
+        }
+        return super.getCapability(capability, facing);
+    }
 }

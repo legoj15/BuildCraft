@@ -34,6 +34,7 @@ import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 
+import buildcraft.api.items.FluidItemDrops;
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.core.IFluidFilter;
@@ -201,7 +202,15 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     @Override
     public void addDrops(NonNullList<ItemStack> toDrop, int fortune) {
         super.addDrops(toDrop, fortune);
-        // fragileFluidShard not yet ported — skip fluid drops for now
+        if (!currentFluid.isEmpty()) {
+            int totalAmount = 0;
+            for (EnumPipePart part : EnumPipePart.VALUES) {
+                totalAmount += sections.get(part).amount;
+            }
+            if (totalAmount > 0) {
+                FluidItemDrops.addFluidDrops(toDrop, currentFluid.copyWithAmount(totalAmount));
+            }
+        }
     }
 
     public boolean doesContainFluid() {

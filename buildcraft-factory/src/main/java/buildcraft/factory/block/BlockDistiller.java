@@ -32,7 +32,6 @@ import net.minecraft.world.phys.BlockHitResult;
 
 import net.minecraft.core.NonNullList;
 
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 
 import buildcraft.api.items.FluidItemDrops;
 import buildcraft.factory.BCFactoryBlockEntities;
@@ -98,16 +97,15 @@ public class BlockDistiller extends BaseEntityBlock {
         if (!(be instanceof TileDistiller_BC8 distiller)) {
             return InteractionResult.PASS;
         }
-        // Try bucket/fluid container interaction with the hit side's tank
-        // Horizontal sides → input, UP → gas out, DOWN → liquid out
-        Direction hitSide = hitResult.getDirection();
-        FluidTank tank = distiller.getTankForSide(hitSide);
-        if (tank != null) {
-            @SuppressWarnings("removal")
-            boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, tank);
-            if (didChange) {
-                return InteractionResult.SUCCESS;
-            }
+        // 1.12.2 behaviour: TileBC_Neptune.onActivated ignores the hit face and
+        // calls tankManager.onActivated, which tries every tank in order.
+        // Only tankIn accepts fill (the output tanks have canFill=false), so
+        // bucket interaction always targets the input tank regardless of which
+        // face the player clicks.
+        @SuppressWarnings("removal")
+        boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, distiller.getTankIn());
+        if (didChange) {
+            return InteractionResult.SUCCESS;
         }
         // No fluid interaction — open the GUI
         if (!level.isClientSide()) {

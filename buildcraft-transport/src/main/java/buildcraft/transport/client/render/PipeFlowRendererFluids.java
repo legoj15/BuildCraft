@@ -40,9 +40,10 @@ import buildcraft.transport.pipe.flow.PipeFlowFluids;
 
 /** Renders fluids flowing through fluid pipes.
  *
- * Ported from 1.12.2 — the geometry calculations are identical but rendering
- * uses {@link MutableQuad}/{@link ModelUtil} instead of the old GL-based
- * {@code FluidRenderer}. */
+ * Ported from 1.12.2 — geometry stays in-place within the pipe while the
+ * offset from {@link PipeFlowFluids#getOffsetsForRender} is applied only to
+ * the UV coordinates, producing a texture-scrolling flow animation identical
+ * to the original. */
 public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> {
     INSTANCE;
 
@@ -112,17 +113,20 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
                 radius = new Vec3(perc * 0.24, radius.y, perc * 0.24);
             }
 
-            Vec3 offset = offsets[face.ordinal()];
-            if (offset == null) offset = Vec3.ZERO;
-            center = center.add(offset);
-
+            // Geometry stays at the actual pipe position
             Vec3 min = center.subtract(radius);
             Vec3 max = center.add(radius);
 
+            // UV box is shifted by the offset to create scrolling animation
+            Vec3 offset = offsets[face.ordinal()];
+            if (offset == null) offset = Vec3.ZERO;
+            Vec3 uvMin = min.add(offset);
+            Vec3 uvMax = max.add(offset);
+
             if (face.getAxis() == Axis.Y) {
-                renderFluidCuboid(min, max, 1, 1, sprite, tR, tG, tB, tA, fluidBB, pose);
+                renderFluidCuboid(min, max, uvMin, uvMax, 1, 1, sprite, tR, tG, tB, tA, fluidBB, pose);
             } else {
-                renderFluidCuboid(min, max, amount, flow.capacity, sprite, tR, tG, tB, tA, fluidBB, pose);
+                renderFluidCuboid(min, max, uvMin, uvMax, amount, flow.capacity, sprite, tR, tG, tB, tA, fluidBB, pose);
             }
         }
 
@@ -134,10 +138,15 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
         double horizPos = 0.26;
 
         if (horizontal || !vertical) {
-            Vec3 min = new Vec3(0.26, 0.26, 0.26).add(centerOffset);
-            Vec3 max = new Vec3(0.74, 0.74, 0.74).add(centerOffset);
+            // Geometry stays at fixed center position
+            Vec3 min = new Vec3(0.26, 0.26, 0.26);
+            Vec3 max = new Vec3(0.74, 0.74, 0.74);
 
-            renderFluidCuboid(min, max, centerAmount, flow.capacity, sprite, tR, tG, tB, tA, fluidBB, pose);
+            // UV box shifted for flow animation
+            Vec3 uvMin = min.add(centerOffset);
+            Vec3 uvMax = max.add(centerOffset);
+
+            renderFluidCuboid(min, max, uvMin, uvMax, centerAmount, flow.capacity, sprite, tR, tG, tB, tA, fluidBB, pose);
             horizPos += (max.y - min.y) * centerAmount / flow.capacity;
         }
 
@@ -150,24 +159,33 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             double yMin = gas ? 0.26 : horizPos;
             double yMax = gas ? 1 - horizPos : 0.74;
 
-            Vec3 min = new Vec3(minXZ, yMin, minXZ).add(centerOffset);
-            Vec3 max = new Vec3(maxXZ, yMax, maxXZ).add(centerOffset);
+            Vec3 min = new Vec3(minXZ, yMin, minXZ);
+            Vec3 max = new Vec3(maxXZ, yMax, maxXZ);
 
-            renderFluidCuboid(min, max, 1, 1, sprite, tR, tG, tB, tA, fluidBB, pose);
+            Vec3 uvMin = min.add(centerOffset);
+            Vec3 uvMax = max.add(centerOffset);
+
+            renderFluidCuboid(min, max, uvMin, uvMax, 1, 1, sprite, tR, tG, tB, tA, fluidBB, pose);
         }
 
         bufferSource.endBatch();
     }
 
     /** Renders a fluid cuboid using {@link MutableQuad}s, with fill-level scaling on the Y axis.
-     * This replaces the 1.12.2 {@code FluidRenderer.renderFluid()} call. */
-    private static void renderFluidCuboid(Vec3 min, Vec3 max, double amount, double capacity,
+     * <p>
+     * Geometry is defined by {@code min}/{@code max}; UV mapping is derived from the
+     * {@code uvMin}/{@code uvMax} box (which may be offset for flow animation).
+     * This replaces the 1.12.2 {@code FluidRenderer.renderFluid()} +
+     * {@code setTranslation()} counter-translate pattern. */
+    private static void renderFluidCuboid(Vec3 min, Vec3 max, Vec3 uvMin, Vec3 uvMax,
+            double amount, double capacity,
             TextureAtlasSprite sprite, int tR, int tG, int tB, int tA, VertexConsumer bb, PoseStack.Pose pose) {
         if (amount <= 0 || capacity <= 0) return;
 
         // Scale height by fill level (same as 1.12.2 — non-gaseous fluids fill from bottom)
         double height = Math.min(amount / capacity, 1.0);
         Vec3 realMax = new Vec3(max.x, min.y + (max.y - min.y) * height, max.z);
+        Vec3 realUvMax = new Vec3(uvMax.x, uvMin.y + (uvMax.y - uvMin.y) * height, uvMax.z);
 
         Vector3f center = new Vector3f(
             (float) (min.x + realMax.x) / 2f,
@@ -183,13 +201,15 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
         if (radius.x <= 0 || radius.y <= 0 || radius.z <= 0) return;
 
         UvFaceData uvs = new UvFaceData();
-        for (Direction face : Direction.values()) {
-            // Compute proper UVs from the cuboid's bounding box
-            net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(
-                min.x, min.y, min.z, realMax.x, realMax.y, realMax.z
-            );
-            ModelUtil.mapBoxToUvs(box, face, uvs);
+        // UV AABB — uses the offset-shifted box for texture scrolling
+        net.minecraft.world.phys.AABB uvBox = new net.minecraft.world.phys.AABB(
+            uvMin.x, uvMin.y, uvMin.z, realUvMax.x, realUvMax.y, realUvMax.z
+        );
 
+        for (Direction face : Direction.values()) {
+            ModelUtil.mapBoxToUvs(uvBox, face, uvs);
+
+            // Geometry uses non-offset center/radius — stays in pipe bounds
             MutableQuad quad = ModelUtil.createFace(face, center, radius, uvs);
             quad.texFromSprite(sprite);
             quad.colouri(tR, tG, tB, tA);

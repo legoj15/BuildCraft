@@ -166,6 +166,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         return false;
     }
 
+
     // TODO: uncomment when TRIGGER_FLUIDS_TRAVERSING is added to BCTransportStatements
     // @PipeEventHandler
     // public static void addTriggers(PipeEventStatement.AddTriggerInternal event) {
@@ -352,25 +353,32 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
 
     // Rendering
 
-    @Nonnull
+    /** Returns the current fluid type for rendering, or null if empty. */
     public FluidStack getFluidStackForRender() {
-        return currentFluid;
+        return currentFluid.isEmpty() ? null : currentFluid;
     }
 
+    /** Returns fluid amounts per section for rendering.
+     *  Index 0-5 = Direction.ordinal(), index 6 = CENTER.
+     *  Uses server-side amounts directly since pipe networking (sendMessage) is not yet ported.
+     *  TODO: When networking is ported, switch to client interpolation:
+     *  s.clientAmountLast * (1 - partialTicks) + s.clientAmountThis * partialTicks */
     public double[] getAmountsForRender(float partialTicks) {
         double[] arr = new double[7];
         for (EnumPipePart part : EnumPipePart.VALUES) {
             Section s = sections.get(part);
-            arr[part.getIndex()] = s.clientAmountLast * (1 - partialTicks) + s.clientAmountThis * (partialTicks);
+            arr[part.getIndex()] = s.amount;
         }
         return arr;
     }
 
+    /** Returns flow offsets per section for rendering (used for flow animation).
+     *  Index 0-5 = Direction.ordinal(), index 6 = CENTER. */
     public Vec3[] getOffsetsForRender(float partialTicks) {
         Vec3[] arr = new Vec3[7];
         for (EnumPipePart part : EnumPipePart.VALUES) {
             Section s = sections.get(part);
-            if (s.offsetLast != null & s.offsetThis != null) {
+            if (s.offsetLast != null && s.offsetThis != null) {
                 arr[part.getIndex()] = s.offsetLast.scale(1 - partialTicks).add(s.offsetThis.scale(partialTicks));
             }
         }

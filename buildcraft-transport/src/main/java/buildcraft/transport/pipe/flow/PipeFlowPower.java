@@ -83,34 +83,12 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
     public CompoundTag writeToNbt() {
         CompoundTag nbt = super.writeToNbt();
         nbt.putBoolean("isReceiver", isReceiver);
-        // Include display data so it reaches clients via block entity sync
-        int[] powers = new int[6];
-        int[] flows = new int[6];
-        for (Direction face : Direction.values()) {
-            Section s = sections.get(face);
-            powers[face.ordinal()] = s.displayPower;
-            flows[face.ordinal()] = s.displayFlow.ordinal();
-        }
-        nbt.putIntArray("displayPower", powers);
-        nbt.putIntArray("displayFlow", flows);
         return nbt;
     }
 
     @Override
     public void readFromNbt(CompoundTag nbt) {
         isReceiver = nbt.getBooleanOr("isReceiver", false);
-        int[] powers = nbt.getIntArray("displayPower").orElse(new int[6]);
-        int[] flows = nbt.getIntArray("displayFlow").orElse(new int[6]);
-        for (Direction face : Direction.values()) {
-            int i = face.ordinal();
-            Section s = sections.get(face);
-            if (i < powers.length) s.displayPower = powers[i];
-            if (i < flows.length) {
-                int flowIdx = flows[i];
-                EnumFlow[] vals = EnumFlow.values();
-                s.displayFlow = (flowIdx >= 0 && flowIdx < vals.length) ? vals[flowIdx] : EnumFlow.STATIONARY;
-            }
-        }
     }
 
     @Override

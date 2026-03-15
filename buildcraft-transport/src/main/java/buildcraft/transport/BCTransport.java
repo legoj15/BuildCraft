@@ -25,6 +25,7 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.lib.misc.CapUtil;
 import buildcraft.transport.net.MessageMultiPipeItem;
+import buildcraft.transport.net.MessagePipePayload;
 import buildcraft.transport.net.PipeItemMessageQueue;
 import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.pipe.StripesRegistry;
@@ -139,6 +140,11 @@ public class BCTransport {
                 MessageMultiPipeItem.TYPE,
                 MessageMultiPipeItem.STREAM_CODEC,
                 MessageMultiPipeItem::handle
+        );
+        registrar.playToClient(
+                MessagePipePayload.TYPE,
+                MessagePipePayload.STREAM_CODEC,
+                MessagePipePayload::handle
         );
     }
 

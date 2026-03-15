@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
+
+import io.netty.buffer.Unpooled;
 import javax.annotation.Nullable;
 
 import com.mojang.authlib.GameProfile;
@@ -34,6 +36,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
+import buildcraft.api.core.BCLog;
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.tiles.IDebuggable;
 import buildcraft.api.transport.IWireManager;
@@ -46,7 +49,9 @@ import buildcraft.api.transport.pipe.PipeDefinition;
 import buildcraft.api.transport.pipe.PipeEvent;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
+import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.transport.BCTransportBlockEntities;
+import buildcraft.transport.net.MessagePipePayload;
 import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.pipe.PipeEventBus;
 
@@ -292,12 +297,29 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     @Override
     public void sendMessage(PipeMessageReceiver to, IWriter writer) {
-        // Networking not yet ported — no-op
+        if (level == null || level.isClientSide()) return;
+        // Serialize the writer's output into a byte array
+        PacketBufferBC buffer = new PacketBufferBC(Unpooled.buffer());
+        try {
+            writer.write(buffer);
+            byte[] data = new byte[buffer.readableBytes()];
+            buffer.readBytes(data);
+            MessagePipePayload payload = new MessagePipePayload(worldPosition, to.ordinal(), data);
+            // Send to all players tracking this chunk
+            if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingChunk(
+                        serverLevel, new net.minecraft.world.level.ChunkPos(worldPosition), payload);
+            }
+        } catch (Exception e) {
+            BCLog.logger.warn("[transport] Failed to send pipe message at " + worldPosition, e);
+        } finally {
+            buffer.release();
+        }
     }
 
     @Override
     public void sendGuiMessage(PipeMessageReceiver to, IWriter writer) {
-        // Networking not yet ported — no-op
+        // GUI messages not yet ported — no-op
     }
 
     @Override

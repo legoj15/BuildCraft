@@ -416,14 +416,16 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
 
     /** Returns fluid amounts per section for rendering.
      *  Index 0-5 = Direction.ordinal(), index 6 = CENTER.
-     *  Uses server-side amounts directly since custom pipe networking is not yet ported.
-     *  TODO: When custom networking is ported, switch to client interpolation:
-     *  s.clientAmountLast * (1 - partialTicks) + s.clientAmountThis * partialTicks */
+     *  Uses client-side interpolated values for smooth fluid animation. */
     public double[] getAmountsForRender(float partialTicks) {
         double[] arr = new double[7];
         for (EnumPipePart part : EnumPipePart.VALUES) {
             Section s = sections.get(part);
-            arr[part.getIndex()] = s.amount;
+            if (pipe.getHolder().getPipeWorld().isClientSide()) {
+                arr[part.getIndex()] = s.clientAmountLast * (1 - partialTicks) + s.clientAmountThis * partialTicks;
+            } else {
+                arr[part.getIndex()] = s.amount;
+            }
         }
         return arr;
     }
@@ -522,10 +524,8 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
 
         if (send && tracker.markTimeIfDelay(world)) {
-            // Use NeoForge block entity sync instead of broken custom networking
-            // This triggers sendBlockUpdated() in TilePipeHolder.tick(), which sends
-            // updated NBT (including fluid_id and section amounts) to the client
-            pipe.getHolder().scheduleRenderUpdate();
+            // Send lightweight custom payload instead of full NBT block entity sync
+            sendPayload(NET_FLUID_AMOUNTS);
         }
     }
 

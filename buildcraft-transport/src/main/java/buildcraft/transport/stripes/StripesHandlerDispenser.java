@@ -37,17 +37,18 @@ public enum StripesHandlerDispenser implements IStripesHandlerItem {
             return false;
         }
 
-        BlockPos target = pos.relative(direction);
-
         // Set the item in the player's hand
         player.setItemInHand(InteractionHand.MAIN_HAND, stack);
 
-        // Try useOn at target position
+        // Simulate a right-click on the face of the block at the pipe position,
+        // looking in the pipe's direction. Items like FlintAndSteelItem place fire
+        // at clickedPos.relative(clickedFace), so by targeting pos with face=direction
+        // the effect lands at pos.relative(direction) — exactly where the pipe points.
         BlockHitResult hit = new BlockHitResult(
-            Vec3.atCenterOf(target), direction.getOpposite(), target, false
+            Vec3.atCenterOf(pos), direction, pos, false
         );
         UseOnContext ctx = new UseOnContext(world, player, InteractionHand.MAIN_HAND, stack, hit);
-        if (stack.getItem().useOn(ctx).consumesAction()) {
+        if (stack.useOn(ctx).consumesAction()) {
             return true;
         }
 

@@ -808,6 +808,11 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             this.amount = nbt.getShortOr("capacity", (short) 0);
             this.lastSentAmount = nbt.getShortOr("lastSentAmount", (short) 0);
             this.ticksInDirection = nbt.getShortOr("ticksInDirection", (short) 0);
+            // Initialize client interpolation fields so fluid is visible immediately
+            // on chunk load, before any custom network packets arrive
+            this.target = this.amount;
+            this.clientAmountThis = this.amount;
+            this.clientAmountLast = this.amount;
 
             incomingTotalCache = 0;
             for (int i = 0; i < incoming.length; ++i) {

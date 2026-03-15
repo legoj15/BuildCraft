@@ -38,12 +38,17 @@ public enum PipeFlowRendererItems implements IPipeFlowRenderer<PipeFlowItems> {
     INSTANCE;
 
     private static final MutableQuad[] COLOURED_QUADS = new MutableQuad[6];
+    private static boolean colouredQuadsInitialized = false;
 
-    public static void onModelBake() {
+    /** Lazily initializes the coloured overlay quads the first time they're needed.
+     *  This ensures the sprite atlas has been baked before we try to read UV coordinates. */
+    private static void ensureColouredQuads() {
+        if (colouredQuadsInitialized) return;
+        colouredQuadsInitialized = true;
+
         Vector3f center = new Vector3f();
         Vector3f radius = new Vector3f(0.2f, 0.2f, 0.2f);
 
-        // Use the COLOUR_ITEM_BOX sprite ISprite for UV lookup
         var sprite = BCTransportSprites.COLOUR_ITEM_BOX;
         UvFaceData uvs = new UvFaceData();
         uvs.minU = (float) sprite.getInterpU(0);
@@ -60,6 +65,7 @@ public enum PipeFlowRendererItems implements IPipeFlowRenderer<PipeFlowItems> {
 
     @Override
     public void render(PipeFlowItems flow, double x, double y, double z, float partialTicks, VertexConsumer bb) {
+        ensureColouredQuads();
         Level world = flow.pipe.getHolder().getPipeWorld();
         if (world == null) return;
         long now = world.getGameTime();

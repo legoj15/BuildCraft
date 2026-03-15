@@ -8,6 +8,7 @@ package buildcraft.transport.client.render;
 
 import org.joml.Vector3f;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -34,7 +35,7 @@ public enum PipeFlowRendererRf implements IPipeFlowRenderer<PipeFlowRedstoneFlux
     INSTANCE;
 
     @Override
-    public void render(PipeFlowRedstoneFlux flow, double x, double y, double z, float partialTicks, VertexConsumer bb) {
+    public void render(PipeFlowRedstoneFlux flow, double x, double y, double z, float partialTicks, VertexConsumer bb, PoseStack.Pose pose) {
         double centrePower = 0;
         double[] power = new double[6];
         for (Direction side : Direction.values()) {
@@ -52,7 +53,7 @@ public enum PipeFlowRendererRf implements IPipeFlowRenderer<PipeFlowRedstoneFlux
                 int i = side.ordinal();
                 Section s = flow.getSection(side);
                 double offset = computeOffset(s.clientDisplayFlowLast, s.clientDisplayFlow, partialTicks);
-                renderSidePower(side, power[i], centrePower, offset, bb);
+                renderSidePower(side, power[i], centrePower, offset, bb, pose);
             }
 
             Vec3 offsetLast = flow.clientDisplayFlowCentreLast;
@@ -61,7 +62,7 @@ public enum PipeFlowRendererRf implements IPipeFlowRenderer<PipeFlowRedstoneFlux
             double offsetY = computeOffset(offsetLast.y, offsetThis.y, partialTicks);
             double offsetZ = computeOffset(offsetLast.z, offsetThis.z, partialTicks);
 
-            renderCentrePower(centrePower, offsetX, offsetY, offsetZ, bb);
+            renderCentrePower(centrePower, offsetX, offsetY, offsetZ, bb, pose);
         }
     }
 
@@ -79,7 +80,7 @@ public enum PipeFlowRendererRf implements IPipeFlowRenderer<PipeFlowRedstoneFlux
     }
 
     private static void renderSidePower(Direction side, double power, double centrePower, double offset,
-        VertexConsumer bb) {
+        VertexConsumer bb, PoseStack.Pose pose) {
         if (power < 0) {
             return;
         }
@@ -118,12 +119,12 @@ public enum PipeFlowRendererRf implements IPipeFlowRenderer<PipeFlowRedstoneFlux
             MutableQuad quad = ModelUtil.createFace(face, centreF, radiusF, uvs);
             quad.texFromSprite(sprite);
             quad.lighti(15, 15);
-            quad.render(bb);
+            quad.render(pose, bb);
         }
     }
 
     private static void renderCentrePower(double power, double offsetX, double offsetY, double offsetZ,
-        VertexConsumer bb) {
+        VertexConsumer bb, PoseStack.Pose pose) {
         float radius = 0.248f * (float) power;
         if (radius > 0.248f) {
             radius = 0.248f;
@@ -147,7 +148,8 @@ public enum PipeFlowRendererRf implements IPipeFlowRenderer<PipeFlowRedstoneFlux
             MutableQuad quad = ModelUtil.createFace(face, centre, radiusP, uvs);
             quad.texFromSprite(sprite);
             quad.lighti(15, 15);
-            quad.render(bb);
+            quad.render(pose, bb);
         }
     }
 }
+

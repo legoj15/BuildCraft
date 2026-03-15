@@ -30,7 +30,9 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.world.level.Level;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.EnumPipePart;
@@ -173,12 +175,13 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     // IFlowFluid
 
     @Override
+    @SuppressWarnings("unchecked")
     public FluidStack tryExtractFluid(int millibuckets, Direction from, FluidStack filter, boolean simulate) {
         if (from == null || millibuckets <= 0) {
             return null;
         }
-        IFluidHandler fluidHandler = pipe.getHolder().getCapabilityFromPipe(from, CapUtil.CAP_FLUIDS);
-        if (fluidHandler == null) {
+        ResourceHandler<FluidResource> handler = pipe.getHolder().getCapabilityFromPipe(from, CapUtil.CAP_FLUIDS);
+        if (handler == null) {
             return null;
         }
         Section section = sections.get(EnumPipePart.fromFacing(from));
@@ -187,30 +190,50 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         if (millibuckets <= 0) {
             return null;
         }
-        FluidStack toAdd;
-        if (filter == null || filter.isEmpty()) {
-            toAdd = fluidHandler.drain(millibuckets, simulate ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE);
+
+        // Determine what fluid resource to extract
+        FluidResource resource;
+        if (filter != null && !filter.isEmpty()) {
+            resource = FluidResource.of(filter);
         } else {
-            FluidStack drainFilter = filter.copyWithAmount(millibuckets);
-            toAdd = fluidHandler.drain(drainFilter, simulate ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE);
+            // Extract whatever the handler has
+            resource = handler.getResource(0);
+            if (resource == null || resource.isEmpty()) {
+                return null;
+            }
         }
-        if (toAdd.isEmpty()) {
+
+        int extracted;
+        if (simulate) {
+            try (Transaction tx = Transaction.openRoot()) {
+                extracted = handler.extract(0, resource, millibuckets, tx);
+                // tx is not committed — rolls back automatically (simulate)
+            }
+        } else {
+            try (Transaction tx = Transaction.openRoot()) {
+                extracted = handler.extract(0, resource, millibuckets, tx);
+                tx.commit();
+            }
+        }
+
+        if (extracted <= 0) {
             return null;
         }
-        millibuckets = toAdd.getAmount();
+
+        FluidStack toAdd = resource.toStack(extracted);
         if (currentFluid.isEmpty() && !simulate) {
             setFluid(toAdd);
         }
-        int reallyFilled = section.fillInternal(millibuckets, !simulate);
-        int leftOver = millibuckets - reallyFilled;
+        int reallyFilled = section.fillInternal(extracted, !simulate);
+        int leftOver = extracted - reallyFilled;
         reallyFilled += middle.fillInternal(leftOver, !simulate);
         if (!simulate) {
             section.ticksInDirection = COOLDOWN_INPUT;
         }
-        if (reallyFilled != millibuckets) {
+        if (reallyFilled != extracted) {
             BCLog.logger.warn(
                 "[tryExtractFluid] Filled "
-                + reallyFilled + " != extracted " + millibuckets
+                + reallyFilled + " != extracted " + extracted
                 + " @" + pipe.getHolder().getPipePos()
             );
         }
@@ -435,6 +458,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
     }
 
+    @SuppressWarnings("unchecked")
     private void moveFromPipe() {
         for (EnumPipePart part : EnumPipePart.FACES) {
             Section section = sections.get(part);
@@ -447,13 +471,16 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                 sideCheck.disallowAllExcept(part.face);
                 pipe.getHolder().fireEvent(sideCheck);
                 if (sideCheck.getOrder().size() == 1) {
-                    IFluidHandler fluidHandler = pipe.getHolder().getCapabilityFromPipe(part.face, CapUtil.CAP_FLUIDS);
-                    if (fluidHandler == null) continue;
+                    ResourceHandler<FluidResource> handler = pipe.getHolder().getCapabilityFromPipe(part.face, CapUtil.CAP_FLUIDS);
+                    if (handler == null) continue;
 
-                    FluidStack fluidToPush = currentFluid.copyWithAmount(maxDrain);
-
-                    if (fluidToPush.getAmount() > 0) {
-                        int filled = fluidHandler.fill(fluidToPush, IFluidHandler.FluidAction.EXECUTE);
+                    if (maxDrain > 0) {
+                        FluidResource resource = FluidResource.of(currentFluid);
+                        int filled;
+                        try (Transaction tx = Transaction.openRoot()) {
+                            filled = handler.insert(0, resource, maxDrain, tx);
+                            tx.commit();
+                        }
                         if (filled > 0) {
                             section.drainInternal(filled, true);
                             section.ticksInDirection = COOLDOWN_OUTPUT;
@@ -669,7 +696,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     }
 
     /** Holds data about a single section of this pipe. */
-    class Section implements IFluidHandler {
+    class Section implements ResourceHandler<FluidResource> {
         final EnumPipePart part;
 
         int amount = 0;
@@ -828,54 +855,61 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             return clientAmountThis > 0 | clientAmountLast > 0;
         }
 
-        // IFluidHandler
+        // ResourceHandler<FluidResource>
 
         @Override
-        public int getTanks() {
+        public int size() {
             return 1;
         }
 
         @Override
-        @Nonnull
-        public FluidStack getFluidInTank(int tank) {
-            if (tank == 0 && !currentFluid.isEmpty() && amount > 0) {
-                return currentFluid.copyWithAmount(amount);
+        public FluidResource getResource(int index) {
+            if (index == 0 && !currentFluid.isEmpty() && amount > 0) {
+                return FluidResource.of(currentFluid);
             }
-            return FluidStack.EMPTY;
+            return FluidResource.EMPTY;
         }
 
         @Override
-        public int getTankCapacity(int tank) {
-            return capacity;
+        public long getAmountAsLong(int index) {
+            return index == 0 ? amount : 0;
         }
 
         @Override
-        public boolean isFluidValid(int tank, @Nonnull FluidStack stack) {
-            return currentFluid.isEmpty() || FluidStack.isSameFluidSameComponents(currentFluid, stack);
+        public long getCapacityAsLong(int index, FluidResource resource) {
+            return index == 0 ? capacity : 0;
         }
 
         @Override
-        public int fill(@Nonnull FluidStack resource, FluidAction action) {
-            if (!getCurrentDirection().canInput() || !pipe.isConnected(part.face) || resource.isEmpty()) {
+        public boolean isValid(int index, FluidResource resource) {
+            if (index != 0) return false;
+            return currentFluid.isEmpty()
+                || FluidStack.isSameFluidSameComponents(currentFluid, resource.toStack(1));
+        }
+
+        @Override
+        public int insert(int index, FluidResource resource, int insertAmount,
+                          net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
+            if (index != 0) return 0;
+            FluidStack fluidStack = resource.toStack(insertAmount);
+            if (!getCurrentDirection().canInput() || !pipe.isConnected(part.face) || fluidStack.isEmpty()) {
                 return 0;
             }
-            resource = resource.copy();
             PipeEventFluid.TryInsert tryInsert = new PipeEventFluid.TryInsert(
-                pipe.getHolder(), PipeFlowFluids.this, part.face, resource
+                pipe.getHolder(), PipeFlowFluids.this, part.face, fluidStack
             );
             pipe.getHolder().fireEvent(tryInsert);
             if (tryInsert.isCanceled()) {
                 return 0;
             }
 
-            if (currentFluid.isEmpty() || FluidStack.isSameFluidSameComponents(currentFluid, resource)) {
-                if (action.execute()) {
-                    if (currentFluid.isEmpty()) {
-                        setFluid(resource.copy());
-                    }
+            if (currentFluid.isEmpty() || FluidStack.isSameFluidSameComponents(currentFluid, fluidStack)) {
+                // BC manages its own state — commit changes immediately within the transaction
+                if (currentFluid.isEmpty()) {
+                    setFluid(fluidStack.copy());
                 }
-                int filled = fill(resource.getAmount(), action.execute());
-                if (filled > 0 && action.execute()) {
+                int filled = fill(insertAmount, true);
+                if (filled > 0) {
                     ticksInDirection = COOLDOWN_INPUT;
                 }
                 return filled;
@@ -884,15 +918,10 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
 
         @Override
-        @Nonnull
-        public FluidStack drain(@Nonnull FluidStack resource, FluidAction action) {
-            return FluidStack.EMPTY;
-        }
-
-        @Override
-        @Nonnull
-        public FluidStack drain(int maxDrain, FluidAction action) {
-            return FluidStack.EMPTY;
+        public int extract(int index, FluidResource resource, int extractAmount,
+                           net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
+            // Pipe sections don't support external drain
+            return 0;
         }
     }
 

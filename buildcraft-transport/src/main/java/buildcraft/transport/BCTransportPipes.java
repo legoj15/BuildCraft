@@ -19,6 +19,7 @@ import buildcraft.api.transport.pipe.PipeDefinition.PipeDefinitionBuilder;
 import buildcraft.api.transport.pipe.PipeFlowType;
 
 import buildcraft.transport.pipe.PipeRegistry;
+import buildcraft.transport.pipe.flow.PipeFlowFluids;
 import buildcraft.transport.pipe.flow.PipeFlowItems;
 import buildcraft.transport.pipe.flow.PipeFlowStructure;
 import buildcraft.transport.pipe.behaviour.*;
@@ -85,8 +86,9 @@ public class BCTransportPipes {
         // Initialize flow types
         PipeApi.flowStructure = new PipeFlowType(PipeFlowStructure::new, PipeFlowStructure::new);
         PipeApi.flowItems = new PipeFlowType(PipeFlowItems::new, PipeFlowItems::new);
-        // Fluid/Power flows are not yet ported — use null placeholders
-        // They will be set when those flow classes are ported
+        PipeApi.flowFluids = new PipeFlowType(PipeFlowFluids::new, PipeFlowFluids::new);
+        // Power flow is not yet ported — use null placeholder
+        // It will be set when PipeFlowPower is ported
 
         // Set the pipe registry
         PipeApi.pipeRegistry = PipeRegistry.INSTANCE;
@@ -103,37 +105,42 @@ public class BCTransportPipes {
         builder.logic(PipeBehaviourWood::new, PipeBehaviourWood::new).texSuffixes("_clear", "_filled");
         builder.builder.itemTex(0, 0, 1);
         woodItem = builder.idTexPrefix("wood_item").flowItem().define();
-        // woodFluid and woodPower require PipeFlowFluid/PipeFlowPower
-        // woodFluid = builder.idTexPrefix("wood_fluid").flowFluid().define();
+        woodFluid = builder.idTexPrefix("wood_fluid").flowFluid().define();
+        // woodPower requires PipeFlowPower
         // woodPower = builder.idTexPrefix("wood_power").flowPower().define();
         builder.builder.itemTex(0);
 
         // === Stone pipes ===
         builder.logic(PipeBehaviourStone::new, PipeBehaviourStone::new);
         stoneItem = builder.idTex("stone_item").flowItem().define();
-        // stoneFluid = builder.idTex("stone_fluid").flowFluid().define();
+        stoneFluid = builder.idTex("stone_fluid").flowFluid().define();
         // stonePower = builder.idTex("stone_power").flowPower().define();
 
         // === Cobblestone pipes ===
         builder.logic(PipeBehaviourCobble::new, PipeBehaviourCobble::new);
         cobbleItem = builder.idTex("cobblestone_item").flowItem().define();
+        cobbleFluid = builder.idTex("cobblestone_fluid").flowFluid().define();
 
         // === Quartz pipes ===
         builder.logic(PipeBehaviourQuartz::new, PipeBehaviourQuartz::new);
         quartzItem = builder.idTex("quartz_item").flowItem().define();
+        quartzFluid = builder.idTex("quartz_fluid").flowFluid().define();
 
         // === Gold pipes ===
         builder.logic(PipeBehaviourGold::new, PipeBehaviourGold::new);
         goldItem = builder.idTex("gold_item").flowItem().define();
+        goldFluid = builder.idTex("gold_fluid").flowFluid().define();
 
         // === Sandstone pipes ===
         builder.logic(PipeBehaviourSandstone::new, PipeBehaviourSandstone::new);
         sandstoneItem = builder.idTex("sandstone_item").flowItem().define();
+        sandstoneFluid = builder.idTex("sandstone_fluid").flowFluid().define();
 
         // === Iron pipes ===
         builder.logic(PipeBehaviourIron::new, PipeBehaviourIron::new).texSuffixes("_clear", "_filled");
         builder.builder.itemTex(0, 0, 1);
         ironItem = builder.idTexPrefix("iron_item").flowItem().define();
+        ironFluid = builder.idTexPrefix("iron_fluid").flowFluid().define();
         builder.builder.itemTex(0);
 
         // === Diamond pipes ===
@@ -147,21 +154,27 @@ public class BCTransportPipes {
         builder.logic(PipeBehaviourDiamondItem::new, PipeBehaviourDiamondItem::new).texSuffixes(diamondTextureSuffixes);
         builder.builder.itemTex(7);
         diamondItem = builder.idTexPrefix("diamond_item").flowItem().define();
+
+        builder.logic(PipeBehaviourDiamondFluid::new, PipeBehaviourDiamondFluid::new);
+        diamondFluid = builder.idTexPrefix("diamond_fluid").flowFluid().define();
         builder.builder.itemTex(0);
 
         // === Diamond-wood (emerald) pipes ===
         builder.logic(PipeBehaviourWoodDiamond::new, PipeBehaviourWoodDiamond::new).texSuffixes("_clear", "_filled");
         builder.builder.itemTex(0, 0, 1);
         diaWoodItem = builder.idTexPrefix("diamond_wood_item").flowItem().define();
+        diaWoodFluid = builder.idTexPrefix("diamond_wood_fluid").flowFluid().define();
         builder.builder.itemTex(0);
 
         // === Clay pipes ===
         builder.logic(PipeBehaviourClay::new, PipeBehaviourClay::new);
         clayItem = builder.idTex("clay_item").flowItem().define();
+        clayFluid = builder.idTex("clay_fluid").flowFluid().define();
 
         // === Void pipes ===
         builder.logic(PipeBehaviourVoid::new, PipeBehaviourVoid::new);
         voidItem = builder.idTex("void_item").flowItem().define();
+        voidFluid = builder.idTex("void_fluid").flowFluid().define();
 
         // === Obsidian pipes ===
         builder.logic(PipeBehaviourObsidian::new, PipeBehaviourObsidian::new);

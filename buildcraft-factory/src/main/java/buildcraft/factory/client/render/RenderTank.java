@@ -73,11 +73,14 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TileTank tile)) return;
 
-        FluidStack fluid = tile.tank.getFluid();
-        if (fluid.isEmpty()) return;
+        // Use the FluidSmoother for interpolated rendering — prevents level snapping
+        float partialTicks = 0f; // inter-tick smoothing handled by FluidSmoother.tick()
+        buildcraft.lib.fluid.FluidSmoother.FluidStackInterp interp = tile.smoothedTank.getFluidForRender(partialTicks);
+        if (interp == null) return;
 
-        int amount = tile.tank.getFluidAmount();
-        int capacity = tile.tank.getCapacity();
+        FluidStack fluid = interp.fluid();
+        double amount = interp.amount();
+        int capacity = tile.smoothedTank.getCapacity();
         if (amount <= 0 || capacity <= 0) return;
 
         IClientFluidTypeExtensions fluidExt = IClientFluidTypeExtensions.of(fluid.getFluid());
@@ -100,7 +103,7 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
 
         float minY = connectedDown ? MIN_Y_CONNECTED : MIN_Y;
         float maxYFull = connectedUp ? MAX_Y_CONNECTED : MAX_Y;
-        float fillRatio = (float) amount / capacity;
+        float fillRatio = (float) (amount / capacity);
 
         boolean gaseous = FluidUtilBC.isGaseous(fluid);
         float fluidTop, fluidBottom;

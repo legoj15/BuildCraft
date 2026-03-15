@@ -76,7 +76,8 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
             BlockEntityType<T> type) {
         if (level.isClientSide()) {
-            return null;
+            return createTickerHelper(type, BCFactoryBlockEntities.TANK.get(),
+                    (lvl, pos, st, tile) -> tile.clientTick());
         }
         return createTickerHelper(type, BCFactoryBlockEntities.TANK.get(),
                 (lvl, pos, st, tile) -> tile.serverTick());

@@ -42,7 +42,6 @@ public enum PipeBehaviourRendererStripes implements IPipeBehaviourRenderer<PipeB
         for (MutableQuad cached : quads) {
             // Copy so we don't permanently mutate the cached quad
             MutableQuad q = new MutableQuad(cached);
-            q.multShade();
             q.lighti(light);
             q.render(pose, bb);
         }
@@ -153,7 +152,7 @@ public enum PipeBehaviourRendererStripes implements IPipeBehaviourRenderer<PipeB
         q.vertex_1.positionf(x1, y1, z1).texf(u0, v1).normalf(nx, ny, nz).colourf(1, 1, 1, 1);
         q.vertex_2.positionf(x2, y2, z2).texf(u1, v1).normalf(nx, ny, nz).colourf(1, 1, 1, 1);
         q.vertex_3.positionf(x3, y3, z3).texf(u1, v0).normalf(nx, ny, nz).colourf(1, 1, 1, 1);
-        q.setShade(true);
+        q.setShade(false);
         q.setSprite(sprite);
         return q;
     }

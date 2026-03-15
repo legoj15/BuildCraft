@@ -11,6 +11,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.item.ItemStackResourceHandler;
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.mj.IMjConnector;
@@ -33,9 +35,39 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
     // Fuel slot: single ItemStack managed manually
     private ItemStack fuelStack = ItemStack.EMPTY;
 
+    /**
+     * ResourceHandler wrapper for the fuel slot.
+     * In 1.12.2, ItemHandlerSimple registered with EnumAccess.BOTH exposed
+     * this as a capability from all sides, allowing item pipes to insert fuel.
+     * NeoForge 1.21.11 uses ItemStackResourceHandler (transaction-safe single-slot handler).
+     */
+    public final ItemStackResourceHandler fuelItemHandler = new ItemStackResourceHandler() {
+        @Override
+        protected ItemStack getStack() {
+            return fuelStack;
+        }
+
+        @Override
+        protected void setStack(ItemStack stack) {
+            fuelStack = stack;
+        }
+
+        @Override
+        protected boolean isValid(ItemResource resource) {
+            // Only accept burnable items
+            return isValidFuel(resource.toStack(1));
+        }
+
+        @Override
+        protected void onRootCommit(ItemStack originalState) {
+            setChanged();
+        }
+    };
+
     public TileEngineStone_BC8(BlockPos pos, BlockState state) {
         super(BCEnergyBlockEntities.ENGINE_STONE.get(), pos, state);
     }
+
 
     // --- Fuel slot accessors (for container data sync) ---
 

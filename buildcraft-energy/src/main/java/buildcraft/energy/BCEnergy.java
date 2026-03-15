@@ -62,6 +62,14 @@ public class BCEnergy {
             )
         );
 
+        // Item handler capability for the stirling engine — allows item pipes
+        // to insert fuel (1.12.2 used ItemHandlerSimple with EnumAccess.BOTH)
+        event.registerBlockEntity(
+            Capabilities.Item.BLOCK,
+            BCEnergyBlockEntities.ENGINE_STONE.get(),
+            (engine, direction) -> engine.fuelItemHandler
+        );
+
         // MJ connector capability for stone and iron engines — needed for power pipe
         // connection detection (matches the registrations in BCCore for redstone/creative engines)
         event.registerBlockEntity(

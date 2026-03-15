@@ -6,6 +6,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
@@ -22,6 +23,7 @@ import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.pipe.PipeApi;
+import buildcraft.lib.misc.CapUtil;
 import buildcraft.transport.net.MessageMultiPipeItem;
 import buildcraft.transport.net.PipeItemMessageQueue;
 import buildcraft.transport.pipe.Pipe;
@@ -137,6 +139,7 @@ public class BCTransport {
         );
     }
 
+    @SuppressWarnings("unchecked")
     private void registerCapabilities(RegisterCapabilitiesEvent event) {
         // MJ Receiver — needed for engines to discover wood pipes as power consumers
         event.registerBlockEntity(
@@ -172,6 +175,16 @@ public class BCTransport {
                 IMjConnector c = pipe.getBehaviour().getCapability(MjAPI.CAP_CONNECTOR, side);
                 if (c != null) return c;
                 return pipe.getFlow().getCapability(MjAPI.CAP_CONNECTOR, side);
+            }
+        );
+
+        // Fluid capability — allows pumps, tanks, etc. to push/pull fluid into fluid pipes
+        event.registerBlockEntity(
+            Capabilities.Fluid.BLOCK, BCTransportBlockEntities.PIPE_HOLDER.get(),
+            (tile, side) -> {
+                Pipe pipe = tile.getPipe();
+                if (pipe == null || side == null) return null;
+                return pipe.getFlow().getCapability(CapUtil.CAP_FLUIDS, side);
             }
         );
     }

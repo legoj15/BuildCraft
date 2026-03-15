@@ -80,7 +80,9 @@ public class BCTransportItems {
     public static final DeferredItem<ItemPipeHolder> PIPE_EMZULI_ITEM = ITEMS.registerItem("pipe_emzuli_item",
             props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
                     BCTransportPipes.emzuliItem, props).registerWithPipeApi());
-    public static final DeferredItem<Item> PIPE_STRIPES_ITEM = ITEMS.registerItem("pipe_stripes_item", Item::new);
+    public static final DeferredItem<ItemPipeHolder> PIPE_STRIPES_ITEM = ITEMS.registerItem("pipe_stripes_item",
+            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
+                    BCTransportPipes.stripesItem, props).registerWithPipeApi());
 
     // Fluid transport pipes
     public static final DeferredItem<Item> PIPE_WOOD_FLUID = ITEMS.registerItem("pipe_wood_fluid", Item::new);

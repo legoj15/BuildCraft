@@ -17,6 +17,7 @@ import buildcraft.transport.client.render.PipeFlowRendererItems;
 import buildcraft.transport.client.render.PipeFlowRendererPower;
 import buildcraft.transport.client.render.PipeFlowRendererRf;
 import buildcraft.transport.client.render.RenderPipeHolder;
+import buildcraft.transport.client.render.PipeBehaviourRendererStripes;
 import buildcraft.transport.pipe.flow.PipeFlowFluids;
 import buildcraft.transport.pipe.flow.PipeFlowItems;
 import buildcraft.transport.pipe.flow.PipeFlowPower;
@@ -49,6 +50,12 @@ public class BCTransportClient {
         PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowRedstoneFlux.class, PipeFlowRendererRf.INSTANCE);
         PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowItems.class, PipeFlowRendererItems.INSTANCE);
         PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowFluids.class, PipeFlowRendererFluids.INSTANCE);
+
+        // Behaviour renderers
+        PipeRegistryClient.INSTANCE.registerRenderer(
+            buildcraft.transport.pipe.behaviour.PipeBehaviourStripes.class,
+            PipeBehaviourRendererStripes.INSTANCE
+        );
     }
 }
 

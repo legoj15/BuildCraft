@@ -39,7 +39,9 @@ public enum PipeBehaviourRendererStripes implements IPipeBehaviourRenderer<PipeB
             stripes.pipe.getHolder().getPipeWorld(),
             stripes.pipe.getHolder().getPipePos()
         );
-        for (MutableQuad q : quads) {
+        for (MutableQuad cached : quads) {
+            // Copy so we don't permanently mutate the cached quad
+            MutableQuad q = new MutableQuad(cached);
             q.multShade();
             q.lighti(light);
             q.render(bb);

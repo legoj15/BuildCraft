@@ -40,19 +40,32 @@ public enum StripesHandlerDispenser implements IStripesHandlerItem {
         // Set the item in the player's hand
         player.setItemInHand(InteractionHand.MAIN_HAND, stack);
 
-        // Simulate a right-click on the face of the block at the pipe position,
-        // looking in the pipe's direction. Items like FlintAndSteelItem place fire
-        // at clickedPos.relative(clickedFace), so by targeting pos with face=direction
-        // the effect lands at pos.relative(direction) — exactly where the pipe points.
-        BlockHitResult hit = new BlockHitResult(
-            Vec3.atCenterOf(pos), direction, pos, false
+        BlockPos target = pos.relative(direction);
+
+        // Strategy 1: Click directly on the block in front of the pipe.
+        // This handles items that affect the clicked block itself (e.g. bonemeal on crops,
+        // hoe on dirt, shears on leaves).
+        BlockHitResult hitDirect = new BlockHitResult(
+            Vec3.atCenterOf(target), direction.getOpposite(), target, false
         );
-        UseOnContext ctx = new UseOnContext(world, player, InteractionHand.MAIN_HAND, stack, hit);
-        if (stack.useOn(ctx).consumesAction()) {
+        UseOnContext ctxDirect = new UseOnContext(world, player, InteractionHand.MAIN_HAND, stack, hitDirect);
+        if (stack.useOn(ctxDirect).consumesAction()) {
             return true;
         }
 
-        // Try use (right-click in air)
+        // Strategy 2: Click on the pipe-side face of the pipe block, with the face
+        // pointing outward (direction). Items like FlintAndSteelItem place their effect
+        // at clickedPos.relative(clickedFace), so this puts the effect at
+        // pos.relative(direction) = the block in front.
+        BlockHitResult hitFromPipe = new BlockHitResult(
+            Vec3.atCenterOf(pos), direction, pos, false
+        );
+        UseOnContext ctxFromPipe = new UseOnContext(world, player, InteractionHand.MAIN_HAND, stack, hitFromPipe);
+        if (stack.useOn(ctxFromPipe).consumesAction()) {
+            return true;
+        }
+
+        // Strategy 3: Use in air (right-click with no target block)
         if (stack.getItem().use(world, player, InteractionHand.MAIN_HAND).consumesAction()) {
             return true;
         }

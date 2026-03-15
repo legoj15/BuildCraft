@@ -30,7 +30,7 @@ public enum PipeBehaviourRendererStripes implements IPipeBehaviourRenderer<PipeB
 
     @Override
     public void render(PipeBehaviourStripes stripes, double x, double y, double z,
-                       float partialTicks, VertexConsumer bb) {
+                       float partialTicks, VertexConsumer bb, com.mojang.blaze3d.vertex.PoseStack.Pose pose) {
         Direction dir = stripes.direction;
         if (dir == null) return;
 
@@ -44,7 +44,7 @@ public enum PipeBehaviourRendererStripes implements IPipeBehaviourRenderer<PipeB
             MutableQuad q = new MutableQuad(cached);
             q.multShade();
             q.lighti(light);
-            q.render(bb);
+            q.render(pose, bb);
         }
     }
 

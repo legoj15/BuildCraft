@@ -99,7 +99,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         ItemRenderUtil.beginItemBatch(poseStack, collector, light);
 
         // --- Render flow + behaviour content ---
-        renderContents(pipe, 0, 0, 0, 0, buffer);
+        renderContents(pipe, 0, 0, 0, 0, buffer, poseStack.last());
 
         ItemRenderUtil.endItemBatch();
 
@@ -135,7 +135,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
     }
 
     private static void renderContents(TilePipeHolder pipe, double x, double y, double z,
-        float partialTicks, VertexConsumer bb) {
+        float partialTicks, VertexConsumer bb, PoseStack.Pose pose) {
         Pipe p = pipe.getPipe();
         if (p == null) {
             return;
@@ -144,7 +144,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
             renderFlow(p.flow, x, y, z, partialTicks, bb);
         }
         if (p.behaviour != null) {
-            renderBehaviour(p.behaviour, x, y, z, partialTicks, bb);
+            renderBehaviour(p.behaviour, x, y, z, partialTicks, bb, pose);
         }
     }
 
@@ -159,10 +159,10 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
 
     @SuppressWarnings("unchecked")
     private static <B extends PipeBehaviour> void renderBehaviour(B behaviour, double x, double y, double z,
-        float partialTicks, VertexConsumer bb) {
+        float partialTicks, VertexConsumer bb, PoseStack.Pose pose) {
         IPipeBehaviourRenderer<B> renderer = PipeRegistryClient.getBehaviourRenderer(behaviour);
         if (renderer != null) {
-            renderer.render(behaviour, x, y, z, partialTicks, bb);
+            renderer.render(behaviour, x, y, z, partialTicks, bb, pose);
         }
     }
 }

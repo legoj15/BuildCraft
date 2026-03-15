@@ -177,6 +177,8 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             if (nbt.contains(key)) {
                 CompoundTag compound = nbt.getCompoundOrEmpty(key);
                 sections.get(part).readFromNbt(compound);
+                // Update client interpolation target so tickClient() smooths toward the new value
+                sections.get(part).target = sections.get(part).amount;
             }
         }
     }
@@ -416,14 +418,12 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
 
     /** Returns fluid amounts per section for rendering.
      *  Index 0-5 = Direction.ordinal(), index 6 = CENTER.
-     *  Uses server-side amounts directly since pipe networking (sendMessage) is not yet ported.
-     *  TODO: When networking is ported, switch to client interpolation:
-     *  s.clientAmountLast * (1 - partialTicks) + s.clientAmountThis * partialTicks */
+     *  Uses client-side interpolated amounts for smooth fill/drain animation. */
     public double[] getAmountsForRender(float partialTicks) {
         double[] arr = new double[7];
         for (EnumPipePart part : EnumPipePart.VALUES) {
             Section s = sections.get(part);
-            arr[part.getIndex()] = s.amount;
+            arr[part.getIndex()] = s.clientAmountLast * (1 - partialTicks) + s.clientAmountThis * partialTicks;
         }
         return arr;
     }

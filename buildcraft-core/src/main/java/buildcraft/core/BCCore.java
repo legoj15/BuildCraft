@@ -136,6 +136,9 @@ public class BCCore {
             }
         };
 
+        // Initialize the default crop handler for the CropManager API
+        buildcraft.api.crops.CropManager.setDefaultHandler(buildcraft.lib.crops.CropHandlerPlantable.INSTANCE);
+
         MarkerCache.registerCache(VolumeCache.INSTANCE);
         MarkerCache.registerCache(PathCache.INSTANCE);
 

@@ -32,10 +32,36 @@ import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 
+import net.minecraft.world.level.material.Fluids;
+
 import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IFluidHandlerAdv;
 
 public class FluidUtilBC {
+
+    /**
+     * Returns whether the given fluid should be rendered with translucent
+     * blending (e.g. vanilla water) rather than opaque cutout.
+     *
+     * <p>In 1.12.2, each BC fluid had its own opaque procedurally-generated
+     * texture. In 1.21.11, all BC energy fluids reuse vanilla
+     * {@code water_still / water_flow} textures tinted with a colour, but
+     * those textures have semi-transparent pixels. Without this check,
+     * oil, fuel, etc. would all inherit water's translucency.
+     *
+     * <p>The heuristic is simple: only vanilla water (still or flowing)
+     * is expected to be translucent. Every other fluid — including BC
+     * fluids that happen to reuse water's texture as a tint base — uses
+     * cutout rendering so the texture alpha is clamped to binary.
+     */
+    public static boolean shouldRenderTranslucent(Fluid fluid) {
+        return fluid == Fluids.WATER || fluid == Fluids.FLOWING_WATER;
+    }
+
+    /** @see #shouldRenderTranslucent(Fluid) */
+    public static boolean shouldRenderTranslucent(FluidStack stack) {
+        return !stack.isEmpty() && shouldRenderTranslucent(stack.getFluid());
+    }
 
     /**
      * Pushes fluid from the given FluidTank to all adjacent fluid-capable blocks.

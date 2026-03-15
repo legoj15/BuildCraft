@@ -14,6 +14,8 @@ import org.joml.Vector3f;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
@@ -29,6 +31,7 @@ import buildcraft.api.transport.pipe.IPipeFlowRenderer;
 
 import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.ModelUtil.UvFaceData;
+import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.misc.VecUtil;
 
@@ -72,6 +75,15 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
         int tA = (tintColor >> 24) & 0xFF;
         if (tA == 0) tA = 0xFF; // Default to fully opaque if alpha is 0
 
+        // Select render type: translucent for vanilla water (texture has
+        // alpha pixels), cutout for everything else (BC fluids reuse the
+        // water texture as a tint base but should be opaque).
+        MultiBufferSource.BufferSource bufferSource =
+            Minecraft.getInstance().renderBuffers().bufferSource();
+        VertexConsumer fluidBB = bufferSource.getBuffer(
+            FluidUtilBC.shouldRenderTranslucent(forRender)
+                ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
+
         double[] amounts = flow.getAmountsForRender(partialTicks);
         Vec3[] offsets = flow.getOffsetsForRender(partialTicks);
 
@@ -108,9 +120,9 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             Vec3 max = center.add(radius);
 
             if (face.getAxis() == Axis.Y) {
-                renderFluidCuboid(min, max, 1, 1, sprite, tR, tG, tB, tA, bb, pose);
+                renderFluidCuboid(min, max, 1, 1, sprite, tR, tG, tB, tA, fluidBB, pose);
             } else {
-                renderFluidCuboid(min, max, amount, flow.capacity, sprite, tR, tG, tB, tA, bb, pose);
+                renderFluidCuboid(min, max, amount, flow.capacity, sprite, tR, tG, tB, tA, fluidBB, pose);
             }
         }
 
@@ -125,7 +137,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             Vec3 min = new Vec3(0.26, 0.26, 0.26).add(centerOffset);
             Vec3 max = new Vec3(0.74, 0.74, 0.74).add(centerOffset);
 
-            renderFluidCuboid(min, max, centerAmount, flow.capacity, sprite, tR, tG, tB, tA, bb, pose);
+            renderFluidCuboid(min, max, centerAmount, flow.capacity, sprite, tR, tG, tB, tA, fluidBB, pose);
             horizPos += (max.y - min.y) * centerAmount / flow.capacity;
         }
 
@@ -141,8 +153,10 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             Vec3 min = new Vec3(minXZ, yMin, minXZ).add(centerOffset);
             Vec3 max = new Vec3(maxXZ, yMax, maxXZ).add(centerOffset);
 
-            renderFluidCuboid(min, max, 1, 1, sprite, tR, tG, tB, tA, bb, pose);
+            renderFluidCuboid(min, max, 1, 1, sprite, tR, tG, tB, tA, fluidBB, pose);
         }
+
+        bufferSource.endBatch();
     }
 
     /** Renders a fluid cuboid using {@link MutableQuad}s, with fill-level scaling on the Y axis.

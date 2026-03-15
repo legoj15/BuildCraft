@@ -222,8 +222,10 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
             fluidTop = minY + (maxY - minY) * fillRatio;
         }
 
+        // Translucent for vanilla water, cutout for BC fluids (reuse water texture opaquely)
         VertexConsumer buffer = bufferSource.getBuffer(
-                a < 1.0f ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
+                FluidUtilBC.shouldRenderTranslucent(fluid)
+                    ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
         PoseStack.Pose pose = poseStack.last();
         int overlay = OverlayTexture.NO_OVERLAY;
 
@@ -274,8 +276,10 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         float b = (color & 0xFF) / 255.0f;
         if (a <= 0) a = 1.0f;
 
+        // Translucent for vanilla water, cutout for BC fluids
         VertexConsumer buffer = bufferSource.getBuffer(
-                a < 1.0f ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
+                FluidUtilBC.shouldRenderTranslucent(fluid)
+                    ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
         PoseStack.Pose pose = poseStack.last();
         int overlay = OverlayTexture.NO_OVERLAY;
 

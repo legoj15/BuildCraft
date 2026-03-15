@@ -121,10 +121,10 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
 
         MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
-        // Use translucent rendering only for fluids with partial alpha (e.g. water);
-        // opaque fluids (e.g. oil) use cutout to avoid see-through artifacts.
+        // Translucent for vanilla water, cutout for BC fluids (reuse water texture opaquely)
         VertexConsumer buffer = bufferSource.getBuffer(
-                a < 1.0f ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
+                FluidUtilBC.shouldRenderTranslucent(fluid)
+                    ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
         PoseStack.Pose pose = poseStack.last();
 
         boolean renderBottom = !connectedDown;

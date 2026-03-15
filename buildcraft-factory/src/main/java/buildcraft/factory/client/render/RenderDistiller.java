@@ -199,8 +199,10 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
             fluidTop = minY + (maxY - minY) * fillRatio;
         }
 
+        // Translucent for vanilla water, cutout for BC fluids (reuse water texture opaquely)
         VertexConsumer buffer = bufferSource.getBuffer(
-                a < 1.0f ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
+                FluidUtilBC.shouldRenderTranslucent(fluid)
+                    ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
         PoseStack.Pose pose = poseStack.last();
         int overlay = OverlayTexture.NO_OVERLAY;
 

@@ -141,7 +141,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
             return;
         }
         if (p.flow != null) {
-            renderFlow(p.flow, x, y, z, partialTicks, bb);
+            renderFlow(p.flow, x, y, z, partialTicks, bb, pose);
         }
         if (p.behaviour != null) {
             renderBehaviour(p.behaviour, x, y, z, partialTicks, bb, pose);
@@ -150,10 +150,10 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
 
     @SuppressWarnings("unchecked")
     private static <F extends PipeFlow> void renderFlow(F flow, double x, double y, double z,
-        float partialTicks, VertexConsumer bb) {
+        float partialTicks, VertexConsumer bb, PoseStack.Pose pose) {
         IPipeFlowRenderer<F> renderer = PipeRegistryClient.getFlowRenderer(flow);
         if (renderer != null) {
-            renderer.render(flow, x, y, z, partialTicks, bb);
+            renderer.render(flow, x, y, z, partialTicks, bb, pose);
         }
     }
 

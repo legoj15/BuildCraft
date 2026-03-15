@@ -8,6 +8,7 @@ package buildcraft.transport.client.render;
 
 import java.util.Arrays;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import org.joml.Vector3f;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -48,7 +49,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
     }
 
     @Override
-    public void render(PipeFlowFluids flow, double x, double y, double z, float partialTicks, VertexConsumer bb) {
+    public void render(PipeFlowFluids flow, double x, double y, double z, float partialTicks, VertexConsumer bb, PoseStack.Pose pose) {
         FluidStack forRender = flow.getFluidStackForRender();
         if (forRender == null || forRender.isEmpty()) {
             return;
@@ -106,9 +107,9 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             Vec3 max = center.add(radius);
 
             if (face.getAxis() == Axis.Y) {
-                renderFluidCuboid(min, max, 1, 1, sprite, tR, tG, tB, tA, bb);
+                renderFluidCuboid(min, max, 1, 1, sprite, tR, tG, tB, tA, bb, pose);
             } else {
-                renderFluidCuboid(min, max, amount, flow.capacity, sprite, tR, tG, tB, tA, bb);
+                renderFluidCuboid(min, max, amount, flow.capacity, sprite, tR, tG, tB, tA, bb, pose);
             }
         }
 
@@ -123,7 +124,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             Vec3 min = new Vec3(0.26, 0.26, 0.26).add(centerOffset);
             Vec3 max = new Vec3(0.74, 0.74, 0.74).add(centerOffset);
 
-            renderFluidCuboid(min, max, centerAmount, flow.capacity, sprite, tR, tG, tB, tA, bb);
+            renderFluidCuboid(min, max, centerAmount, flow.capacity, sprite, tR, tG, tB, tA, bb, pose);
             horizPos += (max.y - min.y) * centerAmount / flow.capacity;
         }
 
@@ -139,14 +140,14 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             Vec3 min = new Vec3(minXZ, yMin, minXZ).add(centerOffset);
             Vec3 max = new Vec3(maxXZ, yMax, maxXZ).add(centerOffset);
 
-            renderFluidCuboid(min, max, 1, 1, sprite, tR, tG, tB, tA, bb);
+            renderFluidCuboid(min, max, 1, 1, sprite, tR, tG, tB, tA, bb, pose);
         }
     }
 
     /** Renders a fluid cuboid using {@link MutableQuad}s, with fill-level scaling on the Y axis.
      * This replaces the 1.12.2 {@code FluidRenderer.renderFluid()} call. */
     private static void renderFluidCuboid(Vec3 min, Vec3 max, double amount, double capacity,
-            TextureAtlasSprite sprite, int tR, int tG, int tB, int tA, VertexConsumer bb) {
+            TextureAtlasSprite sprite, int tR, int tG, int tB, int tA, VertexConsumer bb, PoseStack.Pose pose) {
         if (amount <= 0 || capacity <= 0) return;
 
         // Scale height by fill level (same as 1.12.2 — non-gaseous fluids fill from bottom)
@@ -178,7 +179,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             quad.texFromSprite(sprite);
             quad.colouri(tR, tG, tB, tA);
             quad.lighti(15, 15);
-            quad.render(bb);
+            quad.render(pose, bb);
         }
     }
 }

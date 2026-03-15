@@ -6,20 +6,23 @@ import javax.annotation.Nullable;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.Direction;
 
+import net.neoforged.neoforge.fluids.FluidStack;
+
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.transport.pipe.IFlowFluid;
 import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.PipeBehaviour;
+import buildcraft.api.transport.pipe.PipeEventFluid;
 import buildcraft.api.transport.pipe.PipeEventHandler;
 import buildcraft.api.transport.pipe.PipeEventItem;
 import buildcraft.api.transport.pipe.PipeFlow;
 
-public class PipeBehaviourWood extends PipeBehaviourDirectional implements IMjRedstoneReceiver {
+import buildcraft.transport.BCTransportConfig;
 
-    /** Cost per item extracted, matching 1.12.2's BCTransportConfig.mjPerItem default (1 MJ per item). */
-    private static final long MJ_PER_ITEM = MjAPI.MJ;
+public class PipeBehaviourWood extends PipeBehaviourDirectional implements IMjRedstoneReceiver {
 
     public PipeBehaviourWood(IPipe pipe) {
         super(pipe);
@@ -41,10 +44,16 @@ public class PipeBehaviourWood extends PipeBehaviourDirectional implements IMjRe
             && pipe.getConnectedType(dir) == IPipe.ConnectedType.TILE;
     }
 
-    // No onTick extraction — 1.12.2 extracts items directly in receivePower()
+    @PipeEventHandler
+    public void fluidSideCheck(PipeEventFluid.SideCheck sideCheck) {
+        // Prevent fluids from flowing back out through the extraction face
+        if (currentDir.face != null) {
+            sideCheck.disallow(currentDir.face);
+        }
+    }
 
     /**
-     * Attempt to extract items (or simulate extraction) using the given power budget.
+     * Attempt to extract items or fluids using the given power budget.
      * Returns the leftover power that was NOT consumed.
      * Matches 1.12.2's PipeBehaviourWood.extract(long, boolean).
      */
@@ -53,11 +62,20 @@ public class PipeBehaviourWood extends PipeBehaviourDirectional implements IMjRe
             PipeFlow flow = pipe.getFlow();
             if (flow instanceof IFlowItems) {
                 IFlowItems itemFlow = (IFlowItems) flow;
-                int maxItems = (int) (power / MJ_PER_ITEM);
+                int maxItems = (int) (power / BCTransportConfig.mjPerItem);
                 if (maxItems > 0) {
                     int extracted = extractItems(itemFlow, getCurrentDir(), maxItems, simulate);
                     if (extracted > 0) {
-                        return power - extracted * MJ_PER_ITEM;
+                        return power - extracted * BCTransportConfig.mjPerItem;
+                    }
+                }
+            } else if (flow instanceof IFlowFluid) {
+                IFlowFluid fluidFlow = (IFlowFluid) flow;
+                int maxMillibuckets = (int) (power / BCTransportConfig.mjPerMillibucket);
+                if (maxMillibuckets > 0) {
+                    FluidStack extracted = extractFluid(fluidFlow, getCurrentDir(), maxMillibuckets, simulate);
+                    if (extracted != null && !extracted.isEmpty()) {
+                        return power - extracted.getAmount() * BCTransportConfig.mjPerMillibucket;
                     }
                 }
             }
@@ -69,6 +87,11 @@ public class PipeBehaviourWood extends PipeBehaviourDirectional implements IMjRe
         return flow.tryExtractItems(count, dir, null, stack -> true, simulate);
     }
 
+    @Nullable
+    protected FluidStack extractFluid(IFlowFluid flow, Direction dir, int millibuckets, boolean simulate) {
+        return flow.tryExtractFluid(millibuckets, dir, null, simulate);
+    }
+
     // IMjRedstoneReceiver
 
     @Override
@@ -78,18 +101,14 @@ public class PipeBehaviourWood extends PipeBehaviourDirectional implements IMjRe
 
     @Override
     public long getPowerRequested() {
-        // Only request power if we can actually extract items right now.
-        // This is the key difference from the battery model:
-        // simulate an extraction to see if items exist, and request only
-        // as much power as we'd actually consume.
+        // Only request power if we can actually extract right now.
         final long power = 512 * MjAPI.MJ;
         return power - extract(power, true);
     }
 
     @Override
     public long receivePower(long microJoules, boolean simulate) {
-        // Directly extract items when power is delivered.
-        // Returns leftover power that was not consumed.
+        // Directly extract items/fluids when power is delivered.
         return extract(microJoules, simulate);
     }
 

@@ -11,4 +11,10 @@ package buildcraft.transport;
 public class BCTransportConfig {
     public static boolean disableRfPipe = false;
     public static boolean powerPipeUseOldMjTexture = false;
+
+    /** MJ cost per item extracted by a wooden pipe. Default: 1 MJ (= 1_000_000 µMJ). */
+    public static long mjPerItem = 1_000_000L;
+
+    /** MJ cost per millibucket extracted by a wooden fluid pipe. Default: 1000 µMJ per mB. */
+    public static long mjPerMillibucket = 1_000L;
 }

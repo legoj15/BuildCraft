@@ -1,15 +1,21 @@
 package buildcraft.transport.pipe.behaviour;
 
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.HitResult;
 
 import buildcraft.api.core.EnumPipePart;
@@ -17,12 +23,20 @@ import buildcraft.api.core.IStackFilter;
 import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver;
+import buildcraft.api.transport.pipe.PipeEventActionActivate;
+import buildcraft.api.transport.pipe.PipeEventHandler;
+import buildcraft.api.transport.pipe.PipeEventStatement;
 
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
+import buildcraft.lib.tile.item.ItemHandlerSimple;
+
+import buildcraft.transport.BCTransportStatements;
+import buildcraft.transport.container.ContainerEmzuliPipe;
+import buildcraft.transport.statements.ActionExtractionPreset;
 
 /** Emzuli pipe — filtered extraction with round-robin across 4 preset slots, each with a colour assignment.
- * Activated via gate statements (stubbed until BCTransportStatements is ported). */
+ * Activated via gate Extraction Preset actions. */
 public class PipeBehaviourEmzuli extends PipeBehaviourWood {
 
     public enum SlotIndex {
@@ -51,7 +65,7 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
     }
 
     public final EnumMap<SlotIndex, DyeColor> slotColours = new EnumMap<>(SlotIndex.class);
-    public final NonNullList<ItemStack> invFilters = NonNullList.withSize(4, ItemStack.EMPTY);
+    public final ItemHandlerSimple invFilters = new ItemHandlerSimple(4);
     private final EnumSet<SlotIndex> activeSlots;
     private final byte[] activatedTtl = new byte[SlotIndex.VALUES.length];
     private SlotIndex currentSlot = null;
@@ -66,11 +80,8 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
     public PipeBehaviourEmzuli(IPipe pipe, CompoundTag nbt) {
         super(pipe, nbt);
         CompoundTag filtersTag = nbt.getCompoundOrEmpty("Filters");
-        for (int i = 0; i < invFilters.size(); i++) {
-            CompoundTag itemTag = filtersTag.getCompoundOrEmpty("slot" + i);
-            if (!itemTag.isEmpty()) {
-                invFilters.set(i, NBTUtilBC.itemStackFromNBT(itemTag));
-            }
+        if (!filtersTag.isEmpty()) {
+            invFilters.deserializeNBT(filtersTag);
         }
         activeSlots = EnumSet.noneOf(SlotIndex.class);
         currentSlot = NBTUtilBC.readEnum(nbt.get("currentSlot"), SlotIndex.class);
@@ -85,14 +96,7 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
     @Override
     public CompoundTag writeToNbt() {
         CompoundTag nbt = super.writeToNbt();
-        CompoundTag filtersTag = new CompoundTag();
-        for (int i = 0; i < invFilters.size(); i++) {
-            ItemStack stack = invFilters.get(i);
-            if (!stack.isEmpty()) {
-                filtersTag.put("slot" + i, NBTUtilBC.itemStackToNBT(stack));
-            }
-        }
-        nbt.put("Filters", filtersTag);
+        nbt.put("Filters", invFilters.serializeNBT());
         if (currentSlot != null) {
             nbt.put("currentSlot", NBTUtilBC.writeEnum(currentSlot));
         }
@@ -110,6 +114,12 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
             DyeColor c = slotColours.get(index);
             buffer.writeByte(c == null ? -1 : c.getId());
         }
+        // Write activeSlots as a bitmask
+        int mask = 0;
+        for (SlotIndex index : activeSlots) {
+            mask |= (1 << index.ordinal());
+        }
+        buffer.writeByte(mask);
         buffer.writeByte(currentSlot == null ? -1 : currentSlot.ordinal());
     }
 
@@ -122,6 +132,14 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
                 slotColours.put(index, DyeColor.byId(c));
             } else {
                 slotColours.remove(index);
+            }
+        }
+        // Read activeSlots bitmask
+        int mask = buffer.readUnsignedByte();
+        activeSlots.clear();
+        for (SlotIndex index : SlotIndex.VALUES) {
+            if ((mask & (1 << index.ordinal())) != 0) {
+                activeSlots.add(index);
             }
         }
         int slotOrd = buffer.readByte();
@@ -144,7 +162,7 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
 
     private boolean filterMatches(ItemStack stack) {
         if (currentSlot == null) return false;
-        ItemStack current = invFilters.get(currentSlot.ordinal());
+        ItemStack current = invFilters.getStackInSlot(currentSlot.ordinal());
         return StackUtil.isMatchingItemOrList(current, stack);
     }
 
@@ -175,7 +193,7 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
         int i = SlotIndex.VALUES.length;
         while (i-- > 0) {
             current = current.next();
-            if (activeSlots.contains(current) && !invFilters.get(current.ordinal()).isEmpty()) {
+            if (activeSlots.contains(current) && !invFilters.getStackInSlot(current.ordinal()).isEmpty()) {
                 return current;
             }
         }
@@ -193,18 +211,48 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
     @Override
     public boolean onPipeActivate(Player player, HitResult trace, float hitX, float hitY, float hitZ,
         EnumPipePart part) {
-        // GUI opening — BCTransportGuis not yet ported
-        return false;
+        if (!player.level().isClientSide() && player instanceof ServerPlayer serverPlayer) {
+            final PipeBehaviourEmzuli self = this;
+            serverPlayer.openMenu(new MenuProvider() {
+                @Override
+                public Component getDisplayName() {
+                    return Component.translatable("gui.pipes.emzuli.title");
+                }
+
+                @Override
+                public AbstractContainerMenu createMenu(int containerId, Inventory playerInv, Player p) {
+                    return new ContainerEmzuliPipe(containerId, playerInv, self);
+                }
+            }, (buf) -> {
+                buf.writeBlockPos(pipe.getHolder().getPipePos());
+            });
+        }
+        return true;
     }
 
     @Override
     public void addDrops(NonNullList<ItemStack> toDrop, int fortune) {
-        for (ItemStack stack : invFilters) {
+        for (int i = 0; i < invFilters.getSlots(); i++) {
+            ItemStack stack = invFilters.getStackInSlot(i);
             if (!stack.isEmpty()) {
                 toDrop.add(stack);
             }
         }
     }
 
-    // Statement handlers removed — BCTransportStatements not yet ported
+    // Statement handlers — wire Extraction Preset actions from gates
+
+    @PipeEventHandler
+    public void addActions(PipeEventStatement.AddActionInternal event) {
+        Collections.addAll(event.actions, BCTransportStatements.ACTION_EXTRACTION_PRESET);
+    }
+
+    @PipeEventHandler
+    public void onActionActivate(PipeEventActionActivate event) {
+        if (event.action instanceof ActionExtractionPreset) {
+            ActionExtractionPreset preset = (ActionExtractionPreset) event.action;
+            activeSlots.add(preset.index);
+            activatedTtl[preset.index.ordinal()] = 2;
+        }
+    }
 }

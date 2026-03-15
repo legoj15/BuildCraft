@@ -95,11 +95,22 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         for (EnumPipePart part : EnumPipePart.VALUES) {
             sections.put(part, new Section(part));
         }
-        if (nbt.contains("fluid")) {
-            CompoundTag fluidTag = nbt.getCompoundOrEmpty("fluid");
-            // FluidStack deserialization deferred until registry context is available
-            // For now use empty — the proper load needs a HolderLookup.Provider
-            setFluid(FluidStack.EMPTY);
+        if (nbt.contains("fluid_id")) {
+            // Deserialize fluid using registry key string (no HolderLookup.Provider needed)
+            String fluidId = nbt.getStringOr("fluid_id", "");
+            if (!fluidId.isEmpty()) {
+                net.minecraft.resources.Identifier fluidRL =
+                    net.minecraft.resources.Identifier.parse(fluidId);
+                net.minecraft.world.level.material.Fluid fluid =
+                    net.minecraft.core.registries.BuiltInRegistries.FLUID.getValue(fluidRL);
+                if (fluid != null && fluid != net.minecraft.world.level.material.Fluids.EMPTY) {
+                    setFluid(new FluidStack(fluid, 1000));
+                } else {
+                    setFluid(FluidStack.EMPTY);
+                }
+            } else {
+                setFluid(FluidStack.EMPTY);
+            }
         } else {
             setFluid(FluidStack.EMPTY);
         }
@@ -119,8 +130,10 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         CompoundTag nbt = super.writeToNbt();
 
         if (!currentFluid.isEmpty()) {
-            // FluidStack serialization deferred — needs HolderLookup.Provider
-            // nbt.put("fluid", currentFluid.save(...));
+            // Serialize fluid using registry key string (no HolderLookup.Provider needed)
+            nbt.putString("fluid_id",
+                net.minecraft.core.registries.BuiltInRegistries.FLUID
+                    .getKey(currentFluid.getFluid()).toString());
 
             for (EnumPipePart part : EnumPipePart.VALUES) {
                 int direction = part.getIndex();

@@ -14,6 +14,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -28,17 +29,19 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
+import buildcraft.api.blocks.ICustomPaintHandler;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeDefinition;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.tile.TilePipeHolder;
 
-public class BlockPipeHolder extends Block implements EntityBlock {
+public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintHandler {
 
     // Center box: 4/16 → 12/16 (i.e. 0.25→0.75)
     private static final VoxelShape CENTER = Block.box(4, 4, 4, 12, 12, 12);
@@ -250,5 +253,25 @@ public class BlockPipeHolder extends Block implements EntityBlock {
             );
         }
         return false;
+    }
+
+    // ICustomPaintHandler — paint pipes with paintbrush
+
+    @Override
+    public InteractionResult attemptPaint(Level world, BlockPos pos, BlockState state, Vec3 hitPos,
+                                          @Nullable Direction hitSide, @Nullable DyeColor paintColour) {
+        BlockEntity be = world.getBlockEntity(pos);
+        if (!(be instanceof TilePipeHolder tile)) {
+            return InteractionResult.PASS;
+        }
+        Pipe pipe = tile.getPipe();
+        if (pipe == null) {
+            return InteractionResult.FAIL;
+        }
+        if (pipe.getColour() == paintColour || !pipe.getDefinition().canBeColoured) {
+            return InteractionResult.FAIL;
+        }
+        pipe.setColour(paintColour);
+        return InteractionResult.SUCCESS;
     }
 }

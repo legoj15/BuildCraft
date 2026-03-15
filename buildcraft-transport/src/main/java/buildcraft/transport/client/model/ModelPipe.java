@@ -43,15 +43,33 @@ public class ModelPipe {
         return PipeModelCacheAll.getTranslucentModel(tile);
     }
 
-    /** Renders the pipe body (cutout layer) directly into a VertexConsumer,
-     *  bypassing the BakedQuad conversion. Used by the BER.
-     *  @param pose the PoseStack.Pose to transform vertices from block-local to camera-relative space */
+    /** Renders the pipe body (cutout layer) directly into a VertexConsumer.
+     *  For coloured pipes, call renderMaskOverlay() separately with a translucent buffer. */
     public static void renderDirect(TilePipeHolder tile, PoseStack.Pose pose, VertexConsumer buffer, int light) {
         if (tile == null || tile.getPipe() == null) return;
         PipeModelKey modelKey = tile.getPipe().getModel();
         if (modelKey == null) return;
         PipeBaseCutoutKey key = new PipeBaseCutoutKey(modelKey);
         List<MutableQuad> quads = PipeModelCacheBase.generator.generateCutoutMutable(key);
+        for (MutableQuad q : quads) {
+            q.lighti(light);
+            q.render(pose, buffer);
+        }
+    }
+
+    /** Renders the colour mask overlay for painted pipes into a TRANSLUCENT buffer.
+     *  Must be called AFTER renderDirect() so the cutout pass writes depth for
+     *  frame pixels but leaves glass pixels with no depth — allowing the mask quads
+     *  to pass depth test for glass and fail for frame. No Z-fighting.
+     *
+     *  @param alpha tint intensity (0-255). 76 matches overlay_stained.png's 30% tint. */
+    public static void renderMaskOverlay(TilePipeHolder tile, PoseStack.Pose pose,
+            VertexConsumer buffer, int light, int alpha) {
+        if (tile == null || tile.getPipe() == null) return;
+        PipeModelKey modelKey = tile.getPipe().getModel();
+        if (modelKey == null) return;
+        PipeBaseCutoutKey key = new PipeBaseCutoutKey(modelKey);
+        List<MutableQuad> quads = PipeBaseModelGenStandard.INSTANCE.generateMaskMutable(key, alpha);
         for (MutableQuad q : quads) {
             q.lighti(light);
             q.render(pose, buffer);

@@ -1,6 +1,7 @@
 package buildcraft.lib.misc;
 
 import javax.annotation.Nullable;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.DyeColor;
 
@@ -29,6 +30,28 @@ public class ColourUtil {
         0x30_30_30, // BLACK
     };
 
+    /** Maps DyeColor ordinals to ChatFormatting colours for display, matching 1.12.2. */
+    private static final ChatFormatting[] COLOUR_TO_FORMAT = new ChatFormatting[16];
+
+    static {
+        COLOUR_TO_FORMAT[DyeColor.WHITE.ordinal()] = ChatFormatting.WHITE;
+        COLOUR_TO_FORMAT[DyeColor.ORANGE.ordinal()] = ChatFormatting.GOLD;
+        COLOUR_TO_FORMAT[DyeColor.MAGENTA.ordinal()] = ChatFormatting.LIGHT_PURPLE;
+        COLOUR_TO_FORMAT[DyeColor.LIGHT_BLUE.ordinal()] = ChatFormatting.AQUA;
+        COLOUR_TO_FORMAT[DyeColor.YELLOW.ordinal()] = ChatFormatting.YELLOW;
+        COLOUR_TO_FORMAT[DyeColor.LIME.ordinal()] = ChatFormatting.GREEN;
+        COLOUR_TO_FORMAT[DyeColor.PINK.ordinal()] = ChatFormatting.LIGHT_PURPLE;
+        COLOUR_TO_FORMAT[DyeColor.GRAY.ordinal()] = ChatFormatting.DARK_GRAY;
+        COLOUR_TO_FORMAT[DyeColor.LIGHT_GRAY.ordinal()] = ChatFormatting.GRAY;
+        COLOUR_TO_FORMAT[DyeColor.CYAN.ordinal()] = ChatFormatting.DARK_AQUA;
+        COLOUR_TO_FORMAT[DyeColor.PURPLE.ordinal()] = ChatFormatting.DARK_PURPLE;
+        COLOUR_TO_FORMAT[DyeColor.BLUE.ordinal()] = ChatFormatting.BLUE;
+        COLOUR_TO_FORMAT[DyeColor.BROWN.ordinal()] = ChatFormatting.GOLD;
+        COLOUR_TO_FORMAT[DyeColor.GREEN.ordinal()] = ChatFormatting.DARK_GREEN;
+        COLOUR_TO_FORMAT[DyeColor.RED.ordinal()] = ChatFormatting.DARK_RED;
+        COLOUR_TO_FORMAT[DyeColor.BLACK.ordinal()] = ChatFormatting.DARK_GRAY;
+    }
+
     /** Returns a display-friendly name for the given dye colour (or "Clean" if null). */
     public static String getTextFullTooltip(@Nullable DyeColor colour) {
         if (colour == null) return "Clean";
@@ -40,6 +63,12 @@ public class ColourUtil {
     public static String getTextFullTooltip(Direction direction) {
         String name = direction.getName();
         return Character.toUpperCase(name.charAt(0)) + name.substring(1);
+    }
+
+    /** Converts a {@link DyeColor} into an equivalent {@link ChatFormatting} for display.
+     *  Black maps to DARK_GRAY so it remains visible on dark backgrounds. */
+    public static ChatFormatting convertColourToTextFormat(DyeColor colour) {
+        return COLOUR_TO_FORMAT[colour.ordinal()];
     }
 
     /** Returns the lighter hex colour for the given dye colour. */

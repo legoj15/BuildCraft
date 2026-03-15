@@ -68,7 +68,11 @@ public class PipeModelCacheBase {
         }
 
         private static boolean canBakeCutoutColour(EnumPipeColourType type) {
-            return type == EnumPipeColourType.BORDER_OUTER || type == EnumPipeColourType.BORDER_INNER;
+            // BORDER types: border sprite quads in cutout pass
+            // TRANSLUCENT: inverted-alpha mask quads in cutout pass (reverse-cutout)
+            return type == EnumPipeColourType.BORDER_OUTER
+                || type == EnumPipeColourType.BORDER_INNER
+                || type == EnumPipeColourType.TRANSLUCENT;
         }
 
         @Override

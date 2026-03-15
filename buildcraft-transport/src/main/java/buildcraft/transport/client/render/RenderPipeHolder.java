@@ -12,11 +12,13 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
+
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.state.CameraRenderState;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
@@ -25,6 +27,7 @@ import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.transport.pipe.IPipeBehaviourRenderer;
 import buildcraft.api.transport.pipe.IPipeFlowRenderer;
+import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeBehaviour;
 import buildcraft.api.transport.pipe.PipeFlow;
 import buildcraft.api.transport.pluggable.IPlugDynamicRenderer;
@@ -90,7 +93,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         poseStack.pushPose();
 
         // --- Render pipe body (static model from cache) ---
-        renderPipeBody(pipe, poseStack, buffer, light);
+        renderPipeBody(pipe, poseStack, buffer, bufferSource, light);
 
         // --- Render pluggables ---
         renderPluggables(pipe, 0, 0, 0, 0, buffer);
@@ -109,9 +112,29 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         poseStack.popPose();
     }
 
-    /** Emit the cached pipe body quads (cutout layer). */
-    private static void renderPipeBody(TilePipeHolder pipe, PoseStack poseStack, VertexConsumer buffer, int light) {
-        ModelPipe.renderDirect(pipe, poseStack.last(), buffer, light);
+    /** Emit pipe body quads (cutout) and colour mask overlay.
+     *  Dual-mode rendering based on pipe type:
+     *  - Fluid pipes: mask quads in CUTOUT buffer at alpha=255 (overwrites waterproofing
+     *    pixels with opaque dye colour, GL_LEQUAL allows overwrite at same depth)
+     *  - Item/kinesis: mask quads in TRANSLUCENT buffer at alpha=76 (semi-transparent
+     *    tint in glass regions, cutout pass writes no depth for glass so mask passes) */
+    private static void renderPipeBody(TilePipeHolder pipe, PoseStack poseStack,
+            VertexConsumer cutoutBuffer, MultiBufferSource.BufferSource bufferSource, int light) {
+        // 1. Cutout pass: base pipe body
+        ModelPipe.renderDirect(pipe, poseStack.last(), cutoutBuffer, light);
+
+        // 2. Colour mask overlay (if painted)
+        if (pipe.getPipe() != null && pipe.getPipe().getColour() != null) {
+            if (pipe.getPipe().getDefinition().flowType == PipeApi.flowFluids) {
+                // Fluid pipes: overwrite waterproofing pixels in cutout buffer (fully opaque)
+                ModelPipe.renderMaskOverlay(pipe, poseStack.last(), cutoutBuffer, light, 255);
+            } else {
+                // Item/kinesis pipes: tint glass in translucent buffer (30% alpha)
+                VertexConsumer translucentBuffer = bufferSource.getBuffer(
+                    Sheets.translucentBlockItemSheet());
+                ModelPipe.renderMaskOverlay(pipe, poseStack.last(), translucentBuffer, light, 76);
+            }
+        }
     }
 
     private static void renderPluggables(TilePipeHolder pipe, double x, double y, double z,

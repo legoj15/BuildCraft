@@ -103,6 +103,11 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
                 pipe = null;
             }
         });
+        // After data sync (e.g. colour change), refresh the model on the client
+        if (level != null && level.isClientSide()) {
+            requestModelDataUpdate();
+            scheduleRenderUpdate = true;
+        }
     }
 
     @Override

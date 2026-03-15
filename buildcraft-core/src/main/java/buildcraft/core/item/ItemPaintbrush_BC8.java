@@ -6,6 +6,7 @@ package buildcraft.core.item;
 
 import javax.annotation.Nullable;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -96,8 +97,11 @@ public class ItemPaintbrush_BC8 extends Item {
     public Component getName(ItemStack stack) {
         DyeColor colour = getColour(stack);
         if (colour != null) {
+            ChatFormatting fmt = ColourUtil.convertColourToTextFormat(colour);
             String colourName = ColourUtil.getTextFullTooltip(colour);
-            return Component.literal(colourName + " ").append(super.getName(stack));
+            return Component.empty()
+                .append(Component.literal(colourName + " ").withStyle(fmt))
+                .append(super.getName(stack));
         }
         return super.getName(stack);
     }

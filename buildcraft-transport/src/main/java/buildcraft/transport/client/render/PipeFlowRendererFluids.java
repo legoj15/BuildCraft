@@ -124,9 +124,9 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             Vec3 uvMax = max.add(offset);
 
             if (face.getAxis() == Axis.Y) {
-                renderFluidCuboid(min, max, uvMin, uvMax, 1, 1, sprite, tR, tG, tB, tA, fluidBB, pose);
+                renderFluidCuboid(min, max, uvMin, uvMax, 1, 1, gas, sprite, tR, tG, tB, tA, fluidBB, pose);
             } else {
-                renderFluidCuboid(min, max, uvMin, uvMax, amount, flow.capacity, sprite, tR, tG, tB, tA, fluidBB, pose);
+                renderFluidCuboid(min, max, uvMin, uvMax, amount, flow.capacity, gas, sprite, tR, tG, tB, tA, fluidBB, pose);
             }
         }
 
@@ -146,7 +146,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             Vec3 uvMin = min.add(centerOffset);
             Vec3 uvMax = max.add(centerOffset);
 
-            renderFluidCuboid(min, max, uvMin, uvMax, centerAmount, flow.capacity, sprite, tR, tG, tB, tA, fluidBB, pose);
+            renderFluidCuboid(min, max, uvMin, uvMax, centerAmount, flow.capacity, gas, sprite, tR, tG, tB, tA, fluidBB, pose);
             horizPos += (max.y - min.y) * centerAmount / flow.capacity;
         }
 
@@ -165,7 +165,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             Vec3 uvMin = min.add(centerOffset);
             Vec3 uvMax = max.add(centerOffset);
 
-            renderFluidCuboid(min, max, uvMin, uvMax, 1, 1, sprite, tR, tG, tB, tA, fluidBB, pose);
+            renderFluidCuboid(min, max, uvMin, uvMax, 1, 1, gas, sprite, tR, tG, tB, tA, fluidBB, pose);
         }
 
         bufferSource.endBatch();
@@ -178,24 +178,36 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
      * This replaces the 1.12.2 {@code FluidRenderer.renderFluid()} +
      * {@code setTranslation()} counter-translate pattern. */
     private static void renderFluidCuboid(Vec3 min, Vec3 max, Vec3 uvMin, Vec3 uvMax,
-            double amount, double capacity,
+            double amount, double capacity, boolean gas,
             TextureAtlasSprite sprite, int tR, int tG, int tB, int tA, VertexConsumer bb, PoseStack.Pose pose) {
         if (amount <= 0 || capacity <= 0) return;
 
-        // Scale height by fill level (same as 1.12.2 — non-gaseous fluids fill from bottom)
+        // Scale height by fill level
         double height = Math.min(amount / capacity, 1.0);
-        Vec3 realMax = new Vec3(max.x, min.y + (max.y - min.y) * height, max.z);
-        Vec3 realUvMax = new Vec3(uvMax.x, uvMin.y + (uvMax.y - uvMin.y) * height, uvMax.z);
+        Vec3 realMin, realMax, realUvMin, realUvMax;
+        if (gas) {
+            // Gaseous fluids fill from the top downward (matching 1.12.2)
+            realMin = new Vec3(min.x, max.y - (max.y - min.y) * height, min.z);
+            realMax = max;
+            realUvMin = new Vec3(uvMin.x, uvMax.y - (uvMax.y - uvMin.y) * height, uvMin.z);
+            realUvMax = uvMax;
+        } else {
+            // Normal fluids fill from the bottom upward
+            realMin = min;
+            realMax = new Vec3(max.x, min.y + (max.y - min.y) * height, max.z);
+            realUvMin = uvMin;
+            realUvMax = new Vec3(uvMax.x, uvMin.y + (uvMax.y - uvMin.y) * height, uvMax.z);
+        }
 
         Vector3f center = new Vector3f(
-            (float) (min.x + realMax.x) / 2f,
-            (float) (min.y + realMax.y) / 2f,
-            (float) (min.z + realMax.z) / 2f
+            (float) (realMin.x + realMax.x) / 2f,
+            (float) (realMin.y + realMax.y) / 2f,
+            (float) (realMin.z + realMax.z) / 2f
         );
         Vector3f radius = new Vector3f(
-            (float) (realMax.x - min.x) / 2f,
-            (float) (realMax.y - min.y) / 2f,
-            (float) (realMax.z - min.z) / 2f
+            (float) (realMax.x - realMin.x) / 2f,
+            (float) (realMax.y - realMin.y) / 2f,
+            (float) (realMax.z - realMin.z) / 2f
         );
 
         if (radius.x <= 0 || radius.y <= 0 || radius.z <= 0) return;
@@ -203,7 +215,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
         UvFaceData uvs = new UvFaceData();
         // UV AABB — uses the offset-shifted box for texture scrolling
         net.minecraft.world.phys.AABB uvBox = new net.minecraft.world.phys.AABB(
-            uvMin.x, uvMin.y, uvMin.z, realUvMax.x, realUvMax.y, realUvMax.z
+            realUvMin.x, realUvMin.y, realUvMin.z, realUvMax.x, realUvMax.y, realUvMax.z
         );
 
         for (Direction face : Direction.values()) {

@@ -6,6 +6,8 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import buildcraft.api.enums.EnumSpring;
 import buildcraft.energy.client.BCEnergyFluidsClient;
 import buildcraft.energy.tile.TileSpringOil;
+import buildcraft.lib.misc.MultiTankResourceHandler;
 
 @Mod(BCEnergy.MODID)
 public class BCEnergy {
@@ -40,10 +43,24 @@ public class BCEnergy {
         // Creative tab
         modEventBus.addListener(this::addCreativeTabItems);
 
+        // Register NeoForge capabilities for engines
+        modEventBus.addListener(this::registerCapabilities);
+
         // Setup event for things that need registries to be frozen
         modEventBus.addListener(this::commonSetup);
 
         LOGGER.info("BuildCraft Energy initialized");
+    }
+
+    private void registerCapabilities(RegisterCapabilitiesEvent event) {
+        // Fluid capability for the combustion engine — exposes fuel, coolant, residue tanks
+        event.registerBlockEntity(
+            Capabilities.Fluid.BLOCK,
+            BCEnergyBlockEntities.ENGINE_IRON.get(),
+            (engine, direction) -> new MultiTankResourceHandler(
+                engine.tankFuel, engine.tankCoolant, engine.tankResidue
+            )
+        );
     }
 
     private void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {

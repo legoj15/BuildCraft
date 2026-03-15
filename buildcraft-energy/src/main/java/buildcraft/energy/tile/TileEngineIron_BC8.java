@@ -68,7 +68,6 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
     private double burnTime;
     private double residueAmount = 0;
     private IFuel currentFuel;
-    public long currentOutput = 0;
 
     public TileEngineIron_BC8(BlockPos pos, BlockState state) {
         super(BCEnergyBlockEntities.ENGINE_IRON.get(), pos, state);

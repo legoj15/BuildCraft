@@ -55,6 +55,9 @@ public class BCTransport {
         // Initialize pipe definitions and registry
         BCTransportPipes.preInit();
 
+        // Register power transfer data for kinesis pipes
+        BCTransportConfig.registerPowerTransferData();
+
         // Initialize stripes registry and handlers
         initStripesRegistry();
 

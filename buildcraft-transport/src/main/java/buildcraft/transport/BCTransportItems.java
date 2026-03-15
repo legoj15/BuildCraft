@@ -120,15 +120,33 @@ public class BCTransportItems {
                     BCTransportPipes.diaWoodFluid, props).registerWithPipeApi());
 
     // Power transport pipes
-    public static final DeferredItem<Item> PIPE_WOOD_POWER = ITEMS.registerItem("pipe_wood_power", Item::new);
-    public static final DeferredItem<Item> PIPE_COBBLE_POWER = ITEMS.registerItem("pipe_cobble_power", Item::new);
-    public static final DeferredItem<Item> PIPE_STONE_POWER = ITEMS.registerItem("pipe_stone_power", Item::new);
-    public static final DeferredItem<Item> PIPE_QUARTZ_POWER = ITEMS.registerItem("pipe_quartz_power", Item::new);
-    public static final DeferredItem<Item> PIPE_IRON_POWER = ITEMS.registerItem("pipe_iron_power", Item::new);
-    public static final DeferredItem<Item> PIPE_GOLD_POWER = ITEMS.registerItem("pipe_gold_power", Item::new);
-    public static final DeferredItem<Item> PIPE_SANDSTONE_POWER = ITEMS.registerItem("pipe_sandstone_power", Item::new);
-    public static final DeferredItem<Item> PIPE_DIAMOND_POWER = ITEMS.registerItem("pipe_diamond_power", Item::new);
-    public static final DeferredItem<Item> PIPE_DIAMOND_WOOD_POWER = ITEMS.registerItem("pipe_diamond_wood_power", Item::new);
+    public static final DeferredItem<ItemPipeHolder> PIPE_WOOD_POWER = ITEMS.registerItem("pipe_wood_power",
+            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
+                    BCTransportPipes.woodPower, props).registerWithPipeApi());
+    public static final DeferredItem<ItemPipeHolder> PIPE_COBBLE_POWER = ITEMS.registerItem("pipe_cobble_power",
+            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
+                    BCTransportPipes.cobblePower, props).registerWithPipeApi());
+    public static final DeferredItem<ItemPipeHolder> PIPE_STONE_POWER = ITEMS.registerItem("pipe_stone_power",
+            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
+                    BCTransportPipes.stonePower, props).registerWithPipeApi());
+    public static final DeferredItem<ItemPipeHolder> PIPE_QUARTZ_POWER = ITEMS.registerItem("pipe_quartz_power",
+            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
+                    BCTransportPipes.quartzPower, props).registerWithPipeApi());
+    public static final DeferredItem<ItemPipeHolder> PIPE_IRON_POWER = ITEMS.registerItem("pipe_iron_power",
+            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
+                    BCTransportPipes.ironPower, props).registerWithPipeApi());
+    public static final DeferredItem<ItemPipeHolder> PIPE_GOLD_POWER = ITEMS.registerItem("pipe_gold_power",
+            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
+                    BCTransportPipes.goldPower, props).registerWithPipeApi());
+    public static final DeferredItem<ItemPipeHolder> PIPE_SANDSTONE_POWER = ITEMS.registerItem("pipe_sandstone_power",
+            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
+                    BCTransportPipes.sandstonePower, props).registerWithPipeApi());
+    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_POWER = ITEMS.registerItem("pipe_diamond_power",
+            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
+                    BCTransportPipes.diamondPower, props).registerWithPipeApi());
+    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_WOOD_POWER = ITEMS.registerItem("pipe_diamond_wood_power",
+            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
+                    BCTransportPipes.diaWoodPower, props).registerWithPipeApi());
 
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);

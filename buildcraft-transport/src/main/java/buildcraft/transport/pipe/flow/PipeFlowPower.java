@@ -118,9 +118,23 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
 
     @Override
     public boolean canConnect(Direction face, BlockEntity oTile) {
-        // Check if tile has MJ connector capability on opposite side
-        IMjConnector connector = pipe.getHolder().getCapabilityFromPipe(face, MjAPI.CAP_CONNECTOR);
-        return connector != null;
+        // Check if the external tile has MJ receiver or connector capability
+        if (pipe.getHolder().getPipeWorld() != null) {
+            // Use NeoForge BlockCapability lookup to check the neighbor tile
+            net.minecraft.world.level.Level level = pipe.getHolder().getPipeWorld();
+            net.minecraft.core.BlockPos neighborPos = pipe.getHolder().getPipePos().relative(face);
+            // Check for MJ receiver (engines, machines)
+            IMjReceiver receiver = level.getCapability(MjAPI.CAP_RECEIVER, neighborPos, face.getOpposite());
+            if (receiver != null) {
+                return true;
+            }
+            // Check for MJ connector (other power entities)
+            IMjConnector connector = level.getCapability(MjAPI.CAP_CONNECTOR, neighborPos, face.getOpposite());
+            if (connector != null && connector.canConnect(sections.get(face))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

@@ -75,6 +75,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
         double[] amounts = flow.getAmountsForRender(partialTicks);
         Vec3[] offsets = flow.getOffsetsForRender(partialTicks);
 
+
         boolean gas = forRender.getFluid().getFluidType().isLighterThanAir();
         boolean horizontal = false;
         boolean vertical = flow.pipe.isConnected(gas ? Direction.DOWN : Direction.UP);

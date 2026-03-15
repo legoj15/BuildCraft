@@ -84,21 +84,20 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         super.loadAdditional(input);
         input.read("pipe", CompoundTag.CODEC).ifPresent(pipeTag -> {
             try {
-                pipe = new Pipe(this, pipeTag);
-                eventBus.registerHandler(pipe.behaviour);
-                eventBus.registerHandler(pipe.flow);
-                org.slf4j.LoggerFactory.getLogger(TilePipeHolder.class)
-                    .info("[PipeDebug] loadAdditional: pipe created from NBT at {} (def={})", worldPosition, pipe.getDefinition().identifier);
+                if (pipe != null) {
+                    // Pipe already exists — just update its data from the incoming NBT
+                    // instead of recreating from scratch. This prevents the pipe being
+                    // destroyed/rebuilt every time the server sends a block entity update.
+                    pipe.readFromNbt(pipeTag);
+                } else {
+                    pipe = new Pipe(this, pipeTag);
+                    eventBus.registerHandler(pipe.behaviour);
+                    eventBus.registerHandler(pipe.flow);
+                }
             } catch (InvalidInputDataException e) {
-                org.slf4j.LoggerFactory.getLogger(TilePipeHolder.class)
-                    .error("[PipeDebug] loadAdditional: FAILED to create pipe from NBT at {}", worldPosition, e);
                 pipe = null;
             }
         });
-        if (pipe == null) {
-            org.slf4j.LoggerFactory.getLogger(TilePipeHolder.class)
-                .warn("[PipeDebug] loadAdditional: pipe is NULL after load at {} (no 'pipe' key in NBT?)", worldPosition);
-        }
     }
 
     @Override
@@ -110,9 +109,6 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         // Refresh model data and schedule render update
         requestModelDataUpdate();
         scheduleRenderUpdate = true;
-        boolean isClient = level != null && level.isClientSide();
-        org.slf4j.LoggerFactory.getLogger(TilePipeHolder.class)
-            .info("[PipeDebug] onLoad: pipe={} at {} (client={})", pipe != null ? pipe.getDefinition().identifier : "NULL", worldPosition, isClient);
     }
 
     // --- Client sync ---
@@ -152,8 +148,8 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
             pipe.postPluggableTick();
         }
 
-        // Schedule render update
-        if (scheduleRenderUpdate && level != null) {
+        // Schedule render update — server side only, to push block entity data to clients
+        if (scheduleRenderUpdate && level != null && !level.isClientSide()) {
             scheduleRenderUpdate = false;
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }

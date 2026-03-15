@@ -107,6 +107,40 @@ public final class Pipe implements IPipe, IDebuggable {
         return nbt;
     }
 
+    /** Updates the mutable state of this pipe from NBT. Used for in-place updates
+     *  when the server sends a block entity sync packet, avoiding the expensive
+     *  recreate-from-scratch path in loadAdditional. */
+    public void readFromNbt(CompoundTag nbt) {
+        // Update colour
+        String colStr = nbt.getStringOr("col", "");
+        if (!colStr.isEmpty()) {
+            this.colour = NBTUtilBC.readEnum(nbt.get("col"), DyeColor.class);
+        } else {
+            this.colour = null;
+        }
+        if (!definition.canBeColoured) {
+            colour = null;
+        }
+        // Update connections
+        connected.clear();
+        types.clear();
+        int connectionData = nbt.getIntOr("con", 0);
+        for (Direction face : Direction.values()) {
+            int data = (connectionData >>> (face.ordinal() * 2)) & 0b11;
+            if (data == 0b01) {
+                connected.put(face, DEFAULT_CONNECTION_DISTANCE);
+                types.put(face, ConnectedType.PIPE);
+            } else if (data == 0b10) {
+                connected.put(face, DEFAULT_CONNECTION_DISTANCE);
+                types.put(face, ConnectedType.TILE);
+            }
+        }
+        // Delegate flow data update
+        if (nbt.contains("flow")) {
+            flow.readFromNbt(nbt.getCompoundOrEmpty("flow"));
+        }
+    }
+
     // network
 
     public void writePayload(FriendlyByteBuf buffer) {

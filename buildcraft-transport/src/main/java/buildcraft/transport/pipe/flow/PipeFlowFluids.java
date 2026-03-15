@@ -146,6 +146,40 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         return nbt;
     }
 
+    /** Updates this flow's fluid data in-place from the given NBT.
+     *  Used for client-side sync — avoids recreating the PipeFlowFluids object. */
+    @Override
+    public void readFromNbt(CompoundTag nbt) {
+        if (nbt.contains("fluid_id")) {
+            String fluidId = nbt.getStringOr("fluid_id", "");
+            if (!fluidId.isEmpty()) {
+                net.minecraft.resources.Identifier fluidRL =
+                    net.minecraft.resources.Identifier.parse(fluidId);
+                net.minecraft.world.level.material.Fluid fluid =
+                    net.minecraft.core.registries.BuiltInRegistries.FLUID.getValue(fluidRL);
+                if (fluid != null && fluid != net.minecraft.world.level.material.Fluids.EMPTY) {
+                    // Set fluid directly without calling setFluid() to avoid resetting section state
+                    currentFluid = new FluidStack(fluid, 1000);
+                } else {
+                    currentFluid = FluidStack.EMPTY;
+                }
+            } else {
+                currentFluid = FluidStack.EMPTY;
+            }
+        } else {
+            currentFluid = FluidStack.EMPTY;
+        }
+        // Update section amounts
+        for (EnumPipePart part : EnumPipePart.VALUES) {
+            int direction = part.getIndex();
+            String key = "tank[" + direction + "]";
+            if (nbt.contains(key)) {
+                CompoundTag compound = nbt.getCompoundOrEmpty(key);
+                sections.get(part).readFromNbt(compound);
+            }
+        }
+    }
+
     @Override
     public boolean canConnect(Direction face, PipeFlow other) {
         return other instanceof IFlowFluid;

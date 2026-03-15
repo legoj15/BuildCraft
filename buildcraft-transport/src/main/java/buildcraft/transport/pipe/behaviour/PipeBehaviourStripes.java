@@ -196,9 +196,16 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
         if (world.isClientSide() || !(world instanceof ServerLevel serverLevel)) {
             return;
         }
-        FakePlayer player = BuildCraftAPI.fakePlayerProvider.getFakePlayer(
-            serverLevel, holder.getOwner(), pos
-        );
+        com.mojang.authlib.GameProfile owner = holder.getOwner();
+        FakePlayer player;
+        if (owner != null) {
+            player = BuildCraftAPI.fakePlayerProvider.getFakePlayer(
+                serverLevel, owner, pos
+            );
+        } else {
+            player = BuildCraftAPI.fakePlayerProvider.getBuildCraftPlayer(serverLevel);
+            player.setPos(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        }
         player.getInventory().clearContent();
         player.getInventory().setItem(player.getInventory().getSelectedSlot(), event.getStack());
         if (PipeApi.stripeRegistry != null &&

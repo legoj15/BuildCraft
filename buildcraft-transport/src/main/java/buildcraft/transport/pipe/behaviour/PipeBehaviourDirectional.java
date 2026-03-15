@@ -46,6 +46,13 @@ public abstract class PipeBehaviourDirectional extends PipeBehaviour {
     }
 
     @Override
+    public void readFromNbt(CompoundTag nbt) {
+        super.readFromNbt(nbt);
+        Direction dir = NBTUtilBC.readEnum(nbt.get("currentDir"), Direction.class);
+        this.currentDir = EnumPipePart.fromFacing(dir);
+    }
+
+    @Override
     public void writePayload(FriendlyByteBuf buffer) {
         super.writePayload(buffer);
         buffer.writeByte(currentDir.ordinal());

@@ -135,6 +135,10 @@ public final class Pipe implements IPipe, IDebuggable {
                 types.put(face, ConnectedType.TILE);
             }
         }
+        // Delegate behaviour data update
+        if (nbt.contains("beh")) {
+            behaviour.readFromNbt(nbt.getCompoundOrEmpty("beh"));
+        }
         // Delegate flow data update
         if (nbt.contains("flow")) {
             flow.readFromNbt(nbt.getCompoundOrEmpty("flow"));

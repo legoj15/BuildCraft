@@ -17,20 +17,25 @@ import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.client.renderer.item.ItemModelResolver;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.state.CameraRenderState;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
+
+import com.mojang.math.Axis;
 
 import buildcraft.api.transport.pipe.IPipeBehaviourRenderer;
 import buildcraft.api.transport.pipe.IPipeFlowRenderer;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeBehaviour;
 import buildcraft.api.transport.pipe.PipeFlow;
-import buildcraft.api.transport.pluggable.IPlugDynamicRenderer;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
 import buildcraft.lib.client.render.ItemRenderUtil;
@@ -96,7 +101,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         renderPipeBody(pipe, poseStack, buffer, bufferSource, light);
 
         // --- Render pluggables ---
-        renderPluggables(pipe, 0, 0, 0, 0, buffer);
+        renderPluggables(pipe, poseStack, collector, light);
 
         // --- Set up ItemRenderUtil batch state for item flow rendering ---
         ItemRenderUtil.beginItemBatch(poseStack, collector, light);
@@ -137,23 +142,57 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         }
     }
 
-    private static void renderPluggables(TilePipeHolder pipe, double x, double y, double z,
-        float partialTicks, VertexConsumer bb) {
+    private static final ItemStackRenderState plugRenderState = new ItemStackRenderState();
+
+    private static void renderPluggables(TilePipeHolder pipe, PoseStack poseStack,
+        SubmitNodeCollector collector, int light) {
         for (Direction face : Direction.values()) {
             PipePluggable plug = pipe.getPluggable(face);
             if (plug == null) {
                 continue;
             }
-            renderPlug(plug, x, y, z, partialTicks, bb);
-        }
-    }
+            // Get the item model from the pluggable's pick stack
+            ItemStack pickStack = plug.getPickStack();
+            if (pickStack.isEmpty()) continue;
 
-    @SuppressWarnings("unchecked")
-    private static <P extends PipePluggable> void renderPlug(P plug, double x, double y, double z,
-        float partialTicks, VertexConsumer bb) {
-        IPlugDynamicRenderer<P> renderer = PipeRegistryClient.getPlugRenderer(plug);
-        if (renderer != null) {
-            renderer.render(plug, x, y, z, partialTicks, bb);
+            ItemModelResolver resolver = Minecraft.getInstance().getItemModelResolver();
+            plugRenderState.clear();
+            resolver.updateForTopItem(plugRenderState, pickStack, ItemDisplayContext.FIXED,
+                    Minecraft.getInstance().level, null, 0);
+            if (plugRenderState.isEmpty()) continue;
+
+            poseStack.pushPose();
+
+            // Rotate the model from its default orientation to point outward from the pipe face.
+            // The item models (plug_blocker, plug_power_adaptor) are authored as WEST-facing geometry.
+            poseStack.translate(0.5, 0.5, 0.5);
+            switch (face) {
+                case WEST:
+                    // Already facing west, no rotation needed
+                    break;
+                case EAST:
+                    poseStack.mulPose(Axis.YP.rotationDegrees(180));
+                    break;
+                case NORTH:
+                    poseStack.mulPose(Axis.YP.rotationDegrees(90));
+                    break;
+                case SOUTH:
+                    poseStack.mulPose(Axis.YP.rotationDegrees(-90));
+                    break;
+                case UP:
+                    poseStack.mulPose(Axis.ZP.rotationDegrees(-90));
+                    break;
+                case DOWN:
+                    poseStack.mulPose(Axis.ZP.rotationDegrees(90));
+                    break;
+            }
+            poseStack.translate(-0.5, -0.5, -0.5);
+
+            // Render the pluggable model
+            plugRenderState.submit(poseStack, collector,
+                    light, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, 0);
+
+            poseStack.popPose();
         }
     }
 

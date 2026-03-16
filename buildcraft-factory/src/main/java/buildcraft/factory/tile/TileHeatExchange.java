@@ -33,6 +33,9 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import buildcraft.api.recipes.BuildcraftRecipeRegistry;
 import buildcraft.api.recipes.IRefineryRecipeManager;
@@ -477,7 +480,7 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
         }
 
         @Nullable
-        IFluidHandler getFluidAutoOutputTarget() {
+        ResourceHandler<FluidResource> getFluidAutoOutputTarget() {
             return null;
         }
     }
@@ -515,15 +518,12 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
 
         @Nullable
         @Override
-        IFluidHandler getFluidAutoOutputTarget() {
+        ResourceHandler<FluidResource> getFluidAutoOutputTarget() {
             Direction facing = getTile().getFacing();
             if (facing == null || getTile().level == null) return null;
             BlockPos targetPos = getTile().worldPosition.relative(facing.getClockWise());
-            @SuppressWarnings("unchecked")
-            IFluidHandler handler = (IFluidHandler) getTile().level.getCapability(
-                    (net.neoforged.neoforge.capabilities.BlockCapability) Capabilities.Fluid.BLOCK,
-                    targetPos, facing.getCounterClockWise());
-            return handler;
+            return getTile().level.getCapability(
+                    Capabilities.Fluid.BLOCK, targetPos, facing.getCounterClockWise());
         }
 
         @Override
@@ -675,12 +675,12 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
         }
 
         private void output() {
-            IFluidHandler thisOut = getFluidAutoOutputTarget();
+            ResourceHandler<FluidResource> thisOut = getFluidAutoOutputTarget();
             if (thisOut != null) {
                 moveFluid(tankOutput, thisOut, 1000);
             }
             if (endSection != null) {
-                IFluidHandler endOut = endSection.getFluidAutoOutputTarget();
+                ResourceHandler<FluidResource> endOut = endSection.getFluidAutoOutputTarget();
                 if (endOut != null) {
                     moveFluid(endSection.tankOutput, endOut, 1000);
                 }
@@ -719,12 +719,17 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
             t.drain(fluid.copy(), IFluidHandler.FluidAction.EXECUTE);
         }
 
-        private static void moveFluid(FluidTank from, IFluidHandler to, int maxAmount) {
+        @SuppressWarnings("removal")
+        private static void moveFluid(FluidTank from, ResourceHandler<FluidResource> to, int maxAmount) {
             FluidStack drained = from.drain(maxAmount, IFluidHandler.FluidAction.SIMULATE);
             if (drained.isEmpty()) return;
-            int filled = to.fill(drained, IFluidHandler.FluidAction.EXECUTE);
-            if (filled > 0) {
-                from.drain(filled, IFluidHandler.FluidAction.EXECUTE);
+            FluidResource resource = FluidResource.of(drained);
+            try (Transaction tx = Transaction.openRoot()) {
+                int accepted = to.insert(resource, drained.getAmount(), tx);
+                if (accepted > 0) {
+                    from.drain(accepted, IFluidHandler.FluidAction.EXECUTE);
+                    tx.commit();
+                }
             }
         }
     }
@@ -742,13 +747,11 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
 
         @Nullable
         @Override
-        IFluidHandler getFluidAutoOutputTarget() {
+        ResourceHandler<FluidResource> getFluidAutoOutputTarget() {
             if (getTile().level == null) return null;
-            @SuppressWarnings("unchecked")
-            IFluidHandler handler = (IFluidHandler) getTile().level.getCapability(
-                    (net.neoforged.neoforge.capabilities.BlockCapability) Capabilities.Fluid.BLOCK,
+            return getTile().level.getCapability(
+                    Capabilities.Fluid.BLOCK,
                     getTile().worldPosition.above(), Direction.DOWN);
-            return handler;
         }
     }
 }

@@ -6,6 +6,8 @@ import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 
+import buildcraft.silicon.item.ItemPluggableFacade;
+
 public class BCSiliconItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCSilicon.MODID);
 
@@ -41,6 +43,10 @@ public class BCSiliconItems {
     // Gate Copier
     public static final DeferredItem<Item> GATE_COPIER =
             ITEMS.registerItem("gate_copier", Item::new, props -> props.stacksTo(1));
+
+    // Facade
+    public static final DeferredItem<ItemPluggableFacade> PLUG_FACADE =
+            ITEMS.registerItem("plug_facade", ItemPluggableFacade::new);
 
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);

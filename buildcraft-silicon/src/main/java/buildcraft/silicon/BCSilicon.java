@@ -58,7 +58,21 @@ public class BCSilicon {
 
     private void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == buildcraft.core.BCCoreCreativeTabs.MAIN_TAB_KEY) {
+            // Tables (after laser)
             event.accept(new ItemStack(BCSiliconItems.LASER.get()));
+            event.accept(new ItemStack(BCSiliconItems.ASSEMBLY_TABLE.get()));
+            event.accept(new ItemStack(BCSiliconItems.ADVANCED_CRAFTING_TABLE.get()));
+            event.accept(new ItemStack(BCSiliconItems.INTEGRATION_TABLE.get()));
+
+            // Chipsets
+            event.accept(new ItemStack(BCSiliconItems.REDSTONE_RED_CHIPSET.get()));
+            event.accept(new ItemStack(BCSiliconItems.REDSTONE_IRON_CHIPSET.get()));
+            event.accept(new ItemStack(BCSiliconItems.REDSTONE_GOLD_CHIPSET.get()));
+            event.accept(new ItemStack(BCSiliconItems.REDSTONE_QUARTZ_CHIPSET.get()));
+            event.accept(new ItemStack(BCSiliconItems.REDSTONE_DIAMOND_CHIPSET.get()));
+
+            // Gate Copier
+            event.accept(new ItemStack(BCSiliconItems.GATE_COPIER.get()));
         }
     }
 }

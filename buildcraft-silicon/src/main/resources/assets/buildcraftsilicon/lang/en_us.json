@@ -1,3 +1,12 @@
 {
-    "block.buildcraftsilicon.laser": "Laser"
+    "block.buildcraftsilicon.laser": "Laser",
+    "block.buildcraftsilicon.assembly_table": "Assembly Table",
+    "block.buildcraftsilicon.advanced_crafting_table": "Advanced Crafting Table",
+    "block.buildcraftsilicon.integration_table": "Integration Table",
+    "item.buildcraftsilicon.redstone_red_chipset": "Redstone Chipset",
+    "item.buildcraftsilicon.redstone_iron_chipset": "Iron Chipset",
+    "item.buildcraftsilicon.redstone_gold_chipset": "Gold Chipset",
+    "item.buildcraftsilicon.redstone_quartz_chipset": "Quartz Chipset",
+    "item.buildcraftsilicon.redstone_diamond_chipset": "Diamond Chipset",
+    "item.buildcraftsilicon.gate_copier": "Gate Copier"
 }

@@ -256,7 +256,6 @@ public class BCCore {
             event.accept(BCCoreItems.MAP_LOCATION);
             event.accept(BCCoreItems.MARKER_CONNECTOR);
             event.accept(BCCoreItems.VOLUME_BOX);
-            event.accept(BCCoreItems.GOGGLES);
         }
     }
 }

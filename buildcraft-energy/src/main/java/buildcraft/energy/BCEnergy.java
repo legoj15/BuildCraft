@@ -97,6 +97,20 @@ public class BCEnergy {
 
             event.insertAfter(redstoneAnchor, stoneStack, net.minecraft.world.item.CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
             event.insertAfter(stoneStack, ironStack, net.minecraft.world.item.CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+
+            // Glob of Oil — positioned between the quarry and autoworkbench to match 1.12.2
+            // Use registry lookup since buildcraft-energy doesn't depend on buildcraft-builders
+            net.minecraft.world.level.block.Block quarryBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                    .getValue(net.minecraft.resources.Identifier.parse("buildcraftbuilders:quarry"));
+            if (quarryBlock != net.minecraft.world.level.block.Blocks.AIR) {
+                net.minecraft.world.item.ItemStack quarryAnchor = new net.minecraft.world.item.ItemStack(quarryBlock);
+                net.minecraft.world.item.ItemStack globStack = new net.minecraft.world.item.ItemStack(
+                        BCEnergyItems.GLOB_OF_OIL.get());
+                event.insertAfter(quarryAnchor, globStack, net.minecraft.world.item.CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+            } else {
+                // Fallback: just append if quarry isn't loaded
+                event.accept(new net.minecraft.world.item.ItemStack(BCEnergyItems.GLOB_OF_OIL.get()));
+            }
         }
     }
 

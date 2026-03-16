@@ -106,8 +106,8 @@ public class BCBuilders {
             event.accept(BCBuildersBlocks.ARCHITECT);
             event.accept(BCBuildersBlocks.LIBRARY);
             event.accept(BCBuildersBlocks.REPLACER);
-            event.accept(BCBuildersBlocks.QUARRY);
             event.accept(BCBuildersBlocks.FRAME);
+            event.accept(BCBuildersBlocks.QUARRY);
         }
     }
 

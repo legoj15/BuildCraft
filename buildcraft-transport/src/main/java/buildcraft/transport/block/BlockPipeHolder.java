@@ -245,18 +245,18 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         if (stack.getItem() instanceof buildcraft.api.transport.IItemPluggable itemPlug) {
             buildcraft.api.transport.pluggable.PipePluggable existing = tile.getPluggable(realSide);
             if (existing == null) {
-                if (!level.isClientSide()) {
-                    buildcraft.api.transport.pluggable.PipePluggable plug = 
-                            itemPlug.onPlace(stack, tile, realSide, player, hand);
-                    if (plug != null) {
+                buildcraft.api.transport.pluggable.PipePluggable plug = 
+                        itemPlug.onPlace(stack, tile, realSide, player, hand);
+                if (plug != null) {
+                    if (!level.isClientSide()) {
                         tile.replacePluggable(realSide, plug);
                         plug.onPlacedBy(player);
                         if (!player.getAbilities().instabuild) {
                             stack.shrink(1);
                         }
                     }
+                    return InteractionResult.SUCCESS;
                 }
-                return InteractionResult.SUCCESS;
             }
         }
 

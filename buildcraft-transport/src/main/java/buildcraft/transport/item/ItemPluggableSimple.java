@@ -6,6 +6,8 @@
 
 package buildcraft.transport.item;
 
+import java.util.function.Predicate;
+
 import javax.annotation.Nullable;
 
 import net.minecraft.world.InteractionHand;
@@ -16,6 +18,7 @@ import net.minecraft.core.Direction;
 
 import buildcraft.api.transport.IItemPluggable;
 import buildcraft.api.transport.pipe.IPipeHolder;
+import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
 
@@ -24,17 +27,33 @@ import buildcraft.api.transport.pluggable.PluggableDefinition;
  * Used for Pipe Plug and Pipe Power Adaptor.
  */
 public class ItemPluggableSimple extends Item implements IItemPluggable {
+    /** Predicate that checks if the pipe uses the power flow type (kinesis pipes). */
+    public static final Predicate<IPipeHolder> PIPE_BEHAVIOUR_ACCEPTS_RS_POWER = holder -> {
+        if (holder.getPipe() == null) return false;
+        return holder.getPipe().getDefinition().flowType == PipeApi.flowPower;
+    };
+
     private final PluggableDefinition definition;
+    private final Predicate<IPipeHolder> placementPredicate;
 
     public ItemPluggableSimple(Item.Properties properties, PluggableDefinition definition) {
+        this(properties, definition, null);
+    }
+
+    public ItemPluggableSimple(Item.Properties properties, PluggableDefinition definition,
+                                @Nullable Predicate<IPipeHolder> placementPredicate) {
         super(properties);
         this.definition = definition;
+        this.placementPredicate = placementPredicate;
     }
 
     @Nullable
     @Override
     public PipePluggable onPlace(ItemStack stack, IPipeHolder holder, Direction side, Player player,
                                   InteractionHand hand) {
+        if (placementPredicate != null && !placementPredicate.test(holder)) {
+            return null;
+        }
         if (definition.creator != null) {
             return definition.creator.createSimplePluggable(definition, holder, side);
         }

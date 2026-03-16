@@ -25,9 +25,10 @@ public class BCTransportItems {
     public static final DeferredItem<ItemPluggableSimple> PLUG_BLOCKER = ITEMS.registerItem("plug_blocker",
             props -> new ItemPluggableSimple(props, BCTransportPlugs.blocker));
 
-    /** Power Adaptor Plug — allows MJ to pass into a pipe from adjacents. */
+    /** Power Adaptor Plug — allows MJ to pass into a pipe from adjacents. Only placeable on kinesis pipes. */
     public static final DeferredItem<ItemPluggableSimple> PLUG_POWER_ADAPTOR = ITEMS.registerItem("plug_power_adaptor",
-            props -> new ItemPluggableSimple(props, BCTransportPlugs.powerAdaptor));
+            props -> new ItemPluggableSimple(props, BCTransportPlugs.powerAdaptor,
+                    ItemPluggableSimple.PIPE_BEHAVIOUR_ACCEPTS_RS_POWER));
 
     // -- Pipe Items --
     // PIPE_WOOD_ITEM uses ItemPipeHolder to tie the item to the pipe_holder block + pipe definition.

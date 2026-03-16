@@ -169,6 +169,26 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         return this.saveCustomOnly(registries);
     }
 
+    @Override
+    public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
+        super.handleUpdateTag(input);
+        // Schedule client-side render refresh after receiving updated state
+        requestModelDataUpdate();
+        if (level != null && level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+        }
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
+        super.onDataPacket(net, input);
+        // Schedule client-side render refresh after receiving updated state
+        requestModelDataUpdate();
+        if (level != null && level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+        }
+    }
+
     @Nullable
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {

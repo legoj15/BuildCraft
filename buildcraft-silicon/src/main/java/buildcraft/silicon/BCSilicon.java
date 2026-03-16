@@ -33,6 +33,7 @@ public class BCSilicon {
         BCSiliconBlocks.init(modEventBus);
         BCSiliconItems.init(modEventBus);
         BCSiliconBlockEntities.init(modEventBus);
+        BCSiliconCreativeTabs.init(modEventBus);
 
         // Register pluggable definitions (facade, etc.)
         BCSiliconPlugs.preInit();
@@ -96,8 +97,10 @@ public class BCSilicon {
 
             // Gate Copier
             event.accept(new ItemStack(BCSiliconItems.GATE_COPIER.get()));
+        }
 
-            // Facades
+        // Facades in their own tab
+        if (event.getTabKey() == BCSiliconCreativeTabs.FACADE_TAB_KEY) {
             for (FacadeBlockStateInfo info : FacadeStateManager.validFacadeStates.values()) {
                 if (info.isVisible) {
                     event.accept(BCSiliconItems.PLUG_FACADE.get()

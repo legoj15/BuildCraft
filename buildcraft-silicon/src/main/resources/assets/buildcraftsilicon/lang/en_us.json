@@ -8,5 +8,10 @@
     "item.buildcraftsilicon.redstone_gold_chipset": "Gold Chipset",
     "item.buildcraftsilicon.redstone_quartz_chipset": "Quartz Chipset",
     "item.buildcraftsilicon.redstone_diamond_chipset": "Diamond Chipset",
-    "item.buildcraftsilicon.gate_copier": "Gate Copier"
+    "item.buildcraftsilicon.gate_copier": "Gate Copier",
+    "item.buildcraftsilicon.plug_facade": "Facade",
+    "item.buildcraftsilicon.plug_facade_phased": "Phased Facade",
+    "item.buildcraftsilicon.plug_facade_phased.state": "%s: %s",
+    "item.buildcraftsilicon.plug_facade_phased.state_default": "Default: %s",
+    "itemGroup.buildcraft.facades": "BuildCraft Facades"
 }

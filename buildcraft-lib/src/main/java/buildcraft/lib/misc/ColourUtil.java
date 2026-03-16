@@ -56,7 +56,15 @@ public class ColourUtil {
     public static String getTextFullTooltip(@Nullable DyeColor colour) {
         if (colour == null) return "Clean";
         String name = colour.getName();
-        return Character.toUpperCase(name.charAt(0)) + name.substring(1);
+        // Title-case each word (e.g. "light_blue" -> "Light Blue")
+        String[] parts = name.split("_");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < parts.length; i++) {
+            if (i > 0) sb.append(' ');
+            sb.append(Character.toUpperCase(parts[i].charAt(0)));
+            sb.append(parts[i].substring(1));
+        }
+        return sb.toString();
     }
 
     /** Returns a display-friendly name for the given direction. */

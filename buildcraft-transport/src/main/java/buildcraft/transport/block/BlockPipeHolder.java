@@ -342,6 +342,8 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                                 Block.popResource(level, pos, drop);
                             }
                         }
+                        // Immediately sync the updated state to the client
+                        level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
                         return false; // Don't destroy the pipe
                     }
                 }

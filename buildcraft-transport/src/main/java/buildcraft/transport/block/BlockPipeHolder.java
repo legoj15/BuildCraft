@@ -228,7 +228,7 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                            Player player, InteractionHand hand, BlockHitResult hitResult) {
         if (stack.isEmpty()) {
-            return InteractionResult.PASS;
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TilePipeHolder tile) || tile.getPipe() == null) {
@@ -273,7 +273,7 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                 (float) hitResult.getLocation().z, hitPart)) {
             return InteractionResult.SUCCESS;
         }
-        return InteractionResult.PASS;
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
     }
 
     /**

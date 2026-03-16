@@ -6,6 +6,8 @@ import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 
+import buildcraft.transport.item.ItemPluggableSimple;
+
 import buildcraft.transport.item.ItemPipeHolder;
 
 public class BCTransportItems {
@@ -20,10 +22,12 @@ public class BCTransportItems {
     public static final DeferredItem<Item> WATERPROOF = ITEMS.registerItem("waterproof", Item::new);
 
     /** Plug — blocks a pipe face, preventing connections. */
-    public static final DeferredItem<Item> PLUG_BLOCKER = ITEMS.registerItem("plug_blocker", Item::new);
+    public static final DeferredItem<ItemPluggableSimple> PLUG_BLOCKER = ITEMS.registerItem("plug_blocker",
+            props -> new ItemPluggableSimple(props, BCTransportPlugs.blocker));
 
     /** Power Adaptor Plug — allows MJ to pass into a pipe from adjacents. */
-    public static final DeferredItem<Item> PLUG_POWER_ADAPTOR = ITEMS.registerItem("plug_power_adaptor", Item::new);
+    public static final DeferredItem<ItemPluggableSimple> PLUG_POWER_ADAPTOR = ITEMS.registerItem("plug_power_adaptor",
+            props -> new ItemPluggableSimple(props, BCTransportPlugs.powerAdaptor));
 
     // -- Pipe Items --
     // PIPE_WOOD_ITEM uses ItemPipeHolder to tie the item to the pipe_holder block + pipe definition.

@@ -10,6 +10,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -172,6 +173,19 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         if (be instanceof TilePipeHolder tile && tile.getPipe() != null) {
             var pipe = tile.getPipe();
             buildcraft.api.core.EnumPipePart hitPart = getHitPart(tile, hitResult);
+
+            // Check if clicking on a pluggable — activate it
+            if (hitPart != buildcraft.api.core.EnumPipePart.CENTER && hitPart.face != null) {
+                buildcraft.api.transport.pluggable.PipePluggable existing = tile.getPluggable(hitPart.face);
+                if (existing != null) {
+                    if (existing.onPluggableActivate(player, hitResult,
+                            (float) hitResult.getLocation().x, (float) hitResult.getLocation().y,
+                            (float) hitResult.getLocation().z)) {
+                        return InteractionResult.SUCCESS;
+                    }
+                }
+            }
+
             if (pipe.getBehaviour().onPipeActivate(player, hitResult, 
                     (float) hitResult.getLocation().x, (float) hitResult.getLocation().y, 
                     (float) hitResult.getLocation().z, 
@@ -180,6 +194,65 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
             }
         }
         return InteractionResult.PASS;
+    }
+
+    @Override
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                           Player player, InteractionHand hand, BlockHitResult hitResult) {
+        if (stack.isEmpty()) {
+            return InteractionResult.PASS;
+        }
+        BlockEntity be = level.getBlockEntity(pos);
+        if (!(be instanceof TilePipeHolder tile) || tile.getPipe() == null) {
+            return InteractionResult.PASS;
+        }
+
+        // Determine which face was clicked
+        Direction realSide = getHitFace(tile, hitResult);
+        if (realSide == null) {
+            realSide = hitResult.getDirection();
+        }
+
+        // Try to place a pluggable
+        if (stack.getItem() instanceof buildcraft.api.transport.IItemPluggable itemPlug) {
+            buildcraft.api.transport.pluggable.PipePluggable existing = tile.getPluggable(realSide);
+            if (existing == null) {
+                if (!level.isClientSide()) {
+                    buildcraft.api.transport.pluggable.PipePluggable plug = 
+                            itemPlug.onPlace(stack, tile, realSide, player, hand);
+                    if (plug != null) {
+                        tile.replacePluggable(realSide, plug);
+                        plug.onPlacedBy(player);
+                        if (!player.getAbilities().instabuild) {
+                            stack.shrink(1);
+                        }
+                    }
+                }
+                return InteractionResult.SUCCESS;
+            }
+        }
+
+        return InteractionResult.PASS;
+    }
+
+    /**
+     * Determines the Direction face the player clicked on (arm or null for center).
+     */
+    @Nullable
+    private static Direction getHitFace(TilePipeHolder tile, BlockHitResult hitResult) {
+        double lx = hitResult.getLocation().x - hitResult.getBlockPos().getX();
+        double ly = hitResult.getLocation().y - hitResult.getBlockPos().getY();
+        double lz = hitResult.getLocation().z - hitResult.getBlockPos().getZ();
+        var pipe = tile.getPipe();
+        if (pipe != null) {
+            if (ly < 0.25 && pipe.isConnected(Direction.DOWN))  return Direction.DOWN;
+            if (ly > 0.75 && pipe.isConnected(Direction.UP))    return Direction.UP;
+            if (lz < 0.25 && pipe.isConnected(Direction.NORTH)) return Direction.NORTH;
+            if (lz > 0.75 && pipe.isConnected(Direction.SOUTH)) return Direction.SOUTH;
+            if (lx < 0.25 && pipe.isConnected(Direction.WEST))  return Direction.WEST;
+            if (lx > 0.75 && pipe.isConnected(Direction.EAST))  return Direction.EAST;
+        }
+        return null; // Center
     }
 
     /**

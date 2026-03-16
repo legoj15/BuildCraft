@@ -39,6 +39,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.tiles.IDebuggable;
+import buildcraft.api.transport.pipe.PipeApi;
+import buildcraft.api.transport.pluggable.PluggableDefinition;
 import buildcraft.api.transport.IWireManager;
 import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IItemPipe;
@@ -62,6 +64,7 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     public final PipeEventBus eventBus = new PipeEventBus();
     private Pipe pipe;
+    private final PipePluggable[] pluggables = new PipePluggable[6];
     private boolean scheduleRenderUpdate = true;
     private final Set<PipeMessageReceiver> networkUpdates = EnumSet.noneOf(PipeMessageReceiver.class);
     private final Set<PipeMessageReceiver> networkGuiUpdates = EnumSet.noneOf(PipeMessageReceiver.class);
@@ -82,6 +85,20 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         if (pipe != null) {
             output.store("pipe", CompoundTag.CODEC, pipe.writeToNbt());
         }
+        // Save pluggables
+        CompoundTag plugTag = new CompoundTag();
+        for (Direction face : Direction.values()) {
+            PipePluggable plug = pluggables[face.ordinal()];
+            if (plug != null) {
+                CompoundTag entry = new CompoundTag();
+                entry.putString("id", plug.definition.identifier.toString());
+                entry.put("data", plug.writeToNbt());
+                plugTag.put(face.getName(), entry);
+            }
+        }
+        if (!plugTag.isEmpty()) {
+            output.store("plugs", CompoundTag.CODEC, plugTag);
+        }
     }
 
     @Override
@@ -101,6 +118,30 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
                 }
             } catch (InvalidInputDataException e) {
                 pipe = null;
+            }
+        });
+        // Load pluggables
+        input.read("plugs", CompoundTag.CODEC).ifPresent(plugTag -> {
+            for (Direction face : Direction.values()) {
+                if (plugTag.contains(face.getName())) {
+                    CompoundTag entry = plugTag.getCompound(face.getName()).orElse(new CompoundTag());
+                    String id = entry.getString("id").orElse("");
+                    if (!id.isEmpty()) {
+                        net.minecraft.resources.Identifier plugId = net.minecraft.resources.Identifier.parse(id);
+                        PluggableDefinition def = PipeApi.pluggableRegistry != null
+                                ? PipeApi.pluggableRegistry.getDefinition(plugId) : null;
+                        if (def != null) {
+                            CompoundTag data = entry.getCompound("data").orElse(new CompoundTag());
+                            pluggables[face.ordinal()] = def.readFromNbt(this, face, data);
+                        } else {
+                            pluggables[face.ordinal()] = null;
+                        }
+                    } else {
+                        pluggables[face.ordinal()] = null;
+                    }
+                } else {
+                    pluggables[face.ordinal()] = null;
+                }
             }
         });
         // After data sync (e.g. colour change), refresh the model on the client
@@ -154,6 +195,12 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         if (pipe != null) {
             pipe.onTick();
         }
+        // Tick pluggables
+        for (PipePluggable plug : pluggables) {
+            if (plug != null) {
+                plug.onTick();
+            }
+        }
         if (pipe != null) {
             pipe.postPluggableTick();
         }
@@ -184,6 +231,19 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
             pipe.addDrops(drops, 0);
             for (ItemStack drop : drops) {
                 Block.popResource(lvl, pos, drop);
+            }
+        }
+        // Drop pluggables
+        for (int i = 0; i < 6; i++) {
+            PipePluggable plug = pluggables[i];
+            if (plug != null) {
+                NonNullList<ItemStack> plugDrops = NonNullList.create();
+                plug.addDrops(plugDrops, 0);
+                for (ItemStack drop : plugDrops) {
+                    Block.popResource(lvl, pos, drop);
+                }
+                plug.onRemove();
+                pluggables[i] = null;
             }
         }
     }
@@ -219,7 +279,22 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     @Nullable
     @Override
     public PipePluggable getPluggable(Direction side) {
-        return null; // Pluggables not yet ported
+        if (side == null) return null;
+        return pluggables[side.ordinal()];
+    }
+
+    /** Replaces (or removes) the pluggable on the given side.
+     *  @return The previously installed pluggable (or null). */
+    @Nullable
+    public PipePluggable replacePluggable(Direction side, @Nullable PipePluggable with) {
+        PipePluggable old = pluggables[side.ordinal()];
+        pluggables[side.ordinal()] = with;
+        if (pipe != null) {
+            pipe.markForUpdate();
+        }
+        scheduleRenderUpdate();
+        setChanged();
+        return old;
     }
 
     @Nullable

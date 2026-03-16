@@ -41,6 +41,11 @@ public class BCTransport {
     public BCTransport(IEventBus modEventBus, ModContainer modContainer) {
         INSTANCE = this;
 
+        // Initialize pipe and pluggable definitions BEFORE items register
+        // (ItemPluggableSimple references BCTransportPlugs.blocker etc. at class-load time)
+        BCTransportPipes.preInit();
+        BCTransportPlugs.preInit();
+
         // Register all deferred registries
         BCTransportBlocks.init(modEventBus);
         BCTransportItems.init(modEventBus);
@@ -52,9 +57,6 @@ public class BCTransport {
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
             modEventBus.register(buildcraft.transport.client.BCTransportClient.class);
         }
-
-        // Initialize pipe definitions and registry
-        BCTransportPipes.preInit();
 
         // Register power transfer data for kinesis pipes
         BCTransportConfig.registerPowerTransferData();

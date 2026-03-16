@@ -299,41 +299,63 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         return buildcraft.api.core.EnumPipePart.CENTER;
     }
 
-    // Block removal — check for pluggable targeting first, then drop pipe items
+    /**
+     * Returns the Direction of the pluggable that the given local hit coordinates fall within,
+     * or null if no pluggable is hit.
+     */
+    @Nullable
+    private static Direction getHitPluggable(TilePipeHolder tile, double lx, double ly, double lz) {
+        for (Direction dir : Direction.values()) {
+            PipePluggable plug = tile.getPluggable(dir);
+            if (plug != null) {
+                AABB box = plug.getBoundingBox();
+                if (lx >= box.minX && lx <= box.maxX
+                    && ly >= box.minY && ly <= box.maxY
+                    && lz >= box.minZ && lz <= box.maxZ) {
+                    return dir;
+                }
+            }
+        }
+        return null;
+    }
+
+    // NeoForge hook: returning false prevents the block from being destroyed.
+    // If the player targets a pluggable, remove only the pluggable and return false.
     @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof TilePipeHolder tile && !level.isClientSide()) {
-            // Check if the player is targeting a pluggable
-            net.minecraft.world.phys.HitResult hit = player.pick(5.0, 0.0f, false);
-            if (hit instanceof BlockHitResult blockHit && pos.equals(blockHit.getBlockPos())) {
-                double lx = blockHit.getLocation().x - pos.getX();
-                double ly = blockHit.getLocation().y - pos.getY();
-                double lz = blockHit.getLocation().z - pos.getZ();
-                for (Direction dir : Direction.values()) {
-                    PipePluggable plug = tile.getPluggable(dir);
-                    if (plug != null) {
-                        AABB box = plug.getBoundingBox();
-                        if (lx >= box.minX && lx <= box.maxX
-                            && ly >= box.minY && ly <= box.maxY
-                            && lz >= box.minZ && lz <= box.maxZ) {
-                            // Remove the pluggable and drop it — don't break the pipe
+    public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
+                                       ItemStack toolStack, boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {
+        if (!level.isClientSide()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TilePipeHolder tile) {
+                net.minecraft.world.phys.HitResult hit = player.pick(5.0, 0.0f, false);
+                if (hit instanceof BlockHitResult blockHit && pos.equals(blockHit.getBlockPos())) {
+                    double lx = blockHit.getLocation().x - pos.getX();
+                    double ly = blockHit.getLocation().y - pos.getY();
+                    double lz = blockHit.getLocation().z - pos.getZ();
+                    Direction plugDir = getHitPluggable(tile, lx, ly, lz);
+                    if (plugDir != null) {
+                        PipePluggable plug = tile.getPluggable(plugDir);
+                        if (plug != null) {
                             ItemStack drop = plug.getPickStack();
-                            tile.replacePluggable(dir, null);
+                            tile.replacePluggable(plugDir, null);
                             if (!player.isCreative() && !drop.isEmpty()) {
                                 Block.popResource(level, pos, drop);
                             }
-                            // Re-place the block state to cancel the break
-                            level.setBlock(pos, state, Block.UPDATE_ALL);
-                            return state;
                         }
+                        return false; // Don't destroy the pipe
                     }
                 }
             }
-            // No pluggable targeted — proceed with normal pipe removal
-            if (!player.isCreative()) {
-                tile.dropPipeItems(level, pos);
-            }
+        }
+        return super.onDestroyedByPlayer(state, level, pos, player, toolStack, willHarvest, fluid);
+    }
+
+    // Block removal — drops pipe item (only called when the pipe is actually being destroyed)
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TilePipeHolder tile && !level.isClientSide() && !player.isCreative()) {
+            tile.dropPipeItems(level, pos);
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
@@ -349,28 +371,22 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         }
     }
 
-    // Pick block (middle click) — return the correct pipe item
+    // Pick block (middle click) — return the correct item for what's targeted
     @Override
     public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData, Player player) {
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TilePipeHolder tile) {
-            // Check if targeting a pluggable — return its pick stack
-            if (level instanceof net.minecraft.world.level.Level realLevel && realLevel.isClientSide()) {
-                net.minecraft.world.phys.HitResult hit = net.minecraft.client.Minecraft.getInstance().hitResult;
-                if (hit instanceof BlockHitResult blockHit && pos.equals(blockHit.getBlockPos())) {
-                    double lx = blockHit.getLocation().x - pos.getX();
-                    double ly = blockHit.getLocation().y - pos.getY();
-                    double lz = blockHit.getLocation().z - pos.getZ();
-                    for (Direction dir : Direction.values()) {
-                        PipePluggable plug = tile.getPluggable(dir);
-                        if (plug != null) {
-                            AABB box = plug.getBoundingBox();
-                            if (lx >= box.minX && lx <= box.maxX
-                                && ly >= box.minY && ly <= box.maxY
-                                && lz >= box.minZ && lz <= box.maxZ) {
-                                return plug.getPickStack();
-                            }
-                        }
+            // Use player.pick to get the hit result (works on both client and server via player entity)
+            net.minecraft.world.phys.HitResult hit = player.pick(5.0, 0.0f, false);
+            if (hit instanceof BlockHitResult blockHit && pos.equals(blockHit.getBlockPos())) {
+                double lx = blockHit.getLocation().x - pos.getX();
+                double ly = blockHit.getLocation().y - pos.getY();
+                double lz = blockHit.getLocation().z - pos.getZ();
+                Direction plugDir = getHitPluggable(tile, lx, ly, lz);
+                if (plugDir != null) {
+                    PipePluggable plug = tile.getPluggable(plugDir);
+                    if (plug != null) {
+                        return plug.getPickStack();
                     }
                 }
             }

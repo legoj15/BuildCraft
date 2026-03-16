@@ -267,8 +267,11 @@ public final class Pipe implements IPipe, IDebuggable {
                 if (oBehaviour == null) {
                     continue;
                 }
-                // Check if the other pipe's pluggable blocks
-                // (simplified — no CAP_PLUG lookup in 1.21)
+                // Check if the other pipe's pluggable on the opposite face blocks
+                var oPlug = oPipe.getHolder().getPluggable(facing.getOpposite());
+                if (oPlug != null && oPlug.isBlocking()) {
+                    continue;
+                }
                 if (canPipesConnect(facing, this, oPipe)) {
                     connected.put(facing, DEFAULT_CONNECTION_DISTANCE);
                     types.put(facing, ConnectedType.PIPE);

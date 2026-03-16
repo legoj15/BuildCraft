@@ -292,6 +292,11 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         if (pipe != null) {
             pipe.markForUpdate();
         }
+        // Also notify the neighbor pipe to recalculate its connections
+        IPipe neighbourPipe = getNeighbourPipe(side);
+        if (neighbourPipe != null) {
+            neighbourPipe.markForUpdate();
+        }
         scheduleRenderUpdate();
         setChanged();
         return old;

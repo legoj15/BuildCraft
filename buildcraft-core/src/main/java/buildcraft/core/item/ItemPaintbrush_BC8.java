@@ -130,9 +130,6 @@ public class ItemPaintbrush_BC8 extends Item {
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Level level = context.getLevel();
-        if (level.isClientSide()) {
-            return InteractionResult.PASS;
-        }
 
         Player player = context.getPlayer();
         if (player == null) return InteractionResult.PASS;
@@ -153,18 +150,20 @@ public class ItemPaintbrush_BC8 extends Item {
         InteractionResult result = CustomPaintHelper.INSTANCE.attemptPaintBlock(level, pos, state, hitPos, side, colour);
 
         if (result == InteractionResult.SUCCESS) {
-            ParticleUtil.showChangeColour(level, hitPos, colour);
-            SoundUtil.playChangeColour(level, pos, colour);
+            if (!level.isClientSide()) {
+                ParticleUtil.showChangeColour(level, hitPos, colour);
+                SoundUtil.playChangeColour(level, pos, colour);
 
-            if (!player.isCreative()) {
-                usesLeft--;
-            }
+                if (!player.isCreative()) {
+                    usesLeft--;
+                }
 
-            if (usesLeft <= 0) {
-                colour = null;
-                usesLeft = 0;
+                if (usesLeft <= 0) {
+                    colour = null;
+                    usesLeft = 0;
+                }
+                setBrushData(stack, colour, usesLeft);
             }
-            setBrushData(stack, colour, usesLeft);
             return InteractionResult.SUCCESS;
         }
         return InteractionResult.FAIL;

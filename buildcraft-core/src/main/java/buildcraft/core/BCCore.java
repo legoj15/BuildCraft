@@ -153,8 +153,7 @@ public class BCCore {
     }
 
     private void init(FMLCommonSetupEvent event) {
-        // BCCoreConfig.saveConfigs();
-        // BCCoreProxy.getProxy().fmlInit();
+        buildcraft.core.block.VanillaPaintHandlers.fmlInit();
     }
 
     private void postInit(net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent event) {

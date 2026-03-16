@@ -121,7 +121,7 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
             }
         });
         // Load pluggables
-        input.read("plugs", CompoundTag.CODEC).ifPresent(plugTag -> {
+        input.read("plugs", CompoundTag.CODEC).ifPresentOrElse(plugTag -> {
             for (Direction face : Direction.values()) {
                 if (plugTag.contains(face.getName())) {
                     CompoundTag entry = plugTag.getCompound(face.getName()).orElse(new CompoundTag());
@@ -142,6 +142,11 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
                 } else {
                     pluggables[face.ordinal()] = null;
                 }
+            }
+        }, () -> {
+            // No "plugs" tag means all pluggables were removed — clear them
+            for (int i = 0; i < pluggables.length; i++) {
+                pluggables[i] = null;
             }
         });
         // After data sync (e.g. colour change), refresh the model on the client

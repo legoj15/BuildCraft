@@ -164,10 +164,13 @@ public class BCTransport {
             (tile, side) -> {
                 Pipe pipe = tile.getPipe();
                 if (pipe == null || side == null) return null;
-                // Check behaviour first (wood pipe), then flow (power pipe)
+                // Check behaviour first (wood pipe), then flow (power pipe), then pluggable (power adaptor)
                 IMjReceiver r = pipe.getBehaviour().getCapability(MjAPI.CAP_RECEIVER, side);
                 if (r != null) return r;
-                return pipe.getFlow().getCapability(MjAPI.CAP_RECEIVER, side);
+                r = pipe.getFlow().getCapability(MjAPI.CAP_RECEIVER, side);
+                if (r != null) return r;
+                buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
+                return plug != null ? plug.getCapability(MjAPI.CAP_RECEIVER) : null;
             }
         );
 
@@ -179,7 +182,10 @@ public class BCTransport {
                 if (pipe == null || side == null) return null;
                 IMjRedstoneReceiver r = pipe.getBehaviour().getCapability(MjAPI.CAP_REDSTONE_RECEIVER, side);
                 if (r != null) return r;
-                return pipe.getFlow().getCapability(MjAPI.CAP_REDSTONE_RECEIVER, side);
+                r = pipe.getFlow().getCapability(MjAPI.CAP_REDSTONE_RECEIVER, side);
+                if (r != null) return r;
+                buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
+                return plug != null ? plug.getCapability(MjAPI.CAP_REDSTONE_RECEIVER) : null;
             }
         );
 
@@ -191,7 +197,10 @@ public class BCTransport {
                 if (pipe == null || side == null) return null;
                 IMjConnector c = pipe.getBehaviour().getCapability(MjAPI.CAP_CONNECTOR, side);
                 if (c != null) return c;
-                return pipe.getFlow().getCapability(MjAPI.CAP_CONNECTOR, side);
+                c = pipe.getFlow().getCapability(MjAPI.CAP_CONNECTOR, side);
+                if (c != null) return c;
+                buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
+                return plug != null ? plug.getCapability(MjAPI.CAP_CONNECTOR) : null;
             }
         );
 

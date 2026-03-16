@@ -47,7 +47,7 @@ public class PluggablePowerAdaptor extends PipePluggable {
 
     @Override
     public boolean isBlocking() {
-        return false;
+        return true;
     }
 
     @Override

@@ -353,11 +353,25 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     }
 
     // Block removal — drops pipe item (only called when the pipe is actually being destroyed)
+    // Must check if a pluggable is targeted, because playerWillDestroy runs BEFORE
+    // onDestroyedByPlayer which cancels the pipe break.
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TilePipeHolder tile && !level.isClientSide() && !player.isCreative()) {
-            tile.dropPipeItems(level, pos);
+            // Don't drop pipe items if a pluggable is being targeted — 
+            // onDestroyedByPlayer will handle the pluggable and cancel the break
+            net.minecraft.world.phys.HitResult hit = player.pick(5.0, 0.0f, false);
+            boolean hittingPluggable = false;
+            if (hit instanceof BlockHitResult blockHit && pos.equals(blockHit.getBlockPos())) {
+                double lx = blockHit.getLocation().x - pos.getX();
+                double ly = blockHit.getLocation().y - pos.getY();
+                double lz = blockHit.getLocation().z - pos.getZ();
+                hittingPluggable = getHitPluggable(tile, lx, ly, lz) != null;
+            }
+            if (!hittingPluggable) {
+                tile.dropPipeItems(level, pos);
+            }
         }
         return super.playerWillDestroy(level, pos, state, player);
     }

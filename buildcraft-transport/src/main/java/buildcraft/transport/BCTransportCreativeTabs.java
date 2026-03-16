@@ -24,6 +24,17 @@ public class BCTransportCreativeTabs {
                             .icon(() -> BCTransportItems.PIPE_DIAMOND_ITEM.get().getDefaultInstance())
                             .build());
 
+    public static final ResourceKey<CreativeModeTab> PLUGS_TAB_KEY =
+            ResourceKey.create(Registries.CREATIVE_MODE_TAB,
+                    Identifier.fromNamespaceAndPath(BCTransport.MODID, "plugs"));
+
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> PLUGS_TAB =
+            CREATIVE_MODE_TABS.register("plugs", () ->
+                    CreativeModeTab.builder()
+                            .title(Component.translatable("itemGroup.buildcraft.plugs"))
+                            .icon(() -> BCTransportItems.PLUG_BLOCKER.get().getDefaultInstance())
+                            .build());
+
     public static void init(IEventBus modEventBus) {
         CREATIVE_MODE_TABS.register(modEventBus);
     }

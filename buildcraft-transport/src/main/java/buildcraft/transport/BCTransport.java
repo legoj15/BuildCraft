@@ -85,6 +85,12 @@ public class BCTransport {
             event.accept(new ItemStack(BCTransportItems.WATERPROOF.get()));
         }
 
+        // Pluggable items go in the dedicated Pluggables tab
+        if (event.getTabKey() == BCTransportCreativeTabs.PLUGS_TAB_KEY) {
+            event.accept(BCTransportItems.PLUG_BLOCKER.get());
+            event.accept(BCTransportItems.PLUG_POWER_ADAPTOR.get());
+        }
+
         // All pipe items go in the dedicated Pipes tab
         if (event.getTabKey() == BCTransportCreativeTabs.PIPES_TAB_KEY) {
             // Structure pipe

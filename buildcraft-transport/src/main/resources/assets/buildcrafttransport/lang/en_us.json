@@ -40,5 +40,8 @@
     "item.buildcrafttransport.pipe_diamond_power": "Diamond Kinesis Pipe",
     "item.buildcrafttransport.pipe_diamond_wood_power": "Wooden Diamond Kinesis Pipe",
     "gui.buildcrafttransport.pipe_diamond.title": "Filters",
-    "gui.buildcrafttransport.pipe_diamond_wood.title": "Emerald Pipe"
+    "gui.buildcrafttransport.pipe_diamond_wood.title": "Emerald Pipe",
+    "item.buildcrafttransport.plug_blocker": "Pipe Plug",
+    "item.buildcrafttransport.plug_power_adaptor": "Pipe Power Adaptor",
+    "itemGroup.buildcraft.plugs": "BuildCraft Pluggables"
 }

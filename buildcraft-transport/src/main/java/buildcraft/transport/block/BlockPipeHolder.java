@@ -214,6 +214,12 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                     hitPart)) {
                 return InteractionResult.SUCCESS;
             }
+            if (pipe.getFlow().onFlowActivate(player, hitResult,
+                    (float) hitResult.getLocation().x, (float) hitResult.getLocation().y,
+                    (float) hitResult.getLocation().z,
+                    hitPart)) {
+                return InteractionResult.SUCCESS;
+            }
         }
         return InteractionResult.PASS;
     }
@@ -254,6 +260,19 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
             }
         }
 
+        // Fall through to pipe activation (e.g. opening a pipe GUI)
+        var pipe = tile.getPipe();
+        buildcraft.api.core.EnumPipePart hitPart = getHitPart(tile, hitResult);
+        if (pipe.getBehaviour().onPipeActivate(player, hitResult,
+                (float) hitResult.getLocation().x, (float) hitResult.getLocation().y,
+                (float) hitResult.getLocation().z, hitPart)) {
+            return InteractionResult.SUCCESS;
+        }
+        if (pipe.getFlow().onFlowActivate(player, hitResult,
+                (float) hitResult.getLocation().x, (float) hitResult.getLocation().y,
+                (float) hitResult.getLocation().z, hitPart)) {
+            return InteractionResult.SUCCESS;
+        }
         return InteractionResult.PASS;
     }
 

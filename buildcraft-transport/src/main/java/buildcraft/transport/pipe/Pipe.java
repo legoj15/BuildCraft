@@ -267,16 +267,19 @@ public final class Pipe implements IPipe, IDebuggable {
                 if (oBehaviour == null) {
                     continue;
                 }
-                // Check if the other pipe's pluggable on the opposite face blocks
+                // Check if the other pipe's pluggable on the opposite face blocks.
+                // If NO blocking pluggable → try pipe-to-pipe connection, then skip tile check.
+                // If YES blocking pluggable → fall through to tile entity capability check below.
+                // This matches 1.12.2 behavior: kinesis pipes discover the power adaptor's
+                // MJ capabilities as ConnectedType.TILE through the fallthrough path.
                 var oPlug = oPipe.getHolder().getPluggable(facing.getOpposite());
-                if (oPlug != null && oPlug.isBlocking()) {
+                if (oPlug == null || !oPlug.isBlocking()) {
+                    if (canPipesConnect(facing, this, oPipe)) {
+                        connected.put(facing, DEFAULT_CONNECTION_DISTANCE);
+                        types.put(facing, ConnectedType.PIPE);
+                    }
                     continue;
                 }
-                if (canPipesConnect(facing, this, oPipe)) {
-                    connected.put(facing, DEFAULT_CONNECTION_DISTANCE);
-                    types.put(facing, ConnectedType.PIPE);
-                }
-                continue;
             }
 
             BlockPos nPos = holder.getPipePos().relative(facing);

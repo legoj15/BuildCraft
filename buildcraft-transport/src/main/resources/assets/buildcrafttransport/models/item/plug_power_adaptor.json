@@ -1,6 +1,32 @@
 {
-    "parent": "item/generated",
+    "parent": "block/block",
     "textures": {
-        "layer0": "buildcrafttransport:item/plug_power_adaptor"
-    }
+        "all": "buildcrafttransport:pipes/power_adapter"
+    },
+    "elements": [
+        {
+            "from": [4, 4, 6],
+            "to": [12, 12, 10],
+            "faces": {
+                "down":  { "uv": [4, 4, 12, 8],  "texture": "#all" },
+                "up":    { "uv": [4, 4, 12, 8],  "texture": "#all" },
+                "north": { "uv": [4, 4, 12, 12], "texture": "#all" },
+                "south": { "uv": [4, 4, 12, 12], "texture": "#all" },
+                "west":  { "uv": [6, 4, 10, 12], "texture": "#all" },
+                "east":  { "uv": [6, 4, 10, 12], "texture": "#all" }
+            }
+        },
+        {
+            "from": [3, 3, 3],
+            "to": [13, 13, 6],
+            "faces": {
+                "down":  { "uv": [3, 3, 13, 6],  "texture": "#all" },
+                "up":    { "uv": [3, 3, 13, 6],  "texture": "#all" },
+                "north": { "uv": [3, 3, 13, 13], "texture": "#all" },
+                "south": { "uv": [3, 3, 13, 13], "texture": "#all" },
+                "west":  { "uv": [3, 3, 6, 13],  "texture": "#all" },
+                "east":  { "uv": [3, 3, 6, 13],  "texture": "#all" }
+            }
+        }
+    ]
 }

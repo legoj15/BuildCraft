@@ -1,6 +1,20 @@
 {
-    "parent": "item/generated",
+    "parent": "block/block",
     "textures": {
-        "layer0": "buildcrafttransport:item/plug_blocker"
-    }
+        "all": "buildcrafttransport:pipes/plug"
+    },
+    "elements": [
+        {
+            "from": [3, 3, 6],
+            "to": [13, 13, 10],
+            "faces": {
+                "down":  { "uv": [3, 3, 13, 7],  "texture": "#all" },
+                "up":    { "uv": [3, 3, 13, 7],  "texture": "#all" },
+                "north": { "uv": [3, 3, 13, 13], "texture": "#all" },
+                "south": { "uv": [3, 3, 13, 13], "texture": "#all" },
+                "west":  { "uv": [6, 3, 10, 13], "texture": "#all" },
+                "east":  { "uv": [6, 3, 10, 13], "texture": "#all" }
+            }
+        }
+    ]
 }

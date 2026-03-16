@@ -16,9 +16,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.Direction;
 
+import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.transport.IItemPluggable;
 import buildcraft.api.transport.pipe.IPipeHolder;
-import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
 
@@ -27,10 +27,11 @@ import buildcraft.api.transport.pluggable.PluggableDefinition;
  * Used for Pipe Plug and Pipe Power Adaptor.
  */
 public class ItemPluggableSimple extends Item implements IItemPluggable {
-    /** Predicate that checks if the pipe uses the power flow type (kinesis pipes). */
+    /** Predicate that checks if the pipe's behaviour accepts redstone-triggered MJ power.
+     *  True for wooden, obsidian, and stripes pipes — pipes that need engine power to operate. */
     public static final Predicate<IPipeHolder> PIPE_BEHAVIOUR_ACCEPTS_RS_POWER = holder -> {
         if (holder.getPipe() == null) return false;
-        return holder.getPipe().getDefinition().flowType == PipeApi.flowPower;
+        return holder.getPipe().getBehaviour() instanceof IMjRedstoneReceiver;
     };
 
     private final PluggableDefinition definition;

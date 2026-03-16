@@ -2,11 +2,12 @@
     "parent": "block/block",
     "gui_light": "front",
     "textures": {
-        "all": "buildcrafttransport:pipes/plug"
+        "all": "buildcrafttransport:pipes/plug",
+        "particle": "buildcrafttransport:pipes/plug"
     },
     "display": {
         "gui": {
-            "rotation": [30, 225, 0],
+            "rotation": [0, 0, 0],
             "translation": [0, 0, 0],
             "scale": [1.0, 1.0, 1.0]
         },
@@ -43,15 +44,16 @@
     },
     "elements": [
         {
-            "from": [3, 3, 6],
-            "to": [13, 13, 10],
+            "from": [2, 4, 4],
+            "to": [4.01, 12, 12],
+            "shade": true,
             "faces": {
-                "down":  { "uv": [3, 6, 13, 10],  "texture": "#all" },
-                "up":    { "uv": [3, 6, 13, 10],  "texture": "#all" },
-                "north": { "uv": [3, 3, 13, 13],  "texture": "#all" },
-                "south": { "uv": [3, 3, 13, 13],  "texture": "#all" },
-                "west":  { "uv": [6, 3, 10, 13],  "texture": "#all" },
-                "east":  { "uv": [6, 3, 10, 13],  "texture": "#all" }
+                "down":  { "uv": [2, 4, 4, 12], "texture": "#all" },
+                "up":    { "uv": [2, 4, 4, 12], "texture": "#all" },
+                "north": { "uv": [2, 4, 4, 12], "texture": "#all" },
+                "south": { "uv": [2, 4, 4, 12], "texture": "#all" },
+                "west":  { "uv": [4, 4, 12, 12], "texture": "#all" },
+                "east":  { "uv": [4, 4, 12, 12], "texture": "#all" }
             }
         }
     ]

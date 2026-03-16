@@ -17,6 +17,11 @@ public class BCSiliconCreativeTabs {
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, BCSilicon.MODID);
 
+    // Reference the transport plugs tab key by identifier (avoids cross-module compile dependency)
+    private static final ResourceKey<CreativeModeTab> TRANSPORT_PLUGS_TAB_KEY =
+            ResourceKey.create(Registries.CREATIVE_MODE_TAB,
+                    Identifier.fromNamespaceAndPath("buildcrafttransport", "plugs"));
+
     public static final ResourceKey<CreativeModeTab> FACADE_TAB_KEY =
             ResourceKey.create(Registries.CREATIVE_MODE_TAB,
                     Identifier.fromNamespaceAndPath(BCSilicon.MODID, "facades"));
@@ -33,6 +38,7 @@ public class BCSiliconCreativeTabs {
                                 }
                                 return BCSiliconItems.PLUG_FACADE.get().getDefaultInstance();
                             })
+                            .withTabsBefore(TRANSPORT_PLUGS_TAB_KEY)
                             .build());
 
     public static void init(IEventBus modEventBus) {

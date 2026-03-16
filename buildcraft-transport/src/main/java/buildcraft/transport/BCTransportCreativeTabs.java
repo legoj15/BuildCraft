@@ -9,6 +9,8 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import buildcraft.core.BCCoreCreativeTabs;
+
 public class BCTransportCreativeTabs {
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, BCTransport.MODID);
@@ -22,6 +24,7 @@ public class BCTransportCreativeTabs {
                     CreativeModeTab.builder()
                             .title(Component.translatable("itemGroup.buildcraft.pipes"))
                             .icon(() -> BCTransportItems.PIPE_DIAMOND_ITEM.get().getDefaultInstance())
+                            .withTabsBefore(BCCoreCreativeTabs.MAIN_TAB_KEY)
                             .build());
 
     public static final ResourceKey<CreativeModeTab> PLUGS_TAB_KEY =
@@ -33,6 +36,7 @@ public class BCTransportCreativeTabs {
                     CreativeModeTab.builder()
                             .title(Component.translatable("itemGroup.buildcraft.plugs"))
                             .icon(() -> BCTransportItems.PLUG_BLOCKER.get().getDefaultInstance())
+                            .withTabsBefore(PIPES_TAB_KEY)
                             .build());
 
     public static void init(IEventBus modEventBus) {

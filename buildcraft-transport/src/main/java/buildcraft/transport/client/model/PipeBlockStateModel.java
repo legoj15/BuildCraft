@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.block.model.BlockModelPart;
 import net.minecraft.client.renderer.block.model.BlockStateModel;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.SimpleModelWrapper;
+import net.minecraft.client.renderer.block.MovingBlockRenderState;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.QuadCollection;
@@ -47,7 +48,12 @@ public class PipeBlockStateModel implements DynamicBlockStateModel {
     @Override
     public void collectParts(BlockAndTintGetter level, BlockPos pos, BlockState state,
                              RandomSource random, List<BlockModelPart> parts) {
+        // MovingBlockRenderState (used for breaking overlay) always returns null from
+        // getBlockEntity() — fall through to the underlying level field to find the tile.
         BlockEntity be = level.getBlockEntity(pos);
+        if (be == null && level instanceof MovingBlockRenderState movingState && movingState.level != null) {
+            be = movingState.level.getBlockEntity(pos);
+        }
         if (be instanceof TilePipeHolder tile && tile.getPipe() != null) {
             TextureAtlasSprite particle = vanillaDelegate.particleIcon();
 

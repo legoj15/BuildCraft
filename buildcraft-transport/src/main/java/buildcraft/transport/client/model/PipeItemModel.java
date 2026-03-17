@@ -148,11 +148,6 @@ public class PipeItemModel implements ItemModel {
      * For each cube's visible faces, we create double-sided coloured overlay quads.
      */
     private List<BakedQuad> generateOverlayQuads(DyeColor colour) {
-        TextureAtlasSprite sprite = BCTransportSprites.PIPE_COLOUR.getSprite();
-        if (sprite == null) {
-            return List.of();
-        }
-
         // Get the dye colour in ABGR vertex format (matching PipeBaseModelGenStandard.getPipeModelColour)
         int dyeColour = PipeBaseModelGenStandard.getDyeTintColour(colour);
 
@@ -161,28 +156,53 @@ public class PipeItemModel implements ItemModel {
 
         List<BakedQuad> quads = new ArrayList<>();
 
-        // pipe_item.json geometry (block-space 0..1):
-        //   Bottom cap: [4,0,4]-[12,4,12]   → center=0.5,0.125,0.5  radius=0.25,0.125,0.25
-        //   Center:     [4,4,4]-[12,12,12]  → center=0.5,0.5,0.5    radius=0.25,0.25,0.25
-        //   Top cap:    [4,12,4]-[12,16,12] → center=0.5,0.875,0.5  radius=0.25,0.125,0.25
+        if (definition.flowType == buildcraft.api.transport.pipe.PipeApi.flowFluids) {
+            // Fluid pipes: use mask sprites with fully opaque painting
+            // (matching in-world generateMaskMutable with alpha=255)
+            TextureAtlasSprite[] maskArray = PipeBaseModelGenStandard.ensureMaskSprites(definition);
+            TextureAtlasSprite maskSprite = maskArray != null && maskArray.length > 0
+                    ? maskArray[0] : null;
+            if (maskSprite == null || maskSprite == buildcraft.lib.misc.SpriteUtil.missingSprite()) {
+                return List.of();
+            }
+            // Mask quads use base geometry (not double-faced) with full dye alpha
+            addMaskFaces(quads, maskSprite, dyeColour, uvs,
+                    new Vector3f(0.5f, 0.125f, 0.5f),
+                    new Vector3f(0.25f, 0.125f, 0.25f),
+                    new Direction[]{ Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
+            addMaskFaces(quads, maskSprite, dyeColour, uvs,
+                    new Vector3f(0.5f, 0.5f, 0.5f),
+                    new Vector3f(0.25f, 0.25f, 0.25f),
+                    new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
+            addMaskFaces(quads, maskSprite, dyeColour, uvs,
+                    new Vector3f(0.5f, 0.875f, 0.5f),
+                    new Vector3f(0.25f, 0.125f, 0.25f),
+                    new Direction[]{ Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
+        } else {
+            // Item/kinesis/other pipes: use PIPE_COLOUR sprite with translucent overlay
+            TextureAtlasSprite sprite = BCTransportSprites.PIPE_COLOUR.getSprite();
+            if (sprite == null) {
+                return List.of();
+            }
 
-        // Bottom cap — all visible faces (except UP which is internal)
-        addColouredFaces(quads, sprite, dyeColour, uvs,
-                new Vector3f(0.5f, 0.125f, 0.5f),
-                new Vector3f(0.25f, 0.125f, 0.25f),
-                new Direction[]{ Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
+            // pipe_item.json geometry (block-space 0..1):
+            //   Bottom cap: [4,0,4]-[12,4,12]   → center=0.5,0.125,0.5  radius=0.25,0.125,0.25
+            //   Center:     [4,4,4]-[12,12,12]  → center=0.5,0.5,0.5    radius=0.25,0.25,0.25
+            //   Top cap:    [4,12,4]-[12,16,12] → center=0.5,0.875,0.5  radius=0.25,0.125,0.25
 
-        // Center body — only side faces (top/bottom are internal)
-        addColouredFaces(quads, sprite, dyeColour, uvs,
-                new Vector3f(0.5f, 0.5f, 0.5f),
-                new Vector3f(0.25f, 0.25f, 0.25f),
-                new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
-
-        // Top cap — all visible faces (except DOWN which is internal)
-        addColouredFaces(quads, sprite, dyeColour, uvs,
-                new Vector3f(0.5f, 0.875f, 0.5f),
-                new Vector3f(0.25f, 0.125f, 0.25f),
-                new Direction[]{ Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
+            addColouredFaces(quads, sprite, dyeColour, uvs,
+                    new Vector3f(0.5f, 0.125f, 0.5f),
+                    new Vector3f(0.25f, 0.125f, 0.25f),
+                    new Direction[]{ Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
+            addColouredFaces(quads, sprite, dyeColour, uvs,
+                    new Vector3f(0.5f, 0.5f, 0.5f),
+                    new Vector3f(0.25f, 0.25f, 0.25f),
+                    new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
+            addColouredFaces(quads, sprite, dyeColour, uvs,
+                    new Vector3f(0.5f, 0.875f, 0.5f),
+                    new Vector3f(0.25f, 0.125f, 0.25f),
+                    new Direction[]{ Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
+        }
 
         return quads;
     }
@@ -208,6 +228,32 @@ public class PipeItemModel implements ItemModel {
                 quad.colouri(dyeColour);
                 quads.add(quad.toBakedBlock());
             }
+        }
+    }
+
+    /**
+     * Add mask overlay quads for fluid pipes — single-faced, slightly offset,
+     * with the mask sprite's alpha controlling paint coverage and dye colour applied.
+     * Matches in-world generateMaskMutable with alpha=255.
+     */
+    private static void addMaskFaces(List<BakedQuad> quads, TextureAtlasSprite maskSprite,
+                                      int dyeColour, UvFaceData uvs,
+                                      Vector3f center, Vector3f radius, Direction[] faces) {
+        int dye_r = (dyeColour >> 0) & 0xFF;
+        int dye_g = (dyeColour >> 8) & 0xFF;
+        int dye_b = (dyeColour >> 16) & 0xFF;
+
+        for (Direction face : faces) {
+            MutableQuad quad = ModelUtil.createFace(face, center, radius, uvs);
+            // Offset slightly outward from face to avoid Z-fighting
+            net.minecraft.world.phys.Vec3 offset = net.minecraft.world.phys.Vec3.atLowerCornerOf(
+                    face.getOpposite().getUnitVec3i()).scale(COLOUR_OFFSET);
+            quad.translatevd(offset);
+            quad.setSprite(maskSprite);
+            quad.texFromSprite(maskSprite);
+            // Apply dye colour with full alpha — mask sprite alpha controls paint coverage
+            quad.multColouri(dye_r, dye_g, dye_b, 255);
+            quads.add(quad.toBakedBlock());
         }
     }
 }

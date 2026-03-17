@@ -150,7 +150,7 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
      *  alpha from the original pipe textures: opaque white where glass is, transparent
      *  where the frame is. Used for reverse-cutout colour rendering.
      *  Multiple textures sharing the same alpha pattern share one mask file. */
-    private static TextureAtlasSprite[] ensureMaskSprites(PipeDefinition def) {
+    static TextureAtlasSprite[] ensureMaskSprites(PipeDefinition def) {
         TextureAtlasSprite[] cached = MASK_SPRITES.get(def);
         if (cached != null) return cached;
         TextureAtlasSprite missing = SpriteUtil.missingSprite();

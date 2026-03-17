@@ -5,26 +5,37 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.client.particle.SingleQuadParticle;
+import net.minecraft.client.renderer.item.ItemModelResolver;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions;
 
 import org.jspecify.annotations.Nullable;
 
 import buildcraft.api.transport.pipe.PipeDefinition;
+import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.lib.misc.SpriteUtil;
+import buildcraft.transport.block.BlockPipeHolder;
 import buildcraft.transport.tile.TilePipeHolder;
 
 /**
  * Custom client extensions for the pipe_holder block.
- * Overrides break/hit particle effects to use the correct pipe texture
- * instead of the static default (which is hardcoded to wood pipe).
+ * Overrides break/hit/sprint particle effects to use the correct pipe or
+ * pluggable texture instead of the static default (pipe_holder.json particle).
  */
 public class PipeHolderClientExtensions implements IClientBlockExtensions {
     public static final PipeHolderClientExtensions INSTANCE = new PipeHolderClientExtensions();
+
+    /** Reusable render state to avoid allocation per particle. */
+    private final ItemStackRenderState renderState = new ItemStackRenderState();
 
     private PipeHolderClientExtensions() {}
 
@@ -43,6 +54,51 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
             }
         }
         return null;
+    }
+
+    /**
+     * Resolves the particle sprite for a pluggable using 1.21.11's ItemStackRenderState.
+     * This correctly handles all item types by resolving through the item model system.
+     */
+    private @Nullable TextureAtlasSprite getPluggableSprite(PipePluggable pluggable) {
+        ItemStack stack = pluggable.getPickStack();
+        if (!stack.isEmpty()) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.level == null) return null;
+            renderState.clear();
+            ItemModelResolver resolver = mc.getItemModelResolver();
+            resolver.appendItemLayers(renderState, stack,
+                    net.minecraft.world.item.ItemDisplayContext.GUI,
+                    mc.level, (net.minecraft.world.entity.ItemOwner) null, 0);
+            TextureAtlasSprite sprite = renderState.pickParticleIcon(mc.level.getRandom());
+            if (sprite != null && sprite != SpriteUtil.missingSprite()) {
+                return sprite;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Resolves the best sprite for a specific hit on the pipe_holder block.
+     * Uses hit location and pluggable AABB testing to determine if a pluggable was hit.
+     */
+    private @Nullable TextureAtlasSprite getSpriteForHit(Level level, BlockPos pos, BlockHitResult blockHit) {
+        if (level.getBlockEntity(pos) instanceof TilePipeHolder tile) {
+            // Use hit location to determine which pluggable (if any) was hit
+            double lx = blockHit.getLocation().x - pos.getX();
+            double ly = blockHit.getLocation().y - pos.getY();
+            double lz = blockHit.getLocation().z - pos.getZ();
+            Direction plugDir = BlockPipeHolder.getHitPluggable(tile, lx, ly, lz);
+            if (plugDir != null) {
+                PipePluggable plug = tile.getPluggable(plugDir);
+                if (plug != null) {
+                    TextureAtlasSprite sprite = getPluggableSprite(plug);
+                    if (sprite != null) return sprite;
+                }
+            }
+        }
+        // Fall back to pipe sprite
+        return getPipeSprite(level, pos);
     }
 
     @Override
@@ -75,14 +131,52 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
 
     @Override
     public boolean addHitEffects(BlockState state, Level level, @Nullable HitResult target, ParticleEngine manager) {
-        // For hit effects, we let vanilla handle the particle spawning
-        // but the destroy effect (which is much more visible) uses the correct texture.
+        if (target instanceof BlockHitResult blockHit) {
+            BlockPos pos = blockHit.getBlockPos();
+            TextureAtlasSprite sprite = getSpriteForHit(level, pos, blockHit);
+            if (sprite != null) {
+                Direction face = blockHit.getDirection();
+                spawnHitParticle(level, pos, face, sprite, manager);
+                return true; // suppress default particles
+            }
+        }
         return false;
     }
 
     /**
-     * Spawns a sprint particle with the correct pipe texture.
+     * Spawns a single hit particle on the given face of the block.
+     * Mirrors vanilla ParticleEngine.crack() positioning logic.
+     */
+    private void spawnHitParticle(Level level, BlockPos pos, Direction face,
+                                  TextureAtlasSprite sprite, ParticleEngine manager) {
+        var random = level.getRandom();
+        double x = pos.getX() + random.nextDouble();
+        double y = pos.getY() + random.nextDouble();
+        double z = pos.getZ() + random.nextDouble();
+
+        // Offset particle to be on the face surface
+        double offset = 0.1;
+        switch (face) {
+            case DOWN -> y = pos.getY() - offset;
+            case UP -> y = pos.getY() + 1.0 + offset;
+            case NORTH -> z = pos.getZ() - offset;
+            case SOUTH -> z = pos.getZ() + 1.0 + offset;
+            case WEST -> x = pos.getX() - offset;
+            case EAST -> x = pos.getX() + 1.0 + offset;
+        }
+
+        PipeBreakParticle particle = new PipeBreakParticle(
+                (ClientLevel) level, x, y, z, 0, 0, 0, sprite
+        );
+        particle.setLifetime(4);
+        particle.setParticleSpeed(0, 0, 0);
+        manager.add(particle);
+    }
+
+    /**
+     * Spawns a sprint particle with the correct pipe or pluggable texture.
      * Called from BlockPipeHolder.addRunningEffects.
+     * If a pluggable exists on the UP face, uses its texture instead of the pipe's.
      * @return true if a particle was spawned, false to fall back to vanilla.
      */
     public static boolean spawnRunningParticle(Level level, BlockPos pos, double entityX, double entityZ,
@@ -91,11 +185,20 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
         var be = level.getBlockEntity(pos);
         if (!(be instanceof TilePipeHolder tile) || tile.getPipe() == null) return false;
 
-        PipeDefinition def = tile.getPipe().getDefinition();
+        // Check if there's a pluggable on the UP face (entity is running on top)
         TextureAtlasSprite sprite = null;
-        if (def.textures != null && def.textures.length > 0) {
-            sprite = SpriteUtil.getSprite(def.textures[0]);
-            if (sprite == SpriteUtil.missingSprite()) sprite = null;
+        PipePluggable upPlug = tile.getPluggable(Direction.UP);
+        if (upPlug != null) {
+            sprite = INSTANCE.getPluggableSprite(upPlug);
+        }
+
+        // Fall back to pipe texture
+        if (sprite == null) {
+            PipeDefinition def = tile.getPipe().getDefinition();
+            if (def.textures != null && def.textures.length > 0) {
+                sprite = SpriteUtil.getSprite(def.textures[0]);
+                if (sprite == SpriteUtil.missingSprite()) sprite = null;
+            }
         }
         if (sprite == null) return false;
 

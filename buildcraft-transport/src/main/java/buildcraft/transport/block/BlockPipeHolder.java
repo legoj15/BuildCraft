@@ -324,7 +324,7 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
      * or null if no pluggable is hit.
      */
     @Nullable
-    private static Direction getHitPluggable(TilePipeHolder tile, double lx, double ly, double lz) {
+    public static Direction getHitPluggable(TilePipeHolder tile, double lx, double ly, double lz) {
         for (Direction dir : Direction.values()) {
             PipePluggable plug = tile.getPluggable(dir);
             if (plug != null) {

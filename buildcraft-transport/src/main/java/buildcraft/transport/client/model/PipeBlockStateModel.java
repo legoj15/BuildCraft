@@ -24,6 +24,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.neoforge.client.model.DynamicBlockStateModel;
 
+import buildcraft.api.transport.pipe.PipeDefinition;
 import buildcraft.transport.tile.TilePipeHolder;
 
 /**
@@ -87,6 +88,22 @@ public class PipeBlockStateModel implements DynamicBlockStateModel {
 
     @Override
     public TextureAtlasSprite particleIcon(BlockAndTintGetter level, BlockPos pos, BlockState state) {
+        // Resolve the actual pipe texture — the vanilla delegate has the pipe_holder.json
+        // particle which is always the wooden pipe texture.
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be == null && level instanceof net.minecraft.client.renderer.block.MovingBlockRenderState movingState
+                && movingState.level != null) {
+            be = movingState.level.getBlockEntity(pos);
+        }
+        if (be instanceof TilePipeHolder tile && tile.getPipe() != null) {
+            PipeDefinition def = tile.getPipe().getDefinition();
+            if (def.textures != null && def.textures.length > 0) {
+                TextureAtlasSprite sprite = buildcraft.lib.misc.SpriteUtil.getSprite(def.textures[0]);
+                if (sprite != null && sprite != buildcraft.lib.misc.SpriteUtil.missingSprite()) {
+                    return sprite;
+                }
+            }
+        }
         return vanillaDelegate.particleIcon();
     }
 }

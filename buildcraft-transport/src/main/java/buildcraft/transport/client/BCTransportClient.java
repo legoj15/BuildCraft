@@ -83,6 +83,12 @@ public class BCTransportClient {
             blockModels.put(pipeState, new PipeBlockStateModel(vanillaModel));
         }
 
+        // Construct empty ItemTransforms for the overlay layer (the vanilla model provides the actual transforms)
+        var noTx = net.minecraft.client.renderer.block.model.ItemTransform.NO_TRANSFORM;
+        var itemTransforms = new net.minecraft.client.renderer.block.model.ItemTransforms(
+                noTx, noTx, noTx, noTx, noTx, noTx, noTx, noTx, noTx,
+                com.google.common.collect.ImmutableMap.of());
+
         // Item model swap — wrap each pipe item with PipeItemModel
         var itemModels = event.getBakingResult().itemStackModels();
         for (PipeDefinition def : PipeApi.pipeRegistry.getAllRegisteredPipes()) {
@@ -91,7 +97,7 @@ public class BCTransportClient {
                 Identifier itemId = BuiltInRegistries.ITEM.getKey(pipeItem);
                 ItemModel vanillaItemModel = itemModels.get(itemId);
                 if (vanillaItemModel != null) {
-                    itemModels.put(itemId, new PipeItemModel(vanillaItemModel, def));
+                    itemModels.put(itemId, new PipeItemModel(vanillaItemModel, def, itemTransforms));
                 }
             }
         }

@@ -15,6 +15,7 @@ import org.jspecify.annotations.Nullable;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.client.renderer.item.BlockModelWrapper;
 import net.minecraft.client.renderer.item.CompositeModel;
@@ -61,12 +62,14 @@ public class PipeItemModel implements ItemModel {
 
     private final ItemModel vanillaModel;
     private final PipeDefinition definition;
+    private final ItemTransforms itemTransforms;
     /** Cache of composed models per DyeColor. null key = unpainted (uses vanilla model directly). */
     private final Map<DyeColor, ItemModel> cache = new EnumMap<>(DyeColor.class);
 
-    public PipeItemModel(ItemModel vanillaModel, PipeDefinition definition) {
+    public PipeItemModel(ItemModel vanillaModel, PipeDefinition definition, ItemTransforms itemTransforms) {
         this.vanillaModel = vanillaModel;
         this.definition = definition;
+        this.itemTransforms = itemTransforms;
     }
 
     @Override
@@ -107,7 +110,7 @@ public class PipeItemModel implements ItemModel {
 
         // Build the overlay layer as a BlockModelWrapper with tint source
         TextureAtlasSprite particle = overlayQuads.get(0).sprite();
-        ModelRenderProperties renderProps = new ModelRenderProperties(false, particle, null);
+        ModelRenderProperties renderProps = new ModelRenderProperties(false, particle, itemTransforms);
         var renderType = RenderTypeHelper.detectItemModelRenderType(overlayQuads, TRANSLUCENT_RENDER_TYPES);
 
         ItemModel overlayModel = new BlockModelWrapper(

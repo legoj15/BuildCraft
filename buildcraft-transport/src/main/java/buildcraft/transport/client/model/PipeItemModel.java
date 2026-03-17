@@ -151,9 +151,6 @@ public class PipeItemModel implements ItemModel {
         // Get the dye colour in ABGR vertex format (matching PipeBaseModelGenStandard.getPipeModelColour)
         int dyeColour = PipeBaseModelGenStandard.getDyeTintColour(colour);
 
-        // UVs matching the center (no-connection) geometry: 4/16 to 12/16
-        UvFaceData uvs = new UvFaceData(4 / 16f, 4 / 16f, 12 / 16f, 12 / 16f);
-
         List<BakedQuad> quads = new ArrayList<>();
 
         if (definition.flowType == buildcraft.api.transport.pipe.PipeApi.flowFluids) {
@@ -165,19 +162,47 @@ public class PipeItemModel implements ItemModel {
             if (maskSprite == null || maskSprite == buildcraft.lib.misc.SpriteUtil.missingSprite()) {
                 return List.of();
             }
-            // Center UVs align mask pattern with pipe geometry
-            addColouredFaces(quads, maskSprite, dyeColour, uvs,
+
+            // Per-cube UV mappings matching pipe_item.json exactly:
+            //   Bottom cap side faces: uv [4,12,12,16]
+            //   Center body side faces: uv [4,4,12,12]
+            //   Top cap side faces: uv [4,0,12,4]
+            //   Top/bottom faces: full face (default 0->1 mapped by createFace)
+            UvFaceData bottomSideUvs = UvFaceData.from16(4, 12, 12, 16);
+            UvFaceData centerUvs     = UvFaceData.from16(4, 4, 12, 12);
+            UvFaceData topSideUvs    = UvFaceData.from16(4, 0, 12, 4);
+            UvFaceData capFaceUvs    = UvFaceData.from16(4, 4, 12, 12);
+
+            // Bottom cap — DOWN face + side faces with bottom UVs
+            addMaskFaces(quads, maskSprite, dyeColour,
                     new Vector3f(0.5f, 0.125f, 0.5f),
                     new Vector3f(0.25f, 0.125f, 0.25f),
-                    new Direction[]{ Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
-            addColouredFaces(quads, maskSprite, dyeColour, uvs,
+                    new Direction[]{ Direction.DOWN },
+                    capFaceUvs);
+            addMaskFaces(quads, maskSprite, dyeColour,
+                    new Vector3f(0.5f, 0.125f, 0.5f),
+                    new Vector3f(0.25f, 0.125f, 0.25f),
+                    new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST },
+                    bottomSideUvs);
+
+            // Center body — side faces only with center UVs
+            addMaskFaces(quads, maskSprite, dyeColour,
                     new Vector3f(0.5f, 0.5f, 0.5f),
                     new Vector3f(0.25f, 0.25f, 0.25f),
-                    new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
-            addColouredFaces(quads, maskSprite, dyeColour, uvs,
+                    new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST },
+                    centerUvs);
+
+            // Top cap — UP face + side faces with top UVs
+            addMaskFaces(quads, maskSprite, dyeColour,
                     new Vector3f(0.5f, 0.875f, 0.5f),
                     new Vector3f(0.25f, 0.125f, 0.25f),
-                    new Direction[]{ Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
+                    new Direction[]{ Direction.UP },
+                    capFaceUvs);
+            addMaskFaces(quads, maskSprite, dyeColour,
+                    new Vector3f(0.5f, 0.875f, 0.5f),
+                    new Vector3f(0.25f, 0.125f, 0.25f),
+                    new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST },
+                    topSideUvs);
         } else {
             // Item/kinesis/other pipes: use PIPE_COLOUR sprite with translucent overlay
             TextureAtlasSprite sprite = BCTransportSprites.PIPE_COLOUR.getSprite();
@@ -185,19 +210,20 @@ public class PipeItemModel implements ItemModel {
                 return List.of();
             }
 
-            // pipe_item.json geometry (block-space 0..1):
-            //   Bottom cap: [4,0,4]-[12,4,12]   → center=0.5,0.125,0.5  radius=0.25,0.125,0.25
-            //   Center:     [4,4,4]-[12,12,12]  → center=0.5,0.5,0.5    radius=0.25,0.25,0.25
-            //   Top cap:    [4,12,4]-[12,16,12] → center=0.5,0.875,0.5  radius=0.25,0.125,0.25
+            // Center UVs for all cubes (only semi-transparent area is visible)
+            UvFaceData uvs = UvFaceData.from16(4, 4, 12, 12);
 
+            // Bottom cap
             addColouredFaces(quads, sprite, dyeColour, uvs,
                     new Vector3f(0.5f, 0.125f, 0.5f),
                     new Vector3f(0.25f, 0.125f, 0.25f),
                     new Direction[]{ Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
+            // Center body
             addColouredFaces(quads, sprite, dyeColour, uvs,
                     new Vector3f(0.5f, 0.5f, 0.5f),
                     new Vector3f(0.25f, 0.25f, 0.25f),
                     new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
+            // Top cap
             addColouredFaces(quads, sprite, dyeColour, uvs,
                     new Vector3f(0.5f, 0.875f, 0.5f),
                     new Vector3f(0.25f, 0.125f, 0.25f),
@@ -208,26 +234,46 @@ public class PipeItemModel implements ItemModel {
     }
 
     /**
-     * Add double-faced coloured overlay quads for the given faces, slightly offset
-     * outward to avoid Z-fighting (matching QUADS_COLOURED in PipeBaseModelGenStandard).
+     * Add double-faced translucent overlay quads, offset INWARD to sit just behind
+     * the base pipe geometry (matching QUADS_COLOURED in PipeBaseModelGenStandard).
+     * Works for non-fluid pipes where the translucent colour shows through the pipe.
      */
     private static void addColouredFaces(List<BakedQuad> quads, TextureAtlasSprite sprite,
                                           int dyeColour, UvFaceData uvs,
                                           Vector3f center, Vector3f radius, Direction[] faces) {
         for (Direction face : faces) {
-            // Create double-sided quads (front + back) matching QUADS_COLOURED
             MutableQuad[] pair = ModelUtil.createDoubleFace(face, center, radius, uvs);
             for (MutableQuad quad : pair) {
-                // Offset slightly outward (in face direction) so overlay renders in front of base pipe
+                // Inward offset — translucent overlay sits behind base pipe geometry
                 net.minecraft.world.phys.Vec3 offset = net.minecraft.world.phys.Vec3.atLowerCornerOf(
-                        face.getUnitVec3i()).scale(COLOUR_OFFSET);
+                        face.getOpposite().getUnitVec3i()).scale(COLOUR_OFFSET);
                 quad.translatevd(offset);
                 quad.setSprite(sprite);
                 quad.texFromSprite(sprite);
-                // Apply dye colour (ABGR format from getPipeModelColour)
                 quad.colouri(dyeColour);
                 quads.add(quad.toBakedBlock());
             }
+        }
+    }
+
+    /**
+     * Add single-faced mask overlay quads, offset OUTWARD to render in front of
+     * the base pipe geometry. Used for fluid pipes where the mask texture controls
+     * which areas (frame only) get painted.
+     */
+    private static void addMaskFaces(List<BakedQuad> quads, TextureAtlasSprite maskSprite,
+                                      int dyeColour, Vector3f center, Vector3f radius,
+                                      Direction[] faces, UvFaceData uvs) {
+        for (Direction face : faces) {
+            MutableQuad quad = ModelUtil.createFace(face, center, radius, uvs);
+            // Outward offset — mask must render in front of pipe to be visible
+            net.minecraft.world.phys.Vec3 offset = net.minecraft.world.phys.Vec3.atLowerCornerOf(
+                    face.getUnitVec3i()).scale(COLOUR_OFFSET);
+            quad.translatevd(offset);
+            quad.setSprite(maskSprite);
+            quad.texFromSprite(maskSprite);
+            quad.colouri(dyeColour);
+            quads.add(quad.toBakedBlock());
         }
     }
 }

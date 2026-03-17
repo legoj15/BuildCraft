@@ -61,8 +61,6 @@ public class PipeItemModel implements ItemModel {
     /** Slight outward offset (in block-space units) to avoid Z-fighting. */
     private static final float OFFSET = 0.002f;
 
-    /** Semi-transparent alpha for the colour overlay (lets base pipe show through). */
-    private static final float OVERLAY_ALPHA = 0.55f;
 
     // Reflection fields cached at class-load time
     private static final Field QUADS_FIELD;
@@ -216,8 +214,8 @@ public class PipeItemModel implements ItemModel {
             MutableQuad quad = ModelUtil.createFace(faces[i], center, radius, uv);
             quad.setSprite(sprite);
             quad.texFromSprite(sprite);
-            // Bake dye colour with semi-transparent alpha so base pipe shows through
-            quad.colourf(r, g, b, OVERLAY_ALPHA);
+            // Bake dye colour — texture alpha handles cutout transparency
+            quad.colourf(r, g, b, 1.0f);
             quads.add(quad.toBakedBlock());
         }
     }

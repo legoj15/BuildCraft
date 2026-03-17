@@ -6,7 +6,6 @@
 
 package buildcraft.transport.client.model;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -17,13 +16,10 @@ import org.joml.Vector3f;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.client.renderer.item.BlockModelWrapper;
-import net.minecraft.client.renderer.item.CompositeModel;
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.renderer.item.ModelRenderProperties;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.DyeColor;
@@ -39,106 +35,79 @@ import buildcraft.lib.misc.ColourUtil;
 
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.BCTransportSprites;
-import buildcraft.transport.client.PipeColourTintSource;
-
-import net.neoforged.neoforge.client.NeoForgeRenderTypes;
-import net.neoforged.neoforge.client.RenderTypeGroup;
-import net.neoforged.neoforge.client.RenderTypeHelper;
 
 /**
  * A dynamic ItemModel for pipe items that wraps the vanilla JSON-baked model
  * and adds colour overlay quads when the item carries a PIPE_COLOUR data component.
  *
- * <p>Uses CompositeModel to combine the vanilla base model (items atlas) with
- * an overlay model (blocks atlas), following the DynamicFluidContainerModel pattern.
- * Each layer gets its own render type detection so atlas mismatches are avoided.
+ * <p>The overlay is added by directly manipulating the ItemStackRenderState after
+ * the vanilla model's update() call, adding a new layer with the overlay quads.
+ * This avoids atlas-mismatch issues (vanilla uses items atlas, overlay uses blocks atlas)
+ * because each layer binds its own render type independently.
  */
 public class PipeItemModel implements ItemModel {
-    private static final RenderTypeGroup TRANSLUCENT_RENDER_TYPES =
-            new RenderTypeGroup(ChunkSectionLayer.TRANSLUCENT, NeoForgeRenderTypes::getUnsortedTranslucent);
-
-    /** Slight outward offset (in block-space units) to avoid Z-fighting with base quads. */
+    /** Slight outward offset (in block-space units) to avoid Z-fighting. */
     private static final float OFFSET = 0.002f;
-
-    // Reflection to extract ModelRenderProperties from BlockModelWrapper
-    private static final Field PROPERTIES_FIELD;
-    static {
-        try {
-            PROPERTIES_FIELD = BlockModelWrapper.class.getDeclaredField("properties");
-            PROPERTIES_FIELD.setAccessible(true);
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException("Failed to access BlockModelWrapper.properties", e);
-        }
-    }
 
     private final BlockModelWrapper vanillaWrapper;
     private final PipeDefinition definition;
-    private final ModelRenderProperties renderProperties;
 
-    /** Cache of CompositeModel per DyeColor. */
-    private final Map<DyeColor, ItemModel> cache = new EnumMap<>(DyeColor.class);
+    /** Pre-baked overlay quads per DyeColor. */
+    private final Map<DyeColor, List<BakedQuad>> overlayQuadCache = new EnumMap<>(DyeColor.class);
 
     public PipeItemModel(BlockModelWrapper vanillaWrapper, PipeDefinition definition) {
         this.vanillaWrapper = vanillaWrapper;
         this.definition = definition;
-        try {
-            this.renderProperties = (ModelRenderProperties) PROPERTIES_FIELD.get(vanillaWrapper);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException("Failed to read BlockModelWrapper.properties", e);
-        }
     }
 
     @Override
     public void update(ItemStackRenderState renderState, ItemStack stack, ItemModelResolver modelResolver,
                        ItemDisplayContext displayContext, @Nullable ClientLevel level,
                        @Nullable ItemOwner owner, int seed) {
+        // Always render the vanilla base model first
+        vanillaWrapper.update(renderState, stack, modelResolver, displayContext, level, owner, seed);
+
+        // If painted, add overlay layer directly to the render state
         DyeColor colour = stack.get(BCTransportItems.PIPE_COLOUR.get());
         if (colour == null) {
-            // No paint — use vanilla model as-is
-            vanillaWrapper.update(renderState, stack, modelResolver, displayContext, level, owner, seed);
             return;
         }
-        // Use CompositeModel for painted pipes (vanilla base + colour overlay)
-        cache.computeIfAbsent(colour, this::buildCompositeModel)
-                .update(renderState, stack, modelResolver, displayContext, level, owner, seed);
-    }
 
-    /**
-     * Build a CompositeModel with two layers:
-     * 1) vanilla base model (items atlas)
-     * 2) colour overlay model (blocks atlas, tinted by PipeColourTintSource)
-     *
-     * Following the DynamicFluidContainerModel pattern: same renderProperties,
-     * separate render type detection per layer.
-     */
-    private ItemModel buildCompositeModel(DyeColor colour) {
-        List<BakedQuad> overlayQuads = generateOverlayQuads(colour);
-
+        List<BakedQuad> overlayQuads = overlayQuadCache.computeIfAbsent(colour, this::generateOverlayQuads);
         if (overlayQuads.isEmpty()) {
-            return vanillaWrapper;
+            return;
         }
 
-        // Detect render type from overlay quads only (all blocks atlas)
-        var overlayRenderType = RenderTypeHelper.detectItemModelRenderType(
-                overlayQuads, TRANSLUCENT_RENDER_TYPES);
+        // Add a new layer directly to the render state for the overlay
+        var overlayLayer = renderState.newLayer();
 
-        // Create overlay layer: same render properties as vanilla (matching transforms,
-        // particle, etc.), tinted by PipeColourTintSource
-        ItemModel overlayModel = new BlockModelWrapper(
-                List.of(PipeColourTintSource.INSTANCE),
-                overlayQuads,
-                renderProperties,
-                overlayRenderType
-        );
+        // Copy quads to the layer
+        overlayLayer.prepareQuadList().addAll(overlayQuads);
 
-        // CompositeModel calls each sub-model's update(), each adds its own layer
-        return new CompositeModel(List.of(vanillaWrapper, overlayModel));
+        // Set up tint colours
+        int tintCount = 1; // we use tintIndex 0
+        int[] tintLayers = overlayLayer.prepareTintLayers(tintCount);
+        // Apply the dye colour as the tint
+        int colourHex = ColourUtil.getLightHex(colour);
+        // ARGB format: 0xAARRGGBB — full alpha
+        tintLayers[0] = 0xFF000000 | colourHex;
+
+        // Detect the correct render type for blocks-atlas overlay quads
+        var renderTypeGetter = net.neoforged.neoforge.client.RenderTypeHelper
+                .detectItemModelRenderType(overlayQuads,
+                        new net.neoforged.neoforge.client.RenderTypeGroup(
+                                net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT,
+                                net.neoforged.neoforge.client.NeoForgeRenderTypes::getUnsortedTranslucent));
+        overlayLayer.setRenderType(renderTypeGetter.apply(stack));
+
+        // Use block lighting to match the vanilla layer
+        overlayLayer.setUsesBlockLight(true);
     }
 
     /**
      * Generate overlay quads matching the pipe_item.json 3-cube geometry
      * (bottom cap, center body, top cap), with the overlay texture.
-     * Vertex colour is set to the dye colour; tintIndex=0 for PipeColourTintSource.
+     * Vertex colour is set to white (tinting applied via tintLayers at render time).
      */
     private List<BakedQuad> generateOverlayQuads(DyeColor colour) {
         var overlaySprite = switch (definition.getColourType()) {
@@ -147,12 +116,6 @@ public class PipeItemModel implements ItemModel {
             default -> BCTransportSprites.PIPE_COLOUR.getSprite();
         };
 
-        // Dye colour for vertex colour (overlay quads should appear in this colour)
-        int colourHex = ColourUtil.getLightHex(colour);
-        float r = ((colourHex >> 16) & 0xFF) / 255f;
-        float g = ((colourHex >> 8) & 0xFF) / 255f;
-        float b = (colourHex & 0xFF) / 255f;
-
         List<BakedQuad> quads = new ArrayList<>();
 
         // pipe_item.json geometry (block-space 0..1):
@@ -160,8 +123,8 @@ public class PipeItemModel implements ItemModel {
         //   Center:     [4,4,4]-[12,12,12]  → center=0.5,0.5,0.5    radius=0.25,0.25,0.25
         //   Top cap:    [4,12,4]-[12,16,12] → center=0.5,0.875,0.5  radius=0.25,0.125,0.25
 
-        // Bottom cap — all faces except UP (internal to pipe body)
-        addBoxFaces(quads, overlaySprite, r, g, b,
+        // Bottom cap — all faces except UP (internal)
+        addBoxFaces(quads, overlaySprite,
                 new Vector3f(0.5f, 0.125f, 0.5f),
                 new Vector3f(0.25f + OFFSET, 0.125f + OFFSET, 0.25f + OFFSET),
                 new Direction[]{ Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST },
@@ -169,7 +132,7 @@ public class PipeItemModel implements ItemModel {
                         UvFaceData.from16(4, 12, 12, 16), UvFaceData.from16(4, 12, 12, 16) });
 
         // Center body — only side faces (top/bottom are internal)
-        addBoxFaces(quads, overlaySprite, r, g, b,
+        addBoxFaces(quads, overlaySprite,
                 new Vector3f(0.5f, 0.5f, 0.5f),
                 new Vector3f(0.25f + OFFSET, 0.25f + OFFSET, 0.25f + OFFSET),
                 new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST },
@@ -177,7 +140,7 @@ public class PipeItemModel implements ItemModel {
                         UvFaceData.from16(4, 4, 12, 12), UvFaceData.from16(4, 4, 12, 12) });
 
         // Top cap — all faces except DOWN (internal)
-        addBoxFaces(quads, overlaySprite, r, g, b,
+        addBoxFaces(quads, overlaySprite,
                 new Vector3f(0.5f, 0.875f, 0.5f),
                 new Vector3f(0.25f + OFFSET, 0.125f + OFFSET, 0.25f + OFFSET),
                 new Direction[]{ Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST },
@@ -188,11 +151,11 @@ public class PipeItemModel implements ItemModel {
     }
 
     /**
-     * Add quads for selected faces of a box, with colour tinting and the overlay texture.
+     * Add quads for selected faces of a box, with the overlay texture.
+     * Vertex colour is white; actual tinting is applied via tintLayers.
      */
     private static void addBoxFaces(List<BakedQuad> quads,
                                      net.minecraft.client.renderer.texture.TextureAtlasSprite sprite,
-                                     float r, float g, float b,
                                      Vector3f center, Vector3f radius,
                                      Direction[] faces, UvFaceData[] uvs) {
         for (int i = 0; i < faces.length; i++) {
@@ -201,10 +164,11 @@ public class PipeItemModel implements ItemModel {
                 uv = new UvFaceData(0, 0, 1, 1);
             }
             MutableQuad quad = ModelUtil.createFace(faces[i], center, radius, uv);
-            quad.setTint(0);
+            quad.setTint(0); // tintIndex 0 for tintLayers colouring
             quad.setSprite(sprite);
             quad.texFromSprite(sprite);
-            quad.colourf(r, g, b, 1.0f);
+            // White vertex colour — tinting happens via tintLayers in update()
+            quad.colourf(1.0f, 1.0f, 1.0f, 1.0f);
             quads.add(quad.toBakedBlock());
         }
     }

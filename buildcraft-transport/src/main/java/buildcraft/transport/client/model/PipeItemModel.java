@@ -18,7 +18,6 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.client.renderer.item.BlockModelWrapper;
-import net.minecraft.client.renderer.item.CompositeModel;
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
@@ -64,8 +63,8 @@ public class PipeItemModel implements ItemModel {
     private final ItemModel vanillaModel;
     private final PipeDefinition definition;
     private final ModelRenderProperties vanillaRenderProps;
-    /** Cache of composed models per DyeColor. */
-    private final Map<DyeColor, ItemModel> cache = new EnumMap<>(DyeColor.class);
+    /** Cache of overlay-only models per DyeColor. */
+    private final Map<DyeColor, ItemModel> overlayCache = new EnumMap<>(DyeColor.class);
 
     public PipeItemModel(ItemModel vanillaModel, PipeDefinition definition, ModelRenderProperties vanillaRenderProps) {
         this.vanillaModel = vanillaModel;
@@ -77,33 +76,36 @@ public class PipeItemModel implements ItemModel {
     public void update(ItemStackRenderState renderState, ItemStack stack, ItemModelResolver modelResolver,
                        ItemDisplayContext displayContext, @Nullable ClientLevel level,
                        @Nullable ItemOwner owner, int seed) {
+        // Always render the vanilla base model first
+        vanillaModel.update(renderState, stack, modelResolver, displayContext, level, owner, seed);
+
+        // If painted, stack the overlay on top
         DyeColor colour = stack.get(BCTransportItems.PIPE_COLOUR.get());
-        if (colour == null) {
-            vanillaModel.update(renderState, stack, modelResolver, displayContext, level, owner, seed);
-            return;
+        if (colour != null) {
+            overlayCache.computeIfAbsent(colour, this::buildOverlayModel)
+                    .update(renderState, stack, modelResolver, displayContext, level, owner, seed);
         }
-        cache.computeIfAbsent(colour, this::buildColouredModel)
-                .update(renderState, stack, modelResolver, displayContext, level, owner, seed);
     }
 
-    private ItemModel buildColouredModel(DyeColor colour) {
+    /**
+     * Build an overlay-only BlockModelWrapper for the given dye colour.
+     */
+    private ItemModel buildOverlayModel(DyeColor colour) {
         List<BakedQuad> overlayQuads = generateOverlayQuads(colour);
 
         if (overlayQuads.isEmpty()) {
-            return vanillaModel;
+            // Return a no-op model that does nothing
+            return (rs, s, mr, dc, l, o, seed) -> {};
         }
 
-        // Use the same render properties as the vanilla model to ensure matching transforms
         var renderType = RenderTypeHelper.detectItemModelRenderType(overlayQuads, TRANSLUCENT_RENDER_TYPES);
 
-        ItemModel overlayModel = new BlockModelWrapper(
+        return new BlockModelWrapper(
                 List.of(PipeColourTintSource.INSTANCE),
                 overlayQuads,
                 vanillaRenderProps,
                 renderType
         );
-
-        return new CompositeModel(List.of(vanillaModel, overlayModel));
     }
 
     /**

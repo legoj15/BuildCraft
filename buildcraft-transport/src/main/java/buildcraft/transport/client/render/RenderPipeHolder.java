@@ -98,8 +98,8 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
 
         poseStack.pushPose();
 
-        // --- Render pipe body (static model from cache) ---
-        renderPipeBody(pipe, poseStack, buffer, bufferSource, light);
+        // Static pipe body is rendered by the chunk mesh via PipeBlockStateModel.
+        // The BER only handles pluggables and dynamic content (flows, behaviours).
 
         // --- Render pluggables ---
         renderPluggables(pipe, poseStack.last(), buffer, light);

@@ -164,10 +164,11 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         return getFullShape(level, pos);
     }
 
-    // Rendering — invisible (no baked model), rendered by BER later
+    // Rendering — MODEL so quads participate in breaking overlay; pipe geometry
+    // is provided by PipeBlockStateModel which is swapped in via ModelEvent.ModifyBakingResult.
     @Override
     public RenderShape getRenderShape(BlockState state) {
-        return RenderShape.INVISIBLE;
+        return RenderShape.MODEL;
     }
 
     @Override

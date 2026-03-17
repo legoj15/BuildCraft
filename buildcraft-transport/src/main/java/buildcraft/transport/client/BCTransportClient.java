@@ -1,7 +1,10 @@
 package buildcraft.transport.client;
 
+import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 
@@ -13,6 +16,7 @@ import buildcraft.transport.client.gui.GuiDiamondPipe;
 import buildcraft.transport.client.gui.GuiDiamondWoodPipe;
 import buildcraft.transport.client.gui.GuiEmzuliPipe;
 import buildcraft.transport.client.gui.GuiFilteredBuffer;
+import buildcraft.transport.client.model.PipeBlockStateModel;
 import buildcraft.transport.client.render.PipeFlowRendererFluids;
 import buildcraft.transport.client.render.PipeFlowRendererItems;
 import buildcraft.transport.client.render.PipeFlowRendererPower;
@@ -45,6 +49,21 @@ public class BCTransportClient {
         event.registerBlock(PipeHolderClientExtensions.INSTANCE, BCTransportBlocks.PIPE_HOLDER.get());
     }
 
+    /**
+     * Swap the vanilla-baked pipe_holder model with PipeBlockStateModel.
+     * The vanilla model provides only a particle texture; PipeBlockStateModel wraps it
+     * and dynamically generates pipe quads for both chunk-mesh rendering and the breaking overlay.
+     */
+    @SubscribeEvent
+    public static void onModifyBakingResult(ModelEvent.ModifyBakingResult event) {
+        BlockState pipeState = BCTransportBlocks.PIPE_HOLDER.get().defaultBlockState();
+        var models = event.getBakingResult().blockStateModels();
+        BlockStateModel vanillaModel = models.get(pipeState);
+        if (vanillaModel != null) {
+            models.put(pipeState, new PipeBlockStateModel(vanillaModel));
+        }
+    }
+
     /** Called during mod init to register pipe flow renderers. */
     public static void registerFlowRenderers() {
         PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowPower.class, PipeFlowRendererPower.INSTANCE);
@@ -59,4 +78,3 @@ public class BCTransportClient {
         );
     }
 }
-

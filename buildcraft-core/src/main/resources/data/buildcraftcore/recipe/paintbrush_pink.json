@@ -9,7 +9,8 @@
   "result": {
     "id": "buildcraftcore:paintbrush",
     "components": {
-      "minecraft:custom_data": {"colour": 6, "uses": 64},
+      "buildcraftcore:brush_color": "pink",
+      "buildcraftcore:brush_uses": 64,
       "minecraft:custom_model_data": {"floats": [7.0]}
     }
   }

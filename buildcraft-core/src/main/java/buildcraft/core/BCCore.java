@@ -11,12 +11,15 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.world.item.DyeColor;
 import buildcraft.core.item.ItemPaintbrush_BC8;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.minecraft.core.component.DataComponentType;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
 import java.util.function.Supplier;
+import com.mojang.serialization.Codec;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
@@ -41,6 +44,18 @@ public class BCCore {
     public static final Supplier<DataComponentType<SimpleFluidContent>> FLUID_CONTENT = DATA_COMPONENTS
             .registerComponentType("fluid_content", builder -> builder.persistent(SimpleFluidContent.CODEC)
                     .networkSynchronized(SimpleFluidContent.STREAM_CODEC));
+
+    /** Typed component for paintbrush colour. Present = coloured brush, absent = clean brush. */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<DyeColor>> BRUSH_COLOR =
+            DATA_COMPONENTS.registerComponentType("brush_color",
+                    builder -> builder.persistent(DyeColor.CODEC)
+                                      .networkSynchronized(DyeColor.STREAM_CODEC));
+
+    /** Typed component for paintbrush remaining uses. */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> BRUSH_USES =
+            DATA_COMPONENTS.registerComponentType("brush_uses",
+                    builder -> builder.persistent(Codec.INT)
+                                      .networkSynchronized(ByteBufCodecs.INT));
 
     public BCCore(IEventBus modEventBus, ModContainer modContainer) {
         INSTANCE = this;

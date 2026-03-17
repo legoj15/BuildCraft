@@ -13,7 +13,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
@@ -21,60 +20,47 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.CompoundTag;
 
 import buildcraft.api.blocks.CustomPaintHelper;
+import buildcraft.core.BCCore;
 import buildcraft.lib.misc.ColourUtil;
 import buildcraft.lib.misc.ParticleUtil;
 import buildcraft.lib.misc.SoundUtil;
 import buildcraft.lib.misc.VecUtil;
 
 public class ItemPaintbrush_BC8 extends Item {
-    private static final String TAG_COLOUR = "colour";
-    private static final String TAG_USES = "uses";
     private static final int MAX_USES = 64;
 
     public ItemPaintbrush_BC8(Item.Properties properties) {
         super(properties);
     }
 
-    // --- Brush data via custom data component ---
+    // --- Brush data via typed data components ---
 
     @Nullable
     private static DyeColor getColour(ItemStack stack) {
-        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
-        if (customData == null) return null;
-        CompoundTag tag = customData.copyTag();
-        if (!tag.contains(TAG_COLOUR)) return null;
-        int ordinal = tag.getInt(TAG_COLOUR).orElse(-1);
-        if (ordinal < 0 || ordinal >= DyeColor.values().length) return null;
-        return DyeColor.values()[ordinal];
+        return stack.get(BCCore.BRUSH_COLOR.get());
     }
 
     private static int getUsesLeft(ItemStack stack) {
-        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
-        if (customData == null) return 0;
-        CompoundTag tag = customData.copyTag();
-        if (!tag.contains(TAG_USES)) return MAX_USES;
-        return tag.getInt(TAG_USES).orElse(0);
+        Integer uses = stack.get(BCCore.BRUSH_USES.get());
+        return uses != null ? uses : 0;
     }
 
     private static void setBrushData(ItemStack stack, @Nullable DyeColor colour, int usesLeft) {
         if (colour == null || usesLeft <= 0) {
-            // Clean brush — remove custom data and model data entirely
-            stack.remove(DataComponents.CUSTOM_DATA);
-            stack.remove(DataComponents.CUSTOM_MODEL_DATA);
+            // Clean brush — remove all brush components
+            stack.remove(BCCore.BRUSH_COLOR.get());
+            stack.remove(BCCore.BRUSH_USES.get());
+            stack.remove(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA);
             return;
         }
-        CompoundTag tag = new CompoundTag();
-        tag.putInt(TAG_COLOUR, colour.ordinal());
-        tag.putInt(TAG_USES, usesLeft);
-        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        stack.set(BCCore.BRUSH_COLOR.get(), colour);
+        stack.set(BCCore.BRUSH_USES.get(), usesLeft);
         // Set CUSTOM_MODEL_DATA for the range_dispatch item model selector.
         // Values 1-16 map to DyeColor ordinals + 1 (0 = clean/fallback).
         // In 1.21.4+, CustomModelData takes (floats, flags, strings, colors).
-        stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(
+        stack.set(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(
                 java.util.List.of((float) (colour.ordinal() + 1)),
                 java.util.List.of(),
                 java.util.List.of(),

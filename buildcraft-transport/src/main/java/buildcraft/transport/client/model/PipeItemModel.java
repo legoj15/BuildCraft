@@ -128,9 +128,9 @@ public class PipeItemModel implements ItemModel {
             var overlayLayer = renderState.newLayer();
             overlayLayer.prepareQuadList().addAll(overlayQuads);
 
-            // Use translucent render type — the overlay texture has alpha
-            // that must be blended (cutoutBlockSheet only alpha-tests, not blends)
-            overlayLayer.setRenderType(net.minecraft.client.renderer.Sheets.translucentItemSheet());
+            // Use blocks-atlas translucent render type — overlay sprites are on
+            // the blocks atlas and need alpha blending for transparent areas
+            overlayLayer.setRenderType(net.minecraft.client.renderer.Sheets.translucentBlockItemSheet());
             overlayLayer.setUsesBlockLight(usesBlockLight);
             overlayLayer.setTransform(itemTransforms.getTransform(displayContext));
         }

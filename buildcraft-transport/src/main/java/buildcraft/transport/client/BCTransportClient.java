@@ -1,14 +1,22 @@
 package buildcraft.transport.client;
 
 import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.item.ItemModel;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
+import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 
+import buildcraft.api.transport.pipe.PipeApi;
+import buildcraft.api.transport.pipe.PipeDefinition;
 
+import buildcraft.transport.BCTransport;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportMenuTypes;
@@ -17,6 +25,7 @@ import buildcraft.transport.client.gui.GuiDiamondWoodPipe;
 import buildcraft.transport.client.gui.GuiEmzuliPipe;
 import buildcraft.transport.client.gui.GuiFilteredBuffer;
 import buildcraft.transport.client.model.PipeBlockStateModel;
+import buildcraft.transport.client.model.PipeItemModel;
 import buildcraft.transport.client.render.PipeFlowRendererFluids;
 import buildcraft.transport.client.render.PipeFlowRendererItems;
 import buildcraft.transport.client.render.PipeFlowRendererPower;
@@ -50,17 +59,41 @@ public class BCTransportClient {
     }
 
     /**
-     * Swap the vanilla-baked pipe_holder model with PipeBlockStateModel.
-     * The vanilla model provides only a particle texture; PipeBlockStateModel wraps it
-     * and dynamically generates pipe quads for both chunk-mesh rendering and the breaking overlay.
+     * Register the pipe colour tint source so item model JSON can reference it.
+     */
+    @SubscribeEvent
+    public static void registerItemTintSources(RegisterColorHandlersEvent.ItemTintSources event) {
+        event.register(
+                Identifier.fromNamespaceAndPath(BCTransport.MODID, "pipe_colour"),
+                PipeColourTintSource.MAP_CODEC
+        );
+    }
+
+    /**
+     * Swap the vanilla-baked pipe_holder model with PipeBlockStateModel, and
+     * wrap each pipe item's vanilla model with PipeItemModel for dynamic colour overlays.
      */
     @SubscribeEvent
     public static void onModifyBakingResult(ModelEvent.ModifyBakingResult event) {
+        // Block model swap
         BlockState pipeState = BCTransportBlocks.PIPE_HOLDER.get().defaultBlockState();
-        var models = event.getBakingResult().blockStateModels();
-        BlockStateModel vanillaModel = models.get(pipeState);
+        var blockModels = event.getBakingResult().blockStateModels();
+        BlockStateModel vanillaModel = blockModels.get(pipeState);
         if (vanillaModel != null) {
-            models.put(pipeState, new PipeBlockStateModel(vanillaModel));
+            blockModels.put(pipeState, new PipeBlockStateModel(vanillaModel));
+        }
+
+        // Item model swap — wrap each pipe item with PipeItemModel
+        var itemModels = event.getBakingResult().itemStackModels();
+        for (PipeDefinition def : PipeApi.pipeRegistry.getAllRegisteredPipes()) {
+            Item pipeItem = (Item) PipeApi.pipeRegistry.getItemForPipe(def);
+            if (pipeItem != null) {
+                Identifier itemId = BuiltInRegistries.ITEM.getKey(pipeItem);
+                ItemModel vanillaItemModel = itemModels.get(itemId);
+                if (vanillaItemModel != null) {
+                    itemModels.put(itemId, new PipeItemModel(vanillaItemModel, def));
+                }
+            }
         }
     }
 

@@ -165,16 +165,17 @@ public class PipeItemModel implements ItemModel {
             if (maskSprite == null || maskSprite == buildcraft.lib.misc.SpriteUtil.missingSprite()) {
                 return List.of();
             }
-            // Mask quads use base geometry (not double-faced) with full dye alpha
-            addMaskFaces(quads, maskSprite, dyeColour, uvs,
+            // Mask quads use full UVs to show entire frame pattern (corners + connecting lines)
+            UvFaceData maskUvs = new UvFaceData(0, 0, 1, 1);
+            addMaskFaces(quads, maskSprite, dyeColour, maskUvs,
                     new Vector3f(0.5f, 0.125f, 0.5f),
                     new Vector3f(0.25f, 0.125f, 0.25f),
                     new Direction[]{ Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
-            addMaskFaces(quads, maskSprite, dyeColour, uvs,
+            addMaskFaces(quads, maskSprite, dyeColour, maskUvs,
                     new Vector3f(0.5f, 0.5f, 0.5f),
                     new Vector3f(0.25f, 0.25f, 0.25f),
                     new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
-            addMaskFaces(quads, maskSprite, dyeColour, uvs,
+            addMaskFaces(quads, maskSprite, dyeColour, maskUvs,
                     new Vector3f(0.5f, 0.875f, 0.5f),
                     new Vector3f(0.25f, 0.125f, 0.25f),
                     new Direction[]{ Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });

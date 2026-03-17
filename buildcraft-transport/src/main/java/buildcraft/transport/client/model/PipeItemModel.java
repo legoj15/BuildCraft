@@ -49,8 +49,20 @@ public class PipeItemModel implements ItemModel {
     /** Slight outward offset (in block-space units) to avoid Z-fighting. */
     private static final float OFFSET = 0.002f;
 
+    // Reflection to extract ModelRenderProperties from BlockModelWrapper
+    private static final java.lang.reflect.Field PROPERTIES_FIELD;
+    static {
+        try {
+            PROPERTIES_FIELD = BlockModelWrapper.class.getDeclaredField("properties");
+            PROPERTIES_FIELD.setAccessible(true);
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException("Failed to access BlockModelWrapper.properties", e);
+        }
+    }
+
     private final BlockModelWrapper vanillaWrapper;
     private final PipeDefinition definition;
+    private final net.minecraft.client.renderer.block.model.ItemTransforms itemTransforms;
 
     /** Pre-baked overlay quads per DyeColor. */
     private final Map<DyeColor, List<BakedQuad>> overlayQuadCache = new EnumMap<>(DyeColor.class);
@@ -58,6 +70,12 @@ public class PipeItemModel implements ItemModel {
     public PipeItemModel(BlockModelWrapper vanillaWrapper, PipeDefinition definition) {
         this.vanillaWrapper = vanillaWrapper;
         this.definition = definition;
+        try {
+            var renderProps = (net.minecraft.client.renderer.item.ModelRenderProperties) PROPERTIES_FIELD.get(vanillaWrapper);
+            this.itemTransforms = renderProps.transforms();
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Failed to read BlockModelWrapper.properties", e);
+        }
     }
 
     @Override
@@ -102,6 +120,9 @@ public class PipeItemModel implements ItemModel {
 
         // Use block lighting to match the vanilla layer
         overlayLayer.setUsesBlockLight(true);
+
+        // Apply the same display transform as the vanilla model
+        overlayLayer.setTransform(itemTransforms.getTransform(displayContext));
     }
 
     /**

@@ -25,6 +25,7 @@ import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.item.ModelRenderProperties;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.DyeColor;
@@ -45,14 +46,14 @@ import buildcraft.transport.BCTransportSprites;
  * A dynamic ItemModel for pipe items that wraps the vanilla JSON-baked model
  * and adds colour overlay quads when the item carries a PIPE_COLOUR data component.
  *
- * <p>For painted pipes, both vanilla quads and overlay quads are added as direct
- * render state layers (bypassing BlockModelWrapper.update) to avoid sharing
- * model identity with unpainted pipes (which would corrupt the GUI render cache).
+ * <p>The overlay replicates the in-world translucent paint rendering using the
+ * PIPE_COLOUR sprite with slightly-offset double-faced geometry, tinted with
+ * the dye colour — matching exactly what {@link PipeBaseModelGenStandard}
+ * does for the translucent pass.
  */
 public class PipeItemModel implements ItemModel {
-    /** Slight outward offset (in block-space units) to avoid Z-fighting. */
-    private static final float OFFSET = 0.002f;
-
+    /** Slight outward offset per-face to avoid Z-fighting (matches QUADS_COLOURED in PipeBaseModelGenStandard). */
+    private static final double COLOUR_OFFSET = 0.01;
 
     // Reflection fields cached at class-load time
     private static final Field QUADS_FIELD;
@@ -81,7 +82,7 @@ public class PipeItemModel implements ItemModel {
     @SuppressWarnings("unchecked")
     private final Function<ItemStack, RenderType> vanillaRenderType;
 
-    /** Pre-baked overlay quads per DyeColor (colour baked into vertex data). */
+    /** Pre-baked overlay quads per DyeColor. */
     private final Map<DyeColor, List<BakedQuad>> overlayQuadCache = new EnumMap<>(DyeColor.class);
 
     @SuppressWarnings("unchecked")
@@ -122,7 +123,7 @@ public class PipeItemModel implements ItemModel {
         baseLayer.setUsesBlockLight(usesBlockLight);
         baseLayer.setTransform(itemTransforms.getTransform(displayContext));
 
-        // === Layer 2: Colour overlay (semi-transparent, tinted) ===
+        // === Layer 2: Translucent colour overlay (matching in-world paint rendering) ===
         List<BakedQuad> overlayQuads = overlayQuadCache.computeIfAbsent(colour, this::generateOverlayQuads);
         if (!overlayQuads.isEmpty()) {
             var overlayLayer = renderState.newLayer();
@@ -137,22 +138,26 @@ public class PipeItemModel implements ItemModel {
     }
 
     /**
-     * Generate overlay quads matching the pipe_item.json 3-cube geometry
-     * (bottom cap, center body, top cap), with the overlay texture and
-     * dye colour baked into the vertex colour at semi-transparent alpha.
+     * Generate colour overlay quads matching the in-world translucent paint pass.
+     *
+     * <p>Uses the PIPE_COLOUR sprite on slightly-offset double-faced geometry
+     * (matching QUADS_COLOURED in PipeBaseModelGenStandard), tinted with the
+     * dye colour. This produces the same visual as in-world painted pipes.
+     *
+     * <p>The pipe_item.json geometry uses 3 cubes (bottom cap, center, top cap).
+     * For each cube's visible faces, we create double-sided coloured overlay quads.
      */
     private List<BakedQuad> generateOverlayQuads(DyeColor colour) {
-        var overlaySprite = switch (definition.getColourType()) {
-            case BORDER_OUTER -> BCTransportSprites.PIPE_COLOUR_BORDER_OUTER.getSprite();
-            case BORDER_INNER -> BCTransportSprites.PIPE_COLOUR_BORDER_INNER.getSprite();
-            default -> BCTransportSprites.PIPE_COLOUR.getSprite();
-        };
+        TextureAtlasSprite sprite = BCTransportSprites.PIPE_COLOUR.getSprite();
+        if (sprite == null) {
+            return List.of();
+        }
 
-        // Dye colour for vertex colour
-        int colourHex = ColourUtil.getLightHex(colour);
-        float r = ((colourHex >> 16) & 0xFF) / 255f;
-        float g = ((colourHex >> 8) & 0xFF) / 255f;
-        float b = (colourHex & 0xFF) / 255f;
+        // Get the dye colour in ABGR vertex format (matching PipeBaseModelGenStandard.getPipeModelColour)
+        int dyeColour = PipeBaseModelGenStandard.getDyeTintColour(colour);
+
+        // UVs matching the center (no-connection) geometry: 4/16 to 12/16
+        UvFaceData uvs = new UvFaceData(4 / 16f, 4 / 16f, 12 / 16f, 12 / 16f);
 
         List<BakedQuad> quads = new ArrayList<>();
 
@@ -161,50 +166,48 @@ public class PipeItemModel implements ItemModel {
         //   Center:     [4,4,4]-[12,12,12]  → center=0.5,0.5,0.5    radius=0.25,0.25,0.25
         //   Top cap:    [4,12,4]-[12,16,12] → center=0.5,0.875,0.5  radius=0.25,0.125,0.25
 
-        // Use full UV (0,0 → 1,1) so the entire border texture is visible
-        // including transparent areas that let the base pipe show through
-        UvFaceData fullUv = new UvFaceData(0, 0, 1, 1);
-
-        // Bottom cap — all faces except UP (internal)
-        addBoxFaces(quads, overlaySprite, r, g, b,
+        // Bottom cap — all visible faces (except UP which is internal)
+        addColouredFaces(quads, sprite, dyeColour, uvs,
                 new Vector3f(0.5f, 0.125f, 0.5f),
-                new Vector3f(0.25f + OFFSET, 0.125f + OFFSET, 0.25f + OFFSET),
-                new Direction[]{ Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST },
-                fullUv);
+                new Vector3f(0.25f, 0.125f, 0.25f),
+                new Direction[]{ Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
 
         // Center body — only side faces (top/bottom are internal)
-        addBoxFaces(quads, overlaySprite, r, g, b,
+        addColouredFaces(quads, sprite, dyeColour, uvs,
                 new Vector3f(0.5f, 0.5f, 0.5f),
-                new Vector3f(0.25f + OFFSET, 0.25f + OFFSET, 0.25f + OFFSET),
-                new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST },
-                fullUv);
+                new Vector3f(0.25f, 0.25f, 0.25f),
+                new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
 
-        // Top cap — all faces except DOWN (internal)
-        addBoxFaces(quads, overlaySprite, r, g, b,
+        // Top cap — all visible faces (except DOWN which is internal)
+        addColouredFaces(quads, sprite, dyeColour, uvs,
                 new Vector3f(0.5f, 0.875f, 0.5f),
-                new Vector3f(0.25f + OFFSET, 0.125f + OFFSET, 0.25f + OFFSET),
-                new Direction[]{ Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST },
-                fullUv);
+                new Vector3f(0.25f, 0.125f, 0.25f),
+                new Direction[]{ Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST });
 
         return quads;
     }
 
     /**
-     * Add quads for selected faces of a box, with the overlay texture
-     * and dye colour baked into vertex colour.
+     * Add double-faced coloured overlay quads for the given faces, slightly offset
+     * outward to avoid Z-fighting (matching QUADS_COLOURED in PipeBaseModelGenStandard).
      */
-    private static void addBoxFaces(List<BakedQuad> quads,
-                                     net.minecraft.client.renderer.texture.TextureAtlasSprite sprite,
-                                     float r, float g, float b,
-                                     Vector3f center, Vector3f radius,
-                                     Direction[] faces, UvFaceData uv) {
+    private static void addColouredFaces(List<BakedQuad> quads, TextureAtlasSprite sprite,
+                                          int dyeColour, UvFaceData uvs,
+                                          Vector3f center, Vector3f radius, Direction[] faces) {
         for (Direction face : faces) {
-            MutableQuad quad = ModelUtil.createFace(face, center, radius, uv);
-            quad.setSprite(sprite);
-            quad.texFromSprite(sprite);
-            // Bake dye colour — texture alpha handles transparency
-            quad.colourf(r, g, b, 1.0f);
-            quads.add(quad.toBakedBlock());
+            // Create double-sided quads (front + back) matching QUADS_COLOURED
+            MutableQuad[] pair = ModelUtil.createDoubleFace(face, center, radius, uvs);
+            for (MutableQuad quad : pair) {
+                // Offset slightly outward from face to avoid Z-fighting
+                net.minecraft.world.phys.Vec3 offset = net.minecraft.world.phys.Vec3.atLowerCornerOf(
+                        face.getOpposite().getUnitVec3i()).scale(COLOUR_OFFSET);
+                quad.translatevd(offset);
+                quad.setSprite(sprite);
+                quad.texFromSprite(sprite);
+                // Apply dye colour (ABGR format from getPipeModelColour)
+                quad.colouri(dyeColour);
+                quads.add(quad.toBakedBlock());
+            }
         }
     }
 }

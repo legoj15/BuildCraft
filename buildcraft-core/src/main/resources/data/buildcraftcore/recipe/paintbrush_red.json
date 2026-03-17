@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "buildcraft_paintbrush",
+  "ingredients": [
+    "buildcraftcore:paintbrush",
+    "#c:dyes/red"
+  ],
+  "result": {
+    "id": "buildcraftcore:paintbrush",
+    "components": {
+      "minecraft:custom_data": {"colour": 14, "uses": 64},
+      "minecraft:custom_model_data": {"floats": [15.0]}
+    }
+  }
+}

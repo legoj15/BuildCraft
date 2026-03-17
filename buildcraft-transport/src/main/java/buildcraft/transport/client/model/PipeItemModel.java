@@ -16,7 +16,6 @@ import org.joml.Vector3f;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.client.renderer.item.BlockModelWrapper;
 import net.minecraft.client.renderer.item.CompositeModel;
@@ -64,14 +63,14 @@ public class PipeItemModel implements ItemModel {
 
     private final ItemModel vanillaModel;
     private final PipeDefinition definition;
-    private final ItemTransforms itemTransforms;
+    private final ModelRenderProperties vanillaRenderProps;
     /** Cache of composed models per DyeColor. */
     private final Map<DyeColor, ItemModel> cache = new EnumMap<>(DyeColor.class);
 
-    public PipeItemModel(ItemModel vanillaModel, PipeDefinition definition, ItemTransforms itemTransforms) {
+    public PipeItemModel(ItemModel vanillaModel, PipeDefinition definition, ModelRenderProperties vanillaRenderProps) {
         this.vanillaModel = vanillaModel;
         this.definition = definition;
-        this.itemTransforms = itemTransforms;
+        this.vanillaRenderProps = vanillaRenderProps;
     }
 
     @Override
@@ -94,14 +93,13 @@ public class PipeItemModel implements ItemModel {
             return vanillaModel;
         }
 
-        TextureAtlasSprite particle = overlayQuads.get(0).sprite();
-        ModelRenderProperties renderProps = new ModelRenderProperties(false, particle, itemTransforms);
+        // Use the same render properties as the vanilla model to ensure matching transforms
         var renderType = RenderTypeHelper.detectItemModelRenderType(overlayQuads, TRANSLUCENT_RENDER_TYPES);
 
         ItemModel overlayModel = new BlockModelWrapper(
                 List.of(PipeColourTintSource.INSTANCE),
                 overlayQuads,
-                renderProps,
+                vanillaRenderProps,
                 renderType
         );
 

@@ -1,7 +1,9 @@
 package buildcraft.transport.client;
 
 import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.item.BlockModelWrapper;
 import net.minecraft.client.renderer.item.ItemModel;
+import net.minecraft.client.renderer.item.ModelRenderProperties;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
@@ -83,12 +85,6 @@ public class BCTransportClient {
             blockModels.put(pipeState, new PipeBlockStateModel(vanillaModel));
         }
 
-        // Construct empty ItemTransforms for the overlay layer (the vanilla model provides the actual transforms)
-        var noTx = net.minecraft.client.renderer.block.model.ItemTransform.NO_TRANSFORM;
-        var itemTransforms = new net.minecraft.client.renderer.block.model.ItemTransforms(
-                noTx, noTx, noTx, noTx, noTx, noTx, noTx, noTx, noTx,
-                com.google.common.collect.ImmutableMap.of());
-
         // Item model swap — wrap each pipe item with PipeItemModel
         var itemModels = event.getBakingResult().itemStackModels();
         for (PipeDefinition def : PipeApi.pipeRegistry.getAllRegisteredPipes()) {
@@ -96,10 +92,25 @@ public class BCTransportClient {
             if (pipeItem != null) {
                 Identifier itemId = BuiltInRegistries.ITEM.getKey(pipeItem);
                 ItemModel vanillaItemModel = itemModels.get(itemId);
-                if (vanillaItemModel != null) {
-                    itemModels.put(itemId, new PipeItemModel(vanillaItemModel, def, itemTransforms));
+                if (vanillaItemModel instanceof BlockModelWrapper wrapper) {
+                    ModelRenderProperties renderProps = extractRenderProperties(wrapper);
+                    if (renderProps != null) {
+                        itemModels.put(itemId, new PipeItemModel(vanillaItemModel, def, renderProps));
+                    }
                 }
             }
+        }
+    }
+
+    /** Extract ModelRenderProperties from BlockModelWrapper (field made public by AT at runtime). */
+    private static ModelRenderProperties extractRenderProperties(BlockModelWrapper wrapper) {
+        try {
+            // AT makes this field public at runtime
+            var field = BlockModelWrapper.class.getDeclaredField("properties");
+            field.setAccessible(true);
+            return (ModelRenderProperties) field.get(wrapper);
+        } catch (Exception e) {
+            return null;
         }
     }
 

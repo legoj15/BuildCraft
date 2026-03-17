@@ -6,6 +6,7 @@
 
 package buildcraft.transport.client.model;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -22,7 +23,6 @@ import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.item.ModelRenderProperties;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.DyeColor;
@@ -43,66 +43,92 @@ import buildcraft.transport.client.PipeColourTintSource;
 
 import net.neoforged.neoforge.client.NeoForgeRenderTypes;
 import net.neoforged.neoforge.client.RenderTypeGroup;
-import net.neoforged.neoforge.client.RenderTypeHelper;
 
 /**
  * A dynamic ItemModel for pipe items that wraps the vanilla JSON-baked model
  * and adds colour overlay quads when the item carries a PIPE_COLOUR data component.
  *
- * <p>The overlay uses simple 3-cube geometry matching pipe_item.json (bottom cap,
- * center body, top cap) with the appropriate overlay texture for the pipe's
- * colour type (border or translucent), slightly offset to avoid Z-fighting.
+ * <p>For painted pipes, the vanilla quads and overlay quads are merged into a single
+ * BlockModelWrapper with the same render properties as the vanilla model.
  */
 public class PipeItemModel implements ItemModel {
     private static final RenderTypeGroup TRANSLUCENT_RENDER_TYPES =
             new RenderTypeGroup(ChunkSectionLayer.TRANSLUCENT, NeoForgeRenderTypes::getUnsortedTranslucent);
 
-    /** Slight outward offset (in block-space units, i.e. 1/16 pixels) to avoid Z-fighting. */
+    /** Slight outward offset (in block-space units) to avoid Z-fighting. */
     private static final float OFFSET = 0.002f;
 
-    private final ItemModel vanillaModel;
-    private final PipeDefinition definition;
-    private final ModelRenderProperties vanillaRenderProps;
-    /** Cache of overlay-only models per DyeColor. */
-    private final Map<DyeColor, ItemModel> overlayCache = new EnumMap<>(DyeColor.class);
+    // Reflection fields cached at class-load time
+    private static final Field QUADS_FIELD;
+    private static final Field PROPERTIES_FIELD;
+    private static final Field TINTS_FIELD;
+    static {
+        try {
+            QUADS_FIELD = BlockModelWrapper.class.getDeclaredField("quads");
+            QUADS_FIELD.setAccessible(true);
+            PROPERTIES_FIELD = BlockModelWrapper.class.getDeclaredField("properties");
+            PROPERTIES_FIELD.setAccessible(true);
+            TINTS_FIELD = BlockModelWrapper.class.getDeclaredField("tints");
+            TINTS_FIELD.setAccessible(true);
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException("Failed to access BlockModelWrapper fields", e);
+        }
+    }
 
-    public PipeItemModel(ItemModel vanillaModel, PipeDefinition definition, ModelRenderProperties vanillaRenderProps) {
-        this.vanillaModel = vanillaModel;
+    private final BlockModelWrapper vanillaWrapper;
+    private final PipeDefinition definition;
+    private final List<BakedQuad> vanillaQuads;
+    private final ModelRenderProperties vanillaRenderProps;
+
+    /** Cache of merged models per DyeColor. */
+    private final Map<DyeColor, ItemModel> mergedCache = new EnumMap<>(DyeColor.class);
+
+    @SuppressWarnings("unchecked")
+    public PipeItemModel(BlockModelWrapper vanillaWrapper, PipeDefinition definition) {
+        this.vanillaWrapper = vanillaWrapper;
         this.definition = definition;
-        this.vanillaRenderProps = vanillaRenderProps;
+        try {
+            this.vanillaQuads = (List<BakedQuad>) QUADS_FIELD.get(vanillaWrapper);
+            this.vanillaRenderProps = (ModelRenderProperties) PROPERTIES_FIELD.get(vanillaWrapper);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Failed to read BlockModelWrapper fields", e);
+        }
     }
 
     @Override
     public void update(ItemStackRenderState renderState, ItemStack stack, ItemModelResolver modelResolver,
                        ItemDisplayContext displayContext, @Nullable ClientLevel level,
                        @Nullable ItemOwner owner, int seed) {
-        // Always render the vanilla base model first
-        vanillaModel.update(renderState, stack, modelResolver, displayContext, level, owner, seed);
-
-        // If painted, stack the overlay on top
         DyeColor colour = stack.get(BCTransportItems.PIPE_COLOUR.get());
-        if (colour != null) {
-            overlayCache.computeIfAbsent(colour, this::buildOverlayModel)
-                    .update(renderState, stack, modelResolver, displayContext, level, owner, seed);
+        if (colour == null) {
+            // No paint — use vanilla model as-is
+            vanillaWrapper.update(renderState, stack, modelResolver, displayContext, level, owner, seed);
+            return;
         }
+        // Use merged model (vanilla quads + overlay quads in one BlockModelWrapper)
+        mergedCache.computeIfAbsent(colour, this::buildMergedModel)
+                .update(renderState, stack, modelResolver, displayContext, level, owner, seed);
     }
 
     /**
-     * Build an overlay-only BlockModelWrapper for the given dye colour.
+     * Build a single BlockModelWrapper containing both the vanilla quads
+     * AND the overlay quads for the given dye colour.
      */
-    private ItemModel buildOverlayModel(DyeColor colour) {
+    private ItemModel buildMergedModel(DyeColor colour) {
         List<BakedQuad> overlayQuads = generateOverlayQuads(colour);
 
-        if (overlayQuads.isEmpty()) {
-            // Return a no-op model that does nothing
-            return (rs, s, mr, dc, l, o, seed) -> {};
-        }
+        // Merge vanilla + overlay quads into a single list
+        List<BakedQuad> mergedQuads = new ArrayList<>(vanillaQuads.size() + overlayQuads.size());
+        mergedQuads.addAll(vanillaQuads);
+        mergedQuads.addAll(overlayQuads);
 
-        var renderType = RenderTypeHelper.detectItemModelRenderType(overlayQuads, TRANSLUCENT_RENDER_TYPES);
-
+        // Vanilla quads have tintIndex=-1 (no tint), overlay quads have tintIndex=0.
+        // PipeColourTintSource at index 0 will only affect tintIndex=0 quads.
+        var renderType = net.neoforged.neoforge.client.RenderTypeHelper
+                .detectItemModelRenderType(mergedQuads, TRANSLUCENT_RENDER_TYPES);
         return new BlockModelWrapper(
                 List.of(PipeColourTintSource.INSTANCE),
-                overlayQuads,
+                mergedQuads,
                 vanillaRenderProps,
                 renderType
         );
@@ -115,20 +141,11 @@ public class PipeItemModel implements ItemModel {
      */
     private List<BakedQuad> generateOverlayQuads(DyeColor colour) {
         // Select overlay texture based on pipe colour type
-        TextureAtlasSprite overlaySprite;
-        EnumPipeColourType colourType = definition.getColourType();
-        switch (colourType) {
-            case BORDER_OUTER:
-                overlaySprite = BCTransportSprites.PIPE_COLOUR_BORDER_OUTER.getSprite();
-                break;
-            case BORDER_INNER:
-                overlaySprite = BCTransportSprites.PIPE_COLOUR_BORDER_INNER.getSprite();
-                break;
-            case TRANSLUCENT:
-            default:
-                overlaySprite = BCTransportSprites.PIPE_COLOUR.getSprite();
-                break;
-        }
+        var overlaySprite = switch (definition.getColourType()) {
+            case BORDER_OUTER -> BCTransportSprites.PIPE_COLOUR_BORDER_OUTER.getSprite();
+            case BORDER_INNER -> BCTransportSprites.PIPE_COLOUR_BORDER_INNER.getSprite();
+            default -> BCTransportSprites.PIPE_COLOUR.getSprite();
+        };
 
         // Get dye colour for vertex tinting (RGB 0-255)
         int colourHex = ColourUtil.getLightHex(colour);
@@ -138,17 +155,16 @@ public class PipeItemModel implements ItemModel {
 
         List<BakedQuad> quads = new ArrayList<>();
 
-        // pipe_item.json geometry (in block-space, 0..1):
-        //   Bottom cap: [4,0,4] to [12,4,12]  → center=0.5,0.125,0.5 radius=0.25,0.125,0.25
-        //   Center body: [4,4,4] to [12,12,12] → center=0.5,0.5,0.5 radius=0.25,0.25,0.25
-        //   Top cap: [4,12,4] to [12,16,12]   → center=0.5,0.875,0.5 radius=0.25,0.125,0.25
+        // pipe_item.json geometry (block-space 0..1):
+        //   Bottom cap: [4,0,4]-[12,4,12]   → center=0.5,0.125,0.5  radius=0.25,0.125,0.25
+        //   Center:     [4,4,4]-[12,12,12]  → center=0.5,0.5,0.5    radius=0.25,0.25,0.25
+        //   Top cap:    [4,12,4]-[12,16,12] → center=0.5,0.875,0.5  radius=0.25,0.125,0.25
 
-        // Bottom cap — all faces except UP (it's internal to the pipe body)
+        // Bottom cap — all faces except UP (internal)
         addBoxFaces(quads, overlaySprite, r, g, b,
                 new Vector3f(0.5f, 0.125f, 0.5f),
                 new Vector3f(0.25f + OFFSET, 0.125f + OFFSET, 0.25f + OFFSET),
                 new Direction[]{ Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST },
-                // UV mapping matching pipe_item.json: down=full face, sides=[4,12,12,16]
                 new UvFaceData[]{ null, UvFaceData.from16(4, 12, 12, 16), UvFaceData.from16(4, 12, 12, 16),
                         UvFaceData.from16(4, 12, 12, 16), UvFaceData.from16(4, 12, 12, 16) });
 
@@ -174,7 +190,8 @@ public class PipeItemModel implements ItemModel {
     /**
      * Add quads for selected faces of a box, with colour tinting and the overlay texture.
      */
-    private static void addBoxFaces(List<BakedQuad> quads, TextureAtlasSprite sprite,
+    private static void addBoxFaces(List<BakedQuad> quads,
+                                     net.minecraft.client.renderer.texture.TextureAtlasSprite sprite,
                                      float r, float g, float b,
                                      Vector3f center, Vector3f radius,
                                      Direction[] faces, UvFaceData[] uvs) {

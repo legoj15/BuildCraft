@@ -3,7 +3,6 @@ package buildcraft.transport.client;
 import net.minecraft.client.renderer.block.model.BlockStateModel;
 import net.minecraft.client.renderer.item.BlockModelWrapper;
 import net.minecraft.client.renderer.item.ItemModel;
-import net.minecraft.client.renderer.item.ModelRenderProperties;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
@@ -93,24 +92,9 @@ public class BCTransportClient {
                 Identifier itemId = BuiltInRegistries.ITEM.getKey(pipeItem);
                 ItemModel vanillaItemModel = itemModels.get(itemId);
                 if (vanillaItemModel instanceof BlockModelWrapper wrapper) {
-                    ModelRenderProperties renderProps = extractRenderProperties(wrapper);
-                    if (renderProps != null) {
-                        itemModels.put(itemId, new PipeItemModel(vanillaItemModel, def, renderProps));
-                    }
+                    itemModels.put(itemId, new PipeItemModel(wrapper, def));
                 }
             }
-        }
-    }
-
-    /** Extract ModelRenderProperties from BlockModelWrapper (field made public by AT at runtime). */
-    private static ModelRenderProperties extractRenderProperties(BlockModelWrapper wrapper) {
-        try {
-            // AT makes this field public at runtime
-            var field = BlockModelWrapper.class.getDeclaredField("properties");
-            field.setAccessible(true);
-            return (ModelRenderProperties) field.get(wrapper);
-        } catch (Exception e) {
-            return null;
         }
     }
 

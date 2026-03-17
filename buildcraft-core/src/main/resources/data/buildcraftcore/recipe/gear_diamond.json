@@ -1,21 +1,17 @@
 {
-    "type": "minecraft:crafting_shaped",
-    "group": "buildcraft_gears",
-    "pattern": [
-        " d ",
-        "dGd",
-        " d "
-    ],
-    "key": {
-        "d": {
-            "tag": "c:gems/diamond"
-        },
-        "G": {
-            "item": "buildcraftcore:gear_gold"
-        }
-    },
-    "result": {
-        "id": "buildcraftcore:gear_diamond",
-        "count": 1
-    }
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "buildcraft_gears",
+  "pattern": [
+    " d ",
+    "dGd",
+    " d "
+  ],
+  "key": {
+    "d": "#c:gems/diamond",
+    "G": "buildcraftcore:gear_gold"
+  },
+  "result": {
+    "id": "buildcraftcore:gear_diamond"
+  }
 }

@@ -426,7 +426,14 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
     @Override
     public List<BakedQuad> generateTranslucent(PipeBaseTranslucentKey key) {
         if (!key.shouldRender()) return ImmutableList.of();
-        List<MutableQuad> mutableQuads = generateTranslucentMutable(key);
+        List<MutableQuad> mutableQuads;
+        if (key.cutoutKey != null && key.cutoutKey.definition != null
+                && key.cutoutKey.definition.flowType == PipeApi.flowFluids) {
+            // Fluid pipes — use mask quads for fully opaque corner painting
+            mutableQuads = generateMaskMutable(key.cutoutKey, 255);
+        } else {
+            mutableQuads = generateTranslucentMutable(key);
+        }
         List<BakedQuad> bakedQuads = new ArrayList<>();
         for (MutableQuad q : mutableQuads) {
             bakedQuads.add(q.toBakedBlock());

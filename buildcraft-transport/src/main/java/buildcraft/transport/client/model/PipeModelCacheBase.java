@@ -105,20 +105,25 @@ public class PipeModelCacheBase {
     public static final class PipeBaseTranslucentKey {
         public final DyeColor colour;
         public final float[] connections;
+        /** Non-null for TRANSLUCENT type pipes — carries definition and sprite info
+         *  needed for mask-based painting (opaque corners, not translucent glass). */
+        public final PipeBaseCutoutKey cutoutKey;
         private final int hashCode;
 
         public PipeBaseTranslucentKey(PipeModelKey key) {
             if (key.getColourType() == EnumPipeColourType.TRANSLUCENT) {
                 this.colour = key.colour;
+                this.cutoutKey = new PipeBaseCutoutKey(key);
             } else {
                 this.colour = null;
+                this.cutoutKey = null;
             }
             if (colour == null) {
                 connections = null;
                 hashCode = 0;
             } else {
                 connections = key.connected;
-                hashCode = Objects.hash(colour, Arrays.hashCode(connections));
+                hashCode = Objects.hash(colour, Arrays.hashCode(connections), cutoutKey);
             }
         }
 
@@ -139,7 +144,8 @@ public class PipeModelCacheBase {
             PipeBaseTranslucentKey other = (PipeBaseTranslucentKey) obj;
             if (!shouldRender() && !other.shouldRender()) return true;
             if (!Arrays.equals(connections, other.connections)) return false;
-            return colour == other.colour;
+            if (colour != other.colour) return false;
+            return Objects.equals(cutoutKey, other.cutoutKey);
         }
 
         @Override

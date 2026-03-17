@@ -8,15 +8,15 @@ import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.registration.ISubtypeRegistration;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.DyeColor;
 
 import buildcraft.core.BCCore;
 import buildcraft.core.BCCoreItems;
 
 /**
  * JEI integration plugin for BuildCraft Core.
- * Registers subtype interpreters so JEI can differentiate items that share
- * the same item ID but differ by data component (e.g. coloured paintbrushes).
+ * Registers data component types as subtype differentiators so JEI can
+ * distinguish items that share the same item ID but differ by component
+ * (e.g. coloured paintbrushes).
  */
 @JeiPlugin
 public class BCCoreJeiPlugin implements IModPlugin {
@@ -30,13 +30,11 @@ public class BCCoreJeiPlugin implements IModPlugin {
     @Override
     public void registerItemSubtypes(ISubtypeRegistration registration) {
         // Tell JEI to differentiate paintbrush stacks by their brush_color component.
-        // Absent = clean brush, present = that specific DyeColor.
-        registration.registerSubtypeInterpreter(
+        // Uses the purpose-built component-based API (since JEI 20.0.0) which handles
+        // both ingredient list display AND recipe output matching automatically.
+        registration.registerFromDataComponentTypes(
                 BCCoreItems.PAINTBRUSH.get(),
-                (stack, context) -> {
-                    DyeColor colour = stack.get(BCCore.BRUSH_COLOR.get());
-                    return colour != null ? colour.getName() : "";
-                }
+                BCCore.BRUSH_COLOR.get()
         );
     }
 }

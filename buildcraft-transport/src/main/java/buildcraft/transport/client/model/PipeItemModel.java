@@ -19,7 +19,6 @@ import org.joml.Vector3f;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.ItemTransforms;
-import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.client.renderer.item.BlockModelWrapper;
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModelResolver;
@@ -42,10 +41,6 @@ import buildcraft.lib.misc.ColourUtil;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.BCTransportSprites;
 
-import net.neoforged.neoforge.client.NeoForgeRenderTypes;
-import net.neoforged.neoforge.client.RenderTypeGroup;
-import net.neoforged.neoforge.client.RenderTypeHelper;
-
 /**
  * A dynamic ItemModel for pipe items that wraps the vanilla JSON-baked model
  * and adds colour overlay quads when the item carries a PIPE_COLOUR data component.
@@ -55,9 +50,6 @@ import net.neoforged.neoforge.client.RenderTypeHelper;
  * model identity with unpainted pipes (which would corrupt the GUI render cache).
  */
 public class PipeItemModel implements ItemModel {
-    private static final RenderTypeGroup TRANSLUCENT_RENDER_TYPES =
-            new RenderTypeGroup(ChunkSectionLayer.TRANSLUCENT, NeoForgeRenderTypes::getUnsortedTranslucent);
-
     /** Slight outward offset (in block-space units) to avoid Z-fighting. */
     private static final float OFFSET = 0.002f;
 
@@ -136,10 +128,9 @@ public class PipeItemModel implements ItemModel {
             var overlayLayer = renderState.newLayer();
             overlayLayer.prepareQuadList().addAll(overlayQuads);
 
-            // Render type for blocks-atlas overlay
-            var overlayRenderType = RenderTypeHelper.detectItemModelRenderType(
-                    overlayQuads, TRANSLUCENT_RENDER_TYPES);
-            overlayLayer.setRenderType(overlayRenderType.apply(stack));
+            // Use translucent render type — the overlay texture has alpha
+            // that must be blended (cutoutBlockSheet only alpha-tests, not blends)
+            overlayLayer.setRenderType(net.minecraft.client.renderer.Sheets.translucentItemSheet());
             overlayLayer.setUsesBlockLight(usesBlockLight);
             overlayLayer.setTransform(itemTransforms.getTransform(displayContext));
         }
@@ -170,51 +161,48 @@ public class PipeItemModel implements ItemModel {
         //   Center:     [4,4,4]-[12,12,12]  → center=0.5,0.5,0.5    radius=0.25,0.25,0.25
         //   Top cap:    [4,12,4]-[12,16,12] → center=0.5,0.875,0.5  radius=0.25,0.125,0.25
 
+        // Use full UV (0,0 → 1,1) so the entire border texture is visible
+        // including transparent areas that let the base pipe show through
+        UvFaceData fullUv = new UvFaceData(0, 0, 1, 1);
+
         // Bottom cap — all faces except UP (internal)
         addBoxFaces(quads, overlaySprite, r, g, b,
                 new Vector3f(0.5f, 0.125f, 0.5f),
                 new Vector3f(0.25f + OFFSET, 0.125f + OFFSET, 0.25f + OFFSET),
                 new Direction[]{ Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST },
-                new UvFaceData[]{ null, UvFaceData.from16(4, 12, 12, 16), UvFaceData.from16(4, 12, 12, 16),
-                        UvFaceData.from16(4, 12, 12, 16), UvFaceData.from16(4, 12, 12, 16) });
+                fullUv);
 
         // Center body — only side faces (top/bottom are internal)
         addBoxFaces(quads, overlaySprite, r, g, b,
                 new Vector3f(0.5f, 0.5f, 0.5f),
                 new Vector3f(0.25f + OFFSET, 0.25f + OFFSET, 0.25f + OFFSET),
                 new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST },
-                new UvFaceData[]{ UvFaceData.from16(4, 4, 12, 12), UvFaceData.from16(4, 4, 12, 12),
-                        UvFaceData.from16(4, 4, 12, 12), UvFaceData.from16(4, 4, 12, 12) });
+                fullUv);
 
         // Top cap — all faces except DOWN (internal)
         addBoxFaces(quads, overlaySprite, r, g, b,
                 new Vector3f(0.5f, 0.875f, 0.5f),
                 new Vector3f(0.25f + OFFSET, 0.125f + OFFSET, 0.25f + OFFSET),
                 new Direction[]{ Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST },
-                new UvFaceData[]{ null, UvFaceData.from16(4, 0, 12, 4), UvFaceData.from16(4, 0, 12, 4),
-                        UvFaceData.from16(4, 0, 12, 4), UvFaceData.from16(4, 0, 12, 4) });
+                fullUv);
 
         return quads;
     }
 
     /**
      * Add quads for selected faces of a box, with the overlay texture
-     * and dye colour baked into vertex colour at semi-transparent alpha.
+     * and dye colour baked into vertex colour.
      */
     private static void addBoxFaces(List<BakedQuad> quads,
                                      net.minecraft.client.renderer.texture.TextureAtlasSprite sprite,
                                      float r, float g, float b,
                                      Vector3f center, Vector3f radius,
-                                     Direction[] faces, UvFaceData[] uvs) {
-        for (int i = 0; i < faces.length; i++) {
-            UvFaceData uv = uvs[i];
-            if (uv == null) {
-                uv = new UvFaceData(0, 0, 1, 1);
-            }
-            MutableQuad quad = ModelUtil.createFace(faces[i], center, radius, uv);
+                                     Direction[] faces, UvFaceData uv) {
+        for (Direction face : faces) {
+            MutableQuad quad = ModelUtil.createFace(face, center, radius, uv);
             quad.setSprite(sprite);
             quad.texFromSprite(sprite);
-            // Bake dye colour — texture alpha handles cutout transparency
+            // Bake dye colour — texture alpha handles transparency
             quad.colourf(r, g, b, 1.0f);
             quads.add(quad.toBakedBlock());
         }

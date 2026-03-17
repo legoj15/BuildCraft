@@ -245,9 +245,9 @@ public class PipeItemModel implements ItemModel {
 
         for (Direction face : faces) {
             MutableQuad quad = ModelUtil.createFace(face, center, radius, uvs);
-            // Offset slightly outward from face to avoid Z-fighting
+            // Offset slightly outward (in face direction) so overlay renders in front of base pipe
             net.minecraft.world.phys.Vec3 offset = net.minecraft.world.phys.Vec3.atLowerCornerOf(
-                    face.getOpposite().getUnitVec3i()).scale(COLOUR_OFFSET);
+                    face.getUnitVec3i()).scale(COLOUR_OFFSET);
             quad.translatevd(offset);
             quad.setSprite(maskSprite);
             quad.texFromSprite(maskSprite);

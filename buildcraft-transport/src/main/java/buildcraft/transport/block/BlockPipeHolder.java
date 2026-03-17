@@ -42,6 +42,7 @@ import buildcraft.api.blocks.ICustomPaintHandler;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeDefinition;
 import buildcraft.transport.BCTransportBlockEntities;
+import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.tile.TilePipeHolder;
 
@@ -426,13 +427,18 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                     }
                 }
             }
-            // Default: return pipe item
+            // Default: return pipe item (with colour if painted)
             if (tile.getPipe() != null) {
                 Pipe pipe = tile.getPipe();
                 PipeDefinition def = pipe.getDefinition();
                 Item item = (Item) PipeApi.pipeRegistry.getItemForPipe(def);
                 if (item != null) {
-                    return new ItemStack(item);
+                    ItemStack stack = new ItemStack(item);
+                    DyeColor col = pipe.getColour();
+                    if (col != null) {
+                        stack.set(BCTransportItems.PIPE_COLOUR.get(), col);
+                    }
+                    return stack;
                 }
             }
         }

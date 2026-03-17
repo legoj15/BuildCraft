@@ -1,10 +1,15 @@
 package buildcraft.transport;
 
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.DeferredItem;
-import net.neoforged.bus.api.IEventBus;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.DeferredItem;
+import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.transport.item.ItemPluggableSimple;
 
@@ -12,6 +17,16 @@ import buildcraft.transport.item.ItemPipeHolder;
 
 public class BCTransportItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCTransport.MODID);
+
+    // -- Data Components --
+    private static final DeferredRegister.DataComponents DATA_COMPONENTS =
+            DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, BCTransport.MODID);
+
+    /** Carries the paint colour on a pipe ItemStack (pick-block, drops, placement). */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<DyeColor>> PIPE_COLOUR =
+            DATA_COMPONENTS.registerComponentType("pipe_colour",
+                    builder -> builder.persistent(DyeColor.CODEC)
+                                      .networkSynchronized(DyeColor.STREAM_CODEC));
 
     // -- Non-pipe items --
 
@@ -155,5 +170,6 @@ public class BCTransportItems {
 
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);
+        DATA_COMPONENTS.register(modEventBus);
     }
 }

@@ -28,6 +28,7 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -53,6 +54,7 @@ import buildcraft.api.transport.pluggable.PipePluggable;
 
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.transport.BCTransportBlockEntities;
+import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.net.MessagePipePayload;
 import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.pipe.PipeEventBus;
@@ -209,6 +211,11 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
             this.pipe = new Pipe(this, definition);
             eventBus.registerHandler(pipe.behaviour);
             eventBus.registerHandler(pipe.flow);
+            // Restore paint colour from the placed item
+            DyeColor col = stack.get(BCTransportItems.PIPE_COLOUR.get());
+            if (col != null) {
+                pipe.setColour(col);
+            }
         }
         scheduleRenderUpdate();
         setChanged();
@@ -249,7 +256,12 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
             PipeDefinition def = pipe.getDefinition();
             Item pipeItem = (Item) PipeApi.pipeRegistry.getItemForPipe(def);
             if (pipeItem != null) {
-                Block.popResource(lvl, pos, new ItemStack(pipeItem));
+                ItemStack pipeStack = new ItemStack(pipeItem);
+                DyeColor col = pipe.getColour();
+                if (col != null) {
+                    pipeStack.set(BCTransportItems.PIPE_COLOUR.get(), col);
+                }
+                Block.popResource(lvl, pos, pipeStack);
             }
             // Drop flow/behaviour items
             NonNullList<ItemStack> drops = NonNullList.create();

@@ -23,6 +23,9 @@ import com.mojang.serialization.Codec;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.ModList;
+import net.neoforged.neoforgespi.language.ModFileScanData;
+import org.objectweb.asm.Type;
 
 import buildcraft.lib.marker.MarkerCache;
 import buildcraft.lib.net.MessageContainerPayload;
@@ -59,6 +62,13 @@ public class BCCore {
 
     public BCCore(IEventBus modEventBus, ModContainer modContainer) {
         INSTANCE = this;
+
+        // ── JEI Plugin Annotation Injection ──────────────────────────────────
+        // JEI's @JeiPlugin has RetentionPolicy.CLASS (not RUNTIME), so NeoForge's
+        // dev sourceSet scanner doesn't capture it.  We manually inject the
+        // annotation into our mod's scan data so ForgePluginFinder finds us.
+        // In production JARs this is harmless — the annotation is already there.
+        injectJeiPluginAnnotation(modContainer);
         // BCLibItems.enableGuide();
         // BCLibItems.enableDebugger();
 
@@ -272,5 +282,80 @@ public class BCCore {
             event.accept(BCCoreItems.MARKER_CONNECTOR);
             event.accept(BCCoreItems.VOLUME_BOX);
         }
+    }
+
+    /**
+     * Ensures JEI's {@code @JeiPlugin} annotation on {@code BCCoreJeiPlugin} is present
+     * in NeoForge's scan data. This is needed because the annotation has
+     * {@code RetentionPolicy.CLASS} (not RUNTIME) so NeoForge's dev-mode sourceSet
+     * scanner does not capture it. In production JARs this is a harmless no-op.
+     */
+    @SuppressWarnings("unchecked")
+    private static void injectJeiPluginAnnotation(ModContainer modContainer) {
+        try {
+            // Only inject if JEI is loaded (compileOnly — may not be present)
+            Class.forName("mezz.jei.api.JeiPlugin");
+        } catch (ClassNotFoundException e) {
+            return; // JEI not present, nothing to inject
+        }
+
+        try {
+            Type jeiPluginType = Type.getType("Lmezz/jei/api/JeiPlugin;");
+            String pluginClassName = "buildcraft.core.compat.jei.BCCoreJeiPlugin";
+            Type pluginClassType = Type.getObjectType(pluginClassName.replace('.', '/'));
+
+            for (ModFileScanData scanData : ModList.get().getAllScanData()) {
+                // Find our mod's scan data by looking for BCCore's @Mod annotation
+                boolean isBuildCraftCore = scanData.getAnnotations().stream()
+                        .anyMatch(a -> a.memberName().equals("buildcraft.core.BCCore"));
+                if (!isBuildCraftCore) continue;
+
+                // Check if the annotation is already present (production JAR case)
+                boolean alreadyPresent = scanData.getAnnotations().stream()
+                        .anyMatch(a -> a.annotationType().equals(jeiPluginType)
+                                && a.memberName().equals(pluginClassName));
+                if (alreadyPresent) return;
+
+                // Use reflection to construct AnnotationData — the record's
+                // constructor signature varies across NeoForge SPI versions.
+                var adClass = ModFileScanData.AnnotationData.class;
+                var components = adClass.getRecordComponents();
+                var ctorParamTypes = new Class<?>[components.length];
+                for (int i = 0; i < components.length; i++) {
+                    ctorParamTypes[i] = components[i].getType();
+                }
+                var ctor = adClass.getDeclaredConstructor(ctorParamTypes);
+
+                // Build argument array matching the record components by name
+                Object[] args = new Object[components.length];
+                for (int i = 0; i < components.length; i++) {
+                    String name = components[i].getName();
+                    switch (name) {
+                        case "annotationType" -> args[i] = jeiPluginType;
+                        case "clazz"          -> args[i] = pluginClassType;
+                        case "memberName"     -> args[i] = pluginClassName;
+                        case "annotationData" -> args[i] = java.util.Map.of();
+                        default -> args[i] = getDefaultValue(components[i].getType());
+                    }
+                }
+
+                Object ad = ctor.newInstance(args);
+                scanData.getAnnotations().add((ModFileScanData.AnnotationData) ad);
+                return;
+            }
+        } catch (Exception e) {
+            // Silently fail — JEI integration is optional
+        }
+    }
+
+    /** Returns a sensible default for a given type (used as fallback for unknown record components). */
+    private static Object getDefaultValue(Class<?> type) {
+        if (type == boolean.class) return false;
+        if (type == int.class) return 0;
+        if (type == long.class) return 0L;
+        if (type.isPrimitive()) return 0;
+        if (type == String.class) return "";
+        if (java.util.Map.class.isAssignableFrom(type)) return java.util.Map.of();
+        return null;
     }
 }

@@ -178,6 +178,16 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
     private void removeSection() {
         if (section == null) return;
         section = null;
+        // Reset block state to MIDDLE when the multiblock is invalidated
+        if (level != null) {
+            BlockState oldState = getBlockState();
+            if (oldState.getBlock() instanceof BlockHeatExchange) {
+                BlockState newState = oldState.setValue(BlockHeatExchange.PART, EnumExchangePart.MIDDLE);
+                if (oldState != newState) {
+                    level.setBlock(worldPosition, newState, Block.UPDATE_ALL);
+                }
+            }
+        }
         syncToClient();
     }
 

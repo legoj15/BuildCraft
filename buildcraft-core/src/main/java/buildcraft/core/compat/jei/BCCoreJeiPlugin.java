@@ -22,6 +22,10 @@ import buildcraft.core.BCCoreItems;
 public class BCCoreJeiPlugin implements IModPlugin {
     private static final Identifier UID = Identifier.parse("buildcraftcore:jei_plugin");
 
+    public BCCoreJeiPlugin() {
+        org.slf4j.LoggerFactory.getLogger("BuildCraft").info("[JEI] BCCoreJeiPlugin INSTANTIATED");
+    }
+
     @Override
     public Identifier getPluginUid() {
         return UID;
@@ -29,12 +33,11 @@ public class BCCoreJeiPlugin implements IModPlugin {
 
     @Override
     public void registerItemSubtypes(ISubtypeRegistration registration) {
-        // Tell JEI to differentiate paintbrush stacks by their brush_color component.
-        // Uses the purpose-built component-based API (since JEI 20.0.0) which handles
-        // both ingredient list display AND recipe output matching automatically.
+        org.slf4j.LoggerFactory.getLogger("BuildCraft").info("[JEI] registerItemSubtypes called!");
         registration.registerFromDataComponentTypes(
                 BCCoreItems.PAINTBRUSH.get(),
                 BCCore.BRUSH_COLOR.get()
         );
+        org.slf4j.LoggerFactory.getLogger("BuildCraft").info("[JEI] Registered BRUSH_COLOR subtype for paintbrush");
     }
 }

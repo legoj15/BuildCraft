@@ -14,21 +14,60 @@ sourceSets {
     }
 }
 
-dependencies {
-    implementation project(':buildcraft-api')
-    implementation project(':buildcraft-lib')
-    implementation project(':buildcraft-core')
-    implementation project(':buildcraft-builders')
-    implementation project(':buildcraft-energy')
-    implementation project(':buildcraft-factory')
-    implementation project(':buildcraft-transport')
-    implementation project(':buildcraft-silicon')
-    implementation project(':buildcraft-robotics')
+def bcModules = [
+    ':buildcraft-api',
+    ':buildcraft-lib',
+    ':buildcraft-core',
+    ':buildcraft-builders',
+    ':buildcraft-energy',
+    ':buildcraft-factory',
+    ':buildcraft-transport',
+    ':buildcraft-silicon',
+    ':buildcraft-robotics',
+]
 
-    // JEI — loaded as a proper mod in dev runs so NeoForge integrates it 
+dependencies {
+    bcModules.each { implementation project(it) }
+
+    // JEI — loaded as a proper mod in dev runs so NeoForge integrates it
     // into the mod loading pipeline alongside BuildCraft modules.
     // This enables @JeiPlugin annotation discovery in buildcraft-core.
     runtimeOnly "mezz.jei:jei-1.21.11-neoforge:27.4.0.15"
+}
+
+// ─── Fat JAR ─────────────────────────────────────────────────────────────────
+// Produces a single distributable JAR with all 9 BuildCraft modules.
+// Usage: ./gradlew :buildcraft-all:fatJar
+tasks.register('fatJar', Jar) {
+    group = 'build'
+    description = 'Assembles a single JAR containing all BuildCraft modules.'
+
+    archiveBaseName = 'BuildCraft-all'
+    archiveVersion = '1.21.11-8.0.0'
+    archiveClassifier = ''
+
+    // Include buildcraft-all's own resources first (merged mods.toml, AT)
+    from(sourceSets.main.output) {
+        // This module's resources take priority (merged neoforge.mods.toml)
+    }
+
+    // Merge classes and resources from every sub-module
+    bcModules.each { modulePath ->
+        dependsOn project(modulePath).tasks.named('classes')
+        from(project(modulePath).sourceSets.main.output) {
+            // Exclude per-module META-INF descriptors — we use the merged one
+            exclude 'META-INF/neoforge.mods.toml'
+            exclude 'META-INF/accesstransformer.cfg'
+        }
+    }
+
+    // Prevent duplicate files — first entry wins (our merged mods.toml)
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// Wire fatJar into the standard build lifecycle
+tasks.named('assemble') {
+    dependsOn tasks.named('fatJar')
 }
 
 // ─── Dev Run Configuration ───────────────────────────────────────────────────

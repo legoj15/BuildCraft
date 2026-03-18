@@ -18,7 +18,7 @@
             }
         },
         {
-            "comment": "Inner Pipe - inverted (for interior visibility)",
+            "comment": "Inner Pipe - inverted",
             "from": [16, 12, 12],
             "to": [0, 4, 4],
             "faces": {
@@ -32,6 +32,17 @@
             "comment": "Outer Pipe",
             "from": [ 0, 2, 2 ],
             "to": [ 16, 14, 14 ],
+            "faces": {
+                "up":    { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
+                "down":  { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
+                "north": { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
+                "south": { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" }
+            }
+        },
+        {
+            "comment": "Outer Pipe - inverted",
+            "from": [ 16, 14, 14 ],
+            "to": [ 0, 2, 2 ],
             "faces": {
                 "up":    { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
                 "down":  { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },

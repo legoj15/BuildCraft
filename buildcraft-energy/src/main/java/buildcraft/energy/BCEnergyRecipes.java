@@ -96,6 +96,26 @@ public class BCEnergyRecipes {
             addDistillation(light_dense, light, dense, 1, 16 * MjAPI.MJ);
 
             addDistillation(dense_residue, dense, residue, 2, 12 * MjAPI.MJ);
+
+            // --- Heat exchange recipes (for TileHeatExchange) ---
+            addHeatExchange("oil");
+            addHeatExchange("oil_residue");
+            addHeatExchange("oil_heavy");
+            addHeatExchange("oil_dense");
+            addHeatExchange("oil_distilled");
+            addHeatExchange("fuel_dense");
+            addHeatExchange("fuel_mixed_heavy");
+            addHeatExchange("fuel_light");
+            addHeatExchange("fuel_mixed_light");
+            addHeatExchange("fuel_gaseous");
+
+            // Water heating: consumed as heat source, produces nothing
+            FluidStack water = new FluidStack(Fluids.WATER, 10);
+            BuildcraftRecipeRegistry.refineryRecipes.addHeatableRecipe(water, null, 0, 1);
+
+            // Lava cooling: consumed as coolant, produces nothing
+            FluidStack lava = new FluidStack(Fluids.LAVA, 5);
+            BuildcraftRecipeRegistry.refineryRecipes.addCoolableRecipe(lava, null, 4, 2);
         }
     }
 
@@ -178,6 +198,24 @@ public class BCEnergyRecipes {
         } else {
             BuildcraftFuelRegistry.fuel.addDirtyFuel(fuel, powerPerCycle, totalTime,
                 new FluidStack(residue, 1000 / amountDiff));
+        }
+    }
+
+    /**
+     * Registers heatable and coolable recipes between adjacent heat levels
+     * for the given fluid base name. Each oil fluid has 3 heat levels (0, 1, 2),
+     * so this creates transitions 0→1 and 1→2 (heatable) and 1→0 and 2→1 (coolable),
+     * each at 10 mB per operation. Directly mirrors the 1.12.2 addHeatExchange().
+     */
+    private static void addHeatExchange(String baseName) {
+        for (int heat = 0; heat < 2; heat++) {
+            Fluid cool = findFluidByHeat(baseName, heat);
+            Fluid hot = findFluidByHeat(baseName, heat + 1);
+            if (cool == null || hot == null) continue; // fluid variant disabled
+            FluidStack coolStack = new FluidStack(cool, 10);
+            FluidStack hotStack = new FluidStack(hot, 10);
+            BuildcraftRecipeRegistry.refineryRecipes.addHeatableRecipe(coolStack, hotStack, heat, heat + 1);
+            BuildcraftRecipeRegistry.refineryRecipes.addCoolableRecipe(hotStack, coolStack, heat + 1, heat);
         }
     }
 }

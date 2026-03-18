@@ -1,98 +1,57 @@
 {
-    "render_type": "minecraft:translucent",
-    "textures": {
-        "sprite_a": "buildcraftfactory:block/heat_exchange/sprite_a",
-        "sprite_b": "buildcraftfactory:block/heat_exchange/sprite_b",
-        "particle": "buildcraftfactory:block/heat_exchange/sprite_a"
-    },
-    "elements": [
-        {
-            "comment": "Inner Pipe",
-            "from": [2, 4, 4],
-            "to": [16, 12, 12],
-            "faces": {
-                "up":    { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "down":  { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "north": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "south": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" }
-            }
-        },
-        {
-            "comment": "Inner Pipe - inverted",
-            "from": [16, 12, 12],
-            "to": [2, 4, 4],
-            "faces": {
-                "up":    { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "down":  { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "north": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "south": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" }
-            }
-        },
-        {
-            "comment": "Outer Pipe Center",
-            "from": [2, 2, 2],
-            "to": [14, 14, 14],
-            "faces": {
-                "up":    { "uv": [ 8, 8, 16, 16 ], "texture": "#sprite_b" },
-                "west":  { "uv": [ 8, 8, 16, 16 ], "texture": "#sprite_b", "rotation": 90 },
-                "north": { "uv": [ 0, 8, 8, 16 ],  "texture": "#sprite_b", "rotation": 180 },
-                "south": { "uv": [ 0, 8, 8, 16 ],  "texture": "#sprite_b", "rotation": 90 }
-            }
-        },
-        {
-            "comment": "Outer Pipe Center - inverted",
-            "from": [14, 14, 14],
-            "to": [2, 2, 2],
-            "faces": {
-                "up":    { "uv": [ 8, 8, 16, 16 ], "texture": "#sprite_b" },
-                "west":  { "uv": [ 8, 8, 16, 16 ], "texture": "#sprite_b", "rotation": 90 },
-                "north": { "uv": [ 0, 8, 8, 16 ],  "texture": "#sprite_b", "rotation": 180 },
-                "south": { "uv": [ 0, 8, 8, 16 ],  "texture": "#sprite_b", "rotation": 90 }
-            }
-        },
-        {
-            "comment": "Outer Pipe To Middle",
-            "from": [14, 2, 2],
-            "to": [16, 14, 14],
-            "faces": {
-                "up":    { "uv": [ 0, 4, 4, 12 ], "texture": "#sprite_a" },
-                "down":  { "uv": [ 0, 4, 4, 12 ], "texture": "#sprite_a" },
-                "north": { "uv": [ 0, 4, 4, 12 ], "texture": "#sprite_a" },
-                "south": { "uv": [ 0, 4, 4, 12 ], "texture": "#sprite_a" }
-            }
-        },
-        {
-            "comment": "Outer Pipe To Middle - inverted",
-            "from": [16, 14, 14],
-            "to": [14, 2, 2],
-            "faces": {
-                "up":    { "uv": [ 0, 4, 4, 12 ], "texture": "#sprite_a" },
-                "down":  { "uv": [ 0, 4, 4, 12 ], "texture": "#sprite_a" },
-                "north": { "uv": [ 0, 4, 4, 12 ], "texture": "#sprite_a" },
-                "south": { "uv": [ 0, 4, 4, 12 ], "texture": "#sprite_a" }
-            }
-        },
-        {
-            "comment": "Outer Pipe To Out (vertical down)",
-            "from": [2, 0, 2],
-            "to": [14, 2, 14],
-            "faces": {
-                "east":  { "uv": [ 0, 4, 4, 12 ], "texture": "#sprite_a", "rotation": 90 },
-                "west":  { "uv": [ 0, 4, 4, 12 ], "texture": "#sprite_a", "rotation": 90 },
-                "north": { "uv": [ 0, 4, 4, 12 ], "texture": "#sprite_a", "rotation": 90 },
-                "south": { "uv": [ 0, 4, 4, 12 ], "texture": "#sprite_a", "rotation": 90 }
-            }
-        },
-        {
-            "comment": "Outer Pipe To Out (vertical down) - inverted",
-            "from": [14, 2, 14],
-            "to": [2, 0, 2],
-            "faces": {
-                "east":  { "uv": [ 0, 4, 4, 12 ], "texture": "#sprite_a", "rotation": 90 },
-                "west":  { "uv": [ 0, 4, 4, 12 ], "texture": "#sprite_a", "rotation": 90 },
-                "north": { "uv": [ 0, 4, 4, 12 ], "texture": "#sprite_a", "rotation": 90 },
-                "south": { "uv": [ 0, 4, 4, 12 ], "texture": "#sprite_a", "rotation": 90 }
-            }
-        }
-    ]
+	"format_version": "1.21.11",
+	"credit": "Made with Blockbench",
+	"render_type": "minecraft:translucent",
+	"textures": {
+		"0": "buildcraftfactory:block/heat_exchange/sprite_a",
+		"2": "buildcraftfactory:block/heat_exchange/sprite_c",
+		"4": "buildcraftfactory:block/heat_exchange/sprite_e",
+		"particle": "buildcraftfactory:block/heat_exchange/sprite_a"
+	},
+	"elements": [
+		{
+			"name": "outer",
+			"from": [2, 0, 2],
+			"to": [14, 14, 16],
+			"faces": {
+				"north": {"uv": [0, 0, 12, 12], "rotation": 270, "texture": "#4"},
+				"east": {"uv": [2, 14, 16, 0], "rotation": 90, "texture": "#2"},
+				"west": {"uv": [2, 0, 16, 14], "rotation": 90, "texture": "#2"},
+				"up": {"uv": [0, 0, 12, 12], "rotation": 270, "texture": "#4"}
+			}
+		},
+		{
+			"name": "outer_inverted",
+			"from": [14, 14, 16],
+			"to": [2, 0, 2],
+			"faces": {
+				"east": {"uv": [2, 14, 16, 0], "rotation": 270, "texture": "#2"},
+				"south": {"uv": [0, 0, 12, 12], "rotation": 90, "texture": "#4"},
+				"west": {"uv": [16, 0, 2, 14], "texture": "#2"},
+				"down": {"uv": [0, 0, 12, 12], "rotation": 270, "texture": "#4"}
+			}
+		},
+		{
+			"name": "inner",
+			"from": [4, 4, 0],
+			"to": [12, 12, 16],
+			"faces": {
+				"east": {"uv": [16, 0, 0, 8], "texture": "#0"},
+				"west": {"uv": [0, 0, 16, 8], "texture": "#0"},
+				"up": {"uv": [0, 0, 16, 8], "rotation": 90, "texture": "#0"},
+				"down": {"uv": [0, 0, 16, 8], "rotation": 90, "texture": "#0"}
+			}
+		},
+		{
+			"name": "inner_inverted",
+			"from": [12, 12, 16],
+			"to": [4, 4, 0],
+			"faces": {
+				"east": {"uv": [16, 0, 0, 8], "texture": "#0"},
+				"west": {"uv": [0, 0, 16, 8], "texture": "#0"},
+				"up": {"uv": [0, 0, 16, 8], "rotation": 90, "texture": "#0"},
+				"down": {"uv": [0, 0, 16, 8], "rotation": 90, "texture": "#0"}
+			}
+		}
+	]
 }

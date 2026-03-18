@@ -6,20 +6,17 @@ package buildcraft.core.compat.jei;
 
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
-import mezz.jei.api.ingredients.subtypes.ISubtypeInterpreter;
-import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.registration.ISubtypeRegistration;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.item.ItemStack;
 
 import buildcraft.core.BCCore;
 import buildcraft.core.BCCoreItems;
 
 /**
  * JEI integration plugin for BuildCraft Core.
- * Registers a subtype interpreter so JEI can distinguish paintbrush colours
- * for both the ingredient list AND recipe output matching.
+ * Registers data component types as subtype differentiators so JEI can
+ * distinguish items that share the same item ID but differ by component
+ * (e.g. coloured paintbrushes).
  */
 @JeiPlugin
 public class BCCoreJeiPlugin implements IModPlugin {
@@ -32,27 +29,11 @@ public class BCCoreJeiPlugin implements IModPlugin {
 
     @Override
     public void registerItemSubtypes(ISubtypeRegistration registration) {
-        var logger = org.slf4j.LoggerFactory.getLogger("BuildCraft");
-        var paintbrush = BCCoreItems.PAINTBRUSH.get();
-        var brushColorType = BCCore.BRUSH_COLOR.get();
-        logger.info("[JEI] registerItemSubtypes called!");
-        logger.info("[JEI] PAINTBRUSH item: {} @{}", paintbrush, System.identityHashCode(paintbrush));
-        logger.info("[JEI] BRUSH_COLOR type: {} @{}", brushColorType, System.identityHashCode(brushColorType));
-
-        registration.registerSubtypeInterpreter(paintbrush,
-                (ItemStack stack, UidContext context) -> {
-                    DyeColor color = stack.get(brushColorType);
-                    String result = color != null ? color.getName() : "";
-                    // Log full stack info on first few calls only
-                    logger.info("[JEI] getSubtypeData: item={}@{} color={} result='{}' components={}",
-                            stack.getItem(), System.identityHashCode(stack.getItem()), color, result,
-                            stack.getComponents());
-                    return result;
-                }
+        // Tell JEI to differentiate paintbrush stacks by their brush_color component.
+        // This handles both ingredient list display AND recipe output matching.
+        registration.registerFromDataComponentTypes(
+                BCCoreItems.PAINTBRUSH.get(),
+                BCCore.BRUSH_COLOR.get()
         );
-
-        logger.info("[JEI] Registered paintbrush subtype interpreter");
     }
 }
-
-

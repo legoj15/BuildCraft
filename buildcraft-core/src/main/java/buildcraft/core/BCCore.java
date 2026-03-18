@@ -23,9 +23,7 @@ import com.mojang.serialization.Codec;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforgespi.language.ModFileScanData;
-import org.objectweb.asm.Type;
+
 
 import buildcraft.lib.marker.MarkerCache;
 import buildcraft.lib.net.MessageContainerPayload;
@@ -62,13 +60,6 @@ public class BCCore {
 
     public BCCore(IEventBus modEventBus, ModContainer modContainer) {
         INSTANCE = this;
-
-        // ── JEI Plugin Annotation Injection ──────────────────────────────────
-        // JEI's @JeiPlugin has RetentionPolicy.CLASS (not RUNTIME), so NeoForge's
-        // dev sourceSet scanner doesn't capture it.  We manually inject the
-        // annotation into our mod's scan data so ForgePluginFinder finds us.
-        // In production JARs this is harmless — the annotation is already there.
-        injectJeiPluginAnnotation(modContainer);
         // BCLibItems.enableGuide();
         // BCLibItems.enableDebugger();
 
@@ -284,96 +275,4 @@ public class BCCore {
         }
     }
 
-    /**
-     * Ensures JEI's {@code @JeiPlugin} annotation on {@code BCCoreJeiPlugin} is present
-     * in NeoForge's scan data. This is needed because the annotation has
-     * {@code RetentionPolicy.CLASS} (not RUNTIME) so NeoForge's dev-mode sourceSet
-     * scanner does not capture it. In production JARs this is a harmless no-op.
-     */
-    @SuppressWarnings("unchecked")
-    private static void injectJeiPluginAnnotation(ModContainer modContainer) {
-        try {
-            Class.forName("mezz.jei.api.JeiPlugin");
-            org.slf4j.LoggerFactory.getLogger("BuildCraft").info("[JEI] JEI detected, checking scan data for @JeiPlugin...");
-        } catch (ClassNotFoundException e) {
-            return;
-        }
-
-        try {
-            var logger = org.slf4j.LoggerFactory.getLogger("BuildCraft");
-            Type jeiPluginType = Type.getType("Lmezz/jei/api/JeiPlugin;");
-            String pluginClassName = "buildcraft.core.compat.jei.BCCoreJeiPlugin";
-            Type pluginClassType = Type.getObjectType(pluginClassName.replace('.', '/'));
-
-            var allScanData = ModList.get().getAllScanData();
-            logger.info("[JEI] Scan data entries: {}", allScanData.size());
-
-            for (ModFileScanData scanData : allScanData) {
-                // Dump all annotation memberNames for debugging
-                var annotations = scanData.getAnnotations();
-                boolean isBuildCraftCore = annotations.stream()
-                        .anyMatch(a -> a.memberName().equals("buildcraft.core.BCCore"));
-                if (!isBuildCraftCore) continue;
-
-                logger.info("[JEI] Found buildcraftcore scan data with {} annotations", annotations.size());
-                // Log the first few annotation types to understand what's in there
-                annotations.stream().limit(5).forEach(a ->
-                    logger.info("[JEI]   annotation: type={} member={}", a.annotationType(), a.memberName()));
-
-                boolean alreadyPresent = annotations.stream()
-                        .anyMatch(a -> a.annotationType().equals(jeiPluginType)
-                                && a.memberName().equals(pluginClassName));
-                if (alreadyPresent) {
-                    logger.info("[JEI] @JeiPlugin already present in scan data — no injection needed");
-                    return;
-                }
-
-                logger.info("[JEI] @JeiPlugin NOT in scan data — injecting...");
-
-                var adClass = ModFileScanData.AnnotationData.class;
-                var components = adClass.getRecordComponents();
-                logger.info("[JEI] AnnotationData has {} components:", components.length);
-                var ctorParamTypes = new Class<?>[components.length];
-                for (int i = 0; i < components.length; i++) {
-                    ctorParamTypes[i] = components[i].getType();
-                    logger.info("[JEI]   [{}] {} : {}", i, components[i].getName(), components[i].getType().getSimpleName());
-                }
-                var ctor = adClass.getDeclaredConstructor(ctorParamTypes);
-
-                Object[] args = new Object[components.length];
-                for (int i = 0; i < components.length; i++) {
-                    String name = components[i].getName();
-                    switch (name) {
-                        case "annotationType" -> args[i] = jeiPluginType;
-                        case "clazz"          -> args[i] = pluginClassType;
-                        case "memberName"     -> args[i] = pluginClassName;
-                        case "annotationData" -> args[i] = java.util.Map.of();
-                        default -> {
-                            args[i] = getDefaultValue(components[i].getType());
-                            logger.warn("[JEI]   Unknown component '{}', using default: {}", name, args[i]);
-                        }
-                    }
-                }
-
-                Object ad = ctor.newInstance(args);
-                annotations.add((ModFileScanData.AnnotationData) ad);
-                logger.info("[JEI] Successfully injected @JeiPlugin annotation data");
-                return;
-            }
-            logger.warn("[JEI] Could not find buildcraftcore scan data!");
-        } catch (Exception e) {
-            org.slf4j.LoggerFactory.getLogger("BuildCraft").error("[JEI] Failed to inject @JeiPlugin annotation", e);
-        }
-    }
-
-    /** Returns a sensible default for a given type (used as fallback for unknown record components). */
-    private static Object getDefaultValue(Class<?> type) {
-        if (type == boolean.class) return false;
-        if (type == int.class) return 0;
-        if (type == long.class) return 0L;
-        if (type.isPrimitive()) return 0;
-        if (type == String.class) return "";
-        if (java.util.Map.class.isAssignableFrom(type)) return java.util.Map.of();
-        return null;
-    }
 }

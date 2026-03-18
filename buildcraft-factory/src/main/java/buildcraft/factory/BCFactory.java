@@ -137,15 +137,16 @@ public class BCFactory {
             }
         );
 
-        // Fluid capabilities for the heat exchanger (section-based)
+        // Fluid capabilities for the heat exchanger (direction-specific, matching 1.12.2)
+        // START: tankInput on DOWN, tankOutput on facing.getClockWise()
+        // END: tankOutput on UP, tankInput on facing.getCounterClockWise()
+        // MIDDLE / no section: no connections
         event.registerBlockEntity(
             Capabilities.Fluid.BLOCK,
             BCFactoryBlockEntities.HEAT_EXCHANGE.get(),
             (heatExchange, direction) -> {
-                buildcraft.factory.tile.TileHeatExchange.ExchangeSection section = heatExchange.getSection();
-                if (section == null) return null;
-                // Expose input tank for fluid insertion
-                return new FluidTankResourceHandler(section.tankInput);
+                net.neoforged.neoforge.fluids.capability.templates.FluidTank tank = heatExchange.getFluidTankForDirection(direction);
+                return tank != null ? new FluidTankResourceHandler(tank) : null;
             }
         );
     }

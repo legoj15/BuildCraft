@@ -85,6 +85,39 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
         return section;
     }
 
+    /**
+     * Returns the appropriate fluid tank for the given direction, or null if
+     * fluid connections are not allowed on that face. Matches the 1.12.2 behavior:
+     * <ul>
+     *   <li>START: tankInput on DOWN, tankOutput on facing.getClockWise()</li>
+     *   <li>END: tankOutput on UP, tankInput on facing.getCounterClockWise()</li>
+     *   <li>MIDDLE / no section: null (no connections)</li>
+     * </ul>
+     */
+    @Nullable
+    public FluidTank getFluidTankForDirection(@Nullable Direction direction) {
+        if (section == null || direction == null) return null;
+        Direction facing = getFacing();
+        if (facing == null) return null;
+
+        if (section instanceof ExchangeSectionStart) {
+            if (direction == Direction.DOWN) {
+                return section.tankInput;
+            }
+            if (direction == facing.getClockWise()) {
+                return section.tankOutput;
+            }
+        } else if (section instanceof ExchangeSectionEnd) {
+            if (direction == Direction.UP) {
+                return section.tankOutput;
+            }
+            if (direction == facing.getCounterClockWise()) {
+                return section.tankInput;
+            }
+        }
+        return null;
+    }
+
     public void markCheckNeighbours() {
         checkNeighbours = true;
     }
@@ -159,14 +192,14 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
     public void clientTick() {
         if (level == null) return;
         if (checkNeighbours) {
-            checkNeighbours = false;
             Deque<TileHeatExchange> exchangers = findAdjacentExchangers();
-            // Link start and end sections on the client
+            // Link start and end sections on the client — retry until successful
             if (exchangers.size() > 2) {
                 TileHeatExchange start = exchangers.getFirst();
                 TileHeatExchange end = exchangers.getLast();
                 if (start.isStart() && end.isEnd()) {
                     ((ExchangeSectionStart) start.section).endSection = (ExchangeSectionEnd) end.section;
+                    checkNeighbours = false;
                 }
             }
         }
@@ -402,22 +435,38 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
         if (input.getBooleanOr("hasSection", false)) {
             boolean isStart = input.getBooleanOr("isStart", true);
             if (isStart) {
-                ExchangeSectionStart s = new ExchangeSectionStart(this);
+                // Reuse existing section to preserve FluidSmoother state
+                ExchangeSectionStart s;
+                if (section instanceof ExchangeSectionStart existing) {
+                    s = existing;
+                } else {
+                    s = new ExchangeSectionStart(this);
+                }
                 s.tankInput.setFluid(input.read("sectionInput", FluidStack.CODEC).orElse(FluidStack.EMPTY));
                 s.tankOutput.setFluid(input.read("sectionOutput", FluidStack.CODEC).orElse(FluidStack.EMPTY));
                 s.middleCount = input.getIntOr("middleCount", 1);
-                s.progress = input.getIntOr("progress", 0);
+                // Only sync progressState — progress is computed independently on the
+                // client via updateProgress(), matching 1.12.2 behavior. Loading the server's
+                // progress value would cause jitter due to network latency.
                 int stateOrd = input.getIntOr("progressState", 0);
                 s.progressState = EnumProgressState.values()[Math.min(stateOrd, EnumProgressState.values().length - 1)];
                 s.inputCoolantAmountCharge = input.getIntOr("coolantCharge", 0);
                 s.inputHeatantAmountCharge = input.getIntOr("heatantCharge", 0);
                 section = s;
             } else {
-                ExchangeSectionEnd e = new ExchangeSectionEnd(this);
+                // Reuse existing section to preserve FluidSmoother state
+                ExchangeSectionEnd e;
+                if (section instanceof ExchangeSectionEnd existing) {
+                    e = existing;
+                } else {
+                    e = new ExchangeSectionEnd(this);
+                }
                 e.tankInput.setFluid(input.read("sectionInput", FluidStack.CODEC).orElse(FluidStack.EMPTY));
                 e.tankOutput.setFluid(input.read("sectionOutput", FluidStack.CODEC).orElse(FluidStack.EMPTY));
                 section = e;
             }
+        } else if (section != null) {
+            section = null;
         }
         checkNeighbours = true;
     }

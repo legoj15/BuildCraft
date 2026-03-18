@@ -101,6 +101,24 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         if (section == null) return;
         ExchangeSectionEnd sectionEnd = section.getEndSection();
 
+        // Fallback: if endSection isn't linked yet, resolve it directly for rendering
+        // and trigger the tile to re-check neighbors for permanent linkage
+        if (sectionEnd == null) {
+            BlockState st = tile.getBlockState();
+            if (st.getBlock() instanceof BlockHeatExchange) {
+                Direction dir = st.getValue(BlockHeatExchange.FACING).getCounterClockWise();
+                for (int i = 1; i < 6; i++) {
+                    BlockEntity neighbor = level.getBlockEntity(pos.relative(dir, i));
+                    if (neighbor instanceof TileHeatExchange other && other.isEnd()) {
+                        sectionEnd = (ExchangeSectionEnd) other.getSection();
+                        tile.markCheckNeighbours(); // trigger permanent linkage on next tick
+                        break;
+                    }
+                    if (!(neighbor instanceof TileHeatExchange)) break;
+                }
+            }
+        }
+
         BlockState state = tile.getBlockState();
         if (!(state.getBlock() instanceof BlockHeatExchange)) return;
 
@@ -116,7 +134,7 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
 
-        float partialTicks = 0f;
+        float partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
         // Render fluid in start tanks
         renderSmoothedFluid(section.smoothedTankInput, TANK_BOTTOM, poseStack, bufferSource, light, partialTicks);
@@ -157,13 +175,20 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
                 double otherStart = flip ? p0 : p1 - length * progress;
                 double otherEnd = flip ? p0 + length * progress : p1;
                 Vec3 vDiff = Vec3.atLowerCornerOf(diff);
-                vDiff = vDiff.add(t.x - (float) camPos.x, t.y - (float) camPos.y, t.z - (float) camPos.z);
+                // Flow volume is controlled by progress, not tank levels.
+                // Use raw fluid type (not smoothed amount) — matches 1.12.2 behavior.
+                FluidStack coolantFluid = sectionEnd.smoothedTankInput.getFluid();
+                FluidStack heatantFluid = section.smoothedTankInput.getFluid();
                 // Render upper flow (coolant)
-                renderFlow(vDiff, face, poseStack, bufferSource, progressStart + 0.01, progressEnd - 0.01,
-                        sectionEnd.tankInput.getFluid(), 4, partialTicks, light);
+                if (!coolantFluid.isEmpty()) {
+                    renderFlow(vDiff, face, poseStack, bufferSource, progressStart + 0.01, progressEnd - 0.01,
+                            coolantFluid, 4, partialTicks, light);
+                }
                 // Render lower flow (heatant)
-                renderFlow(vDiff, face.getOpposite(), poseStack, bufferSource, otherStart, otherEnd,
-                        section.tankInput.getFluid(), 2, partialTicks, light);
+                if (!heatantFluid.isEmpty()) {
+                    renderFlow(vDiff, face.getOpposite(), poseStack, bufferSource, otherStart, otherEnd,
+                            heatantFluid, 2, partialTicks, light);
+                }
             }
         }
 
@@ -280,7 +305,6 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
                     ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
-        PoseStack.Pose pose = poseStack.last();
         int overlay = OverlayTexture.NO_OVERLAY;
 
         Level level = Minecraft.getInstance().level;
@@ -313,6 +337,7 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
             }
             poseStack.pushPose();
             poseStack.translate(diff.x, diff.y, diff.z);
+            PoseStack.Pose pose = poseStack.last(); // capture AFTER translate
             diff = diff.add(dirVec);
 
             double s1 = s < i ? 0 : (s % 1);

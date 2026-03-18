@@ -293,40 +293,53 @@ public class BCCore {
     @SuppressWarnings("unchecked")
     private static void injectJeiPluginAnnotation(ModContainer modContainer) {
         try {
-            // Only inject if JEI is loaded (compileOnly — may not be present)
             Class.forName("mezz.jei.api.JeiPlugin");
+            org.slf4j.LoggerFactory.getLogger("BuildCraft").info("[JEI] JEI detected, checking scan data for @JeiPlugin...");
         } catch (ClassNotFoundException e) {
-            return; // JEI not present, nothing to inject
+            return;
         }
 
         try {
+            var logger = org.slf4j.LoggerFactory.getLogger("BuildCraft");
             Type jeiPluginType = Type.getType("Lmezz/jei/api/JeiPlugin;");
             String pluginClassName = "buildcraft.core.compat.jei.BCCoreJeiPlugin";
             Type pluginClassType = Type.getObjectType(pluginClassName.replace('.', '/'));
 
-            for (ModFileScanData scanData : ModList.get().getAllScanData()) {
-                // Find our mod's scan data by looking for BCCore's @Mod annotation
-                boolean isBuildCraftCore = scanData.getAnnotations().stream()
+            var allScanData = ModList.get().getAllScanData();
+            logger.info("[JEI] Scan data entries: {}", allScanData.size());
+
+            for (ModFileScanData scanData : allScanData) {
+                // Dump all annotation memberNames for debugging
+                var annotations = scanData.getAnnotations();
+                boolean isBuildCraftCore = annotations.stream()
                         .anyMatch(a -> a.memberName().equals("buildcraft.core.BCCore"));
                 if (!isBuildCraftCore) continue;
 
-                // Check if the annotation is already present (production JAR case)
-                boolean alreadyPresent = scanData.getAnnotations().stream()
+                logger.info("[JEI] Found buildcraftcore scan data with {} annotations", annotations.size());
+                // Log the first few annotation types to understand what's in there
+                annotations.stream().limit(5).forEach(a ->
+                    logger.info("[JEI]   annotation: type={} member={}", a.annotationType(), a.memberName()));
+
+                boolean alreadyPresent = annotations.stream()
                         .anyMatch(a -> a.annotationType().equals(jeiPluginType)
                                 && a.memberName().equals(pluginClassName));
-                if (alreadyPresent) return;
+                if (alreadyPresent) {
+                    logger.info("[JEI] @JeiPlugin already present in scan data — no injection needed");
+                    return;
+                }
 
-                // Use reflection to construct AnnotationData — the record's
-                // constructor signature varies across NeoForge SPI versions.
+                logger.info("[JEI] @JeiPlugin NOT in scan data — injecting...");
+
                 var adClass = ModFileScanData.AnnotationData.class;
                 var components = adClass.getRecordComponents();
+                logger.info("[JEI] AnnotationData has {} components:", components.length);
                 var ctorParamTypes = new Class<?>[components.length];
                 for (int i = 0; i < components.length; i++) {
                     ctorParamTypes[i] = components[i].getType();
+                    logger.info("[JEI]   [{}] {} : {}", i, components[i].getName(), components[i].getType().getSimpleName());
                 }
                 var ctor = adClass.getDeclaredConstructor(ctorParamTypes);
 
-                // Build argument array matching the record components by name
                 Object[] args = new Object[components.length];
                 for (int i = 0; i < components.length; i++) {
                     String name = components[i].getName();
@@ -335,16 +348,21 @@ public class BCCore {
                         case "clazz"          -> args[i] = pluginClassType;
                         case "memberName"     -> args[i] = pluginClassName;
                         case "annotationData" -> args[i] = java.util.Map.of();
-                        default -> args[i] = getDefaultValue(components[i].getType());
+                        default -> {
+                            args[i] = getDefaultValue(components[i].getType());
+                            logger.warn("[JEI]   Unknown component '{}', using default: {}", name, args[i]);
+                        }
                     }
                 }
 
                 Object ad = ctor.newInstance(args);
-                scanData.getAnnotations().add((ModFileScanData.AnnotationData) ad);
+                annotations.add((ModFileScanData.AnnotationData) ad);
+                logger.info("[JEI] Successfully injected @JeiPlugin annotation data");
                 return;
             }
+            logger.warn("[JEI] Could not find buildcraftcore scan data!");
         } catch (Exception e) {
-            // Silently fail — JEI integration is optional
+            org.slf4j.LoggerFactory.getLogger("BuildCraft").error("[JEI] Failed to inject @JeiPlugin annotation", e);
         }
     }
 

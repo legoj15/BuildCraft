@@ -361,6 +361,21 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     @SuppressWarnings("unchecked")
     public <T> T getCapabilityFromPipe(Direction side, @Nonnull Object capability) {
         if (level == null || side == null) return null;
+        // Check pluggable on this side first (mirrors 1.12.2 logic)
+        PipePluggable plug = getPluggable(side);
+        if (plug != null) {
+            T t = plug.getInternalCapability(capability);
+            if (t != null) {
+                return t;
+            }
+            if (plug.isBlocking()) {
+                return null;
+            }
+        }
+        // Only look up neighbor capability if we have a pipe
+        if (pipe == null) {
+            return null;
+        }
         BlockPos neighborPos = worldPosition.relative(side);
         if (capability instanceof net.neoforged.neoforge.capabilities.BlockCapability<?, ?> blockCap) {
             // Route block capabilities to the NeoForge capability system

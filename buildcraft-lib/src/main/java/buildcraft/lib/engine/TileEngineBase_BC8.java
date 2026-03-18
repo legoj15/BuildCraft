@@ -77,7 +77,7 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
     boolean prevIsPumping = false;
     EnumPowerStage prevPowerStage = EnumPowerStage.BLUE;
 
-    protected boolean checkOrientation = true;
+    protected int orientationChecksRemaining = 1;
     protected boolean checkRedstonePower = true;
     protected int redstonePollTimer = 0;
 
@@ -325,17 +325,21 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
             engine.checkRedstoneLevel();
         }
 
-        if (engine.checkOrientation) {
-            engine.checkOrientation = false;
+        if (engine.orientationChecksRemaining > 0) {
+            engine.orientationChecksRemaining--;
             // 1.12.2 parity: rotateIfInvalid() — only rotate if current direction is invalid
             if (engine.getReceiverToPower(engine.orientation) == null) {
                 // Current direction invalid, try to find a valid one
                 if (engine.attemptRotation()) {
+                    engine.orientationChecksRemaining = 0;
                     level.setBlock(pos, state.setValue(
                             buildcraft.api.properties.BuildCraftProperties.BLOCK_FACING_6,
                             engine.orientation), 3);
                     level.sendBlockUpdated(pos, state, state, 3);
                 }
+            } else {
+                // Current orientation is valid, stop retrying
+                engine.orientationChecksRemaining = 0;
             }
         }
 
@@ -428,7 +432,10 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
 
     public void onNeighborUpdate() {
         checkRedstonePower = true;
-        checkOrientation = true;
+        // Retry orientation for several ticks to give newly placed pipes
+        // time to initialize their MJ receiver capability (PipeFlowPower.isReceiver
+        // is only set after the pipe's first onTick/reconfigure cycle).
+        orientationChecksRemaining = 5;
     }
 
     // --- Pumping ---
@@ -451,7 +458,7 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
 
     public void setOrientation(Direction dir) {
         orientation = dir;
-        checkOrientation = true;
+        orientationChecksRemaining = 1;
         setChanged();
     }
 

@@ -6,25 +6,24 @@ package buildcraft.core.compat.jei;
 
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
+import mezz.jei.api.ingredients.subtypes.ISubtypeInterpreter;
+import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.registration.ISubtypeRegistration;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemStack;
 
 import buildcraft.core.BCCore;
 import buildcraft.core.BCCoreItems;
 
 /**
  * JEI integration plugin for BuildCraft Core.
- * Registers data component types as subtype differentiators so JEI can
- * distinguish items that share the same item ID but differ by component
- * (e.g. coloured paintbrushes).
+ * Registers a subtype interpreter so JEI can distinguish paintbrush colours
+ * for both the ingredient list AND recipe output matching.
  */
 @JeiPlugin
 public class BCCoreJeiPlugin implements IModPlugin {
     private static final Identifier UID = Identifier.parse("buildcraftcore:jei_plugin");
-
-    public BCCoreJeiPlugin() {
-        org.slf4j.LoggerFactory.getLogger("BuildCraft").info("[JEI] BCCoreJeiPlugin INSTANTIATED");
-    }
 
     @Override
     public Identifier getPluginUid() {
@@ -34,10 +33,19 @@ public class BCCoreJeiPlugin implements IModPlugin {
     @Override
     public void registerItemSubtypes(ISubtypeRegistration registration) {
         org.slf4j.LoggerFactory.getLogger("BuildCraft").info("[JEI] registerItemSubtypes called!");
-        registration.registerFromDataComponentTypes(
-                BCCoreItems.PAINTBRUSH.get(),
-                BCCore.BRUSH_COLOR.get()
+
+        registration.registerSubtypeInterpreter(BCCoreItems.PAINTBRUSH.get(),
+                (ItemStack stack, UidContext context) -> {
+                    DyeColor color = stack.get(BCCore.BRUSH_COLOR.get());
+                    if (color != null) {
+                        return color.getName(); // each color is a distinct subtype
+                    }
+                    return ""; // clean brush = no subtype
+                }
         );
-        org.slf4j.LoggerFactory.getLogger("BuildCraft").info("[JEI] Registered BRUSH_COLOR subtype for paintbrush");
+
+        org.slf4j.LoggerFactory.getLogger("BuildCraft").info("[JEI] Registered paintbrush subtype interpreter");
     }
 }
+
+

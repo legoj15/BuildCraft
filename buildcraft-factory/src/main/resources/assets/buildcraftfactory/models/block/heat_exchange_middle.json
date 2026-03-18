@@ -2,6 +2,7 @@
     "render_type": "minecraft:translucent",
     "textures": {
         "sprite_a": "buildcraftfactory:block/heat_exchange/sprite_a",
+        "sprite_d": "buildcraftfactory:block/heat_exchange/sprite_d",
         "particle": "buildcraftfactory:block/heat_exchange/sprite_a"
     },
     "elements": [
@@ -10,10 +11,10 @@
             "from": [0, 4, 4],
             "to": [16, 12, 12],
             "faces": {
-                "up":    { "uv": [ 0, 0, 16, 4 ], "texture": "#sprite_a" },
-                "down":  { "uv": [ 0, 0, 16, 4 ], "texture": "#sprite_a" },
-                "north": { "uv": [ 0, 0, 16, 4 ], "texture": "#sprite_a" },
-                "south": { "uv": [ 0, 0, 16, 4 ], "texture": "#sprite_a" }
+                "up":    { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
+                "down":  { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
+                "north": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
+                "south": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" }
             }
         },
         {
@@ -21,10 +22,10 @@
             "from": [16, 12, 12],
             "to": [0, 4, 4],
             "faces": {
-                "up":    { "uv": [ 0, 0, 16, 4 ], "texture": "#sprite_a" },
-                "down":  { "uv": [ 0, 0, 16, 4 ], "texture": "#sprite_a" },
-                "north": { "uv": [ 0, 0, 16, 4 ], "texture": "#sprite_a" },
-                "south": { "uv": [ 0, 0, 16, 4 ], "texture": "#sprite_a" }
+                "up":    { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
+                "down":  { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
+                "north": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
+                "south": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" }
             }
         },
         {
@@ -32,10 +33,10 @@
             "from": [ 0, 2, 2 ],
             "to": [ 16, 14, 14 ],
             "faces": {
-                "up":    { "uv": [ 0, 4, 16, 12 ], "texture": "#sprite_a" },
-                "down":  { "uv": [ 0, 4, 16, 12 ], "texture": "#sprite_a" },
-                "north": { "uv": [ 0, 4, 16, 12 ], "texture": "#sprite_a" },
-                "south": { "uv": [ 0, 4, 16, 12 ], "texture": "#sprite_a" }
+                "up":    { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
+                "down":  { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
+                "north": { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
+                "south": { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" }
             }
         }
     ]

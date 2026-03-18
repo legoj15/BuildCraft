@@ -32,19 +32,24 @@ public class BCCoreJeiPlugin implements IModPlugin {
 
     @Override
     public void registerItemSubtypes(ISubtypeRegistration registration) {
-        org.slf4j.LoggerFactory.getLogger("BuildCraft").info("[JEI] registerItemSubtypes called!");
+        var logger = org.slf4j.LoggerFactory.getLogger("BuildCraft");
+        var paintbrush = BCCoreItems.PAINTBRUSH.get();
+        var brushColorType = BCCore.BRUSH_COLOR.get();
+        logger.info("[JEI] registerItemSubtypes called!");
+        logger.info("[JEI] PAINTBRUSH item: {} @{}", paintbrush, System.identityHashCode(paintbrush));
+        logger.info("[JEI] BRUSH_COLOR type: {} @{}", brushColorType, System.identityHashCode(brushColorType));
 
-        registration.registerSubtypeInterpreter(BCCoreItems.PAINTBRUSH.get(),
+        registration.registerSubtypeInterpreter(paintbrush,
                 (ItemStack stack, UidContext context) -> {
-                    DyeColor color = stack.get(BCCore.BRUSH_COLOR.get());
-                    if (color != null) {
-                        return color.getName(); // each color is a distinct subtype
-                    }
-                    return ""; // clean brush = no subtype
+                    DyeColor color = stack.get(brushColorType);
+                    String result = color != null ? color.getName() : "";
+                    logger.info("[JEI] getSubtypeData: item={}@{} color={} result='{}'",
+                            stack.getItem(), System.identityHashCode(stack.getItem()), color, result);
+                    return result;
                 }
         );
 
-        org.slf4j.LoggerFactory.getLogger("BuildCraft").info("[JEI] Registered paintbrush subtype interpreter");
+        logger.info("[JEI] Registered paintbrush subtype interpreter");
     }
 }
 

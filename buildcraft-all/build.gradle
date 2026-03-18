@@ -25,9 +25,10 @@ dependencies {
     implementation project(':buildcraft-silicon')
     implementation project(':buildcraft-robotics')
 
-    // JEI API — needed so annotation scanning discovers @JeiPlugin in buildcraft-core
-    compileOnly "mezz.jei:jei-1.21.11-common-api:27.4.0.15"
-    compileOnly "mezz.jei:jei-1.21.11-neoforge-api:27.4.0.15"
+    // JEI — loaded as a proper mod in dev runs so NeoForge integrates it 
+    // into the mod loading pipeline alongside BuildCraft modules.
+    // This enables @JeiPlugin annotation discovery in buildcraft-core.
+    runtimeOnly "mezz.jei:jei-1.21.11-neoforge:27.4.0.15"
 }
 
 // ─── Dev Run Configuration ───────────────────────────────────────────────────
@@ -48,7 +49,6 @@ neoForge {
         }
         buildcraftcore {
             sourceSet project(':buildcraft-core').sourceSets.main
-            sourceSet sourceSets.main // JEI plugin lives here for guaranteed annotation scan
         }
         buildcraftbuilders {
             sourceSet project(':buildcraft-builders').sourceSets.main

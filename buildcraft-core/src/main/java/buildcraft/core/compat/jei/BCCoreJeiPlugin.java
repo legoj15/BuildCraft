@@ -43,8 +43,10 @@ public class BCCoreJeiPlugin implements IModPlugin {
                 (ItemStack stack, UidContext context) -> {
                     DyeColor color = stack.get(brushColorType);
                     String result = color != null ? color.getName() : "";
-                    logger.info("[JEI] getSubtypeData: item={}@{} color={} result='{}'",
-                            stack.getItem(), System.identityHashCode(stack.getItem()), color, result);
+                    // Log full stack info on first few calls only
+                    logger.info("[JEI] getSubtypeData: item={}@{} color={} result='{}' components={}",
+                            stack.getItem(), System.identityHashCode(stack.getItem()), color, result,
+                            stack.getComponents());
                     return result;
                 }
         );

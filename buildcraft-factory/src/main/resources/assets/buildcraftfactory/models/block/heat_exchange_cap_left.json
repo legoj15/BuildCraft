@@ -10,7 +10,7 @@
             "from": [0, 2, 2],
             "to": [2, 14, 14],
             "faces": {
-                "west": { "uv": [ 0, 0, 8, 8 ],  "texture": "#sprite_b" },
+                "west": { "uv": [ 0, 0, 12, 12 ], "texture": "#sprite_b" },
                 "up":   { "uv": [ 8, 0, 10, 8 ], "texture": "#sprite_b", "rotation": 180 },
                 "down": { "uv": [ 8, 0, 10, 8 ], "texture": "#sprite_b", "rotation": 180 },
                 "north":{ "uv": [ 8, 0, 10, 8 ], "texture": "#sprite_b" },

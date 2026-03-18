@@ -28,6 +28,15 @@ subprojects {
         }
     }
 
+    // Exclude neoforge.mods.toml from individual sub-project JARs.
+    // This prevents NeoForge from detecting them as mod files during dev runs,
+    // which caused "Found 2 mod files for modid X" duplicate detection.
+    // The mods {} block in buildcraft-all provides mod info for dev runs;
+    // the fat JAR has its own merged neoforge.mods.toml for distribution.
+    tasks.named('jar') {
+        exclude 'META-INF/neoforge.mods.toml'
+    }
+
     dependencies {
 
     }

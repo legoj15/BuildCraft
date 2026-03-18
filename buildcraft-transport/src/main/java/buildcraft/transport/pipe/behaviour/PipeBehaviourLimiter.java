@@ -29,6 +29,7 @@ import buildcraft.api.transport.pipe.PipeEventHandler;
 import buildcraft.api.transport.pipe.PipeEventPower;
 import buildcraft.api.transport.pipe.PipeEventRedstoneFlux;
 
+import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.MathUtil;
 
 import buildcraft.transport.pipe.flow.PipeFlowRedstoneFlux;
@@ -54,6 +55,12 @@ public class PipeBehaviourLimiter extends PipeBehaviour {
         CompoundTag nbt = super.writeToNbt();
         nbt.putInt("limitShift", limitShift);
         return nbt;
+    }
+
+    @Override
+    public void readFromNbt(CompoundTag nbt) {
+        super.readFromNbt(nbt);
+        limitShift = MathUtil.clamp(nbt.getIntOr("limitShift", 0), 0, MAX_SHIFT);
     }
 
     public void readPayload(FriendlyByteBuf buffer, Object side) throws IOException {
@@ -94,8 +101,12 @@ public class PipeBehaviourLimiter extends PipeBehaviour {
     public boolean onPipeActivate(
         Player player, HitResult trace, float hitX, float hitY, float hitZ, EnumPipePart part
     ) {
-        // Wrench check stubbed — EntityUtil.getWrenchHand not yet ported
+        if (EntityUtil.getWrenchHand(player) == null) {
+            return false;
+        }
+
         if (!player.level().isClientSide()) {
+            EntityUtil.activateWrench(player, trace);
             limitShift++;
             if (limitShift > MAX_SHIFT) {
                 limitShift = 0;

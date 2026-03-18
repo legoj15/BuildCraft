@@ -16,6 +16,7 @@ import buildcraft.api.transport.pipe.PipeFaceTex;
 import buildcraft.api.transport.pipe.PipeEventHandler;
 import buildcraft.api.transport.pipe.PipeEventItem;
 
+import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 
 public class PipeBehaviourDaizuli extends PipeBehaviourDirectional {
@@ -38,6 +39,15 @@ public class PipeBehaviourDaizuli extends PipeBehaviourDirectional {
         CompoundTag nbt = super.writeToNbt();
         nbt.put("colour", NBTUtilBC.writeEnum(colour));
         return nbt;
+    }
+
+    @Override
+    public void readFromNbt(CompoundTag nbt) {
+        super.readFromNbt(nbt);
+        DyeColor read = NBTUtilBC.readEnum(nbt.get("colour"), DyeColor.class);
+        if (read != null) {
+            colour = read;
+        }
     }
 
     @Override
@@ -71,12 +81,16 @@ public class PipeBehaviourDaizuli extends PipeBehaviourDirectional {
             return super.onPipeActivate(player, trace, hitX, hitY, hitZ, part);
         }
         if (pipe.getHolder().getPipeWorld().isClientSide()) {
+            return EntityUtil.getWrenchHand(player) != null;
+        }
+        if (EntityUtil.getWrenchHand(player) != null) {
+            EntityUtil.activateWrench(player, trace);
+            int n = colour.getId() + (player.isShiftKeyDown() ? 15 : 1);
+            colour = DyeColor.byId(n & 15);
+            pipe.getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
             return true;
         }
-        int n = colour.getId() + (player.isShiftKeyDown() ? 15 : 1);
-        colour = DyeColor.byId(n & 15);
-        pipe.getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
-        return true;
+        return false;
     }
 
     @PipeEventHandler

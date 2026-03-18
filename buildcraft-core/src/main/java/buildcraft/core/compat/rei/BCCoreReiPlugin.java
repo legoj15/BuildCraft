@@ -6,6 +6,7 @@ package buildcraft.core.compat.rei;
 
 import me.shedaniel.rei.api.common.entry.comparison.ItemComparatorRegistry;
 import me.shedaniel.rei.api.common.plugins.REICommonPlugin;
+import me.shedaniel.rei.forge.REIPluginCommon;
 
 import buildcraft.core.BCCoreItems;
 
@@ -15,6 +16,7 @@ import buildcraft.core.BCCoreItems;
  * items that share the same item ID but differ by component
  * (e.g. coloured paintbrushes).
  */
+@REIPluginCommon
 public class BCCoreReiPlugin implements REICommonPlugin {
 
     @Override

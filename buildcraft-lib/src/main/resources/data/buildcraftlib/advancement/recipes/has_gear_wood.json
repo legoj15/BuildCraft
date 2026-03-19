@@ -6,20 +6,13 @@
     ]
   },
   "criteria": {
-    "has_gear_wood": {
-      "trigger": "minecraft:inventory_changed",
-      "conditions": {
-        "items": [
-          {
-            "items": "buildcraftcore:gear_wood"
-          }
-        ]
-      }
+    "on_spawn": {
+      "trigger": "minecraft:tick"
     }
   },
   "requirements": [
     [
-      "has_gear_wood"
+      "on_spawn"
     ]
   ]
 }

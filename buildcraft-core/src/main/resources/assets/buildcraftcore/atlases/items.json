@@ -1,0 +1,12 @@
+{
+    "sources": [
+        {
+            "type": "minecraft:single",
+            "resource": "buildcraftcore:item/fragile_fluid_shard_base"
+        },
+        {
+            "type": "minecraft:single",
+            "resource": "buildcraftcore:item/fragile_fluid_shard_fluid"
+        }
+    ]
+}

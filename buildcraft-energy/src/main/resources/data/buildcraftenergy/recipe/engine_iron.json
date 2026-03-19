@@ -13,6 +13,6 @@
     "p": "minecraft:piston"
   },
   "result": {
-    "id": "buildcraftenergy:engine_iron"
+    "id": "buildcraftcore:engine_iron"
   }
 }

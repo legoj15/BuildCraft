@@ -1,0 +1,25 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "buildcraftcore:decorated_laser"
+    ]
+  },
+  "criteria": {
+    "has_obsidian": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:obsidian"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_obsidian"
+    ]
+  ]
+}

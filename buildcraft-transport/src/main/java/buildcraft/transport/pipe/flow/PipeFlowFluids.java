@@ -263,12 +263,12 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         int extracted;
         if (simulate) {
             try (Transaction tx = Transaction.openRoot()) {
-                extracted = handler.extract(0, resource, millibuckets, tx);
+                extracted = handler.extract(resource, millibuckets, tx);
                 // tx is not committed — rolls back automatically (simulate)
             }
         } else {
             try (Transaction tx = Transaction.openRoot()) {
-                extracted = handler.extract(0, resource, millibuckets, tx);
+                extracted = handler.extract(resource, millibuckets, tx);
                 tx.commit();
             }
         }
@@ -549,7 +549,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                         FluidResource resource = FluidResource.of(currentFluid);
                         int filled;
                         try (Transaction tx = Transaction.openRoot()) {
-                            filled = handler.insert(0, resource, maxDrain, tx);
+                            filled = handler.insert(resource, maxDrain, tx);
                             tx.commit();
                         }
                         if (filled > 0) {

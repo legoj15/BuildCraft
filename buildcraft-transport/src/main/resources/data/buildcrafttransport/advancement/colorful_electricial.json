@@ -1,0 +1,12 @@
+{
+  "display": {
+    "icon": { "id": "buildcrafttransport:pipe_lapis_item" },
+    "title": { "translate": "advancements.buildcrafttransport.colorful_electrician.title" },
+    "description": { "translate": "advancements.buildcrafttransport.colorful_electrician.description" },
+    "frame": "challenge"
+  },
+  "parent": "buildcrafttransport:logic_transportation",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

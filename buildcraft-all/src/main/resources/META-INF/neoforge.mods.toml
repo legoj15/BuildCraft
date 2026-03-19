@@ -25,8 +25,11 @@ The library module for BuildCraft 8.
 modId="buildcraftcore"
 version="1.21.11-8.0.0"
 displayName="BuildCraft Core"
+logoFile="logo.png"
+credits="Created by SpaceToad"
+authors="SpaceToad, BuildCraft Team"
 description='''
-The core module for BuildCraft 8.
+Extending Minecraft with pipes, auto-crafting, quarries, engines and much more!
 '''
 
 # ─── BuildCraft Builders ─────────────────────────────────────────────────────

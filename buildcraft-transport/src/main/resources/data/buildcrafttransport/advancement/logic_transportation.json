@@ -1,0 +1,11 @@
+{
+  "display": {
+    "icon": { "id": "buildcrafttransport:pipe_wood_item" },
+    "title": { "translate": "advancements.buildcrafttransport.logic_transportation.title" },
+    "description": { "translate": "advancements.buildcrafttransport.logic_transportation.description" }
+  },
+  "parent": "buildcrafttransport:pipe_dream",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

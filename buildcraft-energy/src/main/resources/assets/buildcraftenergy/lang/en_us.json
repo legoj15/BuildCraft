@@ -99,5 +99,19 @@
     "gui.help": "Help",
     "gui.buildcraft.stirling_engine.help": "Burns solid fuel to produce MJ power. Heat increases output. Overheating may cause damage.",
     "gui.buildcraft.combustion_engine.help": "Burns liquid fuel to produce MJ power. Requires coolant to prevent overheating. Higher temperature fuels produce more power.",
-    "item.buildcraftenergy.glob_of_oil": "Glob of Oil"
+    "item.buildcraftenergy.glob_of_oil": "Glob of Oil",
+    "advancements.buildcraftenergy.poweringUp.title": "Powering Up!",
+    "advancements.buildcraftenergy.poweringUp.description": "Activate a Stirling/Combustion engine with a redstone signal",
+    "advancements.buildcraftenergy.lava_power.title": "Lava Power",
+    "advancements.buildcraftenergy.lava_power.description": "Power a stirling engine with a lava bucket",
+    "advancements.buildcraftenergy.to_much_power.title": "Too much power!",
+    "advancements.buildcraftenergy.to_much_power.description": "Make an engine overheat and whack it with a wrench",
+    "advancements.buildcraftenergy.ice_cool.title": "Ice cool",
+    "advancements.buildcraftenergy.ice_cool.description": "Cool a combustion engine with something other than water",
+    "advancements.buildcraftenergy.sticky_dipping.title": "Sticky dipping",
+    "advancements.buildcraftenergy.sticky_dipping.description": "Discover the sticky nature of oil",
+    "advancements.buildcraftenergy.fine_riches.title": "Fine riches",
+    "advancements.buildcraftenergy.fine_riches.description": "Find an oil biome",
+    "advancements.buildcraftenergy.refine_and_redefine.title": "Refine and redefine",
+    "advancements.buildcraftenergy.refine_and_redefine.description": "Produce a tank full of every single type of oil and fuel"
 }

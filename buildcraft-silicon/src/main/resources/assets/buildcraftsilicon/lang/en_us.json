@@ -13,5 +13,9 @@
     "item.buildcraftsilicon.plug_facade_phased": "Phased Facade",
     "item.buildcraftsilicon.plug_facade_phased.state": "%s: %s",
     "item.buildcraftsilicon.plug_facade_phased.state_default": "Default: %s",
-    "itemGroup.buildcraft.facades": "BuildCraft Facades"
+    "itemGroup.buildcraft.facades": "BuildCraft Facades",
+    "advancements.buildcraftsilicon.laser_power.title": "Laser power",
+    "advancements.buildcraftsilicon.laser_power.description": "Make a laser",
+    "advancements.buildcraftsilicon.precision_crafting.title": "Precision crafting",
+    "advancements.buildcraftsilicon.precision_crafting.description": "Start crafting with an assembly table"
 }

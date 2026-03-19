@@ -179,6 +179,13 @@ public class FluidUtilBC {
         return stack.getAmount() + " mB " + net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(stack.getFluid());
     }
 
+    /** @return A debug string matching the 1.12.2 Tank format: "amount / capacity mB of fluidName". */
+    public static String getDebugString(FluidTank tank) {
+        FluidStack f = tank.getFluid();
+        String name = f.isEmpty() ? "n/a" : net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(f.getFluid()).toString();
+        return (f.isEmpty() ? 0 : f.getAmount()) + " / " + tank.getCapacity() + " mB of " + name;
+    }
+
     /**
      * Returns whether the given fluid is gaseous (lighter than air).
      * In NeoForge 1.21.11 this checks {@code FluidType.isLighterThanAir()},

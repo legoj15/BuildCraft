@@ -2,5 +2,6 @@
     "parent": "block/cube_all",
     "textures": {
         "all": "buildcraftfactory:block/tube/default"
-    }
+    },
+    "render_type": "minecraft:cutout"
 }

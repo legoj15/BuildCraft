@@ -91,7 +91,15 @@ public class BCFactory {
         event.registerBlockEntity(
             Capabilities.Fluid.BLOCK,
             BCFactoryBlockEntities.PUMP.get(),
-            (pump, direction) -> new FluidTankResourceHandler(pump.getTank())
+            // In 1.12.2, tank.setCanFill(false) prevented external blocks from
+            // pushing fluids in. Only the pump itself fills the tank internally.
+            (pump, direction) -> new FluidTankResourceHandler(pump.getTank()) {
+                @Override
+                public int insert(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource,
+                                  int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
+                    return 0; // drain-only
+                }
+            }
         );
         event.registerBlockEntity(
             Capabilities.Fluid.BLOCK,

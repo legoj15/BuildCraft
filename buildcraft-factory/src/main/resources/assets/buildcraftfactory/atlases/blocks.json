@@ -1,0 +1,9 @@
+{
+    "sources": [
+        {
+            "type": "minecraft:directory",
+            "source": "block/pump",
+            "prefix": "block/pump/"
+        }
+    ]
+}

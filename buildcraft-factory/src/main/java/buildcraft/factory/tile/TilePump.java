@@ -305,12 +305,14 @@ public class TilePump extends TileMiner implements IDebuggable {
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
+        tank.serialize(output);
         // Oil spring pos would be saved here once oil springs are ported
     }
 
     @Override
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
+        tank.deserialize(input);
         // Oil spring pos would be loaded here once oil springs are ported
     }
 
@@ -327,7 +329,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         left.add("isComplete = " + isComplete());
         left.add("progress = " + MjAPI.formatMj((long) progress));
         // TilePump-specific fields
-        left.add("fluid = " + FluidUtilBC.getDebugString(tank.getFluid()));
+        left.add("fluid = " + FluidUtilBC.getDebugString(tank));
         left.add("queue size = " + queue.size());
         left.add("infinite = " + isInfiniteWaterSource);
     }
@@ -340,7 +342,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         left.add("currentLength = " + currentLength);
         left.add("isComplete = " + isComplete());
         left.add("progress = " + MjAPI.formatMj((long) progress));
-        left.add("fluid = " + FluidUtilBC.getDebugString(tank.getFluid()));
+        left.add("fluid = " + FluidUtilBC.getDebugString(tank));
         left.add("queue size = " + queue.size());
         left.add("infinite = " + isInfiniteWaterSource);
     }

@@ -13,6 +13,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -21,8 +22,8 @@ import buildcraft.factory.tile.TileMiner;
 
 /**
  * The tube block placed below a mining well / quarry as it drills down.
- * Unbreakable and non-opaque. If a player tries to break it while a
- * TileMiner exists above, the break is prevented.
+ * Unbreakable and invisible — its visuals are handled by the pump's laser
+ * renderer (RenderPump). The block only provides collision.
  */
 public class BlockTube extends Block {
     private static final VoxelShape SHAPE = Block.box(4, 0, 4, 12, 16, 12);
@@ -44,7 +45,20 @@ public class BlockTube extends Block {
     }
 
     @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    protected RenderShape getRenderShape(BlockState state) {
+        // Invisible — the pump's BER renders the tube as a laser beam
+        return RenderShape.INVISIBLE;
+    }
+
+    @Override
+    protected boolean propagatesSkylightDown(BlockState state) {
+        return true;
+    }
+
+    @Override
+    public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
+            net.minecraft.world.item.ItemStack toolStack, boolean willHarvest,
+            net.minecraft.world.level.material.FluidState fluid) {
         // Walk upwards to find if a TileMiner is above this tube column
         BlockPos checkPos = pos;
         while (level.getBlockState(checkPos = checkPos.above()).getBlock() == this) {
@@ -52,9 +66,8 @@ public class BlockTube extends Block {
         }
         if (level.getBlockEntity(checkPos) instanceof TileMiner) {
             // Don't allow breaking — the miner owns this tube
-            // Return without calling super to skip the break
-            return state;
+            return false;
         }
-        return super.playerWillDestroy(level, pos, state, player);
+        return super.onDestroyedByPlayer(state, level, pos, player, toolStack, willHarvest, fluid);
     }
 }

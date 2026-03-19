@@ -35,4 +35,9 @@ public class LocaleUtil {
     public static String localizeHeat(float heat) {
         return localizeHeat((double) heat);
     }
+
+    /** Format fluid flow for display (e.g. "40 mB/t"), matching 1.12.2's tooltip format. */
+    public static String localizeFluidFlow(int mbPerTick) {
+        return mbPerTick + " mB/t";
+    }
 }

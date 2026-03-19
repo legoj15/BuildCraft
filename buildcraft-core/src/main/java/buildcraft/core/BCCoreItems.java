@@ -59,7 +59,19 @@ public class BCCoreItems {
                         .registerSimpleBlockItem("engine_redstone", BCCoreBlocks.ENGINE_REDSTONE);
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> ENGINE_CREATIVE = ITEMS
-                        .registerSimpleBlockItem("engine_creative", BCCoreBlocks.ENGINE_CREATIVE);
+                        .registerItem("engine_creative", props -> new net.minecraft.world.item.BlockItem(
+                                BCCoreBlocks.ENGINE_CREATIVE.get(), props) {
+                                @Override
+                                public void appendHoverText(net.minecraft.world.item.ItemStack stack,
+                                        TooltipContext context,
+                                        net.minecraft.world.item.component.TooltipDisplay display,
+                                        java.util.function.Consumer<net.minecraft.network.chat.Component> tooltip,
+                                        net.minecraft.world.item.TooltipFlag flag) {
+                                        tooltip.accept(net.minecraft.network.chat.Component.translatable(
+                                                "tip.block.engine_creative")
+                                                .withStyle(net.minecraft.ChatFormatting.GRAY));
+                                }
+                        });
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> MARKER_VOLUME = ITEMS
                         .registerSimpleBlockItem("marker_volume", BCCoreBlocks.MARKER_VOLUME);

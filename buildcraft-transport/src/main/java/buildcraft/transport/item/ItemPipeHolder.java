@@ -6,11 +6,17 @@
 
 package buildcraft.transport.item;
 
+import java.util.function.Consumer;
+
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.block.Block;
 
 import buildcraft.api.transport.pipe.IItemPipe;
@@ -18,6 +24,7 @@ import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeDefinition;
 
 import buildcraft.lib.misc.ColourUtil;
+import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.transport.BCTransportItems;
 
 /** An item that, when placed, creates a pipe block with the associated {@link PipeDefinition}. */
@@ -51,5 +58,29 @@ public class ItemPipeHolder extends BlockItem implements IItemPipe {
             return Component.literal("").append(colourName).append(" ").append(super.getName(stack));
         }
         return super.getName(stack);
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
+                                Consumer<Component> tooltip, TooltipFlag flag) {
+        // Descriptive tip from lang file (e.g. "Extraction pipe", "Sorts items")
+        String id = definition.identifier; // e.g. "buildcrafttransport:wood_item"
+        int colon = id.indexOf(':');
+        String path = colon >= 0 ? id.substring(colon + 1) : id;
+        String tipKey = "tip.pipe." + path;
+        if (I18n.exists(tipKey)) {
+            tooltip.accept(Component.literal(I18n.get(tipKey)).withStyle(ChatFormatting.GRAY));
+        }
+
+        // Flow rate tooltip for fluid and power pipes
+        if (definition.flowType == PipeApi.flowFluids) {
+            PipeApi.FluidTransferInfo fti = PipeApi.getFluidTransferInfo(definition);
+            tooltip.accept(Component.literal(LocaleUtil.localizeFluidFlow(fti.transferPerTick))
+                    .withStyle(ChatFormatting.GRAY));
+        } else if (definition.flowType == PipeApi.flowPower) {
+            PipeApi.PowerTransferInfo pti = PipeApi.getPowerTransferInfo(definition);
+            tooltip.accept(Component.literal(LocaleUtil.localizeMjFlow(pti.transferPerTick))
+                    .withStyle(ChatFormatting.GRAY));
+        }
     }
 }

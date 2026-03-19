@@ -2,17 +2,16 @@
   "parent": "minecraft:recipes/root",
   "rewards": {
     "recipes": [
-      "buildcraftcore:engine_redstone",
-      "buildcraftcore:paintbrush"
+      "buildcraftcore:marker_connector"
     ]
   },
   "criteria": {
-    "has_gear_wood": {
+    "has_wrench": {
       "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [
           {
-            "items": "buildcraftcore:gear_wood"
+            "items": "buildcraftcore:wrench"
           }
         ]
       }
@@ -20,7 +19,7 @@
   },
   "requirements": [
     [
-      "has_gear_wood"
+      "has_wrench"
     ]
   ]
 }

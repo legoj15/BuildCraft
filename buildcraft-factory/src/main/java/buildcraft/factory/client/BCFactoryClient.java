@@ -12,6 +12,7 @@ import buildcraft.factory.client.gui.GuiDistiller;
 import buildcraft.factory.client.gui.GuiTank;
 import buildcraft.factory.client.render.RenderDistiller;
 import buildcraft.factory.client.render.RenderHeatExchange;
+import buildcraft.factory.client.render.RenderMiningWell;
 import buildcraft.factory.client.render.RenderPump;
 import buildcraft.factory.client.render.RenderTank;
 
@@ -30,5 +31,6 @@ public class BCFactoryClient {
         event.registerBlockEntityRenderer(BCFactoryBlockEntities.DISTILLER.get(), RenderDistiller::new);
         event.registerBlockEntityRenderer(BCFactoryBlockEntities.HEAT_EXCHANGE.get(), RenderHeatExchange::new);
         event.registerBlockEntityRenderer(BCFactoryBlockEntities.PUMP.get(), RenderPump::new);
+        event.registerBlockEntityRenderer(BCFactoryBlockEntities.MINING_WELL.get(), RenderMiningWell::new);
     }
 }

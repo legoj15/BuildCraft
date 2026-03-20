@@ -111,6 +111,14 @@ public class BCEnergy {
                 // Fallback: just append if quarry isn't loaded
                 event.accept(new net.minecraft.world.item.ItemStack(BCEnergyItems.GLOB_OF_OIL.get()));
             }
+
+            // Fluid buckets — only add cool (heat==0) variants, matching 1.12.2 behavior
+            for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
+                if (entry.heat() == 0) {
+                    event.accept(new net.minecraft.world.item.ItemStack(entry.bucket().get()),
+                            net.minecraft.world.item.CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+                }
+            }
         }
     }
 

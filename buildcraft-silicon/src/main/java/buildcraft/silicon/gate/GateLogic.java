@@ -51,7 +51,6 @@ import buildcraft.lib.statement.TriggerWrapper.TriggerWrapperInternal;
 import buildcraft.lib.statement.TriggerWrapper.TriggerWrapperInternalSided;
 
 import buildcraft.silicon.plug.PluggableGate;
-// import buildcraft.transport.wire.WorldSavedDataWireSystems; // TODO: Port Wire Systems
 
 public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContainer {
 
@@ -473,7 +472,15 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
             // FIXME: add call to "wires.emittingColour(turnedOff)"
 
             if (BCModules.TRANSPORT.isLoaded() && !getPipeHolder().getPipeWorld().isClientSide()) {
-                // WorldSavedDataWireSystems.get(getPipeHolder().getPipeWorld()).gatesChanged = true; // TODO: Port Wire Systems
+                try {
+                    Class<?> clazz = Class.forName("buildcraft.transport.wire.SavedDataWireSystems");
+                    java.lang.reflect.Method getMethod = clazz.getMethod("get", net.minecraft.world.level.Level.class);
+                    Object wireSystems = getMethod.invoke(null, getPipeHolder().getPipeWorld());
+                    java.lang.reflect.Field field = clazz.getField("gatesChanged");
+                    field.setBoolean(wireSystems, true);
+                } catch (Exception e) {
+                    // Transport module wire systems not available
+                }
             }
         }
 

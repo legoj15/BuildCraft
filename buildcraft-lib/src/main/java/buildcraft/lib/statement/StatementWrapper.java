@@ -23,7 +23,7 @@ import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.ITrigger;
 
 import buildcraft.lib.misc.ColourUtil;
-import buildcraft.lib.misc.LocaleUtil;
+import net.minecraft.client.resources.language.I18n;
 
 public abstract class StatementWrapper implements IStatement, Comparable<StatementWrapper> {
     public final IStatement delegate;
@@ -96,7 +96,7 @@ public abstract class StatementWrapper implements IStatement, Comparable<Stateme
         if (sourcePart != EnumPipePart.CENTER) {
             list = new ArrayList<>(list);
             String translated = ColourUtil.getTextFullTooltip(sourcePart.face);
-            list.add(LocaleUtil.localize("gate.side", translated));
+            list.add(I18n.get("gate.side", translated));
         }
         return list;
     }

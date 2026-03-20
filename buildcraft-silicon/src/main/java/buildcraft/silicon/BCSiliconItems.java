@@ -7,6 +7,8 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 
 import buildcraft.silicon.item.ItemPluggableFacade;
+import buildcraft.silicon.item.ItemPluggableGate;
+import buildcraft.silicon.item.ItemGateCopier;
 
 public class BCSiliconItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCSilicon.MODID);
@@ -41,12 +43,16 @@ public class BCSiliconItems {
             ITEMS.registerItem("redstone_diamond_chipset", Item::new);
 
     // Gate Copier
-    public static final DeferredItem<Item> GATE_COPIER =
-            ITEMS.registerItem("gate_copier", Item::new, props -> props.stacksTo(1));
+    public static final DeferredItem<ItemGateCopier> GATE_COPIER =
+            ITEMS.registerItem("gate_copier", ItemGateCopier::new);
 
     // Facade
     public static final DeferredItem<ItemPluggableFacade> PLUG_FACADE =
             ITEMS.registerItem("plug_facade", ItemPluggableFacade::new);
+
+    // Gate
+    public static final DeferredItem<ItemPluggableGate> PLUG_GATE =
+            ITEMS.registerItem("plug_gate", ItemPluggableGate::new);
 
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);

@@ -100,7 +100,6 @@ public class BCSilicon {
 
             // Gates
             buildcraft.silicon.item.ItemPluggableGate gateItem = BCSiliconItems.PLUG_GATE.get();
-            event.accept(new ItemStack(gateItem));
             for (buildcraft.silicon.gate.EnumGateMaterial material : buildcraft.silicon.gate.EnumGateMaterial.VALUES) {
                 if (!material.canBeModified) continue;
                 for (buildcraft.silicon.gate.EnumGateLogic logic : buildcraft.silicon.gate.EnumGateLogic.VALUES) {

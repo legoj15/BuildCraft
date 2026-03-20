@@ -1,6 +1,21 @@
 {
     "sources": [
         {
+            "type": "minecraft:directory",
+            "source": "block/engine",
+            "prefix": "block/engine/"
+        },
+        {
+            "type": "minecraft:directory",
+            "source": "block/pump",
+            "prefix": "block/pump/"
+        },
+        {
+            "type": "minecraft:directory",
+            "source": "pipes",
+            "prefix": "pipes/"
+        },
+        {
             "type": "minecraft:single",
             "resource": "buildcraftcore:lasers/marker_default_possible"
         },

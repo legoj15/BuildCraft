@@ -1,6 +1,6 @@
 {
   "display": {
-    "icon": { "id": "buildcraftbuilders:architect" },
+    "icon": { "id": "buildcraftbuilders:builder" },
     "title": { "translate": "advancements.buildcraftbuilders.start_of_something_big.title" },
     "description": { "translate": "advancements.buildcraftbuilders.start_of_something_big.description" },
     "frame": "goal"

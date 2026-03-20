@@ -58,6 +58,10 @@ tasks.register('fatJar', Jar) {
             // Exclude per-module META-INF descriptors — we use the merged one
             exclude 'META-INF/neoforge.mods.toml'
             exclude 'META-INF/accesstransformer.cfg'
+            // Exclude per-module atlas source files — we use the merged one
+            // (SpriteSourceList only loads assets/minecraft/atlases/*.json, so
+            //  multiple modules' copies would conflict with DuplicatesStrategy.EXCLUDE)
+            exclude 'assets/minecraft/atlases/**'
         }
     }
 

@@ -1,6 +1,6 @@
 {
   "display": {
-    "icon": { "id": "buildcrafttransport:pipe_sealant" },
+    "icon": { "id": "buildcrafttransport:waterproof" },
     "title": { "translate": "advancements.buildcrafttransport.sealing_fluids.title" },
     "description": { "translate": "advancements.buildcrafttransport.sealing_fluids.description" }
   },

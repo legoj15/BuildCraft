@@ -1,6 +1,6 @@
 {
   "display": {
-    "icon": { "id": "buildcraftbuilders:quarry" },
+    "icon": { "id": "buildcraftbuilders:filler" },
     "title": { "translate": "advancements.buildcraftbuilders.building_for_the_future.title" },
     "description": { "translate": "advancements.buildcraftbuilders.building_for_the_future.description" },
     "frame": "goal"

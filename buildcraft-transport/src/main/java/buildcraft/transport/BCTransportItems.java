@@ -12,6 +12,7 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.transport.item.ItemPluggableSimple;
+import buildcraft.transport.item.ItemWire;
 
 import buildcraft.transport.item.ItemPipeHolder;
 
@@ -45,7 +46,18 @@ public class BCTransportItems {
             props -> new ItemPluggableSimple(props, BCTransportPlugs.powerAdaptor,
                     ItemPluggableSimple.PIPE_BEHAVIOUR_ACCEPTS_RS_POWER));
 
-    // -- Pipe Items --
+    // -- Wire Items (one per DyeColor) --
+    public static final java.util.Map<DyeColor, DeferredItem<ItemWire>> WIRE_ITEMS;
+    static {
+        java.util.Map<DyeColor, DeferredItem<ItemWire>> map = new java.util.EnumMap<>(DyeColor.class);
+        for (DyeColor color : DyeColor.values()) {
+            DyeColor c = color; // effectively final for lambda
+            map.put(color, ITEMS.registerItem("wire_" + color.getName(),
+                    props -> new ItemWire(props, c)));
+        }
+        WIRE_ITEMS = java.util.Collections.unmodifiableMap(map);
+    }
+
     // PIPE_WOOD_ITEM uses ItemPipeHolder to tie the item to the pipe_holder block + pipe definition.
     // Other pipes remain simple Item stubs until they are individually ported.
 

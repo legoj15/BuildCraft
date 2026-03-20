@@ -75,7 +75,17 @@ public class BCTransport {
 
         // Register server tick event for flushing pipe item packets
         NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class,
-                event -> PipeItemMessageQueue.serverTick());
+                event -> {
+                    PipeItemMessageQueue.serverTick();
+                });
+
+        // Register server-side wire system tick
+        NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.event.tick.LevelTickEvent.Post.class,
+                event -> {
+                    if (event.getLevel() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                        buildcraft.transport.wire.SavedDataWireSystems.get(serverLevel).tick();
+                    }
+                });
 
         LOGGER.info("BuildCraft Transport initialized");
     }
@@ -91,6 +101,10 @@ public class BCTransport {
         if (event.getTabKey() == BCTransportCreativeTabs.PLUGS_TAB_KEY) {
             event.accept(BCTransportItems.PLUG_BLOCKER.get());
             event.accept(BCTransportItems.PLUG_POWER_ADAPTOR.get());
+            // Wire items
+            for (net.minecraft.world.item.DyeColor color : net.minecraft.world.item.DyeColor.values()) {
+                event.accept(BCTransportItems.WIRE_ITEMS.get(color).get());
+            }
         }
 
         // All pipe items go in the dedicated Pipes tab
@@ -153,6 +167,16 @@ public class BCTransport {
                 MessagePipePayload.TYPE,
                 MessagePipePayload.STREAM_CODEC,
                 MessagePipePayload::handle
+        );
+        registrar.playToClient(
+                buildcraft.transport.wire.PayloadWireSystems.TYPE,
+                buildcraft.transport.wire.PayloadWireSystems.STREAM_CODEC,
+                buildcraft.transport.wire.PayloadWireSystems::handle
+        );
+        registrar.playToClient(
+                buildcraft.transport.wire.PayloadWireSystemsPowered.TYPE,
+                buildcraft.transport.wire.PayloadWireSystemsPowered.STREAM_CODEC,
+                buildcraft.transport.wire.PayloadWireSystemsPowered::handle
         );
     }
 

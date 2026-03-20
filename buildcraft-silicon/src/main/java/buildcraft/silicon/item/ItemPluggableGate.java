@@ -36,7 +36,9 @@ public class ItemPluggableGate extends Item implements IItemPluggable {
 
     public ItemStack getStack(GateVariant variant) {
         ItemStack stack = new ItemStack(this);
-        NBTUtilBC.getItemData(stack).put("gate", variant.writeToNBT());
+        CompoundTag data = NBTUtilBC.getItemData(stack);
+        data.put("gate", variant.writeToNBT());
+        NBTUtilBC.setItemData(stack, data);
         return stack;
     }
 

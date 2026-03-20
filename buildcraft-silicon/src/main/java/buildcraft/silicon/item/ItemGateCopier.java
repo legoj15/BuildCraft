@@ -48,9 +48,12 @@ public class ItemGateCopier extends Item {
         if (getCopiedGateData(stack) == null) {
             return InteractionResult.PASS;
         }
-        NBTUtilBC.getItemData(stack).remove(NBT_DATA);
-        if (NBTUtilBC.getItemData(stack).isEmpty()) {
-            stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, null);
+        CompoundTag data = NBTUtilBC.getItemData(stack);
+        data.remove(NBT_DATA);
+        if (data.isEmpty()) {
+            stack.remove(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        } else {
+            NBTUtilBC.setItemData(stack, data);
         }
         return InteractionResult.SUCCESS;
     }
@@ -64,6 +67,8 @@ public class ItemGateCopier extends Item {
     }
 
     public static void setCopiedGateData(ItemStack stack, CompoundTag nbt) {
-        NBTUtilBC.getItemData(stack).put(NBT_DATA, nbt);
+        CompoundTag data = NBTUtilBC.getItemData(stack);
+        data.put(NBT_DATA, nbt);
+        NBTUtilBC.setItemData(stack, data);
     }
 }

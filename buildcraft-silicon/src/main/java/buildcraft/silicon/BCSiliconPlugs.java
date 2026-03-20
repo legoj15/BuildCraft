@@ -14,15 +14,20 @@ import buildcraft.api.transport.pluggable.PluggableDefinition.IPluggableNbtReade
 import buildcraft.api.transport.pluggable.PluggableDefinition.IPluggableNetLoader;
 
 import buildcraft.silicon.plug.PluggableFacade;
+import buildcraft.silicon.plug.PluggableGate;
 
 public class BCSiliconPlugs {
 
     public static PluggableDefinition facade;
+    public static PluggableDefinition gate;
 
     public static void preInit() {
         facade = register("facade",
             (PluggableDefinition.IPluggableNbtReader) PluggableFacade::new,
             (PluggableDefinition.IPluggableNetLoader) PluggableFacade::new);
+        gate = register("gate",
+            (PluggableDefinition.IPluggableNbtReader) PluggableGate::new,
+            (PluggableDefinition.IPluggableNetLoader) PluggableGate::new);
     }
 
     private static PluggableDefinition register(String name, IPluggableNbtReader reader, IPluggableNetLoader loader) {

@@ -97,6 +97,18 @@ public class BCSilicon {
 
             // Gate Copier
             event.accept(new ItemStack(BCSiliconItems.GATE_COPIER.get()));
+
+            // Gates
+            buildcraft.silicon.item.ItemPluggableGate gateItem = BCSiliconItems.PLUG_GATE.get();
+            event.accept(new ItemStack(gateItem));
+            for (buildcraft.silicon.gate.EnumGateMaterial material : buildcraft.silicon.gate.EnumGateMaterial.VALUES) {
+                if (!material.canBeModified) continue;
+                for (buildcraft.silicon.gate.EnumGateLogic logic : buildcraft.silicon.gate.EnumGateLogic.VALUES) {
+                    for (buildcraft.silicon.gate.EnumGateModifier modifier : buildcraft.silicon.gate.EnumGateModifier.VALUES) {
+                        event.accept(gateItem.getStack(new buildcraft.silicon.gate.GateVariant(logic, material, modifier)));
+                    }
+                }
+            }
         }
 
         // Facades in their own tab

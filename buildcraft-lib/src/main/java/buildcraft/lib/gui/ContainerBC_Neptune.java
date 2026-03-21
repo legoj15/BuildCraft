@@ -178,8 +178,9 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
                 return ItemStack.EMPTY;
             }
         } else {
-            // From player to container
-            if (!this.moveItemStackTo(slotStack, 0, containerSlots, false)) {
+            // From player to container — only target slots that accept items
+            // (skip phantom, display, and output-only slots)
+            if (!moveItemStackToValid(slotStack, 0, containerSlots)) {
                 return ItemStack.EMPTY;
             }
         }
@@ -191,6 +192,46 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
         }
 
         return itemstack;
+    }
+
+    /** Like moveItemStackTo but skips slots where mayPlace() returns false.
+     *  This prevents shift-clicking items into phantom/display/output slots. */
+    private boolean moveItemStackToValid(ItemStack stack, int startIndex, int endIndex) {
+        boolean moved = false;
+
+        // First pass: try to merge with existing matching stacks
+        for (int i = startIndex; i < endIndex && !stack.isEmpty(); i++) {
+            Slot targetSlot = this.slots.get(i);
+            if (!targetSlot.mayPlace(stack)) continue;
+
+            ItemStack existing = targetSlot.getItem();
+            if (!existing.isEmpty() && ItemStack.isSameItemSameComponents(stack, existing)) {
+                int maxSize = Math.min(targetSlot.getMaxStackSize(), stack.getMaxStackSize());
+                int space = maxSize - existing.getCount();
+                if (space > 0) {
+                    int transfer = Math.min(space, stack.getCount());
+                    existing.grow(transfer);
+                    stack.shrink(transfer);
+                    targetSlot.setChanged();
+                    moved = true;
+                }
+            }
+        }
+
+        // Second pass: try to place into empty slots
+        for (int i = startIndex; i < endIndex && !stack.isEmpty(); i++) {
+            Slot targetSlot = this.slots.get(i);
+            if (!targetSlot.mayPlace(stack)) continue;
+
+            if (targetSlot.getItem().isEmpty()) {
+                int maxSize = Math.min(targetSlot.getMaxStackSize(), stack.getMaxStackSize());
+                int transfer = Math.min(maxSize, stack.getCount());
+                targetSlot.set(stack.split(transfer));
+                moved = true;
+            }
+        }
+
+        return moved;
     }
 
     @Override

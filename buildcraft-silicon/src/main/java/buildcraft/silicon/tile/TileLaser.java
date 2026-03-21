@@ -38,11 +38,12 @@ import buildcraft.lib.misc.VolumeUtil;
 import buildcraft.lib.misc.data.AverageLong;
 import buildcraft.lib.mj.MjBatteryReceiver;
 
+import buildcraft.api.tiles.IDebuggable;
 import buildcraft.silicon.BCSiliconBlockEntities;
 import buildcraft.silicon.BCSiliconBlocks;
 import buildcraft.silicon.block.BlockLaser;
 
-public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscriber {
+public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscriber, IDebuggable {
     private static final int TARGETING_RANGE = 6;
 
     private final SafeTimeTracker clientLaserMoveInterval = new SafeTimeTracker(5, 10);
@@ -288,4 +289,12 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
         }
     }
 
+    // --- Debug ---
+
+    @Override
+    public void getDebugInfo(List<String> left, List<String> right, Direction side) {
+        left.add("battery = " + battery.getStored() + " / " + battery.getCapacity());
+        left.add("target = " + targetPos);
+        left.add("average = " + averageClient);
+    }
 }

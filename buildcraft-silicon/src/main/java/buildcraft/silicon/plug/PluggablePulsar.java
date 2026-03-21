@@ -101,7 +101,7 @@ public class PluggablePulsar extends PipePluggable {
     }
 
     @Override
-    public void readPayload(FriendlyByteBuf buffer, Object side, Object ctx) {
+    public void readPayload(FriendlyByteBuf buffer, Object side, Object ctx) throws java.io.IOException {
         super.readPayload(buffer, side, ctx);
         readData(buffer);
     }

@@ -33,6 +33,7 @@ public class BCSilicon {
         BCSiliconBlocks.init(modEventBus);
         BCSiliconItems.init(modEventBus);
         BCSiliconBlockEntities.init(modEventBus);
+        BCSiliconMenuTypes.init(modEventBus);
         BCSiliconCreativeTabs.init(modEventBus);
 
         // Register pluggable definitions (facade, etc.)
@@ -47,6 +48,8 @@ public class BCSilicon {
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(net.neoforged.bus.api.EventPriority.LOWEST, this::addCreativeTabItems);
+
+        // TODO: Register laser beam BlockEntityRenderer once ported to 1.21.11 render API
 
         LOGGER.info("BuildCraft Silicon initialized");
     }
@@ -72,6 +75,9 @@ public class BCSilicon {
             // Set up the facade API references
             FacadeAPI.facadeItem = BCSiliconItems.PLUG_FACADE.get();
             FacadeAPI.registry = FacadeStateManager.INSTANCE;
+
+            // Register assembly, integration, and other recipes
+            BCSiliconRecipes.init();
 
             // Scan all registered blocks and build the facade state registry
             FacadeStateManager.init();

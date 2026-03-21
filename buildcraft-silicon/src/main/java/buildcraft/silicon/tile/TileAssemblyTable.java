@@ -77,6 +77,8 @@ public class TileAssemblyTable extends TileLaserTableBase {
                 if (!enough) {
                     iterator.remove();
                 }
+            } else if (state == EnumAssemblyRecipeState.PAUSED) {
+                // User-paused: don't promote or demote, only clicks change this
             } else {
                 if (enough) {
                     if (state == EnumAssemblyRecipeState.SAVED) {
@@ -160,7 +162,18 @@ public class TileAssemblyTable extends TileLaserTableBase {
     public void serverTick() {
         super.serverTick();
 
+        int prevSize = recipesStates.size();
+        int prevHash = recipesStates.hashCode();
+
         updateRecipes();
+
+        // Sync to clients if recipe states changed
+        if (recipesStates.size() != prevSize || recipesStates.hashCode() != prevHash) {
+            setChanged();
+            if (getLevel() != null) {
+                getLevel().sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+            }
+        }
 
         if (getTarget() > 0) {
             if (power >= getTarget()) {

@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -28,16 +27,18 @@ import net.minecraft.world.level.storage.ValueOutput;
 import buildcraft.api.mj.ILaserTarget;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.recipes.IngredientStack;
+import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.lib.misc.data.AverageLong;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
-public abstract class TileLaserTableBase extends TileBC_Neptune implements ILaserTarget {
+public abstract class TileLaserTableBase extends TileBC_Neptune implements ILaserTarget, IDebuggable {
     private static final long MJ_FLOW_ROUND = MjAPI.MJ / 10;
     private final AverageLong avgPower = new AverageLong(120);
     public long avgPowerClient;
     public long power;
+    private long lastSyncedPower = -1;
 
     protected TileLaserTableBase(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -66,10 +67,21 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
     /** Called each server tick by the block's ticker. */
     public void serverTick() {
         avgPower.tick();
+        avgPowerClient = (long) avgPower.getAverage();
 
         if (getTarget() <= 0) {
-            power = 0;
+            // Don't zero power — retain it so pausing a recipe doesn't waste MJ.
+            // Power will be applied to the next active recipe.
             avgPower.clear();
+        }
+
+        // Sync power to clients when it changes
+        if (power != lastSyncedPower) {
+            lastSyncedPower = power;
+            setChanged();
+            if (getLevel() != null) {
+                getLevel().sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+            }
         }
     }
 
@@ -79,6 +91,7 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
         output.putLong("power", power);
+        output.putLong("avg_power", avgPowerClient);
         output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
     }
 
@@ -86,6 +99,7 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         power = input.getLongOr("power", 0L);
+        avgPowerClient = input.getLongOr("avg_power", 0L);
         input.read("items", CompoundTag.CODEC).ifPresent(tag -> itemManager.deserializeNBT(tag));
     }
 
@@ -103,9 +117,10 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
 
     // --- Debug ---
 
-    public void getDebugInfo(List<Component> left, List<Component> right, Direction side) {
-        left.add(Component.literal("power - " + power));
-        left.add(Component.literal("target - " + getTarget()));
+    @Override
+    public void getDebugInfo(List<String> left, List<String> right, Direction side) {
+        left.add("power = " + power);
+        left.add("target = " + getTarget());
     }
 
     // --- Ingredient extraction helper ---

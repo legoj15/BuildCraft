@@ -59,6 +59,8 @@ public class BCLib {
                     buildcraft.lib.misc.data.ModelVariableData.onModelBake();
                 }
             );
+            // Register debug overlay for IDebuggable block entities on F3 screen
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(buildcraft.lib.client.BCDebugOverlay.class);
         }
     }
 }

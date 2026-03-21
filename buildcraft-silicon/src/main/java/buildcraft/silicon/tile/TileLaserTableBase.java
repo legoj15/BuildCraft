@@ -38,6 +38,7 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
     private final AverageLong avgPower = new AverageLong(120);
     public long avgPowerClient;
     public long power;
+    private long lastSyncedPower = -1;
 
     protected TileLaserTableBase(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -66,10 +67,20 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
     /** Called each server tick by the block's ticker. */
     public void serverTick() {
         avgPower.tick();
+        avgPowerClient = (long) avgPower.getAverage();
 
         if (getTarget() <= 0) {
             power = 0;
             avgPower.clear();
+        }
+
+        // Sync power to clients when it changes
+        if (power != lastSyncedPower) {
+            lastSyncedPower = power;
+            setChanged();
+            if (getLevel() != null) {
+                getLevel().sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+            }
         }
     }
 
@@ -79,6 +90,7 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
         output.putLong("power", power);
+        output.putLong("avg_power", avgPowerClient);
         output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
     }
 
@@ -86,6 +98,7 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         power = input.getLongOr("power", 0L);
+        avgPowerClient = input.getLongOr("avg_power", 0L);
         input.read("items", CompoundTag.CODEC).ifPresent(tag -> itemManager.deserializeNBT(tag));
     }
 

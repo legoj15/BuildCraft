@@ -19,6 +19,7 @@ import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.slot.SlotDisplay;
 
 import buildcraft.silicon.BCSiliconMenuTypes;
+import buildcraft.silicon.EnumAssemblyRecipeState;
 import buildcraft.silicon.tile.TileAssemblyTable;
 
 public class ContainerAssemblyTable extends ContainerBCTile<TileAssemblyTable> {
@@ -47,6 +48,24 @@ public class ContainerAssemblyTable extends ContainerBCTile<TileAssemblyTable> {
         addFullPlayerInventory(8, 123);
     }
 
+    @Override
+    public boolean clickMenuButton(Player player, int index) {
+        if (tile == null) return false;
+        var keys = new ArrayList<>(tile.recipesStates.keySet());
+        if (index < 0 || index >= keys.size()) return false;
+
+        TileAssemblyTable.AssemblyInstruction instruction = keys.get(index);
+        EnumAssemblyRecipeState current = tile.recipesStates.get(instruction);
+
+        // Toggle between POSSIBLE and SAVED
+        if (current == EnumAssemblyRecipeState.POSSIBLE) {
+            tile.recipesStates.put(instruction, EnumAssemblyRecipeState.SAVED);
+        } else {
+            tile.recipesStates.put(instruction, EnumAssemblyRecipeState.POSSIBLE);
+        }
+        return true;
+    }
+
     private ItemStack getDisplay(int index) {
         return index < tile.recipesStates.size()
                 ? new ArrayList<>(tile.recipesStates.keySet()).get(index).output
@@ -59,3 +78,4 @@ public class ContainerAssemblyTable extends ContainerBCTile<TileAssemblyTable> {
         return be instanceof TileAssemblyTable t ? t : null;
     }
 }
+

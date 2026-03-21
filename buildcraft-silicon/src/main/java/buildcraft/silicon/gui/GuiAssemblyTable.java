@@ -93,7 +93,9 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
             for (int i = 0; i < menu.tile.recipesStates.size(); i++) {
                 IGuiArea area = getRecipeArea(i);
                 if (area.contains(mouseX, mouseY)) {
-                    // TODO: send recipe state toggle to server via container messaging
+                    if (minecraft != null && minecraft.gameMode != null) {
+                        minecraft.gameMode.handleInventoryButtonClick(menu.containerId, i);
+                    }
                     return true;
                 }
             }

@@ -54,6 +54,22 @@ public class BCSiliconItems {
     public static final DeferredItem<ItemPluggableGate> PLUG_GATE =
             ITEMS.registerItem("plug_gate", ItemPluggableGate::new);
 
+    // Pulsar
+    public static final DeferredItem<Item> PLUG_PULSAR =
+            ITEMS.registerItem("plug_pulsar", Item::new);
+
+    // Lens
+    public static final DeferredItem<Item> PLUG_LENS =
+            ITEMS.registerItem("plug_lens", Item::new);
+
+    // Light Sensor
+    public static final DeferredItem<Item> PLUG_LIGHT_SENSOR =
+            ITEMS.registerItem("plug_light_sensor", Item::new);
+
+    // Timer
+    public static final DeferredItem<Item> PLUG_TIMER =
+            ITEMS.registerItem("plug_timer", Item::new);
+
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);
     }

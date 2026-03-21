@@ -16,20 +16,23 @@ public class BCSiliconBlocks {
             BlockLaser::new,
             BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion());
 
-    public static final DeferredBlock<BlockLaserTable> ASSEMBLY_TABLE = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockLaserTable> ASSEMBLY_TABLE = BLOCKS.register(
             "assembly_table",
-            BlockLaserTable::new,
-            BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion());
+            () -> new BlockLaserTable(
+                BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion(),
+                BCSiliconBlockEntities.ASSEMBLY_TABLE));
 
-    public static final DeferredBlock<BlockLaserTable> ADVANCED_CRAFTING_TABLE = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockLaserTable> ADVANCED_CRAFTING_TABLE = BLOCKS.register(
             "advanced_crafting_table",
-            BlockLaserTable::new,
-            BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion());
+            () -> new BlockLaserTable(
+                BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion(),
+                BCSiliconBlockEntities.ADVANCED_CRAFTING_TABLE));
 
-    public static final DeferredBlock<BlockLaserTable> INTEGRATION_TABLE = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockLaserTable> INTEGRATION_TABLE = BLOCKS.register(
             "integration_table",
-            BlockLaserTable::new,
-            BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion());
+            () -> new BlockLaserTable(
+                BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion(),
+                BCSiliconBlockEntities.INTEGRATION_TABLE));
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

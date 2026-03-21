@@ -57,11 +57,16 @@ public class ContainerAssemblyTable extends ContainerBCTile<TileAssemblyTable> {
         TileAssemblyTable.AssemblyInstruction instruction = keys.get(index);
         EnumAssemblyRecipeState current = tile.recipesStates.get(instruction);
 
-        // Toggle between POSSIBLE and SAVED
         if (current == EnumAssemblyRecipeState.POSSIBLE) {
+            // Select: mark as saved so it becomes eligible for crafting
             tile.recipesStates.put(instruction, EnumAssemblyRecipeState.SAVED);
-        } else {
+        } else if (current == EnumAssemblyRecipeState.SAVED) {
+            // Deselect: go back to possible, remove from consideration
             tile.recipesStates.put(instruction, EnumAssemblyRecipeState.POSSIBLE);
+        } else {
+            // Pause: SAVED_ENOUGH or SAVED_ENOUGH_ACTIVE → SAVED
+            // MJ is retained — updateRecipes will re-promote when resumed
+            tile.recipesStates.put(instruction, EnumAssemblyRecipeState.SAVED);
         }
         return true;
     }

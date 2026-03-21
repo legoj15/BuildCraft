@@ -52,5 +52,9 @@
     "advancements.buildcraftcore.paper.title": "Paper collector",
     "advancements.buildcraftcore.paper.description": "Use every piece of paper",
     "advancements.buildcraftcore.goggles.title": "I can see!",
-    "advancements.buildcraftcore.goggles.description": "Wear the goggles"
+    "advancements.buildcraftcore.goggles.description": "Wear the goggles",
+    "gui.power": "Power",
+    "gui.assemblyCurrentRequired": "Required",
+    "gui.stored": "Stored",
+    "gui.assemblyRate": "Rate"
 }

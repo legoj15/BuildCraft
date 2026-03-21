@@ -190,15 +190,17 @@ public class WorkbenchCrafting {
             InventoryUtil.addToBestAcceptor(tile.getLevel(), tile.getBlockPos(), null, leftover);
         }
 
-        // Step 5: Crafting consumed all inputs — clear the grid
+        // Step 5: Get remaining items BEFORE clearing the grid, because
+        // CraftingInput.of() stores a reference to the same list — clearing
+        // gridContents would also empty the items inside craftInput.
+        NonNullList<ItemStack> remainingStacks = currentRecipe.value().getRemainingItems(craftInput);
+
+        // Step 6: Crafting consumed all inputs — clear the grid
         for (int s = 0; s < gridContents.size(); s++) {
             gridContents.set(s, ItemStack.EMPTY);
         }
 
-        // Step 6: Handle remaining items (e.g. empty buckets from water bucket recipes)
-        // Note: CraftingInput.of() trims the grid, so remainingStacks may have fewer
-        // entries than gridContents. We just insert remainders directly into materials.
-        NonNullList<ItemStack> remainingStacks = currentRecipe.value().getRemainingItems(craftInput);
+        // Step 7: Handle remaining items (e.g. empty buckets from cake recipe)
         for (int s = 0; s < remainingStacks.size(); s++) {
             ItemStack remaining = remainingStacks.get(s);
             if (!remaining.isEmpty()) {

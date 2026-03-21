@@ -182,12 +182,17 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
             worldHasUpdated = false;
         }
 
-        if (!isPowerNeededAt(targetPos)) {
+        // Only target when we have power to send
+        if (battery.getStored() <= 0) {
             targetPos = null;
-        }
+        } else {
+            if (!isPowerNeededAt(targetPos)) {
+                targetPos = null;
+            }
 
-        if (serverTargetMoveInterval.markTimeIfDelay(level) || !isPowerNeededAt(targetPos)) {
-            randomlyChooseTargetPos();
+            if (serverTargetMoveInterval.markTimeIfDelay(level) || !isPowerNeededAt(targetPos)) {
+                randomlyChooseTargetPos();
+            }
         }
 
         ILaserTarget target = getTarget();
@@ -274,10 +279,21 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
     // --- Lifecycle ---
 
     @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level != null && level.isClientSide()) {
+            buildcraft.silicon.client.RenderLaser.addLaser(this);
+        }
+    }
+
+    @Override
     public void setRemoved() {
         super.setRemoved();
         if (level != null && !level.isClientSide()) {
             LocalBlockUpdateNotifier.instance(level).removeSubscriberFromUpdateNotifications(this);
+        }
+        if (level != null && level.isClientSide()) {
+            buildcraft.silicon.client.RenderLaser.removeLaser(this);
         }
     }
 
@@ -295,6 +311,10 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
     public void getDebugInfo(List<String> left, List<String> right, Direction side) {
         left.add("battery = " + battery.getStored() + " / " + battery.getCapacity());
         left.add("target = " + targetPos);
+        left.add("laser = " + laserPos);
         left.add("average = " + averageClient);
+        if (level != null && level.isClientSide()) {
+            left.add("active_lasers = " + buildcraft.silicon.client.RenderLaser.getActiveCount());
+        }
     }
 }

@@ -49,7 +49,10 @@ public class BCSilicon {
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(net.neoforged.bus.api.EventPriority.LOWEST, this::addCreativeTabItems);
 
-        // TODO: Register laser beam BlockEntityRenderer once ported to 1.21.11 render API
+        // Register laser beam renderer on the game event bus (client only)
+        if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(buildcraft.silicon.client.RenderLaser.class);
+        }
 
         LOGGER.info("BuildCraft Silicon initialized");
     }

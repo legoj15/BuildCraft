@@ -44,7 +44,7 @@ public class ContainerAssemblyTable extends ContainerBCTile<TileAssemblyTable> {
             }
         }
 
-        addFullPlayerInventory(8, 138);
+        addFullPlayerInventory(8, 123);
     }
 
     private ItemStack getDisplay(int index) {

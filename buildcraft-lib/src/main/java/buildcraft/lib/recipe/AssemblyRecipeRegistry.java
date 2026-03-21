@@ -6,8 +6,6 @@
 
 package buildcraft.lib.recipe;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,17 +15,15 @@ import javax.annotation.Nonnull;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.NonNullList;
-import net.minecraft.world.InteractionResult;
 
 import buildcraft.api.recipes.AssemblyRecipe;
 
-public class AssemblyRecipeRegistry  {
-    public static final Map<Identifier, AssemblyRecipe> REGISTRY = new HashMap<>();
+public class AssemblyRecipeRegistry {
+    public static final Map<String, AssemblyRecipe> REGISTRY = new HashMap<>();
 
     public static void register(AssemblyRecipe recipe) {
         REGISTRY.put(recipe.getRegistryName(), recipe);
     }
-
 
     @Nonnull
     public static List<AssemblyRecipe> getRecipesFor(@Nonnull NonNullList<ItemStack> possibleIn) {

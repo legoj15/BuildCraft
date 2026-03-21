@@ -6,8 +6,6 @@
 
 package buildcraft.lib.recipe;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,14 +13,13 @@ import javax.annotation.Nonnull;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.NonNullList;
-import net.minecraft.world.InteractionResult;
 
 import buildcraft.api.recipes.IIntegrationRecipeRegistry;
 import buildcraft.api.recipes.IntegrationRecipe;
 
 public class IntegrationRecipeRegistry implements IIntegrationRecipeRegistry {
     public static final IntegrationRecipeRegistry INSTANCE = new IntegrationRecipeRegistry();
-    public final Map<Identifier, IntegrationRecipe> recipes = new HashMap<>();
+    public final Map<Object, IntegrationRecipe> recipes = new HashMap<>();
 
     @Override
     public IntegrationRecipe getRecipeFor(@Nonnull ItemStack target, @Nonnull NonNullList<ItemStack> toIntegrate) {
@@ -33,8 +30,6 @@ public class IntegrationRecipeRegistry implements IIntegrationRecipeRegistry {
         }
         return null;
     }
-
-
 
     @Override
     public void addRecipe(IntegrationRecipe recipe) {
@@ -50,9 +45,8 @@ public class IntegrationRecipeRegistry implements IIntegrationRecipeRegistry {
         return recipes.values();
     }
 
-
     @Override
-    public IntegrationRecipe getRecipe(@Nonnull Identifier name) {
+    public IntegrationRecipe getRecipe(@Nonnull Object name) {
         return recipes.get(name);
     }
 }

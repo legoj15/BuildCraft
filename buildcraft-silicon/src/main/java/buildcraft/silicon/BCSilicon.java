@@ -74,6 +74,9 @@ public class BCSilicon {
             FacadeAPI.facadeItem = BCSiliconItems.PLUG_FACADE.get();
             FacadeAPI.registry = FacadeStateManager.INSTANCE;
 
+            // Register assembly, integration, and other recipes
+            BCSiliconRecipes.init();
+
             // Scan all registered blocks and build the facade state registry
             FacadeStateManager.init();
             LOGGER.info("Facade state manager initialized with {} valid states",

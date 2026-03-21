@@ -70,7 +70,8 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
         avgPowerClient = (long) avgPower.getAverage();
 
         if (getTarget() <= 0) {
-            power = 0;
+            // Don't zero power — retain it so pausing a recipe doesn't waste MJ.
+            // Power will be applied to the next active recipe.
             avgPower.clear();
         }
 

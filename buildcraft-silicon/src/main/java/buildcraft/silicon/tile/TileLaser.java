@@ -306,6 +306,10 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
     public void getDebugInfo(List<String> left, List<String> right, Direction side) {
         left.add("battery = " + battery.getStored() + " / " + battery.getCapacity());
         left.add("target = " + targetPos);
+        left.add("laser = " + laserPos);
         left.add("average = " + averageClient);
+        if (level != null && level.isClientSide()) {
+            left.add("active_lasers = " + buildcraft.silicon.client.RenderLaser.getActiveCount());
+        }
     }
 }

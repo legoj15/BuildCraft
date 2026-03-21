@@ -42,6 +42,11 @@ public class RenderLaser {
         ACTIVE_LASERS.remove(laser);
     }
 
+    /** Returns the number of tracked laser instances (for debug). */
+    public static int getActiveCount() {
+        return ACTIVE_LASERS.size();
+    }
+
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
         if (ACTIVE_LASERS.isEmpty()) return;

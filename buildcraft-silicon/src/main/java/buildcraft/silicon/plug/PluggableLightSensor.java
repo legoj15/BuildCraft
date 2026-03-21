@@ -11,10 +11,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 
 import buildcraft.api.transport.pipe.IPipeHolder;
+import buildcraft.api.transport.pipe.PipeEventHandler;
+import buildcraft.api.transport.pipe.PipeEventStatement;
 import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
 
 import buildcraft.silicon.BCSiliconItems;
+import buildcraft.silicon.BCSiliconStatements;
 
 public class PluggableLightSensor extends PipePluggable {
 
@@ -58,12 +61,11 @@ public class PluggableLightSensor extends PipePluggable {
         return new ItemStack(BCSiliconItems.PLUG_LIGHT_SENSOR.get());
     }
 
-    // TODO: Statement handlers (depends on BCSiliconStatements)
-    // @PipeEventHandler
-    // public void addInternalTriggers(PipeEventStatement.AddTriggerInternalSided event) {
-    //     if (event.side == this.side) {
-    //         event.triggers.add(BCSiliconStatements.TRIGGER_LIGHT_LOW);
-    //         event.triggers.add(BCSiliconStatements.TRIGGER_LIGHT_HIGH);
-    //     }
-    // }
+    @PipeEventHandler
+    public void addInternalTriggers(PipeEventStatement.AddTriggerInternalSided event) {
+        if (event.side == this.side) {
+            event.triggers.add(BCSiliconStatements.TRIGGER_LIGHT_LOW);
+            event.triggers.add(BCSiliconStatements.TRIGGER_LIGHT_HIGH);
+        }
+    }
 }

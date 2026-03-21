@@ -7,8 +7,16 @@
 package buildcraft.silicon.tile;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.mj.MjAPI;
@@ -35,6 +43,16 @@ public class TileAdvancedCraftingTable extends TileLaserTableBase {
         invMaterials = itemManager.addInvHandler("materials", 5 * 3, EnumAccess.INSERT, EnumPipePart.VALUES);
         invResults = itemManager.addInvHandler("result", 3 * 3, EnumAccess.EXTRACT, EnumPipePart.VALUES);
         crafting = new WorkbenchCrafting(3, 3, this, invBlueprint, invMaterials, invResults);
+
+        // Wire inventory change callbacks to WorkbenchCrafting
+        invBlueprint.setCallback((handler, slot, before, after) -> {
+            setChanged();
+            crafting.onInventoryChange(invBlueprint);
+        });
+        invMaterials.setCallback((handler, slot, before, after) -> {
+            setChanged();
+            crafting.onInventoryChange(invMaterials);
+        });
     }
 
     @Override
@@ -47,12 +65,24 @@ public class TileAdvancedCraftingTable extends TileLaserTableBase {
     public void serverTick() {
         super.serverTick();
 
+        ItemStack prevResult = resultClient;
         boolean didChange = crafting.tick();
+        if (didChange) {
+            resultClient = crafting.getAssumedResult().copy();
+        }
         if (crafting.canCraft()) {
             if (power >= POWER_REQ) {
                 if (crafting.craft()) {
                     power -= POWER_REQ;
                 }
+            }
+        }
+
+        // Sync to clients when recipe result changes
+        if (!ItemStack.matches(prevResult, resultClient)) {
+            setChanged();
+            if (level != null) {
+                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
             }
         }
     }
@@ -63,5 +93,33 @@ public class TileAdvancedCraftingTable extends TileLaserTableBase {
 
     public ItemHandlerSimple getInvBlueprint() {
         return invBlueprint;
+    }
+
+    // --- Save / Load ---
+
+    @Override
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        if (!resultClient.isEmpty()) {
+            output.store("resultClient", ItemStack.CODEC, resultClient);
+        }
+    }
+
+    @Override
+    public void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        resultClient = input.read("resultClient", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+    }
+
+    // --- Network Sync ---
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        return this.saveCustomOnly(registries);
+    }
+
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
     }
 }

@@ -6,21 +6,32 @@
 
 package buildcraft.silicon.container;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.StackedItemContents;
+import net.minecraft.world.inventory.RecipeBookType;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
 
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotBase;
-import buildcraft.lib.gui.slot.SlotDisplay;
 import buildcraft.lib.gui.slot.SlotOutput;
 import buildcraft.lib.gui.slot.SlotPhantom;
+import buildcraft.lib.misc.CraftingUtil;
 
 import buildcraft.silicon.BCSiliconMenuTypes;
 import buildcraft.silicon.tile.TileAdvancedCraftingTable;
 
 public class ContainerAdvancedCraftingTable extends ContainerBCTile<TileAdvancedCraftingTable> {
+
+    private final List<Slot> blueprintSlots = new ArrayList<>();
 
     // Client-side constructor (from network)
     public ContainerAdvancedCraftingTable(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
@@ -32,7 +43,7 @@ public class ContainerAdvancedCraftingTable extends ContainerBCTile<TileAdvanced
         super(BCSiliconMenuTypes.ADVANCED_CRAFTING_TABLE.get(), containerId, player, tile);
 
         // Display slot showing current recipe result
-        addSlot(new SlotDisplay(i -> tile.resultClient, 0, 127, 33));
+        addSlot(new buildcraft.lib.gui.slot.SlotDisplay(i -> tile.resultClient, 0, 127, 33));
 
         // 5x3 material input slots
         for (int y = 0; y < 3; y++) {
@@ -51,11 +62,62 @@ public class ContainerAdvancedCraftingTable extends ContainerBCTile<TileAdvanced
         // 3x3 phantom blueprint slots
         for (int y = 0; y < 3; y++) {
             for (int x = 0; x < 3; x++) {
-                addSlot(new SlotPhantom(tile.invBlueprint, x + y * 3, 33 + x * 18, 16 + y * 18, false));
+                Slot slot = new SlotPhantom(tile.invBlueprint, x + y * 3, 33 + x * 18, 16 + y * 18, false);
+                addSlot(slot);
+                blueprintSlots.add(slot);
             }
         }
 
         addFullPlayerInventory(8, 153);
+    }
+
+    // --- Recipe Book Support ---
+
+    /** @return The 3x3 blueprint grid slots (used by the recipe book component). */
+    public List<Slot> getInputGridSlots() {
+        return blueprintSlots;
+    }
+
+    /** @return Grid width for the recipe book. */
+    public int getGridWidth() {
+        return 3;
+    }
+
+    /** @return Grid height for the recipe book. */
+    public int getGridHeight() {
+        return 3;
+    }
+
+    /** @return The display slot (result preview). */
+    public Slot getResultSlot() {
+        return this.slots.get(0); // First slot added is the display slot
+    }
+
+    @Override
+    public PostPlaceAction handlePlacement(boolean useMaxItems, boolean isCreative, RecipeHolder<?> recipe,
+        ServerLevel level, Inventory playerInv) {
+        // Only handle crafting recipes
+        if (!(recipe.value() instanceof CraftingRecipe craftingRecipe)) {
+            return PostPlaceAction.NOTHING;
+        }
+
+        // Delegate to CraftingUtil (in lib where AT is applied)
+        CraftingUtil.placeRecipeInBlueprint(craftingRecipe, tile.invBlueprint);
+
+        return PostPlaceAction.PLACE_GHOST_RECIPE;
+    }
+
+    @Override
+    public void fillCraftSlotsStackedContents(StackedItemContents contents) {
+        // Report material inventory contents to the recipe book for craftability display
+        for (int i = 0; i < tile.invMaterials.getSlots(); i++) {
+            contents.accountStack(tile.invMaterials.getStackInSlot(i));
+        }
+    }
+
+    @Override
+    public RecipeBookType getRecipeBookType() {
+        return RecipeBookType.CRAFTING;
     }
 
     private static TileAdvancedCraftingTable getTile(Inventory inv, FriendlyByteBuf buf) {

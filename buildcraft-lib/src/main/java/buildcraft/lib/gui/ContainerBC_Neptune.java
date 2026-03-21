@@ -8,15 +8,23 @@ package buildcraft.lib.gui;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import com.google.common.collect.ImmutableList;
 
 import io.netty.buffer.Unpooled;
 
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.StackedItemContents;
+import net.minecraft.world.inventory.RecipeBookMenu;
+import net.minecraft.world.inventory.RecipeBookType;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
@@ -36,9 +44,13 @@ import buildcraft.lib.net.PacketBufferBC;
  * Provides shift-click logic, phantom slot handling, and widget sync via
  * {@link MessageContainerPayload}.
  */
-public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
+public abstract class ContainerBC_Neptune extends RecipeBookMenu {
 
     public static final int NET_WIDGET = 0;
+    /** Container message ID used by JEI's BlueprintTransferHandler. */
+    public static final int NET_JEI_RECIPE_TRANSFER = 100;
+    /** Container message ID used by JEI's BCGhostIngredientHandler. */
+    public static final int NET_GHOST_SLOT_SET = 101;
 
     public final Player player;
     private final List<Widget_Neptune<?>> widgets = new ArrayList<>();
@@ -137,6 +149,33 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
             } catch (Exception e) {
                 BCLog.logger.warn("[lib.container] Error handling widget data for widget " + widgetId, e);
             }
+        } else if (id == NET_JEI_RECIPE_TRANSFER && !isClient) {
+            // Server-side: JEI requested recipe placement into blueprint phantom slots.
+            // Look up the recipe by resource location and delegate to handlePlacement().
+            Identifier recipeId = Identifier.parse(buffer.readUtf());
+            if (player.level() instanceof ServerLevel serverLevel) {
+                net.minecraft.resources.ResourceKey<net.minecraft.world.item.crafting.Recipe<?>> key =
+                        net.minecraft.resources.ResourceKey.create(
+                                net.minecraft.core.registries.Registries.RECIPE, recipeId);
+                Optional<RecipeHolder<CraftingRecipe>> holder = serverLevel.recipeAccess()
+                        .byKey(key)
+                        .filter(r -> r.value() instanceof CraftingRecipe)
+                        .map(r -> (RecipeHolder<CraftingRecipe>) (RecipeHolder<?>) r);
+                holder.ifPresent(recipe -> handlePlacement(
+                        false, player.isCreative(), recipe,
+                        serverLevel, player.getInventory()));
+            }
+        } else if (id == NET_GHOST_SLOT_SET && !isClient) {
+            // Server-side: JEI ghost ingredient dropped on a phantom slot.
+            int slotIdx = buffer.readUnsignedShort();
+            String itemId = buffer.readUtf();
+            if (slotIdx >= 0 && slotIdx < slots.size() && slots.get(slotIdx) instanceof SlotPhantom phantom) {
+                net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+                        Identifier.parse(itemId)).ifPresent(itemRef -> {
+                    ItemStack stack = new ItemStack(itemRef.value(), 1);
+                    phantom.set(stack);
+                });
+            }
         }
     }
 
@@ -178,8 +217,9 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
                 return ItemStack.EMPTY;
             }
         } else {
-            // From player to container
-            if (!this.moveItemStackTo(slotStack, 0, containerSlots, false)) {
+            // From player to container — only target slots that accept items
+            // (skip phantom, display, and output-only slots)
+            if (!moveItemStackToValid(slotStack, 0, containerSlots)) {
                 return ItemStack.EMPTY;
             }
         }
@@ -193,8 +233,66 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
         return itemstack;
     }
 
+    /** Like moveItemStackTo but skips slots where mayPlace() returns false.
+     *  This prevents shift-clicking items into phantom/display/output slots. */
+    private boolean moveItemStackToValid(ItemStack stack, int startIndex, int endIndex) {
+        boolean moved = false;
+
+        // First pass: try to merge with existing matching stacks
+        for (int i = startIndex; i < endIndex && !stack.isEmpty(); i++) {
+            Slot targetSlot = this.slots.get(i);
+            if (!targetSlot.mayPlace(stack)) continue;
+
+            ItemStack existing = targetSlot.getItem();
+            if (!existing.isEmpty() && ItemStack.isSameItemSameComponents(stack, existing)) {
+                int maxSize = Math.min(targetSlot.getMaxStackSize(), stack.getMaxStackSize());
+                int space = maxSize - existing.getCount();
+                if (space > 0) {
+                    int transfer = Math.min(space, stack.getCount());
+                    existing.grow(transfer);
+                    stack.shrink(transfer);
+                    targetSlot.setChanged();
+                    moved = true;
+                }
+            }
+        }
+
+        // Second pass: try to place into empty slots
+        for (int i = startIndex; i < endIndex && !stack.isEmpty(); i++) {
+            Slot targetSlot = this.slots.get(i);
+            if (!targetSlot.mayPlace(stack)) continue;
+
+            if (targetSlot.getItem().isEmpty()) {
+                int maxSize = Math.min(targetSlot.getMaxStackSize(), stack.getMaxStackSize());
+                int transfer = Math.min(maxSize, stack.getCount());
+                targetSlot.set(stack.split(transfer));
+                moved = true;
+            }
+        }
+
+        return moved;
+    }
+
     @Override
     public boolean stillValid(Player player) {
         return true; // Subclasses override
+    }
+
+    // --- RecipeBookMenu defaults (override in containers that support recipe book) ---
+
+    @Override
+    public PostPlaceAction handlePlacement(boolean useMaxItems, boolean isCreative, RecipeHolder<?> recipe,
+        ServerLevel level, Inventory playerInv) {
+        return PostPlaceAction.NOTHING;
+    }
+
+    @Override
+    public void fillCraftSlotsStackedContents(StackedItemContents contents) {
+        // No-op by default
+    }
+
+    @Override
+    public RecipeBookType getRecipeBookType() {
+        return RecipeBookType.CRAFTING;
     }
 }

@@ -190,34 +190,27 @@ public class WorkbenchCrafting {
             InventoryUtil.addToBestAcceptor(tile.getLevel(), tile.getBlockPos(), null, leftover);
         }
 
-        // Step 5: Handle remaining items (e.g. empty buckets)
+        // Step 5: Get remaining items BEFORE clearing the grid, because
+        // CraftingInput.of() stores a reference to the same list — clearing
+        // gridContents would also empty the items inside craftInput.
         NonNullList<ItemStack> remainingStacks = currentRecipe.value().getRemainingItems(craftInput);
+
+        // Step 6: Crafting consumed all inputs — clear the grid
+        for (int s = 0; s < gridContents.size(); s++) {
+            gridContents.set(s, ItemStack.EMPTY);
+        }
+
+        // Step 7: Handle remaining items (e.g. empty buckets from cake recipe)
         for (int s = 0; s < remainingStacks.size(); s++) {
-            ItemStack inSlot = gridContents.get(s);
             ItemStack remaining = remainingStacks.get(s);
-
-            if (!inSlot.isEmpty()) {
-                inSlot.shrink(1);
-                gridContents.set(s, inSlot.isEmpty() ? ItemStack.EMPTY : inSlot);
-            }
-
             if (!remaining.isEmpty()) {
-                if (gridContents.get(s).isEmpty()) {
-                    gridContents.set(s, remaining);
-                } else if (ItemStack.isSameItemSameComponents(gridContents.get(s), remaining)) {
-                    remaining.grow(gridContents.get(s).getCount());
-                    gridContents.set(s, remaining);
-                } else {
-                    leftover = invMaterials.insert(remaining, false, false);
-                    if (!leftover.isEmpty()) {
-                        InventoryUtil.addToBestAcceptor(tile.getLevel(), tile.getBlockPos(), null, leftover);
-                    }
+                leftover = invMaterials.insert(remaining, false, false);
+                if (!leftover.isEmpty()) {
+                    InventoryUtil.addToBestAcceptor(tile.getLevel(), tile.getBlockPos(), null, leftover);
                 }
             }
         }
 
-        // Step 6: Return leftover grid contents to materials
-        returnItemsToMaterials(gridContents);
         return true;
     }
 

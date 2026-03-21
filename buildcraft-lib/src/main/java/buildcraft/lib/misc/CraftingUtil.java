@@ -6,14 +6,25 @@
 
 package buildcraft.lib.misc;
 
+import java.util.List;
+import java.util.Optional;
+
 import javax.annotation.Nullable;
 
+import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.ShapedRecipe;
+import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.minecraft.world.level.Level;
+
+import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 public final class CraftingUtil {
 
@@ -29,5 +40,60 @@ public final class CraftingUtil {
             .getRecipeFor(RecipeType.CRAFTING, input, serverLevel)
             .orElse(null);
     }
-}
 
+    /**
+     * Places a crafting recipe's ingredients into a 3x3 phantom blueprint inventory.
+     * Uses AT-opened fields (ShapelessRecipe.ingredients) which are only accessible
+     * from buildcraft-lib where the AT is declared.
+     *
+     * @param recipe The crafting recipe to place
+     * @param blueprint A 9-slot (3x3) phantom inventory to populate
+     */
+    public static void placeRecipeInBlueprint(CraftingRecipe recipe, ItemHandlerSimple blueprint) {
+        // Clear blueprint
+        for (int i = 0; i < blueprint.getSlots(); i++) {
+            blueprint.setStackInSlot(i, ItemStack.EMPTY);
+        }
+
+        if (recipe instanceof ShapedRecipe shaped) {
+            // For shaped recipes, respect the pattern width/height
+            int recipeWidth = shaped.getWidth();
+            int recipeHeight = shaped.getHeight();
+            List<Optional<Ingredient>> ingredients = shaped.pattern.ingredients();
+
+            for (int row = 0; row < recipeHeight && row < 3; row++) {
+                for (int col = 0; col < recipeWidth && col < 3; col++) {
+                    int ingredientIdx = col + row * recipeWidth;
+                    int blueprintIdx = col + row * 3;
+                    if (ingredientIdx < ingredients.size()) {
+                        Optional<Ingredient> optIngredient = ingredients.get(ingredientIdx);
+                        optIngredient.ifPresent(ingredient -> {
+                            ItemStack stack = ingredientToStack(ingredient);
+                            if (!stack.isEmpty()) {
+                                blueprint.setStackInSlot(blueprintIdx, stack);
+                            }
+                        });
+                    }
+                }
+            }
+        } else if (recipe instanceof ShapelessRecipe shapeless) {
+            // Shapeless — AT-opened field
+            List<Ingredient> ingredients = shapeless.ingredients;
+            for (int i = 0; i < ingredients.size() && i < 9; i++) {
+                ItemStack stack = ingredientToStack(ingredients.get(i));
+                if (!stack.isEmpty()) {
+                    blueprint.setStackInSlot(i, stack);
+                }
+            }
+        }
+    }
+
+    /** Convert an Ingredient to the first matching ItemStack. */
+    private static ItemStack ingredientToStack(Ingredient ingredient) {
+        List<Holder<Item>> holders = ingredient.items().toList();
+        if (holders.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        return new ItemStack(holders.get(0).value());
+    }
+}

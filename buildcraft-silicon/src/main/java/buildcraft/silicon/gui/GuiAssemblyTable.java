@@ -63,6 +63,9 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
             if (state == EnumAssemblyRecipeState.SAVED) {
                 ICON_SAVED.drawAt(area);
             }
+            if (state == EnumAssemblyRecipeState.PAUSED) {
+                ICON_SAVED.drawAt(area);
+            }
             if (state == EnumAssemblyRecipeState.SAVED_ENOUGH) {
                 ICON_SAVED_ENOUGH.drawAt(area);
             }

@@ -63,10 +63,13 @@ public class ContainerAssemblyTable extends ContainerBCTile<TileAssemblyTable> {
         } else if (current == EnumAssemblyRecipeState.SAVED) {
             // Deselect: go back to possible, remove from consideration
             tile.recipesStates.put(instruction, EnumAssemblyRecipeState.POSSIBLE);
-        } else {
-            // Pause: SAVED_ENOUGH or SAVED_ENOUGH_ACTIVE → SAVED
-            // MJ is retained — updateRecipes will re-promote when resumed
+        } else if (current == EnumAssemblyRecipeState.PAUSED) {
+            // Resume: go back to SAVED, updateRecipes will re-promote
             tile.recipesStates.put(instruction, EnumAssemblyRecipeState.SAVED);
+        } else {
+            // Pause: SAVED_ENOUGH or SAVED_ENOUGH_ACTIVE → PAUSED
+            // MJ is retained — click again to resume
+            tile.recipesStates.put(instruction, EnumAssemblyRecipeState.PAUSED);
         }
         return true;
     }

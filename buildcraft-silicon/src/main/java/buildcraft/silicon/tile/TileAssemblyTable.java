@@ -77,6 +77,8 @@ public class TileAssemblyTable extends TileLaserTableBase {
                 if (!enough) {
                     iterator.remove();
                 }
+            } else if (state == EnumAssemblyRecipeState.PAUSED) {
+                // User-paused: don't promote or demote, only clicks change this
             } else {
                 if (enough) {
                     if (state == EnumAssemblyRecipeState.SAVED) {

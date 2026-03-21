@@ -182,12 +182,17 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
             worldHasUpdated = false;
         }
 
-        if (!isPowerNeededAt(targetPos)) {
+        // Only target when we have power to send
+        if (battery.getStored() <= 0) {
             targetPos = null;
-        }
+        } else {
+            if (!isPowerNeededAt(targetPos)) {
+                targetPos = null;
+            }
 
-        if (serverTargetMoveInterval.markTimeIfDelay(level) || !isPowerNeededAt(targetPos)) {
-            randomlyChooseTargetPos();
+            if (serverTargetMoveInterval.markTimeIfDelay(level) || !isPowerNeededAt(targetPos)) {
+                randomlyChooseTargetPos();
+            }
         }
 
         ILaserTarget target = getTarget();

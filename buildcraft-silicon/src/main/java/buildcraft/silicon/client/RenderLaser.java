@@ -55,7 +55,7 @@ public class RenderLaser {
         if (mc.player == null || mc.level == null) return;
 
         PoseStack poseStack = event.getPoseStack();
-        Vec3 cameraPos = mc.player.position();
+        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
 
         for (TileLaser laser : ACTIVE_LASERS) {
             Vec3 target = laser.laserPos;

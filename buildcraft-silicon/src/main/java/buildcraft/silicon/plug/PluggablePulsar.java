@@ -19,12 +19,15 @@ import net.minecraft.world.phys.HitResult;
 import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.pipe.IPipeHolder;
+import buildcraft.api.transport.pipe.PipeEventHandler;
+import buildcraft.api.transport.pipe.PipeEventStatement;
 import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
 
 import buildcraft.lib.misc.MathUtil;
 
 import buildcraft.silicon.BCSiliconItems;
+import buildcraft.silicon.BCSiliconStatements;
 
 public class PluggablePulsar extends PipePluggable {
     private static final int PULSE_STAGE = 20;
@@ -217,12 +220,11 @@ public class PluggablePulsar extends PipePluggable {
         return manuallyEnabled || gateEnabledTicks > 0 || gateSinglePulses > 0;
     }
 
-    // TODO: Statement handlers (depends on BCSiliconStatements)
-    // @PipeEventHandler
-    // public void onAddActions(PipeEventStatement.AddActionInternalSided event) {
-    //     if (event.side == this.side) {
-    //         event.actions.add(BCSiliconStatements.ACTION_PULSAR_CONSTANT);
-    //         event.actions.add(BCSiliconStatements.ACTION_PULSAR_SINGLE);
-    //     }
-    // }
+    @PipeEventHandler
+    public void onAddActions(PipeEventStatement.AddActionInternalSided event) {
+        if (event.side == this.side) {
+            event.actions.add(BCSiliconStatements.ACTION_PULSAR_CONSTANT);
+            event.actions.add(BCSiliconStatements.ACTION_PULSAR_SINGLE);
+        }
+    }
 }

@@ -11,10 +11,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 
 import buildcraft.api.transport.pipe.IPipeHolder;
+import buildcraft.api.transport.pipe.PipeEventHandler;
+import buildcraft.api.transport.pipe.PipeEventStatement;
 import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
 
 import buildcraft.silicon.BCSiliconItems;
+import buildcraft.silicon.BCSiliconStatements;
 
 public class PluggableTimer extends PipePluggable {
 
@@ -58,11 +61,10 @@ public class PluggableTimer extends PipePluggable {
         return new ItemStack(BCSiliconItems.PLUG_TIMER.get());
     }
 
-    // TODO: Statement handlers (depends on BCSiliconStatements)
-    // @PipeEventHandler
-    // public void addInternalTriggers(PipeEventStatement.AddTriggerInternal event) {
-    //     event.triggers.add(BCSiliconStatements.TRIGGER_TIMER_SHORT);
-    //     event.triggers.add(BCSiliconStatements.TRIGGER_TIMER_MEDIUM);
-    //     event.triggers.add(BCSiliconStatements.TRIGGER_TIMER_LONG);
-    // }
+    @PipeEventHandler
+    public void addInternalTriggers(PipeEventStatement.AddTriggerInternal event) {
+        event.triggers.add(BCSiliconStatements.TRIGGER_TIMER_SHORT);
+        event.triggers.add(BCSiliconStatements.TRIGGER_TIMER_MEDIUM);
+        event.triggers.add(BCSiliconStatements.TRIGGER_TIMER_LONG);
+    }
 }

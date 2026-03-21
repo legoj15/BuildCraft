@@ -22,26 +22,26 @@ public class BCSiliconBlocks {
             BlockLaser::new,
             BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion());
 
-    public static final DeferredBlock<BlockLaserTable> ASSEMBLY_TABLE = BLOCKS.register(
+    public static final DeferredBlock<BlockLaserTable> ASSEMBLY_TABLE = BLOCKS.registerBlock(
             "assembly_table",
-            () -> new BlockLaserTable(
-                BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion(),
+            props -> new BlockLaserTable(props,
                 BCSiliconBlockEntities.ASSEMBLY_TABLE,
-                (id, inv, tile) -> new ContainerAssemblyTable(id, inv.player, (TileAssemblyTable) tile)));
+                (id, inv, tile) -> new ContainerAssemblyTable(id, inv.player, (TileAssemblyTable) tile)),
+            BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion());
 
-    public static final DeferredBlock<BlockLaserTable> ADVANCED_CRAFTING_TABLE = BLOCKS.register(
+    public static final DeferredBlock<BlockLaserTable> ADVANCED_CRAFTING_TABLE = BLOCKS.registerBlock(
             "advanced_crafting_table",
-            () -> new BlockLaserTable(
-                BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion(),
+            props -> new BlockLaserTable(props,
                 BCSiliconBlockEntities.ADVANCED_CRAFTING_TABLE,
-                (id, inv, tile) -> new ContainerAdvancedCraftingTable(id, inv.player, (TileAdvancedCraftingTable) tile)));
+                (id, inv, tile) -> new ContainerAdvancedCraftingTable(id, inv.player, (TileAdvancedCraftingTable) tile)),
+            BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion());
 
-    public static final DeferredBlock<BlockLaserTable> INTEGRATION_TABLE = BLOCKS.register(
+    public static final DeferredBlock<BlockLaserTable> INTEGRATION_TABLE = BLOCKS.registerBlock(
             "integration_table",
-            () -> new BlockLaserTable(
-                BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion(),
+            props -> new BlockLaserTable(props,
                 BCSiliconBlockEntities.INTEGRATION_TABLE,
-                (id, inv, tile) -> new ContainerIntegrationTable(id, inv.player, (TileIntegrationTable) tile)));
+                (id, inv, tile) -> new ContainerIntegrationTable(id, inv.player, (TileIntegrationTable) tile)),
+            BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion());
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

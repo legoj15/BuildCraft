@@ -274,10 +274,21 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
     // --- Lifecycle ---
 
     @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level != null && level.isClientSide()) {
+            buildcraft.silicon.client.RenderLaser.addLaser(this);
+        }
+    }
+
+    @Override
     public void setRemoved() {
         super.setRemoved();
         if (level != null && !level.isClientSide()) {
             LocalBlockUpdateNotifier.instance(level).removeSubscriberFromUpdateNotifications(this);
+        }
+        if (level != null && level.isClientSide()) {
+            buildcraft.silicon.client.RenderLaser.removeLaser(this);
         }
     }
 

@@ -160,7 +160,18 @@ public class TileAssemblyTable extends TileLaserTableBase {
     public void serverTick() {
         super.serverTick();
 
+        int prevSize = recipesStates.size();
+        int prevHash = recipesStates.hashCode();
+
         updateRecipes();
+
+        // Sync to clients if recipe states changed
+        if (recipesStates.size() != prevSize || recipesStates.hashCode() != prevHash) {
+            setChanged();
+            if (getLevel() != null) {
+                getLevel().sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+            }
+        }
 
         if (getTarget() > 0) {
             if (power >= getTarget()) {

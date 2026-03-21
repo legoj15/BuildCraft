@@ -6,9 +6,11 @@ import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 
+import buildcraft.silicon.item.ItemGateCopier;
 import buildcraft.silicon.item.ItemPluggableFacade;
 import buildcraft.silicon.item.ItemPluggableGate;
-import buildcraft.silicon.item.ItemGateCopier;
+import buildcraft.silicon.item.ItemPluggableLens;
+import buildcraft.silicon.item.ItemPluggablePulsar;
 
 public class BCSiliconItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCSilicon.MODID);
@@ -55,12 +57,12 @@ public class BCSiliconItems {
             ITEMS.registerItem("plug_gate", ItemPluggableGate::new);
 
     // Pulsar
-    public static final DeferredItem<Item> PLUG_PULSAR =
-            ITEMS.registerItem("plug_pulsar", Item::new);
+    public static final DeferredItem<ItemPluggablePulsar> PLUG_PULSAR =
+            ITEMS.registerItem("plug_pulsar", ItemPluggablePulsar::new);
 
     // Lens
-    public static final DeferredItem<Item> PLUG_LENS =
-            ITEMS.registerItem("plug_lens", Item::new);
+    public static final DeferredItem<ItemPluggableLens> PLUG_LENS =
+            ITEMS.registerItem("plug_lens", ItemPluggableLens::new);
 
     // Light Sensor
     public static final DeferredItem<Item> PLUG_LIGHT_SENSOR =

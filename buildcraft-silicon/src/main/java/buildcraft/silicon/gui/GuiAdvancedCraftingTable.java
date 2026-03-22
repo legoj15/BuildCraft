@@ -76,7 +76,7 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
 
     private ScreenPosition getRecipeBookButtonPosition() {
         // Left of the 3x3 blueprint grid (starts at x=33), aligned with 2nd row (y=34)
-        return new ScreenPosition(this.leftPos + 11, this.topPos + 34);
+        return new ScreenPosition(this.leftPos + 7, this.topPos + 33);
     }
 
     @Override
@@ -119,7 +119,6 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
         if (this.recipeBookComponent != null) {
             this.recipeBookComponent.renderTooltip(graphics, mouseX, mouseY, null);
         }
-        this.renderTooltip(graphics, mouseX, mouseY);
     }
 
     @Override
@@ -128,6 +127,7 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
         mainGui.drawBackgroundLayer(partialTicks, mouseX, mouseY, () -> {
             drawBackgroundTexture(graphics);
         });
+        mainGui.drawElementBackgrounds();
     }
 
     @Override

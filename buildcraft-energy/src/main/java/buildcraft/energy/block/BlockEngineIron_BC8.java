@@ -15,6 +15,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
@@ -95,6 +96,27 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
             Player player, BlockHitResult hitResult) {
         return openGui(state, level, pos, player);
+    }
+
+    /**
+     * Drop fragile fluid shards for all tank contents when the engine is broken.
+     * Matches 1.12.2 behavior where TankManager contents were dropped as fluid shard items.
+     */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state,
+            Player player) {
+        if (!level.isClientSide()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileEngineIron_BC8 engine) {
+                net.minecraft.core.NonNullList<ItemStack> drops = net.minecraft.core.NonNullList.create();
+                buildcraft.api.items.FluidItemDrops.addFluidDrops(drops,
+                        engine.tankFuel, engine.tankCoolant, engine.tankResidue);
+                for (ItemStack drop : drops) {
+                    Block.popResource(level, pos, drop);
+                }
+            }
+        }
+        return super.playerWillDestroy(level, pos, state, player);
     }
 
     /** Open the combustion engine GUI for the given player. */

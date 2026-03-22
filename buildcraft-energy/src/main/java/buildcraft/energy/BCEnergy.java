@@ -56,28 +56,33 @@ public class BCEnergy {
         // Fluid capability for the combustion engine — exposes fuel, coolant, residue tanks.
         // Only the residue tank (index 2) allows extraction, matching 1.12.2's InternalFluidHandler
         // where drain() only operated on tankResidue.
+        // Returns null on the output face to prevent fluid pipes connecting to the "nose".
         event.registerBlockEntity(
             Capabilities.Fluid.BLOCK,
             BCEnergyBlockEntities.ENGINE_IRON.get(),
-            (engine, direction) -> new MultiTankResourceHandler(
-                engine.tankFuel, engine.tankCoolant, engine.tankResidue
-            ) {
-                @Override
-                public int extract(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource,
-                        int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
-                    // Only allow extraction from the residue tank (index 2)
-                    if (index != 2) return 0;
-                    return super.extract(index, resource, amount, transaction);
-                }
+            (engine, direction) -> {
+                if (direction == engine.getOrientation()) return null;
+                return new MultiTankResourceHandler(
+                    engine.tankFuel, engine.tankCoolant, engine.tankResidue
+                ) {
+                    @Override
+                    public int extract(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource,
+                            int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
+                        // Only allow extraction from the residue tank (index 2)
+                        if (index != 2) return 0;
+                        return super.extract(index, resource, amount, transaction);
+                    }
+                };
             }
         );
 
         // Item handler capability for the stirling engine — allows item pipes
-        // to insert fuel (1.12.2 used ItemHandlerSimple with EnumAccess.BOTH)
+        // to insert fuel (1.12.2 used ItemHandlerSimple with EnumAccess.BOTH).
+        // Returns null on the output face to prevent item pipes connecting to the "nose".
         event.registerBlockEntity(
             Capabilities.Item.BLOCK,
             BCEnergyBlockEntities.ENGINE_STONE.get(),
-            (engine, direction) -> engine.fuelItemHandler
+            (engine, direction) -> direction == engine.getOrientation() ? null : engine.fuelItemHandler
         );
 
         // MJ connector capability for stone and iron engines — needed for power pipe

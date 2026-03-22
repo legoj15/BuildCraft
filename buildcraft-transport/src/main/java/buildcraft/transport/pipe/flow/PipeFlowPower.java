@@ -174,7 +174,15 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
         configure.setPowerLoss(pti.lossPerTick);
         configure.setPowerResistance(pti.resistancePerTick);
         pipe.getHolder().fireEvent(configure);
+        boolean wasReceiver = isReceiver;
         isReceiver = configure.isReceiver();
+        // If isReceiver changed, the pipe's connection checks need to re-run because
+        // EngineConnector.canConnect() checks Section.canReceive() which depends on isReceiver.
+        // Without this, wooden power pipes placed on engine noses fail to connect on the
+        // first tick because reconfigure() runs AFTER the initial updateConnections() call.
+        if (wasReceiver != isReceiver) {
+            pipe.markForUpdate();
+        }
         maxPower = configure.getMaxPower();
         disabled = configure.isTransferDisabled();
         if (maxPower <= 0) {

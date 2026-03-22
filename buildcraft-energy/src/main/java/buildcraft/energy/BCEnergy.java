@@ -53,13 +53,23 @@ public class BCEnergy {
     }
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {
-        // Fluid capability for the combustion engine — exposes fuel, coolant, residue tanks
+        // Fluid capability for the combustion engine — exposes fuel, coolant, residue tanks.
+        // Only the residue tank (index 2) allows extraction, matching 1.12.2's InternalFluidHandler
+        // where drain() only operated on tankResidue.
         event.registerBlockEntity(
             Capabilities.Fluid.BLOCK,
             BCEnergyBlockEntities.ENGINE_IRON.get(),
             (engine, direction) -> new MultiTankResourceHandler(
                 engine.tankFuel, engine.tankCoolant, engine.tankResidue
-            )
+            ) {
+                @Override
+                public int extract(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource,
+                        int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
+                    // Only allow extraction from the residue tank (index 2)
+                    if (index != 2) return 0;
+                    return super.extract(index, resource, amount, transaction);
+                }
+            }
         );
 
         // Item handler capability for the stirling engine — allows item pipes

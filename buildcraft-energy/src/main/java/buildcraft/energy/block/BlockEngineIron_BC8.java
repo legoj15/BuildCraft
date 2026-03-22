@@ -6,6 +6,8 @@ package buildcraft.energy.block;
 
 import org.jetbrains.annotations.Nullable;
 
+import net.minecraft.core.Direction;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -16,6 +18,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+
+import buildcraft.api.properties.BuildCraftProperties;
 
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.api.transport.pipe.IItemPipe;
@@ -44,11 +48,22 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        // Wrenches: non-crouching wrench opens GUI (matches 1.12.2)
-        // Crouch+wrench falls through to PASS -> Item.useOn() -> ICustomRotationHandler rotation
+        // Wrenches: in 1.12.2, right-clicking with a wrench rotates the engine.
+        // Crouch+wrench also rotates (falls through to PASS -> Item.useOn() -> ICustomRotationHandler).
+        // The GUI is opened by right-clicking with anything OTHER than a wrench/pipe.
         if (!stack.isEmpty() && stack.getItem() instanceof IToolWrench) {
             if (!player.isShiftKeyDown()) {
-                return openGui(state, level, pos, player);
+                // Directly rotate the engine (matching 1.12.2 where wrench returns false from onActivated)
+                if (!level.isClientSide()) {
+                    BlockEntity be = level.getBlockEntity(pos);
+                    if (be instanceof TileEngineIron_BC8 engine) {
+                        if (engine.attemptRotation()) {
+                            level.setBlock(pos, state.setValue(
+                                    BuildCraftProperties.BLOCK_FACING_6, engine.getOrientation()), 3);
+                        }
+                    }
+                }
+                return InteractionResult.SUCCESS;
             }
             return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
         }

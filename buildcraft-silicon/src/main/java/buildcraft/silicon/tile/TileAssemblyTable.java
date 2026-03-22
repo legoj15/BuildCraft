@@ -249,7 +249,17 @@ public class TileAssemblyTable extends TileLaserTableBase {
         public int compareTo(AssemblyInstruction o) {
             int recipeCompare = recipe.compareTo(o.recipe);
             if (recipeCompare != 0) return recipeCompare;
-            return ItemStack.hashItemAndComponents(output) - ItemStack.hashItemAndComponents(o.output);
+            if (ItemStack.isSameItemSameComponents(output, o.output)) return 0;
+            
+            net.minecraft.resources.Identifier thisId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(output.getItem());
+            net.minecraft.resources.Identifier otherId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(o.output.getItem());
+            int idCompare = thisId.compareTo(otherId);
+            if (idCompare != 0) return idCompare;
+            
+            int hashCompare = Integer.compare(ItemStack.hashItemAndComponents(output), ItemStack.hashItemAndComponents(o.output));
+            if (hashCompare != 0) return hashCompare;
+            
+            return output.getComponents().toString().compareTo(o.output.getComponents().toString());
         }
 
         @Override

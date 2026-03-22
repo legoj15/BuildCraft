@@ -134,8 +134,7 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
         MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
 
-        // FluidSmoother handles tick-based interpolation; use 0 for partial ticks
-        float partialTicks = 0f;
+        float partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
         // Render fluid in tanks
         renderSmoothedFluid(tile.getSmoothIn(), sizes.tankIn, poseStack, bufferSource, light, partialTicks);
@@ -143,7 +142,7 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
         renderSmoothedFluid(tile.getSmoothLiquidOut(), sizes.tankLiquidOut, poseStack, bufferSource, light, partialTicks);
 
         // Render animated power indicator cubes
-        renderPowerCubes(tile, sizes, poseStack, bufferSource, light);
+        renderPowerCubes(tile, sizes, poseStack, bufferSource, light, partialTicks);
 
         bufferSource.endBatch();
         poseStack.popPose();
@@ -233,8 +232,12 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
     // --- Power Cube Rendering ---
 
     private static void renderPowerCubes(TileDistiller_BC8 tile, TankSizes sizes,
-                                          PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, int light) {
-        double animState = tile.getAnimState();
+                                          PoseStack poseStack, MultiBufferSource.BufferSource bufferSource,
+                                          int light, float partialTicks) {
+        // Lerp between previous and current tick's animation state for smooth per-frame animation
+        double prevAnim = tile.getPrevAnimState();
+        double curAnim = tile.getAnimState();
+        double animState = prevAnim + (curAnim - prevAnim) * partialTicks;
         long powerAvg = tile.getPowerAvgClient();
 
         // Compute Y positions from animation state (matches 1.12.2 expressions)

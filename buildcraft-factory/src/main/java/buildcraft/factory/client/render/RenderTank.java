@@ -74,7 +74,7 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
         if (!(be instanceof TileTank tile)) return;
 
         // Use the FluidSmoother for interpolated rendering — prevents level snapping
-        float partialTicks = 0f; // inter-tick smoothing handled by FluidSmoother.tick()
+        float partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         buildcraft.lib.fluid.FluidSmoother.FluidStackInterp interp = tile.smoothedTank.getFluidForRender(partialTicks);
         if (interp == null) return;
 

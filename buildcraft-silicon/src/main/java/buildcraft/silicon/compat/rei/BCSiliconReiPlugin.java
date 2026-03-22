@@ -49,8 +49,8 @@ public class BCSiliconReiPlugin implements REIClientPlugin {
     @Override
     public void registerTransferHandlers(TransferHandlerRegistry registry) {
         registry.register(context -> {
-            Screen screen = context.getMinecraft().screen;
-            if (!(screen instanceof GuiAdvancedCraftingTable gui)) {
+            var containerScreen = context.getContainerScreen();
+            if (!(containerScreen instanceof GuiAdvancedCraftingTable gui)) {
                 return TransferHandler.Result.createNotApplicable();
             }
 
@@ -60,7 +60,7 @@ public class BCSiliconReiPlugin implements REIClientPlugin {
             }
 
             if (!context.isActuallyCrafting()) {
-                return TransferHandler.Result.createSuccessful();
+                return TransferHandler.Result.createSuccessful().blocksFurtherHandling();
             }
 
             if (display.getDisplayLocation().isPresent()) {
@@ -71,18 +71,19 @@ public class BCSiliconReiPlugin implements REIClientPlugin {
                 });
             }
 
-            return TransferHandler.Result.createSuccessful();
+            return TransferHandler.Result.createSuccessful().blocksFurtherHandling();
         });
     }
 
     @Override
     public void registerScreens(ScreenRegistry registry) {
-        // Click the vertical progress bar to view crafting recipes
+        // Click the progress arrow between the blueprint grid and the output
+        // slot to view crafting recipes.
         registry.registerClickArea(
                 screen -> new Rectangle(
-                        screen.getGuiLeft() + 164,
-                        screen.getGuiTop() + 7,
-                        4, 70),
+                        screen.getGuiLeft() + 93,
+                        screen.getGuiTop() + 32,
+                        23, 16),
                 GuiAdvancedCraftingTable.class,
                 CRAFTING);
 

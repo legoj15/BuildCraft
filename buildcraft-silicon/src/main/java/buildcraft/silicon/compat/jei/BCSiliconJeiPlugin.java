@@ -50,11 +50,11 @@ public class BCSiliconJeiPlugin implements IModPlugin {
 
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
-        // Clicking the vertical progress bar in the Advanced Crafting Table opens JEI's
-        // crafting recipe view. Coordinates match RECT_PROGRESS at (164, 7) with size 4x70.
+        // Clicking the progress arrow between the blueprint grid and the output slot
+        // opens JEI's crafting recipe view. The arrow is at approximately (93, 32) size 23x16.
         registration.addRecipeClickArea(
                 GuiAdvancedCraftingTable.class,
-                164, 7, 4, 70,
+                93, 32, 23, 16,
                 RecipeTypes.CRAFTING
         );
         // Allow dragging ingredients from JEI onto phantom blueprint slots

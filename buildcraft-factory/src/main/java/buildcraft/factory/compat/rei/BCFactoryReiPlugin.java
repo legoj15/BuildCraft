@@ -49,8 +49,8 @@ public class BCFactoryReiPlugin implements REIClientPlugin {
     @Override
     public void registerTransferHandlers(TransferHandlerRegistry registry) {
         registry.register(context -> {
-            Screen screen = context.getMinecraft().screen;
-            if (!(screen instanceof GuiAutoCraftItems gui)) {
+            var containerScreen = context.getContainerScreen();
+            if (!(containerScreen instanceof GuiAutoCraftItems gui)) {
                 return TransferHandler.Result.createNotApplicable();
             }
 
@@ -60,7 +60,7 @@ public class BCFactoryReiPlugin implements REIClientPlugin {
             }
 
             if (!context.isActuallyCrafting()) {
-                return TransferHandler.Result.createSuccessful();
+                return TransferHandler.Result.createSuccessful().blocksFurtherHandling();
             }
 
             if (display.getDisplayLocation().isPresent()) {
@@ -71,7 +71,7 @@ public class BCFactoryReiPlugin implements REIClientPlugin {
                 });
             }
 
-            return TransferHandler.Result.createSuccessful();
+            return TransferHandler.Result.createSuccessful().blocksFurtherHandling();
         });
     }
 

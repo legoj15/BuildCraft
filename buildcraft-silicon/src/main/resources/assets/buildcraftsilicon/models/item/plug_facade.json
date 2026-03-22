@@ -1,5 +1,6 @@
 {
     "parent": "block/block",
+    "gui_light": "front",
     "textures": {
         "all": "minecraft:block/bricks",
         "particle": "minecraft:block/bricks"

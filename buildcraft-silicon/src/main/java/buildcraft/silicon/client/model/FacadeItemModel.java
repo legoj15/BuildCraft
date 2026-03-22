@@ -73,6 +73,8 @@ public class FacadeItemModel implements ItemModel {
             // offset = (16 - SIZE) / 2 / 16
             float offsetZ = (16 - buildcraft.silicon.plug.PluggableFacade.SIZE) / 2f / 16f;
             for (MutableQuad quad : PlugBakerFacade.INSTANCE.bakeForKey(key)) {
+                // Disable directional shading and set full brightness for GUI
+                quad.setShade(false);
                 quad.vertex_0.translatef(0, 0, offsetZ); quad.vertex_0.lighti(15, 15); quad.vertex_0.colouri(255, 255, 255, 255);
                 quad.vertex_1.translatef(0, 0, offsetZ); quad.vertex_1.lighti(15, 15); quad.vertex_1.colouri(255, 255, 255, 255);
                 quad.vertex_2.translatef(0, 0, offsetZ); quad.vertex_2.lighti(15, 15); quad.vertex_2.colouri(255, 255, 255, 255);

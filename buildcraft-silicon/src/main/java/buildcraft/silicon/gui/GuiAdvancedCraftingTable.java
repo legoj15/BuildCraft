@@ -133,7 +133,7 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         String title = I18n.get("block.buildcraftsilicon.advanced_crafting_table");
-        graphics.drawString(font, title, (imageWidth - font.width(title)) / 2, 5, 0x404040, false);
+        graphics.drawString(font, title, (imageWidth - font.width(title)) / 2, 5, 0xFF404040, false);
     }
 
     @Override

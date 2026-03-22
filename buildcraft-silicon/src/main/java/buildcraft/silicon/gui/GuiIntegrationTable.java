@@ -55,6 +55,6 @@ public class GuiIntegrationTable extends GuiBC8<ContainerIntegrationTable> {
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         String title = I18n.get("tile.integrationTableBlock.name");
-        graphics.drawString(font, title, (imageWidth - font.width(title)) / 2, 10, 0x404040, false);
+        graphics.drawString(font, title, (imageWidth - font.width(title)) / 2, 10, 0xFF404040, false);
     }
 }

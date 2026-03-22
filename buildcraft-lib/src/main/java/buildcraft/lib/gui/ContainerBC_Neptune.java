@@ -16,7 +16,11 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.StackedItemContents;
+import net.minecraft.world.inventory.RecipeBookMenu;
+import net.minecraft.world.inventory.RecipeBookType;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
@@ -36,7 +40,7 @@ import buildcraft.lib.net.PacketBufferBC;
  * Provides shift-click logic, phantom slot handling, and widget sync via
  * {@link MessageContainerPayload}.
  */
-public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
+public abstract class ContainerBC_Neptune extends RecipeBookMenu {
 
     public static final int NET_WIDGET = 0;
 
@@ -237,5 +241,23 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu {
     @Override
     public boolean stillValid(Player player) {
         return true; // Subclasses override
+    }
+
+    // --- RecipeBookMenu defaults (override in containers that support recipe book) ---
+
+    @Override
+    public PostPlaceAction handlePlacement(boolean useMaxItems, boolean isCreative, RecipeHolder<?> recipe,
+        ServerLevel level, Inventory playerInv) {
+        return PostPlaceAction.NOTHING;
+    }
+
+    @Override
+    public void fillCraftSlotsStackedContents(StackedItemContents contents) {
+        // No-op by default
+    }
+
+    @Override
+    public RecipeBookType getRecipeBookType() {
+        return RecipeBookType.CRAFTING;
     }
 }

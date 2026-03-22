@@ -55,8 +55,8 @@ public class ContainerEngineStone extends ContainerBC_Neptune {
                         case DATA_POWER_HI -> (int) (engine.getPower() >>> 32);
                         case DATA_POWER_LO -> (int) (engine.getPower() & 0xFFFFFFFFL);
                         case DATA_HEAT -> Float.floatToIntBits(engine.getHeat());
-                        case DATA_OUTPUT_HI -> (int) (engine.getCurrentOutput() >>> 32);
-                        case DATA_OUTPUT_LO -> (int) (engine.getCurrentOutput() & 0xFFFFFFFFL);
+                        case DATA_OUTPUT_HI -> (int) (engine.currentOutput >>> 32);
+                        case DATA_OUTPUT_LO -> (int) (engine.currentOutput & 0xFFFFFFFFL);
                         case DATA_POWER_STAGE -> engine.getPowerStage().ordinal();
                         case DATA_IS_BURNING_ENGINE -> engine.isBurning() ? 1 : 0;
                         default -> 0;

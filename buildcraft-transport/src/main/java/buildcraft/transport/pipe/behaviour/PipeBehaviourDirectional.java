@@ -83,7 +83,7 @@ public abstract class PipeBehaviourDirectional extends PipeBehaviour {
     }
 
     /** Check if the player is holding a wrench in either hand. */
-    private static boolean isHoldingWrench(Player player) {
+    protected static boolean isHoldingWrench(Player player) {
         for (net.minecraft.world.InteractionHand hand : net.minecraft.world.InteractionHand.values()) {
             if (player.getItemInHand(hand).getItem() instanceof buildcraft.api.tools.IToolWrench) {
                 return true;

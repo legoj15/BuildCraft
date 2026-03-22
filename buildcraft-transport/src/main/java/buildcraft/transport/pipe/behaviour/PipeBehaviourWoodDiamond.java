@@ -87,6 +87,15 @@ public class PipeBehaviourWoodDiamond extends PipeBehaviourWood {
     @Override
     public boolean onPipeActivate(Player player, HitResult trace, float hitX, float hitY, float hitZ,
         EnumPipePart part) {
+        // 1.12.2: wrench cycles direction via PipeBehaviourDirectional
+        if (isHoldingWrench(player)) {
+            return super.onPipeActivate(player, trace, hitX, hitY, hitZ, part);
+        }
+        // Don't intercept pluggable placement
+        ItemStack held = player.getMainHandItem();
+        if (!held.isEmpty() && held.getItem() instanceof buildcraft.api.transport.IItemPluggable) {
+            return false;
+        }
         if (!player.level().isClientSide() && player instanceof ServerPlayer serverPlayer) {
             final PipeBehaviourWoodDiamond self = this;
             serverPlayer.openMenu(new MenuProvider() {

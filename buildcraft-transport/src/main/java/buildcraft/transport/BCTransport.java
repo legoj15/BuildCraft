@@ -188,13 +188,16 @@ public class BCTransport {
             (tile, side) -> {
                 Pipe pipe = tile.getPipe();
                 if (pipe == null || side == null) return null;
-                // Check behaviour first (wood pipe), then flow (power pipe), then pluggable (power adaptor)
+                // Check pluggable first (matches 1.12.2 getCapability order)
+                buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
+                if (plug != null) {
+                    IMjReceiver r = plug.getCapability(MjAPI.CAP_RECEIVER);
+                    if (r != null) return r;
+                    if (plug.isBlocking()) return null;
+                }
                 IMjReceiver r = pipe.getBehaviour().getCapability(MjAPI.CAP_RECEIVER, side);
                 if (r != null) return r;
-                r = pipe.getFlow().getCapability(MjAPI.CAP_RECEIVER, side);
-                if (r != null) return r;
-                buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
-                return plug != null ? plug.getCapability(MjAPI.CAP_RECEIVER) : null;
+                return pipe.getFlow().getCapability(MjAPI.CAP_RECEIVER, side);
             }
         );
 
@@ -204,12 +207,15 @@ public class BCTransport {
             (tile, side) -> {
                 Pipe pipe = tile.getPipe();
                 if (pipe == null || side == null) return null;
+                buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
+                if (plug != null) {
+                    IMjRedstoneReceiver r = plug.getCapability(MjAPI.CAP_REDSTONE_RECEIVER);
+                    if (r != null) return r;
+                    if (plug.isBlocking()) return null;
+                }
                 IMjRedstoneReceiver r = pipe.getBehaviour().getCapability(MjAPI.CAP_REDSTONE_RECEIVER, side);
                 if (r != null) return r;
-                r = pipe.getFlow().getCapability(MjAPI.CAP_REDSTONE_RECEIVER, side);
-                if (r != null) return r;
-                buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
-                return plug != null ? plug.getCapability(MjAPI.CAP_REDSTONE_RECEIVER) : null;
+                return pipe.getFlow().getCapability(MjAPI.CAP_REDSTONE_RECEIVER, side);
             }
         );
 
@@ -219,12 +225,15 @@ public class BCTransport {
             (tile, side) -> {
                 Pipe pipe = tile.getPipe();
                 if (pipe == null || side == null) return null;
+                buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
+                if (plug != null) {
+                    IMjConnector c = plug.getCapability(MjAPI.CAP_CONNECTOR);
+                    if (c != null) return c;
+                    if (plug.isBlocking()) return null;
+                }
                 IMjConnector c = pipe.getBehaviour().getCapability(MjAPI.CAP_CONNECTOR, side);
                 if (c != null) return c;
-                c = pipe.getFlow().getCapability(MjAPI.CAP_CONNECTOR, side);
-                if (c != null) return c;
-                buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
-                return plug != null ? plug.getCapability(MjAPI.CAP_CONNECTOR) : null;
+                return pipe.getFlow().getCapability(MjAPI.CAP_CONNECTOR, side);
             }
         );
 
@@ -234,6 +243,9 @@ public class BCTransport {
             (tile, side) -> {
                 Pipe pipe = tile.getPipe();
                 if (pipe == null || side == null) return null;
+                // Block external access through blocking pluggables (matches 1.12.2)
+                buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
+                if (plug != null && plug.isBlocking()) return null;
                 return pipe.getFlow().getCapability(CapUtil.CAP_FLUIDS, side);
             }
         );

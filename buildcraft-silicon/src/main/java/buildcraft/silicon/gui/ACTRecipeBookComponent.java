@@ -24,8 +24,6 @@ import net.minecraft.world.item.crafting.RecipeBookCategories;
 import net.minecraft.world.item.crafting.display.RecipeDisplay;
 import net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay;
 import net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
 
@@ -33,7 +31,6 @@ import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
  * Recipe book component for the Advanced Crafting Table.
  * Mirrors vanilla CraftingRecipeBookComponent but works with our container.
  */
-@OnlyIn(Dist.CLIENT)
 public class ACTRecipeBookComponent extends RecipeBookComponent<ContainerAdvancedCraftingTable> {
     private static final WidgetSprites FILTER_BUTTON_SPRITES = new WidgetSprites(
         Identifier.withDefaultNamespace("recipe_book/filter_enabled"),

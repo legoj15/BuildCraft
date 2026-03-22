@@ -75,7 +75,7 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     }
 
     private ScreenPosition getRecipeBookButtonPosition() {
-        return new ScreenPosition(this.leftPos + 5, this.height / 2 - 49);
+        return new ScreenPosition(this.leftPos + 5, this.topPos + 5);
     }
 
     @Override

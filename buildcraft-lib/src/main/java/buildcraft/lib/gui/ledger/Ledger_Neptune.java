@@ -66,6 +66,28 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     /** -1 means shrinking, 0 no change, 1 expanding */
     private int currentDifference = 0;
 
+    /**
+     * Copy the full animation state from another ledger instance.
+     * Used to seamlessly continue animation across window resizes,
+     * where init() destroys and re-creates all ledger instances.
+     */
+    public void copyAnimationStateFrom(Ledger_Neptune other) {
+        this.currentDifference = other.currentDifference;
+        this.currentWidth = other.currentWidth;
+        this.currentHeight = other.currentHeight;
+        this.lastWidth = other.lastWidth;
+        this.lastHeight = other.lastHeight;
+        this.interpWidth = other.interpWidth;
+        this.interpHeight = other.interpHeight;
+        // Recalculate max size for this instance's text content,
+        // then clamp current values so they don't exceed the new max
+        this.calculateMaxSize();
+        this.currentWidth = Math.min(this.currentWidth, this.maxWidth);
+        this.currentHeight = Math.min(this.currentHeight, this.maxHeight);
+        this.lastWidth = Math.min(this.lastWidth, this.maxWidth);
+        this.lastHeight = Math.min(this.lastHeight, this.maxHeight);
+    }
+
     // Text entries for open-panel content
     private final List<TextEntry> textEntries = new ArrayList<>();
 

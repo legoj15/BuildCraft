@@ -18,6 +18,7 @@ import buildcraft.factory.BCFactoryItems;
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.client.gui.GuiAutoCraftItems;
 import buildcraft.factory.container.ContainerAutoCraftItems;
+import buildcraft.lib.compat.jei.BCGhostIngredientHandler;
 import buildcraft.lib.compat.jei.BlueprintTransferHandler;
 
 /**
@@ -56,6 +57,8 @@ public class BCFactoryJeiPlugin implements IModPlugin {
                 90, 47, 23, 10,
                 RecipeTypes.CRAFTING
         );
+        // Allow dragging ingredients from JEI onto phantom blueprint slots
+        registration.addGhostIngredientHandler(GuiAutoCraftItems.class, new BCGhostIngredientHandler<>());
     }
 
     @Override

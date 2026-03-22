@@ -49,6 +49,8 @@ public abstract class ContainerBC_Neptune extends RecipeBookMenu {
     public static final int NET_WIDGET = 0;
     /** Container message ID used by JEI's BlueprintTransferHandler. */
     public static final int NET_JEI_RECIPE_TRANSFER = 100;
+    /** Container message ID used by JEI's BCGhostIngredientHandler. */
+    public static final int NET_GHOST_SLOT_SET = 101;
 
     public final Player player;
     private final List<Widget_Neptune<?>> widgets = new ArrayList<>();
@@ -162,6 +164,17 @@ public abstract class ContainerBC_Neptune extends RecipeBookMenu {
                 holder.ifPresent(recipe -> handlePlacement(
                         false, player.isCreative(), recipe,
                         serverLevel, player.getInventory()));
+            }
+        } else if (id == NET_GHOST_SLOT_SET && !isClient) {
+            // Server-side: JEI ghost ingredient dropped on a phantom slot.
+            int slotIdx = buffer.readUnsignedShort();
+            String itemId = buffer.readUtf();
+            if (slotIdx >= 0 && slotIdx < slots.size() && slots.get(slotIdx) instanceof SlotPhantom phantom) {
+                net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+                        Identifier.parse(itemId)).ifPresent(itemRef -> {
+                    ItemStack stack = new ItemStack(itemRef.value(), 1);
+                    phantom.set(stack);
+                });
             }
         }
     }

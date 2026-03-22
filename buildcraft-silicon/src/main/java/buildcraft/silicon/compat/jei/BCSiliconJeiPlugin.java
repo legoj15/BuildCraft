@@ -14,6 +14,7 @@ import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.resources.Identifier;
 
+import buildcraft.lib.compat.jei.BCGhostIngredientHandler;
 import buildcraft.lib.compat.jei.BlueprintTransferHandler;
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.BCSiliconMenuTypes;
@@ -56,6 +57,8 @@ public class BCSiliconJeiPlugin implements IModPlugin {
                 164, 7, 4, 70,
                 RecipeTypes.CRAFTING
         );
+        // Allow dragging ingredients from JEI onto phantom blueprint slots
+        registration.addGhostIngredientHandler(GuiAdvancedCraftingTable.class, new BCGhostIngredientHandler<>());
     }
 
     @Override

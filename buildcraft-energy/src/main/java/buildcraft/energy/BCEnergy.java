@@ -41,7 +41,7 @@ public class BCEnergy {
         }
 
         // Creative tab
-        modEventBus.addListener(this::addCreativeTabItems);
+        modEventBus.addListener(net.neoforged.bus.api.EventPriority.LOWEST, this::addCreativeTabItems);
 
         // Register NeoForge capabilities for engines
         modEventBus.addListener(this::registerCapabilities);

@@ -86,6 +86,9 @@ public class BuildCraftGui {
     }
 
     public void drawBackgroundLayer(float partialTicks, int mouseX, int mouseY, Runnable menuBackgroundRenderer) {
+        // 1.12.2 parity: explicitly source partialTicks from the MC timer
+        // to avoid stale values from the incoming argument
+        partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         this.lastPartialTicks = partialTicks;
         mouse.setMousePosition(mouseX, mouseY);
         if (currentMenu == null || !currentMenu.shouldFullyOverride()) {

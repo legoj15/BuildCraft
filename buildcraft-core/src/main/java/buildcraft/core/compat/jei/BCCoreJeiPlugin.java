@@ -6,11 +6,13 @@ package buildcraft.core.compat.jei;
 
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
+import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
 import net.minecraft.resources.Identifier;
 
 import buildcraft.core.BCCore;
 import buildcraft.core.BCCoreItems;
+import buildcraft.lib.gui.GuiBC8;
 
 /**
  * JEI integration plugin for BuildCraft Core.
@@ -35,5 +37,12 @@ public class BCCoreJeiPlugin implements IModPlugin {
                 BCCoreItems.PAINTBRUSH.get(),
                 BCCore.BRUSH_COLOR.get()
         );
+    }
+
+    @Override
+    public void registerGuiHandlers(IGuiHandlerRegistration registration) {
+        // Tell JEI about BuildCraft ledger exclusion areas so the ingredient
+        // list is pushed out of the way when ledgers are open.
+        registration.addGenericGuiContainerHandler(GuiBC8.class, new BCGuiContainerHandler());
     }
 }

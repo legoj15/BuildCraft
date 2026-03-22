@@ -11,11 +11,12 @@ import java.util.List;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 
 import buildcraft.api.core.render.ISprite;
@@ -34,15 +35,16 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     public static final int CLOSED_WIDTH = 2 + 16 + LEDGER_GAP;   // 22
     public static final int CLOSED_HEIGHT = LEDGER_GAP + 16 + LEDGER_GAP; // 24
 
-    // 9-sliced ledger background sprites (matches 1.12.2 BCLibSprites.LEDGER_LEFT/RIGHT)
+    // 16x16 nine-sliced ledger background sprites (matches 1.12.2 BCLibSprites.LEDGER_LEFT/RIGHT).
+    // Scale = 16.0 so the 4/16 = 0.25 normalized border maps to 4 actual pixels.
     private static final ISprite SPRITE_LEFT = new SpriteRaw(
         Identifier.parse("buildcraftlib:textures/icons/ledger_left.png"), 0, 0, 1.0, 1.0);
     private static final ISprite SPRITE_RIGHT = new SpriteRaw(
         Identifier.parse("buildcraftlib:textures/icons/ledger_right.png"), 0, 0, 1.0, 1.0);
     private static final SpriteNineSliced SPRITE_SPLIT_LEFT =
-        new SpriteNineSliced(SPRITE_LEFT, 4.0/16, 4.0/16, 12.0/16, 12.0/16, 1.0);
+        new SpriteNineSliced(SPRITE_LEFT, 4.0 / 16, 4.0 / 16, 12.0 / 16, 12.0 / 16, 16.0);
     private static final SpriteNineSliced SPRITE_SPLIT_RIGHT =
-        new SpriteNineSliced(SPRITE_RIGHT, 4.0/16, 4.0/16, 12.0/16, 12.0/16, 1.0);
+        new SpriteNineSliced(SPRITE_RIGHT, 4.0 / 16, 4.0 / 16, 12.0 / 16, 12.0 / 16, 16.0);
 
     public final BuildCraftGui gui;
     public final int colour;
@@ -61,10 +63,35 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     protected double interpWidth = lastWidth;
     protected double interpHeight = lastHeight;
 
+    /** Computed upward Y shift when ledger hits the bottom of the screen. */
+    private double yShift = 0;
+
     protected String title = "unknown";
 
     /** -1 means shrinking, 0 no change, 1 expanding */
     private int currentDifference = 0;
+
+    /**
+     * Copy the full animation state from another ledger instance.
+     * Used to seamlessly continue animation across window resizes,
+     * where init() destroys and re-creates all ledger instances.
+     */
+    public void copyAnimationStateFrom(Ledger_Neptune other) {
+        this.currentDifference = other.currentDifference;
+        this.currentWidth = other.currentWidth;
+        this.currentHeight = other.currentHeight;
+        this.lastWidth = other.lastWidth;
+        this.lastHeight = other.lastHeight;
+        this.interpWidth = other.interpWidth;
+        this.interpHeight = other.interpHeight;
+        // Recalculate max size for this instance's text content,
+        // then clamp current values so they don't exceed the new max
+        this.calculateMaxSize();
+        this.currentWidth = Math.min(this.currentWidth, this.maxWidth);
+        this.currentHeight = Math.min(this.currentHeight, this.maxHeight);
+        this.lastWidth = Math.min(this.lastWidth, this.maxWidth);
+        this.lastHeight = Math.min(this.lastHeight, this.maxHeight);
+    }
 
     // Text entries for open-panel content
     private final List<TextEntry> textEntries = new ArrayList<>();
@@ -118,24 +145,56 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         return 0xFF_E1_C9_2F;
     }
 
-    /** Recalculate the maximum size based on text entries and title. */
+    /** Recalculate the maximum size based on text entries and title, with word wrapping. */
     protected void calculateMaxSize() {
         Font font = Minecraft.getInstance().font;
-        // Width: icon (16) + gap (4) + max text width + gap padding
-        int maxTextWidth = font.width(getTitle());
-        for (TextEntry entry : textEntries) {
-            String text = entry.getText();
-            int w = font.width(text);
-            if (w > maxTextWidth) maxTextWidth = w;
+        int screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+
+        // Compute the non-text overhead: 2 (border) + 16 (icon) + 4 (gap) + 4 (gap) + 2 (border) = 28
+        int overhead = 2 + 16 + LEDGER_GAP + LEDGER_GAP + 2;
+
+        // Determine max available text width before the ledger hits the screen edge.
+        // For right-side (expandPositive): ledger starts at positionLedgerStart.getX()
+        // and grows rightward, so available = screenWidth - startX - overhead
+        // For left-side: ledger grows leftward from its anchor, so use screenWidth as the limit too
+        int availableTextWidth;
+        if (expandPositive) {
+            availableTextWidth = Math.max(40, screenWidth - (int) positionLedgerStart.getX() - overhead);
+        } else {
+            // Left ledgers grow leftward from the GUI's left edge
+            availableTextWidth = Math.max(40, (int) positionLedgerStart.getX() + CLOSED_WIDTH - overhead);
         }
-        // 2 (border) + 16 (icon) + 4 (gap) + text + 4 (gap) + 2 (border)
-        maxWidth = Math.max(CLOSED_WIDTH, 2 + 16 + LEDGER_GAP + maxTextWidth + LEDGER_GAP + 2);
-        // 4 (top gap) + title line + entries + 4 (bottom gap)
+
+        // Natural width of the widest text entry
+        int naturalMaxTextWidth = font.width(getTitle());
+        for (TextEntry entry : textEntries) {
+            int w = font.width(entry.getText());
+            if (w > naturalMaxTextWidth) naturalMaxTextWidth = w;
+        }
+
+        // Only wrap if text would go off-screen; otherwise use natural width
+        int textAreaWidth = Math.min(naturalMaxTextWidth, availableTextWidth);
+
+        maxWidth = Math.max(CLOSED_WIDTH, overhead + textAreaWidth);
+
+        // Height: title (always 1 line) + wrapped text entries
         int textHeight = font.lineHeight + 3; // title
-        for (int i = 0; i < textEntries.size(); i++) {
-            textHeight += font.lineHeight + 3;
+        for (TextEntry entry : textEntries) {
+            List<FormattedCharSequence> wrapped = font.split(Component.literal(entry.getText()), textAreaWidth);
+            int lineCount = Math.max(1, wrapped.size());
+            textHeight += (font.lineHeight + 3) * lineCount;
         }
         maxHeight = Math.max(CLOSED_HEIGHT, LEDGER_GAP + textHeight + LEDGER_GAP);
+
+        // Upward shift: if the ledger bottom would extend past the screen, push it up
+        double normalY = positionLedgerStart.getY();
+        int screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+        double bottomEdge = normalY + maxHeight;
+        if (bottomEdge > screenHeight) {
+            yShift = bottomEdge - screenHeight;
+        } else {
+            yShift = 0;
+        }
     }
 
     @Override
@@ -187,20 +246,27 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         interpWidth = interp(lastWidth, currentWidth, partialTicks);
         interpHeight = interp(lastHeight, currentHeight, partialTicks);
 
-        double startX = getX();
-        double startY = getY();
-        int x = (int) startX;
-        int y = (int) startY;
+        int x = (int) getX();
+        int y = (int) getY();
         int w = (int) interpWidth;
         int h = (int) interpHeight;
 
         if (w <= 0 || h <= 0) return;
 
-        // Draw 9-sliced ledger background sprite with colour tinting
-        // Matches 1.12.2: RenderUtil.setGLColorFromIntPlusAlpha(colour) → split.draw()
+        // Draw nine-sliced ledger background with colour tinting.
+        // Uses ledger_left.png for left ledgers, ledger_right.png for right,
+        // matching 1.12.2 BCLibSprites.LEDGER_LEFT/RIGHT.
         SpriteNineSliced split = expandPositive ? SPRITE_SPLIT_RIGHT : SPRITE_SPLIT_LEFT;
         int tintColour = 0xFF000000 | (colour & 0xFFFFFF);
-        split.drawTinted(startX, startY, interpWidth, interpHeight, tintColour);
+        split.drawTinted(getX(), getY(), interpWidth, interpHeight, tintColour);
+
+        // Scissor clip all content (icon + text) to the ledger's current animated bounds.
+        // Matches 1.12.2's GuiUtil.scissor() which masked content during expand/contract.
+        int scissorX = (int) positionLedgerIconStart.getX();
+        int scissorY = (int) positionLedgerIconStart.getY();
+        int scissorW = (int) (interpWidth - LEDGER_GAP);
+        int scissorH = (int) (interpHeight - LEDGER_GAP * 2);
+        graphics.enableScissor(scissorX, scissorY, scissorX + scissorW, scissorY + scissorH);
 
         // Draw icon (always visible)
         double iconX = positionLedgerIconStart.getX();
@@ -210,33 +276,30 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         // Draw text content if expanded enough
         if (interpWidth > CLOSED_WIDTH + 10) {
             Font font = Minecraft.getInstance().font;
+            int textAreaWidth = (int) maxWidth - 2 - 16 - LEDGER_GAP - LEDGER_GAP - 2;
             // Text starts after the icon: icon(16) + gap(4)
             int textX = (int) iconX + 16 + LEDGER_GAP;
             int textY = (int) iconY + 1;
 
-            // Clip to ledger bounds
-            int maxTextX = x + w - LEDGER_GAP;
-
-            // Draw title
-            if (textX < maxTextX) {
-                graphics.drawString(font, getTitle(), textX, textY, getTitleColour() | 0xFF000000, true);
-            }
+            // Draw title (not wrapped — titles are always short)
+            graphics.drawString(font, getTitle(), textX, textY, getTitleColour() | 0xFF000000, true);
             textY += font.lineHeight + 3;
 
-            // Draw text entries
+            // Draw text entries with word wrapping
             for (TextEntry entry : textEntries) {
-                if (textY + font.lineHeight > y + interpHeight - LEDGER_GAP) break;
-                if (textX < maxTextX) {
-                    String text = entry.getText();
-                    graphics.drawString(font, text, textX, textY,
-                        entry.getColour() | 0xFF000000, entry.dropShadow);
+                int entryColour = entry.getColour() | 0xFF000000;
+                List<FormattedCharSequence> wrapped = font.split(
+                    Component.literal(entry.getText()), textAreaWidth);
+                for (FormattedCharSequence line : wrapped) {
+                    graphics.drawString(font, line, textX, textY, entryColour, entry.dropShadow);
+                    textY += font.lineHeight + 3;
                 }
-                textY += font.lineHeight + 3;
             }
         }
 
+        graphics.disableScissor();
+
         // Draw tooltip when ledger is closed/closing and mouse hovers over it
-        // Matches 1.12.2 Ledger_Neptune.addToolTips() behavior
         if (!shouldDrawOpen() && contains(gui.mouse.getX(), gui.mouse.getY())) {
             Font font2 = Minecraft.getInstance().font;
             var titleComp = net.minecraft.network.chat.Component.literal(getTitle());
@@ -249,6 +312,7 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
                 null);
         }
     }
+
 
     /** Override in subclasses to draw a 16x16 icon. */
     protected void drawIcon(double x, double y, GuiGraphics graphics) {
@@ -282,7 +346,10 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
 
     @Override
     public double getY() {
-        return positionLedgerStart.getY();
+        // Apply upward shift when ledger would extend past screen bottom.
+        // Only shift when actually expanding (not when closed).
+        double shift = (currentDifference != 0 || currentHeight > CLOSED_HEIGHT) ? yShift : 0;
+        return positionLedgerStart.getY() - shift;
     }
 
     @Override

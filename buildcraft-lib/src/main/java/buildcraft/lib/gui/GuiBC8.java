@@ -42,8 +42,38 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
     @Override
     protected void init() {
         super.init();
+
+        // Save old ledger instances before re-creating elements.
+        // In 1.12.2, ledger animation state was preserved across window resizes —
+        // a mid-animation ledger would continue from exactly where it was.
+        java.util.Map<String, buildcraft.lib.gui.ledger.Ledger_Neptune> oldLedgers = new java.util.LinkedHashMap<>();
+        for (IGuiElement elem : mainGui.shownElements) {
+            if (elem instanceof buildcraft.lib.gui.ledger.Ledger_Neptune ledger) {
+                oldLedgers.put(elem.getClass().getName(), ledger);
+            }
+        }
+
+        // Reset ledger position anchors before re-creating elements.
+        // On window resize, init() is called again and new Ledger_Neptune instances
+        // are created. Without resetting, the position chain accumulates stale offsets
+        // from the destroyed ledger instances, causing displacement or disappearance.
+        IGuiArea rootArea = BuildCraftGui.createWindowedArea(this);
+        mainGui.lowerLeftLedgerPos = rootArea.offset(0, 5);
+        mainGui.lowerRightLedgerPos = rootArea.getPosition(1, -1).offset(0, 5);
         mainGui.shownElements.clear();
         initGuiElements();
+
+        // Restore full animation state from old ledgers to new ones (matched by class name)
+        if (!oldLedgers.isEmpty()) {
+            for (IGuiElement elem : mainGui.shownElements) {
+                if (elem instanceof buildcraft.lib.gui.ledger.Ledger_Neptune ledger) {
+                    var oldLedger = oldLedgers.get(elem.getClass().getName());
+                    if (oldLedger != null) {
+                        ledger.copyAnimationStateFrom(oldLedger);
+                    }
+                }
+            }
+        }
     }
 
     @Override

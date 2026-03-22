@@ -8,7 +8,6 @@ package buildcraft.silicon.client;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +53,7 @@ public class FacadeDeduplicator {
         if (FacadeStateManager.validFacadeStates.isEmpty()) return;
 
         Map<String, FacadeBlockStateInfo> seen = new HashMap<>();
-        Set<BlockState> toRemove = new HashSet<>();
+        Map<BlockState, FacadeBlockStateInfo> toRemove = new HashMap<>();
         int dupCount = 0;
         int nullFingerprints = 0;
 
@@ -77,7 +76,7 @@ public class FacadeDeduplicator {
 
             FacadeBlockStateInfo existing = seen.get(fingerprint);
             if (existing != null) {
-                toRemove.add(entry.getKey());
+                toRemove.put(entry.getKey(), existing);
                 dupCount++;
                 if (DEBUG) {
                     BCLog.logger.info("[silicon.facade] Dedup: " + info.state
@@ -91,8 +90,14 @@ public class FacadeDeduplicator {
         BCLog.logger.info("[silicon.facade] Dedup scan complete: " + seen.size() + " unique, "
             + dupCount + " duplicates, " + nullFingerprints + " null fingerprints");
 
-        // Remove duplicates from both maps
-        for (BlockState state : toRemove) {
+        // Remove duplicates from validFacadeStates and stackFacades,
+        // and populate stackRedirects so recipes can still accept the removed blocks as inputs
+        FacadeStateManager.stackRedirects.clear();
+        int redirectCount = 0;
+
+        for (Map.Entry<BlockState, FacadeBlockStateInfo> removal : toRemove.entrySet()) {
+            BlockState state = removal.getKey();
+            FacadeBlockStateInfo surviving = removal.getValue();
             FacadeBlockStateInfo removed = FacadeStateManager.validFacadeStates.remove(state);
             if (removed != null && !removed.requiredStack.isEmpty()) {
                 ItemStackKey stackKey = new ItemStackKey(removed.requiredStack);
@@ -103,13 +108,19 @@ public class FacadeDeduplicator {
                         FacadeStateManager.stackFacades.remove(stackKey);
                     }
                 }
+                // Redirect: removed block's item → surviving facade info
+                if (!FacadeStateManager.stackRedirects.containsKey(stackKey)) {
+                    FacadeStateManager.stackRedirects.put(stackKey, surviving);
+                    redirectCount++;
+                }
             }
         }
 
         if (dupCount > 0) {
             BCLog.logger.info("[silicon.facade] Removed " + dupCount
                 + " visually identical facade duplicates. Remaining: "
-                + FacadeStateManager.validFacadeStates.size());
+                + FacadeStateManager.validFacadeStates.size()
+                + " (" + redirectCount + " recipe redirects registered)");
         } else {
             BCLog.logger.info("[silicon.facade] No visual duplicates found.");
         }

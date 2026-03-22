@@ -56,6 +56,9 @@ public enum FacadeStateManager implements IFacadeRegistry {
     public static final boolean DEBUG = BCDebugging.shouldDebugLog("silicon.facade");
     public static final SortedMap<BlockState, FacadeBlockStateInfo> validFacadeStates;
     public static final Map<ItemStackKey, List<FacadeBlockStateInfo>> stackFacades;
+    /** Maps item inputs of deduplicated (removed) facades to the surviving facade info.
+     *  Populated client-side by FacadeDeduplicator after visual dedup. */
+    public static final Map<ItemStackKey, FacadeBlockStateInfo> stackRedirects;
     public static FacadeBlockStateInfo defaultState, previewState;
 
     private static final Map<Block, String> disabledBlocks = new HashMap<>();
@@ -64,6 +67,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
     static {
         validFacadeStates = new TreeMap<>(blockStateComparator());
         stackFacades = new HashMap<>();
+        stackRedirects = new HashMap<>();
     }
 
     /** Creates a comparator for BlockState based on their ID in the global block state registry. */

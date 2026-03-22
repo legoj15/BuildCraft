@@ -29,6 +29,7 @@ import buildcraft.silicon.gate.EnumGateLogic;
 import buildcraft.silicon.gate.EnumGateMaterial;
 import buildcraft.silicon.gate.EnumGateModifier;
 import buildcraft.silicon.gate.GateVariant;
+import buildcraft.silicon.recipe.FacadeAssemblyRecipes;
 
 public class BCSiliconRecipes {
 
@@ -194,8 +195,7 @@ public class BCSiliconRecipes {
     // --- Facade Recipes ---
 
     private static void registerFacadeRecipes() {
-        // TODO: FacadeAssemblyRecipes dynamic recipe
-        // AssemblyRecipeRegistry.register(FacadeAssemblyRecipes.INSTANCE);
+        AssemblyRecipeRegistry.register(FacadeAssemblyRecipes.INSTANCE);
     }
 
     // --- Helpers ---

@@ -120,7 +120,21 @@ public class FacadeAssemblyRecipes extends AssemblyRecipe implements IRecipeView
                 stacks.add(createFacadeStack(redirect, true));
             }
         }
-        return ImmutableSet.copyOf(stacks);
+        java.util.TreeSet<ItemStack> set = new java.util.TreeSet<>((a, b) -> {
+            if (ItemStack.isSameItemSameComponents(a, b)) return 0;
+            
+            net.minecraft.resources.Identifier thisId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(a.getItem());
+            net.minecraft.resources.Identifier otherId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(b.getItem());
+            int idCompare = thisId.compareTo(otherId);
+            if (idCompare != 0) return idCompare;
+            
+            int hashCompare = Integer.compare(ItemStack.hashItemAndComponents(a), ItemStack.hashItemAndComponents(b));
+            if (hashCompare != 0) return hashCompare;
+            
+            return a.getComponents().toString().compareTo(b.getComponents().toString());
+        });
+        set.addAll(stacks);
+        return set;
     }
 
     private static ItemStack baseRequirementStack() {

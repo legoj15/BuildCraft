@@ -75,6 +75,10 @@ public class BCSilicon {
 
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
+            // Register pluggable definitions with the transport registry.
+            // This MUST happen after Transport's constructor has set PipeApi.pluggableRegistry.
+            BCSiliconPlugs.registerAll();
+
             // Set up the facade API references
             FacadeAPI.facadeItem = BCSiliconItems.PLUG_FACADE.get();
             FacadeAPI.registry = FacadeStateManager.INSTANCE;

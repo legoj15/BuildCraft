@@ -6,6 +6,12 @@
 
 package buildcraft.silicon;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import net.minecraft.resources.Identifier;
 
 import buildcraft.api.transport.pipe.PipeApi;
@@ -22,6 +28,7 @@ import buildcraft.silicon.plug.PluggablePulsar;
 import buildcraft.silicon.plug.PluggableTimer;
 
 public class BCSiliconPlugs {
+    private static final Logger LOGGER = LoggerFactory.getLogger("BuildCraft");
 
     public static PluggableDefinition facade;
     public static PluggableDefinition gate;
@@ -30,38 +37,58 @@ public class BCSiliconPlugs {
     public static PluggableDefinition lightSensor;
     public static PluggableDefinition timer;
 
+    /** All definitions created in preInit, to be registered later when the registry is available. */
+    private static final List<PluggableDefinition> PENDING = new ArrayList<>();
+
+    /**
+     * Creates PluggableDefinition objects. Does NOT register them with the pluggable registry
+     * because PipeApi.pluggableRegistry may not be set yet (Silicon loads before Transport).
+     */
     public static void preInit() {
-        facade = register("facade",
+        facade = create("facade",
             (IPluggableNbtReader) PluggableFacade::new,
             (IPluggableNetLoader) PluggableFacade::new);
-        gate = register("gate",
+        gate = create("gate",
             (IPluggableNbtReader) PluggableGate::new,
             (IPluggableNetLoader) PluggableGate::new);
-        pulsar = register("pulsar",
+        pulsar = create("pulsar",
             (IPluggableNbtReader) PluggablePulsar::new,
             (IPluggableNetLoader) PluggablePulsar::new);
-        lens = register("lens",
+        lens = create("lens",
             (IPluggableNbtReader) PluggableLens::new,
             (IPluggableNetLoader) PluggableLens::new);
-        lightSensor = registerSimple("light_sensor",
+        lightSensor = createSimple("light_sensor",
             PluggableLightSensor::new);
-        timer = registerSimple("timer",
+        timer = createSimple("timer",
             PluggableTimer::new);
     }
 
-    private static PluggableDefinition register(String name, IPluggableNbtReader reader, IPluggableNetLoader loader) {
-        PluggableDefinition def = new PluggableDefinition(idFor(name), reader, loader);
-        if (PipeApi.pluggableRegistry != null) {
+    /**
+     * Registers all pending definitions with PipeApi.pluggableRegistry.
+     * Must be called AFTER Transport has set PipeApi.pluggableRegistry (e.g. from FMLCommonSetupEvent).
+     */
+    public static void registerAll() {
+        if (PipeApi.pluggableRegistry == null) {
+            LOGGER.error("[silicon.plugs] PipeApi.pluggableRegistry is null at registerAll! "
+                + "Pluggables (facades, gates, etc.) will NOT be saved or loaded.");
+            return;
+        }
+        for (PluggableDefinition def : PENDING) {
             PipeApi.pluggableRegistry.register(def);
         }
+        LOGGER.info("[silicon.plugs] Registered {} pluggable definitions", PENDING.size());
+        PENDING.clear();
+    }
+
+    private static PluggableDefinition create(String name, IPluggableNbtReader reader, IPluggableNetLoader loader) {
+        PluggableDefinition def = new PluggableDefinition(idFor(name), reader, loader);
+        PENDING.add(def);
         return def;
     }
 
-    private static PluggableDefinition registerSimple(String name, IPluggableCreator creator) {
+    private static PluggableDefinition createSimple(String name, IPluggableCreator creator) {
         PluggableDefinition def = new PluggableDefinition(idFor(name), creator);
-        if (PipeApi.pluggableRegistry != null) {
-            PipeApi.pluggableRegistry.register(def);
-        }
+        PENDING.add(def);
         return def;
     }
 
@@ -69,3 +96,4 @@ public class BCSiliconPlugs {
         return Identifier.fromNamespaceAndPath(BCSilicon.MODID, name);
     }
 }
+

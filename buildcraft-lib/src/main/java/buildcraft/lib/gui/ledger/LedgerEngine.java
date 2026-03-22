@@ -66,6 +66,7 @@ public class LedgerEngine extends Ledger_Neptune {
         // Select the appropriate engine status icon based on power stage
         // Matches 1.12.2 LedgerEngine.drawIcon() logic
         Identifier icon;
+        boolean animated = false;
         EnumPowerStage stage = powerStageSupplier.get();
         switch (stage) {
             case OVERHEAT:
@@ -74,12 +75,31 @@ public class LedgerEngine extends Ledger_Neptune {
             case RED:
             case YELLOW:
                 icon = ICON_WARM;
+                animated = true;
                 break;
             default:
-                icon = engineOnSupplier.get() ? ICON_ACTIVE : ICON_INACTIVE;
+                if (engineOnSupplier.get()) {
+                    icon = ICON_ACTIVE;
+                    animated = true;
+                } else {
+                    icon = ICON_INACTIVE;
+                }
         }
-        // Blit the 16x16 icon texture
-        graphics.blit(RenderPipelines.GUI_TEXTURED, icon,
-            (int) x, (int) y, 0f, 0f, 16, 16, 16, 16);
+
+        if (animated) {
+            // Sprite sheets are 16x96 (6 frames, 16x16 each, stacked vertically).
+            // frametime=1 in the 1.12.2 .mcmeta → advance one frame per game tick.
+            int totalFrames = 6;
+            int ticksPerFrame = 1;
+            long ticks = System.currentTimeMillis() / 50; // ~20 ticks/sec like MC
+            int frame = (int) ((ticks / ticksPerFrame) % totalFrames);
+            float vOffset = frame * 16f;
+            graphics.blit(RenderPipelines.GUI_TEXTURED, icon,
+                (int) x, (int) y, 0f, vOffset, 16, 16, 16, 96);
+        } else {
+            // Static icons (inactive, overheat) are 16x16
+            graphics.blit(RenderPipelines.GUI_TEXTURED, icon,
+                (int) x, (int) y, 0f, 0f, 16, 16, 16, 16);
+        }
     }
 }

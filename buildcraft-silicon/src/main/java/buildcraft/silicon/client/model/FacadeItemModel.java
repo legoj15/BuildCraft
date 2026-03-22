@@ -52,16 +52,10 @@ public class FacadeItemModel implements ItemModel {
     private final List<BakedQuad> vanillaQuads;
     private final ModelRenderProperties renderProperties;
 
-    // Cache for hand/3rd-person rendering (EAST facing, no offset)
+    // Cache for hand/3rd-person rendering (EAST facing, includes plug connector)
     private static final LoadingCache<KeyPlugFacade, List<BakedQuad>> cache = CacheBuilder.newBuilder()
         .expireAfterAccess(1, TimeUnit.MINUTES)
-        .build(CacheLoader.from(key -> {
-            List<BakedQuad> quads = new ArrayList<>();
-            for (MutableQuad quad : PlugBakerFacade.INSTANCE.bakeForKey(key)) {
-                quads.add(quad.toBakedItem());
-            }
-            return quads;
-        }));
+        .build(CacheLoader.from(key -> PlugBakerFacade.INSTANCE.bake(key)));
 
     // Cache for GUI/inventory rendering (NORTH facing, centered in slot)
     private static final LoadingCache<KeyPlugFacade, List<BakedQuad>> guiCache = CacheBuilder.newBuilder()
@@ -75,7 +69,6 @@ public class FacadeItemModel implements ItemModel {
             for (MutableQuad quad : PlugBakerFacade.INSTANCE.bakeForKey(key)) {
                 // Disable directional shading and set full brightness for GUI
                 quad.setShade(false);
-                quad.setLightEmission(15);
                 // Set all normals to UP — the renderer applies face-based brightness
                 // multipliers (UP=1.0, NORTH/SOUTH=0.8, EAST/WEST=0.6), so UP normals
                 // give the brightest result, matching 1.12.2's fully-lit appearance

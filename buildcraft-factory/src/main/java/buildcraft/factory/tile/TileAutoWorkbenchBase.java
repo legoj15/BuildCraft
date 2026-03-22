@@ -28,7 +28,6 @@ import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
-import buildcraft.api.mj.MjBattery;
 import buildcraft.api.tiles.IHasWork;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.tile.TileBC_Neptune;
@@ -40,7 +39,16 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IHasWork, IAutoCraft {
 
-    private static final long MJ_COST = 64 * MjAPI.MJ; // 64 MJ per craft
+    /** A redstone engine generates 1 * MjAPI.MJ per tick.
+     *  This passive rate makes the workbench much slower without one powering it. */
+    private static final long POWER_GEN_PASSIVE = MjAPI.MJ / 5;
+
+    /** Total MJ required per craft: 0.2 MJ/tick * 200 ticks = 40 MJ.
+     *  Without external power this takes 10 seconds. */
+    private static final long POWER_REQUIRED = POWER_GEN_PASSIVE * 20 * 10;
+
+    /** Power drained per tick when the workbench cannot craft (decays stored power). */
+    private static final long POWER_LOST = POWER_GEN_PASSIVE * 10;
 
     protected final int width;
     protected final int height;
@@ -54,18 +62,27 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
     /** The recipe output, synced to clients for display in the GUI. */
     public ItemStack resultClient = ItemStack.EMPTY;
 
-    private final MjBattery mjBattery = new MjBattery(1024 * MjAPI.MJ);
+    /** Accumulated MJ towards the current craft. */
+    private long powerStored;
 
-    /** MJ receiver adapter — wraps the battery for the capability system. */
+    /** Previous tick's powerStored, used for smooth client-side progress interpolation. */
+    private long powerStoredLast;
+
+    /** MJ receiver — allows engines to pump power directly into powerStored. */
     private final IMjReceiver mjReceiver = new IMjReceiver() {
         @Override
         public long getPowerRequested() {
-            return mjBattery.getCapacity() - mjBattery.getStored();
+            return POWER_REQUIRED - powerStored;
         }
 
         @Override
         public long receivePower(long microJoules, boolean simulate) {
-            return mjBattery.addPowerChecking(microJoules, simulate);
+            long req = getPowerRequested();
+            long taken = Math.min(req, microJoules);
+            if (!simulate) {
+                powerStored += taken;
+            }
+            return microJoules - taken;
         }
 
         @Override
@@ -73,9 +90,6 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
             return true;
         }
     };
-
-    private long mjCostRemaining = 0;
-    private boolean isActive = false;
 
     public TileAutoWorkbenchBase(BlockEntityType<?> type, BlockPos pos, BlockState state, int width, int height) {
         super(type, pos, state);
@@ -107,7 +121,7 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
     // region IHasWork
     @Override
     public boolean hasWork() {
-        return crafting.canCraft();
+        return powerStored > 0;
     }
     // endregion
 
@@ -124,13 +138,32 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
     // endregion
 
     // region MJ
-    public MjBattery getMjBattery() {
-        return mjBattery;
-    }
-
     /** @return The IMjReceiver for capability registration. */
     public IMjReceiver getMjReceiver() {
         return mjReceiver;
+    }
+    // endregion
+
+    // region Progress
+    /** @return The crafting progress as a 0.0–1.0 value, interpolated for smooth rendering. */
+    public double getProgress(float partialTicks) {
+        double interp = powerStoredLast + (powerStored - powerStoredLast) * partialTicks;
+        return interp / POWER_REQUIRED;
+    }
+
+    /** @return The current power stored (for container data slot sync). */
+    public long getPowerStored() {
+        return powerStored;
+    }
+
+    /** Sets powerStored from the client-side container sync. */
+    public void setPowerStored(long value) {
+        this.powerStoredLast = this.powerStored;
+        this.powerStored = value;
+        if (powerStored < 10) {
+            // Properly handle crafting finishes — avoid stuttering interpolation
+            powerStoredLast = powerStored;
+        }
     }
     // endregion
 
@@ -145,28 +178,19 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
         }
 
         if (crafting.canCraft()) {
-            if (mjCostRemaining <= 0) {
-                mjCostRemaining = MJ_COST;
-            }
-
-            long extracted = mjBattery.extractPower(0, mjCostRemaining);
-            mjCostRemaining -= extracted;
-
-            if (mjCostRemaining <= 0) {
+            if (powerStored >= POWER_REQUIRED) {
                 if (crafting.craft()) {
-                    mjCostRemaining = 0;
+                    // Keep 1 if more crafts are possible, else reset to 0
+                    powerStored = crafting.canCraft() ? 1 : 0;
                 }
+            } else {
+                // Passive power generation — allows crafting without engines (slowly)
+                powerStored += POWER_GEN_PASSIVE;
             }
-            if (!isActive) {
-                isActive = true;
-                setChanged();
-            }
+        } else if (powerStored >= POWER_LOST) {
+            powerStored -= POWER_LOST;
         } else {
-            if (isActive) {
-                isActive = false;
-                mjCostRemaining = 0;
-                setChanged();
-            }
+            powerStored = 0;
         }
 
         // Sync to clients when recipe result changes
@@ -258,8 +282,7 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
         output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
-        output.putLong("mjStored", mjBattery.getStored());
-        output.putLong("mjCostRemaining", mjCostRemaining);
+        output.putLong("powerStored", powerStored);
         if (!resultClient.isEmpty()) {
             output.store("resultClient", ItemStack.CODEC, resultClient);
         }
@@ -269,8 +292,7 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
-        mjBattery.addPowerChecking(input.getLongOr("mjStored", 0L), false);
-        mjCostRemaining = input.getLongOr("mjCostRemaining", 0L);
+        powerStored = input.getLongOr("powerStored", 0L);
         resultClient = input.read("resultClient", ItemStack.CODEC).orElse(ItemStack.EMPTY);
     }
     // endregion
@@ -287,4 +309,3 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
     }
     // endregion
 }
-

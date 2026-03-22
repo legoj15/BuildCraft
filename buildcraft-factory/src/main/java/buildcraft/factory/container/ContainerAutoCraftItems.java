@@ -72,6 +72,22 @@ public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchIt
         // Recipe result display slot at (93, 27) — matches 1.12.2
         addSlot(new SlotDisplay(i -> tile.resultClient, 0, 93, 27));
 
+        // Sync powerStored to client for progress bar (long → two int data slots)
+        addDataSlot(new net.minecraft.world.inventory.DataSlot() {
+            @Override public int get() { return (int) (tile.getPowerStored() & 0xFFFFFFFFL); }
+            @Override public void set(int value) {
+                long current = tile.getPowerStored();
+                tile.setPowerStored((current & 0xFFFFFFFF00000000L) | (value & 0xFFFFFFFFL));
+            }
+        });
+        addDataSlot(new net.minecraft.world.inventory.DataSlot() {
+            @Override public int get() { return (int) (tile.getPowerStored() >>> 32); }
+            @Override public void set(int value) {
+                long current = tile.getPowerStored();
+                tile.setPowerStored((current & 0x00000000FFFFFFFFL) | ((long) value << 32));
+            }
+        });
+
         // Player inventory at (8, 115)
         addFullPlayerInventory(8, 115);
     }

@@ -34,6 +34,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
             Identifier.parse("buildcraftlib:textures/gui/misc_slots.png");
     private static final int SIZE_X = 176, SIZE_Y = 197;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
+    private static final GuiIcon ICON_PROGRESS = new GuiIcon(TEXTURE, SIZE_X, 0, 23, 10);
     private static final GuiIcon ICON_FILTER_OVERLAY_SAME = new GuiIcon(TEXTURE_MISC, 54, 0, 18, 18);
     private static final GuiIcon ICON_FILTER_OVERLAY_DIFFERENT = new GuiIcon(TEXTURE_MISC, 72, 0, 18, 18);
 
@@ -98,6 +99,19 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     @Override
     protected void drawBackgroundTexture(GuiGraphics graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
+
+        // Draw crafting progress bar (arrow fill)
+        if (menu.tile != null) {
+            double progress = menu.tile.getProgress(0);
+            if (progress > 0) {
+                int progressWidth = (int) (ICON_PROGRESS.width * Math.min(progress, 1.0));
+                if (progressWidth > 0) {
+                    int px = 90 + (int) mainGui.rootElement.getX();
+                    int py = 47 + (int) mainGui.rootElement.getY();
+                    ICON_PROGRESS.drawCutInside(px, py, progressWidth, ICON_PROGRESS.height);
+                }
+            }
+        }
 
         // Draw phantom filter items and colored overlays on material slots
         if (hasFilters()) {

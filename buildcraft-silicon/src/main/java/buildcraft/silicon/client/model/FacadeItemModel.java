@@ -52,12 +52,31 @@ public class FacadeItemModel implements ItemModel {
     private final List<BakedQuad> vanillaQuads;
     private final ModelRenderProperties renderProperties;
 
-    // Cache baked quads per facade key
+    // Cache for hand/3rd-person rendering (EAST facing, no offset)
     private static final LoadingCache<KeyPlugFacade, List<BakedQuad>> cache = CacheBuilder.newBuilder()
         .expireAfterAccess(1, TimeUnit.MINUTES)
         .build(CacheLoader.from(key -> {
             List<BakedQuad> quads = new ArrayList<>();
             for (MutableQuad quad : PlugBakerFacade.INSTANCE.bakeForKey(key)) {
+                quads.add(quad.toBakedItem());
+            }
+            return quads;
+        }));
+
+    // Cache for GUI/inventory rendering (NORTH facing, centered in slot)
+    private static final LoadingCache<KeyPlugFacade, List<BakedQuad>> guiCache = CacheBuilder.newBuilder()
+        .expireAfterAccess(1, TimeUnit.MINUTES)
+        .build(CacheLoader.from(key -> {
+            List<BakedQuad> quads = new ArrayList<>();
+            // Center the NORTH-facing facade in the block space:
+            // facade spans z=0 to z=SIZE/16, center of block is z=0.5
+            // offset = (16 - SIZE) / 2 / 16
+            float offsetZ = (16 - buildcraft.silicon.plug.PluggableFacade.SIZE) / 2f / 16f;
+            for (MutableQuad quad : PlugBakerFacade.INSTANCE.bakeForKey(key)) {
+                quad.vertex_0.translatef(0, 0, offsetZ);
+                quad.vertex_1.translatef(0, 0, offsetZ);
+                quad.vertex_2.translatef(0, 0, offsetZ);
+                quad.vertex_3.translatef(0, 0, offsetZ);
                 quads.add(quad.toBakedItem());
             }
             return quads;
@@ -103,6 +122,7 @@ public class FacadeItemModel implements ItemModel {
 
     public static void onModelBake() {
         cache.invalidateAll();
+        guiCache.invalidateAll();
     }
 
     @Override
@@ -112,9 +132,18 @@ public class FacadeItemModel implements ItemModel {
         FacadeInstance inst = ItemPluggableFacade.getStates(stack);
         FacadePhasedState state = inst.getCurrentStateForStack();
 
-        KeyPlugFacade key = new KeyPlugFacade("cutout", Direction.EAST, state.stateInfo.state, inst.isHollow());
+        // GUI: use NORTH facing (visible in standard isometric view) + centered
+        // Hand/other: use EAST facing (visible when held)
+        List<BakedQuad> quads;
+        KeyPlugFacade key;
+        if (displayContext == ItemDisplayContext.GUI) {
+            key = new KeyPlugFacade("cutout", Direction.NORTH, state.stateInfo.state, inst.isHollow());
+            quads = guiCache.getUnchecked(key);
+        } else {
+            key = new KeyPlugFacade("cutout", Direction.EAST, state.stateInfo.state, inst.isHollow());
+            quads = cache.getUnchecked(key);
+        }
 
-        List<BakedQuad> quads = cache.getUnchecked(key);
         if (quads.isEmpty()) {
             // Fallback to the vanilla model if baking produced nothing
             vanillaWrapper.update(renderState, stack, modelResolver, displayContext, level, owner, seed);
@@ -132,3 +161,4 @@ public class FacadeItemModel implements ItemModel {
         renderProperties.applyToLayer(layer, displayContext);
     }
 }
+

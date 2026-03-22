@@ -201,6 +201,14 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         int tintColour = 0xFF000000 | (colour & 0xFFFFFF);
         split.drawTinted(getX(), getY(), interpWidth, interpHeight, tintColour);
 
+        // Scissor clip all content (icon + text) to the ledger's current animated bounds.
+        // Matches 1.12.2's GuiUtil.scissor() which masked content during expand/contract.
+        int scissorX = (int) positionLedgerIconStart.getX();
+        int scissorY = (int) positionLedgerIconStart.getY();
+        int scissorW = (int) (interpWidth - LEDGER_GAP);
+        int scissorH = (int) (interpHeight - LEDGER_GAP * 2);
+        graphics.enableScissor(scissorX, scissorY, scissorX + scissorW, scissorY + scissorH);
+
         // Draw icon (always visible)
         double iconX = positionLedgerIconStart.getX();
         double iconY = positionLedgerIconStart.getY();
@@ -213,26 +221,20 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
             int textX = (int) iconX + 16 + LEDGER_GAP;
             int textY = (int) iconY + 1;
 
-            // Clip to ledger bounds
-            int maxTextX = x + w - LEDGER_GAP;
-
             // Draw title
-            if (textX < maxTextX) {
-                graphics.drawString(font, getTitle(), textX, textY, getTitleColour() | 0xFF000000, true);
-            }
+            graphics.drawString(font, getTitle(), textX, textY, getTitleColour() | 0xFF000000, true);
             textY += font.lineHeight + 3;
 
             // Draw text entries
             for (TextEntry entry : textEntries) {
-                if (textY + font.lineHeight > y + interpHeight - LEDGER_GAP) break;
-                if (textX < maxTextX) {
-                    String text = entry.getText();
-                    graphics.drawString(font, text, textX, textY,
-                        entry.getColour() | 0xFF000000, entry.dropShadow);
-                }
+                String text = entry.getText();
+                graphics.drawString(font, text, textX, textY,
+                    entry.getColour() | 0xFF000000, entry.dropShadow);
                 textY += font.lineHeight + 3;
             }
         }
+
+        graphics.disableScissor();
 
         // Draw tooltip when ledger is closed/closing and mouse hovers over it
         if (!shouldDrawOpen() && contains(gui.mouse.getX(), gui.mouse.getY())) {

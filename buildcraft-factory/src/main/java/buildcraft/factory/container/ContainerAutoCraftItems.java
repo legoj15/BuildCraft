@@ -25,6 +25,7 @@ import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotBase;
+import buildcraft.lib.gui.slot.SlotDisplay;
 import buildcraft.lib.gui.slot.SlotOutput;
 import buildcraft.lib.gui.slot.SlotPhantom;
 import buildcraft.lib.misc.CraftingUtil;
@@ -32,6 +33,7 @@ import buildcraft.lib.misc.CraftingUtil;
 public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchItems> {
 
     private final List<Slot> blueprintSlots = new ArrayList<>();
+    public final SlotBase[] materialSlots;
 
     // Client-side constructor (from network)
     public ContainerAutoCraftItems(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
@@ -45,7 +47,7 @@ public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchIt
         // Result output slot at (124, 35) — matches 1.12.2
         addSlot(new SlotOutput(tile.invResult, 0, 124, 35));
 
-        // Blueprint phantom slots (3x3 grid) — top-left at (30, 17) — matches 1.12.2
+        // Blueprint phantom slots (3x3 grid) — top-left at (30, 17)
         for (int y = 0; y < 3; y++) {
             for (int x = 0; x < 3; x++) {
                 Slot slot = new SlotPhantom(tile.invBlueprint, x + y * 3,
@@ -55,12 +57,22 @@ public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchIt
             }
         }
 
-        // Materials slots — single row of 9 at (8 + x*18, 84) — matches 1.12.2
+        // Material filter phantom slots (hidden off-screen, synced for GUI overlay)
         for (int x = 0; x < 9; x++) {
-            addSlot(new SlotBase(tile.invMaterials, x, 8 + x * 18, 84));
+            addSlot(new SlotPhantom(tile.invMaterialFilter, x, -1000000, -1000000));
         }
 
-        // Player inventory at (8, 115) — matches 1.12.2
+        // Materials slots — single row of 9 at (8 + x*18, 84)
+        materialSlots = new SlotBase[9];
+        for (int x = 0; x < 9; x++) {
+            materialSlots[x] = new SlotBase(tile.invMaterials, x, 8 + x * 18, 84);
+            addSlot(materialSlots[x]);
+        }
+
+        // Recipe result display slot at (93, 27) — matches 1.12.2
+        addSlot(new SlotDisplay(i -> tile.resultClient, 0, 93, 27));
+
+        // Player inventory at (8, 115)
         addFullPlayerInventory(8, 115);
     }
 
@@ -98,7 +110,6 @@ public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchIt
 
     @Override
     public void fillCraftSlotsStackedContents(StackedItemContents contents) {
-        // Report material inventory contents to the recipe book for craftability display
         for (int i = 0; i < tile.invMaterials.getSlots(); i++) {
             contents.accountStack(tile.invMaterials.getStackInSlot(i));
         }
@@ -120,3 +131,4 @@ public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchIt
         return null;
     }
 }
+

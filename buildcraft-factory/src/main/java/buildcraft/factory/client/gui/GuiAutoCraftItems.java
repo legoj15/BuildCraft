@@ -17,21 +17,25 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 import buildcraft.factory.container.ContainerAutoCraftItems;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
-import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
+import buildcraft.lib.gui.slot.SlotBase;
+import buildcraft.lib.misc.StackUtil;
+import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     private static final Identifier TEXTURE =
             Identifier.parse("buildcraftfactory:textures/gui/autobench_item.png");
+    private static final Identifier TEXTURE_MISC =
+            Identifier.parse("buildcraftlib:textures/gui/misc_slots.png");
     private static final int SIZE_X = 176, SIZE_Y = 197;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
-    private static final GuiIcon ICON_PROGRESS = new GuiIcon(TEXTURE, SIZE_X, 0, 23, 10);
-    private static final buildcraft.lib.gui.pos.GuiRectangle RECT_PROGRESS =
-            new buildcraft.lib.gui.pos.GuiRectangle(90, 47, 23, 10);
+    private static final GuiIcon ICON_FILTER_OVERLAY_SAME = new GuiIcon(TEXTURE_MISC, 54, 0, 18, 18);
+    private static final GuiIcon ICON_FILTER_OVERLAY_DIFFERENT = new GuiIcon(TEXTURE_MISC, 72, 0, 18, 18);
 
     private AWRecipeBookComponent recipeBookComponent;
     private ImageButton recipeBookButton;
@@ -94,6 +98,38 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     @Override
     protected void drawBackgroundTexture(GuiGraphics graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
+
+        // Draw colored overlays on material slots when recipe filters are active
+        if (hasFilters()) {
+            ItemHandlerSimple filters = menu.tile.invMaterialFilter;
+            for (int s = 0; s < filters.getSlots(); s++) {
+                ItemStack filterStack = filters.getStackInSlot(s);
+                if (!filterStack.isEmpty()) {
+                    SlotBase slot = menu.materialSlots[s];
+                    ItemStack real = slot.getItem();
+                    GuiIcon icon;
+                    if (real.isEmpty() || StackUtil.canMerge(real, filterStack)) {
+                        icon = ICON_FILTER_OVERLAY_SAME;
+                    } else {
+                        icon = ICON_FILTER_OVERLAY_DIFFERENT;
+                    }
+                    int x = slot.x + (int) mainGui.rootElement.getX() - 1;
+                    int y = slot.y + (int) mainGui.rootElement.getY() - 1;
+                    icon.drawAt(x, y);
+                }
+            }
+        }
+    }
+
+    private boolean hasFilters() {
+        if (menu.tile == null) return false;
+        ItemHandlerSimple filters = menu.tile.invMaterialFilter;
+        for (int s = 0; s < filters.getSlots(); s++) {
+            if (!filters.getStackInSlot(s).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

@@ -99,9 +99,23 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     protected void drawBackgroundTexture(GuiGraphics graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
 
-        // Draw colored overlays on material slots when recipe filters are active
+        // Draw phantom filter items and colored overlays on material slots
         if (hasFilters()) {
             ItemHandlerSimple filters = menu.tile.invMaterialFilter;
+
+            // First pass: render the phantom filter items inside material slots
+            for (int s = 0; s < filters.getSlots(); s++) {
+                ItemStack filterStack = filters.getStackInSlot(s);
+                if (!filterStack.isEmpty()) {
+                    SlotBase slot = menu.materialSlots[s];
+                    int x = slot.x + (int) mainGui.rootElement.getX();
+                    int y = slot.y + (int) mainGui.rootElement.getY();
+                    graphics.renderItem(filterStack, x, y);
+                    graphics.renderItemDecorations(this.font, filterStack, x, y, null);
+                }
+            }
+
+            // Second pass: draw colored overlays on top
             for (int s = 0; s < filters.getSlots(); s++) {
                 ItemStack filterStack = filters.getStackInSlot(s);
                 if (!filterStack.isEmpty()) {

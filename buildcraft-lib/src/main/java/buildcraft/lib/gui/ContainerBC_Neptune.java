@@ -8,11 +8,13 @@ package buildcraft.lib.gui;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import com.google.common.collect.ImmutableList;
 
 import io.netty.buffer.Unpooled;
 
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -20,7 +22,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.StackedItemContents;
 import net.minecraft.world.inventory.RecipeBookMenu;
 import net.minecraft.world.inventory.RecipeBookType;
+import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
@@ -43,6 +47,8 @@ import buildcraft.lib.net.PacketBufferBC;
 public abstract class ContainerBC_Neptune extends RecipeBookMenu {
 
     public static final int NET_WIDGET = 0;
+    /** Container message ID used by JEI's BlueprintTransferHandler. */
+    public static final int NET_JEI_RECIPE_TRANSFER = 100;
 
     public final Player player;
     private final List<Widget_Neptune<?>> widgets = new ArrayList<>();
@@ -140,6 +146,22 @@ public abstract class ContainerBC_Neptune extends RecipeBookMenu {
                 }
             } catch (Exception e) {
                 BCLog.logger.warn("[lib.container] Error handling widget data for widget " + widgetId, e);
+            }
+        } else if (id == NET_JEI_RECIPE_TRANSFER && !isClient) {
+            // Server-side: JEI requested recipe placement into blueprint phantom slots.
+            // Look up the recipe by resource location and delegate to handlePlacement().
+            Identifier recipeId = Identifier.parse(buffer.readUtf());
+            if (player.level() instanceof ServerLevel serverLevel) {
+                net.minecraft.resources.ResourceKey<net.minecraft.world.item.crafting.Recipe<?>> key =
+                        net.minecraft.resources.ResourceKey.create(
+                                net.minecraft.core.registries.Registries.RECIPE, recipeId);
+                Optional<RecipeHolder<CraftingRecipe>> holder = serverLevel.recipeAccess()
+                        .byKey(key)
+                        .filter(r -> r.value() instanceof CraftingRecipe)
+                        .map(r -> (RecipeHolder<CraftingRecipe>) (RecipeHolder<?>) r);
+                holder.ifPresent(recipe -> handlePlacement(
+                        false, player.isCreative(), recipe,
+                        serverLevel, player.getInventory()));
             }
         }
     }

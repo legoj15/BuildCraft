@@ -76,10 +76,13 @@ public class FacadeItemModel implements ItemModel {
                 // Disable directional shading and set full brightness for GUI
                 quad.setShade(false);
                 quad.setLightEmission(15);
-                quad.vertex_0.translatef(0, 0, offsetZ); quad.vertex_0.lighti(15, 15); quad.vertex_0.colouri(255, 255, 255, 255);
-                quad.vertex_1.translatef(0, 0, offsetZ); quad.vertex_1.lighti(15, 15); quad.vertex_1.colouri(255, 255, 255, 255);
-                quad.vertex_2.translatef(0, 0, offsetZ); quad.vertex_2.lighti(15, 15); quad.vertex_2.colouri(255, 255, 255, 255);
-                quad.vertex_3.translatef(0, 0, offsetZ); quad.vertex_3.lighti(15, 15); quad.vertex_3.colouri(255, 255, 255, 255);
+                // Set all normals to UP — the renderer applies face-based brightness
+                // multipliers (UP=1.0, NORTH/SOUTH=0.8, EAST/WEST=0.6), so UP normals
+                // give the brightest result, matching 1.12.2's fully-lit appearance
+                quad.vertex_0.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
+                quad.vertex_1.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
+                quad.vertex_2.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
+                quad.vertex_3.translatef(0, 0, offsetZ).normalf(0, 1, 0).colouri(255, 255, 255, 255);
                 quads.add(quad.toBakedItem());
             }
             return quads;

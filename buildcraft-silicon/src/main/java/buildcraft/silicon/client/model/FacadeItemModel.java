@@ -75,6 +75,7 @@ public class FacadeItemModel implements ItemModel {
             for (MutableQuad quad : PlugBakerFacade.INSTANCE.bakeForKey(key)) {
                 // Disable directional shading and set full brightness for GUI
                 quad.setShade(false);
+                quad.setLightEmission(15);
                 quad.vertex_0.translatef(0, 0, offsetZ); quad.vertex_0.lighti(15, 15); quad.vertex_0.colouri(255, 255, 255, 255);
                 quad.vertex_1.translatef(0, 0, offsetZ); quad.vertex_1.lighti(15, 15); quad.vertex_1.colouri(255, 255, 255, 255);
                 quad.vertex_2.translatef(0, 0, offsetZ); quad.vertex_2.lighti(15, 15); quad.vertex_2.colouri(255, 255, 255, 255);

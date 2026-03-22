@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.BlockModelPart;
 import net.minecraft.client.renderer.block.model.BlockStateModel;
@@ -46,21 +45,35 @@ public class FacadeDeduplicator {
      * Removes facade states from {@link FacadeStateManager#validFacadeStates} and
      * {@link FacadeStateManager#stackFacades} that are visually identical to an
      * earlier-registered state. Only the first (by blockstate ID order) survives.
+     *
+     * @param blockStateModels the baked blockstate-to-model map from the BakingResult
      */
-    public static void deduplicateVisuallyIdentical() {
+    public static void deduplicateVisuallyIdentical(Map<BlockState, BlockStateModel> blockStateModels) {
+        BCLog.logger.info("[silicon.facade] Starting visual deduplication of "
+            + FacadeStateManager.validFacadeStates.size() + " facade states...");
         if (FacadeStateManager.validFacadeStates.isEmpty()) return;
 
         Map<String, FacadeBlockStateInfo> seen = new HashMap<>();
         Set<BlockState> toRemove = new HashSet<>();
         int dupCount = 0;
+        int nullFingerprints = 0;
 
         for (Map.Entry<BlockState, FacadeBlockStateInfo> entry
                 : FacadeStateManager.validFacadeStates.entrySet()) {
             FacadeBlockStateInfo info = entry.getValue();
             if (!info.isVisible) continue;
 
-            String fingerprint = computeTextureFingerprint(info.state);
-            if (fingerprint == null) continue;
+            BlockStateModel model = blockStateModels.get(info.state);
+            if (model == null) {
+                nullFingerprints++;
+                continue;
+            }
+
+            String fingerprint = computeTextureFingerprint(model);
+            if (fingerprint == null) {
+                nullFingerprints++;
+                continue;
+            }
 
             FacadeBlockStateInfo existing = seen.get(fingerprint);
             if (existing != null) {
@@ -74,6 +87,9 @@ public class FacadeDeduplicator {
                 seen.put(fingerprint, info);
             }
         }
+
+        BCLog.logger.info("[silicon.facade] Dedup scan complete: " + seen.size() + " unique, "
+            + dupCount + " duplicates, " + nullFingerprints + " null fingerprints");
 
         // Remove duplicates from both maps
         for (BlockState state : toRemove) {
@@ -94,20 +110,18 @@ public class FacadeDeduplicator {
             BCLog.logger.info("[silicon.facade] Removed " + dupCount
                 + " visually identical facade duplicates. Remaining: "
                 + FacadeStateManager.validFacadeStates.size());
+        } else {
+            BCLog.logger.info("[silicon.facade] No visual duplicates found.");
         }
     }
 
     /**
-     * Computes a texture fingerprint for a blockstate by examining its baked model's
-     * quads on all 6 faces. Uses the NeoForge 1.21.11 BlockStateModel/collectParts API.
-     * Returns a canonical string of sorted texture names, or null if the model
-     * couldn't be obtained.
+     * Computes a texture fingerprint for a BlockStateModel by examining its quads
+     * on all 6 faces. Uses the NeoForge 1.21.11 collectParts/SimpleModelWrapper API.
+     * Returns a canonical string of sorted texture names, or null if no quads found.
      */
-    private static String computeTextureFingerprint(BlockState state) {
+    private static String computeTextureFingerprint(BlockStateModel model) {
         try {
-            BlockStateModel model = Minecraft.getInstance().getBlockRenderer().getBlockModel(state);
-            if (model == null) return null;
-
             Set<String> textures = new LinkedHashSet<>();
 
             for (Direction dir : Direction.values()) {
@@ -129,7 +143,7 @@ public class FacadeDeduplicator {
             return String.join("|", sorted);
         } catch (Exception e) {
             if (DEBUG) {
-                BCLog.logger.warn("[silicon.facade] Failed to compute fingerprint for " + state, e);
+                BCLog.logger.warn("[silicon.facade] Failed to compute fingerprint for model", e);
             }
             return null;
         }

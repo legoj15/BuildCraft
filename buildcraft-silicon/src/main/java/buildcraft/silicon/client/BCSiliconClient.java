@@ -66,7 +66,7 @@ public class BCSiliconClient {
 
         // Deduplicate facades that have identical textures on all 6 faces
         // (e.g. bricks vs double brick_slab, waterlogged vs non-waterlogged)
-        FacadeDeduplicator.deduplicateVisuallyIdentical();
+        FacadeDeduplicator.deduplicateVisuallyIdentical(event.getBakingResult().blockStateModels());
     }
 }
 

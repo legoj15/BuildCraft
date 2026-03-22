@@ -65,6 +65,11 @@ tasks.register('fatJar', Jar) {
         }
     }
 
+    // Include the expression library (local file dependency used by lib/core/energy)
+    from(zipTree("${rootDir}/sub_projects/expression/build/libs/buildcraft-libexpression-0.9.3-pre.4.jar")) {
+        exclude 'META-INF/**'
+    }
+
     // Prevent duplicate files — first entry wins (our merged mods.toml)
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

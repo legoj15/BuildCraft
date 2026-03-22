@@ -112,7 +112,7 @@ public class FacadeItemModel implements ItemModel {
         FacadeInstance inst = ItemPluggableFacade.getStates(stack);
         FacadePhasedState state = inst.getCurrentStateForStack();
 
-        KeyPlugFacade key = new KeyPlugFacade("cutout", Direction.WEST, state.stateInfo.state, inst.isHollow());
+        KeyPlugFacade key = new KeyPlugFacade("cutout", Direction.EAST, state.stateInfo.state, inst.isHollow());
 
         List<BakedQuad> quads = cache.getUnchecked(key);
         if (quads.isEmpty()) {

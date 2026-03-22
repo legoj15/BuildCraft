@@ -42,6 +42,13 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
     @Override
     protected void init() {
         super.init();
+        // Reset ledger position anchors before re-creating elements.
+        // On window resize, init() is called again and new Ledger_Neptune instances
+        // are created. Without resetting, the position chain accumulates stale offsets
+        // from the destroyed ledger instances, causing displacement or disappearance.
+        IGuiArea rootArea = BuildCraftGui.createWindowedArea(this);
+        mainGui.lowerLeftLedgerPos = rootArea.offset(0, 5);
+        mainGui.lowerRightLedgerPos = rootArea.getPosition(1, -1).offset(0, 5);
         mainGui.shownElements.clear();
         initGuiElements();
     }

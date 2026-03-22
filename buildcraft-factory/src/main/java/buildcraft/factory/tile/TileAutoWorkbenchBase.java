@@ -26,7 +26,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.mj.IMjConnector;
-import buildcraft.api.mj.IMjReceiver;
+import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.tiles.IHasWork;
 import buildcraft.lib.misc.StackUtil;
@@ -68,8 +68,9 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
     /** Previous tick's powerStored, used for smooth client-side progress interpolation. */
     private long powerStoredLast;
 
-    /** MJ receiver — allows engines to pump power directly into powerStored. */
-    private final IMjReceiver mjReceiver = new IMjReceiver() {
+    /** MJ redstone receiver — engines use pulsed power delivery (at piston midpoint)
+     *  rather than constant per-tick delivery, matching 1.12.2 behavior. */
+    private final IMjRedstoneReceiver mjReceiver = new IMjRedstoneReceiver() {
         @Override
         public long getPowerRequested() {
             return POWER_REQUIRED - powerStored;
@@ -138,8 +139,8 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
     // endregion
 
     // region MJ
-    /** @return The IMjReceiver for capability registration. */
-    public IMjReceiver getMjReceiver() {
+    /** @return The IMjRedstoneReceiver for capability registration. */
+    public IMjRedstoneReceiver getMjReceiver() {
         return mjReceiver;
     }
     // endregion

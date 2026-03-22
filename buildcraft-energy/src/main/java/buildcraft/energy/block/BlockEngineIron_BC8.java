@@ -6,6 +6,8 @@ package buildcraft.energy.block;
 
 import org.jetbrains.annotations.Nullable;
 
+import net.minecraft.core.Direction;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -13,9 +15,12 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+
+import buildcraft.api.properties.BuildCraftProperties;
 
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.api.transport.pipe.IItemPipe;
@@ -44,10 +49,28 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        // Wrenches: non-crouching wrench opens GUI (matches 1.12.2)
-        // Crouch+wrench falls through to PASS -> Item.useOn() -> ICustomRotationHandler rotation
+        // Wrenches: in 1.12.2, right-clicking with a wrench rotates the engine.
+        // Crouch+wrench also rotates (falls through to PASS -> Item.useOn() -> ICustomRotationHandler).
+        // The GUI is opened by right-clicking with anything OTHER than a wrench/pipe.
         if (!stack.isEmpty() && stack.getItem() instanceof IToolWrench) {
             if (!player.isShiftKeyDown()) {
+                // Try to rotate; if successful, return SUCCESS.
+                // If no valid rotation target, fall through to open the GUI (matching 1.12.2).
+                if (!level.isClientSide()) {
+                    BlockEntity be = level.getBlockEntity(pos);
+                    if (be instanceof TileEngineIron_BC8 engine) {
+                        if (engine.attemptRotation()) {
+                            level.setBlock(pos, state.setValue(
+                                    BuildCraftProperties.BLOCK_FACING_6, engine.getOrientation()), 3);
+                            return InteractionResult.SUCCESS;
+                        }
+                    }
+                } else {
+                    // Client side: optimistically return success for the swing animation.
+                    // If server finds no valid target, the GUI will open server-side.
+                    return InteractionResult.SUCCESS;
+                }
+                // No valid rotation target — open the GUI
                 return openGui(state, level, pos, player);
             }
             return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
@@ -80,6 +103,27 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
             Player player, BlockHitResult hitResult) {
         return openGui(state, level, pos, player);
+    }
+
+    /**
+     * Drop fragile fluid shards for all tank contents when the engine is broken.
+     * Matches 1.12.2 behavior where TankManager contents were dropped as fluid shard items.
+     */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state,
+            Player player) {
+        if (!level.isClientSide()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileEngineIron_BC8 engine) {
+                net.minecraft.core.NonNullList<ItemStack> drops = net.minecraft.core.NonNullList.create();
+                buildcraft.api.items.FluidItemDrops.addFluidDrops(drops,
+                        engine.tankFuel, engine.tankCoolant, engine.tankResidue);
+                for (ItemStack drop : drops) {
+                    Block.popResource(level, pos, drop);
+                }
+            }
+        }
+        return super.playerWillDestroy(level, pos, state, player);
     }
 
     /** Open the combustion engine GUI for the given player. */

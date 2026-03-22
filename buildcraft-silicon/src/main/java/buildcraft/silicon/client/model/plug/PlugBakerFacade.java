@@ -27,6 +27,7 @@ import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.transport.pluggable.IPluggableStaticBaker;
 
+import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.client.model.MutableVertex;
 import buildcraft.lib.misc.VecUtil;
@@ -310,6 +311,53 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
         for (MutableQuad quad : mutableQuads) {
             baked.add(quad.toBakedItem());
         }
+        // For solid, full-block facades, add the blocker plug connector
+        // (the small box that bridges the facade to the pipe center).
+        // In 1.12.2 this was TransportCompat.bakeBlocker(key.side).
+        if (!key.isHollow) {
+            baked.addAll(createPlugQuads(key.side));
+        }
         return baked;
     }
+
+    /**
+     * Creates the plug connector quads — a small box matching the blocker model
+     * (from [2,4,4] to [4.01,12,12] in 16ths, west-facing, then rotated to the given side).
+     * Texture: buildcrafttransport:pipes/plug
+     */
+    private static List<BakedQuad> createPlugQuads(Direction side) {
+        // The blocker model is a box from [2,4,4] to [4.01,12,12] facing west.
+        float x0 = 2 / 16f, x1 = 4.01f / 16f;
+        float y0 = 4 / 16f, y1 = 12 / 16f;
+        float z0 = 4 / 16f, z1 = 12 / 16f;
+
+        // Get the plug texture sprite
+        net.minecraft.client.renderer.texture.TextureAtlasSprite sprite =
+            buildcraft.lib.misc.SpriteUtil.getSprite(
+                net.minecraft.resources.Identifier.fromNamespaceAndPath("buildcrafttransport", "pipes/plug"));
+        if (sprite == null) {
+            sprite = buildcraft.lib.misc.SpriteUtil.missingSprite();
+        }
+
+        // Center and radius for ModelUtil
+        org.joml.Vector3f center = new org.joml.Vector3f(
+            (x0 + x1) / 2f, (y0 + y1) / 2f, (z0 + z1) / 2f);
+        org.joml.Vector3f radius = new org.joml.Vector3f(
+            (x1 - x0) / 2f, (y1 - y0) / 2f, (z1 - z0) / 2f);
+
+        net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(x0, y0, z0, x1, y1, z1);
+
+        List<BakedQuad> result = new ArrayList<>();
+        for (Direction face : Direction.values()) {
+            ModelUtil.UvFaceData uvs = new ModelUtil.UvFaceData();
+            ModelUtil.mapBoxToUvs(box, face, uvs);
+            MutableQuad q = ModelUtil.createFace(face, center, radius, uvs);
+            q.setSprite(sprite);
+            q.rotate(Direction.WEST, side, 0.5f, 0.5f, 0.5f);
+            q.multShade();
+            result.add(q.toBakedBlock());
+        }
+        return result;
+    }
 }
+

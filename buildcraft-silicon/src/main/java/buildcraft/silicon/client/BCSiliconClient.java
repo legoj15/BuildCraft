@@ -63,6 +63,10 @@ public class BCSiliconClient {
             itemModels.put(facadeId, new FacadeItemModel(wrapper));
         }
         FacadeItemModel.onModelBake();
+
+        // Deduplicate facades that have identical textures on all 6 faces
+        // (e.g. bricks vs double brick_slab, waterlogged vs non-waterlogged)
+        FacadeDeduplicator.deduplicateVisuallyIdentical();
     }
 }
 

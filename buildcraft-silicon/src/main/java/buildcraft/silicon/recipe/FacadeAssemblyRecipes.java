@@ -124,10 +124,11 @@ public class FacadeAssemblyRecipes extends AssemblyRecipe implements IRecipeView
     }
 
     private static ItemStack baseRequirementStack() {
-        if (BCItems.Transport.PIPE_STRUCTURE == null) {
+        net.minecraft.world.item.Item pipe = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse("buildcrafttransport:pipe_structure"));
+        if (pipe == Items.AIR) {
             return new ItemStack(Items.COBBLESTONE_WALL);
         }
-        return new ItemStack(BCItems.Transport.PIPE_STRUCTURE, 3);
+        return new ItemStack(pipe, 3);
     }
 
     @Override

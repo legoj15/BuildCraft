@@ -75,7 +75,8 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     }
 
     private ScreenPosition getRecipeBookButtonPosition() {
-        return new ScreenPosition(this.leftPos + 5, this.topPos + 5);
+        // Left of the 3x3 blueprint grid (starts at x=33), aligned with 2nd row (y=34)
+        return new ScreenPosition(this.leftPos + 11, this.topPos + 34);
     }
 
     @Override

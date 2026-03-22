@@ -104,6 +104,18 @@ public class MutableQuad {
         return this.sprite;
     }
 
+    public void setLightEmission(int lightEmission) {
+        this.lightEmission = lightEmission;
+    }
+
+    public int getLightEmission() {
+        return this.lightEmission;
+    }
+
+    public void setAmbientOcclusion(boolean hasAmbientOcclusion) {
+        this.hasAmbientOcclusion = hasAmbientOcclusion;
+    }
+
     // ############################
     //
     // BakedQuad conversion

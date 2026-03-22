@@ -15,6 +15,7 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 
 import buildcraft.api.transport.pipe.PipeApi;
+import buildcraft.api.transport.pipe.PipeApiClient;
 import buildcraft.api.transport.pipe.PipeDefinition;
 
 import buildcraft.transport.BCTransport;
@@ -50,6 +51,8 @@ public class BCTransportClient {
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(BCTransportBlockEntities.PIPE_HOLDER.get(), RenderPipeHolder::new);
+        // Set the API registry so other modules (e.g. silicon) can register bakers
+        PipeApiClient.registry = PipeRegistryClient.INSTANCE;
         // Register flow renderers so PipeRegistryClient can dispatch render calls
         registerFlowRenderers();
     }

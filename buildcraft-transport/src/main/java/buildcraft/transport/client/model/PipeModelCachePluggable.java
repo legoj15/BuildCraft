@@ -23,6 +23,8 @@ import buildcraft.lib.client.model.IModelCache;
 import buildcraft.lib.client.model.ModelCache;
 import buildcraft.lib.client.model.ModelCacheMultipleSame;
 
+import buildcraft.transport.client.PipeRegistryClient;
+
 public class PipeModelCachePluggable {
     public static final IModelCache<PluggableKey> cacheCutoutAll, cacheTranslucentAll;
     public static final ModelCache<PluggableModelKey> cacheCutoutSingle, cacheTranslucentSingle;
@@ -39,22 +41,27 @@ public class PipeModelCachePluggable {
         if (key == null) {
             return ImmutableList.of();
         }
-        // Pluggable baking not yet ported — return empty for now
-        return ImmutableList.of();
+        IPluggableStaticBaker<K> baker = PipeRegistryClient.getPlugBaker(key);
+        if (baker == null) {
+            return ImmutableList.of();
+        }
+        return baker.bake(key);
     }
 
     public static class PluggableKey {
         private final ImmutableSet<PluggableModelKey> pluggables;
         private final int hash;
 
-        /** NeoForge 1.21.11: RenderType replaces BlockRenderLayer.
-         *  For now, we accept a boolean isCutout instead. */
         public PluggableKey(boolean isCutout, IPipeHolder holder) {
             ImmutableSet.Builder<PluggableModelKey> builder = ImmutableSet.builder();
             for (Direction side : Direction.values()) {
                 PipePluggable pluggable = holder.getPluggable(side);
                 if (pluggable == null) continue;
-                // Pluggable model keys not yet wired — skip for now
+                PluggableModelKey key = pluggable.getModelRenderKey(
+                    isCutout ? "cutout" : "translucent");
+                if (key != null) {
+                    builder.add(key);
+                }
             }
             this.pluggables = builder.build();
             this.hash = pluggables.hashCode();
@@ -80,3 +87,4 @@ public class PipeModelCachePluggable {
         }
     }
 }
+

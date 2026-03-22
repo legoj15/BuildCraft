@@ -32,6 +32,7 @@ import buildcraft.lib.misc.MathUtil;
 import buildcraft.lib.net.PacketBufferBC;
 
 import buildcraft.silicon.BCSiliconItems;
+import buildcraft.silicon.client.model.key.KeyPlugFacade;
 
 public class PluggableFacade extends PipePluggable implements IFacade {
 
@@ -143,8 +144,8 @@ public class PluggableFacade extends PipePluggable implements IFacade {
 
     @Override
     public PluggableModelKey getModelRenderKey(Object layer) {
-        // Rendering not yet ported — return null until PlugBakerFacade is implemented
-        return null;
+        FacadePhasedState state = states.phasedStates[activeState];
+        return new KeyPlugFacade(layer, side, state.stateInfo.state, states.isHollow());
     }
 
     @Override

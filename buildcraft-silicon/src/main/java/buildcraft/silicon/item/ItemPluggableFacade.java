@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -23,6 +24,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
 
 import buildcraft.api.facades.FacadeType;
 import buildcraft.api.facades.IFacade;
@@ -140,7 +142,21 @@ public class ItemPluggableFacade extends Item implements IItemPluggable, IFacade
                 tooltip.accept(Component.literal(
                     BuiltInRegistries.BLOCK.getKey(states.phasedStates[0].stateInfo.state.getBlock()).toString()));
             }
+            // Show varying blockstate properties so duplicates can be distinguished
+            FacadeBlockStateInfo info = states.phasedStates[0].stateInfo;
+            BlockState state = info.state;
+            for (Property<?> prop : info.varyingProperties) {
+                String name = prop.getName();
+                String value = getPropertyValueName(state, prop);
+                tooltip.accept(Component.literal(name + " = " + value)
+                    .withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+            }
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T extends Comparable<T>> String getPropertyValueName(BlockState state, Property<T> prop) {
+        return prop.getName(state.getValue(prop));
     }
 
     // IFacadeItem

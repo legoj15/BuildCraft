@@ -54,17 +54,24 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
         // The GUI is opened by right-clicking with anything OTHER than a wrench/pipe.
         if (!stack.isEmpty() && stack.getItem() instanceof IToolWrench) {
             if (!player.isShiftKeyDown()) {
-                // Directly rotate the engine (matching 1.12.2 where wrench returns false from onActivated)
+                // Try to rotate; if successful, return SUCCESS.
+                // If no valid rotation target, fall through to open the GUI (matching 1.12.2).
                 if (!level.isClientSide()) {
                     BlockEntity be = level.getBlockEntity(pos);
                     if (be instanceof TileEngineIron_BC8 engine) {
                         if (engine.attemptRotation()) {
                             level.setBlock(pos, state.setValue(
                                     BuildCraftProperties.BLOCK_FACING_6, engine.getOrientation()), 3);
+                            return InteractionResult.SUCCESS;
                         }
                     }
+                } else {
+                    // Client side: optimistically return success for the swing animation.
+                    // If server finds no valid target, the GUI will open server-side.
+                    return InteractionResult.SUCCESS;
                 }
-                return InteractionResult.SUCCESS;
+                // No valid rotation target — open the GUI
+                return openGui(state, level, pos, player);
             }
             return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
         }

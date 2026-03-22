@@ -106,8 +106,10 @@ public class BCSilicon {
 
             // Gate Copier
             event.accept(new ItemStack(BCSiliconItems.GATE_COPIER.get()));
+        }
 
-            // Gates
+        // Gates are pluggables — they belong in the Pluggables tab
+        if (event.getTabKey() == BCSiliconCreativeTabs.TRANSPORT_PLUGS_TAB_KEY) {
             buildcraft.silicon.item.ItemPluggableGate gateItem = BCSiliconItems.PLUG_GATE.get();
             for (buildcraft.silicon.gate.EnumGateMaterial material : buildcraft.silicon.gate.EnumGateMaterial.VALUES) {
                 if (!material.canBeModified) continue;

@@ -18,7 +18,7 @@ public class BCSiliconCreativeTabs {
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, BCSilicon.MODID);
 
     // Reference the transport plugs tab key by identifier (avoids cross-module compile dependency)
-    private static final ResourceKey<CreativeModeTab> TRANSPORT_PLUGS_TAB_KEY =
+    static final ResourceKey<CreativeModeTab> TRANSPORT_PLUGS_TAB_KEY =
             ResourceKey.create(Registries.CREATIVE_MODE_TAB,
                     Identifier.fromNamespaceAndPath("buildcrafttransport", "plugs"));
 

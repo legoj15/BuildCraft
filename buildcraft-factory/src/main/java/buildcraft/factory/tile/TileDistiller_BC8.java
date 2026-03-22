@@ -75,6 +75,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
     // Client-side animation state for power indicator cubes
     // Matches 1.12.2 expression: state increments when active, decays when inactive
     private double animState = 0;
+    private double prevAnimState = 0;
 
     // Client-sync tracking — send block updates when fluid contents or active state change
     private int lastSyncedIn = -1;
@@ -147,11 +148,18 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         return animState;
     }
 
+    /** Returns the previous tick's animation phase, for per-frame lerp in the renderer. */
+    public double getPrevAnimState() {
+        return prevAnimState;
+    }
+
     /** Call from a client-side ticker to advance fluid smoothing and power animation. */
     public void clientTick() {
         smoothIn.tick();
         smoothGasOut.tick();
         smoothLiquidOut.tick();
+
+        prevAnimState = animState;
 
         // Advance power cube animation (matches 1.12.2 expression logic)
         // powerAvgClient is in micro-MJ, MAX_MJ_PER_TICK is in micro-MJ
@@ -163,6 +171,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
             // Wrap around: once state >= 1.5, subtract 1 to loop between 0.5 and 1.5
             if (animState >= 1.5) {
                 animState -= 1.0;
+                prevAnimState -= 1.0; // Keep prev in sync so lerp doesn't jump backwards
             }
         } else {
             animState = animState > changeSpeed ? animState - changeSpeed : 0;

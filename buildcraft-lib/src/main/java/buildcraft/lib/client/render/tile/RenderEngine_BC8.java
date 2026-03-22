@@ -68,7 +68,8 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
         if (!(be instanceof TileEngineBase_BC8 engine)) return;
 
         // Get animated quads from the quad provider (injected by energy module)
-        MutableQuad[] quads = quadProvider.apply(engine, 1.0f);
+        float partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        MutableQuad[] quads = quadProvider.apply(engine, partialTicks);
         if (quads == null || quads.length == 0) return;
 
         poseStack.pushPose();

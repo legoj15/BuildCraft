@@ -18,7 +18,7 @@ import buildcraft.lib.gui.BuildCraftGui;
 
 /** Ledger that shows the owner (player who placed the block). */
 public class LedgerOwnership extends Ledger_Neptune {
-    private static final int COLOUR = 0xD1C07D;
+    private static final int COLOUR = 0xE0F0FF;
     // Default Steve skin texture for the player head icon
     private static final Identifier SKIN_TEXTURE = Identifier.parse("textures/entity/player/wide/steve.png");
 

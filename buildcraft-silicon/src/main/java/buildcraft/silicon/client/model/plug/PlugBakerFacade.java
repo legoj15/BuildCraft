@@ -353,6 +353,11 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
             ModelUtil.mapBoxToUvs(box, face, uvs);
             MutableQuad q = ModelUtil.createFace(face, center, radius, uvs);
             q.setSprite(sprite);
+            // Remap UVs from 0-1 texture space to atlas space
+            q.vertex_0.texFromSprite(sprite);
+            q.vertex_1.texFromSprite(sprite);
+            q.vertex_2.texFromSprite(sprite);
+            q.vertex_3.texFromSprite(sprite);
             q.rotate(Direction.WEST, side, 0.5f, 0.5f, 0.5f);
             q.multShade();
             result.add(q.toBakedBlock());

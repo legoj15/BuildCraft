@@ -14,10 +14,12 @@ import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 
+import buildcraft.api.core.render.ISprite;
+import buildcraft.lib.client.sprite.SpriteNineSliced;
+import buildcraft.lib.client.sprite.SpriteRaw;
 import buildcraft.lib.gui.BuildCraftGui;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.IGuiElement;
@@ -31,12 +33,16 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     public static final int CLOSED_WIDTH = 2 + 16 + LEDGER_GAP;   // 22
     public static final int CLOSED_HEIGHT = LEDGER_GAP + 16 + LEDGER_GAP; // 24
 
-    /** 256x256 ledger background texture — the original 1.12.2 asset. */
-    private static final Identifier LEDGER_TEXTURE =
-        Identifier.parse("buildcraftlib:textures/gui/ledger.png");
-    private static final int TEX_SIZE = 256;
-    /** The fixed-size corner/border width in pixels. */
-    private static final int CORNER = 4;
+    // 16x16 nine-sliced ledger background sprites (matches 1.12.2 BCLibSprites.LEDGER_LEFT/RIGHT).
+    // Scale = 16.0 so the 4/16 = 0.25 normalized border maps to 4 actual pixels.
+    private static final ISprite SPRITE_LEFT = new SpriteRaw(
+        Identifier.parse("buildcraftlib:textures/icons/ledger_left.png"), 0, 0, 1.0, 1.0);
+    private static final ISprite SPRITE_RIGHT = new SpriteRaw(
+        Identifier.parse("buildcraftlib:textures/icons/ledger_right.png"), 0, 0, 1.0, 1.0);
+    private static final SpriteNineSliced SPRITE_SPLIT_LEFT =
+        new SpriteNineSliced(SPRITE_LEFT, 4.0 / 16, 4.0 / 16, 12.0 / 16, 12.0 / 16, 16.0);
+    private static final SpriteNineSliced SPRITE_SPLIT_RIGHT =
+        new SpriteNineSliced(SPRITE_RIGHT, 4.0 / 16, 4.0 / 16, 12.0 / 16, 12.0 / 16, 16.0);
 
     public final BuildCraftGui gui;
     public final int colour;
@@ -188,34 +194,12 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
 
         if (w <= 0 || h <= 0) return;
 
-        // Colour tint (fully opaque) — matches 1.12.2 RenderUtil.setGLColorFromInt(overlayColor)
-        int tint = 0xFF000000 | (colour & 0xFFFFFF);
-
-        // -- 1.12.2 four-region drawing using the 256x256 ledger.png --
-        // The texture has a rounded top-left corner and gradient borders baked in.
-        // By sampling from the edges of the 256x256 texture, borders stay crisp at any size.
-        if (expandPositive) {
-            // Right-side ledger — mirror the UVs horizontally
-            // Right edge:     screen (x+w-4, y) ← UV (0, 256-h, 4, h)
-            blitTinted(graphics, x + w - CORNER, y, 0, TEX_SIZE - h, CORNER, h, tint);
-            // Top edge:       screen (x, y) ← UV (256-w+4 → mirrored to 0, 0, w-4, 4)
-            blitTinted(graphics, x, y, 0, 0, w - CORNER, CORNER, tint);
-            // Top-right corner (redraw to fix intersection)
-            blitTinted(graphics, x + w - CORNER, y, 0, 0, CORNER, CORNER, tint);
-            // Center fill
-            blitTinted(graphics, x, y + CORNER, 0, 0, w - CORNER, h - CORNER, tint);
-        } else {
-            // Left-side ledger — original 1.12.2 UV layout
-            // Left edge:      screen (x, y) ← UV (0, 256-h, 4, h)
-            blitTinted(graphics, x, y, 0, TEX_SIZE - h, CORNER, h, tint);
-            // Top edge:       screen (x+4, y) ← UV (256-w+4, 0, w-4, 4)
-            blitTinted(graphics, x + CORNER, y, TEX_SIZE - w + CORNER, 0, w - CORNER, CORNER, tint);
-            // Top-left corner (redraw to fix intersection)
-            blitTinted(graphics, x, y, 0, 0, CORNER, CORNER, tint);
-            // Center fill
-            blitTinted(graphics, x + CORNER, y + CORNER,
-                TEX_SIZE - w + CORNER, TEX_SIZE - h + CORNER, w - CORNER, h - CORNER, tint);
-        }
+        // Draw nine-sliced ledger background with colour tinting.
+        // Uses ledger_left.png for left ledgers, ledger_right.png for right,
+        // matching 1.12.2 BCLibSprites.LEDGER_LEFT/RIGHT.
+        SpriteNineSliced split = expandPositive ? SPRITE_SPLIT_RIGHT : SPRITE_SPLIT_LEFT;
+        int tintColour = 0xFF000000 | (colour & 0xFFFFFF);
+        split.drawTinted(getX(), getY(), interpWidth, interpHeight, tintColour);
 
         // Draw icon (always visible)
         double iconX = positionLedgerIconStart.getX();
@@ -264,14 +248,6 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         }
     }
 
-    /** Blit a tinted rectangle from the 256x256 ledger texture.
-     *  Equivalent to 1.12.2's drawTexturedModalRect with a colour overlay. */
-    private static void blitTinted(GuiGraphics graphics, int x, int y,
-            int u, int v, int width, int height, int colour) {
-        if (width <= 0 || height <= 0) return;
-        graphics.blit(RenderPipelines.GUI_TEXTURED, LEDGER_TEXTURE,
-            x, y, u, v, width, height, TEX_SIZE, TEX_SIZE, colour);
-    }
 
     /** Override in subclasses to draw a 16x16 icon. */
     protected void drawIcon(double x, double y, GuiGraphics graphics) {

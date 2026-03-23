@@ -53,6 +53,8 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     // Position — set by auto-stacking in the constructor
     private final IGuiPosition positionLedgerStart;
     private final IGuiPosition positionLedgerIconStart;
+    /** Stable anchor position for width calculation (not offset by -getWidth()). */
+    private final IGuiPosition positionAnchor;
 
     protected double maxWidth = 96, maxHeight = 48;
 
@@ -104,11 +106,13 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         if (expandPositive) {
             // Right side — icon at left edge of ledger
             positionLedgerStart = gui.lowerRightLedgerPos;
+            positionAnchor = positionLedgerStart;
             // Advance the right-side position downward for the next ledger
             gui.lowerRightLedgerPos = positionLedgerStart.offset(0, () -> this.getHeight() + 5);
             positionLedgerIconStart = positionLedgerStart.offset(2, LEDGER_GAP);
         } else {
             // Left side — ledger grows leftward
+            positionAnchor = gui.lowerLeftLedgerPos; // stable reference for width calc
             positionLedgerStart = gui.lowerLeftLedgerPos.offset(() -> -this.getWidth(), 0);
             // Advance the left-side position downward for the next ledger
             gui.lowerLeftLedgerPos = gui.lowerLeftLedgerPos.offset(0, () -> this.getHeight() + 5);
@@ -137,6 +141,11 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         return entry;
     }
 
+    /** Clear all text entries. Used by LedgerHelp to dynamically swap content on hover. */
+    protected void clearTextEntries() {
+        textEntries.clear();
+    }
+
     public String getTitle() {
         return buildcraft.lib.misc.LocaleUtil.localize(title);
     }
@@ -150,32 +159,33 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         Font font = Minecraft.getInstance().font;
         int screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
 
-        // Compute the non-text overhead: 2 (border) + 16 (icon) + 4 (gap) + 4 (gap) + 2 (border) = 28
+        // Non-text overhead: 2 (border) + 16 (icon) + 4 (gap) ... text ... + 4 (gap) + 2 (border)
         int overhead = 2 + 16 + LEDGER_GAP + LEDGER_GAP + 2;
 
-        // Determine max available text width before the ledger hits the screen edge.
-        // For right-side (expandPositive): ledger starts at positionLedgerStart.getX()
-        // and grows rightward, so available = screenWidth - startX - overhead
-        // For left-side: ledger grows leftward from its anchor, so use screenWidth as the limit too
-        int availableTextWidth;
-        if (expandPositive) {
-            availableTextWidth = Math.max(40, screenWidth - (int) positionLedgerStart.getX() - overhead);
-        } else {
-            // Left ledgers grow leftward from the GUI's left edge
-            availableTextWidth = Math.max(40, (int) positionLedgerStart.getX() + CLOSED_WIDTH - overhead);
-        }
-
-        // Natural width of the widest text entry
+        // Compute the natural (unwrapped) ledger width from the widest text entry
         int naturalMaxTextWidth = font.width(getTitle());
         for (TextEntry entry : textEntries) {
             int w = font.width(entry.getText());
             if (w > naturalMaxTextWidth) naturalMaxTextWidth = w;
         }
+        int naturalWidth = overhead + naturalMaxTextWidth;
 
-        // Only wrap if text would go off-screen; otherwise use natural width
-        int textAreaWidth = Math.min(naturalMaxTextWidth, availableTextWidth);
+        // Cap the total ledger width so it doesn't extend past the screen edge.
+        // Use the stable anchor position (not affected by -getWidth() offset).
+        int maxAllowedWidth;
+        if (expandPositive) {
+            // Right-side: ledger starts at anchor X and grows rightward
+            maxAllowedWidth = Math.max(CLOSED_WIDTH, screenWidth - (int) positionAnchor.getX());
+        } else {
+            // Left-side: ledger grows leftward from anchor X toward screen left (x=0)
+            maxAllowedWidth = Math.max(CLOSED_WIDTH, (int) positionAnchor.getX());
+        }
 
-        maxWidth = Math.max(CLOSED_WIDTH, overhead + textAreaWidth);
+        maxWidth = Math.min(naturalWidth, maxAllowedWidth);
+        maxWidth = Math.max(CLOSED_WIDTH, maxWidth);
+
+        // Derive the text area width from the capped maxWidth for wrapping
+        int textAreaWidth = Math.max(40, (int) maxWidth - overhead);
 
         // Height: title (always 1 line) + wrapped text entries
         int textHeight = font.lineHeight + 3; // title

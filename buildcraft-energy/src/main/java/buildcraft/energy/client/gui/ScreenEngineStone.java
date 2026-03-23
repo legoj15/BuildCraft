@@ -13,6 +13,8 @@ import net.minecraft.world.entity.player.Inventory;
 import buildcraft.energy.container.ContainerEngineStone;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.ledger.LedgerEngine;
 import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
@@ -52,8 +54,18 @@ public class ScreenEngineStone extends GuiBC8<ContainerEngineStone> {
             ));
 
             // Help ledger on the LEFT side (auto-stacked via Ledger_Neptune)
-            mainGui.shownElements.add(new LedgerHelp(mainGui,
-                "gui.buildcraft.stirling_engine.help"
+            mainGui.shownElements.add(new LedgerHelp(mainGui, false));
+
+            // Help elements for flame indicator and fuel slot (matching 1.12.2)
+            mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(82, 26, 12, 12).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.stone_engine.flame.title", 0xFF_FF_FF_1F,
+                    "buildcraft.help.stone_engine.flame")
+            ));
+            mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(80, 41, 16, 16).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.stone_engine.fuel.title", 0xFF_AA_33_33,
+                    "buildcraft.help.stone_engine.fuel")
             ));
         }
     }

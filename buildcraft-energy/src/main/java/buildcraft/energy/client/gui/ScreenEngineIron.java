@@ -22,9 +22,12 @@ import buildcraft.energy.container.ContainerEngineIron;
 import buildcraft.energy.tile.TileEngineIron_BC8;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.ledger.LedgerEngine;
 import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
+import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.misc.LocaleUtil;
 
 /**
@@ -66,9 +69,24 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
                 true
             ));
 
-            // Help ledger on the left side
-            mainGui.shownElements.add(new LedgerHelp(mainGui,
-                "gui.buildcraft.combustion_engine.help"
+            // Help ledger on the left side (interactive — highlights tanks on hover)
+            mainGui.shownElements.add(new LedgerHelp(mainGui, false));
+
+            // Register help elements for each tank so the ledger can highlight them
+            mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(TANK_FUEL_X, TANK_FUEL_Y, TANK_WIDTH, TANK_HEIGHT).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.tank.title.tankFuel", 0xFF_FF_33_33,
+                    "buildcraft.help.tank.generic", "buildcraft.help.tank.fuel")
+            ));
+            mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(TANK_COOLANT_X, TANK_COOLANT_Y, TANK_WIDTH, TANK_HEIGHT).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.tank.title.tankCoolant", 0xFF_55_55_FF,
+                    "buildcraft.help.tank.generic", "buildcraft.help.tank.coolant")
+            ));
+            mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(TANK_RESIDUE_X, TANK_RESIDUE_Y, TANK_WIDTH, TANK_HEIGHT).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.tank.title.tankResidue", 0xFF_AA_33_AA,
+                    "buildcraft.help.tank.generic", "buildcraft.help.tank.residue")
             ));
         }
     }

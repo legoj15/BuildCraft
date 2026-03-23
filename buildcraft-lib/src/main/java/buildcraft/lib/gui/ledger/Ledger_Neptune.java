@@ -14,7 +14,9 @@ import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 
 import buildcraft.api.core.render.ISprite;
@@ -60,6 +62,9 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     protected double lastHeight = currentHeight;
     protected double interpWidth = lastWidth;
     protected double interpHeight = lastHeight;
+
+    /** Computed upward Y shift when ledger hits the bottom of the screen. */
+    private double yShift = 0;
 
     protected String title = "unknown";
 
@@ -140,24 +145,56 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         return 0xFF_E1_C9_2F;
     }
 
-    /** Recalculate the maximum size based on text entries and title. */
+    /** Recalculate the maximum size based on text entries and title, with word wrapping. */
     protected void calculateMaxSize() {
         Font font = Minecraft.getInstance().font;
-        // Width: icon (16) + gap (4) + max text width + gap padding
-        int maxTextWidth = font.width(getTitle());
-        for (TextEntry entry : textEntries) {
-            String text = entry.getText();
-            int w = font.width(text);
-            if (w > maxTextWidth) maxTextWidth = w;
+        int screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+
+        // Compute the non-text overhead: 2 (border) + 16 (icon) + 4 (gap) + 4 (gap) + 2 (border) = 28
+        int overhead = 2 + 16 + LEDGER_GAP + LEDGER_GAP + 2;
+
+        // Determine max available text width before the ledger hits the screen edge.
+        // For right-side (expandPositive): ledger starts at positionLedgerStart.getX()
+        // and grows rightward, so available = screenWidth - startX - overhead
+        // For left-side: ledger grows leftward from its anchor, so use screenWidth as the limit too
+        int availableTextWidth;
+        if (expandPositive) {
+            availableTextWidth = Math.max(40, screenWidth - (int) positionLedgerStart.getX() - overhead);
+        } else {
+            // Left ledgers grow leftward from the GUI's left edge
+            availableTextWidth = Math.max(40, (int) positionLedgerStart.getX() + CLOSED_WIDTH - overhead);
         }
-        // 2 (border) + 16 (icon) + 4 (gap) + text + 4 (gap) + 2 (border)
-        maxWidth = Math.max(CLOSED_WIDTH, 2 + 16 + LEDGER_GAP + maxTextWidth + LEDGER_GAP + 2);
-        // 4 (top gap) + title line + entries + 4 (bottom gap)
+
+        // Natural width of the widest text entry
+        int naturalMaxTextWidth = font.width(getTitle());
+        for (TextEntry entry : textEntries) {
+            int w = font.width(entry.getText());
+            if (w > naturalMaxTextWidth) naturalMaxTextWidth = w;
+        }
+
+        // Only wrap if text would go off-screen; otherwise use natural width
+        int textAreaWidth = Math.min(naturalMaxTextWidth, availableTextWidth);
+
+        maxWidth = Math.max(CLOSED_WIDTH, overhead + textAreaWidth);
+
+        // Height: title (always 1 line) + wrapped text entries
         int textHeight = font.lineHeight + 3; // title
-        for (int i = 0; i < textEntries.size(); i++) {
-            textHeight += font.lineHeight + 3;
+        for (TextEntry entry : textEntries) {
+            List<FormattedCharSequence> wrapped = font.split(Component.literal(entry.getText()), textAreaWidth);
+            int lineCount = Math.max(1, wrapped.size());
+            textHeight += (font.lineHeight + 3) * lineCount;
         }
         maxHeight = Math.max(CLOSED_HEIGHT, LEDGER_GAP + textHeight + LEDGER_GAP);
+
+        // Upward shift: if the ledger bottom would extend past the screen, push it up
+        double normalY = positionLedgerStart.getY();
+        int screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+        double bottomEdge = normalY + maxHeight;
+        if (bottomEdge > screenHeight) {
+            yShift = bottomEdge - screenHeight;
+        } else {
+            yShift = 0;
+        }
     }
 
     @Override
@@ -239,20 +276,24 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         // Draw text content if expanded enough
         if (interpWidth > CLOSED_WIDTH + 10) {
             Font font = Minecraft.getInstance().font;
+            int textAreaWidth = (int) maxWidth - 2 - 16 - LEDGER_GAP - LEDGER_GAP - 2;
             // Text starts after the icon: icon(16) + gap(4)
             int textX = (int) iconX + 16 + LEDGER_GAP;
             int textY = (int) iconY + 1;
 
-            // Draw title
+            // Draw title (not wrapped — titles are always short)
             graphics.drawString(font, getTitle(), textX, textY, getTitleColour() | 0xFF000000, true);
             textY += font.lineHeight + 3;
 
-            // Draw text entries
+            // Draw text entries with word wrapping
             for (TextEntry entry : textEntries) {
-                String text = entry.getText();
-                graphics.drawString(font, text, textX, textY,
-                    entry.getColour() | 0xFF000000, entry.dropShadow);
-                textY += font.lineHeight + 3;
+                int entryColour = entry.getColour() | 0xFF000000;
+                List<FormattedCharSequence> wrapped = font.split(
+                    Component.literal(entry.getText()), textAreaWidth);
+                for (FormattedCharSequence line : wrapped) {
+                    graphics.drawString(font, line, textX, textY, entryColour, entry.dropShadow);
+                    textY += font.lineHeight + 3;
+                }
             }
         }
 
@@ -305,7 +346,10 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
 
     @Override
     public double getY() {
-        return positionLedgerStart.getY();
+        // Apply upward shift when ledger would extend past screen bottom.
+        // Only shift when actually expanding (not when closed).
+        double shift = (currentDifference != 0 || currentHeight > CLOSED_HEIGHT) ? yShift : 0;
+        return positionLedgerStart.getY() - shift;
     }
 
     @Override

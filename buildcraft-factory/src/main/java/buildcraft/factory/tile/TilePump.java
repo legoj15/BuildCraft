@@ -24,6 +24,7 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.resources.Identifier;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 import buildcraft.lib.misc.FluidUtilBC;
@@ -37,6 +38,7 @@ import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.mj.MjRedstoneBatteryReceiver;
 import buildcraft.api.tiles.IDebuggable;
 
@@ -46,6 +48,11 @@ import buildcraft.api.tiles.IDebuggable;
  * Ported from 1.12.2 TilePump.
  */
 public class TilePump extends TileMiner implements IDebuggable {
+
+    private static final Identifier ADVANCEMENT_DRAIN_ANY
+        = Identifier.parse("buildcraftfactory:draining_the_world");
+    private static final Identifier ADVANCEMENT_DRAIN_OIL
+        = Identifier.parse("buildcraftfactory:oil_platform");
 
     private static final Direction[] SEARCH_NORMAL = new Direction[] {
         Direction.UP, Direction.NORTH, Direction.SOUTH,
@@ -258,6 +265,10 @@ public class TilePump extends TileMiner implements IDebuggable {
 
                 tank.fill(drain, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
                 progress = 0;
+
+                if (getOwner() != null) {
+                    AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT_DRAIN_ANY);
+                }
 
                 isInfiniteWaterSource &= !BCCoreConfig.pumpsConsumeWater;
                 if (isInfiniteWaterSource) {

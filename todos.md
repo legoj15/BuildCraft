@@ -118,7 +118,6 @@
 - [ ] Statement implementations (12 files): `TriggerInventory`, `TriggerPower`, `TriggerRedstoneInput`, `TriggerMachine`, `TriggerFluidContainer`, `TriggerFluidContainerLevel`, `TriggerInventoryLevel`, `TriggerEnginePowerStage`, `TriggerTrue`, `ActionMachineControl`, `ActionRedstoneOutput`, `CoreTriggerProvider`, `CoreActionProvider`
 - [ ] Statement parameters (4 files): `StatementParamGateSideOnly`, `StatementParameterDirection`, `StatementParameterItemStackExact`, `StatementParameterRedstoneLevel`
 - [ ] List GUI: `ContainerList`, `GuiList`, `ListTooltipHandler`
-- [ ] Engine render stubs: `RenderEngineCreative`, `RenderEngineWood` (may already have replacements)
 - [ ] Volume box networking: `MessageVolumeBoxes`
 - [ ] Misc old stubs: `BCCoreProxy`, `BCCoreGuis`, `BlockPowerConsumerTester`
 

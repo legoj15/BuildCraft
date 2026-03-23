@@ -92,6 +92,7 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
             positions.add(pos);
             MessageMarker message = new MessageMarker(true, false, cacheId, positions);
             sendToDimension(message);
+            markSavedDataDirty();
         }
     }
 
@@ -114,6 +115,7 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
             positions.add(pos);
             MessageMarker message = new MessageMarker(false, false, cacheId, positions);
             sendToDimension(message);
+            markSavedDataDirty();
         }
     }
 
@@ -134,6 +136,9 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
         if (set != null) {
             deinitConnection(set);
         }
+        if (isServer) {
+            markSavedDataDirty();
+        }
 
         if (DEBUG_FULL) {
             validateAllConnections();
@@ -143,6 +148,9 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
     public void addConnection(@Nonnull C connection) {
         Set<BlockPos> lastSeen = new HashSet<>(connection.getMarkerPositions());
         initConnection(connection, lastSeen);
+        if (isServer) {
+            markSavedDataDirty();
+        }
         if (DEBUG_FULL) {
             validateAllConnections();
         }
@@ -167,6 +175,9 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
             if (lastSeen.isEmpty()) {
                 connectionToPos.remove(connection);
             }
+        }
+        if (isServer) {
+            markSavedDataDirty();
         }
 
         if (DEBUG_FULL) {
@@ -271,6 +282,9 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
     public ImmutableList<C> getConnections() {
         return ImmutableList.copyOf(connectionToPos.keySet());
     }
+
+    /** Called to flag the associated SavedData as dirty so changes persist to disk. */
+    protected abstract void markSavedDataDirty();
 
     public abstract boolean tryConnect(BlockPos from, BlockPos to);
 

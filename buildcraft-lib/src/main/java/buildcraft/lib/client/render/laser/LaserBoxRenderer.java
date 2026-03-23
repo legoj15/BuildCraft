@@ -31,11 +31,15 @@ public class LaserBoxRenderer {
     private static final double RENDER_SCALE = 1 / 16.05;
 
     public static void renderLaserBoxStatic(PoseStack poseStack, Box box, LaserType type, boolean center, Vec3 cameraPos) {
+        renderLaserBoxStatic(poseStack, box, type, center, true, cameraPos);
+    }
+
+    public static void renderLaserBoxStatic(PoseStack poseStack, Box box, LaserType type, boolean center, boolean enableDiffuse, Vec3 cameraPos) {
         if (box == null || box.min() == null || box.max() == null) {
             return;
         }
 
-        List<LaserData_BC8> datas = makeLaserBox(box, type, center);
+        List<LaserData_BC8> datas = makeLaserBox(box, type, center, enableDiffuse);
 
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer consumer = bufferSource.getBuffer(
@@ -46,7 +50,7 @@ public class LaserBoxRenderer {
         bufferSource.endBatch();
     }
 
-    private static List<LaserData_BC8> makeLaserBox(Box box, LaserType type, boolean center) {
+    private static List<LaserData_BC8> makeLaserBox(Box box, LaserType type, boolean center, boolean enableDiffuse) {
         boolean renderX = !center || box.size().getX() > 1;
         boolean renderY = !center || box.size().getY() > 1;
         boolean renderZ = !center || box.size().getZ() > 1;
@@ -67,54 +71,54 @@ public class LaserBoxRenderer {
         vecs[1][1][1] = new Vec3(max.x, max.y, max.z);
 
         if (renderX) {
-            datas.add(makeLaser(type, vecs[0][0][0], vecs[1][0][0], Axis.X));
+            datas.add(makeLaser(type, enableDiffuse, vecs[0][0][0], vecs[1][0][0], Axis.X));
             if (renderY) {
-                datas.add(makeLaser(type, vecs[0][1][0], vecs[1][1][0], Axis.X));
+                datas.add(makeLaser(type, enableDiffuse, vecs[0][1][0], vecs[1][1][0], Axis.X));
                 if (renderZ) {
-                    datas.add(makeLaser(type, vecs[0][1][1], vecs[1][1][1], Axis.X));
+                    datas.add(makeLaser(type, enableDiffuse, vecs[0][1][1], vecs[1][1][1], Axis.X));
                 }
             }
             if (renderZ) {
-                datas.add(makeLaser(type, vecs[0][0][1], vecs[1][0][1], Axis.X));
+                datas.add(makeLaser(type, enableDiffuse, vecs[0][0][1], vecs[1][0][1], Axis.X));
             }
         }
 
         if (renderY) {
-            datas.add(makeLaser(type, vecs[0][0][0], vecs[0][1][0], Axis.Y));
+            datas.add(makeLaser(type, enableDiffuse, vecs[0][0][0], vecs[0][1][0], Axis.Y));
             if (renderX) {
-                datas.add(makeLaser(type, vecs[1][0][0], vecs[1][1][0], Axis.Y));
+                datas.add(makeLaser(type, enableDiffuse, vecs[1][0][0], vecs[1][1][0], Axis.Y));
                 if (renderZ) {
-                    datas.add(makeLaser(type, vecs[1][0][1], vecs[1][1][1], Axis.Y));
+                    datas.add(makeLaser(type, enableDiffuse, vecs[1][0][1], vecs[1][1][1], Axis.Y));
                 }
             }
             if (renderZ) {
-                datas.add(makeLaser(type, vecs[0][0][1], vecs[0][1][1], Axis.Y));
+                datas.add(makeLaser(type, enableDiffuse, vecs[0][0][1], vecs[0][1][1], Axis.Y));
             }
         }
 
         if (renderZ) {
-            datas.add(makeLaser(type, vecs[0][0][0], vecs[0][0][1], Axis.Z));
+            datas.add(makeLaser(type, enableDiffuse, vecs[0][0][0], vecs[0][0][1], Axis.Z));
             if (renderX) {
-                datas.add(makeLaser(type, vecs[1][0][0], vecs[1][0][1], Axis.Z));
+                datas.add(makeLaser(type, enableDiffuse, vecs[1][0][0], vecs[1][0][1], Axis.Z));
                 if (renderY) {
-                    datas.add(makeLaser(type, vecs[1][1][0], vecs[1][1][1], Axis.Z));
+                    datas.add(makeLaser(type, enableDiffuse, vecs[1][1][0], vecs[1][1][1], Axis.Z));
                 }
             }
             if (renderY) {
-                datas.add(makeLaser(type, vecs[0][1][0], vecs[0][1][1], Axis.Z));
+                datas.add(makeLaser(type, enableDiffuse, vecs[0][1][0], vecs[0][1][1], Axis.Z));
             }
         }
 
         return datas;
     }
 
-    private static LaserData_BC8 makeLaser(LaserType type, Vec3 min, Vec3 max, Axis axis) {
+    private static LaserData_BC8 makeLaser(LaserType type, boolean enableDiffuse, Vec3 min, Vec3 max, Axis axis) {
         Direction faceForMin = VecUtil.getFacing(axis, true);
         Direction faceForMax = VecUtil.getFacing(axis, false);
         Vec3 dirMin = Vec3.atLowerCornerOf(faceForMin.getUnitVec3i());
         Vec3 dirMax = Vec3.atLowerCornerOf(faceForMax.getUnitVec3i());
         Vec3 one = min.add(dirMin.scale(1 / 16D));
         Vec3 two = max.add(dirMax.scale(1 / 16D));
-        return new LaserData_BC8(type, one, two, RENDER_SCALE);
+        return new LaserData_BC8(type, one, two, RENDER_SCALE, enableDiffuse, false, 0);
     }
 }

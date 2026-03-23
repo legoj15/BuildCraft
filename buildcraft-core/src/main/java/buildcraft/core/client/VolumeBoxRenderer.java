@@ -24,7 +24,7 @@ public class VolumeBoxRenderer {
                     MarkerRenderer.getPoseStack(),
                     volumeBox.box,
                     BuildCraftLaserManager.MARKER_VOLUME_CONNECTED,
-                    true,
+                    true, false,
                     MarkerRenderer.getCameraPos());
         }
     }

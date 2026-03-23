@@ -95,7 +95,8 @@ public class MarkerRenderer {
                     Vec3 to = VecUtil.add(VEC_HALF, target);
                     Vec3 fromOffset = offset(from, to);
                     Vec3 toOffset = offset(to, from);
-                    LaserData_BC8 data = new LaserData_BC8(laserType, fromOffset, toOffset, RENDER_SCALE);
+                    LaserData_BC8 data = new LaserData_BC8(laserType, fromOffset, toOffset, RENDER_SCALE,
+                            false, false, 15);
                     LaserRenderer_BC8.renderLaserStatic(currentPoseStack, data, currentCameraPos);
                 }
             }

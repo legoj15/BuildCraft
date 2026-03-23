@@ -119,9 +119,6 @@ public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, Min
         // --- LED Rendering ---
         renderLEDs(tile, pos, level, poseStack, bufferSource);
 
-        // --- Tube Rendering ---
-        renderTube(tile, pos, poseStack, bufferSource, camPos);
-
         bufferSource.endBatch();
         poseStack.popPose();
     }
@@ -185,22 +182,5 @@ public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, Min
         Direction skipFace = facing.getOpposite();
         LED_POWER.render(pose, consumer, skipFace);
         LED_STATUS.render(pose, consumer, skipFace);
-    }
-
-    private void renderTube(TileMiningWell tile, BlockPos pos, PoseStack poseStack,
-                            MultiBufferSource.BufferSource bufferSource, Vec3 camPos) {
-        double length = tile.getLength(1.0f);
-        if (length <= 0) {
-            return;
-        }
-
-        Vec3 start = new Vec3(0.5, 0, 0.5);
-        Vec3 end = new Vec3(0.5, -length, 0.5);
-
-        LaserData_BC8 data = new LaserData_BC8(TUBE_LASER, start, end, 1 / 16.0);
-
-        VertexConsumer consumer = bufferSource.getBuffer(
-                net.minecraft.client.renderer.rendertype.RenderTypes.entitySolid(TextureAtlas.LOCATION_BLOCKS));
-        LaserRenderer_BC8.renderLaser(poseStack, consumer, data, Vec3.ZERO);
     }
 }

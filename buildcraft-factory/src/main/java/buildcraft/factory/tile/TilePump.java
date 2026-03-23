@@ -205,7 +205,10 @@ public class TilePump extends TileMiner implements IDebuggable {
     @Override
     @Nullable
     protected BlockPos getTargetPos() {
-        if (queue.isEmpty()) {
+        // Return targetPos as long as the pump has work: either queued blocks or
+        // a block being actively drained. Fixes tube not spawning for small volumes
+        // where nextPos() empties the queue before updateLength() is called.
+        if (queue.isEmpty() && currentPos == null) {
             return null;
         }
         return targetPos;

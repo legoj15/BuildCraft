@@ -79,6 +79,9 @@ public abstract class TileMiner extends TileBC_Neptune {
         if (level != null && level.random != null) {
             offset = level.random.nextInt(10);
         }
+        if (level != null && level.isClientSide()) {
+            buildcraft.factory.client.render.TubeRenderer.addMiner(this);
+        }
     }
 
     public void onRemove() {
@@ -89,6 +92,14 @@ public abstract class TileMiner extends TileBC_Neptune {
             } else {
                 break;
             }
+        }
+    }
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        if (level != null && level.isClientSide()) {
+            buildcraft.factory.client.render.TubeRenderer.removeMiner(this);
         }
     }
 

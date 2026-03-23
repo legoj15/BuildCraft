@@ -66,11 +66,22 @@ public class ItemList_BC8 extends Item implements IList {
 
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
-        if (level.isClientSide()) {
-            return InteractionResult.SUCCESS;
+        if (!level.isClientSide()) {
+            if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+                serverPlayer.openMenu(new net.minecraft.world.MenuProvider() {
+                    @Override
+                    public net.minecraft.network.chat.Component getDisplayName() {
+                        return Component.translatable("gui.buildcraftcore.list");
+                    }
+
+                    @Override
+                    public net.minecraft.world.inventory.AbstractContainerMenu createMenu(
+                            int containerId, net.minecraft.world.entity.player.Inventory playerInv, Player p) {
+                        return new buildcraft.core.list.ContainerList(containerId, playerInv, hand);
+                    }
+                }, buf -> buf.writeByte(hand.ordinal()));
+            }
         }
-        // TODO: Open List GUI when it is implemented (BCCoreGuis.LIST.openGUI(player))
-        player.displayClientMessage(Component.literal("List GUI not yet implemented."), true);
         return InteractionResult.SUCCESS;
     }
 

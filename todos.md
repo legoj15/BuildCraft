@@ -138,8 +138,6 @@
 - [ ] Replace text-based filter mode buttons with 1.12.2-style icon buttons
 - [ ] Currently uses `Button.builder(Component.literal("White"), ...)` instead of proper icons
 
-### Combustion Engine
-- [ ] Ice coolant support (not found in `TileEngineIron_BC8`)
 
 ### Guidebook
 - [ ] Finish content: add help entries for all blocks/items

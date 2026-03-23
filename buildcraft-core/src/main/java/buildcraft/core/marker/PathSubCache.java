@@ -16,9 +16,6 @@ import buildcraft.lib.marker.MarkerCache;
 import buildcraft.lib.marker.MarkerSubCache;
 import buildcraft.lib.net.MessageMarker;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-
 import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
 
 import buildcraft.core.BCCoreConfig;
@@ -27,7 +24,6 @@ import buildcraft.core.client.BuildCraftLaserManager;
 public class PathSubCache extends MarkerSubCache<PathConnection> {
 
     @Override
-    @OnlyIn(Dist.CLIENT)
     public LaserType getPossibleLaserType() {
         return BuildCraftLaserManager.MARKER_PATH_POSSIBLE;
     }

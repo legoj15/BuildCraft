@@ -20,9 +20,6 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.core.BlockPos;
@@ -284,7 +281,6 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
 
     public abstract ImmutableList<BlockPos> getValidConnections(BlockPos from);
 
-    @OnlyIn(Dist.CLIENT)
     public abstract buildcraft.lib.client.render.laser.LaserData_BC8.LaserType getPossibleLaserType();
 
     public final void handleMessageMain(MessageMarker message) {

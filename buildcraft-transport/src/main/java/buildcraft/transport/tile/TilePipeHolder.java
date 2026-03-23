@@ -52,6 +52,7 @@ import buildcraft.api.transport.pipe.PipeDefinition;
 import buildcraft.api.transport.pipe.PipeEvent;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
@@ -60,6 +61,9 @@ import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.pipe.PipeEventBus;
 
 public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebuggable {
+    private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_DREAM
+        = net.minecraft.resources.Identifier.parse("buildcrafttransport:pipe_dream");
+
     /** ModelData property that passes this tile reference to ModelPipe for baked model generation. */
     public static final net.neoforged.neoforge.model.data.ModelProperty<TilePipeHolder> PIPE_MODEL_DATA =
         new net.neoforged.neoforge.model.data.ModelProperty<>();
@@ -216,6 +220,9 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
             if (col != null) {
                 pipe.setColour(col);
             }
+        }
+        if (placer instanceof Player player && level != null && !level.isClientSide()) {
+            AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PIPE_DREAM);
         }
         scheduleRenderUpdate();
         setChanged();

@@ -23,11 +23,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.resources.Identifier;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.recipes.AssemblyRecipe;
 
 import buildcraft.lib.misc.InventoryUtil;
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.recipe.AssemblyRecipeRegistry;
 import buildcraft.lib.tile.item.ItemHandlerManager;
@@ -37,6 +39,8 @@ import buildcraft.silicon.BCSiliconBlockEntities;
 import buildcraft.silicon.EnumAssemblyRecipeState;
 
 public class TileAssemblyTable extends TileLaserTableBase {
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftsilicon:precision_crafting");
+
     public final ItemHandlerSimple inv = itemManager.addInvHandler(
         "inv",
         3 * 4,
@@ -185,6 +189,9 @@ public class TileAssemblyTable extends TileLaserTableBase {
                     InventoryUtil.addToBestAcceptor(getLevel(), getBlockPos(), null, instruction.output.copy());
                     power -= getTarget();
                     activateNextRecipe();
+                    if (getOwner() != null) {
+                        AdvancementUtil.unlockAdvancement(getOwner().id(), getLevel(), ADVANCEMENT);
+                    }
                 }
             }
         }

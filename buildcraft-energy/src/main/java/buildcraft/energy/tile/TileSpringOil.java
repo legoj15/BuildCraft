@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -14,12 +15,15 @@ import net.minecraft.world.level.storage.ValueOutput;
 
 import buildcraft.core.tile.ITileOilSpring;
 import buildcraft.energy.BCEnergyBlockEntities;
+import buildcraft.lib.misc.AdvancementUtil;
 
 /**
  * Block entity for oil springs (at bedrock level in large oil wells).
  * Tracks per-player pump progress.
  */
 public class TileSpringOil extends BlockEntity implements ITileOilSpring {
+
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftfactory:black_gold");
 
     private final Map<GameProfile, PlayerPumpInfo> pumpProgress = new ConcurrentHashMap<>();
 
@@ -42,7 +46,9 @@ public class TileSpringOil extends BlockEntity implements ITileOilSpring {
 
         if (info.sourcesPumped >= totalSources * 7 / 8) {
             if (oilPos.equals(getBlockPos().above())) {
-                // TODO: Unlock advancement buildcraftfactory:black_gold
+                if (profile.id() != null) {
+                    AdvancementUtil.unlockAdvancement(profile.id(), level, ADVANCEMENT);
+                }
             }
         }
     }

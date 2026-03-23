@@ -16,6 +16,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -36,6 +37,7 @@ import net.minecraft.core.NonNullList;
 import buildcraft.api.items.FluidItemDrops;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileTank;
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 
 /**
@@ -47,6 +49,7 @@ import buildcraft.lib.misc.FluidUtilBC;
 public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
     public static final MapCodec<BlockTank> CODEC = simpleCodec(BlockTank::new);
     public static final BooleanProperty JOINED_BELOW = BooleanProperty.create("joined_below");
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftfactory:fluid_storage");
 
     private static final VoxelShape SHAPE = Block.box(2, 0, 2, 14, 16, 14);
 
@@ -157,6 +160,9 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
         // fill/drain across the entire tank stack
         boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, tank.getColumnFluidHandler());
         if (didChange) {
+            if (!level.isClientSide()) {
+                AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);
+            }
             return InteractionResult.SUCCESS;
         }
         // If the player is holding a non-fluid item, open the GUI

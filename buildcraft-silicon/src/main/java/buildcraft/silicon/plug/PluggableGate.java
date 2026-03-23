@@ -57,11 +57,11 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
 
     private static final AABB[] BOXES = new AABB[6];
 
-    // private static final ResourceLocation ADVANCEMENT_PLACE_GATE
-    //     = ResourceLocation.fromNamespaceAndPath("buildcraft", "pipe_logic");
+    private static final Identifier ADVANCEMENT_PLACE_GATE
+        = Identifier.parse("buildcrafttransport:pipe_logic");
 
-    // private static final ResourceLocation ADVANCEMENT_PLACE_ADV_GATE
-    //     = ResourceLocation.fromNamespaceAndPath("buildcraft", "extended_logic");
+    private static final Identifier ADVANCEMENT_PLACE_ADV_GATE
+        = Identifier.parse("buildcrafttransport:extended_logic");
 
     public final GateLogic logic;
 
@@ -218,10 +218,10 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
     public void onPlacedBy(Player player) {
         super.onPlacedBy(player);
         if (!holder.getPipeWorld().isClientSide()) {
-            // AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PLACE_GATE);
-            // if (logic.variant.numActionArgs >= 1) {
-            //     AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PLACE_ADV_GATE);
-            // }
+            AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PLACE_GATE);
+            if (logic.variant.numActionArgs >= 1) {
+                AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PLACE_ADV_GATE);
+            }
         }
     }
 

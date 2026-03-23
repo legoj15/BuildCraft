@@ -12,9 +12,11 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -28,9 +30,11 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.tile.TileQuarry;
+import buildcraft.lib.misc.AdvancementUtil;
 
 public class BlockQuarry extends HorizontalDirectionalBlock implements EntityBlock {
     public static final MapCodec<BlockQuarry> CODEC = simpleCodec(BlockQuarry::new);
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftbuilders:shaping_the_world");
 
     public BlockQuarry(Properties properties) {
         super(properties);
@@ -79,6 +83,9 @@ public class BlockQuarry extends HorizontalDirectionalBlock implements EntityBlo
         BlockEntity tile = level.getBlockEntity(pos);
         if (tile instanceof TileQuarry quarry) {
             quarry.onPlacedBy(placer, stack);
+        }
+        if (!level.isClientSide() && placer instanceof Player player) {
+            AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);
         }
     }
 

@@ -24,12 +24,15 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
+import net.minecraft.resources.Identifier;
+
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.tiles.IHasWork;
 import buildcraft.lib.misc.StackUtil;
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.craft.IAutoCraft;
 import buildcraft.lib.tile.craft.WorkbenchCrafting;
@@ -38,6 +41,8 @@ import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IHasWork, IAutoCraft {
+
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftfactory:lazy_crafting");
 
     /** A redstone engine generates 1 * MjAPI.MJ per tick.
      *  This passive rate makes the workbench much slower without one powering it. */
@@ -183,6 +188,9 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
                 if (crafting.craft()) {
                     // Keep 1 if more crafts are possible, else reset to 0
                     powerStored = crafting.canCraft() ? 1 : 0;
+                    if (getOwner() != null) {
+                        AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT);
+                    }
                 }
             } else {
                 // Passive power generation — allows crafting without engines (slowly)

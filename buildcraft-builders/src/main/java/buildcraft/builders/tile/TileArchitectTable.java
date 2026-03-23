@@ -40,6 +40,7 @@ import buildcraft.api.schematics.SchematicEntityContext;
 import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.lib.misc.data.Box;
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.tile.TileBC_Neptune;
 
 import buildcraft.builders.BCBuildersBlockEntities;
@@ -60,6 +61,9 @@ import buildcraft.core.marker.volume.Lock;
 import buildcraft.core.marker.volume.VolumeBox;
 
 public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, MenuProvider {
+
+    private static final net.minecraft.resources.Identifier ADVANCEMENT
+        = net.minecraft.resources.Identifier.parse("buildcraftbuilders:architect");
 
     private EnumSnapshotType snapshotType = EnumSnapshotType.BLUEPRINT;
     public final Box box = new Box();
@@ -300,6 +304,9 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
         blueprintScannedEntities.clear();
         scanProgress = 0;
         scanTotal = 0;
+        if (getOwner() != null) {
+            AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT);
+        }
         setChanged();
     }
 

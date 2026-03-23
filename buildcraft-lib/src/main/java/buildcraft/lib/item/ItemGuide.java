@@ -7,6 +7,7 @@ package buildcraft.lib.item;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -16,6 +17,7 @@ import net.minecraft.world.level.Level;
 
 import buildcraft.lib.BCLib;
 import buildcraft.lib.client.guide.GuiGuide;
+import buildcraft.lib.misc.AdvancementUtil;
 
 /**
  * The BuildCraft guide book item. In 1.12 this supported multiple "books" via
@@ -24,6 +26,7 @@ import buildcraft.lib.client.guide.GuiGuide;
  * currently shows a placeholder chat message.
  */
 public class ItemGuide extends Item {
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftcore:guide");
     public static final String DEFAULT_BOOK = "buildcraftcore:main";
 
     public ItemGuide(Item.Properties properties) {
@@ -36,6 +39,8 @@ public class ItemGuide extends Item {
             ItemStack stack = player.getItemInHand(hand);
             String bookName = getBookName(stack);
             Minecraft.getInstance().setScreen(new GuiGuide(bookName));
+        } else {
+            AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);
         }
         return InteractionResult.SUCCESS;
     }

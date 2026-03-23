@@ -16,6 +16,7 @@ import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
@@ -41,6 +42,7 @@ import buildcraft.api.mj.MjBattery;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.block.BlockChute;
 import buildcraft.factory.container.ContainerChute;
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -54,6 +56,7 @@ public class TileChute extends TileBC_Neptune implements MenuProvider {
 
     private static final int PICKUP_MAX = 3;
     private static final long PROGRESS_TARGET = 100_000;
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftfactory:retired_hopper");
 
     public final ItemHandlerSimple inv = new ItemHandlerSimple(4,
             (handler, slot, before, after) -> this.setChanged());
@@ -176,6 +179,9 @@ public class TileChute extends TileBC_Neptune implements MenuProvider {
                 int inserted = ResourceHandlerUtil.insertStacking(targetHandler, resource, 1, null);
                 if (inserted > 0) {
                     inv.extractItem(ourSlot, inserted, false);
+                    if (getOwner() != null) {
+                        AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT);
+                    }
                     return; // Moved item(s), done for this tick
                 }
             }

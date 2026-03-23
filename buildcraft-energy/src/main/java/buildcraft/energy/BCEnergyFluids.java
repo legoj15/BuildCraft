@@ -109,9 +109,11 @@ public class BCEnergyFluids {
             int texLight       = data[4];
             int texDark        = data[5];
 
+            int baseSpread = data[3];
+
             for (int heat = 0; heat < 3; heat++) {
                 FluidEntry entry = registerFluidVariant(
-                        baseName, heat, baseDensity, baseViscosity, boilPoint, texLight, texDark);
+                        baseName, heat, baseDensity, baseViscosity, boilPoint, baseSpread, texLight, texDark);
                 ALL_ENTRIES.add(entry);
 
                 // Store convenience reference for crude oil cool
@@ -127,13 +129,16 @@ public class BCEnergyFluids {
     private static FluidEntry registerFluidVariant(
             String baseName, int heat,
             int baseDensity, int baseViscosity, int boilPoint,
-            int texLight, int texDark) {
+            int baseSpread, int texLight, int texDark) {
 
         // 1.12 formulas
         int viscosity   = baseViscosity * (4 - heat) / 4;
         int density     = baseDensity * (heat >= boilPoint ? -1 : 1);
         int temperature = 300 + 20 * heat;
         boolean gaseous = density < 0;
+
+        // 1.12 quanta formula: baseSpread + heat bonus
+        int quanta = baseSpread + (baseSpread > 6 ? heat : heat / 2);
 
         // Tint: average of light and dark, slightly brighter per heat level
         int tintR = (((texLight >> 16) & 0xFF) + ((texDark >> 16) & 0xFF)) / 2 + heat * 0x10;
@@ -168,12 +173,12 @@ public class BCEnergyFluids {
         sourceHolder[0] = FLUIDS.register(regName,
                 () -> new BaseFlowingFluid.Source(makeProps(
                         fluidType, sourceHolder[0], flowingHolder[0],
-                        blockHolder[0], bucketHolder[0])));
+                        blockHolder[0], bucketHolder[0], viscosity, quanta)));
 
         flowingHolder[0] = FLUIDS.register(regName + "_flowing",
                 () -> new BaseFlowingFluid.Flowing(makeProps(
                         fluidType, sourceHolder[0], flowingHolder[0],
-                        blockHolder[0], bucketHolder[0])));
+                        blockHolder[0], bucketHolder[0], viscosity, quanta)));
 
         // Block
         MapColor mapColor = gaseous ? MapColor.NONE : MapColor.COLOR_BLACK;
@@ -205,13 +210,37 @@ public class BCEnergyFluids {
             DeferredHolder<Fluid, BaseFlowingFluid.Source> source,
             DeferredHolder<Fluid, BaseFlowingFluid.Flowing> flowing,
             DeferredBlock<LiquidBlock> block,
-            DeferredItem<BucketItem> bucket) {
+            DeferredItem<BucketItem> bucket,
+            int viscosity, int quanta) {
+
+        // Derive tick rate from viscosity: thicker fluids update slower.
+        // viscosity 500 (gas fuel) → tick 5, 2000 (crude oil) → tick 20, 4000 (residue) → tick 40
+        int tickRate = Math.max(5, viscosity / 100);
+
+        // Map 1.12 quanta (spread distance) to NeoForge flow parameters.
+        // quanta ≤ 6: short-range (like lava), quanta ≥ 7: longer-range (like water)
+        int slopeFindDistance;
+        int levelDecreasePerBlock;
+        if (quanta <= 5) {
+            slopeFindDistance = 2;
+            levelDecreasePerBlock = 2;
+        } else if (quanta <= 6) {
+            slopeFindDistance = 3;
+            levelDecreasePerBlock = 2;
+        } else if (quanta <= 8) {
+            slopeFindDistance = 4;
+            levelDecreasePerBlock = 1;
+        } else {
+            slopeFindDistance = 5;
+            levelDecreasePerBlock = 1;
+        }
+
         return new BaseFlowingFluid.Properties(type, source, flowing)
                 .block(block)
                 .bucket(bucket)
-                .slopeFindDistance(3)
-                .levelDecreasePerBlock(2)
-                .tickRate(10);
+                .slopeFindDistance(slopeFindDistance)
+                .levelDecreasePerBlock(levelDecreasePerBlock)
+                .tickRate(tickRate);
     }
 
     /** Register all deferred registers on the mod event bus. */

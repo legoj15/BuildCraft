@@ -79,6 +79,9 @@ public abstract class TileMiner extends TileBC_Neptune {
         if (level != null && level.random != null) {
             offset = level.random.nextInt(10);
         }
+        if (level != null && level.isClientSide()) {
+            buildcraft.factory.client.render.TubeRenderer.addMiner(this);
+        }
     }
 
     public void onRemove() {
@@ -89,6 +92,14 @@ public abstract class TileMiner extends TileBC_Neptune {
             } else {
                 break;
             }
+        }
+    }
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        if (level != null && level.isClientSide()) {
+            buildcraft.factory.client.render.TubeRenderer.removeMiner(this);
         }
     }
 
@@ -133,15 +144,6 @@ public abstract class TileMiner extends TileBC_Neptune {
 
     public boolean isComplete() {
         return level != null && level.isClientSide() ? isComplete : currentPos == null;
-    }
-
-    @javax.annotation.Nonnull
-    public net.minecraft.world.phys.AABB getRenderBoundingBox() {
-        // Extend the AABB downward to cover the full tube length so the BER
-        // is not frustum-culled when the source block scrolls offscreen.
-        return new net.minecraft.world.phys.AABB(
-                worldPosition.getX(), worldPosition.getY() - wantedLength - 1, worldPosition.getZ(),
-                worldPosition.getX() + 1, worldPosition.getY() + 1, worldPosition.getZ() + 1);
     }
 
     /** Debug accessor for wanted tube length. */

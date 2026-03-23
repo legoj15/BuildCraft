@@ -149,9 +149,6 @@ public class RenderPump implements BlockEntityRenderer<TilePump, PumpRenderState
         // --- LED Rendering ---
         renderLEDs(tile, pos, level, poseStack, bufferSource);
 
-        // --- Tube Rendering ---
-        renderTube(tile, pos, poseStack, bufferSource, camPos);
-
         bufferSource.endBatch();
         poseStack.popPose();
     }
@@ -186,21 +183,5 @@ public class RenderPump implements BlockEntityRenderer<TilePump, PumpRenderState
             LED_POWER[i].render(pose, consumer, skipFace);
             LED_STATUS[i].render(pose, consumer, skipFace);
         }
-    }
-
-    private void renderTube(TilePump tile, BlockPos pos, PoseStack poseStack,
-                            MultiBufferSource.BufferSource bufferSource, Vec3 camPos) {
-        float partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        double length = tile.getLength(partialTicks);
-        if (length <= 0) {
-            return;
-        }
-
-        // Use world-space coordinates so computeLightmap samples correct light values
-        Vec3 start = new Vec3(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
-        Vec3 end = new Vec3(pos.getX() + 0.5, pos.getY() - length, pos.getZ() + 0.5);
-
-        LaserData_BC8 data = new LaserData_BC8(TUBE_LASER, start, end, 1 / 16.0);
-        LaserRenderer_BC8.renderLaserStatic(poseStack, data, camPos);
     }
 }

@@ -69,6 +69,7 @@ public class BCCore {
         BCCoreBlockEntities.init(modEventBus);
         BCCoreFeatures.init(modEventBus);
         BCCoreCreativeTabs.init(modEventBus);
+        BCCoreMenuTypes.init(modEventBus);
 
         modEventBus.addListener(this::preInit);
         modEventBus.addListener(this::init);
@@ -121,6 +122,14 @@ public class BCCore {
                         );
                     }
             );
+            // Register List GUI screen
+            modEventBus.addListener(
+                    net.neoforged.neoforge.client.event.RegisterMenuScreensEvent.class,
+                    event -> event.register(BCCoreMenuTypes.LIST.get(),
+                            buildcraft.core.list.GuiList::new)
+            );
+            // Register List tooltip handler (shows 'Matches' in tooltip while List GUI is open)
+            NeoForge.EVENT_BUS.register(buildcraft.core.list.ListTooltipHandler.INSTANCE);
         }
     }
 

@@ -211,7 +211,7 @@ public enum BCBuildersEventDist {
                 cameraPos);
         } else {
             // No drill yet — show the whole frame box as laser outline (caution stripes)
-            LaserBoxRenderer.renderLaserBoxStatic(poseStack, tile.frameBox, BuildCraftLaserManager.STRIPES_WRITE, true, cameraPos);
+            LaserBoxRenderer.renderLaserBoxStatic(poseStack, tile.frameBox, BuildCraftLaserManager.STRIPES_WRITE, true, false, cameraPos);
         }
     }
 }

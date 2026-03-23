@@ -135,6 +135,15 @@ public abstract class TileMiner extends TileBC_Neptune {
         return level != null && level.isClientSide() ? isComplete : currentPos == null;
     }
 
+    @javax.annotation.Nonnull
+    public net.minecraft.world.phys.AABB getRenderBoundingBox() {
+        // Extend the AABB downward to cover the full tube length so the BER
+        // is not frustum-culled when the source block scrolls offscreen.
+        return new net.minecraft.world.phys.AABB(
+                worldPosition.getX(), worldPosition.getY() - wantedLength - 1, worldPosition.getZ(),
+                worldPosition.getX() + 1, worldPosition.getY() + 1, worldPosition.getZ() + 1);
+    }
+
     /** Debug accessor for wanted tube length. */
     public int getWantedLength() {
         return wantedLength;

@@ -189,18 +189,17 @@ public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, Min
 
     private void renderTube(TileMiningWell tile, BlockPos pos, PoseStack poseStack,
                             MultiBufferSource.BufferSource bufferSource, Vec3 camPos) {
-        double length = tile.getLength(1.0f);
+        float partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        double length = tile.getLength(partialTicks);
         if (length <= 0) {
             return;
         }
 
-        Vec3 start = new Vec3(0.5, 0, 0.5);
-        Vec3 end = new Vec3(0.5, -length, 0.5);
+        // Use world-space coordinates so computeLightmap samples correct light values
+        Vec3 start = new Vec3(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+        Vec3 end = new Vec3(pos.getX() + 0.5, pos.getY() - length, pos.getZ() + 0.5);
 
         LaserData_BC8 data = new LaserData_BC8(TUBE_LASER, start, end, 1 / 16.0);
-
-        VertexConsumer consumer = bufferSource.getBuffer(
-                net.minecraft.client.renderer.rendertype.RenderTypes.entitySolid(TextureAtlas.LOCATION_BLOCKS));
-        LaserRenderer_BC8.renderLaser(poseStack, consumer, data, Vec3.ZERO);
+        LaserRenderer_BC8.renderLaserStatic(poseStack, data, camPos);
     }
 }

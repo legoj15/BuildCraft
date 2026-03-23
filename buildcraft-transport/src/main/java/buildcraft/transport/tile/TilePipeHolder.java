@@ -52,6 +52,7 @@ import buildcraft.api.transport.pipe.PipeDefinition;
 import buildcraft.api.transport.pipe.PipeEvent;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
+import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.transport.BCTransportBlockEntities;
@@ -63,6 +64,10 @@ import buildcraft.transport.pipe.PipeEventBus;
 public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebuggable {
     private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_DREAM
         = net.minecraft.resources.Identifier.parse("buildcrafttransport:pipe_dream");
+    private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_DIVERSIFICATION
+        = net.minecraft.resources.Identifier.parse("buildcrafttransport:pipe_diversification");
+    private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_FANATIC
+        = net.minecraft.resources.Identifier.parse("buildcrafttransport:pipe_fanatic");
 
     /** ModelData property that passes this tile reference to ModelPipe for baked model generation. */
     public static final net.neoforged.neoforge.model.data.ModelProperty<TilePipeHolder> PIPE_MODEL_DATA =
@@ -223,9 +228,27 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         }
         if (placer instanceof Player player && level != null && !level.isClientSide()) {
             AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PIPE_DREAM);
+            if (pipe != null) {
+                PipeDefinition def = pipe.getDefinition();
+                // Pipe diversification: award criterion by flow type
+                String flowCriterion = getFlowTypeCriterion(def);
+                if (flowCriterion != null) {
+                    AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PIPE_DIVERSIFICATION, flowCriterion);
+                }
+                // Pipe fanatic: award criterion by pipe identifier
+                AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PIPE_FANATIC, def.identifier);
+            }
         }
         scheduleRenderUpdate();
         setChanged();
+    }
+
+    private static String getFlowTypeCriterion(PipeDefinition def) {
+        if (def.flowType == PipeApi.flowItems) return "item_pipe";
+        if (def.flowType == PipeApi.flowFluids) return "fluid_pipe";
+        if (def.flowType == PipeApi.flowPower) return "power_pipe";
+        if (def.flowType == PipeApi.flowStructure) return "structure_pipe";
+        return null;
     }
 
     // --- Tick ---

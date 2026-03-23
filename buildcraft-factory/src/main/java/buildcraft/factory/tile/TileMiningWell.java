@@ -111,13 +111,17 @@ public class TileMiningWell extends TileMiner {
             if (canBreak()) {
                 updateLength();
                 return;
-            } else if (level.isEmptyBlock(currentPos)
+            }
+            // Skip air, tubes, and water — they are passable
+            FluidState fluidState = level.getFluidState(currentPos);
+            boolean isWater = fluidState.is(net.minecraft.world.level.material.Fluids.WATER)
+                    || fluidState.is(net.minecraft.world.level.material.Fluids.FLOWING_WATER);
+            if (level.isEmptyBlock(currentPos)
                     || level.getBlockState(currentPos).is(BCFactoryBlocks.TUBE.get())
-                    || !level.getFluidState(currentPos).isEmpty()) {
-                // Air, tubes, or any fluid → keep scanning down
+                    || isWater) {
                 continue;
             } else {
-                // Hit an unbreakable solid block (e.g. bedrock)
+                // Hit an impassable block (bedrock, lava, etc.) — stop
                 break;
             }
         }

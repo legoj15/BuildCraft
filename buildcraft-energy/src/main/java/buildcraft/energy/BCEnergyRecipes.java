@@ -35,6 +35,9 @@ public class BCEnergyRecipes {
         BuildcraftFuelRegistry.coolant.addSolidCoolant(
             new ItemStack(Blocks.PACKED_ICE),
             new FluidStack(Fluids.WATER, 1000), 2f);
+        BuildcraftFuelRegistry.coolant.addSolidCoolant(
+            new ItemStack(Blocks.BLUE_ICE),
+            new FluidStack(Fluids.WATER, 1000), 2.5f);
 
         // --- Fuels (oil-derived) ---
         // Relative amounts from 1.12 refinery chain

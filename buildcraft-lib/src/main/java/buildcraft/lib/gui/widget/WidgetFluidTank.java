@@ -19,6 +19,8 @@ import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
 import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
+import buildcraft.api.fuels.BuildcraftFuelRegistry;
+import buildcraft.api.fuels.ISolidCoolant;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.gui.Widget_Neptune;
 import buildcraft.lib.net.PacketBufferBC;
@@ -165,6 +167,27 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
                                 }
                                 return original;
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- Try solid coolant conversion (ice → water, ported from 1.12.2 Tank.map()) ---
+        if (BuildcraftFuelRegistry.coolant != null) {
+            ItemStack singleCopy = stack.copyWithCount(1);
+            ISolidCoolant solidCoolant = BuildcraftFuelRegistry.coolant.getSolidCoolant(singleCopy);
+            if (solidCoolant != null) {
+                FluidStack fluidCoolant = solidCoolant.getFluidFromSolidCoolant(singleCopy);
+                if (fluidCoolant != null && !fluidCoolant.isEmpty()) {
+                    int space = tank.getCapacity() - tank.getFluidAmount();
+                    if (fluidCoolant.getAmount() <= space) {
+                        int filled = tank.fill(fluidCoolant, IFluidHandler.FluidAction.EXECUTE);
+                        if (filled > 0) {
+                            if (!isCreative) {
+                                stack.shrink(1);
+                            }
+                            return stack;
                         }
                     }
                 }

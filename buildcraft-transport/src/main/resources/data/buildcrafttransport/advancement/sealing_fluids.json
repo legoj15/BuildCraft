@@ -4,8 +4,13 @@
     "title": { "translate": "advancements.buildcrafttransport.sealing_fluids.title" },
     "description": { "translate": "advancements.buildcrafttransport.sealing_fluids.description" }
   },
-  "parent": "buildcrafttransport:pipe_diversification",
+  "parent": "buildcrafttransport:pipe_dream",
   "criteria": {
-    "code_trigger": { "trigger": "minecraft:impossible" }
+    "crafted_sealant": {
+      "trigger": "minecraft:recipe_crafted",
+      "conditions": {
+        "recipe_id": "buildcrafttransport:pipe_sealant"
+      }
+    }
   }
 }

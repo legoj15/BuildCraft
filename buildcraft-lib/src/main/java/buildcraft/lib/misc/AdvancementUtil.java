@@ -18,6 +18,10 @@ public class AdvancementUtil {
     private static final Set<Identifier> UNKNOWN_ADVANCEMENTS = new HashSet<>();
 
     public static void unlockAdvancement(Player player, Identifier advancementName) {
+        unlockAdvancement(player, advancementName, "code_trigger");
+    }
+
+    public static void unlockAdvancement(Player player, Identifier advancementName, String criterionName) {
         if (player instanceof ServerPlayer serverPlayer) {
             MinecraftServer server = player.level().getServer();
             if (server == null) {
@@ -28,7 +32,7 @@ public class AdvancementUtil {
             if (holder != null) {
                 // never assume the advancement exists, we create them but they are removable by datapacks
                 PlayerAdvancements tracker = serverPlayer.getAdvancements();
-                tracker.award(holder, "code_trigger");
+                tracker.award(holder, criterionName);
             } else if (UNKNOWN_ADVANCEMENTS.add(advancementName)) {
                 BCLog.logger.warn("[lib.advancement] Attempted to trigger undefined advancement: " + advancementName);
             }

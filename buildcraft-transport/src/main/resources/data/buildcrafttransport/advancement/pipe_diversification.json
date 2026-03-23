@@ -6,6 +6,9 @@
   },
   "parent": "buildcrafttransport:pipe_dream",
   "criteria": {
-    "code_trigger": { "trigger": "minecraft:impossible" }
+    "item_pipe": { "trigger": "minecraft:impossible" },
+    "fluid_pipe": { "trigger": "minecraft:impossible" },
+    "power_pipe": { "trigger": "minecraft:impossible" },
+    "structure_pipe": { "trigger": "minecraft:impossible" }
   }
 }

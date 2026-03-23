@@ -27,6 +27,7 @@ import buildcraft.core.BCCoreBlockEntities;
 import buildcraft.api.tiles.ITileAreaProvider;
 
 import buildcraft.lib.marker.MarkerSubCache;
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.PositionUtil;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.tile.TileMarker;
@@ -36,6 +37,9 @@ import buildcraft.core.marker.VolumeConnection;
 import buildcraft.core.marker.VolumeSubCache;
 
 public class TileMarkerVolume extends TileMarker<VolumeConnection> implements ITileAreaProvider {
+    private static final net.minecraft.resources.Identifier ADVANCEMENT_MARKERS
+        = net.minecraft.resources.Identifier.parse("buildcraftcore:markers");
+
     private boolean showSignals = false;
 
     public TileMarkerVolume(BlockPos pos, BlockState state) {
@@ -83,16 +87,24 @@ public class TileMarkerVolume extends TileMarker<VolumeConnection> implements IT
 
     public void onManualConnectionAttempt(Player player) {
         MarkerSubCache<VolumeConnection> cache = this.getLocalCache();
+        boolean connected = false;
         for (BlockPos other : cache.getValidConnections(getBlockPos())) {
-            cache.tryConnect(getBlockPos(), other);
+            if (cache.tryConnect(getBlockPos(), other)) {
+                connected = true;
+            }
         }
         VolumeConnection c = getCurrentConnection();
         if (c != null) {
             for (BlockPos corner : PositionUtil.getCorners(c.getBox().min(), c.getBox().max())) {
                 if (!c.getMarkerPositions().contains(corner) && cache.hasLoadedOrUnloadedMarker(corner)) {
-                    c.addMarker(corner);
+                    if (c.addMarker(corner)) {
+                        connected = true;
+                    }
                 }
             }
+        }
+        if (connected && level != null && !level.isClientSide()) {
+            AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_MARKERS);
         }
     }
 

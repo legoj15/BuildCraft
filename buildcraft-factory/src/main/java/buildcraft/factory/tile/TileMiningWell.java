@@ -91,11 +91,9 @@ public class TileMiningWell extends TileMiner {
         if (fluid == null) {
             return true; // Not a fluid, can break
         }
-        // Match 1.12.2: allow mining water (low-viscosity fluids) but not lava
-        // In 1.21, water is the default fluid; lava has high flow speed
-        FluidState fluidState = level.getFluidState(currentPos);
-        return fluidState.is(net.minecraft.world.level.material.Fluids.WATER)
-            || fluidState.is(net.minecraft.world.level.material.Fluids.FLOWING_WATER);
+        // Match 1.12.2: allow mining low-viscosity fluids (water, light fuel, etc.)
+        // but block high-viscosity fluids (lava, oil, etc.)
+        return fluid.getFluidType().getViscosity() <= 1000;
     }
 
     private void nextPos() {
@@ -112,16 +110,16 @@ public class TileMiningWell extends TileMiner {
                 updateLength();
                 return;
             }
-            // Skip air, tubes, and water — they are passable
+            // Skip air, tubes, and low-viscosity fluids (water, light fuel, etc.)
             FluidState fluidState = level.getFluidState(currentPos);
-            boolean isWater = fluidState.is(net.minecraft.world.level.material.Fluids.WATER)
-                    || fluidState.is(net.minecraft.world.level.material.Fluids.FLOWING_WATER);
+            boolean isPassable = !fluidState.isEmpty()
+                    && fluidState.getFluidType().getViscosity() <= 1000;
             if (level.isEmptyBlock(currentPos)
                     || level.getBlockState(currentPos).is(BCFactoryBlocks.TUBE.get())
-                    || isWater) {
+                    || isPassable) {
                 continue;
             } else {
-                // Hit an impassable block (bedrock, lava, etc.) — stop
+                // Hit an impassable block (bedrock, lava, oil, etc.) — stop
                 break;
             }
         }

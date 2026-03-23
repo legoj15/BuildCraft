@@ -22,6 +22,7 @@ import buildcraft.core.BCCoreConfig;
 import buildcraft.core.client.BuildCraftLaserManager;
 
 public class PathSubCache extends MarkerSubCache<PathConnection> {
+    private PathSavedData savedData;
 
     @Override
     public LaserType getPossibleLaserType() {
@@ -31,6 +32,7 @@ public class PathSubCache extends MarkerSubCache<PathConnection> {
     public PathSubCache(Level world) {
         super(world, MarkerCache.CACHES.indexOf(PathCache.INSTANCE));
         PathSavedData data = PathSavedData.getOrCreate(world);
+        this.savedData = data;
         for (BlockPos pos : data.markerPositions) {
             loadMarker(pos, null);
         }
@@ -41,6 +43,13 @@ public class PathSubCache extends MarkerSubCache<PathConnection> {
         }
         data.setSubCache(this);
         data.setDirty();
+    }
+
+    @Override
+    protected void markSavedDataDirty() {
+        if (savedData != null) {
+            savedData.setDirty();
+        }
     }
 
     @Override

@@ -15,6 +15,8 @@ import buildcraft.lib.marker.MarkerConnection;
 import buildcraft.lib.marker.MarkerSubCache;
 
 public abstract class TileMarker<C extends MarkerConnection<C>> extends BlockEntity implements IDebuggable {
+    /** Set to true when this BE is being removed due to chunk unload, not block breaking. */
+    private boolean chunkUnloading = false;
 
     public TileMarker(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -48,9 +50,20 @@ public abstract class TileMarker<C extends MarkerConnection<C>> extends BlockEnt
     }
 
     @Override
+    public void onChunkUnloaded() {
+        super.onChunkUnloaded();
+        chunkUnloading = true;
+        if (level != null && !level.isClientSide()) {
+            // Just unload the tile reference — keep the position and connections in the cache
+            getLocalCache().unloadMarker(getBlockPos());
+        }
+    }
+
+    @Override
     public void setRemoved() {
         super.setRemoved();
-        if (level != null && !level.isClientSide()) {
+        if (level != null && !level.isClientSide() && !chunkUnloading) {
+            // Block was actually broken — fully remove from cache and tear down connections
             getLocalCache().removeMarker(getBlockPos());
         }
     }

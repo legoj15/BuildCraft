@@ -26,6 +26,7 @@ import buildcraft.core.BCCoreConfig;
 import buildcraft.core.client.BuildCraftLaserManager;
 
 public class VolumeSubCache extends MarkerSubCache<VolumeConnection> {
+    private VolumeSavedData savedData;
 
     @Override
     public LaserType getPossibleLaserType() {
@@ -35,6 +36,7 @@ public class VolumeSubCache extends MarkerSubCache<VolumeConnection> {
     public VolumeSubCache(Level world) {
         super(world, MarkerCache.CACHES.indexOf(VolumeCache.INSTANCE));
         VolumeSavedData data = VolumeSavedData.getOrCreate(world);
+        this.savedData = data;
         for (BlockPos pos : data.markerPositions) {
             loadMarker(pos, null);
         }
@@ -45,6 +47,13 @@ public class VolumeSubCache extends MarkerSubCache<VolumeConnection> {
         }
         data.setSubCache(this);
         data.setDirty();
+    }
+
+    @Override
+    protected void markSavedDataDirty() {
+        if (savedData != null) {
+            savedData.setDirty();
+        }
     }
 
     @Override

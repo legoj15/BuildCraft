@@ -85,7 +85,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
 
     private ScreenPosition getRecipeBookButtonPosition() {
         // Left of the 3x3 blueprint grid (starts at x=30), aligned with 2nd row
-        return new ScreenPosition(this.leftPos + 5, this.topPos + 33);
+        return new ScreenPosition(this.leftPos + 5, this.topPos + 34);
     }
 
     @Override

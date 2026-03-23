@@ -108,11 +108,9 @@ public class FacadeDeduplicator {
                         FacadeStateManager.stackFacades.remove(stackKey);
                     }
                 }
-                // Redirect: removed block's item → surviving facade info
-                if (!FacadeStateManager.stackRedirects.containsKey(stackKey)) {
-                    FacadeStateManager.stackRedirects.put(stackKey, surviving);
-                    redirectCount++;
-                }
+                // Redirect: removed block's item → surviving facade info(s)
+                FacadeStateManager.stackRedirects.computeIfAbsent(stackKey, k -> new java.util.ArrayList<>()).add(surviving);
+                redirectCount++;
             }
         }
 
@@ -123,6 +121,51 @@ public class FacadeDeduplicator {
                 + " (" + redirectCount + " recipe redirects registered)");
         } else {
             BCLog.logger.info("[silicon.facade] No visual duplicates found.");
+        }
+
+        // Second pass: scan ALL blocks (including non-facade blocks like slabs) and
+        // redirect any that share textures with a surviving facade.
+        // This enables e.g. brick_slab → bricks facade in the Assembly Table.
+        int extraRedirects = 0;
+        for (Map.Entry<BlockState, BlockStateModel> modelEntry : blockStateModels.entrySet()) {
+            BlockState state = modelEntry.getKey();
+            // Skip blocks that are already valid facades — they're handled above
+            if (FacadeStateManager.validFacadeStates.containsKey(state)) continue;
+
+            net.minecraft.world.item.Item blockItem = state.getBlock().asItem();
+            if (blockItem == net.minecraft.world.item.Items.AIR) continue;
+
+            // Only process the default blockstate to avoid scanning every variant of every block
+            if (state != state.getBlock().defaultBlockState()) continue;
+
+            net.minecraft.world.item.ItemStack requiredStack = new net.minecraft.world.item.ItemStack(blockItem);
+            ItemStackKey stackKey = new ItemStackKey(requiredStack);
+            // Skip if this item already has a facade or a redirect
+            if (FacadeStateManager.stackFacades.containsKey(stackKey)) continue;
+            if (FacadeStateManager.stackRedirects.containsKey(stackKey)) continue;
+
+            BlockStateModel model = modelEntry.getValue();
+            if (model == null) continue;
+
+            String fingerprint = computeTextureFingerprint(model);
+            if (fingerprint == null) continue;
+
+            FacadeBlockStateInfo match = seen.get(fingerprint);
+            if (match != null) {
+                FacadeStateManager.stackRedirects.computeIfAbsent(stackKey, k -> new java.util.ArrayList<>()).add(match);
+                extraRedirects++;
+                if (DEBUG) {
+                    BCLog.logger.info("[silicon.facade] Extra redirect: "
+                        + net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock())
+                        + " → " + match.state);
+                }
+            }
+        }
+
+        if (extraRedirects > 0) {
+            BCLog.logger.info("[silicon.facade] Added " + extraRedirects
+                + " extra recipe redirects from non-facade blocks (total redirects: "
+                + FacadeStateManager.stackRedirects.size() + ")");
         }
     }
 

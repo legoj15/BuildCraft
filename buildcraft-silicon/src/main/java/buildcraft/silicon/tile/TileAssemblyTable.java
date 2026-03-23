@@ -28,6 +28,7 @@ import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.recipes.AssemblyRecipe;
 
 import buildcraft.lib.misc.InventoryUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.recipe.AssemblyRecipeRegistry;
 import buildcraft.lib.tile.item.ItemHandlerManager;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -61,7 +62,8 @@ public class TileAssemblyTable extends TileLaserTableBase {
                     }
                 }
                 AssemblyInstruction instruction = new AssemblyInstruction(recipe, out);
-                if (!found && !recipesStates.containsKey(instruction)) {
+                boolean alreadyContains = recipesStates.containsKey(instruction);
+                if (!found && !alreadyContains) {
                     recipesStates.put(instruction, EnumAssemblyRecipeState.POSSIBLE);
                 }
             }
@@ -199,6 +201,14 @@ public class TileAssemblyTable extends TileLaserTableBase {
             CompoundTag entryTag = new CompoundTag();
             entryTag.putString("recipe", instruction.recipe.getRegistryName());
             entryTag.putInt("state", state.ordinal());
+            // Serialize the output ItemStack so the client can reconstruct the correct variant
+            CompoundTag outputTag = NBTUtilBC.itemStackToNBT(instruction.output);
+            // Also save the custom data component (for facades, this contains the blockstate info)
+            CompoundTag customData = NBTUtilBC.getItemData(instruction.output);
+            if (!customData.isEmpty()) {
+                outputTag.put("customData", customData);
+            }
+            entryTag.put("output", outputTag);
             recipesStatesTag.add(entryTag);
         });
         wrapper.put("entries", recipesStatesTag);
@@ -219,11 +229,28 @@ public class TileAssemblyTable extends TileLaserTableBase {
                                 int stateOrdinal = entryTag.getIntOr("state", 0);
                                 EnumAssemblyRecipeState[] values = EnumAssemblyRecipeState.values();
                                 if (stateOrdinal >= 0 && stateOrdinal < values.length) {
-                                    Set<ItemStack> outputs = recipe.getOutputs(inv.stacks);
-                                    for (ItemStack out : outputs) {
-                                        AssemblyInstruction instruction = new AssemblyInstruction(recipe, out);
+                                    // Try to load the specific output ItemStack from saved data
+                                    ItemStack outputStack = entryTag.getCompound("output")
+                                        .map(outputTag -> {
+                                            ItemStack stack = NBTUtilBC.itemStackFromNBT(outputTag);
+                                            // Restore custom data component if present
+                                            outputTag.getCompound("customData").ifPresent(cd -> {
+                                                NBTUtilBC.setItemData(stack, cd);
+                                            });
+                                            return stack;
+                                        })
+                                        .orElse(ItemStack.EMPTY);
+                                    
+                                    if (outputStack.isEmpty()) {
+                                        // Fallback for legacy data: take the first output
+                                        Set<ItemStack> outputs = recipe.getOutputs(inv.stacks);
+                                        if (!outputs.isEmpty()) {
+                                            outputStack = outputs.iterator().next();
+                                        }
+                                    }
+                                    if (!outputStack.isEmpty()) {
+                                        AssemblyInstruction instruction = new AssemblyInstruction(recipe, outputStack);
                                         recipesStates.put(instruction, values[stateOrdinal]);
-                                        break;
                                     }
                                 }
                             }
@@ -255,9 +282,6 @@ public class TileAssemblyTable extends TileLaserTableBase {
             net.minecraft.resources.Identifier otherId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(o.output.getItem());
             int idCompare = thisId.compareTo(otherId);
             if (idCompare != 0) return idCompare;
-            
-            int hashCompare = Integer.compare(ItemStack.hashItemAndComponents(output), ItemStack.hashItemAndComponents(o.output));
-            if (hashCompare != 0) return hashCompare;
             
             return output.getComponents().toString().compareTo(o.output.getComponents().toString());
         }

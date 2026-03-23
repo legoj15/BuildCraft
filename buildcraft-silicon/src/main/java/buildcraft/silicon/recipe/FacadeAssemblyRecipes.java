@@ -99,6 +99,7 @@ public class FacadeAssemblyRecipes extends AssemblyRecipe implements IRecipeView
 
         ArrayList<ItemStack> stacks = new ArrayList<>();
         for (ItemStack stack : inputs) {
+            if (stack.isEmpty()) continue;
             stack = stack.copy();
             stack.setCount(1);
             ItemStackKey key = new ItemStackKey(stack);
@@ -113,13 +114,16 @@ public class FacadeAssemblyRecipes extends AssemblyRecipe implements IRecipeView
                 continue;
             }
 
-            // Redirect match: this block was deduplicated, redirect to the surviving facade
-            FacadeBlockStateInfo redirect = FacadeStateManager.stackRedirects.get(key);
-            if (redirect != null) {
-                stacks.add(createFacadeStack(redirect, false));
-                stacks.add(createFacadeStack(redirect, true));
+            // Redirect match: this block was deduplicated, redirect to the surviving facade(s)
+            List<FacadeBlockStateInfo> redirects = FacadeStateManager.stackRedirects.get(key);
+            if (redirects != null) {
+                for (FacadeBlockStateInfo redirect : redirects) {
+                    stacks.add(createFacadeStack(redirect, false));
+                    stacks.add(createFacadeStack(redirect, true));
+                }
             }
         }
+        
         java.util.TreeSet<ItemStack> set = new java.util.TreeSet<>((a, b) -> {
             if (ItemStack.isSameItemSameComponents(a, b)) return 0;
             
@@ -128,12 +132,10 @@ public class FacadeAssemblyRecipes extends AssemblyRecipe implements IRecipeView
             int idCompare = thisId.compareTo(otherId);
             if (idCompare != 0) return idCompare;
             
-            int hashCompare = Integer.compare(ItemStack.hashItemAndComponents(a), ItemStack.hashItemAndComponents(b));
-            if (hashCompare != 0) return hashCompare;
-            
             return a.getComponents().toString().compareTo(b.getComponents().toString());
         });
         set.addAll(stacks);
+        
         return set;
     }
 
@@ -153,10 +155,27 @@ public class FacadeAssemblyRecipes extends AssemblyRecipe implements IRecipeView
     @Override
     public Set<IngredientStack> getInputsFor(@Nonnull ItemStack output) {
         FacadePhasedState state = ItemPluggableFacade.getStates(output).getCurrentStateForStack();
-        ItemStack stateRequirement = state.stateInfo.requiredStack;
-        IngredientStack ingredientType = new IngredientStack(Ingredient.of(stateRequirement.getItem()));
+        FacadeBlockStateInfo targetInfo = state.stateInfo;
+        ItemStack stateRequirement = targetInfo.requiredStack;
+
+        // Build a list of all items that can be used to craft this facade:
+        // 1. The facade's own requiredStack item
+        // 2. Any items that redirect to this facade via visual dedup
+        List<net.minecraft.world.level.ItemLike> acceptedItems = new ArrayList<>();
+        acceptedItems.add(stateRequirement.getItem());
+        for (java.util.Map.Entry<ItemStackKey, List<FacadeBlockStateInfo>> entry : FacadeStateManager.stackRedirects.entrySet()) {
+            for (FacadeBlockStateInfo redirectInfo : entry.getValue()) {
+                if (redirectInfo == targetInfo || redirectInfo.state == targetInfo.state) {
+                    acceptedItems.add(entry.getKey().baseStack.getItem());
+                    break; // Only need to add this item once
+                }
+            }
+        }
+
+        Ingredient ingredientType = Ingredient.of(acceptedItems.toArray(new net.minecraft.world.level.ItemLike[0]));
+        IngredientStack ingredientTypeStack = new IngredientStack(ingredientType);
         IngredientStack ingredientBase = new IngredientStack(Ingredient.of(baseRequirementStack().getItem()), 3);
-        return ImmutableSet.of(ingredientType, ingredientBase);
+        return ImmutableSet.of(ingredientTypeStack, ingredientBase);
     }
 
     @Override

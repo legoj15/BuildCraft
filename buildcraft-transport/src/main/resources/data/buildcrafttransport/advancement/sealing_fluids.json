@@ -11,6 +11,21 @@
       "conditions": {
         "recipe_id": "buildcrafttransport:pipe_sealant"
       }
+    },
+    "crafted_sealant_dye": {
+      "trigger": "minecraft:recipe_crafted",
+      "conditions": {
+        "recipe_id": "buildcrafttransport:pipe_sealant_from_green_dye"
+      }
+    },
+    "crafted_sealant_residue": {
+      "trigger": "minecraft:recipe_crafted",
+      "conditions": {
+        "recipe_id": "buildcraftenergy:residue_to_pipe_sealant"
+      }
     }
-  }
+  },
+  "requirements": [
+    ["crafted_sealant", "crafted_sealant_dye", "crafted_sealant_residue"]
+  ]
 }

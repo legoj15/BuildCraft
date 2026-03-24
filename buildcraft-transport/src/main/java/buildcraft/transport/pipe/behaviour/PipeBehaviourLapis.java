@@ -17,10 +17,14 @@ import buildcraft.api.transport.pipe.PipeFaceTex;
 import buildcraft.api.transport.pipe.PipeEventHandler;
 import buildcraft.api.transport.pipe.PipeEventItem;
 
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 
 public class PipeBehaviourLapis extends PipeBehaviour {
+    private static final net.minecraft.resources.Identifier ADVANCEMENT
+        = net.minecraft.resources.Identifier.parse("buildcrafttransport:categorizing_with_colors");
+
     private DyeColor colour = DyeColor.WHITE;
 
     public PipeBehaviourLapis(IPipe pipe) {
@@ -78,6 +82,7 @@ public class PipeBehaviourLapis extends PipeBehaviour {
             int n = colour.getId() + (player.isShiftKeyDown() ? 15 : 1);
             colour = DyeColor.byId(n & 15);
             pipe.getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
+            AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);
             return true;
         }
         return false;

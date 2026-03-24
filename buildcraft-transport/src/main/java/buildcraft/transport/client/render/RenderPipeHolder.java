@@ -185,8 +185,8 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
 
                 poseStack.translate(entry.posX + dx, entry.posY + dy, entry.posZ + dz);
 
-                // Scale to pipe item size
-                poseStack.scale(0.60f, 0.60f, 0.60f);
+                // Scale to pipe item size — matches 1.12.2 scale of 0.30f
+                poseStack.scale(0.30f, 0.30f, 0.30f);
 
                 // Rotate to face the travel direction
                 applyDirectionRotation(poseStack, dir);

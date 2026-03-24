@@ -39,6 +39,8 @@ import buildcraft.lib.misc.AdvancementUtil;
 public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
     private static final net.minecraft.resources.Identifier ADVANCEMENT_POWERING_UP
         = net.minecraft.resources.Identifier.parse("buildcraftenergy:powering_up");
+    private static final net.minecraft.resources.Identifier ADVANCEMENT_ICE_COOL
+        = net.minecraft.resources.Identifier.parse("buildcraftenergy:ice_cool");
 
     public static final int MAX_FLUID = 10_000;
     public static final double COOLDOWN_RATE = 0.05;
@@ -188,6 +190,11 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
                         int coolantAmount = Math.min(MAX_COOLANT_PER_TICK, tankCoolant.getFluidAmount());
                         coolingBuffer += coolantAmount * coolPerMb;
                         tankCoolant.drain(coolantAmount, IFluidHandler.FluidAction.EXECUTE);
+                        // Ice cool advancement: coolant that isn't water
+                        if (!tankCoolant.getFluid().is(net.minecraft.world.level.material.Fluids.WATER)
+                            && getOwner() != null && level != null) {
+                            AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT_ICE_COOL);
+                        }
                     }
                 }
             }

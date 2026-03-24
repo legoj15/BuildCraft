@@ -39,12 +39,21 @@ public enum PipeBehaviourRendererStripes implements IPipeBehaviourRenderer<PipeB
             stripes.pipe.getHolder().getPipeWorld(),
             stripes.pipe.getHolder().getPipePos()
         );
+
+        // Create a dedicated buffer — the BER no longer passes a shared VertexConsumer
+        net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource =
+            Minecraft.getInstance().renderBuffers().bufferSource();
+        VertexConsumer buffer = bufferSource.getBuffer(
+            net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
+
         for (MutableQuad cached : quads) {
             // Copy so we don't permanently mutate the cached quad
             MutableQuad q = new MutableQuad(cached);
             q.lighti(light);
-            q.render(pose, bb);
+            q.render(pose, buffer);
         }
+
+        bufferSource.endBatch(net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
     }
 
     /** Get or build the quads for the given direction. */

@@ -103,8 +103,11 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
 
                     // Create a fresh ItemStackRenderState per item (vanilla pattern)
                     ItemStackRenderState itemState = new ItemStackRenderState();
+                    // Use NONE to skip display transforms — 1.12.2 read raw model quads
+                    // and scaled them uniformly. FIXED applies per-model transforms that
+                    // shrink blocks more than items, causing inconsistent sizing.
                     this.itemModelResolver.updateForTopItem(
-                        itemState, stack, ItemDisplayContext.FIXED,
+                        itemState, stack, ItemDisplayContext.NONE,
                         world, null, posHash + i);
 
                     if (itemState.isEmpty()) continue;

@@ -45,6 +45,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -56,6 +57,7 @@ import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.lib.chunkload.ChunkLoaderManager;
 import buildcraft.lib.chunkload.IChunkLoadingTile;
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.BoundingBoxUtil;
 import buildcraft.lib.misc.InventoryUtil;
@@ -86,6 +88,7 @@ import buildcraft.core.tile.TileMarkerVolume;
 public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoadingTile {
     public static final boolean DEBUG_QUARRY = BCDebugging.shouldDebugLog("builders.quarry");
     private static final long MAX_POWER_PER_TICK = 512 * MjAPI.MJ;
+    private static final Identifier DIGGY_DIGGY_HOLE = Identifier.parse("buildcraftbuilders:diggy_diggy_hole");
 
     private final MjBattery battery = new MjBattery(24000 * MjAPI.MJ);
     private final MjBatteryReceiver mjReceiver = new MjBatteryReceiver(battery);
@@ -108,6 +111,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     private long debugPowerRate = 0;
     private double blockPercentSoFar;
     private double moveDistanceSoFar;
+    private boolean advancementGranted = false;
 
     private List<AABB> collisionBoxes = ImmutableList.of();
     private Vec3 collisionDrillPos;
@@ -586,6 +590,20 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             }
         }
         debugPowerRate -= max;
+
+        // Grant "Diggy diggy hole" advancement when quarry finishes mining with frame >= 64x64
+        if (!advancementGranted && boxIterator != null && !boxIterator.hasNext()
+                && frameBreakBlockPoses.isEmpty() && framePlaceFramePoses.isEmpty()
+                && frameBox.isInitialized()) {
+            int sizeX = frameBox.max().getX() - frameBox.min().getX() + 1;
+            int sizeZ = frameBox.max().getZ() - frameBox.min().getZ() + 1;
+            if (sizeX >= 64 && sizeZ >= 64 && getOwner() != null) {
+                AdvancementUtil.unlockAdvancement(getOwner().id(), level, DIGGY_DIGGY_HOLE);
+                advancementGranted = true;
+                setChanged();
+            }
+        }
+
         if (sendUpdate) {
             setChanged();
             if (level != null && !level.isClientSide()) {
@@ -705,6 +723,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             output.putBoolean("hasDrill", false);
         }
         output.putBoolean("firstChecked", firstChecked);
+        output.putBoolean("advancementGranted", advancementGranted);
     }
 
     // Network sync — sends all data to client for rendering
@@ -802,6 +821,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             drillPos = null;
         }
         firstChecked = input.getBooleanOr("firstChecked", false);
+        advancementGranted = input.getBooleanOr("advancementGranted", false);
 
         if (drillPos != null && drillPos.distanceToSqr(Vec3.atLowerCornerOf(getBlockPos())) > 1024 * 1024) {
             drillPos = null;

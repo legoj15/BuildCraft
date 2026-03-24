@@ -90,10 +90,6 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         }
         if (level == null) return;
 
-        // Get the buffer source for rendering
-        MultiBufferSource.BufferSource bufferSource =
-            Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer buffer = bufferSource.getBuffer(Sheets.cutoutBlockSheet());
         int light = LevelRenderer.getLightColor(level, pipe.getBlockPos());
 
         poseStack.pushPose();
@@ -101,19 +97,16 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         // Static pipe body is rendered by the chunk mesh via PipeBlockStateModel.
         // The BER only handles pluggables and dynamic content (flows, behaviours).
 
-        // --- Render pluggables ---
-        renderPluggables(pipe, poseStack.last(), buffer, light);
-
         // --- Set up ItemRenderUtil batch state for item flow rendering ---
         ItemRenderUtil.beginItemBatch(poseStack, collector, light);
 
         // --- Render flow + behaviour content ---
-        renderContents(pipe, 0, 0, 0, 0, buffer, poseStack.last());
+        // Flow renderers that need a VertexConsumer (fluids, power) create their own
+        // dedicated buffer source internally. Item flow uses the SubmitNodeCollector
+        // via ItemRenderUtil.
+        renderContents(pipe, 0, 0, 0, 0, poseStack.last());
 
         ItemRenderUtil.endItemBatch();
-
-        // Flush the buffer — without this, quads are enqueued but never drawn
-        bufferSource.endBatch();
 
         poseStack.popPose();
     }
@@ -143,88 +136,35 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         }
     }
 
-    private static void renderPluggables(TilePipeHolder pipe, PoseStack.Pose pose,
-        VertexConsumer buffer, int light) {
-        for (Direction face : Direction.values()) {
-            PipePluggable plug = pipe.getPluggable(face);
-            if (plug == null) {
-                continue;
-            }
-            AABB box = plug.getBoundingBox();
-            TextureAtlasSprite sprite = getPlugSprite(plug);
-            if (sprite == null) continue;
-            renderTexturedBox(pose, buffer, box, sprite, light);
-        }
-    }
-
-    /** Gets the texture sprite for a pluggable type. */
-    private static TextureAtlasSprite getPlugSprite(PipePluggable plug) {
-        Identifier texId;
-        if (plug instanceof buildcraft.transport.plug.PluggableBlocker) {
-            texId = Identifier.fromNamespaceAndPath("buildcrafttransport", "pipes/plug");
-        } else if (plug instanceof buildcraft.transport.plug.PluggablePowerAdaptor) {
-            texId = Identifier.fromNamespaceAndPath("buildcrafttransport", "pipes/power_adapter");
-        } else {
-            return null;
-        }
-        net.minecraft.client.renderer.texture.TextureAtlas atlas =
-                (net.minecraft.client.renderer.texture.TextureAtlas) Minecraft.getInstance()
-                        .getTextureManager().getTexture(
-                                net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);
-        return atlas.getSprite(texId);
-    }
-
-    /** Renders a textured box at the given AABB using MutableQuad, matching the pipe body rendering approach. */
-    private static void renderTexturedBox(PoseStack.Pose pose, VertexConsumer buffer,
-        AABB box, TextureAtlasSprite sprite, int light) {
-        float x0 = (float) box.minX, y0 = (float) box.minY, z0 = (float) box.minZ;
-        float x1 = (float) box.maxX, y1 = (float) box.maxY, z1 = (float) box.maxZ;
-        Vector3f center = new Vector3f(
-            (x0 + x1) / 2f, (y0 + y1) / 2f, (z0 + z1) / 2f
-        );
-        Vector3f radius = new Vector3f(
-            (x1 - x0) / 2f, (y1 - y0) / 2f, (z1 - z0) / 2f
-        );
-
-        for (Direction face : Direction.values()) {
-            ModelUtil.UvFaceData uvs = new ModelUtil.UvFaceData();
-            ModelUtil.mapBoxToUvs(box, face, uvs);
-            MutableQuad quad = ModelUtil.createFace(face, center, radius, uvs);
-            quad.texFromSprite(sprite);
-            quad.lighti(light);
-            quad.render(pose, buffer);
-        }
-    }
-
     private static void renderContents(TilePipeHolder pipe, double x, double y, double z,
-        float partialTicks, VertexConsumer bb, PoseStack.Pose pose) {
+        float partialTicks, PoseStack.Pose pose) {
         Pipe p = pipe.getPipe();
         if (p == null) {
             return;
         }
         if (p.flow != null) {
-            renderFlow(p.flow, x, y, z, partialTicks, bb, pose);
+            renderFlow(p.flow, x, y, z, partialTicks, pose);
         }
         if (p.behaviour != null) {
-            renderBehaviour(p.behaviour, x, y, z, partialTicks, bb, pose);
+            renderBehaviour(p.behaviour, x, y, z, partialTicks, pose);
         }
     }
 
     @SuppressWarnings("unchecked")
     private static <F extends PipeFlow> void renderFlow(F flow, double x, double y, double z,
-        float partialTicks, VertexConsumer bb, PoseStack.Pose pose) {
+        float partialTicks, PoseStack.Pose pose) {
         IPipeFlowRenderer<F> renderer = PipeRegistryClient.getFlowRenderer(flow);
         if (renderer != null) {
-            renderer.render(flow, x, y, z, partialTicks, bb, pose);
+            renderer.render(flow, x, y, z, partialTicks, null, pose);
         }
     }
 
     @SuppressWarnings("unchecked")
     private static <B extends PipeBehaviour> void renderBehaviour(B behaviour, double x, double y, double z,
-        float partialTicks, VertexConsumer bb, PoseStack.Pose pose) {
+        float partialTicks, PoseStack.Pose pose) {
         IPipeBehaviourRenderer<B> renderer = PipeRegistryClient.getBehaviourRenderer(behaviour);
         if (renderer != null) {
-            renderer.render(behaviour, x, y, z, partialTicks, bb, pose);
+            renderer.render(behaviour, x, y, z, partialTicks, null, pose);
         }
     }
 }

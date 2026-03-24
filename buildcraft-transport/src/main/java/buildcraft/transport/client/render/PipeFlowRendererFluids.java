@@ -168,7 +168,9 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             renderFluidCuboid(min, max, uvMin, uvMax, 1, 1, gas, sprite, tR, tG, tB, tA, fluidBB, pose);
         }
 
-        bufferSource.endBatch();
+        // Flush only the render type we used — don't disturb other renderers' in-progress buffers
+        boolean translucent = FluidUtilBC.shouldRenderTranslucent(forRender);
+        bufferSource.endBatch(translucent ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
     }
 
     /** Renders a fluid cuboid using {@link MutableQuad}s, with fill-level scaling on the Y axis.

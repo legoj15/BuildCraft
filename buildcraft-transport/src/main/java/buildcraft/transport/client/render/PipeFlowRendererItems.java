@@ -15,6 +15,8 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.Sheets;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
@@ -65,7 +67,7 @@ public enum PipeFlowRendererItems implements IPipeFlowRenderer<PipeFlowItems> {
     }
 
     @Override
-    public void render(PipeFlowItems flow, double x, double y, double z, float partialTicks, VertexConsumer bb) {
+    public void render(PipeFlowItems flow, double x, double y, double z, float partialTicks, VertexConsumer bb, PoseStack.Pose pose) {
         ensureColouredQuads();
         Level world = flow.pipe.getHolder().getPipeWorld();
         if (world == null) return;
@@ -75,10 +77,15 @@ public enum PipeFlowRendererItems implements IPipeFlowRenderer<PipeFlowItems> {
 
         List<TravellingItem> toRender = flow.getAllItemsForRender();
 
+        // Only create colour overlay buffer if needed (lazy)
+        VertexConsumer colourBuffer = null;
+        MultiBufferSource.BufferSource colourBufferSource = null;
+        boolean needsColourFlush = false;
+
         for (TravellingItem item : toRender) {
             Vec3 pos = item.getRenderPosition(BlockPos.ZERO, now, partialTicks, flow);
 
-            // Render the actual item stack model
+            // Render the actual item stack model via SubmitNodeCollector
             ItemStack stack = item.clientItemLink.get();
             if (stack == null || stack.isEmpty()) {
                 // Fallback: try the server-side stack field (works for items arriving via packet)
@@ -87,13 +94,19 @@ public enum PipeFlowRendererItems implements IPipeFlowRenderer<PipeFlowItems> {
             if (stack != null && !stack.isEmpty()) {
                 ItemRenderUtil.renderItemStack(x + pos.x, y + pos.y, z + pos.z,
                         stack, item.stackSize > 0 ? item.stackSize : stack.getCount(),
-                        lightc, item.getRenderDirection(now, partialTicks), bb);
+                        lightc, item.getRenderDirection(now, partialTicks), null);
             }
 
-            // Render colour overlay box for dye-tagged items using PoseStack transforms
+            // Render colour overlay box for dye-tagged items
             if (item.colour != null) {
                 PoseStack ps = ItemRenderUtil.getCurrentPoseStack();
                 if (ps != null) {
+                    // Lazily create the colour buffer only when needed
+                    if (colourBuffer == null) {
+                        colourBufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+                        colourBuffer = colourBufferSource.getBuffer(Sheets.cutoutBlockSheet());
+                        needsColourFlush = true;
+                    }
                     int col = ColourUtil.getLightHex(item.colour);
                     int r = (col >> 16) & 0xFF;
                     int g = (col >> 8) & 0xFF;
@@ -105,11 +118,16 @@ public enum PipeFlowRendererItems implements IPipeFlowRenderer<PipeFlowItems> {
                         MutableQuad q2 = new MutableQuad(q);
                         q2.lighti(15, 15);
                         q2.multColouri(r, g, b_col, 255);
-                        q2.render(ps.last(), bb);
+                        q2.render(ps.last(), colourBuffer);
                     }
                     ps.popPose();
                 }
             }
+        }
+
+        // Flush colour overlay buffer only if we actually rendered any colour boxes
+        if (needsColourFlush && colourBufferSource != null) {
+            colourBufferSource.endBatch(Sheets.cutoutBlockSheet());
         }
         // Note: endItemBatch() is called by RenderPipeHolder.submit() which owns the batch lifecycle
     }

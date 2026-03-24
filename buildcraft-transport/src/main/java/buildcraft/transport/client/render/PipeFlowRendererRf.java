@@ -11,6 +11,10 @@ import org.joml.Vector3f;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.Sheets;
+
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
@@ -46,6 +50,10 @@ public enum PipeFlowRendererRf implements IPipeFlowRenderer<PipeFlowRedstoneFlux
         }
 
         if (centrePower > 0) {
+            MultiBufferSource.BufferSource bufferSource =
+                Minecraft.getInstance().renderBuffers().bufferSource();
+            VertexConsumer rfBB = bufferSource.getBuffer(Sheets.cutoutBlockSheet());
+
             for (Direction side : Direction.values()) {
                 if (!flow.pipe.isConnected(side)) {
                     continue;
@@ -53,7 +61,7 @@ public enum PipeFlowRendererRf implements IPipeFlowRenderer<PipeFlowRedstoneFlux
                 int i = side.ordinal();
                 Section s = flow.getSection(side);
                 double offset = computeOffset(s.clientDisplayFlowLast, s.clientDisplayFlow, partialTicks);
-                renderSidePower(side, power[i], centrePower, offset, bb, pose);
+                renderSidePower(side, power[i], centrePower, offset, rfBB, pose);
             }
 
             Vec3 offsetLast = flow.clientDisplayFlowCentreLast;
@@ -62,7 +70,9 @@ public enum PipeFlowRendererRf implements IPipeFlowRenderer<PipeFlowRedstoneFlux
             double offsetY = computeOffset(offsetLast.y, offsetThis.y, partialTicks);
             double offsetZ = computeOffset(offsetLast.z, offsetThis.z, partialTicks);
 
-            renderCentrePower(centrePower, offsetX, offsetY, offsetZ, bb, pose);
+            renderCentrePower(centrePower, offsetX, offsetY, offsetZ, rfBB, pose);
+
+            bufferSource.endBatch(Sheets.cutoutBlockSheet());
         }
     }
 

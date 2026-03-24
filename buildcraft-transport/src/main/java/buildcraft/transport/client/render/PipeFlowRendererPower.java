@@ -11,6 +11,10 @@ import org.joml.Vector3f;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.Sheets;
+
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
@@ -44,6 +48,13 @@ public enum PipeFlowRendererPower implements IPipeFlowRenderer<PipeFlowPower> {
         }
 
         if (centrePower > 0) {
+            // Create a dedicated buffer for power rendering — do NOT use the global
+            // buffer source shared by other renderers to avoid endBatch() corrupting
+            // in-progress vertex data from other BERs.
+            MultiBufferSource.BufferSource bufferSource =
+                Minecraft.getInstance().renderBuffers().bufferSource();
+            VertexConsumer powerBB = bufferSource.getBuffer(Sheets.cutoutBlockSheet());
+
             for (Direction side : Direction.values()) {
                 if (!flow.pipe.isConnected(side)) {
                     continue;
@@ -51,7 +62,7 @@ public enum PipeFlowRendererPower implements IPipeFlowRenderer<PipeFlowPower> {
                 int i = side.ordinal();
                 Section s = flow.getSection(side);
                 double offset = computeOffset(s.clientDisplayFlowLast, s.clientDisplayFlow, partialTicks);
-                renderSidePower(side, power[i], centrePower, offset, bb, pose);
+                renderSidePower(side, power[i], centrePower, offset, powerBB, pose);
             }
 
             Vec3 offsetLast = flow.clientDisplayFlowCentreLast;
@@ -60,7 +71,9 @@ public enum PipeFlowRendererPower implements IPipeFlowRenderer<PipeFlowPower> {
             double offsetY = computeOffset(offsetLast.y, offsetThis.y, partialTicks);
             double offsetZ = computeOffset(offsetLast.z, offsetThis.z, partialTicks);
 
-            renderCentrePower(centrePower, offsetX, offsetY, offsetZ, bb, pose);
+            renderCentrePower(centrePower, offsetX, offsetY, offsetZ, powerBB, pose);
+
+            bufferSource.endBatch(Sheets.cutoutBlockSheet());
         }
     }
 

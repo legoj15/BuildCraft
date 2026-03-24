@@ -184,6 +184,9 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
                     if (fluidCoolant.getAmount() <= space) {
                         int filled = tank.fill(fluidCoolant, IFluidHandler.FluidAction.EXECUTE);
                         if (filled > 0) {
+                            // Trigger "Ice cool" advancement for using solid coolant
+                            buildcraft.lib.misc.AdvancementUtil.unlockAdvancement(
+                                player, net.minecraft.resources.Identifier.parse("buildcraftenergy:ice_cool"));
                             if (!isCreative) {
                                 stack.shrink(1);
                             }

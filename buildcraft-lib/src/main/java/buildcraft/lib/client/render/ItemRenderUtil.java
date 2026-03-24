@@ -27,18 +27,19 @@ import com.mojang.math.Axis;
 public class ItemRenderUtil {
 
     private static final Random modelOffsetRandom = new Random(0);
-    private static final ItemStackRenderState renderState = new ItemStackRenderState();
 
     // Batch state — set by beginItemBatch, used by renderItemStack
     private static PoseStack currentPoseStack;
     private static SubmitNodeCollector currentCollector;
     private static int currentLight;
+    private static ItemStackRenderState renderState;
 
     /** Begin a batch of item renders. Must be called before renderItemStack. */
     public static void beginItemBatch(PoseStack poseStack, SubmitNodeCollector collector, int light) {
         currentPoseStack = poseStack;
         currentCollector = collector;
         currentLight = light;
+        renderState = new ItemStackRenderState();
     }
 
     /** Returns the current PoseStack set by beginItemBatch, or null if not in a batch.

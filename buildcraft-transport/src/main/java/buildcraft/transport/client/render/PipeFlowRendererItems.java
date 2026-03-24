@@ -111,7 +111,6 @@ public enum PipeFlowRendererItems implements IPipeFlowRenderer<PipeFlowItems> {
                 }
             }
         }
-
-        ItemRenderUtil.endItemBatch();
+        // Note: endItemBatch() is called by RenderPipeHolder.submit() which owns the batch lifecycle
     }
 }

@@ -140,13 +140,33 @@ public class BCFactory {
         );
 
         // Fluid capabilities for the distiller (directional)
-        // Horizontal sides → input tank, UP → gas out, DOWN → liquid out
+        // In 1.12.2: tankIn.setCanDrain(false), tankGasOut.setCanFill(false), tankLiquidOut.setCanFill(false)
+        // Horizontal sides → input tank (insert-only), UP → gas out (extract-only), DOWN → liquid out (extract-only)
         event.registerBlockEntity(
             Capabilities.Fluid.BLOCK,
             BCFactoryBlockEntities.DISTILLER.get(),
             (distiller, direction) -> {
                 net.neoforged.neoforge.fluids.capability.templates.FluidTank tank = distiller.getTankForSide(direction);
-                return tank != null ? new FluidTankResourceHandler(tank) : null;
+                if (tank == null) return null;
+                if (tank == distiller.getTankIn()) {
+                    // Input tank: fill only (no extraction), matching 1.12.2 setCanDrain(false)
+                    return new FluidTankResourceHandler(tank) {
+                        @Override
+                        public int extract(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource,
+                                           int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
+                            return 0;
+                        }
+                    };
+                } else {
+                    // Output tanks (gas/liquid): drain only (no fill), matching 1.12.2 setCanFill(false)
+                    return new FluidTankResourceHandler(tank) {
+                        @Override
+                        public int insert(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource,
+                                          int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
+                            return 0;
+                        }
+                    };
+                }
             }
         );
 

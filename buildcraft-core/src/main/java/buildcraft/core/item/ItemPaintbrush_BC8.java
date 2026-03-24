@@ -24,12 +24,15 @@ import net.minecraft.core.Direction;
 import buildcraft.api.blocks.CustomPaintHelper;
 import buildcraft.core.BCCore;
 import buildcraft.lib.misc.ColourUtil;
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.ParticleUtil;
 import buildcraft.lib.misc.SoundUtil;
 import buildcraft.lib.misc.VecUtil;
 
 public class ItemPaintbrush_BC8 extends Item {
     private static final int MAX_USES = 64;
+    private static final net.minecraft.resources.Identifier ADVANCEMENT
+        = net.minecraft.resources.Identifier.parse("buildcrafttransport:categorizing_with_colors");
 
     public ItemPaintbrush_BC8(Item.Properties properties) {
         super(properties);
@@ -137,6 +140,7 @@ public class ItemPaintbrush_BC8 extends Item {
 
         if (result == InteractionResult.SUCCESS) {
             if (!level.isClientSide()) {
+                AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);
                 ParticleUtil.showChangeColour(level, hitPos, colour);
                 SoundUtil.playChangeColour(level, pos, colour);
 

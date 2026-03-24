@@ -21,8 +21,12 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.energy.BCEnergyBlockEntities;
 import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
+import buildcraft.lib.misc.AdvancementUtil;
 
 public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
+    private static final net.minecraft.resources.Identifier ADVANCEMENT_POWERING_UP
+        = net.minecraft.resources.Identifier.parse("buildcraftenergy:poweringUp");
+
     private static final long MAX_OUTPUT = MjAPI.MJ;
     private static final long MIN_OUTPUT = MAX_OUTPUT / 3;
     private static final long eLimit = (MAX_OUTPUT - MIN_OUTPUT) * 20;
@@ -120,6 +124,9 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
             if (newBurn > 0) {
                 burnTime = newBurn;
                 totalBurnTime = newBurn;
+                if (getOwner() != null && level != null) {
+                    AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT_POWERING_UP);
+                }
 
                 // Consume one fuel item
                 ItemStack consumed = fuelStack.copy();

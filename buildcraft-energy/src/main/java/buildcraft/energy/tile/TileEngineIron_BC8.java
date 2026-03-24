@@ -30,12 +30,16 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.energy.BCEnergyBlockEntities;
 import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
+import buildcraft.lib.misc.AdvancementUtil;
 
 /**
  * Combustion engine (Iron Engine). Burns fluid fuels and requires fluid coolant.
  * Ported from 1.12.2 TileEngineIron_BC8.
  */
 public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
+    private static final net.minecraft.resources.Identifier ADVANCEMENT_POWERING_UP
+        = net.minecraft.resources.Identifier.parse("buildcraftenergy:poweringUp");
+
     public static final int MAX_FLUID = 10_000;
     public static final double COOLDOWN_RATE = 0.05;
     public static final int MAX_COOLANT_PER_TICK = 40;
@@ -110,6 +114,9 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
         if (penaltyCooling <= 0) {
             if (isRedstonePowered) {
                 lastPowered = true;
+                if (getOwner() != null && level != null) {
+                    AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT_POWERING_UP);
+                }
 
                 if (burnTime > 0 || fuel.getAmount() > 0) {
                     if (burnTime > 0) {

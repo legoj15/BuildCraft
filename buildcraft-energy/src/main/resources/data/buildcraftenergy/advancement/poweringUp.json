@@ -1,0 +1,11 @@
+{
+  "display": {
+    "icon": { "id": "buildcraftenergy:engine_iron" },
+    "title": { "translate": "advancements.buildcraftenergy.poweringUp.title" },
+    "description": { "translate": "advancements.buildcraftenergy.poweringUp.description" }
+  },
+  "parent": "buildcraftcore:free_power",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

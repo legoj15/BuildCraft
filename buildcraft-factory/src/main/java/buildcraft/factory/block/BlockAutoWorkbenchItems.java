@@ -14,8 +14,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -57,6 +59,18 @@ public class BlockAutoWorkbenchItems extends BaseEntityBlock {
         }
         return createTickerHelper(type, BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
                 (lvl, pos, st, tile) -> tile.serverTick());
+    }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
+            @org.jetbrains.annotations.Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (!level.isClientSide()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileAutoWorkbenchItems workbench) {
+                workbench.onPlacedBy(placer, stack);
+            }
+        }
     }
 
     @Override

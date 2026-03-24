@@ -9,6 +9,7 @@ package buildcraft.lib.tile;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -16,17 +17,20 @@ import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 import buildcraft.lib.tile.item.ItemHandlerManager;
 
 /**
  * Lightweight stub of the 1.12 TileBC_Neptune.
- * Provides only player tracking, owner tracking, and item manager hooks
+ * Provides player tracking, owner tracking (with persistence), and item manager hooks
  * needed by ContainerBCTile and the GUI layer. Full networking is deferred.
  */
 public abstract class TileBC_Neptune extends BlockEntity {
@@ -69,6 +73,44 @@ public abstract class TileBC_Neptune extends BlockEntity {
 
     public void setOwner(@Nullable GameProfile owner) {
         this.owner = owner;
+    }
+
+    /**
+     * Called by block classes from setPlacedBy() to record the placing player.
+     * Matches the 1.12.2 TileBC_Neptune.onPlacedBy() pattern.
+     */
+    public void onPlacedBy(@Nullable LivingEntity placer, ItemStack stack) {
+        if (placer instanceof Player player) {
+            setOwner(player.getGameProfile());
+        }
+    }
+
+    // --- Owner persistence ---
+
+    @Override
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        if (owner != null && owner.id() != null) {
+            output.putString("ownerUUID", owner.id().toString());
+            if (owner.name() != null) {
+                output.putString("ownerName", owner.name());
+            }
+        }
+    }
+
+    @Override
+    public void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        String uuidStr = input.getStringOr("ownerUUID", "");
+        if (!uuidStr.isEmpty()) {
+            try {
+                UUID uuid = UUID.fromString(uuidStr);
+                String name = input.getStringOr("ownerName", "Unknown");
+                owner = new GameProfile(uuid, name);
+            } catch (IllegalArgumentException e) {
+                owner = null;
+            }
+        }
     }
 
     // --- GUI tick stub (networking deferred) ---

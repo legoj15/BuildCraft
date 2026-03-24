@@ -40,7 +40,8 @@
       "buildcrafttransport:pipe_emzuli_item",
       "buildcrafttransport:pipe_stripes_item",
       "buildcrafttransport:pipe_structure",
-      "buildcrafttransport:pipe_sealant"
+      "buildcrafttransport:pipe_sealant",
+      "buildcrafttransport:pipe_sealant_from_green_dye"
     ]
   },
   "criteria": {

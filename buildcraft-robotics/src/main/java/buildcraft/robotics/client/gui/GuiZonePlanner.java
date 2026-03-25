@@ -6,7 +6,7 @@
 
 package buildcraft.robotics.client.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -26,7 +26,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphics graphics) {
+    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
     }
 
@@ -36,7 +36,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         // No labels — matches 1.12.2 which only has the GUI texture
     }
 }

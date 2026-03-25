@@ -1,6 +1,6 @@
 package buildcraft.builders.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
@@ -21,8 +21,8 @@ public class GuiFiller extends AbstractContainerScreen<ContainerFiller> {
     }
 
     @Override
-    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE,
+    protected void renderBg(GuiGraphicsExtractor GuiGraphicsExtractor, float partialTick, int mouseX, int mouseY) {
+        GuiGraphicsExtractor.blit(RenderPipelines.GUI_TEXTURED, TEXTURE,
                 leftPos, topPos,
                 0f, 0f,
                 imageWidth, imageHeight,
@@ -30,8 +30,8 @@ public class GuiFiller extends AbstractContainerScreen<ContainerFiller> {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        renderTooltip(guiGraphics, mouseX, mouseY);
+    public void render(GuiGraphicsExtractor GuiGraphicsExtractor, int mouseX, int mouseY, float partialTick) {
+        super.render(GuiGraphicsExtractor, mouseX, mouseY, partialTick);
+        renderTooltip(GuiGraphicsExtractor, mouseX, mouseY);
     }
 }

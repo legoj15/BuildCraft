@@ -4,7 +4,7 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.builders.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -43,9 +43,9 @@ public class GuiArchitectTable extends AbstractContainerScreen<ContainerArchitec
     }
 
     @Override
-    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+    protected void renderBg(GuiGraphicsExtractor GuiGraphicsExtractor, float partialTick, int mouseX, int mouseY) {
         // Draw main GUI background
-        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_BASE,
+        GuiGraphicsExtractor.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_BASE,
                 leftPos, topPos,
                 0f, 0f,
                 SIZE_X, SIZE_Y,
@@ -57,7 +57,7 @@ public class GuiArchitectTable extends AbstractContainerScreen<ContainerArchitec
             int progress = menu.getSyncedProgress();
             int progressWidth = (int) (24.0f * progress / total);
             // The progress bar sprite is at (0, 166) in the texture, 24x17
-            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_BASE,
+            GuiGraphicsExtractor.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_BASE,
                     leftPos + 159, topPos + 34,
                     0f, 166f,
                     progressWidth, 17,
@@ -66,8 +66,8 @@ public class GuiArchitectTable extends AbstractContainerScreen<ContainerArchitec
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        renderTooltip(guiGraphics, mouseX, mouseY);
+    public void render(GuiGraphicsExtractor GuiGraphicsExtractor, int mouseX, int mouseY, float partialTick) {
+        super.render(GuiGraphicsExtractor, mouseX, mouseY, partialTick);
+        renderTooltip(GuiGraphicsExtractor, mouseX, mouseY);
     }
 }

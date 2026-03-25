@@ -9,7 +9,7 @@ package buildcraft.lib.gui.ledger;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 
@@ -62,7 +62,7 @@ public class LedgerEngine extends Ledger_Neptune {
     }
 
     @Override
-    protected void drawIcon(double x, double y, GuiGraphics graphics) {
+    protected void drawIcon(double x, double y, GuiGraphicsExtractor graphics) {
         // Select the appropriate engine status icon based on power stage
         // Matches 1.12.2 LedgerEngine.drawIcon() logic
         Identifier icon;

@@ -1,6 +1,6 @@
 package buildcraft.transport.client.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -25,7 +25,7 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphics graphics) {
+    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
     }
 
@@ -73,7 +73,7 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         String title = Component.translatable("gui.pipes.emzuli.title").getString();
         int titleX = (imageWidth - font.width(title)) / 2;
         graphics.drawString(font, title, titleX, 6, 0x404040, false);

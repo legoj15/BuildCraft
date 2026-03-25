@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
 import net.minecraft.network.chat.Component;
@@ -56,12 +56,12 @@ public class GuiTank extends GuiBC8<ContainerTank> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphics graphics) {
+    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         // Draw "Tank" title centered at the top
         String titleStr = title.getString();
         int titleWidth = font.width(titleStr);
@@ -73,7 +73,7 @@ public class GuiTank extends GuiBC8<ContainerTank> {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
+    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
         super.render(graphics, mouseX, mouseY, partialTicks);
 
@@ -81,7 +81,7 @@ public class GuiTank extends GuiBC8<ContainerTank> {
         renderTankTooltip(graphics, mouseX, mouseY);
     }
 
-    private void renderTankTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+    private void renderTankTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         if (menu.tile == null) return;
 
         int absX = leftPos + TANK_X;

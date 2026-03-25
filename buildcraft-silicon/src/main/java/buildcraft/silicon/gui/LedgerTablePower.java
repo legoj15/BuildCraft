@@ -6,7 +6,7 @@
 
 package buildcraft.silicon.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import buildcraft.lib.gui.BuildCraftGui;
 import buildcraft.lib.gui.ledger.Ledger_Neptune;
@@ -36,7 +36,7 @@ public class LedgerTablePower extends Ledger_Neptune {
     }
 
     @Override
-    protected void drawIcon(double x, double y, GuiGraphics graphics) {
+    protected void drawIcon(double x, double y, GuiGraphicsExtractor graphics) {
         // TODO: draw engine active/inactive sprite when BCLibSprites is re-enabled
     }
 }

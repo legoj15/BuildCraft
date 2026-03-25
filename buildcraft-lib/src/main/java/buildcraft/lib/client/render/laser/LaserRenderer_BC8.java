@@ -12,7 +12,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.Lightmap;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -93,12 +93,12 @@ public class LaserRenderer_BC8 {
      */
     public static int computeLightmap(double x, double y, double z, int minBlockLight) {
         Level level = Minecraft.getInstance().level;
-        if (level == null) return LightTexture.FULL_BRIGHT;
+        if (level == null) return Lightmap.FULL_BRIGHT;
 
         BlockPos pos = BlockPos.containing(x, y, z);
         int blockLight = minBlockLight >= 15 ? 15 :
                 Math.max(minBlockLight, level.getBrightness(LightLayer.BLOCK, pos));
         int skyLight = level.getBrightness(LightLayer.SKY, pos);
-        return LightTexture.pack(blockLight, skyLight);
+        return Lightmap.pack(blockLight, skyLight);
     }
 }

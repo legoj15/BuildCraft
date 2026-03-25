@@ -6,7 +6,7 @@
 
 package buildcraft.silicon.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
@@ -16,7 +16,7 @@ import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ClickAction;
 import net.minecraft.world.inventory.Slot;
 
 import buildcraft.lib.gui.GuiBC8;
@@ -88,7 +88,7 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphics graphics) {
+    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
 
         long target = menu.tile.getTarget();
@@ -106,7 +106,7 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         if (this.recipeBookComponent != null && this.recipeBookComponent.isVisible() && this.widthTooNarrow) {
             this.renderBg(graphics, partialTick, mouseX, mouseY);
             this.recipeBookComponent.render(graphics, mouseX, mouseY, partialTick);
@@ -122,7 +122,7 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     }
 
     @Override
-    protected void renderBg(GuiGraphics graphics, float partialTicks, int mouseX, int mouseY) {
+    protected void renderBg(GuiGraphicsExtractor graphics, float partialTicks, int mouseX, int mouseY) {
         GuiIcon.setGuiGraphics(graphics);
         mainGui.drawBackgroundLayer(partialTicks, mouseX, mouseY, () -> {
             drawBackgroundTexture(graphics);
@@ -131,7 +131,7 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         String title = I18n.get("block.buildcraftsilicon.advanced_crafting_table");
         graphics.drawString(font, title, (imageWidth - font.width(title)) / 2, 5, 0xFF404040, false);
     }
@@ -155,7 +155,7 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     }
 
     @Override
-    protected void slotClicked(Slot slot, int slotId, int mouseButton, ClickType type) {
+    protected void slotClicked(Slot slot, int slotId, int mouseButton, ClickAction type) {
         super.slotClicked(slot, slotId, mouseButton, type);
         if (this.recipeBookComponent != null) {
             this.recipeBookComponent.slotClicked(slot);
@@ -181,7 +181,7 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     }
 
 
-    public void renderGhostRecipe(GuiGraphics graphics, boolean p_283495_) {
+    public void renderGhostRecipe(GuiGraphicsExtractor graphics, boolean p_283495_) {
         if (this.recipeBookComponent != null) {
             this.recipeBookComponent.renderGhostRecipe(graphics, p_283495_);
         }

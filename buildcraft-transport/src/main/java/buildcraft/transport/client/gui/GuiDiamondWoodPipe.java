@@ -5,7 +5,7 @@
  */
 package buildcraft.transport.client.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -31,7 +31,7 @@ public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphics graphics) {
+    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
     }
 
@@ -61,7 +61,7 @@ public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         // Draw current filter mode indicator
         String modeStr = switch (menu.behaviour.filterMode) {
             case WHITE_LIST -> "§a[Whitelist]";

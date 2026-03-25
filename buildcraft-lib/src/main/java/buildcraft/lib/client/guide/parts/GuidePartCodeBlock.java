@@ -60,7 +60,7 @@ public class GuidePartCodeBlock extends GuidePart {
                     }
                 }
                 int _x = x + 8 + lineNumberWidth;
-                // Darkened background rendering deferred (needs GuiGraphics)
+                // Darkened background rendering deferred (needs GuiGraphicsExtractor)
                 font.drawString(line, _x, _y, 0);
                 _y += font.getMaxFontHeight() + 2;
             }

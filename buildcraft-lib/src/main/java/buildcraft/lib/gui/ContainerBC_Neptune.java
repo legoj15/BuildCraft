@@ -25,7 +25,7 @@ import net.minecraft.world.inventory.RecipeBookType;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ClickAction;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -182,7 +182,7 @@ public abstract class ContainerBC_Neptune extends RecipeBookMenu {
     // --- Slot handling ---
 
     @Override
-    public void clicked(int slotId, int dragType, ClickType clickType, Player player) {
+    public void clicked(int slotId, int dragType, ClickAction ClickAction, Player player) {
         Slot slot = slotId < 0 ? null : this.slots.get(slotId);
         if (slot instanceof SlotPhantom) {
             SlotPhantom phantom = (SlotPhantom) slot;
@@ -196,7 +196,7 @@ public abstract class ContainerBC_Neptune extends RecipeBookMenu {
             }
             return;
         }
-        super.clicked(slotId, dragType, clickType, player);
+        super.clicked(slotId, dragType, ClickAction, player);
     }
 
     @Override

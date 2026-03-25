@@ -10,7 +10,7 @@ import java.util.List;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * Renders the BuildCraft debug overlay on the F3 screen.
@@ -25,7 +25,7 @@ public class DebugOverlayRenderer {
      * Renders debug info lines on the left and right sides of the screen,
      * below the vanilla debug text.
      */
-    public static void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
+    public static void render(GuiGraphicsExtractor GuiGraphicsExtractor, DeltaTracker deltaTracker) {
         Minecraft mc = Minecraft.getInstance();
 
         if (mc.debugEntries == null || !mc.debugEntries.isOverlayVisible()) {
@@ -57,8 +57,8 @@ public class DebugOverlayRenderer {
             }
             // Background
             int width = font.width(line);
-            guiGraphics.fill(1, leftY - 1, 2 + width + 1, leftY + font.lineHeight, 0x90505050);
-            guiGraphics.drawString(font, line, 2, leftY, 0xFFE0E0E0, false);
+            GuiGraphicsExtractor.fill(1, leftY - 1, 2 + width + 1, leftY + font.lineHeight, 0x90505050);
+            GuiGraphicsExtractor.drawString(font, line, 2, leftY, 0xFFE0E0E0, false);
             leftY += lineHeight;
         }
 
@@ -76,8 +76,8 @@ public class DebugOverlayRenderer {
             }
             int width = font.width(line);
             int x = screenWidth - 2 - width;
-            guiGraphics.fill(x - 1, rightY - 1, x + width + 1, rightY + font.lineHeight, 0x90505050);
-            guiGraphics.drawString(font, line, x, rightY, 0xFFE0E0E0, false);
+            GuiGraphicsExtractor.fill(x - 1, rightY - 1, x + width + 1, rightY + font.lineHeight, 0x90505050);
+            GuiGraphicsExtractor.drawString(font, line, x, rightY, 0xFFE0E0E0, false);
             rightY += lineHeight;
         }
     }

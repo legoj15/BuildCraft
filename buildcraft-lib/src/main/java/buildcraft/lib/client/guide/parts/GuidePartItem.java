@@ -1,7 +1,7 @@
 package buildcraft.lib.client.guide.parts;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.lib.client.guide.GuiGuide;
@@ -24,7 +24,7 @@ public abstract class GuidePartItem extends GuidePart {
     protected void drawItemStack(ItemStack stack, int x, int y) {
         if (stack == null || stack.isEmpty()) return;
 
-        GuiGraphics graphics = GuiIcon.getGuiGraphics();
+        GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
         if (graphics != null) {
             graphics.renderItem(stack, x, y);
             graphics.renderItemDecorations(Minecraft.getInstance().font, stack, x, y);

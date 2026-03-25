@@ -6,7 +6,7 @@
 
 package buildcraft.factory.client.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
@@ -15,7 +15,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ClickAction;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
@@ -97,7 +97,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphics graphics) {
+    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
 
         // Draw crafting progress bar (arrow fill)
@@ -161,7 +161,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         if (this.recipeBookComponent != null && this.recipeBookComponent.isVisible() && this.widthTooNarrow) {
             this.renderBg(graphics, partialTick, mouseX, mouseY);
             this.recipeBookComponent.render(graphics, mouseX, mouseY, partialTick);
@@ -177,7 +177,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     }
 
     @Override
-    protected void renderBg(GuiGraphics graphics, float partialTicks, int mouseX, int mouseY) {
+    protected void renderBg(GuiGraphicsExtractor graphics, float partialTicks, int mouseX, int mouseY) {
         GuiIcon.setGuiGraphics(graphics);
         mainGui.drawBackgroundLayer(partialTicks, mouseX, mouseY, () -> {
             drawBackgroundTexture(graphics);
@@ -186,7 +186,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         // No labels — matches 1.12.2 which only has the GUI texture
     }
 
@@ -208,7 +208,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     }
 
     @Override
-    protected void slotClicked(Slot slot, int slotId, int mouseButton, ClickType type) {
+    protected void slotClicked(Slot slot, int slotId, int mouseButton, ClickAction type) {
         super.slotClicked(slot, slotId, mouseButton, type);
         if (this.recipeBookComponent != null) {
             this.recipeBookComponent.slotClicked(slot);
@@ -232,7 +232,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
         return super.isHovering(x, y, width, height, mouseX, mouseY);
     }
 
-    public void renderGhostRecipe(GuiGraphics graphics, boolean p_283495_) {
+    public void renderGhostRecipe(GuiGraphicsExtractor graphics, boolean p_283495_) {
         if (this.recipeBookComponent != null) {
             this.recipeBookComponent.renderGhostRecipe(graphics, p_283495_);
         }

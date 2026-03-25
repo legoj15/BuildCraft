@@ -6,7 +6,7 @@
 
 package buildcraft.silicon.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -35,7 +35,7 @@ public class GuiIntegrationTable extends GuiBC8<ContainerIntegrationTable> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphics graphics) {
+    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
 
         long target = menu.tile.getTarget();
@@ -53,7 +53,7 @@ public class GuiIntegrationTable extends GuiBC8<ContainerIntegrationTable> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         String title = I18n.get("block.buildcraftsilicon.integration_table");
         graphics.drawString(font, title, (imageWidth - font.width(title)) / 2, 10, 0xFF404040, false);
     }

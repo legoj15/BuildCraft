@@ -153,6 +153,8 @@
 
 ---
 
+- Fix quarry rendering
+
 ## 🆕 New Features (Post-Port)
 
 - [ ] Quarry LEDs

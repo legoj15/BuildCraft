@@ -1,4 +1,4 @@
-## **UNOFFICIAL** BuildCraft for Minecraft 1.21.11
+## **UNOFFICIAL** BuildCraft for Minecraft 26.1
 
 ### Reporting an issue
 

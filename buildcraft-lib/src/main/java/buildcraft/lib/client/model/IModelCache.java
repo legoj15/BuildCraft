@@ -10,7 +10,7 @@ import net.minecraft.resources.Identifier;
 
 import java.util.List;
 
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 
 public interface IModelCache<K> {
     List<BakedQuad> bake(K key);

@@ -9,7 +9,7 @@ package buildcraft.lib.gui.elem;
 import java.util.List;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -70,7 +70,7 @@ public class GuiElementFluidTank implements IInteractionElement {
 
         FluidStack fluid = tank.getFluid();
         if (!fluid.isEmpty() && tank.getCapacity() > 0) {
-            GuiGraphics graphics = GuiIcon.getGuiGraphics();
+            GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
             if (graphics != null) {
                 drawFluid(graphics, fluid, tank.getFluidAmount(), tank.getCapacity());
             }
@@ -82,7 +82,7 @@ public class GuiElementFluidTank implements IInteractionElement {
         }
     }
 
-    private void drawFluid(GuiGraphics graphics, FluidStack fluid, int amount, int capacity) {
+    private void drawFluid(GuiGraphicsExtractor graphics, FluidStack fluid, int amount, int capacity) {
         IClientFluidTypeExtensions fluidExt = IClientFluidTypeExtensions.of(fluid.getFluid());
         Identifier stillTexture = fluidExt.getStillTexture(fluid);
         if (stillTexture == null) return;

@@ -6,7 +6,7 @@
  */
 package buildcraft.transport.client.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -26,7 +26,7 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphics graphics) {
+    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
     }
 
@@ -36,7 +36,7 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         // Title is drawn as part of the GUI texture in 1.12.2
     }
 }

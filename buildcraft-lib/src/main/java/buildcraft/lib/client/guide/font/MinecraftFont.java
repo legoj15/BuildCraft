@@ -11,21 +11,21 @@ import java.util.List;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
 /** Implements a font that delegates to Minecraft's own {@link Font}.
- * Requires a {@link GuiGraphics} context to be set via {@link #setGuiGraphics} before
+ * Requires a {@link GuiGraphicsExtractor} context to be set via {@link #setGuiGraphics} before
  * any draw calls can render visually. */
 public enum MinecraftFont implements IFontRenderer {
     INSTANCE;
 
-    /** The current GuiGraphics context — set by GuiGuide during rendering. */
-    private static GuiGraphics currentGraphics;
+    /** The current GuiGraphicsExtractor context — set by GuiGuide during rendering. */
+    private static GuiGraphicsExtractor currentGraphics;
 
-    /** Set the GuiGraphics context for all font rendering. Must be called each frame. */
-    public static void setGuiGraphics(GuiGraphics graphics) {
+    /** Set the GuiGraphicsExtractor context for all font rendering. Must be called each frame. */
+    public static void setGuiGraphics(GuiGraphicsExtractor graphics) {
         currentGraphics = graphics;
     }
 
@@ -62,7 +62,7 @@ public enum MinecraftFont implements IFontRenderer {
             drawX = x - width / 2;
         }
 
-        // Note: in NeoForge 1.21.11, GuiGraphics.pose() returns Matrix3x2fStack
+        // Note: in NeoForge 1.21.11, GuiGraphicsExtractor.pose() returns Matrix3x2fStack
         // which does not have pushPose/popPose. For scaled text we skip the transform
         // and just draw at the given position for now.
         currentGraphics.drawString(font, text, drawX, y, colour, shadow);

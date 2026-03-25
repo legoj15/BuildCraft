@@ -8,7 +8,7 @@ package buildcraft.core.list;
 
 import java.util.List;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
@@ -94,7 +94,7 @@ public class GuiList extends GuiBC8<ContainerList> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphics graphics) {
+    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
 
         // Draw one-stack overlay for lines in type/material mode
@@ -106,7 +106,7 @@ public class GuiList extends GuiBC8<ContainerList> {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
+    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
         super.render(graphics, mouseX, mouseY, partialTicks);
     }
@@ -150,7 +150,7 @@ public class GuiList extends GuiBC8<ContainerList> {
         }
 
         @Override
-        protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        protected void renderWidget(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
             int u = toggled ? uOn : uOff;
             int v = toggled ? vOn : vOff;
             graphics.blit(RenderPipelines.GUI_TEXTURED, texture,

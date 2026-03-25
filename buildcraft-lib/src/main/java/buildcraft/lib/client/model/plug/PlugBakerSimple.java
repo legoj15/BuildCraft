@@ -13,7 +13,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.core.Direction;
 
 import buildcraft.api.transport.pluggable.IPluggableStaticBaker;

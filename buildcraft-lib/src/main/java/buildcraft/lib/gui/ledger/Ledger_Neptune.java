@@ -13,7 +13,7 @@ import java.util.function.Supplier;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
@@ -250,7 +250,7 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
 
     @Override
     public void drawBackground(float partialTicks) {
-        GuiGraphics graphics = GuiIcon.getGuiGraphics();
+        GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
         if (graphics == null) return;
 
         interpWidth = interp(lastWidth, currentWidth, partialTicks);
@@ -325,7 +325,7 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
 
 
     /** Override in subclasses to draw a 16x16 icon. */
-    protected void drawIcon(double x, double y, GuiGraphics graphics) {
+    protected void drawIcon(double x, double y, GuiGraphicsExtractor graphics) {
         // Default: nothing
     }
 

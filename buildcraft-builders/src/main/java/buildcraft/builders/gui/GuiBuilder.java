@@ -6,7 +6,7 @@
 
 package buildcraft.builders.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
@@ -30,15 +30,15 @@ public class GuiBuilder extends AbstractContainerScreen<ContainerBuilder> {
     }
 
     @Override
-    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+    protected void renderBg(GuiGraphicsExtractor GuiGraphicsExtractor, float partialTick, int mouseX, int mouseY) {
         // Draw main GUI background
-        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_BASE,
+        GuiGraphicsExtractor.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_BASE,
                 leftPos, topPos,
                 0f, 0f,
                 SIZE_X, SIZE_Y,
                 256, 256);
         // TODO: Draw blueprint panel when a Blueprint snapshot is loaded
-        // guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_BLUEPRINT,
+        // GuiGraphicsExtractor.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_BLUEPRINT,
         //         leftPos + SIZE_BLUEPRINT_X - BLUEPRINT_WIDTH, topPos,
         //         SIZE_BLUEPRINT_X - BLUEPRINT_WIDTH, 0f,
         //         BLUEPRINT_WIDTH, SIZE_Y,
@@ -46,8 +46,8 @@ public class GuiBuilder extends AbstractContainerScreen<ContainerBuilder> {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        renderTooltip(guiGraphics, mouseX, mouseY);
+    public void render(GuiGraphicsExtractor GuiGraphicsExtractor, int mouseX, int mouseY, float partialTick) {
+        super.render(GuiGraphicsExtractor, mouseX, mouseY, partialTick);
+        renderTooltip(GuiGraphicsExtractor, mouseX, mouseY);
     }
 }

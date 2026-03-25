@@ -15,7 +15,7 @@ import javax.annotation.Nullable;
 import com.google.common.collect.Queues;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -277,7 +277,7 @@ public class GuiGuide extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
+    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
         // Set the graphics context for font rendering and other sub-renderers
         MinecraftFont.setGuiGraphics(graphics);
         GuiIcon.setGuiGraphics(graphics);

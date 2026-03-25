@@ -6,7 +6,7 @@
 
 package buildcraft.lib.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
@@ -23,16 +23,16 @@ public class GuiIcon implements ISimpleDrawable {
     public final int textureSize;
     public final int width, height;
 
-    /** The GuiGraphics context — set by GuiGuide at the start of each render frame. */
-    private static GuiGraphics currentGraphics;
+    /** The GuiGraphicsExtractor context — set by GuiGuide at the start of each render frame. */
+    private static GuiGraphicsExtractor currentGraphics;
 
-    /** Set the GuiGraphics context for all GuiIcon rendering. */
-    public static void setGuiGraphics(GuiGraphics graphics) {
+    /** Set the GuiGraphicsExtractor context for all GuiIcon rendering. */
+    public static void setGuiGraphics(GuiGraphicsExtractor graphics) {
         currentGraphics = graphics;
     }
 
-    /** Get the current GuiGraphics context (set each frame by GuiGuide). */
-    public static GuiGraphics getGuiGraphics() {
+    /** Get the current GuiGraphicsExtractor context (set each frame by GuiGuide). */
+    public static GuiGraphicsExtractor getGuiGraphics() {
         return currentGraphics;
     }
 

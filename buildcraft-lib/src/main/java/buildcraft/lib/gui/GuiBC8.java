@@ -6,7 +6,7 @@
 
 package buildcraft.lib.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
@@ -83,7 +83,7 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
     }
 
     @Override
-    protected void renderBg(GuiGraphics graphics, float partialTicks, int mouseX, int mouseY) {
+    protected void renderBg(GuiGraphicsExtractor graphics, float partialTicks, int mouseX, int mouseY) {
         GuiIcon.setGuiGraphics(graphics);
         mainGui.drawBackgroundLayer(partialTicks, mouseX, mouseY, () -> {
             drawBackgroundTexture(graphics);
@@ -92,7 +92,7 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
+    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
         super.render(graphics, mouseX, mouseY, partialTicks);
         this.renderTooltip(graphics, mouseX, mouseY);
@@ -110,13 +110,13 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         // Suppress vanilla's default title/inventory label rendering.
         // BuildCraft GUIs draw labels manually in subclass overrides with custom positioning.
     }
 
     /** Draw the background texture. Override this to blit your GUI background. */
-    protected void drawBackgroundTexture(GuiGraphics graphics) {
+    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
         // Default: do nothing. Subclasses blit their texture.
     }
 }

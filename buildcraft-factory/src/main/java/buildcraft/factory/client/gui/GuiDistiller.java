@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
 import net.minecraft.network.chat.Component;
@@ -78,12 +78,12 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphics graphics) {
+    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         String titleStr = title.getString();
         int titleWidth = font.width(titleStr);
         int titleX = (imageWidth - titleWidth) / 2;
@@ -92,7 +92,7 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
+    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
         super.render(graphics, mouseX, mouseY, partialTicks);
         renderTankTooltip(graphics, mouseX, mouseY, menu.tile != null ? menu.tile.getTankIn() : null,
@@ -103,7 +103,7 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
                 TANK_LIQ_X, TANK_LIQ_Y, TANK_LIQ_W, TANK_LIQ_H);
     }
 
-    private void renderTankTooltip(GuiGraphics graphics, int mouseX, int mouseY,
+    private void renderTankTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY,
             FluidTank tank, int relX, int relY, int w, int h) {
         if (tank == null) return;
         int absX = leftPos + relX;

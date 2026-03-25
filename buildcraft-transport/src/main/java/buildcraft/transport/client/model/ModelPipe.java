@@ -13,7 +13,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import com.google.common.collect.ImmutableList;
 
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 
 import buildcraft.lib.client.model.MutableQuad;
 

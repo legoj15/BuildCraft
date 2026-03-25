@@ -60,3 +60,4 @@ gradle-debug.log
 diagram.png
 diagram.xcf
 *.xcf
+build_error.txt

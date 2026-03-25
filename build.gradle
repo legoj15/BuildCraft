@@ -1,11 +1,11 @@
 plugins {
-    id 'net.neoforged.moddev' version '2.0.140' apply false
+    id 'net.neoforged.moddev' version '2.0.141' apply false
 }
 
 allprojects {
     apply plugin: 'java'
 
-    java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+    java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
     repositories {
         mavenLocal()
@@ -20,7 +20,7 @@ subprojects {
     apply plugin: 'net.neoforged.moddev'
 
     neoForge {
-        version = '21.11.38-beta'
+        version = project.neo_version
 
         // Load access transformers from any subproject that has the file
         def atFile = project.file('src/main/resources/META-INF/accesstransformer.cfg')

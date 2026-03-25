@@ -8,6 +8,7 @@ package buildcraft.factory.tile;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -19,26 +20,31 @@ import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Direction.Axis;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import net.minecraft.resources.Identifier;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import buildcraft.lib.misc.FluidUtilBC;
 import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
 
+import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.BCCoreConfig;
+import buildcraft.core.tile.ITileOilSpring;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.BCFactoryBlocks;
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
-import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.mj.MjRedstoneBatteryReceiver;
 import buildcraft.api.tiles.IDebuggable;
 
@@ -90,6 +96,9 @@ public class TilePump extends TileMiner implements IDebuggable {
     /** The position just below the bottom of the pump tube. */
     private BlockPos targetPos;
 
+    @Nullable
+    private BlockPos oilSpringPos;
+
     public TilePump(BlockPos pos, BlockState state) {
         super(BCFactoryBlockEntities.PUMP.get(), pos, state);
     }
@@ -139,6 +148,14 @@ public class TilePump extends TileMiner implements IDebuggable {
         buildQueue0(queueFluid, nextPosesToCheck, checked);
     }
 
+    /** Returns true if the fluid is crude oil (any heat variant). */
+    private static boolean isOil(Fluid fluid) {
+        Identifier id = BuiltInRegistries.FLUID.getKey(fluid);
+        // Covers "buildcraftenergy:oil", "buildcraftenergy:oil_heat_1", "buildcraftenergy:oil_heat_2"
+        return id.getNamespace().equals("buildcraftenergy")
+            && (id.getPath().equals("oil") || id.getPath().startsWith("oil_heat_"));
+    }
+
     private void buildQueue0(Fluid queueFluid, List<BlockPos> nextPosesToCheck, Set<BlockPos> checked) {
         Direction[] directions = FluidUtilBC.isGaseous(queueFluid) ? SEARCH_GASEOUS : SEARCH_NORMAL;
         boolean isWater = !BCCoreConfig.pumpsConsumeWater
@@ -185,6 +202,30 @@ public class TilePump extends TileMiner implements IDebuggable {
                         }
                     }
                 }
+            }
+        }
+
+        // Oil spring search — matches 1.12.2 logic
+        if (isOil(queueFluid)) {
+            List<BlockPos> springPositions = new ArrayList<>();
+            BlockPos center = VecUtil.replaceValue(worldPosition, Axis.Y, 0);
+            for (BlockPos spring : BlockPos.betweenClosed(center.offset(-10, 0, -10), center.offset(10, 0, 10))) {
+                if (level.getBlockState(spring).is(BCCoreBlocks.SPRING_OIL.get())) {
+                    BlockEntity tile = level.getBlockEntity(spring);
+                    if (tile instanceof ITileOilSpring) {
+                        springPositions.add(spring.immutable());
+                    }
+                }
+            }
+            switch (springPositions.size()) {
+                case 0:
+                    break;
+                case 1:
+                    oilSpringPos = springPositions.get(0);
+                    break;
+                default:
+                    springPositions.sort(Comparator.comparingDouble(worldPosition::distSqr));
+                    oilSpringPos = springPositions.get(0);
             }
         }
     }
@@ -280,6 +321,17 @@ public class TilePump extends TileMiner implements IDebuggable {
 
                 if (!isInfiniteWaterSource) {
                     BlockUtil.drainBlock(level, currentPos, true);
+                    if (isOil(drain.getFluid())) {
+                        if (getOwner() != null) {
+                            AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT_DRAIN_OIL);
+                        }
+                        if (oilSpringPos != null) {
+                            BlockEntity tile = level.getBlockEntity(oilSpringPos);
+                            if (tile instanceof ITileOilSpring oilSpring) {
+                                oilSpring.onPumpOil(getOwner(), currentPos);
+                            }
+                        }
+                    }
                     paths.remove(currentPos);
                     nextPos();
                 }
@@ -320,14 +372,26 @@ public class TilePump extends TileMiner implements IDebuggable {
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
         tank.serialize(output);
-        // Oil spring pos would be saved here once oil springs are ported
+        if (oilSpringPos != null) {
+            output.putBoolean("hasOilSpring", true);
+            output.putInt("oilSpringX", oilSpringPos.getX());
+            output.putInt("oilSpringY", oilSpringPos.getY());
+            output.putInt("oilSpringZ", oilSpringPos.getZ());
+        }
     }
 
     @Override
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         tank.deserialize(input);
-        // Oil spring pos would be loaded here once oil springs are ported
+        if (input.getBooleanOr("hasOilSpring", false)) {
+            oilSpringPos = new BlockPos(
+                input.getIntOr("oilSpringX", 0),
+                input.getIntOr("oilSpringY", 0),
+                input.getIntOr("oilSpringZ", 0));
+        } else {
+            oilSpringPos = null;
+        }
     }
 
     // --- IDebuggable ---

@@ -17,7 +17,7 @@ import net.minecraft.data.AtlasIds;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
 
@@ -30,6 +30,11 @@ import buildcraft.core.BCCore;
  * (like water), returns the fluid's tint directly. For fluids with pre-colored
  * textures (like lava, where tint is white/0xFFFFFF), samples the average pixel
  * color from the fluid's flowing sprite to produce a representative color.
+ *
+ * MC 26.1: IClientFluidTypeExtensions.getTintColor/getStillTexture/getFlowingTexture
+ * have been removed. Using hardcoded texture lookups as a workaround until
+ * NeoForge 26.1 fluid rendering API stabilizes.
+ * TODO: Implement proper NeoForge 26.1 fluid rendering API when available.
  */
 public final class FluidShardTintSource implements ItemTintSource {
     public static final FluidShardTintSource INSTANCE = new FluidShardTintSource();
@@ -45,21 +50,15 @@ public final class FluidShardTintSource implements ItemTintSource {
             return 0xFFFFFFFF;
         }
 
-        IClientFluidTypeExtensions ext = IClientFluidTypeExtensions.of(fluid.getFluid());
-        int tint = ext.getTintColor(fluid);
-        // Strip alpha for comparison — if the RGB channels are all white,
-        // the fluid relies on pre-colored textures rather than tinting.
-        int rgb = tint & 0x00FFFFFF;
-        if (rgb != 0xFFFFFF) {
-            // Fluid uses a real tint (e.g. water) — return it directly
-            return tint;
+        // MC 26.1: IClientFluidTypeExtensions removed getTintColor/getStillTexture/getFlowingTexture.
+        // For water, return the biome-based tint (blue). For other fluids, sample texture color.
+        if (fluid.getFluid().isSame(Fluids.WATER)) {
+            // Default water blue tint
+            return 0xFF3F76E4;
         }
 
-        // Fluid has pre-colored textures (e.g. lava) — sample the sprite
-        Identifier flowingTex = ext.getFlowingTexture(fluid);
-        if (flowingTex == null) {
-            flowingTex = ext.getStillTexture(fluid);
-        }
+        // For pre-colored fluids (lava, oil, etc.), sample the sprite to get color
+        Identifier flowingTex = getFluidTexture(fluid);
         if (flowingTex == null) {
             return 0xFFFFFFFF;
         }
@@ -68,6 +67,26 @@ public final class FluidShardTintSource implements ItemTintSource {
                 .getAtlasManager().getAtlasOrThrow(AtlasIds.BLOCKS);
         TextureAtlasSprite sprite = atlas.getSprite(flowingTex);
         return averageSpriteColor(sprite);
+    }
+
+    /**
+     * Gets a fluid's still texture identifier using hardcoded lookups.
+     * TODO: Replace with proper NeoForge 26.1 fluid rendering API.
+     */
+    @Nullable
+    private static Identifier getFluidTexture(FluidStack fluid) {
+        if (fluid.getFluid().isSame(Fluids.WATER) || fluid.getFluid().isSame(Fluids.FLOWING_WATER)) {
+            return Identifier.withDefaultNamespace("block/water_flow");
+        } else if (fluid.getFluid().isSame(Fluids.LAVA) || fluid.getFluid().isSame(Fluids.FLOWING_LAVA)) {
+            return Identifier.withDefaultNamespace("block/lava_flow");
+        }
+        // For mod fluids, try the fluid's registry name as a texture path
+        Identifier fluidId = net.neoforged.neoforge.registries.NeoForgeRegistries.FLUID_TYPES
+                .getKey(fluid.getFluid().getFluidType());
+        if (fluidId != null) {
+            return Identifier.parse(fluidId.getNamespace() + ":block/" + fluidId.getPath() + "_still");
+        }
+        return null;
     }
 
     /** Computes the average RGB color of the first frame of a sprite, with full alpha. */

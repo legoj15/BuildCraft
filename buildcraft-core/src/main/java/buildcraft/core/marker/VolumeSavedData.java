@@ -13,6 +13,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.saveddata.SavedDataType;
 
 /**
@@ -73,9 +74,10 @@ public class VolumeSavedData extends SavedData {
     }));
 
     public static final SavedDataType<VolumeSavedData> TYPE = new SavedDataType<>(
-            ID,
+            Identifier.withDefaultNamespace(ID),
             VolumeSavedData::new,
-            CODEC
+            CODEC,
+            net.minecraft.util.datafix.DataFixTypes.LEVEL
     );
 
     // -------------------------------------------------------------------------

@@ -25,6 +25,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.saveddata.SavedDataType;
 
 public class LevelSavedDataVolumeBoxes extends SavedData {
@@ -40,9 +41,10 @@ public class LevelSavedDataVolumeBoxes extends SavedData {
     // decode it manually because VolumeBox needs a Level reference.
     public static SavedDataType<LevelSavedDataVolumeBoxes> createType(Level world) {
         return new SavedDataType<>(
-                DATA_NAME,
+                Identifier.withDefaultNamespace(DATA_NAME),
                 () -> new LevelSavedDataVolumeBoxes(world),
-                buildCodec(world)
+                buildCodec(world),
+                net.minecraft.util.datafix.DataFixTypes.LEVEL
         );
     }
 

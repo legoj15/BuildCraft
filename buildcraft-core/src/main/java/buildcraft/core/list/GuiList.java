@@ -106,9 +106,9 @@ public class GuiList extends GuiBC8<ContainerList> {
     }
 
     @Override
-    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
-        super.render(graphics, mouseX, mouseY, partialTicks);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
     }
 
     // --- Toggle image button widget ---
@@ -150,7 +150,7 @@ public class GuiList extends GuiBC8<ContainerList> {
         }
 
         @Override
-        protected void renderWidget(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
             int u = toggled ? uOn : uOff;
             int v = toggled ? vOn : vOff;
             graphics.blit(RenderPipelines.GUI_TEXTURED, texture,

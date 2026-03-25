@@ -11,385 +11,12 @@ Daemon will be stopped at the end of the build
 > Task :buildcraft-builders:createMinecraftArtifacts UP-TO-DATE
 > Task :buildcraft-core:createMinecraftArtifacts UP-TO-DATE
 > Task :buildcraft-lib:createMinecraftArtifacts UP-TO-DATE
+> Task :buildcraft-lib:compileJava UP-TO-DATE
 
-> Task :buildcraft-lib:compileJava
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\TileBC_Neptune.java:39: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-        (handler, slot, before, after) -> this.setChanged()
-         ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\ItemHandlerManager.java:50: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-    private final List<IItemHandlerModifiable> handlersToDrop = new ArrayList<>();
-                       ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\ItemHandlerManager.java:62: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-    public <T extends INBTSerializable<CompoundTag> & IItemHandlerModifiable> T addInvHandler(String key, T handler,
-                                                      ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\ItemHandlerManager.java:67: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-        IItemHandlerModifiable external = handler;
-        ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\ItemHandlerManager.java:124: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-        for (IItemHandlerModifiable itemHandler : handlersToDrop) {
-             ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\ItemHandlerManager.java:130: warning: [removal] IItemHandler in net.neoforged.neoforge.items has been deprecated and marked for removal
-    public IItemHandler getItemHandler(Direction facing) {
-           ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\ItemHandlerManager.java:154: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-        private final List<IItemHandlerModifiable> handlers = new ArrayList<>();
-                           ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\ItemHandlerManager.java:155: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-        private IItemHandlerModifiable combined = null;// TODO: This should be an IItemTransactor as well.
-                ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\ItemHandlerManager.java:163: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-            IItemHandlerModifiable[] arr = new IItemHandlerModifiable[handlers.size()];
-            ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\ItemHandlerManager.java:163: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-            IItemHandlerModifiable[] arr = new IItemHandlerModifiable[handlers.size()];
-                                               ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\StackChangeCallback.java:19: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-    void onStackChange(IItemHandlerModifiable itemHandler, int slot, @Nonnull ItemStack before, @Nonnull ItemStack after);
-                       ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\ItemHandlerSimple.java:32: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-    implements IItemHandlerModifiable, IItemHandlerAdv, INBTSerializable<CompoundTag> {
-               ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\ItemHandlerSimple.java:299: warning: [removal] isItemValid(int,ItemStack) in IItemHandler has been deprecated and marked for removal
-    public boolean isItemValid(int slot, ItemStack stack) {
-                   ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\ItemHandlerSimple.java:289: warning: [removal] getSlotLimit(int) in IItemHandler has been deprecated and marked for removal
-    public int getSlotLimit(int slot) {
-               ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\ItemHandlerSimple.java:192: warning: [removal] extractItem(int,int,boolean) in IItemHandler has been deprecated and marked for removal
-    public ItemStack extractItem(int slot, int amount, boolean simulate) {
-                     ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\ItemHandlerSimple.java:148: warning: [removal] insertItem(int,ItemStack,boolean) in IItemHandler has been deprecated and marked for removal
-    public ItemStack insertItem(int slot, @Nonnull ItemStack stack, boolean simulate) {
-                     ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\ItemHandlerSimple.java:141: warning: [removal] getStackInSlot(int) in IItemHandler has been deprecated and marked for removal
-    public ItemStack getStackInSlot(int slot) {
-                     ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\ItemHandlerSimple.java:125: warning: [removal] getSlots() in IItemHandler has been deprecated and marked for removal
-    public int getSlots() {
-               ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\IItemHandlerAdv.java:14: warning: [removal] IItemHandler in net.neoforged.neoforge.items has been deprecated and marked for removal
-public interface IItemHandlerAdv extends IItemHandler, StackInsertionChecker {}
-                                         ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\elem\GuiElementFluidTank.java:35: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    private final FluidTank tank;
-                  ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\elem\GuiElementFluidTank.java:40: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-            FluidTank tank,
-            ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:37: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    private final FluidTank tank;
-                  ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:39: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    public WidgetFluidTank(ContainerBC_Neptune container, FluidTank tank) {
-                                                          ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:99: warning: [removal] IFluidHandlerItem in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-            Optional<IFluidHandlerItem> opt = FluidUtil.getFluidHandler(singleCopy);
-                     ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:99: warning: [removal] FluidUtil in net.neoforged.neoforge.fluids has been deprecated and marked for removal
-            Optional<IFluidHandlerItem> opt = FluidUtil.getFluidHandler(singleCopy);
-                                              ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:99: warning: [removal] getFluidHandler(ItemStack) in FluidUtil has been deprecated and marked for removal
-            Optional<IFluidHandlerItem> opt = FluidUtil.getFluidHandler(singleCopy);
-                                                       ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:101: warning: [removal] IFluidHandlerItem in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                IFluidHandlerItem itemHandler = opt.get();
-                ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:103: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                FluidStack drained = itemHandler.drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE);
-                                                                          ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:103: warning: [removal] drain(int,FluidAction) in IFluidHandler has been deprecated and marked for removal
-                FluidStack drained = itemHandler.drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE);
-                                                ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:106: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                    int accepted = tank.fill(drained, IFluidHandler.FluidAction.SIMULATE);
-                                                      ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:110: warning: [removal] IFluidHandlerItem in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                        Optional<IFluidHandlerItem> fillOpt = FluidUtil.getFluidHandler(fillCopy);
-                                 ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:110: warning: [removal] FluidUtil in net.neoforged.neoforge.fluids has been deprecated and marked for removal
-                        Optional<IFluidHandlerItem> fillOpt = FluidUtil.getFluidHandler(fillCopy);
-                                                              ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:110: warning: [removal] getFluidHandler(ItemStack) in FluidUtil has been deprecated and marked for removal
-                        Optional<IFluidHandlerItem> fillOpt = FluidUtil.getFluidHandler(fillCopy);
-                                                                       ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:112: warning: [removal] IFluidHandlerItem in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                            IFluidHandlerItem fillHandler = fillOpt.get();
-                            ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:114: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                            FluidStack realDrained = fillHandler.drain(toDrain, IFluidHandler.FluidAction.EXECUTE);
-                                                                                ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:114: warning: [removal] drain(FluidStack,FluidAction) in IFluidHandler has been deprecated and marked for removal
-                            FluidStack realDrained = fillHandler.drain(toDrain, IFluidHandler.FluidAction.EXECUTE);
-                                                                ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:116: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                                int reallyFilled = tank.fill(realDrained, IFluidHandler.FluidAction.EXECUTE);
-                                                                          ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:118: warning: [removal] getContainer() in IFluidHandlerItem has been deprecated and marked for removal
-                                    ItemStack containerResult = fillHandler.getContainer();
-                                                                           ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:144: warning: [removal] IFluidHandlerItem in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-            Optional<IFluidHandlerItem> opt = FluidUtil.getFluidHandler(drainCopy);
-                     ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:144: warning: [removal] FluidUtil in net.neoforged.neoforge.fluids has been deprecated and marked for removal
-            Optional<IFluidHandlerItem> opt = FluidUtil.getFluidHandler(drainCopy);
-                                              ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:144: warning: [removal] getFluidHandler(ItemStack) in FluidUtil has been deprecated and marked for removal
-            Optional<IFluidHandlerItem> opt = FluidUtil.getFluidHandler(drainCopy);
-                                                       ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:146: warning: [removal] IFluidHandlerItem in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                IFluidHandlerItem drainHandler = opt.get();
-                ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:147: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                FluidStack inTank = tank.drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE);
-                                                                  ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:149: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                    int filled = drainHandler.fill(inTank, IFluidHandler.FluidAction.SIMULATE);
-                                                           ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:149: warning: [removal] fill(FluidStack,FluidAction) in IFluidHandler has been deprecated and marked for removal
-                    int filled = drainHandler.fill(inTank, IFluidHandler.FluidAction.SIMULATE);
-                                             ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:152: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                        FluidStack reallyDrained = tank.drain(filled, IFluidHandler.FluidAction.EXECUTE);
-                                                                      ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:154: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                            drainHandler.fill(reallyDrained, IFluidHandler.FluidAction.EXECUTE);
-                                                             ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:154: warning: [removal] fill(FluidStack,FluidAction) in IFluidHandler has been deprecated and marked for removal
-                            drainHandler.fill(reallyDrained, IFluidHandler.FluidAction.EXECUTE);
-                                        ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:155: warning: [removal] getContainer() in IFluidHandlerItem has been deprecated and marked for removal
-                            ItemStack containerResult = drainHandler.getContainer();
-                                                                    ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:185: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                        int filled = tank.fill(fluidCoolant, IFluidHandler.FluidAction.EXECUTE);
-                                                             ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\slot\SlotBase.java:18: warning: [removal] SlotItemHandler in net.neoforged.neoforge.items has been deprecated and marked for removal
-public class SlotBase extends SlotItemHandler {
-                              ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\slot\SlotBase.java:41: warning: [removal] insertItem(int,ItemStack,boolean) in IItemHandler has been deprecated and marked for removal
-        return getItemHandler().insertItem(handlerIndex, stack, simulate);
-                               ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\inventory\filter\DelegatingItemHandlerFilter.java:21: warning: [removal] IItemHandler in net.neoforged.neoforge.items has been deprecated and marked for removal
-    private final IItemHandler handler;
-                  ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\inventory\filter\DelegatingItemHandlerFilter.java:23: warning: [removal] IItemHandler in net.neoforged.neoforge.items has been deprecated and marked for removal
-    public DelegatingItemHandlerFilter(ISingleStackFilter perStackFilter, IItemHandler handler) {
-                                                                          ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\inventory\filter\DelegatingItemHandlerFilter.java:30: warning: [removal] getSlots() in IItemHandler has been deprecated and marked for removal
-        for (int slot = 0; slot < handler.getSlots(); slot++) {
-                                         ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\inventory\filter\DelegatingItemHandlerFilter.java:31: warning: [removal] getStackInSlot(int) in IItemHandler has been deprecated and marked for removal
-            if (perStackFilter.matches(handler.getStackInSlot(slot), stack)) {
-                                              ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:131: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-    public static FluidStack move(IFluidHandler from, IFluidHandler to) {
-                                  ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:131: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-    public static FluidStack move(IFluidHandler from, IFluidHandler to) {
-                                                      ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:138: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-    public static FluidStack move(IFluidHandler from, IFluidHandler to, int max) {
-                                  ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:138: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-    public static FluidStack move(IFluidHandler from, IFluidHandler to, int max) {
-                                                      ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:144: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-            IFluidFilter filter = f -> to.fill(f, IFluidHandler.FluidAction.SIMULATE) > 0;
-                                                  ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:144: warning: [removal] fill(FluidStack,FluidAction) in IFluidHandler has been deprecated and marked for removal
-            IFluidFilter filter = f -> to.fill(f, IFluidHandler.FluidAction.SIMULATE) > 0;
-                                         ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:147: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-            toDrainPotential = from.drain(max, IFluidHandler.FluidAction.SIMULATE);
-                                               ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:147: warning: [removal] drain(int,FluidAction) in IFluidHandler has been deprecated and marked for removal
-            toDrainPotential = from.drain(max, IFluidHandler.FluidAction.SIMULATE);
-                                   ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:152: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-        int accepted = to.fill(toDrainPotential.copy(), IFluidHandler.FluidAction.SIMULATE);
-                                                        ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:152: warning: [removal] fill(FluidStack,FluidAction) in IFluidHandler has been deprecated and marked for removal
-        int accepted = to.fill(toDrainPotential.copy(), IFluidHandler.FluidAction.SIMULATE);
-                         ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:158: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-            toDrainPotential = from.drain(toDrain, IFluidHandler.FluidAction.SIMULATE);
-                                                   ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:158: warning: [removal] drain(FluidStack,FluidAction) in IFluidHandler has been deprecated and marked for removal
-            toDrainPotential = from.drain(toDrain, IFluidHandler.FluidAction.SIMULATE);
-                                   ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:163: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-        FluidStack drained = from.drain(toDrain.copy(), IFluidHandler.FluidAction.EXECUTE);
-                                                        ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:163: warning: [removal] drain(FluidStack,FluidAction) in IFluidHandler has been deprecated and marked for removal
-        FluidStack drained = from.drain(toDrain.copy(), IFluidHandler.FluidAction.EXECUTE);
-                                 ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:167: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-        int actuallyAccepted = to.fill(drained, IFluidHandler.FluidAction.EXECUTE);
-                                                ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:167: warning: [removal] fill(FluidStack,FluidAction) in IFluidHandler has been deprecated and marked for removal
-        int actuallyAccepted = to.fill(drained, IFluidHandler.FluidAction.EXECUTE);
-                                 ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:183: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    public static String getDebugString(FluidTank tank) {
-                                        ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:205: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-        IFluidHandler fluidHandler) {
-        ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:212: warning: [removal] IFluidHandlerItem in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-        java.util.Optional<IFluidHandlerItem> flItemOpt;
-                           ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:214: warning: [removal] FluidUtil in net.neoforged.neoforge.fluids has been deprecated and marked for removal
-            flItemOpt = FluidUtil.getFluidHandler(held);
-                        ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:214: warning: [removal] getFluidHandler(ItemStack) in FluidUtil has been deprecated and marked for removal
-            flItemOpt = FluidUtil.getFluidHandler(held);
-                                 ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:218: warning: [removal] FluidUtil in net.neoforged.neoforge.fluids has been deprecated and marked for removal
-            flItemOpt = FluidUtil.getFluidHandler(copy);
-                        ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:218: warning: [removal] getFluidHandler(ItemStack) in FluidUtil has been deprecated and marked for removal
-            flItemOpt = FluidUtil.getFluidHandler(copy);
-                                 ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:223: warning: [removal] IFluidHandlerItem in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-        IFluidHandlerItem flItem = flItemOpt.get();
-        ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:240: warning: [removal] getContainer() in IFluidHandlerItem has been deprecated and marked for removal
-                player.setItemInHand(hand, flItem.getContainer());
-                                                 ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:243: warning: [removal] ItemHandlerHelper in net.neoforged.neoforge.items has been deprecated and marked for removal
-                net.neoforged.neoforge.items.ItemHandlerHelper.giveItemToPlayer(player, flItem.getContainer());
-                                            ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:243: warning: [removal] getContainer() in IFluidHandlerItem has been deprecated and marked for removal
-                net.neoforged.neoforge.items.ItemHandlerHelper.giveItemToPlayer(player, flItem.getContainer());
-                                                                                              ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\FluidUtilBC.java:243: warning: [removal] giveItemToPlayer(Player,ItemStack) in ItemHandlerHelper has been deprecated and marked for removal
-                net.neoforged.neoforge.items.ItemHandlerHelper.giveItemToPlayer(player, flItem.getContainer());
-                                                              ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\InventoryUtil.java:29: warning: [removal] IItemHandler in net.neoforged.neoforge.items has been deprecated and marked for removal
-    public static void addAll(IItemHandler handler, List<ItemStack> list) {
-                              ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\InventoryUtil.java:30: warning: [removal] getSlots() in IItemHandler has been deprecated and marked for removal
-        for (int i = 0; i < handler.getSlots(); i++) {
-                                   ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\InventoryUtil.java:31: warning: [removal] getStackInSlot(int) in IItemHandler has been deprecated and marked for removal
-            ItemStack stack = handler.getStackInSlot(i);
-                                     ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\craft\WorkbenchCrafting.java:72: warning: [removal] IItemHandler in net.neoforged.neoforge.items has been deprecated and marked for removal
-    public void onInventoryChange(IItemHandler inv) {
-                                  ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\CombinedItemHandlerWrapper.java:16: warning: [removal] CombinedInvWrapper in net.neoforged.neoforge.items.wrapper has been deprecated and marked for removal
-public class CombinedItemHandlerWrapper extends CombinedInvWrapper implements IItemHandlerFiltered {
-                                                ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\CombinedItemHandlerWrapper.java:18: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-    public CombinedItemHandlerWrapper(IItemHandlerModifiable... itemHandler) {
-                                      ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\CombinedItemHandlerWrapper.java:25: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-        IItemHandlerModifiable handler = getHandlerFromIndex(index);
-        ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\CombinedItemHandlerWrapper.java:30: warning: [removal] getStackInSlot(int) in IItemHandler has been deprecated and marked for removal
-        return handler.getStackInSlot(slot);
-                      ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\DelegateItemHandler.java:17: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-public class DelegateItemHandler implements IItemHandlerModifiable, IItemHandlerFiltered {
-                                            ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\DelegateItemHandler.java:56: warning: [removal] isItemValid(int,ItemStack) in IItemHandler has been deprecated and marked for removal
-    public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-                   ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\DelegateItemHandler.java:51: warning: [removal] getSlotLimit(int) in IItemHandler has been deprecated and marked for removal
-    public int getSlotLimit(int slot) {
-               ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\DelegateItemHandler.java:41: warning: [removal] extractItem(int,int,boolean) in IItemHandler has been deprecated and marked for removal
-    public ItemStack extractItem(int slot, int amount, boolean simulate) {
-                     ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\DelegateItemHandler.java:35: warning: [removal] insertItem(int,ItemStack,boolean) in IItemHandler has been deprecated and marked for removal
-    public ItemStack insertItem(int slot, @Nonnull ItemStack stack, boolean simulate) {
-                     ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\DelegateItemHandler.java:30: warning: [removal] getStackInSlot(int) in IItemHandler has been deprecated and marked for removal
-    public ItemStack getStackInSlot(int slot) {
-                     ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\DelegateItemHandler.java:25: warning: [removal] getSlots() in IItemHandler has been deprecated and marked for removal
-    public int getSlots() {
-               ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\item\DelegateItemHandler.java:18: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-    private final IItemHandlerModifiable delegate;
-                  ^
-Note: Some input files use or override a deprecated API.
-Note: Recompile with -Xlint:deprecation for details.
-Note: Some input files additionally use or override a deprecated API that is marked for removal.
-Note: Some input files use unchecked or unsafe operations.
-Note: Recompile with -Xlint:unchecked for details.
-100 warnings
-
-> Task :buildcraft-core:compileJava FAILED
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:17: error: cannot find symbol
-import net.minecraft.client.renderer.block.model.ItemTransforms;
-                                                ^
-  symbol:   class ItemTransforms
-  location: package net.minecraft.client.renderer.block.model
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:19: error: cannot find symbol
-import net.minecraft.client.renderer.item.BlockModelWrapper;
-                                         ^
-  symbol:   class BlockModelWrapper
-  location: package net.minecraft.client.renderer.item
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:26: error: cannot find symbol
-import net.minecraft.client.resources.model.BlockModelRotation;
-                                           ^
-  symbol:   class BlockModelRotation
-  location: package net.minecraft.client.resources.model
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:27: error: cannot find symbol
-import net.minecraft.client.resources.model.Material;
-                                           ^
-  symbol:   class Material
-  location: package net.minecraft.client.resources.model
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:29: error: cannot find symbol
-import net.minecraft.client.resources.model.ModelState;
-                                           ^
-  symbol:   class ModelState
-  location: package net.minecraft.client.resources.model
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:41: error: cannot find symbol
-import net.neoforged.neoforge.client.RenderTypeGroup;
-                                    ^
-  symbol:   class RenderTypeGroup
-  location: package net.neoforged.neoforge.client
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:42: error: cannot find symbol
-import net.neoforged.neoforge.client.RenderTypeHelper;
-                                    ^
-  symbol:   class RenderTypeHelper
-  location: package net.neoforged.neoforge.client
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:77: error: cannot find symbol
-    private static final RenderTypeGroup RENDER_TYPES_CUTOUT =
-                         ^
-  symbol:   class RenderTypeGroup
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:79: error: cannot find symbol
-    private static final RenderTypeGroup RENDER_TYPES_TRANSLUCENT =
-                         ^
-  symbol:   class RenderTypeGroup
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:81: error: cannot find symbol
-    private static final RenderTypeGroup RENDER_TYPES_UNLIT =
-                         ^
-  symbol:   class RenderTypeGroup
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:91: error: cannot find symbol
-    private final ItemTransforms itemTransforms;
-                  ^
-  symbol:   class ItemTransforms
-  location: class DynamicFluidShardModel
+> Task :buildcraft-core:compileJava
 warning: unknown enum constant EnvType.CLIENT
   reason: class file for net.fabricmc.api.EnvType not found
 warning: unknown enum constant EnvType.CLIENT
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\tile\TileEngineCreative.java:107: error: cannot find symbol
-        player.displayClientMessage(
-              ^
-  symbol:   method displayClientMessage(MutableComponent,boolean)
-  location: variable player of type Player
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\marker\PathSavedData.java:75: error: cannot infer type arguments for SavedDataType<>
-    public static final SavedDataType<PathSavedData> TYPE = new SavedDataType<>(
-                                                            ^
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\marker\VolumeSavedData.java:75: error: cannot infer type arguments for SavedDataType<>
-    public static final SavedDataType<VolumeSavedData> TYPE = new SavedDataType<>(
-                                                              ^
 E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\BCCoreBlocks.java:18: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
     public static final DeferredBlock<BlockSpring> SPRING_WATER = BLOCKS.registerBlock("spring_water",
                                                                         ^
@@ -537,176 +164,9 @@ E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\statements\Tr
 E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\statements\TriggerInventoryLevel.java:87: warning: [removal] getSlotLimit(int) in IItemHandler has been deprecated and marked for removal
                     itemSpace += Math.min(stackInSlot.getMaxStackSize(), itemHandler.getSlotLimit(slot));
                                                                                     ^
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:78: error: cannot find symbol
-            new RenderTypeGroup(ChunkSectionLayer.CUTOUT, NeoForgeRenderTypes::getItemLayeredCutout);
-                ^
-  symbol:   class RenderTypeGroup
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:80: error: cannot find symbol
-            new RenderTypeGroup(ChunkSectionLayer.TRANSLUCENT, NeoForgeRenderTypes::getItemLayeredTranslucent);
-                ^
-  symbol:   class RenderTypeGroup
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:82: error: cannot find symbol
-            new RenderTypeGroup(ChunkSectionLayer.TRANSLUCENT, NeoForgeRenderTypes::getUnlitTranslucent);
-                ^
-  symbol:   class RenderTypeGroup
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:112: error: cannot find symbol
-        var sprites = bakingContext.blockModelBaker().sprites();
-                                                     ^
-  symbol:   method sprites()
-  location: interface ModelBaker
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:114: error: cannot find symbol
-        Material baseMaterial = ClientHooks.getItemMaterial(BASE_TEXTURE);
-        ^
-  symbol:   class Material
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:114: error: cannot find symbol
-        Material baseMaterial = ClientHooks.getItemMaterial(BASE_TEXTURE);
-                                           ^
-  symbol:   method getItemMaterial(Identifier)
-  location: class ClientHooks
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:115: error: cannot find symbol
-        Material fluidMaskMaterial = ClientHooks.getItemMaterial(FLUID_MASK_TEXTURE);
-        ^
-  symbol:   class Material
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:115: error: cannot find symbol
-        Material fluidMaskMaterial = ClientHooks.getItemMaterial(FLUID_MASK_TEXTURE);
-                                                ^
-  symbol:   method getItemMaterial(Identifier)
-  location: class ClientHooks
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:121: error: cannot find symbol
-        Identifier stillTexId = ext.getStillTexture();
-                                   ^
-  symbol:   method getStillTexture()
-  location: variable ext of type IClientFluidTypeExtensions
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:123: error: cannot find symbol
-                ? sprites.get(ClientHooks.getBlockMaterial(stillTexId), DEBUG_NAME)
-                                         ^
-  symbol:   method getBlockMaterial(Identifier)
-  location: class ClientHooks
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:130: error: cannot find symbol
-        ModelState state = BlockModelRotation.IDENTITY;
-        ^
-  symbol:   class ModelState
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:130: error: cannot find symbol
-        ModelState state = BlockModelRotation.IDENTITY;
-                           ^
-  symbol:   variable BlockModelRotation
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:137: error: cannot find symbol
-            var unbaked = UnbakedElementsHelper.createUnbakedItemElements(0, baseSprite);
-                                               ^
-  symbol:   method createUnbakedItemElements(int,TextureAtlasSprite)
-  location: class UnbakedElementsHelper
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:139: error: cannot find symbol
-            var renderType = RenderTypeHelper.detectItemModelRenderType(quads, RENDER_TYPES_CUTOUT);
-                             ^
-  symbol:   variable RenderTypeHelper
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:140: error: cannot find symbol
-            subModels.add(new BlockModelWrapper(List.of(), quads, renderProperties, renderType));
-                              ^
-  symbol:   class BlockModelWrapper
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:147: error: cannot find symbol
-            var unbaked = UnbakedElementsHelper.createUnbakedItemMaskElements(0, maskSprite);
-                                               ^
-  symbol:   method createUnbakedItemMaskElements(int,TextureAtlasSprite)
-  location: class UnbakedElementsHelper
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:156: error: cannot find symbol
-            RenderTypeGroup renderTypeGroup;
-            ^
-  symbol:   class RenderTypeGroup
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:165: error: cannot find symbol
-            var renderType = RenderTypeHelper.detectItemModelRenderType(quads, renderTypeGroup);
-                             ^
-  symbol:   variable RenderTypeHelper
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:173: error: cannot find symbol
-            subModels.add(new BlockModelWrapper(List.of(FluidContentsTint.INSTANCE), quads, renderProperties, renderType));
-                              ^
-  symbol:   class BlockModelWrapper
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:179: error: cannot find symbol
-                var coverUnbaked = UnbakedElementsHelper.createUnbakedItemMaskElements(0, maskSprite);
-                                                        ^
-  symbol:   method createUnbakedItemMaskElements(int,TextureAtlasSprite)
-  location: class UnbakedElementsHelper
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:181: error: cannot find symbol
-                var coverRenderType = RenderTypeHelper.detectItemModelRenderType(coverQuads, RENDER_TYPES_CUTOUT);
-                                      ^
-  symbol:   variable RenderTypeHelper
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:182: error: cannot find symbol
-                subModels.add(new BlockModelWrapper(List.of(), coverQuads, renderProperties, coverRenderType));
-                                  ^
-  symbol:   class BlockModelWrapper
-  location: class DynamicFluidShardModel
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:199: error: cannot find symbol
-                quad.tintIndex(),
-                    ^
-  symbol:   method tintIndex()
-  location: variable quad of type BakedQuad
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:201: error: cannot find symbol
-                quad.sprite(),
-                    ^
-  symbol:   method sprite()
-  location: variable quad of type BakedQuad
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:202: error: cannot find symbol
-                quad.shade(),
-                    ^
-  symbol:   method shade()
-  location: variable quad of type BakedQuad
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:206: error: cannot find symbol
-                quad.hasAmbientOcclusion());
-                    ^
-  symbol:   method hasAmbientOcclusion()
-  location: variable quad of type BakedQuad
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:238: error: buildcraft.core.client.DynamicFluidShardModel.Unbaked is not abstract and does not override abstract method bake(BakingContext,Matrix4fc) in net.minecraft.client.renderer.item.ItemModel.Unbaked
-    public static class Unbaked implements ItemModel.Unbaked {
-                  ^
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:249: error: method does not override or implement a method from a supertype
-        @Override
-        ^
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\FluidShardTintSource.java:49: error: cannot find symbol
-        int tint = ext.getTintColor(fluid);
-                      ^
-  symbol:   method getTintColor(FluidStack)
-  location: variable ext of type IClientFluidTypeExtensions
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\FluidShardTintSource.java:59: error: cannot find symbol
-        Identifier flowingTex = ext.getFlowingTexture(fluid);
-                                   ^
-  symbol:   method getFlowingTexture(FluidStack)
-  location: variable ext of type IClientFluidTypeExtensions
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\FluidShardTintSource.java:61: error: cannot find symbol
-            flowingTex = ext.getStillTexture(fluid);
-                            ^
-  symbol:   method getStillTexture(FluidStack)
-  location: variable ext of type IClientFluidTypeExtensions
 warning: unknown enum constant EnvType.CLIENT
 warning: unknown enum constant EnvType.CLIENT
 warning: unknown enum constant EnvType.CLIENT
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\list\GuiList.java:108: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\list\GuiList.java:111: error: cannot find symbol
-        super.render(graphics, mouseX, mouseY, partialTicks);
-             ^
-  symbol: method render(GuiGraphicsExtractor,int,int,float)
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\list\GuiList.java:116: error: GuiList.ToggleImageButton is not abstract and does not override abstract method extractWidgetRenderState(GuiGraphicsExtractor,int,int,float) in AbstractWidget
-    private class ToggleImageButton extends AbstractWidget {
-            ^
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\list\GuiList.java:152: error: method does not override or implement a method from a supertype
-        @Override
-        ^
-E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\marker\volume\LevelSavedDataVolumeBoxes.java:42: error: cannot infer type arguments for SavedDataType<>
-        return new SavedDataType<>(
-               ^
 E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\statements\CoreTriggerProvider.java:66: warning: [removal] IItemHandler in net.neoforged.neoforge.items has been deprecated and marked for removal
             if (tile instanceof IItemHandler) {
                                 ^
@@ -720,27 +180,266 @@ Note: Some input files use or override a deprecated API.
 Note: Recompile with -Xlint:deprecation for details.
 Note: E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\statements\BCStatement.java uses unchecked or unsafe operations.
 Note: Recompile with -Xlint:unchecked for details.
-50 errors
 53 warnings
+
+> Task :buildcraft-builders:compileJava
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\tile\TileBuilder.java:90: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
+    private final IFluidHandler stubFluidHandler = new IFluidHandler() {
+                  ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\tile\TileBuilder.java:90: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
+    private final IFluidHandler stubFluidHandler = new IFluidHandler() {
+                                                       ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\tile\TileBuilder.java:97: warning: [removal] drain(int,FluidAction) in IFluidHandler has been deprecated and marked for removal
+        @Override public FluidStack drain(int maxDrain, FluidAction action) { return FluidStack.EMPTY; }
+                                    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\tile\TileBuilder.java:96: warning: [removal] drain(FluidStack,FluidAction) in IFluidHandler has been deprecated and marked for removal
+        @Override public FluidStack drain(FluidStack resource, FluidAction action) { return FluidStack.EMPTY; }
+                                    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\tile\TileBuilder.java:95: warning: [removal] fill(FluidStack,FluidAction) in IFluidHandler has been deprecated and marked for removal
+        @Override public int fill(FluidStack resource, FluidAction action) { return 0; }
+                             ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\tile\TileBuilder.java:94: warning: [removal] isFluidValid(int,FluidStack) in IFluidHandler has been deprecated and marked for removal
+        @Override public boolean isFluidValid(int tank, FluidStack stack) { return false; }
+                                 ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\tile\TileBuilder.java:93: warning: [removal] getTankCapacity(int) in IFluidHandler has been deprecated and marked for removal
+        @Override public int getTankCapacity(int tank) { return 0; }
+                             ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\tile\TileBuilder.java:92: warning: [removal] getFluidInTank(int) in IFluidHandler has been deprecated and marked for removal
+        @Override public FluidStack getFluidInTank(int tank) { return FluidStack.EMPTY; }
+                                    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\tile\TileBuilder.java:91: warning: [removal] getTanks() in IFluidHandler has been deprecated and marked for removal
+        @Override public int getTanks() { return 0; }
+                             ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\tile\TileBuilder.java:346: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
+    public IFluidHandler getTankManager() {
+           ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\snapshot\ITileForBlueprintBuilder.java:18: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
+    IFluidHandler getTankManager();
+    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\tile\TileQuarry.java:417: error: x has private access in ChunkPos
+        for (int x = minChunkPos.x; x <= maxChunkPos.x; x++) {
+                                ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\tile\TileQuarry.java:417: error: x has private access in ChunkPos
+        for (int x = minChunkPos.x; x <= maxChunkPos.x; x++) {
+                                                    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\tile\TileQuarry.java:418: error: z has private access in ChunkPos
+            for (int z = minChunkPos.z; z <= maxChunkPos.z; z++) {
+                                    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\tile\TileQuarry.java:418: error: z has private access in ChunkPos
+            for (int z = minChunkPos.z; z <= maxChunkPos.z; z++) {
+                                                        ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\snapshot\BlueprintBuilder.java:103: warning: [removal] FluidUtil in net.neoforged.neoforge.fluids has been deprecated and marked for removal
+                    ItemStack bucket = net.neoforged.neoforge.fluids.FluidUtil.getFilledBucket(fluidStack);
+                                                                    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\snapshot\BlueprintBuilder.java:103: warning: [removal] getFilledBucket(FluidStack) in FluidUtil has been deprecated and marked for removal
+                    ItemStack bucket = net.neoforged.neoforge.fluids.FluidUtil.getFilledBucket(fluidStack);
+                                                                              ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\snapshot\BlueprintBuilder.java:125: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
+                            FluidUtilBC.areFluidStackEqual(stack, tile.getTankManager().drain(stack, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE))
+                                                                                                                                             ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\snapshot\BlueprintBuilder.java:125: warning: [removal] drain(FluidStack,FluidAction) in IFluidHandler has been deprecated and marked for removal
+                            FluidUtilBC.areFluidStackEqual(stack, tile.getTankManager().drain(stack, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE))
+                                                                                       ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\snapshot\BlueprintBuilder.java:142: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
+                                .map(fluidStack -> tile.getTankManager().drain(fluidStack, simulate ? net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE : net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE))
+                                                                                                                                              ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\snapshot\BlueprintBuilder.java:142: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
+                                .map(fluidStack -> tile.getTankManager().drain(fluidStack, simulate ? net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE : net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE))
+                                                                                                                                                                                                                            ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\snapshot\BlueprintBuilder.java:142: warning: [removal] drain(FluidStack,FluidAction) in IFluidHandler has been deprecated and marked for removal
+                                .map(fluidStack -> tile.getTankManager().drain(fluidStack, simulate ? net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE : net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE))
+                                                                        ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\snapshot\BlueprintBuilder.java:144: warning: [removal] FluidUtil in net.neoforged.neoforge.fluids has been deprecated and marked for removal
+                                    ItemStack stack = net.neoforged.neoforge.fluids.FluidUtil.getFilledBucket(fluidStack);
+                                                                                   ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\snapshot\BlueprintBuilder.java:144: warning: [removal] getFilledBucket(FluidStack) in FluidUtil has been deprecated and marked for removal
+                                    ItemStack stack = net.neoforged.neoforge.fluids.FluidUtil.getFilledBucket(fluidStack);
+                                                                                             ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\snapshot\BlueprintBuilder.java:232: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
+            .forEach(fluidStack -> tile.getTankManager().fill(fluidStack, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE));
+                                                                                                                  ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\snapshot\BlueprintBuilder.java:232: warning: [removal] fill(FluidStack,FluidAction) in IFluidHandler has been deprecated and marked for removal
+            .forEach(fluidStack -> tile.getTankManager().fill(fluidStack, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE));
+                                                        ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\BCBuildersBlocks.java:23: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+    public static final DeferredBlock<BlockFrame> FRAME = BLOCKS.registerBlock(
+                                                                ^
+  where B is a type-variable:
+    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\BCBuildersBlocks.java:27: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+    public static final DeferredBlock<BlockFiller> FILLER = BLOCKS.registerBlock(
+                                                                  ^
+  where B is a type-variable:
+    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\BCBuildersBlocks.java:31: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+    public static final DeferredBlock<BlockBuilder> BUILDER = BLOCKS.registerBlock(
+                                                                    ^
+  where B is a type-variable:
+    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\BCBuildersBlocks.java:35: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+    public static final DeferredBlock<BlockArchitectTable> ARCHITECT = BLOCKS.registerBlock(
+                                                                             ^
+  where B is a type-variable:
+    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\BCBuildersBlocks.java:39: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+    public static final DeferredBlock<BlockElectronicLibrary> LIBRARY = BLOCKS.registerBlock(
+                                                                              ^
+  where B is a type-variable:
+    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\BCBuildersBlocks.java:43: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+    public static final DeferredBlock<BlockReplacer> REPLACER = BLOCKS.registerBlock(
+                                                                      ^
+  where B is a type-variable:
+    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\BCBuildersBlocks.java:47: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+    public static final DeferredBlock<BlockQuarry> QUARRY = BLOCKS.registerBlock(
+                                                                  ^
+  where B is a type-variable:
+    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\item\ItemSchematicSingle.java:161: error: cannot find symbol
+                                player.displayClientMessage(
+                                      ^
+  symbol:   method displayClientMessage(MutableComponent,boolean)
+  location: variable player of type Player
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\item\ItemSchematicSingle.java:172: error: cannot find symbol
+                            player.displayClientMessage(
+                                  ^
+  symbol:   method displayClientMessage(MutableComponent,boolean)
+  location: variable player of type Player
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\item\ItemSchematicSingle.java:180: error: cannot find symbol
+                player.displayClientMessage(
+                      ^
+  symbol:   method displayClientMessage(MutableComponent,boolean)
+  location: variable player of type Player
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiArchitectTable.java:26: error: cannot assign a value to final variable imageWidth
+        this.imageWidth = SIZE_X;
+            ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiArchitectTable.java:27: error: cannot assign a value to final variable imageHeight
+        this.imageHeight = SIZE_Y;
+            ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiArchitectTable.java:45: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiArchitectTable.java:68: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiArchitectTable.java:70: error: cannot find symbol
+        super.render(GuiGraphicsExtractor, mouseX, mouseY, partialTick);
+             ^
+  symbol: method render(GuiGraphicsExtractor,int,int,float)
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiArchitectTable.java:71: error: cannot find symbol
+        renderTooltip(GuiGraphicsExtractor, mouseX, mouseY);
+        ^
+  symbol:   method renderTooltip(GuiGraphicsExtractor,int,int)
+  location: class GuiArchitectTable
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiBuilder.java:27: error: cannot assign a value to final variable imageWidth
+        this.imageWidth = SIZE_X;
+            ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiBuilder.java:28: error: cannot assign a value to final variable imageHeight
+        this.imageHeight = SIZE_Y;
+            ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiBuilder.java:32: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiBuilder.java:48: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiBuilder.java:50: error: cannot find symbol
+        super.render(GuiGraphicsExtractor, mouseX, mouseY, partialTick);
+             ^
+  symbol: method render(GuiGraphicsExtractor,int,int,float)
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiBuilder.java:51: error: cannot find symbol
+        renderTooltip(GuiGraphicsExtractor, mouseX, mouseY);
+        ^
+  symbol:   method renderTooltip(GuiGraphicsExtractor,int,int)
+  location: class GuiBuilder
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiElectronicLibrary.java:27: error: cannot assign a value to final variable imageWidth
+        this.imageWidth = SIZE_X;
+            ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiElectronicLibrary.java:28: error: cannot assign a value to final variable imageHeight
+        this.imageHeight = SIZE_Y;
+            ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiElectronicLibrary.java:32: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiElectronicLibrary.java:75: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiElectronicLibrary.java:77: error: cannot find symbol
+        super.render(GuiGraphicsExtractor, mouseX, mouseY, partialTick);
+             ^
+  symbol: method render(GuiGraphicsExtractor,int,int,float)
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiElectronicLibrary.java:78: error: cannot find symbol
+        renderTooltip(GuiGraphicsExtractor, mouseX, mouseY);
+        ^
+  symbol:   method renderTooltip(GuiGraphicsExtractor,int,int)
+  location: class GuiElectronicLibrary
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiFiller.java:18: error: cannot assign a value to final variable imageWidth
+        this.imageWidth = 176;
+            ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiFiller.java:19: error: cannot assign a value to final variable imageHeight
+        this.imageHeight = 235;
+            ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiFiller.java:23: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiFiller.java:32: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiFiller.java:34: error: cannot find symbol
+        super.render(GuiGraphicsExtractor, mouseX, mouseY, partialTick);
+             ^
+  symbol: method render(GuiGraphicsExtractor,int,int,float)
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiFiller.java:35: error: cannot find symbol
+        renderTooltip(GuiGraphicsExtractor, mouseX, mouseY);
+        ^
+  symbol:   method renderTooltip(GuiGraphicsExtractor,int,int)
+  location: class GuiFiller
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiReplacer.java:24: error: cannot assign a value to final variable imageWidth
+        this.imageWidth = SIZE_X;
+            ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiReplacer.java:25: error: cannot assign a value to final variable imageHeight
+        this.imageHeight = SIZE_Y;
+            ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiReplacer.java:29: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiReplacer.java:38: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiReplacer.java:40: error: cannot find symbol
+        super.render(GuiGraphicsExtractor, mouseX, mouseY, partialTick);
+             ^
+  symbol: method render(GuiGraphicsExtractor,int,int,float)
+E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\gui\GuiReplacer.java:41: error: cannot find symbol
+        renderTooltip(GuiGraphicsExtractor, mouseX, mouseY);
+        ^
+  symbol:   method renderTooltip(GuiGraphicsExtractor,int,int)
+  location: class GuiReplacer
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\snapshot\BlueprintBuilder.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+37 errors
+29 warnings
+
+> Task :buildcraft-builders:compileJava FAILED
 
 
 [Incubating] Problems report is available at: file:///E:/GitHub/BuildCraft/build/reports/problems/problems-report.html
 FAILURE: Build failed with an exception.
 
 * What went wrong:
-Execution failed for task ':buildcraft-core:compileJava'.
+Execution failed for task ':buildcraft-builders:compileJava'.
 > Compilation failed; see the compiler output below.
-  E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\client\DynamicFluidShardModel.java:17: error: cannot find symbol
-  import net.minecraft.client.renderer.block.model.ItemTransforms;
-                                                  ^
-    symbol:   class ItemTransforms
-    location: package net.minecraft.client.renderer.block.model
-  50 errors
-  53 warnings
+  E:\GitHub\BuildCraft\buildcraft-builders\src\main\java\buildcraft\builders\tile\TileBuilder.java:90: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
+      private final IFluidHandler stubFluidHandler = new IFluidHandler() {
+                    ^
+  37 errors
+  29 warnings
 
 * Try:
-> Check your code and dependencies to fix the compilation error(s)
 > Run with --scan to get full insights from a Build Scan (powered by Develocity).
 
-BUILD FAILED in 17s
-9 actionable tasks: 3 executed, 6 up-to-date
+BUILD FAILED in 14s
+10 actionable tasks: 3 executed, 7 up-to-date

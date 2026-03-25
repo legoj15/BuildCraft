@@ -74,17 +74,21 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
 
         poseStack.pushPose();
 
-        int light = LightCoordsUtil.lightCoordsWithEmission(level, pos);
+        int light = LevelRenderer.getLightCoords(level, pos);
 
         MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer buffer = bufferSource.getBuffer(Sheets.cutoutBlockSheet());
 
         // Render each MutableQuad as a BakedQuad
+        com.mojang.blaze3d.vertex.QuadInstance quadInstance = new com.mojang.blaze3d.vertex.QuadInstance();
+        quadInstance.setColor(0xFFFFFFFF);
+        quadInstance.setLightCoords(light);
+        quadInstance.setOverlayCoords(OverlayTexture.NO_OVERLAY);
         for (MutableQuad quad : quads) {
             quad.maxLighti(light, 0);
             BakedQuad baked = quad.toBakedBlock();
-            buffer.putBakedQuad(poseStack.last(), baked, 1.0f, 1.0f, 1.0f, 1.0f, light, OverlayTexture.NO_OVERLAY);
+            buffer.putBakedQuad(poseStack.last(), baked, quadInstance);
         }
 
         bufferSource.endBatch();

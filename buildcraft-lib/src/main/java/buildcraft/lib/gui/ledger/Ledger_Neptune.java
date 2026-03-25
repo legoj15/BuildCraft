@@ -311,15 +311,9 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
 
         // Draw tooltip when ledger is closed/closing and mouse hovers over it
         if (!shouldDrawOpen() && contains(gui.mouse.getX(), gui.mouse.getY())) {
-            Font font2 = Minecraft.getInstance().font;
             var titleComp = net.minecraft.network.chat.Component.literal(getTitle());
-            var tooltipLine = net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
-                .create(titleComp.getVisualOrderText());
-            graphics.setTooltipForNextFrame(font2,
-                java.util.List.of(tooltipLine),
-                (int) gui.mouse.getX(), (int) gui.mouse.getY(),
-                net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner.INSTANCE,
-                null);
+            graphics.setTooltipForNextFrame(titleComp,
+                (int) gui.mouse.getX(), (int) gui.mouse.getY());
         }
     }
 

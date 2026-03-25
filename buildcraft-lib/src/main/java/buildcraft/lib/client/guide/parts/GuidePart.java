@@ -79,7 +79,7 @@ public abstract class GuidePart {
 
     protected void renderTextLine(String text, int x, int y, int colour) {
         if (fontRenderer != null) {
-            fontRenderer.text(text, x, y + 8 - (fontRenderer.getFontHeight(text) / 2), colour);
+            fontRenderer.drawString(text, x, y + 8 - (fontRenderer.getFontHeight(text) / 2), colour);
         }
     }
 
@@ -139,7 +139,7 @@ public abstract class GuidePart {
                     renderTooltip();
                 }
                 if (fontRenderer != null) {
-                    fontRenderer.text(text, _x, _y, 0xFF000000);
+                    fontRenderer.drawString(text, _x, _y, 0xFF000000);
                 }
             }
             next = strings.length == 1 ? null : strings[1];

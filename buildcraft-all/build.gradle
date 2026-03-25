@@ -32,7 +32,8 @@ dependencies {
     // JEI — loaded as a proper mod in dev runs so NeoForge integrates it
     // into the mod loading pipeline alongside BuildCraft modules.
     // This enables @JeiPlugin annotation discovery in buildcraft-core.
-    runtimeOnly "mezz.jei:jei-1.21.11-neoforge:27.4.0.15"
+    // DISABLED: No JEI release for MC 26.1 yet — uncomment when available.
+    // runtimeOnly "mezz.jei:jei-1.21.11-neoforge:27.4.0.15"
 }
 
 // ─── Fat JAR ─────────────────────────────────────────────────────────────────

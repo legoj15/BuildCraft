@@ -35,7 +35,7 @@ public class GuiDiamondPipe extends GuiBC8<ContainerDiamondPipe> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         // Title drawn as part of the background texture in 1.12.2
     }
 }

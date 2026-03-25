@@ -132,7 +132,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         Level level = pipe.getLevel();
         if (level == null) return;
 
-        int light = LightCoordsUtil.lightCoordsWithEmission(level, pipe.getBlockPos());
+        int light = LevelRenderer.getLightCoords(level, pipe.getBlockPos());
 
         poseStack.pushPose();
 

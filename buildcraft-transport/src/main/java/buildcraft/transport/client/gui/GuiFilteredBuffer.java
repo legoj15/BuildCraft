@@ -36,7 +36,7 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         // Title is drawn as part of the GUI texture in 1.12.2
     }
 }

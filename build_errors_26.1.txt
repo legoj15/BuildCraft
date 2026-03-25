@@ -21,178 +21,10 @@ Daemon will be stopped at the end of the build
 > Task :buildcraft-robotics:createMinecraftArtifacts UP-TO-DATE
 > Task :buildcraft-robotics:compileJava UP-TO-DATE
 > Task :buildcraft-silicon:createMinecraftArtifacts UP-TO-DATE
+> Task :buildcraft-silicon:compileJava UP-TO-DATE
+> Task :buildcraft-transport:createMinecraftArtifacts UP-TO-DATE
 
-> Task :buildcraft-silicon:compileJava
-warning: unknown enum constant EnvType.CLIENT
-  reason: class file for net.fabricmc.api.EnvType not found
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\tile\TileAdvancedCraftingTable.java:48: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-        invBlueprint.setCallback((handler, slot, before, after) -> {
-                                  ^
-E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\tile\TileAdvancedCraftingTable.java:52: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-        invMaterials.setCallback((handler, slot, before, after) -> {
-                                  ^
-E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\BCSiliconBlocks.java:20: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockLaser> LASER = BLOCKS.registerBlock(
-                                                                ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\BCSiliconBlocks.java:25: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockLaserTable> ASSEMBLY_TABLE = BLOCKS.registerBlock(
-                                                                              ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\BCSiliconBlocks.java:32: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockLaserTable> ADVANCED_CRAFTING_TABLE = BLOCKS.registerBlock(
-                                                                                       ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\BCSiliconBlocks.java:39: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockLaserTable> INTEGRATION_TABLE = BLOCKS.registerBlock(
-                                                                                 ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-Note: Some input files use or override a deprecated API.
-Note: Recompile with -Xlint:deprecation for details.
-25 warnings
-
-> Task :buildcraft-transport:createMinecraftArtifacts
-Loaded 141 artifacts from E:\GitHub\BuildCraft\buildcraft-transport\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
-[1m*** Started working on [4mdownloadManifest[0m[0m
-  DL    https://launchermeta.mojang.com/mc/game/version_manifest_v2.json
- [1m[92mDONE [0m Completed [4mdownloadManifest[0m in 0.58s
-[1m*** Started working on [4mdownloadJson[0m[0m
- [1m[92mDONE [0m Completed [4mdownloadJson[0m in 0.00s
-[1m*** Started working on [4mdownloadClient[0m[0m
-[1m*** Started working on [4mdownloadServer[0m[0m
- [1m[92mDONE [0m Completed [4mdownloadClient[0m in 0.02s
- [1m[92mDONE [0m Completed [4mdownloadServer[0m in 0.02s
-[1m*** Started working on [4mpreProcessJar[0m[0m
- [1m[92mREUSE[0m Used cache of [4mpreProcessJar[0m in 0.00s
-[1m*** Started working on [4mdecompile[0m[0m
- [1m[92mREUSE[0m Used cache of [4mdecompile[0m in 0.00s
-[1m*** Started working on [4mpatch[0m[0m
- [1m[92mREUSE[0m Used cache of [4mpatch[0m in 0.00s
-[1m*** Started working on [4mapplyNeoforgePatches[0m[0m
- [1m[92mREUSE[0m Used cache of [4mapplyNeoforgePatches[0m in 0.00s
-[1m*** Started working on [4mtransformSources[0m[0m
- [1m[92mREUSE[0m Used cache of [4mtransformSources[0m in 0.00s
-[1m*** Started working on [4mrecompile[0m[0m
- [1m[92mREUSE[0m Used cache of [4mrecompile[0m in 0.00s
-[1m*** Started working on [4mmergeWithSources[0m[0m
- [1m[92mREUSE[0m Used cache of [4mmergeWithSources[0m in 0.00s
-Total runtime: 1.51s
-
-
-> Task :buildcraft-transport:compileJava FAILED
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\BCTransportClient.java:3: error: cannot find symbol
-import net.minecraft.client.renderer.block.model.BlockStateModel;
-                                                ^
-  symbol:   class BlockStateModel
-  location: package net.minecraft.client.renderer.block.model
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\BCTransportClient.java:4: error: cannot find symbol
-import net.minecraft.client.renderer.item.BlockModelWrapper;
-                                         ^
-  symbol:   class BlockModelWrapper
-  location: package net.minecraft.client.renderer.item
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:11: error: cannot find symbol
-import net.minecraft.client.renderer.block.model.BlockModelPart;
-                                                ^
-  symbol:   class BlockModelPart
-  location: package net.minecraft.client.renderer.block.model
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:12: error: cannot find symbol
-import net.minecraft.client.renderer.block.model.BlockStateModel;
-                                                ^
-  symbol:   class BlockStateModel
-  location: package net.minecraft.client.renderer.block.model
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:14: error: cannot find symbol
-import net.minecraft.client.renderer.block.model.SimpleModelWrapper;
-                                                ^
-  symbol:   class SimpleModelWrapper
-  location: package net.minecraft.client.renderer.block.model
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:18: error: cannot find symbol
-import net.minecraft.client.resources.model.QuadCollection;
-                                           ^
-  symbol:   class QuadCollection
-  location: package net.minecraft.client.resources.model
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:21: error: cannot find symbol
-import net.minecraft.world.level.BlockAndTintGetter;
-                                ^
-  symbol:   class BlockAndTintGetter
-  location: package net.minecraft.world.level
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:43: error: cannot find symbol
-    private final BlockStateModel vanillaDelegate;
-                  ^
-  symbol:   class BlockStateModel
-  location: class PipeBlockStateModel
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:45: error: cannot find symbol
-    public PipeBlockStateModel(BlockStateModel vanillaDelegate) {
-                               ^
-  symbol:   class BlockStateModel
-  location: class PipeBlockStateModel
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:50: error: cannot find symbol
-    public void collectParts(BlockAndTintGetter level, BlockPos pos, BlockState state,
-                             ^
-  symbol:   class BlockAndTintGetter
-  location: class PipeBlockStateModel
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:51: error: cannot find symbol
-                             RandomSource random, List<BlockModelPart> parts) {
-                                                       ^
-  symbol:   class BlockModelPart
-  location: class PipeBlockStateModel
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:90: error: cannot find symbol
-    public TextureAtlasSprite particleIcon(BlockAndTintGetter level, BlockPos pos, BlockState state) {
-                                           ^
-  symbol:   class BlockAndTintGetter
-  location: class PipeBlockStateModel
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeItemModel.java:21: error: cannot find symbol
-import net.minecraft.client.renderer.block.model.ItemTransforms;
-                                                ^
-  symbol:   class ItemTransforms
-  location: package net.minecraft.client.renderer.block.model
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeItemModel.java:22: error: cannot find symbol
-import net.minecraft.client.renderer.item.BlockModelWrapper;
-                                         ^
-  symbol:   class BlockModelWrapper
-  location: package net.minecraft.client.renderer.item
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeItemModel.java:78: error: cannot find symbol
-    private final BlockModelWrapper vanillaWrapper;
-                  ^
-  symbol:   class BlockModelWrapper
-  location: class PipeItemModel
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeItemModel.java:84: error: cannot find symbol
-    private final ItemTransforms itemTransforms;
-                  ^
-  symbol:   class ItemTransforms
-  location: class PipeItemModel
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeItemModel.java:95: error: cannot find symbol
-    public PipeItemModel(BlockModelWrapper vanillaWrapper, PipeDefinition definition) {
-                         ^
-  symbol:   class BlockModelWrapper
-  location: class PipeItemModel
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\tile\TilePipeHolder.java:478: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                        serverLevel, new net.minecraft.world.level.ChunkPos(worldPosition), payload);
-                                     ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
+> Task :buildcraft-transport:compileJava
 E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\BCTransportBlocks.java:14: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
     public static final DeferredBlock<BlockFilteredBuffer> FILTERED_BUFFER = BLOCKS.registerBlock(
                                                                                    ^
@@ -203,134 +35,6 @@ E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\BCT
                                                                            ^
   where B is a type-variable:
     B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\BCTransportClient.java:85: error: cannot find symbol
-        BlockStateModel vanillaModel = blockModels.get(pipeState);
-        ^
-  symbol:   class BlockStateModel
-  location: class BCTransportClient
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\BCTransportClient.java:97: error: cannot find symbol
-                if (vanillaItemModel instanceof BlockModelWrapper wrapper) {
-                                                ^
-  symbol:   class BlockModelWrapper
-  location: class BCTransportClient
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\gui\GuiDiamondPipe.java:37: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\gui\GuiDiamondWoodPipe.java:63: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\gui\GuiEmzuliPipe.java:75: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\gui\GuiFilteredBuffer.java:38: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:42: error: PipeBlockStateModel is not abstract and does not override abstract method materialFlags() in BlockStateModel
-public class PipeBlockStateModel implements DynamicBlockStateModel {
-       ^
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:55: error: cannot find symbol
-        if (be == null && level instanceof MovingBlockRenderState movingState && movingState.level != null) {
-                                                                                            ^
-  symbol:   variable level
-  location: variable movingState of type MovingBlockRenderState
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:56: error: cannot find symbol
-            be = movingState.level.getBlockEntity(pos);
-                            ^
-  symbol:   variable level
-  location: variable movingState of type MovingBlockRenderState
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:64: error: package QuadCollection does not exist
-                QuadCollection.Builder builder = new QuadCollection.Builder();
-                              ^
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:64: error: package QuadCollection does not exist
-                QuadCollection.Builder builder = new QuadCollection.Builder();
-                                                                   ^
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:68: error: cannot find symbol
-                parts.add(new SimpleModelWrapper(builder.build(), true, particle, ChunkSectionLayer.CUTOUT));
-                              ^
-  symbol:   class SimpleModelWrapper
-  location: class PipeBlockStateModel
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:74: error: package QuadCollection does not exist
-                QuadCollection.Builder builder = new QuadCollection.Builder();
-                              ^
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:74: error: package QuadCollection does not exist
-                QuadCollection.Builder builder = new QuadCollection.Builder();
-                                                                   ^
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:78: error: cannot find symbol
-                parts.add(new SimpleModelWrapper(builder.build(), false, particle, ChunkSectionLayer.TRANSLUCENT));
-                              ^
-  symbol:   class SimpleModelWrapper
-  location: class PipeBlockStateModel
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:83: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:89: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:95: error: cannot find symbol
-                && movingState.level != null) {
-                              ^
-  symbol:   variable level
-  location: variable movingState of type MovingBlockRenderState
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeBlockStateModel.java:96: error: cannot find symbol
-            be = movingState.level.getBlockEntity(pos);
-                            ^
-  symbol:   variable level
-  location: variable movingState of type MovingBlockRenderState
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeItemModel.java:65: error: cannot find symbol
-            QUADS_FIELD = BlockModelWrapper.class.getDeclaredField("quads");
-                          ^
-  symbol:   class BlockModelWrapper
-  location: class PipeItemModel
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeItemModel.java:67: error: cannot find symbol
-            PROPERTIES_FIELD = BlockModelWrapper.class.getDeclaredField("properties");
-                               ^
-  symbol:   class BlockModelWrapper
-  location: class PipeItemModel
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeItemModel.java:69: error: cannot find symbol
-            RENDER_TYPE_FIELD = BlockModelWrapper.class.getDeclaredField("renderType");
-                                ^
-  symbol:   class BlockModelWrapper
-  location: class PipeItemModel
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeItemModel.java:71: error: cannot find symbol
-            EXTENTS_FIELD = BlockModelWrapper.class.getDeclaredField("extents");
-                            ^
-  symbol:   class BlockModelWrapper
-  location: class PipeItemModel
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeItemModel.java:130: error: cannot find symbol
-        baseLayer.setRenderType(vanillaRenderType.apply(stack));
-                 ^
-  symbol:   method setRenderType(RenderType)
-  location: variable baseLayer of type ItemStackRenderState.LayerRenderState
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\model\PipeItemModel.java:141: error: cannot find symbol
-            overlayLayer.setRenderType(net.minecraft.client.renderer.Sheets.translucentBlockItemSheet());
-                        ^
-  symbol:   method setRenderType(RenderType)
-  location: variable overlayLayer of type ItemStackRenderState.LayerRenderState
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\PipeHolderClientExtensions.java:73: error: cannot find symbol
-            TextureAtlasSprite sprite = renderState.pickParticleIcon(mc.level.getRandom());
-                                                   ^
-  symbol:   method pickParticleIcon(RandomSource)
-  location: variable renderState of type ItemStackRenderState
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\PipeHolderClientExtensions.java:253: error: cannot find symbol
-            return Layer.TERRAIN;
-                        ^
-  symbol:   variable TERRAIN
-  location: class Layer
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\render\PipeBehaviourRendererStripes.java:38: error: cannot find symbol
-        int light = LightCoordsUtil.lightCoordsWithEmission(
-                    ^
-  symbol:   variable LightCoordsUtil
-  location: class PipeBehaviourRendererStripes
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\render\PipeFlowRendererFluids.java:64: error: cannot find symbol
-        Identifier stillTexture = fluidExt.getStillTexture(forRender);
-                                          ^
-  symbol:   method getStillTexture(FluidStack)
-  location: variable fluidExt of type IClientFluidTypeExtensions
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\render\PipeFlowRendererFluids.java:72: error: cannot find symbol
-        int tintColor = fluidExt.getTintColor(forRender);
-                                ^
-  symbol:   method getTintColor(FluidStack)
-  location: variable fluidExt of type IClientFluidTypeExtensions
 E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\pipe\flow\PipeFlowRedstoneFlux.java:258: warning: [removal] IEnergyStorage in net.neoforged.neoforge.energy has been deprecated and marked for removal
                                 IEnergyStorage receiver = pipe.getHolder().getCapabilityFromPipe(
                                 ^
@@ -373,56 +77,22 @@ E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\pip
 E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\pipe\flow\PipeFlowRedstoneFlux.java:435: warning: [removal] receiveEnergy(int,boolean) in IEnergyStorage has been deprecated and marked for removal
         public int receiveEnergy(int maxReceive, boolean simulate) {
                    ^
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\render\RenderPipeHolder.java:135: error: cannot find symbol
-        int light = LightCoordsUtil.lightCoordsWithEmission(level, pipe.getBlockPos());
-                    ^
-  symbol:   variable LightCoordsUtil
-  location: class RenderPipeHolder
 E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\pipe\behaviour\PipeBehaviourDiamondFluid.java:40: warning: [removal] FluidUtil in net.neoforged.neoforge.fluids has been deprecated and marked for removal
                     FluidStack target = FluidUtil.getFluidContained(compareTo).orElse(FluidStack.EMPTY);
                                         ^
 E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\pipe\behaviour\PipeBehaviourDiamondFluid.java:40: warning: [removal] getFluidContained(ItemStack) in FluidUtil has been deprecated and marked for removal
                     FluidStack target = FluidUtil.getFluidContained(compareTo).orElse(FluidStack.EMPTY);
                                                  ^
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\pipe\behaviour\PipeBehaviourLimiter.java:127: error: cannot find symbol
-            player.displayClientMessage(Component.translatable(key, limit), true);
-                  ^
-  symbol:   method displayClientMessage(MutableComponent,boolean)
-  location: variable player of type Player
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\stripes\StripesHandlerEntityInteract.java:41: error: method interactOn in class Player cannot be applied to given types;
-            if (player.interactOn(entity, InteractionHand.MAIN_HAND).consumesAction()) {
-                      ^
-  required: Entity,InteractionHand,Vec3
-  found:    LivingEntity,InteractionHand
-  reason: actual and formal argument lists differ in length
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\wire\SavedDataWireSystems.java:42: error: cannot infer type arguments for SavedDataType<>
-    public static final SavedDataType<SavedDataWireSystems> TYPE = new SavedDataType<>(
-                                                                   ^
 Note: Some input files use or override a deprecated API.
 Note: Recompile with -Xlint:deprecation for details.
 Note: Some input files use unchecked or unsafe operations.
 Note: Recompile with -Xlint:unchecked for details.
-52 errors
 18 warnings
+
+> Task :buildcraft-all:compileJava NO-SOURCE
 
 [Incubating] Problems report is available at: file:///E:/GitHub/BuildCraft/build/reports/problems/problems-report.html
 
-FAILURE: Build failed with an exception.
-
-* What went wrong:
-Execution failed for task ':buildcraft-transport:compileJava'.
-> Compilation failed; see the compiler output below.
-  E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\BCTransportClient.java:3: error: cannot find symbol
-  import net.minecraft.client.renderer.block.model.BlockStateModel;
-                                                  ^
-    symbol:   class BlockStateModel
-    location: package net.minecraft.client.renderer.block.model
-  52 errors
-  18 warnings
-
-* Try:
-> Check your code and dependencies to fix the compilation error(s)
-> Run with --scan to get full insights from a Build Scan (powered by Develocity).
-
-BUILD FAILED in 17s
-20 actionable tasks: 4 executed, 16 up-to-date
+BUILD SUCCESSFUL in 12s
+20 actionable tasks: 2 executed, 18 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.3.1/userguide/configuration_cache_enabling.html

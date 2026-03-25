@@ -475,7 +475,7 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
             // Send to all players tracking this chunk
             if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
                 net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingChunk(
-                        serverLevel, new net.minecraft.world.level.ChunkPos(worldPosition), payload);
+                        serverLevel, new net.minecraft.world.level.ChunkPos(worldPosition.getX() >> 4, worldPosition.getZ() >> 4), payload);
             }
         } catch (Exception e) {
             BCLog.logger.warn("[transport] Failed to send pipe message at " + worldPosition, e);

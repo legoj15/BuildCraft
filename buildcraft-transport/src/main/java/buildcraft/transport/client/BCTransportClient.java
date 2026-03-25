@@ -1,7 +1,7 @@
 package buildcraft.transport.client;
 
-import net.minecraft.client.renderer.block.model.BlockStateModel;
-import net.minecraft.client.renderer.item.BlockModelWrapper;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.block.model.BlockStateModelWrapper;
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -94,7 +94,7 @@ public class BCTransportClient {
             if (pipeItem != null) {
                 Identifier itemId = BuiltInRegistries.ITEM.getKey(pipeItem);
                 ItemModel vanillaItemModel = itemModels.get(itemId);
-                if (vanillaItemModel instanceof BlockModelWrapper wrapper) {
+                if (vanillaItemModel instanceof BlockStateModelWrapper wrapper) {
                     itemModels.put(itemId, new PipeItemModel(wrapper, def));
                 }
             }

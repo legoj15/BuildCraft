@@ -61,7 +61,7 @@ public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         // Draw current filter mode indicator
         String modeStr = switch (menu.behaviour.filterMode) {
             case WHITE_LIST -> "§a[Whitelist]";

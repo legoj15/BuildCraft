@@ -23,7 +23,7 @@ import net.minecraft.core.Direction.Axis;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
+// MC 26.1: IClientFluidTypeExtensions removed
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.core.EnumPipePart;
@@ -59,17 +59,15 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             return;
         }
 
-        // Resolve sprite + tint from the fluid type
-        IClientFluidTypeExtensions fluidExt = IClientFluidTypeExtensions.of(forRender.getFluid());
-        Identifier stillTexture = fluidExt.getStillTexture(forRender);
-        if (stillTexture == null) {
-            return;
-        }
+        // MC 26.1: IClientFluidTypeExtensions removed. Use hardcoded water texture as placeholder.
+        // TODO: Implement proper fluid texture resolution using new NeoForge 26.1 API.
+        Identifier stillTexture = Identifier.withDefaultNamespace("block/water_still");
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
                 .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
 
-        int tintColor = fluidExt.getTintColor(forRender);
+        // MC 26.1: Fluid tint color — hardcode water blue for now
+        int tintColor = 0xFF3F76E4; // default water color
         int tR = (tintColor >> 16) & 0xFF;
         int tG = (tintColor >> 8) & 0xFF;
         int tB = tintColor & 0xFF;

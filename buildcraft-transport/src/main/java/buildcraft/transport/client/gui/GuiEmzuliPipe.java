@@ -73,7 +73,7 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         String title = Component.translatable("gui.pipes.emzuli.title").getString();
         int titleX = (imageWidth - font.width(title)) / 2;
         graphics.text(font, title, titleX, 6, 0x404040, false);

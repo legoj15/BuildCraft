@@ -38,7 +38,7 @@ public enum StripesHandlerEntityInteract implements IStripesHandlerItem {
         );
         Collections.shuffle(entities);
         for (LivingEntity entity : entities) {
-            if (player.interactOn(entity, InteractionHand.MAIN_HAND).consumesAction()) {
+            if (player.interactOn(entity, InteractionHand.MAIN_HAND, entity.position()).consumesAction()) {
                 return true;
             }
         }

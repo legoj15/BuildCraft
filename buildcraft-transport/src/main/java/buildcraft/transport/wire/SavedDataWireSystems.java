@@ -27,6 +27,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.datafix.DataFixTypes;
 
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -40,9 +42,10 @@ import org.jspecify.annotations.Nullable;
 
 public class SavedDataWireSystems extends SavedData {
     public static final SavedDataType<SavedDataWireSystems> TYPE = new SavedDataType<>(
-        "buildcraft_wire_systems",
-        SavedDataWireSystems::new,
-        SavedDataWireSystems::makeCodec
+        Identifier.withDefaultNamespace("buildcraft_wire_systems"),
+        () -> new SavedDataWireSystems(null),
+        makeCodec(null),
+        DataFixTypes.SAVED_DATA_MAP_DATA
     );
 
     public Level world;

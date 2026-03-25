@@ -3,7 +3,7 @@ package buildcraft.silicon.client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import net.minecraft.client.renderer.item.BlockModelWrapper;
+import net.minecraft.client.renderer.block.model.BlockStateModelWrapper;
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -59,7 +59,7 @@ public class BCSiliconClient {
         var itemModels = event.getBakingResult().itemStackModels();
         Identifier facadeId = BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_FACADE.get());
         ItemModel vanillaModel = itemModels.get(facadeId);
-        if (vanillaModel instanceof BlockModelWrapper wrapper) {
+        if (vanillaModel instanceof BlockStateModelWrapper wrapper) {
             itemModels.put(facadeId, new FacadeItemModel(wrapper));
         }
         FacadeItemModel.onModelBake();

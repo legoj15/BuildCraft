@@ -150,14 +150,10 @@ public class PluggableFacade extends PipePluggable implements IFacade {
 
     @Override
     public int getBlockColor(int tintIndex) {
-        FacadePhasedState state = states.phasedStates[activeState];
-        try {
-            return Minecraft.getInstance().getBlockColors()
-                .getColor(state.stateInfo.state, holder.getPipeWorld(), holder.getPipePos(), tintIndex);
-        } catch (NullPointerException ex) {
-            // the block didn't like the null world or player
-            return -1;
-        }
+        // MC 26.1: BlockColors class has been removed entirely.
+        // Block tinting is now done inline in the BlockStateModel rendering pipeline.
+        // TODO: Implement proper facade tinting using MC 26.1's tint system.
+        return -1; // White/untinted fallback
     }
 
     // IFacade

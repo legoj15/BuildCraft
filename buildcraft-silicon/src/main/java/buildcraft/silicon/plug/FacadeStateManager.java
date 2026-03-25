@@ -197,16 +197,18 @@ public enum FacadeStateManager implements IFacadeRegistry {
                 ItemStackKey stackKey = new ItemStackKey(requiredStack);
                 Map<Property<?>, Comparable<?>> vars = varyingProperties.get(stackKey);
                 if (vars == null) {
-                    vars = new HashMap<>(state.getValues());
-                    varyingProperties.put(stackKey, vars);
+                    Map<Property<?>, Comparable<?>> newVars = new HashMap<>();
+                    state.getValues().forEach(pv -> newVars.put(pv.property(), pv.value()));
+                    varyingProperties.put(stackKey, newVars);
                 } else {
-                    for (Entry<Property<?>, Comparable<?>> entry : state.getValues().entrySet()) {
-                        Property<?> prop = entry.getKey();
-                        Comparable<?> value = entry.getValue();
-                        if (vars.get(prop) != value) {
-                            vars.put(prop, null);
+                    final Map<Property<?>, Comparable<?>> finalVars = vars;
+                    state.getValues().forEach(pv -> {
+                        Property<?> prop = pv.property();
+                        Comparable<?> value = pv.value();
+                        if (finalVars.get(prop) != value) {
+                            finalVars.put(prop, null);
                         }
-                    }
+                    });
                 }
             }
 

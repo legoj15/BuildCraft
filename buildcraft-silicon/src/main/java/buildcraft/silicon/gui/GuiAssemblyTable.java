@@ -83,7 +83,7 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         String title = I18n.get("block.buildcraftsilicon.assembly_table");
         graphics.text(font, title, (imageWidth - font.width(title)) / 2, 15, 0xFF404040, false);
     }

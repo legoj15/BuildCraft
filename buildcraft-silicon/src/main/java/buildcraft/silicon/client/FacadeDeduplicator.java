@@ -14,9 +14,9 @@ import java.util.Map;
 import java.util.Set;
 
 import net.minecraft.client.resources.model.geometry.BakedQuad;
-import net.minecraft.client.renderer.block.model.BlockModelPart;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
-import net.minecraft.client.resources.model.QuadCollection;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.resources.model.geometry.QuadCollection;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.state.BlockState;
@@ -181,13 +181,13 @@ public class FacadeDeduplicator {
             for (Direction dir : Direction.values()) {
                 List<BakedQuad> quads = getQuadsFromModel(model, dir);
                 for (BakedQuad quad : quads) {
-                    textures.add(dir.name() + ":" + quad.sprite().contents().name().toString());
+                    textures.add(dir.name() + ":" + quad.materialInfo().sprite().contents().name().toString());
                 }
             }
             // Also check null-direction (general/unculled quads)
             List<BakedQuad> generalQuads = getQuadsFromModel(model, null);
             for (BakedQuad quad : generalQuads) {
-                textures.add("GENERAL:" + quad.sprite().contents().name().toString());
+                textures.add("GENERAL:" + quad.materialInfo().sprite().contents().name().toString());
             }
 
             if (textures.isEmpty()) return null;
@@ -208,11 +208,11 @@ public class FacadeDeduplicator {
      * NeoForge 1.21.11 collectParts/SimpleModelWrapper API.
      */
     private static List<BakedQuad> getQuadsFromModel(BlockStateModel model, Direction side) {
-        List<BlockModelPart> parts = new ArrayList<>();
+        List<BlockStateModelPart> parts = new ArrayList<>();
         model.collectParts(RANDOM, parts);
         List<BakedQuad> result = new ArrayList<>();
-        for (BlockModelPart part : parts) {
-            if (part instanceof net.minecraft.client.renderer.block.model.SimpleModelWrapper smw) {
+        for (BlockStateModelPart part : parts) {
+            if (part instanceof net.minecraft.client.resources.model.SimpleModelWrapper smw) {
                 QuadCollection qc = smw.quads();
                 result.addAll(qc.getQuads(side));
             }

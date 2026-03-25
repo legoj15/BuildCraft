@@ -17,9 +17,9 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
-import net.minecraft.client.renderer.block.model.BlockModelPart;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
-import net.minecraft.client.resources.model.QuadCollection;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.resources.model.geometry.QuadCollection;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.state.BlockState;
@@ -51,11 +51,11 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
      * NeoForge 1.21.11 no longer has BakedModel.getQuads() — we must use
      * collectParts() to get BlockModelParts, then extract quads from each part's QuadCollection. */
     private static List<BakedQuad> getQuadsFromModel(BlockStateModel model, Direction side) {
-        List<BlockModelPart> parts = new ArrayList<>();
+        List<BlockStateModelPart> parts = new ArrayList<>();
         model.collectParts(RANDOM, parts);
         List<BakedQuad> result = new ArrayList<>();
-        for (BlockModelPart part : parts) {
-            if (part instanceof net.minecraft.client.renderer.block.model.SimpleModelWrapper smw) {
+        for (BlockStateModelPart part : parts) {
+            if (part instanceof net.minecraft.client.resources.model.SimpleModelWrapper smw) {
                 QuadCollection qc = smw.quads();
                 result.addAll(qc.getQuads(side));
             }
@@ -222,7 +222,7 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
     }
 
     public List<MutableQuad> bakeForKey(KeyPlugFacade key) {
-        BlockStateModel model = Minecraft.getInstance().getBlockRenderer().getBlockModel(key.state);
+        BlockStateModel model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(key.state);
         List<MutableQuad> quads = new ArrayList<>();
         int pS = PluggableFacade.SIZE;
         int nS = 16 - pS;

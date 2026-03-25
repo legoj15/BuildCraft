@@ -121,7 +121,7 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
             targetPos = null;
             return;
         }
-        targetPos = targetsNeedingPower.get(level.random.nextInt(targetsNeedingPower.size()));
+        targetPos = targetsNeedingPower.get(level.getRandom().nextInt(targetsNeedingPower.size()));
     }
 
     private boolean isPowerNeededAt(BlockPos position) {
@@ -147,9 +147,9 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
     private void updateLaser() {
         if (targetPos != null) {
             laserPos = Vec3.atLowerCornerOf(targetPos).add(
-                (5 + level.random.nextInt(6) + 0.5) / 16D,
+                (5 + level.getRandom().nextInt(6) + 0.5) / 16D,
                 9 / 16D,
-                (5 + level.random.nextInt(6) + 0.5) / 16D
+                (5 + level.getRandom().nextInt(6) + 0.5) / 16D
             );
         } else {
             laserPos = null;

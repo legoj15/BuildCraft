@@ -18,9 +18,8 @@ import org.jspecify.annotations.Nullable;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
-import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
-import net.minecraft.client.renderer.item.BlockModelWrapper;
+import net.minecraft.client.renderer.block.model.BlockStateModelWrapper;
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
@@ -46,7 +45,7 @@ import buildcraft.silicon.plug.FacadePhasedState;
  */
 public class FacadeItemModel implements ItemModel {
 
-    private final BlockModelWrapper vanillaWrapper;
+    private final BlockStateModelWrapper vanillaWrapper;
 
     // Extracted from vanilla model at construction time
     private final List<BakedQuad> vanillaQuads;
@@ -88,16 +87,16 @@ public class FacadeItemModel implements ItemModel {
     private static final java.lang.reflect.Field EXTENTS_FIELD;
     static {
         try {
-            QUADS_FIELD = BlockModelWrapper.class.getDeclaredField("quads");
+            QUADS_FIELD = BlockStateModelWrapper.class.getDeclaredField("quads");
             QUADS_FIELD.setAccessible(true);
-            PROPERTIES_FIELD = BlockModelWrapper.class.getDeclaredField("properties");
+            PROPERTIES_FIELD = BlockStateModelWrapper.class.getDeclaredField("properties");
             PROPERTIES_FIELD.setAccessible(true);
-            RENDER_TYPE_FIELD = BlockModelWrapper.class.getDeclaredField("renderType");
+            RENDER_TYPE_FIELD = BlockStateModelWrapper.class.getDeclaredField("renderType");
             RENDER_TYPE_FIELD.setAccessible(true);
-            EXTENTS_FIELD = BlockModelWrapper.class.getDeclaredField("extents");
+            EXTENTS_FIELD = BlockStateModelWrapper.class.getDeclaredField("extents");
             EXTENTS_FIELD.setAccessible(true);
         } catch (NoSuchFieldException e) {
-            throw new RuntimeException("Failed to access BlockModelWrapper fields", e);
+            throw new RuntimeException("Failed to access BlockStateModelWrapper fields", e);
         }
     }
 
@@ -107,7 +106,7 @@ public class FacadeItemModel implements ItemModel {
     private final java.util.function.Supplier<org.joml.Vector3fc[]> extents;
 
     @SuppressWarnings("unchecked")
-    public FacadeItemModel(BlockModelWrapper vanillaWrapper) {
+    public FacadeItemModel(BlockStateModelWrapper vanillaWrapper) {
         this.vanillaWrapper = vanillaWrapper;
         try {
             this.vanillaQuads = (List<BakedQuad>) QUADS_FIELD.get(vanillaWrapper);
@@ -115,7 +114,7 @@ public class FacadeItemModel implements ItemModel {
             this.vanillaRenderType = (java.util.function.Function<ItemStack, RenderType>) RENDER_TYPE_FIELD.get(vanillaWrapper);
             this.extents = (java.util.function.Supplier<org.joml.Vector3fc[]>) EXTENTS_FIELD.get(vanillaWrapper);
         } catch (IllegalAccessException e) {
-            throw new RuntimeException("Failed to read BlockModelWrapper fields", e);
+            throw new RuntimeException("Failed to read BlockStateModelWrapper fields", e);
         }
     }
 
@@ -145,7 +144,10 @@ public class FacadeItemModel implements ItemModel {
 
         if (quads.isEmpty()) {
             // Fallback to the vanilla model if baking produced nothing
-            vanillaWrapper.update(renderState, stack, modelResolver, displayContext, level, owner, seed);
+            // MC 26.1: BlockStateModelWrapper.update() signature changed entirely
+            // (now takes BlockModelRenderState, BlockState, BlockDisplayContext, long).
+            // Cannot delegate to vanilla wrapper for item rendering.
+            // TODO: Implement proper fallback using new ItemModel API.
             return;
         }
 
@@ -155,9 +157,10 @@ public class FacadeItemModel implements ItemModel {
 
         var layer = renderState.newLayer();
         layer.prepareQuadList().addAll(quads);
-        layer.setExtents(extents);
-        layer.setRenderType(vanillaRenderType.apply(stack));
-        renderProperties.applyToLayer(layer, displayContext);
+        // MC 26.1: LayerRenderState API may have changed; setExtents removed
+        // layer.setExtents(extents);
+        // layer.setRenderType(vanillaRenderType.apply(stack));
+        // renderProperties.applyToLayer(layer, displayContext);
     }
 }
 

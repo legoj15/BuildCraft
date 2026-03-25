@@ -63,6 +63,32 @@ public class FluidUtilBC {
         return !stack.isEmpty() && shouldRenderTranslucent(stack.getFluid());
     }
 
+    @Nullable
+    public static net.minecraft.resources.Identifier getFluidTexture(FluidStack fluid) {
+        if (fluid.isEmpty()) return net.minecraft.resources.Identifier.withDefaultNamespace("block/water_still");
+        if (fluid.getFluid().isSame(Fluids.WATER) || fluid.getFluid().isSame(Fluids.FLOWING_WATER)) {
+            return net.minecraft.resources.Identifier.withDefaultNamespace("block/water_still");
+        } else if (fluid.getFluid().isSame(Fluids.LAVA) || fluid.getFluid().isSame(Fluids.FLOWING_LAVA)) {
+            return net.minecraft.resources.Identifier.withDefaultNamespace("block/lava_still");
+        }
+        net.minecraft.resources.Identifier fluidId = net.neoforged.neoforge.registries.NeoForgeRegistries.FLUID_TYPES
+                .getKey(fluid.getFluid().getFluidType());
+        if (fluidId != null) {
+            return net.minecraft.resources.Identifier.parse(fluidId.getNamespace() + ":block/" + fluidId.getPath() + "_still");
+        }
+        return net.minecraft.resources.Identifier.withDefaultNamespace("block/water_still");
+    }
+
+    public static int getFluidColor(FluidStack fluid) {
+        if (fluid.isEmpty()) return 0xFFFFFFFF;
+        if (fluid.getFluid().isSame(Fluids.WATER) || fluid.getFluid().isSame(Fluids.FLOWING_WATER)) {
+            return 0xFF3F76E4;
+        } else if (fluid.getFluid().isSame(Fluids.LAVA) || fluid.getFluid().isSame(Fluids.FLOWING_LAVA)) {
+            return 0xFFFFFFFF;
+        }
+        return 0xFFFFFFFF;
+    }
+
     /**
      * Pushes fluid from the given FluidTank to all adjacent fluid-capable blocks.
      * Uses NeoForge 1.21.11's Capabilities.Fluid.BLOCK with ResourceHandler API.

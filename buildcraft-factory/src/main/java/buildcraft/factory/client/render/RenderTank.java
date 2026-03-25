@@ -27,6 +27,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 
+import net.minecraft.client.renderer.rendertype.RenderType;
+
+import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.factory.tile.TileTank;
@@ -82,15 +85,14 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
         int capacity = tile.smoothedTank.getCapacity();
         if (amount <= 0 || capacity <= 0) return;
 
-        // MC 26.1: IClientFluidTypeExtensions removed. Use hardcoded water texture.
-        Identifier stillTexture = Identifier.withDefaultNamespace("block/water_still");
+        Identifier stillTexture = FluidUtilBC.getFluidTexture(fluid);
+        if (stillTexture == null) return;
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
                 .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
 
-        // TODO: proper fluid tint for MC 26.1
-        int color = 0xFFFFFFFF;
+        int color = FluidUtilBC.getFluidColor(fluid);
         float a = ((color >> 24) & 0xFF) / 255.0f;
         float r = ((color >> 16) & 0xFF) / 255.0f;
         float g = ((color >> 8) & 0xFF) / 255.0f;
@@ -126,7 +128,7 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
         // Translucent for vanilla water, cutout for BC fluids (reuse water texture opaquely)
         VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
+                    ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
         PoseStack.Pose pose = poseStack.last();
 
         boolean renderBottom = !connectedDown;
@@ -164,7 +166,6 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
                     0, -1, 0, r, g, b, a, light, overlay);
         }
 
-        bufferSource.endBatch();
         poseStack.popPose();
     }
 

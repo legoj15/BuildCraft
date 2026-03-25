@@ -33,6 +33,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
+import net.minecraft.client.renderer.rendertype.RenderType;
+
+import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.factory.block.BlockHeatExchange;
@@ -191,7 +194,6 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
             }
         }
 
-        bufferSource.endBatch();
         poseStack.popPose();
     }
 
@@ -211,15 +213,14 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         int capacity = smoother.getCapacity();
         if (capacity <= 0) return;
 
-        // MC 26.1: IClientFluidTypeExtensions removed. Use hardcoded water texture.
-        Identifier stillTexture = Identifier.withDefaultNamespace("block/water_still");
+        Identifier stillTexture = FluidUtilBC.getFluidTexture(fluid);
+        if (stillTexture == null) return;
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
                 .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
 
-        // TODO: proper fluid tint for MC 26.1
-        int color = 0xFFFFFFFF;
+        int color = FluidUtilBC.getFluidColor(fluid);
         float a = ((color >> 24) & 0xFF) / 255.0f;
         float r = ((color >> 16) & 0xFF) / 255.0f;
         float g = ((color >> 8) & 0xFF) / 255.0f;
@@ -249,7 +250,7 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         // Translucent for vanilla water, cutout for BC fluids (reuse water texture opaquely)
         VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
+                    ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
         PoseStack.Pose pose = poseStack.last();
         int overlay = OverlayTexture.NO_OVERLAY;
 
@@ -285,15 +286,14 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
                                     int point, float partialTicks, int light) {
         if (fluid.isEmpty()) return;
 
-        // MC 26.1: IClientFluidTypeExtensions removed. Use hardcoded water texture.
-        Identifier stillTexture = Identifier.withDefaultNamespace("block/water_still");
+        Identifier stillTexture = FluidUtilBC.getFluidTexture(fluid);
+        if (stillTexture == null) return;
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
                 .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
 
-        // TODO: proper fluid tint for MC 26.1
-        int color = 0xFFFFFFFF;
+        int color = FluidUtilBC.getFluidColor(fluid);
         float a = ((color >> 24) & 0xFF) / 255.0f;
         float r = ((color >> 16) & 0xFF) / 255.0f;
         float g = ((color >> 8) & 0xFF) / 255.0f;
@@ -303,7 +303,7 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         // Translucent for vanilla water, cutout for BC fluids
         VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
+                    ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
         int overlay = OverlayTexture.NO_OVERLAY;
 
         Level level = Minecraft.getInstance().level;

@@ -23,7 +23,10 @@ import net.minecraft.core.Direction.Axis;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
-// MC 26.1: IClientFluidTypeExtensions removed
+import net.minecraft.client.renderer.rendertype.RenderType;
+
+// MC 26.1: Use IClientFluidTypeExtensions
+import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.core.EnumPipePart;
@@ -59,15 +62,13 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             return;
         }
 
-        // MC 26.1: IClientFluidTypeExtensions removed. Use hardcoded water texture as placeholder.
-        // TODO: Implement proper fluid texture resolution using new NeoForge 26.1 API.
-        Identifier stillTexture = Identifier.withDefaultNamespace("block/water_still");
+        Identifier stillTexture = FluidUtilBC.getFluidTexture(forRender);
+        if (stillTexture == null) return;
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
                 .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
 
-        // MC 26.1: Fluid tint color — hardcode water blue for now
-        int tintColor = 0xFF3F76E4; // default water color
+        int tintColor = FluidUtilBC.getFluidColor(forRender);
         int tR = (tintColor >> 16) & 0xFF;
         int tG = (tintColor >> 8) & 0xFF;
         int tB = tintColor & 0xFF;
@@ -81,7 +82,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer fluidBB = bufferSource.getBuffer(
             FluidUtilBC.shouldRenderTranslucent(forRender)
-                ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
+                ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
 
         double[] amounts = flow.getAmountsForRender(partialTicks);
         Vec3[] offsets = flow.getOffsetsForRender(partialTicks);
@@ -166,9 +167,6 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             renderFluidCuboid(min, max, uvMin, uvMax, 1, 1, gas, sprite, tR, tG, tB, tA, fluidBB, pose);
         }
 
-        // Flush only the render type we used — don't disturb other renderers' in-progress buffers
-        boolean translucent = FluidUtilBC.shouldRenderTranslucent(forRender);
-        bufferSource.endBatch(translucent ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
     }
 
     /** Renders a fluid cuboid using {@link MutableQuad}s, with fill-level scaling on the Y axis.

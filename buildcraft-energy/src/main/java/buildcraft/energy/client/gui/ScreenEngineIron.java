@@ -179,8 +179,8 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
         String str = LocaleUtil.localize("tile.engineIron.name");
         int strWidth = font.width(str);
         int titleX = (imageWidth - strWidth) / 2;
-        graphics.drawString(font, str, titleX, 6, 0xFF404040, false);
-        graphics.drawString(font, playerInventoryTitle, 8, imageHeight - 96 + 2, 0xFF404040, false);
+        graphics.text(font, str, titleX, 6, 0xFF404040, false);
+        graphics.text(font, playerInventoryTitle, 8, imageHeight - 96 + 2, 0xFF404040, false);
     }
 
     @Override
@@ -223,7 +223,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
                         .create(c.getVisualOrderText()))
                     .collect(java.util.stream.Collectors.toList());
 
-            graphics.renderTooltip(font, tooltipLines, mouseX, mouseY,
+            graphics.setTooltipForNextFrame(font, tooltipLines, mouseX, mouseY,
                 net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner.INSTANCE,
                 null);
         }

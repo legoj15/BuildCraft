@@ -124,8 +124,8 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
                     SlotBase slot = menu.materialSlots[s];
                     int x = slot.x + (int) mainGui.rootElement.getX();
                     int y = slot.y + (int) mainGui.rootElement.getY();
-                    graphics.renderItem(filterStack, x, y);
-                    graphics.renderItemDecorations(this.font, filterStack, x, y, null);
+                    graphics.item(filterStack, x, y);
+                    graphics.itemDecorations(this.font, filterStack, x, y, null);
                 }
             }
 
@@ -172,7 +172,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
             }
         }
         if (this.recipeBookComponent != null) {
-            this.recipeBookComponent.renderTooltip(graphics, mouseX, mouseY, null);
+            this.recipeBookComponent.setTooltipForNextFrame(graphics, mouseX, mouseY, null);
         }
     }
 

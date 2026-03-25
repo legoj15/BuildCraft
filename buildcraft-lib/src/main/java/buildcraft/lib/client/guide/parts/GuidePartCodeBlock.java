@@ -56,12 +56,12 @@ public class GuidePartCodeBlock extends GuidePart {
                     if (wrappedLines.size() > 1) {
                         String ns = Integer.toString(number);
                         int addX = lineNumberWidth - font.getStringWidth(ns);
-                        font.drawString(ns, x + 4 + addX, _y, 0);
+                        font.text(ns, x + 4 + addX, _y, 0);
                     }
                 }
                 int _x = x + 8 + lineNumberWidth;
                 // Darkened background rendering deferred (needs GuiGraphicsExtractor)
-                font.drawString(line, _x, _y, 0);
+                font.text(line, _x, _y, 0);
                 _y += font.getMaxFontHeight() + 2;
             }
         }

@@ -68,6 +68,6 @@ public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
             case BLACK_LIST -> "§c[Blacklist]";
             case ROUND_ROBIN -> "§e[Round Robin]";
         };
-        graphics.drawString(font, modeStr, 8, 58, 0x404040, false);
+        graphics.text(font, modeStr, 8, 58, 0x404040, false);
     }
 }

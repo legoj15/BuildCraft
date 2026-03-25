@@ -26,8 +26,8 @@ public abstract class GuidePartItem extends GuidePart {
 
         GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
         if (graphics != null) {
-            graphics.renderItem(stack, x, y);
-            graphics.renderItemDecorations(Minecraft.getInstance().font, stack, x, y);
+            graphics.item(stack, x, y);
+            graphics.itemDecorations(Minecraft.getInstance().font, stack, x, y);
         }
 
         if (STACK_RECT.offset(x, y).contains(gui.mouse)) {

@@ -72,7 +72,7 @@ public class BCDebugOverlay {
         // Render left-side debug info at bottom-left
         int y = screenHeight - 2 - (left.size() * (fontHeight + 1));
         for (String line : left) {
-            graphics.drawString(mc.font, "[BC] " + line, 2, y, 0xFFFFFF);
+            graphics.text(mc.font, "[BC] " + line, 2, y, 0xFFFFFF);
             y += fontHeight + 1;
         }
 
@@ -80,7 +80,7 @@ public class BCDebugOverlay {
         y = screenHeight - 2 - (right.size() * (fontHeight + 1));
         for (String line : right) {
             int x = screenWidth - mc.font.width("[BC] " + line) - 2;
-            graphics.drawString(mc.font, "[BC] " + line, x, y, 0xFFFFFF);
+            graphics.text(mc.font, "[BC] " + line, x, y, 0xFFFFFF);
             y += fontHeight + 1;
         }
     }

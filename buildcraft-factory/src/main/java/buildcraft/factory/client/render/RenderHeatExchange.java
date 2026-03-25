@@ -20,7 +20,7 @@ import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -127,7 +127,7 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         TankSideData sideTank = TANK_SIDES.get(face);
         if (sideTank == null) return;
 
-        int light = LevelRenderer.getLightColor(level, pos);
+        int light = LightCoordsUtil.lightCoordsWithEmission(level, pos);
 
         poseStack.pushPose();
 

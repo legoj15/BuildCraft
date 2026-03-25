@@ -35,7 +35,7 @@ public enum PipeBehaviourRendererStripes implements IPipeBehaviourRenderer<PipeB
         if (dir == null) return;
 
         MutableQuad[] quads = getQuads(dir);
-        int light = LevelRenderer.getLightColor(
+        int light = LightCoordsUtil.lightCoordsWithEmission(
             stripes.pipe.getHolder().getPipeWorld(),
             stripes.pipe.getHolder().getPipePos()
         );

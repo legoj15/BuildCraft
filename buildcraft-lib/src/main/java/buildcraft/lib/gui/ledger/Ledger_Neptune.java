@@ -292,7 +292,7 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
             int textY = (int) iconY + 1;
 
             // Draw title (not wrapped — titles are always short)
-            graphics.drawString(font, getTitle(), textX, textY, getTitleColour() | 0xFF000000, true);
+            graphics.text(font, getTitle(), textX, textY, getTitleColour() | 0xFF000000, true);
             textY += font.lineHeight + 3;
 
             // Draw text entries with word wrapping
@@ -301,7 +301,7 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
                 List<FormattedCharSequence> wrapped = font.split(
                     Component.literal(entry.getText()), textAreaWidth);
                 for (FormattedCharSequence line : wrapped) {
-                    graphics.drawString(font, line, textX, textY, entryColour, entry.dropShadow);
+                    graphics.text(font, line, textX, textY, entryColour, entry.dropShadow);
                     textY += font.lineHeight + 3;
                 }
             }
@@ -315,7 +315,7 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
             var titleComp = net.minecraft.network.chat.Component.literal(getTitle());
             var tooltipLine = net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
                 .create(titleComp.getVisualOrderText());
-            graphics.renderTooltip(font2,
+            graphics.setTooltipForNextFrame(font2,
                 java.util.List.of(tooltipLine),
                 (int) gui.mouse.getX(), (int) gui.mouse.getY(),
                 net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner.INSTANCE,

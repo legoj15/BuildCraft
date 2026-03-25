@@ -41,7 +41,7 @@ public class GuideFont implements IFontRenderer {
 
     @Override
     public int drawString(String text, int x, int y, int colour, boolean shadow, boolean centered, float scale) {
-        return MinecraftFont.INSTANCE.drawString(text, x, y, colour, shadow, centered, scale);
+        return MinecraftFont.INSTANCE.text(text, x, y, colour, shadow, centered, scale);
     }
 
     @Override

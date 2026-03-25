@@ -97,7 +97,7 @@ public class WorkbenchCrafting {
             if (currentRecipe == null) {
                 assumedResult = ItemStack.EMPTY;
             } else {
-                assumedResult = currentRecipe.value().assemble(input, tile.getLevel().registryAccess());
+                assumedResult = currentRecipe.value().assemble(input);
             }
             isBlueprintDirty = false;
             areMaterialsDirty = true; // re-check materials against new recipe
@@ -178,7 +178,7 @@ public class WorkbenchCrafting {
         }
 
         // Step 3: Assemble result
-        ItemStack result = currentRecipe.value().assemble(craftInput, tile.getLevel().registryAccess());
+        ItemStack result = currentRecipe.value().assemble(craftInput);
         if (result.isEmpty()) {
             returnItemsToMaterials(gridContents);
             return false;

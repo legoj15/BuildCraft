@@ -76,9 +76,9 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
     protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         String title = Component.translatable("gui.pipes.emzuli.title").getString();
         int titleX = (imageWidth - font.width(title)) / 2;
-        graphics.drawString(font, title, titleX, 6, 0x404040, false);
+        graphics.text(font, title, titleX, 6, 0x404040, false);
 
-        graphics.drawString(font, Component.translatable("gui.inventory").getString(),
+        graphics.text(font, Component.translatable("gui.inventory").getString(),
             8, imageHeight - 93, 0x404040, false);
 
         // Draw active slot indicators

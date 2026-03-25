@@ -28,7 +28,7 @@ public class GuiStack implements ISimpleDrawable {
 
     @Override
     public void drawAt(double x, double y) {
-        // Rendering stub — in 1.21, item rendering requires GuiGraphicsExtractor.renderItem().
+        // Rendering stub — in 1.21, item rendering requires GuiGraphicsExtractor.item().
         // Will be implemented when the guide GUI passes its GuiGraphicsExtractor context.
     }
 }

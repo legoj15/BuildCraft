@@ -16,7 +16,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.core.BlockPos;
@@ -74,7 +74,7 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
 
         poseStack.pushPose();
 
-        int light = LevelRenderer.getLightColor(level, pos);
+        int light = LightCoordsUtil.lightCoordsWithEmission(level, pos);
 
         MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
@@ -84,7 +84,7 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
         for (MutableQuad quad : quads) {
             quad.maxLighti(light, 0);
             BakedQuad baked = quad.toBakedBlock();
-            buffer.putBulkData(poseStack.last(), baked, 1.0f, 1.0f, 1.0f, 1.0f, light, OverlayTexture.NO_OVERLAY);
+            buffer.putBakedQuad(poseStack.last(), baked, 1.0f, 1.0f, 1.0f, 1.0f, light, OverlayTexture.NO_OVERLAY);
         }
 
         bufferSource.endBatch();

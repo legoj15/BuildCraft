@@ -117,7 +117,7 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
             }
         }
         if (this.recipeBookComponent != null) {
-            this.recipeBookComponent.renderTooltip(graphics, mouseX, mouseY, null);
+            this.recipeBookComponent.setTooltipForNextFrame(graphics, mouseX, mouseY, null);
         }
     }
 
@@ -133,7 +133,7 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     @Override
     protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         String title = I18n.get("block.buildcraftsilicon.advanced_crafting_table");
-        graphics.drawString(font, title, (imageWidth - font.width(title)) / 2, 5, 0xFF404040, false);
+        graphics.text(font, title, (imageWidth - font.width(title)) / 2, 5, 0xFF404040, false);
     }
 
     @Override

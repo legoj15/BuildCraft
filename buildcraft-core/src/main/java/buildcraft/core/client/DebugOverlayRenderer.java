@@ -58,7 +58,7 @@ public class DebugOverlayRenderer {
             // Background
             int width = font.width(line);
             GuiGraphicsExtractor.fill(1, leftY - 1, 2 + width + 1, leftY + font.lineHeight, 0x90505050);
-            GuiGraphicsExtractor.drawString(font, line, 2, leftY, 0xFFE0E0E0, false);
+            GuiGraphicsExtractor.text(font, line, 2, leftY, 0xFFE0E0E0, false);
             leftY += lineHeight;
         }
 
@@ -77,7 +77,7 @@ public class DebugOverlayRenderer {
             int width = font.width(line);
             int x = screenWidth - 2 - width;
             GuiGraphicsExtractor.fill(x - 1, rightY - 1, x + width + 1, rightY + font.lineHeight, 0x90505050);
-            GuiGraphicsExtractor.drawString(font, line, x, rightY, 0xFFE0E0E0, false);
+            GuiGraphicsExtractor.text(font, line, x, rightY, 0xFFE0E0E0, false);
             rightY += lineHeight;
         }
     }

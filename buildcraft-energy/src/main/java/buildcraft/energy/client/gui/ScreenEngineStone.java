@@ -96,7 +96,7 @@ public class ScreenEngineStone extends GuiBC8<ContainerEngineStone> {
         String str = LocaleUtil.localize("tile.engineStone.name");
         int strWidth = font.width(str);
         int titleX = (imageWidth - strWidth) / 2;
-        graphics.drawString(font, str, titleX, 6, 0xFF404040, false);
-        graphics.drawString(font, playerInventoryTitle, 8, imageHeight - 96 + 2, 0xFF404040, false);
+        graphics.text(font, str, titleX, 6, 0xFF404040, false);
+        graphics.text(font, playerInventoryTitle, 8, imageHeight - 96 + 2, 0xFF404040, false);
     }
 }

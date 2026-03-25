@@ -13,49 +13,44 @@ Daemon will be stopped at the end of the build
 > Task :buildcraft-lib:createMinecraftArtifacts UP-TO-DATE
 
 > Task :buildcraft-lib:compileJava
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\render\tile\RenderEngine_BC8.java:19: error: cannot find symbol
-import net.minecraft.client.renderer.state.CameraRenderState;
-                                          ^
-  symbol:   class CameraRenderState
-  location: package net.minecraft.client.renderer.state
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\render\tile\RenderEngine_BC8.java:54: error: cannot find symbol
-                       SubmitNodeCollector collector, CameraRenderState cameraState) {
-                                                      ^
-  symbol:   class CameraRenderState
-  location: class RenderEngine_BC8
 E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\item\ItemGuideNote.java:29: error: cannot find symbol
             player.displayClientMessage(
                   ^
   symbol:   method displayClientMessage(MutableComponent,boolean)
   location: variable player of type Player
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\BCDebugOverlay.java:75: error: cannot find symbol
-            graphics.drawString(mc.font, "[BC] " + line, 2, y, 0xFFFFFF);
-                    ^
-  symbol:   method drawString(Font,String,int,int,int)
-  location: variable graphics of type GuiGraphicsExtractor
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\BCDebugOverlay.java:83: error: cannot find symbol
-            graphics.drawString(mc.font, "[BC] " + line, x, y, 0xFFFFFF);
-                    ^
-  symbol:   method drawString(Font,String,int,int,int)
-  location: variable graphics of type GuiGraphicsExtractor
+E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\guide\parts\GuidePart.java:82: error: cannot find symbol
+            fontRenderer.text(text, x, y + 8 - (fontRenderer.getFontHeight(text) / 2), colour);
+                        ^
+  symbol:   method text(String,int,int,int)
+  location: variable fontRenderer of type IFontRenderer
+E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\guide\parts\GuidePart.java:142: error: cannot find symbol
+                    fontRenderer.text(text, _x, _y, 0xFF000000);
+                                ^
+  symbol:   method text(String,int,int,int)
+  location: variable fontRenderer of type IFontRenderer
 E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\guide\GuiGuide.java:279: error: method does not override or implement a method from a supertype
     @Override
     ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\guide\font\MinecraftFont.java:68: error: cannot find symbol
-        currentGraphics.drawString(font, text, drawX, y, colour, shadow);
+E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\guide\GuiGuide.java:418: error: cannot find symbol
+            currentFont.text(title, x, minY + 12, 0xFF90816a);
                        ^
-  symbol:   method drawString(Font,String,int,int,int,boolean)
-  location: variable currentGraphics of type GuiGraphicsExtractor
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\guide\parts\GuidePartItem.java:29: error: cannot find symbol
-            graphics.renderItem(stack, x, y);
+  symbol:   method text(String,int,int,int)
+  location: variable currentFont of type IFontRenderer
+E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\guide\font\GuideFont.java:44: error: cannot find symbol
+        return MinecraftFont.INSTANCE.text(text, x, y, colour, shadow, centered, scale);
+                                     ^
+  symbol:   method text(String,int,int,int,boolean,boolean,float)
+  location: variable INSTANCE of type MinecraftFont
+E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\guide\parts\GuidePartCodeBlock.java:59: error: cannot find symbol
+                        font.text(ns, x + 4 + addX, _y, 0);
+                            ^
+  symbol:   method text(String,int,int,int)
+  location: variable font of type IFontRenderer
+E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\guide\parts\GuidePartCodeBlock.java:64: error: cannot find symbol
+                font.text(line, _x, _y, 0);
                     ^
-  symbol:   method renderItem(ItemStack,int,int)
-  location: variable graphics of type GuiGraphicsExtractor
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\guide\parts\GuidePartItem.java:30: error: cannot find symbol
-            graphics.renderItemDecorations(Minecraft.getInstance().font, stack, x, y);
-                    ^
-  symbol:   method renderItemDecorations(Font,ItemStack,int,int)
-  location: variable graphics of type GuiGraphicsExtractor
+  symbol:   method text(String,int,int,int)
+  location: variable font of type IFontRenderer
 E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\guide\parts\recipe\GuideCraftingFactory.java:75: error: incompatible types: ItemStackTemplate cannot be converted to ItemStack
         ItemStack output = recipe.result;
                                  ^
@@ -71,26 +66,17 @@ E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\guide\pa
 E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\guide\parts\recipe\GuideSmeltingRecipes.java:74: error: incompatible types: ItemStackTemplate cannot be converted to ItemStack
                 ItemStack output = smelt.result;
                                         ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\render\laser\LaserRenderer_BC8.java:96: error: cannot find symbol
-        if (level == null) return Lightmap.FULL_BRIGHT;
-                                          ^
-  symbol:   variable FULL_BRIGHT
-  location: class Lightmap
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\render\laser\LaserRenderer_BC8.java:102: error: cannot find symbol
-        return Lightmap.pack(blockLight, skyLight);
-                       ^
-  symbol:   method pack(int,int)
-  location: class Lightmap
 E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\render\tile\RenderEngine_BC8.java:77: error: cannot find symbol
-        int light = LevelRenderer.getLightColor(level, pos);
-                                 ^
-  symbol:   method getLightColor(Level,BlockPos)
-  location: class LevelRenderer
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\render\tile\RenderEngine_BC8.java:87: error: cannot find symbol
-            buffer.putBulkData(poseStack.last(), baked, 1.0f, 1.0f, 1.0f, 1.0f, light, OverlayTexture.NO_OVERLAY);
+        int light = LightCoordsUtil.lightCoordsWithEmission(level, pos);
+                    ^
+  symbol:   variable LightCoordsUtil
+  location: class RenderEngine_BC8
+E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\render\tile\RenderEngine_BC8.java:87: error: method putBakedQuad in interface VertexConsumer cannot be applied to given types;
+            buffer.putBakedQuad(poseStack.last(), baked, 1.0f, 1.0f, 1.0f, 1.0f, light, OverlayTexture.NO_OVERLAY);
                   ^
-  symbol:   method putBulkData(Pose,BakedQuad,float,float,float,float,int,int)
-  location: variable buffer of type VertexConsumer
+  required: Pose,BakedQuad,QuadInstance
+  found:    Pose,BakedQuad,float,float,float,float,int,int
+  reason: actual and formal argument lists differ in length
 E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\TileBC_Neptune.java:39: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
         (handler, slot, before, after) -> this.setChanged()
          ^
@@ -251,21 +237,23 @@ E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\Widg
 E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.java:185: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
                         int filled = tank.fill(fluidCoolant, IFluidHandler.FluidAction.EXECUTE);
                                                              ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\ledger\Ledger_Neptune.java:295: error: cannot find symbol
-            graphics.drawString(font, getTitle(), textX, textY, getTitleColour() | 0xFF000000, true);
+E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\ledger\Ledger_Neptune.java:318: error: no suitable method found for setTooltipForNextFrame(Font,List<ClientTooltipComponent>,int,int,ClientTooltipPositioner,<null>)
+            graphics.setTooltipForNextFrame(font2,
                     ^
-  symbol:   method drawString(Font,String,int,int,int,boolean)
-  location: variable graphics of type GuiGraphicsExtractor
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\ledger\Ledger_Neptune.java:304: error: cannot find symbol
-                    graphics.drawString(font, line, textX, textY, entryColour, entry.dropShadow);
-                            ^
-  symbol:   method drawString(Font,FormattedCharSequence,int,int,int,boolean)
-  location: variable graphics of type GuiGraphicsExtractor
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\ledger\Ledger_Neptune.java:318: error: cannot find symbol
-            graphics.renderTooltip(font2,
-                    ^
-  symbol:   method renderTooltip(Font,List<ClientTooltipComponent>,int,int,ClientTooltipPositioner,<null>)
-  location: variable graphics of type GuiGraphicsExtractor
+    method GuiGraphicsExtractor.setTooltipForNextFrame(Font,List<Component>,Optional<TooltipComponent>,ItemStack,int,int) is not applicable
+      (argument mismatch; inference variable E has incompatible bounds
+          equality constraints: Component
+          lower bounds: ClientTooltipComponent)
+    method GuiGraphicsExtractor.setTooltipForNextFrame(Font,List<Component>,Optional<TooltipComponent>,int,int,@org.jspecify.annotations.Nullable Identifier) is not applicable
+      (argument mismatch; inference variable E has incompatible bounds
+          equality constraints: Component
+          lower bounds: ClientTooltipComponent)
+    method GuiGraphicsExtractor.setTooltipForNextFrame(Font,List<FormattedCharSequence>,ClientTooltipPositioner,int,int,boolean) is not applicable
+      (argument mismatch; inference variable E has incompatible bounds
+          equality constraints: FormattedCharSequence
+          lower bounds: ClientTooltipComponent)
+  where E is a type-variable:
+    E extends Object declared in method <E>of(E)
 E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\slot\SlotBase.java:18: warning: [removal] SlotItemHandler in net.neoforged.neoforge.items has been deprecated and marked for removal
 public class SlotBase extends SlotItemHandler {
                               ^
@@ -437,7 +425,8 @@ Note: Recompile with -Xlint:deprecation for details.
 Note: Some input files additionally use or override a deprecated API that is marked for removal.
 Note: Some input files use unchecked or unsafe operations.
 Note: Recompile with -Xlint:unchecked for details.
-25 errors
+Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+20 errors
 100 warnings
 
 > Task :buildcraft-lib:compileJava FAILED
@@ -449,12 +438,12 @@ FAILURE: Build failed with an exception.
 * What went wrong:
 Execution failed for task ':buildcraft-lib:compileJava'.
 > Compilation failed; see the compiler output below.
-  E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\render\tile\RenderEngine_BC8.java:19: error: cannot find symbol
-  import net.minecraft.client.renderer.state.CameraRenderState;
-                                            ^
-    symbol:   class CameraRenderState
-    location: package net.minecraft.client.renderer.state
-  25 errors
+  E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\item\ItemGuideNote.java:29: error: cannot find symbol
+              player.displayClientMessage(
+                    ^
+    symbol:   method displayClientMessage(MutableComponent,boolean)
+    location: variable player of type Player
+  20 errors
   100 warnings
 
 * Try:

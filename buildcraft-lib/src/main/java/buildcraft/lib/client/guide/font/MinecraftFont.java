@@ -65,7 +65,7 @@ public enum MinecraftFont implements IFontRenderer {
         // Note: in NeoForge 1.21.11, GuiGraphicsExtractor.pose() returns Matrix3x2fStack
         // which does not have pushPose/popPose. For scaled text we skip the transform
         // and just draw at the given position for now.
-        currentGraphics.drawString(font, text, drawX, y, colour, shadow);
+        currentGraphics.text(font, text, drawX, y, colour, shadow);
 
         return width;
     }

@@ -53,7 +53,7 @@ public class GuiElectronicLibrary extends AbstractContainerScreen<ContainerElect
             int colour = isSelected ? 0xFF_FF_FA_A0 : 0xFF_E0_E0_E0;
             Snapshot.Header header = key.header;
             String text = header == null ? key.toString() : header.name;
-            GuiGraphicsExtractor.drawString(font, text, listX, listY, colour, false);
+            GuiGraphicsExtractor.text(font, text, listX, listY, colour, false);
             listY += 8;
         }
 

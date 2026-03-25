@@ -66,10 +66,10 @@ public class GuiTank extends GuiBC8<ContainerTank> {
         String titleStr = title.getString();
         int titleWidth = font.width(titleStr);
         int titleX = (imageWidth - titleWidth) / 2;
-        graphics.drawString(font, titleStr, titleX, 6, 0xFF404040, false);
+        graphics.text(font, titleStr, titleX, 6, 0xFF404040, false);
 
         // Draw "Inventory" label above the player inventory
-        graphics.drawString(font, playerInventoryTitle, 8, imageHeight - 96 + 2, 0xFF404040, false);
+        graphics.text(font, playerInventoryTitle, 8, imageHeight - 96 + 2, 0xFF404040, false);
     }
 
     @Override
@@ -104,7 +104,7 @@ public class GuiTank extends GuiBC8<ContainerTank> {
                     .map(c -> ClientTooltipComponent.create(c.getVisualOrderText()))
                     .collect(Collectors.toList());
 
-            graphics.renderTooltip(font, tooltipLines, mouseX, mouseY,
+            graphics.setTooltipForNextFrame(font, tooltipLines, mouseX, mouseY,
                     DefaultTooltipPositioner.INSTANCE, null);
         }
     }

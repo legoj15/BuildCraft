@@ -18,7 +18,6 @@ import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
-
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -28,7 +27,6 @@ import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.geometry.BakedQuad;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -138,9 +136,8 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
 
         poseStack.pushPose();
 
-        // --- Render pipe body geometry (center cube + connector arms) ---
-        // PipeBlockStateModel has no geometry — all pipe body rendering goes through the BER.
-        renderPipeBody(pipe, poseStack, collector, light);
+        // Static pipe body geometry is rendered by the chunk mesh via PipeBlockStateModel
+        // (DynamicBlockStateModel). The BER only handles dynamic content.
 
         // --- Render pre-resolved item models ---
         // Following vanilla CampfireRenderer: item models were resolved in
@@ -155,41 +152,6 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         ItemRenderUtil.endItemBatch();
 
         poseStack.popPose();
-    }
-
-    /** Render the static pipe body geometry using cached BakedQuads from PipeModelCacheAll. */
-    private static void renderPipeBody(TilePipeHolder tile, PoseStack poseStack,
-                                        SubmitNodeCollector collector, int light) {
-        Pipe pipe = tile.getPipe();
-        if (pipe == null) return;
-
-        // Use a local BufferSource so we can flush independently of other renderers
-        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-        PoseStack.Pose pose = poseStack.last();
-
-        // Cutout pass — pipe body geometry with pipe-specific textures
-        List<BakedQuad> cutoutQuads = PipeModelCacheAll.getCutoutModel(tile);
-        if (!cutoutQuads.isEmpty()) {
-            VertexConsumer cutoutBuffer = bufferSource.getBuffer(Sheets.cutoutBlockSheet());
-            MutableQuad mq = new MutableQuad();
-            for (BakedQuad bq : cutoutQuads) {
-                mq.fromBakedBlock(bq);
-                mq.lighti(light);
-                mq.render(pose, cutoutBuffer);
-            }
-        }
-
-        // Translucent pass — colour overlay for painted pipes
-        List<BakedQuad> translucentQuads = PipeModelCacheAll.getTranslucentModel(tile);
-        if (!translucentQuads.isEmpty()) {
-            VertexConsumer translucentBuffer = bufferSource.getBuffer(Sheets.translucentBlockItemSheet());
-            MutableQuad mq = new MutableQuad();
-            for (BakedQuad bq : translucentQuads) {
-                mq.fromBakedBlock(bq);
-                mq.lighti(light);
-                mq.render(pose, translucentBuffer);
-            }
-        }
     }
 
 

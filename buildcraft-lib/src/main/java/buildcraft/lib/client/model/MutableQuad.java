@@ -126,7 +126,7 @@ public class MutableQuad {
     /** Converts this MutableQuad into a MC 26.1 BakedQuad. */
     public BakedQuad toBakedBlock() {
         BakedQuad.MaterialInfo matInfo = new BakedQuad.MaterialInfo(
-            sprite, null, null, tintIndex, shade, lightEmission
+            sprite, net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT, null, tintIndex, shade, lightEmission
         );
         return new BakedQuad(
             vertex_0.positionvf(), vertex_1.positionvf(),

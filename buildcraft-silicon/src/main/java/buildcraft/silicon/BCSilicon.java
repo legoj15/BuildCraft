@@ -7,7 +7,9 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +56,10 @@ public class BCSilicon {
             net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(buildcraft.silicon.client.RenderLaser.class);
         }
 
+        // MC 26.1: Register recipes on ServerAboutToStartEvent instead of commonSetup,
+        // because ItemStack/FluidStack constructors now require bound registry components.
+        NeoForge.EVENT_BUS.addListener(this::onServerAboutToStart);
+
         LOGGER.info("BuildCraft Silicon initialized");
     }
 
@@ -84,13 +90,20 @@ public class BCSilicon {
             FacadeAPI.registry = FacadeStateManager.INSTANCE;
 
             // Register assembly, integration, and other recipes
-            BCSiliconRecipes.init();
+            // MC 26.1: Moved to ServerAboutToStartEvent — see onServerAboutToStart()
 
             // Scan all registered blocks and build the facade state registry
             FacadeStateManager.init();
             LOGGER.info("Facade state manager initialized with {} valid states",
                 FacadeStateManager.validFacadeStates.size());
         });
+    }
+
+    private void onServerAboutToStart(ServerAboutToStartEvent event) {
+        // MC 26.1: Recipe registration moved here from commonSetup because
+        // ItemStack/FluidStack constructors now access Holder.components(),
+        // which is only bound after registries finish freezing.
+        BCSiliconRecipes.init();
     }
 
     private void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {

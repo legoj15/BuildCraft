@@ -8,7 +8,9 @@ import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,6 +50,10 @@ public class BCEnergy {
 
         // Setup event for things that need registries to be frozen
         modEventBus.addListener(this::commonSetup);
+
+        // MC 26.1: Register recipes on ServerAboutToStartEvent instead of commonSetup,
+        // because ItemStack/FluidStack constructors now require bound registry components.
+        NeoForge.EVENT_BUS.addListener(this::onServerAboutToStart);
 
         LOGGER.info("BuildCraft Energy initialized");
     }
@@ -139,20 +145,24 @@ public class BCEnergy {
 
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
-            // Register fuel and coolant definitions
-            BCEnergyRecipes.init();
+            // MC 26.1: Recipe registration moved to ServerAboutToStartEvent
+            // — see onServerAboutToStart()
 
             // Wire the oil spring enum to our fluid and tile entity
             EnumSpring.OIL.liquidBlock = BCEnergyFluids.OIL_COOL.block().get().defaultBlockState();
             EnumSpring.OIL.tileConstructor = () -> {
-                // This is used by BlockSpring to create the tile entity
-                // We return null here — the block entity is created via BlockEntityType
-                // The spring block should use the registered BlockEntityType instead
                 return null;
             };
 
             // Initialize world gen
             BCEnergyWorldGen.init();
         });
+    }
+
+    private void onServerAboutToStart(ServerAboutToStartEvent event) {
+        // MC 26.1: Recipe/fuel/coolant registration moved here from commonSetup
+        // because ItemStack/FluidStack constructors now access Holder.components(),
+        // which is only bound after registries finish freezing.
+        BCEnergyRecipes.init();
     }
 }

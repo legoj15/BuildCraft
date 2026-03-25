@@ -36,7 +36,7 @@ public class GuiChute extends GuiBC8<ContainerChute> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         // No labels — matches 1.12.2 which only has the GUI texture
     }
 }

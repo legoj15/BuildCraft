@@ -12,8 +12,7 @@ import java.util.stream.Collectors;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
-import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -83,7 +82,7 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         String titleStr = title.getString();
         int titleWidth = font.width(titleStr);
         int titleX = (imageWidth - titleWidth) / 2;
@@ -92,9 +91,9 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     }
 
     @Override
-    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
-        super.render(graphics, mouseX, mouseY, partialTicks);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
         renderTankTooltip(graphics, mouseX, mouseY, menu.tile != null ? menu.tile.getTankIn() : null,
                 TANK_IN_X, TANK_IN_Y, TANK_IN_W, TANK_IN_H);
         renderTankTooltip(graphics, mouseX, mouseY, menu.tile != null ? menu.tile.getTankGasOut() : null,
@@ -120,12 +119,8 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
             lines.add(Component.literal(amount + " / " + capacity + " mB")
                     .withStyle(ChatFormatting.GRAY));
 
-            List<ClientTooltipComponent> tooltipLines = lines.stream()
-                    .map(c -> ClientTooltipComponent.create(c.getVisualOrderText()))
-                    .collect(Collectors.toList());
-
-            graphics.setTooltipForNextFrame(font, tooltipLines, mouseX, mouseY,
-                    DefaultTooltipPositioner.INSTANCE, null);
+            // MC 26.1: Tooltip APIs changed. Stubbing tooltip for now.
+            // TODO: Implement proper tank tooltip with new MC 26.1 API.
         }
     }
 }

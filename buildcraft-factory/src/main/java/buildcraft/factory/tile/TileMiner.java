@@ -76,8 +76,8 @@ public abstract class TileMiner extends TileBC_Neptune {
     }
 
     public void onLoad() {
-        if (level != null && level.random != null) {
-            offset = level.random.nextInt(10);
+        if (level != null && level.getRandom() != null) {
+            offset = level.getRandom().nextInt(10);
         }
         if (level != null && level.isClientSide()) {
             buildcraft.factory.client.render.TubeRenderer.addMiner(this);

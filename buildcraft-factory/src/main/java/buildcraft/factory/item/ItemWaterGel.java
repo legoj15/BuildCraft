@@ -53,7 +53,7 @@ public class ItemWaterGel extends Item {
         // Same as ItemSnowball — play throw sound
         level.playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.SNOWBALL_THROW, SoundSource.NEUTRAL,
-                0.5F, 0.4F / (level.random.nextFloat() * 0.4F + 0.8F));
+                0.5F, 0.4F / (level.getRandom().nextFloat() * 0.4F + 0.8F));
 
         if (!level.isClientSide()) {
             BlockState gelState = BCFactoryBlocks.WATER_GEL.get().defaultBlockState()

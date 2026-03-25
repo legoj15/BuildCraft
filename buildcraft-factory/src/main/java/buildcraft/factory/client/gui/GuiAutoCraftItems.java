@@ -161,23 +161,22 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     }
 
     @Override
-    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         if (this.recipeBookComponent != null && this.recipeBookComponent.isVisible() && this.widthTooNarrow) {
-            this.renderBg(graphics, partialTick, mouseX, mouseY);
-            this.recipeBookComponent.render(graphics, mouseX, mouseY, partialTick);
+            this.extractContents(graphics, mouseX, mouseY, partialTick);
+            // MC 26.1: RecipeBookComponent rendering APIs changed significantly
+            // TODO: Implement proper recipe book rendering with new MC 26.1 API
         } else {
-            super.render(graphics, mouseX, mouseY, partialTick);
-            if (this.recipeBookComponent != null) {
-                this.recipeBookComponent.render(graphics, mouseX, mouseY, partialTick);
-            }
+            super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+            // MC 26.1: RecipeBookComponent rendering APIs changed significantly
+            // TODO: Implement proper recipe book rendering with new MC 26.1 API
         }
-        if (this.recipeBookComponent != null) {
-            this.recipeBookComponent.setTooltipForNextFrame(graphics, mouseX, mouseY, null);
-        }
+        // MC 26.1: Tooltip APIs changed significantly
+        // TODO: Implement proper recipe book tooltip rendering with new MC 26.1 API
     }
 
     @Override
-    protected void renderBg(GuiGraphicsExtractor graphics, float partialTicks, int mouseX, int mouseY) {
+    public void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
         mainGui.drawBackgroundLayer(partialTicks, mouseX, mouseY, () -> {
             drawBackgroundTexture(graphics);
@@ -186,7 +185,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         // No labels — matches 1.12.2 which only has the GUI texture
     }
 
@@ -207,13 +206,9 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
             : outside;
     }
 
-    @Override
-    protected void slotClicked(Slot slot, int slotId, int mouseButton, ClickAction type) {
-        super.slotClicked(slot, slotId, mouseButton, type);
-        if (this.recipeBookComponent != null) {
-            this.recipeBookComponent.slotClicked(slot);
-        }
-    }
+    // MC 26.1: slotClicked signature changed (ClickAction→ContainerInput)
+    // Recipe book slot tracking is non-critical — stubbed for now.
+    // TODO: Implement proper recipe book integration with new MC 26.1 API.
 
     public void recipesUpdated() {
         if (this.recipeBookComponent != null) {
@@ -232,10 +227,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
         return super.isHovering(x, y, width, height, mouseX, mouseY);
     }
 
-    public void renderGhostRecipe(GuiGraphicsExtractor graphics, boolean p_283495_) {
-        if (this.recipeBookComponent != null) {
-            this.recipeBookComponent.renderGhostRecipe(graphics, p_283495_);
-        }
-    }
+    // MC 26.1: renderGhostRecipe removed from RecipeBookComponent API.
+    // TODO: Implement proper ghost recipe rendering with new MC 26.1 API.
 }
 

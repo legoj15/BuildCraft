@@ -15,126 +15,10 @@ Daemon will be stopped at the end of the build
 > Task :buildcraft-core:compileJava UP-TO-DATE
 > Task :buildcraft-builders:compileJava UP-TO-DATE
 > Task :buildcraft-energy:createMinecraftArtifacts UP-TO-DATE
+> Task :buildcraft-energy:compileJava UP-TO-DATE
+> Task :buildcraft-factory:createMinecraftArtifacts UP-TO-DATE
 
-> Task :buildcraft-energy:compileJava
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\BCEnergy.java:67: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-                ) {
-                  ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:53: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    public final FluidTank tankFuel = new FluidTank(MAX_FLUID) {
-                 ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:53: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    public final FluidTank tankFuel = new FluidTank(MAX_FLUID) {
-                                          ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:59: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    public final FluidTank tankCoolant = new FluidTank(MAX_FLUID) {
-                 ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:59: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    public final FluidTank tankCoolant = new FluidTank(MAX_FLUID) {
-                                             ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:65: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    public final FluidTank tankResidue = new FluidTank(MAX_FLUID) {
-                 ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:65: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    public final FluidTank tankResidue = new FluidTank(MAX_FLUID) {
-                                             ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:129: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                            tankFuel.drain(1, IFluidHandler.FluidAction.EXECUTE);
-                                              ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:139: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                                    int filled = tankResidue.fill(toFill, IFluidHandler.FluidAction.EXECUTE);
-                                                                          ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:163: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-            tankFuel.drain(MAX_FLUID, IFluidHandler.FluidAction.EXECUTE); // empty the tank
-                                      ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:192: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                        tankCoolant.drain(coolantAmount, IFluidHandler.FluidAction.EXECUTE);
-                                                         ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:307: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-    public final IFluidHandler combinedFluidHandler = new IFluidHandler() {
-                 ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:307: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-    public final IFluidHandler combinedFluidHandler = new IFluidHandler() {
-                                                          ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:353: warning: [removal] drain(int,FluidAction) in IFluidHandler has been deprecated and marked for removal
-        public FluidStack drain(int maxDrain, FluidAction action) {
-                          ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:345: warning: [removal] drain(FluidStack,FluidAction) in IFluidHandler has been deprecated and marked for removal
-        public FluidStack drain(FluidStack resource, FluidAction action) {
-                          ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:334: warning: [removal] fill(FluidStack,FluidAction) in IFluidHandler has been deprecated and marked for removal
-        public int fill(FluidStack resource, FluidAction action) {
-                   ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:325: warning: [removal] isFluidValid(int,FluidStack) in IFluidHandler has been deprecated and marked for removal
-        public boolean isFluidValid(int tank, FluidStack stack) {
-                       ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:322: warning: [removal] getTankCapacity(int) in IFluidHandler has been deprecated and marked for removal
-        public int getTankCapacity(int tank) { return MAX_FLUID; }
-                   ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:312: warning: [removal] getFluidInTank(int) in IFluidHandler has been deprecated and marked for removal
-        public FluidStack getFluidInTank(int tank) {
-                          ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:309: warning: [removal] getTanks() in IFluidHandler has been deprecated and marked for removal
-        public int getTanks() { return 3; }
-                   ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\tile\TileEngineIron_BC8.java:402: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    private void loadTank(ValueInput input, String fluidKey, String amountKey, FluidTank tank) {
-                                                                               ^
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\BCEnergyBlocks.java:16: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockEngineStone_BC8> ENGINE_STONE = BLOCKS.registerBlock(
-                                                                                 ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\BCEnergyBlocks.java:20: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockEngineIron_BC8> ENGINE_IRON = BLOCKS.registerBlock(
-                                                                               ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\BCEnergyFluids.java:185: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-        blockHolder[0] = BLOCKS.registerBlock(regName,
-                               ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\BCEnergyFluids.java:197: warning: [removal] <I>registerItem(String,Function<Properties,? extends I>,Properties) in Items has been deprecated and marked for removal
-        bucketHolder[0] = ITEMS.registerItem(regName + "_bucket",
-                               ^
-  where I is a type-variable:
-    I extends Item declared in method <I>registerItem(String,Function<Properties,? extends I>,Properties)
-Note: Some input files use or override a deprecated API.
-Note: Recompile with -Xlint:deprecation for details.
-Note: E:\GitHub\BuildCraft\buildcraft-energy\src\main\java\buildcraft\energy\BCEnergyFluids.java uses unchecked or unsafe operations.
-Note: Recompile with -Xlint:unchecked for details.
-25 warnings
-
-> Task :buildcraft-factory:createMinecraftArtifacts
-Loaded 141 artifacts from E:\GitHub\BuildCraft\buildcraft-factory\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
-[1m*** Started working on [4mdownloadManifest[0m[0m
-  DL    https://launchermeta.mojang.com/mc/game/version_manifest_v2.json
- [1m[92mDONE [0m Completed [4mdownloadManifest[0m in 0.49s
-[1m*** Started working on [4mdownloadJson[0m[0m
- [1m[92mDONE [0m Completed [4mdownloadJson[0m in 0.00s
-[1m*** Started working on [4mdownloadClient[0m[0m
-[1m*** Started working on [4mdownloadServer[0m[0m
- [1m[92mDONE [0m Completed [4mdownloadClient[0m in 0.02s
- [1m[92mDONE [0m Completed [4mdownloadServer[0m in 0.02s
-[1m*** Started working on [4mpreProcessJar[0m[0m
- [1m[92mREUSE[0m Used cache of [4mpreProcessJar[0m in 0.00s
-[1m*** Started working on [4mdecompile[0m[0m
- [1m[92mREUSE[0m Used cache of [4mdecompile[0m in 0.00s
-[1m*** Started working on [4mpatch[0m[0m
- [1m[92mREUSE[0m Used cache of [4mpatch[0m in 0.00s
-[1m*** Started working on [4mapplyNeoforgePatches[0m[0m
- [1m[92mREUSE[0m Used cache of [4mapplyNeoforgePatches[0m in 0.00s
-[1m*** Started working on [4mtransformSources[0m[0m
- [1m[92mREUSE[0m Used cache of [4mtransformSources[0m in 0.00s
-[1m*** Started working on [4mrecompile[0m[0m
- [1m[92mREUSE[0m Used cache of [4mrecompile[0m in 0.00s
-[1m*** Started working on [4mmergeWithSources[0m[0m
- [1m[92mREUSE[0m Used cache of [4mmergeWithSources[0m in 0.00s
-Total runtime: 1.26s
-
-
-> Task :buildcraft-factory:compileJava FAILED
+> Task :buildcraft-factory:compileJava
 warning: unknown enum constant EnvType.CLIENT
   reason: class file for net.fabricmc.api.EnvType not found
 warning: unknown enum constant EnvType.CLIENT
@@ -169,12 +53,6 @@ E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\Ti
 E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileAutoWorkbenchBase.java:121: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
         invMaterials.setCallback((handler, slot, before, after) -> {
                                   ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileMiner.java:79: error: random has protected access in Level
-        if (level != null && level.random != null) {
-                                  ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileMiner.java:80: error: random has protected access in Level
-            offset = level.random.nextInt(10);
-                          ^
 E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TilePump.java:88: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
     private final FluidTank tank = new FluidTank(16 * 1000); // 16 buckets
                   ^
@@ -354,158 +232,14 @@ E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFacto
                                                                        ^
   where B is a type-variable:
     B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\block\BlockWaterGel.java:159: error: random has protected access in Level
-            if (changeable.size() == 3 || level.random.nextDouble() < 0.5) {
-                                               ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\block\BlockWaterGel.java:231: error: random has protected access in Level
-        RandomSource rand = builder.getLevel().random;
-                                              ^
 E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactoryItems.java:38: warning: [removal] <I>registerItem(String,Function<Properties,? extends I>,Properties) in Items has been deprecated and marked for removal
     public static final DeferredItem<ItemWaterGel> WATER_GEL_SPAWN = ITEMS.registerItem(
                                                                           ^
   where I is a type-variable:
     I extends Item declared in method <I>registerItem(String,Function<Properties,? extends I>,Properties)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\item\ItemWaterGel.java:56: error: random has protected access in Level
-                0.5F, 0.4F / (level.random.nextFloat() * 0.4F + 0.8F));
-                                   ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiAutoCraftItems.java:163: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiAutoCraftItems.java:167: error: cannot find symbol
-            this.recipeBookComponent.render(graphics, mouseX, mouseY, partialTick);
-                                    ^
-  symbol:   method render(GuiGraphicsExtractor,int,int,float)
-  location: variable recipeBookComponent of type AWRecipeBookComponent
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiAutoCraftItems.java:169: error: cannot find symbol
-            super.render(graphics, mouseX, mouseY, partialTick);
-                 ^
-  symbol: method render(GuiGraphicsExtractor,int,int,float)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiAutoCraftItems.java:171: error: cannot find symbol
-                this.recipeBookComponent.render(graphics, mouseX, mouseY, partialTick);
-                                        ^
-  symbol:   method render(GuiGraphicsExtractor,int,int,float)
-  location: variable recipeBookComponent of type AWRecipeBookComponent
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiAutoCraftItems.java:175: error: cannot find symbol
-            this.recipeBookComponent.setTooltipForNextFrame(graphics, mouseX, mouseY, null);
-                                    ^
-  symbol:   method setTooltipForNextFrame(GuiGraphicsExtractor,int,int,<null>)
-  location: variable recipeBookComponent of type AWRecipeBookComponent
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiAutoCraftItems.java:179: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiAutoCraftItems.java:188: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiAutoCraftItems.java:210: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiAutoCraftItems.java:212: error: incompatible types: ClickAction cannot be converted to ContainerInput
-        super.slotClicked(slot, slotId, mouseButton, type);
-                                                     ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiAutoCraftItems.java:237: error: cannot find symbol
-            this.recipeBookComponent.renderGhostRecipe(graphics, p_283495_);
-                                    ^
-  symbol:   method renderGhostRecipe(GuiGraphicsExtractor,boolean)
-  location: variable recipeBookComponent of type AWRecipeBookComponent
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiChute.java:38: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiDistiller.java:85: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiDistiller.java:94: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiDistiller.java:97: error: cannot find symbol
-        super.render(graphics, mouseX, mouseY, partialTicks);
-             ^
-  symbol: method render(GuiGraphicsExtractor,int,int,float)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiDistiller.java:107: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
+E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiDistiller.java:106: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
             FluidTank tank, int relX, int relY, int w, int h) {
             ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiDistiller.java:127: error: no suitable method found for setTooltipForNextFrame(Font,List<ClientTooltipComponent>,int,int,ClientTooltipPositioner,<null>)
-            graphics.setTooltipForNextFrame(font, tooltipLines, mouseX, mouseY,
-                    ^
-    method GuiGraphicsExtractor.setTooltipForNextFrame(Font,List<Component>,Optional<TooltipComponent>,ItemStack,int,int) is not applicable
-      (argument mismatch; List<ClientTooltipComponent> cannot be converted to List<Component>)
-    method GuiGraphicsExtractor.setTooltipForNextFrame(Font,List<Component>,Optional<TooltipComponent>,int,int,@org.jspecify.annotations.Nullable Identifier) is not applicable
-      (argument mismatch; List<ClientTooltipComponent> cannot be converted to List<Component>)
-    method GuiGraphicsExtractor.setTooltipForNextFrame(Font,List<FormattedCharSequence>,ClientTooltipPositioner,int,int,boolean) is not applicable
-      (argument mismatch; List<ClientTooltipComponent> cannot be converted to List<FormattedCharSequence>)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiTank.java:63: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiTank.java:75: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiTank.java:78: error: cannot find symbol
-        super.render(graphics, mouseX, mouseY, partialTicks);
-             ^
-  symbol: method render(GuiGraphicsExtractor,int,int,float)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiTank.java:107: error: no suitable method found for setTooltipForNextFrame(Font,List<ClientTooltipComponent>,int,int,ClientTooltipPositioner,<null>)
-            graphics.setTooltipForNextFrame(font, tooltipLines, mouseX, mouseY,
-                    ^
-    method GuiGraphicsExtractor.setTooltipForNextFrame(Font,List<Component>,Optional<TooltipComponent>,ItemStack,int,int) is not applicable
-      (argument mismatch; List<ClientTooltipComponent> cannot be converted to List<Component>)
-    method GuiGraphicsExtractor.setTooltipForNextFrame(Font,List<Component>,Optional<TooltipComponent>,int,int,@org.jspecify.annotations.Nullable Identifier) is not applicable
-      (argument mismatch; List<ClientTooltipComponent> cannot be converted to List<Component>)
-    method GuiGraphicsExtractor.setTooltipForNextFrame(Font,List<FormattedCharSequence>,ClientTooltipPositioner,int,int,boolean) is not applicable
-      (argument mismatch; List<ClientTooltipComponent> cannot be converted to List<FormattedCharSequence>)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\render\RenderDistiller.java:130: error: cannot find symbol
-        int light = LightCoordsUtil.lightCoordsWithEmission(level, pos);
-                    ^
-  symbol:   variable LightCoordsUtil
-  location: class RenderDistiller
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\render\RenderDistiller.java:163: error: cannot find symbol
-        Identifier stillTexture = fluidExt.getStillTexture(fluid);
-                                          ^
-  symbol:   method getStillTexture(FluidStack)
-  location: variable fluidExt of type IClientFluidTypeExtensions
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\render\RenderDistiller.java:170: error: cannot find symbol
-        int color = fluidExt.getTintColor(fluid);
-                            ^
-  symbol:   method getTintColor(FluidStack)
-  location: variable fluidExt of type IClientFluidTypeExtensions
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\render\RenderHeatExchange.java:130: error: cannot find symbol
-        int light = LightCoordsUtil.lightCoordsWithEmission(level, pos);
-                    ^
-  symbol:   variable LightCoordsUtil
-  location: class RenderHeatExchange
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\render\RenderHeatExchange.java:216: error: cannot find symbol
-        Identifier stillTexture = fluidExt.getStillTexture(fluid);
-                                          ^
-  symbol:   method getStillTexture(FluidStack)
-  location: variable fluidExt of type IClientFluidTypeExtensions
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\render\RenderHeatExchange.java:223: error: cannot find symbol
-        int color = fluidExt.getTintColor(fluid);
-                            ^
-  symbol:   method getTintColor(FluidStack)
-  location: variable fluidExt of type IClientFluidTypeExtensions
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\render\RenderHeatExchange.java:290: error: cannot find symbol
-        Identifier stillTexture = fluidExt.getStillTexture(fluid);
-                                          ^
-  symbol:   method getStillTexture(FluidStack)
-  location: variable fluidExt of type IClientFluidTypeExtensions
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\render\RenderHeatExchange.java:297: error: cannot find symbol
-        int color = fluidExt.getTintColor(fluid);
-                            ^
-  symbol:   method getTintColor(FluidStack)
-  location: variable fluidExt of type IClientFluidTypeExtensions
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\render\RenderTank.java:87: error: cannot find symbol
-        Identifier stillTexture = fluidExt.getStillTexture(fluid);
-                                          ^
-  symbol:   method getStillTexture(FluidStack)
-  location: variable fluidExt of type IClientFluidTypeExtensions
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\render\RenderTank.java:94: error: cannot find symbol
-        int color = fluidExt.getTintColor(fluid);
-                            ^
-  symbol:   method getTintColor(FluidStack)
-  location: variable fluidExt of type IClientFluidTypeExtensions
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\render\RenderTank.java:120: error: cannot find symbol
-        int light = LightCoordsUtil.lightCoordsWithEmission(level, pos);
-                    ^
-  symbol:   variable LightCoordsUtil
-  location: class RenderTank
 warning: unknown enum constant EnvType.CLIENT
 warning: unknown enum constant EnvType.CLIENT
 warning: unknown enum constant EnvType.CLIENT
@@ -515,24 +249,94 @@ warning: unknown enum constant EnvType.CLIENT
 warning: unknown enum constant EnvType.CLIENT
 Note: Some input files use or override a deprecated API.
 Note: Recompile with -Xlint:deprecation for details.
-Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
-35 errors
 81 warnings
 
+> Task :buildcraft-robotics:createMinecraftArtifacts
+Loaded 141 artifacts from E:\GitHub\BuildCraft\buildcraft-robotics\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+[1m*** Started working on [4mdownloadManifest[0m[0m
+  DL    https://launchermeta.mojang.com/mc/game/version_manifest_v2.json
+ [1m[92mDONE [0m Completed [4mdownloadManifest[0m in 0.51s
+[1m*** Started working on [4mdownloadJson[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadJson[0m in 0.00s
+[1m*** Started working on [4mdownloadServer[0m[0m
+[1m*** Started working on [4mdownloadClient[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadClient[0m in 0.02s
+ [1m[92mDONE [0m Completed [4mdownloadServer[0m in 0.02s
+[1m*** Started working on [4mpreProcessJar[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpreProcessJar[0m in 0.00s
+[1m*** Started working on [4mdecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mdecompile[0m in 0.00s
+[1m*** Started working on [4mpatch[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpatch[0m in 0.00s
+[1m*** Started working on [4mapplyNeoforgePatches[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mapplyNeoforgePatches[0m in 0.00s
+[1m*** Started working on [4mtransformSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mtransformSources[0m in 0.00s
+[1m*** Started working on [4mrecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mrecompile[0m in 0.00s
+[1m*** Started working on [4mmergeWithSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mmergeWithSources[0m in 0.00s
+Total runtime: 1.30s
+
+
+> Task :buildcraft-robotics:compileJava FAILED
+E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:110: error: x has private access in ChunkPos
+            zoneChunkTag.putInt("chunkX", entry.getKey().x);
+                                                        ^
+E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:111: error: z has private access in ChunkPos
+            zoneChunkTag.putInt("chunkZ", entry.getKey().z);
+                                                        ^
+E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:145: error: x has private access in ChunkPos
+            double dx = (e.getKey().x << 4) + 8 - pos.getX();
+                                   ^
+E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:146: error: z has private access in ChunkPos
+            double dz = (e.getKey().z << 4) + 8 - pos.getZ();
+                                   ^
+E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:177: error: x has private access in ChunkPos
+                int x = (e.getKey().x << 4) + i.getX();
+                                   ^
+E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:178: error: z has private access in ChunkPos
+                int z = (e.getKey().z << 4) + i.getZ();
+                                   ^
+E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:193: error: method containing in record ChunkPos cannot be applied to given types;
+            ChunkPos key = ChunkPos.containing(buf.readInt(), buf.readInt());
+                                   ^
+  required: BlockPos
+  found:    int,int
+  reason: actual and formal argument lists differ in length
+E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:204: error: x has private access in ChunkPos
+            buf.writeInt(e.getKey().x);
+                                   ^
+E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:205: error: z has private access in ChunkPos
+            buf.writeInt(e.getKey().z);
+                                   ^
+E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\BCRoboticsBlocks.java:13: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+    public static final DeferredBlock<BlockZonePlanner> ZONE_PLANNER = BLOCKS.registerBlock(
+                                                                             ^
+  where B is a type-variable:
+    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
+E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\client\gui\GuiZonePlanner.java:38: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+10 errors
+1 warning
 
 [Incubating] Problems report is available at: file:///E:/GitHub/BuildCraft/build/reports/problems/problems-report.html
+
 FAILURE: Build failed with an exception.
 
 * What went wrong:
-Execution failed for task ':buildcraft-factory:compileJava'.
+Execution failed for task ':buildcraft-robotics:compileJava'.
 > Compilation failed; see the compiler output below.
-  warning: unknown enum constant EnvType.CLIENT
-    reason: class file for net.fabricmc.api.EnvType not found
-  35 errors
-  81 warnings
+  E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:110: error: x has private access in ChunkPos
+              zoneChunkTag.putInt("chunkX", entry.getKey().x);
+                                                          ^
+  10 errors
+  1 warning
 
 * Try:
+> Check your code and dependencies to fix the compilation error(s)
 > Run with --scan to get full insights from a Build Scan (powered by Develocity).
 
-BUILD FAILED in 15s
-14 actionable tasks: 4 executed, 10 up-to-date
+BUILD FAILED in 14s
+16 actionable tasks: 4 executed, 12 up-to-date

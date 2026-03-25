@@ -156,7 +156,7 @@ public class BlockWaterGel extends Block {
                 tries++;
             }
             final int time = next.spreading ? 200 : 400;
-            if (changeable.size() == 3 || level.random.nextDouble() < 0.5) {
+            if (changeable.size() == 3 || level.getRandom().nextDouble() < 0.5) {
                 for (BlockPos p : changeable) {
                     level.setBlockAndUpdate(p, nextState);
                     level.scheduleTick(p, this, rand.nextInt(150) + time);
@@ -228,7 +228,7 @@ public class BlockWaterGel extends Block {
     @Override
     protected List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
         GelStage stage = state.getValue(PROP_STAGE);
-        RandomSource rand = builder.getLevel().random;
+        RandomSource rand = builder.getLevel().getRandom();
         int count;
         if (stage.spreading) {
             count = rand.nextInt(2) + 1;

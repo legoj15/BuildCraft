@@ -6,24 +6,19 @@
 
 package buildcraft.transport.client.model;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
 import org.joml.Vector3f;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
-import net.minecraft.client.renderer.block.model.BlockStateModelWrapper;
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.renderer.item.ModelRenderProperties;
-import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.ItemOwner;
@@ -54,58 +49,20 @@ public class PipeItemModel implements ItemModel {
     /** Slight outward offset per-face to avoid Z-fighting (matches QUADS_COLOURED in PipeBaseModelGenStandard). */
     private static final double COLOUR_OFFSET = 0.01;
 
-    // Reflection fields cached at class-load time
-    private static final Field QUADS_FIELD;
-    private static final Field PROPERTIES_FIELD;
-    private static final Field RENDER_TYPE_FIELD;
-    private static final Field EXTENTS_FIELD;
-    static {
-        try {
-            QUADS_FIELD = BlockStateModelWrapper.class.getDeclaredField("quads");
-            QUADS_FIELD.setAccessible(true);
-            PROPERTIES_FIELD = BlockStateModelWrapper.class.getDeclaredField("properties");
-            PROPERTIES_FIELD.setAccessible(true);
-            RENDER_TYPE_FIELD = BlockStateModelWrapper.class.getDeclaredField("renderType");
-            RENDER_TYPE_FIELD.setAccessible(true);
-            EXTENTS_FIELD = BlockStateModelWrapper.class.getDeclaredField("extents");
-            EXTENTS_FIELD.setAccessible(true);
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException("Failed to access BlockStateModelWrapper fields", e);
-        }
-    }
+    // MC 26.1: BlockStateModelWrapper fields completely changed (quads/properties/
+    // renderType/extents → model/tints/transformation). Reflection removed.
+    // Instead, we delegate to the vanilla ItemModel for base pipe rendering
+    // and only add our colour overlay layer on top.
 
-    private final BlockStateModelWrapper vanillaWrapper;
+    private final ItemModel vanillaDelegate;
     private final PipeDefinition definition;
-
-    // Extracted from vanilla model at construction time
-    private final List<BakedQuad> vanillaQuads;
-    private final ModelRenderProperties renderProperties;
-    // MC 26.1: ItemTransforms removed — transforms accessed differently
-    // private final ItemTransforms itemTransforms;
-    private final boolean usesBlockLight;
-    @SuppressWarnings("unchecked")
-    private final Function<ItemStack, RenderType> vanillaRenderType;
-    @SuppressWarnings("unchecked")
-    private final java.util.function.Supplier<org.joml.Vector3fc[]> extents;
 
     /** Pre-baked overlay quads per DyeColor. */
     private final Map<DyeColor, List<BakedQuad>> overlayQuadCache = new EnumMap<>(DyeColor.class);
 
-    @SuppressWarnings("unchecked")
-    public PipeItemModel(BlockStateModelWrapper vanillaWrapper, PipeDefinition definition) {
-        this.vanillaWrapper = vanillaWrapper;
+    public PipeItemModel(ItemModel vanillaDelegate, PipeDefinition definition) {
+        this.vanillaDelegate = vanillaDelegate;
         this.definition = definition;
-        try {
-            this.vanillaQuads = (List<BakedQuad>) QUADS_FIELD.get(vanillaWrapper);
-            this.renderProperties = (ModelRenderProperties) PROPERTIES_FIELD.get(vanillaWrapper);
-            // MC 26.1: ItemTransforms removed — access transforms differently
-            // this.itemTransforms = renderProperties.transforms();
-            this.usesBlockLight = renderProperties.usesBlockLight();
-            this.vanillaRenderType = (Function<ItemStack, RenderType>) RENDER_TYPE_FIELD.get(vanillaWrapper);
-            this.extents = (java.util.function.Supplier<org.joml.Vector3fc[]>) EXTENTS_FIELD.get(vanillaWrapper);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException("Failed to read BlockStateModelWrapper fields", e);
-        }
     }
 
     @Override
@@ -113,35 +70,24 @@ public class PipeItemModel implements ItemModel {
                        ItemDisplayContext displayContext, @Nullable ClientLevel level,
                        @Nullable ItemOwner owner, int seed) {
         DyeColor colour = stack.get(BCTransportItems.PIPE_COLOUR.get());
+
+        // Let the vanilla model render the base pipe geometry
+        vanillaDelegate.update(renderState, stack, modelResolver, displayContext, level, owner, seed);
+
         if (colour == null) {
-            // No paint — use vanilla model as-is (gets its own model identity)
-            // MC 26.1: BlockStateModelWrapper.update() changed signature entirely
-            // Cannot delegate to vanilla wrapper for item rendering.
-            // TODO: Implement proper fallback using new ItemModel API.
+            // No paint — vanilla rendering is sufficient
             return;
         }
 
-        // For painted pipes: use OUR identity (not vanillaWrapper's)
-        // so the GUI cache doesn't confuse painted and unpainted versions
+        // For painted pipes: add our identity so the cache differentiates
         renderState.appendModelIdentityElement(this);
         renderState.appendModelIdentityElement(colour);
 
-        // === Layer 1: Base pipe quads (from vanilla model) ===
-        var baseLayer = renderState.newLayer();
-        baseLayer.prepareQuadList().addAll(vanillaQuads);
-        baseLayer.setExtents(extents);  // Required for ground item rendering (culling bounds)
-        // MC 26.1: setRenderType() and applyToLayer() removed from LayerRenderState
-        // Render type is now determined automatically by the pipeline.
-
-        // === Layer 2: Translucent colour overlay (matching in-world paint rendering) ===
+        // Add colour overlay layer on top of vanilla's base layer
         List<BakedQuad> overlayQuads = overlayQuadCache.computeIfAbsent(colour, this::generateOverlayQuads);
         if (!overlayQuads.isEmpty()) {
             var overlayLayer = renderState.newLayer();
             overlayLayer.prepareQuadList().addAll(overlayQuads);
-
-            // MC 26.1: setRenderType() and applyToLayer() removed from LayerRenderState
-            // overlayLayer.setRenderType(Sheets.translucentBlockItemSheet());
-            // renderProperties.applyToLayer(overlayLayer, displayContext);
         }
     }
 

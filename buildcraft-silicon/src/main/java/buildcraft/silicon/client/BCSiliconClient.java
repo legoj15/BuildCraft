@@ -58,9 +58,11 @@ public class BCSiliconClient {
         // Swap vanilla item model with dynamic facade model
         var itemModels = event.getBakingResult().itemStackModels();
         Identifier facadeId = BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_FACADE.get());
+        // MC 26.1: FacadeItemModel no longer needs the vanilla wrapper
+        // (BlockStateModelWrapper fields completely changed)
         ItemModel vanillaModel = itemModels.get(facadeId);
-        if (vanillaModel instanceof BlockStateModelWrapper wrapper) {
-            itemModels.put(facadeId, new FacadeItemModel(wrapper));
+        if (vanillaModel != null) {
+            itemModels.put(facadeId, new FacadeItemModel());
         }
         FacadeItemModel.onModelBake();
 

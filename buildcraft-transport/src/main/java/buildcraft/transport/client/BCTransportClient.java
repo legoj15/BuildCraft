@@ -94,8 +94,10 @@ public class BCTransportClient {
             if (pipeItem != null) {
                 Identifier itemId = BuiltInRegistries.ITEM.getKey(pipeItem);
                 ItemModel vanillaItemModel = itemModels.get(itemId);
-                if (vanillaItemModel instanceof BlockStateModelWrapper wrapper) {
-                    itemModels.put(itemId, new PipeItemModel(wrapper, def));
+                // MC 26.1: PipeItemModel no longer reflects into BlockStateModelWrapper;
+                // accepts any ItemModel as delegate for base pipe rendering
+                if (vanillaItemModel != null) {
+                    itemModels.put(itemId, new PipeItemModel(vanillaItemModel, def));
                 }
             }
         }

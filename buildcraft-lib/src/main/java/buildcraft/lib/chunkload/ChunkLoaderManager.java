@@ -43,7 +43,7 @@ public class ChunkLoaderManager {
     public static <T extends BlockEntity & IChunkLoadingTile> Set<ChunkPos> getChunksToLoad(T tile) {
         Set<ChunkPos> chunksToLoad = tile.getChunksToLoad();
         Set<ChunkPos> chunkPoses = new HashSet<>(chunksToLoad != null ? chunksToLoad : Collections.emptyList());
-        chunkPoses.add(new ChunkPos(tile.getBlockPos()));
+        chunkPoses.add(ChunkPos.containing(tile.getBlockPos()));
         return chunkPoses;
     }
 

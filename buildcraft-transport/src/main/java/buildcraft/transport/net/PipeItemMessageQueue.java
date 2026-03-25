@@ -59,7 +59,7 @@ public class PipeItemMessageQueue {
         }
 
         // Find all players tracking this chunk
-        ChunkPos chunkPos = new ChunkPos(pos);
+        ChunkPos chunkPos = ChunkPos.containing(pos);
         var chunkMap = server.getChunkSource().chunkMap;
         var players = chunkMap.getPlayers(chunkPos, false);
 

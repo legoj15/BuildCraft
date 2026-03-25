@@ -190,7 +190,7 @@ public class ZonePlan implements IZone {
         chunkMapping.clear();
         int size = buf.readInt();
         for (int i = 0; i < size; i++) {
-            ChunkPos key = new ChunkPos(buf.readInt(), buf.readInt());
+            ChunkPos key = ChunkPos.containing(buf.readInt(), buf.readInt());
             ZoneChunk value = new ZoneChunk();
             value.readFromByteBuf(buf);
             chunkMapping.put(key, value);

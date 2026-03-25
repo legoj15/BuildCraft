@@ -28,18 +28,6 @@ E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\item\ItemGuideN
                   ^
   symbol:   method displayClientMessage(MutableComponent,boolean)
   location: variable player of type Player
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\chunkload\ChunkLoaderManager.java:46: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-        chunkPoses.add(new ChunkPos(tile.getBlockPos()));
-                       ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\chunkload\IChunkLoadingTile.java:40: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-            chunkPoses.add(new ChunkPos(pos.relative(face)));
-                           ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
 E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\BCDebugOverlay.java:75: error: cannot find symbol
             graphics.drawString(mc.font, "[BC] " + line, 2, y, 0xFFFFFF);
                     ^
@@ -83,38 +71,6 @@ E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\guide\pa
 E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\guide\parts\recipe\GuideSmeltingRecipes.java:74: error: incompatible types: ItemStackTemplate cannot be converted to ItemStack
                 ItemStack output = smelt.result;
                                         ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\model\MutableQuad.java:130: error: no suitable constructor found for BakedQuad(Vector3f,Vector3f,Vector3f,Vector3f,long,long,long,long,int,Direction,TextureAtlasSprite,boolean,int,BakedNormals,BakedColors,boolean)
-        return new BakedQuad(
-               ^
-    constructor BakedQuad.BakedQuad(Vector3fc,Vector3fc,Vector3fc,Vector3fc,long,long,long,long,Direction,MaterialInfo) is not applicable
-      (actual and formal argument lists differ in length)
-    constructor BakedQuad.BakedQuad(Vector3fc,Vector3fc,Vector3fc,Vector3fc,long,long,long,long,Direction,MaterialInfo,BakedNormals,BakedColors) is not applicable
-      (actual and formal argument lists differ in length)
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\model\MutableQuad.java:181: error: cannot find symbol
-        tintIndex = quad.tintIndex();
-                        ^
-  symbol:   method tintIndex()
-  location: variable quad of type BakedQuad
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\model\MutableQuad.java:183: error: cannot find symbol
-        sprite = quad.sprite();
-                     ^
-  symbol:   method sprite()
-  location: variable quad of type BakedQuad
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\model\MutableQuad.java:184: error: cannot find symbol
-        shade = quad.shade();
-                    ^
-  symbol:   method shade()
-  location: variable quad of type BakedQuad
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\model\MutableQuad.java:185: error: cannot find symbol
-        lightEmission = quad.lightEmission();
-                            ^
-  symbol:   method lightEmission()
-  location: variable quad of type BakedQuad
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\model\MutableQuad.java:186: error: cannot find symbol
-        hasAmbientOcclusion = quad.hasAmbientOcclusion();
-                                  ^
-  symbol:   method hasAmbientOcclusion()
-  location: variable quad of type BakedQuad
 E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\render\laser\LaserRenderer_BC8.java:96: error: cannot find symbol
         if (level == null) return Lightmap.FULL_BRIGHT;
                                           ^
@@ -135,35 +91,6 @@ E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\client\render\t
                   ^
   symbol:   method putBulkData(Pose,BakedQuad,float,float,float,float,int,int)
   location: variable buffer of type VertexConsumer
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\GuiBC8.java:33: error: cannot assign a value to final variable imageWidth
-        this.imageWidth = xSize;
-            ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\GuiBC8.java:34: error: cannot assign a value to final variable imageHeight
-        this.imageHeight = ySize;
-            ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\GuiBC8.java:85: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\GuiBC8.java:94: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\GuiBC8.java:97: error: cannot find symbol
-        super.render(graphics, mouseX, mouseY, partialTicks);
-             ^
-  symbol: method render(GuiGraphicsExtractor,int,int,float)
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\GuiBC8.java:98: error: cannot find symbol
-        this.renderTooltip(graphics, mouseX, mouseY);
-            ^
-  symbol: method renderTooltip(GuiGraphicsExtractor,int,int)
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\GuiBC8.java:112: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\ContainerBC_Neptune.java:184: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\gui\ContainerBC_Neptune.java:199: error: incompatible types: ClickAction cannot be converted to ContainerInput
-        super.clicked(slotId, dragType, ClickAction, player);
-                                        ^
 E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\TileBC_Neptune.java:39: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
         (handler, slot, before, after) -> this.setChanged()
          ^
@@ -510,14 +437,13 @@ Note: Recompile with -Xlint:deprecation for details.
 Note: Some input files additionally use or override a deprecated API that is marked for removal.
 Note: Some input files use unchecked or unsafe operations.
 Note: Recompile with -Xlint:unchecked for details.
-Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
-42 errors
+25 errors
 100 warnings
 
 > Task :buildcraft-lib:compileJava FAILED
 
-
 [Incubating] Problems report is available at: file:///E:/GitHub/BuildCraft/build/reports/problems/problems-report.html
+
 FAILURE: Build failed with an exception.
 
 * What went wrong:
@@ -528,12 +454,12 @@ Execution failed for task ':buildcraft-lib:compileJava'.
                                             ^
     symbol:   class CameraRenderState
     location: package net.minecraft.client.renderer.state
-  42 errors
+  25 errors
   100 warnings
 
 * Try:
 > Check your code and dependencies to fix the compilation error(s)
 > Run with --scan to get full insights from a Build Scan (powered by Develocity).
 
-BUILD FAILED in 12s
+BUILD FAILED in 13s
 8 actionable tasks: 2 executed, 6 up-to-date

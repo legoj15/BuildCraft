@@ -17,6 +17,9 @@ import buildcraft.lib.gui.pos.IGuiArea;
 /**
  * Base screen class for all BuildCraft GUIs.
  * Extends AbstractContainerScreen and delegates element rendering/input to {@link BuildCraftGui}.
+ *
+ * MC 26.1: render → extractRenderState, renderBg → extractBackground, renderLabels → extractLabels.
+ * imageWidth/imageHeight are now final — pass through super constructor.
  */
 public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractContainerScreen<C> {
 
@@ -29,9 +32,7 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
     }
 
     protected GuiBC8(C container, Inventory playerInventory, Component title, int xSize, int ySize) {
-        super(container, playerInventory, title);
-        this.imageWidth = xSize;
-        this.imageHeight = ySize;
+        super(container, playerInventory, title, xSize, ySize);
         IGuiArea rootArea = BuildCraftGui.createWindowedArea(this);
         this.mainGui = new BuildCraftGui(this, rootArea);
     }
@@ -44,8 +45,6 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
         super.init();
 
         // Save old ledger instances before re-creating elements.
-        // In 1.12.2, ledger animation state was preserved across window resizes —
-        // a mid-animation ledger would continue from exactly where it was.
         java.util.Map<String, buildcraft.lib.gui.ledger.Ledger_Neptune> oldLedgers = new java.util.LinkedHashMap<>();
         for (IGuiElement elem : mainGui.shownElements) {
             if (elem instanceof buildcraft.lib.gui.ledger.Ledger_Neptune ledger) {
@@ -53,17 +52,13 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
             }
         }
 
-        // Reset ledger position anchors before re-creating elements.
-        // On window resize, init() is called again and new Ledger_Neptune instances
-        // are created. Without resetting, the position chain accumulates stale offsets
-        // from the destroyed ledger instances, causing displacement or disappearance.
         IGuiArea rootArea = BuildCraftGui.createWindowedArea(this);
         mainGui.lowerLeftLedgerPos = rootArea.offset(0, 5);
         mainGui.lowerRightLedgerPos = rootArea.getPosition(1, -1).offset(0, 5);
         mainGui.shownElements.clear();
         initGuiElements();
 
-        // Restore full animation state from old ledgers to new ones (matched by class name)
+        // Restore full animation state from old ledgers to new ones
         if (!oldLedgers.isEmpty()) {
             for (IGuiElement elem : mainGui.shownElements) {
                 if (elem instanceof buildcraft.lib.gui.ledger.Ledger_Neptune ledger) {
@@ -82,8 +77,10 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
         mainGui.tick();
     }
 
+    /** MC 26.1: extractBackground replaces renderBg. */
     @Override
-    protected void renderBg(GuiGraphicsExtractor graphics, float partialTicks, int mouseX, int mouseY) {
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+        super.extractBackground(graphics, mouseX, mouseY, partialTicks);
         GuiIcon.setGuiGraphics(graphics);
         mainGui.drawBackgroundLayer(partialTicks, mouseX, mouseY, () -> {
             drawBackgroundTexture(graphics);
@@ -91,11 +88,11 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
         mainGui.drawElementBackgrounds();
     }
 
+    /** MC 26.1: extractRenderState replaces render. */
     @Override
-    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
-        super.render(graphics, mouseX, mouseY, partialTicks);
-        this.renderTooltip(graphics, mouseX, mouseY);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
     }
 
     @Override
@@ -109,8 +106,9 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
         return super.mouseClicked(event, doubleClick);
     }
 
+    /** MC 26.1: extractLabels replaces renderLabels. */
     @Override
-    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         // Suppress vanilla's default title/inventory label rendering.
         // BuildCraft GUIs draw labels manually in subclass overrides with custom positioning.
     }

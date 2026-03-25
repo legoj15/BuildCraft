@@ -20,8 +20,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.util.ARGB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.client.model.quad.BakedColors;
-import net.neoforged.neoforge.client.model.quad.BakedNormals;
 
 /** Holds all of the information necessary to make a {@link BakedQuad}. This provides a variety of methods to quickly
  * set or get different elements. This currently holds 4 {@link MutableVertex}. */
@@ -120,13 +118,16 @@ public class MutableQuad {
     //
     // BakedQuad conversion
     //
-    // NeoForge 1.21.11: BakedQuad uses Vector3fc positions,
-    // packed long UVs, BakedNormals, BakedColors
+    // MC 26.1: BakedQuad is a record with MaterialInfo.
+    // Constructor: (Vector3fc×4, long×4, Direction, MaterialInfo)
     //
     // ############################
 
-    /** Converts this MutableQuad into a NeoForge 1.21.11 BakedQuad. */
+    /** Converts this MutableQuad into a MC 26.1 BakedQuad. */
     public BakedQuad toBakedBlock() {
+        BakedQuad.MaterialInfo matInfo = new BakedQuad.MaterialInfo(
+            sprite, null, null, tintIndex, shade, lightEmission
+        );
         return new BakedQuad(
             vertex_0.positionvf(), vertex_1.positionvf(),
             vertex_2.positionvf(), vertex_3.positionvf(),
@@ -134,22 +135,11 @@ public class MutableQuad {
             UVPair.pack(vertex_1.tex_u, vertex_1.tex_v),
             UVPair.pack(vertex_2.tex_u, vertex_2.tex_v),
             UVPair.pack(vertex_3.tex_u, vertex_3.tex_v),
-            tintIndex, face, sprite, shade, lightEmission,
-            BakedNormals.of(
-                vertex_0.normalToPackedInt(), vertex_1.normalToPackedInt(),
-                vertex_2.normalToPackedInt(), vertex_3.normalToPackedInt()
-            ),
-            BakedColors.of(
-                ARGB.color(vertex_0.colour_a, vertex_0.colour_r, vertex_0.colour_g, vertex_0.colour_b),
-                ARGB.color(vertex_1.colour_a, vertex_1.colour_r, vertex_1.colour_g, vertex_1.colour_b),
-                ARGB.color(vertex_2.colour_a, vertex_2.colour_r, vertex_2.colour_g, vertex_2.colour_b),
-                ARGB.color(vertex_3.colour_a, vertex_3.colour_r, vertex_3.colour_g, vertex_3.colour_b)
-            ),
-            hasAmbientOcclusion
+            face, matInfo
         );
     }
 
-    /** In 1.21.11, block and item use the same vertex format. Alias for {@link #toBakedBlock()}. */
+    /** In 26.1, block and item use the same vertex format. Alias for {@link #toBakedBlock()}. */
     public BakedQuad toBakedItem() {
         return toBakedBlock();
     }
@@ -178,36 +168,25 @@ public class MutableQuad {
 
     /** Reads a BakedQuad's data into this MutableQuad. */
     public MutableQuad fromBakedBlock(BakedQuad quad) {
-        tintIndex = quad.tintIndex();
         face = quad.direction();
-        sprite = quad.sprite();
-        shade = quad.shade();
-        lightEmission = quad.lightEmission();
-        hasAmbientOcclusion = quad.hasAmbientOcclusion();
+        BakedQuad.MaterialInfo mat = quad.materialInfo();
+        tintIndex = mat.tintIndex();
+        sprite = mat.sprite();
+        shade = mat.shade();
+        lightEmission = mat.lightEmission();
 
-        readVertexFromBaked(vertex_0, quad.position0(), quad.packedUV0(),
-            quad.bakedNormals().normal(0), quad.bakedColors().color(0));
-        readVertexFromBaked(vertex_1, quad.position1(), quad.packedUV1(),
-            quad.bakedNormals().normal(1), quad.bakedColors().color(1));
-        readVertexFromBaked(vertex_2, quad.position2(), quad.packedUV2(),
-            quad.bakedNormals().normal(2), quad.bakedColors().color(2));
-        readVertexFromBaked(vertex_3, quad.position3(), quad.packedUV3(),
-            quad.bakedNormals().normal(3), quad.bakedColors().color(3));
+        readVertexFromBaked(vertex_0, quad.position0(), quad.packedUV0());
+        readVertexFromBaked(vertex_1, quad.position1(), quad.packedUV1());
+        readVertexFromBaked(vertex_2, quad.position2(), quad.packedUV2());
+        readVertexFromBaked(vertex_3, quad.position3(), quad.packedUV3());
 
         return this;
     }
 
-    private static void readVertexFromBaked(MutableVertex v, Vector3fc pos, long packedUV,
-            int packedNormal, int argbColor) {
+    private static void readVertexFromBaked(MutableVertex v, Vector3fc pos, long packedUV) {
         v.positionf(pos.x(), pos.y(), pos.z());
         // UVPair.pack stores two floats in a long; unpack manually
         v.texf(Float.intBitsToFloat((int) (packedUV >> 32)), Float.intBitsToFloat((int) packedUV));
-        v.normali(packedNormal);
-        // BakedColors stores ARGB, convert to our r/g/b/a shorts
-        v.colour_a = (short) ((argbColor >> 24) & 0xFF);
-        v.colour_r = (short) ((argbColor >> 16) & 0xFF);
-        v.colour_g = (short) ((argbColor >> 8) & 0xFF);
-        v.colour_b = (short) (argbColor & 0xFF);
     }
 
     /** Alias for {@link #fromBakedBlock(BakedQuad)}. */

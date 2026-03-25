@@ -16,7 +16,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 
 import buildcraft.energy.container.ContainerEngineIron;
 import buildcraft.energy.tile.TileEngineIron_BC8;
@@ -131,16 +130,16 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
      * and tint color (fluid textures are grayscale; color comes from tinting).
      */
     private void drawFluidTexture(GuiGraphicsExtractor graphics, int x, int y, int width, int height, Fluid fluid) {
-        IClientFluidTypeExtensions fluidExt = IClientFluidTypeExtensions.of(fluid);
-        Identifier stillTexture = fluidExt.getStillTexture();
-        if (stillTexture == null) return;
+        // MC 26.1: IClientFluidTypeExtensions was removed.
+        // Use hardcoded water texture for all fluids as a fallback.
+        Identifier stillTexture = Identifier.withDefaultNamespace("block/water_still");
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
             .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
 
-        // Get the fluid's tint color (ARGB packed int)
-        int tintColor = fluidExt.getTintColor();
+        // Default tint — white (no tinting). TODO: proper fluid tints for MC 26.1
+        int tintColor = 0xFFFFFFFF;
 
         // Enable scissor to clip to the tank area
         graphics.enableScissor(x, y, x + width, y + height);
@@ -175,7 +174,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         String str = LocaleUtil.localize("tile.engineIron.name");
         int strWidth = font.width(str);
         int titleX = (imageWidth - strWidth) / 2;
@@ -184,9 +183,9 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
     }
 
     @Override
-    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
-        super.render(graphics, mouseX, mouseY, partialTicks);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
 
         // Draw tank tooltips
         renderTankTooltip(graphics, mouseX, mouseY, TANK_FUEL_X, TANK_FUEL_Y,
@@ -216,16 +215,8 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
             lines.add(Component.literal(amount + " / " + maxAmount + " mB")
                 .withStyle(net.minecraft.ChatFormatting.GRAY));
 
-            // Convert Component list to ClientTooltipComponent list for 1.21.11 API
-            List<net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent> tooltipLines =
-                lines.stream()
-                    .map(c -> net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
-                        .create(c.getVisualOrderText()))
-                    .collect(java.util.stream.Collectors.toList());
-
-            graphics.setTooltipForNextFrame(font, tooltipLines, mouseX, mouseY,
-                net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner.INSTANCE,
-                null);
+            // MC 26.1: Tooltip rendering APIs have changed significantly.
+            // TODO: Implement proper tank tooltip rendering with the new MC 26.1 API.
         }
     }
 

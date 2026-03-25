@@ -92,7 +92,7 @@ public class ScreenEngineStone extends GuiBC8<ContainerEngineStone> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         String str = LocaleUtil.localize("tile.engineStone.name");
         int strWidth = font.width(str);
         int titleX = (imageWidth - strWidth) / 2;

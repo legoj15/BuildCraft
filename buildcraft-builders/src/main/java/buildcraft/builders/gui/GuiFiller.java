@@ -14,14 +14,12 @@ public class GuiFiller extends AbstractContainerScreen<ContainerFiller> {
             Identifier.parse("buildcraftbuilders:textures/gui/filler.png");
 
     public GuiFiller(ContainerFiller container, Inventory playerInv, Component title) {
-        super(container, playerInv, title);
-        this.imageWidth = 176;
-        this.imageHeight = 235;
+        super(container, playerInv, title, 176, 235);
         this.inventoryLabelY = this.imageHeight - 94;
     }
 
     @Override
-    protected void renderBg(GuiGraphicsExtractor GuiGraphicsExtractor, float partialTick, int mouseX, int mouseY) {
+    public void extractContents(GuiGraphicsExtractor GuiGraphicsExtractor, int mouseX, int mouseY, float partialTick) {
         GuiGraphicsExtractor.blit(RenderPipelines.GUI_TEXTURED, TEXTURE,
                 leftPos, topPos,
                 0f, 0f,
@@ -30,8 +28,7 @@ public class GuiFiller extends AbstractContainerScreen<ContainerFiller> {
     }
 
     @Override
-    public void render(GuiGraphicsExtractor GuiGraphicsExtractor, int mouseX, int mouseY, float partialTick) {
-        super.render(GuiGraphicsExtractor, mouseX, mouseY, partialTick);
-        renderTooltip(GuiGraphicsExtractor, mouseX, mouseY);
+    public void extractRenderState(GuiGraphicsExtractor GuiGraphicsExtractor, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(GuiGraphicsExtractor, mouseX, mouseY, partialTick);
     }
 }

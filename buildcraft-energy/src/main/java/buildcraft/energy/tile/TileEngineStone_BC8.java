@@ -138,7 +138,8 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
                 }
 
                 // Handle container items (e.g., empty bucket from lava bucket)
-                ItemStack container = consumed.getCraftingRemainder();
+                net.minecraft.world.item.ItemStackTemplate containerTemplate = consumed.getItem().getCraftingRemainder();
+                ItemStack container = containerTemplate != null ? containerTemplate.create() : ItemStack.EMPTY;
                 if (!container.isEmpty()) {
                     if (fuelStack.isEmpty()) {
                         fuelStack = container;

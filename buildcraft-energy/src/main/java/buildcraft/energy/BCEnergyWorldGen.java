@@ -8,6 +8,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 
@@ -51,7 +52,7 @@ public class BCEnergyWorldGen {
         data.markGenerated(chunkPos);
 
         // Generate oil structures that overlap with this chunk
-        OilGenerator.generateForChunk(serverLevel, chunkPos.x, chunkPos.z);
+        OilGenerator.generateForChunk(serverLevel, chunkPos.x(), chunkPos.z());
     }
 
     /**
@@ -77,17 +78,18 @@ public class BCEnergyWorldGen {
         ).apply(instance, OilGenSavedData::new));
 
         public static final SavedDataType<OilGenSavedData> TYPE = new SavedDataType<>(
-                DATA_NAME,
+                Identifier.withDefaultNamespace(DATA_NAME),
                 OilGenSavedData::new,
-                CODEC
+                CODEC,
+                net.minecraft.util.datafix.DataFixTypes.LEVEL
         );
 
         public boolean hasGenerated(ChunkPos pos) {
-            return generatedChunks.contains(pos.toLong());
+            return generatedChunks.contains(pos.pack());
         }
 
         public void markGenerated(ChunkPos pos) {
-            generatedChunks.add(pos.toLong());
+            generatedChunks.add(pos.pack());
             setDirty();
         }
 

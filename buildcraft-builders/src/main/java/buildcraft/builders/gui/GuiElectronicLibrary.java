@@ -23,14 +23,12 @@ public class GuiElectronicLibrary extends AbstractContainerScreen<ContainerElect
     private static final int SIZE_X = 244, SIZE_Y = 220;
 
     public GuiElectronicLibrary(ContainerElectronicLibrary container, Inventory playerInv, Component title) {
-        super(container, playerInv, title);
-        this.imageWidth = SIZE_X;
-        this.imageHeight = SIZE_Y;
+        super(container, playerInv, title, SIZE_X, SIZE_Y);
         this.inventoryLabelY = this.imageHeight - 94;
     }
 
     @Override
-    protected void renderBg(GuiGraphicsExtractor GuiGraphicsExtractor, float partialTick, int mouseX, int mouseY) {
+    public void extractContents(GuiGraphicsExtractor GuiGraphicsExtractor, int mouseX, int mouseY, float partialTick) {
         GuiGraphicsExtractor.blit(RenderPipelines.GUI_TEXTURED, TEXTURE,
                 leftPos, topPos,
                 0f, 0f,
@@ -73,9 +71,8 @@ public class GuiElectronicLibrary extends AbstractContainerScreen<ContainerElect
     }
 
     @Override
-    public void render(GuiGraphicsExtractor GuiGraphicsExtractor, int mouseX, int mouseY, float partialTick) {
-        super.render(GuiGraphicsExtractor, mouseX, mouseY, partialTick);
-        renderTooltip(GuiGraphicsExtractor, mouseX, mouseY);
+    public void extractRenderState(GuiGraphicsExtractor GuiGraphicsExtractor, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(GuiGraphicsExtractor, mouseX, mouseY, partialTick);
     }
 
     @Override

@@ -17,251 +17,28 @@ Daemon will be stopped at the end of the build
 > Task :buildcraft-energy:createMinecraftArtifacts UP-TO-DATE
 > Task :buildcraft-energy:compileJava UP-TO-DATE
 > Task :buildcraft-factory:createMinecraftArtifacts UP-TO-DATE
+> Task :buildcraft-factory:compileJava UP-TO-DATE
+> Task :buildcraft-robotics:createMinecraftArtifacts UP-TO-DATE
 
-> Task :buildcraft-factory:compileJava
-warning: unknown enum constant EnvType.CLIENT
-  reason: class file for net.fabricmc.api.EnvType not found
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactory.java:101: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-            (pump, direction) -> new FluidTankResourceHandler(pump.getTank()) {
-                                                                              ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactory.java:149: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-                net.neoforged.neoforge.fluids.capability.templates.FluidTank tank = distiller.getTankForSide(direction);
-                                                                  ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactory.java:153: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-                    return new FluidTankResourceHandler(tank) {
-                                                              ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactory.java:162: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-                    return new FluidTankResourceHandler(tank) {
-                                                              ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactory.java:181: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-                net.neoforged.neoforge.fluids.capability.templates.FluidTank tank = heatExchange.getFluidTankForDirection(direction);
-                                                                  ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileAutoWorkbenchBase.java:117: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-        invBlueprint.setCallback((handler, slot, before, after) -> {
-                                  ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileAutoWorkbenchBase.java:121: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-        invMaterials.setCallback((handler, slot, before, after) -> {
-                                  ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TilePump.java:88: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    private final FluidTank tank = new FluidTank(16 * 1000); // 16 buckets
-                  ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TilePump.java:88: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    private final FluidTank tank = new FluidTank(16 * 1000); // 16 buckets
-                                       ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TilePump.java:111: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    public FluidTank getTank() {
-           ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TilePump.java:310: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                tank.fill(drain, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
-                                                                         ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileFloodGate.java:59: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    private final FluidTank tank = new FluidTank(2000); // 2 buckets
-                  ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileFloodGate.java:59: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    private final FluidTank tank = new FluidTank(2000); // 2 buckets
-                                       ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileFloodGate.java:72: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    public FluidTank getTank() {
-           ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileFloodGate.java:172: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                FluidStack fluid = tank.drain(1000, IFluidHandler.FluidAction.SIMULATE);
-                                                    ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileFloodGate.java:194: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                            tank.drain(1000, IFluidHandler.FluidAction.EXECUTE);
-                                             ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileChute.java:62: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
-            (handler, slot, before, after) -> this.setChanged());
-             ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.java:54: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    private final FluidTank tankIn = new FluidTank(4000);
-                  ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.java:54: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    private final FluidTank tankIn = new FluidTank(4000);
-                                         ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.java:55: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    private final FluidTank tankGasOut = new FluidTank(4000);
-                  ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.java:55: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    private final FluidTank tankGasOut = new FluidTank(4000);
-                                             ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.java:56: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    private final FluidTank tankLiquidOut = new FluidTank(4000);
-                  ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.java:56: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    private final FluidTank tankLiquidOut = new FluidTank(4000);
-                                                ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.java:93: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    public FluidTank getTankIn() {
-           ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.java:97: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    public FluidTank getTankGasOut() {
-           ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.java:101: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    public FluidTank getTankLiquidOut() {
-           ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.java:114: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    public FluidTank getTankForSide(@Nullable Direction side) {
-           ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.java:215: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-            FluidStack potentialIn = tankIn.drain(reqIn.getAmount(), IFluidHandler.FluidAction.SIMULATE);
-                                                                     ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.java:220: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-            boolean canFillLiquid = tankLiquidOut.fill(outLiquid.copy(), IFluidHandler.FluidAction.SIMULATE) >= outLiquid.getAmount();
-                                                                         ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.java:221: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-            boolean canFillGas = tankGasOut.fill(outGas.copy(), IFluidHandler.FluidAction.SIMULATE) >= outGas.getAmount();
-                                                                ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.java:237: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                    tankIn.drain(reqIn.getAmount(), IFluidHandler.FluidAction.EXECUTE);
-                                                    ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.java:238: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                    tankGasOut.fill(outGas.copy(), IFluidHandler.FluidAction.EXECUTE);
-                                                   ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.java:239: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                    tankLiquidOut.fill(outLiquid.copy(), IFluidHandler.FluidAction.EXECUTE);
-                                                         ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:98: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-    public FluidTank getFluidTankForDirection(@Nullable Direction direction) {
-           ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:502: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-        public final FluidTank tankInput, tankOutput;
-                     ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:502: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-        public final FluidTank tankInput, tankOutput;
-                     ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:507: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-            tankInput = new FluidTank(2000);
-                            ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:508: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-            tankOutput = new FluidTank(2000);
-                             ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:633: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-            FluidTank c_in = endSection.tankInput;
-            ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:634: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-            FluidTank c_out = tankOutput;
-            ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:635: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-            FluidTank h_in = tankInput;
-            ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:636: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-            FluidTank h_out = endSection.tankOutput;
-            ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:667: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                    : c_out.fill(c_out_f.copy(), IFluidHandler.FluidAction.SIMULATE);
-                                                 ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:670: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-                    : h_out.fill(h_out_f.copy(), IFluidHandler.FluidAction.SIMULATE);
-                                                 ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:765: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-        private static int drainableAmount(FluidTank t, @Nullable FluidStack fluid) {
-                                           ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:767: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-            FluidStack f2 = t.drain(fluid.copy(), IFluidHandler.FluidAction.SIMULATE);
-                                                  ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:771: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-        private static void fillTank(FluidTank t, @Nullable FluidStack fluid) {
-                                     ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:773: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-            t.fill(fluid.copy(), IFluidHandler.FluidAction.EXECUTE);
-                                 ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:776: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-        private static void drainTank(FluidTank t, @Nullable FluidStack fluid) {
-                                      ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\tile\TileHeatExchange.java:778: warning: [removal] IFluidHandler in net.neoforged.neoforge.fluids.capability has been deprecated and marked for removal
-            t.drain(fluid.copy(), IFluidHandler.FluidAction.EXECUTE);
-                                  ^
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactoryBlocks.java:22: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockAutoWorkbenchItems> AUTOWORKBENCH_ITEM = BLOCKS.registerBlock(
-                                                                                          ^
+> Task :buildcraft-robotics:compileJava
+E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\BCRoboticsBlocks.java:13: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+    public static final DeferredBlock<BlockZonePlanner> ZONE_PLANNER = BLOCKS.registerBlock(
+                                                                             ^
   where B is a type-variable:
     B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactoryBlocks.java:27: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockMiningWell> MINING_WELL = BLOCKS.registerBlock(
-                                                                           ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactoryBlocks.java:32: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockPump> PUMP = BLOCKS.registerBlock(
-                                                              ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactoryBlocks.java:37: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockFloodGate> FLOOD_GATE = BLOCKS.registerBlock(
-                                                                         ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactoryBlocks.java:42: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockTank> TANK = BLOCKS.registerBlock(
-                                                              ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactoryBlocks.java:47: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockTube> TUBE = BLOCKS.registerBlock(
-                                                              ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactoryBlocks.java:52: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockChute> CHUTE = BLOCKS.registerBlock(
-                                                                ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactoryBlocks.java:57: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockDistiller> DISTILLER = BLOCKS.registerBlock(
-                                                                        ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactoryBlocks.java:62: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockHeatExchange> HEAT_EXCHANGE = BLOCKS.registerBlock(
-                                                                               ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactoryBlocks.java:67: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockWaterGel> WATER_GEL = BLOCKS.registerBlock(
-                                                                       ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\BCFactoryItems.java:38: warning: [removal] <I>registerItem(String,Function<Properties,? extends I>,Properties) in Items has been deprecated and marked for removal
-    public static final DeferredItem<ItemWaterGel> WATER_GEL_SPAWN = ITEMS.registerItem(
-                                                                          ^
-  where I is a type-variable:
-    I extends Item declared in method <I>registerItem(String,Function<Properties,? extends I>,Properties)
-E:\GitHub\BuildCraft\buildcraft-factory\src\main\java\buildcraft\factory\client\gui\GuiDistiller.java:106: warning: [removal] FluidTank in net.neoforged.neoforge.fluids.capability.templates has been deprecated and marked for removal
-            FluidTank tank, int relX, int relY, int w, int h) {
-            ^
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-warning: unknown enum constant EnvType.CLIENT
-Note: Some input files use or override a deprecated API.
-Note: Recompile with -Xlint:deprecation for details.
-81 warnings
+1 warning
 
-> Task :buildcraft-robotics:createMinecraftArtifacts
-Loaded 141 artifacts from E:\GitHub\BuildCraft\buildcraft-robotics\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+> Task :buildcraft-silicon:createMinecraftArtifacts
+Loaded 141 artifacts from E:\GitHub\BuildCraft\buildcraft-silicon\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
 [1m*** Started working on [4mdownloadManifest[0m[0m
   DL    https://launchermeta.mojang.com/mc/game/version_manifest_v2.json
- [1m[92mDONE [0m Completed [4mdownloadManifest[0m in 0.51s
+ [1m[92mDONE [0m Completed [4mdownloadManifest[0m in 0.54s
 [1m*** Started working on [4mdownloadJson[0m[0m
  [1m[92mDONE [0m Completed [4mdownloadJson[0m in 0.00s
-[1m*** Started working on [4mdownloadServer[0m[0m
 [1m*** Started working on [4mdownloadClient[0m[0m
- [1m[92mDONE [0m Completed [4mdownloadClient[0m in 0.02s
+[1m*** Started working on [4mdownloadServer[0m[0m
  [1m[92mDONE [0m Completed [4mdownloadServer[0m in 0.02s
+ [1m[92mDONE [0m Completed [4mdownloadClient[0m in 0.02s
 [1m*** Started working on [4mpreProcessJar[0m[0m
  [1m[92mREUSE[0m Used cache of [4mpreProcessJar[0m in 0.00s
 [1m*** Started working on [4mdecompile[0m[0m
@@ -276,67 +53,337 @@ Loaded 141 artifacts from E:\GitHub\BuildCraft\buildcraft-robotics\build\tmp\cre
  [1m[92mREUSE[0m Used cache of [4mrecompile[0m in 0.00s
 [1m*** Started working on [4mmergeWithSources[0m[0m
  [1m[92mREUSE[0m Used cache of [4mmergeWithSources[0m in 0.00s
-Total runtime: 1.30s
+Total runtime: 1.28s
 
 
-> Task :buildcraft-robotics:compileJava FAILED
-E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:110: error: x has private access in ChunkPos
-            zoneChunkTag.putInt("chunkX", entry.getKey().x);
-                                                        ^
-E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:111: error: z has private access in ChunkPos
-            zoneChunkTag.putInt("chunkZ", entry.getKey().z);
-                                                        ^
-E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:145: error: x has private access in ChunkPos
-            double dx = (e.getKey().x << 4) + 8 - pos.getX();
-                                   ^
-E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:146: error: z has private access in ChunkPos
-            double dz = (e.getKey().z << 4) + 8 - pos.getZ();
-                                   ^
-E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:177: error: x has private access in ChunkPos
-                int x = (e.getKey().x << 4) + i.getX();
-                                   ^
-E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:178: error: z has private access in ChunkPos
-                int z = (e.getKey().z << 4) + i.getZ();
-                                   ^
-E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:193: error: method containing in record ChunkPos cannot be applied to given types;
-            ChunkPos key = ChunkPos.containing(buf.readInt(), buf.readInt());
-                                   ^
-  required: BlockPos
-  found:    int,int
-  reason: actual and formal argument lists differ in length
-E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:204: error: x has private access in ChunkPos
-            buf.writeInt(e.getKey().x);
-                                   ^
-E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:205: error: z has private access in ChunkPos
-            buf.writeInt(e.getKey().z);
-                                   ^
-E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\BCRoboticsBlocks.java:13: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockZonePlanner> ZONE_PLANNER = BLOCKS.registerBlock(
-                                                                             ^
+> Task :buildcraft-silicon:compileJava FAILED
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\BCSiliconClient.java:6: error: cannot find symbol
+import net.minecraft.client.renderer.item.BlockModelWrapper;
+                                         ^
+  symbol:   class BlockModelWrapper
+  location: package net.minecraft.client.renderer.item
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\FacadeDeduplicator.java:17: error: cannot find symbol
+import net.minecraft.client.renderer.block.model.BlockModelPart;
+                                                ^
+  symbol:   class BlockModelPart
+  location: package net.minecraft.client.renderer.block.model
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\FacadeDeduplicator.java:18: error: cannot find symbol
+import net.minecraft.client.renderer.block.model.BlockStateModel;
+                                                ^
+  symbol:   class BlockStateModel
+  location: package net.minecraft.client.renderer.block.model
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\FacadeDeduplicator.java:19: error: cannot find symbol
+import net.minecraft.client.resources.model.QuadCollection;
+                                           ^
+  symbol:   class QuadCollection
+  location: package net.minecraft.client.resources.model
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\FacadeDeduplicator.java:50: error: cannot find symbol
+    public static void deduplicateVisuallyIdentical(Map<BlockState, BlockStateModel> blockStateModels) {
+                                                                    ^
+  symbol:   class BlockStateModel
+  location: class FacadeDeduplicator
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\FacadeDeduplicator.java:177: error: cannot find symbol
+    private static String computeTextureFingerprint(BlockStateModel model) {
+                                                    ^
+  symbol:   class BlockStateModel
+  location: class FacadeDeduplicator
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\FacadeDeduplicator.java:210: error: cannot find symbol
+    private static List<BakedQuad> getQuadsFromModel(BlockStateModel model, Direction side) {
+                                                     ^
+  symbol:   class BlockStateModel
+  location: class FacadeDeduplicator
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\FacadeItemModel.java:21: error: cannot find symbol
+import net.minecraft.client.renderer.block.model.ItemTransforms;
+                                                ^
+  symbol:   class ItemTransforms
+  location: package net.minecraft.client.renderer.block.model
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\FacadeItemModel.java:23: error: cannot find symbol
+import net.minecraft.client.renderer.item.BlockModelWrapper;
+                                         ^
+  symbol:   class BlockModelWrapper
+  location: package net.minecraft.client.renderer.item
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\FacadeItemModel.java:49: error: cannot find symbol
+    private final BlockModelWrapper vanillaWrapper;
+                  ^
+  symbol:   class BlockModelWrapper
+  location: class FacadeItemModel
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\FacadeItemModel.java:110: error: cannot find symbol
+    public FacadeItemModel(BlockModelWrapper vanillaWrapper) {
+                           ^
+  symbol:   class BlockModelWrapper
+  location: class FacadeItemModel
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\plug\PlugBakerFacade.java:20: error: cannot find symbol
+import net.minecraft.client.renderer.block.model.BlockModelPart;
+                                                ^
+  symbol:   class BlockModelPart
+  location: package net.minecraft.client.renderer.block.model
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\plug\PlugBakerFacade.java:21: error: cannot find symbol
+import net.minecraft.client.renderer.block.model.BlockStateModel;
+                                                ^
+  symbol:   class BlockStateModel
+  location: package net.minecraft.client.renderer.block.model
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\plug\PlugBakerFacade.java:22: error: cannot find symbol
+import net.minecraft.client.resources.model.QuadCollection;
+                                           ^
+  symbol:   class QuadCollection
+  location: package net.minecraft.client.resources.model
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\plug\PlugBakerFacade.java:53: error: cannot find symbol
+    private static List<BakedQuad> getQuadsFromModel(BlockStateModel model, Direction side) {
+                                                     ^
+  symbol:   class BlockStateModel
+  location: class PlugBakerFacade
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\plug\PlugBakerFacade.java:105: error: cannot find symbol
+                                                  BlockStateModel model,
+                                                  ^
+  symbol:   class BlockStateModel
+  location: class PlugBakerFacade
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\plug\PlugBakerFacade.java:211: error: cannot find symbol
+                                 BlockStateModel model,
+                                 ^
+  symbol:   class BlockStateModel
+  location: class PlugBakerFacade
+warning: unknown enum constant EnvType.CLIENT
+  reason: class file for net.fabricmc.api.EnvType not found
+warning: unknown enum constant EnvType.CLIENT
+warning: unknown enum constant EnvType.CLIENT
+warning: unknown enum constant EnvType.CLIENT
+warning: unknown enum constant EnvType.CLIENT
+warning: unknown enum constant EnvType.CLIENT
+warning: unknown enum constant EnvType.CLIENT
+warning: unknown enum constant EnvType.CLIENT
+warning: unknown enum constant EnvType.CLIENT
+warning: unknown enum constant EnvType.CLIENT
+warning: unknown enum constant EnvType.CLIENT
+warning: unknown enum constant EnvType.CLIENT
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\tile\TileLaser.java:124: error: random has protected access in Level
+        targetPos = targetsNeedingPower.get(level.random.nextInt(targetsNeedingPower.size()));
+                                                 ^
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\tile\TileLaser.java:150: error: random has protected access in Level
+                (5 + level.random.nextInt(6) + 0.5) / 16D,
+                          ^
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\tile\TileLaser.java:152: error: random has protected access in Level
+                (5 + level.random.nextInt(6) + 0.5) / 16D
+                          ^
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\tile\TileAdvancedCraftingTable.java:48: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
+        invBlueprint.setCallback((handler, slot, before, after) -> {
+                                  ^
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\tile\TileAdvancedCraftingTable.java:52: warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has been deprecated and marked for removal
+        invMaterials.setCallback((handler, slot, before, after) -> {
+                                  ^
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\BCSiliconBlocks.java:20: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+    public static final DeferredBlock<BlockLaser> LASER = BLOCKS.registerBlock(
+                                                                ^
   where B is a type-variable:
     B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\client\gui\GuiZonePlanner.java:38: error: method does not override or implement a method from a supertype
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\BCSiliconBlocks.java:25: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+    public static final DeferredBlock<BlockLaserTable> ASSEMBLY_TABLE = BLOCKS.registerBlock(
+                                                                              ^
+  where B is a type-variable:
+    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\BCSiliconBlocks.java:32: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+    public static final DeferredBlock<BlockLaserTable> ADVANCED_CRAFTING_TABLE = BLOCKS.registerBlock(
+                                                                                       ^
+  where B is a type-variable:
+    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\BCSiliconBlocks.java:39: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+    public static final DeferredBlock<BlockLaserTable> INTEGRATION_TABLE = BLOCKS.registerBlock(
+                                                                                 ^
+  where B is a type-variable:
+    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\BCSiliconClient.java:62: error: cannot find symbol
+        if (vanillaModel instanceof BlockModelWrapper wrapper) {
+                                    ^
+  symbol:   class BlockModelWrapper
+  location: class BCSiliconClient
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\FacadeDeduplicator.java:65: error: cannot find symbol
+            BlockStateModel model = blockStateModels.get(info.state);
+            ^
+  symbol:   class BlockStateModel
+  location: class FacadeDeduplicator
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\FacadeDeduplicator.java:130: error: cannot find symbol
+        for (Map.Entry<BlockState, BlockStateModel> modelEntry : blockStateModels.entrySet()) {
+                                   ^
+  symbol:   class BlockStateModel
+  location: class FacadeDeduplicator
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\FacadeDeduplicator.java:147: error: cannot find symbol
+            BlockStateModel model = modelEntry.getValue();
+            ^
+  symbol:   class BlockStateModel
+  location: class FacadeDeduplicator
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\FacadeDeduplicator.java:184: error: cannot find symbol
+                    textures.add(dir.name() + ":" + quad.sprite().contents().name().toString());
+                                                        ^
+  symbol:   method sprite()
+  location: variable quad of type BakedQuad
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\FacadeDeduplicator.java:190: error: cannot find symbol
+                textures.add("GENERAL:" + quad.sprite().contents().name().toString());
+                                              ^
+  symbol:   method sprite()
+  location: variable quad of type BakedQuad
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\FacadeDeduplicator.java:211: error: cannot find symbol
+        List<BlockModelPart> parts = new ArrayList<>();
+             ^
+  symbol:   class BlockModelPart
+  location: class FacadeDeduplicator
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\FacadeDeduplicator.java:214: error: cannot find symbol
+        for (BlockModelPart part : parts) {
+             ^
+  symbol:   class BlockModelPart
+  location: class FacadeDeduplicator
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\FacadeDeduplicator.java:215: error: cannot find symbol
+            if (part instanceof net.minecraft.client.renderer.block.model.SimpleModelWrapper smw) {
+                                                                         ^
+  symbol:   class SimpleModelWrapper
+  location: package net.minecraft.client.renderer.block.model
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\FacadeDeduplicator.java:216: error: cannot find symbol
+                QuadCollection qc = smw.quads();
+                ^
+  symbol:   class QuadCollection
+  location: class FacadeDeduplicator
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\FacadeItemModel.java:91: error: cannot find symbol
+            QUADS_FIELD = BlockModelWrapper.class.getDeclaredField("quads");
+                          ^
+  symbol:   class BlockModelWrapper
+  location: class FacadeItemModel
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\FacadeItemModel.java:93: error: cannot find symbol
+            PROPERTIES_FIELD = BlockModelWrapper.class.getDeclaredField("properties");
+                               ^
+  symbol:   class BlockModelWrapper
+  location: class FacadeItemModel
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\FacadeItemModel.java:95: error: cannot find symbol
+            RENDER_TYPE_FIELD = BlockModelWrapper.class.getDeclaredField("renderType");
+                                ^
+  symbol:   class BlockModelWrapper
+  location: class FacadeItemModel
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\FacadeItemModel.java:97: error: cannot find symbol
+            EXTENTS_FIELD = BlockModelWrapper.class.getDeclaredField("extents");
+                            ^
+  symbol:   class BlockModelWrapper
+  location: class FacadeItemModel
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\FacadeItemModel.java:159: error: cannot find symbol
+        layer.setRenderType(vanillaRenderType.apply(stack));
+             ^
+  symbol:   method setRenderType(RenderType)
+  location: variable layer of type ItemStackRenderState.LayerRenderState
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\plug\PlugBakerFacade.java:54: error: cannot find symbol
+        List<BlockModelPart> parts = new ArrayList<>();
+             ^
+  symbol:   class BlockModelPart
+  location: class PlugBakerFacade
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\plug\PlugBakerFacade.java:57: error: cannot find symbol
+        for (BlockModelPart part : parts) {
+             ^
+  symbol:   class BlockModelPart
+  location: class PlugBakerFacade
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\plug\PlugBakerFacade.java:58: error: cannot find symbol
+            if (part instanceof net.minecraft.client.renderer.block.model.SimpleModelWrapper smw) {
+                                                                         ^
+  symbol:   class SimpleModelWrapper
+  location: package net.minecraft.client.renderer.block.model
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\plug\PlugBakerFacade.java:59: error: cannot find symbol
+                QuadCollection qc = smw.quads();
+                ^
+  symbol:   class QuadCollection
+  location: class PlugBakerFacade
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\plug\PlugBakerFacade.java:225: error: cannot find symbol
+        BlockStateModel model = Minecraft.getInstance().getBlockRenderer().getBlockModel(key.state);
+        ^
+  symbol:   class BlockStateModel
+  location: class PlugBakerFacade
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\model\plug\PlugBakerFacade.java:225: error: cannot find symbol
+        BlockStateModel model = Minecraft.getInstance().getBlockRenderer().getBlockModel(key.state);
+                                                       ^
+  symbol:   method getBlockRenderer()
+  location: class Minecraft
+warning: unknown enum constant EnvType.CLIENT
+warning: unknown enum constant EnvType.CLIENT
+warning: unknown enum constant EnvType.CLIENT
+warning: unknown enum constant EnvType.CLIENT
+warning: unknown enum constant EnvType.CLIENT
+warning: unknown enum constant EnvType.CLIENT
+warning: unknown enum constant EnvType.CLIENT
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\gui\GuiAdvancedCraftingTable.java:108: error: method does not override or implement a method from a supertype
     @Override
     ^
-10 errors
-1 warning
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\gui\GuiAdvancedCraftingTable.java:112: error: cannot find symbol
+            this.recipeBookComponent.render(graphics, mouseX, mouseY, partialTick);
+                                    ^
+  symbol:   method render(GuiGraphicsExtractor,int,int,float)
+  location: variable recipeBookComponent of type ACTRecipeBookComponent
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\gui\GuiAdvancedCraftingTable.java:114: error: cannot find symbol
+            super.render(graphics, mouseX, mouseY, partialTick);
+                 ^
+  symbol: method render(GuiGraphicsExtractor,int,int,float)
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\gui\GuiAdvancedCraftingTable.java:116: error: cannot find symbol
+                this.recipeBookComponent.render(graphics, mouseX, mouseY, partialTick);
+                                        ^
+  symbol:   method render(GuiGraphicsExtractor,int,int,float)
+  location: variable recipeBookComponent of type ACTRecipeBookComponent
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\gui\GuiAdvancedCraftingTable.java:120: error: cannot find symbol
+            this.recipeBookComponent.setTooltipForNextFrame(graphics, mouseX, mouseY, null);
+                                    ^
+  symbol:   method setTooltipForNextFrame(GuiGraphicsExtractor,int,int,<null>)
+  location: variable recipeBookComponent of type ACTRecipeBookComponent
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\gui\GuiAdvancedCraftingTable.java:124: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\gui\GuiAdvancedCraftingTable.java:133: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\gui\GuiAdvancedCraftingTable.java:157: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\gui\GuiAdvancedCraftingTable.java:159: error: incompatible types: ClickAction cannot be converted to ContainerInput
+        super.slotClicked(slot, slotId, mouseButton, type);
+                                                     ^
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\gui\GuiAdvancedCraftingTable.java:186: error: cannot find symbol
+            this.recipeBookComponent.renderGhostRecipe(graphics, p_283495_);
+                                    ^
+  symbol:   method renderGhostRecipe(GuiGraphicsExtractor,boolean)
+  location: variable recipeBookComponent of type ACTRecipeBookComponent
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\gui\GuiAssemblyTable.java:85: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\gui\GuiIntegrationTable.java:55: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\plug\FacadeStateManager.java:200: error: cannot infer type arguments for HashMap<>
+                    vars = new HashMap<>(state.getValues());
+                           ^
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\plug\FacadeStateManager.java:203: error: cannot find symbol
+                    for (Entry<Property<?>, Comparable<?>> entry : state.getValues().entrySet()) {
+                                                                                    ^
+  symbol:   method entrySet()
+  location: interface Stream<Value<?>>
+E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\plug\PluggableFacade.java:156: error: cannot find symbol
+                .getColor(state.stateInfo.state, holder.getPipeWorld(), holder.getPipePos(), tintIndex);
+                ^
+  symbol:   method getColor(BlockState,Level,BlockPos,int)
+  location: class BlockColors
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+56 errors
+25 warnings
 
 [Incubating] Problems report is available at: file:///E:/GitHub/BuildCraft/build/reports/problems/problems-report.html
 
 FAILURE: Build failed with an exception.
 
 * What went wrong:
-Execution failed for task ':buildcraft-robotics:compileJava'.
+Execution failed for task ':buildcraft-silicon:compileJava'.
 > Compilation failed; see the compiler output below.
-  E:\GitHub\BuildCraft\buildcraft-robotics\src\main\java\buildcraft\robotics\zone\ZonePlan.java:110: error: x has private access in ChunkPos
-              zoneChunkTag.putInt("chunkX", entry.getKey().x);
-                                                          ^
-  10 errors
-  1 warning
+  E:\GitHub\BuildCraft\buildcraft-silicon\src\main\java\buildcraft\silicon\client\BCSiliconClient.java:6: error: cannot find symbol
+  import net.minecraft.client.renderer.item.BlockModelWrapper;
+                                           ^
+    symbol:   class BlockModelWrapper
+    location: package net.minecraft.client.renderer.item
+  56 errors
+  25 warnings
 
 * Try:
 > Check your code and dependencies to fix the compilation error(s)
 > Run with --scan to get full insights from a Build Scan (powered by Develocity).
 
 BUILD FAILED in 14s
-16 actionable tasks: 4 executed, 12 up-to-date
+18 actionable tasks: 4 executed, 14 up-to-date

@@ -4,6 +4,12 @@
             "type": "minecraft:directory",
             "source": "block/engine",
             "prefix": "block/engine/"
+        },
+        {
+            "type": "neoforge:namespaced_directory",
+            "namespace": "buildcraftenergy",
+            "source": "block/fluids",
+            "prefix": "block/fluids/"
         }
     ]
 }

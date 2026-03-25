@@ -63,29 +63,67 @@ public class FluidUtilBC {
         return !stack.isEmpty() && shouldRenderTranslucent(stack.getFluid());
     }
 
-    @Nullable
-    public static net.minecraft.resources.Identifier getFluidTexture(FluidStack fluid) {
-        if (fluid.isEmpty()) return net.minecraft.resources.Identifier.withDefaultNamespace("block/water_still");
-        if (fluid.getFluid().isSame(Fluids.WATER) || fluid.getFluid().isSame(Fluids.FLOWING_WATER)) {
-            return net.minecraft.resources.Identifier.withDefaultNamespace("block/water_still");
-        } else if (fluid.getFluid().isSame(Fluids.LAVA) || fluid.getFluid().isSame(Fluids.FLOWING_LAVA)) {
+    public static net.minecraft.resources.Identifier getFluidTexture(FluidStack stack) {
+        if (stack.isEmpty() || stack.getFluid() == null || stack.getFluid().getFluidType() == null) return net.minecraft.resources.Identifier.withDefaultNamespace("block/water_still");
+        Fluid fluid = stack.getFluid();
+        if (fluid == Fluids.LAVA || fluid == Fluids.FLOWING_LAVA) {
             return net.minecraft.resources.Identifier.withDefaultNamespace("block/lava_still");
         }
-        net.minecraft.resources.Identifier fluidId = net.neoforged.neoforge.registries.NeoForgeRegistries.FLUID_TYPES
-                .getKey(fluid.getFluid().getFluidType());
+
+        // Check if this is a BuildCraft energy fluid — use the recolored sprite ID.
+        // Recolored sprites are named: <baseName>_heat_<heat>_still
+        // The fluid type registry path is: "<baseName>" for heat 0, "<baseName>_heat_1" for heat 1, etc.
+        // So the recolored sprite name is always: "<regPath>_heat_0_still" or "<regPath>_still" 
+        // depending on whether heat suffix is already present.
+        net.minecraft.resources.Identifier fluidId = net.neoforged.neoforge.registries.NeoForgeRegistries.FLUID_TYPES.getKey(fluid.getFluidType());
+        if (fluidId != null && fluidId.getNamespace().equals("buildcraftenergy")) {
+            String path = fluidId.getPath();
+            // Determine if heat suffix is already in the path
+            String spriteName;
+            if (path.contains("_heat_")) {
+                // e.g., "oil_heat_1" -> "oil_heat_1_still"
+                spriteName = path + "_still";
+            } else {
+                // e.g., "oil" -> "oil_heat_0_still"
+                spriteName = path + "_heat_0_still";
+            }
+            return net.minecraft.resources.Identifier.fromNamespaceAndPath("buildcraftenergy", "block/fluids/" + spriteName);
+        }
         if (fluidId != null) {
             return net.minecraft.resources.Identifier.parse(fluidId.getNamespace() + ":block/" + fluidId.getPath() + "_still");
         }
-        return net.minecraft.resources.Identifier.withDefaultNamespace("block/water_still");
+
+        return net.minecraft.resources.Identifier.withDefaultNamespace("block/water_still"); // Default fallback
     }
 
-    public static int getFluidColor(FluidStack fluid) {
-        if (fluid.isEmpty()) return 0xFFFFFFFF;
-        if (fluid.getFluid().isSame(Fluids.WATER) || fluid.getFluid().isSame(Fluids.FLOWING_WATER)) {
-            return 0xFF3F76E4;
-        } else if (fluid.getFluid().isSame(Fluids.LAVA) || fluid.getFluid().isSame(Fluids.FLOWING_LAVA)) {
+    /**
+     * Resolves the tint color of the fluid dynamically.
+     */
+    public static int getFluidColor(FluidStack stack) {
+        if (stack.isEmpty() || stack.getFluid() == null || stack.getFluid().getFluidType() == null) return 0xFFFFFFFF;
+        Fluid fluid = stack.getFluid();
+        
+        if (fluid == Fluids.LAVA || fluid == Fluids.FLOWING_LAVA) {
+            return 0xFFFFFFFF; // Lava evaluates intrinsically without tinting
+        }
+        if (fluid == Fluids.WATER || fluid == Fluids.FLOWING_WATER) {
+            return 0xFF3F76E4; // Base NeoForge water tint fallback
+        }
+
+        // BC energy fluids have colors baked into their recolored sprites — no tint needed
+        net.minecraft.resources.Identifier fluidId = net.neoforged.neoforge.registries.NeoForgeRegistries.FLUID_TYPES.getKey(fluid.getFluidType());
+        if (fluidId != null && fluidId.getNamespace().equals("buildcraftenergy")) {
             return 0xFFFFFFFF;
         }
+
+        try {
+            net.minecraft.client.renderer.block.FluidModel model = net.minecraft.client.Minecraft.getInstance()
+                    .getModelManager().getFluidStateModelSet().get(fluid.defaultFluidState());
+            if (model != null && model.fluidTintSource() != null) {
+                return model.fluidTintSource().color(fluid.defaultFluidState());
+            }
+        } catch (Exception e) {}
+
         return 0xFFFFFFFF;
     }
 

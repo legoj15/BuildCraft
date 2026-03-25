@@ -55,12 +55,15 @@ public class BCEnergyFluids {
     /** Holds all deferred holders for a single fluid variant. */
     public record FluidEntry(
             String name,
+            String baseName,
             int heat,
             int density,
             int viscosity,
             int temperature,
             boolean gaseous,
             int tintColor,
+            int texLight,
+            int texDark,
             DeferredHolder<FluidType, FluidType> fluidType,
             DeferredHolder<Fluid, BaseFlowingFluid.Source> source,
             DeferredHolder<Fluid, BaseFlowingFluid.Flowing> flowing,
@@ -201,7 +204,8 @@ public class BCEnergyFluids {
                 ), new Item.Properties());
 
         return new FluidEntry(
-                regName, heat, density, viscosity, temperature, gaseous, tintColor,
+                regName, baseName, heat, density, viscosity, temperature, gaseous, tintColor,
+                texLight, texDark,
                 fluidType, sourceHolder[0], flowingHolder[0], blockHolder[0], bucketHolder[0]);
     }
 

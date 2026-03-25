@@ -61,3 +61,13 @@ diagram.png
 diagram.xcf
 *.xcf
 build_error.txt
+baked.txt
+compile_log*.txt
+fluidtype.txt
+itemblockrendertypes.txt
+javap.txt
+rendertype.txt
+rendertype_vanilla.txt
+rendertypes.txt
+sheets.txt
+unbaked.txt

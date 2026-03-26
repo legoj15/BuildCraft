@@ -93,6 +93,8 @@
 - [ ] Replace hardcoded `BCCoreConfig` defaults with actual NeoForge config file I/O
 - [ ] Port `BCEnergyConfig`, `BCTransportConfig`, `BCBuildersConfig` to use real config
 - [ ] Power unit configuration (MJ ↔ RF/FE, full text vs abbreviated, per tick vs per second)
+- [ ] **Fullbright fluid rendering in tanks** — config option for 1.12.2 "neon glow" look
+- [ ] **Heat-level color shifting** — config option to subtly brighten/warm fluid colors at higher heat levels for visual temperature differentiation
 
 ### Advancements
 - [ ] Port custom advancement triggers (currently only display advancements, no gameplay triggers)

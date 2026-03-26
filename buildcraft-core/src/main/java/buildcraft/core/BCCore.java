@@ -110,8 +110,14 @@ public class BCCore {
                     net.neoforged.neoforge.client.event.ClientTickEvent.Post.class,
                     event -> buildcraft.core.client.DebugOverlayHelper.onClientTick()
             );
-            // Register the dynamic fluid shard item model type
-            modEventBus.register(buildcraft.core.client.DynamicFluidShardModel.class);
+            // Register the fluid shard tint source for fragile fluid containers
+            modEventBus.addListener(
+                    net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.ItemTintSources.class,
+                    event -> event.register(
+                            net.minecraft.resources.Identifier.parse("buildcraftcore:fluid_shard_tint"),
+                            buildcraft.core.client.FluidShardTintSource.MAP_CODEC
+                    )
+            );
             // F3 debug overlay: register the overlay layer on the mod bus
             modEventBus.addListener(
                     net.neoforged.neoforge.client.event.RegisterGuiLayersEvent.class,

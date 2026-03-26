@@ -2,6 +2,8 @@ package buildcraft.energy.client;
 
 import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,6 +20,36 @@ import buildcraft.energy.BCEnergyFluids;
 public class BCEnergyFluidsClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BCEnergyFluidsClient.class);
+
+    /**
+     * Register IClientFluidTypeExtensions for every BC energy fluid so that
+     * DynamicFluidContainerModel (used by buckets and fluid shards) can find
+     * the correct still/flow textures and tint color.
+     */
+    @SubscribeEvent
+    public static void onRegisterClientExtensions(RegisterClientExtensionsEvent event) {
+        LOGGER.info("[BCEnergyFluidsClient] Registering IClientFluidTypeExtensions for {} fluid entries.", BCEnergyFluids.ALL.size());
+        for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
+            String spriteName = entry.baseName() + "_heat_" + entry.heat();
+            final Identifier stillId = Identifier.fromNamespaceAndPath("buildcraftenergy", "block/fluids/" + spriteName + "_still");
+            final Identifier flowId = Identifier.fromNamespaceAndPath("buildcraftenergy", "block/fluids/" + spriteName + "_flow");
+
+            event.registerFluidType(new IClientFluidTypeExtensions() {
+                public Identifier getStillTexture() {
+                    return stillId;
+                }
+
+                public Identifier getFlowingTexture() {
+                    return flowId;
+                }
+
+                public int getTintColor() {
+                    // No tint — colors are baked into the pre-recolored sprites
+                    return 0xFFFFFFFF;
+                }
+            }, entry.fluidType().get());
+        }
+    }
 
     @SubscribeEvent
     public static void onRegisterFluidModels(net.neoforged.neoforge.client.event.RegisterFluidModelsEvent event) {

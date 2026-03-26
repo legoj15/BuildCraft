@@ -28,7 +28,7 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
  *
  * <p>Port of the 1.12 data table from BCEnergyFluids.defineFluid():
  * <ul>
- *   <li>viscosity = baseViscosity × (4 − heat) / 4</li>
+ *   <li>viscosity = baseViscosity × (5 − heat) / 5</li>
  *   <li>density   = baseDensity × (heat ≥ boilPoint ? −1 : 1)</li>
  *   <li>temp(K)   = 300 + 20 × heat</li>
  *   <li>gaseous   = density &lt; 0 (lighter than air → upside-down bucket)</li>
@@ -74,16 +74,16 @@ public class BCEnergyFluids {
     // ─── 1.12 fluid data table ────────────────────────────────────────
     //                          density, viscosity, boil, spread, tex_light,   tex_dark,  sticky, flammable
     private static final int[][] FLUID_DATA = {
-        {  900,  2000,  3,  6, 0x50_50_50, 0x05_05_05,  1,  1 }, // 0: Crude Oil
-        { 1200,  4000,  3,  4, 0x10_0F_10, 0x42_10_42,  1,  0 }, // 1: Residue
-        {  850,  1800,  3,  6, 0xA0_8F_1F, 0x42_35_20,  1,  1 }, // 2: Heavy Oil
-        {  950,  1600,  3,  5, 0x87_6E_77, 0x42_24_24,  1,  1 }, // 3: Dense Oil
-        {  750,  1400,  2,  8, 0xE4_AF_78, 0xB4_7F_00,  0,  1 }, // 4: Distilled Oil
-        {  600,   800,  2,  7, 0xFF_AF_3F, 0xE0_7F_00,  0,  1 }, // 5: Dense Fuel
-        {  700,  1000,  2,  7, 0xF2_A7_00, 0xC4_87_00,  0,  1 }, // 6: Mixed Heavy Fuels
-        {  400,   600,  1,  8, 0xFF_FF_30, 0xE4_CF_00,  0,  1 }, // 7: Light Fuel
-        {  650,   900,  1,  9, 0xF6_D7_00, 0xC4_B7_00,  0,  1 }, // 8: Mixed Light Fuels
-        {  300,   500,  0, 10, 0xFA_F6_30, 0xE0_D9_00,  0,  1 }, // 9: Gas Fuel
+        { 4000,  4000,  3,  6, 0x50_50_50, 0x05_05_05,  1,  1 }, // 0: Crude Oil
+        { 6000,  8000,  3,  4, 0x10_0F_10, 0x42_10_42,  1,  0 }, // 1: Residue
+        { 4000,  4000,  3,  6, 0xA0_8F_1F, 0x42_35_20,  1,  1 }, // 2: Heavy Oil
+        { 5000,  5000,  3,  5, 0x87_6E_77, 0x42_24_24,  1,  1 }, // 3: Dense Oil
+        { 3000,  3500,  2,  8, 0xE4_AF_78, 0xB4_7F_00,  0,  1 }, // 4: Distilled Oil
+        { 2000,  5000,  2,  7, 0xFF_AF_3F, 0xE0_7F_00,  0,  1 }, // 5: Dense Fuel
+        { 1200,   700,  2,  7, 0xF2_A7_00, 0xC4_87_00,  0,  1 }, // 6: Mixed Heavy Fuels
+        { 1000,   900,  1,  8, 0xFF_FF_30, 0xE4_CF_00,  0,  1 }, // 7: Light Fuel
+        {  800,   700,  1,  9, 0xF6_D7_00, 0xC4_B7_00,  0,  1 }, // 8: Mixed Light Fuels
+        {  300,   600,  0, 10, 0xFA_F6_30, 0xE0_D9_00,  0,  1 }, // 9: Gas Fuel
     };
 
     private static final String[] FLUID_NAMES = {
@@ -135,7 +135,7 @@ public class BCEnergyFluids {
             int baseSpread, int texLight, int texDark) {
 
         // 1.12 formulas
-        int viscosity   = baseViscosity * (4 - heat) / 4;
+        int viscosity   = baseViscosity * (5 - heat) / 5;
         int density     = baseDensity * (heat >= boilPoint ? -1 : 1);
         int temperature = 300 + 20 * heat;
         boolean gaseous = density < 0;
@@ -217,9 +217,9 @@ public class BCEnergyFluids {
             DeferredItem<BucketItem> bucket,
             int viscosity, int quanta) {
 
-        // Derive tick rate from viscosity: thicker fluids update slower.
-        // viscosity 500 (gas fuel) → tick 5, 2000 (crude oil) → tick 20, 4000 (residue) → tick 40
-        int tickRate = Math.max(5, viscosity / 100);
+        // Derive tick rate from viscosity, matching Forge 1.12.2 BlockFluidBase formula:
+        // tickRate = fluid.viscosity / 200
+        int tickRate = Math.max(1, viscosity / 200);
 
         // Map 1.12 quanta (spread distance) to NeoForge flow parameters.
         // quanta ≤ 6: short-range (like lava), quanta ≥ 7: longer-range (like water)

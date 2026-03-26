@@ -436,12 +436,16 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
         }
         List<BakedQuad> bakedQuads = new ArrayList<>();
         for (MutableQuad q : mutableQuads) {
-            bakedQuads.add(q.toBakedBlock());
+            bakedQuads.add(q.toBakedTranslucent());
         }
         return bakedQuads;
     }
 
-    /** Returns translucent colour overlay quads as MutableQuads for direct BER rendering. */
+    /** Returns translucent colour overlay quads for chunk-baked rendering.
+     *  Uses the same geometry position as the pipe body (QUADS templates)
+     *  instead of the offset QUADS_COLOURED templates, so the overlay
+     *  co-locates with the cutout pipe face and passes the GL_LEQUAL depth
+     *  test in the translucent chunk section pass. */
     public List<MutableQuad> generateTranslucentMutable(PipeBaseTranslucentKey key) {
         if (!key.shouldRender()) return ImmutableList.of();
         List<MutableQuad> quads = new ArrayList<>();
@@ -452,14 +456,16 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
         for (Direction face : Direction.values()) {
             float size = key.connections[face.ordinal()];
             if (size > 0) {
-                addQuads(QUADS_COLOURED[1][face.ordinal()], quads, sprite);
+                addQuads(QUADS[1][face.ordinal()], quads, sprite);
             } else {
-                addQuads(QUADS_COLOURED[0][face.ordinal()], quads, sprite);
+                addQuads(QUADS[0][face.ordinal()], quads, sprite);
             }
         }
-        int colour = getPipeModelColour(key.colour);
+        // Set tintIndex=1 on all translucent overlay quads.
+        // The chunk renderer applies colour via BlockTintSource (tintIndex=1 → dye colour),
+        // since BakedQuad in NeoForge 26.1 has no vertex colour — only tint-based colouring.
         for (MutableQuad q : quads) {
-            q.colouri(colour);
+            q.setTint(1);
         }
         return quads;
     }

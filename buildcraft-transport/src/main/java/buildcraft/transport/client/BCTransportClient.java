@@ -66,12 +66,13 @@ public class BCTransportClient {
      * Register the pipe colour tint source so item model JSON can reference it.
      */
     @SubscribeEvent
-    public static void registerItemTintSources(RegisterColorHandlersEvent.ItemTintSources event) {
+    public static void registerItemTintSources(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.ItemTintSources event) {
         event.register(
                 Identifier.fromNamespaceAndPath(BCTransport.MODID, "pipe_colour"),
                 PipeColourTintSource.MAP_CODEC
         );
     }
+
 
     /**
      * Swap the vanilla-baked pipe_holder model with PipeBlockStateModel, and

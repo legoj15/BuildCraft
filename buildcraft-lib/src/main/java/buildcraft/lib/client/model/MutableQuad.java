@@ -139,6 +139,24 @@ public class MutableQuad {
         );
     }
 
+    /** Converts this MutableQuad into a BakedQuad routed to the TRANSLUCENT chunk section layer.
+     *  The chunk compiler uses MaterialInfo.layer() to route each quad to the correct buffer,
+     *  enabling alpha-blended rendering for colour overlays in the chunk mesh. */
+    public BakedQuad toBakedTranslucent() {
+        BakedQuad.MaterialInfo matInfo = new BakedQuad.MaterialInfo(
+            sprite, net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT, null, tintIndex, shade, lightEmission
+        );
+        return new BakedQuad(
+            vertex_0.positionvf(), vertex_1.positionvf(),
+            vertex_2.positionvf(), vertex_3.positionvf(),
+            UVPair.pack(vertex_0.tex_u, vertex_0.tex_v),
+            UVPair.pack(vertex_1.tex_u, vertex_1.tex_v),
+            UVPair.pack(vertex_2.tex_u, vertex_2.tex_v),
+            UVPair.pack(vertex_3.tex_u, vertex_3.tex_v),
+            face, matInfo
+        );
+    }
+
     /** In 26.1, block and item use the same vertex format. Alias for {@link #toBakedBlock()}. */
     public BakedQuad toBakedItem() {
         return toBakedBlock();

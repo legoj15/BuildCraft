@@ -30,6 +30,11 @@ import buildcraft.transport.tile.TilePipeHolder;
  * in collectParts(), enabling position-dependent pipe geometry to be rendered
  * in the chunk mesh with proper face culling, AO, and directional shading.
  *
+ * <p>Cutout pipe body quads carry {@code ChunkSectionLayer.CUTOUT} in their
+ * {@code BakedQuad.MaterialInfo}, while translucent colour overlay quads carry
+ * {@code ChunkSectionLayer.TRANSLUCENT}. The chunk compiler routes each quad
+ * to its correct buffer based on this per-quad layer field.
+ *
  * <p>The tile entity's PipeModelKey is accessed via ModelData, which is
  * populated by TilePipeHolder.getModelData() and refreshed whenever
  * pipe connections or paint change.
@@ -59,22 +64,23 @@ public class PipeBlockStateModel implements DynamicBlockStateModel {
             addQuadsAsPart(parts, cutoutQuads, vanillaDelegate.particleMaterial());
         }
 
-        // Translucent pass — colour overlay for painted pipes
+        // Translucent pass — colour overlay for painted pipes.
+        // BakedQuads from getTranslucentModel() carry ChunkSectionLayer.TRANSLUCENT
+        // in their MaterialInfo, so the chunk compiler routes them to the alpha-blended
+        // translucent buffer automatically. No custom part type needed.
         List<BakedQuad> translucentQuads = PipeModelCacheAll.getTranslucentModel(tile);
         if (!translucentQuads.isEmpty()) {
             addQuadsAsPart(parts, translucentQuads, vanillaDelegate.particleMaterial());
         }
     }
 
-    /** Convert a list of BakedQuads into a BlockStateModelPart and add to the parts list.
+    /** Convert a list of BakedQuads into a cutout BlockStateModelPart and add to the parts list.
      *  All pipe quads are unculled (sub-block sized, shouldn't be face-culled). */
     private static void addQuadsAsPart(List<BlockStateModelPart> parts, List<BakedQuad> quads, Material.Baked particle) {
         QuadCollection.Builder builder = new QuadCollection.Builder();
         for (BakedQuad quad : quads) {
             builder.addUnculledFace(quad);
         }
-        // SimpleModelWrapper is a vanilla record implementing BlockStateModelPart
-        // Constructor: SimpleModelWrapper(QuadCollection quads, boolean useAmbientOcclusion, Material.Baked particleMaterial)
         parts.add(new net.minecraft.client.resources.model.SimpleModelWrapper(builder.build(), true, particle));
     }
 

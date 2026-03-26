@@ -35,4 +35,10 @@ public interface IPipeBaseModelGen {
     default List<MutableQuad> generateCutoutMutable(PipeBaseCutoutKey key) {
         return new ArrayList<>();
     }
+
+    /** Returns translucent colour overlay quads as MutableQuads for direct rendering.
+     *  Default implementation returns an empty list — override for translucent overlay support. */
+    default List<MutableQuad> generateTranslucentMutable(PipeBaseTranslucentKey key) {
+        return new ArrayList<>();
+    }
 }

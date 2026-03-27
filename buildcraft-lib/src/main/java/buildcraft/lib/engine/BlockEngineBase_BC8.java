@@ -69,9 +69,26 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock, 
 
     // --- Shape / Occlusion ---
 
+    /**
+     * A collision shape that is 15.99/16 tall — visually and mechanically indistinguishable
+     * from a full block, but fails the {@code Block.isFaceFull(shape, UP)} check.
+     * This prevents snow from accumulating on top, matching 1.12.2 behaviour where
+     * {@code isSideSolid()} returned false for the top face of engine blocks.
+     * <p>
+     * {@code SnowLayerBlock.canSurvive()} falls back to checking
+     * {@code Block.isFaceFull(getCollisionShape(), Direction.UP)} when the block
+     * is not in any snow-related block tag.
+     */
+    private static final VoxelShape NO_SNOW_SHAPE = Block.box(0, 0, 0, 16, 15.99, 16);
+
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return Shapes.block();
+    }
+
+    @Override
+    protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return NO_SNOW_SHAPE;
     }
 
     @Override

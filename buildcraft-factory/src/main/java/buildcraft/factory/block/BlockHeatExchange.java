@@ -144,6 +144,20 @@ public class BlockHeatExchange extends BaseEntityBlock {
                 (lvl, pos, st, tile) -> tile.serverTick());
     }
 
+    /**
+     * Collision shape that is 15.99/16 tall to prevent snow accumulation.
+     * @see buildcraft.lib.engine.BlockEngineBase_BC8#NO_SNOW_SHAPE
+     */
+    private static final net.minecraft.world.phys.shapes.VoxelShape NO_SNOW_SHAPE =
+            Block.box(0, 0, 0, 16, 15.99, 16);
+
+    @Override
+    protected net.minecraft.world.phys.shapes.VoxelShape getCollisionShape(BlockState state,
+            net.minecraft.world.level.BlockGetter level, BlockPos pos,
+            net.minecraft.world.phys.shapes.CollisionContext context) {
+        return NO_SNOW_SHAPE;
+    }
+
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;

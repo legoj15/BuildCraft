@@ -21,6 +21,7 @@
     "block.buildcraftcore.engine_stone": "Stirling Engine",
     "block.buildcraftcore.engine_iron": "Combustion Engine",
     "block.buildcraftcore.engine_creative": "Creative Engine",
+    "item.buildcraftcore.engine_creative": "Creative Engine",
     "chat.pipe.power.iron.mode": "Switched to %s MJ/t limit",
     "item.buildcraftcore.gear_wood": "Wood Gear",
     "item.buildcraftcore.gear_stone": "Stone Gear",

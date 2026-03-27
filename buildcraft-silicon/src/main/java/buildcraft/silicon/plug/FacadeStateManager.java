@@ -62,6 +62,8 @@ public enum FacadeStateManager implements IFacadeRegistry {
     public static final Map<ItemStackKey, List<FacadeBlockStateInfo>> stackRedirects;
     public static FacadeBlockStateInfo defaultState, previewState;
 
+    private static volatile boolean initialized = false;
+
     private static final Map<Block, String> disabledBlocks = new HashMap<>();
     private static final Map<BlockState, ItemStack> customBlocks = new HashMap<>();
 
@@ -69,6 +71,19 @@ public enum FacadeStateManager implements IFacadeRegistry {
         validFacadeStates = new TreeMap<>(blockStateComparator());
         stackFacades = new HashMap<>();
         stackRedirects = new HashMap<>();
+    }
+
+    /** Returns true if {@link #init()} has been called successfully at least once. */
+    public static boolean isInitialized() {
+        return initialized;
+    }
+
+    /** Ensures that {@link #init()} has been called at least once.
+     *  Safe to call from any thread — will only run the full scan on the first call. */
+    public static void ensureInitialized() {
+        if (!initialized) {
+            init();
+        }
     }
 
     /** Creates a comparator for BlockState based on their ID in the global block state registry. */
@@ -131,6 +146,9 @@ public enum FacadeStateManager implements IFacadeRegistry {
     }
 
     public static void init() {
+        if (initialized) {
+            return;
+        }
         defaultState = new FacadeBlockStateInfo(Blocks.AIR.defaultBlockState(), ItemStack.EMPTY, ImmutableSet.of());
         if (FacadeAPI.facadeItem == null) {
             previewState = defaultState;
@@ -146,6 +164,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
             previewState = defaultState;
         }
 
+        initialized = true;
         BCLog.logger.info("[silicon.facade] Total valid facade states: " + validFacadeStates.size());
     }
 

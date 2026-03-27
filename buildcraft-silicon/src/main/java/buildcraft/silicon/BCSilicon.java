@@ -89,20 +89,18 @@ public class BCSilicon {
             FacadeAPI.facadeItem = BCSiliconItems.PLUG_FACADE.get();
             FacadeAPI.registry = FacadeStateManager.INSTANCE;
 
-            // Register assembly, integration, and other recipes
-            // MC 26.1: Moved to ServerAboutToStartEvent — see onServerAboutToStart()
-
-            // Scan all registered blocks and build the facade state registry
-            FacadeStateManager.init();
-            LOGGER.info("Facade state manager initialized with {} valid states",
-                FacadeStateManager.validFacadeStates.size());
+            // NOTE: FacadeStateManager.init() is NOT called here.
+            // MC 26.1: ItemStack constructors require Holder.components() to be bound,
+            // which only happens after registries freeze. Facade init is deferred to
+            // ServerAboutToStartEvent / BuildCreativeModeTabContentsEvent.
         });
     }
 
     private void onServerAboutToStart(ServerAboutToStartEvent event) {
-        // MC 26.1: Recipe registration moved here from commonSetup because
+        // MC 26.1: Facade + recipe initialization moved here from commonSetup because
         // ItemStack/FluidStack constructors now access Holder.components(),
         // which is only bound after registries finish freezing.
+        FacadeStateManager.ensureInitialized();
         BCSiliconRecipes.init();
     }
 
@@ -140,6 +138,13 @@ public class BCSilicon {
 
         // Facades in their own tab
         if (event.getTabKey() == BCSiliconCreativeTabs.FACADE_TAB_KEY) {
+            // Ensure facade states are scanned — this may be the first point where
+            // ItemStack construction is safe (registry components are bound).
+            FacadeStateManager.ensureInitialized();
+            // Run visual deduplication using cached models from the last bake
+            if (FMLEnvironment.getDist() == Dist.CLIENT) {
+                buildcraft.silicon.client.BCSiliconClient.runDeferredDedup();
+            }
             for (FacadeBlockStateInfo info : FacadeStateManager.validFacadeStates.values()) {
                 if (info.isVisible) {
                     event.accept(BCSiliconItems.PLUG_FACADE.get()

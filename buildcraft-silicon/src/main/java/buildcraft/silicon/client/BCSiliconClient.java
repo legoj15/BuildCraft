@@ -24,9 +24,14 @@ import buildcraft.silicon.client.render.RenderLaser;
 import buildcraft.silicon.gui.GuiAdvancedCraftingTable;
 import buildcraft.silicon.gui.GuiAssemblyTable;
 import buildcraft.silicon.gui.GuiIntegrationTable;
+import buildcraft.silicon.plug.FacadeStateManager;
 
 public class BCSiliconClient {
     private static final Logger LOGGER = LoggerFactory.getLogger("BuildCraft");
+
+    /** Cached blockstate model map from the last bake, used for deferred facade dedup. */
+    private static java.util.Map<net.minecraft.world.level.block.state.BlockState,
+            net.minecraft.client.renderer.block.dispatch.BlockStateModel> cachedBlockStateModels;
 
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
@@ -66,9 +71,21 @@ public class BCSiliconClient {
         }
         FacadeItemModel.onModelBake();
 
-        // Deduplicate facades that have identical textures on all 6 faces
-        // (e.g. bricks vs double brick_slab, waterlogged vs non-waterlogged)
-        FacadeDeduplicator.deduplicateVisuallyIdentical(event.getBakingResult().blockStateModels());
+        // Cache the blockstate models for deferred facade deduplication.
+        // We can't run dedup here because ItemStack components aren't bound yet
+        // during the initial resource reload. Dedup runs later via runDeferredDedup().
+        cachedBlockStateModels = event.getBakingResult().blockStateModels();
+    }
+
+    /**
+     * Runs visual facade deduplication using the cached blockstate models from the
+     * last bake. Should be called after FacadeStateManager has been initialized
+     * (i.e. after registry components are bound).
+     */
+    public static void runDeferredDedup() {
+        if (cachedBlockStateModels != null) {
+            FacadeDeduplicator.deduplicateVisuallyIdentical(cachedBlockStateModels);
+            cachedBlockStateModels = null; // release reference
+        }
     }
 }
-

@@ -158,18 +158,31 @@ public class FacadeAssemblyRecipes extends AssemblyRecipe implements IRecipeView
         FacadeBlockStateInfo targetInfo = state.stateInfo;
         ItemStack stateRequirement = targetInfo.requiredStack;
 
+        // If the facade has no item requirement (e.g. air default state), skip
+        if (stateRequirement.isEmpty()) {
+            return Collections.emptySet();
+        }
+
         // Build a list of all items that can be used to craft this facade:
         // 1. The facade's own requiredStack item
         // 2. Any items that redirect to this facade via visual dedup
         List<net.minecraft.world.level.ItemLike> acceptedItems = new ArrayList<>();
-        acceptedItems.add(stateRequirement.getItem());
+        if (stateRequirement.getItem() != Items.AIR) {
+            acceptedItems.add(stateRequirement.getItem());
+        }
         for (java.util.Map.Entry<ItemStackKey, List<FacadeBlockStateInfo>> entry : FacadeStateManager.stackRedirects.entrySet()) {
             for (FacadeBlockStateInfo redirectInfo : entry.getValue()) {
                 if (redirectInfo == targetInfo || redirectInfo.state == targetInfo.state) {
-                    acceptedItems.add(entry.getKey().baseStack.getItem());
+                    if (entry.getKey().baseStack.getItem() != Items.AIR) {
+                        acceptedItems.add(entry.getKey().baseStack.getItem());
+                    }
                     break; // Only need to add this item once
                 }
             }
+        }
+
+        if (acceptedItems.isEmpty()) {
+            return Collections.emptySet();
         }
 
         Ingredient ingredientType = Ingredient.of(acceptedItems.toArray(new net.minecraft.world.level.ItemLike[0]));

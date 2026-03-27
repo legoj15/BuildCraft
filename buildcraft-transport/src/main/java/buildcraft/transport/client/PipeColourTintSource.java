@@ -30,13 +30,16 @@ public final class PipeColourTintSource implements ItemTintSource {
 
     private PipeColourTintSource() {}
 
+    /** Semi-transparent alpha for the overlay (76/255 ≈ 30%, matching overlay_stained.png). */
+    private static final int OVERLAY_ALPHA = 76;
+
     @Override
     public int calculate(ItemStack stack, @Nullable ClientLevel level, @Nullable LivingEntity entity) {
         DyeColor col = stack.get(BCTransportItems.PIPE_COLOUR.get());
         if (col != null) {
-            return ColourUtil.getLightHex(col);
+            return (OVERLAY_ALPHA << 24) | ColourUtil.getLightHex(col);
         }
-        return 0xFFFFFF; // white — multiplies to no visual change on white overlay texture
+        return (OVERLAY_ALPHA << 24) | 0xFFFFFF;
     }
 
     @Override

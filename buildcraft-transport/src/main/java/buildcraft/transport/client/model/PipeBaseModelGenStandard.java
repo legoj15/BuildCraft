@@ -23,6 +23,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.world.item.DyeColor;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.transport.pipe.EnumPipeColourType;
@@ -46,6 +47,8 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
     // Textures — sprites are loaded lazily from the atlas via PipeDefinition texture names
     private static final Map<PipeDefinition, TextureAtlasSprite[]> SPRITES = new IdentityHashMap<>();
     private static final Map<PipeDefinition, TextureAtlasSprite[]> MASK_SPRITES = new IdentityHashMap<>();
+    /** Cache of dyed fluid pipe sprites, keyed by (PipeDefinition, DyeColor ordinal). */
+    private static final Map<Long, TextureAtlasSprite[]> DYED_SPRITES = new java.util.HashMap<>();
 
     @Override
     public TextureAtlasSprite[] getItemSprites(PipeDefinition def) {
@@ -184,6 +187,30 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
         return array;
     }
 
+    /** Resolve dyed sprites for a painted fluid pipe. Appends "_dyed_<colour>" to each
+     *  texture name in PipeDefinition.textures[] and resolves from the block atlas.
+     *  Returns null if any sprite fails to resolve (fallback to mask overlay). */
+    @Nullable
+    static TextureAtlasSprite[] ensureDyedSprites(PipeDefinition def, DyeColor colour) {
+        long cacheKey = ((long) System.identityHashCode(def) << 32) | colour.ordinal();
+        TextureAtlasSprite[] cached = DYED_SPRITES.get(cacheKey);
+        if (cached != null) return cached;
+        TextureAtlasSprite missing = SpriteUtil.missingSprite();
+        TextureAtlasSprite[] array = new TextureAtlasSprite[def.textures.length];
+        String dyeSuffix = "_dyed_" + colour.getName();
+        boolean allResolved = true;
+        for (int i = 0; i < array.length; i++) {
+            String dyedTex = def.textures[i] + dyeSuffix;
+            array[i] = SpriteUtil.getSprite(Identifier.parse(dyedTex));
+            if (array[i] == null || array[i] == missing) {
+                // No dyed variant for this texture — fallback
+                return null;
+            }
+        }
+        DYED_SPRITES.put(cacheKey, array);
+        return array;
+    }
+
     // Models - pre-built geometry templates
     private static final MutableQuad[][][] QUADS;
     private static final MutableQuad[][][] QUADS_COLOURED;
@@ -302,7 +329,19 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
     public List<MutableQuad> generateCutoutMutable(PipeBaseCutoutKey key) {
         List<MutableQuad> quads = new ArrayList<>();
 
-        TextureAtlasSprite[] spriteArray = key.definition != null ? ensureSprites(key.definition) : null;
+        // For painted fluid pipes, use pre-generated dyed texture variants
+        // instead of the original sprites (colour baked into texture at build time)
+        TextureAtlasSprite[] spriteArray;
+        if (key.definition != null && key.colour != null
+                && key.definition.flowType == PipeApi.flowFluids) {
+            spriteArray = ensureDyedSprites(key.definition, key.colour);
+            if (spriteArray == null) {
+                // Dyed variant not found — fall back to normal sprites
+                spriteArray = ensureSprites(key.definition);
+            }
+        } else {
+            spriteArray = key.definition != null ? ensureSprites(key.definition) : null;
+        }
         TextureAtlasSprite borderSprite = getBorderSprite(key);
         int colour = borderSprite == null ? -1 : getPipeModelColour(key.colour);
         int border_r = (colour >> 0) & 0xFF;
@@ -429,7 +468,13 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
         List<MutableQuad> mutableQuads;
         if (key.cutoutKey != null && key.cutoutKey.definition != null
                 && key.cutoutKey.definition.flowType == PipeApi.flowFluids) {
-            // Fluid pipes — use mask quads for fully opaque corner painting
+            // Fluid pipes — colour is baked into the dyed cutout texture.
+            // No translucent overlay needed. Fall back to mask quads only
+            // if dyed sprites are unavailable.
+            if (key.cutoutKey.colour != null
+                    && ensureDyedSprites(key.cutoutKey.definition, key.cutoutKey.colour) != null) {
+                return ImmutableList.of(); // dyed texture handles colour — no overlay
+            }
             mutableQuads = generateMaskMutable(key.cutoutKey, 255);
         } else {
             mutableQuads = generateTranslucentMutable(key);
@@ -442,23 +487,40 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
     }
 
     /** Returns translucent colour overlay quads for chunk-baked rendering.
-     *  Uses the same geometry position as the pipe body (QUADS templates)
-     *  instead of the offset QUADS_COLOURED templates, so the overlay
-     *  co-locates with the cutout pipe face and passes the GL_LEQUAL depth
-     *  test in the translucent chunk section pass. */
+     *  Uses mask sprites (which have alpha=0 over the frame, alpha=255 over
+     *  the glass area) so the tint only colours the see-through parts.
+     *  Alpha=76 gives the same semi-transparency as overlay_stained.png. */
     public List<MutableQuad> generateTranslucentMutable(PipeBaseTranslucentKey key) {
         if (!key.shouldRender()) return ImmutableList.of();
         List<MutableQuad> quads = new ArrayList<>();
-        TextureAtlasSprite sprite = BCTransportSprites.PIPE_COLOUR.getSprite();
-        if (sprite == null) {
-            sprite = SpriteUtil.missingSprite();
-        }
+
+        // Use per-definition mask sprites — these have proper alpha masking
+        // (transparent over frame, opaque over glass)
+        TextureAtlasSprite[] maskArray = key.cutoutKey != null && key.cutoutKey.definition != null
+                ? ensureMaskSprites(key.cutoutKey.definition) : null;
+
         for (Direction face : Direction.values()) {
             float size = key.connections[face.ordinal()];
-            if (size > 0) {
-                addQuads(QUADS[1][face.ordinal()], quads, sprite);
+            PipeFaceTex tex = key.cutoutKey != null
+                    ? (size > 0 ? key.cutoutKey.sideSprites[face.ordinal()] : key.cutoutKey.centerSprite)
+                    : null;
+            int quadsIndex = size > 0 ? 1 : 0;
+
+            if (tex != null) {
+                for (int i = 0; i < tex.getCount(); i++) {
+                    TextureAtlasSprite maskSprite = getSprite(maskArray, tex, i);
+                    int startIndex = quads.size();
+                    addQuads(QUADS[quadsIndex][face.ordinal()], quads, maskSprite);
+                    // Apply semi-transparent alpha (76 = overlay_stained.png's glass alpha)
+                    for (int q = startIndex; q < quads.size(); q++) {
+                        quads.get(q).multColouri(0xFF, 0xFF, 0xFF, 76);
+                    }
+                }
             } else {
-                addQuads(QUADS[0][face.ordinal()], quads, sprite);
+                // Fallback: use PIPE_COLOUR sprite (full-face)
+                TextureAtlasSprite sprite = BCTransportSprites.PIPE_COLOUR.getSprite();
+                if (sprite == null) sprite = SpriteUtil.missingSprite();
+                addQuads(QUADS[quadsIndex][face.ordinal()], quads, sprite);
             }
         }
         // Set tintIndex=1 on all translucent overlay quads.

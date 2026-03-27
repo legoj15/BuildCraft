@@ -10,24 +10,25 @@ public class ColourUtil {
     /** All 16 dye colours, in ordinal order. Equivalent to DyeColor.values() but cached. */
     public static final DyeColor[] COLOURS = DyeColor.values();
 
-    /** Light (brighter) hex colour for each dye, used for pipe colouring. */
+    /** Light (brighter) hex colour for each dye, used for pipe colouring.
+     *  Values from 1.12.2, remapped to MC 26.1 DyeColor ordinal order. */
     private static final int[] LIGHT_HEX = {
-        0xFF_FF_FF, // WHITE
-        0xFF_A5_40, // ORANGE
-        0xFF_40_FF, // MAGENTA
-        0x40_80_FF, // LIGHT_BLUE
-        0xFF_FF_40, // YELLOW
-        0x40_FF_40, // LIME
-        0xFF_80_A0, // PINK
-        0x60_60_60, // GRAY
-        0xA0_A0_A0, // LIGHT_GRAY
-        0x40_A0_A0, // CYAN
-        0xA0_40_FF, // PURPLE
-        0x40_40_FF, // BLUE
-        0x80_60_40, // BROWN
-        0x40_80_40, // GREEN
-        0xFF_40_40, // RED
-        0x30_30_30, // BLACK
+        0xe4_e4_e4, // WHITE
+        0xEA_78_35, // ORANGE
+        0xD9_43_C6, // MAGENTA
+        0x66_AA_FF, // LIGHT_BLUE
+        0xFF_D9_1C, // YELLOW
+        0x39_D5_2E, // LIME
+        0xD9_71_99, // PINK
+        0x7A_7A_7A, // GRAY
+        0xa0_a7_a7, // LIGHT_GRAY
+        0x29_97_99, // CYAN
+        0x7e_34_bf, // PURPLE
+        0x25_31_93, // BLUE
+        0x89_50_2D, // BROWN
+        0x00_7F_0E, // GREEN
+        0xBE_2B_27, // RED
+        0x18_14_14, // BLACK
     };
 
     /** Maps DyeColor ordinals to ChatFormatting colours for display, matching 1.12.2. */

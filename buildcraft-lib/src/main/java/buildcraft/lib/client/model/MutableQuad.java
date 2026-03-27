@@ -126,7 +126,9 @@ public class MutableQuad {
     /** Converts this MutableQuad into a MC 26.1 BakedQuad. */
     public BakedQuad toBakedBlock() {
         BakedQuad.MaterialInfo matInfo = new BakedQuad.MaterialInfo(
-            sprite, net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT, null, tintIndex, shade, lightEmission
+            sprite, net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT,
+            net.minecraft.client.renderer.Sheets.cutoutBlockItemSheet(),
+            tintIndex, shade, lightEmission
         );
         return new BakedQuad(
             vertex_0.positionvf(), vertex_1.positionvf(),
@@ -141,10 +143,13 @@ public class MutableQuad {
 
     /** Converts this MutableQuad into a BakedQuad routed to the TRANSLUCENT chunk section layer.
      *  The chunk compiler uses MaterialInfo.layer() to route each quad to the correct buffer,
-     *  enabling alpha-blended rendering for colour overlays in the chunk mesh. */
+     *  enabling alpha-blended rendering for colour overlays in the chunk mesh.
+     *  Uses translucentBlockItemSheet for correct item rendering of blocks-atlas sprites. */
     public BakedQuad toBakedTranslucent() {
         BakedQuad.MaterialInfo matInfo = new BakedQuad.MaterialInfo(
-            sprite, net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT, null, tintIndex, shade, lightEmission
+            sprite, net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT,
+            net.minecraft.client.renderer.Sheets.translucentBlockItemSheet(),
+            tintIndex, shade, lightEmission
         );
         return new BakedQuad(
             vertex_0.positionvf(), vertex_1.positionvf(),

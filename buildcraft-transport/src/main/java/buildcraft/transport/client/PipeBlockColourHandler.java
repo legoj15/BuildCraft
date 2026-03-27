@@ -39,21 +39,25 @@ public class PipeBlockColourHandler {
     /** No-op tint: full-alpha white = no colour modification. */
     private static final BlockTintSource NO_TINT = state -> 0xFFFFFFFF;
 
-    /** BlockTintSource for tintIndex=1 (translucent colour overlay quads). */
+    /** Semi-transparent alpha for the overlay (76/255 ≈ 30%, matching overlay_stained.png). */
+    private static final int OVERLAY_ALPHA = 76;
+
+    /** BlockTintSource for tintIndex=1 (translucent colour overlay quads).
+     *  Returns ARGB with alpha=76 for semi-transparent stained-glass effect. */
     private static final BlockTintSource PIPE_COLOUR_TINT = new BlockTintSource() {
         @Override
         public int color(BlockState state) {
-            return 0xFFFFFFFF; // fallback when no level/pos context
+            return (OVERLAY_ALPHA << 24) | 0xFFFFFF; // semi-transparent white fallback
         }
 
         @Override
         public int colorInWorld(BlockState state, BlockAndTintGetter level, BlockPos pos) {
             var be = level.getBlockEntity(pos);
-            if (!(be instanceof TilePipeHolder tile)) return 0xFFFFFFFF;
-            if (tile.getPipe() == null) return 0xFFFFFFFF;
+            if (!(be instanceof TilePipeHolder tile)) return (OVERLAY_ALPHA << 24) | 0xFFFFFF;
+            if (tile.getPipe() == null) return (OVERLAY_ALPHA << 24) | 0xFFFFFF;
             DyeColor colour = tile.getPipe().getModel().colour;
-            if (colour == null) return 0xFFFFFFFF;
-            return 0xFF000000 | ColourUtil.getLightHex(colour);
+            if (colour == null) return (OVERLAY_ALPHA << 24) | 0xFFFFFF;
+            return (OVERLAY_ALPHA << 24) | ColourUtil.getLightHex(colour);
         }
     };
 

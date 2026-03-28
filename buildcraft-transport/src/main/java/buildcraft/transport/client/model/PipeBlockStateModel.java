@@ -94,7 +94,9 @@ public class PipeBlockStateModel implements DynamicBlockStateModel {
         if (tile == null || tile.getPipe() == null) {
             return EMPTY_KEY;
         }
-        return tile.getPipe().getModel();
+        // Use PipeAllCutoutKey as the geometry key — it encodes both the pipe model
+        // and all pluggable model keys, so the chunk rebuilds when either changes.
+        return new PipeModelCacheAll.PipeAllCutoutKey(tile);
     }
 
     @Override

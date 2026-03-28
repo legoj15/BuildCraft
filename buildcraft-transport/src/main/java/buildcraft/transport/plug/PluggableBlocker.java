@@ -75,7 +75,7 @@ public class PluggableBlocker extends PipePluggable {
 
     @Override
     public PluggableModelKey getModelRenderKey(Object layer) {
-        // Rendering not yet ported — return null until KeyPlugBlocker baked model support is added
+        if ("cutout".equals(layer)) return new KeyPlugBlocker(side);
         return null;
     }
 }

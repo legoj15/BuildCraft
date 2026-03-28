@@ -16,6 +16,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.AABB;
+import buildcraft.transport.pipe.Pipe;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions;
 
 import org.jspecify.annotations.Nullable;
@@ -33,6 +36,8 @@ import buildcraft.transport.tile.TilePipeHolder;
  */
 public class PipeHolderClientExtensions implements IClientBlockExtensions {
     public static final PipeHolderClientExtensions INSTANCE = new PipeHolderClientExtensions();
+
+
 
     /** Reusable render state to avoid allocation per particle. */
     private final ItemStackRenderState renderState = new ItemStackRenderState();
@@ -59,120 +64,199 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
     /**
      * Resolves the particle sprite for a pluggable using 1.21.11's ItemStackRenderState.
      * This correctly handles all item types by resolving through the item model system.
+     * For facades, it bypasses the item model and extracts the mimicked block's sprite directly.
      */
     private @Nullable TextureAtlasSprite getPluggableSprite(PipePluggable pluggable) {
+        if (pluggable instanceof buildcraft.api.facades.IFacade facade) {
+            buildcraft.api.facades.IFacadePhasedState[] states = facade.getPhasedStates();
+            if (states != null && states.length > 0) {
+                BlockState state = states[0].getState().getBlockState();
+                if (state != null) {
+                    Minecraft mc = Minecraft.getInstance();
+                    var model = mc.getModelManager().getBlockStateModelSet().get(state);
+                    if (model != null) {
+                        for (java.lang.reflect.Method m : model.getClass().getMethods()) {
+                            String name = m.getName().toLowerCase();
+                            if ((name.contains("particle") || name.contains("icon") || name.contains("sprite")) 
+                                    && m.getParameterCount() == 0 
+                                    && m.getReturnType() == TextureAtlasSprite.class) {
+                                try {
+                                    m.setAccessible(true);
+                                    TextureAtlasSprite sprite = (TextureAtlasSprite) m.invoke(model);
+                                    if (sprite != null) return sprite;
+                                } catch (Exception e) {}
+                            }
+                        }
+                        
+                        // Fallback: try taking 3 arguments (BlockAndTintGetter, BlockPos, BlockState) like NeoForge extensions
+                        for (java.lang.reflect.Method m : model.getClass().getMethods()) {
+                            if (m.getParameterCount() == 3 && m.getReturnType() == TextureAtlasSprite.class) {
+                                try {
+                                    m.setAccessible(true);
+                                    TextureAtlasSprite sprite = (TextureAtlasSprite) m.invoke(model, mc.level, BlockPos.ZERO, state);
+                                    if (sprite != null) return sprite;
+                                } catch (Exception e) {}
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        // For regular pluggables, use the baked quads from PipeModelCachePluggable
+        buildcraft.api.transport.pluggable.PluggableModelKey keyC = pluggable.getModelRenderKey("cutout");
+        buildcraft.api.transport.pluggable.PluggableModelKey keyT = pluggable.getModelRenderKey("translucent");
+        java.util.List<BakedQuad> quads = null;
+        if (keyC != null) quads = buildcraft.transport.client.model.PipeModelCachePluggable.cacheCutoutSingle.bake(keyC);
+        if (quads == null || quads.isEmpty()) {
+            if (keyT != null) quads = buildcraft.transport.client.model.PipeModelCachePluggable.cacheTranslucentSingle.bake(keyT);
+        }
+        if (quads != null && !quads.isEmpty()) {
+            BakedQuad quad = quads.get(0);
+            for (java.lang.reflect.Method m : quad.getClass().getMethods()) {
+                if (m.getReturnType() == net.minecraft.client.renderer.texture.TextureAtlasSprite.class && m.getParameterCount() == 0) {
+                    try {
+                        return (net.minecraft.client.renderer.texture.TextureAtlasSprite) m.invoke(quad);
+                    } catch (Exception e) {}
+                }
+            }
+        }
+
+        // Final fallback: try ItemStackRenderState
         ItemStack stack = pluggable.getPickStack();
         if (!stack.isEmpty()) {
             Minecraft mc = Minecraft.getInstance();
-            if (mc.level == null) return null;
-            renderState.clear();
-            ItemModelResolver resolver = mc.getItemModelResolver();
-            resolver.appendItemLayers(renderState, stack,
-                    net.minecraft.world.item.ItemDisplayContext.GUI,
-                    mc.level, (net.minecraft.world.entity.ItemOwner) null, 0);
-            // MC 26.1: pickParticleIcon → pickParticleMaterial (returns Material.Baked)
-            var particleMat = renderState.pickParticleMaterial(mc.level.getRandom());
-            TextureAtlasSprite sprite = particleMat != null ? particleMat.sprite() : null;
-            if (sprite != null && sprite != SpriteUtil.missingSprite()) {
-                return sprite;
+            if (mc.level != null) {
+                renderState.clear();
+                ItemModelResolver resolver = mc.getItemModelResolver();
+                resolver.appendItemLayers(renderState, stack, net.minecraft.world.item.ItemDisplayContext.GUI, mc.level, null, 0);
+                var particleMat = renderState.pickParticleMaterial(mc.level.getRandom());
+                TextureAtlasSprite sprite = particleMat != null ? particleMat.sprite() : null;
+                if (sprite != null && sprite != SpriteUtil.missingSprite()) {
+                    return sprite;
+                }
             }
         }
         return null;
     }
 
-    /**
-     * Resolves the best sprite for a specific hit on the pipe_holder block.
-     * Uses hit location and pluggable AABB testing to determine if a pluggable was hit.
-     */
-    private @Nullable TextureAtlasSprite getSpriteForHit(Level level, BlockPos pos, BlockHitResult blockHit) {
-        if (level.getBlockEntity(pos) instanceof TilePipeHolder tile) {
-            // Use hit location to determine which pluggable (if any) was hit
-            double lx = blockHit.getLocation().x - pos.getX();
-            double ly = blockHit.getLocation().y - pos.getY();
-            double lz = blockHit.getLocation().z - pos.getZ();
-            Direction plugDir = BlockPipeHolder.getHitPluggable(tile, lx, ly, lz);
-            if (plugDir != null) {
-                PipePluggable plug = tile.getPluggable(plugDir);
-                if (plug != null) {
-                    TextureAtlasSprite sprite = getPluggableSprite(plug);
-                    if (sprite != null) return sprite;
-                }
-            }
+    private static final class HitSpriteInfo {
+        final AABB aabb;
+        final TextureAtlasSprite sprite;
+        HitSpriteInfo(AABB aabb, TextureAtlasSprite sprite) {
+            this.aabb = aabb;
+            this.sprite = sprite;
         }
-        // Fall back to pipe sprite
-        return getPipeSprite(level, pos);
     }
 
-    @Override
-    public boolean addDestroyEffects(BlockState state, Level level, BlockPos pos, ParticleEngine manager) {
-        TextureAtlasSprite sprite = getPipeSprite(level, pos);
-        if (sprite == null) {
-            return false; // fall back to default
+    private @Nullable HitSpriteInfo getHitSpriteInfo(Level level, BlockPos pos, @Nullable HitResult target) {
+        if (!(target instanceof BlockHitResult blockHit) || !pos.equals(blockHit.getBlockPos())) {
+            return null;
+        }
+        if (!(level.getBlockEntity(pos) instanceof TilePipeHolder tile)) {
+            return null;
         }
 
-        // Spawn 4×4×4 = 64 particles, mirroring vanilla ParticleEngine.destroy()
-        for (int ix = 0; ix < 4; ix++) {
-            for (int iy = 0; iy < 4; iy++) {
-                for (int iz = 0; iz < 4; iz++) {
-                    double x = pos.getX() + (ix + 0.5) / 4.0;
-                    double y = pos.getY() + (iy + 0.5) / 4.0;
-                    double z = pos.getZ() + (iz + 0.5) / 4.0;
-                    PipeBreakParticle particle = new PipeBreakParticle(
-                            (ClientLevel) level, x, y, z,
-                            x - pos.getX() - 0.5,
-                            y - pos.getY() - 0.5,
-                            z - pos.getZ() - 0.5,
-                            sprite
-                    );
-                    manager.add(particle);
+        double lx = blockHit.getLocation().x - pos.getX();
+        double ly = blockHit.getLocation().y - pos.getY();
+        double lz = blockHit.getLocation().z - pos.getZ();
+
+        // 1. Check Pluggables
+        Direction plugDir = BlockPipeHolder.getHitPluggable(tile, lx, ly, lz);
+        if (plugDir != null) {
+            PipePluggable plug = tile.getPluggable(plugDir);
+            if (plug != null) {
+                AABB box = plug.getBoundingBox();
+                TextureAtlasSprite sprite = getPluggableSprite(plug);
+                if (sprite != null && box != null) {
+                    return new HitSpriteInfo(box, sprite);
                 }
             }
         }
-        return true; // suppress default particles
+
+        // 2. Fallback to Pipe Center
+        return getPipeSpriteInfo(level, pos, tile);
+    }
+
+    private @Nullable HitSpriteInfo getPipeSpriteInfo(Level level, BlockPos pos, TilePipeHolder tile) {
+        Pipe pipe = tile.getPipe();
+        if (pipe != null) {
+            PipeDefinition def = pipe.getDefinition();
+            if (def != null && def.textures != null && def.textures.length > 0) {
+                TextureAtlasSprite sprite = SpriteUtil.getSprite(def.textures[0]);
+                if (sprite != null) {
+                    return new HitSpriteInfo(new AABB(0.25, 0.25, 0.25, 0.75, 0.75, 0.75), sprite);
+                }
+            }
+        }
+        return null;
     }
 
     @Override
     public boolean addHitEffects(BlockState state, Level level, @Nullable HitResult target, ParticleEngine manager) {
         if (target instanceof BlockHitResult blockHit) {
-            BlockPos pos = blockHit.getBlockPos();
-            TextureAtlasSprite sprite = getSpriteForHit(level, pos, blockHit);
-            if (sprite != null) {
+            HitSpriteInfo info = getHitSpriteInfo(level, blockHit.getBlockPos(), target);
+            if (info != null) {
+                BlockPos pos = blockHit.getBlockPos();
                 Direction face = blockHit.getDirection();
-                spawnHitParticle(level, pos, face, sprite, manager);
+                double x = pos.getX() + Math.random() * (info.aabb.maxX - info.aabb.minX) + info.aabb.minX;
+                double y = pos.getY() + Math.random() * (info.aabb.maxY - info.aabb.minY) + info.aabb.minY;
+                double z = pos.getZ() + Math.random() * (info.aabb.maxZ - info.aabb.minZ) + info.aabb.minZ;
+                switch (face) {
+                    case DOWN: y = pos.getY() + info.aabb.minY - 0.1; break;
+                    case UP: y = pos.getY() + info.aabb.maxY + 0.1; break;
+                    case NORTH: z = pos.getZ() + info.aabb.minZ - 0.1; break;
+                    case SOUTH: z = pos.getZ() + info.aabb.maxZ + 0.1; break;
+                    case WEST: x = pos.getX() + info.aabb.minX - 0.1; break;
+                    case EAST: x = pos.getX() + info.aabb.maxX + 0.1; break;
+                }
+                
+                PipeBreakParticle particle = new PipeBreakParticle((ClientLevel) level, x, y, z, 0, 0, 0, info.sprite);
+                manager.add(particle);
                 return true; // suppress default particles
             }
         }
         return false;
     }
 
-    /**
-     * Spawns a single hit particle on the given face of the block.
-     * Mirrors vanilla ParticleEngine.crack() positioning logic.
-     */
-    private void spawnHitParticle(Level level, BlockPos pos, Direction face,
-                                  TextureAtlasSprite sprite, ParticleEngine manager) {
-        var random = level.getRandom();
-        double x = pos.getX() + random.nextDouble();
-        double y = pos.getY() + random.nextDouble();
-        double z = pos.getZ() + random.nextDouble();
-
-        // Offset particle to be on the face surface
-        double offset = 0.1;
-        switch (face) {
-            case DOWN -> y = pos.getY() - offset;
-            case UP -> y = pos.getY() + 1.0 + offset;
-            case NORTH -> z = pos.getZ() - offset;
-            case SOUTH -> z = pos.getZ() + 1.0 + offset;
-            case WEST -> x = pos.getX() - offset;
-            case EAST -> x = pos.getX() + 1.0 + offset;
+    @Override
+    public boolean addDestroyEffects(BlockState state, Level level, BlockPos pos, ParticleEngine manager) {
+        HitSpriteInfo info = getHitSpriteInfo(level, pos, Minecraft.getInstance().hitResult);
+        if (info == null && level.getBlockEntity(pos) instanceof TilePipeHolder tile) {
+            info = getPipeSpriteInfo(level, pos, tile);
+        }
+        if (info == null) {
+            return false; // fall back to default
         }
 
-        PipeBreakParticle particle = new PipeBreakParticle(
-                (ClientLevel) level, x, y, z, 0, 0, 0, sprite
-        );
-        particle.setLifetime(4);
-        particle.setParticleSpeed(0, 0, 0);
-        manager.add(particle);
+        double sizeX = info.aabb.maxX - info.aabb.minX;
+        double sizeY = info.aabb.maxY - info.aabb.minY;
+        double sizeZ = info.aabb.maxZ - info.aabb.minZ;
+
+        int countX = (int) Math.max(2, 4 * sizeX);
+        int countY = (int) Math.max(2, 4 * sizeY);
+        int countZ = (int) Math.max(2, 4 * sizeZ);
+
+        for (int x = 0; x < countX; x++) {
+            for (int y = 0; y < countY; y++) {
+                for (int z = 0; z < countZ; z++) {
+                    double _x = pos.getX() + info.aabb.minX + (x + 0.5) * sizeX / countX;
+                    double _y = pos.getY() + info.aabb.minY + (y + 0.5) * sizeY / countY;
+                    double _z = pos.getZ() + info.aabb.minZ + (z + 0.5) * sizeZ / countZ;
+                    
+                    PipeBreakParticle particle = new PipeBreakParticle(
+                            (ClientLevel) level, _x, _y, _z,
+                            _x - pos.getX() - 0.5,
+                            _y - pos.getY() - 0.5,
+                            _z - pos.getZ() - 0.5,
+                            info.sprite
+                    );
+                    manager.add(particle);
+                }
+            }
+        }
+        return true; // suppress default particles
     }
 
     /**

@@ -1,0 +1,66 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Task :checkSplitPackages
+Γ£ô No split-package violations found.
+
+> Task :buildcraft-api:createMinecraftArtifacts UP-TO-DATE
+> Task :buildcraft-api:compileJava UP-TO-DATE
+> Task :buildcraft-core:createMinecraftArtifacts UP-TO-DATE
+> Task :buildcraft-lib:createMinecraftArtifacts UP-TO-DATE
+> Task :buildcraft-lib:compileJava UP-TO-DATE
+> Task :buildcraft-core:compileJava UP-TO-DATE
+> Task :buildcraft-transport:createMinecraftArtifacts UP-TO-DATE
+
+> Task :buildcraft-transport:compileJava
+E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\BCTransportBlocks.java:14: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+    public static final DeferredBlock<BlockFilteredBuffer> FILTERED_BUFFER = BLOCKS.registerBlock(
+                                                                                   ^
+  where B is a type-variable:
+    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
+E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\BCTransportBlocks.java:19: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+    public static final DeferredBlock<BlockPipeHolder> PIPE_HOLDER = BLOCKS.registerBlock(
+                                                                           ^
+  where B is a type-variable:
+    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
+E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\PipeHolderClientExtensions.java:116: error: cannot find symbol
+            return quads.get(0).sprite();
+                               ^
+  symbol:   method sprite()
+  location: class BakedQuad
+1 error
+2 warnings
+
+> Task :buildcraft-transport:compileJava FAILED
+
+[Incubating] Problems report is available at: file:///E:/GitHub/BuildCraft/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':buildcraft-transport:compileJava'.
+> Compilation failed; see the compiler output below.
+  E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\BCTransportBlocks.java:14: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+9 actionable tasks: 2 executed, 7 up-to-date
+      public static final DeferredBlock<BlockFilteredBuffer> FILTERED_BUFFER = BLOCKS.registerBlock(
+                                                                                     ^
+    where B is a type-variable:
+      B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
+  E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\BCTransportBlocks.java:19: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
+      public static final DeferredBlock<BlockPipeHolder> PIPE_HOLDER = BLOCKS.registerBlock(
+                                                                             ^
+    where B is a type-variable:
+      B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
+  E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\client\PipeHolderClientExtensions.java:116: error: cannot find symbol
+              return quads.get(0).sprite();
+                                 ^
+    symbol:   method sprite()
+    location: class BakedQuad
+  1 error
+  2 warnings
+
+* Try:
+> Check your code and dependencies to fix the compilation error(s)
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+BUILD FAILED in 13s

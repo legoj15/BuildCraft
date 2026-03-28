@@ -345,28 +345,30 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     @Override
     public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
                                        ItemStack toolStack, boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {
-        if (!level.isClientSide()) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TilePipeHolder tile) {
-                net.minecraft.world.phys.HitResult hit = player.pick(5.0, 0.0f, false);
-                if (hit instanceof BlockHitResult blockHit && pos.equals(blockHit.getBlockPos())) {
-                    double lx = blockHit.getLocation().x - pos.getX();
-                    double ly = blockHit.getLocation().y - pos.getY();
-                    double lz = blockHit.getLocation().z - pos.getZ();
-                    Direction plugDir = getHitPluggable(tile, lx, ly, lz);
-                    if (plugDir != null) {
-                        PipePluggable plug = tile.getPluggable(plugDir);
-                        if (plug != null) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TilePipeHolder tile) {
+            net.minecraft.world.phys.HitResult hit = player.pick(5.0, 0.0f, false);
+            if (hit instanceof BlockHitResult blockHit && pos.equals(blockHit.getBlockPos())) {
+                double lx = blockHit.getLocation().x - pos.getX();
+                double ly = blockHit.getLocation().y - pos.getY();
+                double lz = blockHit.getLocation().z - pos.getZ();
+                Direction plugDir = getHitPluggable(tile, lx, ly, lz);
+                if (plugDir != null) {
+                    PipePluggable plug = tile.getPluggable(plugDir);
+                    if (plug != null) {
+                        if (!level.isClientSide()) {
                             ItemStack drop = plug.getPickStack();
-                            tile.replacePluggable(plugDir, null);
                             if (!player.isCreative() && !drop.isEmpty()) {
                                 Block.popResource(level, pos, drop);
                             }
                         }
+                        tile.replacePluggable(plugDir, null);
                         // Immediately sync the updated state to the client
-                        level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
-                        return false; // Don't destroy the pipe
+                        if (!level.isClientSide()) {
+                            level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
+                        }
                     }
+                    return false; // Don't destroy the pipe, on client or server
                 }
             }
         }
@@ -379,9 +381,7 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof TilePipeHolder tile && !level.isClientSide() && !player.isCreative()) {
-            // Don't drop pipe items if a pluggable is being targeted — 
-            // onDestroyedByPlayer will handle the pluggable and cancel the break
+        if (be instanceof TilePipeHolder tile) {
             net.minecraft.world.phys.HitResult hit = player.pick(5.0, 0.0f, false);
             boolean hittingPluggable = false;
             if (hit instanceof BlockHitResult blockHit && pos.equals(blockHit.getBlockPos())) {
@@ -390,7 +390,13 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                 double lz = blockHit.getLocation().z - pos.getZ();
                 hittingPluggable = getHitPluggable(tile, lx, ly, lz) != null;
             }
-            if (!hittingPluggable) {
+            if (hittingPluggable) {
+                // If hitting a pluggable, we only want to drop the pluggable (handled in onDestroyedByPlayer)
+                // However, we MUST NOT skip super.playerWillDestroy() because it emits the 2001 level event
+                // which is required for addDestroyEffects to spawn the breaking particles.
+                return super.playerWillDestroy(level, pos, state, player);
+            }
+            if (!level.isClientSide() && !player.isCreative()) {
                 tile.dropPipeItems(level, pos);
             }
         }

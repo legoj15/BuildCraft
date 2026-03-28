@@ -4,9 +4,9 @@ import net.minecraft.core.Direction;
 
 import buildcraft.api.transport.pluggable.PluggableModelKey;
 
-/** Model key for PluggableBlocker — renders in the cutout layer. */
-public class KeyPlugBlocker extends PluggableModelKey {
-    public KeyPlugBlocker(Direction side) {
+/** Model key for PluggablePowerAdaptor — renders in the cutout layer. */
+public class KeyPlugPowerAdaptor extends PluggableModelKey {
+    public KeyPlugPowerAdaptor(Direction side) {
         super("cutout", side);
     }
 }

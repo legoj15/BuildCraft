@@ -14,6 +14,7 @@ import buildcraft.api.transport.pluggable.PluggableDefinition;
 import buildcraft.api.transport.pluggable.PluggableModelKey;
 
 import buildcraft.transport.BCTransportItems;
+import buildcraft.transport.client.model.key.KeyPlugPowerAdaptor;
 
 public class PluggablePowerAdaptor extends PipePluggable {
 
@@ -58,7 +59,7 @@ public class PluggablePowerAdaptor extends PipePluggable {
     @Override
     @Nullable
     public PluggableModelKey getModelRenderKey(Object layer) {
-        // Rendering not yet ported — return null until KeyPlugPowerAdaptor baked model support is added
+        if ("cutout".equals(layer)) return new KeyPlugPowerAdaptor(side);
         return null;
     }
 

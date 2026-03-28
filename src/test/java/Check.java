@@ -1,0 +1,1 @@
+import net.minecraft.client.renderer.block.model.BakedQuad; public class Check { public static void main(String[] args) throws Exception { for (java.lang.reflect.Method m : BakedQuad.class.getMethods()) { System.out.println(m.getName()); } } }

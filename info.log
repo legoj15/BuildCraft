@@ -1,0 +1,280 @@
+Initialized native services in: C:\Users\legoj\.gradle\native
+Initialized jansi services in: C:\Users\legoj\.gradle\native
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Starting process 'Gradle build daemon'. Working directory: C:\Users\legoj\.gradle\daemon\9.3.1 Command: C:\Program Files\Java\jdk-25.0.2+10\bin\java.exe --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.xml/javax.xml.namespace=ALL-UNNAMED --add-opens=java.base/java.time=ALL-UNNAMED --enable-native-access=ALL-UNNAMED -Xmx3G -Dfile.encoding=UTF-8 -Duser.country=US -Duser.language=en -Duser.variant -cp C:\Users\legoj\.gradle\wrapper\dists\gradle-9.3.1-bin\23ovyewtku6u96viwx3xl3oks\gradle-9.3.1\lib\gradle-daemon-main-9.3.1.jar -javaagent:C:\Users\legoj\.gradle\wrapper\dists\gradle-9.3.1-bin\23ovyewtku6u96viwx3xl3oks\gradle-9.3.1\lib\agents\gradle-instrumentation-agent-9.3.1.jar org.gradle.launcher.daemon.bootstrap.GradleDaemon 9.3.1
+Successfully started process 'Gradle build daemon'
+An attempt to start the daemon took 1.163 secs.
+The client will now receive all logging from the daemon (pid: 28628). The daemon log file: C:\Users\legoj\.gradle\daemon\9.3.1\daemon-28628.out.log
+Daemon will be stopped at the end of the build 
+Using 32 worker leases.
+Operational build model parameters: {requiresToolingModels=false, parallelProjectExecution=false, configureOnDemand=false, configurationCache=false, configurationCacheParallelStore=false, configurationCacheParallelLoad=true, isolatedProjects=false, parallelProjectConfiguration=false, intermediateModelCache=false, parallelToolingApiActions=false, invalidateCoupledProjects=false, modelAsProjectDependency=false, resilientModelBuilding=false}
+Received JVM installation metadata from 'C:\Program Files\Java\jdk-25.0.2+10': {JAVA_HOME=C:\Program Files\Java\jdk-25.0.2+10, JAVA_VERSION=25.0.2, JAVA_VENDOR=Eclipse Adoptium, RUNTIME_NAME=OpenJDK Runtime Environment, RUNTIME_VERSION=25.0.2+10-LTS, VM_NAME=OpenJDK 64-Bit Server VM, VM_VERSION=25.0.2+10-LTS, VM_VENDOR=Eclipse Adoptium, OS_ARCH=amd64}
+Watching the file system is configured to be enabled if available
+Now considering [E:\GitHub\BuildCraft] as hierarchies to watch
+File system watching is active
+Starting Build
+Settings evaluated using settings file 'E:\GitHub\BuildCraft\settings.gradle'.
+Projects loaded. Root project using build file 'E:\GitHub\BuildCraft\build.gradle'.
+Included projects: [root project 'BuildCraft', project ':buildcraft-all', project ':buildcraft-api', project ':buildcraft-builders', project ':buildcraft-core', project ':buildcraft-energy', project ':buildcraft-factory', project ':buildcraft-lib', project ':buildcraft-robotics', project ':buildcraft-silicon', project ':buildcraft-transport']
+
+> Configure project :
+Evaluating root project 'BuildCraft' using build file 'E:\GitHub\BuildCraft\build.gradle'.
+Resolved plugin [id: 'net.neoforged.moddev', version: '2.0.141', apply: false]
+Parsed unknown MC version 26.1 from NeoForge version 26.1.0.8-beta. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+Parsed unknown MC version 26.1 from NeoForge version 26.1.0.8-beta. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+Parsed unknown MC version 26.1 from NeoForge version 26.1.0.8-beta. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+Parsed unknown MC version 26.1 from NeoForge version 26.1.0.8-beta. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+Parsed unknown MC version 26.1 from NeoForge version 26.1.0.8-beta. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+Parsed unknown MC version 26.1 from NeoForge version 26.1.0.8-beta. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+Parsed unknown MC version 26.1 from NeoForge version 26.1.0.8-beta. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+Parsed unknown MC version 26.1 from NeoForge version 26.1.0.8-beta. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+Parsed unknown MC version 26.1 from NeoForge version 26.1.0.8-beta. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+Parsed unknown MC version 26.1 from NeoForge version 26.1.0.8-beta. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :buildcraft-all
+Evaluating project ':buildcraft-all' using build file 'E:\GitHub\BuildCraft\buildcraft-all\build.gradle'.
+
+> Configure project :buildcraft-api
+Evaluating project ':buildcraft-api' using build file 'E:\GitHub\BuildCraft\buildcraft-api\build.gradle'.
+
+> Configure project :buildcraft-builders
+Evaluating project ':buildcraft-builders' using build file 'E:\GitHub\BuildCraft\buildcraft-builders\build.gradle'.
+
+> Configure project :buildcraft-core
+Evaluating project ':buildcraft-core' using build file 'E:\GitHub\BuildCraft\buildcraft-core\build.gradle'.
+
+> Configure project :buildcraft-energy
+Evaluating project ':buildcraft-energy' using build file 'E:\GitHub\BuildCraft\buildcraft-energy\build.gradle'.
+
+> Configure project :buildcraft-factory
+Evaluating project ':buildcraft-factory' using build file 'E:\GitHub\BuildCraft\buildcraft-factory\build.gradle'.
+
+> Configure project :buildcraft-lib
+Evaluating project ':buildcraft-lib' using build file 'E:\GitHub\BuildCraft\buildcraft-lib\build.gradle'.
+
+> Configure project :buildcraft-robotics
+Evaluating project ':buildcraft-robotics' using build file 'E:\GitHub\BuildCraft\buildcraft-robotics\build.gradle'.
+
+> Configure project :buildcraft-silicon
+Evaluating project ':buildcraft-silicon' using build file 'E:\GitHub\BuildCraft\buildcraft-silicon\build.gradle'.
+
+> Configure project :buildcraft-transport
+Evaluating project ':buildcraft-transport' using build file 'E:\GitHub\BuildCraft\buildcraft-transport\build.gradle'.
+All projects evaluated.
+Task path ':buildcraft-all:runClient' matched project ':buildcraft-all'
+Task name matched 'runClient'
+Selected primary task 'runClient' from project :buildcraft-all
+Starting process 'command 'C:\Program Files\Java\jdk1.8.0_261\bin\java.exe''. Working directory: C:\Users\legoj\.gradle\.tmp\tmp-jvm3605380734228430153probe Command: C:\Program Files\Java\jdk1.8.0_261\bin\java.exe -Xmx32m -Xms32m -cp . JavaProbe
+Successfully started process 'command 'C:\Program Files\Java\jdk1.8.0_261\bin\java.exe''
+Received JVM installation metadata from 'C:\Program Files\Java\jdk1.8.0_261': {JAVA_HOME=C:\Program Files\Java\jdk1.8.0_261\jre, JAVA_VERSION=1.8.0_261, JAVA_VENDOR=Oracle Corporation, RUNTIME_NAME=Java(TM) SE Runtime Environment, RUNTIME_VERSION=1.8.0_261-b12, VM_NAME=Java HotSpot(TM) 64-Bit Server VM, VM_VERSION=25.261-b12, VM_VENDOR=Oracle Corporation, OS_ARCH=amd64}
+Starting process 'command 'C:\Program Files\Java\jre1.8.0_481\bin\java.exe''. Working directory: C:\Users\legoj\.gradle\.tmp\tmp-jvm13120116752418264907probe Command: C:\Program Files\Java\jre1.8.0_481\bin\java.exe -Xmx32m -Xms32m -cp . JavaProbe
+Successfully started process 'command 'C:\Program Files\Java\jre1.8.0_481\bin\java.exe''
+Received JVM installation metadata from 'C:\Program Files\Java\jre1.8.0_481': {JAVA_HOME=C:\Program Files\Java\jre1.8.0_481, JAVA_VERSION=1.8.0_481, JAVA_VENDOR=Oracle Corporation, RUNTIME_NAME=Java(TM) SE Runtime Environment, RUNTIME_VERSION=1.8.0_481-b10, VM_NAME=Java HotSpot(TM) 64-Bit Server VM, VM_VERSION=25.481-b10, VM_VENDOR=Oracle Corporation, OS_ARCH=amd64}
+Starting process 'command 'C:\Program Files\Java\jdk-17.0.1\bin\java.exe''. Working directory: C:\Users\legoj\.gradle\.tmp\tmp-jvm13094837777112427003probe Command: C:\Program Files\Java\jdk-17.0.1\bin\java.exe -Xmx32m -Xms32m -cp . JavaProbe
+Successfully started process 'command 'C:\Program Files\Java\jdk-17.0.1\bin\java.exe''
+Received JVM installation metadata from 'C:\Program Files\Java\jdk-17.0.1': {JAVA_HOME=C:\Program Files\Java\jdk-17.0.1, JAVA_VERSION=17.0.1, JAVA_VENDOR=Oracle Corporation, RUNTIME_NAME=Java(TM) SE Runtime Environment, RUNTIME_VERSION=17.0.1+12-LTS-39, VM_NAME=Java HotSpot(TM) 64-Bit Server VM, VM_VERSION=17.0.1+12-LTS-39, VM_VENDOR=Oracle Corporation, OS_ARCH=amd64}
+Tasks to be executed: [task ':checkSplitPackages', task ':buildcraft-all:createMinecraftArtifacts', task ':buildcraft-api:createMinecraftArtifacts', task ':buildcraft-api:compileJava', task ':buildcraft-builders:createMinecraftArtifacts', task ':buildcraft-core:createMinecraftArtifacts', task ':buildcraft-lib:createMinecraftArtifacts', task ':buildcraft-lib:compileJava', task ':buildcraft-core:compileJava', task ':buildcraft-builders:compileJava', task ':buildcraft-energy:createMinecraftArtifacts', task ':buildcraft-energy:compileJava', task ':buildcraft-factory:createMinecraftArtifacts', task ':buildcraft-factory:compileJava', task ':buildcraft-robotics:createMinecraftArtifacts', task ':buildcraft-robotics:compileJava', task ':buildcraft-silicon:createMinecraftArtifacts', task ':buildcraft-silicon:compileJava', task ':buildcraft-transport:createMinecraftArtifacts', task ':buildcraft-transport:compileJava', task ':buildcraft-all:compileJava', task ':buildcraft-all:processResources', task ':buildcraft-all:classes', task ':buildcraft-all:downloadAssets', task ':buildcraft-all:prepareClientRun', task ':buildcraft-api:processResources', task ':buildcraft-api:classes', task ':buildcraft-api:jarJar', task ':buildcraft-api:jar', task ':buildcraft-builders:processResources', task ':buildcraft-builders:classes', task ':buildcraft-builders:jarJar', task ':buildcraft-builders:jar', task ':buildcraft-core:processResources', task ':buildcraft-core:classes', task ':buildcraft-core:jarJar', task ':buildcraft-core:jar', task ':buildcraft-energy:processResources', task ':buildcraft-energy:classes', task ':buildcraft-energy:jarJar', task ':buildcraft-energy:jar', task ':buildcraft-factory:processResources', task ':buildcraft-factory:classes', task ':buildcraft-factory:jarJar', task ':buildcraft-factory:jar', task ':buildcraft-lib:processResources', task ':buildcraft-lib:classes', task ':buildcraft-lib:jarJar', task ':buildcraft-lib:jar', task ':buildcraft-robotics:processResources', task ':buildcraft-robotics:classes', task ':buildcraft-robotics:jarJar', task ':buildcraft-robotics:jar', task ':buildcraft-silicon:processResources', task ':buildcraft-silicon:classes', task ':buildcraft-silicon:jarJar', task ':buildcraft-silicon:jar', task ':buildcraft-transport:processResources', task ':buildcraft-transport:classes', task ':buildcraft-transport:jarJar', task ':buildcraft-transport:jar', task ':buildcraft-all:runClient']
+Tasks that were excluded: []
+Resolve mutations for :checkSplitPackages (Thread[#145,Execution worker Thread 3,5,main]) started.
+:checkSplitPackages (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :checkSplitPackages
+Caching disabled for task ':checkSplitPackages' because:
+  Build cache is disabled
+Task ':checkSplitPackages' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Γ£ô No split-package violations found.
+Resolve mutations for :buildcraft-all:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-all:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-all:createMinecraftArtifacts UP-TO-DATE
+Caching disabled for task ':buildcraft-all:createMinecraftArtifacts' because:
+  Build cache is disabled
+  Implements its own caching
+Skipping task ':buildcraft-all:createMinecraftArtifacts' as it is up-to-date.
+Resolve mutations for :buildcraft-api:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-api:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-api:createMinecraftArtifacts UP-TO-DATE
+Caching disabled for task ':buildcraft-api:createMinecraftArtifacts' because:
+  Build cache is disabled
+  Implements its own caching
+Skipping task ':buildcraft-api:createMinecraftArtifacts' as it is up-to-date.
+Resolve mutations for :buildcraft-api:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-api:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-api:compileJava UP-TO-DATE
+Caching disabled for task ':buildcraft-api:compileJava' because:
+  Build cache is disabled
+Skipping task ':buildcraft-api:compileJava' as it is up-to-date.
+work action resolve main (project :buildcraft-api) (Thread[#145,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :buildcraft-builders:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-builders:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-builders:createMinecraftArtifacts UP-TO-DATE
+Caching disabled for task ':buildcraft-builders:createMinecraftArtifacts' because:
+  Build cache is disabled
+  Implements its own caching
+Skipping task ':buildcraft-builders:createMinecraftArtifacts' as it is up-to-date.
+Resolve mutations for :buildcraft-core:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-core:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-core:createMinecraftArtifacts UP-TO-DATE
+Caching disabled for task ':buildcraft-core:createMinecraftArtifacts' because:
+  Build cache is disabled
+  Implements its own caching
+Skipping task ':buildcraft-core:createMinecraftArtifacts' as it is up-to-date.
+Resolve mutations for :buildcraft-lib:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-lib:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-lib:createMinecraftArtifacts UP-TO-DATE
+Caching disabled for task ':buildcraft-lib:createMinecraftArtifacts' because:
+  Build cache is disabled
+  Implements its own caching
+Skipping task ':buildcraft-lib:createMinecraftArtifacts' as it is up-to-date.
+Resolve mutations for :buildcraft-lib:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-lib:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-lib:compileJava UP-TO-DATE
+Caching disabled for task ':buildcraft-lib:compileJava' because:
+  Build cache is disabled
+Skipping task ':buildcraft-lib:compileJava' as it is up-to-date.
+work action resolve main (project :buildcraft-lib) (Thread[#145,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :buildcraft-core:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-core:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-core:compileJava UP-TO-DATE
+Caching disabled for task ':buildcraft-core:compileJava' because:
+  Build cache is disabled
+Skipping task ':buildcraft-core:compileJava' as it is up-to-date.
+work action resolve main (project :buildcraft-core) (Thread[#145,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :buildcraft-builders:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-builders:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-builders:compileJava UP-TO-DATE
+Caching disabled for task ':buildcraft-builders:compileJava' because:
+  Build cache is disabled
+Skipping task ':buildcraft-builders:compileJava' as it is up-to-date.
+work action resolve main (project :buildcraft-builders) (Thread[#145,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :buildcraft-energy:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-energy:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-energy:createMinecraftArtifacts UP-TO-DATE
+Caching disabled for task ':buildcraft-energy:createMinecraftArtifacts' because:
+  Build cache is disabled
+  Implements its own caching
+Skipping task ':buildcraft-energy:createMinecraftArtifacts' as it is up-to-date.
+Resolve mutations for :buildcraft-energy:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-energy:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-energy:compileJava UP-TO-DATE
+Caching disabled for task ':buildcraft-energy:compileJava' because:
+  Build cache is disabled
+Skipping task ':buildcraft-energy:compileJava' as it is up-to-date.
+work action resolve main (project :buildcraft-energy) (Thread[#145,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :buildcraft-factory:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-factory:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-factory:createMinecraftArtifacts UP-TO-DATE
+Caching disabled for task ':buildcraft-factory:createMinecraftArtifacts' because:
+  Build cache is disabled
+  Implements its own caching
+Skipping task ':buildcraft-factory:createMinecraftArtifacts' as it is up-to-date.
+Resolve mutations for :buildcraft-factory:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-factory:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-factory:compileJava UP-TO-DATE
+Caching disabled for task ':buildcraft-factory:compileJava' because:
+  Build cache is disabled
+Skipping task ':buildcraft-factory:compileJava' as it is up-to-date.
+work action resolve main (project :buildcraft-factory) (Thread[#145,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :buildcraft-robotics:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-robotics:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-robotics:createMinecraftArtifacts UP-TO-DATE
+Caching disabled for task ':buildcraft-robotics:createMinecraftArtifacts' because:
+  Build cache is disabled
+  Implements its own caching
+Skipping task ':buildcraft-robotics:createMinecraftArtifacts' as it is up-to-date.
+Resolve mutations for :buildcraft-robotics:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-robotics:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-robotics:compileJava UP-TO-DATE
+Caching disabled for task ':buildcraft-robotics:compileJava' because:
+  Build cache is disabled
+Skipping task ':buildcraft-robotics:compileJava' as it is up-to-date.
+work action resolve main (project :buildcraft-robotics) (Thread[#145,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :buildcraft-silicon:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-silicon:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-silicon:createMinecraftArtifacts UP-TO-DATE
+Caching disabled for task ':buildcraft-silicon:createMinecraftArtifacts' because:
+  Build cache is disabled
+  Implements its own caching
+Skipping task ':buildcraft-silicon:createMinecraftArtifacts' as it is up-to-date.
+Resolve mutations for :buildcraft-silicon:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-silicon:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-silicon:compileJava UP-TO-DATE
+Caching disabled for task ':buildcraft-silicon:compileJava' because:
+  Build cache is disabled
+Skipping task ':buildcraft-silicon:compileJava' as it is up-to-date.
+work action resolve main (project :buildcraft-silicon) (Thread[#145,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :buildcraft-transport:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-transport:createMinecraftArtifacts (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-transport:createMinecraftArtifacts UP-TO-DATE
+Caching disabled for task ':buildcraft-transport:createMinecraftArtifacts' because:
+  Build cache is disabled
+  Implements its own caching
+Skipping task ':buildcraft-transport:createMinecraftArtifacts' as it is up-to-date.
+Resolve mutations for :buildcraft-transport:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-transport:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-transport:compileJava UP-TO-DATE
+Caching disabled for task ':buildcraft-transport:compileJava' because:
+  Build cache is disabled
+Skipping task ':buildcraft-transport:compileJava' as it is up-to-date.
+work action resolve main (project :buildcraft-transport) (Thread[#145,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :buildcraft-all:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-all:compileJava (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-all:compileJava NO-SOURCE
+Skipping task ':buildcraft-all:compileJava' as it has no source files and no previous output files.
+Resolve mutations for :buildcraft-all:processResources (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-all:processResources (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-all:processResources UP-TO-DATE
+Caching disabled for task ':buildcraft-all:processResources' because:
+  Build cache is disabled
+  Not worth caching
+Skipping task ':buildcraft-all:processResources' as it is up-to-date.
+Resolve mutations for :buildcraft-all:classes (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-all:classes (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-all:classes UP-TO-DATE
+Skipping task ':buildcraft-all:classes' as it has no actions.
+Resolve mutations for :buildcraft-all:downloadAssets (Thread[#145,Execution worker Thread 3,5,main]) started.
+:buildcraft-all:downloadAssets (Thread[#145,Execution worker Thread 3,5,main]) started.
+
+> Task :buildcraft-all:downloadAssets FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':buildcraft-all:downloadAssets'.
+> Error while evaluating property 'javaExecutable' of task ':buildcraft-all:downloadAssets'.
+   > Failed to calculate the value of task ':buildcraft-all:downloadAssets' property 'javaExecutable'.
+      > Cannot find a Java installation on your machine (Windows 11 10.0 amd64) matching: {languageVersion=21, vendor=any vendor, implementation=vendor-specific, nativeImageCapable=false}. Toolchain download repositories have not been configured.
+
+* Try:
+> Learn more about toolchain auto-detection and auto-provisioning at https://docs.gradle.org/9.3.1/userguide/toolchains.html#sec:auto_detection.
+> Learn more about toolchain repositories at https://docs.gradle.org/9.3.1/userguide/toolchains.html#sub:download_repositories.
+> Run with --stacktrace option to get the stack trace.
+> Run with --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 8s
+22 actionable tasks: 2 executed, 20 up-to-date
+Watched directory hierarchies: [E:\GitHub\BuildCraft]

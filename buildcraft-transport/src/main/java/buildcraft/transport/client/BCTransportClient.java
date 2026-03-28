@@ -17,6 +17,10 @@ import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsE
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeApiClient;
 import buildcraft.api.transport.pipe.PipeDefinition;
+import buildcraft.api.transport.pluggable.IPluggableStaticBaker;
+
+import buildcraft.lib.client.model.ModelHolderStatic;
+import buildcraft.lib.client.model.plug.PlugBakerSimple;
 
 import buildcraft.transport.BCTransport;
 import buildcraft.transport.BCTransportBlockEntities;
@@ -34,12 +38,28 @@ import buildcraft.transport.client.render.PipeFlowRendererPower;
 import buildcraft.transport.client.render.PipeFlowRendererRf;
 import buildcraft.transport.client.render.RenderPipeHolder;
 import buildcraft.transport.client.render.PipeBehaviourRendererStripes;
+import buildcraft.transport.client.model.key.KeyPlugBlocker;
+import buildcraft.transport.client.model.key.KeyPlugPowerAdaptor;
 import buildcraft.transport.pipe.flow.PipeFlowFluids;
 import buildcraft.transport.pipe.flow.PipeFlowItems;
 import buildcraft.transport.pipe.flow.PipeFlowPower;
 import buildcraft.transport.pipe.flow.PipeFlowRedstoneFlux;
 
 public class BCTransportClient {
+    // Static model holders for plug rendering
+    public static final ModelHolderStatic BLOCKER = new ModelHolderStatic("buildcrafttransport:models/plugs/blocker.json");
+    public static final ModelHolderStatic POWER_ADAPTER = new ModelHolderStatic("buildcrafttransport:models/plugs/power_adapter.json");
+
+    // Bakers that rotate the model to the correct face and produce BakedQuads
+    public static final IPluggableStaticBaker<KeyPlugBlocker> BAKER_PLUG_BLOCKER =
+        new PlugBakerSimple<>(BLOCKER::getCutoutQuads);
+    public static final IPluggableStaticBaker<KeyPlugPowerAdaptor> BAKER_PLUG_POWER_ADAPTOR =
+        new PlugBakerSimple<>(POWER_ADAPTER::getCutoutQuads);
+
+    /** Forces class initialization so the static fields above are instantiated. */
+    public static void init() {
+    }
+
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(BCTransportMenuTypes.FILTERED_BUFFER.get(), GuiFilteredBuffer::new);
@@ -104,7 +124,7 @@ public class BCTransportClient {
         }
     }
 
-    /** Called during mod init to register pipe flow renderers. */
+    /** Called during mod init to register pipe flow renderers and pluggable bakers. */
     public static void registerFlowRenderers() {
         PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowPower.class, PipeFlowRendererPower.INSTANCE);
         PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowRedstoneFlux.class, PipeFlowRendererRf.INSTANCE);
@@ -116,5 +136,9 @@ public class BCTransportClient {
             buildcraft.transport.pipe.behaviour.PipeBehaviourStripes.class,
             PipeBehaviourRendererStripes.INSTANCE
         );
+
+        // Static pluggable bakers — quads are baked into the chunk mesh
+        PipeRegistryClient.INSTANCE.registerBaker(KeyPlugBlocker.class, BAKER_PLUG_BLOCKER);
+        PipeRegistryClient.INSTANCE.registerBaker(KeyPlugPowerAdaptor.class, BAKER_PLUG_POWER_ADAPTOR);
     }
 }

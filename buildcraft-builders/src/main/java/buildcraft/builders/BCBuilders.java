@@ -42,6 +42,10 @@ public class BCBuilders {
         BCBuildersMenuTypes.init(modEventBus);
 
         BCBuildersConfig.register(modContainer);
+        if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
+            modContainer.registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
+                    net.neoforged.neoforge.client.gui.ConfigurationScreen::new);
+        }
 
         modEventBus.addListener(this::preInit);
         modEventBus.addListener(this::init);

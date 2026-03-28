@@ -85,7 +85,7 @@ public abstract class TileMiner extends TileBC_Neptune {
     }
 
     public void onRemove() {
-        for (int y = worldPosition.getY() - 1; y > worldPosition.getY() - BCCoreConfig.miningMaxDepth; y--) {
+        for (int y = worldPosition.getY() - 1; y > worldPosition.getY() - BCCoreConfig.miningMaxDepth.get(); y--) {
             BlockPos blockPos = new BlockPos(worldPosition.getX(), y, worldPosition.getZ());
             if (level.getBlockState(blockPos).is(BCFactoryBlocks.TUBE.get())) {
                 level.removeBlock(blockPos, false);
@@ -108,7 +108,7 @@ public abstract class TileMiner extends TileBC_Neptune {
         int newLength = worldPosition.getY() - newY;
         if (newLength != wantedLength) {
             // Remove old tubes
-            for (int y = worldPosition.getY() - 1; y > worldPosition.getY() - BCCoreConfig.miningMaxDepth; y--) {
+            for (int y = worldPosition.getY() - 1; y > worldPosition.getY() - BCCoreConfig.miningMaxDepth.get(); y--) {
                 BlockPos blockPos = new BlockPos(worldPosition.getX(), y, worldPosition.getZ());
                 if (level.getBlockState(blockPos).is(BCFactoryBlocks.TUBE.get())) {
                     level.removeBlock(blockPos, false);

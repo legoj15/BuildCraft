@@ -309,7 +309,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         frameBox.setMin(min);
         frameBox.setMax(max);
         miningBox.reset();
-        int minY = max.getY() - 1 - BCCoreConfig.miningMaxDepth;
+        int minY = max.getY() - 1 - BCCoreConfig.miningMaxDepth.get();
         if (level.isOutsideBuildHeight(new BlockPos(min.getX(), minY, min.getZ()))) {
             minY = level.getMinY();
         }

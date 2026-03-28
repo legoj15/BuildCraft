@@ -6,38 +6,75 @@
 
 package buildcraft.transport;
 
+import net.neoforged.neoforge.common.ModConfigSpec;
+
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeApi.PowerTransferInfo;
 import buildcraft.api.transport.pipe.PipeDefinition;
 
-/** Transport module configuration. Currently stubbed — values will be loaded from
- *  a NeoForge config file when the config system is ported. */
+/** Transport module configuration. */
 public class BCTransportConfig {
-    public static boolean disableRfPipe = false;
-    public static boolean powerPipeUseOldMjTexture = false;
+
+    public static final ModConfigSpec SPEC;
+
+    public static final ModConfigSpec.BooleanValue disableRfPipe;
+    public static final ModConfigSpec.BooleanValue powerPipeUseOldMjTexture;
 
     /** MJ cost per item extracted by a wooden pipe. Default: 1 MJ (= 1_000_000 µMJ). */
-    public static long mjPerItem = 1_000_000L;
+    public static final ModConfigSpec.LongValue mjPerItem;
 
     /** MJ cost per millibucket extracted by a wooden fluid pipe. Default: 1000 µMJ per mB. */
-    public static long mjPerMillibucket = 1_000L;
+    public static final ModConfigSpec.LongValue mjPerMillibucket;
 
     /** Base multiplier for kinesis pipe transfer rates (MJ). Default: 4. */
-    public static int basePowerRate = 4;
+    public static final ModConfigSpec.IntValue basePowerRate;
+
+    static {
+        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+
+        builder.push("general");
+
+        disableRfPipe = builder
+                .comment("Set true to disable the RF pipe")
+                .define("disableRfPipe", false);
+
+        powerPipeUseOldMjTexture = builder
+                .comment("Set true to use the old MJ texture for power pipes")
+                .define("powerPipeUseOldMjTexture", false);
+
+        builder.pop();
+        builder.push("pipes");
+
+        mjPerItem = builder
+                .comment("MJ cost per item extracted by a wooden pipe. Default: 1 MJ (= 1,000,000 µMJ).")
+                .defineInRange("mjPerItem", 1_000_000L, 0L, Long.MAX_VALUE);
+
+        mjPerMillibucket = builder
+                .comment("MJ cost per millibucket extracted by a wooden fluid pipe. Default: 1000 µMJ per mB.")
+                .defineInRange("mjPerMillibucket", 1_000L, 0L, Long.MAX_VALUE);
+
+        basePowerRate = builder
+                .comment("Base multiplier for kinesis pipe transfer rates (MJ). Default: 4.")
+                .defineInRange("basePowerRate", 4, 1, Integer.MAX_VALUE);
+
+        builder.pop();
+        SPEC = builder.build();
+    }
 
     /** Register default power transfer info for all kinesis pipe definitions.
      *  Should be called after BCTransportPipes.preInit(). */
     public static void registerPowerTransferData() {
-        powerTransfer(BCTransportPipes.cobblePower, basePowerRate, 16, false);
-        powerTransfer(BCTransportPipes.stonePower, basePowerRate * 2, 32, false);
-        powerTransfer(BCTransportPipes.woodPower, basePowerRate * 4, 128, true);
-        powerTransfer(BCTransportPipes.sandstonePower, basePowerRate * 4, 32, false);
-        powerTransfer(BCTransportPipes.quartzPower, basePowerRate * 8, 32, false);
-        powerTransfer(BCTransportPipes.ironPower, basePowerRate * 8, 32, false);
-        powerTransfer(BCTransportPipes.goldPower, basePowerRate * 32, 32, false);
-        powerTransfer(BCTransportPipes.diamondPower, basePowerRate * 64, 32, false);
-        powerTransfer(BCTransportPipes.diaWoodPower, basePowerRate * 64, 32, true);
+        int rate = basePowerRate.get();
+        powerTransfer(BCTransportPipes.cobblePower, rate, 16, false);
+        powerTransfer(BCTransportPipes.stonePower, rate * 2, 32, false);
+        powerTransfer(BCTransportPipes.woodPower, rate * 4, 128, true);
+        powerTransfer(BCTransportPipes.sandstonePower, rate * 4, 32, false);
+        powerTransfer(BCTransportPipes.quartzPower, rate * 8, 32, false);
+        powerTransfer(BCTransportPipes.ironPower, rate * 8, 32, false);
+        powerTransfer(BCTransportPipes.goldPower, rate * 32, 32, false);
+        powerTransfer(BCTransportPipes.diamondPower, rate * 64, 32, false);
+        powerTransfer(BCTransportPipes.diaWoodPower, rate * 64, 32, true);
     }
 
     private static void powerTransfer(PipeDefinition def, int transferMultiplier, int resistanceDivisor, boolean recv) {

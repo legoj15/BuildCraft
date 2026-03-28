@@ -79,7 +79,14 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     @Nonnull
     private FluidStack currentFluid = FluidStack.EMPTY;
     private int currentDelay;
-    private final SafeTimeTracker tracker = new SafeTimeTracker(BCCoreConfig.networkUpdateRate, 4);
+    private SafeTimeTracker tracker;
+
+    private SafeTimeTracker getTracker() {
+        if (tracker == null) {
+            tracker = new SafeTimeTracker(BCCoreConfig.networkUpdateRate.get(), 4);
+        }
+        return tracker;
+    }
 
     // Client fields for interpolating amounts
     private long lastMessage, lastMessageMinus1;
@@ -523,7 +530,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             }
         }
 
-        if (send && tracker.markTimeIfDelay(world)) {
+        if (send && getTracker().markTimeIfDelay(world)) {
             // Send lightweight custom payload instead of full NBT block entity sync
             sendPayload(NET_FLUID_AMOUNTS);
         }

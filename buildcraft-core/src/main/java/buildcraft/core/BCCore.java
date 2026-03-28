@@ -71,6 +71,12 @@ public class BCCore {
         BCCoreCreativeTabs.init(modEventBus);
         BCCoreMenuTypes.init(modEventBus);
 
+        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, BCCoreConfig.SPEC);
+        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+            modContainer.registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
+                    net.neoforged.neoforge.client.gui.ConfigurationScreen::new);
+        }
+
         modEventBus.addListener(this::preInit);
         modEventBus.addListener(this::init);
         modEventBus.addListener(this::postInit);

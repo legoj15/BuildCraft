@@ -93,7 +93,7 @@ public class PathSubCache extends MarkerSubCache<PathConnection> {
     @Override
     public ImmutableList<BlockPos> getValidConnections(BlockPos from) {
         ImmutableList.Builder<BlockPos> list = ImmutableList.builder();
-        final int maxLengthSquared = BCCoreConfig.markerMaxDistance * BCCoreConfig.markerMaxDistance;
+        final int maxLengthSquared = BCCoreConfig.markerMaxDistance.get() * BCCoreConfig.markerMaxDistance.get();
         for (BlockPos pos : getAllMarkers()) {
             if (pos.equals(from)) {
                 continue;

@@ -105,12 +105,10 @@ public class OilGenerator {
 
     /** Check if the dimension is excluded based on config. */
     private static boolean isDimensionExcluded(ResourceKey<Level> dimKey) {
-        // Default exclusion: nether and end
-        if (dimKey == Level.NETHER || dimKey == Level.END) {
-            return BCEnergyConfig.excludedDimensionsIsBlackList;
+        if (BCEnergyConfig.getExcludedDimensions().contains(dimKey.identifier())) {
+            return BCEnergyConfig.excludedDimensionsIsBlackList.get();
         }
-        // TODO: Support custom dimension exclusion from config
-        return !BCEnergyConfig.excludedDimensionsIsBlackList;
+        return !BCEnergyConfig.excludedDimensionsIsBlackList.get();
     }
 
     public static List<OilGenStructure> getStructures(Level level, int cx, int cz) {
@@ -130,8 +128,8 @@ public class OilGenerator {
         Identifier biomeId = Identifier.parse(registeredName);
 
         // Do not generate oil in excluded biomes
-        boolean isExcludedBiome = BCEnergyConfig.excludedBiomes.contains(biomeId);
-        if (isExcludedBiome == BCEnergyConfig.excludedBiomesIsBlackList) {
+        boolean isExcludedBiome = BCEnergyConfig.getExcludedBiomes().contains(biomeId);
+        if (isExcludedBiome == BCEnergyConfig.excludedBiomesIsBlackList.get()) {
             if (DEBUG_OILGEN_BASIC & log) {
                 BCLog.logger.info("[energy.oilgen] Not generating oil in chunk " + cx + ", " + cz
                     + " because the biome (" + biomeId + ") is excluded!");
@@ -145,20 +143,20 @@ public class OilGenerator {
             return ImmutableList.of();
         }
 
-        boolean oilBiome = BCEnergyConfig.surfaceDepositBiomes.contains(biomeId);
+        boolean oilBiome = BCEnergyConfig.getSurfaceDepositBiomes().contains(biomeId);
 
         double bonus = oilBiome ? 3.0 : 1.0;
-        bonus *= BCEnergyConfig.oilWellGenerationRate;
-        if (BCEnergyConfig.excessiveBiomes.contains(biomeId)) {
+        bonus *= BCEnergyConfig.oilWellGenerationRate.get();
+        if (BCEnergyConfig.getExcessiveBiomes().contains(biomeId)) {
             bonus *= 30.0;
         }
         final GenType type;
 
-        if (rand.nextDouble() <= BCEnergyConfig.largeOilGenProb * bonus) {
+        if (rand.nextDouble() <= BCEnergyConfig.largeOilGenProb.get() * bonus) {
             type = GenType.LARGE;
-        } else if (rand.nextDouble() <= BCEnergyConfig.mediumOilGenProb * bonus) {
+        } else if (rand.nextDouble() <= BCEnergyConfig.mediumOilGenProb.get() * bonus) {
             type = GenType.MEDIUM;
-        } else if (oilBiome && rand.nextDouble() <= BCEnergyConfig.smallOilGenProb * bonus) {
+        } else if (oilBiome && rand.nextDouble() <= BCEnergyConfig.smallOilGenProb.get() * bonus) {
             type = GenType.LAKE;
         } else {
             if (DEBUG_OILGEN_ALL & log) {
@@ -201,16 +199,16 @@ public class OilGenerator {
             structures.add(createSphere(new BlockPos(x, wellY, z), radius));
 
             // Generate a spout
-            if (BCEnergyConfig.enableOilSpouts) {
+            if (BCEnergyConfig.enableOilSpouts.get()) {
                 int maxHeight, minHeight;
 
                 if (type == GenType.LARGE) {
-                    minHeight = BCEnergyConfig.largeSpoutMinHeight;
-                    maxHeight = BCEnergyConfig.largeSpoutMaxHeight;
+                    minHeight = BCEnergyConfig.largeSpoutMinHeight.get();
+                    maxHeight = BCEnergyConfig.largeSpoutMaxHeight.get();
                     radius = 1;
                 } else {
-                    minHeight = BCEnergyConfig.smallSpoutMinHeight;
-                    maxHeight = BCEnergyConfig.smallSpoutMaxHeight;
+                    minHeight = BCEnergyConfig.smallSpoutMinHeight.get();
+                    maxHeight = BCEnergyConfig.smallSpoutMaxHeight.get();
                     radius = 0;
                 }
                 final int height;

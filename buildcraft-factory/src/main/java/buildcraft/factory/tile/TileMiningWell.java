@@ -103,7 +103,7 @@ public class TileMiningWell extends TileMiner {
             if (level.isOutsideBuildHeight(currentPos)) {
                 break;
             }
-            if (worldPosition.getY() - currentPos.getY() > BCCoreConfig.miningMaxDepth) {
+            if (worldPosition.getY() - currentPos.getY() > BCCoreConfig.miningMaxDepth.get()) {
                 break;
             }
             if (canBreak()) {

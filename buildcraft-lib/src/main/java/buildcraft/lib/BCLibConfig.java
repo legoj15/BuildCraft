@@ -6,30 +6,48 @@
 
 package buildcraft.lib;
 
+import net.neoforged.neoforge.common.ModConfigSpec;
+
 import buildcraft.api.mj.IMjToRfStatus;
 import buildcraft.api.mj.MjRfConversion;
 
 /**
- * Configuration file for lib. Minimal port — only contains fields needed at runtime.
- * The full config system from 1.12.2 is not yet ported.
+ * Configuration file for lib. Uses NeoForge ModConfigSpec.
  */
 public class BCLibConfig {
 
-    /** MJ to RF conversion ratio. */
-    public static MjRfConversion mjRfConversion = MjRfConversion.createDefault();
+    public static final ModConfigSpec SPEC;
 
-    public static PowerMode powerMode = PowerMode.MJ_ONLY;
+    public static final ModConfigSpec.EnumValue<PowerMode> powerMode;
+    public static final ModConfigSpec.DoubleValue mjRfConversionAmount;
+
+    static {
+        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+
+        builder.push("general");
+
+        powerMode = builder
+                .comment("Power mode. Options are MJ_ONLY, MJ_AUTOCONVERT_RF, DISPLAY_RF")
+                .defineEnum("powerMode", PowerMode.MJ_ONLY);
+
+        mjRfConversionAmount = builder
+                .comment("Conversion ratio for MJ <-> RF if autoconvert is enabled (MJ per RF)")
+                .defineInRange("mjRfConversionAmount", 0.1, 0.0001, 0.2);
+
+        builder.pop();
+        SPEC = builder.build();
+    }
 
     public enum PowerMode {
-        /** MJ &lt;-&gt; RF conversion disabled, all machines require MJ exclusively to operate. */
+        /** MJ <-> RF conversion disabled, all machines require MJ exclusively to operate. */
         MJ_ONLY(false),
-        /** MJ &lt;-&gt; RF conversion enabled, machines accept both MJ and RF. */
+        /** MJ <-> RF conversion enabled, machines accept both MJ and RF. */
         MJ_AUTOCONVERT_RF(true),
-        /** MJ &lt;-&gt; RF conversion enabled, machines accept both MJ and RF. Additionally machines will display power
+        /** MJ <-> RF conversion enabled, machines accept both MJ and RF. Additionally machines will display power
          * amounts in RF rather than MJ. */
         DISPLAY_RF(true);
 
-        final boolean autoconvert;
+        public final boolean autoconvert;
 
         PowerMode(boolean autoconvert) {
             this.autoconvert = autoconvert;
@@ -40,12 +58,12 @@ public class BCLibConfig {
 
         @Override
         public MjRfConversion getConversion() {
-            return BCLibConfig.mjRfConversion;
+            return MjRfConversion.createParsed(BCLibConfig.mjRfConversionAmount.get());
         }
 
         @Override
         public boolean isAutoconvertEnabled() {
-            return powerMode.autoconvert;
+            return powerMode.get().autoconvert;
         }
     }
 }

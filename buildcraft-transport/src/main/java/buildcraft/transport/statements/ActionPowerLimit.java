@@ -71,7 +71,7 @@ public abstract class ActionPowerLimit extends BCStatement implements IActionInt
     @Override
     public ISprite getSprite() {
         SpriteHolder[] sprites;
-        if (BCTransportConfig.powerPipeUseOldMjTexture || !isRf()) {
+        if (BCTransportConfig.powerPipeUseOldMjTexture.get() || !isRf()) {
             sprites = BCTransportSprites.POWER_LIMIT;
         } else {
             sprites = BCTransportSprites.POWER_LIMIT_RF;

@@ -123,7 +123,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         List<BlockPos> nextPosesToCheck = new ArrayList<>();
 
         for (targetPos = worldPosition.below(); !level.isOutsideBuildHeight(targetPos); targetPos = targetPos.below()) {
-            if (worldPosition.getY() - targetPos.getY() > BCCoreConfig.miningMaxDepth) {
+            if (worldPosition.getY() - targetPos.getY() > BCCoreConfig.miningMaxDepth.get()) {
                 break;
             }
             if (BlockUtil.getFluidWithFlowing(level, targetPos) != null) {
@@ -158,9 +158,9 @@ public class TilePump extends TileMiner implements IDebuggable {
 
     private void buildQueue0(Fluid queueFluid, List<BlockPos> nextPosesToCheck, Set<BlockPos> checked) {
         Direction[] directions = FluidUtilBC.isGaseous(queueFluid) ? SEARCH_GASEOUS : SEARCH_NORMAL;
-        boolean isWater = !BCCoreConfig.pumpsConsumeWater
+        boolean isWater = !BCCoreConfig.pumpsConsumeWater.get()
                 && FluidUtilBC.areFluidsEqual(queueFluid, Fluids.WATER);
-        final int maxLengthSquared = BCCoreConfig.pumpMaxDistance * BCCoreConfig.pumpMaxDistance;
+        final int maxLengthSquared = BCCoreConfig.pumpMaxDistance.get() * BCCoreConfig.pumpMaxDistance.get();
 
         outer:
         while (!nextPosesToCheck.isEmpty()) {
@@ -314,7 +314,7 @@ public class TilePump extends TileMiner implements IDebuggable {
                     AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT_DRAIN_ANY);
                 }
 
-                isInfiniteWaterSource &= !BCCoreConfig.pumpsConsumeWater;
+                isInfiniteWaterSource &= !BCCoreConfig.pumpsConsumeWater.get();
                 if (isInfiniteWaterSource) {
                     isInfiniteWaterSource = FluidUtilBC.areFluidsEqual(drain.getFluid(), Fluids.WATER);
                 }

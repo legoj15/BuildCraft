@@ -26,7 +26,7 @@ import buildcraft.energy.generation.OilGenerator;
 public class BCEnergyWorldGen {
 
     public static void init() {
-        if (!BCEnergyConfig.enableOilGeneration) {
+        if (!BCEnergyConfig.enableOilGeneration.get()) {
             BCLog.logger.info("[energy.oilgen] Oil generation is disabled by config.");
             return;
         }

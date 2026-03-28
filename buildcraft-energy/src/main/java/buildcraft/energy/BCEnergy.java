@@ -36,6 +36,12 @@ public class BCEnergy {
         BCEnergyBlockEntities.init(modEventBus);
         BCEnergyMenuTypes.init(modEventBus);
 
+        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, BCEnergyConfig.SPEC);
+        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+            modContainer.registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
+                    net.neoforged.neoforge.client.gui.ConfigurationScreen::new);
+        }
+
         // Register client-side extensions on the mod event bus
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
             modEventBus.register(BCEnergyFluidsClient.class);

@@ -4,6 +4,7 @@ import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -53,6 +54,12 @@ public class BCTransport {
         BCTransportMenuTypes.init(modEventBus);
         BCTransportCreativeTabs.init(modEventBus);
 
+        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, BCTransportConfig.SPEC);
+        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+            modContainer.registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
+                    net.neoforged.neoforge.client.gui.ConfigurationScreen::new);
+        }
+
         // Register client-side extensions on the mod event bus
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
             modEventBus.register(buildcraft.transport.client.BCTransportClient.class);
@@ -62,8 +69,9 @@ public class BCTransport {
             modEventBus.register(buildcraft.transport.client.PipeBlockColourHandler.class);
         }
 
-        // Register power transfer data for kinesis pipes
-        BCTransportConfig.registerPowerTransferData();
+        // Register power transfer data for kinesis pipes (deferred to commonSetup
+        // because config values aren't available during mod construction)
+        modEventBus.addListener(this::commonSetup);
 
         // Initialize stripes registry and handlers
         initStripesRegistry();
@@ -92,6 +100,10 @@ public class BCTransport {
                 });
 
         LOGGER.info("BuildCraft Transport initialized");
+    }
+
+    private void commonSetup(FMLCommonSetupEvent event) {
+        event.enqueueWork(BCTransportConfig::registerPowerTransferData);
     }
 
     private void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {

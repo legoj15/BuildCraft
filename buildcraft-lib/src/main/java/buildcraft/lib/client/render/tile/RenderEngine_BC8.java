@@ -17,8 +17,6 @@ import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -80,15 +78,13 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
                 Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer buffer = bufferSource.getBuffer(Sheets.cutoutBlockSheet());
 
-        // Render each MutableQuad as a BakedQuad
-        com.mojang.blaze3d.vertex.QuadInstance quadInstance = new com.mojang.blaze3d.vertex.QuadInstance();
-        quadInstance.setColor(0xFFFFFFFF);
-        quadInstance.setLightCoords(light);
-        quadInstance.setOverlayCoords(OverlayTexture.NO_OVERLAY);
+        // Render quads directly via MutableQuad.render() which writes per-vertex
+        // color, normal, UV, and lightmap data. This bypasses BakedQuad (which in
+        // 26.1 carries no vertex colors) and ensures diffuse shading is applied.
         for (MutableQuad quad : quads) {
-            quad.maxLighti(light, 0);
-            BakedQuad baked = quad.toBakedBlock();
-            buffer.putBakedQuad(poseStack.last(), baked, quadInstance);
+            quad.setCalculatedDiffuse();
+            quad.lighti(light);
+            quad.render(poseStack.last(), buffer);
         }
 
         bufferSource.endBatch();

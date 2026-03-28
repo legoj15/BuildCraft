@@ -304,6 +304,47 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
     }
 
     /**
+     * Spawns landing particles using the correct pipe or pluggable texture.
+     * Called client-side from MessagePipeLandingEffect.
+     */
+    public static void spawnLandingParticles(Level level, BlockPos pos, double x, double y, double z, int numberOfParticles) {
+        if (!(level instanceof ClientLevel clientLevel)) return;
+        HitSpriteInfo info = null;
+        if (level.getBlockEntity(pos) instanceof TilePipeHolder tile) {
+            PipePluggable upPlug = tile.getPluggable(Direction.UP);
+            if (upPlug != null) {
+                TextureAtlasSprite sprite = INSTANCE.getPluggableSprite(upPlug);
+                AABB box = upPlug.getBoundingBox();
+                if (sprite != null && box != null) {
+                    info = new HitSpriteInfo(box, sprite);
+                }
+            }
+            if (info == null) {
+                info = INSTANCE.getPipeSpriteInfo(level, pos, tile);
+            }
+        }
+        if (info == null) return;
+        
+        var random = level.getRandom();
+        for (int i = 0; i < numberOfParticles; ++i) {
+            double px = x + (random.nextFloat() - 0.5) * 0.5;
+            double py = y;
+            double pz = z + (random.nextFloat() - 0.5) * 0.5;
+
+            double motionX = random.nextGaussian() * 0.15D;
+            double motionY = random.nextGaussian() * 0.15D;
+            double motionZ = random.nextGaussian() * 0.15D;
+
+            PipeBreakParticle particle = new PipeBreakParticle(
+                clientLevel, px, py, pz,
+                motionX, motionY, motionZ,
+                info.sprite
+            );
+            Minecraft.getInstance().particleEngine.add(particle);
+        }
+    }
+
+    /**
      * A simple particle that renders from the block texture atlas with a given sprite,
      * bypassing TerrainParticle's updateSprite() which would re-resolve from the block model.
      * Randomises UV sub-regions so each particle shows a small chunk of the texture.

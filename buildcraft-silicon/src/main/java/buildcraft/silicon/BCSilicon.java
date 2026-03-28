@@ -137,6 +137,22 @@ public class BCSilicon {
                     }
                 }
             }
+
+            // Lenses and Filters
+            buildcraft.silicon.item.ItemPluggableLens lensItem = BCSiliconItems.PLUG_LENS.get();
+            event.accept(lensItem.getStack(null, false));
+            for (net.minecraft.world.item.DyeColor color : net.minecraft.world.item.DyeColor.values()) {
+                event.accept(lensItem.getStack(color, false));
+            }
+            event.accept(lensItem.getStack(null, true));
+            for (net.minecraft.world.item.DyeColor color : net.minecraft.world.item.DyeColor.values()) {
+                event.accept(lensItem.getStack(color, true));
+            }
+
+            // Other Pluggables
+            event.accept(new ItemStack(BCSiliconItems.PLUG_PULSAR.get()));
+            event.accept(new ItemStack(BCSiliconItems.PLUG_LIGHT_SENSOR.get()));
+            event.accept(new ItemStack(BCSiliconItems.PLUG_TIMER.get()));
         }
 
         // Facades in their own tab

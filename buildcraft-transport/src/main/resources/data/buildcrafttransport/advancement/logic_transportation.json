@@ -1,6 +1,6 @@
 {
   "display": {
-    "icon": { "id": "buildcrafttransport:pipe_wood_item" },
+    "icon": { "id": "buildcrafttransport:wire_white" },
     "title": { "translate": "advancements.buildcrafttransport.logic_transportation.title" },
     "description": { "translate": "advancements.buildcrafttransport.logic_transportation.description" }
   },

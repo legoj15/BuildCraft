@@ -182,6 +182,11 @@ public class BCTransport {
                 buildcraft.transport.wire.PayloadWireSystemsPowered.STREAM_CODEC,
                 buildcraft.transport.wire.PayloadWireSystemsPowered::handle
         );
+        registrar.playToClient(
+                buildcraft.transport.net.MessagePipeLandingEffect.TYPE,
+                buildcraft.transport.net.MessagePipeLandingEffect.STREAM_CODEC,
+                buildcraft.transport.net.MessagePipeLandingEffect::handle
+        );
     }
 
     @SuppressWarnings("unchecked")

@@ -466,6 +466,17 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         return false;
     }
 
+    // Landing particles — vanilla spawns wooden pipe particles because the block has no explicit texture.
+    // We delegate to a custom packet to spawn the correct pipe-specific texture on clients.
+    @Override
+    public boolean addLandingEffects(BlockState state1, net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state2, net.minecraft.world.entity.LivingEntity entity, int numberOfParticles) {
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingChunk(
+            level, new net.minecraft.world.level.ChunkPos(pos.getX() >> 4, pos.getZ() >> 4),
+            new buildcraft.transport.net.MessagePipeLandingEffect(pos, entity.getX(), entity.getY(), entity.getZ(), numberOfParticles)
+        );
+        return true;
+    }
+
     // ICustomPaintHandler — paint pipes with paintbrush
 
     @Override

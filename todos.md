@@ -19,7 +19,6 @@
 ## 🔧 Still Needs Work
 
 ### Silicon Module (Gates)
-- [ ] Finish gate item models (multi-layered data-driven models)
 - [ ] Implement gate world models (Block Entity Renderer)
 
 ### Config System
@@ -31,8 +30,7 @@
 - [ ] **Heat-level color shifting** — config option to subtly brighten/warm fluid colors at higher heat levels for visual temperature differentiation
 
 ### Advancements
-- [ ] Port custom advancement triggers (currently only display advancements, no gameplay triggers)
-- [ ] `AdvancementUtil.java` exists but triggers are not wired up
+- [ ] Complete porting and wiring up of remaining gameplay advancement triggers via `AdvancementUtil`
 
 ### Block Sounds
 - [ ] Most blocks use default `SoundType` — review and set appropriate sounds per block type

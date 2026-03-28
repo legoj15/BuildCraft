@@ -139,6 +139,9 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         // Static pipe body geometry is rendered by the chunk mesh via PipeBlockStateModel
         // (DynamicBlockStateModel). The BER only handles dynamic content.
 
+        // --- Render wires ---
+        PipeWireRenderer.renderWires(pipe, poseStack.last());
+
         // --- Render pre-resolved item models ---
         // Following vanilla CampfireRenderer: item models were resolved in
         // extractRenderState(). We just position and submit each here.

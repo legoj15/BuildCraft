@@ -59,6 +59,7 @@ import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.net.MessagePipePayload;
 import buildcraft.transport.pipe.Pipe;
+import buildcraft.transport.wire.WireManager;
 import buildcraft.transport.pipe.PipeEventBus;
 
 public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebuggable {
@@ -75,6 +76,7 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     public final PipeEventBus eventBus = new PipeEventBus();
     private Pipe pipe;
+    public final WireManager wireManager = new WireManager(this);
     private final PipePluggable[] pluggables = new PipePluggable[6];
     private boolean scheduleRenderUpdate = true;
     private final Set<PipeMessageReceiver> networkUpdates = EnumSet.noneOf(PipeMessageReceiver.class);
@@ -95,6 +97,10 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         super.saveAdditional(output);
         if (pipe != null) {
             output.store("pipe", CompoundTag.CODEC, pipe.writeToNbt());
+        }
+        CompoundTag wireTag = wireManager.writeToNbt();
+        if (!wireTag.isEmpty()) {
+            output.store("wires", CompoundTag.CODEC, wireTag);
         }
         // Save pluggables
         CompoundTag plugTag = new CompoundTag();
@@ -159,6 +165,10 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
             for (int i = 0; i < pluggables.length; i++) {
                 pluggables[i] = null;
             }
+        });
+        // Load wire data
+        input.read("wires", CompoundTag.CODEC).ifPresent(wireTag -> {
+            wireManager.readFromNbt(wireTag);
         });
         // After data sync (e.g. colour change), refresh the model on the client
         if (level != null && level.isClientSide()) {
@@ -254,6 +264,7 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     // --- Tick ---
 
     public void tick() {
+        wireManager.tick();
         if (pipe != null) {
             pipe.onTick();
         }
@@ -431,9 +442,8 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     }
 
     @Override
-    public IWireManager getWireManager() {
-        // Stub — wires not yet ported
-        return null;
+    public WireManager getWireManager() {
+        return wireManager;
     }
 
     @Override

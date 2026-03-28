@@ -4,6 +4,11 @@
             "type": "minecraft:directory",
             "source": "pipes",
             "prefix": "pipes/"
+        },
+        {
+            "type": "minecraft:directory",
+            "source": "wires",
+            "prefix": "wires/"
         }
     ]
 }

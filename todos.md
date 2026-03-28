@@ -16,77 +16,11 @@
 
 ---
 
-## ✅ Completed (since original TODO)
-
-### Silicon Module
-- [x] Gates — `GateLogic`, `PluggableGate`, gate variants, gate copier
-- [x] Wires — `ItemWire`, wire system ported
-- [x] Lenses — `ItemPluggableLens`, `PluggableLens`
-- [x] Facades — Full rendering pipeline (in-world + item), dedup, assembly recipes
-- [x] Laser + Assembly/Integration Tables — Beam rendering, recipe system, power sync
-- [x] Advanced Crafting Table — Recipe book, JEI/REI integration
-- [x] Pulsar pluggable
-
-### Transport Module
-- [x] All pipe types (item, fluid, power, structure, void, stripes)
-- [x] All pipe behaviours (wood, iron, diamond, diamond wood, emzuli, etc.)
-- [x] All pipe flow renderers (items, fluids, power, RF)
-- [x] Pipe GUIs (diamond, diamond wood, emzuli, filtered buffer)
-- [x] Pipe pluggable system (blockers, gates, facades, lenses, pulsars)
-- [x] Pipe wire system
-- [x] Pipe connection logic and engine face exclusion
-
-### Energy Module
-- [x] Stirling engine (block, tile, GUI, container)
-- [x] Combustion engine (block, tile, GUI, container, fluid extraction)
-- [x] 30 energy fluid variants (10 types × 3 temperatures)
-- [x] Oil world generation (`OilGenerator`, `OilGenStructure`)
-- [x] Oil spring tile entity
-
-### Factory Module
-- [x] Auto Workbench — Power model, progress bar, recipe book, JEI/REI, material slot coloring
-- [x] Tank — Block, tile, GUI, renderer
-- [x] Pump — Block, tile, renderer
-- [x] Distiller — Block, tile, GUI, renderer (with interpolation fixes)
-- [x] Heat Exchanger — Block, tile, renderer
-- [x] Mining Well — Block, tile, renderer
-- [x] Chute — Block, tile, GUI
-- [x] Flood Gate — Block, tile
-- [x] Water Gel — Block, item
-
-### Builders Module
-- [x] Quarry — Full tile entity (1099 lines), frame building, mining, drill, chunk loading
-- [x] Quarry renderer + debug overlay
-- [x] Filler — Block, tile, GUI, container, statement context, filler patterns
-- [x] Filler Planner — Item, addon, renderer, container, GUI
-- [x] Architect Table — Block, tile, GUI, container
-- [x] Builder — Block, tile, GUI, container
-- [x] Electronic Library — Block, tile, GUI, container
-- [x] Replacer — Block, tile, GUI, container
-- [x] Frame block
-- [x] Schematic Single item
-- [x] Snapshot system (partial — Blueprint, SnapshotBuilder, Template basics)
-
-### Core Module
-- [x] All items (wrench, goggles, paintbrush, guide, debugger, map location, list, marker connector, volume box, filler planner)
-- [x] Markers (path + volume) with caching and saved data
-- [x] Volume box addon system
-- [x] Engine blocks (creative, redstone)
-- [x] Spring blocks + Spring world gen feature
-- [x] Decorated blocks + paint handlers
-- [x] Statement system (triggers/actions framework)
-- [x] Laser manager
-- [x] Debug overlay
-- [x] Guide book system (full GUI, XML loader, rendering)
-- [x] Advancements — 21 advancement JSONs ported
-- [x] Ledger system (help, power, ownership) with animation, scissor clipping, wrapping
-- [x] Interactive help system (slot/tank highlighting)
-- [x] REI/JEI integration (exclusion zones, container handlers)
-- [x] Creative tabs with ordering
-
----
-
 ## 🔧 Still Needs Work
+
+### Silicon Module (Gates)
+- [ ] Finish gate item models (multi-layered data-driven models)
+- [ ] Implement gate world models (Block Entity Renderer)
 
 ### Config System
 - [ ] Port `FileConfigManager`, `RoamingConfigManager`, `StreamConfigManager` from lib (all `.disabled`)
@@ -155,7 +89,7 @@
 
 ---
 
-- Fix quarry rendering
+- [ ] Fix quarry rendering
 
 ## 🆕 New Features (Post-Port)
 
@@ -175,3 +109,4 @@
 - [ ] Deprecation and warning fixes
 - [ ] Fix texture filtering bug and crash
 - [ ] Final code review across all modules
+

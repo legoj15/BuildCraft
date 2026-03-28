@@ -1,6 +1,13 @@
 {
   "display": {
-    "icon": { "id": "buildcrafttransport:pipe_iron_item" },
+    "icon": { 
+      "id": "buildcraftsilicon:plug_gate",
+      "components": {
+        "minecraft:custom_model_data": {
+          "strings": ["gold_or_diamond"]
+        }
+      }
+    },
     "title": { "translate": "advancements.buildcrafttransport.extended_logic.title" },
     "description": { "translate": "advancements.buildcrafttransport.extended_logic.description" }
   },

@@ -104,8 +104,17 @@ public class PluggableLens extends PipePluggable {
 
     @Override
     public ItemStack getPickStack() {
-        // TODO: return ItemPluggableLens.getStack(colour, isFilter) when that item is ported
-        return new ItemStack(BCSiliconItems.PLUG_LENS.get());
+        return BCSiliconItems.PLUG_LENS.get().getStack(colour, isFilter);
+    }
+
+    @Override
+    public PluggableModelKey getModelRenderKey(Object layer) {
+        if (layer == null) return null;
+        String name = layer.toString().toLowerCase();
+        if (name.contains("cutout") || name.contains("translucent")) {
+            return new buildcraft.silicon.client.model.key.KeyPlugLens(layer, side, colour, isFilter);
+        }
+        return null;
     }
 
     @Override

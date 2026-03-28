@@ -47,6 +47,7 @@ public class BCSiliconClient {
 
 
 
+
     /**
      * Register facade baker and swap the vanilla facade item model with FacadeItemModel.
      * This event fires after all models are baked and after EntityRenderersEvent has
@@ -57,6 +58,7 @@ public class BCSiliconClient {
         // Register facade baker via API (fires after Transport's registerRenderers)
         if (PipeApiClient.registry != null) {
             PipeApiClient.registry.registerBaker(KeyPlugFacade.class, PlugBakerFacade.INSTANCE);
+            PipeApiClient.registry.registerBaker(buildcraft.silicon.client.model.key.KeyPlugLens.class, buildcraft.silicon.client.model.plug.PlugBakerLens.INSTANCE);
         } else {
             LOGGER.warn("[silicon.client] PipeApiClient.registry is null at ModifyBakingResult! "
                 + "Facade in-world rendering will not work.");

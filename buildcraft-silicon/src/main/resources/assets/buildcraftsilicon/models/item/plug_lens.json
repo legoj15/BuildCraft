@@ -1,6 +1,7 @@
 {
     "parent": "minecraft:item/generated",
     "textures": {
-        "layer0": "buildcraftsilicon:item/plug_lens"
+        "layer0": "buildcraftsilicon:item/plug_lens",
+        "layer1": "buildcraftsilicon:block/plugs/overlay_lens"
     }
 }

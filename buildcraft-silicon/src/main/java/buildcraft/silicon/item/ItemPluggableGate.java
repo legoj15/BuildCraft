@@ -4,6 +4,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
@@ -11,6 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -39,6 +41,9 @@ public class ItemPluggableGate extends Item implements IItemPluggable {
         CompoundTag data = NBTUtilBC.getItemData(stack);
         data.put("gate", variant.writeToNBT());
         NBTUtilBC.setItemData(stack, data);
+        // Set CustomModelData with the variant name so minecraft:select can route to the correct model
+        stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(
+            List.of(), List.of(), List.of(variant.getVariantName()), List.of()));
         return stack;
     }
 

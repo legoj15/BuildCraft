@@ -127,7 +127,10 @@ public class BCSilicon {
         if (event.getTabKey() == BCSiliconCreativeTabs.TRANSPORT_PLUGS_TAB_KEY) {
             buildcraft.silicon.item.ItemPluggableGate gateItem = BCSiliconItems.PLUG_GATE.get();
             for (buildcraft.silicon.gate.EnumGateMaterial material : buildcraft.silicon.gate.EnumGateMaterial.VALUES) {
-                if (!material.canBeModified) continue;
+                if (!material.canBeModified) {
+                    event.accept(gateItem.getStack(new buildcraft.silicon.gate.GateVariant(buildcraft.silicon.gate.EnumGateLogic.AND, material, buildcraft.silicon.gate.EnumGateModifier.NO_MODIFIER)));
+                    continue;
+                }
                 for (buildcraft.silicon.gate.EnumGateLogic logic : buildcraft.silicon.gate.EnumGateLogic.VALUES) {
                     for (buildcraft.silicon.gate.EnumGateModifier modifier : buildcraft.silicon.gate.EnumGateModifier.VALUES) {
                         event.accept(gateItem.getStack(new buildcraft.silicon.gate.GateVariant(logic, material, modifier)));

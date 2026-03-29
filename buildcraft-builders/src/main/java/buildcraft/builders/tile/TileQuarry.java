@@ -77,6 +77,8 @@ import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.BCBuildersBlocks;
+import buildcraft.builders.BCBuildersEntities;
+import buildcraft.builders.entity.EntityQuarryRig;
 import buildcraft.builders.BCBuildersConfig;
 import buildcraft.builders.BCBuildersEventDist;
 import buildcraft.core.BCCoreConfig;
@@ -115,6 +117,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
 
     private List<AABB> collisionBoxes = ImmutableList.of();
     private Vec3 collisionDrillPos;
+
+    private final EntityQuarryRig[] rigs = new EntityQuarryRig[3];
 
     public TileQuarry(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.QUARRY.get(), pos, state);
@@ -390,6 +394,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         BCBuildersEventDist.INSTANCE.invalidateQuarry(this);
         if (level != null && !level.isClientSide()) {
             ChunkLoaderManager.releaseChunksFor(this);
+            discardRigs();
         }
     }
 
@@ -609,6 +614,51 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             if (level != null && !level.isClientSide()) {
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
             }
+        }
+
+        updateRigs();
+    }
+
+    private void updateRigs() {
+        if (level == null || level.isClientSide()) return;
+
+        if (drillPos == null || !frameBox.isInitialized()) {
+            discardRigs();
+            return;
+        }
+
+        List<AABB> boxes = getCollisionBoxes();
+        if (boxes.size() != 3) {
+            discardRigs();
+            return;
+        }
+
+        boolean isDrillMoving = (currentTask instanceof TaskMoveDrill);
+
+        for (int i = 0; i < 3; i++) {
+            EntityQuarryRig rig = rigs[i];
+            if (rig == null || rig.isRemoved()) {
+                rig = new EntityQuarryRig(BCBuildersEntities.QUARRY_RIG.get(), level);
+                if (rig != null) {
+                    level.addFreshEntity(rig);
+                    rigs[i] = rig;
+                }
+            }
+            if (rig != null) {
+                rig.setRiggingBox(boxes.get(i));
+                if (i == 2) {
+                    rig.setPhasing(isDrillMoving);
+                }
+            }
+        }
+    }
+
+    private void discardRigs() {
+        for (int i = 0; i < 3; i++) {
+            if (rigs[i] != null && !rigs[i].isRemoved()) {
+                rigs[i].discard();
+            }
+            rigs[i] = null;
         }
     }
 

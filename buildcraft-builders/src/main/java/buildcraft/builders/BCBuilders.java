@@ -36,6 +36,7 @@ public class BCBuilders {
         BCBuildersBlocks.init(modEventBus);
         BCBuildersItems.init(modEventBus);
         BCBuildersBlockEntities.init(modEventBus);
+        BCBuildersEntities.init(modEventBus);
         BCBuildersMenuTypes.init(modEventBus);
 
         modEventBus.addListener((FMLCommonSetupEvent event) -> {
@@ -55,8 +56,14 @@ public class BCBuilders {
         });
 
         // Register quarry rendering via game event bus (not mod bus)
-        NeoForge.EVENT_BUS.addListener(RenderLevelStageEvent.AfterTranslucentBlocks.class,
-            event -> BCBuildersEventDist.INSTANCE.renderAllQuarries(event));
+        if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
+            NeoForge.EVENT_BUS.addListener(RenderLevelStageEvent.AfterTranslucentBlocks.class,
+                event -> BCBuildersEventDist.INSTANCE.renderAllQuarries(event));
+
+            modEventBus.addListener((net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterRenderers event) -> {
+                event.registerEntityRenderer(BCBuildersEntities.QUARRY_RIG.get(), net.minecraft.client.renderer.entity.NoopRenderer::new);
+            });
+        }
     }
 
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {

@@ -128,9 +128,36 @@ public class BuildCraftGui {
             m.drawForeground(lastPartialTicks);
         }
 
-        // TODO: draw tooltips
-        // GuiUtil.drawVerticallyAppending(mouse, getAllTooltips(), this::drawTooltip);
-    }
+        java.util.List<ToolTip> tooltips = new java.util.ArrayList<>();
+        if (m != null && m.shouldFullyOverride()) {
+            if (m instanceof buildcraft.lib.gui.ITooltipElement) {
+                ((buildcraft.lib.gui.ITooltipElement) m).addToolTips(tooltips);
+            }
+        } else {
+            if (m instanceof buildcraft.lib.gui.ITooltipElement) {
+                ((buildcraft.lib.gui.ITooltipElement) m).addToolTips(tooltips);
+            }
+            for (IGuiElement element : shownElements) {
+                if (element instanceof buildcraft.lib.gui.ITooltipElement) {
+                    ((buildcraft.lib.gui.ITooltipElement) element).addToolTips(tooltips);
+                }
+            }
+        }
+
+        if (!tooltips.isEmpty()) {
+            net.minecraft.client.gui.GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
+            if (graphics != null) {
+                java.util.List<net.minecraft.util.FormattedCharSequence> comps = new java.util.ArrayList<>();
+                for (ToolTip tip : tooltips) {
+                    for (String str : tip) {
+                        comps.add(net.minecraft.network.chat.Component.literal(str).getVisualOrderText());
+                    }
+                }
+                if (!comps.isEmpty()) {
+                    graphics.setTooltipForNextFrame(net.minecraft.client.Minecraft.getInstance().font, comps, (int) mouse.getX(), (int) mouse.getY());
+                }
+            }
+        }    }
 
     public boolean onMouseClicked(int mouseX, int mouseY, int mouseButton) {
         mouse.setMousePosition(mouseX, mouseY);

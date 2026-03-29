@@ -61,7 +61,7 @@ public class GuiTank extends GuiBC8<ContainerTank> {
 
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        // Draw "Tank" title centered at the top
+        super.extractLabels(graphics, mouseX, mouseY);        // Draw "Tank" title centered at the top
         String titleStr = title.getString();
         int titleWidth = font.width(titleStr);
         int titleX = (imageWidth - titleWidth) / 2;
@@ -98,9 +98,11 @@ public class GuiTank extends GuiBC8<ContainerTank> {
             }
             lines.add(Component.literal(amount + " / " + capacity + " mB")
                     .withStyle(ChatFormatting.GRAY));
-
-            // MC 26.1: Tooltip APIs changed. Stubbing tooltip for now.
-            // TODO: Implement proper tank tooltip with new MC 26.1 API.
+            java.util.List<net.minecraft.util.FormattedCharSequence> comps = new java.util.ArrayList<>();
+            for (net.minecraft.network.chat.Component c : lines) {
+                comps.add(c.getVisualOrderText());
+            }
+            graphics.setTooltipForNextFrame(font, comps, mouseX, mouseY);
         }
     }
 }

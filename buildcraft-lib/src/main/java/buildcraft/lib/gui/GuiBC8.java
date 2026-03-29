@@ -109,8 +109,13 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
     /** MC 26.1: extractLabels replaces renderLabels. */
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        // Suppress vanilla's default title/inventory label rendering.
-        // BuildCraft GUIs draw labels manually in subclass overrides with custom positioning.
+        GuiIcon.setGuiGraphics(graphics);
+        drawForegroundLayer();
+        mainGui.drawElementForegrounds(null);
+    }
+
+    /** Draw custom foreground labels. Subclasses should override this. */
+    protected void drawForegroundLayer() {
     }
 
     /** Draw the background texture. Override this to blit your GUI background. */

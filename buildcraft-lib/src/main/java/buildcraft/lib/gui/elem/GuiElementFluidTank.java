@@ -82,31 +82,14 @@ public class GuiElementFluidTank implements IInteractionElement {
     }
 
     private void drawFluid(GuiGraphicsExtractor graphics, FluidStack fluid, int amount, int capacity) {
-        // MC 26.1: IClientFluidTypeExtensions.getStillTexture/getTintColor removed.
-        // Use the fluid's built-in properties instead.
-        // TODO: Implement proper NeoForge 26.1 fluid rendering API when it stabilizes.
-        net.minecraft.world.level.material.FluidState fluidState = fluid.getFluid().defaultFluidState();
-        // Try to get the still texture from the FluidType properties
-        Identifier stillTexture = null;
-        // Check if this is water or lava — they have known textures
-        if (fluid.getFluid().isSame(net.minecraft.world.level.material.Fluids.WATER)
-            || fluid.getFluid().isSame(net.minecraft.world.level.material.Fluids.FLOWING_WATER)) {
-            stillTexture = Identifier.withDefaultNamespace("block/water_still");
-        } else if (fluid.getFluid().isSame(net.minecraft.world.level.material.Fluids.LAVA)
-            || fluid.getFluid().isSame(net.minecraft.world.level.material.Fluids.FLOWING_LAVA)) {
-            stillTexture = Identifier.withDefaultNamespace("block/lava_still");
-        } else {
-            // For mod fluids, try using the NeoForge FluidType renderProperties
-            // This is a fallback — specific mod fluids may need their own registration
-            stillTexture = Identifier.withDefaultNamespace("block/water_still");
-        }
+        Identifier stillTexture = buildcraft.lib.misc.FluidUtilBC.getFluidTexture(fluid);
         if (stillTexture == null) return;
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
                 .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
 
-        int tintColor = 0xFFFFFFFF; // No tinting for now
+        int tintColor = buildcraft.lib.misc.FluidUtilBC.getFluidColor(fluid);
 
         int x = (int) area.getX();
         int y = (int) area.getY();

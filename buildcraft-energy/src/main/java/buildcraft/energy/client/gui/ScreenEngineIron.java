@@ -130,16 +130,17 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
      * and tint color (fluid textures are grayscale; color comes from tinting).
      */
     private void drawFluidTexture(GuiGraphicsExtractor graphics, int x, int y, int width, int height, Fluid fluid) {
-        // MC 26.1: IClientFluidTypeExtensions was removed.
-        // Use hardcoded water texture for all fluids as a fallback.
-        Identifier stillTexture = Identifier.withDefaultNamespace("block/water_still");
+        net.neoforged.neoforge.fluids.FluidStack stack = new net.neoforged.neoforge.fluids.FluidStack(fluid.builtInRegistryHolder(), 1);
+        Identifier stillTexture = buildcraft.lib.misc.FluidUtilBC.getFluidTexture(stack);
+        if (stillTexture == null) {
+            stillTexture = Identifier.withDefaultNamespace("block/water_still");
+        }
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
             .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
 
-        // Default tint — white (no tinting). TODO: proper fluid tints for MC 26.1
-        int tintColor = 0xFFFFFFFF;
+        int tintColor = buildcraft.lib.misc.FluidUtilBC.getFluidColor(stack);
 
         // Enable scissor to clip to the tank area
         graphics.enableScissor(x, y, x + width, y + height);
@@ -175,6 +176,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
 
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        super.extractLabels(graphics, mouseX, mouseY);
         String str = LocaleUtil.localize("tile.engineIron.name");
         int strWidth = font.width(str);
         int titleX = (imageWidth - strWidth) / 2;
@@ -216,7 +218,11 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
                 .withStyle(net.minecraft.ChatFormatting.GRAY));
 
             // MC 26.1: Tooltip rendering APIs have changed significantly.
-            // TODO: Implement proper tank tooltip rendering with the new MC 26.1 API.
+            java.util.List<net.minecraft.util.FormattedCharSequence> comps = new java.util.ArrayList<>();
+            for (Component c : lines) {
+                comps.add(c.getVisualOrderText());
+            }
+            graphics.setTooltipForNextFrame(font, comps, mouseX, mouseY);
         }
     }
 

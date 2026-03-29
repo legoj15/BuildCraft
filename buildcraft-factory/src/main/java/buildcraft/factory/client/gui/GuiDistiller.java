@@ -29,7 +29,7 @@ import buildcraft.lib.gui.pos.GuiRectangle;
 public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     private static final Identifier TEXTURE =
             Identifier.parse("buildcraftunofficial:textures/gui/distiller.png");
-    private static final int SIZE_X = 176, SIZE_Y = 166;
+    private static final int SIZE_X = 176, SIZE_Y = 161;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
 
     // Tank positions (matching the 1.12.2 GUI layout)
@@ -83,10 +83,9 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
 
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        super.extractLabels(graphics, mouseX, mouseY);
         String titleStr = title.getString();
-        int titleWidth = font.width(titleStr);
-        int titleX = (imageWidth - titleWidth) / 2;
-        graphics.text(font, titleStr, titleX, 6, 0xFF404040, false);
+        graphics.text(font, titleStr, 8, 6, 0xFF404040, false);
         graphics.text(font, playerInventoryTitle, 8, imageHeight - 96 + 2, 0xFF404040, false);
     }
 
@@ -118,9 +117,11 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
             }
             lines.add(Component.literal(amount + " / " + capacity + " mB")
                     .withStyle(ChatFormatting.GRAY));
-
-            // MC 26.1: Tooltip APIs changed. Stubbing tooltip for now.
-            // TODO: Implement proper tank tooltip with new MC 26.1 API.
+            java.util.List<net.minecraft.util.FormattedCharSequence> comps = new java.util.ArrayList<>();
+            for (net.minecraft.network.chat.Component c : lines) {
+                comps.add(c.getVisualOrderText());
+            }
+            graphics.setTooltipForNextFrame(font, comps, mouseX, mouseY);
         }
     }
 }

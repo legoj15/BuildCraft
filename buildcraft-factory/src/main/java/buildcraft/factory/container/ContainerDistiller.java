@@ -33,7 +33,13 @@ public class ContainerDistiller extends ContainerBC_Neptune {
         super(BCFactoryMenuTypes.DISTILLER.get(), containerId, playerInv.player);
         this.tile = tile;
 
-        addFullPlayerInventory(8, 84);
+        if (tile != null) {
+            addSlot(new net.neoforged.neoforge.items.SlotItemHandler(tile.containerSlots, 0, 8, 35));
+            addSlot(new net.neoforged.neoforge.items.SlotItemHandler(tile.containerSlots, 1, 152, 10));
+            addSlot(new net.neoforged.neoforge.items.SlotItemHandler(tile.containerSlots, 2, 152, 55));
+        }
+
+        addFullPlayerInventory(8, 79);
 
         widgetTankIn = addWidget(new WidgetFluidTank(this, tile != null ? tile.getTankIn() : null));
         widgetTankGasOut = addWidget(new WidgetFluidTank(this, tile != null ? tile.getTankGasOut() : null));
@@ -66,6 +72,36 @@ public class ContainerDistiller extends ContainerBC_Neptune {
 
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
-        return ItemStack.EMPTY;
+        ItemStack itemstack = ItemStack.EMPTY;
+        net.minecraft.world.inventory.Slot slot = this.slots.get(index);
+
+        if (slot != null && slot.hasItem()) {
+            ItemStack itemstack1 = slot.getItem();
+            itemstack = itemstack1.copy();
+
+            if (index < 3) {
+                if (!this.moveItemStackTo(itemstack1, 3, 39, true)) {
+                    return ItemStack.EMPTY;
+                }
+            } else {
+                if (!this.moveItemStackTo(itemstack1, 0, 3, false)) {
+                    return ItemStack.EMPTY;
+                }
+            }
+
+            if (itemstack1.isEmpty()) {
+                slot.set(ItemStack.EMPTY);
+            } else {
+                slot.setChanged();
+            }
+
+            if (itemstack1.getCount() == itemstack.getCount()) {
+                return ItemStack.EMPTY;
+            }
+
+            slot.onTake(player, itemstack1);
+        }
+
+        return itemstack;
     }
 }

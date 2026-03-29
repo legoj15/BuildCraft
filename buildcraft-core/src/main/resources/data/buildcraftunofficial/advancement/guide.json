@@ -1,0 +1,19 @@
+{
+  "display": {
+    "icon": {
+      "id": "buildcraftunofficial:guide"
+    },
+    "title": {
+      "translate": "advancements.buildcraftunofficial.guide.title"
+    },
+    "description": {
+      "translate": "advancements.buildcraftunofficial.guide.description"
+    }
+  },
+  "parent": "buildcraftunofficial:root",
+  "criteria": {
+    "code_trigger": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

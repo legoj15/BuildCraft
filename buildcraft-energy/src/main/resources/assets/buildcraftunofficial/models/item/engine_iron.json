@@ -1,0 +1,8 @@
+{
+    "parent": "buildcraftunofficial:block/engine_item_base",
+    "textures": {
+        "back": "buildcraftunofficial:block/engine/iron_back",
+        "side": "buildcraftunofficial:block/engine/iron_side",
+        "trunk": "buildcraftunofficial:block/engine/trunk_blue"
+    }
+}

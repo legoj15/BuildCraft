@@ -1,10 +1,10 @@
 {
     "textures": {
-        "#sprite_a":"buildcraftfactory:blocks/heat_exchange/sprite_a",
-        "#sprite_b":"buildcraftfactory:blocks/heat_exchange/sprite_b",
-        "#sprite_c":"buildcraftfactory:blocks/heat_exchange/sprite_c",
-        "#sprite_d":"buildcraftfactory:blocks/heat_exchange/sprite_d",
-        "#sprite_e":"buildcraftfactory:blocks/heat_exchange/sprite_e"
+        "#sprite_a":"buildcraftunofficial:blocks/heat_exchange/sprite_a",
+        "#sprite_b":"buildcraftunofficial:blocks/heat_exchange/sprite_b",
+        "#sprite_c":"buildcraftunofficial:blocks/heat_exchange/sprite_c",
+        "#sprite_d":"buildcraftunofficial:blocks/heat_exchange/sprite_d",
+        "#sprite_e":"buildcraftunofficial:blocks/heat_exchange/sprite_e"
     },
     "rules": [
         {

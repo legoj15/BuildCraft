@@ -1,9 +1,9 @@
 {
     "textures": {
-        "#back":"buildcraftcore:blocks/engine/creative/back",
-        "#side":"buildcraftcore:blocks/engine/creative/side"
+        "#back":"buildcraftunofficial:blocks/engine/creative/back",
+        "#side":"buildcraftunofficial:blocks/engine/creative/side"
     },
-    "parent":"buildcraftlib:models/item/engine_base",
+    "parent":"buildcraftunofficial:models/item/engine_base",
     "values": {
         "stage":"'overheat'"
     },

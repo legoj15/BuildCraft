@@ -101,7 +101,7 @@ public class PipeBehaviourWoodDiamond extends PipeBehaviourWood {
             serverPlayer.openMenu(new MenuProvider() {
                 @Override
                 public Component getDisplayName() {
-                    return Component.translatable("gui.buildcrafttransport.pipe_diamond_wood.title");
+                    return Component.translatable("gui.buildcraftunofficial.pipe_diamond_wood.title");
                 }
 
                 @Override

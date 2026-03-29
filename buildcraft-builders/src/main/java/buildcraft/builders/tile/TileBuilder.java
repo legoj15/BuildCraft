@@ -359,7 +359,7 @@ public class TileBuilder extends TileBC_Neptune
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.buildcraftbuilders.builder");
+        return Component.translatable("block.buildcraftunofficial.builder");
     }
 
     @Nullable

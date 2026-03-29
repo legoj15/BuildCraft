@@ -1,10 +1,10 @@
 {
     "forge_marker":1,
     "defaults": {
-    	"model": "buildcraftfactory:heat_exchange_joiner",
+    	"model": "buildcraftunofficial:heat_exchange_joiner",
         "textures": {
-            "sprite_a":"buildcraftfactory:blocks/heat_exchange/sprite_a",
-            "sprite_b":"buildcraftfactory:blocks/heat_exchange/sprite_b"
+            "sprite_a":"buildcraftunofficial:blocks/heat_exchange/sprite_a",
+            "sprite_b":"buildcraftunofficial:blocks/heat_exchange/sprite_b"
         }
     },
     "variants": {
@@ -17,7 +17,7 @@
         "connected": {
         	"true": {},
         	"false": {
-        		"submodel":"buildcraftfactory:heat_exchange_cap"
+        		"submodel":"buildcraftunofficial:heat_exchange_cap"
         	}
         },
         "connected_y": {

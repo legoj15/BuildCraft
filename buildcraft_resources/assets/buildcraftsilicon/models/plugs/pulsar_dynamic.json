@@ -1,7 +1,7 @@
 {
     "textures": {
-        "#pulsing_true":"buildcraftsilicon:plugs/pulsar_dynamic_on",
-        "#pulsing_false":"buildcraftsilicon:plugs/pulsar_dynamic_off",
+        "#pulsing_true":"buildcraftunofficial:plugs/pulsar_dynamic_on",
+        "#pulsing_false":"buildcraftunofficial:plugs/pulsar_dynamic_off",
         "particle":"#pulsing_false"
     },
     "variables": {

@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcraftfactory:flood_gate"
+    "item": "buildcraftunofficial:flood_gate"
   },
   "pattern": [
     "igi",
@@ -13,7 +13,7 @@
       "item": "minecraft:iron_bars"
     },
     "t": {
-      "item": "buildcraftfactory:tank"
+      "item": "buildcraftunofficial:tank"
     },
     "g": {
       "item": "#gearIron"
@@ -25,11 +25,11 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftfactory:flood_gate"
+      "item": "buildcraftunofficial:flood_gate"
     },
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftfactory:tank"
+      "item": "buildcraftunofficial:tank"
     }
   ]
 }

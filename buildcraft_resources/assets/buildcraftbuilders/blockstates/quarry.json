@@ -1,7 +1,7 @@
 {
     "forge_marker": 1,
     "defaults": {
-        "model": "buildcraftbuilders:quarry"
+        "model": "buildcraftunofficial:quarry"
     },
     "variants": {
         "facing": {
@@ -10,12 +10,12 @@
             "west": {"y": 270},
             "north": {"y": 0}
         },
-        "connected_up": {"false": {"textures": {"up": "buildcraftbuilders:blocks/quarry/normal/top"}}, "true": {"textures": {"up": "buildcraftbuilders:blocks/quarry/connected/top"}}},
-        "connected_down": {"false": {"textures": {"down": "buildcraftbuilders:blocks/quarry/normal/bottom"}}, "true": {"textures": {"down": "buildcraftbuilders:blocks/quarry/connected/bottom"}}},
-        "connected_east": {"false": {"textures": {"east": "buildcraftbuilders:blocks/quarry/normal/side"}}, "true": {"textures": {"east": "buildcraftbuilders:blocks/quarry/connected/side"}}},
-        "connected_west": {"false": {"textures": {"west": "buildcraftbuilders:blocks/quarry/normal/side"}}, "true": {"textures": {"west": "buildcraftbuilders:blocks/quarry/connected/side"}}},
-        "connected_north": {"false": {"textures": {"north": "buildcraftbuilders:blocks/quarry/normal/front"}}, "true": {"textures": {"north": "buildcraftbuilders:blocks/quarry/connected/front"}}},
-        "connected_south": {"false": {"textures": {"south": "buildcraftbuilders:blocks/quarry/normal/back"}}, "true": {"textures": {"south": "buildcraftbuilders:blocks/quarry/connected/back"}}},
+        "connected_up": {"false": {"textures": {"up": "buildcraftunofficial:blocks/quarry/normal/top"}}, "true": {"textures": {"up": "buildcraftunofficial:blocks/quarry/connected/top"}}},
+        "connected_down": {"false": {"textures": {"down": "buildcraftunofficial:blocks/quarry/normal/bottom"}}, "true": {"textures": {"down": "buildcraftunofficial:blocks/quarry/connected/bottom"}}},
+        "connected_east": {"false": {"textures": {"east": "buildcraftunofficial:blocks/quarry/normal/side"}}, "true": {"textures": {"east": "buildcraftunofficial:blocks/quarry/connected/side"}}},
+        "connected_west": {"false": {"textures": {"west": "buildcraftunofficial:blocks/quarry/normal/side"}}, "true": {"textures": {"west": "buildcraftunofficial:blocks/quarry/connected/side"}}},
+        "connected_north": {"false": {"textures": {"north": "buildcraftunofficial:blocks/quarry/normal/front"}}, "true": {"textures": {"north": "buildcraftunofficial:blocks/quarry/connected/front"}}},
+        "connected_south": {"false": {"textures": {"south": "buildcraftunofficial:blocks/quarry/normal/back"}}, "true": {"textures": {"south": "buildcraftunofficial:blocks/quarry/connected/back"}}},
         "inventory": [{}]
     }
 }

@@ -14,9 +14,9 @@
         }
     ],
     "textures": {
-        "particle": "buildcraftfactory:blocks/tank/side",
-        "up": "buildcraftfactory:blocks/tank/end",
-        "down": "buildcraftfactory:blocks/tank/end",
-        "side": "buildcraftfactory:blocks/tank/side"
+        "particle": "buildcraftunofficial:blocks/tank/side",
+        "up": "buildcraftunofficial:blocks/tank/end",
+        "down": "buildcraftunofficial:blocks/tank/end",
+        "side": "buildcraftunofficial:blocks/tank/side"
     }
 }

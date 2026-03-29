@@ -15,7 +15,7 @@ import buildcraft.lib.gui.pos.IGuiArea;
 import buildcraft.lib.gui.pos.IGuiPosition;
 
 public class ElementTypeToolTip extends ElementType {
-    public static final String NAME = "buildcraftlib:tooltip";
+    public static final String NAME = "buildcraftunofficial:tooltip";
     public static final ElementTypeToolTip INSTANCE = new ElementTypeToolTip();
 
     private ElementTypeToolTip() {

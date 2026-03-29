@@ -56,9 +56,9 @@ import buildcraft.api.tiles.IDebuggable;
 public class TilePump extends TileMiner implements IDebuggable {
 
     private static final Identifier ADVANCEMENT_DRAIN_ANY
-        = Identifier.parse("buildcraftfactory:draining_the_world");
+        = Identifier.parse("buildcraftunofficial:draining_the_world");
     private static final Identifier ADVANCEMENT_DRAIN_OIL
-        = Identifier.parse("buildcraftfactory:oil_platform");
+        = Identifier.parse("buildcraftunofficial:oil_platform");
 
     private static final Direction[] SEARCH_NORMAL = new Direction[] {
         Direction.UP, Direction.NORTH, Direction.SOUTH,
@@ -151,8 +151,8 @@ public class TilePump extends TileMiner implements IDebuggable {
     /** Returns true if the fluid is crude oil (any heat variant). */
     private static boolean isOil(Fluid fluid) {
         Identifier id = BuiltInRegistries.FLUID.getKey(fluid);
-        // Covers "buildcraftenergy:oil", "buildcraftenergy:oil_heat_1", "buildcraftenergy:oil_heat_2"
-        return id.getNamespace().equals("buildcraftenergy")
+        // Covers "buildcraftunofficial:oil", "buildcraftunofficial:oil_heat_1", "buildcraftunofficial:oil_heat_2"
+        return id.getNamespace().equals("buildcraftunofficial")
             && (id.getPath().equals("oil") || id.getPath().startsWith("oil_heat_"));
     }
 

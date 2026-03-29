@@ -1,5 +1,5 @@
 {
     "variants": {
-        "normal": {"model": "buildcrafttransport:filtered_buffer"}
+        "normal": {"model": "buildcraftunofficial:filtered_buffer"}
     }
 }

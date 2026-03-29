@@ -1,7 +1,7 @@
 [
     {
         "selectors": [
-            "buildcraftfactory:tank"
+            "buildcraftunofficial:tank"
         ],
         "requiredExtractors": [
             {
@@ -14,7 +14,7 @@
     },
     {
         "selectors": [
-            "buildcraftfactory:distiller"
+            "buildcraftunofficial:distiller"
         ],
         "requiredExtractors": [
             {
@@ -33,7 +33,7 @@
     },
     {
         "selectors": [
-            "buildcraftfactory:flood_gate"
+            "buildcraftunofficial:flood_gate"
         ],
         "requiredExtractors": [
             {
@@ -46,7 +46,7 @@
     },
     {
         "selectors": [
-            "buildcraftfactory:heat_exchange_start"
+            "buildcraftunofficial:heat_exchange_start"
         ],
         "requiredExtractors": [
             {
@@ -62,7 +62,7 @@
     },
     {
         "selectors": [
-            "buildcraftfactory:heat_exchange_start"
+            "buildcraftunofficial:heat_exchange_start"
         ],
         "requiredExtractors": [
             {
@@ -78,7 +78,7 @@
     },
     {
         "selectors": [
-            "buildcraftfactory:pump"
+            "buildcraftunofficial:pump"
         ],
         "requiredExtractors": [
             {
@@ -91,7 +91,7 @@
     },
     {
         "selectors": [
-            "buildcraftcore:engine[type=iron]"
+            "buildcraftunofficial:engine[type=iron]"
         ],
         "requiredExtractors": [
             {
@@ -110,7 +110,7 @@
     },
     {
         "selectors": [
-            "buildcraftbuilders:builder"
+            "buildcraftunofficial:builder"
         ],
         "requiredExtractors": [
             {

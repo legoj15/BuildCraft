@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcraftsilicon:laser"
+    "item": "buildcraftunofficial:laser"
   },
   "pattern": [
     "rro",
@@ -23,7 +23,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftsilicon:laser"
+      "item": "buildcraftunofficial:laser"
     }
   ]
 }

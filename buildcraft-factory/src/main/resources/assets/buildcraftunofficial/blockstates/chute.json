@@ -1,0 +1,10 @@
+{
+    "variants": {
+        "facing=down": { "model": "buildcraftunofficial:block/chute", "x": 180 },
+        "facing=up": { "model": "buildcraftunofficial:block/chute" },
+        "facing=north": { "model": "buildcraftunofficial:block/chute", "x": 90 },
+        "facing=south": { "model": "buildcraftunofficial:block/chute", "x": 90, "y": 180 },
+        "facing=west": { "model": "buildcraftunofficial:block/chute", "x": 90, "y": 270 },
+        "facing=east": { "model": "buildcraftunofficial:block/chute", "x": 90, "y": 90 }
+    }
+}

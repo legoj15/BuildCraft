@@ -120,7 +120,7 @@ public class BCBuildersSprites {
     }
 
     private static SpriteHolder getHolder(String suffix) {
-        return SpriteHolderRegistry.getHolder("buildcraftbuilders:" + suffix);
+        return SpriteHolderRegistry.getHolder("buildcraftunofficial:" + suffix);
     }
 
     public static void fmlPreInit() {

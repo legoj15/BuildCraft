@@ -25,7 +25,7 @@ import buildcraft.lib.misc.AdvancementUtil;
 
 public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
     private static final net.minecraft.resources.Identifier ADVANCEMENT_POWERING_UP
-        = net.minecraft.resources.Identifier.parse("buildcraftenergy:powering_up");
+        = net.minecraft.resources.Identifier.parse("buildcraftunofficial:powering_up");
 
     private static final long MAX_OUTPUT = MjAPI.MJ;
     private static final long MIN_OUTPUT = MAX_OUTPUT / 3;

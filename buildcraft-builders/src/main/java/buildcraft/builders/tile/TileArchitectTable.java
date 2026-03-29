@@ -63,7 +63,7 @@ import buildcraft.core.marker.volume.VolumeBox;
 public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, MenuProvider {
 
     private static final net.minecraft.resources.Identifier ADVANCEMENT
-        = net.minecraft.resources.Identifier.parse("buildcraftbuilders:architect");
+        = net.minecraft.resources.Identifier.parse("buildcraftunofficial:architect");
 
     private EnumSnapshotType snapshotType = EnumSnapshotType.BLUEPRINT;
     public final Box box = new Box();
@@ -374,7 +374,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.buildcraftbuilders.architect");
+        return Component.translatable("block.buildcraftunofficial.architect");
     }
 
     @Nullable

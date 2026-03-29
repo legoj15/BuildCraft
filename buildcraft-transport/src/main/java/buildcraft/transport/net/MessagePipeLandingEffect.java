@@ -16,7 +16,7 @@ public record MessagePipeLandingEffect(
 ) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<MessagePipeLandingEffect> TYPE =
-            new CustomPacketPayload.Type<>(Identifier.parse("buildcrafttransport:pipe_landing_effect"));
+            new CustomPacketPayload.Type<>(Identifier.parse("buildcraftunofficial:pipe_landing_effect"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, MessagePipeLandingEffect> STREAM_CODEC =
             StreamCodec.composite(

@@ -1,0 +1,11 @@
+{
+  "display": {
+    "icon": { "id": "minecraft:lava_bucket" },
+    "title": { "translate": "advancements.buildcraftunofficial.lava_power.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.lava_power.description" }
+  },
+  "parent": "buildcraftunofficial:engine",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

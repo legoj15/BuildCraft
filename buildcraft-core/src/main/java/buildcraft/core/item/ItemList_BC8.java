@@ -71,7 +71,7 @@ public class ItemList_BC8 extends Item implements IList {
                 serverPlayer.openMenu(new net.minecraft.world.MenuProvider() {
                     @Override
                     public net.minecraft.network.chat.Component getDisplayName() {
-                        return Component.translatable("gui.buildcraftcore.list");
+                        return Component.translatable("gui.buildcraftunofficial.list");
                     }
 
                     @Override

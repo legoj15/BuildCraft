@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcraftsilicon:assembly_table"
+    "item": "buildcraftunofficial:assembly_table"
   },
   "pattern": [
     "OdO",
@@ -26,7 +26,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftsilicon:assembly_table"
+      "item": "buildcraftunofficial:assembly_table"
     }
   ]
 }

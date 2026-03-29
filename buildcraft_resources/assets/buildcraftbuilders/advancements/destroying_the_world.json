@@ -1,17 +1,17 @@
 {
   "display": {
     "icon": {
-      "item": "buildcraftbuilders:filler"
+      "item": "buildcraftunofficial:filler"
     },
     "title": {
-      "translate": "advancements.buildcraftbuilders.destroying_the_world.title"
+      "translate": "advancements.buildcraftunofficial.destroying_the_world.title"
     },
     "description": {
-      "translate": "advancements.buildcraftbuilders.destroying_the_world.description"
+      "translate": "advancements.buildcraftunofficial.destroying_the_world.description"
     },
     "frame": "challenge"
   },
-  "parent": "buildcraftbuilders:diggy_diggy_hole",
+  "parent": "buildcraftunofficial:diggy_diggy_hole",
   "criteria": {
     "code_trigger": {
       "trigger": "minecraft:impossible"

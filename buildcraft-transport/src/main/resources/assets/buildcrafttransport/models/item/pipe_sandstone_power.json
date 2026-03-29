@@ -1,8 +1,0 @@
-{
-    "parent": "buildcrafttransport:item/pipe_item",
-    "textures": {
-        "top": "buildcrafttransport:item/pipe_sandstone_power",
-        "center": "buildcrafttransport:item/pipe_sandstone_power",
-        "bottom": "buildcrafttransport:item/pipe_sandstone_power"
-    }
-}

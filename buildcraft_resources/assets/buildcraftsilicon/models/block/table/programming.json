@@ -130,12 +130,12 @@
         }
     ],
     "textures": {
-        "particle": "buildcraftsilicon:blocks/table/programming/top",
-        "top": "buildcraftsilicon:blocks/table/programming/top",
-        "middle": "buildcraftsilicon:blocks/table/programming/middle",
-        "bottom": "buildcraftsilicon:blocks/table/programming/bottom",
-        "side": "buildcraftsilicon:blocks/table/programming/side",
-        "center": "buildcraftsilicon:blocks/table/programming/center",
+        "particle": "buildcraftunofficial:blocks/table/programming/top",
+        "top": "buildcraftunofficial:blocks/table/programming/top",
+        "middle": "buildcraftunofficial:blocks/table/programming/middle",
+        "bottom": "buildcraftunofficial:blocks/table/programming/bottom",
+        "side": "buildcraftunofficial:blocks/table/programming/side",
+        "center": "buildcraftunofficial:blocks/table/programming/center",
         "glass": "blocks/glass_white"
     }
 }

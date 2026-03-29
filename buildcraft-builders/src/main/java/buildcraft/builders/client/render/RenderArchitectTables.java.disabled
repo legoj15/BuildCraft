@@ -110,7 +110,7 @@ public enum RenderArchitectTables implements DetachedRenderer.IDetachedRenderer 
             GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
             Minecraft.getMinecraft().renderEngine.bindTexture(
                 new ResourceLocation(
-                    "buildcraftbuilders",
+                    "buildcraftunofficial",
                     "textures/blocks/scan.png"
                 )
             );

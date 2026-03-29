@@ -1,0 +1,10 @@
+{
+    "variants": {
+        "facing=up": { "model": "buildcraftunofficial:block/laser" },
+        "facing=down": { "model": "buildcraftunofficial:block/laser", "x": 180 },
+        "facing=north": { "model": "buildcraftunofficial:block/laser", "x": 90 },
+        "facing=east": { "model": "buildcraftunofficial:block/laser", "x": 90, "y": 90 },
+        "facing=south": { "model": "buildcraftunofficial:block/laser", "x": 90, "y": 180 },
+        "facing=west": { "model": "buildcraftunofficial:block/laser", "x": 90, "y": 270 }
+    }
+}

@@ -11,7 +11,7 @@
       "ore": "dyeBlack"
     },
     "m": {
-      "item": "buildcraftcore:marker_volume"
+      "item": "buildcraftunofficial:marker_volume"
     },
     "y": {
       "type": "forge:ore_dict",
@@ -25,25 +25,25 @@
       "ore": "gearDiamond"
     },
     "s": {
-      "item": "buildcraftbuilders:snapshot",
+      "item": "buildcraftunofficial:snapshot",
       "data": 2
     }
   },
   "result": {
-    "item": "buildcraftbuilders:architect"
+    "item": "buildcraftunofficial:architect"
   },
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftbuilders:architect"
+      "item": "buildcraftunofficial:architect"
     },
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftbuilders:snapshot"
+      "item": "buildcraftunofficial:snapshot"
     },
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftcore:marker_volume"
+      "item": "buildcraftunofficial:marker_volume"
     }
   ]
 }

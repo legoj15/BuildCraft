@@ -1,7 +1,7 @@
 {
     "textures": {
-        "#gate_false":"buildcraftsilicon:gates/gate_off",
-        "#gate_true":"buildcraftsilicon:gates/gate_on",
+        "#gate_false":"buildcraftunofficial:gates/gate_off",
+        "#gate_true":"buildcraftunofficial:gates/gate_on",
 
         "particle":"#gate_off"
     },

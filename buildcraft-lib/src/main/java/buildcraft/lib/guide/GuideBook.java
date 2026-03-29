@@ -21,7 +21,7 @@ public final class GuideBook {
 
     private static GuideBook deserialize(Object nameObj, JsonObject json, JsonDeserializationContext ctx) {
         Identifier name = (Identifier) nameObj;
-        Identifier itemIcon = Identifier.parse("buildcraftcore:guide_main");
+        Identifier itemIcon = Identifier.parse("buildcraftunofficial:guide_main");
         // Read title from JSON, falling back to name
         String titleStr = json.has("title") ? json.get("title").getAsString() : name.toString();
         Component title = Component.literal(titleStr);

@@ -4,13 +4,13 @@
       "item": "minecraft:water_bucket"
     },
     "title": {
-      "translate": "advancements.buildcraftenergy.ice_cool.title"
+      "translate": "advancements.buildcraftunofficial.ice_cool.title"
     },
     "description": {
-      "translate": "advancements.buildcraftenergy.ice_cool.description"
+      "translate": "advancements.buildcraftunofficial.ice_cool.description"
     }
   },
-  "parent": "buildcraftenergy:powering_up",
+  "parent": "buildcraftunofficial:powering_up",
   "criteria": {
     "code_trigger": {
       "trigger": "minecraft:impossible"

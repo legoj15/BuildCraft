@@ -37,7 +37,7 @@ import buildcraft.lib.misc.StackUtil;
 import buildcraft.core.BCCoreGuis;
 
 public class ItemList_BC8 extends ItemBC_Neptune implements IList {
-    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftcore:list");
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:list");
     public ItemList_BC8(String id) {
         super(id);
         setMaxStackSize(1);

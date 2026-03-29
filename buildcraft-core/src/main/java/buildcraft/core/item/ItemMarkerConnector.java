@@ -45,8 +45,8 @@ import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
 
 public class ItemMarkerConnector extends Item {
 
-    private static final Identifier ADVANCEMENT_VOLUME_MARKER = Identifier.parse("buildcraftcore:markers");
-    private static final Identifier ADVANCEMENT_PATH_MARKER = Identifier.parse("buildcraftcore:path_markers");
+    private static final Identifier ADVANCEMENT_VOLUME_MARKER = Identifier.parse("buildcraftunofficial:markers");
+    private static final Identifier ADVANCEMENT_PATH_MARKER = Identifier.parse("buildcraftunofficial:path_markers");
 
     public ItemMarkerConnector(Item.Properties properties) {
         super(properties);

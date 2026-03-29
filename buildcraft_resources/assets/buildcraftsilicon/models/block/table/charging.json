@@ -75,10 +75,10 @@
         }
     ],
     "textures": {
-        "particle": "buildcraftsilicon:blocks/table/charging/top",
-        "top": "buildcraftsilicon:blocks/table/charging/top",
-        "middle": "buildcraftsilicon:blocks/table/charging/middle",
-        "bottom": "buildcraftsilicon:blocks/table/charging/bottom",
-        "side": "buildcraftsilicon:blocks/table/charging/side"
+        "particle": "buildcraftunofficial:blocks/table/charging/top",
+        "top": "buildcraftunofficial:blocks/table/charging/top",
+        "middle": "buildcraftunofficial:blocks/table/charging/middle",
+        "bottom": "buildcraftunofficial:blocks/table/charging/bottom",
+        "side": "buildcraftunofficial:blocks/table/charging/side"
     }
 }

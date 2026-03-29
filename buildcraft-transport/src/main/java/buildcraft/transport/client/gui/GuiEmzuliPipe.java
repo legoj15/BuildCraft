@@ -16,7 +16,7 @@ import buildcraft.transport.pipe.behaviour.PipeBehaviourEmzuli.SlotIndex;
 
 public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
     private static final Identifier TEXTURE =
-            Identifier.parse("buildcrafttransport:textures/gui/pipe_emzuli.png");
+            Identifier.parse("buildcraftunofficial:textures/gui/pipe_emzuli.png");
     private static final int SIZE_X = 176, SIZE_Y = 166;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
 

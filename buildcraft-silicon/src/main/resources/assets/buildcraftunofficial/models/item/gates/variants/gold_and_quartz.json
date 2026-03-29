@@ -1,0 +1,8 @@
+{
+    "parent": "minecraft:item/generated",
+    "textures": {
+        "layer0": "buildcraftunofficial:item/gates/material_gold",
+        "layer1": "buildcraftunofficial:item/gates/logic_and",
+        "layer2": "buildcraftunofficial:item/gates/modifier_quartz"
+    }
+}

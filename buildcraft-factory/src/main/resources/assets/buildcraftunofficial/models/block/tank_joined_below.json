@@ -1,0 +1,7 @@
+{
+    "parent": "buildcraftunofficial:block/tank",
+    "textures": {
+        "particle": "buildcraftunofficial:block/tank/side_joined_below",
+        "side": "buildcraftunofficial:block/tank/side_joined_below"
+    }
+}

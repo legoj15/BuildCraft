@@ -16,7 +16,7 @@ import buildcraft.builders.container.ContainerArchitectTable;
 
 public class GuiArchitectTable extends AbstractContainerScreen<ContainerArchitectTable> {
     private static final Identifier TEXTURE_BASE =
-            Identifier.parse("buildcraftbuilders:textures/gui/architect.png");
+            Identifier.parse("buildcraftunofficial:textures/gui/architect.png");
     private static final int SIZE_X = 256, SIZE_Y = 166;
 
     private EditBox nameField;

@@ -66,7 +66,7 @@ public abstract class PipeBehaviourDiamond extends PipeBehaviour {
             serverPlayer.openMenu(new MenuProvider() {
                 @Override
                 public Component getDisplayName() {
-                    return Component.translatable("gui.buildcrafttransport.pipe_diamond.title");
+                    return Component.translatable("gui.buildcraftunofficial.pipe_diamond.title");
                 }
 
                 @Override

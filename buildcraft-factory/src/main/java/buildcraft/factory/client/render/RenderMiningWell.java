@@ -69,7 +69,7 @@ public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, Min
             COLOUR_POWER[i] = colour;
         }
 
-        SpriteHolder spriteTubeMiddle = SpriteHolderRegistry.getHolder("buildcraftfactory:block/mining_well/tube");
+        SpriteHolder spriteTubeMiddle = SpriteHolderRegistry.getHolder("buildcraftunofficial:block/mining_well/tube");
         LaserRow cap = new LaserRow(spriteTubeMiddle, 0, 8, 8, 16);
         LaserRow middle = new LaserRow(spriteTubeMiddle, 0, 0, 16, 8);
 

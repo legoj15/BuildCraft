@@ -16,7 +16,7 @@ import buildcraft.builders.container.ContainerReplacer;
 
 public class GuiReplacer extends AbstractContainerScreen<ContainerReplacer> {
     private static final Identifier TEXTURE =
-            Identifier.parse("buildcraftbuilders:textures/gui/replacer.png");
+            Identifier.parse("buildcraftunofficial:textures/gui/replacer.png");
     private static final int SIZE_X = 176, SIZE_Y = 241;
 
     public GuiReplacer(ContainerReplacer container, Inventory playerInv, Component title) {

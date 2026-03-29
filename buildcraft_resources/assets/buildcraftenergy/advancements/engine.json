@@ -1,24 +1,24 @@
 {
   "display": {
     "icon": {
-      "item": "buildcraftcore:engine",
+      "item": "buildcraftunofficial:engine",
       "data": 1
     },
     "title": {
-      "translate": "advancements.buildcraftcore.engine.title"
+      "translate": "advancements.buildcraftunofficial.engine.title"
     },
     "description": {
-      "translate": "advancements.buildcraftcore.engine.description"
+      "translate": "advancements.buildcraftunofficial.engine.description"
     }
   },
-  "parent": "buildcraftcore:guide",
+  "parent": "buildcraftunofficial:guide",
   "criteria": {
     "redstone_engine": {
       "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [
           {
-            "item": "buildcraftcore:engine",
+            "item": "buildcraftunofficial:engine",
             "data": 0
           }
         ]
@@ -29,7 +29,7 @@
       "conditions": {
         "items": [
           {
-            "item": "buildcraftcore:engine",
+            "item": "buildcraftunofficial:engine",
             "data": 1
           }
         ]
@@ -40,7 +40,7 @@
       "conditions": {
         "items": [
           {
-            "item": "buildcraftcore:engine",
+            "item": "buildcraftunofficial:engine",
             "data": 2
           }
         ]

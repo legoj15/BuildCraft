@@ -107,14 +107,14 @@ public class RulesLoader {
             }
         }
         READ_DOMAINS.add("minecraft");
-        READ_DOMAINS.add("buildcraftcore");
-        READ_DOMAINS.add("buildcraftlib");
-        READ_DOMAINS.add("buildcraftbuilders");
-        READ_DOMAINS.add("buildcraftenergy");
-        READ_DOMAINS.add("buildcraftfactory");
-        READ_DOMAINS.add("buildcraftrobotics");
-        READ_DOMAINS.add("buildcraftsilicon");
-        READ_DOMAINS.add("buildcrafttransport");
+        READ_DOMAINS.add("buildcraftunofficial");
+        READ_DOMAINS.add("buildcraftunofficial");
+        READ_DOMAINS.add("buildcraftunofficial");
+        READ_DOMAINS.add("buildcraftunofficial");
+        READ_DOMAINS.add("buildcraftunofficial");
+        READ_DOMAINS.add("buildcraftunofficial");
+        READ_DOMAINS.add("buildcraftunofficial");
+        READ_DOMAINS.add("buildcraftunofficial");
         // TODO: Replace with BCLib.DEV when implemented
         if (true) {
             READ_DOMAINS.removeIf(domain -> domain.startsWith("buildcraft"));

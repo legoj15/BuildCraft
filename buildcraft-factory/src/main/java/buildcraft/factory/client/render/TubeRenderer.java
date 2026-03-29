@@ -42,13 +42,13 @@ public class TubeRenderer {
 
     static {
         {
-            SpriteHolder sprite = SpriteHolderRegistry.getHolder("buildcraftfactory:block/pump/tube");
+            SpriteHolder sprite = SpriteHolderRegistry.getHolder("buildcraftunofficial:block/pump/tube");
             LaserRow cap = new LaserRow(sprite, 0, 8, 8, 16);
             LaserRow middle = new LaserRow(sprite, 0, 0, 16, 8);
             PUMP_TUBE = new LaserType(cap, middle, new LaserRow[]{ middle }, null, cap);
         }
         {
-            SpriteHolder sprite = SpriteHolderRegistry.getHolder("buildcraftfactory:block/mining_well/tube");
+            SpriteHolder sprite = SpriteHolderRegistry.getHolder("buildcraftunofficial:block/mining_well/tube");
             LaserRow cap = new LaserRow(sprite, 0, 8, 8, 16);
             LaserRow middle = new LaserRow(sprite, 0, 0, 16, 8);
             MINING_WELL_TUBE = new LaserType(cap, middle, new LaserRow[]{ middle }, null, cap);

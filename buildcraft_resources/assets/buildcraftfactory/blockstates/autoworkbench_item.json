@@ -1,5 +1,5 @@
 {
     "variants": {
-        "normal": { "model": "buildcraftfactory:autoworkbench_item" }
+        "normal": { "model": "buildcraftunofficial:autoworkbench_item" }
     }
 }

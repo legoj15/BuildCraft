@@ -64,11 +64,11 @@ import buildcraft.transport.pipe.PipeEventBus;
 
 public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebuggable {
     private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_DREAM
-        = net.minecraft.resources.Identifier.parse("buildcrafttransport:pipe_dream");
+        = net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_dream");
     private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_DIVERSIFICATION
-        = net.minecraft.resources.Identifier.parse("buildcrafttransport:pipe_diversification");
+        = net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_diversification");
     private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_FANATIC
-        = net.minecraft.resources.Identifier.parse("buildcrafttransport:pipe_fanatic");
+        = net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_fanatic");
 
     /** ModelData property that passes this tile reference to ModelPipe for baked model generation. */
     public static final net.neoforged.neoforge.model.data.ModelProperty<TilePipeHolder> PIPE_MODEL_DATA =

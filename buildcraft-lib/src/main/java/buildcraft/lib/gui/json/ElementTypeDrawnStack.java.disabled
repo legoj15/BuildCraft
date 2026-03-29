@@ -14,7 +14,7 @@ import buildcraft.lib.gui.pos.IGuiArea;
 import buildcraft.lib.gui.pos.IGuiPosition;
 
 public class ElementTypeDrawnStack extends ElementType {
-    public static final String NAME = "buildcraftlib:drawable/stack";
+    public static final String NAME = "buildcraftunofficial:drawable/stack";
     public static final ElementTypeDrawnStack INSTANCE = new ElementTypeDrawnStack();
 
     private ElementTypeDrawnStack() {

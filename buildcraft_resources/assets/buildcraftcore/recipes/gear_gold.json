@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcraftcore:gear_gold"
+    "item": "buildcraftunofficial:gear_gold"
   },
   "pattern": [
     " o ",
@@ -20,7 +20,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftcore:gear_gold"
+      "item": "buildcraftunofficial:gear_gold"
     }
   ]
 }

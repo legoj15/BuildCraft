@@ -58,10 +58,10 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
     private static final AABB[] BOXES = new AABB[6];
 
     private static final Identifier ADVANCEMENT_PLACE_GATE
-        = Identifier.parse("buildcrafttransport:pipe_logic");
+        = Identifier.parse("buildcraftunofficial:pipe_logic");
 
     private static final Identifier ADVANCEMENT_PLACE_ADV_GATE
-        = Identifier.parse("buildcrafttransport:extended_logic");
+        = Identifier.parse("buildcraftunofficial:extended_logic");
 
     public final GateLogic logic;
 

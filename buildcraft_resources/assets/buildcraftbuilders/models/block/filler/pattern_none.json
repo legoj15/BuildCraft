@@ -50,6 +50,6 @@
         }
     ],
     "textures": {
-        "pattern": "buildcraftbuilders:blocks/filler/patterns/none"
+        "pattern": "buildcraftunofficial:blocks/filler/patterns/none"
     }
 }

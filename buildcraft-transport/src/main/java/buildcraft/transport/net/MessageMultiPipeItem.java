@@ -44,7 +44,7 @@ public class MessageMultiPipeItem implements CustomPacketPayload {
     private static final int MAX_POSITIONS = 4000;
 
     public static final CustomPacketPayload.Type<MessageMultiPipeItem> TYPE =
-            new CustomPacketPayload.Type<>(Identifier.parse("buildcrafttransport:multi_pipe_item"));
+            new CustomPacketPayload.Type<>(Identifier.parse("buildcraftunofficial:multi_pipe_item"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, MessageMultiPipeItem> STREAM_CODEC =
             StreamCodec.of(MessageMultiPipeItem::encode, MessageMultiPipeItem::decode);

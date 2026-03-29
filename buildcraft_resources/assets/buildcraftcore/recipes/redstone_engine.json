@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcraftcore:engine",
+    "item": "buildcraftunofficial:engine",
     "data": 0
   },
   "pattern": [
@@ -29,7 +29,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftcore:engine"
+      "item": "buildcraftunofficial:engine"
     }
   ]
 }

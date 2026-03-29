@@ -56,7 +56,7 @@ public class TileChute extends TileBC_Neptune implements MenuProvider {
 
     private static final int PICKUP_MAX = 3;
     private static final long PROGRESS_TARGET = 100_000;
-    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftfactory:retired_hopper");
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:retired_hopper");
 
     public final ItemHandlerSimple inv = new ItemHandlerSimple(4,
             (handler, slot, before, after) -> this.setChanged());
@@ -192,7 +192,7 @@ public class TileChute extends TileBC_Neptune implements MenuProvider {
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.buildcraftfactory.chute");
+        return Component.translatable("block.buildcraftunofficial.chute");
     }
 
     @Nullable

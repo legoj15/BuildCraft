@@ -1,6 +1,6 @@
 {
     "textures": {
-        "#all":"buildcraftsilicon:plugs/timer",
+        "#all":"buildcraftunofficial:plugs/timer",
         "particle":"#all"
     },
     "elements": [

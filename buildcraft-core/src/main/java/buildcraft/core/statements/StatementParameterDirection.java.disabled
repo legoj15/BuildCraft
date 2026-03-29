@@ -47,12 +47,12 @@ public class StatementParameterDirection implements IStatementParameter {
     @OnlyIn(Dist.CLIENT)
     public void registerIcons(TextureAtlas map) {
         sprites = new TextureAtlasSprite[] {
-            map.registerSprite(Identifier.parse("buildcraftcore:triggers/trigger_dir_down")),
-            map.registerSprite(Identifier.parse("buildcraftcore:triggers/trigger_dir_up")),
-            map.registerSprite(Identifier.parse("buildcraftcore:triggers/trigger_dir_north")),
-            map.registerSprite(Identifier.parse("buildcraftcore:triggers/trigger_dir_south")),
-            map.registerSprite(Identifier.parse("buildcraftcore:triggers/trigger_dir_west")),
-            map.registerSprite(Identifier.parse("buildcraftcore:triggers/trigger_dir_east"))
+            map.registerSprite(Identifier.parse("buildcraftunofficial:triggers/trigger_dir_down")),
+            map.registerSprite(Identifier.parse("buildcraftunofficial:triggers/trigger_dir_up")),
+            map.registerSprite(Identifier.parse("buildcraftunofficial:triggers/trigger_dir_north")),
+            map.registerSprite(Identifier.parse("buildcraftunofficial:triggers/trigger_dir_south")),
+            map.registerSprite(Identifier.parse("buildcraftunofficial:triggers/trigger_dir_west")),
+            map.registerSprite(Identifier.parse("buildcraftunofficial:triggers/trigger_dir_east"))
         };
     }
 

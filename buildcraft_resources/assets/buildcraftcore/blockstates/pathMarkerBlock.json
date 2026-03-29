@@ -2,22 +2,22 @@
     "forge_marker": 1,
     "variants": {
         "facing": {
-            "up":    { "model": "buildcraftcore:marker_path" },
-            "down":  { "model": "buildcraftcore:marker_path", "x": 180 },
-            "east":  { "model": "buildcraftcore:marker_path", "x": 90, "y": 90 },
-            "south": { "model": "buildcraftcore:marker_path", "x": 90, "y": 180 },
-            "west":  { "model": "buildcraftcore:marker_path", "x": 90, "y": 270 },
-            "north": { "model": "buildcraftcore:marker_path", "x": 90 }
+            "up":    { "model": "buildcraftunofficial:marker_path" },
+            "down":  { "model": "buildcraftunofficial:marker_path", "x": 180 },
+            "east":  { "model": "buildcraftunofficial:marker_path", "x": 90, "y": 90 },
+            "south": { "model": "buildcraftunofficial:marker_path", "x": 90, "y": 180 },
+            "west":  { "model": "buildcraftunofficial:marker_path", "x": 90, "y": 270 },
+            "north": { "model": "buildcraftunofficial:marker_path", "x": 90 }
         },
         "led_done": {
             "false": {
                 "textures": {
-                    "torch": "buildcraftcore:blocks/marker/path"
+                    "torch": "buildcraftunofficial:blocks/marker/path"
                 }
             },
             "true": {
                 "textures": {
-                    "torch": "buildcraftcore:blocks/marker/path_searching"
+                    "torch": "buildcraftunofficial:blocks/marker/path_searching"
                 }
             }
         }

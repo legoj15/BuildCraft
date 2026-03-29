@@ -1,0 +1,11 @@
+{
+  "display": {
+    "icon": { "id": "buildcraftunofficial:wrench" },
+    "title": { "translate": "advancements.buildcraftunofficial.to_much_power.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.to_much_power.description" }
+  },
+  "parent": "buildcraftunofficial:powering_up",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

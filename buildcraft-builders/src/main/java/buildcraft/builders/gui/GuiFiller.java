@@ -11,7 +11,7 @@ import buildcraft.builders.container.ContainerFiller;
 
 public class GuiFiller extends AbstractContainerScreen<ContainerFiller> {
     private static final Identifier TEXTURE =
-            Identifier.parse("buildcraftbuilders:textures/gui/filler.png");
+            Identifier.parse("buildcraftunofficial:textures/gui/filler.png");
 
     public GuiFiller(ContainerFiller container, Inventory playerInv, Component title) {
         super(container, playerInv, title, 176, 235);

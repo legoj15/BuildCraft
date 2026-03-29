@@ -383,7 +383,7 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.buildcraftfactory.tank");
+        return Component.translatable("block.buildcraftunofficial.tank");
     }
 
     @Override

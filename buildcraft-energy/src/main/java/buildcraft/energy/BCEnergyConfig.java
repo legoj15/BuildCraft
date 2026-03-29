@@ -12,35 +12,31 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  */
 public class BCEnergyConfig {
 
-    public static final ModConfigSpec SPEC;
+    public static ModConfigSpec.BooleanValue enableOilGeneration;
+    public static ModConfigSpec.DoubleValue oilWellGenerationRate;
 
-    public static final ModConfigSpec.BooleanValue enableOilGeneration;
-    public static final ModConfigSpec.DoubleValue oilWellGenerationRate;
+    public static ModConfigSpec.BooleanValue enableOilSpouts;
+    public static ModConfigSpec.IntValue smallSpoutMinHeight;
+    public static ModConfigSpec.IntValue smallSpoutMaxHeight;
+    public static ModConfigSpec.IntValue largeSpoutMinHeight;
+    public static ModConfigSpec.IntValue largeSpoutMaxHeight;
 
-    public static final ModConfigSpec.BooleanValue enableOilSpouts;
-    public static final ModConfigSpec.IntValue smallSpoutMinHeight;
-    public static final ModConfigSpec.IntValue smallSpoutMaxHeight;
-    public static final ModConfigSpec.IntValue largeSpoutMinHeight;
-    public static final ModConfigSpec.IntValue largeSpoutMaxHeight;
+    public static ModConfigSpec.DoubleValue smallOilGenProb;
+    public static ModConfigSpec.DoubleValue mediumOilGenProb;
+    public static ModConfigSpec.DoubleValue largeOilGenProb;
 
-    public static final ModConfigSpec.DoubleValue smallOilGenProb;
-    public static final ModConfigSpec.DoubleValue mediumOilGenProb;
-    public static final ModConfigSpec.DoubleValue largeOilGenProb;
+    public static ModConfigSpec.BooleanValue oilIsSticky;
+    public static ModConfigSpec.BooleanValue enableOilBurn;
 
-    public static final ModConfigSpec.BooleanValue oilIsSticky;
-    public static final ModConfigSpec.BooleanValue enableOilBurn;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> excessiveBiomes;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> surfaceDepositBiomes;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> excludedBiomes;
+    public static ModConfigSpec.BooleanValue excludedBiomesIsBlackList;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> excludedDimensions;
+    public static ModConfigSpec.BooleanValue excludedDimensionsIsBlackList;
 
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> excessiveBiomes;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> surfaceDepositBiomes;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> excludedBiomes;
-    public static final ModConfigSpec.BooleanValue excludedBiomesIsBlackList;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> excludedDimensions;
-    public static final ModConfigSpec.BooleanValue excludedDimensionsIsBlackList;
-
-    static {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
-
-        builder.push("oil_generation");
+    public static void buildWorldgen(ModConfigSpec.Builder builder) {
+        builder.push("oil");
 
         enableOilGeneration = builder
                 .comment("Set true to enable oil generation")
@@ -49,6 +45,10 @@ public class BCEnergyConfig {
         oilWellGenerationRate = builder
                 .comment("Multiplier for oil well generation rate")
                 .defineInRange("oilWellGenerationRate", 1.0, 0.0, 100.0);
+
+        enableOilBurn = builder.define("enableOilBurn", true);
+
+        builder.push("spouts");
 
         enableOilSpouts = builder
                 .comment("Set true to enable oil spouts generating")
@@ -59,18 +59,14 @@ public class BCEnergyConfig {
         largeSpoutMinHeight = builder.defineInRange("largeSpoutMinHeight", 10, 0, 256);
         largeSpoutMaxHeight = builder.defineInRange("largeSpoutMaxHeight", 20, 0, 256);
 
+        builder.pop();
+        builder.push("spawn_probability");
+
         smallOilGenProb = builder.defineInRange("smallOilGenProb", 2.0 / 100, 0.0, 1.0);
         mediumOilGenProb = builder.defineInRange("mediumOilGenProb", 0.1 / 100, 0.0, 1.0);
         largeOilGenProb = builder.defineInRange("largeOilGenProb", 0.04 / 100, 0.0, 1.0);
 
         builder.pop();
-        builder.push("oil_properties");
-
-        oilIsSticky = builder.define("oilIsSticky", false);
-        enableOilBurn = builder.define("enableOilBurn", true);
-
-        builder.pop();
-        builder.push("biomes_and_dimensions");
 
         excessiveBiomes = builder.defineListAllowEmpty(
                 "excessiveBiomes",
@@ -110,7 +106,10 @@ public class BCEnergyConfig {
         excludedDimensionsIsBlackList = builder.define("excludedDimensionsIsBlackList", true);
 
         builder.pop();
-        SPEC = builder.build();
+    }
+
+    public static void buildGeneral(ModConfigSpec.Builder builder) {
+        oilIsSticky = builder.define("oilIsSticky", false);
     }
 
     public static Set<Identifier> getExcessiveBiomes() {

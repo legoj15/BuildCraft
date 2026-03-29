@@ -5,40 +5,32 @@
  */
 package buildcraft.builders;
 
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class BCBuildersConfig {
 
-    public static final ModConfigSpec SPEC;
-
     /** Blueprints that save larger than this are stored externally, smaller ones are stored directly in the item. */
-    public static final ModConfigSpec.IntValue BPT_STORE_EXTERNAL_THRESHOLD;
+    public static ModConfigSpec.IntValue BPT_STORE_EXTERNAL_THRESHOLD;
 
     /** The minimum height that all quarry frames must be. */
-    public static final ModConfigSpec.IntValue QUARRY_FRAME_MIN_HEIGHT;
+    public static ModConfigSpec.IntValue QUARRY_FRAME_MIN_HEIGHT;
 
     /** If true then the frame will move with the drill in both axis. */
-    public static final ModConfigSpec.BooleanValue QUARRY_FRAME_MOVE_BOTH;
+    public static ModConfigSpec.BooleanValue QUARRY_FRAME_MOVE_BOTH;
 
     /** The maximum number of tasks that the quarry will do per tick. */
-    public static final ModConfigSpec.IntValue QUARRY_MAX_TASKS_PER_TICK;
+    public static ModConfigSpec.IntValue QUARRY_MAX_TASKS_PER_TICK;
 
     /** 1 divided by this value is added to the power cost for each additional task done per tick. 0 disables. */
-    public static final ModConfigSpec.IntValue QUARRY_TASK_POWER_DIVISOR;
+    public static ModConfigSpec.IntValue QUARRY_TASK_POWER_DIVISOR;
 
     /** The maximum number of blocks that a quarry is allowed to move, per second. 0 = no limit. */
-    public static final ModConfigSpec.DoubleValue QUARRY_MAX_FRAME_MOVE_SPEED;
+    public static ModConfigSpec.DoubleValue QUARRY_MAX_FRAME_MOVE_SPEED;
 
     /** The maximum number of blocks that the quarry is allowed to mine each second. 0 = no limit. */
-    public static final ModConfigSpec.DoubleValue QUARRY_MAX_BLOCK_MINE_RATE;
+    public static ModConfigSpec.DoubleValue QUARRY_MAX_BLOCK_MINE_RATE;
 
-    static {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
-
-        builder.push("general");
-
+    public static void buildGeneral(ModConfigSpec.Builder builder) {
         BPT_STORE_EXTERNAL_THRESHOLD = builder
                 .comment("Blueprints larger than this (in bytes) are stored externally rather than in the item NBT.")
                 .defineInRange("bptStoreExternalThreshold", 20_000, 0, Integer.MAX_VALUE);
@@ -71,13 +63,5 @@ public class BCBuildersConfig {
                 .comment("The maximum number of blocks that the quarry is allowed to mine each second.",
                          "A value of 0 means no limit, and a value of 0.5 will mine up to half a block per second.")
                 .defineInRange("quarryMaxBlockMineRate", 0.0, 0.0, 1000.0);
-
-        builder.pop();
-
-        SPEC = builder.build();
-    }
-
-    public static void register(ModContainer modContainer) {
-        modContainer.registerConfig(ModConfig.Type.COMMON, SPEC);
     }
 }

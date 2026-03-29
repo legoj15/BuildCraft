@@ -39,7 +39,7 @@ import buildcraft.silicon.BCSiliconBlockEntities;
 import buildcraft.silicon.EnumAssemblyRecipeState;
 
 public class TileAssemblyTable extends TileLaserTableBase {
-    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftsilicon:precision_crafting");
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:precision_crafting");
 
     public final ItemHandlerSimple inv = itemManager.addInvHandler(
         "inv",

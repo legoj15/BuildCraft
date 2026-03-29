@@ -38,9 +38,9 @@ import buildcraft.lib.misc.AdvancementUtil;
  */
 public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
     private static final net.minecraft.resources.Identifier ADVANCEMENT_POWERING_UP
-        = net.minecraft.resources.Identifier.parse("buildcraftenergy:powering_up");
+        = net.minecraft.resources.Identifier.parse("buildcraftunofficial:powering_up");
     private static final net.minecraft.resources.Identifier ADVANCEMENT_ICE_COOL
-        = net.minecraft.resources.Identifier.parse("buildcraftenergy:ice_cool");
+        = net.minecraft.resources.Identifier.parse("buildcraftunofficial:ice_cool");
 
     public static final int MAX_FLUID = 10_000;
     public static final double COOLDOWN_RATE = 0.05;

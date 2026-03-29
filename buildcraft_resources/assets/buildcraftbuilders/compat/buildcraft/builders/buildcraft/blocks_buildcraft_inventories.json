@@ -1,7 +1,7 @@
 [
     {
         "selectors": [
-            "buildcraftbuilders:architect"
+            "buildcraftunofficial:architect"
         ],
         "requiredExtractors": [
             {
@@ -17,7 +17,7 @@
     },
     {
         "selectors": [
-            "buildcraftbuilders:builder"
+            "buildcraftunofficial:builder"
         ],
         "requiredExtractors": [
             {
@@ -33,7 +33,7 @@
     },
     {
         "selectors": [
-            "buildcraftbuilders:filler"
+            "buildcraftunofficial:filler"
         ],
         "requiredExtractors": [
             {
@@ -46,7 +46,7 @@
     },
     {
         "selectors": [
-            "buildcraftbuilders:replacer"
+            "buildcraftunofficial:replacer"
         ],
         "requiredExtractors": [
             {
@@ -65,7 +65,7 @@
     },
     {
         "selectors": [
-            "buildcraftbuilders:library"
+            "buildcraftunofficial:library"
         ],
         "requiredExtractors": [
             {
@@ -87,7 +87,7 @@
     },
     {
         "selectors": [
-            "buildcraftfactory:autoworkbench_item"
+            "buildcraftunofficial:autoworkbench_item"
         ],
         "requiredExtractors": [
             {
@@ -109,7 +109,7 @@
     },
     {
         "selectors": [
-            "buildcraftfactory:chute"
+            "buildcraftunofficial:chute"
         ],
         "requiredExtractors": [
             {
@@ -122,7 +122,7 @@
     },
     {
         "selectors": [
-            "buildcraftrobotics:zone_planner"
+            "buildcraftunofficial:zone_planner"
         ],
         "requiredExtractors": [
             {
@@ -153,7 +153,7 @@
     },
     {
         "selectors": [
-            "buildcraftsilicon:assembly_table"
+            "buildcraftunofficial:assembly_table"
         ],
         "requiredExtractors": [
             {
@@ -166,7 +166,7 @@
     },
     {
         "selectors": [
-            "buildcraftsilicon:advanced_crafting_table"
+            "buildcraftunofficial:advanced_crafting_table"
         ],
         "requiredExtractors": [
             {
@@ -185,7 +185,7 @@
     },
     {
         "selectors": [
-            "buildcraftsilicon:integration_table"
+            "buildcraftunofficial:integration_table"
         ],
         "requiredExtractors": [
             {
@@ -204,7 +204,7 @@
     },
     {
         "selectors": [
-            "buildcraftcore:engine[type=stone]"
+            "buildcraftunofficial:engine[type=stone]"
         ],
         "requiredExtractors": [
             {
@@ -217,7 +217,7 @@
     },
     {
         "selectors": [
-            "buildcrafttransport:filtered_buffer"
+            "buildcraftunofficial:filtered_buffer"
         ],
         "requiredExtractors": [
             {

@@ -16,16 +16,10 @@ import buildcraft.api.mj.MjRfConversion;
  */
 public class BCLibConfig {
 
-    public static final ModConfigSpec SPEC;
+    public static ModConfigSpec.EnumValue<PowerMode> powerMode;
+    public static ModConfigSpec.DoubleValue mjRfConversionAmount;
 
-    public static final ModConfigSpec.EnumValue<PowerMode> powerMode;
-    public static final ModConfigSpec.DoubleValue mjRfConversionAmount;
-
-    static {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
-
-        builder.push("general");
-
+    public static void buildGeneral(ModConfigSpec.Builder builder) {
         powerMode = builder
                 .comment("Power mode. Options are MJ_ONLY, MJ_AUTOCONVERT_RF, DISPLAY_RF")
                 .defineEnum("powerMode", PowerMode.MJ_ONLY);
@@ -33,9 +27,6 @@ public class BCLibConfig {
         mjRfConversionAmount = builder
                 .comment("Conversion ratio for MJ <-> RF if autoconvert is enabled (MJ per RF)")
                 .defineInRange("mjRfConversionAmount", 0.1, 0.0001, 0.2);
-
-        builder.pop();
-        SPEC = builder.build();
     }
 
     public enum PowerMode {

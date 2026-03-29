@@ -2,8 +2,8 @@
   "parent": "minecraft:recipes/root",
   "rewards": {
     "recipes": [
-      "buildcraftfactory:water_gel_spawn",
-      "buildcraftfactory:water_gel_to_bucket"
+      "buildcraftunofficial:water_gel_spawn",
+      "buildcraftunofficial:water_gel_to_bucket"
     ]
   },
   "criteria": {

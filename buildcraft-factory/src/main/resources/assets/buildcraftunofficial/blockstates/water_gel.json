@@ -1,0 +1,11 @@
+{
+    "variants": {
+        "stage=spread_0":  { "model": "buildcraftunofficial:block/gel/spread_0" },
+        "stage=spread_1":  { "model": "buildcraftunofficial:block/gel/spread_1" },
+        "stage=spread_2":  { "model": "buildcraftunofficial:block/gel/spread_2" },
+        "stage=spread_3":  { "model": "buildcraftunofficial:block/gel/spread_3" },
+        "stage=gelling_0": { "model": "buildcraftunofficial:block/gel/gelling_0" },
+        "stage=gelling_1": { "model": "buildcraftunofficial:block/gel/gelling_1" },
+        "stage=gel":       { "model": "buildcraftunofficial:block/gel/gel" }
+    }
+}

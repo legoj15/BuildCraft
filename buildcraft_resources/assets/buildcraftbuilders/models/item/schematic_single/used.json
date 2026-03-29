@@ -1,6 +1,6 @@
 {
     "parent":"item/generated",
     "textures":{
-        "layer0":"buildcraftbuilders:items/schematic_single/used"
+        "layer0":"buildcraftunofficial:items/schematic_single/used"
     }
 }

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "www",
+    " g ",
+    "GpG"
+  ],
+  "key": {
+    "w": "#c:cobblestones/normal",
+    "g": "#c:glass_blocks/colorless",
+    "G": "buildcraftunofficial:gear_stone",
+    "p": "minecraft:piston"
+  },
+  "result": {
+    "id": "buildcraftunofficial:engine_stone"
+  }
+}

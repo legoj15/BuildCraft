@@ -9,12 +9,12 @@
         }
     },
     "textures": {
-        "particle": "buildcraftbuilders:blocks/library/back",
-        "down": "buildcraftbuilders:blocks/library/bottom",
-        "up": "buildcraftbuilders:blocks/library/top",
-        "north": "buildcraftbuilders:blocks/library/front",
-        "east": "buildcraftbuilders:blocks/library/left",
-        "south": "buildcraftbuilders:blocks/library/back",
-        "west": "buildcraftbuilders:blocks/library/right"
+        "particle": "buildcraftunofficial:blocks/library/back",
+        "down": "buildcraftunofficial:blocks/library/bottom",
+        "up": "buildcraftunofficial:blocks/library/top",
+        "north": "buildcraftunofficial:blocks/library/front",
+        "east": "buildcraftunofficial:blocks/library/left",
+        "south": "buildcraftunofficial:blocks/library/back",
+        "west": "buildcraftunofficial:blocks/library/right"
     }
 }

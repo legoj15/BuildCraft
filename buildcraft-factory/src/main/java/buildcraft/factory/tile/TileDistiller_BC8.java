@@ -314,7 +314,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.buildcraftfactory.distiller");
+        return Component.translatable("block.buildcraftunofficial.distiller");
     }
 
     @Nullable

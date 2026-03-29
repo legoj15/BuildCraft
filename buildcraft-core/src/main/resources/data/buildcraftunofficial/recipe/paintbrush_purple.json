@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "buildcraft_paintbrush",
+  "ingredients": [
+    "buildcraftunofficial:paintbrush",
+    "#c:dyes/purple"
+  ],
+  "result": {
+    "id": "buildcraftunofficial:paintbrush",
+    "count": 1,
+    "components": {
+      "buildcraftunofficial:brush_color": "purple",
+      "buildcraftunofficial:brush_uses": 64,
+      "minecraft:custom_model_data": {
+        "floats": [11.0]
+      }
+    }
+  }
+}

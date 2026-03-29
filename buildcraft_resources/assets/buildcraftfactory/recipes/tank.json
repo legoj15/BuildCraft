@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcraftfactory:tank"
+    "item": "buildcraftunofficial:tank"
   },
   "pattern": [
     "ggg",
@@ -16,7 +16,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftfactory:tank"
+      "item": "buildcraftunofficial:tank"
     }
   ]
 }

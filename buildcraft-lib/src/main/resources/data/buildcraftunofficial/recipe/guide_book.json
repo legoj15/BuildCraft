@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "buildcraft",
+  "ingredients": [
+    "buildcraftunofficial:gear_wood",
+    "minecraft:paper",
+    "minecraft:paper",
+    "minecraft:paper"
+  ],
+  "result": {
+    "id": "buildcraftunofficial:guide"
+  }
+}

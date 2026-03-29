@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcraftfactory:water_gel_spawn"
+    "item": "buildcraftunofficial:water_gel_spawn"
   },
   "pattern": [
     " s ",
@@ -25,7 +25,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftfactory:water_gel_spawn"
+      "item": "buildcraftunofficial:water_gel_spawn"
     },
     {
       "type": "forge:mod_loaded",

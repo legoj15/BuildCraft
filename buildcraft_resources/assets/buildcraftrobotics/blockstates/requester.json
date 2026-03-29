@@ -1,15 +1,15 @@
 {
     "forge_marker": 1,
     "defaults": {
-        "model":"buildcraftcore:default_cube",
+        "model":"buildcraftunofficial:default_cube",
         "textures": {
-            "particle":"buildcraftrobotics:blocks/requester/side",
-            "down":"buildcraftrobotics:blocks/requester/bottom",
-            "up":"buildcraftrobotics:blocks/requester/top",
-            "north":"buildcraftrobotics:blocks/requester/back",
-            "east":"buildcraftrobotics:blocks/requester/side",
-            "south":"buildcraftrobotics:blocks/requester/front",
-            "west":"buildcraftrobotics:blocks/requester/side"
+            "particle":"buildcraftunofficial:blocks/requester/side",
+            "down":"buildcraftunofficial:blocks/requester/bottom",
+            "up":"buildcraftunofficial:blocks/requester/top",
+            "north":"buildcraftunofficial:blocks/requester/back",
+            "east":"buildcraftunofficial:blocks/requester/side",
+            "south":"buildcraftunofficial:blocks/requester/front",
+            "west":"buildcraftunofficial:blocks/requester/side"
         }
     },
     "variants": {

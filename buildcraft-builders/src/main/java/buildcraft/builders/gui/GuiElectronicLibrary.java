@@ -19,7 +19,7 @@ import buildcraft.builders.snapshot.Snapshot;
 
 public class GuiElectronicLibrary extends AbstractContainerScreen<ContainerElectronicLibrary> {
     private static final Identifier TEXTURE =
-            Identifier.parse("buildcraftbuilders:textures/gui/electronic_library.png");
+            Identifier.parse("buildcraftunofficial:textures/gui/electronic_library.png");
     private static final int SIZE_X = 244, SIZE_Y = 220;
 
     public GuiElectronicLibrary(ContainerElectronicLibrary container, Inventory playerInv, Component title) {

@@ -9,6 +9,6 @@
         }
     ],
     "textures": {
-        "item_hatch": "buildcraftcore:blocks/item_hatch"
+        "item_hatch": "buildcraftunofficial:blocks/item_hatch"
     }
 }

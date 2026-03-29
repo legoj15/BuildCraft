@@ -45,7 +45,7 @@ public enum BCBuildersEventDist {
 
     static {
         {
-            SpriteHolder sprite = SpriteHolderRegistry.getHolder("buildcraftbuilders:block/frame/default");
+            SpriteHolder sprite = SpriteHolderRegistry.getHolder("buildcraftunofficial:block/frame/default");
             LaserRow capStart = new LaserRow(sprite, 0, 0, 0, 0);
             LaserRow start = null;
             LaserRow[] middle = { new LaserRow(sprite, 0, 4, 16, 12) };
@@ -54,7 +54,7 @@ public enum BCBuildersEventDist {
             FRAME = new LaserType(capStart, start, middle, end, capEnd);
         }
         {
-            SpriteHolder sprite = SpriteHolderRegistry.getHolder("buildcraftbuilders:block/frame/default");
+            SpriteHolder sprite = SpriteHolderRegistry.getHolder("buildcraftunofficial:block/frame/default");
             LaserRow capStart = new LaserRow(sprite, 0, 0, 0, 0);
             LaserRow start = null;
             LaserRow[] middle = { new LaserRow(sprite, 0, 4, 16, 12) };
@@ -63,7 +63,7 @@ public enum BCBuildersEventDist {
             FRAME_BOTTOM = new LaserType(capStart, start, middle, end, capEnd);
         }
         {
-            SpriteHolder sprite = SpriteHolderRegistry.getHolder("buildcraftbuilders:block/quarry/drill");
+            SpriteHolder sprite = SpriteHolderRegistry.getHolder("buildcraftunofficial:block/quarry/drill");
             LaserRow capStart = new LaserRow(sprite, 6, 0, 10, 4);
             LaserRow start = null;
             LaserRow[] middle = { new LaserRow(sprite, 0, 0, 16, 4) };

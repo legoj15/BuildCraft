@@ -2,8 +2,6 @@ package buildcraft.transport;
 
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
@@ -24,6 +22,7 @@ import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.pipe.PipeApi;
+import buildcraft.core.BCCore;
 import buildcraft.lib.misc.CapUtil;
 import buildcraft.transport.net.MessageMultiPipeItem;
 import buildcraft.transport.net.MessagePipePayload;
@@ -32,18 +31,15 @@ import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.pipe.StripesRegistry;
 import buildcraft.transport.stripes.*;
 
-@Mod(BCTransport.MODID)
+/**
+ * BuildCraft Transport initializer. No longer a separate @Mod — called from BCCore.
+ */
 public class BCTransport {
-    public static final String MODID = "buildcrafttransport";
+    public static final String MODID = BCCore.MODID;
     private static final Logger LOGGER = LoggerFactory.getLogger(BCTransport.class);
 
-    public static BCTransport INSTANCE;
-
-    public BCTransport(IEventBus modEventBus, ModContainer modContainer) {
-        INSTANCE = this;
-
+    public static void init(IEventBus modEventBus) {
         // Initialize pipe and pluggable definitions BEFORE items register
-        // (ItemPluggableSimple references BCTransportPlugs.blocker etc. at class-load time)
         BCTransportPipes.preInit();
         BCTransportPlugs.preInit();
 
@@ -53,12 +49,6 @@ public class BCTransport {
         BCTransportBlockEntities.init(modEventBus);
         BCTransportMenuTypes.init(modEventBus);
         BCTransportCreativeTabs.init(modEventBus);
-
-        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, BCTransportConfig.SPEC);
-        if (FMLEnvironment.getDist() == Dist.CLIENT) {
-            modContainer.registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
-                    net.neoforged.neoforge.client.gui.ConfigurationScreen::new);
-        }
 
         // Register client-side extensions on the mod event bus
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
@@ -71,19 +61,27 @@ public class BCTransport {
 
         // Register power transfer data for kinesis pipes (deferred to commonSetup
         // because config values aren't available during mod construction)
-        modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener((FMLCommonSetupEvent event) -> {
+            event.enqueueWork(BCTransportConfig::registerPowerTransferData);
+        });
 
         // Initialize stripes registry and handlers
         initStripesRegistry();
 
         // Register creative tab — LOW priority so transport items appear after core/factory/silicon items
-        modEventBus.addListener(EventPriority.LOW, this::addCreativeTabItems);
+        modEventBus.addListener(EventPriority.LOW, (BuildCreativeModeTabContentsEvent event) -> {
+            addCreativeTabItems(event);
+        });
 
         // Register NeoForge capabilities for pipe holders
-        modEventBus.addListener(this::registerCapabilities);
+        modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
+            registerCapabilities(event);
+        });
 
         // Register network payloads
-        modEventBus.addListener(this::registerPayloads);
+        modEventBus.addListener((RegisterPayloadHandlersEvent event) -> {
+            registerPayloads(event);
+        });
 
         // Register server tick event for flushing pipe item packets
         NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class,
@@ -102,16 +100,7 @@ public class BCTransport {
         LOGGER.info("BuildCraft Transport initialized");
     }
 
-    private void commonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(BCTransportConfig::registerPowerTransferData);
-    }
-
-    private void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
-        // Non-pipe items go in the main BuildCraft tab
-        if (event.getTabKey() == buildcraft.core.BCCoreCreativeTabs.MAIN_TAB_KEY) {
-            event.accept(new ItemStack(BCTransportItems.FILTERED_BUFFER.get()));
-            event.accept(new ItemStack(BCTransportItems.WATERPROOF.get()));
-        }
+    private static void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
 
         // Pluggable items go in the dedicated Pluggables tab
         if (event.getTabKey() == BCTransportCreativeTabs.PLUGS_TAB_KEY) {
@@ -125,10 +114,7 @@ public class BCTransport {
 
         // All pipe items go in the dedicated Pipes tab
         if (event.getTabKey() == BCTransportCreativeTabs.PIPES_TAB_KEY) {
-            // Structure pipe
             event.accept(BCTransportItems.PIPE_STRUCTURE.get());
-
-            // Item transport pipes (1.12.2 ordering)
             event.accept(BCTransportItems.PIPE_WOOD_ITEM.get());
             event.accept(BCTransportItems.PIPE_COBBLE_ITEM.get());
             event.accept(BCTransportItems.PIPE_STONE_ITEM.get());
@@ -145,8 +131,6 @@ public class BCTransport {
             event.accept(BCTransportItems.PIPE_DAIZULI_ITEM.get());
             event.accept(BCTransportItems.PIPE_EMZULI_ITEM.get());
             event.accept(BCTransportItems.PIPE_STRIPES_ITEM.get());
-
-            // Fluid transport pipes
             event.accept(BCTransportItems.PIPE_WOOD_FLUID.get());
             event.accept(BCTransportItems.PIPE_COBBLE_FLUID.get());
             event.accept(BCTransportItems.PIPE_STONE_FLUID.get());
@@ -158,8 +142,6 @@ public class BCTransport {
             event.accept(BCTransportItems.PIPE_VOID_FLUID.get());
             event.accept(BCTransportItems.PIPE_DIAMOND_FLUID.get());
             event.accept(BCTransportItems.PIPE_DIAMOND_WOOD_FLUID.get());
-
-            // Power transport pipes
             event.accept(BCTransportItems.PIPE_WOOD_POWER.get());
             event.accept(BCTransportItems.PIPE_COBBLE_POWER.get());
             event.accept(BCTransportItems.PIPE_STONE_POWER.get());
@@ -172,7 +154,7 @@ public class BCTransport {
         }
     }
 
-    private void registerPayloads(RegisterPayloadHandlersEvent event) {
+    private static void registerPayloads(RegisterPayloadHandlersEvent event) {
         final PayloadRegistrar registrar = event.registrar("1");
         registrar.playToClient(
                 MessageMultiPipeItem.TYPE,
@@ -202,14 +184,12 @@ public class BCTransport {
     }
 
     @SuppressWarnings("unchecked")
-    private void registerCapabilities(RegisterCapabilitiesEvent event) {
-        // MJ Receiver — needed for engines to discover wood pipes as power consumers
+    private static void registerCapabilities(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(
             MjAPI.CAP_RECEIVER, BCTransportBlockEntities.PIPE_HOLDER.get(),
             (tile, side) -> {
                 Pipe pipe = tile.getPipe();
                 if (pipe == null || side == null) return null;
-                // Check pluggable first (matches 1.12.2 getCapability order)
                 buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
                 if (plug != null) {
                     IMjReceiver r = plug.getCapability(MjAPI.CAP_RECEIVER);
@@ -222,7 +202,6 @@ public class BCTransport {
             }
         );
 
-        // MJ Redstone Receiver — needed for stripes pipe to receive MJ via redstone engines
         event.registerBlockEntity(
             MjAPI.CAP_REDSTONE_RECEIVER, BCTransportBlockEntities.PIPE_HOLDER.get(),
             (tile, side) -> {
@@ -240,7 +219,6 @@ public class BCTransport {
             }
         );
 
-        // MJ Connector — needed for power pipe connection checks
         event.registerBlockEntity(
             MjAPI.CAP_CONNECTOR, BCTransportBlockEntities.PIPE_HOLDER.get(),
             (tile, side) -> {
@@ -258,13 +236,11 @@ public class BCTransport {
             }
         );
 
-        // Fluid capability — allows pumps, tanks, etc. to push/pull fluid into fluid pipes
         event.registerBlockEntity(
             Capabilities.Fluid.BLOCK, BCTransportBlockEntities.PIPE_HOLDER.get(),
             (tile, side) -> {
                 Pipe pipe = tile.getPipe();
                 if (pipe == null || side == null) return null;
-                // Block external access through blocking pluggables (matches 1.12.2)
                 buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
                 if (plug != null && plug.isBlocking()) return null;
                 return pipe.getFlow().getCapability(CapUtil.CAP_FLUIDS, side);
@@ -272,10 +248,9 @@ public class BCTransport {
         );
     }
 
-    private void initStripesRegistry() {
+    private static void initStripesRegistry() {
         PipeApi.stripeRegistry = StripesRegistry.INSTANCE;
 
-        // Item use stripes handlers
         PipeApi.stripeRegistry.addHandler(StripesHandlerPlant.INSTANCE);
         PipeApi.stripeRegistry.addHandler(StripesHandlerShears.INSTANCE);
         PipeApi.stripeRegistry.addHandler(new StripesHandlerPipes());
@@ -285,7 +260,6 @@ public class BCTransport {
         PipeApi.stripeRegistry.addHandler(StripesHandlerPlaceBlock.INSTANCE, EnumHandlerPriority.LOW);
         PipeApi.stripeRegistry.addHandler(StripesHandlerUse.INSTANCE, EnumHandlerPriority.LOW);
 
-        // Block breaking stripes handlers
         PipeApi.stripeRegistry.addHandler(StripesHandlerMinecartDestroy.INSTANCE);
     }
 }

@@ -23,7 +23,7 @@ import buildcraft.lib.gui.pos.IGuiArea;
 import buildcraft.lib.misc.LocaleUtil;
 
 public class ScreenEngineStone extends GuiBC8<ContainerEngineStone> {
-    private static final Identifier TEXTURE = Identifier.parse("buildcraftenergy:textures/gui/steam_engine_gui.png");
+    private static final Identifier TEXTURE = Identifier.parse("buildcraftunofficial:textures/gui/steam_engine_gui.png");
     private static final int SIZE_X = 176, SIZE_Y = 166;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
 

@@ -1,12 +1,12 @@
 {
     "parent": "block/cube_all",
     "textures": {
-        "particle": "buildcraftfactory:blocks/auto_workbench_item/side",
-        "up": "buildcraftfactory:blocks/auto_workbench_item/top",
-        "down": "buildcraftfactory:blocks/auto_workbench_item/top",
-        "north": "buildcraftfactory:blocks/auto_workbench_item/side",
-        "east": "buildcraftfactory:blocks/auto_workbench_item/side",
-        "south": "buildcraftfactory:blocks/auto_workbench_item/side",
-        "west": "buildcraftfactory:blocks/auto_workbench_item/side"
+        "particle": "buildcraftunofficial:blocks/auto_workbench_item/side",
+        "up": "buildcraftunofficial:blocks/auto_workbench_item/top",
+        "down": "buildcraftunofficial:blocks/auto_workbench_item/top",
+        "north": "buildcraftunofficial:blocks/auto_workbench_item/side",
+        "east": "buildcraftunofficial:blocks/auto_workbench_item/side",
+        "south": "buildcraftunofficial:blocks/auto_workbench_item/side",
+        "west": "buildcraftunofficial:blocks/auto_workbench_item/side"
     }
 }

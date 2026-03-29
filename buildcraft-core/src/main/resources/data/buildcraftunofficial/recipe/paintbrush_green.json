@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "buildcraft_paintbrush",
+  "ingredients": [
+    "buildcraftunofficial:paintbrush",
+    "#c:dyes/green"
+  ],
+  "result": {
+    "id": "buildcraftunofficial:paintbrush",
+    "count": 1,
+    "components": {
+      "buildcraftunofficial:brush_color": "green",
+      "buildcraftunofficial:brush_uses": 64,
+      "minecraft:custom_model_data": {
+        "floats": [14.0]
+      }
+    }
+  }
+}

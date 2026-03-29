@@ -1,0 +1,18 @@
+{
+  "display": {
+    "icon": { 
+      "id": "buildcraftunofficial:plug_gate",
+      "components": {
+        "minecraft:custom_model_data": {
+          "strings": ["iron_and_no_modifier"]
+        }
+      }
+    },
+    "title": { "translate": "advancements.buildcraftunofficial.pipe_logic.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.pipe_logic.description" }
+  },
+  "parent": "buildcraftunofficial:plugging_the_gap",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

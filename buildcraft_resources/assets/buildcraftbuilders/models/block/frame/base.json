@@ -27,6 +27,6 @@
         }
     ],
     "textures": {
-        "all": "buildcraftbuilders:blocks/frame/default"
+        "all": "buildcraftunofficial:blocks/frame/default"
     }
 }

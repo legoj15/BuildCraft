@@ -1,16 +1,16 @@
 {
   "display": {
     "icon": {
-      "item": "buildcrafttransport:plug_blocker"
+      "item": "buildcraftunofficial:plug_blocker"
     },
     "title": {
-      "translate": "advancements.buildcrafttransport.plugging_the_gap.title"
+      "translate": "advancements.buildcraftunofficial.plugging_the_gap.title"
     },
     "description": {
-      "translate": "advancements.buildcrafttransport.plugging_the_gap.description"
+      "translate": "advancements.buildcraftunofficial.plugging_the_gap.description"
     }
   },
-  "parent": "buildcrafttransport:pipe_dream",
+  "parent": "buildcraftunofficial:pipe_dream",
   "criteria": {
     "code_trigger": {
       "trigger": "minecraft:impossible"

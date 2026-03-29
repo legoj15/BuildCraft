@@ -16,34 +16,23 @@ import buildcraft.api.transport.pipe.PipeDefinition;
 /** Transport module configuration. */
 public class BCTransportConfig {
 
-    public static final ModConfigSpec SPEC;
-
-    public static final ModConfigSpec.BooleanValue disableRfPipe;
-    public static final ModConfigSpec.BooleanValue powerPipeUseOldMjTexture;
+    public static ModConfigSpec.BooleanValue disableRfPipe;
+    public static ModConfigSpec.BooleanValue powerPipeUseOldMjTexture;
 
     /** MJ cost per item extracted by a wooden pipe. Default: 1 MJ (= 1_000_000 µMJ). */
-    public static final ModConfigSpec.LongValue mjPerItem;
+    public static ModConfigSpec.LongValue mjPerItem;
 
     /** MJ cost per millibucket extracted by a wooden fluid pipe. Default: 1000 µMJ per mB. */
-    public static final ModConfigSpec.LongValue mjPerMillibucket;
+    public static ModConfigSpec.LongValue mjPerMillibucket;
 
     /** Base multiplier for kinesis pipe transfer rates (MJ). Default: 4. */
-    public static final ModConfigSpec.IntValue basePowerRate;
+    public static ModConfigSpec.IntValue basePowerRate;
 
-    static {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
-
-        builder.push("general");
-
+    public static void buildGeneral(ModConfigSpec.Builder builder) {
         disableRfPipe = builder
                 .comment("Set true to disable the RF pipe")
                 .define("disableRfPipe", false);
 
-        powerPipeUseOldMjTexture = builder
-                .comment("Set true to use the old MJ texture for power pipes")
-                .define("powerPipeUseOldMjTexture", false);
-
-        builder.pop();
         builder.push("pipes");
 
         mjPerItem = builder
@@ -59,7 +48,16 @@ public class BCTransportConfig {
                 .defineInRange("basePowerRate", 4, 1, Integer.MAX_VALUE);
 
         builder.pop();
-        SPEC = builder.build();
+    }
+
+    public static void buildDisplay(ModConfigSpec.Builder builder) {
+        builder.push("pipes");
+
+        powerPipeUseOldMjTexture = builder
+                .comment("Set true to use the old MJ texture for power pipes")
+                .define("powerPipeUseOldMjTexture", false);
+
+        builder.pop();
     }
 
     /** Register default power transfer info for all kinesis pipe definitions.

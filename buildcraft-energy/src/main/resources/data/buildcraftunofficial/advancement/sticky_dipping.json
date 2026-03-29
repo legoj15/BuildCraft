@@ -1,0 +1,12 @@
+{
+  "display": {
+    "icon": { "id": "buildcraftunofficial:glob_of_oil" },
+    "title": { "translate": "advancements.buildcraftunofficial.sticky_dipping.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.sticky_dipping.description" },
+    "hidden": true
+  },
+  "parent": "buildcraftunofficial:fine_riches",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

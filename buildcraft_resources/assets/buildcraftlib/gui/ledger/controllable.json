@@ -1,9 +1,9 @@
 {
-	"type": "buildcraftlib:ledger",
+	"type": "buildcraftunofficial:ledger",
 	"title": "",
 	"closed": [
 		{
-			"type": "buildcraftlib:drawable",
+			"type": "buildcraftunofficial:drawable",
 			"source": "controllable.sprite",
 			"area": [0, 0, 16, 16]
 		}

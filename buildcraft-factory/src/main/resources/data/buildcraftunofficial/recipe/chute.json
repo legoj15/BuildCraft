@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "ici",
+    "igi",
+    " i "
+  ],
+  "key": {
+    "i": "#c:ingots/iron",
+    "c": "#c:chests/wooden",
+    "g": "buildcraftunofficial:gear_stone"
+  },
+  "result": {
+    "id": "buildcraftunofficial:chute"
+  }
+}

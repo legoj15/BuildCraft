@@ -76,7 +76,7 @@ public class FluidUtilBC {
         // So the recolored sprite name is always: "<regPath>_heat_0_still" or "<regPath>_still" 
         // depending on whether heat suffix is already present.
         net.minecraft.resources.Identifier fluidId = net.neoforged.neoforge.registries.NeoForgeRegistries.FLUID_TYPES.getKey(fluid.getFluidType());
-        if (fluidId != null && fluidId.getNamespace().equals("buildcraftenergy")) {
+        if (fluidId != null && fluidId.getNamespace().equals("buildcraftunofficial")) {
             String path = fluidId.getPath();
             // Determine if heat suffix is already in the path
             String spriteName;
@@ -87,7 +87,7 @@ public class FluidUtilBC {
                 // e.g., "oil" -> "oil_heat_0_still"
                 spriteName = path + "_heat_0_still";
             }
-            return net.minecraft.resources.Identifier.fromNamespaceAndPath("buildcraftenergy", "block/fluids/" + spriteName);
+            return net.minecraft.resources.Identifier.fromNamespaceAndPath("buildcraftunofficial", "block/fluids/" + spriteName);
         }
         if (fluidId != null) {
             return net.minecraft.resources.Identifier.parse(fluidId.getNamespace() + ":block/" + fluidId.getPath() + "_still");
@@ -112,7 +112,7 @@ public class FluidUtilBC {
 
         // BC energy fluids have colors baked into their recolored sprites — no tint needed
         net.minecraft.resources.Identifier fluidId = net.neoforged.neoforge.registries.NeoForgeRegistries.FLUID_TYPES.getKey(fluid.getFluidType());
-        if (fluidId != null && fluidId.getNamespace().equals("buildcraftenergy")) {
+        if (fluidId != null && fluidId.getNamespace().equals("buildcraftunofficial")) {
             return 0xFFFFFFFF;
         }
 

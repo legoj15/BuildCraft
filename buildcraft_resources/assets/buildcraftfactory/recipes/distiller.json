@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcraftfactory:distiller"
+    "item": "buildcraftunofficial:distiller"
   },
   "pattern": [
     "rtr",
@@ -12,7 +12,7 @@
       "item": "minecraft:redstone_torch"
     },
     "t": {
-      "item": "buildcraftfactory:tank"
+      "item": "buildcraftunofficial:tank"
     },
     "g": {
       "item": "#gearDiamond"
@@ -21,7 +21,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftfactory:distiller"
+      "item": "buildcraftunofficial:distiller"
     }
   ]
 }

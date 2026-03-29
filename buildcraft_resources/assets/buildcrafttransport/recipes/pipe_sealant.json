@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcrafttransport:waterproof"
+    "item": "buildcraftunofficial:waterproof"
   },
   "type": "minecraft:crafting_shapeless",
   "ingredients": [
@@ -11,7 +11,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcrafttransport:waterproof"
+      "item": "buildcraftunofficial:waterproof"
     }
   ]
 }

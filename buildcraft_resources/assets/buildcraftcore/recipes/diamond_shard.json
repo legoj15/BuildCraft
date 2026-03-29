@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcraftcore:diamond_shard",
+    "item": "buildcraftunofficial:diamond_shard",
     "count": 4
   },
   "pattern": [
@@ -15,7 +15,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftcore:diamond_shard"
+      "item": "buildcraftunofficial:diamond_shard"
     }
   ]
 }

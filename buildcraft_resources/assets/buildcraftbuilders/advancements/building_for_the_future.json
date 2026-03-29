@@ -1,17 +1,17 @@
 {
   "display": {
     "icon": {
-      "item": "buildcraftbuilders:filler"
+      "item": "buildcraftunofficial:filler"
     },
     "title": {
-      "translate": "advancements.buildcraftbuilders.building_for_the_future.title"
+      "translate": "advancements.buildcraftunofficial.building_for_the_future.title"
     },
     "description": {
-      "translate": "advancements.buildcraftbuilders.building_for_the_future.description"
+      "translate": "advancements.buildcraftunofficial.building_for_the_future.description"
     },
     "frame": "goal"
   },
-  "parent": "buildcraftbuilders:shaping_the_world",
+  "parent": "buildcraftunofficial:shaping_the_world",
   "criteria": {
     "code_trigger": {
       "trigger": "minecraft:impossible"

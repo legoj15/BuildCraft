@@ -16,7 +16,7 @@ import buildcraft.core.BCCoreSprites;
 public class TriggerTrue extends BCStatement implements ITriggerInternal {
 
     public TriggerTrue() {
-        super("buildcraftcore:trigger.true");
+        super("buildcraftunofficial:trigger.true");
     }
 
     @Override

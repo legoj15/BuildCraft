@@ -1,0 +1,28 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "buildcraftunofficial:quarry",
+      "buildcraftunofficial:architect",
+      "buildcraftunofficial:blueprint_clean",
+      "buildcraftunofficial:template_clean"
+    ]
+  },
+  "criteria": {
+    "has_gear_diamond": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "buildcraftunofficial:gear_diamond"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_gear_diamond"
+    ]
+  ]
+}

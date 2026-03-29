@@ -112,7 +112,7 @@ public class TileZonePlanner extends TileBC_Neptune implements MenuProvider {
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.buildcraftrobotics.zone_planner");
+        return Component.translatable("block.buildcraftunofficial.zone_planner");
     }
 
     @Nullable

@@ -1,6 +1,6 @@
 {
     "parent": "block/cube_all",
     "textures": {
-        "all": "buildcraftsilicon:blocks/laser/bottom"
+        "all": "buildcraftunofficial:blocks/laser/bottom"
     }
 }

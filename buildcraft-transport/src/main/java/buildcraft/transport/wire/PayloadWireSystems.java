@@ -22,7 +22,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public class PayloadWireSystems implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<PayloadWireSystems> TYPE =
-        new CustomPacketPayload.Type<>(Identifier.parse("buildcrafttransport:wire_systems"));
+        new CustomPacketPayload.Type<>(Identifier.parse("buildcraftunofficial:wire_systems"));
 
     public static final StreamCodec<FriendlyByteBuf, PayloadWireSystems> STREAM_CODEC =
         StreamCodec.of(PayloadWireSystems::encode, PayloadWireSystems::decode);

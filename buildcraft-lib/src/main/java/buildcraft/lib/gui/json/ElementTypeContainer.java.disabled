@@ -9,7 +9,7 @@ import buildcraft.lib.gui.pos.IGuiArea;
 import buildcraft.lib.gui.pos.IGuiPosition;
 
 public class ElementTypeContainer extends ElementType {
-    public static final String NAME = "buildcraftlib:container";
+    public static final String NAME = "buildcraftunofficial:container";
     public static final ElementTypeContainer INSTANCE = new ElementTypeContainer();
 
     private ElementTypeContainer() {

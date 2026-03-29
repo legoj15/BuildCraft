@@ -31,7 +31,7 @@ public record MessageDebugRequest(
 ) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<MessageDebugRequest> TYPE =
-            new CustomPacketPayload.Type<>(Identifier.parse("buildcraftlib:debug_request"));
+            new CustomPacketPayload.Type<>(Identifier.parse("buildcraftunofficial:debug_request"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, MessageDebugRequest> STREAM_CODEC =
             StreamCodec.of(MessageDebugRequest::encode, MessageDebugRequest::decode);

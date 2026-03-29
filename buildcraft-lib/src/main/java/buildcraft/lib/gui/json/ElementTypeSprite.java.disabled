@@ -20,7 +20,7 @@ import buildcraft.lib.misc.GuiUtil;
 import buildcraft.lib.misc.SpriteUtil;
 
 public class ElementTypeSprite extends ElementType {
-    public static final String NAME = "buildcraftlib:drawable";
+    public static final String NAME = "buildcraftunofficial:drawable";
     public static final ElementTypeSprite INSTANCE = new ElementTypeSprite();
 
     // Args:

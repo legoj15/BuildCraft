@@ -1,0 +1,40 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "buildcraftunofficial:paintbrush_black",
+      "buildcraftunofficial:paintbrush_blue",
+      "buildcraftunofficial:paintbrush_brown",
+      "buildcraftunofficial:paintbrush_cyan",
+      "buildcraftunofficial:paintbrush_gray",
+      "buildcraftunofficial:paintbrush_green",
+      "buildcraftunofficial:paintbrush_light_blue",
+      "buildcraftunofficial:paintbrush_light_gray",
+      "buildcraftunofficial:paintbrush_lime",
+      "buildcraftunofficial:paintbrush_magenta",
+      "buildcraftunofficial:paintbrush_orange",
+      "buildcraftunofficial:paintbrush_pink",
+      "buildcraftunofficial:paintbrush_purple",
+      "buildcraftunofficial:paintbrush_red",
+      "buildcraftunofficial:paintbrush_white",
+      "buildcraftunofficial:paintbrush_yellow"
+    ]
+  },
+  "criteria": {
+    "has_paintbrush": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "buildcraftunofficial:paintbrush"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_paintbrush"
+    ]
+  ]
+}

@@ -1,16 +1,16 @@
 {
   "display": {
     "icon": {
-      "item": "buildcraftfactory:chute"
+      "item": "buildcraftunofficial:chute"
     },
     "title": {
-      "translate": "advancements.buildcraftfactory.retired_hopper.title"
+      "translate": "advancements.buildcraftunofficial.retired_hopper.title"
     },
     "description": {
-      "translate": "advancements.buildcraftfactory.retired_hopper.description"
+      "translate": "advancements.buildcraftunofficial.retired_hopper.description"
     }
   },
-  "parent": "buildcraftcore:wrenched",
+  "parent": "buildcraftunofficial:wrenched",
   "criteria": {
     "code_trigger": {
       "trigger": "minecraft:impossible"

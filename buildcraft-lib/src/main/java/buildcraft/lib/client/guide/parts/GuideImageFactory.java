@@ -29,7 +29,7 @@ public class GuideImageFactory implements GuidePartFactory {
             s = new SpriteRaw(resLoc, 0, 0, 1, 1);
         } catch (Exception e) {
             BCLog.logger.warn("[lib.guide.loader.image] Couldn't load image '" + location + "': " + e.getMessage());
-            s = new SpriteRaw(Identifier.parse("buildcraftlib:missing"), 0, 0, 1, 1);
+            s = new SpriteRaw(Identifier.parse("buildcraftunofficial:missing"), 0, 0, 1, 1);
         }
         this.sprite = s;
         this.srcWidth = sw;

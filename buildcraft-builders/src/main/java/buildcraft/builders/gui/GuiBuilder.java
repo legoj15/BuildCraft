@@ -17,9 +17,9 @@ import buildcraft.builders.container.ContainerBuilder;
 
 public class GuiBuilder extends AbstractContainerScreen<ContainerBuilder> {
     private static final Identifier TEXTURE_BASE =
-            Identifier.parse("buildcraftbuilders:textures/gui/builder.png");
+            Identifier.parse("buildcraftunofficial:textures/gui/builder.png");
     private static final Identifier TEXTURE_BLUEPRINT =
-            Identifier.parse("buildcraftbuilders:textures/gui/builder_blueprint.png");
+            Identifier.parse("buildcraftunofficial:textures/gui/builder_blueprint.png");
     private static final int SIZE_X = 176, SIZE_BLUEPRINT_X = 256, SIZE_Y = 222, BLUEPRINT_WIDTH = 87;
 
     public GuiBuilder(ContainerBuilder container, Inventory playerInv, Component title) {

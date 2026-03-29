@@ -3,19 +3,19 @@
     "variants": {
         "type": {
             "wood": {
-                "model": "buildcraftcore:engine/wood"
+                "model": "buildcraftunofficial:engine/wood"
             },
             "stone": {
-                "model": "buildcraftcore:engine/stone"
+                "model": "buildcraftunofficial:engine/stone"
             },
             "iron": {
-                "model": "buildcraftcore:engine/iron"
+                "model": "buildcraftunofficial:engine/iron"
             },
             "creative": {
-                "model": "buildcraftcore:engine/creative"
+                "model": "buildcraftunofficial:engine/creative"
             },
             "rf": {
-                "model": "buildcraftcore:engine/rf"
+                "model": "buildcraftunofficial:engine/rf"
             }
         }
     }

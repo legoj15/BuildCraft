@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcraftcore:gear_diamond"
+    "item": "buildcraftunofficial:gear_diamond"
   },
   "pattern": [
     " o ",
@@ -20,7 +20,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftcore:gear_diamond"
+      "item": "buildcraftunofficial:gear_diamond"
     }
   ]
 }

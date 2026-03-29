@@ -17,7 +17,7 @@ import buildcraft.lib.gui.GuiIcon;
 
 public class GuiChute extends GuiBC8<ContainerChute> {
     private static final Identifier TEXTURE =
-            Identifier.parse("buildcraftfactory:textures/gui/chute.png");
+            Identifier.parse("buildcraftunofficial:textures/gui/chute.png");
     private static final int SIZE_X = 176, SIZE_Y = 153;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
 

@@ -12,7 +12,7 @@ import buildcraft.lib.gui.pos.IGuiArea;
 import buildcraft.lib.gui.pos.IGuiPosition;
 
 public class ElementTypeHelp extends ElementType {
-    public static final String NAME = "buildcraftlib:help";
+    public static final String NAME = "buildcraftunofficial:help";
     public static final ElementTypeHelp INSTANCE = new ElementTypeHelp();
 
     private ElementTypeHelp() {

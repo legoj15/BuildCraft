@@ -1,0 +1,18 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "buildcraftunofficial:guide_book"
+    ]
+  },
+  "criteria": {
+    "on_spawn": {
+      "trigger": "minecraft:tick"
+    }
+  },
+  "requirements": [
+    [
+      "on_spawn"
+    ]
+  ]
+}

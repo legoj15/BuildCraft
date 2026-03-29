@@ -1,0 +1,11 @@
+{
+  "display": {
+    "icon": { "id": "buildcraftunofficial:engine_stone" },
+    "title": { "translate": "advancements.buildcraftunofficial.poweringUp.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.poweringUp.description" }
+  },
+  "parent": "buildcraftunofficial:engine",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

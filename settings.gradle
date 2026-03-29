@@ -8,14 +8,3 @@ pluginManagement {
 }
 
 rootProject.name = 'BuildCraft'
-
-include 'buildcraft-api'
-include 'buildcraft-lib'
-include 'buildcraft-core'
-include 'buildcraft-builders'
-include 'buildcraft-energy'
-include 'buildcraft-factory'
-include 'buildcraft-transport'
-include 'buildcraft-silicon'
-include 'buildcraft-robotics'
-include 'buildcraft-all'

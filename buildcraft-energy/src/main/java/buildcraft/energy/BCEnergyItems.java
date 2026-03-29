@@ -7,7 +7,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 
 public class BCEnergyItems {
-    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems("buildcraftcore");
+    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems("buildcraftunofficial");
 
     public static final DeferredItem<BlockItem> ENGINE_STONE = ITEMS.registerSimpleBlockItem(
             BCEnergyBlocks.ENGINE_STONE);
@@ -16,7 +16,7 @@ public class BCEnergyItems {
             BCEnergyBlocks.ENGINE_IRON);
 
     // Glob of Oil — registered under a separate registry because its assets are in buildcraftenergy
-    private static final DeferredRegister.Items ENERGY_ITEMS = DeferredRegister.createItems("buildcraftenergy");
+    private static final DeferredRegister.Items ENERGY_ITEMS = DeferredRegister.createItems("buildcraftunofficial");
 
     public static final DeferredItem<Item> GLOB_OF_OIL =
             ENERGY_ITEMS.registerItem("glob_of_oil", Item::new);

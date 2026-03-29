@@ -1,18 +1,18 @@
 {
   "display": {
     "icon": {
-      "item": "buildcrafttransport:wire",
+      "item": "buildcraftunofficial:wire",
       "data": 5
     },
     "title": {
-      "translate": "advancements.buildcrafttransport.colorful_electrician.title"
+      "translate": "advancements.buildcraftunofficial.colorful_electrician.title"
     },
     "description": {
-      "translate": "advancements.buildcrafttransport.colorful_electrician.description"
+      "translate": "advancements.buildcraftunofficial.colorful_electrician.description"
     },
     "frame": "challenge"
   },
-  "parent": "buildcrafttransport:logic_transportation",
+  "parent": "buildcraftunofficial:logic_transportation",
   "criteria": {
     "code_trigger": {
       "trigger": "minecraft:impossible"

@@ -1,0 +1,12 @@
+{
+  "display": {
+    "icon": { "id": "buildcraftunofficial:wire_lime" },
+    "title": { "translate": "advancements.buildcraftunofficial.colorful_electrician.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.colorful_electrician.description" },
+    "frame": "challenge"
+  },
+  "parent": "buildcraftunofficial:logic_transportation",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

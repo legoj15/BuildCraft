@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcraftcore:marker_path"
+    "item": "buildcraftunofficial:marker_path"
   },
   "pattern": [
     "g",
@@ -19,7 +19,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftcore:marker_path"
+      "item": "buildcraftunofficial:marker_path"
     }
   ]
 }

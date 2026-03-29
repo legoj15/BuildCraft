@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "s"
+  ],
+  "key": {
+    "s": "buildcraftunofficial:pipe_structure"
+  },
+  "result": {
+    "id": "buildcraftunofficial:plug_blocker",
+    "count": 4
+  }
+}

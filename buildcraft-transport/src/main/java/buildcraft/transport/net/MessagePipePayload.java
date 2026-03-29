@@ -44,7 +44,7 @@ public record MessagePipePayload(
 ) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<MessagePipePayload> TYPE =
-            new CustomPacketPayload.Type<>(Identifier.parse("buildcrafttransport:pipe_payload"));
+            new CustomPacketPayload.Type<>(Identifier.parse("buildcraftunofficial:pipe_payload"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, MessagePipePayload> STREAM_CODEC =
             StreamCodec.of(MessagePipePayload::encode, MessagePipePayload::decode);

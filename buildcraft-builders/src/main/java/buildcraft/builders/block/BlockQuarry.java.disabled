@@ -38,7 +38,7 @@ import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.tile.TileQuarry;
 
 public class BlockQuarry extends BlockBCTile_Neptune implements IBlockWithFacing {
-    private static final ResourceLocation ADVANCEMENT = new ResourceLocation("buildcraftbuilders:shaping_the_world");
+    private static final ResourceLocation ADVANCEMENT = new ResourceLocation("buildcraftunofficial:shaping_the_world");
 
     public BlockQuarry(Material material, String id) {
         super(material, id);

@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcraftcore:wrench"
+    "item": "buildcraftunofficial:wrench"
   },
   "pattern": [
     "I I",
@@ -21,7 +21,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftcore:wrench"
+      "item": "buildcraftunofficial:wrench"
     }
   ]
 }

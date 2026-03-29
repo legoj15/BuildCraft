@@ -17,7 +17,7 @@ import buildcraft.lib.gui.GuiIcon;
 
 public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     private static final Identifier TEXTURE =
-            Identifier.parse("buildcraftrobotics:textures/gui/zone_planner.png");
+            Identifier.parse("buildcraftunofficial:textures/gui/zone_planner.png");
     private static final int SIZE_X = 256, SIZE_Y = 228;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
 

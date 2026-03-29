@@ -1,12 +1,12 @@
 {
     "textures": {
-        "#trunk_blue":"buildcraftlib:blocks/engine/trunk_blue",
-        "#trunk_green":"buildcraftlib:blocks/engine/trunk_green",
-        "#trunk_yellow":"buildcraftlib:blocks/engine/trunk_yellow",
-        "#trunk_red":"buildcraftlib:blocks/engine/trunk_red",
-        "#trunk_overheat":"buildcraftlib:blocks/engine/trunk_overheat",
+        "#trunk_blue":"buildcraftunofficial:blocks/engine/trunk_blue",
+        "#trunk_green":"buildcraftunofficial:blocks/engine/trunk_green",
+        "#trunk_yellow":"buildcraftunofficial:blocks/engine/trunk_yellow",
+        "#trunk_red":"buildcraftunofficial:blocks/engine/trunk_red",
+        "#trunk_overheat":"buildcraftunofficial:blocks/engine/trunk_overheat",
         "#trunk_black":"#trunk_overheat",
-        "#chamber":"buildcraftlib:blocks/engine/chamber_base",
+        "#chamber":"buildcraftunofficial:blocks/engine/chamber_base",
 
         "#back":"_ABSTRACT_engine_base_back",
         "#side":"_ABSTRACT_engine_base_side"

@@ -58,13 +58,13 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
      * Index 0 = off, 1-6 = power levels.
      */
     private static final Identifier[] POWER_TEXTURES = {
-        Identifier.parse("buildcraftfactory:block/distiller/power_sprite_a"),
-        Identifier.parse("buildcraftfactory:block/distiller/power_sprite_a"),
-        Identifier.parse("buildcraftfactory:block/distiller/power_sprite_b"),
-        Identifier.parse("buildcraftfactory:block/distiller/power_sprite_b"),
-        Identifier.parse("buildcraftfactory:block/distiller/power_sprite_c"),
-        Identifier.parse("buildcraftfactory:block/distiller/power_sprite_c"),
-        Identifier.parse("buildcraftfactory:block/distiller/power_sprite_d"),
+        Identifier.parse("buildcraftunofficial:block/distiller/power_sprite_a"),
+        Identifier.parse("buildcraftunofficial:block/distiller/power_sprite_a"),
+        Identifier.parse("buildcraftunofficial:block/distiller/power_sprite_b"),
+        Identifier.parse("buildcraftunofficial:block/distiller/power_sprite_b"),
+        Identifier.parse("buildcraftunofficial:block/distiller/power_sprite_c"),
+        Identifier.parse("buildcraftunofficial:block/distiller/power_sprite_c"),
+        Identifier.parse("buildcraftunofficial:block/distiller/power_sprite_d"),
     };
     /** Whether to use the top half (true) or bottom half (false) of the texture. */
     private static final boolean[] POWER_TOP_HALF = {

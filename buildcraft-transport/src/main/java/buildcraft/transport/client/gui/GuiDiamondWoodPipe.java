@@ -18,7 +18,7 @@ import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond.FilterMode;
 
 public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
     private static final Identifier TEXTURE =
-            Identifier.parse("buildcrafttransport:textures/gui/pipe_emerald.png");
+            Identifier.parse("buildcraftunofficial:textures/gui/pipe_emerald.png");
     private static final int SIZE_X = 175, SIZE_Y = 161;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
 

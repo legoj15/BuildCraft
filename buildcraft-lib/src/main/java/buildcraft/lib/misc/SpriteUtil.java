@@ -13,7 +13,7 @@ public class SpriteUtil {
         return getBlockAtlas().getSprite(MISSING);
     }
 
-    /** Resolves a sprite from the block atlas by name (e.g. "buildcrafttransport:pipes/wood_item_clear"). */
+    /** Resolves a sprite from the block atlas by name (e.g. "buildcraftunofficial:pipes/wood_item_clear"). */
     public static TextureAtlasSprite getSprite(String name) {
         Identifier loc = Identifier.parse(name);
         return getBlockAtlas().getSprite(loc);

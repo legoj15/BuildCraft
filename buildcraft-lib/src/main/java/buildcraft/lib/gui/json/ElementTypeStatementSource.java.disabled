@@ -10,7 +10,7 @@ import buildcraft.lib.gui.statement.GuiElementStatementSource;
 import buildcraft.lib.statement.StatementContext;
 
 public class ElementTypeStatementSource extends ElementType {
-    public static final String NAME = "buildcraftlib:statement/source";
+    public static final String NAME = "buildcraftunofficial:statement/source";
     public static final ElementTypeStatementSource INSTANCE = new ElementTypeStatementSource();
 
     // layout: An enum of (flat|ledger).(left|right) with the position of the elements + groupings and display

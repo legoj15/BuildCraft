@@ -16,13 +16,13 @@
     }
   },
   "result": {
-    "item": "buildcraftbuilders:snapshot",
+    "item": "buildcraftunofficial:snapshot",
             "data": 0
   },
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftbuilders:snapshot"
+      "item": "buildcraftunofficial:snapshot"
     }
   ]
 }

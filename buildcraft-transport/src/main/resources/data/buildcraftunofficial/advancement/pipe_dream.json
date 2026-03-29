@@ -1,0 +1,11 @@
+{
+  "display": {
+    "icon": { "id": "buildcraftunofficial:pipe_structure" },
+    "title": { "translate": "advancements.buildcraftunofficial.pipe_dream.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.pipe_dream.description" }
+  },
+  "parent": "buildcraftunofficial:root",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

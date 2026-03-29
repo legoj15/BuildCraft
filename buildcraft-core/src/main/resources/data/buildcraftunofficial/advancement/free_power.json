@@ -1,0 +1,19 @@
+{
+  "display": {
+    "icon": {
+      "id": "buildcraftunofficial:engine_redstone"
+    },
+    "title": {
+      "translate": "advancements.buildcraftunofficial.freePowar.title"
+    },
+    "description": {
+      "translate": "advancements.buildcraftunofficial.freePowar.description"
+    }
+  },
+  "parent": "buildcraftunofficial:wrenched",
+  "criteria": {
+    "code_trigger": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

@@ -37,7 +37,7 @@ import buildcraft.lib.item.ItemGuide;
 
 @Mod(BCCore.MODID)
 public class BCCore {
-    public static final String MODID = "buildcraftcore";
+    public static final String MODID = "buildcraftunofficial";
     public static BCCore INSTANCE = null;
 
     public static final DeferredRegister.DataComponents DATA_COMPONENTS = DeferredRegister
@@ -60,9 +60,12 @@ public class BCCore {
 
     public BCCore(IEventBus modEventBus, ModContainer modContainer) {
         INSTANCE = this;
-        // BCLibItems.enableGuide();
-        // BCLibItems.enableDebugger();
 
+        // ─── Initialize all modules ─────────────────────────────────────────
+        // Lib (must be first — other modules depend on it)
+        buildcraft.lib.BCLib.init(modEventBus);
+
+        // Core registries
         BCCoreItems.ITEMS.register(modEventBus);
         DATA_COMPONENTS.register(modEventBus);
         BCCoreBlocks.init(modEventBus);
@@ -71,7 +74,16 @@ public class BCCore {
         BCCoreCreativeTabs.init(modEventBus);
         BCCoreMenuTypes.init(modEventBus);
 
-        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, BCCoreConfig.SPEC);
+        // Module initializers (order matches 1.12.2 load order)
+        buildcraft.transport.BCTransport.init(modEventBus);
+        buildcraft.factory.BCFactory.init(modEventBus);
+        buildcraft.energy.BCEnergy.init(modEventBus);
+        buildcraft.silicon.BCSilicon.init(modEventBus);
+        buildcraft.builders.BCBuilders.init(modEventBus);
+        buildcraft.robotics.BCRobotics.init(modEventBus);
+
+        // ─── Single unified config ──────────────────────────────────────────
+        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, BCUnifiedConfig.SPEC);
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
             modContainer.registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
                     net.neoforged.neoforge.client.gui.ConfigurationScreen::new);
@@ -120,7 +132,7 @@ public class BCCore {
             modEventBus.addListener(
                     net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.ItemTintSources.class,
                     event -> event.register(
-                            net.minecraft.resources.Identifier.parse("buildcraftcore:fluid_shard_tint"),
+                            net.minecraft.resources.Identifier.parse("buildcraftunofficial:fluid_shard_tint"),
                             buildcraft.core.client.FluidShardTintSource.MAP_CODEC
                     )
             );
@@ -129,7 +141,7 @@ public class BCCore {
                     net.neoforged.neoforge.client.event.RegisterGuiLayersEvent.class,
                     event -> {
                         event.registerAboveAll(
-                            net.minecraft.resources.Identifier.parse("buildcraftcore:debug_overlay"),
+                            net.minecraft.resources.Identifier.parse("buildcraftunofficial:debug_overlay"),
                             buildcraft.core.client.DebugOverlayRenderer::render
                         );
                     }
@@ -146,9 +158,6 @@ public class BCCore {
     }
 
     private void preInit(FMLCommonSetupEvent event) {
-        // BCCoreConfig.preInit(cfgFolder);
-        // CreativeTabBC tab = CreativeTabManager.createTab("buildcraft.main");
-
         // Initialize the fake player provider for modules that need FakePlayer instances
         buildcraft.api.core.BuildCraftAPI.fakePlayerProvider = new buildcraft.api.core.IFakePlayerProvider() {
             private static final com.mojang.authlib.GameProfile BC_PROFILE =
@@ -189,11 +198,6 @@ public class BCCore {
         BCCoreItems.preInit();
         BCCoreStatements.preInit();
         BCCoreRecipes.fmlPreInit();
-
-        // BCCoreProxy.getProxy().fmlPreInit();
-        // NetworkRegistry.INSTANCE.registerGuiHandler(INSTANCE,
-        // BCCoreProxy.getProxy());
-        // BCCoreConfig.saveConfigs();
     }
 
     private void init(FMLCommonSetupEvent event) {
@@ -201,9 +205,6 @@ public class BCCore {
     }
 
     private void postInit(net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent event) {
-        // BCCoreConfig.saveConfigs();
-        // BCCoreProxy.getProxy().fmlPostInit();
-        // BCCoreConfig.postInit();
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
@@ -259,48 +260,6 @@ public class BCCore {
     }
 
     private void buildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {
-        if (event.getTabKey() == BCCoreCreativeTabs.MAIN_TAB_KEY) {
-            // Ordered to match 1.12.2 runtime sequence:
-            // buildcraftlib loads before buildcraftcore (dependency),
-            // then BCCoreBlocks.preInit() runs before BCCoreItems.preInit().
-
-            // --- Lib items (registered by buildcraftlib, loads first) ---
-            event.accept(BCLibItems.GUIDE);
-            event.accept(ItemGuide.createForBook(BCLibItems.GUIDE.get(), "buildcraftlib:config"));
-            event.accept(BCLibItems.GUIDE_NOTE);
-            event.accept(BCLibItems.DEBUGGER);
-
-            // --- Blocks (registered in BCCoreBlocks.preInit order) ---
-            event.accept(BCCoreItems.SPRING_WATER);
-            event.accept(BCCoreItems.SPRING_OIL);
-            event.accept(BCCoreItems.DECORATED_DESTROY);
-            event.accept(BCCoreItems.DECORATED_BLUEPRINT);
-            event.accept(BCCoreItems.DECORATED_TEMPLATE);
-            event.accept(BCCoreItems.DECORATED_PAPER);
-            event.accept(BCCoreItems.DECORATED_LEATHER);
-            event.accept(BCCoreItems.DECORATED_LASER);
-            event.accept(BCCoreItems.MARKER_VOLUME);
-            event.accept(BCCoreItems.MARKER_PATH);
-            event.accept(BCCoreItems.ENGINE_REDSTONE);
-            event.accept(BCCoreItems.ENGINE_CREATIVE);
-
-            // --- Items (registered in BCCoreItems.preInit order) ---
-            event.accept(BCCoreItems.WRENCH);
-            event.accept(BCCoreItems.GEAR_WOOD);
-            event.accept(BCCoreItems.GEAR_STONE);
-            event.accept(BCCoreItems.GEAR_IRON);
-            event.accept(BCCoreItems.GEAR_GOLD);
-            event.accept(BCCoreItems.GEAR_DIAMOND);
-            // Paintbrush: clean + 16 dye colours
-            event.accept(ItemPaintbrush_BC8.createColoredStack(BCCoreItems.PAINTBRUSH.get(), null));
-            for (DyeColor colour : DyeColor.values()) {
-                event.accept(ItemPaintbrush_BC8.createColoredStack(BCCoreItems.PAINTBRUSH.get(), colour));
-            }
-            event.accept(BCCoreItems.LIST);
-            event.accept(BCCoreItems.MAP_LOCATION);
-            event.accept(BCCoreItems.MARKER_CONNECTOR);
-            event.accept(BCCoreItems.VOLUME_BOX);
-        }
     }
 
 }

@@ -1,7 +1,7 @@
 {
     "forge_marker": 1,
     "defaults": {
-        "model": "buildcraftfactory:mining_well"
+        "model": "buildcraftunofficial:mining_well"
     },
     "variants": {
         "facing": {

@@ -39,9 +39,9 @@
         }
     ],
     "textures": {
-        "particle": "buildcraftsilicon:blocks/table/assembly/top",
-        "top": "buildcraftsilicon:blocks/table/assembly/top",
-        "bottom": "buildcraftsilicon:blocks/table/assembly/bottom",
-        "side": "buildcraftsilicon:blocks/table/assembly/side"
+        "particle": "buildcraftunofficial:blocks/table/assembly/top",
+        "top": "buildcraftunofficial:blocks/table/assembly/top",
+        "bottom": "buildcraftunofficial:blocks/table/assembly/bottom",
+        "side": "buildcraftunofficial:blocks/table/assembly/side"
     }
 }

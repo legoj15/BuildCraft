@@ -11,7 +11,7 @@ import buildcraft.lib.gui.elem.GuiElementSlotMover;
 import buildcraft.lib.gui.pos.IGuiPosition;
 
 public class ElementTypeSlot extends ElementType {
-    public static final String NAME = "buildcraftlib:slot";
+    public static final String NAME = "buildcraftunofficial:slot";
     public static final ElementTypeSlot INSTANCE = new ElementTypeSlot();
 
     public ElementTypeSlot() {

@@ -1,0 +1,12 @@
+{
+  "display": {
+    "icon": { "id": "buildcraftunofficial:plug_light_sensor" },
+    "title": { "translate": "advancements.buildcraftunofficial.all_plugged_up.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.all_plugged_up.description" },
+    "frame": "goal"
+  },
+  "parent": "buildcraftunofficial:pipe_logic",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

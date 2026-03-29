@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "iri",
+    "igi",
+    "tbt"
+  ],
+  "key": {
+    "i": "#c:ingots/iron",
+    "r": "#c:dusts/redstone",
+    "g": "buildcraftunofficial:gear_iron",
+    "t": "buildcraftunofficial:tank",
+    "b": "minecraft:bucket"
+  },
+  "result": {
+    "id": "buildcraftunofficial:pump"
+  }
+}

@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcraftfactory:heat_exchange"
+    "item": "buildcraftunofficial:heat_exchange"
   },
   "pattern": [
     "igi",
@@ -23,7 +23,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftfactory:heat_exchange"
+      "item": "buildcraftunofficial:heat_exchange"
     }
   ]
 }

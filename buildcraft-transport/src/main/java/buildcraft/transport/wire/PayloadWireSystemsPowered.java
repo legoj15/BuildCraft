@@ -23,7 +23,7 @@ import buildcraft.api.transport.pipe.IPipeHolder;
 
 public class PayloadWireSystemsPowered implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<PayloadWireSystemsPowered> TYPE =
-        new CustomPacketPayload.Type<>(Identifier.parse("buildcrafttransport:wire_systems_powered"));
+        new CustomPacketPayload.Type<>(Identifier.parse("buildcraftunofficial:wire_systems_powered"));
 
     public static final StreamCodec<FriendlyByteBuf, PayloadWireSystemsPowered> STREAM_CODEC =
         StreamCodec.of(PayloadWireSystemsPowered::encode, PayloadWireSystemsPowered::decode);

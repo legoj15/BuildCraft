@@ -1,24 +1,24 @@
 {
   "display": {
     "icon": {
-      "item": "buildcraftcore:gear_diamond"
+      "item": "buildcraftunofficial:gear_diamond"
     },
     "title": {
-      "translate": "advancements.buildcraftcore.gears.title"
+      "translate": "advancements.buildcraftunofficial.gears.title"
     },
     "description": {
-      "translate": "advancements.buildcraftcore.gears.description"
+      "translate": "advancements.buildcraftunofficial.gears.description"
     },
     "frame": "goal"
   },
-  "parent": "buildcraftcore:root",
+  "parent": "buildcraftunofficial:root",
   "criteria": {
     "gear_wood": {
       "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [
           {
-            "item": "buildcraftcore:gear_wood"
+            "item": "buildcraftunofficial:gear_wood"
           }
         ]
       }
@@ -28,7 +28,7 @@
       "conditions": {
         "items": [
           {
-            "item": "buildcraftcore:gear_stone"
+            "item": "buildcraftunofficial:gear_stone"
           }
         ]
       }
@@ -38,7 +38,7 @@
       "conditions": {
         "items": [
           {
-            "item": "buildcraftcore:gear_iron"
+            "item": "buildcraftunofficial:gear_iron"
           }
         ]
       }
@@ -48,7 +48,7 @@
       "conditions": {
         "items": [
           {
-            "item": "buildcraftcore:gear_gold"
+            "item": "buildcraftunofficial:gear_gold"
           }
         ]
       }
@@ -58,7 +58,7 @@
       "conditions": {
         "items": [
           {
-            "item": "buildcraftcore:gear_diamond"
+            "item": "buildcraftunofficial:gear_diamond"
           }
         ]
       }

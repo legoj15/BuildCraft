@@ -1,6 +1,6 @@
 {
     "textures": {
-        "#all":"buildcraftsilicon:plugs/pulsar_static",
+        "#all":"buildcraftunofficial:plugs/pulsar_static",
         "particle":"#all"
     },
     "shade": true,

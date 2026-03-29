@@ -1,0 +1,7 @@
+{
+    "parent": "minecraft:item/generated",
+    "textures": {
+        "layer0": "buildcraftunofficial:item/plug_lens",
+        "layer1": "buildcraftunofficial:block/plugs/overlay_lens"
+    }
+}

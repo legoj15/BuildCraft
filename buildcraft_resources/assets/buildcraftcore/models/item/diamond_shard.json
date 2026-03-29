@@ -1,6 +1,6 @@
 {
     "parent": "item/generated",
     "textures": {
-        "layer0": "buildcraftcore:items/diamond_shard"
+        "layer0": "buildcraftunofficial:items/diamond_shard"
     }
 }

@@ -1,7 +1,0 @@
-{
-    "parent": "minecraft:item/generated",
-    "textures": {
-        "layer0": "buildcraftsilicon:item/gates/material_gold",
-        "layer1": "buildcraftsilicon:item/gates/logic_and"
-    }
-}

@@ -88,7 +88,7 @@ import buildcraft.core.tile.TileMarkerVolume;
 public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoadingTile {
     public static final boolean DEBUG_QUARRY = BCDebugging.shouldDebugLog("builders.quarry");
     private static final long MAX_POWER_PER_TICK = 512 * MjAPI.MJ;
-    private static final Identifier DIGGY_DIGGY_HOLE = Identifier.parse("buildcraftbuilders:diggy_diggy_hole");
+    private static final Identifier DIGGY_DIGGY_HOLE = Identifier.parse("buildcraftunofficial:diggy_diggy_hole");
 
     private final MjBattery battery = new MjBattery(24000 * MjAPI.MJ);
     private final MjBatteryReceiver mjReceiver = new MjBatteryReceiver(battery);

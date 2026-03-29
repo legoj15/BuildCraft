@@ -1,14 +1,14 @@
 {
     "size": [176,100],
-    "texture": "buildcraftbuilders:gui/filler",
+    "texture": "buildcraftunofficial:gui/filler",
     "types": {
         "param": {
-            "type": "buildcraftlib:statement/parameter",
+            "type": "buildcraftunofficial:statement/parameter",
             "area": ["53 + 18 * index",39,18,18],
             "source": "filler.pattern"
         },
         "four_button": {
-            "type": "buildcraftlib:button",
+            "type": "buildcraftunofficial:button",
             "args": {
                 "u_start": 0
             },
@@ -23,13 +23,13 @@
     },
     "elements": {
         "pattern_drag_target": {
-            "type": "buildcraftlib:statement/slot",
+            "type": "buildcraftunofficial:statement/slot",
             "source": "filler.pattern",
             "area": [12,32,32,32],
             "draw":false
         },
         "pattern_drawable": {
-            "type": "buildcraftlib:drawable",
+            "type": "buildcraftunofficial:drawable",
             "source": {
                 "sprite": "filler.pattern.sprite",
                 "area": [0, 0, 16, 16]
@@ -41,7 +41,7 @@
             "type": "param"
         },
         "pattern_possible": {
-            "type": "buildcraftlib:statement/source",
+            "type": "buildcraftunofficial:statement/source",
             "source": "filler.possible"
         },
         "button_invert": {

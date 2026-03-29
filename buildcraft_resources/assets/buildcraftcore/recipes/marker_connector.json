@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcraftcore:marker_connector"
+    "item": "buildcraftunofficial:marker_connector"
   },
   "pattern": [
     "r",
@@ -17,21 +17,21 @@
       "ore": "gearWood"
     },
     "w": {
-      "item": "buildcraftcore:wrench"
+      "item": "buildcraftunofficial:wrench"
     }
   },
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftcore:marker_connector"
+      "item": "buildcraftunofficial:marker_connector"
     },
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftcore:gear_wood"
+      "item": "buildcraftunofficial:gear_wood"
     },
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftcore:wrench"
+      "item": "buildcraftunofficial:wrench"
     }
   ]
 }

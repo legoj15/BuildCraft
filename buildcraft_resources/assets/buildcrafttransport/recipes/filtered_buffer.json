@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcrafttransport:filtered_buffer"
+    "item": "buildcraftunofficial:filtered_buffer"
   },
   "pattern": [
     "wdw",
@@ -16,7 +16,7 @@
       "item": "minecraft:chest"
     },
     "d": {
-      "item": "buildcrafttransport:pipe_diamond_item",
+      "item": "buildcraftunofficial:pipe_diamond_item",
       "data": 0
     },
     "w": {
@@ -26,7 +26,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftbuilders:quarry"
+      "item": "buildcraftunofficial:quarry"
     }
   ]
 }

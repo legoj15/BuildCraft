@@ -1,6 +1,6 @@
 {
     "parent": "item/generated",
     "textures": {
-        "layer0": "buildcraftcore:items/map/spot"
+        "layer0": "buildcraftunofficial:items/map/spot"
     }
 }

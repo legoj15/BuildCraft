@@ -4,44 +4,22 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class BCCoreConfig {
 
-    public static final ModConfigSpec SPEC;
+    public static ModConfigSpec.BooleanValue worldGen;
+    public static ModConfigSpec.BooleanValue worldGenWaterSpring;
+    public static ModConfigSpec.BooleanValue minePlayerProtected;
+    public static ModConfigSpec.BooleanValue hidePower;
+    public static ModConfigSpec.BooleanValue hideFluid;
+    public static ModConfigSpec.BooleanValue pumpsConsumeWater;
+    public static ModConfigSpec.IntValue markerMaxDistance;
+    public static ModConfigSpec.IntValue pumpMaxDistance;
+    public static ModConfigSpec.IntValue networkUpdateRate;
+    public static ModConfigSpec.DoubleValue miningMultiplier;
+    public static ModConfigSpec.IntValue miningMaxDepth;
 
-    public static final ModConfigSpec.BooleanValue worldGen;
-    public static final ModConfigSpec.BooleanValue worldGenWaterSpring;
-    public static final ModConfigSpec.BooleanValue minePlayerProtected;
-    public static final ModConfigSpec.BooleanValue hidePower;
-    public static final ModConfigSpec.BooleanValue hideFluid;
-    public static final ModConfigSpec.BooleanValue pumpsConsumeWater;
-    public static final ModConfigSpec.IntValue markerMaxDistance;
-    public static final ModConfigSpec.IntValue pumpMaxDistance;
-    public static final ModConfigSpec.IntValue networkUpdateRate;
-    public static final ModConfigSpec.DoubleValue miningMultiplier;
-    public static final ModConfigSpec.IntValue miningMaxDepth;
-
-    static {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
-
-        builder.push("general");
-
-        worldGen = builder
-                .comment("Set true to allow world generation for BuildCraft")
-                .define("worldGen", true);
-
-        worldGenWaterSpring = builder
-                .comment("Set true to allow water springs to generate")
-                .define("worldGenWaterSpring", true);
-
+    public static void buildGeneral(ModConfigSpec.Builder builder) {
         minePlayerProtected = builder
                 .comment("Set true to prevent quarries from mining player-protected areas")
                 .define("minePlayerProtected", false);
-
-        hidePower = builder
-                .comment("Should power indicators be hidden?")
-                .define("hidePower", false);
-
-        hideFluid = builder
-                .comment("Should fluid indicators be hidden?")
-                .define("hideFluid", false);
 
         pumpsConsumeWater = builder
                 .comment("Should pumps slowly drain infinite water sources?")
@@ -66,8 +44,25 @@ public class BCCoreConfig {
         miningMaxDepth = builder
                 .comment("How deep can mining machines dig?")
                 .defineInRange("miningMaxDepth", 512, 1, 2048);
+    }
 
-        builder.pop();
-        SPEC = builder.build();
+    public static void buildDisplay(ModConfigSpec.Builder builder) {
+        hidePower = builder
+                .comment("Should power indicators be hidden?")
+                .define("hidePower", false);
+
+        hideFluid = builder
+                .comment("Should fluid indicators be hidden?")
+                .define("hideFluid", false);
+    }
+
+    public static void buildWorldgen(ModConfigSpec.Builder builder) {
+        worldGen = builder
+                .comment("Set true to allow world generation for BuildCraft")
+                .define("worldGen", true);
+
+        worldGenWaterSpring = builder
+                .comment("Set true to allow water springs to generate")
+                .define("worldGenWaterSpring", true);
     }
 }

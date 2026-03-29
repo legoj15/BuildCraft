@@ -1,16 +1,16 @@
 {
   "display": {
     "icon": {
-      "item": "buildcraftsilicon:plug_gate"
+      "item": "buildcraftunofficial:plug_gate"
     },
     "title": {
-      "translate": "advancements.buildcrafttransport.pipe_logic.title"
+      "translate": "advancements.buildcraftunofficial.pipe_logic.title"
     },
     "description": {
-      "translate": "advancements.buildcrafttransport.pipe_logic.description"
+      "translate": "advancements.buildcraftunofficial.pipe_logic.description"
     }
   },
-  "parent": "buildcrafttransport:plugging_the_gap",
+  "parent": "buildcraftunofficial:plugging_the_gap",
   "criteria": {
     "code_trigger": {
       "trigger": "minecraft:impossible"

@@ -51,6 +51,6 @@ public class BCLibSprites {
     }
 
     private static ISprite getHolder(String suffix) {
-        return SpriteHolderRegistry.getHolder("buildcraftlib:" + suffix);
+        return SpriteHolderRegistry.getHolder("buildcraftunofficial:" + suffix);
     }
 }

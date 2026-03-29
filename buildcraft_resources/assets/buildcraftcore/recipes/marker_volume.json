@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcraftcore:marker_volume"
+    "item": "buildcraftunofficial:marker_volume"
   },
   "pattern": [
     "l",
@@ -19,7 +19,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftcore:marker_volume"
+      "item": "buildcraftunofficial:marker_volume"
     }
   ]
 }

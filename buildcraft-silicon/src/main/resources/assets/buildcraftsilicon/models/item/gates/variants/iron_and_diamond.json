@@ -1,8 +1,0 @@
-{
-    "parent": "minecraft:item/generated",
-    "textures": {
-        "layer0": "buildcraftsilicon:item/gates/material_iron",
-        "layer1": "buildcraftsilicon:item/gates/logic_and",
-        "layer2": "buildcraftsilicon:item/gates/modifier_diamond"
-    }
-}

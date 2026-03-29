@@ -26,7 +26,7 @@ public class PluggableBlocker extends PipePluggable {
     private static final AABB[] BOXES = new AABB[6];
 
     private static final Identifier ADVANCEMENT_PLACE_PLUG = Identifier.parse(
-        "buildcrafttransport:plugging_the_gap"
+        "buildcraftunofficial:plugging_the_gap"
     );
 
     static {

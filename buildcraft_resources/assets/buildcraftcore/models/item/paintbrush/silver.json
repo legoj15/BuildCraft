@@ -1,6 +1,6 @@
 {
     "parent": "item/handheld",
     "textures": {
-        "layer0": "buildcraftcore:items/paintbrush/silver"
+        "layer0": "buildcraftunofficial:items/paintbrush/silver"
     }
 }

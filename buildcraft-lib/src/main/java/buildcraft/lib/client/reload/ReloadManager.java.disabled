@@ -170,6 +170,6 @@ public enum ReloadManager {
     }
 
     private static ReloadSource cfg(String path) {
-        return new ReloadSource("buildcraftlib", path, SourceType.CONFIG);
+        return new ReloadSource("buildcraftunofficial", path, SourceType.CONFIG);
     }
 }

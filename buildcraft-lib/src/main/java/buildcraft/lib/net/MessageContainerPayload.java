@@ -37,7 +37,7 @@ public record MessageContainerPayload(
 ) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<MessageContainerPayload> TYPE =
-            new CustomPacketPayload.Type<>(Identifier.parse("buildcraftlib:container"));
+            new CustomPacketPayload.Type<>(Identifier.parse("buildcraftunofficial:container"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, MessageContainerPayload> STREAM_CODEC =
             StreamCodec.of(MessageContainerPayload::encode, MessageContainerPayload::decode);

@@ -63,10 +63,10 @@
         }
     ],
     "textures": {
-        "particle": "buildcraftsilicon:blocks/table/advanced_crafting/top",
-        "top": "buildcraftsilicon:blocks/table/advanced_crafting/top",
-        "middle": "buildcraftsilicon:blocks/table/advanced_crafting/middle",
-        "bottom": "buildcraftsilicon:blocks/table/advanced_crafting/bottom",
-        "side": "buildcraftsilicon:blocks/table/advanced_crafting/side"
+        "particle": "buildcraftunofficial:blocks/table/advanced_crafting/top",
+        "top": "buildcraftunofficial:blocks/table/advanced_crafting/top",
+        "middle": "buildcraftunofficial:blocks/table/advanced_crafting/middle",
+        "bottom": "buildcraftunofficial:blocks/table/advanced_crafting/bottom",
+        "side": "buildcraftunofficial:blocks/table/advanced_crafting/side"
     }
 }

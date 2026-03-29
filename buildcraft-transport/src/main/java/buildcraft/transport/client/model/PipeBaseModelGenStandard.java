@@ -160,7 +160,7 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
         TextureAtlasSprite[] array = new TextureAtlasSprite[def.textures.length];
         boolean allResolved = true;
         for (int i = 0; i < array.length; i++) {
-            // textures[i] is e.g. "buildcrafttransport:pipes/stone_item"
+            // textures[i] is e.g. "buildcraftunofficial:pipes/stone_item"
             String texName = def.textures[i];
             int colonIdx = texName.indexOf(':');
             String namespace = colonIdx >= 0 ? texName.substring(0, colonIdx) : "minecraft";

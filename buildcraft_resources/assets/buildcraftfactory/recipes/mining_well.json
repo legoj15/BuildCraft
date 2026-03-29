@@ -1,6 +1,6 @@
 {
   "result": {
-    "item": "buildcraftfactory:mining_well"
+    "item": "buildcraftunofficial:mining_well"
   },
   "pattern": [
     "iri",
@@ -25,7 +25,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftfactory:mining_well"
+      "item": "buildcraftunofficial:mining_well"
     }
   ]
 }

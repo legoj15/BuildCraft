@@ -1,0 +1,11 @@
+{
+  "display": {
+    "icon": { "id": "buildcraftunofficial:pump" },
+    "title": { "translate": "advancements.buildcraftunofficial.draining_the_world.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.draining_the_world.description" }
+  },
+  "parent": "buildcraftunofficial:fluid_storage",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

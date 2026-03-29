@@ -1,22 +1,22 @@
 {
   "display": {
     "icon": {
-      "item": "buildcraftenergy:glob_of_oil"
+      "item": "buildcraftunofficial:glob_of_oil"
     },
     "title": {
-      "translate": "advancements.buildcraftenergy.sticky_dipping.title"
+      "translate": "advancements.buildcraftunofficial.sticky_dipping.title"
     },
     "description": {
-      "translate": "advancements.buildcraftenergy.sticky_dipping.description"
+      "translate": "advancements.buildcraftunofficial.sticky_dipping.description"
     },
     "hidden": true
   },
-  "parent": "buildcraftenergy:fine_riches",
+  "parent": "buildcraftunofficial:fine_riches",
   "criteria": {
     "oil": {
       "trigger": "minecraft:enter_block",
       "conditions": {
-        "block": "buildcraftenergy:fluid_block_oil_heat_0"
+        "block": "buildcraftunofficial:fluid_block_oil_heat_0"
       }
     }
   }

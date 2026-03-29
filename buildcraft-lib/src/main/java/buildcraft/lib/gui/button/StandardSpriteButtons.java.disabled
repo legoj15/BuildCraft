@@ -25,7 +25,7 @@ public class StandardSpriteButtons {
     public static final GuiButtonDrawable.Builder TINY_BUTTON_DRAWABLE;
 
     static {
-        Identifier buttonSheet = Identifier.parse("buildcraftlib:textures/gui/buttons.png");
+        Identifier buttonSheet = Identifier.parse("buildcraftunofficial:textures/gui/buttons.png");
 
         ISprite sprite = new SpriteRaw(buttonSheet, 0, 0, 1, 1);
 

@@ -9,12 +9,12 @@
         },
         "valid": {
             "true": {
-                "model": "buildcraftbuilders:architect_on"
+                "model": "buildcraftunofficial:architect_on"
             },
             "false": {
-                "model": "buildcraftbuilders:architect_off"
+                "model": "buildcraftunofficial:architect_off"
             }
         },
-        "inventory": [{"model": "buildcraftbuilders:architect_off"}]
+        "inventory": [{"model": "buildcraftunofficial:architect_off"}]
     }
 }

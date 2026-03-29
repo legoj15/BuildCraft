@@ -1,0 +1,17 @@
+{
+  "display": {
+    "icon": { "id": "buildcraftunofficial:glob_of_oil" },
+    "title": { "translate": "advancements.buildcraftunofficial.fine_riches.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.fine_riches.description" },
+    "frame": "goal"
+  },
+  "parent": "buildcraftunofficial:root",
+  "criteria": {
+    "has_oil": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [{ "items": "buildcraftunofficial:glob_of_oil" }]
+      }
+    }
+  }
+}

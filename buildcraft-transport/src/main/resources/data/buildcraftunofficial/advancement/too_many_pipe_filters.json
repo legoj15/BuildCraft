@@ -1,0 +1,11 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "buildcraftunofficial:list"
+    ]
+  },
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

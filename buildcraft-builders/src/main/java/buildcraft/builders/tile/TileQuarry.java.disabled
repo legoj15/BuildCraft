@@ -96,7 +96,7 @@ public class TileQuarry extends TileBC_Neptune implements ITickable, IDebuggable
     public static final boolean DEBUG_QUARRY = BCDebugging.shouldDebugLog("builders.quarry");
     private static final long MAX_POWER_PER_TICK = 512 * MjAPI.MJ;
     private static final ResourceLocation ADVANCEMENT_COMPLETE
-        = new ResourceLocation("buildcraftbuilders:diggy_diggy_hole");
+        = new ResourceLocation("buildcraftunofficial:diggy_diggy_hole");
 
     private final MjBattery battery = new MjBattery(24000 * MjAPI.MJ);
     public final Box frameBox = new Box();

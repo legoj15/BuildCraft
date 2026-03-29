@@ -1,0 +1,25 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "buildcraftunofficial:engine_iron"
+    ]
+  },
+  "criteria": {
+    "has_gear_iron": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "buildcraftunofficial:gear_iron"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_gear_iron"
+    ]
+  ]
+}

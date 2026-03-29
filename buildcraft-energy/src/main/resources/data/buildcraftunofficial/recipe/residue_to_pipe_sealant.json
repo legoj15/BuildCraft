@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "buildcraftunofficial:oil_residue_bucket"
+  ],
+  "result": {
+    "id": "buildcraftunofficial:waterproof",
+    "count": 8
+  }
+}

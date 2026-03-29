@@ -1,105 +1,95 @@
 plugins {
-    id 'net.neoforged.moddev' version '2.0.141' apply false
+    id 'net.neoforged.moddev' version '2.0.141'
 }
 
-allprojects {
-    apply plugin: 'java'
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
-    java.toolchain.languageVersion = JavaLanguageVersion.of(25)
-
-    repositories {
-        mavenLocal()
-        maven { url = 'https://maven.neoforged.net/releases' }
-        maven { url = 'https://maven.blamejared.com' }
-        maven { url = 'https://maven.shedaniel.me/' }
-        mavenCentral()
-    }
+repositories {
+    mavenLocal()
+    maven { url = 'https://maven.neoforged.net/releases' }
+    maven { url = 'https://maven.blamejared.com' }
+    maven { url = 'https://maven.shedaniel.me/' }
+    mavenCentral()
 }
 
-subprojects {
-    apply plugin: 'net.neoforged.moddev'
-
-    neoForge {
-        version = project.neo_version
-
-        // Load access transformers from any subproject that has the file
-        def atFile = project.file('src/main/resources/META-INF/accesstransformer.cfg')
-        if (atFile.exists()) {
-            accessTransformers.from(atFile)
+// ─── Unified Source Sets ─────────────────────────────────────────────────────
+// All former subprojects feed into a single source set.
+sourceSets {
+    main {
+        java {
+            srcDirs = [
+                'buildcraft-api/api',
+                'buildcraft-lib/src/main/java',
+                'buildcraft-core/src/main/java',
+                'buildcraft-builders/src/main/java',
+                'buildcraft-energy/src/main/java',
+                'buildcraft-factory/src/main/java',
+                'buildcraft-transport/src/main/java',
+                'buildcraft-silicon/src/main/java',
+                'buildcraft-robotics/src/main/java',
+            ]
         }
-    }
-
-    // Exclude neoforge.mods.toml from individual sub-project JARs.
-    // This prevents NeoForge from detecting them as mod files during dev runs,
-    // which caused "Found 2 mod files for modid X" duplicate detection.
-    // The mods {} block in buildcraft-all provides mod info for dev runs;
-    // the fat JAR has its own merged neoforge.mods.toml for distribution.
-    tasks.named('jar') {
-        exclude 'META-INF/neoforge.mods.toml'
-    }
-
-    dependencies {
-
-    }
-}
-
-// ─── Split-Package Checker ───────────────────────────────────────────────────
-// Ensures no two subprojects export the same Java package.
-// This prevents java.lang.module.ResolutionException at runtime.
-def modulePackagePrefixes = [
-    'buildcraft-api' : 'buildcraft.api.',
-    'buildcraft-lib' : 'buildcraft.lib.',
-    'buildcraft-core': 'buildcraft.core.',
-    'buildcraft-builders': 'buildcraft.builders.',
-    'buildcraft-energy': 'buildcraft.energy.',
-    'buildcraft-factory': 'buildcraft.factory.',
-    'buildcraft-transport': 'buildcraft.transport.',
-    'buildcraft-silicon': 'buildcraft.silicon.',
-    'buildcraft-robotics': 'buildcraft.robotics.',
-]
-
-tasks.register('checkSplitPackages') {
-    group = 'verification'
-    description = 'Checks that no Java file declares a package belonging to another subproject.'
-
-    doLast {
-        def errors = []
-
-        subprojects.each { proj ->
-            def expectedPrefix = modulePackagePrefixes[proj.name]
-            if (expectedPrefix == null) return // unknown subproject, skip
-
-            proj.sourceSets.main.java.srcDirs.each { srcDir ->
-                if (!srcDir.exists()) return
-                fileTree(srcDir).matching { include '**/*.java' }.each { javaFile ->
-                    javaFile.readLines().each { line ->
-                        def m = (line =~ /^\s*package\s+([\w.]+)\s*;/)
-                        if (m) {
-                            def pkg = m[0][1] + '.'
-                            if (!pkg.startsWith(expectedPrefix)) {
-                                errors << "[${proj.name}] ${javaFile.relativePath(srcDir)} declares 'package ${m[0][1]}' — expected '${expectedPrefix}*'"
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if (!errors.isEmpty()) {
-            throw new GradleException(
-                "Split-package violations detected!\n" +
-                errors.collect { "  ✗ ${it}" }.join('\n') +
-                "\n\nFix the package declarations above so each module only uses its own namespace."
-            )
-        } else {
-            logger.lifecycle("✓ No split-package violations found.")
+        resources {
+            srcDirs = [
+                'buildcraft-lib/src/main/resources',
+                'buildcraft-core/src/main/resources',
+                'buildcraft-builders/src/main/resources',
+                'buildcraft-energy/src/main/resources',
+                'buildcraft-factory/src/main/resources',
+                'buildcraft-transport/src/main/resources',
+                'buildcraft-silicon/src/main/resources',
+                'buildcraft-robotics/src/main/resources',
+            ]
         }
     }
 }
 
-// Wire the checker to run before compileJava on every subproject
-subprojects {
-    tasks.named('compileJava') {
-        dependsOn rootProject.tasks.named('checkSplitPackages')
+// ─── NeoForge Configuration ─────────────────────────────────────────────────
+neoForge {
+    version = project.neo_version
+
+    accessTransformers.from(file('buildcraft-core/src/main/resources/META-INF/accesstransformer.cfg'))
+
+    runs {
+        client {
+            client()
+        }
+    }
+
+    mods {
+        buildcraftunofficial {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+dependencies {
+    // Expression library (local file dependency)
+    implementation files("sub_projects/expression/build/libs/buildcraft-libexpression-0.9.3-pre.4.jar")
+
+    // JEI/REI — No compatible versions for MC 26.1 yet
+    // compileOnly 'mezz.jei:jei-1.21.1-common-api:19.21.0.247'
+    // compileOnly 'me.shedaniel:RoughlyEnoughItems-api-neoforge:16.0.799'
+}
+
+// Exclude JEI/REI compat modules from compilation — no MC 26.1 versions available
+tasks.withType(JavaCompile).configureEach {
+    exclude '**/compat/jei/**'
+    exclude '**/compat/rei/**'
+}
+
+tasks.named('processResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// ─── Distribution JAR ────────────────────────────────────────────────────────
+tasks.named('jar') {
+    archiveBaseName = 'BuildCraft-all'
+    archiveVersion = '26.1-8.0.0'
+    archiveClassifier = ''
+
+    // Include the expression library
+    from(zipTree("${rootDir}/sub_projects/expression/build/libs/buildcraft-libexpression-0.9.3-pre.4.jar")) {
+        exclude 'META-INF/**'
     }
 }

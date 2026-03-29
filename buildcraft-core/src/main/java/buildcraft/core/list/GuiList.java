@@ -26,7 +26,7 @@ import buildcraft.lib.gui.ledger.LedgerHelp;
 
 public class GuiList extends GuiBC8<ContainerList> {
     private static final Identifier TEXTURE_BASE =
-        Identifier.parse("buildcraftcore:textures/gui/list_new.png");
+        Identifier.parse("buildcraftunofficial:textures/gui/list_new.png");
     private static final int SIZE_X = 176, SIZE_Y = 191;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE_BASE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_ONE_STACK = new GuiIcon(TEXTURE_BASE, 0, 191, 20, 20);

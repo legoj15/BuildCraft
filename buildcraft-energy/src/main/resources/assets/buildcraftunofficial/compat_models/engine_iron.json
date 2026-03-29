@@ -1,0 +1,7 @@
+{
+    "textures": {
+        "#back":"buildcraftunofficial:block/engine/iron_back",
+        "#side":"buildcraftunofficial:block/engine/iron_side"
+    },
+    "parent":"buildcraftunofficial:compat_models/engine_base"
+}

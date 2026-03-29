@@ -109,7 +109,7 @@ public class ItemPluggableFacade extends Item implements IItemPluggable, IFacade
             String displayName = getFacadeStateDisplayName(fullState.phasedStates[0]);
             return super.getName(stack).copy().append(": " + displayName);
         } else {
-            return Component.translatable("item.buildcraftsilicon.plug_facade_phased");
+            return Component.translatable("item.buildcraftunofficial.plug_facade_phased");
         }
     }
 
@@ -129,12 +129,12 @@ public class ItemPluggableFacade extends Item implements IItemPluggable, IFacade
                     defaultState = state;
                     continue;
                 }
-                tooltip.accept(Component.translatable("item.buildcraftsilicon.plug_facade_phased.state",
+                tooltip.accept(Component.translatable("item.buildcraftunofficial.plug_facade_phased.state",
                     Component.translatable("color.minecraft." + state.activeColour.getName()),
                     getFacadeStateDisplayName(state)));
             }
             if (defaultState != null) {
-                tooltip.accept(Component.translatable("item.buildcraftsilicon.plug_facade_phased.state_default",
+                tooltip.accept(Component.translatable("item.buildcraftunofficial.plug_facade_phased.state_default",
                     getFacadeStateDisplayName(defaultState)));
             }
         } else {

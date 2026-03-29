@@ -12,7 +12,7 @@ import buildcraft.lib.statement.FullStatement;
 import buildcraft.lib.statement.StatementContext;
 
 public class ElementTypeStatementSlot extends ElementType {
-    public static final String NAME = "buildcraftlib:statement/slot";
+    public static final String NAME = "buildcraftunofficial:statement/slot";
     public static final ElementTypeStatementSlot INSTANCE = new ElementTypeStatementSlot();
 
     // - pos[0], pos[1]: the position of the sprite (where it will be drawn, relative to the root of the gui).

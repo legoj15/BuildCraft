@@ -30,10 +30,10 @@ public class LedgerEngine extends Ledger_Neptune {
     private static final int TEXT_COLOUR = 0x000000;
 
     // Engine status icon textures (from 1.12.2 BCLibSprites)
-    private static final Identifier ICON_ACTIVE = Identifier.parse("buildcraftlib:textures/icons/engine_active.png");
-    private static final Identifier ICON_INACTIVE = Identifier.parse("buildcraftlib:textures/icons/engine_inactive.png");
-    private static final Identifier ICON_WARM = Identifier.parse("buildcraftlib:textures/icons/engine_warm.png");
-    private static final Identifier ICON_OVERHEAT = Identifier.parse("buildcraftlib:textures/icons/engine_overheat.png");
+    private static final Identifier ICON_ACTIVE = Identifier.parse("buildcraftunofficial:textures/icons/engine_active.png");
+    private static final Identifier ICON_INACTIVE = Identifier.parse("buildcraftunofficial:textures/icons/engine_inactive.png");
+    private static final Identifier ICON_WARM = Identifier.parse("buildcraftunofficial:textures/icons/engine_warm.png");
+    private static final Identifier ICON_OVERHEAT = Identifier.parse("buildcraftunofficial:textures/icons/engine_overheat.png");
 
     private final Supplier<EnumPowerStage> powerStageSupplier;
     private final Supplier<Boolean> engineOnSupplier;

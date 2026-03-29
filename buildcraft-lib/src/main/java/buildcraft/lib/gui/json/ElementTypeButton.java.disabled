@@ -20,7 +20,7 @@ import buildcraft.lib.misc.GuiUtil;
 import buildcraft.lib.misc.SpriteUtil;
 
 public class ElementTypeButton extends ElementType {
-    public static final String NAME = "buildcraftlib:button";
+    public static final String NAME = "buildcraftunofficial:button";
     public static final ElementTypeButton INSTANCE = new ElementTypeButton();
 
     // Args:

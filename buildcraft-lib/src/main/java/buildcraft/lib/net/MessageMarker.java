@@ -36,7 +36,7 @@ public record MessageMarker(
 ) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<MessageMarker> TYPE =
-            new CustomPacketPayload.Type<>(Identifier.parse("buildcraftlib:marker"));
+            new CustomPacketPayload.Type<>(Identifier.parse("buildcraftunofficial:marker"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, MessageMarker> STREAM_CODEC =
             StreamCodec.of(MessageMarker::encode, MessageMarker::decode);

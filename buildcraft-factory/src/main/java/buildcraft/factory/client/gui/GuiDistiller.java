@@ -28,7 +28,7 @@ import buildcraft.lib.gui.pos.GuiRectangle;
 
 public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     private static final Identifier TEXTURE =
-            Identifier.parse("buildcraftfactory:textures/gui/distiller.png");
+            Identifier.parse("buildcraftunofficial:textures/gui/distiller.png");
     private static final int SIZE_X = 176, SIZE_Y = 166;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
 

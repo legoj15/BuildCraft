@@ -31,8 +31,8 @@ public class BCEnergyFluidsClient {
         LOGGER.info("[BCEnergyFluidsClient] Registering IClientFluidTypeExtensions for {} fluid entries.", BCEnergyFluids.ALL.size());
         for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
             String spriteName = entry.baseName() + "_heat_" + entry.heat();
-            final Identifier stillId = Identifier.fromNamespaceAndPath("buildcraftenergy", "block/fluids/" + spriteName + "_still");
-            final Identifier flowId = Identifier.fromNamespaceAndPath("buildcraftenergy", "block/fluids/" + spriteName + "_flow");
+            final Identifier stillId = Identifier.fromNamespaceAndPath("buildcraftunofficial", "block/fluids/" + spriteName + "_still");
+            final Identifier flowId = Identifier.fromNamespaceAndPath("buildcraftunofficial", "block/fluids/" + spriteName + "_flow");
 
             event.registerFluidType(new IClientFluidTypeExtensions() {
                 public Identifier getStillTexture() {
@@ -56,10 +56,10 @@ public class BCEnergyFluidsClient {
         LOGGER.info("[BCEnergyFluidsClient] RegisterFluidModelsEvent fired! Registering {} fluid entries.", BCEnergyFluids.ALL.size());
         for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
             // Reference the pre-recolored sprites:
-            // "buildcraftenergy:block/fluids/<baseName>_heat_<heat>_still"
+            // "buildcraftunofficial:block/fluids/<baseName>_heat_<heat>_still"
             String spriteName = entry.baseName() + "_heat_" + entry.heat();
-            Identifier stillId = Identifier.fromNamespaceAndPath("buildcraftenergy", "block/fluids/" + spriteName + "_still");
-            Identifier flowId = Identifier.fromNamespaceAndPath("buildcraftenergy", "block/fluids/" + spriteName + "_flow");
+            Identifier stillId = Identifier.fromNamespaceAndPath("buildcraftunofficial", "block/fluids/" + spriteName + "_still");
+            Identifier flowId = Identifier.fromNamespaceAndPath("buildcraftunofficial", "block/fluids/" + spriteName + "_flow");
 
             net.minecraft.client.resources.model.sprite.Material stillMat =
                 new net.minecraft.client.resources.model.sprite.Material(stillId);

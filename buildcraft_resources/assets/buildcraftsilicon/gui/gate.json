@@ -7,14 +7,14 @@
         "slot_pair_start": "(162 - (slot_pair_width + (gate.two_columns ? (slot_pair_width + 18) : 0))) / 2"
     },
     "size": [176, "16 + 101 + slots_height"],
-    "texture": "buildcraftsilicon:gui/gate_interface",
+    "texture": "buildcraftunofficial:gui/gate_interface",
     "elements": {
         "background_top": {
-            "type": "buildcraftlib:drawable",
+            "type": "buildcraftunofficial:drawable",
             "size": [176, 16]
         },
         "background_bottom": {
-            "type": "buildcraftlib:drawable",
+            "type": "buildcraftunofficial:drawable",
             "pos": [0, "16 + slots_height"],
             "size": [176, 101],
             "source": {
@@ -22,11 +22,11 @@
             }
         },
         "triggers_possible": {
-            "type": "buildcraftlib:statement/source",
+            "type": "buildcraftunofficial:statement/source",
             "source": "gate.triggers.possible"
         },
         "actions_possible": {
-            "type": "buildcraftlib:statement/source",
+            "type": "buildcraftunofficial:statement/source",
             "source": "gate.actions.possible",
             "side": "right"
         },
@@ -37,7 +37,7 @@
                 "step": 1,
                 "while": "index < vertical_slot_count"
             },
-            "type": "buildcraftlib:drawable",
+            "type": "buildcraftunofficial:drawable",
             "size": [176, 18],
             "pos": [0, "16 + index * 18"],
             "source": {
@@ -45,14 +45,14 @@
             }
         },
         "title": {
-            "type": "buildcraftlib:text",
+            "type": "buildcraftunofficial:text",
             "expression": "gate.variant",
             "pos": [ "176 / 2", 6 ],
             "colour": "0xFF_40_40_40",
             "centered": true
         },
         "inv_title": {
-            "type": "buildcraftlib:text",
+            "type": "buildcraftunofficial:text",
             "text": "gui.inventory",
             "pos": [ 5, "16 + slots_height + 4" ],
             "colour": "0xFF_40_40_40",
@@ -71,7 +71,7 @@
                     "while": "column < horizontal_slot_count"
                 }
             },
-            "type": "buildcraftlib:container",
+            "type": "buildcraftunofficial:container",
             "limit": false,
             "pos": [ "slot_pair_start + 7 + column * (18 + slot_pair_width)", "16 + row * 18" ],
             "variables": {
@@ -85,7 +85,7 @@
             },
             "children": {
                 "trigger_slot": {
-                    "type": "buildcraftlib:statement/slot",
+                    "type": "buildcraftunofficial:statement/slot",
                     "source_expression": "trigger_source",
                     "pos": [ 0, 0 ],
                     "children": {
@@ -96,14 +96,14 @@
                                 "step": 1,
                                 "while": "index < gate.triggers.args"
                             },
-                            "type": "buildcraftlib:statement/parameter",
+                            "type": "buildcraftunofficial:statement/parameter",
                             "source_expression": "trigger_source",
                             "pos": [ "18 * (index + 1)", 0 ]
                         }
                     }
                 },
                 "action_slot": {
-                    "type": "buildcraftlib:statement/slot",
+                    "type": "buildcraftunofficial:statement/slot",
                     "source_expression": "action_source",
                     "pos": [ "18 * (2 + gate.triggers.args)", 0 ],
                     "children": {
@@ -114,26 +114,26 @@
                                 "step": 1,
                                 "while": "index < gate.actions.args"
                             },
-                            "type": "buildcraftlib:statement/parameter",
+                            "type": "buildcraftunofficial:statement/parameter",
                             "source_expression": "action_source",
                             "pos": [ "18 * (index + 1)", 0 ]
                         }
                     }
                 },
                 "trigger_is_on": {
-                    "type": "buildcraftlib:drawable",
+                    "type": "buildcraftunofficial:drawable",
                     "pos": [ "connector_pos", 0 ],
                     "size": [ 7, 18 ],
                     "source.pos": [ "176 + (trigger_on ? 18 : 0)", 18 ]
                 },
                 "action_is_on": {
-                    "type": "buildcraftlib:drawable",
+                    "type": "buildcraftunofficial:drawable",
                     "pos": [ "connector_pos + 11", 0 ],
                     "size": [ 7, 18 ],
                     "source.pos": [ "187 + (action_on ? 18 : 0)", 18 ]
                 },
                 "horizontal_connector": {
-                    "type": "buildcraftlib:drawable",
+                    "type": "buildcraftunofficial:drawable",
                     "pos": [ "connector_pos + 7", 0 ],
                     "size": [ 4, 18 ],
                     "source.pos": [ "180 + (connected_is_on ? 18 : 0)", 18 ]
@@ -153,7 +153,7 @@
                     "while": "column < horizontal_slot_count"
                 }
             },
-            "type": "buildcraftlib:container",
+            "type": "buildcraftunofficial:container",
             "pos": [ "slot_pair_start + 7 + column * (18 + slot_pair_width) + 18 * (1 + gate.triggers.args)", "16 + 9 + row * 18" ],
             "variables": {
                 "pair_index": "row + column * vertical_slot_count",
@@ -163,17 +163,17 @@
             },
             "children": {
                 "above_connection": {
-                    "type": "buildcraftlib:drawable",
+                    "type": "buildcraftunofficial:drawable",
                     "area": [ 0, 0, 18, 9 ],
                     "source.pos": [ "176 + (action_above ? 18 : 0)", "36 + (is_connected ? 18 : 0)" ]
                 },
                 "below_connection": {
-                    "type": "buildcraftlib:drawable",
+                    "type": "buildcraftunofficial:drawable",
                     "area": [ 0, 9, 18, 9 ],
                     "source.pos": [ "176 + (action_below ? 18 : 0)", "36 + 9 + (is_connected ? 18 : 0)" ]
                 },
                 "button": {
-                    "type": "buildcraftlib:button",
+                    "type": "buildcraftunofficial:button",
                     "button_expression": "'gate.connection/' + pair_index",
                     "pos": [ 0, 0 ],
                     "size": [ 18, 18 ],

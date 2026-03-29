@@ -1,8 +1,6 @@
 package buildcraft.silicon;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
@@ -17,20 +15,19 @@ import org.slf4j.LoggerFactory;
 import buildcraft.api.facades.FacadeAPI;
 import buildcraft.api.mj.MjAPI;
 
+import buildcraft.core.BCCore;
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
 import buildcraft.silicon.plug.FacadeInstance;
 import buildcraft.silicon.plug.FacadeStateManager;
 
-@Mod(BCSilicon.MODID)
+/**
+ * BuildCraft Silicon initializer. No longer a separate @Mod — called from BCCore.
+ */
 public class BCSilicon {
-    public static final String MODID = "buildcraftsilicon";
+    public static final String MODID = BCCore.MODID;
     private static final Logger LOGGER = LoggerFactory.getLogger(BCSilicon.class);
 
-    public static BCSilicon INSTANCE;
-
-    public BCSilicon(IEventBus modEventBus, ModContainer modContainer) {
-        INSTANCE = this;
-
+    public static void init(IEventBus modEventBus) {
         // Register all deferred registries
         BCSiliconBlocks.init(modEventBus);
         BCSiliconItems.init(modEventBus);
@@ -47,83 +44,51 @@ public class BCSilicon {
         }
 
         // Register capabilities, lifecycle events, and creative tab
-        modEventBus.addListener(this::registerCapabilities);
-        modEventBus.addListener(this::commonSetup);
-        modEventBus.addListener(net.neoforged.bus.api.EventPriority.LOWEST, this::addCreativeTabItems);
+        modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
+            registerCapabilities(event);
+        });
+        modEventBus.addListener((FMLCommonSetupEvent event) -> {
+            commonSetup(event);
+        });
+        modEventBus.addListener(net.neoforged.bus.api.EventPriority.LOWEST, (BuildCreativeModeTabContentsEvent event) -> {
+            addCreativeTabItems(event);
+        });
 
         // Register laser beam renderer on the game event bus (client only)
-        if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
-            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(buildcraft.silicon.client.RenderLaser.class);
+        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+            NeoForge.EVENT_BUS.register(buildcraft.silicon.client.RenderLaser.class);
         }
 
-        // MC 26.1: Register recipes on ServerAboutToStartEvent instead of commonSetup,
-        // because ItemStack/FluidStack constructors now require bound registry components.
-        NeoForge.EVENT_BUS.addListener(this::onServerAboutToStart);
+        // MC 26.1: Register recipes on ServerAboutToStartEvent
+        NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> {
+            onServerAboutToStart(event);
+        });
 
         LOGGER.info("BuildCraft Silicon initialized");
     }
 
-    private void registerCapabilities(RegisterCapabilitiesEvent event) {
-        // MJ receiver capability — allows engines to send power to the laser
-        event.registerBlockEntity(
-            MjAPI.CAP_RECEIVER,
-            BCSiliconBlockEntities.LASER.get(),
-            (laser, direction) -> laser.getMjReceiver()
-        );
-
-        // MJ connector capability — allows visual connection checks
-        event.registerBlockEntity(
-            MjAPI.CAP_CONNECTOR,
-            BCSiliconBlockEntities.LASER.get(),
-            (laser, direction) -> laser.getMjReceiver()
-        );
+    private static void registerCapabilities(RegisterCapabilitiesEvent event) {
+        event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCSiliconBlockEntities.LASER.get(),
+            (laser, direction) -> laser.getMjReceiver());
+        event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCSiliconBlockEntities.LASER.get(),
+            (laser, direction) -> laser.getMjReceiver());
     }
 
-    private void commonSetup(FMLCommonSetupEvent event) {
+    private static void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
-            // Register pluggable definitions with the transport registry.
-            // This MUST happen after Transport's constructor has set PipeApi.pluggableRegistry.
             BCSiliconPlugs.registerAll();
-
-            // Set up the facade API references
             FacadeAPI.facadeItem = BCSiliconItems.PLUG_FACADE.get();
             FacadeAPI.registry = FacadeStateManager.INSTANCE;
-
-            // NOTE: FacadeStateManager.init() is NOT called here.
-            // MC 26.1: ItemStack constructors require Holder.components() to be bound,
-            // which only happens after registries freeze. Facade init is deferred to
-            // ServerAboutToStartEvent / BuildCreativeModeTabContentsEvent.
         });
     }
 
-    private void onServerAboutToStart(ServerAboutToStartEvent event) {
-        // MC 26.1: Facade + recipe initialization moved here from commonSetup because
-        // ItemStack/FluidStack constructors now access Holder.components(),
-        // which is only bound after registries finish freezing.
+    private static void onServerAboutToStart(ServerAboutToStartEvent event) {
         FacadeStateManager.ensureInitialized();
         BCSiliconRecipes.init();
     }
 
-    private void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
-        if (event.getTabKey() == buildcraft.core.BCCoreCreativeTabs.MAIN_TAB_KEY) {
-            // Tables (after laser)
-            event.accept(new ItemStack(BCSiliconItems.LASER.get()));
-            event.accept(new ItemStack(BCSiliconItems.ASSEMBLY_TABLE.get()));
-            event.accept(new ItemStack(BCSiliconItems.ADVANCED_CRAFTING_TABLE.get()));
-            event.accept(new ItemStack(BCSiliconItems.INTEGRATION_TABLE.get()));
+    private static void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
 
-            // Chipsets
-            event.accept(new ItemStack(BCSiliconItems.REDSTONE_RED_CHIPSET.get()));
-            event.accept(new ItemStack(BCSiliconItems.REDSTONE_IRON_CHIPSET.get()));
-            event.accept(new ItemStack(BCSiliconItems.REDSTONE_GOLD_CHIPSET.get()));
-            event.accept(new ItemStack(BCSiliconItems.REDSTONE_QUARTZ_CHIPSET.get()));
-            event.accept(new ItemStack(BCSiliconItems.REDSTONE_DIAMOND_CHIPSET.get()));
-
-            // Gate Copier
-            event.accept(new ItemStack(BCSiliconItems.GATE_COPIER.get()));
-        }
-
-        // Gates are pluggables — they belong in the Pluggables tab
         if (event.getTabKey() == BCSiliconCreativeTabs.TRANSPORT_PLUGS_TAB_KEY) {
             buildcraft.silicon.item.ItemPluggableGate gateItem = BCSiliconItems.PLUG_GATE.get();
             for (buildcraft.silicon.gate.EnumGateMaterial material : buildcraft.silicon.gate.EnumGateMaterial.VALUES) {
@@ -138,7 +103,6 @@ public class BCSilicon {
                 }
             }
 
-            // Lenses and Filters
             buildcraft.silicon.item.ItemPluggableLens lensItem = BCSiliconItems.PLUG_LENS.get();
             event.accept(lensItem.getStack(null, false));
             for (net.minecraft.world.item.DyeColor color : net.minecraft.world.item.DyeColor.values()) {
@@ -149,18 +113,13 @@ public class BCSilicon {
                 event.accept(lensItem.getStack(color, true));
             }
 
-            // Other Pluggables
             event.accept(new ItemStack(BCSiliconItems.PLUG_PULSAR.get()));
             event.accept(new ItemStack(BCSiliconItems.PLUG_LIGHT_SENSOR.get()));
             event.accept(new ItemStack(BCSiliconItems.PLUG_TIMER.get()));
         }
 
-        // Facades in their own tab
         if (event.getTabKey() == BCSiliconCreativeTabs.FACADE_TAB_KEY) {
-            // Ensure facade states are scanned — this may be the first point where
-            // ItemStack construction is safe (registry components are bound).
             FacadeStateManager.ensureInitialized();
-            // Run visual deduplication using cached models from the last bake
             if (FMLEnvironment.getDist() == Dist.CLIENT) {
                 buildcraft.silicon.client.BCSiliconClient.runDeferredDedup();
             }

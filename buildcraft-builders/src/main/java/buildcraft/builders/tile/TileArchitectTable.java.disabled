@@ -77,7 +77,7 @@ public class TileArchitectTable extends TileBC_Neptune implements ITickable, IDe
     public static final int NET_BOX = IDS.allocId("BOX");
     @SuppressWarnings("WeakerAccess")
     public static final int NET_SCAN = IDS.allocId("SCAN");
-    private static final ResourceLocation ADVANCEMENT = new ResourceLocation("buildcraftbuilders:architect");
+    private static final ResourceLocation ADVANCEMENT = new ResourceLocation("buildcraftunofficial:architect");
 
     public final ItemHandlerSimple invSnapshotIn = itemManager.addInvHandler(
         "in",

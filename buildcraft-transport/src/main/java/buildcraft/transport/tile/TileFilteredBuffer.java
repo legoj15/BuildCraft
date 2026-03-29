@@ -52,7 +52,7 @@ public class TileFilteredBuffer extends TileBC_Neptune implements MenuProvider {
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.buildcrafttransport.filtered_buffer");
+        return Component.translatable("block.buildcraftunofficial.filtered_buffer");
     }
 
     @Nullable

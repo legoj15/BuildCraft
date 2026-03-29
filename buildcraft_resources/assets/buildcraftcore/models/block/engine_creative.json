@@ -1,9 +1,9 @@
 {
     "textures": {
-        "#back":"buildcraftcore:blocks/engine/creative/back",
-        "#side":"buildcraftcore:blocks/engine/creative/side"
+        "#back":"buildcraftunofficial:blocks/engine/creative/back",
+        "#side":"buildcraftunofficial:blocks/engine/creative/side"
     },
-    "parent":"buildcraftlib:models/block/engine_base",
+    "parent":"buildcraftunofficial:models/block/engine_base",
     "variables": {
         "stage_light": 0
     }

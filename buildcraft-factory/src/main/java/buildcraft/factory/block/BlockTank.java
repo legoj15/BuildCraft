@@ -49,7 +49,7 @@ import buildcraft.lib.misc.FluidUtilBC;
 public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
     public static final MapCodec<BlockTank> CODEC = simpleCodec(BlockTank::new);
     public static final BooleanProperty JOINED_BELOW = BooleanProperty.create("joined_below");
-    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftfactory:fluid_storage");
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:fluid_storage");
 
     private static final VoxelShape SHAPE = Block.box(2, 0, 2, 14, 16, 14);
 

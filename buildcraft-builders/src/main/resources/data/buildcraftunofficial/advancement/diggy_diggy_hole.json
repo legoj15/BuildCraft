@@ -1,0 +1,12 @@
+{
+  "display": {
+    "icon": { "id": "buildcraftunofficial:quarry" },
+    "title": { "translate": "advancements.buildcraftunofficial.diggy.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.diggy.description" },
+    "frame": "goal"
+  },
+  "parent": "buildcraftunofficial:shaping_the_world",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

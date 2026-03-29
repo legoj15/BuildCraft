@@ -34,7 +34,7 @@ import buildcraft.lib.misc.AdvancementUtil;
 
 public class BlockQuarry extends HorizontalDirectionalBlock implements EntityBlock {
     public static final MapCodec<BlockQuarry> CODEC = simpleCodec(BlockQuarry::new);
-    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftbuilders:shaping_the_world");
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:shaping_the_world");
 
     public BlockQuarry(Properties properties) {
         super(properties);

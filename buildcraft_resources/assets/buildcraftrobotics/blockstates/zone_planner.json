@@ -1,7 +1,7 @@
 {
     "forge_marker": 1,
     "defaults": {
-        "model": "buildcraftrobotics:zone_planner"
+        "model": "buildcraftunofficial:zone_planner"
     },
     "variants": {
         "facing": {

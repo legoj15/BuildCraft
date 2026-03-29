@@ -147,6 +147,6 @@
         }
     ],
     "textures": {
-        "main": "buildcraftcore:lasers/marker_volume_connected"
+        "main": "buildcraftunofficial:lasers/marker_volume_connected"
     }
 }

@@ -1,16 +1,16 @@
 {
   "display": {
     "icon": {
-      "item": "buildcraftfactory:distiller"
+      "item": "buildcraftunofficial:distiller"
     },
     "title": {
-      "translate": "advancements.buildcraftfactory.heating_and_distilling.title"
+      "translate": "advancements.buildcraftunofficial.heating_and_distilling.title"
     },
     "description": {
-      "translate": "advancements.buildcraftfactory.heating_and_distilling.description"
+      "translate": "advancements.buildcraftunofficial.heating_and_distilling.description"
     }
   },
-  "parent": "buildcraftfactory:oil_platform",
+  "parent": "buildcraftunofficial:oil_platform",
   "criteria": {
     "code_trigger": {
       "trigger": "minecraft:impossible"

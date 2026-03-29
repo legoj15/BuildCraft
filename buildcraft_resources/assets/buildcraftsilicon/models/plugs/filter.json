@@ -1,7 +1,7 @@
 {
-    "parent":"buildcraftsilicon:models/plugs/lens",
+    "parent":"buildcraftunofficial:models/plugs/lens",
     "textures": {
-        "#main": "buildcraftsilicon:plugs/filter"
+        "#main": "buildcraftunofficial:plugs/filter"
     },
     "values": {
         "isFilter":"true"

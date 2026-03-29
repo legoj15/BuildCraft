@@ -23,7 +23,7 @@ import buildcraft.lib.misc.NBTUtilBC;
 
 public class PipeBehaviourLapis extends PipeBehaviour {
     private static final net.minecraft.resources.Identifier ADVANCEMENT
-        = net.minecraft.resources.Identifier.parse("buildcrafttransport:categorizing_with_colors");
+        = net.minecraft.resources.Identifier.parse("buildcraftunofficial:categorizing_with_colors");
 
     private DyeColor colour = DyeColor.WHITE;
 

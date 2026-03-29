@@ -13,7 +13,7 @@ import buildcraft.energy.container.ContainerEngineIron;
 
 public class BCEnergyMenuTypes {
     public static final DeferredRegister<MenuType<?>> MENU_TYPES =
-            DeferredRegister.create(Registries.MENU, "buildcraftcore");
+            DeferredRegister.create(Registries.MENU, "buildcraftunofficial");
 
     public static final Supplier<MenuType<ContainerEngineStone>> ENGINE_STONE = MENU_TYPES.register(
             "engine_stone",

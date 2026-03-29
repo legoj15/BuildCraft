@@ -1,56 +1,34 @@
 {
     "sources": [
         {
-            "type": "minecraft:single",
-            "resource": "buildcraftcore:lasers/marker_default_possible"
+            "type": "minecraft:directory",
+            "source": "lasers",
+            "prefix": "lasers/"
         },
         {
-            "type": "minecraft:single",
-            "resource": "buildcraftcore:lasers/marker_path_connected"
+            "type": "minecraft:directory",
+            "source": "pipes",
+            "prefix": "pipes/"
         },
         {
-            "type": "minecraft:single",
-            "resource": "buildcraftcore:lasers/marker_path_possible"
+            "type": "minecraft:directory",
+            "source": "wires",
+            "prefix": "wires/"
         },
         {
-            "type": "minecraft:single",
-            "resource": "buildcraftcore:lasers/marker_volume_connected"
+            "type": "minecraft:directory",
+            "source": "icons",
+            "prefix": "icons/"
         },
         {
-            "type": "minecraft:single",
-            "resource": "buildcraftcore:lasers/marker_volume_possible"
+            "type": "minecraft:directory",
+            "source": "block/engine",
+            "prefix": "block/engine/"
         },
         {
-            "type": "minecraft:single",
-            "resource": "buildcraftcore:lasers/marker_volume_signal"
-        },
-        {
-            "type": "minecraft:single",
-            "resource": "buildcraftcore:lasers/power_full"
-        },
-        {
-            "type": "minecraft:single",
-            "resource": "buildcraftcore:lasers/power_high"
-        },
-        {
-            "type": "minecraft:single",
-            "resource": "buildcraftcore:lasers/power_low"
-        },
-        {
-            "type": "minecraft:single",
-            "resource": "buildcraftcore:lasers/power_med"
-        },
-        {
-            "type": "minecraft:single",
-            "resource": "buildcraftcore:lasers/stripes_read"
-        },
-        {
-            "type": "minecraft:single",
-            "resource": "buildcraftcore:lasers/stripes_write"
-        },
-        {
-            "type": "minecraft:single",
-            "resource": "buildcraftcore:lasers/stripes_write_direction"
+            "type": "minecraft:directory",
+            "source": "block/pump",
+            "prefix": "block/pump/"
         }
     ]
 }

@@ -33,9 +33,9 @@
         }
     },
     "textures": {
-        "particle": "buildcraftsilicon:blocks/laser/bottom",
-        "top": "buildcraftsilicon:blocks/laser/top",
-        "side": "buildcraftsilicon:blocks/laser/side",
-        "bottom": "buildcraftsilicon:blocks/laser/bottom"
+        "particle": "buildcraftunofficial:blocks/laser/bottom",
+        "top": "buildcraftunofficial:blocks/laser/top",
+        "side": "buildcraftunofficial:blocks/laser/side",
+        "bottom": "buildcraftunofficial:blocks/laser/bottom"
     }
 }

@@ -23,7 +23,7 @@ import buildcraft.silicon.EnumAssemblyRecipeState;
 import buildcraft.silicon.container.ContainerAssemblyTable;
 
 public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
-    private static final Identifier TEXTURE_BASE = Identifier.parse("buildcraftsilicon:textures/gui/assembly_table.png");
+    private static final Identifier TEXTURE_BASE = Identifier.parse("buildcraftunofficial:textures/gui/assembly_table.png");
     private static final int SIZE_X = 176, SIZE_Y = 220;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE_BASE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_SAVED = new GuiIcon(TEXTURE_BASE, SIZE_X, 0, 16, 16);
@@ -84,7 +84,7 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
 
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        String title = I18n.get("block.buildcraftsilicon.assembly_table");
+        String title = I18n.get("block.buildcraftunofficial.assembly_table");
         graphics.text(font, title, (imageWidth - font.width(title)) / 2, 15, 0xFF404040, false);
     }
 

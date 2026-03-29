@@ -42,7 +42,7 @@ public class FacadeAssemblyRecipes extends AssemblyRecipe implements IRecipeView
     public static final FacadeAssemblyRecipes INSTANCE = new FacadeAssemblyRecipes();
 
     static {
-        INSTANCE.setRegistryName("buildcraftsilicon:facadeRecipes");
+        INSTANCE.setRegistryName("buildcraftunofficial:facadeRecipes");
     }
 
     private static final int TIME_GAP = 500;
@@ -140,7 +140,7 @@ public class FacadeAssemblyRecipes extends AssemblyRecipe implements IRecipeView
     }
 
     private static ItemStack baseRequirementStack() {
-        net.minecraft.world.item.Item pipe = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse("buildcrafttransport:pipe_structure"));
+        net.minecraft.world.item.Item pipe = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_structure"));
         if (pipe == Items.AIR) {
             return new ItemStack(Items.COBBLESTONE_WALL);
         }

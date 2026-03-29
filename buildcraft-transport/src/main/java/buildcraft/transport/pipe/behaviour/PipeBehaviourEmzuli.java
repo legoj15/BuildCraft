@@ -42,7 +42,7 @@ import buildcraft.lib.misc.AdvancementUtil;
  * Activated via gate Extraction Preset actions. */
 public class PipeBehaviourEmzuli extends PipeBehaviourWood {
 
-    private static final net.minecraft.resources.Identifier ADVANCEMENT = net.minecraft.resources.Identifier.parse("buildcrafttransport:categorizing_with_colors");
+    private static final net.minecraft.resources.Identifier ADVANCEMENT = net.minecraft.resources.Identifier.parse("buildcraftunofficial:categorizing_with_colors");
 
     public enum SlotIndex {
         SQUARE(DyeColor.RED),

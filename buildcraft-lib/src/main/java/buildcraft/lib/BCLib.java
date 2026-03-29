@@ -10,8 +10,6 @@ import java.util.function.Supplier;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.api.fuels.BuildcraftFuelRegistry;
@@ -20,21 +18,24 @@ import buildcraft.lib.fluid.FuelRegistry;
 import buildcraft.lib.fluid.CoolantRegistry;
 import buildcraft.lib.recipe.RefineryRecipeRegistry;
 
-@Mod(BCLib.MODID)
+import buildcraft.core.BCCore;
+
+/**
+ * BuildCraft Lib initializer. No longer a separate @Mod — called from BCCore.
+ */
 public class BCLib {
-    public static final String MODID = "buildcraftlib";
 
     // --- Data Components ---
     public static final DeferredRegister.DataComponents DATA_COMPONENTS =
-            DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, MODID);
+            DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, BCCore.MODID);
 
-    /** Stores the guide book name (e.g. "buildcraftcore:main" or "buildcraftlib:config"). */
+    /** Stores the guide book name (e.g. "buildcraftunofficial:main" or "buildcraftunofficial:config"). */
     public static final Supplier<DataComponentType<String>> GUIDE_BOOK_NAME = DATA_COMPONENTS
             .registerComponentType("guide_book_name", builder -> builder
                     .persistent(com.mojang.serialization.Codec.STRING)
                     .networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8));
 
-    public BCLib(IEventBus modEventBus, ModContainer modContainer) {
+    public static void init(IEventBus modEventBus) {
         // Wire fuel/coolant registries
         BuildcraftFuelRegistry.fuel = FuelRegistry.INSTANCE;
         BuildcraftFuelRegistry.coolant = CoolantRegistry.INSTANCE;
@@ -45,12 +46,6 @@ public class BCLib {
         BCLibItems.ITEMS.register(modEventBus);
         DATA_COMPONENTS.register(modEventBus);
 
-        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, BCLibConfig.SPEC);
-        if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
-            modContainer.registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
-                    net.neoforged.neoforge.client.gui.ConfigurationScreen::new);
-        }
-
         // Wire ModelHolderRegistry into NeoForge model baking lifecycle
         if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
             modEventBus.addListener(
@@ -59,8 +54,7 @@ public class BCLib {
                     // onTextureStitchPre loads the JSON variable models from disk
                     java.util.HashSet<net.minecraft.resources.Identifier> sprites = new java.util.HashSet<>();
                     buildcraft.lib.client.model.ModelHolderRegistry.onTextureStitchPre(sprites);
-                    // onModelBake tells model holders to finalize (NO-OP for variable models, but
-                    // needed for static ModelHolder subclasses)
+                    // onModelBake tells model holders to finalize
                     buildcraft.lib.client.model.ModelHolderRegistry.onModelBake();
                     buildcraft.lib.misc.data.ModelVariableData.onModelBake();
                 }

@@ -1,17 +1,17 @@
 {
   "display": {
     "icon": {
-      "item": "buildcraftcore:engine",
+      "item": "buildcraftunofficial:engine",
       "data": 1
     },
     "title": {
-      "translate": "advancements.buildcraftenergy.poweringUp.title"
+      "translate": "advancements.buildcraftunofficial.poweringUp.title"
     },
     "description": {
-      "translate": "advancements.buildcraftenergy.poweringUp.description"
+      "translate": "advancements.buildcraftunofficial.poweringUp.description"
     }
   },
-  "parent": "buildcraftenergy:engine",
+  "parent": "buildcraftunofficial:engine",
   "criteria": {
     "code_trigger": {
       "trigger": "minecraft:impossible"

@@ -3,32 +3,20 @@ loaderVersion="[2,]"
 license="MIT"
 
 [[mods]]
-modId="buildcraftcore"
-version="1.21.11-8.0.0"
-displayName="BuildCraft Core"
+modId="buildcraftunofficial"
+version="26.1-8.0.0"
+displayName="BuildCraft (Unofficial)"
 logoFile="logo.png"
 credits="Created by SpaceToad"
-authors="SpaceToad, BuildCraft Team"
+authors="SpaceToad, BuildCraft Team, legoj15 with Antigravity"
 description='''
-Extending Minecraft with pipes, auto-crafting, quarries, engines and much more!
+Extending Minecraft 26.1 with pipes, auto-crafting, quarries, engines and much more!
+Unofficial port to NeoForge 26.1.
 '''
-[[dependencies.buildcraftcore]]
+
+[[dependencies.buildcraftunofficial]]
     modId="neoforge"
     type="required"
-    versionRange="[21.1.0,)"
-    ordering="NONE"
-    side="BOTH"
-
-[[dependencies.buildcraftcore]]
-    modId="buildcraftapi"
-    type="required"
-    versionRange="*"
-    ordering="NONE"
-    side="BOTH"
-
-[[dependencies.buildcraftcore]]
-    modId="buildcraftlib"
-    type="required"
-    versionRange="*"
+    versionRange="[26.1.0,)"
     ordering="NONE"
     side="BOTH"

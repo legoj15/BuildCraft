@@ -9,9 +9,7 @@ import buildcraft.energy.block.BlockEngineStone_BC8;
 import buildcraft.energy.block.BlockEngineIron_BC8;
 
 public class BCEnergyBlocks {
-    // Engine blocks register under buildcraftcore namespace to match 1.12.2
-    // (all engines were subtypes of buildcraftcore:engine in 1.12.2)
-    public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks("buildcraftcore");
+    public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCEnergy.MODID);
 
     public static final DeferredBlock<BlockEngineStone_BC8> ENGINE_STONE = BLOCKS.registerBlock(
             "engine_stone",

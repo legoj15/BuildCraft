@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "iri",
+    "gig",
+    "dpd"
+  ],
+  "key": {
+    "i": "buildcraftunofficial:gear_iron",
+    "g": "buildcraftunofficial:gear_gold",
+    "d": "buildcraftunofficial:gear_diamond",
+    "r": "#c:dusts/redstone",
+    "p": "minecraft:diamond_pickaxe"
+  },
+  "result": {
+    "id": "buildcraftunofficial:quarry"
+  }
+}

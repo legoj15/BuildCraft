@@ -26,8 +26,8 @@ import buildcraft.lib.misc.AdvancementUtil;
  * currently shows a placeholder chat message.
  */
 public class ItemGuide extends Item {
-    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftcore:guide");
-    public static final String DEFAULT_BOOK = "buildcraftcore:main";
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:guide");
+    public static final String DEFAULT_BOOK = "buildcraftunofficial:main";
 
     public ItemGuide(Item.Properties properties) {
         super(properties);
@@ -50,9 +50,9 @@ public class ItemGuide extends Item {
         String bookName = getBookName(stack);
         // Map known book names to their translation keys
         String key = switch (bookName) {
-            case "buildcraftcore:main" -> "buildcraft.guide.book.buildcraftcore_main";
-            case "buildcraftlib:config" -> "buildcraft.guide.book.buildcraftlib_config";
-            default -> "item.buildcraftlib.guide";
+            case "buildcraftunofficial:main" -> "buildcraft.guide.book.buildcraftcore_main";
+            case "buildcraftunofficial:config" -> "buildcraft.guide.book.buildcraftlib_config";
+            default -> "item.buildcraftunofficial.guide";
         };
         return Component.translatable(key);
     }

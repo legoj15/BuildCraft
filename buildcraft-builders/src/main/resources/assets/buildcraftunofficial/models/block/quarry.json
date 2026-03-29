@@ -1,0 +1,12 @@
+{
+    "parent": "block/cube",
+    "textures": {
+        "particle": "buildcraftunofficial:block/quarry/side",
+        "down": "buildcraftunofficial:block/quarry/bottom",
+        "up": "buildcraftunofficial:block/quarry/top",
+        "north": "buildcraftunofficial:block/quarry/front",
+        "east": "buildcraftunofficial:block/quarry/side",
+        "south": "buildcraftunofficial:block/quarry/back",
+        "west": "buildcraftunofficial:block/quarry/side"
+    }
+}

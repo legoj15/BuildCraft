@@ -1,16 +1,16 @@
 {
   "display": {
     "icon": {
-      "item": "buildcraftlib:guide"
+      "item": "buildcraftunofficial:guide"
     },
     "title": {
-      "translate": "advancements.buildcraftcore.guide.title"
+      "translate": "advancements.buildcraftunofficial.guide.title"
     },
     "description": {
-      "translate": "advancements.buildcraftcore.guide.description"
+      "translate": "advancements.buildcraftunofficial.guide.description"
     }
   },
-  "parent": "buildcraftcore:root",
+  "parent": "buildcraftunofficial:root",
   "criteria": {
     "code_trigger": {
       "trigger": "minecraft:impossible"

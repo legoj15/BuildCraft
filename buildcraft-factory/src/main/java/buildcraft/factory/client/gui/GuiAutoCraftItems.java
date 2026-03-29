@@ -29,9 +29,9 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     private static final Identifier TEXTURE =
-            Identifier.parse("buildcraftfactory:textures/gui/autobench_item.png");
+            Identifier.parse("buildcraftunofficial:textures/gui/autobench_item.png");
     private static final Identifier TEXTURE_MISC =
-            Identifier.parse("buildcraftlib:textures/gui/misc_slots.png");
+            Identifier.parse("buildcraftunofficial:textures/gui/misc_slots.png");
     private static final int SIZE_X = 176, SIZE_Y = 197;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_PROGRESS = new GuiIcon(TEXTURE, SIZE_X, 0, 23, 10);

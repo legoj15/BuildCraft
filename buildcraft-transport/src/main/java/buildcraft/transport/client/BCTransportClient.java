@@ -47,8 +47,8 @@ import buildcraft.transport.pipe.flow.PipeFlowRedstoneFlux;
 
 public class BCTransportClient {
     // Static model holders for plug rendering
-    public static final ModelHolderStatic BLOCKER = new ModelHolderStatic("buildcrafttransport:models/plugs/blocker.json");
-    public static final ModelHolderStatic POWER_ADAPTER = new ModelHolderStatic("buildcrafttransport:models/plugs/power_adapter.json");
+    public static final ModelHolderStatic BLOCKER = new ModelHolderStatic("buildcraftunofficial:models/plugs/blocker.json");
+    public static final ModelHolderStatic POWER_ADAPTER = new ModelHolderStatic("buildcraftunofficial:models/plugs/power_adapter.json");
 
     // Bakers that rotate the model to the correct face and produce BakedQuads
     public static final IPluggableStaticBaker<KeyPlugBlocker> BAKER_PLUG_BLOCKER =

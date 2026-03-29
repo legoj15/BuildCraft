@@ -9,11 +9,11 @@
     },
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftcore:list"
+      "item": "buildcraftunofficial:list"
     }
   ],
   "result": {
-    "item": "buildcraftcore:list"
+    "item": "buildcraftunofficial:list"
   },
   "pattern": [
     "pRp",

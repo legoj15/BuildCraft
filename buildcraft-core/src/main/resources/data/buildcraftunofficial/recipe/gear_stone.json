@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "buildcraft_gears",
+  "pattern": [
+    " c ",
+    "cGc",
+    " c "
+  ],
+  "key": {
+    "c": "#c:cobblestones/normal",
+    "G": "buildcraftunofficial:gear_wood"
+  },
+  "result": {
+    "id": "buildcraftunofficial:gear_stone"
+  }
+}

@@ -9,7 +9,7 @@
   "type": "forge:ore_shaped",
   "key": {
     "g": {
-      "item": "buildcraftfactory:gel"
+      "item": "buildcraftunofficial:gel"
     },
     "b": {
       "item": "minecraft:bucket"
@@ -18,7 +18,7 @@
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftfactory:gel"
+      "item": "buildcraftunofficial:gel"
     }
   ]
 }

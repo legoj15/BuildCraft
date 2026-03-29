@@ -10,7 +10,7 @@ import buildcraft.lib.gui.pos.IGuiPosition;
 import buildcraft.lib.misc.LocaleUtil;
 
 public class ElementTypeText extends ElementType {
-    public static final String NAME = "buildcraftlib:text";
+    public static final String NAME = "buildcraftunofficial:text";
     public static final ElementTypeText INSTANCE = new ElementTypeText();
 
     private ElementTypeText() {

@@ -1,16 +1,16 @@
 {
   "display": {
     "icon": {
-      "item": "buildcrafttransport:pipe_structure"
+      "item": "buildcraftunofficial:pipe_structure"
     },
     "title": {
-      "translate": "advancements.buildcrafttransport.pipe_dream.title"
+      "translate": "advancements.buildcraftunofficial.pipe_dream.title"
     },
     "description": {
-      "translate": "advancements.buildcrafttransport.pipe_dream.description"
+      "translate": "advancements.buildcraftunofficial.pipe_dream.description"
     }
   },
-  "parent": "buildcraftcore:root",
+  "parent": "buildcraftunofficial:root",
   "criteria": {
     "code_trigger": {
       "trigger": "minecraft:impossible"

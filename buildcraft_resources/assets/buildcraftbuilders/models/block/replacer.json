@@ -1,12 +1,12 @@
 {
     "parent": "block/cube",
     "textures": {
-        "particle": "buildcraftbuilders:blocks/replacer/side",
-        "down": "buildcraftbuilders:blocks/replacer/bottom",
-        "up": "buildcraftbuilders:blocks/replacer/top",
-        "north": "buildcraftbuilders:blocks/replacer/front",
-        "east": "buildcraftbuilders:blocks/replacer/side",
-        "south": "buildcraftbuilders:blocks/replacer/side",
-        "west": "buildcraftbuilders:blocks/replacer/side"
+        "particle": "buildcraftunofficial:blocks/replacer/side",
+        "down": "buildcraftunofficial:blocks/replacer/bottom",
+        "up": "buildcraftunofficial:blocks/replacer/top",
+        "north": "buildcraftunofficial:blocks/replacer/front",
+        "east": "buildcraftunofficial:blocks/replacer/side",
+        "south": "buildcraftunofficial:blocks/replacer/side",
+        "west": "buildcraftunofficial:blocks/replacer/side"
     }
 }

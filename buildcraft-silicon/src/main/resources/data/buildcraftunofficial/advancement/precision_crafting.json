@@ -1,0 +1,11 @@
+{
+  "display": {
+    "icon": { "id": "buildcraftunofficial:assembly_table" },
+    "title": { "translate": "advancements.buildcraftunofficial.precision_crafting.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.precision_crafting.description" }
+  },
+  "parent": "buildcraftunofficial:laser_power",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

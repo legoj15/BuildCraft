@@ -27,12 +27,12 @@
     }
   },
   "result": {
-    "item": "buildcraftbuilders:quarry"
+    "item": "buildcraftunofficial:quarry"
   },
   "conditions": [
     {
       "type": "minecraft:item_exists",
-      "item": "buildcraftbuilders:quarry"
+      "item": "buildcraftunofficial:quarry"
     }
   ]
 }

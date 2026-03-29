@@ -1,0 +1,12 @@
+{
+  "display": {
+    "icon": { "id": "buildcraftunofficial:glob_of_oil" },
+    "title": { "translate": "advancements.buildcraftunofficial.refine_and_redefine.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.refine_and_redefine.description" },
+    "frame": "challenge"
+  },
+  "parent": "buildcraftunofficial:sticky_dipping",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "display": {
+    "icon": { "id": "buildcraftunofficial:pump" },
+    "title": { "translate": "advancements.buildcraftunofficial.oil_platform.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.oil_platform.description" }
+  },
+  "parent": "buildcraftunofficial:draining_the_world",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

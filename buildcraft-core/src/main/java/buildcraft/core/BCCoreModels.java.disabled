@@ -58,11 +58,11 @@ public class BCCoreModels {
         ENGINE_FACING = fnCtx.putVariableObject("direction", Direction.class);
 
         ENGINE_REDSTONE = new ModelHolderVariable(
-            "buildcraftcore:models/block/engine_redstone.json",
+            "buildcraftunofficial:models/block/engine_redstone.json",
             fnCtx
         );
         ENGINE_CREATIVE = new ModelHolderVariable(
-            "buildcraftcore:models/block/engine_creative.json",
+            "buildcraftunofficial:models/block/engine_creative.json",
             fnCtx
         );
     }

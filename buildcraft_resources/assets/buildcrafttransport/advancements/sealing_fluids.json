@@ -1,16 +1,16 @@
 {
   "display": {
     "icon": {
-      "item": "buildcrafttransport:waterproof"
+      "item": "buildcraftunofficial:waterproof"
     },
     "title": {
-      "translate": "advancements.buildcrafttransport.sealing_fluids.title"
+      "translate": "advancements.buildcraftunofficial.sealing_fluids.title"
     },
     "description": {
-      "translate": "advancements.buildcrafttransport.sealing_fluids.description"
+      "translate": "advancements.buildcraftunofficial.sealing_fluids.description"
     }
   },
-  "parent": "buildcrafttransport:pipe_diversification",
+  "parent": "buildcraftunofficial:pipe_diversification",
   "criteria": {
     "code_trigger": {
       "trigger": "minecraft:impossible"

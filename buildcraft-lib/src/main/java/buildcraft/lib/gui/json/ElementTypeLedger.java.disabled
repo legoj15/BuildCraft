@@ -10,7 +10,7 @@ import buildcraft.lib.gui.ledger.Ledger_Neptune;
 import buildcraft.lib.gui.pos.IGuiPosition;
 
 public class ElementTypeLedger extends ElementType {
-    public static final String NAME = "buildcraftlib:ledger";
+    public static final String NAME = "buildcraftunofficial:ledger";
     public static final ElementTypeLedger INSTANCE = new ElementTypeLedger();
 
     private ElementTypeLedger() {

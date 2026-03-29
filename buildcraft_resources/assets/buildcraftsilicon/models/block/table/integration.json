@@ -135,11 +135,11 @@
         }
     ],
     "textures": {
-        "particle": "buildcraftsilicon:blocks/table/integration/top",
-        "top": "buildcraftsilicon:blocks/table/integration/top",
-        "middle": "buildcraftsilicon:blocks/table/integration/middle",
-        "bottom": "buildcraftsilicon:blocks/table/integration/bottom",
-        "side": "buildcraftsilicon:blocks/table/integration/side",
-        "center": "buildcraftsilicon:blocks/table/integration/center"
+        "particle": "buildcraftunofficial:blocks/table/integration/top",
+        "top": "buildcraftunofficial:blocks/table/integration/top",
+        "middle": "buildcraftunofficial:blocks/table/integration/middle",
+        "bottom": "buildcraftunofficial:blocks/table/integration/bottom",
+        "side": "buildcraftunofficial:blocks/table/integration/side",
+        "center": "buildcraftunofficial:blocks/table/integration/center"
     }
 }

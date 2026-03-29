@@ -17,7 +17,7 @@ import buildcraft.transport.container.ContainerFilteredBuffer;
 
 public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
     private static final Identifier TEXTURE =
-            Identifier.parse("buildcrafttransport:textures/gui/filtered_buffer.png");
+            Identifier.parse("buildcraftunofficial:textures/gui/filtered_buffer.png");
     private static final int SIZE_X = 176, SIZE_Y = 169;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
 

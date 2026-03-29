@@ -22,7 +22,7 @@ import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.SoundUtil;
 
 public class ItemWrench_Neptune extends Item implements IToolWrench {
-    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftcore:wrenched");
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:wrenched");
 
     public ItemWrench_Neptune(Item.Properties properties) {
         super(properties);

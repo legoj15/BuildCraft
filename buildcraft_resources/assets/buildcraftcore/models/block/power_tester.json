@@ -1,6 +1,6 @@
 {
     "parent": "block/cube_all",
     "textures": {
-        "all": "buildcraftcore:blocks/power_tester"
+        "all": "buildcraftunofficial:blocks/power_tester"
     }
 }

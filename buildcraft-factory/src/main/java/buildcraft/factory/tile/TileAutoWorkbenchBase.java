@@ -42,7 +42,7 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IHasWork, IAutoCraft {
 
-    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftfactory:lazy_crafting");
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:lazy_crafting");
 
     /** A redstone engine generates 1 * MjAPI.MJ per tick.
      *  This passive rate makes the workbench much slower without one powering it. */

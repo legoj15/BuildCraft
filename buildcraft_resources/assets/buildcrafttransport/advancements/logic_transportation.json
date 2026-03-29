@@ -1,16 +1,16 @@
 {
   "display": {
     "icon": {
-      "item": "buildcrafttransport:wire"
+      "item": "buildcraftunofficial:wire"
     },
     "title": {
-      "translate": "advancements.buildcrafttransport.logic_transportation.title"
+      "translate": "advancements.buildcraftunofficial.logic_transportation.title"
     },
     "description": {
-      "translate": "advancements.buildcrafttransport.logic_transportation.description"
+      "translate": "advancements.buildcraftunofficial.logic_transportation.description"
     }
   },
-  "parent": "buildcrafttransport:pipe_dream",
+  "parent": "buildcraftunofficial:pipe_dream",
   "criteria": {
     "code_trigger": {
       "trigger": "minecraft:impossible"

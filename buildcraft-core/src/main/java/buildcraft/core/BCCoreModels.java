@@ -35,11 +35,11 @@ public class BCCoreModels {
         ENGINE_STAGE = fnCtx.putVariableObject("stage", EnumPowerStage.class);
         ENGINE_FACING = fnCtx.putVariableObject("direction", Direction.class);
         ENGINE_WOOD = new ModelHolderVariable(
-            "buildcraftcore:compat_models/engine_wood.json",
+            "buildcraftunofficial:compat_models/engine_wood.json",
             fnCtx
         );
         ENGINE_CREATIVE = new ModelHolderVariable(
-            "buildcraftcore:compat_models/engine_creative.json",
+            "buildcraftunofficial:compat_models/engine_creative.json",
             fnCtx
         );
     }

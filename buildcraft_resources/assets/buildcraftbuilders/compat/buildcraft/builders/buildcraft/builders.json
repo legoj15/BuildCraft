@@ -1,8 +1,8 @@
 [
     {
         "selectors": [
-            "buildcraftbuilders:filler",
-            "buildcraftbuilders:builder"
+            "buildcraftunofficial:filler",
+            "buildcraftunofficial:builder"
         ],
         "replaceNbt": {
             "builder": null

@@ -1,6 +1,6 @@
 {
     "parent": "item/handheld",
     "textures": {
-        "layer0": "buildcrafttransport:items/wire/cyan"
+        "layer0": "buildcraftunofficial:items/wire/cyan"
     }
 }

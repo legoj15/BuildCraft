@@ -4,13 +4,13 @@
       "item": "minecraft:paper"
     },
     "title": {
-      "translate": "advancements.buildcraftcore.paper.title"
+      "translate": "advancements.buildcraftunofficial.paper.title"
     },
     "description": {
-      "translate": "advancements.buildcraftcore.paper.description"
+      "translate": "advancements.buildcraftunofficial.paper.description"
     }
   },
-  "parent": "buildcraftcore:list",
+  "parent": "buildcraftunofficial:list",
   "criteria": {
     "code_trigger": {
       "trigger": "minecraft:impossible"

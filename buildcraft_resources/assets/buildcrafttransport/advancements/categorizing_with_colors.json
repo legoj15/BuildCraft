@@ -1,17 +1,17 @@
 {
   "display": {
     "icon": {
-      "item": "buildcrafttransport:pipe_emzuli_item"
+      "item": "buildcraftunofficial:pipe_emzuli_item"
     },
     "title": {
-      "translate": "advancements.buildcrafttransport.categorizing_with_colors.title"
+      "translate": "advancements.buildcraftunofficial.categorizing_with_colors.title"
     },
     "description": {
-      "translate": "advancements.buildcrafttransport.categorizing_with_colors.description"
+      "translate": "advancements.buildcraftunofficial.categorizing_with_colors.description"
     },
     "frame": "goal"
   },
-  "parent": "buildcrafttransport:plugging_the_gap",
+  "parent": "buildcraftunofficial:plugging_the_gap",
   "criteria": {
     "code_trigger": {
       "trigger": "minecraft:impossible"

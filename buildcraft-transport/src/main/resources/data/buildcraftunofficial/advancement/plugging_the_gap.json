@@ -1,0 +1,11 @@
+{
+  "display": {
+    "icon": { "id": "buildcraftunofficial:plug_blocker" },
+    "title": { "translate": "advancements.buildcraftunofficial.plugging_the_gap.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.plugging_the_gap.description" }
+  },
+  "parent": "buildcraftunofficial:pipe_dream",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

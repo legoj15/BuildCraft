@@ -1,0 +1,18 @@
+{
+  "display": {
+    "icon": { 
+      "id": "buildcraftunofficial:plug_gate",
+      "components": {
+        "minecraft:custom_model_data": {
+          "strings": ["gold_or_diamond"]
+        }
+      }
+    },
+    "title": { "translate": "advancements.buildcraftunofficial.extended_logic.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.extended_logic.description" }
+  },
+  "parent": "buildcraftunofficial:pipe_logic",
+  "criteria": {
+    "code_trigger": { "trigger": "minecraft:impossible" }
+  }
+}

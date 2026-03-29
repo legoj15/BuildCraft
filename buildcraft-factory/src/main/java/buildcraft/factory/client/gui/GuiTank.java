@@ -28,7 +28,7 @@ import buildcraft.lib.gui.pos.GuiRectangle;
 
 public class GuiTank extends GuiBC8<ContainerTank> {
     private static final Identifier TEXTURE =
-            Identifier.parse("buildcraftfactory:textures/gui/tank.png");
+            Identifier.parse("buildcraftunofficial:textures/gui/tank.png");
     private static final int SIZE_X = 176, SIZE_Y = 181;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_TANK_OVERLAY = new GuiIcon(TEXTURE, 176, 0, 16, 64);

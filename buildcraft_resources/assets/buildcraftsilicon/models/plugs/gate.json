@@ -1,7 +1,7 @@
 {
     "textures": {
-        "#logic_and":"buildcraftsilicon:gates/gate_and",
-        "#logic_or":"buildcraftsilicon:gates/gate_or",
+        "#logic_and":"buildcraftunofficial:gates/gate_and",
+        "#logic_or":"buildcraftunofficial:gates/gate_or",
 
         "#material_clay_brick":"minecraft:blocks/brick",
         "#material_iron":"minecraft:blocks/iron_block",

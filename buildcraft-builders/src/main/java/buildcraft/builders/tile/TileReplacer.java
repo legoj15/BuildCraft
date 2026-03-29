@@ -104,7 +104,7 @@ public class TileReplacer extends TileBC_Neptune implements MenuProvider {
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.buildcraftbuilders.replacer");
+        return Component.translatable("block.buildcraftunofficial.replacer");
     }
 
     @Nullable

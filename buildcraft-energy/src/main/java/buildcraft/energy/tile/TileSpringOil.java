@@ -23,7 +23,7 @@ import buildcraft.lib.misc.AdvancementUtil;
  */
 public class TileSpringOil extends BlockEntity implements ITileOilSpring {
 
-    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftfactory:black_gold");
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:black_gold");
 
     private final Map<GameProfile, PlayerPumpInfo> pumpProgress = new ConcurrentHashMap<>();
 

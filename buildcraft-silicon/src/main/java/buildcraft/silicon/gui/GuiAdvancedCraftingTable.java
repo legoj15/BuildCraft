@@ -26,7 +26,7 @@ import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
 
 public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTable> {
-    private static final Identifier TEXTURE_BASE = Identifier.parse("buildcraftsilicon:textures/gui/advanced_crafting_table.png");
+    private static final Identifier TEXTURE_BASE = Identifier.parse("buildcraftunofficial:textures/gui/advanced_crafting_table.png");
     private static final int SIZE_X = 176, SIZE_Y = 241;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE_BASE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_PROGRESS = new GuiIcon(TEXTURE_BASE, SIZE_X, 0, 4, 70);
@@ -131,7 +131,7 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
 
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        String title = I18n.get("block.buildcraftsilicon.advanced_crafting_table");
+        String title = I18n.get("block.buildcraftunofficial.advanced_crafting_table");
         graphics.text(font, title, (imageWidth - font.width(title)) / 2, 5, 0xFF404040, false);
     }
 

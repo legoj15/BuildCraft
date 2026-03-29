@@ -1,7 +1,7 @@
 {
     "forge_marker": 1,
     "defaults": {
-        "model": "buildcraftbuilders:builder/main"
+        "model": "buildcraftunofficial:builder/main"
     },
     "variants": {
         "facing": {
@@ -11,9 +11,9 @@
             "north": {"y": 0}
         },
         "snapshot_type": {
-            "none": {"submodel": "buildcraftbuilders:builder/slot_empty"},
-            "blueprint": {"submodel": "buildcraftbuilders:builder/slot_blueprint"},
-            "template": {"submodel": "buildcraftbuilders:builder/slot_template"}
+            "none": {"submodel": "buildcraftunofficial:builder/slot_empty"},
+            "blueprint": {"submodel": "buildcraftunofficial:builder/slot_blueprint"},
+            "template": {"submodel": "buildcraftunofficial:builder/slot_template"}
         },
         "inventory": [{}]
     }

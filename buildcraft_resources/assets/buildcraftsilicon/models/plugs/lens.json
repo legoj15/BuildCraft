@@ -1,7 +1,7 @@
 {
     "textures": {
-        "#main":"buildcraftsilicon:plugs/lens",
-        "#lens":"buildcraftsilicon:plugs/overlay_lens",
+        "#main":"buildcraftunofficial:plugs/lens",
+        "#lens":"buildcraftunofficial:plugs/overlay_lens",
         "#water_flowing":"minecraft:blocks/water_flow"
     },
     "variables": {

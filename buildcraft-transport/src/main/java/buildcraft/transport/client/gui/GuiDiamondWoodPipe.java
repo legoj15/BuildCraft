@@ -6,7 +6,10 @@
 package buildcraft.transport.client.gui;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.AbstractButton;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -19,12 +22,16 @@ import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond.FilterMode;
 public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
     private static final Identifier TEXTURE =
             Identifier.parse("buildcraftunofficial:textures/gui/pipe_emerald.png");
+    private static final Identifier TEXTURE_BUTTON =
+            Identifier.parse("buildcraftunofficial:textures/gui/pipe_emerald_button.png");
     private static final int SIZE_X = 175, SIZE_Y = 161;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
+    private static final GuiIcon ICON_ROUND_ROBIN_INDEX = new GuiIcon(TEXTURE, 176, 0, 20, 20);
+    private static final GuiIcon ICON_ROUND_ROBIN_NONE = new GuiIcon(TEXTURE, 176, 20, 20, 20);
 
-    private Button whiteListButton;
-    private Button blackListButton;
-    private Button roundRobinButton;
+    private FilterButton whiteListButton;
+    private FilterButton blackListButton;
+    private FilterButton roundRobinButton;
 
     public GuiDiamondWoodPipe(ContainerDiamondWoodPipe menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title, SIZE_X, SIZE_Y);
@@ -33,26 +40,31 @@ public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
     @Override
     protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
+
+        if (menu.behaviour.pipe.getFlow() instanceof buildcraft.api.transport.pipe.IFlowItems) {
+            if (menu.behaviour.filterMode == FilterMode.ROUND_ROBIN) {
+                GuiIcon icon = menu.behaviour.filterValid ? ICON_ROUND_ROBIN_INDEX : ICON_ROUND_ROBIN_NONE;
+                int xOffset = menu.behaviour.filterValid ? 18 * menu.behaviour.currentFilter : 0;
+                icon.drawAt(mainGui.rootElement.getX() + 6 + xOffset, mainGui.rootElement.getY() + 16);
+            }
+        }
     }
 
     @Override
     protected void initGuiElements() {
-        // Filter mode toggle buttons below the filter slots
         int bx = leftPos + 7;
         int by = topPos + 41;
-        int bw = 50;
-        int bh = 14;
 
-        whiteListButton = Button.builder(Component.literal("White"), b -> setFilterMode(FilterMode.WHITE_LIST))
-                .bounds(bx, by, bw, bh).build();
-        blackListButton = Button.builder(Component.literal("Black"), b -> setFilterMode(FilterMode.BLACK_LIST))
-                .bounds(bx + bw + 2, by, bw, bh).build();
-        roundRobinButton = Button.builder(Component.literal("Round"), b -> setFilterMode(FilterMode.ROUND_ROBIN))
-                .bounds(bx + (bw + 2) * 2, by, bw, bh).build();
+        whiteListButton = new FilterButton(bx, by, FilterMode.WHITE_LIST, 19, 19, "tip.PipeItemsEmerald.whitelist");
+        blackListButton = new FilterButton(bx + 18, by, FilterMode.BLACK_LIST, 37, 19, "tip.PipeItemsEmerald.blacklist");
 
         addRenderableWidget(whiteListButton);
         addRenderableWidget(blackListButton);
-        addRenderableWidget(roundRobinButton);
+
+        if (menu.behaviour.pipe.getFlow() instanceof buildcraft.api.transport.pipe.IFlowItems) {
+            roundRobinButton = new FilterButton(bx + 36, by, FilterMode.ROUND_ROBIN, 55, 19, "tip.PipeItemsEmerald.roundrobin");
+            addRenderableWidget(roundRobinButton);
+        }
     }
 
     private void setFilterMode(FilterMode mode) {
@@ -62,12 +74,50 @@ public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
 
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        // Draw current filter mode indicator
-        String modeStr = switch (menu.behaviour.filterMode) {
-            case WHITE_LIST -> "§a[Whitelist]";
-            case BLACK_LIST -> "§c[Blacklist]";
-            case ROUND_ROBIN -> "§e[Round Robin]";
-        };
-        graphics.text(font, modeStr, 8, 58, 0x404040, false);
+    }
+
+    private class FilterButton extends AbstractButton {
+        private final FilterMode mode;
+        private final int iconU, iconV;
+
+        public FilterButton(int x, int y, FilterMode mode, int u, int v, String tooltipKey) {
+            super(x, y, 18, 18, Component.empty());
+            this.mode = mode;
+            this.iconU = u;
+            this.iconV = v;
+            this.setTooltip(Tooltip.create(Component.translatable(tooltipKey)));
+        }
+
+        @Override
+        public void onPress(InputWithModifiers modifiers) {
+            setFilterMode(mode);
+        }
+
+        @Override
+        protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+            int state;
+            boolean selected = menu.behaviour.filterMode == mode;
+            if (!this.active) {
+                state = 0;
+            } else if (isHovered()) {
+                state = selected ? 4 : 2;
+            } else {
+                state = selected ? 3 : 1;
+            }
+
+            int baseU = state * 18;
+            int baseV = 0;
+
+            GuiIcon bgIcon = new GuiIcon(TEXTURE_BUTTON, baseU, baseV, width, height);
+            bgIcon.drawAt(getX(), getY());
+            
+            GuiIcon fgIcon = new GuiIcon(TEXTURE_BUTTON, iconU, iconV, 16, 16);
+            fgIcon.drawAt(getX() + 1, getY() + 1);
+        }
+
+        @Override
+        protected void updateWidgetNarration(NarrationElementOutput output) {
+            this.defaultButtonNarrationText(output);
+        }
     }
 }

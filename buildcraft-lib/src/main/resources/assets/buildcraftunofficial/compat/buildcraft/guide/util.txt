@@ -28,7 +28,7 @@ alias statement 4 `add_basic "%2" "statement" "%0" "%1" \`,
 
 alias item 3 `item_stack "item" "%0" "%1" "%2"`
 alias block_full 3 `item_stack "block" "%0" "%1" "%2"`
-alias block 2 `item_stack "block" "%0" "%1" "${domain}:%1"`
+alias block 2 `item_stack "block" "%0" "%1" "buildcraftunofficial:%1"`
 alias pipe 3 `item_stack "pipe" "%0" "%1" "%2"`
 alias trigger 3 `statement "trigger" "%0" "%1" "%2"`
 alias action 3 `statement "action" "%0" "%1" "%2"`
@@ -46,9 +46,9 @@ alias block_mining 1 `block "mining" "%0"`
 alias block_auto 1 `block "automation" "%0"`
 alias block_engine 2 `block_full "engine" "%0" "%1"`
 
-alias tool 1 `item_tool "%0" "${domain}:%0"`
-alias gear 1 `item_gear "%0" "${domain}:%0"`
-alias plug 1 `item_plug "%0" "${domain}:%0"`
+alias tool 1 `item_tool "%0" "buildcraftunofficial:%0"`
+alias gear 1 `item_gear "%0" "buildcraftunofficial:%0"`
+alias plug 1 `item_plug "%0" "buildcraftunofficial:%0"`
 
 alias block_refining 1 `block "refining" "%0"`
 alias block_fluid 1 `block "fluid" "%0"`

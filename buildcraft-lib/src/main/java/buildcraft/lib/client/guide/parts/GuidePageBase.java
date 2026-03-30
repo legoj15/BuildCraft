@@ -13,6 +13,9 @@ import javax.annotation.Nullable;
 
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.gui.pos.GuiRectangle;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.CharacterEvent;
 
 public abstract class GuidePageBase extends GuidePart {
     private int index = 0;
@@ -134,6 +137,18 @@ public abstract class GuidePageBase extends GuidePart {
     public final void handleMouseDragFinish(int startX, int startY, int endX, int endY, int button) {}
 
     public boolean keyTyped(char typedChar, int keyCode) {
+        return false;
+    }
+
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        return false;
+    }
+
+    public boolean keyPressed(KeyEvent event) {
+        return false;
+    }
+
+    public boolean charTyped(CharacterEvent event) {
         return false;
     }
 }

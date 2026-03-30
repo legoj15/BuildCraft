@@ -13,16 +13,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-import net.minecraft.ChatFormatting;
-import net.minecraft.client.resources.language.I18n;
-import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.CharacterEvent;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.network.chat.Component;
+import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.gui.GuiTextField;
+import net.minecraft.util.text.TextFormatting;
 
 import buildcraft.lib.BCLib;
+import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.GuideManager;
 import buildcraft.lib.client.guide.TypeOrder;
@@ -30,20 +26,23 @@ import buildcraft.lib.client.guide.font.IFontRenderer;
 import buildcraft.lib.client.guide.loader.XmlPageLoader;
 import buildcraft.lib.client.guide.parts.GuideChapter;
 import buildcraft.lib.client.guide.parts.GuidePageBase;
-import buildcraft.lib.client.guide.parts.GuidePart.PagePosition;
+import buildcraft.lib.client.render.font.ConfigurableFontRenderer;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.misc.GuiUtil;
+import buildcraft.lib.misc.GuiUtil.WrappedTextData;
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.lib.misc.RenderUtil;
 import buildcraft.lib.misc.search.ISuffixArray.SearchResult;
 
-/** The base menu for showing all the locations. Controls the guide book table of contents. */
+/** The base menu for showing all the locations. Should never be registered with and guide managers, this is special and
+ * controls them all. */
 public class GuidePageContents extends GuidePageBase {
     private static final int ORDER_OFFSET_X = -10;
     private static final int ORDER_OFFSET_Y = -10;
 
     private ContentsNodeGui contents;
-    private final EditBox searchText;
+    private final GuiTextField searchText;
     private String lastSearchText = "";
     /** -1 if all of the results can be displayed or the actual number of results if it's too many. */
     private int realResultCount = -1;
@@ -51,8 +50,9 @@ public class GuidePageContents extends GuidePageBase {
     public GuidePageContents(GuiGuide gui) {
         super(gui);
         loadMainGui();
-        searchText = new EditBox(Minecraft.getInstance().font, 0, 0, 80, 14, Component.empty());
-        searchText.setBordered(false);
+        FontRenderer fr = new ConfigurableFontRenderer(gui.mc.fontRenderer).disableShadow();
+        searchText = new GuiTextField(0, fr, 0, 0, 80, fr.FONT_HEIGHT + 5);
+        searchText.setEnableBackgroundDrawing(false);
         searchText.setTextColor(0xFF_00_00_00);
         setupChapters();
     }
@@ -60,9 +60,10 @@ public class GuidePageContents extends GuidePageBase {
     @Override
     public GuidePageBase createReloaded() {
         GuidePageContents newPage = new GuidePageContents(gui);
-        newPage.searchText.setValue(searchText.getValue());
+        newPage.searchText.setText(searchText.getText());
         newPage.searchText.setCursorPosition(searchText.getCursorPosition());
         newPage.searchText.setFocused(searchText.isFocused());
+        newPage.searchText.setSelectionPos(searchText.getSelectionEnd());
         newPage.numPages = numPages;
         newPage.goToPage(getIndex());
         return newPage;
@@ -85,19 +86,19 @@ public class GuidePageContents extends GuidePageBase {
 
     @Override
     public String getTitle() {
-        return null; // The Guide Book does not render a title on the top like sub-pages do
+        return null;
     }
 
     @Override
     public void updateScreen() {
         super.updateScreen();
-        // searchText.tick();
-        if (lastSearchText.equals(searchText.getValue())) {
+        searchText.updateCursorCounter();
+        if (lastSearchText.equals(searchText.getText())) {
             if (numPages >= 3 && getPage() >= numPages) {
                 goToPage(numPages);
             }
         } else {
-            lastSearchText = searchText.getValue();
+            lastSearchText = searchText.getText();
             numPages = -1;
             if (lastSearchText.isEmpty()) {
                 realResultCount = -1;
@@ -107,7 +108,7 @@ public class GuidePageContents extends GuidePageBase {
             } else {
                 String text = lastSearchText.toLowerCase(Locale.ROOT);
                 SearchResult<PageLink> ret = GuideManager.INSTANCE.quickSearcher.search(
-                    text, 100 // Hardcoded maxGuideSearchCount for now since BCLibConfig is disabled
+                    text, BCLibConfig.maxGuideSearchCount
                 );
                 realResultCount = ret.hasAllResults() ? -1 : ret.realResultCount;
                 Set<PageLink> matches = new HashSet<>(ret.results);
@@ -134,14 +135,13 @@ public class GuidePageContents extends GuidePageBase {
         if (index == 0) {
             int xMiddle = x + width / 2;
             int _y = y;
-            String text = gui.book == null ? "Everything" : gui.book.title.getString();
-            _y += 3; // Shift down a bit
-            f.drawString(text, xMiddle, _y, 0, false, true);
-            _y += f.getFontHeight(text) + 5;
-            
-            String vers = "BuildCraft 26.1";
-            f.drawString(vers, xMiddle, _y, 0, false, true);
-
+            String text = gui.book == null ? "Everything" : gui.book.title.getUnformattedText();
+            WrappedTextData wrapped = GuiUtil.getWrappedTextData(text, f, width, false, 3f);
+            wrapped.drawAt(xMiddle, _y, 0, true);
+            _y += wrapped.height;
+            if (true) {
+                f.drawString("v" + BCLib.VERSION, xMiddle, _y, 0, false, true);
+            }
             _y = y + height - 80;
             f.drawString(LocaleUtil.localize("options.title"), xMiddle, _y, 0, false, true, 2f);
             _y += 28;
@@ -159,7 +159,7 @@ public class GuidePageContents extends GuidePageBase {
             int _y = y + (height - _height) / 2;
 
             if (gui.bookData.loadedMods.size() > 0) {
-                drawCenteredText(ChatFormatting.BOLD + "Loaded Mods:", x, _y, width);
+                drawCenteredText(TextFormatting.BOLD + "Loaded Mods:", x, _y, width);
                 _y += perLineHeight;
                 for (String text : gui.bookData.loadedMods) {
                     drawCenteredText(text, x, _y, width);
@@ -167,7 +167,7 @@ public class GuidePageContents extends GuidePageBase {
                 }
             }
             if (gui.bookData.loadedOther.size() > 0) {
-                drawCenteredText(ChatFormatting.BOLD + "Loaded Resource Packs:", x, _y, width);
+                drawCenteredText(TextFormatting.BOLD + "Loaded Resource Packs:", x, _y, width);
                 _y += perLineHeight;
                 for (String text : gui.bookData.loadedOther) {
                     drawCenteredText(text, x, _y, width);
@@ -175,55 +175,23 @@ public class GuidePageContents extends GuidePageBase {
                 }
             }
         }
-        
         if (index % 2 == 0) {
-            searchText.setX(x + 23);
-            searchText.setY(y - 16);
-            if (!searchText.isFocused() && searchText.getValue().isEmpty()) {
+            searchText.x = x + 23;
+            searchText.y = y - 16;
+            if (!searchText.isFocused() && searchText.getText().isEmpty()) {
                 GuiGuide.SEARCH_TAB_CLOSED.drawAt(x + 8, y - 20);
                 GuiGuide.SEARCH_ICON.drawAt(x + 8, y - 19);
             } else {
                 GuiGuide.SEARCH_TAB_OPEN.drawAt(x - 2, y - 22);
                 GuiGuide.SEARCH_ICON.drawAt(x + 8, y - 18);
             }
-            // EditBox requires GuiGraphics for rendering in 1.21
-            if (GuiIcon.getGuiGraphics() != null) {
-                try {
-                    for (java.lang.reflect.Method m : searchText.getClass().getMethods()) {
-                        if (m.getParameterCount() == 4 && m.getParameterTypes()[1] == int.class && m.getParameterTypes()[2] == int.class && m.getParameterTypes()[3] == float.class) {
-                            m.invoke(searchText, GuiIcon.getGuiGraphics(), (int) gui.mouse.getX(), (int) gui.mouse.getY(), gui.getLastPartialTicks());
-                            break;
-                        }
-                    }
-                } catch(Exception e) {
-                   // System.out.println("Failed to reflexively call EditBox render");
-                }
-            }
-
+            searchText.drawTextBox();
             if (realResultCount >= 0) {
-                String text = I18n.get("buildcraft.guide.too_many_results", realResultCount);
+                String text = LocaleUtil.localize("buildcraft.guide.too_many_results", realResultCount);
                 getFontRenderer().drawString(text, x + 105, y - 23, -1);
             }
-
-            if (index != 0) {
-                int oX = x + ORDER_OFFSET_X;
-                int oY = y + ORDER_OFFSET_Y;
-                for (int j = 0; j < GuiGuide.ORDERS.length; j++) {
-                    GuiIcon icon = GuiGuide.ORDERS[j];
-                    TypeOrder typeOrder = GuiGuide.SORTING_TYPES[j];
-                    if (gui.sortingOrder == typeOrder) {
-                        icon = icon.offset(0, 14);
-                    }
-                    if (icon.containsGuiPos(oX, oY, gui.mouse)) {
-                        icon = icon.offset(0, 28);
-                        gui.tooltips.add(Collections.singletonList(LocaleUtil.localize(typeOrder.localeKey)));
-                    }
-                    icon.drawAt(oX, oY);
-                    oY += 14;
-                }
-            }
         }
-
+        RenderUtil.setGLColorFromInt(-1);
         PagePosition pos = new PagePosition(2, 0);
 
         pos = contents.render(x, y, width, height, pos, index);
@@ -232,6 +200,23 @@ public class GuidePageContents extends GuidePageBase {
             numPages = pos.page + 1;
         }
         super.renderPage(x, y, width, height, index);
+        if (index != 0 && index % 2 == 0) {
+            int oX = x + ORDER_OFFSET_X;
+            int oY = y + ORDER_OFFSET_Y;
+            for (int j = 0; j < GuiGuide.ORDERS.length; j++) {
+                GuiIcon icon = GuiGuide.ORDERS[j];
+                TypeOrder typeOrder = GuiGuide.SORTING_TYPES[j];
+                if (gui.sortingOrder == typeOrder) {
+                    icon = icon.offset(0, 14);
+                }
+                if (icon.containsGuiPos(oX, oY, gui.mouse)) {
+                    icon = icon.offset(0, 28);
+                    gui.tooltips.add(Collections.singletonList(LocaleUtil.localize(typeOrder.localeKey)));
+                }
+                icon.drawAt(oX, oY);
+                oY += 14;
+            }
+        }
     }
 
     private void drawCenteredText(String text, int x, int y, int width) {
@@ -245,24 +230,29 @@ public class GuidePageContents extends GuidePageBase {
         int index, boolean isEditing) {
         super.handleMouseClick(x, y, width, height, mouseX, mouseY, mouseButton, index, isEditing);
         if (index % 2 == 0) {
-            if (index != 0) {
-                int oX = x + ORDER_OFFSET_X;
-                int oY = y + ORDER_OFFSET_Y;
-                for (TypeOrder order : GuiGuide.SORTING_TYPES) {
-                    GuiRectangle rect = new GuiRectangle(oX, oY, 14, 14);
-                    if (rect.contains(gui.mouse)) {
-                        gui.sortingOrder = order;
-                        loadMainGui();
-                        lastSearchText = "@@@@INVALID@@@";
-                        gui.refreshChapters();
-                        contents.setFontRenderer(getFontRenderer());
-                        return;
-                    }
-                    oY += 14;
+            int oX = x + ORDER_OFFSET_X;
+            int oY = y + ORDER_OFFSET_Y;
+            for (TypeOrder order : GuiGuide.SORTING_TYPES) {
+                GuiRectangle rect = new GuiRectangle(oX, oY, 14, 14);
+                if (rect.contains(gui.mouse)) {
+                    gui.sortingOrder = order;
+                    loadMainGui();
+                    lastSearchText = "@@@@INVALID@@@";
+                    gui.refreshChapters();
+                    contents.setFontRenderer(getFontRenderer());
+                    return;
                 }
+                oY += 14;
+            }
+            if (!searchText.mouseClicked(mouseX, mouseY, mouseButton) && !searchText.isFocused()
+                && new GuiRectangle(x - 2, y - 34, 40, 34).contains(mouseX, mouseY)) {
+                searchText.setFocused(true);
+            }
+            if (mouseButton == 1 && mouseX >= searchText.x && mouseX < searchText.x + searchText.width
+                && mouseY >= searchText.y && mouseY < searchText.y + searchText.height) {
+                searchText.setText("");
             }
         }
-        
         if (mouseButton == 0) {
             if (index == 0) {
                 IFontRenderer f = getFontRenderer();
@@ -289,46 +279,7 @@ public class GuidePageContents extends GuidePageBase {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        double mouseX = event.x();
-        double mouseY = event.y();
-        int mouseButton = event.button();
-        
-        if (searchText.isFocused() && searchText.mouseClicked(event, doubleClick)) {
-             return true;
-        }
-
-        if (!searchText.isFocused() && new GuiRectangle(searchText.getX() - 2, searchText.getY() - 34, 40, 34).contains(mouseX, mouseY)) {
-             searchText.setFocused(true);
-             return true;
-        }
-
-        if (mouseButton == 1 && mouseX >= searchText.getX() && mouseX < searchText.getX() + searchText.getWidth()
-            && mouseY >= searchText.getY() && mouseY < searchText.getY() + searchText.getHeight()) {
-            searchText.setValue("");
-            return true;
-        }
-        
-        return super.mouseClicked(event, doubleClick);
-    }
-
-    @Override
-    public boolean keyPressed(KeyEvent event) {
-        if (searchText.isFocused()) {
-            if (searchText.keyPressed(event)) {
-                return true;
-            }
-        }
-        return super.keyPressed(event);
-    }
-
-    @Override
-    public boolean charTyped(CharacterEvent event) {
-        if (searchText.isFocused()) {
-            if (searchText.charTyped(event)) {
-                return true;
-            }
-        }
-        return super.charTyped(event);
+    public boolean keyTyped(char typedChar, int keyCode) throws IOException {
+        return searchText.textboxKeyTyped(typedChar, keyCode);
     }
 }

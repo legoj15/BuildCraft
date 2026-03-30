@@ -61,6 +61,8 @@ public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, Min
 
     private static final LaserType TUBE_LASER;
 
+    private static boolean ledsInitialized = false;
+
     static {
         for (int i = 0; i < COLOUR_POWER.length; i++) {
             int c = ((i * 0x40) / COLOUR_POWER.length) & 0xFF;
@@ -117,6 +119,11 @@ public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, Min
                 Minecraft.getInstance().renderBuffers().bufferSource();
 
         // --- LED Rendering ---
+        if (!ledsInitialized) {
+            ledsInitialized = true;
+            LED_POWER.setWhiteTex();
+            LED_STATUS.setWhiteTex();
+        }
         renderLEDs(tile, pos, level, poseStack, bufferSource);
 
         bufferSource.endBatch();

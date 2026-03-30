@@ -19,6 +19,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
@@ -498,6 +499,9 @@ public class GuiGuide extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (currentPage != null && currentPage.mouseClicked(event, doubleClick)) {
+            return true;
+        }
         double mouseX = event.x();
         double mouseY = event.y();
         int mouseButton = event.button();
@@ -583,7 +587,7 @@ public class GuiGuide extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent keyEvent) {
-        if (currentPage != null && currentPage.keyTyped((char) 0, keyEvent.key())) {
+        if (currentPage != null && currentPage.keyPressed(keyEvent)) {
             return true;
         }
 
@@ -604,5 +608,13 @@ public class GuiGuide extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    @Override
+    public boolean charTyped(CharacterEvent event) {
+        if (currentPage != null && currentPage.charTyped(event)) {
+            return true;
+        }
+        return super.charTyped(event);
     }
 }

@@ -62,6 +62,11 @@ public enum MinecraftFont implements IFontRenderer {
             drawX = x - width / 2;
         }
 
+        // Ensure alpha is set — colour 0x00000000 would be transparent
+        if ((colour & 0xFF000000) == 0) {
+            colour |= 0xFF000000;
+        }
+
         // Note: in NeoForge 1.21.11, GuiGraphicsExtractor.pose() returns Matrix3x2fStack
         // which does not have pushPose/popPose. For scaled text we skip the transform
         // and just draw at the given position for now.

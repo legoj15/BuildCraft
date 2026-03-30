@@ -58,6 +58,8 @@ public class RenderPump implements BlockEntityRenderer<TilePump, PumpRenderState
 
     private static final LaserType TUBE_LASER;
 
+    private static boolean ledsInitialized = false;
+
     static {
         for (int i = 0; i < COLOUR_POWER.length; i++) {
             int c = (i * 0x40) / COLOUR_POWER.length;
@@ -147,6 +149,13 @@ public class RenderPump implements BlockEntityRenderer<TilePump, PumpRenderState
                 Minecraft.getInstance().renderBuffers().bufferSource();
 
         // --- LED Rendering ---
+        if (!ledsInitialized) {
+            ledsInitialized = true;
+            for (int i = 0; i < 4; i++) {
+                LED_POWER[i].setWhiteTex();
+                LED_STATUS[i].setWhiteTex();
+            }
+        }
         renderLEDs(tile, pos, level, poseStack, bufferSource);
 
         bufferSource.endBatch();

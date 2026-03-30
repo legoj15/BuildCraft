@@ -44,10 +44,13 @@ public class RenderPartCube {
     public void setWhiteTex() {
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
                 .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
-        // MissingTextureAtlasSprite is a pure white sprite on the block atlas.
-        TextureAtlasSprite white = atlas.getSprite(Identifier.withDefaultNamespace("missingno"));
-        float u = (white.getU0() + white.getU1()) / 2f;
-        float v = (white.getV0() + white.getV1()) / 2f;
+        // To get a perfectly untextured, flat solid color quad using the standard block cutout shader:
+        // We select a practically solid white vanilla sprite (snow) and lock all quad vertices
+        // EXACTLY to the top-left pixel boundary. This completely eliminates checkerboard mipmap moire
+        // associated with missing textures, and achieves the "directly colored quad" effect safely.
+        TextureAtlasSprite white = atlas.getSprite(Identifier.parse("minecraft:block/snow"));
+        float u = white.getU0();
+        float v = white.getV0();
         center.texf(u, v);
     }
 

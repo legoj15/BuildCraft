@@ -55,13 +55,23 @@ public class PageEntryItemStack extends PageValueType<ItemStackValueFilter> {
             );
         }
         String str = json.get("stack").getAsString();
+        // Strip parentheses wrapper: (mod:item) -> mod:item
         if (str.startsWith("(") && str.endsWith(")")) {
             str = str.substring(1, str.length() - 1);
         }
+        // Strip legacy 1.12 curly-brace metadata format: {mod:item, meta, damage} -> mod:item
+        if (str.startsWith("{") && str.endsWith("}")) {
+            str = str.substring(1, str.length() - 1);
+        }
+        // Strip metadata values after comma (1.12 used meta/damage, 1.21 doesn't)
+        if (str.contains(",")) {
+            str = str.substring(0, str.indexOf(',')).trim();
+        }
+        str = str.trim();
         Identifier loc = Identifier.parse(str);
         Item item = BuiltInRegistries.ITEM.get(loc).map(ref -> ref.value()).orElse(null);
         if (item == null) {
-            throw new JsonSyntaxException("Unknown item " + str);
+            return new OptionallyDisabled<>("Unknown item '" + str + "' (from stack '" + json.get("stack").getAsString() + "')");
         }
         ItemStack stack = new ItemStack(item);
         ItemStackValueFilter filter = new ItemStackValueFilter(new ItemStackKey(stack), false, false);

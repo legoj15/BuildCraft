@@ -17,8 +17,8 @@ tool "marker_path"
 // tool "list"  // Not yet ported: requires list GUI
 // tool "volume_box"  // Not yet ported: requires volume box system
 
-block_engine "engine_wood" "{buildcraftunofficial:engine, 1, 0}"
-// block_engine "engine_creative" "{buildcraftunofficial:engine, 1, 1}"  // Not yet ported: creative engine
+block_engine "engine_redstone" "buildcraftunofficial:engine_redstone"
+block_engine "engine_creative" "buildcraftunofficial:engine_creative"
 
 // -- Triggers and Actions -- not yet ported: requires statement system
 // trigger "basic" "always_on" "buildcraftunofficial:trigger.true"

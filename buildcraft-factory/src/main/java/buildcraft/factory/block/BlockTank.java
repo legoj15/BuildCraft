@@ -16,6 +16,10 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
+import net.minecraft.util.RandomSource;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -108,29 +112,35 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
 
     // --- Block state from neighbors ---
 
+    @Nullable
+    @Override
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        Level level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        boolean isTankBelow = level.getBlockState(pos.below()).getBlock() instanceof ITankBlockConnector;
+        return this.defaultBlockState().setValue(JOINED_BELOW, isTankBelow);
+    }
+
+    @Override
+    protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess scheduledTickAccess,
+            BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
+        if (direction == Direction.DOWN) {
+            boolean isTankBelow = neighborState.getBlock() instanceof ITankBlockConnector;
+            return state.setValue(JOINED_BELOW, isTankBelow);
+        }
+        return super.updateShape(state, level, scheduledTickAccess, pos, direction, neighborPos, neighborState, random);
+    }
+
     @Override
     protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
         super.onPlace(state, level, pos, oldState, movedByPiston);
-        updateJoinedBelow(level, pos, state);
-        // Also update the block above (it may need to become joined_below=true)
-        BlockPos above = pos.above();
-        BlockState aboveState = level.getBlockState(above);
-        if (aboveState.getBlock() instanceof BlockTank) {
-            updateJoinedBelow(level, above, aboveState);
-        }
+
         // Balance tank fluids on placement
         if (!level.isClientSide()) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof TileTank tank) {
                 tank.balanceTankFluids();
             }
-        }
-    }
-
-    private void updateJoinedBelow(Level level, BlockPos pos, BlockState state) {
-        boolean isTankBelow = level.getBlockState(pos.below()).getBlock() instanceof ITankBlockConnector;
-        if (state.getValue(JOINED_BELOW) != isTankBelow) {
-            level.setBlock(pos, state.setValue(JOINED_BELOW, isTankBelow), Block.UPDATE_ALL);
         }
     }
 

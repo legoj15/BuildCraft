@@ -130,9 +130,7 @@ public class BCCoreCreativeTabs {
                                 output.accept(BCSiliconItems.GATE_COPIER.get());
                                 // Fluids
                                 for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
-                                    if (entry.heat() == 0) {
-                                        output.accept(entry.bucket().get());
-                                    }
+                                    output.accept(entry.bucket().get());
                                 }
                             })
                             .build());

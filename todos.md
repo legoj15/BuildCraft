@@ -67,10 +67,6 @@
 - [ ] Reload system (5 files): `IReloadable`, `LibConfigChangeListener`, `ReloadManager`, `ReloadSource`, `ReloadUtil`
 - [ ] Misc: `CapabilityHelper`, `CompatManager`, `DataMetadataSection`, `BCAdvDebugging`
 
-### Wooden Diamond Pipe GUI
-- [ ] Replace text-based filter mode buttons with 1.12.2-style icon buttons
-- [ ] Currently uses `Button.builder(Component.literal("White"), ...)` instead of proper icons
-
 
 ### Guidebook
 - [ ] Finish content: add help entries for all blocks/items

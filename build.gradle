@@ -39,6 +39,7 @@ sourceSets {
                 'buildcraft-transport/src/main/resources',
                 'buildcraft-silicon/src/main/resources',
                 'buildcraft-robotics/src/main/resources',
+                'BuildCraftGuide/guide_resources',
             ]
         }
     }

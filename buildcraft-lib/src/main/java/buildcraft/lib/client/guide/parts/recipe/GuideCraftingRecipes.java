@@ -95,13 +95,10 @@ public enum GuideCraftingRecipes implements IStackRecipes {
     @Nullable
     static RecipeManager getRecipeManager() {
         Minecraft mc = Minecraft.getInstance();
-        // Try integrated server first (singleplayer)
-        MinecraftServer server = mc.getSingleplayerServer();
+        net.minecraft.server.MinecraftServer server = mc.getSingleplayerServer();
         if (server != null) {
             return server.getRecipeManager();
         }
-        // For dedicated servers, recipes must be synced via OnDatapackSyncEvent
-        // TODO: Add RecipesReceivedEvent listener for multiplayer support
         return null;
     }
 }

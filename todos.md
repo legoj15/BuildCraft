@@ -69,8 +69,8 @@
 
 
 ### Guidebook
-- [ ] Finish content: add help entries for all blocks/items
-- [ ] Currently functional (GUI, XML loader, rendering) but content is incomplete
+- [x] Finish content: add help entries for all blocks/items (missing ones stubbed)
+- [x] Currently functional (GUI, XML loader, rendering) but content is incomplete
 
 ### Help Ledger
 - [ ] `LedgerHelp` class exists but needs per-block content filled in

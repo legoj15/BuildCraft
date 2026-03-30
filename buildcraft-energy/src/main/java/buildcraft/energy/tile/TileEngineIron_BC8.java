@@ -189,9 +189,10 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
                     if (coolPerMb > 0) {
                         int coolantAmount = Math.min(MAX_COOLANT_PER_TICK, tankCoolant.getFluidAmount());
                         coolingBuffer += coolantAmount * coolPerMb;
+                        FluidStack currentCoolant = tankCoolant.getFluid().copy();
                         tankCoolant.drain(coolantAmount, IFluidHandler.FluidAction.EXECUTE);
                         // Ice cool advancement: coolant that isn't water
-                        if (!tankCoolant.getFluid().is(net.minecraft.world.level.material.Fluids.WATER)
+                        if (!currentCoolant.isEmpty() && !currentCoolant.is(net.minecraft.world.level.material.Fluids.WATER)
                             && getOwner() != null && level != null) {
                             AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT_ICE_COOL);
                         }

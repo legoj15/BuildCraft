@@ -9,4 +9,5 @@
 * Re-enabled Assembly Table recipes for Guide Book pages (though the book still doesn't do much)
 * Fixed Pump and Mining Well LEDs failing to render or displaying the missing texture checkerboard due to invalid vertex UV defaults
 * Fixed stacked tanks not regaining their bottom textures when the tank below them is broken or removed
-* Restored legacy block and item sounds, ensuring engines, machines, and pipes clang with correct metal acoustic properties
+* Restored block and item sounds, ensuring engines, machines, and pipes clang with correct metal acoustic properties
+* Restored mechanical wrench rotation sounds and slimy paintbrush coloring sounds

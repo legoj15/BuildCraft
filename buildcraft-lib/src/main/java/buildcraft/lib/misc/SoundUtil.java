@@ -25,11 +25,30 @@ public class SoundUtil {
     }
 
     public static void playSlideSound(Level level, BlockPos pos, BlockState state, InteractionResult result) {
-        // Stub
+        if (result == InteractionResult.PASS) return;
+        SoundType soundType = state.getSoundType();
+        net.minecraft.sounds.SoundEvent event;
+        if (result == InteractionResult.SUCCESS || result == InteractionResult.CONSUME) {
+            event = SoundEvents.PISTON_CONTRACT;
+        } else {
+            event = SoundEvents.PISTON_EXTEND;
+        }
+        float volume = (soundType.getVolume() + 1.0F) / 2.0F;
+        float pitch = soundType.getPitch() * 0.8F;
+        level.playSound(null, pos, event, SoundSource.BLOCKS, volume, pitch);
     }
 
     public static void playChangeColour(Level level, BlockPos pos, @Nullable DyeColor colour) {
-        // Stub — requires sound registry
+        SoundType soundType = SoundType.SLIME_BLOCK;
+        net.minecraft.sounds.SoundEvent soundEvent;
+        if (colour == null) {
+            soundEvent = SoundEvents.BUCKET_EMPTY;
+        } else {
+            soundEvent = SoundEvents.SLIME_SQUISH;
+        }
+        float volume = (soundType.getVolume() + 1.0F) / 2.0F;
+        float pitch = soundType.getPitch() * 0.8F;
+        level.playSound(null, pos, soundEvent, SoundSource.BLOCKS, volume, pitch);
     }
 
     public static void playBucketEmpty(Level world, BlockPos pos, FluidStack fluid) {

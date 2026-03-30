@@ -154,7 +154,66 @@ public class BCCore {
             );
             // Register List tooltip handler (shows 'Matches' in tooltip while List GUI is open)
             NeoForge.EVENT_BUS.register(buildcraft.core.list.ListTooltipHandler.INSTANCE);
+
+            // Custom particles for brushing pipes (suppresses the underlying block's vanilla wood/invisible particles)
+            NeoForge.EVENT_BUS.addListener(
+                net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Tick.class,
+                event -> {
+                    if (event.getEntity().level().isClientSide() && event.getItem().is(net.minecraft.world.item.Items.BRUSH)) {
+                        int maxDuration = event.getItem().getUseDuration(event.getEntity());
+                        int used = maxDuration - event.getDuration();
+                        // BrushItem spawns dust every 10 ticks
+                        if (used > 0 && (used % 10) == 0) {
+                            net.minecraft.world.phys.HitResult hit = net.minecraft.client.Minecraft.getInstance().hitResult;
+                            if (hit instanceof net.minecraft.world.phys.BlockHitResult blockHit) {
+                                net.minecraft.core.BlockPos pos = blockHit.getBlockPos();
+                                net.minecraft.world.level.block.state.BlockState state = event.getEntity().level().getBlockState(pos);
+                                if (state.getBlock() instanceof buildcraft.transport.block.BlockPipeHolder) {
+                                    buildcraft.transport.client.PipeHolderClientExtensions.INSTANCE.addHitEffects(
+                                        state, event.getEntity().level(), blockHit, net.minecraft.client.Minecraft.getInstance().particleEngine
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            );
         }
+
+        // Vanilla Brush for cleaning pipes & painted blocks
+        NeoForge.EVENT_BUS.addListener(
+            net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock.class,
+            interactEvent -> {
+                if (interactEvent.getItemStack().is(net.minecraft.world.item.Items.BRUSH)) {
+                    // Try to un-paint
+                    net.minecraft.world.phys.Vec3 hitLoc = interactEvent.getHitVec().getLocation();
+                    net.minecraft.world.InteractionResult result = buildcraft.api.blocks.CustomPaintHelper.INSTANCE.attemptPaintBlock(
+                        interactEvent.getLevel(), interactEvent.getPos(), interactEvent.getLevel().getBlockState(interactEvent.getPos()),
+                        hitLoc, interactEvent.getFace(), null);
+                    
+                    if (result == net.minecraft.world.InteractionResult.SUCCESS) {
+                        if (!interactEvent.getLevel().isClientSide()) {
+                            try {
+                                // Find any sweeping sound using reflection to be safe
+                                net.minecraft.sounds.SoundEvent sweep = null;
+                                for (java.lang.reflect.Field f : net.minecraft.sounds.SoundEvents.class.getFields()) {
+                                    if (f.getName().contains("BRUSH")) {
+                                        sweep = (net.minecraft.sounds.SoundEvent) f.get(null);
+                                        break;
+                                    }
+                                }
+                                if (sweep != null) {
+                                    interactEvent.getLevel().playSound(null, interactEvent.getPos(), sweep, net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, 1.0f);
+                                }
+                            } catch (Exception e) {}
+                            buildcraft.lib.misc.ParticleUtil.showChangeColour(interactEvent.getLevel(), hitLoc, null);
+                        }
+                        interactEvent.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
+                        interactEvent.setCanceled(true);
+                    }
+                }
+            }
+        );
     }
 
     private void preInit(FMLCommonSetupEvent event) {

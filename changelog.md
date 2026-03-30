@@ -9,5 +9,6 @@
 * Re-enabled Assembly Table recipes for Guide Book pages (though the book still doesn't do much)
 * Fixed Pump and Mining Well LEDs failing to render or displaying the missing texture checkerboard due to invalid vertex UV defaults
 * Fixed stacked tanks not regaining their bottom textures when the tank below them is broken or removed
-* Restored block and item sounds, ensuring engines, machines, and pipes clang with correct metal acoustic properties
-* Restored mechanical wrench rotation sounds and slimy paintbrush coloring sounds
+* Restored block and item sounds (instead of everything just sounding like stone or being silent)
+* Enabled using the vanilla Minecraft Brush item as an alternative way to clean painted pipes and blocks
+* Fixed vanilla interaction logic (such as brushing) causing the default wooden transport pipe particle texture to spawn

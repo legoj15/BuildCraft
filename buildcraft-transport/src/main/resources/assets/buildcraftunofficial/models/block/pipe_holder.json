@@ -1,5 +1,5 @@
 {
     "textures": {
-        "particle": "buildcraftunofficial:item/pipe_wood_item"
+        "particle": "buildcraftunofficial:block/invisible"
     }
 }

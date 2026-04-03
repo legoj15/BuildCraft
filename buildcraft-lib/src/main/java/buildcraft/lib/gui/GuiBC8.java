@@ -109,6 +109,7 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
     /** MC 26.1: extractLabels replaces renderLabels. */
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        super.extractLabels(graphics, mouseX, mouseY);
         GuiIcon.setGuiGraphics(graphics);
         drawForegroundLayer();
         mainGui.drawElementForegrounds(null);

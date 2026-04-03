@@ -162,26 +162,15 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        // Let the base class render the slots and background
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        
         if (this.recipeBookComponent != null && this.recipeBookComponent.isVisible() && this.widthTooNarrow) {
-            this.extractContents(graphics, mouseX, mouseY, partialTick);
-            // MC 26.1: RecipeBookComponent rendering APIs changed significantly
-            // TODO: Implement proper recipe book rendering with new MC 26.1 API
-        } else {
-            super.extractRenderState(graphics, mouseX, mouseY, partialTick);
             // MC 26.1: RecipeBookComponent rendering APIs changed significantly
             // TODO: Implement proper recipe book rendering with new MC 26.1 API
         }
         // MC 26.1: Tooltip APIs changed significantly
         // TODO: Implement proper recipe book tooltip rendering with new MC 26.1 API
-    }
-
-    @Override
-    public void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
-        GuiIcon.setGuiGraphics(graphics);
-        mainGui.drawBackgroundLayer(partialTicks, mouseX, mouseY, () -> {
-            drawBackgroundTexture(graphics);
-        });
-        mainGui.drawElementBackgrounds();
     }
 
     @Override
@@ -195,8 +184,8 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
             this.setFocused(this.recipeBookComponent);
             return true;
         }
-        return this.widthTooNarrow && this.recipeBookComponent != null && this.recipeBookComponent.isVisible()
-            ? true : super.mouseClicked(event, entered);
+        // Defer to super class to allow clicking slots even if recipe book logic is unfinished
+        return super.mouseClicked(event, entered);
     }
 
     protected boolean hasClickedOutside(double mouseX, double mouseY, int left, int top, int button) {

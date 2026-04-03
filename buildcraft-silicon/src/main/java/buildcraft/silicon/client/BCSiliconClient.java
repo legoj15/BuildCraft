@@ -19,6 +19,7 @@ import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.BCSiliconMenuTypes;
 import buildcraft.silicon.client.model.FacadeItemModel;
 import buildcraft.silicon.client.model.key.KeyPlugFacade;
+import buildcraft.silicon.client.model.key.KeyPlugGate;
 import buildcraft.silicon.client.model.plug.PlugBakerFacade;
 import buildcraft.silicon.client.render.RenderLaser;
 import buildcraft.silicon.gui.GuiAdvancedCraftingTable;
@@ -57,6 +58,7 @@ public class BCSiliconClient {
     public static void onModifyBakingResult(ModelEvent.ModifyBakingResult event) {
         // Register facade baker via API (fires after Transport's registerRenderers)
         if (PipeApiClient.registry != null) {
+            PipeApiClient.registry.registerBaker(KeyPlugGate.class, buildcraft.silicon.client.model.plug.PlugGateBaker.INSTANCE);
             PipeApiClient.registry.registerBaker(KeyPlugFacade.class, PlugBakerFacade.INSTANCE);
             PipeApiClient.registry.registerBaker(buildcraft.silicon.client.model.key.KeyPlugLens.class, buildcraft.silicon.client.model.plug.PlugBakerLens.INSTANCE);
         } else {
@@ -74,6 +76,7 @@ public class BCSiliconClient {
             itemModels.put(facadeId, new FacadeItemModel());
         }
         FacadeItemModel.onModelBake();
+        buildcraft.silicon.client.model.plug.PlugGateBaker.onModelBake();
 
         // Cache the blockstate models for deferred facade deduplication.
         // We can't run dedup here because ItemStack components aren't bound yet

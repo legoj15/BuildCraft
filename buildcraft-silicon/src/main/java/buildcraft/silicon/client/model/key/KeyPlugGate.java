@@ -9,11 +9,13 @@ public class KeyPlugGate extends PluggableModelKey {
 
     public final Direction side;
     public final GateVariant variant;
+    public final boolean active;
 
-    public KeyPlugGate(Direction side, GateVariant variant) {
+    public KeyPlugGate(Direction side, GateVariant variant, boolean active) {
         super(null, side); // null layer is CUTOUT/TRANSLUCENT block layer equivalent
         this.side = side;
         this.variant = variant;
+        this.active = active;
     }
 
     @Override
@@ -21,11 +23,11 @@ public class KeyPlugGate extends PluggableModelKey {
         if (obj == this) return true;
         if (obj == null || obj.getClass() != getClass()) return false;
         KeyPlugGate other = (KeyPlugGate) obj;
-        return other.side == side && other.variant.equals(variant);
+        return other.side == side && other.variant.equals(variant) && other.active == active;
     }
 
     @Override
     public int hashCode() {
-        return side.hashCode() * 31 + variant.hashCode();
+        return (side.hashCode() * 31 + variant.hashCode()) * 31 + (active ? 1 : 0);
     }
 }

@@ -68,26 +68,37 @@ dependencies {
     // Expression library (local file dependency)
     implementation files("sub_projects/expression/build/libs/buildcraft-libexpression-0.9.3-pre.4.jar")
 
-    // JEI/REI — No compatible versions for MC 26.1 yet
-    // compileOnly 'mezz.jei:jei-1.21.1-common-api:19.21.0.247'
+    // JEI
+    compileOnly "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
+    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
+    runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+
+    // REI — No compatible versions for MC 26.1 yet
     // compileOnly 'me.shedaniel:RoughlyEnoughItems-api-neoforge:16.0.799'
 }
 
-// Exclude JEI/REI compat modules from compilation — no MC 26.1 versions available
+// Exclude REI compat modules from compilation — no MC 26.1 versions available
 tasks.withType(JavaCompile).configureEach {
-    exclude '**/compat/jei/**'
     exclude '**/compat/rei/**'
 }
 
 tasks.named('processResources') {
+    var replaceProperties = [
+            mod_version: project.mod_version
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/neoforge.mods.toml']) {
+        expand replaceProperties
+    }
+
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 // ─── Distribution JAR ────────────────────────────────────────────────────────
 tasks.named('jar') {
-    archiveBaseName = 'BuildCraft-all'
-    archiveVersion = '26.1-8.0.0'
-    archiveClassifier = ''
+    archiveBaseName = 'BCunofficial'
+    archiveVersion = project.mod_version
 
     // Include the expression library
     from(zipTree("${rootDir}/sub_projects/expression/build/libs/buildcraft-libexpression-0.9.3-pre.4.jar")) {

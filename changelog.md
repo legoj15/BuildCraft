@@ -1,14 +1,3 @@
-###### Changes since 26.1 Beta release 1:
-
-* Fixed gaseous fluids pooling at the top of the bottom most tank in a tank stack when inserted via pipe
-* Reverted the "snow blocker" used on the engines and heat exchanger because it broke the ability to place levers on them
-* Added all temperature variants of custom fluids to the BuildCraft creative tab
-* Added missing block particles to the distiller
-* Integrated the Guide Book into the gradle build path, automatically generating placeholders for undocumented items
-* Fixed a multiplayer crash on dedicated servers when rendering Guide Book recipe pages
-* Re-enabled Assembly Table recipes for Guide Book pages (though the book still doesn't do much)
-* Fixed Pump and Mining Well LEDs failing to render or displaying the missing texture checkerboard due to invalid vertex UV defaults
-* Fixed stacked tanks not regaining their bottom textures when the tank below them is broken or removed
-* Restored block and item sounds (instead of everything just sounding like stone or being silent)
-* Enabled using the vanilla Minecraft Brush item as an alternative way to clean painted pipes and blocks
-* Fixed vanilla interaction logic (such as brushing) causing the default wooden transport pipe particle texture to spawn
+###### Changes since 26.1 Beta release 2:
+ - 26.1.1 Support
+ - Re-enabled JEI integration for 26.1.1

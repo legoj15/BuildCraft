@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Specification-Title: BuildCraft (Unofficial)
+Specification-Vendor: BuildCraftTeam
+Specification-Version: 1
+Implementation-Title: BuildCraft
+Implementation-Version: 26.1.1_8.0.0-br3
+Implementation-Vendor: BuildCraftTeam
+Implementation-Timestamp: 2026-04-03T13:05:42-0400
+FMLModType: MOD
+Automatic-Module-Name: buildcraftunofficial
+

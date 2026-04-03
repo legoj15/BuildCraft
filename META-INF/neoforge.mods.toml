@@ -4,7 +4,7 @@ license="MPL-2.0"
 
 [[mods]]
 modId="buildcraftunofficial"
-version="${mod_version}"
+version="26.1.1_8.0.0-br3"
 displayName="BuildCraft (Unofficial)"
 logoFile="logo.png"
 credits="Created by SpaceToad"

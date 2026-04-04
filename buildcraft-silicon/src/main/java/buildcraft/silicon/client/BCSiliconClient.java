@@ -75,7 +75,16 @@ public class BCSiliconClient {
         if (vanillaModel != null) {
             itemModels.put(facadeId, new FacadeItemModel());
         }
+
+        // Swap vanilla gate item model with 3D programmatic model
+        Identifier gateId = BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_GATE.get());
+        ItemModel vanillaGateModel = itemModels.get(gateId);
+        if (vanillaGateModel != null) {
+            itemModels.put(gateId, new buildcraft.silicon.client.model.GateItemModel());
+        }
+
         FacadeItemModel.onModelBake();
+        buildcraft.silicon.client.model.GateItemModel.onModelBake();
         buildcraft.silicon.client.model.plug.PlugGateBaker.onModelBake();
 
         // Cache the blockstate models for deferred facade deduplication.

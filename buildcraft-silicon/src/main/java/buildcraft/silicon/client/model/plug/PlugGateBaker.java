@@ -79,10 +79,7 @@ public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
 
         // Dynamic State Component
         // In 1.12.2, gate_dynamic.json forced "light": "on ? 15 : 0" on this quad.
-        // At light=0 the renderer made gate_off.png (dark red) appear pure black.
-        // BakedQuad in MC 26.1 doesn't carry vertex colors, and static baked quads
-        // can't override world lighting, so gate_off.png always appears red in daylight.
-        // Fix: use a vanilla near-black texture (black_concrete) for the off state.
+        // BakedQuad in MC 26.1 doesn't carry vertex colors, so we use black_concrete for off state.
         if (key.active) {
             TextureAtlasSprite dynSprite = getSprite("buildcraftunofficial:block/gates/gate_on");
             buildBox(list, 1.9f / 16f, 6f / 16f, 6f / 16f, 4.1f / 16f, 10f / 16f, 10f / 16f, dynSprite, key.side, false, 15);
@@ -104,27 +101,62 @@ public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
         return list;
     }
 
+    /**
+     * Bake gate geometry as MutableQuads for item rendering.
+     * Unlike the in-world baker, items use gate_off.png directly (the dark red texture
+     * is correct for items since vertex colors can be applied through the item rendering path).
+     * Always uses Direction.WEST (no rotation needed for items).
+     */
+    public List<MutableQuad> bakeForItem(buildcraft.silicon.gate.GateVariant variant) {
+        List<MutableQuad> quads = new ArrayList<>();
+
+        float baseMinX = 2f / 16f, baseMaxX = 4.01f / 16f;
+        float baseYMin = 5f / 16f, baseYMax = 11f / 16f;
+        float baseZMin = 5f / 16f, baseZMax = 11f / 16f;
+
+        // Base Material
+        TextureAtlasSprite matSprite = getSprite(getMaterialSpritePath(variant.material));
+        buildBoxMutable(quads, baseMinX, baseYMin, baseZMin, baseMaxX, baseYMax, baseZMax, matSprite, true);
+
+        // Logic Component
+        if (variant.material != buildcraft.silicon.gate.EnumGateMaterial.CLAY_BRICK) {
+            TextureAtlasSprite logicSprite = getSprite("buildcraftunofficial:block/gates/gate_" + variant.logic.tag);
+            buildBoxMutable(quads, 1.8f / 16f, 7f / 16f, 7f / 16f, 4.2f / 16f, 9f / 16f, 9f / 16f, logicSprite, false);
+        }
+
+        // Dynamic State Component — items always show "off" with the original gate_off texture
+        TextureAtlasSprite dynSprite = getSprite("buildcraftunofficial:block/gates/gate_off");
+        buildBoxMutable(quads, 1.9f / 16f, 6f / 16f, 6f / 16f, 4.1f / 16f, 10f / 16f, 10f / 16f, dynSprite, false);
+
+        // Modifiers
+        if (variant.modifier != buildcraft.silicon.gate.EnumGateModifier.NO_MODIFIER) {
+            TextureAtlasSprite modSprite = getSprite(getModifierSpritePath(variant.modifier));
+            buildBoxMutable(quads, 1.8f / 16f, 5.5f / 16f, 5.5f / 16f, 4.2f / 16f, 6.5f / 16f, 6.5f / 16f, modSprite, false);
+            buildBoxMutable(quads, 1.8f / 16f, 9.5f / 16f, 5.5f / 16f, 4.2f / 16f, 10.5f / 16f, 6.5f / 16f, modSprite, false);
+            buildBoxMutable(quads, 1.8f / 16f, 5.5f / 16f, 9.5f / 16f, 4.2f / 16f, 6.5f / 16f, 10.5f / 16f, modSprite, false);
+            buildBoxMutable(quads, 1.8f / 16f, 9.5f / 16f, 9.5f / 16f, 4.2f / 16f, 10.5f / 16f, 10.5f / 16f, modSprite, false);
+        }
+
+        // Rotate 90° around Y so the gate face points toward the camera.
+        // In 1.12.2, TRANSFORM_PLUG_AS_ITEM_BIGGER applied item_gui = def(0, 90, 0, ...).
+        // Our quads start facing WEST (-X); rotating WEST→NORTH maps -X to -Z (camera-facing).
+        // However the rotation moves the face from X≈3/16 to Z≈13/16 (back of the cube),
+        // so we translate forward in Z by -10/16 to bring the face back to the front.
+        for (MutableQuad mq : quads) {
+            mq.rotate(Direction.WEST, Direction.NORTH, 0.5f, 0.5f, 0.5f);
+            mq.translatef(0, 0, -10f / 16f);
+        }
+
+        return quads;
+    }
+
     private void buildBox(List<BakedQuad> list, float minX, float minY, float minZ, float maxX, float maxY, float maxZ, TextureAtlasSprite sprite, Direction targetSide, boolean shade, int light) {
         AABB box = new AABB(minX, minY, minZ, maxX, maxY, maxZ);
         Vector3f center = new Vector3f((minX + maxX) / 2f, (minY + maxY) / 2f, (minZ + maxZ) / 2f);
         Vector3f radius = new Vector3f(maxX - center.x, maxY - center.y, maxZ - center.z);
 
         for (Direction face : Direction.values()) {
-            ModelUtil.UvFaceData uv = new ModelUtil.UvFaceData();
-            
-            // Hardcode specific mapping required for gates 
-            // This is effectively texture shrink-wrapping exactly as modeled in BC 1.12.2 gate.json
-            if (face == Direction.WEST || face == Direction.EAST) {
-                uv.minU = 5f / 16f;
-                uv.maxU = 11f / 16f;
-                uv.minV = 5f / 16f;
-                uv.maxV = 11f / 16f;
-            } else {
-                uv.minU = 2f / 16f;
-                uv.maxU = 4f / 16f;
-                uv.minV = 5f / 16f;
-                uv.maxV = 11f / 16f;
-            }
+            ModelUtil.UvFaceData uv = makeGateUVs(face);
 
             MutableQuad q = ModelUtil.createFace(face, center, radius, uv);
             q.texFromSprite(sprite);
@@ -143,5 +175,42 @@ public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
             
             list.add(q.toBakedBlock());
         }
+    }
+
+    /**
+     * Build box geometry as MutableQuads (for item rendering).
+     * No rotation is applied — items always render in the WEST orientation.
+     */
+    private void buildBoxMutable(List<MutableQuad> list, float minX, float minY, float minZ, float maxX, float maxY, float maxZ, TextureAtlasSprite sprite, boolean shade) {
+        Vector3f center = new Vector3f((minX + maxX) / 2f, (minY + maxY) / 2f, (minZ + maxZ) / 2f);
+        Vector3f radius = new Vector3f(maxX - center.x, maxY - center.y, maxZ - center.z);
+
+        for (Direction face : Direction.values()) {
+            ModelUtil.UvFaceData uv = makeGateUVs(face);
+
+            MutableQuad q = ModelUtil.createFace(face, center, radius, uv);
+            q.texFromSprite(sprite);
+            q.setTint(-1);
+            q.setShade(shade);
+            q.setCalculatedNormal();
+            list.add(q);
+        }
+    }
+
+    /** Hardcoded UV region matching the BC 1.12.2 gate.json texture shrink-wrapping. */
+    private static ModelUtil.UvFaceData makeGateUVs(Direction face) {
+        ModelUtil.UvFaceData uv = new ModelUtil.UvFaceData();
+        if (face == Direction.WEST || face == Direction.EAST) {
+            uv.minU = 5f / 16f;
+            uv.maxU = 11f / 16f;
+            uv.minV = 5f / 16f;
+            uv.maxV = 11f / 16f;
+        } else {
+            uv.minU = 2f / 16f;
+            uv.maxU = 4f / 16f;
+            uv.minV = 5f / 16f;
+            uv.maxV = 11f / 16f;
+        }
+        return uv;
     }
 }

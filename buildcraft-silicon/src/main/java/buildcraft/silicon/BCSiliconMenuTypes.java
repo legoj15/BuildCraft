@@ -32,6 +32,9 @@ public class BCSiliconMenuTypes {
     public static final Supplier<MenuType<ContainerAdvancedCraftingTable>> ADVANCED_CRAFTING_TABLE =
         MENU_TYPES.register("advanced_crafting_table", () -> IMenuTypeExtension.create(ContainerAdvancedCraftingTable::new));
 
+    public static final Supplier<MenuType<buildcraft.silicon.container.ContainerGate>> GATE =
+        MENU_TYPES.register("gate", () -> IMenuTypeExtension.create(buildcraft.silicon.container.ContainerGate::new));
+
     public static void init(IEventBus modEventBus) {
         MENU_TYPES.register(modEventBus);
     }

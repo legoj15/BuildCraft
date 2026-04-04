@@ -239,8 +239,22 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
             }
 
             BlockPos pos = holder.getPipePos();
-            // TODO: GUI port
-            // BCSiliconGuis.GATE.openGui(player, pos, side.ordinal());
+            if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+                serverPlayer.openMenu(new net.minecraft.world.MenuProvider() {
+                    @Override
+                    public Component getDisplayName() {
+                        return logic.variant.getLocalizedName();
+                    }
+
+                    @Override
+                    public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int id, net.minecraft.world.entity.player.Inventory inv, Player p) {
+                        return new buildcraft.silicon.container.ContainerGate(id, inv, PluggableGate.this);
+                    }
+                }, buf -> {
+                    buf.writeBlockPos(pos);
+                    buf.writeEnum(side);
+                });
+            }
         }
         return true;
     }

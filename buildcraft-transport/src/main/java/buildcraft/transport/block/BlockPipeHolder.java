@@ -199,8 +199,12 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
             buildcraft.api.core.EnumPipePart hitPart = getHitPart(tile, hitResult);
 
             // Check if clicking on a pluggable — activate it
-            if (hitPart != buildcraft.api.core.EnumPipePart.CENTER && hitPart.face != null) {
-                buildcraft.api.transport.pluggable.PipePluggable existing = tile.getPluggable(hitPart.face);
+            Direction plugDir = getHitPluggable(tile, 
+                    hitResult.getLocation().x - pos.getX(), 
+                    hitResult.getLocation().y - pos.getY(), 
+                    hitResult.getLocation().z - pos.getZ());
+            if (plugDir != null) {
+                buildcraft.api.transport.pluggable.PipePluggable existing = tile.getPluggable(plugDir);
                 if (existing != null) {
                     if (existing.onPluggableActivate(player, hitResult,
                             (float) hitResult.getLocation().x, (float) hitResult.getLocation().y,
@@ -265,6 +269,22 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         // Fall through to pipe activation (e.g. opening a pipe GUI)
         var pipe = tile.getPipe();
         buildcraft.api.core.EnumPipePart hitPart = getHitPart(tile, hitResult);
+
+        Direction plugDir = getHitPluggable(tile, 
+                hitResult.getLocation().x - pos.getX(), 
+                hitResult.getLocation().y - pos.getY(), 
+                hitResult.getLocation().z - pos.getZ());
+        if (plugDir != null) {
+            buildcraft.api.transport.pluggable.PipePluggable existing = tile.getPluggable(plugDir);
+            if (existing != null) {
+                if (existing.onPluggableActivate(player, hitResult,
+                        (float) hitResult.getLocation().x, (float) hitResult.getLocation().y,
+                        (float) hitResult.getLocation().z)) {
+                    return InteractionResult.SUCCESS;
+                }
+            }
+        }
+
         if (pipe.getBehaviour().onPipeActivate(player, hitResult,
                 (float) hitResult.getLocation().x, (float) hitResult.getLocation().y,
                 (float) hitResult.getLocation().z, hitPart)) {

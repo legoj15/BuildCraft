@@ -44,6 +44,7 @@ public class BCSiliconClient {
         event.register(BCSiliconMenuTypes.ASSEMBLY_TABLE.get(), GuiAssemblyTable::new);
         event.register(BCSiliconMenuTypes.INTEGRATION_TABLE.get(), GuiIntegrationTable::new);
         event.register(BCSiliconMenuTypes.ADVANCED_CRAFTING_TABLE.get(), GuiAdvancedCraftingTable::new);
+        event.register(BCSiliconMenuTypes.GATE.get(), buildcraft.silicon.gui.GuiGate::new);
     }
 
 

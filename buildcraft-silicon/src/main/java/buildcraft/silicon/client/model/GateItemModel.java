@@ -48,6 +48,10 @@ public class GateItemModel implements ItemModel {
             List<BakedQuad> quads = new ArrayList<>();
             for (MutableQuad mq : PlugGateBaker.INSTANCE.bakeForItem(variant)) {
                 mq.setShade(false);
+                // Scale 1.8× around center, matching 1.12.2's TRANSFORM_PLUG_AS_ITEM_BIGGER
+                mq.translatef(-0.5f, -0.5f, -0.5f);
+                mq.scalef(1.8f);
+                mq.translatef(0.5f, 0.5f, 0.5f);
                 quads.add(mq.toBakedItem());
             }
             return quads;

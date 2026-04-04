@@ -105,46 +105,41 @@ public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
      * Bake gate geometry as MutableQuads for item rendering.
      * Unlike the in-world baker, items use gate_off.png directly (the dark red texture
      * is correct for items since vertex colors can be applied through the item rendering path).
-     * Always uses Direction.WEST (no rotation needed for items).
+     * Geometry is built facing NORTH (thin axis on Z) so the gate face points at the camera
+     * without needing any post-hoc rotation (which would corrupt BakedQuad face metadata
+     * and break item rendering brightness/size).
      */
     public List<MutableQuad> bakeForItem(buildcraft.silicon.gate.GateVariant variant) {
         List<MutableQuad> quads = new ArrayList<>();
 
-        float baseMinX = 2f / 16f, baseMaxX = 4.01f / 16f;
+        // Coordinates are the same as in-world, but with X↔Z swapped:
+        // Original (WEST-facing): thin in X (2-4/16), wide in Y,Z (5-11/16)
+        // Item (NORTH-facing): thin in Z (2-4/16), wide in X,Y (5-11/16)
+        float baseZMin = 2f / 16f, baseZMax = 4.01f / 16f;
         float baseYMin = 5f / 16f, baseYMax = 11f / 16f;
-        float baseZMin = 5f / 16f, baseZMax = 11f / 16f;
+        float baseXMin = 5f / 16f, baseXMax = 11f / 16f;
 
         // Base Material
         TextureAtlasSprite matSprite = getSprite(getMaterialSpritePath(variant.material));
-        buildBoxMutable(quads, baseMinX, baseYMin, baseZMin, baseMaxX, baseYMax, baseZMax, matSprite, true);
+        buildBoxMutableNorth(quads, baseXMin, baseYMin, baseZMin, baseXMax, baseYMax, baseZMax, matSprite, true);
 
         // Logic Component
         if (variant.material != buildcraft.silicon.gate.EnumGateMaterial.CLAY_BRICK) {
             TextureAtlasSprite logicSprite = getSprite("buildcraftunofficial:block/gates/gate_" + variant.logic.tag);
-            buildBoxMutable(quads, 1.8f / 16f, 7f / 16f, 7f / 16f, 4.2f / 16f, 9f / 16f, 9f / 16f, logicSprite, false);
+            buildBoxMutableNorth(quads, 7f / 16f, 7f / 16f, 1.8f / 16f, 9f / 16f, 9f / 16f, 4.2f / 16f, logicSprite, false);
         }
 
         // Dynamic State Component — items always show "off" with the original gate_off texture
         TextureAtlasSprite dynSprite = getSprite("buildcraftunofficial:block/gates/gate_off");
-        buildBoxMutable(quads, 1.9f / 16f, 6f / 16f, 6f / 16f, 4.1f / 16f, 10f / 16f, 10f / 16f, dynSprite, false);
+        buildBoxMutableNorth(quads, 6f / 16f, 6f / 16f, 1.9f / 16f, 10f / 16f, 10f / 16f, 4.1f / 16f, dynSprite, false);
 
         // Modifiers
         if (variant.modifier != buildcraft.silicon.gate.EnumGateModifier.NO_MODIFIER) {
             TextureAtlasSprite modSprite = getSprite(getModifierSpritePath(variant.modifier));
-            buildBoxMutable(quads, 1.8f / 16f, 5.5f / 16f, 5.5f / 16f, 4.2f / 16f, 6.5f / 16f, 6.5f / 16f, modSprite, false);
-            buildBoxMutable(quads, 1.8f / 16f, 9.5f / 16f, 5.5f / 16f, 4.2f / 16f, 10.5f / 16f, 6.5f / 16f, modSprite, false);
-            buildBoxMutable(quads, 1.8f / 16f, 5.5f / 16f, 9.5f / 16f, 4.2f / 16f, 6.5f / 16f, 10.5f / 16f, modSprite, false);
-            buildBoxMutable(quads, 1.8f / 16f, 9.5f / 16f, 9.5f / 16f, 4.2f / 16f, 10.5f / 16f, 10.5f / 16f, modSprite, false);
-        }
-
-        // Rotate 90° around Y so the gate face points toward the camera.
-        // In 1.12.2, TRANSFORM_PLUG_AS_ITEM_BIGGER applied item_gui = def(0, 90, 0, ...).
-        // Our quads start facing WEST (-X); rotating WEST→NORTH maps -X to -Z (camera-facing).
-        // However the rotation moves the face from X≈3/16 to Z≈13/16 (back of the cube),
-        // so we translate forward in Z by -10/16 to bring the face back to the front.
-        for (MutableQuad mq : quads) {
-            mq.rotate(Direction.WEST, Direction.NORTH, 0.5f, 0.5f, 0.5f);
-            mq.translatef(0, 0, -10f / 16f);
+            buildBoxMutableNorth(quads, 5.5f / 16f, 5.5f / 16f, 1.8f / 16f, 6.5f / 16f, 6.5f / 16f, 4.2f / 16f, modSprite, false);
+            buildBoxMutableNorth(quads, 5.5f / 16f, 9.5f / 16f, 1.8f / 16f, 6.5f / 16f, 10.5f / 16f, 4.2f / 16f, modSprite, false);
+            buildBoxMutableNorth(quads, 9.5f / 16f, 5.5f / 16f, 1.8f / 16f, 10.5f / 16f, 6.5f / 16f, 4.2f / 16f, modSprite, false);
+            buildBoxMutableNorth(quads, 9.5f / 16f, 9.5f / 16f, 1.8f / 16f, 10.5f / 16f, 10.5f / 16f, 4.2f / 16f, modSprite, false);
         }
 
         return quads;
@@ -178,15 +173,16 @@ public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
     }
 
     /**
-     * Build box geometry as MutableQuads (for item rendering).
-     * No rotation is applied — items always render in the WEST orientation.
+     * Build box geometry as MutableQuads for item rendering (NORTH-facing).
+     * The geometry is built with the thin axis on Z (gate face = NORTH),
+     * so no rotation is needed.
      */
-    private void buildBoxMutable(List<MutableQuad> list, float minX, float minY, float minZ, float maxX, float maxY, float maxZ, TextureAtlasSprite sprite, boolean shade) {
+    private void buildBoxMutableNorth(List<MutableQuad> list, float minX, float minY, float minZ, float maxX, float maxY, float maxZ, TextureAtlasSprite sprite, boolean shade) {
         Vector3f center = new Vector3f((minX + maxX) / 2f, (minY + maxY) / 2f, (minZ + maxZ) / 2f);
         Vector3f radius = new Vector3f(maxX - center.x, maxY - center.y, maxZ - center.z);
 
         for (Direction face : Direction.values()) {
-            ModelUtil.UvFaceData uv = makeGateUVs(face);
+            ModelUtil.UvFaceData uv = makeGateItemUVs(face);
 
             MutableQuad q = ModelUtil.createFace(face, center, radius, uv);
             q.texFromSprite(sprite);
@@ -206,6 +202,25 @@ public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
             uv.minV = 5f / 16f;
             uv.maxV = 11f / 16f;
         } else {
+            uv.minU = 2f / 16f;
+            uv.maxU = 4f / 16f;
+            uv.minV = 5f / 16f;
+            uv.maxV = 11f / 16f;
+        }
+        return uv;
+    }
+
+    /** UV mapping for NORTH-facing item geometry (X↔Z swapped from in-world). */
+    private static ModelUtil.UvFaceData makeGateItemUVs(Direction face) {
+        ModelUtil.UvFaceData uv = new ModelUtil.UvFaceData();
+        if (face == Direction.NORTH || face == Direction.SOUTH) {
+            // Big front/back faces
+            uv.minU = 5f / 16f;
+            uv.maxU = 11f / 16f;
+            uv.minV = 5f / 16f;
+            uv.maxV = 11f / 16f;
+        } else {
+            // Thin edge faces
             uv.minU = 2f / 16f;
             uv.maxU = 4f / 16f;
             uv.minV = 5f / 16f;

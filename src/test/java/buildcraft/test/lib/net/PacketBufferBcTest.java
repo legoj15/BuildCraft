@@ -2,11 +2,11 @@ package buildcraft.test.lib.net;
 
 import io.netty.buffer.Unpooled;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import net.minecraft.item.EnumDyeColor;
-import net.minecraft.util.EnumFacing;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.core.Direction;
 
 import buildcraft.lib.net.PacketBufferBC;
 
@@ -38,16 +38,16 @@ public class PacketBufferBcTest {
 
         byte[] read = new byte[expected.length];
         buffer.getBytes(0, read);
-        Assert.assertArrayEquals(expected, read);
+        Assertions.assertArrayEquals(expected, read);
 
-        Assert.assertEquals(49, buffer.readInt());
-        Assert.assertTrue(buffer.readBoolean());
+        Assertions.assertEquals(49, buffer.readInt());
+        Assertions.assertTrue(buffer.readBoolean());
 
-        Assert.assertEquals(95, buffer.readShort());
-        Assert.assertFalse(buffer.readBoolean());
+        Assertions.assertEquals(95, buffer.readShort());
+        Assertions.assertFalse(buffer.readBoolean());
 
-        Assert.assertEquals(11, buffer.readByte());
-        Assert.assertTrue(buffer.readBoolean());
+        Assertions.assertEquals(11, buffer.readByte());
+        Assertions.assertTrue(buffer.readBoolean());
     }
 
     @Test
@@ -62,14 +62,14 @@ public class PacketBufferBcTest {
         PrintingByteBuf print = new PrintingByteBuf(Unpooled.buffer());
         print.writeBytes(buffer, 0, buffer.readableBytes());
 
-        Assert.assertEquals(3, buffer.writerIndex());
+        Assertions.assertEquals(3, buffer.writerIndex());
 
         for (int i = 0; i < 17; i++) {
             boolean value = i % 2 == 0;
-            Assert.assertTrue(value == buffer.readBoolean());
+            Assertions.assertTrue(value == buffer.readBoolean());
         }
 
-        Assert.assertEquals(3, buffer.readerIndex());
+        Assertions.assertEquals(3, buffer.readerIndex());
     }
 
     @Test
@@ -87,21 +87,21 @@ public class PacketBufferBcTest {
         buffer.writeFixedBits(value4, 31);
 
         int read = buffer.readFixedBits(10);
-        Assert.assertEquals(value, read);
+        Assertions.assertEquals(value, read);
 
         int read2 = buffer.readFixedBits(2);
-        Assert.assertEquals(value2, read2);
+        Assertions.assertEquals(value2, read2);
 
-        Assert.assertTrue(buffer.readBoolean());
+        Assertions.assertTrue(buffer.readBoolean());
 
         int read3 = buffer.readFixedBits(20);
-        Assert.assertEquals(value3, read3);
+        Assertions.assertEquals(value3, read3);
 
         int read4 = buffer.readFixedBits(31);
-        Assert.assertEquals(value4, read4);
+        Assertions.assertEquals(value4, read4);
 
-        Assert.assertEquals(8, buffer.readerIndex());
-        Assert.assertEquals(8, buffer.writerIndex());
+        Assertions.assertEquals(8, buffer.readerIndex());
+        Assertions.assertEquals(8, buffer.writerIndex());
     }
 
     @Test
@@ -109,26 +109,26 @@ public class PacketBufferBcTest {
         PacketBufferBC buffer = new PrintingByteBuf(Unpooled.buffer());
 
         buffer.writeBoolean(true);
-        buffer.writeEnumValue(EnumFacing.DOWN);
-        buffer.writeEnumValue(EnumFacing.SOUTH);
-        buffer.writeEnumValue(EnumDyeColor.BROWN);
-        buffer.writeEnumValue(EnumDyeColor.CYAN);
+        buffer.writeEnumValue(Direction.DOWN);
+        buffer.writeEnumValue(Direction.SOUTH);
+        buffer.writeEnumValue(DyeColor.BROWN);
+        buffer.writeEnumValue(DyeColor.CYAN);
 
-        Assert.assertTrue(buffer.readBoolean());
-        Assert.assertEquals(EnumFacing.DOWN, buffer.readEnumValue(EnumFacing.class));
-        Assert.assertEquals(EnumFacing.SOUTH, buffer.readEnumValue(EnumFacing.class));
-        Assert.assertEquals(EnumDyeColor.BROWN, buffer.readEnumValue(EnumDyeColor.class));
-        Assert.assertEquals(EnumDyeColor.CYAN, buffer.readEnumValue(EnumDyeColor.class));
+        Assertions.assertTrue(buffer.readBoolean());
+        Assertions.assertEquals(Direction.DOWN, buffer.readEnumValue(Direction.class));
+        Assertions.assertEquals(Direction.SOUTH, buffer.readEnumValue(Direction.class));
+        Assertions.assertEquals(DyeColor.BROWN, buffer.readEnumValue(DyeColor.class));
+        Assertions.assertEquals(DyeColor.CYAN, buffer.readEnumValue(DyeColor.class));
 
-        Assert.assertEquals(2, buffer.readerIndex());
-        Assert.assertEquals(2, buffer.writerIndex());
+        Assertions.assertEquals(2, buffer.readerIndex());
+        Assertions.assertEquals(2, buffer.writerIndex());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testInvalidEnum_0_read() {
         PacketBufferBC buffer = new PrintingByteBuf(Unpooled.buffer());
         /* Attempting to write out an enum value that doesn't have any values is definitely a bug */
-        buffer.readEnumValue(Enum_0.class);
+        Assertions.assertThrows(IllegalArgumentException.class, () -> buffer.readEnumValue(Enum_0.class));
     }
 
     @Test
@@ -150,19 +150,19 @@ public class PacketBufferBcTest {
         for (Enum_9 e : Enum_9.values()) buffer.writeEnumValue(e);
         //@formatter:on
 
-        Assert.assertEquals(Enum_1.A, buffer.readEnumValue(Enum_1.class));
+        Assertions.assertEquals(Enum_1.A, buffer.readEnumValue(Enum_1.class));
 
-        Assert.assertEquals(Enum_2.A, buffer.readEnumValue(Enum_2.class));
-        Assert.assertEquals(Enum_2.B, buffer.readEnumValue(Enum_2.class));
+        Assertions.assertEquals(Enum_2.A, buffer.readEnumValue(Enum_2.class));
+        Assertions.assertEquals(Enum_2.B, buffer.readEnumValue(Enum_2.class));
 
         //@formatter:off
-        for (Enum_3 e : Enum_3.values()) Assert.assertEquals(e, buffer.readEnumValue(Enum_3.class));
-        for (Enum_4 e : Enum_4.values()) Assert.assertEquals(e, buffer.readEnumValue(Enum_4.class));
-        for (Enum_5 e : Enum_5.values()) Assert.assertEquals(e, buffer.readEnumValue(Enum_5.class));
-        for (Enum_6 e : Enum_6.values()) Assert.assertEquals(e, buffer.readEnumValue(Enum_6.class));
-        for (Enum_7 e : Enum_7.values()) Assert.assertEquals(e, buffer.readEnumValue(Enum_7.class));
-        for (Enum_8 e : Enum_8.values()) Assert.assertEquals(e, buffer.readEnumValue(Enum_8.class));
-        for (Enum_9 e : Enum_9.values()) Assert.assertEquals(e, buffer.readEnumValue(Enum_9.class));
+        for (Enum_3 e : Enum_3.values()) Assertions.assertEquals(e, buffer.readEnumValue(Enum_3.class));
+        for (Enum_4 e : Enum_4.values()) Assertions.assertEquals(e, buffer.readEnumValue(Enum_4.class));
+        for (Enum_5 e : Enum_5.values()) Assertions.assertEquals(e, buffer.readEnumValue(Enum_5.class));
+        for (Enum_6 e : Enum_6.values()) Assertions.assertEquals(e, buffer.readEnumValue(Enum_6.class));
+        for (Enum_7 e : Enum_7.values()) Assertions.assertEquals(e, buffer.readEnumValue(Enum_7.class));
+        for (Enum_8 e : Enum_8.values()) Assertions.assertEquals(e, buffer.readEnumValue(Enum_8.class));
+        for (Enum_9 e : Enum_9.values()) Assertions.assertEquals(e, buffer.readEnumValue(Enum_9.class));
         //@formatter:on
     }
 

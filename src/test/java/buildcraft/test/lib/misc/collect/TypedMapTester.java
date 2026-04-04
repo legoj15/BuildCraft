@@ -1,7 +1,7 @@
 package buildcraft.test.lib.misc.collect;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import buildcraft.lib.misc.collect.TypedMap;
 import buildcraft.lib.misc.collect.TypedMapDirect;
@@ -52,19 +52,19 @@ public class TypedMapTester {
         Independant i = new Independant();
         map.put(i);
 
-        Assert.assertEquals(null, map.get(IRandomInterface.class));
-        Assert.assertEquals(null, map.get(INamedInterface.class));
-        Assert.assertEquals(i, map.get(Independant.class));
-        Assert.assertEquals(RandomE.A, map.get(RandomE.class));
-        Assert.assertEquals(Both.A, map.get(Both.class));
+        Assertions.assertNull(map.get(IRandomInterface.class));
+        Assertions.assertNull(map.get(INamedInterface.class));
+        Assertions.assertEquals(i, map.get(Independant.class));
+        Assertions.assertEquals(RandomE.A, map.get(RandomE.class));
+        Assertions.assertEquals(Both.A, map.get(Both.class));
 
         map.put(RandomE.B);
 
-        Assert.assertEquals(RandomE.B, map.get(RandomE.class));
+        Assertions.assertEquals(RandomE.B, map.get(RandomE.class));
 
         map.remove(RandomE.B);
 
-        Assert.assertEquals(null, map.get(RandomE.class));
+        Assertions.assertNull(map.get(RandomE.class));
     }
 
     @Test
@@ -75,10 +75,10 @@ public class TypedMapTester {
         Independant i = new Independant();
         map.put(i);
 
-        Assert.assertNotEquals(null, map.get(IRandomInterface.class));
-        Assert.assertEquals(Both.A, map.get(INamedInterface.class));
-        Assert.assertEquals(i, map.get(Independant.class));
-        Assert.assertEquals(RandomE.A, map.get(RandomE.class));
-        Assert.assertEquals(Both.A, map.get(Both.class));
+        Assertions.assertNotNull(map.get(IRandomInterface.class));
+        Assertions.assertEquals(Both.A, map.get(INamedInterface.class));
+        Assertions.assertEquals(i, map.get(Independant.class));
+        Assertions.assertEquals(RandomE.A, map.get(RandomE.class));
+        Assertions.assertEquals(Both.A, map.get(Both.class));
     }
 }

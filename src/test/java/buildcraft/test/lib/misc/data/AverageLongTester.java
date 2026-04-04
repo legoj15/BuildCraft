@@ -1,9 +1,9 @@
 package buildcraft.test.lib.misc.data;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.CompoundTag;
 
 import buildcraft.lib.misc.data.AverageLong;
 
@@ -21,9 +21,9 @@ public class AverageLongTester {
         avg.tick(val);
         avg.tick(val);
 
-        NBTTagCompound nbt = new NBTTagCompound();
+        CompoundTag nbt = new CompoundTag();
         avg.writeToNbt(nbt, "test");
         avg2.readFromNbt(nbt, "test");
-        Assert.assertEquals(avg.getAverageLong(), avg2.getAverageLong());
+        Assertions.assertEquals(avg.getAverageLong(), avg2.getAverageLong());
     }
 }

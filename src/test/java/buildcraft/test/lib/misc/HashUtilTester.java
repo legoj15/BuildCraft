@@ -1,51 +1,42 @@
 package buildcraft.test.lib.misc;
 
-import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import buildcraft.api.data.NbtSquishConstants;
+import net.minecraft.nbt.CompoundTag;
 
 import buildcraft.lib.misc.HashUtil;
-import buildcraft.lib.nbt.NbtSquisher;
-
-import buildcraft.test.lib.nbt.NbtSquisherTester;
 
 public class HashUtilTester {
-    private static final byte[] HASH = { 0, 1, 5, 9, (byte) 0xff, (byte) 0xbc };
-    private static final String STR = "00010509ffbc";
-
-    private static final byte[] DATA;
-    // Hardcoded hash value from previous runs
-    private static final byte[] DATA_HASH;
-
-    static {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        NbtSquisher.squish(NbtSquisherTester.nbtSmall, NbtSquishConstants.VANILLA);
-        DATA = baos.toByteArray();
-        DATA_HASH = HashUtil.convertStringToHash("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
-    }
-
-    @Test
-    public void testStringToHash() {
-        byte[] hash = HashUtil.convertStringToHash(STR);
-        Assert.assertArrayEquals(HASH, hash);
-    }
 
     @Test
     public void testHashToString() {
-        String str = HashUtil.convertHashToString(HASH);
-        Assert.assertEquals(STR, str);
+        byte[] hash = { 0, 1, 5, 9, (byte) 0xff, (byte) 0xbc };
+        String expected = "00010509ffbc";
+        String str = HashUtil.convertHashToString(hash);
+        Assertions.assertEquals(expected, str);
     }
 
     @Test
-    public void testHashBasic() {
-        System.out.println(Arrays.toString(DATA));
-        // We can't test this hash against anything -- the bpt format itself
-        byte[] hash = HashUtil.computeHash(DATA);
-        System.out.println(HashUtil.convertHashToString(hash));
-        Assert.assertArrayEquals(DATA_HASH, hash);
+    public void testComputeHash() {
+        CompoundTag tag1 = new CompoundTag();
+        tag1.putString("test", "value");
+        tag1.putInt("num", 42);
+
+        CompoundTag tag2 = new CompoundTag();
+        tag2.putString("test", "value");
+        tag2.putInt("num", 42);
+
+        byte[] hash1 = HashUtil.computeHash(tag1);
+        byte[] hash2 = HashUtil.computeHash(tag2);
+
+        Assertions.assertArrayEquals(hash1, hash2, "Identical NBT should yield identical hash");
+
+        tag2.putInt("num", 43);
+        byte[] hash3 = HashUtil.computeHash(tag2);
+
+        Assertions.assertFalse(Arrays.equals(hash1, hash3), "Different NBT should yield different hash");
     }
 }

@@ -2,10 +2,10 @@ package buildcraft.test.lib.misc.data;
 
 import java.util.Random;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
 
 import buildcraft.lib.misc.data.AxisOrder;
 import buildcraft.lib.misc.data.AxisOrder.Inversion;
@@ -27,14 +27,14 @@ public class BoxIteratorTester {
 
     private static void testNormalMoving(int sx, int sy, int sz) {
         BoxIterator bi = new BoxIterator(
-            BlockPos.ORIGIN, new BlockPos(sx - 1, sy - 1, sz - 1), AxisOrder.getFor(EnumAxisOrder.XYZ, Inversion.PPP), false
+            BlockPos.ZERO, new BlockPos(sx - 1, sy - 1, sz - 1), AxisOrder.getFor(EnumAxisOrder.XYZ, Inversion.PPP), false
         );
 
         Random rand = new Random(42);
         for (int i = 0; i < 200; i++) {
             BlockPos bpos = new BlockPos(rand.nextInt(sx), rand.nextInt(sy), rand.nextInt(sz));
             bi.moveTo(bpos);
-            Assert.assertEquals(bpos, bi.advance());
+            Assertions.assertEquals(bpos, bi.advance());
         }
     }
 }

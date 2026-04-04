@@ -1,54 +1,54 @@
 package buildcraft.test.lib.misc;
 
 import java.util.HashSet;
+import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableList;
 
-import org.junit.Assert;
-import org.junit.experimental.theories.DataPoints;
-import org.junit.experimental.theories.FromDataPoints;
-import org.junit.experimental.theories.Theories;
-import org.junit.experimental.theories.Theory;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
 
 import buildcraft.lib.misc.PositionUtil;
-import buildcraft.lib.misc.VecUtil;
 
-@RunWith(Theories.class)
 public class PositionUtilTester {
 
-    @DataPoints({ "paths" })
-    public static final BlockPos[][] PATH_DATA_POINTS = { //
-        { new BlockPos(0, 0, 0), new BlockPos(0, 0, 0) }, //
-        { new BlockPos(0, 1, 0), new BlockPos(0, 0, 0) }, //
-        { new BlockPos(0, 0, 0), new BlockPos(1, 4, 6) }, //
-        { new BlockPos(0, 0, 0), new BlockPos(1, 0, 0) }, //
-        { new BlockPos(0, 0, 0), new BlockPos(1, 1, 1) }, //
-        { new BlockPos(-50, 45, 34), new BlockPos(-37, 7, -40) }, //
-    };
+    public static Stream<Arguments> paths() {
+        return Stream.of(
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(0, 0, 0) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 1, 0), new BlockPos(0, 0, 0) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(1, 4, 6) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(1, 0, 0) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(1, 1, 1) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(-50, 45, 34), new BlockPos(-37, 7, -40) })
+        );
+    }
 
-    @DataPoints({ "boxes" })
-    public static final BlockPos[][] BOX_DATA_POINTS = { //
-        { new BlockPos(0, 0, 0), new BlockPos(0, 0, 0) }, //
-        { new BlockPos(0, 0, 0), new BlockPos(1, 0, 0) }, //
-        { new BlockPos(0, 0, 0), new BlockPos(0, 1, 0) }, //
-        { new BlockPos(0, 0, 0), new BlockPos(0, 0, 1) }, //
-        { new BlockPos(0, 0, 0), new BlockPos(2, 0, 0) }, //
-        { new BlockPos(0, 0, 0), new BlockPos(0, 2, 0) }, //
-        { new BlockPos(0, 0, 0), new BlockPos(0, 0, 2) }, //
-        { new BlockPos(0, 0, 0), new BlockPos(3, 0, 0) }, //
-        { new BlockPos(0, 0, 0), new BlockPos(0, 3, 0) }, //
-        { new BlockPos(0, 0, 0), new BlockPos(0, 0, 3) }, //
-        { new BlockPos(0, 0, 0), new BlockPos(3, 3, 0) }, //
-        { new BlockPos(0, 0, 0), new BlockPos(3, 0, 3) }, //
-        { new BlockPos(0, 0, 0), new BlockPos(0, 3, 3) }, //
-        { new BlockPos(-45, 3, -4), new BlockPos(-38, 16, 16) }, //
-    };
+    public static Stream<Arguments> boxes() {
+        return Stream.of(
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(0, 0, 0) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(1, 0, 0) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(0, 1, 0) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(0, 0, 1) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(2, 0, 0) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(0, 2, 0) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(0, 0, 2) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(3, 0, 0) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(0, 3, 0) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(0, 0, 3) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(3, 3, 0) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(3, 0, 3) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(0, 0, 0), new BlockPos(0, 3, 3) }),
+            Arguments.of((Object) new BlockPos[]{ new BlockPos(-45, 3, -4), new BlockPos(-38, 16, 16) })
+        );
+    }
 
-    @Theory
-    public void testNormalDataPoint(@FromDataPoints("paths") BlockPos[] path) {
+    @ParameterizedTest
+    @MethodSource("paths")
+    public void testNormalDataPoint(BlockPos[] path) {
         BlockPos from = path[0];
         BlockPos to = path[1];
         System.out.println("All from " + from + " to " + to);
@@ -57,8 +57,9 @@ public class PositionUtilTester {
         }
     }
 
-    @Theory
-    public void testBounds(@FromDataPoints("boxes") BlockPos[] box) {
+    @ParameterizedTest
+    @MethodSource("boxes")
+    public void testBounds(BlockPos[] box) {
         BlockPos min = box[0];
         BlockPos max = box[1];
         System.out.println("Box = [ " + min + " -> " + max + " ]");
@@ -67,21 +68,22 @@ public class PositionUtilTester {
             + allOnEdge.toString().replace("}, Block", "},\n Block");
 
         // Ensure that the returned list has no duplicates
-        Assert.assertEquals("Duplicates! " + info, new HashSet<>(allOnEdge).size(), allOnEdge.size());
-        Assert.assertEquals("Count! " + info, allOnEdge.size(), PositionUtil.getCountOnEdge(min, max));
+        Assertions.assertEquals(new HashSet<>(allOnEdge).size(), allOnEdge.size(), "Duplicates! " + info);
+        Assertions.assertEquals(allOnEdge.size(), PositionUtil.getCountOnEdge(min, max), "Count! " + info);
 
         // Ensure that all of them are valid edges and faces
         for (BlockPos p : allOnEdge) {
             String info2 = "pos = " + p + ", " + info;
-            Assert.assertEquals("isOnEdge mismatch! " + info2, true, PositionUtil.isOnEdge(min, max, p));
-            Assert.assertEquals("isOnFace mismatch! " + info2, true, PositionUtil.isOnFace(min, max, p));
+            Assertions.assertTrue(PositionUtil.isOnEdge(min, max, p), "isOnEdge mismatch! " + info2);
+            Assertions.assertTrue(PositionUtil.isOnFace(min, max, p), "isOnFace mismatch! " + info2);
         }
 
         // Construct it manually via PositionUtil.isOnEdge
-
-        for (BlockPos p : BlockPos.getAllInBox(min.subtract(VecUtil.POS_ONE), max.add(VecUtil.POS_ONE))) {
+        BlockPos minSub = min.offset(-1, -1, -1);
+        BlockPos maxAdd = max.offset(1, 1, 1);
+        for (BlockPos p : BlockPos.betweenClosed(minSub, maxAdd)) {
             if (PositionUtil.isOnEdge(min, max, p)) {
-                Assert.assertTrue("All In Box", allOnEdge.contains(p));
+                Assertions.assertTrue(allOnEdge.contains(p), "All In Box");
             }
         }
     }

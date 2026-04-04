@@ -204,12 +204,12 @@ public class ContainerGate extends ContainerBC_Neptune {
             buffer.writeInt(possibleActions.size());
             for (TriggerWrapper wrapper : possibleTriggers) {
                 buffer.writeUtf(wrapper.getUniqueTag());
-                buffer.writeEnum(wrapper.sourcePart);
+                ((PacketBufferBC) buffer).writeEnumValue(wrapper.sourcePart);
             }
 
             for (ActionWrapper wrapper : possibleActions) {
                 buffer.writeUtf(wrapper.getUniqueTag());
-                buffer.writeEnum(wrapper.sourcePart);
+                ((PacketBufferBC) buffer).writeEnumValue(wrapper.sourcePart);
             }
 
             // Sync connections

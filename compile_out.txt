@@ -1,24 +1,8 @@
 To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
 Daemon will be stopped at the end of the build 
 > Task :createMinecraftArtifacts UP-TO-DATE
-
 > Task :compileJava
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\BCTransportBlocks.java:14: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockFilteredBuffer> FILTERED_BUFFER = BLOCKS.registerBlock(
-                                                                                   ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-E:\GitHub\BuildCraft\buildcraft-transport\src\main\java\buildcraft\transport\BCTransportBlocks.java:19: warning: [removal] <B>registerBlock(String,Function<Properties,? extends B>,Properties) in Blocks has been deprecated and marked for removal
-    public static final DeferredBlock<BlockPipeHolder> PIPE_HOLDER = BLOCKS.registerBlock(
-                                                                           ^
-  where B is a type-variable:
-    B extends Block declared in method <B>registerBlock(String,Function<Properties,? extends B>,Properties)
-Note: E:\GitHub\BuildCraft\buildcraft-core\src\main\java\buildcraft\core\BCCore.java uses or overrides a deprecated API.
-Note: Recompile with -Xlint:deprecation for details.
-2 warnings
 
-[Incubating] Problems report is available at: file:///E:/GitHub/BuildCraft/build/reports/problems/problems-report.html
-
-BUILD SUCCESSFUL in 8s
+BUILD SUCCESSFUL in 9s
 2 actionable tasks: 1 executed, 1 up-to-date
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.3.1/userguide/configuration_cache_enabling.html

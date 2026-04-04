@@ -79,19 +79,16 @@ public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
 
         // Dynamic State Component
         // In 1.12.2, gate_dynamic.json forced "light": "on ? 15 : 0" on this quad.
-        // At light=0 the renderer made gate_off.png (dark red pixels) appear pure black.
-        // Static baked quads can't force a lightmap override, so we darken vertex colors instead.
-        TextureAtlasSprite dynSprite = getSprite("buildcraftunofficial:block/gates/gate_" + (key.active ? "on" : "off"));
-        int dynListStart = list.size();
-        buildBox(list, 1.9f / 16f, 6f / 16f, 6f / 16f, 4.1f / 16f, 10f / 16f, 10f / 16f, dynSprite, key.side, true, key.active ? 15 : 0);
-        if (!key.active) {
-            // Darken the off-state quads so the dark red gate_off.png appears black
-            for (int i = dynListStart; i < list.size(); i++) {
-                MutableQuad mq = new MutableQuad();
-                mq.fromBakedBlock(list.get(i));
-                mq.multColourd(0.05);
-                list.set(i, mq.toBakedBlock());
-            }
+        // At light=0 the renderer made gate_off.png (dark red) appear pure black.
+        // BakedQuad in MC 26.1 doesn't carry vertex colors, and static baked quads
+        // can't override world lighting, so gate_off.png always appears red in daylight.
+        // Fix: use a vanilla near-black texture (black_concrete) for the off state.
+        if (key.active) {
+            TextureAtlasSprite dynSprite = getSprite("buildcraftunofficial:block/gates/gate_on");
+            buildBox(list, 1.9f / 16f, 6f / 16f, 6f / 16f, 4.1f / 16f, 10f / 16f, 10f / 16f, dynSprite, key.side, false, 15);
+        } else {
+            TextureAtlasSprite dynSprite = getSprite("minecraft:block/black_concrete");
+            buildBox(list, 1.9f / 16f, 6f / 16f, 6f / 16f, 4.1f / 16f, 10f / 16f, 10f / 16f, dynSprite, key.side, true, 0);
         }
 
         // Modifiers

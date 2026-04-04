@@ -1,7 +1,7 @@
 package buildcraft.test.lib.client.model;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
@@ -22,9 +22,9 @@ public class MutableQuadTest {
                 float ey = to.getStepY();
                 float ez = to.getStepZ();
 
-                Assert.assertEquals(from + " -> " + to + " [X]", ex, q.vertex_0.position_x, 0.001f);
-                Assert.assertEquals(from + " -> " + to + " [Y]", ey, q.vertex_0.position_y, 0.001f);
-                Assert.assertEquals(from + " -> " + to + " [Z]", ez, q.vertex_0.position_z, 0.001f);
+                Assertions.assertEquals(ex, q.vertex_0.position_x, 0.001f, from + " -> " + to + " [X]");
+                Assertions.assertEquals(ey, q.vertex_0.position_y, 0.001f, from + " -> " + to + " [Y]");
+                Assertions.assertEquals(ez, q.vertex_0.position_z, 0.001f, from + " -> " + to + " [Z]");
             }
         }
     }

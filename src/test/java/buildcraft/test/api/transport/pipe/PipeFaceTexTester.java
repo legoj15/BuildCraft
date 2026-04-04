@@ -1,7 +1,7 @@
 package buildcraft.test.api.transport.pipe;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import buildcraft.api.transport.pipe.PipeFaceTex;
 
@@ -16,7 +16,7 @@ public class PipeFaceTexTester {
     }
 
     private static void assertEquals(PipeFaceTex a, PipeFaceTex b) {
-        Assert.assertEquals(a.hashCode(), b.hashCode());
-        Assert.assertEquals(a, b);
+        Assertions.assertEquals(a.hashCode(), b.hashCode());
+        Assertions.assertEquals(a, b);
     }
 }

@@ -4,23 +4,23 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.experimental.theories.DataPoints;
-import org.junit.experimental.theories.Theories;
-import org.junit.experimental.theories.Theory;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.BlockPos;
 
 import buildcraft.api.filler.FillerManager;
 import buildcraft.api.filler.IFilledTemplate;
 import buildcraft.api.filler.IFillerPatternShape;
 import buildcraft.api.statements.IStatementParameter;
 
-import buildcraft.lib.misc.StringUtilBC;
+
 import buildcraft.lib.misc.VecUtil;
 
 import buildcraft.builders.BCBuildersStatements;
@@ -31,24 +31,40 @@ import buildcraft.builders.snapshot.pattern.parameter.PatternParameterFacing;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterHollow;
 import buildcraft.test.VanillaSetupBaseTester;
 
-@RunWith(Theories.class)
 public class ShapePatternsTester extends VanillaSetupBaseTester {
-    @DataPoints
     public static List<IFillerPatternShape> patterns;
 
-    /** Some randomly chosen sizes. Ideally we would test all possibilities, but that would take too long so here are 4.
-     * (Hopefully enough to show up regressions). */
-    @DataPoints
-    public static BlockPos[] sizes = { //
-        new BlockPos(1, 1, 1), new BlockPos(2, 1, 1), new BlockPos(3, 1, 1), //
-        new BlockPos(2, 2, 2), new BlockPos(3, 2, 2), new BlockPos(4, 2, 2), //
-        new BlockPos(2, 3, 2), new BlockPos(2, 2, 3), new BlockPos(2, 8, 2), //
-        new BlockPos(3, 3, 3), new BlockPos(4, 4, 4), new BlockPos(5, 5, 5), //
-        new BlockPos(6, 6, 6), new BlockPos(7, 7, 7), new BlockPos(11, 13, 12) //
-    };
+    public static Stream<Arguments> sizeAndPattern() {
+        if (patterns == null) setupRegistries();
+        BlockPos[] sizes = {
+            new BlockPos(1, 1, 1), new BlockPos(2, 1, 1), new BlockPos(3, 1, 1),
+            new BlockPos(2, 2, 2), new BlockPos(3, 2, 2), new BlockPos(4, 2, 2),
+            new BlockPos(2, 3, 2), new BlockPos(2, 2, 3), new BlockPos(2, 8, 2),
+            new BlockPos(3, 3, 3), new BlockPos(4, 4, 4), new BlockPos(5, 5, 5),
+            new BlockPos(6, 6, 6), new BlockPos(7, 7, 7), new BlockPos(11, 13, 12)
+        };
+        Stream.Builder<Arguments> builder = Stream.builder();
+        for (IFillerPatternShape pattern : patterns) {
+            for (BlockPos size : sizes) {
+                builder.add(Arguments.of(pattern, size));
+            }
+        }
+        return builder.build();
+    }
 
-    @BeforeClass
+    public static Stream<BlockPos> sizes() {
+        return Stream.of(
+            new BlockPos(1, 1, 1), new BlockPos(2, 1, 1), new BlockPos(3, 1, 1),
+            new BlockPos(2, 2, 2), new BlockPos(3, 2, 2), new BlockPos(4, 2, 2),
+            new BlockPos(2, 3, 2), new BlockPos(2, 2, 3), new BlockPos(2, 8, 2),
+            new BlockPos(3, 3, 3), new BlockPos(4, 4, 4), new BlockPos(5, 5, 5),
+            new BlockPos(6, 6, 6), new BlockPos(7, 7, 7), new BlockPos(11, 13, 12)
+        );
+    }
+
+    @BeforeAll
     public static void setupRegistries() {
+        VanillaSetupBaseTester.init();
         FillerManager.registry = FillerRegistry.INSTANCE;
         patterns = Arrays.stream(BCBuildersStatements.PATTERNS)
             .filter(IFillerPatternShape.class::isInstance)
@@ -56,9 +72,10 @@ public class ShapePatternsTester extends VanillaSetupBaseTester {
             .collect(Collectors.toList());
     }
 
-    @Theory
+    @ParameterizedTest
+    @MethodSource("sizeAndPattern")
     public void testTinyTemplate(IFillerPatternShape pattern, BlockPos size) {
-        System.out.print("Testing pattern " + pattern.getUniqueTag() + " in " + StringUtilBC.blockPosToString(size));
+        System.out.print("Testing pattern " + pattern.getUniqueTag() + " in " + size.toShortString());
 
         try {
             IStatementParameter[] params = new IStatementParameter[pattern.maxParameters()];
@@ -69,9 +86,9 @@ public class ShapePatternsTester extends VanillaSetupBaseTester {
             IFilledTemplate filledTemplate = createFilledTemplate(size);
             boolean b = pattern.fillTemplate(filledTemplate, params);
             if (pattern == BCBuildersStatements.PATTERN_NONE) {
-                Assert.assertFalse(b);
+                Assertions.assertFalse(b);
             } else {
-                Assert.assertTrue(b);
+                Assertions.assertTrue(b);
             }
             System.out.println(" -> success");
         } catch (Throwable t) {
@@ -83,46 +100,43 @@ public class ShapePatternsTester extends VanillaSetupBaseTester {
     private IFilledTemplate createFilledTemplate(BlockPos size) {
         Template template = new Template();
         template.size = size;
-        template.offset = BlockPos.ORIGIN;
+        template.offset = BlockPos.ZERO;
         template.data = new BitSet(Snapshot.getDataSize(size));
         return template.getFilledTemplate();
     }
 
-    /** Ensure that (for the same implicit size sphere) SPHERE, SPHERE_HALF, SPHERE_QUARTER, and SPHERE_EIGHTH all
-     * generate the same sphere.
-     * 
-     * @param size an eighth of the size of the entire sphere. */
-    @Theory
+    @ParameterizedTest
+    @MethodSource("sizes")
     public void testSphereEquality(BlockPos size) {
         BlockPos fullSize = new BlockPos(size.getX() * 2, size.getY() * 2, size.getZ() * 2);
 
-        System.out.println("Testing spheres for equality in " + StringUtilBC.blockPosToString(fullSize));
+        System.out.println("Testing spheres for equality in " + fullSize.toShortString());
 
-        IStatementParameter[] fullParams = new IStatementParameter[] { //
-            PatternParameterHollow.HOLLOW, //
+        IStatementParameter[] fullParams = new IStatementParameter[] {
+            PatternParameterHollow.HOLLOW,
         };
         IFilledTemplate filledTemplateFull = createFilledTemplate(fullSize);
-        Assert.assertTrue(BCBuildersStatements.PATTERN_SPHERE.fillTemplate(filledTemplateFull, fullParams));
+        Assertions.assertTrue(BCBuildersStatements.PATTERN_SPHERE.fillTemplate(filledTemplateFull, fullParams));
         System.out.println("Full:\n" + filledTemplateFull);
 
         // Test halfs
-        for (EnumFacing face : EnumFacing.VALUES) {
+        for (Direction face : Direction.values()) {
             BlockPos halfSize = VecUtil.replaceValue(fullSize, face.getAxis(), VecUtil.getValue(size, face.getAxis()));
-            IStatementParameter[] params = new IStatementParameter[] { //
-                PatternParameterHollow.HOLLOW, //
-                PatternParameterFacing.get(face) //
+            IStatementParameter[] params = new IStatementParameter[] {
+                PatternParameterHollow.HOLLOW,
+                PatternParameterFacing.get(face)
             };
             IFilledTemplate filledTemplateHalf = createFilledTemplate(halfSize);
-            Assert.assertTrue(BCBuildersStatements.PATTERN_HEMI_SPHERE.fillTemplate(filledTemplateHalf, params));
+            Assertions.assertTrue(BCBuildersStatements.PATTERN_HEMI_SPHERE.fillTemplate(filledTemplateHalf, params));
             System.out.println("Half:\n" + filledTemplateHalf);
-            int dx = face == EnumFacing.WEST ? filledTemplateHalf.getSize().getX() : 0;
-            int dy = face == EnumFacing.DOWN ? filledTemplateHalf.getSize().getY() : 0;
-            int dz = face == EnumFacing.NORTH ? filledTemplateHalf.getSize().getZ() : 0;
+            int dx = face == Direction.WEST ? filledTemplateHalf.getSize().getX() : 0;
+            int dy = face == Direction.DOWN ? filledTemplateHalf.getSize().getY() : 0;
+            int dz = face == Direction.NORTH ? filledTemplateHalf.getSize().getZ() : 0;
             for (int z = 0; z <= filledTemplateHalf.getMax().getZ(); z++) {
                 for (int y = 0; y <= filledTemplateHalf.getMax().getY(); y++) {
                     for (int x = 0; x <= filledTemplateHalf.getMax().getX(); x++) {
                         if (filledTemplateFull.get(x + dx, y + dy, z + dz) != filledTemplateHalf.get(x, y, z)) {
-                            Assert.fail(
+                            Assertions.fail(
                                 String.format(
                                     "Half sphere[%s] didn't match full sphere at (%s, %s, %s)",
                                     face,
@@ -136,7 +150,5 @@ public class ShapePatternsTester extends VanillaSetupBaseTester {
                 }
             }
         }
-
-        // TODO: Test quarters
     }
 }

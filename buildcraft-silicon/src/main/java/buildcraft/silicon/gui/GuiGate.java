@@ -11,7 +11,7 @@ import buildcraft.lib.gui.GuiIcon;
 import buildcraft.silicon.container.ContainerGate;
 
 public class GuiGate extends GuiBC8<ContainerGate> {
-    private static final Identifier TEXTURE_BASE = Identifier.parse("buildcraftunofficial:textures/gui/gate_interface.png");
+    private static final Identifier TEXTURE_BASE = Identifier.parse("buildcraftsilicon:textures/gui/gate_interface.png");
     
     // Dynamic height construction
     private static final GuiIcon BACKGROUND_TOP = new GuiIcon(TEXTURE_BASE, 0, 0, 176, 16);

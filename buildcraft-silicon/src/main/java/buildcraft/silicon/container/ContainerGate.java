@@ -105,7 +105,7 @@ public class ContainerGate extends ContainerBC_Neptune {
 
         refreshPossibleGroups();
 
-        addFullPlayerInventory(8, 17 + 101 + slotHeight * 18 + 4);
+        addFullPlayerInventory(8, 33 + slotHeight * 18);
     }
 
     @Override

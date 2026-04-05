@@ -7,3 +7,4 @@
     - Group 1 unit tests ported
     - ListMatchHandlerTools enabled
 - Fixed dyed bundles and other custom recipes not populating in the Advanced Crafting Table via JEI or crafting book
+- Restored missing recipe for the Water Gellifier

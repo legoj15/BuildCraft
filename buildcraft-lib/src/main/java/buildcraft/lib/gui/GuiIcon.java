@@ -127,23 +127,28 @@ public class GuiIcon implements ISimpleDrawable {
 
     public static void draw(ISprite sprite, double xMin, double yMin, double xMax, double yMax) {
         if (currentGraphics == null) return;
-        if (!(sprite instanceof SpriteRaw raw)) return;
+        if (sprite instanceof SpriteRaw raw) {
+            float uPixel = (float) (raw.uMin * raw.texSize);
+            float vPixel = (float) (raw.vMin * raw.texSize);
+            float uWidth = (float) (raw.width * raw.texSize);
+            float vHeight = (float) (raw.height * raw.texSize);
+            int drawWidth = (int) (xMax - xMin);
+            int drawHeight = (int) (yMax - yMin);
 
-        float uPixel = (float) (raw.uMin * raw.texSize);
-        float vPixel = (float) (raw.vMin * raw.texSize);
-        float uWidth = (float) (raw.width * raw.texSize);
-        float vHeight = (float) (raw.height * raw.texSize);
-        int drawWidth = (int) (xMax - xMin);
-        int drawHeight = (int) (yMax - yMin);
-
-        currentGraphics.blit(
-            RenderPipelines.GUI_TEXTURED, raw.location,
-            (int) xMin, (int) yMin,
-            uPixel, vPixel,
-            drawWidth, drawHeight,
-            (int) uWidth, (int) vHeight,
-            raw.texSize, raw.texSize
-        );
+            currentGraphics.blit(
+                RenderPipelines.GUI_TEXTURED, raw.location,
+                (int) xMin, (int) yMin,
+                uPixel, vPixel,
+                drawWidth, drawHeight,
+                (int) uWidth, (int) vHeight,
+                raw.texSize, raw.texSize
+            );
+        } else if (sprite instanceof buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder holder) {
+            net.minecraft.client.renderer.texture.TextureAtlasSprite tas = holder.getSprite();
+            if (tas != null) {
+                currentGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, tas, (int) xMin, (int) yMin, (int) (xMax - xMin), (int) (yMax - yMin));
+            }
+        }
     }
 
     /** Draw a quad with the texture already bound — used by SpriteNineSliced. */

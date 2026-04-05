@@ -59,6 +59,23 @@ public class BCSiliconJeiPlugin implements IModPlugin {
         );
         // Allow dragging ingredients from JEI onto phantom blueprint slots
         registration.addGhostIngredientHandler(GuiAdvancedCraftingTable.class, new BCGhostIngredientHandler<>());
+        
+        // Let JEI know about GuiGate's winglettes
+        registration.addGuiContainerHandler(buildcraft.silicon.gui.GuiGate.class, new mezz.jei.api.gui.handlers.IGuiContainerHandler<buildcraft.silicon.gui.GuiGate>() {
+            @Override
+            public java.util.List<net.minecraft.client.renderer.Rect2i> getGuiExtraAreas(buildcraft.silicon.gui.GuiGate containerScreen) {
+                java.util.List<net.minecraft.client.renderer.Rect2i> extraAreas = new java.util.ArrayList<>();
+                for (buildcraft.lib.gui.IGuiElement element : containerScreen.mainGui.shownElements) {
+                    if (element instanceof buildcraft.lib.gui.statement.GuiElementStatementSource) {
+                        extraAreas.add(new net.minecraft.client.renderer.Rect2i(
+                                (int) element.getX(), (int) element.getY(),
+                                (int) element.getWidth(), (int) element.getHeight()
+                        ));
+                    }
+                }
+                return extraAreas;
+            }
+        });
     }
 
     @Override

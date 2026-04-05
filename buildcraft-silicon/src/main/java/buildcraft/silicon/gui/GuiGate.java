@@ -210,7 +210,7 @@ public class GuiGate extends GuiBC8<ContainerGate> {
         graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
         
         // Offset the 'Inventory' label down into the correct place
-        String invStr = Component.translatable("gui.inventory").getString();
+        String invStr = Component.translatable("container.inventory").getString();
         graphics.text(font, invStr, 8, 16 + numRows * 18 + 4, 0xFF404040, false);
     }
 }

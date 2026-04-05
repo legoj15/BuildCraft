@@ -91,11 +91,11 @@ public class BCTransportSprites {
     }
 
     private static SpriteHolder getHolder(String loc) {
-        return SpriteHolderRegistry.getHolder("buildcrafttransport:" + loc);
+        return SpriteHolderRegistry.getHolder("buildcraftunofficial:" + loc);
     }
 
     private static SpriteHolder getHolder(String module, String loc) {
-        return SpriteHolderRegistry.getHolder("buildcraft" + module + ":" + loc);
+        return SpriteHolderRegistry.getHolder("buildcraftunofficial:" + loc);
     }
 
     public static SpriteHolder getPipeSignal(boolean active, DyeColor colour) {

@@ -1,8 +1,8 @@
-{
+﻿{
     "textures": {
-        "#back":"buildcraftenergy:block/mj_dynamo/back",
-        "#side":"buildcraftenergy:block/mj_dynamo/side",
-        "#front":"buildcraftenergy:block/mj_dynamo/front"
+        "#back":"buildcraftunofficial:block/mj_dynamo/back",
+        "#side":"buildcraftunofficial:block/mj_dynamo/side",
+        "#front":"buildcraftunofficial:block/mj_dynamo/front"
     },
     "parent":"buildcraftunofficial:compat_models/engine_base"
 }

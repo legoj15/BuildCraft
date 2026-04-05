@@ -1,0 +1,8 @@
+﻿{
+    "parent": "buildcraftunofficial:item/pipe_item",
+    "textures": {
+        "top": "buildcraftunofficial:pipes/diamond_wood_fe_clear",
+        "center": "buildcraftunofficial:pipes/diamond_wood_fe_clear",
+        "bottom": "buildcraftunofficial:pipes/diamond_wood_fe_filled"
+    }
+}

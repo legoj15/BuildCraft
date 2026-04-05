@@ -1,0 +1,8 @@
+﻿{
+    "parent": "buildcraftunofficial:item/pipe_item",
+    "textures": {
+        "top": "buildcraftunofficial:pipes/gold_fe",
+        "center": "buildcraftunofficial:pipes/gold_fe",
+        "bottom": "buildcraftunofficial:pipes/gold_fe"
+    }
+}

@@ -94,6 +94,6 @@ public class BCCoreSprites {
     }
 
     private static SpriteHolder h(String path) {
-        return SpriteHolderRegistry.getHolder("buildcraftcore:" + path);
+        return SpriteHolderRegistry.getHolder("buildcraftunofficial:" + path);
     }
 }

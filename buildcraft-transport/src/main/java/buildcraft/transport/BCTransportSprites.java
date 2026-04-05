@@ -91,7 +91,7 @@ public class BCTransportSprites {
     }
 
     private static SpriteHolder getHolder(String loc) {
-        return SpriteHolderRegistry.getHolder("buildcraftunofficial:" + loc);
+        return SpriteHolderRegistry.getHolder("buildcrafttransport:" + loc);
     }
 
     private static SpriteHolder getHolder(String module, String loc) {

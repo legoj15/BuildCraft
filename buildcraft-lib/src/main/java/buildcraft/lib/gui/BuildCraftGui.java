@@ -105,11 +105,18 @@ public class BuildCraftGui {
     }
 
     public void preDrawForeground() {
-        // PoseStack operations - TODO
+        net.minecraft.client.gui.GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
+        if (graphics != null) {
+            graphics.pose().pushMatrix();
+            graphics.pose().translate((float) -rootElement.getX(), (float) -rootElement.getY());
+        }
     }
 
     public void postDrawForeground() {
-        // PoseStack operations - TODO
+        net.minecraft.client.gui.GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
+        if (graphics != null) {
+            graphics.pose().popMatrix();
+        }
     }
 
     public void drawElementForegrounds(Runnable menuBackgroundRenderer) {

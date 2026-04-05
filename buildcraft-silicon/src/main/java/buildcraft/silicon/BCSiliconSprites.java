@@ -36,7 +36,7 @@ public class BCSiliconSprites {
     }
 
     private static SpriteHolder getHolder(String loc) {
-        return SpriteHolderRegistry.getHolder("buildcraftunofficial:" + loc);
+        return SpriteHolderRegistry.getHolder("buildcraftsilicon:" + loc);
     }
 
     private static SpriteHolder getHolder(String module, String loc) {

@@ -44,11 +44,11 @@ public class BCCoreSprites {
     // Triggers
     public static final SpriteHolder TRIGGER_MACHINE_ACTIVE = h("triggers/trigger_machine_active");
     public static final SpriteHolder TRIGGER_MACHINE_INACTIVE = h("triggers/trigger_machine_inactive");
-    public static final SpriteHolder TRIGGER_REDSTONE_ACTIVE = h("triggers/trigger_redstone_active");
-    public static final SpriteHolder TRIGGER_REDSTONE_INACTIVE = h("triggers/trigger_redstone_inactive");
+    public static final SpriteHolder TRIGGER_REDSTONE_ACTIVE = h("triggers/trigger_redstoneinput_active");
+    public static final SpriteHolder TRIGGER_REDSTONE_INACTIVE = h("triggers/trigger_redstoneinput_inactive");
     public static final SpriteHolder TRIGGER_TRUE = h("triggers/trigger_true");
-    public static final SpriteHolder TRIGGER_POWER_HIGH = h("triggers/trigger_power_high");
-    public static final SpriteHolder TRIGGER_POWER_LOW = h("triggers/trigger_power_low");
+    public static final SpriteHolder TRIGGER_POWER_HIGH = h("triggers/trigger_energy_storage_high");
+    public static final SpriteHolder TRIGGER_POWER_LOW = h("triggers/trigger_energy_storage_low");
 
     // Power stage triggers
     public static final EnumMap<EnumPowerStage, SpriteHolder> TRIGGER_POWER_STAGE = new EnumMap<>(EnumPowerStage.class);
@@ -62,38 +62,38 @@ public class BCCoreSprites {
     public static final EnumMap<TriggerInventoryLevel.TriggerType, SpriteHolder> TRIGGER_INVENTORY_LEVEL = new EnumMap<>(TriggerInventoryLevel.TriggerType.class);
 
     // Actions
-    public static final SpriteHolder ACTION_REDSTONE = h("triggers/action_redstone");
+    public static final SpriteHolder ACTION_REDSTONE = h("triggers/action_redstoneoutput");
     public static final EnumMap<Mode, SpriteHolder> ACTION_MACHINE_CONTROL = new EnumMap<>(Mode.class);
 
     // Parameters
-    public static final SpriteHolder PARAM_GATE_SIDE_ONLY = h("triggers/param_gate_side_only");
+    public static final SpriteHolder PARAM_GATE_SIDE_ONLY = h("triggers/redstone_gate_side_only");
     public static final SpriteHolder[] PARAM_REDSTONE_LEVEL = new SpriteHolder[16];
 
     static {
         for (EnumPowerStage stage : EnumPowerStage.VALUES) {
-            TRIGGER_POWER_STAGE.put(stage, h("triggers/trigger_power_stage_" + stage.getSerializedName()));
+            TRIGGER_POWER_STAGE.put(stage, h("triggers/trigger_engineheat_" + stage.getSerializedName()));
         }
         for (TriggerFluidContainer.State state : TriggerFluidContainer.State.VALUES) {
-            TRIGGER_FLUID.put(state, h("triggers/trigger_fluid_" + state.name().toLowerCase()));
+            TRIGGER_FLUID.put(state, h("triggers/trigger_liquidcontainer_" + state.name().toLowerCase()));
         }
         for (TriggerFluidContainerLevel.TriggerType type : TriggerFluidContainerLevel.TriggerType.VALUES) {
-            TRIGGER_FLUID_LEVEL.put(type, h("triggers/trigger_fluid_level_" + type.name().toLowerCase()));
+            TRIGGER_FLUID_LEVEL.put(type, h("triggers/trigger_liquidcontainer_" + type.name().toLowerCase()));
         }
         for (TriggerInventory.State state : TriggerInventory.State.VALUES) {
             TRIGGER_INVENTORY.put(state, h("triggers/trigger_inventory_" + state.name().toLowerCase()));
         }
         for (TriggerInventoryLevel.TriggerType type : TriggerInventoryLevel.TriggerType.VALUES) {
-            TRIGGER_INVENTORY_LEVEL.put(type, h("triggers/trigger_inventory_level_" + type.name().toLowerCase()));
+            TRIGGER_INVENTORY_LEVEL.put(type, h("triggers/trigger_inventory_" + type.name().toLowerCase()));
         }
         for (Mode mode : Mode.VALUES) {
-            ACTION_MACHINE_CONTROL.put(mode, h("triggers/action_machine_control_" + mode.lowerCaseName));
+            ACTION_MACHINE_CONTROL.put(mode, h("triggers/action_machinecontrol_" + mode.lowerCaseName));
         }
         for (int i = 0; i < 16; i++) {
-            PARAM_REDSTONE_LEVEL[i] = h("triggers/param_redstone_level_" + i);
+            PARAM_REDSTONE_LEVEL[i] = h("triggers/parameter_redstone_" + i);
         }
     }
 
     private static SpriteHolder h(String path) {
-        return SpriteHolderRegistry.getHolder("buildcraftunofficial:" + path);
+        return SpriteHolderRegistry.getHolder("buildcraftcore:" + path);
     }
 }

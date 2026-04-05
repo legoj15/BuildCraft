@@ -6,7 +6,7 @@
 package net.neoforged.neoforge.common;
 
 import com.mojang.logging.LogUtils;
-import net.neoforged.api.distmarker.OnlyIn;
+
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.ModLoader;

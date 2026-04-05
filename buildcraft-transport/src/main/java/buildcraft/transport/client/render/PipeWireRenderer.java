@@ -47,7 +47,7 @@ public class PipeWireRenderer {
 
     static {
         for (DyeColor color : DyeColor.values()) {
-            wireSprites.put(color, SpriteHolderRegistry.getHolder("buildcraftunofficial:wires/" + color.getName()));
+            wireSprites.put(color, SpriteHolderRegistry.getHolder("buildcrafttransport:wires/" + color.getName()));
         }
 
         for (EnumWirePart part : EnumWirePart.VALUES) {

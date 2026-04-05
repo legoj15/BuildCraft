@@ -46,8 +46,8 @@ import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.minecraft.nbt.Tag;
 
 import net.neoforged.neoforge.network.handling.IPayloadContext;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+
+
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
 
 import buildcraft.api.core.BCDebugging;
@@ -768,7 +768,7 @@ public abstract class TileBC_Neptune extends BlockEntity implements IPayloadRece
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
+    
     public IDetachedRenderer getDebugRenderer() {
         return null;
     }

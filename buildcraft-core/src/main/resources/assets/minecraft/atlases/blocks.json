@@ -22,6 +22,16 @@
         },
         {
             "type": "minecraft:directory",
+            "source": "triggers",
+            "prefix": "triggers/"
+        },
+        {
+            "type": "minecraft:directory",
+            "source": "gui",
+            "prefix": "gui/"
+        },
+        {
+            "type": "minecraft:directory",
             "source": "block/engine",
             "prefix": "block/engine/"
         },

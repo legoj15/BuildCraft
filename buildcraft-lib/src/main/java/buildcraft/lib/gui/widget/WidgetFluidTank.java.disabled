@@ -13,8 +13,8 @@ import java.util.List;
 
 
 import net.neoforged.neoforge.network.handling.IPayloadContext;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+
+
 
 import buildcraft.lib.fluid.Tank;
 import buildcraft.lib.gui.BuildCraftGui;
@@ -49,7 +49,7 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
         return null;
     }
 
-    @OnlyIn(Dist.CLIENT)
+    
     public IGuiElement createGuiElement(BuildCraftGui gui, IGuiArea area, GuiIcon overlay) {
         return new GuiElementFluidTank(gui, area, overlay);
     }

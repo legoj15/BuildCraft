@@ -76,7 +76,7 @@ public abstract class BlockMarkerBase extends Block implements EntityBlock {
 
     // getRenderType not a valid Block override in 1.21
     // @Override
-    // @OnlyIn(Dist.CLIENT)
+    // 
     // public RenderType getRenderType() { return RenderType.cutout(); }
 
     @Override

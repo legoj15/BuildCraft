@@ -9,8 +9,8 @@ import net.minecraft.resources.Identifier;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+
+
 
 import buildcraft.api.enums.EnumDecoratedBlock;
 
@@ -32,7 +32,7 @@ public class ItemBlockDecorated extends ItemBlockBCMulti {
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
+    
     public void addModelVariants(java.util.Map<Integer, net.minecraft.client.resources.model.ModelResourceLocation> variants) {
         for (EnumDecoratedBlock type : EnumDecoratedBlock.VALUES) {
             addVariant(variants, type.ordinal(), type.getName());

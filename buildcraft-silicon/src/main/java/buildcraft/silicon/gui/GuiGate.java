@@ -43,6 +43,9 @@ public class GuiGate extends GuiBC8<ContainerGate> {
         int slotPairWidth = 18 * (3 + numTriggerArgs + numActionArgs);
         int slotPairStart = (162 - (slotPairWidth + (twoColumns ? slotPairWidth + 18 : 0))) / 2;
         
+        // Drag handler must be added before sources so they can inject events into it
+        mainGui.shownElements.add(new buildcraft.lib.gui.statement.GuiElementStatementDrag(mainGui));
+        
         // Triggers possible
         mainGui.shownElements.add(new GuiElementStatementSource<>(mainGui, true, menu.possibleTriggersContext));
         // Actions possible

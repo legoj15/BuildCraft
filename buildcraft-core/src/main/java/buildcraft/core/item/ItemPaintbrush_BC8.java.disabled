@@ -25,8 +25,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+
+
 
 import buildcraft.api.blocks.CustomPaintHelper;
 
@@ -56,7 +56,7 @@ public class ItemPaintbrush_BC8 extends ItemBC_Neptune {
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
+    
     public void addModelVariants(java.util.Map<Integer, net.minecraft.client.resources.model.ModelResourceLocation> variants) {
         addVariant(variants, 0, "clean");
         for (DyeColor colour : DyeColor.values()) {
@@ -96,7 +96,7 @@ public class ItemPaintbrush_BC8 extends ItemBC_Neptune {
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
+    
     public Font getFontRenderer(ItemStack stack) {
         return SpecialColourFontRenderer.INSTANCE;
     }

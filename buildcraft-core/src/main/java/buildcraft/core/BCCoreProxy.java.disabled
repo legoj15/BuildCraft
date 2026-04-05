@@ -14,8 +14,8 @@ import net.minecraft.world.level.Level;
 
 
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+
+
 
 import buildcraft.api.BCModules;
 
@@ -71,7 +71,7 @@ public abstract class BCCoreProxy implements buildcraft.lib.misc.IGuiHandlerStub
 
     }
 
-    @OnlyIn(Dist.CLIENT)
+    
     public static class ClientProxy extends BCCoreProxy {
         @Override
         public Object getClientGuiElement(int ID, Player player, Level world, int x, int y, int z) {

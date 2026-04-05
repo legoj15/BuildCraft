@@ -44,7 +44,7 @@ public class Box implements IBox {
 
     public BlockPos lastMin, lastMax;
 
-//    @OnlyIn(Dist.CLIENT)
+//    
 //    public LaserType lastType;
 
     private BlockPos min, max;

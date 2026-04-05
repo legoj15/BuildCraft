@@ -21,8 +21,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.world.InteractionResult;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+
+
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.core.render.ISprite;
@@ -38,13 +38,13 @@ import buildcraft.lib.misc.StackUtil;
 @Deprecated
 public class StatementParameterDirection implements IStatementParameter {
 
-    @OnlyIn(Dist.CLIENT)
+    
     private static TextureAtlasSprite[] sprites;
 
     @Nullable
     private Direction direction = null;
 
-    @OnlyIn(Dist.CLIENT)
+    
     public void registerIcons(TextureAtlas map) {
         sprites = new TextureAtlasSprite[] {
             map.registerSprite(Identifier.parse("buildcraftunofficial:triggers/trigger_dir_down")),
@@ -76,7 +76,7 @@ public class StatementParameterDirection implements IStatementParameter {
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
+    
     public ISprite getSprite() {
         Direction dir = getDirection();
         if (dir == null) {

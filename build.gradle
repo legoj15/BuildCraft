@@ -31,6 +31,7 @@ sourceSets {
         }
         resources {
             srcDirs = [
+                'buildcraft_resources',
                 'buildcraft-lib/src/main/resources',
                 'buildcraft-core/src/main/resources',
                 'buildcraft-builders/src/main/resources',

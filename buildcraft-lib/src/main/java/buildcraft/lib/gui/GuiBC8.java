@@ -106,13 +106,33 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
         return super.mouseClicked(event, doubleClick);
     }
 
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        int mouseX = (int) event.x();
+        int mouseY = (int) event.y();
+        int button = event.button();
+        mainGui.onMouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(event);
+    }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        int mouseX = (int) event.x();
+        int mouseY = (int) event.y();
+        int button = event.button();
+        mainGui.onMouseDragged(mouseX, mouseY, button, 0);
+        return super.mouseDragged(event, dragX, dragY);
+    }
+
     /** MC 26.1: extractLabels replaces renderLabels. */
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         super.extractLabels(graphics, mouseX, mouseY);
         GuiIcon.setGuiGraphics(graphics);
+        mainGui.preDrawForeground();
         drawForegroundLayer();
         mainGui.drawElementForegrounds(null);
+        mainGui.postDrawForeground();
     }
 
     /** Draw custom foreground labels. Subclasses should override this. */

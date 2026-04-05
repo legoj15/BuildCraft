@@ -29,8 +29,8 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+
+
 
 import buildcraft.api.core.IAreaProvider;
 import buildcraft.api.core.IBox;
@@ -61,14 +61,14 @@ public class ItemMapLocation extends ItemBC_Neptune implements IMapLocation {
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
+    
     public void addModelVariants(java.util.Map<Integer, net.minecraft.client.resources.model.ModelResourceLocation> variants) {
         for (MapLocationType type : MapLocationType.values()) {
             addVariant(variants, type.meta, type.name().toLowerCase(Locale.ROOT));
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
+    
     @Override
     public void addInformation(ItemStack stack, Level world, List<String> strings, TooltipFlag flag) {
         stack = StackUtil.asNonNull(stack);

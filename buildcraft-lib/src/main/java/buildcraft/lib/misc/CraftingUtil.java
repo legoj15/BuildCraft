@@ -25,10 +25,27 @@ import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.minecraft.world.level.Level;
 
 import buildcraft.lib.tile.item.ItemHandlerSimple;
+import net.minecraft.resources.Identifier;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 
+@EventBusSubscriber(modid = "buildcraftlib")
 public final class CraftingUtil {
 
     private CraftingUtil() {
+    }
+
+    @SubscribeEvent
+    public static void onServerStarted(ServerStartedEvent event) {
+        event.getServer().getRecipeManager().byKey(
+            net.minecraft.resources.ResourceKey.create(
+                net.minecraft.core.registries.Registries.RECIPE,
+                Identifier.parse("minecraft:white_bundle")
+            )
+        ).ifPresent(recipe -> {
+            buildcraft.api.core.BCLog.logger.info("[CraftingUtil] DUMPING BUNDLE RECIPE: " + recipe.value().getClass().getName());
+        });
     }
 
     @Nullable
@@ -84,6 +101,41 @@ public final class CraftingUtil {
                 if (!stack.isEmpty()) {
                     blueprint.setStackInSlot(i, stack);
                 }
+            }
+        } else {
+            // Fallback for custom or wrapped shapeless recipes
+            buildcraft.api.core.BCLog.logger.info("[CraftingUtil] Fallback for unknown recipe class: " + recipe.getClass().getName());
+            try {
+                List<net.minecraft.world.item.crafting.display.RecipeDisplay> displays = recipe.display();
+                if (!displays.isEmpty()) {
+                    net.minecraft.world.item.crafting.display.RecipeDisplay d = displays.get(0);
+                    if (d instanceof net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay shapelessDisplay) {
+                        for (int i = 0; i < shapelessDisplay.ingredients().size() && i < 9; ++i) {
+                            net.minecraft.world.item.crafting.display.SlotDisplay slotDisplay = shapelessDisplay.ingredients().get(i);
+                            List<ItemStack> stacks = slotDisplay.resolveForStacks(net.minecraft.util.context.ContextMap.EMPTY);
+                            if (!stacks.isEmpty()) {
+                                blueprint.setStackInSlot(i, stacks.get(0).copy());
+                            }
+                        }
+                    } else if (d instanceof net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay shapedDisplay) {
+                        int w = shapedDisplay.width();
+                        int h = shapedDisplay.height();
+                        for (int r = 0; r < h && r < 3; r++) {
+                            for (int c = 0; c < w && c < 3; c++) {
+                                int idx = c + r * w;
+                                if (idx < shapedDisplay.ingredients().size()) {
+                                    net.minecraft.world.item.crafting.display.SlotDisplay slotDisplay = shapedDisplay.ingredients().get(idx);
+                                    List<ItemStack> stacks = slotDisplay.resolveForStacks(net.minecraft.util.context.ContextMap.EMPTY);
+                                    if (!stacks.isEmpty()) {
+                                        blueprint.setStackInSlot(c + r * 3, stacks.get(0).copy());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                buildcraft.api.core.BCLog.logger.error("[CraftingUtil] Error fallback parsing display", e);
             }
         }
     }

@@ -33,9 +33,9 @@ import buildcraft.transport.BCTransportSprites;
 import buildcraft.transport.pipe.flow.PipeFlowRedstoneFlux;
 import buildcraft.transport.pipe.flow.PipeFlowRedstoneFlux.Section;
 
-/** Renders RF (Redstone Flux) power flowing through pipes. Nearly identical to
+/** Renders FE/RF power flowing through pipes. Nearly identical to
  *  PipeFlowRendererPower but always uses the POWER_FLOW sprite (no normal/overload). */
-public enum PipeFlowRendererRf implements IPipeFlowRenderer<PipeFlowRedstoneFlux> {
+public enum PipeFlowRendererFE implements IPipeFlowRenderer<PipeFlowRedstoneFlux> {
     INSTANCE;
 
     @Override

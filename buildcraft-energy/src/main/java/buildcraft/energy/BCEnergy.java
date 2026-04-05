@@ -97,6 +97,25 @@ public class BCEnergy {
             BCEnergyBlockEntities.ENGINE_IRON.get(),
             (engine, direction) -> engine.getMjConnector()
         );
+        event.registerBlockEntity(
+            buildcraft.api.mj.MjAPI.CAP_CONNECTOR,
+            BCEnergyBlockEntities.ENGINE_FE.get(),
+            (engine, direction) -> engine.getMjConnector()
+        );
+        event.registerBlockEntity(
+            buildcraft.api.mj.MjAPI.CAP_CONNECTOR,
+            BCEnergyBlockEntities.DYNAMO_MJ.get(),
+            (engine, direction) -> engine.getMjConnector()
+        );
+
+        event.registerBlockEntity(
+            net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK, BCEnergyBlockEntities.ENGINE_FE.get(),
+            (engine, direction) -> engine.energyStorage
+        );
+        event.registerBlockEntity(
+            net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK, BCEnergyBlockEntities.DYNAMO_MJ.get(),
+            (dynamo, direction) -> dynamo.energyStorage
+        );
     }
 
     private static void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {

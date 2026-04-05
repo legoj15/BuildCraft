@@ -1,0 +1,17 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :createMinecraftArtifacts UP-TO-DATE
+
+> Task :compileJava
+E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\tile\craft\WorkbenchCrafting.java:72: warning: [removal] IItemHandler in net.neoforged.neoforge.items has been deprecated and marked for removal
+    public void onInventoryChange(IItemHandler inv) {
+                                  ^
+Note: E:\GitHub\BuildCraft\buildcraft-lib\src\main\java\buildcraft\lib\misc\CraftingUtil.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+1 warning
+
+[Incubating] Problems report is available at: file:///E:/GitHub/BuildCraft/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 7s
+2 actionable tasks: 1 executed, 1 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.3.1/userguide/configuration_cache_enabling.html

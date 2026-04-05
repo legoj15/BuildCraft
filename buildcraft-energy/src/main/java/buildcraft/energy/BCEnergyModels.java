@@ -25,6 +25,8 @@ import buildcraft.lib.misc.data.ModelVariableData;
 
 import buildcraft.energy.tile.TileEngineIron_BC8;
 import buildcraft.energy.tile.TileEngineStone_BC8;
+import buildcraft.energy.tile.TileEngineFE;
+import buildcraft.energy.tile.TileDynamoMJ;
 
 /** Defines the variable model holders and expression variables for all engine types.
  * Provides getXxxEngineQuads() methods that set variables from tile entity state
@@ -36,6 +38,8 @@ public class BCEnergyModels {
 
     private static final ModelHolderVariable ENGINE_STONE;
     private static final ModelHolderVariable ENGINE_IRON;
+    private static final ModelHolderVariable ENGINE_FE;
+    private static final ModelHolderVariable ENGINE_DYNAMO;
 
     static {
         FunctionContext fnCtx = new FunctionContext(ExpressionCompat.ENUM_POWER_STAGE, DefaultContexts.createWithAll());
@@ -48,6 +52,14 @@ public class BCEnergyModels {
         );
         ENGINE_IRON = new ModelHolderVariable(
             "buildcraftunofficial:compat_models/engine_iron.json",
+            fnCtx
+        );
+        ENGINE_FE = new ModelHolderVariable(
+            "buildcraftunofficial:compat_models/engine_fe.json",
+            fnCtx
+        );
+        ENGINE_DYNAMO = new ModelHolderVariable(
+            "buildcraftunofficial:compat_models/engine_dynamo.json",
             fnCtx
         );
     }
@@ -71,5 +83,13 @@ public class BCEnergyModels {
 
     public static MutableQuad[] getIronEngineQuads(TileEngineIron_BC8 tile, float partialTicks) {
         return getEngineQuads(ENGINE_IRON, tile, partialTicks);
+    }
+
+    public static MutableQuad[] getFeEngineQuads(TileEngineFE tile, float partialTicks) {
+        return getEngineQuads(ENGINE_FE, tile, partialTicks);
+    }
+
+    public static MutableQuad[] getDynamoQuads(TileDynamoMJ tile, float partialTicks) {
+        return getEngineQuads(ENGINE_DYNAMO, tile, partialTicks);
     }
 }

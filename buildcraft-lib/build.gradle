@@ -17,3 +17,8 @@ dependencies {
     compileOnly "mezz.jei:jei-1.21.11-common-api:27.4.0.15"
     compileOnly "mezz.jei:jei-1.21.11-neoforge-api:27.4.0.15"
 }
+tasks.register('printDeps') {
+    doLast {
+        configurations.compileClasspath.each { println it }
+    }
+}

@@ -66,6 +66,8 @@ public class BCCoreCreativeTabs {
                                 output.accept(BCCoreItems.ENGINE_REDSTONE.get());
                                 output.accept(BCEnergyItems.ENGINE_STONE.get());
                                 output.accept(BCEnergyItems.ENGINE_IRON.get());
+                                output.accept(BCEnergyItems.ENGINE_FE.get());
+                                output.accept(BCEnergyItems.DYNAMO_MJ.get());
                                 output.accept(BCCoreItems.ENGINE_CREATIVE.get());
                                 // Wrench
                                 output.accept(BCCoreItems.WRENCH.get());

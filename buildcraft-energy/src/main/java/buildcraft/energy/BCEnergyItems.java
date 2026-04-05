@@ -15,6 +15,12 @@ public class BCEnergyItems {
     public static final DeferredItem<BlockItem> ENGINE_IRON = ITEMS.registerSimpleBlockItem(
             BCEnergyBlocks.ENGINE_IRON);
 
+    public static final DeferredItem<BlockItem> ENGINE_FE = ITEMS.registerSimpleBlockItem(
+            BCEnergyBlocks.ENGINE_FE);
+
+    public static final DeferredItem<BlockItem> DYNAMO_MJ = ITEMS.registerSimpleBlockItem(
+            BCEnergyBlocks.DYNAMO_MJ);
+
     // Glob of Oil — registered under a separate registry because its assets are in buildcraftenergy
     private static final DeferredRegister.Items ENERGY_ITEMS = DeferredRegister.createItems("buildcraftunofficial");
 

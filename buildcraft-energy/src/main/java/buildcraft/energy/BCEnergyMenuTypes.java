@@ -10,6 +10,8 @@ import java.util.function.Supplier;
 
 import buildcraft.energy.container.ContainerEngineStone;
 import buildcraft.energy.container.ContainerEngineIron;
+import buildcraft.energy.container.ContainerEngineFE;
+import buildcraft.energy.container.ContainerDynamoMJ;
 
 public class BCEnergyMenuTypes {
     public static final DeferredRegister<MenuType<?>> MENU_TYPES =
@@ -22,6 +24,14 @@ public class BCEnergyMenuTypes {
     public static final Supplier<MenuType<ContainerEngineIron>> ENGINE_IRON = MENU_TYPES.register(
             "engine_iron",
             () -> IMenuTypeExtension.create(ContainerEngineIron::new));
+
+    public static final Supplier<MenuType<ContainerEngineFE>> ENGINE_FE = MENU_TYPES.register(
+            "engine_rf",
+            () -> IMenuTypeExtension.create(ContainerEngineFE::new));
+
+    public static final Supplier<MenuType<ContainerDynamoMJ>> DYNAMO_MJ = MENU_TYPES.register(
+            "mj_dynamo",
+            () -> IMenuTypeExtension.create(ContainerDynamoMJ::new));
 
     public static void init(IEventBus modEventBus) {
         MENU_TYPES.register(modEventBus);

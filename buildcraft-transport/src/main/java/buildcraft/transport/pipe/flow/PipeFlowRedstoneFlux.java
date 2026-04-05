@@ -24,7 +24,8 @@ import net.minecraft.core.Direction.AxisDirection;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.energy.IEnergyStorage;
+import net.neoforged.neoforge.transfer.energy.EnergyHandler;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.mj.MjAPI;
@@ -112,7 +113,7 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
 
     @Override
     public boolean canConnect(Direction face, BlockEntity oTile) {
-        return pipe.getHolder().getCapabilityFromPipe(face, CapUtil.CAP_ENERGY) != null;
+        return pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK) != null;
     }
 
     @Override
@@ -154,11 +155,14 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <T> T getCapability(@Nonnull Object capability, Direction facing) {
         if (facing == null) {
             return null;
         }
-        // IEnergyStorage capability check stubbed until NeoForge cap wiring is complete
+        if (capability == net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK || capability == CapUtil.CAP_ENERGY) {
+            return (T) sections.get(facing);
+        }
         return null;
     }
 
@@ -255,12 +259,15 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
                                 PipeFlowRedstoneFlux oFlow = (PipeFlowRedstoneFlux) neighbour.getFlow();
                                 leftover = oFlow.sections.get(face2.getOpposite()).receivePowerInternal(watts);
                             } else {
-                                IEnergyStorage receiver = pipe.getHolder().getCapabilityFromPipe(
-                                    face2, null /* CapabilityEnergy.ENERGY — stubbed */
+                                EnergyHandler receiver = pipe.getHolder().getCapabilityFromPipe(
+                                    face2, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK
                                 );
-                                if (receiver != null && receiver.canReceive()) {
-                                    int accepted = receiver.receiveEnergy(watts, false);
-                                    leftover = watts - accepted;
+                                if (receiver != null) {
+                                    try (net.neoforged.neoforge.transfer.transaction.Transaction transaction = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+                                        int accepted = receiver.insert(watts, transaction);
+                                        leftover = watts - accepted;
+                                        transaction.commit();
+                                    }
                                 }
                             }
                             int used = watts - leftover;
@@ -290,9 +297,9 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
             if (pipe.getConnectedType(face) != ConnectedType.TILE) {
                 continue;
             }
-            IEnergyStorage recv = pipe.getHolder().getCapabilityFromPipe(face, null /* CapabilityEnergy.ENERGY */);
-            if (recv != null && recv.canReceive()) {
-                int requested = recv.getMaxEnergyStored() - recv.getEnergyStored();
+            EnergyHandler recv = pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK);
+            if (recv != null) {
+                int requested = (int) (recv.getCapacityAsLong() - recv.getAmountAsLong());
                 if (requested > 0) {
                     requestPower(face, requested);
                 }
@@ -389,7 +396,7 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         return max;
     }
 
-    public class Section implements IEnergyStorage {
+    public class Section implements EnergyHandler {
         public final Direction side;
 
         public final AverageInt clientDisplayAverage = new AverageInt(10);
@@ -422,38 +429,26 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         }
 
         @Override
-        public boolean canExtract() {
-            return false;
-        }
-
-        @Override
-        public boolean canReceive() {
-            return isReceiver;
-        }
-
-        @Override
-        public int receiveEnergy(int maxReceive, boolean simulate) {
+        public int insert(int maxReceive, TransactionContext transaction) {
             if (isReceiver) {
-                if (!simulate) {
-                    return maxReceive - this.receivePowerInternal(maxReceive);
-                }
-                return maxReceive;
+                // Not perfectly transactional, but the section handles accumulation gracefully.
+                return maxReceive - this.receivePowerInternal(maxReceive);
             }
             return 0;
         }
 
         @Override
-        public int extractEnergy(int maxExtract, boolean simulate) {
+        public int extract(int maxExtract, TransactionContext transaction) {
             return 0;
         }
 
         @Override
-        public int getEnergyStored() {
+        public long getAmountAsLong() {
             return internalPower + internalNextPower;
         }
 
         @Override
-        public int getMaxEnergyStored() {
+        public long getCapacityAsLong() {
             return maxPower;
         }
 

@@ -1,0 +1,7 @@
+{
+    "textures": {
+        "#back":"buildcraftenergy:block/engine/rf/back",
+        "#side":"buildcraftenergy:block/engine/rf/side"
+    },
+    "parent":"buildcraftunofficial:compat_models/engine_base"
+}

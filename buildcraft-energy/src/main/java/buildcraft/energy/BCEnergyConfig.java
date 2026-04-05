@@ -35,6 +35,8 @@ public class BCEnergyConfig {
     public static ModConfigSpec.ConfigValue<List<? extends String>> excludedDimensions;
     public static ModConfigSpec.BooleanValue excludedDimensionsIsBlackList;
 
+    public static ModConfigSpec.BooleanValue useRfNaming;
+
     public static void buildWorldgen(ModConfigSpec.Builder builder) {
         builder.push("oil");
 
@@ -110,6 +112,9 @@ public class BCEnergyConfig {
 
     public static void buildGeneral(ModConfigSpec.Builder builder) {
         oilIsSticky = builder.define("oilIsSticky", false);
+        useRfNaming = builder
+                .comment("If true, use the classic 'Redstone Flux' (RF) names instead of 'Forge Energy' (FE)")
+                .define("useRfNaming", true);
     }
 
     public static Set<Identifier> getExcessiveBiomes() {

@@ -35,7 +35,7 @@ import buildcraft.transport.client.model.PipeItemModel;
 import buildcraft.transport.client.render.PipeFlowRendererFluids;
 import buildcraft.transport.client.render.PipeFlowRendererItems;
 import buildcraft.transport.client.render.PipeFlowRendererPower;
-import buildcraft.transport.client.render.PipeFlowRendererRf;
+import buildcraft.transport.client.render.PipeFlowRendererFE;
 import buildcraft.transport.client.render.RenderPipeHolder;
 import buildcraft.transport.client.render.PipeBehaviourRendererStripes;
 import buildcraft.transport.client.model.key.KeyPlugBlocker;
@@ -127,7 +127,7 @@ public class BCTransportClient {
     /** Called during mod init to register pipe flow renderers and pluggable bakers. */
     public static void registerFlowRenderers() {
         PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowPower.class, PipeFlowRendererPower.INSTANCE);
-        PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowRedstoneFlux.class, PipeFlowRendererRf.INSTANCE);
+        PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowRedstoneFlux.class, PipeFlowRendererFE.INSTANCE);
         PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowItems.class, PipeFlowRendererItems.INSTANCE);
         PipeRegistryClient.INSTANCE.registerRenderer(PipeFlowFluids.class, PipeFlowRendererFluids.INSTANCE);
 

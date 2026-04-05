@@ -151,6 +151,15 @@ public class BCTransport {
             event.accept(BCTransportItems.PIPE_SANDSTONE_POWER.get());
             event.accept(BCTransportItems.PIPE_DIAMOND_POWER.get());
             event.accept(BCTransportItems.PIPE_DIAMOND_WOOD_POWER.get());
+            event.accept(BCTransportItems.PIPE_WOOD_RF.get());
+            event.accept(BCTransportItems.PIPE_COBBLE_RF.get());
+            event.accept(BCTransportItems.PIPE_STONE_RF.get());
+            event.accept(BCTransportItems.PIPE_QUARTZ_RF.get());
+            event.accept(BCTransportItems.PIPE_IRON_RF.get());
+            event.accept(BCTransportItems.PIPE_GOLD_RF.get());
+            event.accept(BCTransportItems.PIPE_SANDSTONE_RF.get());
+            event.accept(BCTransportItems.PIPE_DIAMOND_RF.get());
+            event.accept(BCTransportItems.PIPE_DIAMOND_WOOD_RF.get());
         }
     }
 
@@ -244,6 +253,22 @@ public class BCTransport {
                 buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
                 if (plug != null && plug.isBlocking()) return null;
                 return pipe.getFlow().getCapability(CapUtil.CAP_FLUIDS, side);
+            }
+        );
+
+        event.registerBlockEntity(
+            net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK, BCTransportBlockEntities.PIPE_HOLDER.get(),
+            (tile, side) -> {
+                if (side != null) {
+                    buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
+                    if (plug != null && plug.isBlocking()) return null;
+                }
+                
+                buildcraft.api.transport.pipe.IPipe pipe = tile.getPipe();
+                if (pipe != null && pipe.getFlow() != null) {
+                    return pipe.getFlow().getCapability(net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK, side);
+                }
+                return null;
             }
         );
     }

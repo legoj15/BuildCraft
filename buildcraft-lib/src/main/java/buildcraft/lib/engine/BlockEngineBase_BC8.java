@@ -81,6 +81,11 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock, 
     }
 
     @Override
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return getBlockSupportShape(state, level, pos);
+    }
+
+    @Override
     public boolean useShapeForLightOcclusion(BlockState state) {
         return true;
     }

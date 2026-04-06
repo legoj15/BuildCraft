@@ -1,3 +1,9 @@
-﻿{
-    "parent": "buildcraftunofficial:block/mj_dynamo"
+{
+    "parent": "buildcraftunofficial:block/engine_item_base",
+    "textures": {
+        "back": "buildcraftunofficial:block/mj_dynamo/back",
+        "side": "buildcraftunofficial:block/mj_dynamo/side",
+        "trunk": "buildcraftunofficial:block/mj_dynamo/front",
+        "chamber": "buildcraftunofficial:block/mj_dynamo/side"
+    }
 }

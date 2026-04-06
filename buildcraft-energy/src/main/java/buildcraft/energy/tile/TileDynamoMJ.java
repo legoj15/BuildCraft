@@ -26,6 +26,7 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.mj.IMjConnector;
+import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
 import buildcraft.core.BCCoreItems;
@@ -210,6 +211,19 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
         }
 
         return level.getCapability(Capabilities.Energy.BLOCK, targetPos, side.getOpposite());
+    }
+
+    @Nullable
+    @Override
+    public IMjReceiver getReceiverToPower(Direction side) {
+        if (getFeReceiver(side) != null) {
+            return new IMjReceiver() {
+                @Override public long getPowerRequested() { return 0; }
+                @Override public long receivePower(long microJoules, boolean simulate) { return 0; }
+                @Override public boolean canConnect(IMjConnector other) { return true; }
+            };
+        }
+        return null;
     }
 
     @Override

@@ -1,3 +1,8 @@
-﻿{
-    "parent": "buildcraftunofficial:block/engine_fe"
+{
+    "parent": "buildcraftunofficial:block/engine_item_base",
+    "textures": {
+        "back": "buildcraftunofficial:block/engine/fe/back",
+        "side": "buildcraftunofficial:block/engine/fe/side",
+        "trunk": "buildcraftunofficial:block/engine/trunk_blue"
+    }
 }

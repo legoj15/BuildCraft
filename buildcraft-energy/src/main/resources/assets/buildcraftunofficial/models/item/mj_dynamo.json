@@ -5,7 +5,6 @@
         "side": "buildcraftunofficial:block/mj_dynamo/side",
         "front": "buildcraftunofficial:block/mj_dynamo/front",
         "trunk": "buildcraftunofficial:block/engine/trunk_blue",
-        "chamber": "buildcraftunofficial:block/engine/chamber_base",
         "particle": "#back"
     },
     "elements": [
@@ -36,28 +35,17 @@
             }
         },
         {
-            "comment": "Narrower piston head matching 1.12.2 MJ dynamo",
+            "comment": "Piston head at rest position (progress=0), matching 1.12.2",
             "name": "piston_head",
-            "from": [2, 7, 2],
-            "to": [14, 11, 14],
+            "from": [2, 4, 2],
+            "to": [14, 8, 14],
             "faces": {
-                "down":  {"uv": [2, 2, 14, 14], "texture": "#front"},
-                "up":    {"uv": [2, 2, 14, 14], "texture": "#front"},
+                "down":  {"uv": [0, 0, 12, 12], "texture": "#front"},
+                "up":    {"uv": [0, 0, 12, 12], "texture": "#front"},
                 "north": {"uv": [0, 12, 12, 16], "texture": "#front"},
                 "south": {"uv": [0, 12, 12, 16], "texture": "#front"},
                 "west":  {"uv": [0, 12, 12, 16], "texture": "#front"},
                 "east":  {"uv": [0, 12, 12, 16], "texture": "#front"}
-            }
-        },
-        {
-            "name": "chamber",
-            "from": [3, 4, 3],
-            "to": [13, 7, 13],
-            "faces": {
-                "north": {"uv": [3, 0, 13, 3], "texture": "#chamber"},
-                "south": {"uv": [3, 0, 13, 3], "texture": "#chamber"},
-                "west":  {"uv": [3, 0, 13, 3], "texture": "#chamber"},
-                "east":  {"uv": [3, 0, 13, 3], "texture": "#chamber"}
             }
         }
     ]

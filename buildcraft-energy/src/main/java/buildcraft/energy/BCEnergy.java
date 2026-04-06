@@ -115,6 +115,17 @@ public class BCEnergy {
                 return engine.getMjConnector();
             }
         );
+        // CAP_RECEIVER is what engines check for auto-rotation and power delivery
+        event.registerBlockEntity(
+            buildcraft.api.mj.MjAPI.CAP_RECEIVER,
+            BCEnergyBlockEntities.DYNAMO_MJ.get(),
+            (dynamo, direction) -> {
+                // MJ input on non-facing sides only
+                if (direction == dynamo.getOrientation()) return null;
+                buildcraft.api.mj.IMjConnector connector = dynamo.getMjConnector();
+                return connector instanceof buildcraft.api.mj.IMjReceiver ? (buildcraft.api.mj.IMjReceiver) connector : null;
+            }
+        );
 
         event.registerBlockEntity(
             net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK, BCEnergyBlockEntities.ENGINE_FE.get(),

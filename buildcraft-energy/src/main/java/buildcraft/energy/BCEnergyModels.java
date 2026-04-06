@@ -55,7 +55,7 @@ public class BCEnergyModels {
             fnCtx
         );
         ENGINE_FE = new ModelHolderVariable(
-            "buildcraftunofficial:compat_models/engine_fe.json",
+            "buildcraftunofficial:compat_models/engine_rf.json",
             fnCtx
         );
         ENGINE_DYNAMO = new ModelHolderVariable(

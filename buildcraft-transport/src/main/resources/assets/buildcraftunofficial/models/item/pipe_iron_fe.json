@@ -1,8 +1,0 @@
-﻿{
-    "parent": "buildcraftunofficial:item/pipe_item",
-    "textures": {
-        "top": "buildcraftunofficial:pipes/iron_fe_clear",
-        "center": "buildcraftunofficial:pipes/iron_fe_clear",
-        "bottom": "buildcraftunofficial:pipes/iron_fe_filled"
-    }
-}

@@ -105,7 +105,11 @@ public class BCEnergy {
         event.registerBlockEntity(
             buildcraft.api.mj.MjAPI.CAP_CONNECTOR,
             BCEnergyBlockEntities.DYNAMO_MJ.get(),
-            (engine, direction) -> engine.getMjConnector()
+            (engine, direction) -> {
+                // MJ input on non-facing sides only
+                if (direction == engine.getOrientation()) return null;
+                return engine.getMjConnector();
+            }
         );
 
         event.registerBlockEntity(
@@ -114,7 +118,11 @@ public class BCEnergy {
         );
         event.registerBlockEntity(
             net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK, BCEnergyBlockEntities.DYNAMO_MJ.get(),
-            (dynamo, direction) -> dynamo.energyStorage
+            (dynamo, direction) -> {
+                // FE output on facing direction only
+                if (direction != dynamo.getOrientation()) return null;
+                return dynamo.energyStorage;
+            }
         );
     }
 

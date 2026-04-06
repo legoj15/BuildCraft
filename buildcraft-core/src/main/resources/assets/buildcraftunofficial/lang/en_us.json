@@ -456,16 +456,16 @@
     "buildcraftunofficial.configuration.excludedDimensions": "Excluded Dimensions",
     "buildcraftunofficial.configuration.excludedDimensionsIsBlackList": "Excluded Dimensions is Blacklist",
 
-    "block.buildcraftunofficial.engine_fe": "FE Engine",
+    "block.buildcraftunofficial.engine_rf": "FE Engine",
     "block.buildcraftunofficial.mj_dynamo": "MJ Dynamo",
-    "item.buildcraftunofficial.pipe_wood_fe": "Wooden FE Pipe",
-    "item.buildcraftunofficial.pipe_cobble_fe": "Cobblestone FE Pipe",
-    "item.buildcraftunofficial.pipe_stone_fe": "Stone FE Pipe",
-    "item.buildcraftunofficial.pipe_quartz_fe": "Quartz FE Pipe",
-    "item.buildcraftunofficial.pipe_iron_fe": "Iron FE Pipe",
-    "item.buildcraftunofficial.pipe_gold_fe": "Golden FE Pipe",
-    "item.buildcraftunofficial.pipe_diamond_fe": "Diamond FE Pipe",
-    "item.buildcraftunofficial.pipe_diamond_wood_fe": "Emerald FE Pipe",
-    "item.buildcraftunofficial.pipe_sandstone_fe": "Sandstone FE Pipe"
+    "item.buildcraftunofficial.pipe_wood_rf": "Wooden FE Pipe",
+    "item.buildcraftunofficial.pipe_cobble_rf": "Cobblestone FE Pipe",
+    "item.buildcraftunofficial.pipe_stone_rf": "Stone FE Pipe",
+    "item.buildcraftunofficial.pipe_quartz_rf": "Quartz FE Pipe",
+    "item.buildcraftunofficial.pipe_iron_rf": "Iron FE Pipe",
+    "item.buildcraftunofficial.pipe_gold_rf": "Golden FE Pipe",
+    "item.buildcraftunofficial.pipe_diamond_rf": "Diamond FE Pipe",
+    "item.buildcraftunofficial.pipe_diamond_wood_rf": "Emerald FE Pipe",
+    "item.buildcraftunofficial.pipe_sandstone_rf": "Sandstone FE Pipe"
 }
 

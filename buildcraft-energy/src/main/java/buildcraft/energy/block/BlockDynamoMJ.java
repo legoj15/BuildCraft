@@ -69,11 +69,6 @@ public class BlockDynamoMJ extends Block implements EntityBlock, ICustomRotation
     }
 
     @Override
-    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, net.minecraft.world.phys.shapes.CollisionContext context) {
-        return getBlockSupportShape(state, level, pos);
-    }
-
-    @Override
     public boolean useShapeForLightOcclusion(BlockState state) {
         return true;
     }

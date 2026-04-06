@@ -1,0 +1,8 @@
+{
+    "parent": "buildcraftunofficial:item/pipe_item",
+    "textures": {
+        "top": "buildcraftunofficial:item/pipe_diamond_rf",
+        "center": "buildcraftunofficial:item/pipe_diamond_rf",
+        "bottom": "buildcraftunofficial:item/pipe_diamond_rf"
+    }
+}

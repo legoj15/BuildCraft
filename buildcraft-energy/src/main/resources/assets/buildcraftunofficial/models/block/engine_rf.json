@@ -1,4 +1,4 @@
-﻿{
+{
     "parent": "buildcraftunofficial:block/engine_base",
     "textures": {
         "particle": "buildcraftunofficial:block/engine/fe/back",

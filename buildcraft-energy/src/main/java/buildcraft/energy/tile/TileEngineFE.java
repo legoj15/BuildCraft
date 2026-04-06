@@ -6,6 +6,7 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.Item;
@@ -13,7 +14,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import buildcraft.api.mj.MjRfConversion;
 import net.neoforged.neoforge.items.ItemStackHandler;
@@ -128,6 +131,9 @@ public class TileEngineFE extends TileEngineBase_BC8 {
 
     @Override
     protected void engineUpdate() {
+        // Actively pull FE from adjacent tiles (including FE pipe sections)
+        pullFeFromNeighbors();
+
         if (currentFe <= 0) return;
 
         if (isRedstonePowered) {
@@ -147,6 +153,29 @@ public class TileEngineFE extends TileEngineBase_BC8 {
             heat += HEAT_RATE;
             if (heat >= 200) {
                 heat = 200;
+            }
+        }
+    }
+
+    /** Pull FE from adjacent blocks on non-facing sides. */
+    private void pullFeFromNeighbors() {
+        if (level == null || currentFe >= MAX_FE) return;
+        for (Direction dir : Direction.values()) {
+            if (dir == orientation) continue; // facing side is MJ output
+            if (currentFe >= MAX_FE) break;
+            BlockPos neighborPos = getBlockPos().relative(dir);
+            EnergyHandler handler = level.getCapability(
+                Capabilities.Energy.BLOCK, neighborPos, dir.getOpposite());
+            if (handler == null) continue;
+            int want = MAX_FE - currentFe;
+            if (want <= 0) break;
+            try (Transaction transaction = Transaction.openRoot()) {
+                int extracted = handler.extract(want, transaction);
+                if (extracted > 0) {
+                    currentFe += extracted;
+                    transaction.commit();
+                    setChanged();
+                }
             }
         }
     }

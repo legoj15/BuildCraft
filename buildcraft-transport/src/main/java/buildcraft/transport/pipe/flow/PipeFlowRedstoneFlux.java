@@ -113,7 +113,20 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
 
     @Override
     public boolean canConnect(Direction face, BlockEntity oTile) {
-        return pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK) != null;
+        net.neoforged.neoforge.transfer.energy.EnergyHandler handler =
+            pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK);
+        if (handler == null) return false;
+        // Receiver pipes (wooden) only connect to tiles that can provide (extract) energy.
+        // This prevents wooden FE pipes from connecting to receive-only blocks like the FE Engine.
+        if (isReceiver) {
+            try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
+                     net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+                int canExtract = handler.extract(1, tx);
+                // Don't commit — we're just checking
+                return canExtract > 0;
+            }
+        }
+        return true;
     }
 
     @Override

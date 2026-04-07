@@ -48,6 +48,7 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
                     if (contains(mainGui.mouse)) {
                         java.util.List<String> lines = new java.util.ArrayList<>();
                         lines.add(LocaleUtil.localize("buildcraft.gui.rf_engine.upgrade_types"));
+                        buildcraft.energy.tile.TileEngineFE.initUpgrades();
                         for (java.util.Map.Entry<net.minecraft.world.item.Item, Long> entry : buildcraft.energy.tile.TileEngineFE.UPGRADE_VALUES.entrySet()) {
                             String itemName = new net.minecraft.world.item.ItemStack(entry.getKey()).getHoverName().getString();
                             long mj = entry.getValue();

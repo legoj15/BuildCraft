@@ -5,3 +5,4 @@
 - Restored upgrade tooltip functionality and upgrade overlay to ScreenDynamoMJ and ScreenEngineFE
 - Fixed upgrade slot misalignment and restored missing upgrade_types translation string
 - Adjusted upgrade tooltips to match 1.12.2 'Redstone Flux per second' phrasing exactly
+- Fixed empty upgrade tooltips by explicitly invoking the deferred upgrade map initialization routines inside the GUI rendering loop

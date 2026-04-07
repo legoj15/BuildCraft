@@ -131,6 +131,9 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
 
     @Override
     protected void engineUpdate() {
+        // ALWAYS attempt to push FE off to receivers, regardless of generation limits
+        sendFeToReceiver();
+
         long mjStored = mjBattery.getStored();
         if (mjStored <= 0) return;
 
@@ -154,9 +157,6 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
                 if (heat >= 200) {
                     heat = 200;
                 }
-
-                // Push FE to adjacent tiles
-                sendFeToReceiver();
             }
         } else {
             currentOutput = 0;

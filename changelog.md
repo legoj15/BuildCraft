@@ -14,3 +14,4 @@
 - Fixed an issue in the Kinesis Pipe flow renderers where using cutoutBlockSheet() for the flow overlays caused them to render as solid opaque boxes instead of transparent overlays; migrated to RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS).
 - Fixed a bug where connecting a Wooden Kinesis Pipe to an FE Engine incorrectly rendered the solid wood extraction plug instead of connecting transparently, as the capability evaluation ignored FE consumers.
 - Fixed a critical energy accumulation bug in `PipeFlowRedstoneFlux` where machines checking insertion capacities via transactions caused permanent phantom energy buildup in the pipelines due to missing snapshot journals.
+- Fixed a stalling issue in the MJ Dynamo where reaching the maximum FE capacity (10,000 FE) would permanently halt energy dissemination, effectively killing the pipe network.

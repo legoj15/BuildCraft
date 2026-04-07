@@ -15,7 +15,7 @@ import buildcraft.lib.misc.LocaleUtil;
 
 public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
     private static final Identifier TEXTURE = Identifier.parse("buildcraftenergy:textures/gui/mj_dynamo_gui.png");
-    private static final int SIZE_X = 176, SIZE_Y = 166;
+    private static final int SIZE_X = 176, SIZE_Y = 177;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
 
     public ScreenDynamoMJ(ContainerDynamoMJ menu, Inventory playerInv, Component title) {

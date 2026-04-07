@@ -62,7 +62,7 @@ public class BlockEngineFE extends BlockEngineBase_BC8 {
             serverPlayer.openMenu(
                 new net.minecraft.world.SimpleMenuProvider(
                     (containerId, playerInv, p) -> new buildcraft.energy.container.ContainerEngineFE(containerId, playerInv, engine),
-                    Component.translatable(BCEnergyConfig.useRfNaming.get() ? "tile.engineRf.name" : "tile.engineFe.name")
+                    Component.translatable(BCEnergyConfig.useRfNaming.get() ? "block.buildcraftunofficial.engine_rf" : "block.buildcraftunofficial.engine_rf")
                 ),
                 buf -> buf.writeBlockPos(pos)
             );

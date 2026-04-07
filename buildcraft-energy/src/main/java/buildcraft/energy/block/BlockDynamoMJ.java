@@ -155,7 +155,7 @@ public class BlockDynamoMJ extends Block implements EntityBlock, ICustomRotation
             serverPlayer.openMenu(
                 new net.minecraft.world.SimpleMenuProvider(
                     (containerId, playerInv, p) -> new buildcraft.energy.container.ContainerDynamoMJ(containerId, playerInv, dynamo),
-                    net.minecraft.network.chat.Component.translatable(BCEnergyConfig.useRfNaming.get() ? "tile.dynamoMj.name" : "tile.fe_dynamoMj.name")
+                    net.minecraft.network.chat.Component.translatable(BCEnergyConfig.useRfNaming.get() ? "block.buildcraftunofficial.mj_dynamo" : "block.buildcraftunofficial.mj_dynamo")
                 ),
                 buf -> buf.writeBlockPos(pos)
             );

@@ -53,7 +53,7 @@ public enum PipeFlowRendererPower implements IPipeFlowRenderer<PipeFlowPower> {
             // in-progress vertex data from other BERs.
             MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
-            VertexConsumer powerBB = bufferSource.getBuffer(Sheets.cutoutBlockSheet());
+            VertexConsumer powerBB = bufferSource.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
 
             for (Direction side : Direction.values()) {
                 if (!flow.pipe.isConnected(side)) {
@@ -73,7 +73,7 @@ public enum PipeFlowRendererPower implements IPipeFlowRenderer<PipeFlowPower> {
 
             renderCentrePower(centrePower, offsetX, offsetY, offsetZ, powerBB, pose);
 
-            bufferSource.endBatch(Sheets.cutoutBlockSheet());
+            bufferSource.endBatch(net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
         }
     }
 

@@ -19,7 +19,7 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_RF = new GuiIcon(TEXTURE, SIZE_X, 0, 16, 60);
     private static final buildcraft.lib.gui.pos.GuiRectangle RECT_UPGRADE_TYPES = new buildcraft.lib.gui.pos.GuiRectangle(42, 20, 74, 20);
-    private static final buildcraft.lib.gui.pos.GuiRectangle RECT_RF_BATTERY = new buildcraft.lib.gui.pos.GuiRectangle(138, 17, 8, 62);
+    private static final buildcraft.lib.gui.pos.GuiRectangle RECT_RF_BATTERY = new buildcraft.lib.gui.pos.GuiRectangle(30, 17, 8, 62);
 
     public ScreenEngineFE(ContainerEngineFE menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title, SIZE_X, SIZE_Y);
@@ -95,7 +95,7 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
         double rfHeight = 60.0 * menu.getSyncedFeStored() / buildcraft.energy.tile.TileEngineFE.MAX_FE;
         double scale = net.minecraft.client.Minecraft.getInstance().getWindow().getGuiScale();
         rfHeight = (Math.round(rfHeight * scale)) / scale;
-        ICON_RF.drawCutInside(new buildcraft.lib.gui.pos.GuiRectangle(139, 18 + 60 - rfHeight, 6, rfHeight).offset(mainGui.rootElement));
+        ICON_RF.drawCutInside(new buildcraft.lib.gui.pos.GuiRectangle(31, 18 + 60 - rfHeight, 6, rfHeight).offset(mainGui.rootElement));
     }
 
     @Override

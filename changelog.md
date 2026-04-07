@@ -7,3 +7,8 @@
 - Adjusted upgrade tooltips to match 1.12.2 'Redstone Flux per second' phrasing exactly
 - Fixed empty upgrade tooltips by explicitly invoking the deferred upgrade map initialization routines inside the GUI rendering loop
 - Restored missing energy tank tooltips in ScreenDynamoMJ and ScreenEngineFE
+- Fixed a bug where the MJ Dynamo and FE Engine were permanently deleting FE during simulated network transfers by migrating them to `SimpleEnergyHandler` with properly backed snapshot journals.
+- Fixed a bug where the MJ Dynamo's FE generation readout and piston animation were erased every tick by legacy MJ engine mechanics expecting native MJ output over FE pushing.
+- Restored the missing dynamically scaled red battery bar rendering to the MJ Dynamo and FE Engine GUIs to match the 1.12.2 visual styling.
+- Fixed the FE Engine GUI's battery tank and tooltip rect alignment so they are correctly positioned on the left side of the UI instead of overlapping the Dynamo's right side.
+- Fixed an issue in the Kinesis Pipe flow renderers where using cutoutBlockSheet() for the flow overlays caused them to render as solid opaque boxes instead of transparent overlays; migrated to RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS).

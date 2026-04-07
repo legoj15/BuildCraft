@@ -17,3 +17,4 @@
 - Fixed a critical energy accumulation bug in `PipeFlowRedstoneFlux` where machines checking insertion capacities via transactions caused permanent phantom energy buildup in the pipelines due to missing snapshot journals.
 - Fixed a stalling issue in the MJ Dynamo where reaching the maximum FE capacity (10,000 FE) would permanently halt energy dissemination, effectively killing the pipe network.
 - Fixed a client-side sync bug in the Quarry where the battery level was additively accumulating with every server packet instead of overwriting, causing the client-side UI battery values to balloon exponentially.
+- Fixed a visual bug in the MJ Dynamo where fractional leftover microJoules or a full FE buffer would cause the piston animation to pump indefinitely even when idle or at 20C.

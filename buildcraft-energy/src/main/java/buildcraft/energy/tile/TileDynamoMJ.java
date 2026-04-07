@@ -134,6 +134,8 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
         // ALWAYS attempt to push FE off to receivers, regardless of generation limits
         sendFeToReceiver();
 
+        currentOutput = 0;
+
         long mjStored = mjBattery.getStored();
         if (mjStored <= 0) return;
 
@@ -238,7 +240,7 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
 
     @Override
     public long extractPower(long min, long max, boolean doExtract) {
-        if (!doExtract && (getCurrentFe() > 0 || currentOutput > 0)) {
+        if (!doExtract && currentOutput > 0) {
             return Math.max(min, 1);
         }
         return 0;

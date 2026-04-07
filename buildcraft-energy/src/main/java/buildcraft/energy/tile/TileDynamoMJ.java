@@ -197,7 +197,7 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
     public IMjReceiver getReceiverToPower(Direction side) {
         if (getFeReceiver(side) != null) {
             return new IMjReceiver() {
-                @Override public long getPowerRequested() { return 0; }
+                @Override public long getPowerRequested() { return 1; }
                 @Override public long receivePower(long microJoules, boolean simulate) { return 0; }
                 @Override public boolean canConnect(IMjConnector other) { return true; }
             };
@@ -234,6 +234,19 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
     @Override
     public long maxPowerExtracted() {
         return 0;
+    }
+
+    @Override
+    public long extractPower(long min, long max, boolean doExtract) {
+        if (!doExtract && (getCurrentFe() > 0 || currentOutput > 0)) {
+            return Math.max(min, 1);
+        }
+        return 0;
+    }
+
+    @Override
+    protected void sendPower(@Nullable IMjReceiver receiver) {
+        // MJ Dynamo pushes FE in engineUpdate(). Do not zero out currentOutput here.
     }
 
     @Override

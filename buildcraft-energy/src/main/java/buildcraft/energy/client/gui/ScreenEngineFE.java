@@ -51,8 +51,8 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
                         for (java.util.Map.Entry<net.minecraft.world.item.Item, Long> entry : buildcraft.energy.tile.TileEngineFE.UPGRADE_VALUES.entrySet()) {
                             String itemName = new net.minecraft.world.item.ItemStack(entry.getKey()).getHoverName().getString();
                             long mj = entry.getValue();
-                            int rf = (int) (mj / 10L); // 10 MJ = 1 RF fallback if conversion object missing
-                            lines.add(itemName + " = +" + mj + " MJ/t (" + rf + " RF/t)");
+                            int rfPerTick = (int) (mj / 100000L); // 100,000 microMJ = 1 RF fallback
+                            lines.add(itemName + " = +" + (rfPerTick * 20) + " Redstone Flux per second");
                         }
                         tooltips.add(new buildcraft.lib.gui.elem.ToolTip(lines));
                     }

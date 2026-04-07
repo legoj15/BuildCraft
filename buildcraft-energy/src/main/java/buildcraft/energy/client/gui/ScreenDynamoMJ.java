@@ -17,6 +17,7 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
     private static final Identifier TEXTURE = Identifier.parse("buildcraftenergy:textures/gui/mj_dynamo_gui.png");
     private static final int SIZE_X = 176, SIZE_Y = 177;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
+    private static final GuiIcon ICON_RF = new GuiIcon(TEXTURE, SIZE_X, 0, 16, 60);
     private static final buildcraft.lib.gui.pos.GuiRectangle RECT_UPGRADE_TYPES = new buildcraft.lib.gui.pos.GuiRectangle(42, 20, 74, 20);
     private static final buildcraft.lib.gui.pos.GuiRectangle RECT_RF_BATTERY = new buildcraft.lib.gui.pos.GuiRectangle(138, 17, 8, 62);
 
@@ -93,6 +94,11 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
             256, 256,
             0xA5FFFFFF
         );
+        
+        double rfHeight = 60.0 * menu.getSyncedFeStored() / buildcraft.energy.tile.TileDynamoMJ.MAX_FE;
+        double scale = net.minecraft.client.Minecraft.getInstance().getWindow().getGuiScale();
+        rfHeight = (Math.round(rfHeight * scale)) / scale;
+        ICON_RF.drawCutInside(new buildcraft.lib.gui.pos.GuiRectangle(139, 18 + 60 - rfHeight, 6, rfHeight).offset(mainGui.rootElement));
     }
 
     @Override

@@ -127,7 +127,9 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
     /** MC 26.1: extractLabels replaces renderLabels. */
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        super.extractLabels(graphics, mouseX, mouseY);
+        // Do not call super.extractLabels(graphics, mouseX, mouseY);
+        // AbstractContainerScreen automatically renders this.title and this.playerInventoryTitle left-aligned,
+        // which duplicates BuildCraft's traditional centered titles drawn in drawForegroundLayer().
         GuiIcon.setGuiGraphics(graphics);
         mainGui.preDrawForeground();
         drawForegroundLayer();

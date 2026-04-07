@@ -1,13 +1,2 @@
-###### Changes since 26.1 Beta release 3:
-- Gate GUI fixes:
-    - Trigger/action textures now render correctly (sprite namespaces and atlas registration fixed)
-    - Drag-and-drop visual indicator follows cursor during gate programming
-    - Removed @OnlyIn startup warning
-- Unit tests ported to JUnit 5
-    - Group 1 unit tests ported
-    - ListMatchHandlerTools enabled
-- Fixed dyed bundles and other custom recipes not populating in the Advanced Crafting Table via JEI or crafting book
-- Restored missing recipe for the Water Gellifier
-- Fixed Dedicated Server crash caused by client-side classes loading on servers (Issue #2)
-- Added `runServer` configuration to gradle build file
-- Fixed Kinesis power beam textures bleeding into other textures
+###### Changes since 26.1 Beta release 4:
+- - Fixed GuiBC8 rendering double-titles by suppressing vanilla AbstractContainerScreen extractLabels

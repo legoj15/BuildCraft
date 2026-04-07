@@ -41,6 +41,7 @@ public class BCTransportSprites {
     private static final EnumMap<Direction, SpriteHolder> ACTION_PIPE_DIRECTION;
 
     public static final SpriteHolder POWER_FLOW;
+    public static final SpriteHolder POWER_FLOW_OVERLOAD;
 
     static {
         EMPTY_FILTERED_BUFFER_SLOT = getHolder("gui/empty_filtered_buffer_slot");
@@ -76,6 +77,7 @@ public class BCTransportSprites {
         }
 
         POWER_FLOW = getHolder("pipes/power_flow");
+        POWER_FLOW_OVERLOAD = getHolder("pipes/power_flow_overload");
 
         TRIGGER_ITEMS_TRAVERSING = getHolder("transport", "triggers/trigger_pipecontents_containsitems");
         TRIGGER_FLUIDS_TRAVERSING = getHolder("transport", "triggers/trigger_pipecontents_containsfluids");

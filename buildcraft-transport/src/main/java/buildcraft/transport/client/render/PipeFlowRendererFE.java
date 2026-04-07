@@ -99,7 +99,7 @@ public enum PipeFlowRendererFE implements IPipeFlowRenderer<PipeFlowRedstoneFlux
             radius = 0.248;
         }
 
-        TextureAtlasSprite sprite = BCTransportSprites.POWER_FLOW.getSprite();
+        TextureAtlasSprite sprite = BCTransportSprites.POWER_FLOW_OVERLOAD.getSprite();
         if (sprite == null) return;
 
         double centreRadius = 0.252 - (0.248 * centrePower);
@@ -139,7 +139,7 @@ public enum PipeFlowRendererFE implements IPipeFlowRenderer<PipeFlowRedstoneFlux
         if (radius > 0.248f) {
             radius = 0.248f;
         }
-        TextureAtlasSprite sprite = BCTransportSprites.POWER_FLOW.getSprite();
+        TextureAtlasSprite sprite = BCTransportSprites.POWER_FLOW_OVERLOAD.getSprite();
         if (sprite == null) return;
 
         Vector3f centre = new Vector3f(0.5f, 0.5f, 0.5f);

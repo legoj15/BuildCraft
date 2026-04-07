@@ -187,14 +187,13 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
     private void sendFeToReceiver() {
         if (level == null || currentFe <= 0) return;
         EnergyHandler receiver = getFeReceiver(orientation);
-        if (receiver != null) {
-            // Because EnergyHandler strictly requires a transaction context:
-            try (net.neoforged.neoforge.transfer.transaction.Transaction transaction = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
-                int accepted = receiver.insert(currentFe, transaction);
-                if (accepted > 0) {
-                    currentFe -= accepted;
-                    transaction.commit();
-                }
+        if (receiver == null) return;
+        // Because EnergyHandler strictly requires a transaction context:
+        try (net.neoforged.neoforge.transfer.transaction.Transaction transaction = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+            int accepted = receiver.insert(currentFe, transaction);
+            if (accepted > 0) {
+                currentFe -= accepted;
+                transaction.commit();
             }
         }
     }

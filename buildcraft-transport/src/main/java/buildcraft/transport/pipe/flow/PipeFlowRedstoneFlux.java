@@ -113,20 +113,11 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
 
     @Override
     public boolean canConnect(Direction face, BlockEntity oTile) {
+        // Match 1.12.2: connect to any tile that exposes FE/Energy capability.
+        // The receiver flag only affects internal flow direction, not connectivity.
         net.neoforged.neoforge.transfer.energy.EnergyHandler handler =
             pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK);
-        if (handler == null) return false;
-        // Receiver pipes (wooden) only connect to tiles that can provide (extract) energy.
-        // This prevents wooden FE pipes from connecting to receive-only blocks like the FE Engine.
-        if (isReceiver) {
-            try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
-                     net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
-                int canExtract = handler.extract(1, tx);
-                // Don't commit — we're just checking
-                return canExtract > 0;
-            }
-        }
-        return true;
+        return handler != null;
     }
 
     @Override
@@ -136,7 +127,11 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         configure.setReceiver(pti.isReceiver);
         configure.setMaxPower(pti.transferPerTick);
         pipe.getHolder().fireEvent(configure);
+        boolean wasReceiver = isReceiver;
         isReceiver = configure.isReceiver();
+        if (wasReceiver != isReceiver) {
+            pipe.markForUpdate();
+        }
         maxPower = configure.getMaxPower();
         disabled = configure.isTransferDisabled();
         if (maxPower <= 0) {
@@ -312,9 +307,18 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
             }
             EnergyHandler recv = pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK);
             if (recv != null) {
-                int requested = (int) (recv.getCapacityAsLong() - recv.getAmountAsLong());
-                if (requested > 0) {
-                    requestPower(face, requested);
+                // Check if the tile can actually receive energy (equivalent to 1.12.2 canReceive())
+                boolean canReceive;
+                try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
+                         net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+                    canReceive = recv.insert(1, tx) > 0;
+                    // Don't commit — just testing
+                }
+                if (canReceive) {
+                    int requested = (int) (recv.getCapacityAsLong() - recv.getAmountAsLong());
+                    if (requested > 0) {
+                        requestPower(face, requested);
+                    }
                 }
             }
         }

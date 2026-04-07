@@ -62,7 +62,10 @@ public class BCTransport {
         // Register power transfer data for kinesis pipes (deferred to commonSetup
         // because config values aren't available during mod construction)
         modEventBus.addListener((FMLCommonSetupEvent event) -> {
-            event.enqueueWork(BCTransportConfig::registerPowerTransferData);
+            event.enqueueWork(() -> {
+                BCTransportConfig.registerPowerTransferData();
+                BCTransportConfig.registerRfTransferData();
+            });
         });
 
         // Initialize stripes registry and handlers

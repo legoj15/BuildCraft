@@ -28,6 +28,9 @@ public class BCTransportConfig {
     /** Base multiplier for kinesis pipe transfer rates (MJ). Default: 4. */
     public static ModConfigSpec.IntValue basePowerRate;
 
+    /** Base multiplier for RF pipe transfer rates (RF/t). Default: 40. */
+    public static ModConfigSpec.IntValue baseRfRate;
+
     public static void buildGeneral(ModConfigSpec.Builder builder) {
         disableRfPipe = builder
                 .comment("Set true to disable the RF pipe")
@@ -46,6 +49,10 @@ public class BCTransportConfig {
         basePowerRate = builder
                 .comment("Base multiplier for kinesis pipe transfer rates (MJ). Default: 4.")
                 .defineInRange("basePowerRate", 4, 1, Integer.MAX_VALUE);
+
+        baseRfRate = builder
+                .comment("Base multiplier for RF pipe transfer rates (RF/t). Default: 40.")
+                .defineInRange("baseRfRate", 40, 10, 4000);
 
         builder.pop();
     }
@@ -79,5 +86,26 @@ public class BCTransportConfig {
         long transfer = MjAPI.MJ * transferMultiplier;
         long resistance = MjAPI.MJ / resistanceDivisor;
         PipeApi.powerTransferData.put(def, PowerTransferInfo.createFromResistance(transfer, resistance, recv));
+    }
+
+    /** Register default power transfer info for all RF pipe definitions.
+     *  Should be called after BCTransportPipes.preInit(). */
+    public static void registerRfTransferData() {
+        int rate = baseRfRate.get();
+        if (!disableRfPipe.get()) {
+            rfTransfer(BCTransportPipes.cobbleRf, rate, false);
+            rfTransfer(BCTransportPipes.stoneRf, rate * 2, false);
+            rfTransfer(BCTransportPipes.woodRf, rate * 4, true);
+            rfTransfer(BCTransportPipes.sandstoneRf, rate * 4, false);
+            rfTransfer(BCTransportPipes.quartzRf, rate * 8, false);
+            rfTransfer(BCTransportPipes.ironRf, rate * 8, false);
+            rfTransfer(BCTransportPipes.goldRf, rate * 32, false);
+            rfTransfer(BCTransportPipes.diamondRf, rate * 64, false);
+            rfTransfer(BCTransportPipes.diaWoodRf, rate * 64, true);
+        }
+    }
+
+    private static void rfTransfer(PipeDefinition def, int maxTransfer, boolean recv) {
+        PipeApi.rfTransferData.put(def, new PipeApi.RedstoneFluxTransferInfo(maxTransfer, recv));
     }
 }

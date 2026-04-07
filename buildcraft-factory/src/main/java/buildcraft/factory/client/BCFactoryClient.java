@@ -33,4 +33,12 @@ public class BCFactoryClient {
         event.registerBlockEntityRenderer(BCFactoryBlockEntities.PUMP.get(), RenderPump::new);
         event.registerBlockEntityRenderer(BCFactoryBlockEntities.MINING_WELL.get(), RenderMiningWell::new);
     }
+
+    public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
+        modEventBus.register(BCFactoryClient.class);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentBlocks.class,
+                event -> buildcraft.factory.client.render.TubeRenderer.onRenderLevel(event)
+        );
+    }
 }

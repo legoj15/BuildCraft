@@ -60,6 +60,12 @@ public class BCTransportClient {
     public static void init() {
     }
 
+    public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
+        modEventBus.register(BCTransportClient.class);
+        init();
+        modEventBus.register(PipeBlockColourHandler.class);
+    }
+
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(BCTransportMenuTypes.FILTERED_BUFFER.get(), GuiFilteredBuffer::new);

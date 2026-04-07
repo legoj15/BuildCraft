@@ -11,4 +11,8 @@ public class BCRoboticsClient {
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(BCRoboticsMenuTypes.ZONE_PLANNER.get(), GuiZonePlanner::new);
     }
+
+    public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
+        modEventBus.register(BCRoboticsClient.class);
+    }
 }

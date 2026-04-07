@@ -40,7 +40,7 @@ public class BCSilicon {
 
         // Register client-side extensions on the mod event bus
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
-            modEventBus.register(buildcraft.silicon.client.BCSiliconClient.class);
+            buildcraft.silicon.client.BCSiliconClient.initClient(modEventBus);
         }
 
         // Register capabilities, lifecycle events, and creative tab
@@ -54,10 +54,7 @@ public class BCSilicon {
             addCreativeTabItems(event);
         });
 
-        // Register laser beam renderer on the game event bus (client only)
-        if (FMLEnvironment.getDist() == Dist.CLIENT) {
-            NeoForge.EVENT_BUS.register(buildcraft.silicon.client.RenderLaser.class);
-        }
+
 
         // MC 26.1: Register recipes on ServerAboutToStartEvent
         NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> {

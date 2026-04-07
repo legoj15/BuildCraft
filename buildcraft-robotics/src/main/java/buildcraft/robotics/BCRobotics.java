@@ -26,7 +26,7 @@ public class BCRobotics {
 
         // Register client-side extensions on the mod event bus
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
-            modEventBus.register(buildcraft.robotics.client.BCRoboticsClient.class);
+            buildcraft.robotics.client.BCRoboticsClient.initClient(modEventBus);
         }
 
         // Register creative tab

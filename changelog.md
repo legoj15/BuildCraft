@@ -8,3 +8,5 @@
     - ListMatchHandlerTools enabled
 - Fixed dyed bundles and other custom recipes not populating in the Advanced Crafting Table via JEI or crafting book
 - Restored missing recipe for the Water Gellifier
+- Fixed Dedicated Server crash caused by client-side classes loading on servers (Issue #2)
+- Added `runServer` configuration to gradle build file

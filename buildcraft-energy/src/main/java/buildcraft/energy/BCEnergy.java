@@ -35,8 +35,7 @@ public class BCEnergy {
 
         // Register client-side extensions on the mod event bus
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
-            modEventBus.register(BCEnergyFluidsClient.class);
-            modEventBus.register(buildcraft.energy.client.BCEnergyClient.class);
+            buildcraft.energy.client.BCEnergyClient.initClient(modEventBus);
         }
 
         // Creative tab

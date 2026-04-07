@@ -63,6 +63,9 @@ neoForge {
         client {
             client()
         }
+        server {
+            server()
+        }
         gameTestServer {
             type = "gameTestServer"
             systemProperty 'neoforge.enableGameTest', 'true'

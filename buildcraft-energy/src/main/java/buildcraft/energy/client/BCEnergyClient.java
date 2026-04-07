@@ -58,4 +58,9 @@ public class BCEnergyClient {
                     return MutableQuad.EMPTY_ARRAY;
                 }));
     }
+
+    public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
+        modEventBus.register(buildcraft.energy.client.BCEnergyFluidsClient.class);
+        modEventBus.register(BCEnergyClient.class);
+    }
 }

@@ -52,11 +52,7 @@ public class BCTransport {
 
         // Register client-side extensions on the mod event bus
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
-            modEventBus.register(buildcraft.transport.client.BCTransportClient.class);
-            // Force class initialization so static ModelHolders are registered before BakingCompleted
-            buildcraft.transport.client.BCTransportClient.init();
-            // Register block tint source for pipe colour overlay (tintIndex=1)
-            modEventBus.register(buildcraft.transport.client.PipeBlockColourHandler.class);
+            buildcraft.transport.client.BCTransportClient.initClient(modEventBus);
         }
 
         // Register power transfer data for kinesis pipes (deferred to commonSetup

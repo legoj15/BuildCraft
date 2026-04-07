@@ -105,4 +105,9 @@ public class BCSiliconClient {
             cachedBlockStateModels = null; // release reference
         }
     }
+
+    public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
+        modEventBus.register(BCSiliconClient.class);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(RenderLaser.class);
+    }
 }

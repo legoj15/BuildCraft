@@ -197,34 +197,62 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             realUvMax = new Vec3(uvMax.x, uvMin.y + (uvMax.y - uvMin.y) * height, uvMax.z);
         }
 
-        Vector3f center = new Vector3f(
-            (float) (realMin.x + realMax.x) / 2f,
-            (float) (realMin.y + realMax.y) / 2f,
-            (float) (realMin.z + realMax.z) / 2f
-        );
-        Vector3f radius = new Vector3f(
-            (float) (realMax.x - realMin.x) / 2f,
-            (float) (realMax.y - realMin.y) / 2f,
-            (float) (realMax.z - realMin.z) / 2f
-        );
-
-        if (radius.x <= 0 || radius.y <= 0 || radius.z <= 0) return;
+        net.minecraft.world.phys.AABB baseBox = new net.minecraft.world.phys.AABB(realMin.x, realMin.y, realMin.z, realMax.x, realMax.y, realMax.z);
+        Vec3 offsetVec = new Vec3(realUvMin.x - realMin.x, realUvMin.y - realMin.y, realUvMin.z - realMin.z);
+        net.minecraft.world.phys.AABB movedBox = baseBox.move(offsetVec.x, offsetVec.y, offsetVec.z);
 
         UvFaceData uvs = new UvFaceData();
-        // UV AABB — uses the offset-shifted box for texture scrolling
-        net.minecraft.world.phys.AABB uvBox = new net.minecraft.world.phys.AABB(
-            realUvMin.x, realUvMin.y, realUvMin.z, realUvMax.x, realUvMax.y, realUvMax.z
-        );
+        
+        int fMinX = (int) Math.floor(movedBox.minX);
+        int fMaxX = (int) Math.floor(movedBox.maxX);
+        int fMinY = (int) Math.floor(movedBox.minY);
+        int fMaxY = (int) Math.floor(movedBox.maxY);
+        int fMinZ = (int) Math.floor(movedBox.minZ);
+        int fMaxZ = (int) Math.floor(movedBox.maxZ);
 
         for (Direction face : Direction.values()) {
-            ModelUtil.mapBoxToUvs(uvBox, face, uvs);
+            for (int i = fMinX; i <= fMaxX; i++) {
+                for (int j = fMinY; j <= fMaxY; j++) {
+                    for (int k = fMinZ; k <= fMaxZ; k++) {
+                        double pMinX = Math.max(movedBox.minX, i);
+                        double pMaxX = Math.min(movedBox.maxX, i + 1);
+                        double pMinY = Math.max(movedBox.minY, j);
+                        double pMaxY = Math.min(movedBox.maxY, j + 1);
+                        double pMinZ = Math.max(movedBox.minZ, k);
+                        double pMaxZ = Math.min(movedBox.maxZ, k + 1);
+                        
+                        if (pMinX >= pMaxX || pMinY >= pMaxY || pMinZ >= pMaxZ) continue;
+                        
+                        if (face == Direction.WEST && pMinX > movedBox.minX + 1e-4) continue;
+                        if (face == Direction.EAST && pMaxX < movedBox.maxX - 1e-4) continue;
+                        if (face == Direction.DOWN && pMinY > movedBox.minY + 1e-4) continue;
+                        if (face == Direction.UP && pMaxY < movedBox.maxY - 1e-4) continue;
+                        if (face == Direction.NORTH && pMinZ > movedBox.minZ + 1e-4) continue;
+                        if (face == Direction.SOUTH && pMaxZ < movedBox.maxZ - 1e-4) continue;
+                        
+                        net.minecraft.world.phys.AABB uvBox = new net.minecraft.world.phys.AABB(pMinX - i, pMinY - j, pMinZ - k, pMaxX - i, pMaxY - j, pMaxZ - k);
+                        ModelUtil.mapBoxToUvs(uvBox, face, uvs);
+                        
+                        double gMinX = pMinX - offsetVec.x;
+                        double gMaxX = pMaxX - offsetVec.x;
+                        double gMinY = pMinY - offsetVec.y;
+                        double gMaxY = pMaxY - offsetVec.y;
+                        double gMinZ = pMinZ - offsetVec.z;
+                        double gMaxZ = pMaxZ - offsetVec.z;
+                        
+                        Vector3f pCent = new Vector3f((float)(gMinX + gMaxX) / 2f, (float)(gMinY + gMaxY) / 2f, (float)(gMinZ + gMaxZ) / 2f);
+                        Vector3f pRad = new Vector3f((float)(gMaxX - gMinX) / 2f, (float)(gMaxY - gMinY) / 2f, (float)(gMaxZ - gMinZ) / 2f);
+                        
+                        if (pRad.x() <= 0 || pRad.y() <= 0 || pRad.z() <= 0) continue;
 
-            // Geometry uses non-offset center/radius — stays in pipe bounds
-            MutableQuad quad = ModelUtil.createFace(face, center, radius, uvs);
-            quad.texFromSprite(sprite);
-            quad.colouri(tR, tG, tB, tA);
-            quad.lighti(15, 15);
-            quad.render(pose, bb);
+                        MutableQuad quad = ModelUtil.createFace(face, pCent, pRad, uvs);
+                        quad.texFromSprite(sprite);
+                        quad.colouri(tR, tG, tB, tA);
+                        quad.lighti(15, 15);
+                        quad.render(pose, bb);
+                    }
+                }
+            }
         }
     }
 }

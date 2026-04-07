@@ -1,4 +1,5 @@
 ###### Changes since 26.1 Beta release 4:
+- Fixed a rendering bug where fluid in fluid pipes would sometimes show adjacent wrong texture atlas sprites when scrolling by splitting the underlying bounding box logic using integer limits (similar to power pipes).
 - Fixed GuiBC8 rendering double-titles by suppressing vanilla AbstractContainerScreen extractLabels
 - Fixed MJ Dynamo and FE Engine GUI translation strings, height cutoffs, and label offsets
 - Fixed translation strings and cut-off rendering in ScreenDynamoMJ and ScreenEngineFE by reverting SIZE_Y parameters and targeting correct localization keys

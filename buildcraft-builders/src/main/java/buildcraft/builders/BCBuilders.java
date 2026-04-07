@@ -51,18 +51,10 @@ public class BCBuilders {
         modEventBus.addListener((BuildCreativeModeTabContentsEvent event) -> {
             buildCreativeTabContents(event);
         });
-        modEventBus.addListener((RegisterMenuScreensEvent event) -> {
-            registerMenuScreens(event);
-        });
 
-        // Register quarry rendering via game event bus (not mod bus)
+
         if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
-            NeoForge.EVENT_BUS.addListener(RenderLevelStageEvent.AfterTranslucentBlocks.class,
-                event -> BCBuildersEventDist.INSTANCE.renderAllQuarries(event));
-
-            modEventBus.addListener((net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterRenderers event) -> {
-                event.registerEntityRenderer(BCBuildersEntities.QUARRY_RIG.get(), net.minecraft.client.renderer.entity.NoopRenderer::new);
-            });
+            buildcraft.builders.client.BCBuildersClient.initClient(modEventBus);
         }
     }
 
@@ -78,11 +70,5 @@ public class BCBuilders {
     private static void buildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {
     }
 
-    private static void registerMenuScreens(RegisterMenuScreensEvent event) {
-        event.register(BCBuildersMenuTypes.FILLER.get(), GuiFiller::new);
-        event.register(BCBuildersMenuTypes.BUILDER.get(), GuiBuilder::new);
-        event.register(BCBuildersMenuTypes.ARCHITECT.get(), GuiArchitectTable::new);
-        event.register(BCBuildersMenuTypes.LIBRARY.get(), GuiElectronicLibrary::new);
-        event.register(BCBuildersMenuTypes.REPLACER.get(), GuiReplacer::new);
-    }
+
 }

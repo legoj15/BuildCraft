@@ -18,6 +18,7 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
     private static final int SIZE_X = 176, SIZE_Y = 177;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
     private static final buildcraft.lib.gui.pos.GuiRectangle RECT_UPGRADE_TYPES = new buildcraft.lib.gui.pos.GuiRectangle(42, 20, 74, 20);
+    private static final buildcraft.lib.gui.pos.GuiRectangle RECT_RF_BATTERY = new buildcraft.lib.gui.pos.GuiRectangle(138, 17, 8, 62);
 
     public ScreenEngineFE(ContainerEngineFE menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title, SIZE_X, SIZE_Y);
@@ -56,6 +57,17 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
                             lines.add(itemName + " = +" + (rfPerTick * 20) + " Redstone Flux per second");
                         }
                         tooltips.add(new buildcraft.lib.gui.elem.ToolTip(lines));
+                    }
+                }
+            });
+
+            mainGui.shownElements.add(new buildcraft.lib.gui.GuiElementSimple(mainGui, RECT_RF_BATTERY.offset(mainGui.rootElement)) {
+                @Override
+                public void addToolTips(java.util.List<buildcraft.lib.gui.elem.ToolTip> tooltips) {
+                    if (contains(mainGui.mouse)) {
+                        int current = menu.getSyncedFeStored();
+                        int max = buildcraft.energy.tile.TileEngineFE.MAX_FE;
+                        tooltips.add(new buildcraft.lib.gui.elem.ToolTip(String.format("%,d / %,d FE", current, max)));
                     }
                 }
             });

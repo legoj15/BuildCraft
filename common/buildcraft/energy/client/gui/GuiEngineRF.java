@@ -35,7 +35,7 @@ import buildcraft.energy.tile.TileEngineRF;
 public class GuiEngineRF extends GuiBC8<ContainerEngineRF> {
     private static final ResourceLocation TEXTURE_BASE
         = new ResourceLocation("buildcraftenergy:textures/gui/rf_engine_gui.png");
-    private static final int SIZE_X = 176, SIZE_Y = 177;
+    private static final int SIZE_X = 176, SIZE_Y = 166;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE_BASE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_RF = new GuiIcon(TEXTURE_BASE, SIZE_X, 0, 16, 60);
     private static final GuiIcon ICON_OVERLAY = new GuiIcon(TEXTURE_BASE, 57, 18, 80, 23);
@@ -118,7 +118,7 @@ public class GuiEngineRF extends GuiBC8<ContainerEngineRF> {
 
     @Override
     protected void drawForegroundLayer() {
-        String str = LocaleUtil.localize("tile.engineRf.name");
+        String str = LocaleUtil.localize("block.buildcraftunofficial.engine_rf");
         int strWidth = fontRenderer.getStringWidth(str);
         double titleX = mainGui.rootElement.getCenterX() - strWidth / 2;
         double titleY = mainGui.rootElement.getY() + 6;

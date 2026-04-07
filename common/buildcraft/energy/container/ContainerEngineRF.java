@@ -18,7 +18,7 @@ public class ContainerEngineRF extends ContainerBCTile<TileEngineRF> {
     public ContainerEngineRF(EntityPlayer player, TileEngineRF engine) {
         super(player, engine);
 
-        addFullPlayerInventory(95);
+        addFullPlayerInventory(84);
         for (int slot = 0; slot < 4; slot++) {
             addSlotToContainer(new SlotBase(engine.invUpgrades, slot, 62 + 18 * slot, 44));
         }

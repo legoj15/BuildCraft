@@ -34,7 +34,7 @@ import buildcraft.energy.tile.TileEngineRF;
 public class GuiDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
     private static final ResourceLocation TEXTURE_BASE
         = new ResourceLocation("buildcraftenergy:textures/gui/mj_dynamo_gui.png");
-    private static final int SIZE_X = 176, SIZE_Y = 177;
+    private static final int SIZE_X = 176, SIZE_Y = 166;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE_BASE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_RF = new GuiIcon(TEXTURE_BASE, SIZE_X, 0, 16, 60);
     private static final GuiIcon ICON_OVERLAY = new GuiIcon(TEXTURE_BASE, 39, 18, 80, 23);
@@ -119,7 +119,7 @@ public class GuiDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
 
     @Override
     protected void drawForegroundLayer() {
-        String str = LocaleUtil.localize("tile.mjDynamo.name");
+        String str = LocaleUtil.localize("block.buildcraftunofficial.mj_dynamo");
         int strWidth = fontRenderer.getStringWidth(str);
         double titleX = mainGui.rootElement.getCenterX() - strWidth / 2;
         double titleY = mainGui.rootElement.getY() + 6;

@@ -23,6 +23,7 @@ import net.neoforged.neoforge.transfer.energy.EnergyHandler;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import buildcraft.api.mj.MjRfConversion;
 import net.neoforged.neoforge.items.ItemStackHandler;
+import net.neoforged.neoforge.transfer.energy.SimpleEnergyHandler;
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.mj.IMjConnector;
@@ -55,8 +56,6 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
     private final MjBattery mjBattery;
     private final MjBatteryReceiver mjConnector;
 
-    private int currentFe;
-
     public final ItemStackHandler upgrades = new ItemStackHandler(4) {
         @Override
         public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
@@ -70,31 +69,10 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
         }
     };
 
-    public final EnergyHandler energyStorage = new EnergyHandler() {
+    public final SimpleEnergyHandler energyStorage = new SimpleEnergyHandler(MAX_FE, 0, MAX_FE) {
         @Override
-        public int insert(int maxReceive, TransactionContext transaction) {
-            return 0; // Extract only
-        }
-
-        @Override
-        public int extract(int maxExtract, TransactionContext transaction) {
-            int max = Math.min(currentFe, maxExtract);
-            if (max <= 0) return 0;
-            // Simulated transactions are supported via SnapshotJournal, but for this simple
-            // block we will just extract directly.
-            currentFe -= max;
+        protected void onEnergyChanged(int previousAmount) {
             setChanged();
-            return max;
-        }
-
-        @Override
-        public long getAmountAsLong() {
-            return currentFe;
-        }
-
-        @Override
-        public long getCapacityAsLong() {
-            return MAX_FE;
         }
     };
 
@@ -105,11 +83,11 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
     }
 
     public int getCurrentFe() {
-        return currentFe;
+        return (int) energyStorage.getAmountAsLong();
     }
 
     public void setCurrentFe(int fe) {
-        this.currentFe = Math.max(0, Math.min(MAX_FE, fe));
+        energyStorage.set(Math.max(0, Math.min(MAX_FE, fe)));
     }
 
     @Nonnull
@@ -164,13 +142,14 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
             int maxFe = (int) Math.min(genFe, mjStored / mjPerRf);
 
             // Dynamically limit generation by available space
+            int currentFe = getCurrentFe();
             maxFe = Math.min(maxFe, MAX_FE - currentFe);
 
             if (maxFe <= 0) return;
 
             if (mjBattery.extractPower(maxFe * mjPerRf)) {
                 currentOutput = maxFe;
-                currentFe += maxFe;
+                energyStorage.set(currentFe + maxFe);
                 heat += HEAT_RATE;
                 if (heat >= 200) {
                     heat = 200;
@@ -185,6 +164,7 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
     }
 
     private void sendFeToReceiver() {
+        int currentFe = getCurrentFe();
         if (level == null || currentFe <= 0) return;
         EnergyHandler receiver = getFeReceiver(orientation);
         if (receiver == null) return;
@@ -192,7 +172,7 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
         try (net.neoforged.neoforge.transfer.transaction.Transaction transaction = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
             int accepted = receiver.insert(currentFe, transaction);
             if (accepted > 0) {
-                currentFe -= accepted;
+                energyStorage.set(currentFe - accepted);
                 transaction.commit();
             }
         }
@@ -274,7 +254,7 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
-        output.putInt("currentFe", currentFe);
+        output.putInt("currentFe", getCurrentFe());
         upgrades.serialize(output);
         output.putLong("mjStored", mjBattery.getStored());
     }
@@ -282,7 +262,7 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
     @Override
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
-        currentFe = input.getIntOr("currentFe", 0);
+        setCurrentFe(input.getIntOr("currentFe", 0));
         upgrades.deserialize(input);
         
         CompoundTag mjTag = new CompoundTag();

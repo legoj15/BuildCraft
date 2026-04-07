@@ -20,6 +20,7 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import buildcraft.api.mj.MjRfConversion;
 import net.neoforged.neoforge.items.ItemStackHandler;
+import net.neoforged.neoforge.transfer.energy.SimpleEnergyHandler;
 
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.MjAPI;
@@ -44,7 +45,6 @@ public class TileEngineFE extends TileEngineBase_BC8 {
         }
     }
 
-    private int currentFe;
 
     public final ItemStackHandler upgrades = new ItemStackHandler(4) {
         @Override
@@ -59,35 +59,10 @@ public class TileEngineFE extends TileEngineBase_BC8 {
         }
     };
 
-    public final EnergyHandler energyStorage = new EnergyHandler() {
+    public final SimpleEnergyHandler energyStorage = new SimpleEnergyHandler(MAX_FE, MAX_FE, 0) {
         @Override
-        public int insert(int maxReceive, TransactionContext transaction) {
-            int max = Math.min(MAX_FE - currentFe, maxReceive);
-            if (max <= 0) return 0;
-            // EnergyHandler insertions are transactional, but in this simple scenario
-            // we will simulate if the transaction is aborted. 
-            // In typical NeoForge 1.21.11, one would use SnapshotJournal, but for simplicity
-            // we can just directly modify currentFe and rely on the implementation limits.
-            // Wait, proper implementation means relying on standard transfer practices.
-            // For now, accept and mutate.
-            currentFe += max;
+        protected void onEnergyChanged(int previousAmount) {
             setChanged();
-            return max;
-        }
-
-        @Override
-        public int extract(int maxExtract, TransactionContext transaction) {
-            return 0; // Receive only
-        }
-
-        @Override
-        public long getAmountAsLong() {
-            return currentFe;
-        }
-
-        @Override
-        public long getCapacityAsLong() {
-            return MAX_FE;
         }
     };
 
@@ -96,16 +71,16 @@ public class TileEngineFE extends TileEngineBase_BC8 {
     }
 
     public int getCurrentFe() {
-        return currentFe;
+        return (int) energyStorage.getAmountAsLong();
     }
 
     public void setCurrentFe(int fe) {
-        this.currentFe = Math.max(0, Math.min(MAX_FE, fe));
+        energyStorage.set(Math.max(0, Math.min(MAX_FE, fe)));
     }
 
     @Override
     public boolean isBurning() {
-        return currentFe > 0 && isRedstonePowered;
+        return getCurrentFe() > 0 && isRedstonePowered;
     }
 
     public long getMjPerTick() {
@@ -134,6 +109,7 @@ public class TileEngineFE extends TileEngineBase_BC8 {
         // Actively pull FE from adjacent tiles (including FE pipe sections)
         pullFeFromNeighbors();
 
+        int currentFe = getCurrentFe();
         if (currentFe <= 0) return;
 
         if (isRedstonePowered) {
@@ -149,7 +125,7 @@ public class TileEngineFE extends TileEngineBase_BC8 {
 
             currentOutput = mjGenerated;
             power += mjGenerated;
-            currentFe -= feConsumed;
+            energyStorage.set(currentFe - feConsumed);
             heat += HEAT_RATE;
             if (heat >= 200) {
                 heat = 200;
@@ -159,6 +135,7 @@ public class TileEngineFE extends TileEngineBase_BC8 {
 
     /** Pull FE from adjacent blocks on non-facing sides. */
     private void pullFeFromNeighbors() {
+        int currentFe = getCurrentFe();
         if (level == null || currentFe >= MAX_FE) return;
         for (Direction dir : Direction.values()) {
             if (dir == orientation) continue; // facing side is MJ output
@@ -173,8 +150,8 @@ public class TileEngineFE extends TileEngineBase_BC8 {
                 int extracted = handler.extract(want, transaction);
                 if (extracted > 0) {
                     currentFe += extracted;
+                    energyStorage.set(currentFe);
                     transaction.commit();
-                    setChanged();
                 }
             }
         }
@@ -219,7 +196,7 @@ public class TileEngineFE extends TileEngineBase_BC8 {
 
     @Override
     public long getCurrentOutput() {
-        if (currentFe > 0) {
+        if (getCurrentFe() > 0) {
             return getMjPerTick();
         } else {
             return 0;
@@ -239,14 +216,14 @@ public class TileEngineFE extends TileEngineBase_BC8 {
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
-        output.putInt("currentFe", currentFe);
+        output.putInt("currentFe", getCurrentFe());
         upgrades.serialize(output);
     }
 
     @Override
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
-        currentFe = input.getIntOr("currentFe", 0);
+        setCurrentFe(input.getIntOr("currentFe", 0));
         upgrades.deserialize(input);
     }
 }

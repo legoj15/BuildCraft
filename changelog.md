@@ -15,3 +15,4 @@
 - Fixed a bug where connecting a Wooden Kinesis Pipe to an FE Engine incorrectly rendered the solid wood extraction plug instead of connecting transparently, as the capability evaluation ignored FE consumers.
 - Fixed a critical energy accumulation bug in `PipeFlowRedstoneFlux` where machines checking insertion capacities via transactions caused permanent phantom energy buildup in the pipelines due to missing snapshot journals.
 - Fixed a stalling issue in the MJ Dynamo where reaching the maximum FE capacity (10,000 FE) would permanently halt energy dissemination, effectively killing the pipe network.
+- Fixed a client-side sync bug in the Quarry where the battery level was additively accumulating with every server packet instead of overwriting, causing the client-side UI battery values to balloon exponentially.

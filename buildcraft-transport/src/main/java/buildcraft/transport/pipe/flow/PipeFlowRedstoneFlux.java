@@ -445,11 +445,32 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
             internalNextPower = 0;
         }
 
+        private final net.neoforged.neoforge.transfer.transaction.SnapshotJournal<Integer> powerJournal = new net.neoforged.neoforge.transfer.transaction.SnapshotJournal<Integer>() {
+            @Override
+            protected Integer createSnapshot() {
+                return internalNextPower;
+            }
+
+            @Override
+            protected void revertToSnapshot(Integer snapshot) {
+                internalNextPower = snapshot;
+            }
+        };
+
         @Override
         public int insert(int maxReceive, TransactionContext transaction) {
-            if (isReceiver) {
-                // Not perfectly transactional, but the section handles accumulation gracefully.
-                return maxReceive - this.receivePowerInternal(maxReceive);
+            if (isReceiver && maxReceive > 0) {
+                PipeFlowRedstoneFlux.this.step();
+                int maxCanAccept = maxPower - internalNextPower;
+                if (maxCanAccept <= 0) return 0;
+
+                int accepted = Math.min(maxCanAccept, maxReceive);
+                if (accepted > 0) {
+                    powerJournal.updateSnapshots(transaction);
+                    debugPowerOffered += accepted;
+                    internalNextPower += accepted;
+                    return accepted;
+                }
             }
             return 0;
         }

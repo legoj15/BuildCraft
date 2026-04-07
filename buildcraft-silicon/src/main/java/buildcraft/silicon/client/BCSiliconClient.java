@@ -108,6 +108,6 @@ public class BCSiliconClient {
 
     public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
         modEventBus.register(BCSiliconClient.class);
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(RenderLaser.class);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(buildcraft.silicon.client.RenderLaser.class);
     }
 }

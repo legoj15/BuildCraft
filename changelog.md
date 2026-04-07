@@ -12,3 +12,4 @@
 - Restored the missing dynamically scaled red battery bar rendering to the MJ Dynamo and FE Engine GUIs to match the 1.12.2 visual styling.
 - Fixed the FE Engine GUI's battery tank and tooltip rect alignment so they are correctly positioned on the left side of the UI instead of overlapping the Dynamo's right side.
 - Fixed an issue in the Kinesis Pipe flow renderers where using cutoutBlockSheet() for the flow overlays caused them to render as solid opaque boxes instead of transparent overlays; migrated to RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS).
+- Fixed a bug where connecting a Wooden Kinesis Pipe to an FE Engine incorrectly rendered the solid wood extraction plug instead of connecting transparently, as the capability evaluation ignored FE consumers.

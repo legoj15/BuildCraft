@@ -40,8 +40,24 @@ public class PipeBehaviourWoodPower extends PipeBehaviour {
         if (tile == null) {
             return 0;
         }
-        // Check if neighbour can receive MJ — use NeoForge capability lookup
-        IMjReceiver recv = pipe.getHolder().getCapabilityFromPipe(face, MjAPI.CAP_RECEIVER);
-        return recv == null ? 1 : recv.canReceive() ? 0 : 1;
+        if (pipe.getFlow() instanceof buildcraft.transport.pipe.flow.PipeFlowRedstoneFlux) {
+            net.neoforged.neoforge.transfer.energy.EnergyHandler handler = pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK);
+            if (handler == null) return 1;
+            
+            // Exclude Redstone Engine (FE Consumer) from generating an extraction plug
+            if (tile instanceof buildcraft.energy.tile.TileEngineFE) return 0;
+            // Include MJ Dynamo (FE Producer) to correctly generate an extraction plug
+            if (tile instanceof buildcraft.energy.tile.TileDynamoMJ) return 1;
+            
+            // Fallback for foreign blocks by performing a fast insertion check
+            try (net.neoforged.neoforge.transfer.transaction.Transaction tx = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+                if (handler.insert(1, tx) > 0) return 0;
+            }
+            return 1;
+        } else {
+            // Check if neighbour can receive MJ — use NeoForge capability lookup
+            IMjReceiver recv = pipe.getHolder().getCapabilityFromPipe(face, MjAPI.CAP_RECEIVER);
+            return recv == null ? 1 : recv.canReceive() ? 0 : 1;
+        }
     }
 }

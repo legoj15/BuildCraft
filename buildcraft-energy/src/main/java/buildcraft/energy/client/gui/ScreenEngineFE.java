@@ -18,7 +18,7 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
     private static final int SIZE_X = 176, SIZE_Y = 177;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_RF = new GuiIcon(TEXTURE, SIZE_X, 0, 16, 60);
-    private static final buildcraft.lib.gui.pos.GuiRectangle RECT_UPGRADE_TYPES = new buildcraft.lib.gui.pos.GuiRectangle(42, 20, 74, 20);
+    private static final buildcraft.lib.gui.pos.GuiRectangle RECT_UPGRADE_TYPES = new buildcraft.lib.gui.pos.GuiRectangle(60, 20, 74, 20);
     private static final buildcraft.lib.gui.pos.GuiRectangle RECT_RF_BATTERY = new buildcraft.lib.gui.pos.GuiRectangle(30, 17, 8, 62);
 
     public ScreenEngineFE(ContainerEngineFE menu, Inventory playerInv, Component title) {
@@ -84,8 +84,8 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
         
         graphics.blit(
             net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE,
-            x + 58, y + 18,
-            39.0f, 18.0f,
+            x + 57, y + 18,
+            57.0f, 18.0f,
             80, 23,
             80, 23,
             256, 256,

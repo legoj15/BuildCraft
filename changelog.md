@@ -1,21 +1,14 @@
 ###### Changes since 26.1 Beta release 4:
-- Fixed a rendering bug where fluid in fluid pipes would sometimes show adjacent wrong texture atlas sprites when scrolling by splitting the underlying bounding box logic using integer limits (similar to power pipes).
-- Fixed GuiBC8 rendering double-titles by suppressing vanilla AbstractContainerScreen extractLabels
-- Fixed MJ Dynamo and FE Engine GUI translation strings, height cutoffs, and label offsets
-- Fixed translation strings and cut-off rendering in ScreenDynamoMJ and ScreenEngineFE by reverting SIZE_Y parameters and targeting correct localization keys
-- Restored upgrade tooltip functionality and upgrade overlay to ScreenDynamoMJ and ScreenEngineFE
-- Fixed upgrade slot misalignment and restored missing upgrade_types translation string
-- Adjusted upgrade tooltips to match 1.12.2 'Redstone Flux per second' phrasing exactly
-- Fixed empty upgrade tooltips by explicitly invoking the deferred upgrade map initialization routines inside the GUI rendering loop
-- Restored missing energy tank tooltips in ScreenDynamoMJ and ScreenEngineFE
+- Fixed a rendering bug where fluid in fluid pipes would sometimes show adjacent wrong texture atlas sprites when scrolling
+- Fixed rendering double-titles on blocks like engines (noticable because one title would be left adjacent and the other would be centered)
+- Fixed MJ Dynamo and FE Engine GUI
 - Fixed a bug where the MJ Dynamo and FE Engine were permanently deleting FE during simulated network transfers by migrating them to `SimpleEnergyHandler` with properly backed snapshot journals.
 - Fixed a bug where the MJ Dynamo's FE generation readout and piston animation were erased every tick by legacy MJ engine mechanics expecting native MJ output over FE pushing.
-- Restored the missing dynamically scaled red battery bar rendering to the MJ Dynamo and FE Engine GUIs to match the 1.12.2 visual styling.
-- Fixed the FE Engine GUI's battery tank and tooltip rect alignment so they are correctly positioned on the left side of the UI instead of overlapping the Dynamo's right side.
 - Fixed an issue in the Kinesis Pipe flow renderers where using cutoutBlockSheet() for the flow overlays caused them to render as solid opaque boxes instead of transparent overlays; migrated to RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS).
 - Fixed a bug where connecting a Wooden Kinesis Pipe to an FE Engine incorrectly rendered the solid wood extraction plug instead of connecting transparently, as the capability evaluation ignored FE consumers.
-- Fixed a critical energy accumulation bug in `PipeFlowRedstoneFlux` where machines checking insertion capacities via transactions caused permanent phantom energy buildup in the pipelines due to missing snapshot journals.
-- Fixed a stalling issue in the MJ Dynamo where reaching the maximum FE capacity (10,000 FE) would permanently halt energy dissemination, effectively killing the pipe network.
+- Fixed a energy accumulation bug in `PipeFlowRedstoneFlux`
+- Fixed a stalling issue in the MJ Dynamo where reaching the maximum FE capacity (10,000 FE) would permanently halt energy transfer.
 - Fixed a client-side sync bug in the Quarry where the battery level was additively accumulating with every server packet instead of overwriting, causing the client-side UI battery values to balloon exponentially.
-- Fixed a visual bug in the MJ Dynamo where fractional leftover microJoules or a full FE buffer would cause the piston animation to pump indefinitely even when idle or at 20C.
+- Fixed a visual bug in the MJ Dynamo where fractional leftover microJoules or a full FE buffer would cause the piston animation to pump indefinitely even when there are no valid FE consumers or MJ being input.
 - Fixed Kinesis Pipes allowing their internal buffer to accumulate infinitely when pushed energy without demand, by strictly enforcing the capacity ceiling against `internalPower + internalNextPower` instead of just the per-tick insertion tracker.
+- Fixed FE Engine rendering duplicate upgrade slot dividers and overlapping slots by correcting its distinct GUI offset variables

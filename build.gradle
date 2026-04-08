@@ -47,8 +47,6 @@ neoForge {
 }
 
 dependencies {
-    // Expression library (local file dependency)
-    implementation files("sub_projects/expression/build/libs/buildcraft-libexpression-0.9.3-pre.4.jar")
 
     // JEI
     compileOnly "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
@@ -93,8 +91,4 @@ tasks.named('jar') {
     archiveBaseName = 'BCunofficial'
     archiveVersion = project.mod_version
 
-    // Include the expression library
-    from(zipTree("${rootDir}/sub_projects/expression/build/libs/buildcraft-libexpression-0.9.3-pre.4.jar")) {
-        exclude 'META-INF/**'
-    }
 }

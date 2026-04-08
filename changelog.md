@@ -11,3 +11,5 @@
 - Fixed a client-side sync bug in the Quarry where the battery level was additively accumulating with every server packet instead of overwriting, causing the client-side UI battery values to balloon exponentially.
 - Fixed a visual bug in the MJ Dynamo where fractional leftover microJoules or a full FE buffer would cause the piston animation to pump indefinitely even when there are no valid FE consumers or MJ being input.
 - Fixed Kinesis Pipes allowing their internal buffer to accumulate infinitely when pushed energy without demand, by strictly enforcing the capacity ceiling against `internalPower + internalNextPower` instead of just the per-tick insertion tracker.
+- Conducted a massive repository restructure and cleanup. Dissolved the old legacy module directory system (`buildcraft-core`, `buildcraft-factory`, etc.) and consolidated all code and assets directly into the unified NeoForge `src/main/` path.
+- Cleaned up lingering 1.12.2 asset duplicates from `buildcraft_resources`, unified the asset namespace to `buildcraftunofficial`, removed old `.txt` and `.tmp` test dumps, and converted lingering Git submodules to standard directories.

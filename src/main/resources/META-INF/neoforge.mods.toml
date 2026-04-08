@@ -13,6 +13,7 @@ description='''
 Extending Minecraft with pipes, auto-crafting, quarries, engines and much more!
 Unofficial port to NeoForge.
 '''
+updateJSONURL="https://raw.githubusercontent.com/legoj15/BuildCraft/8.0.x-26.1.1/BuildCraftVersions.json"
 
 [[dependencies.buildcraftunofficial]]
     modId="neoforge"

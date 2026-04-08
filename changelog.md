@@ -11,4 +11,3 @@
 - Fixed a client-side sync bug in the Quarry where the battery level was additively accumulating with every server packet instead of overwriting, causing the client-side UI battery values to balloon exponentially.
 - Fixed a visual bug in the MJ Dynamo where fractional leftover microJoules or a full FE buffer would cause the piston animation to pump indefinitely even when there are no valid FE consumers or MJ being input.
 - Fixed Kinesis Pipes allowing their internal buffer to accumulate infinitely when pushed energy without demand, by strictly enforcing the capacity ceiling against `internalPower + internalNextPower` instead of just the per-tick insertion tracker.
-- Fixed FE Engine rendering duplicate upgrade slot dividers and overlapping slots by correcting its distinct GUI offset variables

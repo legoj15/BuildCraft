@@ -1,6 +1,0 @@
-{
-    "variants": {
-        "joined_below=false": {"model": "buildcraftunofficial:tank"},
-        "joined_below=true": {"model": "buildcraftunofficial:tank_joined_below"}
-    }
-}

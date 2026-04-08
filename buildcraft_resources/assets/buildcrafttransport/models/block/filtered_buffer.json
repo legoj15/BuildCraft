@@ -1,7 +1,0 @@
-{
-    "parent": "block/cube_all",
-    "textures": {
-        "all": "buildcraftunofficial:blocks/filtered_buffer/default",
-        "particle": "buildcraftunofficial:blocks/filtered_buffer/default"
-    }
-}

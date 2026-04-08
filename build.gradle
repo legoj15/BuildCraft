@@ -12,52 +12,13 @@ repositories {
     mavenCentral()
 }
 
-// ─── Unified Source Sets ─────────────────────────────────────────────────────
-// All former subprojects feed into a single source set.
-sourceSets {
-    main {
-        java {
-            srcDirs = [
-                'buildcraft-api/api',
-                'buildcraft-lib/src/main/java',
-                'buildcraft-core/src/main/java',
-                'buildcraft-builders/src/main/java',
-                'buildcraft-energy/src/main/java',
-                'buildcraft-factory/src/main/java',
-                'buildcraft-transport/src/main/java',
-                'buildcraft-silicon/src/main/java',
-                'buildcraft-robotics/src/main/java',
-            ]
-        }
-        resources {
-            srcDirs = [
-                'buildcraft_resources',
-                'buildcraft-lib/src/main/resources',
-                'buildcraft-core/src/main/resources',
-                'buildcraft-builders/src/main/resources',
-                'buildcraft-energy/src/main/resources',
-                'buildcraft-factory/src/main/resources',
-                'buildcraft-transport/src/main/resources',
-                'buildcraft-silicon/src/main/resources',
-                'buildcraft-robotics/src/main/resources',
-                'BuildCraftGuide/guide_resources',
-            ]
-        }
-    }
-    test {
-        java {
-            srcDirs = ['src/test/java']
-        }
-        compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
-        runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
-    }
-}
+
 
 // ─── NeoForge Configuration ─────────────────────────────────────────────────
 neoForge {
     version = project.neo_version
 
-    accessTransformers.from(file('buildcraft-core/src/main/resources/META-INF/accesstransformer.cfg'))
+    accessTransformers.from(file('src/main/resources/META-INF/accesstransformer.cfg'))
 
     runs {
         client {

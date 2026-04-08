@@ -85,8 +85,8 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
         net.minecraft.world.item.ItemStack gearIron = new net.minecraft.world.item.ItemStack(buildcraft.core.BCCoreItems.GEAR_IRON.get());
         net.minecraft.world.item.ItemStack gearGold = new net.minecraft.world.item.ItemStack(buildcraft.core.BCCoreItems.GEAR_GOLD.get());
         
-        graphics.item(gearIron, x + 43, y + 21);
-        graphics.item(gearGold, x + 61, y + 21);
+        graphics.item(gearIron, x + 60, y + 21);
+        graphics.item(gearGold, x + 83, y + 21);
         
         graphics.blit(
             net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE,

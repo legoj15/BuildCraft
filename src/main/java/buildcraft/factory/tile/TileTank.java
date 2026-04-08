@@ -28,7 +28,11 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.container.ContainerTank;
@@ -44,8 +48,7 @@ import buildcraft.api.tiles.IDebuggable;
  */
 public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
 
-    @SuppressWarnings("removal")
-    public final FluidTank tank = new FluidTank(16_000); // 16 buckets
+    public final FluidStacksResourceHandler tank = new FluidStacksResourceHandler(1, 16_000); // 16 buckets
     public final FluidSmoother smoothedTank = new FluidSmoother(tank);
 
     private int lastComparatorLevel;
@@ -58,8 +61,8 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
     // --- Comparator ---
 
     public int getComparatorLevel() {
-        int amount = tank.getFluidAmount();
-        int cap = tank.getCapacity();
+        int amount = tank.getAmountAsInt(0);
+        int cap = tank.getCapacityAsInt(0, FluidResource.EMPTY);
         return amount * 14 / cap + (amount > 0 ? 1 : 0);
     }
 
@@ -68,7 +71,7 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
     public void serverTick() {
         if (level == null || level.isClientSide()) return;
 
-        int currentAmount = tank.getFluidAmount();
+        int currentAmount = tank.getAmountAsInt(0);
 
         // Sync to client when fluid contents change
         if (currentAmount != lastSyncedAmount) {
@@ -92,17 +95,17 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
 
     @Override
     public void getDebugInfo(List<String> left, List<String> right, Direction side) {
-        String contents = (!tank.getFluid().isEmpty()) ? "Fluid" : "Empty";
-        left.add("fluid = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tank.getFluid()));
-        left.add("current = " + tank.getFluidAmount() + " of " + contents);
-        left.add("lastSent = " + lastSyncedAmount + " of " + ((!tank.getFluid().isEmpty()) ? "Something" : "Nothing"));
+        String contents = (!tank.getResource(0).isEmpty()) ? "Fluid" : "Empty";
+        left.add("fluid = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tank.getResource(0).toStack(tank.getAmountAsInt(0))));
+        left.add("current = " + tank.getAmountAsInt(0) + " of " + contents);
+        left.add("lastSent = " + lastSyncedAmount + " of " + ((!tank.getResource(0).isEmpty()) ? "Something" : "Nothing"));
     }
 
     @Override
     public void getClientDebugInfo(List<String> left, List<String> right, Direction side) {
         if (smoothedTank != null) {
             smoothedTank.getDebugInfo(left, right, side);
-            left.add("shown = " + (int) smoothedTank.getDisplayAmount() + ", target = " + tank.getFluidAmount());
+            left.add("shown = " + (int) smoothedTank.getDisplayAmount() + ", target = " + tank.getAmountAsInt(0));
         }
     }
 
@@ -125,19 +128,19 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
      * move everything as high as possible. */
     public void balanceTankFluids() {
         List<TileTank> tanks = getTankColumn();
-        FluidStack fluid = FluidStack.EMPTY;
+        FluidResource fluid = FluidResource.EMPTY;
         for (TileTank tile : tanks) {
-            FluidStack held = tile.tank.getFluid();
+            FluidResource held = tile.tank.getResource(0);
             if (held.isEmpty()) continue;
             if (fluid.isEmpty()) {
                 fluid = held;
-            } else if (!FluidStack.isSameFluidSameComponents(fluid, held)) {
+            } else if (!fluid.equals(held)) {
                 return; // Different fluids — can't balance
             }
         }
         if (fluid.isEmpty()) return;
 
-        if (FluidUtilBC.isGaseous(fluid)) {
+        if (FluidUtilBC.isGaseous(fluid.toStack(1))) {
             // Move fluid upward (gaseous) — iterate from bottom, move to the tank above
             TileTank prev = null;
             for (int i = tanks.size() - 1; i >= 0; i--) {
@@ -205,78 +208,82 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
         return new ArrayList<>(tanks);
     }
 
-    // --- Column-Aware IFluidHandler (for bucket interaction / legacy APIs) ---
+    // --- Column-Aware ResourceHandler ---
 
     /**
-     * Returns an {@link net.neoforged.neoforge.fluids.capability.IFluidHandler} that fills/drains
-     * across the entire vertical column. Used by bucket interaction and any code
-     * that works with the legacy IFluidHandler API.
+     * Returns a {@link ResourceHandler} that fills/drains across the entire vertical column. 
+     * Used natively for capabilities routing via neoForge.
      */
-    @SuppressWarnings("removal")
-    public net.neoforged.neoforge.fluids.capability.IFluidHandler getColumnFluidHandler() {
-        return new net.neoforged.neoforge.fluids.capability.IFluidHandler() {
+    public ResourceHandler<FluidResource> getColumnResourceHandler() {
+        return new ResourceHandler<FluidResource>() {
             @Override
-            public int getTanks() {
+            public int size() {
                 return 1;
             }
 
             @Override
-            public FluidStack getFluidInTank(int tankIndex) {
-                // Return combined fluid from the column
-                FluidStack result = FluidStack.EMPTY;
+            public FluidResource getResource(int index) {
                 for (TileTank t : getTankColumn()) {
-                    FluidStack held = t.tank.getFluid();
+                    FluidResource held = t.tank.getResource(0);
                     if (!held.isEmpty()) {
-                        if (result.isEmpty()) {
-                            result = held.copy();
-                        } else {
-                            result.grow(held.getAmount());
-                        }
+                        return held;
+                    }
+                }
+                return FluidResource.EMPTY;
+            }
+
+            @Override
+            public long getAmountAsLong(int index) {
+                long result = 0;
+                for (TileTank t : getTankColumn()) {
+                    FluidResource held = t.tank.getResource(0);
+                    if (!held.isEmpty()) {
+                        result += t.tank.getAmountAsInt(0);
                     }
                 }
                 return result;
             }
 
             @Override
-            public int getTankCapacity(int tankIndex) {
-                int total = 0;
+            public long getCapacityAsLong(int index, FluidResource resource) {
+                long total = 0;
                 for (TileTank t : getTankColumn()) {
-                    total += t.tank.getCapacity();
+                    total += t.tank.getCapacityAsInt(0, resource);
                 }
                 return total;
             }
 
             @Override
-            public boolean isFluidValid(int tankIndex, FluidStack stack) {
-                return !stack.isEmpty();
+            public boolean isValid(int index, FluidResource resource) {
+                return !resource.isEmpty();
             }
 
             @Override
-            public int fill(FluidStack resource, FluidAction action) {
-                if (resource.isEmpty()) return 0;
+            public int insert(int index, FluidResource resource, int amount, TransactionContext transaction) {
+                if (resource.isEmpty() || amount <= 0) return 0;
                 List<TileTank> tanks = getTankColumn();
                 // Check compatibility
                 for (TileTank t : tanks) {
-                    FluidStack current = t.tank.getFluid();
-                    if (!current.isEmpty() && !FluidStack.isSameFluidSameComponents(current, resource)) {
+                    FluidResource current = t.tank.getResource(0);
+                    if (!current.isEmpty() && !current.equals(resource)) {
                         return 0;
                     }
                 }
                 // Fill bottom to top for liquids, top to bottom for gases
-                boolean gaseous = FluidUtilBC.isGaseous(resource);
-                int remaining = resource.getAmount();
+                boolean gaseous = FluidUtilBC.isGaseous(resource.toStack(1));
+                int remaining = amount;
                 int totalFilled = 0;
                 if (gaseous) {
                     for (int i = tanks.size() - 1; i >= 0; i--) {
                         if (remaining <= 0) break;
-                        int filled = tanks.get(i).tank.fill(resource.copyWithAmount(remaining), action);
+                        int filled = tanks.get(i).tank.insert(0, resource, remaining, transaction);
                         remaining -= filled;
                         totalFilled += filled;
                     }
                 } else {
                     for (TileTank t : tanks) {
                         if (remaining <= 0) break;
-                        int filled = t.tank.fill(resource.copyWithAmount(remaining), action);
+                        int filled = t.tank.insert(0, resource, remaining, transaction);
                         remaining -= filled;
                         totalFilled += filled;
                     }
@@ -285,82 +292,35 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
             }
 
             @Override
-            public FluidStack drain(FluidStack resource, FluidAction action) {
-                if (resource.isEmpty()) return FluidStack.EMPTY;
+            public int extract(int index, FluidResource resource, int amount, TransactionContext transaction) {
+                if (resource.isEmpty() || amount <= 0) return 0;
                 List<TileTank> tanks = getTankColumn();
+                // Check compatibility
                 // Drain top to bottom for liquids, bottom to top for gases
-                boolean gaseous = FluidUtilBC.isGaseous(resource);
-                int remaining = resource.getAmount();
+                boolean gaseous = FluidUtilBC.isGaseous(resource.toStack(1));
+                int remaining = amount;
                 int totalDrained = 0;
                 if (gaseous) {
                     for (TileTank t : tanks) {
                         if (remaining <= 0) break;
-                        FluidStack drained = t.tank.drain(resource.copyWithAmount(remaining), action);
-                        if (!drained.isEmpty()) {
-                            remaining -= drained.getAmount();
-                            totalDrained += drained.getAmount();
+                        int drained = t.tank.extract(0, resource, remaining, transaction);
+                        if (drained > 0) {
+                            remaining -= drained;
+                            totalDrained += drained;
                         }
                     }
                 } else {
                     for (int i = tanks.size() - 1; i >= 0; i--) {
                         if (remaining <= 0) break;
                         TileTank t = tanks.get(i);
-                        FluidStack drained = t.tank.drain(resource.copyWithAmount(remaining), action);
-                        if (!drained.isEmpty()) {
-                            remaining -= drained.getAmount();
-                            totalDrained += drained.getAmount();
+                        int drained = t.tank.extract(0, resource, remaining, transaction);
+                        if (drained > 0) {
+                            remaining -= drained;
+                            totalDrained += drained;
                         }
                     }
                 }
-                return totalDrained > 0 ? resource.copyWithAmount(totalDrained) : FluidStack.EMPTY;
-            }
-
-            @Override
-            public FluidStack drain(int maxDrain, FluidAction action) {
-                if (maxDrain <= 0) return FluidStack.EMPTY;
-                List<TileTank> tanks = getTankColumn();
-                // Find the fluid type first to determine gaseous
-                FluidStack sampleFluid = FluidStack.EMPTY;
-                for (TileTank t : tanks) {
-                    if (!t.tank.getFluid().isEmpty()) {
-                        sampleFluid = t.tank.getFluid();
-                        break;
-                    }
-                }
-                if (sampleFluid.isEmpty()) return FluidStack.EMPTY;
-                // Drain top to bottom for liquids, bottom to top for gases
-                boolean gaseous = FluidUtilBC.isGaseous(sampleFluid);
-                FluidStack result = FluidStack.EMPTY;
-                int remaining = maxDrain;
-                if (gaseous) {
-                    for (TileTank t : tanks) {
-                        if (remaining <= 0) break;
-                        FluidStack drained = t.tank.drain(remaining, action);
-                        if (!drained.isEmpty()) {
-                            if (result.isEmpty()) {
-                                result = drained.copy();
-                            } else {
-                                result.grow(drained.getAmount());
-                            }
-                            remaining -= drained.getAmount();
-                        }
-                    }
-                } else {
-                    for (int i = tanks.size() - 1; i >= 0; i--) {
-                        if (remaining <= 0) break;
-                        TileTank t = tanks.get(i);
-                        FluidStack drained = t.tank.drain(remaining, action);
-                        if (!drained.isEmpty()) {
-                            if (result.isEmpty()) {
-                                result = drained.copy();
-                            } else {
-                                result.grow(drained.getAmount());
-                            }
-                            remaining -= drained.getAmount();
-                        }
-                    }
-                }
-                return result;
+                return totalDrained;
             }
         };
     }

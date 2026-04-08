@@ -10,9 +10,11 @@ import java.util.Locale;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidUtil;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementContainer;
@@ -53,24 +55,34 @@ public class TriggerFluidContainerLevel extends BCStatement implements ITriggerE
 
     @Override
     public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer statementContainer, IStatementParameter[] parameters) {
-        if (!(tile instanceof IFluidHandler handler)) {
+        if (tile == null || tile.getLevel() == null) {
+            return false;
+        }
+        ResourceHandler<FluidResource> handler = tile.getLevel().getCapability(
+            Capabilities.Fluid.BLOCK, tile.getBlockPos(), side
+        );
+        if (handler == null) {
             return false;
         }
 
-        FluidStack searchedFluid = FluidStack.EMPTY;
+        FluidResource searchedFluid = FluidResource.EMPTY;
 
         if (parameters != null && parameters.length >= 1 && parameters[0] != null && !parameters[0].getItemStack().isEmpty()) {
-            searchedFluid = FluidUtil.getFluidContained(parameters[0].getItemStack()).orElse(FluidStack.EMPTY);
+            net.minecraft.world.item.ItemStack stack = parameters[0].getItemStack();
+            ResourceHandler<FluidResource> itemHandler = stack.getCapability(Capabilities.Fluid.ITEM, net.neoforged.neoforge.transfer.access.ItemAccess.forStack(stack));
+            if (itemHandler != null && itemHandler.size() > 0) {
+                searchedFluid = itemHandler.getResource(0);
+            }
         }
 
-        int tanks = handler.getTanks();
+        int tanks = handler.size();
         if (tanks == 0) {
             return false;
         }
 
         for (int i = 0; i < tanks; i++) {
-            FluidStack fluid = handler.getFluidInTank(i);
-            int capacity = handler.getTankCapacity(i);
+            FluidResource fluid = handler.getResource(i);
+            int capacity = (int) handler.getCapacityAsLong(i, fluid);
             if (capacity <= 0) continue;
 
             if (fluid.isEmpty()) {
@@ -78,14 +90,14 @@ public class TriggerFluidContainerLevel extends BCStatement implements ITriggerE
                 if (searchedFluid.isEmpty()) {
                     return true; // Empty tank is certainly below threshold
                 }
-                FluidStack toFill = searchedFluid.copy();
-                toFill.setAmount(1);
-                if (handler.fill(toFill, IFluidHandler.FluidAction.SIMULATE) > 0) {
-                    return true;
+                try (Transaction tx = Transaction.openRoot()) {
+                    if (handler.insert(i, searchedFluid, 1, tx) > 0) {
+                        return true;
+                    }
                 }
             } else {
-                if (searchedFluid.isEmpty() || FluidStack.isSameFluidSameComponents(fluid, searchedFluid)) {
-                    float percentage = fluid.getAmount() / (float) capacity;
+                if (searchedFluid.isEmpty() || fluid.equals(searchedFluid)) {
+                    float percentage = handler.getAmountAsInt(i) / (float) capacity;
                     return percentage < type.level;
                 }
             }

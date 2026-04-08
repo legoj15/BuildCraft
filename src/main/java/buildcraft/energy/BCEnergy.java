@@ -67,16 +67,7 @@ public class BCEnergy {
             BCEnergyBlockEntities.ENGINE_IRON.get(),
             (engine, direction) -> {
                 if (direction == engine.getOrientation()) return null;
-                return new MultiTankResourceHandler(
-                    engine.tankFuel, engine.tankCoolant, engine.tankResidue
-                ) {
-                    @Override
-                    public int extract(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource,
-                            int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
-                        if (index != 2) return 0;
-                        return super.extract(index, resource, amount, transaction);
-                    }
-                };
+                return engine.combinedFluidHandler;
             }
         );
 

@@ -26,8 +26,9 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
@@ -51,9 +52,9 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
 
     public static final long MAX_MJ_PER_TICK = 6 * MjAPI.MJ;
 
-    private final FluidTank tankIn = new FluidTank(4000);
-    private final FluidTank tankGasOut = new FluidTank(4000);
-    private final FluidTank tankLiquidOut = new FluidTank(4000);
+    private final FluidStacksResourceHandler tankIn = new FluidStacksResourceHandler(1, 4000);
+    private final FluidStacksResourceHandler tankGasOut = new FluidStacksResourceHandler(1, 4000);
+    private final FluidStacksResourceHandler tankLiquidOut = new FluidStacksResourceHandler(1, 4000);
 
     private final MjBattery mjBattery = new MjBattery(1024 * MjAPI.MJ);
     private final IMjReceiver mjReceiver = new MjBatteryReceiver(mjBattery);
@@ -102,15 +103,15 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
 
     // --- Accessors ---
 
-    public FluidTank getTankIn() {
+    public FluidStacksResourceHandler getTankIn() {
         return tankIn;
     }
 
-    public FluidTank getTankGasOut() {
+    public FluidStacksResourceHandler getTankGasOut() {
         return tankGasOut;
     }
 
-    public FluidTank getTankLiquidOut() {
+    public FluidStacksResourceHandler getTankLiquidOut() {
         return tankLiquidOut;
     }
 
@@ -123,7 +124,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
      * Horizontal sides → input tank, UP → gas output, DOWN → liquid output.
      */
     @Nullable
-    public FluidTank getTankForSide(@Nullable Direction side) {
+    public FluidStacksResourceHandler getTankForSide(@Nullable Direction side) {
         if (side == null) return null;
         if (side == Direction.UP) return tankGasOut;
         if (side == Direction.DOWN) return tankLiquidOut;
@@ -208,8 +209,9 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
             // Slot 0: Input container -> drain into tankIn
             net.minecraft.world.item.ItemStack inStack = containerSlots.getStackInSlot(0);
             if (!inStack.isEmpty()) {
+                @SuppressWarnings("removal")
                 net.neoforged.neoforge.fluids.FluidActionResult result = net.neoforged.neoforge.fluids.FluidUtil.tryEmptyContainer(
-                    inStack, tankIn, Integer.MAX_VALUE, null, true
+                    inStack, net.neoforged.neoforge.fluids.capability.IFluidHandler.of(tankIn), Integer.MAX_VALUE, null, true
                 );
                 if (result.isSuccess()) {
                     containerSlots.setStackInSlot(0, result.getResult());
@@ -218,8 +220,9 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
             // Slot 1: Output container gas -> fill from tankGasOut
             net.minecraft.world.item.ItemStack gasStack = containerSlots.getStackInSlot(1);
             if (!gasStack.isEmpty()) {
+                @SuppressWarnings("removal")
                 net.neoforged.neoforge.fluids.FluidActionResult result = net.neoforged.neoforge.fluids.FluidUtil.tryFillContainer(
-                    gasStack, tankGasOut, Integer.MAX_VALUE, null, true
+                    gasStack, net.neoforged.neoforge.fluids.capability.IFluidHandler.of(tankGasOut), Integer.MAX_VALUE, null, true
                 );
                 if (result.isSuccess()) {
                     containerSlots.setStackInSlot(1, result.getResult());
@@ -228,8 +231,9 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
             // Slot 2: Output container liquid -> fill from tankLiquidOut
             net.minecraft.world.item.ItemStack liqStack = containerSlots.getStackInSlot(2);
             if (!liqStack.isEmpty()) {
+                @SuppressWarnings("removal")
                 net.neoforged.neoforge.fluids.FluidActionResult result = net.neoforged.neoforge.fluids.FluidUtil.tryFillContainer(
-                    liqStack, tankLiquidOut, Integer.MAX_VALUE, null, true
+                    liqStack, net.neoforged.neoforge.fluids.capability.IFluidHandler.of(tankLiquidOut), Integer.MAX_VALUE, null, true
                 );
                 if (result.isSuccess()) {
                     containerSlots.setStackInSlot(2, result.getResult());
@@ -242,7 +246,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         currentRecipe = null;
         IRefineryRecipeManager manager = BuildcraftRecipeRegistry.refineryRecipes;
         if (manager != null) {
-            FluidStack inFluid = tankIn.getFluid();
+            FluidStack inFluid = tankIn.getResource(0).toStack(tankIn.getAmountAsInt(0));
             if (!inFluid.isEmpty()) {
                 currentRecipe = manager.getDistillationRegistry().getRecipeForInput(inFluid);
             }
@@ -257,13 +261,19 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
             FluidStack outLiquid = currentRecipe.outLiquid();
             FluidStack outGas = currentRecipe.outGas();
 
-            FluidStack potentialIn = tankIn.drain(reqIn.getAmount(), IFluidHandler.FluidAction.SIMULATE);
-            boolean canExtract = !potentialIn.isEmpty()
-                    && FluidStack.isSameFluidSameComponents(reqIn, potentialIn)
-                    && potentialIn.getAmount() >= reqIn.getAmount();
+            FluidResource resIn = tankIn.getResource(0);
+            boolean canExtract = !resIn.isEmpty() 
+                    && resIn.equals(FluidResource.of(reqIn)) 
+                    && tankIn.getAmountAsInt(0) >= reqIn.getAmount();
 
-            boolean canFillLiquid = tankLiquidOut.fill(outLiquid.copy(), IFluidHandler.FluidAction.SIMULATE) >= outLiquid.getAmount();
-            boolean canFillGas = tankGasOut.fill(outGas.copy(), IFluidHandler.FluidAction.SIMULATE) >= outGas.getAmount();
+            boolean canFillLiquid;
+            try (Transaction tx = Transaction.openRoot()) {
+                canFillLiquid = tankLiquidOut.insert(0, FluidResource.of(outLiquid), outLiquid.getAmount(), tx) >= outLiquid.getAmount();
+            }
+            boolean canFillGas;
+            try (Transaction tx = Transaction.openRoot()) {
+                canFillGas = tankGasOut.insert(0, FluidResource.of(outGas), outGas.getAmount(), tx) >= outGas.getAmount();
+            }
 
             if (canExtract && canFillLiquid && canFillGas) {
                 long max = MAX_MJ_PER_TICK;
@@ -279,9 +289,12 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
                 if (distillPower >= powerReq) {
                     isActive = true;
                     distillPower -= powerReq;
-                    tankIn.drain(reqIn.getAmount(), IFluidHandler.FluidAction.EXECUTE);
-                    tankGasOut.fill(outGas.copy(), IFluidHandler.FluidAction.EXECUTE);
-                    tankLiquidOut.fill(outLiquid.copy(), IFluidHandler.FluidAction.EXECUTE);
+                    try (Transaction tx = Transaction.openRoot()) {
+                        tankIn.extract(0, FluidResource.of(reqIn), reqIn.getAmount(), tx);
+                        tankGasOut.insert(0, FluidResource.of(outGas), outGas.getAmount(), tx);
+                        tankLiquidOut.insert(0, FluidResource.of(outLiquid), outLiquid.getAmount(), tx);
+                        tx.commit();
+                    }
                 }
             } else {
                 mjBattery.addPowerChecking(distillPower, false);
@@ -302,9 +315,9 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         powerAvgClient = Math.min(powerAvgClient, MAX_MJ_PER_TICK);
 
         // Send client sync when fluid amounts or active state change
-        int curIn = tankIn.getFluidAmount();
-        int curGas = tankGasOut.getFluidAmount();
-        int curLiq = tankLiquidOut.getFluidAmount();
+        int curIn = tankIn.getAmountAsInt(0);
+        int curGas = tankGasOut.getAmountAsInt(0);
+        int curLiq = tankLiquidOut.getAmountAsInt(0);
         boolean needsSync = curIn != lastSyncedIn || curGas != lastSyncedGas || curLiq != lastSyncedLiquid
                 || isActive != lastSyncedActive || powerAvgClient != lastSyncedPower;
         if (needsSync) {
@@ -323,9 +336,9 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
     @Override
     public void getDebugInfo(java.util.List<String> left, java.util.List<String> right, Direction side) {
         // We use fluid stacks here to represent the contents
-        left.add("In = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankIn.getFluid()));
-        left.add("GasOut = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankGasOut.getFluid()));
-        left.add("LiquidOut = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankLiquidOut.getFluid()));
+        left.add("In = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankIn.getResource(0).toStack(tankIn.getAmountAsInt(0))));
+        left.add("GasOut = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankGasOut.getResource(0).toStack(tankGasOut.getAmountAsInt(0))));
+        left.add("LiquidOut = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankLiquidOut.getResource(0).toStack(tankLiquidOut.getAmountAsInt(0))));
         left.add("Battery = " + mjBattery.getDebugString());
         left.add("Progress = " + MjAPI.formatMj(distillPower));
         left.add("Rate = " + buildcraft.lib.misc.LocaleUtil.localizeMjFlow(powerAvgClient));
@@ -374,14 +387,14 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
         // Save each tank's fluid contents directly
-        if (!tankIn.getFluid().isEmpty()) {
-            output.store("fluidIn", FluidStack.CODEC, tankIn.getFluid());
+        if (!tankIn.getResource(0).isEmpty()) {
+            output.store("fluidIn", FluidStack.CODEC, tankIn.getResource(0).toStack(tankIn.getAmountAsInt(0)));
         }
-        if (!tankGasOut.getFluid().isEmpty()) {
-            output.store("fluidGasOut", FluidStack.CODEC, tankGasOut.getFluid());
+        if (!tankGasOut.getResource(0).isEmpty()) {
+            output.store("fluidGasOut", FluidStack.CODEC, tankGasOut.getResource(0).toStack(tankGasOut.getAmountAsInt(0)));
         }
-        if (!tankLiquidOut.getFluid().isEmpty()) {
-            output.store("fluidLiquidOut", FluidStack.CODEC, tankLiquidOut.getFluid());
+        if (!tankLiquidOut.getResource(0).isEmpty()) {
+            output.store("fluidLiquidOut", FluidStack.CODEC, tankLiquidOut.getResource(0).toStack(tankLiquidOut.getAmountAsInt(0)));
         }
         output.putLong("mjStored", mjBattery.getStored());
         output.putLong("distillPower", distillPower);
@@ -393,9 +406,15 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
     @Override
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
-        tankIn.setFluid(input.read("fluidIn", FluidStack.CODEC).orElse(FluidStack.EMPTY));
-        tankGasOut.setFluid(input.read("fluidGasOut", FluidStack.CODEC).orElse(FluidStack.EMPTY));
-        tankLiquidOut.setFluid(input.read("fluidLiquidOut", FluidStack.CODEC).orElse(FluidStack.EMPTY));
+        FluidStack in = input.read("fluidIn", FluidStack.CODEC).orElse(FluidStack.EMPTY);
+        FluidStack gas = input.read("fluidGasOut", FluidStack.CODEC).orElse(FluidStack.EMPTY);
+        FluidStack liq = input.read("fluidLiquidOut", FluidStack.CODEC).orElse(FluidStack.EMPTY);
+        try (Transaction tx = Transaction.openRoot()) {
+            if (!in.isEmpty()) tankIn.insert(0, FluidResource.of(in), in.getAmount(), tx);
+            if (!gas.isEmpty()) tankGasOut.insert(0, FluidResource.of(gas), gas.getAmount(), tx);
+            if (!liq.isEmpty()) tankLiquidOut.insert(0, FluidResource.of(liq), liq.getAmount(), tx);
+            tx.commit();
+        }
         mjBattery.addPowerChecking(input.getLongOr("mjStored", 0L), false);
         distillPower = input.getLongOr("distillPower", 0L);
         isActive = input.getBooleanOr("isActive", false);

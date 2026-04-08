@@ -1,0 +1,1144 @@
+﻿.\gradlew : 
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:15: 
+error: cannot find symbol
+At line:1 char:1
++ .\gradlew classes -q -PmaxErrors=1000 > build_errors_full.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (E:\GitHub\Build...not find symbol 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+import buildcraft.lib.misc.FluidTankResourceHandler;
+                          ^
+  symbol:   class FluidTankResourceHandler
+  location: package buildcraft.lib.misc
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerFluidConta
+iner.java:63: error: cannot find symbol
+            Capabilities.FluidHandler.BLOCK, tile.getBlockPos(), side
+                        ^
+  symbol:   variable FluidHandler
+  location: class Capabilities
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerFluidConta
+iner.java:74: error: cannot find symbol
+            ResourceHandler<FluidResource> itemHandler = 
+stack.getCapability(Capabilities.FluidHandler.ITEM);
+                                                                               
+          ^
+  symbol:   variable FluidHandler
+  location: class Capabilities
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerFluidConta
+iner.java:116: error: cannot find symbol
+                try (Transaction tx = Transaction.openNested(null)) {
+                                                 ^
+  symbol:   method openNested(<null>)
+  location: class Transaction
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerFluidConta
+iner.java:136: error: cannot find symbol
+                try (Transaction tx = Transaction.openNested(null)) {
+                                                 ^
+  symbol:   method openNested(<null>)
+  location: class Transaction
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerFluidConta
+inerLevel.java:62: error: cannot find symbol
+            Capabilities.FluidHandler.BLOCK, tile.getBlockPos(), side
+                        ^
+  symbol:   variable FluidHandler
+  location: class Capabilities
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerFluidConta
+inerLevel.java:72: error: cannot find symbol
+            ResourceHandler<FluidResource> itemHandler = 
+stack.getCapability(Capabilities.FluidHandler.ITEM);
+                                                                               
+          ^
+  symbol:   variable FluidHandler
+  location: class Capabilities
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerFluidConta
+inerLevel.java:93: error: cannot find symbol
+                try (Transaction tx = Transaction.openNested(null)) {
+                                                 ^
+  symbol:   method openNested(<null>)
+  location: class Transaction
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventory.
+java:56: warning: [removal] IItemHandler in net.neoforged.neoforge.items has 
+been deprecated and marked for removal
+        if (!(tile instanceof IItemHandler handler)) {
+                              ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventory.
+java:69: warning: [removal] getSlots() in IItemHandler has been deprecated and 
+marked for removal
+        for (int i = 0; i < handler.getSlots(); i++) {
+                                   ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventory.
+java:71: warning: [removal] getStackInSlot(int) in IItemHandler has been 
+deprecated and marked for removal
+            ItemStack stack = handler.getStackInSlot(i);
+                                     ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventory.
+java:76: warning: [removal] insertItem(int,ItemStack,boolean) in IItemHandler 
+has been deprecated and marked for removal
+                && (searchedStack.isEmpty() || searchedStack.getItem() 
+instanceof IList || handler.insertItem(i, searchedStack, true).isEmpty());
+                                                                               
+                   ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventoryL
+evel.java:56: warning: [removal] IItemHandler in net.neoforged.neoforge.items 
+has been deprecated and marked for removal
+        if (!(tile instanceof IItemHandler itemHandler)) {
+                              ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventoryL
+evel.java:65: warning: [removal] getSlots() in IItemHandler has been 
+deprecated and marked for removal
+        for (int slot = 0; slot < itemHandler.getSlots(); slot++) {
+                                             ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventoryL
+evel.java:66: warning: [removal] getStackInSlot(int) in IItemHandler has been 
+deprecated and marked for removal
+            ItemStack stackInSlot = itemHandler.getStackInSlot(slot);
+                                               ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventoryL
+evel.java:69: warning: [removal] getSlotLimit(int) in IItemHandler has been 
+deprecated and marked for removal
+                    itemSpace += itemHandler.getSlotLimit(slot);
+                                            ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventoryL
+evel.java:75: warning: [removal] getSlotLimit(int) in IItemHandler has been 
+deprecated and marked for removal
+                        int count = Math.min(itemHandler.getSlotLimit(slot), 
+searchStack.getMaxStackSize());
+                                                        ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventoryL
+evel.java:77: warning: [removal] insertItem(int,ItemStack,boolean) in 
+IItemHandler has been deprecated and marked for removal
+                        ItemStack leftOver = itemHandler.insertItem(slot, 
+stack, true);
+                                                        ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventoryL
+evel.java:87: warning: [removal] getSlotLimit(int) in IItemHandler has been 
+deprecated and marked for removal
+                    itemSpace += Math.min(stackInSlot.getMaxStackSize(), 
+itemHandler.getSlotLimit(slot));
+                                                                               
+     ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\CoreTriggerProvid
+er.java:68: error: cannot find symbol
+            ResourceHandler<ItemResource> itemHandler = 
+tile.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, 
+tile.getBlockPos(), side);
+                                                                               
+                   ^
+  symbol:   variable ItemHandler
+  location: class Capabilities
+E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\CoreTriggerProvid
+er.java:81: error: cannot find symbol
+            ResourceHandler<FluidResource> fluidHandler = 
+tile.getLevel().getCapability(Capabilities.FluidHandler.BLOCK, 
+tile.getBlockPos(), side);
+                                                                               
+                     ^
+  symbol:   variable FluidHandler
+  location: class Capabilities
+E:\GitHub\BuildCraft\src\main\java\buildcraft\energy\BCEnergy.java:72: 
+warning: [removal] FluidTank in 
+net.neoforged.neoforge.fluids.capability.templates has been deprecated and 
+marked for removal
+                ) {
+                  ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\energy\container\ContainerEngineI
+ron.java:105: error: incompatible types: FluidTank cannot be converted to 
+FluidStacksResourceHandler
+        widgetFuel = addWidget(new WidgetFluidTank(this, engine.tankFuel));
+                                                               ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\energy\container\ContainerEngineI
+ron.java:106: error: incompatible types: FluidTank cannot be converted to 
+FluidStacksResourceHandler
+        widgetCoolant = addWidget(new WidgetFluidTank(this, 
+engine.tankCoolant));
+                                                                  ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\energy\container\ContainerEngineI
+ron.java:107: error: incompatible types: FluidTank cannot be converted to 
+FluidStacksResourceHandler
+        widgetResidue = addWidget(new WidgetFluidTank(this, 
+engine.tankResidue));
+                                                                  ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\energy\container\ContainerEngineF
+E.java:72: warning: [removal] SlotItemHandler in net.neoforged.neoforge.items 
+has been deprecated and marked for removal
+                addSlot(new SlotItemHandler(engine.upgrades, slot, 62 + 18 * 
+slot, 44));
+                            ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\energy\container\ContainerDynamoM
+J.java:72: warning: [removal] SlotItemHandler in net.neoforged.neoforge.items 
+has been deprecated and marked for removal
+                addSlot(new SlotItemHandler(dynamo.upgrades, slot, 44 + 18 * 
+slot, 44));
+                            ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.ja
+va:96: error: cannot find symbol
+        ResourceHandler<FluidResource> itemHandlerIn = 
+singleCopy.getCapability(Capabilities.FluidHandler.ITEM);
+                                                                               
+             ^
+  symbol:   variable FluidHandler
+  location: class Capabilities
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:63: 
+error: cannot find symbol
+            (pump, direction) -> new FluidTankResourceHandler(pump.getTank()) {
+                                     ^
+  symbol:   class FluidTankResourceHandler
+  location: class BCFactory
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:64: 
+error: method does not override or implement a method from a supertype
+                @Override
+                ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:71: 
+error: cannot find symbol
+            (floodGate, direction) -> new 
+FluidTankResourceHandler(floodGate.getTank()));
+                                          ^
+  symbol:   class FluidTankResourceHandler
+  location: class BCFactory
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:82: 
+warning: [removal] FluidTank in 
+net.neoforged.neoforge.fluids.capability.templates has been deprecated and 
+marked for removal
+                net.neoforged.neoforge.fluids.capability.templates.FluidTank 
+tank = distiller.getTankForSide(direction);
+                                                                  ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:82: 
+error: incompatible types: FluidStacksResourceHandler cannot be converted to 
+FluidTank
+                net.neoforged.neoforge.fluids.capability.templates.FluidTank 
+tank = distiller.getTankForSide(direction);
+                                                                               
+                             ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:84: 
+error: incomparable types: FluidTank and FluidStacksResourceHandler
+                if (tank == distiller.getTankIn()) {
+                         ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:85: 
+error: cannot find symbol
+                    return new FluidTankResourceHandler(tank) {
+                               ^
+  symbol:   class FluidTankResourceHandler
+  location: class BCFactory
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:86: 
+error: method does not override or implement a method from a supertype
+                        @Override
+                        ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:93: 
+error: cannot find symbol
+                    return new FluidTankResourceHandler(tank) {
+                               ^
+  symbol:   class FluidTankResourceHandler
+  location: class BCFactory
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:94: 
+error: method does not override or implement a method from a supertype
+                        @Override
+                        ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:104: 
+warning: [removal] FluidTank in 
+net.neoforged.neoforge.fluids.capability.templates has been deprecated and 
+marked for removal
+                net.neoforged.neoforge.fluids.capability.templates.FluidTank 
+tank = heatExchange.getFluidTankForDirection(direction);
+                                                                  ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:104: 
+error: incompatible types: FluidStacksResourceHandler cannot be converted to 
+FluidTank
+                net.neoforged.neoforge.fluids.capability.templates.FluidTank 
+tank = heatExchange.getFluidTankForDirection(direction);
+                                                                               
+                                          ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:105: 
+error: cannot find symbol
+                return tank != null ? new FluidTankResourceHandler(tank) : 
+null;
+                                          ^
+  symbol:   class FluidTankResourceHandler
+  location: class BCFactory
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TilePump.java:278: 
+error: incompatible types: FluidStacksResourceHandler cannot be converted to 
+FluidTank
+        FluidUtilBC.pushFluidToNeighbors(level, worldPosition, tank);
+                                                               ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileTank.java:149: 
+error: incompatible types: FluidStacksResourceHandler cannot be converted to 
+IFluidHandler
+                    FluidUtilBC.move(tile.tank, prev.tank);
+                                         ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileTank.java:158: 
+error: incompatible types: FluidStacksResourceHandler cannot be converted to 
+IFluidHandler
+                    FluidUtilBC.move(tile.tank, prev.tank);
+                                         ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileChute.java:62: 
+warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has 
+been deprecated and marked for removal
+            (handler, slot, before, after) -> this.setChanged());
+             ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.ja
+va:62: warning: [removal] ItemStackHandler in net.neoforged.neoforge.items has 
+been deprecated and marked for removal
+    public final net.neoforged.neoforge.items.ItemStackHandler containerSlots 
+= new net.neoforged.neoforge.items.ItemStackHandler(3) {
+                                             ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.ja
+va:62: warning: [removal] ItemStackHandler in net.neoforged.neoforge.items has 
+been deprecated and marked for removal
+    public final net.neoforged.neoforge.items.ItemStackHandler containerSlots 
+= new net.neoforged.neoforge.items.ItemStackHandler(3) {
+                                                                               
+                                 ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.ja
+va:270: error: cannot find symbol
+            try (Transaction tx = Transaction.openNested(null)) {
+                                             ^
+  symbol:   method openNested(<null>)
+  location: class Transaction
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.ja
+va:274: error: cannot find symbol
+            try (Transaction tx = Transaction.openNested(null)) {
+                                             ^
+  symbol:   method openNested(<null>)
+  location: class Transaction
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockHeatExchange.j
+ava:165: error: incompatible types: FluidStacksResourceHandler cannot be 
+converted to IFluidHandler
+        boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, 
+section.tankInput);
+                                                                               
+   ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockHeatExchange.j
+ava:168: error: incompatible types: FluidStacksResourceHandler cannot be 
+converted to IFluidHandler
+            boolean didChangeOutput = FluidUtilBC.onTankActivated(player, pos, 
+hand, section.tankOutput);
+                                                                               
+             ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockHeatExchange.j
+ava:193: error: no suitable method found for 
+addFluidDrops(NonNullList<ItemStack>,FluidStacksResourceHandler)
+                    FluidItemDrops.addFluidDrops(toDrop, section.tankInput);
+                                  ^
+    method FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,FluidStack...) 
+is not applicable
+      (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+FluidStack)
+    method FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,IFluidTank...) 
+is not applicable
+      (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+IFluidTank)
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockHeatExchange.j
+ava:194: error: no suitable method found for 
+addFluidDrops(NonNullList<ItemStack>,FluidStacksResourceHandler)
+                    FluidItemDrops.addFluidDrops(toDrop, section.tankOutput);
+                                  ^
+    method FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,FluidStack...) 
+is not applicable
+      (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+FluidStack)
+    method FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,IFluidTank...) 
+is not applicable
+      (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+IFluidTank)
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileHeatExchange.jav
+a:797: error: cannot find symbol
+            try (Transaction tx = Transaction.openNested(null)) {
+                                             ^
+  symbol:   method openNested(<null>)
+  location: class Transaction
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileHeatExchange.jav
+a:804: error: cannot find symbol
+            try (Transaction tx = Transaction.openNested(null)) {
+                                             ^
+  symbol:   method openNested(<null>)
+  location: class Transaction
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileHeatExchange.jav
+a:833: error: cannot find symbol
+                        tx.abort();
+                          ^
+  symbol:   method abort()
+  location: variable tx of type Transaction
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\container\ContainerDistil
+ler.java:37: warning: [removal] SlotItemHandler in 
+net.neoforged.neoforge.items has been deprecated and marked for removal
+            addSlot(new 
+net.neoforged.neoforge.items.SlotItemHandler(tile.containerSlots, 0, 8, 35));
+                                                    ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\container\ContainerDistil
+ler.java:38: warning: [removal] SlotItemHandler in 
+net.neoforged.neoforge.items has been deprecated and marked for removal
+            addSlot(new 
+net.neoforged.neoforge.items.SlotItemHandler(tile.containerSlots, 1, 152, 10));
+                                                    ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\container\ContainerDistil
+ler.java:39: warning: [removal] SlotItemHandler in 
+net.neoforged.neoforge.items has been deprecated and marked for removal
+            addSlot(new 
+net.neoforged.neoforge.items.SlotItemHandler(tile.containerSlots, 2, 152, 55));
+                                                    ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockDistiller.java
+:106: error: incompatible types: FluidStacksResourceHandler cannot be 
+converted to IFluidHandler
+        boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, 
+distiller.getTankIn());
+                                                                               
+               ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockDistiller.java
+:137: error: no suitable method found for 
+addFluidDrops(NonNullList<ItemStack>,FluidStacksResourceHandler)
+                FluidItemDrops.addFluidDrops(toDrop, distiller.getTankIn());
+                              ^
+    method FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,FluidStack...) 
+is not applicable
+      (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+FluidStack)
+    method FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,IFluidTank...) 
+is not applicable
+      (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+IFluidTank)
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockDistiller.java
+:138: error: no suitable method found for 
+addFluidDrops(NonNullList<ItemStack>,FluidStacksResourceHandler)
+                FluidItemDrops.addFluidDrops(toDrop, 
+distiller.getTankGasOut());
+                              ^
+    method FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,FluidStack...) 
+is not applicable
+      (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+FluidStack)
+    method FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,IFluidTank...) 
+is not applicable
+      (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+IFluidTank)
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockDistiller.java
+:139: error: no suitable method found for 
+addFluidDrops(NonNullList<ItemStack>,FluidStacksResourceHandler)
+                FluidItemDrops.addFluidDrops(toDrop, 
+distiller.getTankLiquidOut());
+                              ^
+    method FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,FluidStack...) 
+is not applicable
+      (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+FluidStack)
+    method FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,IFluidTank...) 
+is not applicable
+      (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+IFluidTank)
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockTank.java:171:
+ error: cannot find symbol
+        boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, 
+tank.getColumnFluidHandler());
+                                                                               
+^
+  symbol:   method getColumnFluidHandler()
+  location: variable tank of type TileTank
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockTank.java:195:
+ error: no suitable method found for 
+addFluidDrops(NonNullList<ItemStack>,FluidStacksResourceHandler)
+                FluidItemDrops.addFluidDrops(toDrop, tank.tank);
+                              ^
+    method FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,FluidStack...) 
+is not applicable
+      (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+FluidStack)
+    method FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,IFluidTank...) 
+is not applicable
+      (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+IFluidTank)
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiDistiller.j
+ava:58: error: incompatible types: FluidStacksResourceHandler cannot be 
+converted to FluidTank
+                menu.tile.getTankIn(),
+                                   ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiDistiller.j
+ava:65: error: incompatible types: FluidStacksResourceHandler cannot be 
+converted to FluidTank
+                menu.tile.getTankGasOut(),
+                                       ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiDistiller.j
+ava:72: error: incompatible types: FluidStacksResourceHandler cannot be 
+converted to FluidTank
+                menu.tile.getTankLiquidOut(),
+                                          ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiDistiller.j
+ava:96: error: incompatible types: bad type in conditional expression
+        renderTankTooltip(graphics, mouseX, mouseY, menu.tile != null ? 
+menu.tile.getTankIn() : null,
+                                                                               
+            ^
+    FluidStacksResourceHandler cannot be converted to FluidTank
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiDistiller.j
+ava:98: error: incompatible types: bad type in conditional expression
+        renderTankTooltip(graphics, mouseX, mouseY, menu.tile != null ? 
+menu.tile.getTankGasOut() : null,
+                                                                               
+                ^
+    FluidStacksResourceHandler cannot be converted to FluidTank
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiDistiller.j
+ava:100: error: incompatible types: bad type in conditional expression
+        renderTankTooltip(graphics, mouseX, mouseY, menu.tile != null ? 
+menu.tile.getTankLiquidOut() : null,
+                                                                               
+                   ^
+    FluidStacksResourceHandler cannot be converted to FluidTank
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiDistiller.j
+ava:105: warning: [removal] FluidTank in 
+net.neoforged.neoforge.fluids.capability.templates has been deprecated and 
+marked for removal
+            FluidTank tank, int relX, int relY, int w, int h) {
+            ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiTank.java:5
+0: error: incompatible types: FluidStacksResourceHandler cannot be converted 
+to FluidTank
+                menu.tile.tank,
+                         ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiTank.java:9
+1: error: cannot find symbol
+            FluidStack fluid = menu.tile.tank.getFluid();
+                                             ^
+  symbol:   method getFluid()
+  location: variable tank of type FluidStacksResourceHandler
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiTank.java:9
+2: error: cannot find symbol
+            int amount = menu.tile.tank.getFluidAmount();
+                                       ^
+  symbol:   method getFluidAmount()
+  location: variable tank of type FluidStacksResourceHandler
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiTank.java:9
+3: error: method getCapacity in class FluidStacksResourceHandler cannot be 
+applied to given types;
+            int capacity = menu.tile.tank.getCapacity();
+                                         ^
+  required: int,FluidResource
+  found:    no arguments
+  reason: actual and formal argument lists differ in length
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\render\RenderTank.
+java:182: error: cannot find symbol
+            FluidStack otherFluid = otherTank.tank.getFluid();
+                                                  ^
+  symbol:   method getFluid()
+  location: variable tank of type FluidStacksResourceHandler
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\render\RenderTank.
+java:183: error: cannot find symbol
+            FluidStack thisFluid = tile.tank.getFluid();
+                                            ^
+  symbol:   method getFluid()
+  location: variable tank of type FluidStacksResourceHandler
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\render\RenderTank.
+java:190: error: cannot find symbol
+            return otherTank.tank.getFluidAmount() >= 
+otherTank.tank.getCapacity()
+                                 ^
+  symbol:   method getFluidAmount()
+  location: variable tank of type FluidStacksResourceHandler
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\render\RenderTank.
+java:190: error: method getCapacity in class FluidStacksResourceHandler cannot 
+be applied to given types;
+            return otherTank.tank.getFluidAmount() >= 
+otherTank.tank.getCapacity()
+                                                                    ^
+  required: int,FluidResource
+  found:    no arguments
+  reason: actual and formal argument lists differ in length
+E:\GitHub\BuildCraft\src\main\java\buildcraft\lib\gui\elem\GuiElementFluidTank.
+java:35: warning: [removal] FluidTank in 
+net.neoforged.neoforge.fluids.capability.templates has been deprecated and 
+marked for removal
+    private final FluidTank tank;
+                  ^
+E:\GitHub\BuildCraft\src\main\java\buildcraft\lib\gui\elem\GuiElementFluidTank.
+java:40: warning: [removal] FluidTank in 
+net.neoforged.neoforge.fluids.capability.templates has been deprecated and 
+marked for removal
+            FluidTank tank,
+            ^
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some messages have been simplified; recompile with -Xdiags:verbose to 
+get full output
+57 errors
+25 warnings
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileJava'.
+> Compilation failed; see the compiler output below.
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiTank.java
+:93: error: method getCapacity in class FluidStacksResourceHandler cannot be 
+applied to given types;
+              int capacity = menu.tile.tank.getCapacity();
+                                           ^
+    required: int,FluidResource
+    found:    no arguments
+    reason: actual and formal argument lists differ in length
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\render\RenderTan
+k.java:190: error: method getCapacity in class FluidStacksResourceHandler 
+cannot be applied to given types;
+              return otherTank.tank.getFluidAmount() >= 
+otherTank.tank.getCapacity()
+                                                                      ^
+    required: int,FluidResource
+    found:    no arguments
+    reason: actual and formal argument lists differ in length
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockHeatExchange
+.java:193: error: no suitable method found for 
+addFluidDrops(NonNullList<ItemStack>,FluidStacksResourceHandler)
+                      FluidItemDrops.addFluidDrops(toDrop, section.tankInput);
+                                    ^
+      method 
+FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,FluidStack...) is not 
+applicable
+        (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+FluidStack)
+      method 
+FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,IFluidTank...) is not 
+applicable
+        (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+IFluidTank)
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockHeatExchange
+.java:194: error: no suitable method found for 
+addFluidDrops(NonNullList<ItemStack>,FluidStacksResourceHandler)
+                      FluidItemDrops.addFluidDrops(toDrop, section.tankOutput);
+                                    ^
+      method 
+FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,FluidStack...) is not 
+applicable
+        (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+FluidStack)
+      method 
+FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,IFluidTank...) is not 
+applicable
+        (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+IFluidTank)
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockDistiller.ja
+va:137: error: no suitable method found for 
+addFluidDrops(NonNullList<ItemStack>,FluidStacksResourceHandler)
+                  FluidItemDrops.addFluidDrops(toDrop, distiller.getTankIn());
+                                ^
+      method 
+FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,FluidStack...) is not 
+applicable
+        (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+FluidStack)
+      method 
+FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,IFluidTank...) is not 
+applicable
+        (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+IFluidTank)
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockDistiller.ja
+va:138: error: no suitable method found for 
+addFluidDrops(NonNullList<ItemStack>,FluidStacksResourceHandler)
+                  FluidItemDrops.addFluidDrops(toDrop, 
+distiller.getTankGasOut());
+                                ^
+      method 
+FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,FluidStack...) is not 
+applicable
+        (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+FluidStack)
+      method 
+FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,IFluidTank...) is not 
+applicable
+        (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+IFluidTank)
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockDistiller.ja
+va:139: error: no suitable method found for 
+addFluidDrops(NonNullList<ItemStack>,FluidStacksResourceHandler)
+                  FluidItemDrops.addFluidDrops(toDrop, 
+distiller.getTankLiquidOut());
+                                ^
+      method 
+FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,FluidStack...) is not 
+applicable
+        (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+FluidStack)
+      method 
+FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,IFluidTank...) is not 
+applicable
+        (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+IFluidTank)
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockTank.java:19
+5: error: no suitable method found for 
+addFluidDrops(NonNullList<ItemStack>,FluidStacksResourceHandler)
+                  FluidItemDrops.addFluidDrops(toDrop, tank.tank);
+                                ^
+      method 
+FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,FluidStack...) is not 
+applicable
+        (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+FluidStack)
+      method 
+FluidItemDrops.addFluidDrops(NonNullList<ItemStack>,IFluidTank...) is not 
+applicable
+        (varargs mismatch; FluidStacksResourceHandler cannot be converted to 
+IFluidTank)
+  Note: Recompile with -Xlint:deprecation for details.
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:84: 
+error: incomparable types: FluidTank and FluidStacksResourceHandler
+                  if (tank == distiller.getTankIn()) {
+                           ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\energy\container\ContainerEngin
+eIron.java:105: error: incompatible types: FluidTank cannot be converted to 
+FluidStacksResourceHandler
+          widgetFuel = addWidget(new WidgetFluidTank(this, engine.tankFuel));
+                                                                 ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\energy\container\ContainerEngin
+eIron.java:106: error: incompatible types: FluidTank cannot be converted to 
+FluidStacksResourceHandler
+          widgetCoolant = addWidget(new WidgetFluidTank(this, 
+engine.tankCoolant));
+                                                                    ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\energy\container\ContainerEngin
+eIron.java:107: error: incompatible types: FluidTank cannot be converted to 
+FluidStacksResourceHandler
+          widgetResidue = addWidget(new WidgetFluidTank(this, 
+engine.tankResidue));
+                                                                    ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:82: 
+error: incompatible types: FluidStacksResourceHandler cannot be converted to 
+FluidTank
+                  net.neoforged.neoforge.fluids.capability.templates.FluidTank 
+tank = distiller.getTankForSide(direction);
+                                                                               
+                               ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:104: 
+error: incompatible types: FluidStacksResourceHandler cannot be converted to 
+FluidTank
+                  net.neoforged.neoforge.fluids.capability.templates.FluidTank 
+tank = heatExchange.getFluidTankForDirection(direction);
+                                                                               
+                                            ^
+  
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TilePump.java:278: 
+error: incompatible types: FluidStacksResourceHandler cannot be converted to 
+FluidTank
+          FluidUtilBC.pushFluidToNeighbors(level, worldPosition, tank);
+                                                                 ^
+  
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileTank.java:149: 
+error: incompatible types: FluidStacksResourceHandler cannot be converted to 
+IFluidHandler
+                      FluidUtilBC.move(tile.tank, prev.tank);
+                                           ^
+  
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileTank.java:158: 
+error: incompatible types: FluidStacksResourceHandler cannot be converted to 
+IFluidHandler
+                      FluidUtilBC.move(tile.tank, prev.tank);
+                                           ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockHeatExchange
+.java:165: error: incompatible types: FluidStacksResourceHandler cannot be 
+converted to IFluidHandler
+          boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, 
+section.tankInput);
+                                                                               
+     ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockHeatExchange
+.java:168: error: incompatible types: FluidStacksResourceHandler cannot be 
+converted to IFluidHandler
+              boolean didChangeOutput = FluidUtilBC.onTankActivated(player, 
+pos, hand, section.tankOutput);
+                                                                               
+               ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockDistiller.ja
+va:106: error: incompatible types: FluidStacksResourceHandler cannot be 
+converted to IFluidHandler
+          boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, 
+distiller.getTankIn());
+                                                                               
+                 ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiDistiller
+.java:58: error: incompatible types: FluidStacksResourceHandler cannot be 
+converted to FluidTank
+                  menu.tile.getTankIn(),
+                                     ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiDistiller
+.java:65: error: incompatible types: FluidStacksResourceHandler cannot be 
+converted to FluidTank
+                  menu.tile.getTankGasOut(),
+                                         ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiDistiller
+.java:72: error: incompatible types: FluidStacksResourceHandler cannot be 
+converted to FluidTank
+                  menu.tile.getTankLiquidOut(),
+                                            ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiDistiller
+.java:96: error: incompatible types: bad type in conditional expression
+          renderTankTooltip(graphics, mouseX, mouseY, menu.tile != null ? 
+menu.tile.getTankIn() : null,
+                                                                               
+              ^
+      FluidStacksResourceHandler cannot be converted to FluidTank
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiDistiller
+.java:98: error: incompatible types: bad type in conditional expression
+          renderTankTooltip(graphics, mouseX, mouseY, menu.tile != null ? 
+menu.tile.getTankGasOut() : null,
+                                                                               
+                  ^
+      FluidStacksResourceHandler cannot be converted to FluidTank
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiDistiller
+.java:100: error: incompatible types: bad type in conditional expression
+          renderTankTooltip(graphics, mouseX, mouseY, menu.tile != null ? 
+menu.tile.getTankLiquidOut() : null,
+                                                                               
+                     ^
+      FluidStacksResourceHandler cannot be converted to FluidTank
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiTank.java
+:50: error: incompatible types: FluidStacksResourceHandler cannot be converted 
+to FluidTank
+                  menu.tile.tank,
+                           ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:15: 
+error: cannot find symbol
+  import buildcraft.lib.misc.FluidTankResourceHandler;
+                            ^
+    symbol:   class FluidTankResourceHandler
+    location: package buildcraft.lib.misc
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerFluidCon
+tainer.java:63: error: cannot find symbol
+              Capabilities.FluidHandler.BLOCK, tile.getBlockPos(), side
+                          ^
+    symbol:   variable FluidHandler
+    location: class Capabilities
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerFluidCon
+tainer.java:74: error: cannot find symbol
+              ResourceHandler<FluidResource> itemHandler = 
+stack.getCapability(Capabilities.FluidHandler.ITEM);
+                                                                               
+            ^
+    symbol:   variable FluidHandler
+    location: class Capabilities
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerFluidCon
+tainerLevel.java:62: error: cannot find symbol
+              Capabilities.FluidHandler.BLOCK, tile.getBlockPos(), side
+                          ^
+    symbol:   variable FluidHandler
+    location: class Capabilities
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerFluidCon
+tainerLevel.java:72: error: cannot find symbol
+              ResourceHandler<FluidResource> itemHandler = 
+stack.getCapability(Capabilities.FluidHandler.ITEM);
+                                                                               
+            ^
+    symbol:   variable FluidHandler
+    location: class Capabilities
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\CoreTriggerProv
+ider.java:68: error: cannot find symbol
+              ResourceHandler<ItemResource> itemHandler = 
+tile.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, 
+tile.getBlockPos(), side);
+                                                                               
+                     ^
+    symbol:   variable ItemHandler
+    location: class Capabilities
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\CoreTriggerProv
+ider.java:81: error: cannot find symbol
+              ResourceHandler<FluidResource> fluidHandler = 
+tile.getLevel().getCapability(Capabilities.FluidHandler.BLOCK, 
+tile.getBlockPos(), side);
+                                                                               
+                       ^
+    symbol:   variable FluidHandler
+    location: class Capabilities
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\lib\gui\widget\WidgetFluidTank.
+java:96: error: cannot find symbol
+          ResourceHandler<FluidResource> itemHandlerIn = 
+singleCopy.getCapability(Capabilities.FluidHandler.ITEM);
+                                                                               
+               ^
+    symbol:   variable FluidHandler
+    location: class Capabilities
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:63: 
+error: cannot find symbol
+              (pump, direction) -> new 
+FluidTankResourceHandler(pump.getTank()) {
+                                       ^
+    symbol:   class FluidTankResourceHandler
+    location: class BCFactory
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:71: 
+error: cannot find symbol
+              (floodGate, direction) -> new 
+FluidTankResourceHandler(floodGate.getTank()));
+                                            ^
+    symbol:   class FluidTankResourceHandler
+    location: class BCFactory
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:85: 
+error: cannot find symbol
+                      return new FluidTankResourceHandler(tank) {
+                                 ^
+    symbol:   class FluidTankResourceHandler
+    location: class BCFactory
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:93: 
+error: cannot find symbol
+                      return new FluidTankResourceHandler(tank) {
+                                 ^
+    symbol:   class FluidTankResourceHandler
+    location: class BCFactory
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:105: 
+error: cannot find symbol
+                  return tank != null ? new FluidTankResourceHandler(tank) : 
+null;
+                                            ^
+    symbol:   class FluidTankResourceHandler
+    location: class BCFactory
+  Note: Some input files use or override a deprecated API.
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:64: 
+error: method does not override or implement a method from a supertype
+                  @Override
+                  ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:86: 
+error: method does not override or implement a method from a supertype
+                          @Override
+                          ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:94: 
+error: method does not override or implement a method from a supertype
+                          @Override
+                          ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventor
+y.java:56: warning: [removal] IItemHandler in net.neoforged.neoforge.items has 
+been deprecated and marked for removal
+          if (!(tile instanceof IItemHandler handler)) {
+                                ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventor
+y.java:69: warning: [removal] getSlots() in IItemHandler has been deprecated 
+and marked for removal
+          for (int i = 0; i < handler.getSlots(); i++) {
+                                     ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventor
+y.java:71: warning: [removal] getStackInSlot(int) in IItemHandler has been 
+deprecated and marked for removal
+              ItemStack stack = handler.getStackInSlot(i);
+                                       ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventor
+y.java:76: warning: [removal] insertItem(int,ItemStack,boolean) in 
+IItemHandler has been deprecated and marked for removal
+                  && (searchedStack.isEmpty() || searchedStack.getItem() 
+instanceof IList || handler.insertItem(i, searchedStack, true).isEmpty());
+                                                                               
+                     ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventor
+yLevel.java:56: warning: [removal] IItemHandler in 
+net.neoforged.neoforge.items has been deprecated and marked for removal
+          if (!(tile instanceof IItemHandler itemHandler)) {
+                                ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventor
+yLevel.java:65: warning: [removal] getSlots() in IItemHandler has been 
+deprecated and marked for removal
+          for (int slot = 0; slot < itemHandler.getSlots(); slot++) {
+                                               ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventor
+yLevel.java:66: warning: [removal] getStackInSlot(int) in IItemHandler has 
+been deprecated and marked for removal
+              ItemStack stackInSlot = itemHandler.getStackInSlot(slot);
+                                                 ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventor
+yLevel.java:69: warning: [removal] getSlotLimit(int) in IItemHandler has been 
+deprecated and marked for removal
+                      itemSpace += itemHandler.getSlotLimit(slot);
+                                              ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventor
+yLevel.java:75: warning: [removal] getSlotLimit(int) in IItemHandler has been 
+deprecated and marked for removal
+                          int count = Math.min(itemHandler.getSlotLimit(slot), 
+searchStack.getMaxStackSize());
+                                                          ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventor
+yLevel.java:77: warning: [removal] insertItem(int,ItemStack,boolean) in 
+IItemHandler has been deprecated and marked for removal
+                          ItemStack leftOver = itemHandler.insertItem(slot, 
+stack, true);
+                                                          ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerInventor
+yLevel.java:87: warning: [removal] getSlotLimit(int) in IItemHandler has been 
+deprecated and marked for removal
+                      itemSpace += Math.min(stackInSlot.getMaxStackSize(), 
+itemHandler.getSlotLimit(slot));
+                                                                               
+       ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\energy\BCEnergy.java:72: 
+warning: [removal] FluidTank in 
+net.neoforged.neoforge.fluids.capability.templates has been deprecated and 
+marked for removal
+                  ) {
+                    ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\energy\container\ContainerEngin
+eFE.java:72: warning: [removal] SlotItemHandler in 
+net.neoforged.neoforge.items has been deprecated and marked for removal
+                  addSlot(new SlotItemHandler(engine.upgrades, slot, 62 + 18 * 
+slot, 44));
+                              ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\energy\container\ContainerDynam
+oMJ.java:72: warning: [removal] SlotItemHandler in 
+net.neoforged.neoforge.items has been deprecated and marked for removal
+                  addSlot(new SlotItemHandler(dynamo.upgrades, slot, 44 + 18 * 
+slot, 44));
+                              ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:82: 
+warning: [removal] FluidTank in 
+net.neoforged.neoforge.fluids.capability.templates has been deprecated and 
+marked for removal
+                  net.neoforged.neoforge.fluids.capability.templates.FluidTank 
+tank = distiller.getTankForSide(direction);
+                                                                    ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\BCFactory.java:104: 
+warning: [removal] FluidTank in 
+net.neoforged.neoforge.fluids.capability.templates has been deprecated and 
+marked for removal
+                  net.neoforged.neoforge.fluids.capability.templates.FluidTank 
+tank = heatExchange.getFluidTankForDirection(direction);
+                                                                    ^
+  
+E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileChute.java:62: 
+warning: [removal] IItemHandlerModifiable in net.neoforged.neoforge.items has 
+been deprecated and marked for removal
+              (handler, slot, before, after) -> this.setChanged());
+               ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.
+java:62: warning: [removal] ItemStackHandler in net.neoforged.neoforge.items 
+has been deprecated and marked for removal
+      public final net.neoforged.neoforge.items.ItemStackHandler 
+containerSlots = new net.neoforged.neoforge.items.ItemStackHandler(3) {
+                                               ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.
+java:62: warning: [removal] ItemStackHandler in net.neoforged.neoforge.items 
+has been deprecated and marked for removal
+      public final net.neoforged.neoforge.items.ItemStackHandler 
+containerSlots = new net.neoforged.neoforge.items.ItemStackHandler(3) {
+                                                                               
+                                   ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\container\ContainerDist
+iller.java:37: warning: [removal] SlotItemHandler in 
+net.neoforged.neoforge.items has been deprecated and marked for removal
+              addSlot(new 
+net.neoforged.neoforge.items.SlotItemHandler(tile.containerSlots, 0, 8, 35));
+                                                      ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\container\ContainerDist
+iller.java:38: warning: [removal] SlotItemHandler in 
+net.neoforged.neoforge.items has been deprecated and marked for removal
+              addSlot(new 
+net.neoforged.neoforge.items.SlotItemHandler(tile.containerSlots, 1, 152, 10));
+                                                      ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\container\ContainerDist
+iller.java:39: warning: [removal] SlotItemHandler in 
+net.neoforged.neoforge.items has been deprecated and marked for removal
+              addSlot(new 
+net.neoforged.neoforge.items.SlotItemHandler(tile.containerSlots, 2, 152, 55));
+                                                      ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiDistiller
+.java:105: warning: [removal] FluidTank in 
+net.neoforged.neoforge.fluids.capability.templates has been deprecated and 
+marked for removal
+              FluidTank tank, int relX, int relY, int w, int h) {
+              ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\lib\gui\elem\GuiElementFluidTan
+k.java:35: warning: [removal] FluidTank in 
+net.neoforged.neoforge.fluids.capability.templates has been deprecated and 
+marked for removal
+      private final FluidTank tank;
+                    ^
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\lib\gui\elem\GuiElementFluidTan
+k.java:40: warning: [removal] FluidTank in 
+net.neoforged.neoforge.fluids.capability.templates has been deprecated and 
+marked for removal
+              FluidTank tank,
+              ^
+  Note: Some messages have been simplified; recompile with -Xdiags:verbose to 
+get full output
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerFluidCon
+tainer.java:116: error: cannot find symbol
+                  try (Transaction tx = Transaction.openNested(null)) {
+                                                   ^
+    symbol:   method openNested(<null>)
+    location: class Transaction
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerFluidCon
+tainer.java:136: error: cannot find symbol
+                  try (Transaction tx = Transaction.openNested(null)) {
+                                                   ^
+    symbol:   method openNested(<null>)
+    location: class Transaction
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\core\statements\TriggerFluidCon
+tainerLevel.java:93: error: cannot find symbol
+                  try (Transaction tx = Transaction.openNested(null)) {
+                                                   ^
+    symbol:   method openNested(<null>)
+    location: class Transaction
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.
+java:270: error: cannot find symbol
+              try (Transaction tx = Transaction.openNested(null)) {
+                                               ^
+    symbol:   method openNested(<null>)
+    location: class Transaction
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileDistiller_BC8.
+java:274: error: cannot find symbol
+              try (Transaction tx = Transaction.openNested(null)) {
+                                               ^
+    symbol:   method openNested(<null>)
+    location: class Transaction
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileHeatExchange.j
+ava:797: error: cannot find symbol
+              try (Transaction tx = Transaction.openNested(null)) {
+                                               ^
+    symbol:   method openNested(<null>)
+    location: class Transaction
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileHeatExchange.j
+ava:804: error: cannot find symbol
+              try (Transaction tx = Transaction.openNested(null)) {
+                                               ^
+    symbol:   method openNested(<null>)
+    location: class Transaction
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\tile\TileHeatExchange.j
+ava:833: error: cannot find symbol
+                          tx.abort();
+                            ^
+    symbol:   method abort()
+    location: variable tx of type Transaction
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\block\BlockTank.java:17
+1: error: cannot find symbol
+          boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, 
+tank.getColumnFluidHandler());
+                                                                               
+  ^
+    symbol:   method getColumnFluidHandler()
+    location: variable tank of type TileTank
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiTank.java
+:91: error: cannot find symbol
+              FluidStack fluid = menu.tile.tank.getFluid();
+                                               ^
+    symbol:   method getFluid()
+    location: variable tank of type FluidStacksResourceHandler
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\gui\GuiTank.java
+:92: error: cannot find symbol
+              int amount = menu.tile.tank.getFluidAmount();
+                                         ^
+    symbol:   method getFluidAmount()
+    location: variable tank of type FluidStacksResourceHandler
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\render\RenderTan
+k.java:182: error: cannot find symbol
+              FluidStack otherFluid = otherTank.tank.getFluid();
+                                                    ^
+    symbol:   method getFluid()
+    location: variable tank of type FluidStacksResourceHandler
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\render\RenderTan
+k.java:183: error: cannot find symbol
+              FluidStack thisFluid = tile.tank.getFluid();
+                                              ^
+    symbol:   method getFluid()
+    location: variable tank of type FluidStacksResourceHandler
+  E:\GitHub\BuildCraft\src\main\java\buildcraft\factory\client\render\RenderTan
+k.java:190: error: cannot find symbol
+              return otherTank.tank.getFluidAmount() >= 
+otherTank.tank.getCapacity()
+                                   ^
+    symbol:   method getFluidAmount()
+    location: variable tank of type FluidStacksResourceHandler
+  57 errors
+  25 warnings
+
+* Try:
+> Check your code and dependencies to fix the compilation error(s)
+> Run with --scan to get full insights from a Build Scan (powered by 
+Develocity).
+
+BUILD FAILED in 9s

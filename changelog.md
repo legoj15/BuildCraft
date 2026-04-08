@@ -12,3 +12,6 @@
 - Fixed a visual bug in the MJ Dynamo where fractional leftover microJoules or a full FE buffer would cause the piston animation to pump indefinitely even when there are no valid FE consumers or MJ being input.
 - Fixed Kinesis Pipes allowing their internal buffer to accumulate infinitely when pushed energy without demand, by strictly enforcing the capacity ceiling against `internalPower + internalNextPower` instead of just the per-tick insertion tracker.
 - Overhauled underlying mod structure; there may be missing assets or code...
+- Completely overhauled remaining fluid handling implementations to use the modern NeoForge 1.21.11 `ResourceHandler<FluidResource>` APIs, finalizing the migration away from legacy `IFluidHandler` and `FluidTank`.
+- Refactored `TileEngineIron_BC8` (Combustion Engine) to use `FluidStacksResourceHandler` to support proper transactional inserts and extracts for fuel, coolant, and residue operations.
+- Updated multiple GUI and Render components (e.g. `GuiTank`, `GuiDistiller`, `RenderTank`, `GuiElementFluidTank`) to be fully compatible with the new fluid resource handlers.

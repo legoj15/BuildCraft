@@ -10,9 +10,11 @@ import java.util.Locale;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidUtil;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementContainer;
@@ -53,17 +55,29 @@ public class TriggerFluidContainer extends BCStatement implements ITriggerExtern
 
     @Override
     public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer statementContainer, IStatementParameter[] parameters) {
-        if (!(tile instanceof IFluidHandler handler)) {
+        if (tile == null || tile.getLevel() == null) {
             return false;
         }
 
-        FluidStack searchedFluid = FluidStack.EMPTY;
+        ResourceHandler<FluidResource> handler = tile.getLevel().getCapability(
+            Capabilities.Fluid.BLOCK, tile.getBlockPos(), side
+        );
 
-        if (parameters != null && parameters.length >= 1 && parameters[0] != null && !parameters[0].getItemStack().isEmpty()) {
-            searchedFluid = FluidUtil.getFluidContained(parameters[0].getItemStack()).orElse(FluidStack.EMPTY);
+        if (handler == null) {
+            return false;
         }
 
-        int tanks = handler.getTanks();
+        FluidResource searchedFluid = FluidResource.EMPTY;
+
+        if (parameters != null && parameters.length >= 1 && parameters[0] != null && !parameters[0].getItemStack().isEmpty()) {
+            net.minecraft.world.item.ItemStack stack = parameters[0].getItemStack();
+            ResourceHandler<FluidResource> itemHandler = stack.getCapability(Capabilities.Fluid.ITEM, net.neoforged.neoforge.transfer.access.ItemAccess.forStack(stack));
+            if (itemHandler != null && itemHandler.size() > 0) {
+                searchedFluid = itemHandler.getResource(0);
+            }
+        }
+
+        int tanks = handler.size();
         if (tanks == 0) {
             return false;
         }
@@ -71,8 +85,8 @@ public class TriggerFluidContainer extends BCStatement implements ITriggerExtern
         switch (state) {
             case EMPTY: {
                 for (int i = 0; i < tanks; i++) {
-                    FluidStack fluid = handler.getFluidInTank(i);
-                    if (!fluid.isEmpty() && fluid.getAmount() > 0) {
+                    FluidResource fluid = handler.getResource(i);
+                    if (!fluid.isEmpty() && handler.getAmountAsInt(i) > 0) {
                         return false;
                     }
                 }
@@ -80,9 +94,9 @@ public class TriggerFluidContainer extends BCStatement implements ITriggerExtern
             }
             case CONTAINS: {
                 for (int i = 0; i < tanks; i++) {
-                    FluidStack fluid = handler.getFluidInTank(i);
-                    if (!fluid.isEmpty() && fluid.getAmount() > 0
-                        && (searchedFluid.isEmpty() || FluidStack.isSameFluidSameComponents(fluid, searchedFluid))) {
+                    FluidResource fluid = handler.getResource(i);
+                    if (!fluid.isEmpty() && handler.getAmountAsInt(i) > 0
+                        && (searchedFluid.isEmpty() || fluid.equals(searchedFluid))) {
                         return true;
                     }
                 }
@@ -91,32 +105,42 @@ public class TriggerFluidContainer extends BCStatement implements ITriggerExtern
             case SPACE: {
                 if (searchedFluid.isEmpty()) {
                     for (int i = 0; i < tanks; i++) {
-                        FluidStack fluid = handler.getFluidInTank(i);
-                        int cap = handler.getTankCapacity(i);
-                        if (fluid.isEmpty() || fluid.getAmount() < cap) {
+                        FluidResource fluid = handler.getResource(i);
+                        long cap = handler.getCapacityAsLong(i, fluid);
+                        if (fluid.isEmpty() || handler.getAmountAsInt(i) < cap) {
                             return true;
                         }
                     }
                     return false;
                 }
-                FluidStack toFill = searchedFluid.copy();
-                toFill.setAmount(1);
-                return handler.fill(toFill, IFluidHandler.FluidAction.SIMULATE) > 0;
+                try (Transaction tx = Transaction.openRoot()) {
+                    for (int i = 0; i < tanks; i++) {
+                        if (handler.insert(i, searchedFluid, 1, tx) > 0) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
             }
             case FULL: {
                 if (searchedFluid.isEmpty()) {
                     for (int i = 0; i < tanks; i++) {
-                        FluidStack fluid = handler.getFluidInTank(i);
-                        int cap = handler.getTankCapacity(i);
-                        if (fluid.isEmpty() || fluid.getAmount() < cap) {
+                        FluidResource fluid = handler.getResource(i);
+                        long cap = handler.getCapacityAsLong(i, fluid);
+                        if (fluid.isEmpty() || handler.getAmountAsInt(i) < cap) {
                             return false;
                         }
                     }
                     return true;
                 }
-                FluidStack toFill = searchedFluid.copy();
-                toFill.setAmount(1);
-                return handler.fill(toFill, IFluidHandler.FluidAction.SIMULATE) <= 0;
+                try (Transaction tx = Transaction.openRoot()) {
+                    for (int i = 0; i < tanks; i++) {
+                        if (handler.insert(i, searchedFluid, 1, tx) > 0) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
             }
         }
         return false;

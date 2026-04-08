@@ -102,18 +102,17 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     }
 
     private void renderTankTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY,
-            FluidTank tank, int relX, int relY, int w, int h) {
+            net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler tank, int relX, int relY, int w, int h) {
         if (tank == null) return;
         int absX = leftPos + relX;
         int absY = topPos + relY;
         if (mouseX >= absX && mouseX < absX + w && mouseY >= absY && mouseY < absY + h) {
-            FluidStack fluid = tank.getFluid();
-            int amount = tank.getFluidAmount();
-            int capacity = tank.getCapacity();
+            int amount = (int) tank.getAmountAsLong(0);
+            int capacity = (int) tank.getCapacityAsLong(0, net.neoforged.neoforge.transfer.fluid.FluidResource.EMPTY);
 
             List<Component> lines = new ArrayList<>();
-            if (!fluid.isEmpty() && amount > 0) {
-                lines.add(fluid.getHoverName());
+            if (amount > 0) {
+                lines.add(tank.getResource(0).toStack(amount).getHoverName());
             }
             lines.add(Component.literal(amount + " / " + capacity + " mB")
                     .withStyle(ChatFormatting.GRAY));

@@ -25,5 +25,19 @@ public class FluidItemDrops {
             }
         }
     }
+
+    @SafeVarargs
+    public static void addFluidDrops(NonNullList<ItemStack> toDrop, net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource>... tanks) {
+        if (item != null) {
+            for (net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> tank : tanks) {
+                if (tank != null && tank.size() > 0) {
+                    net.neoforged.neoforge.transfer.fluid.FluidResource res = tank.getResource(0);
+                    if (!res.isEmpty()) {
+                        item.addFluidDrops(toDrop, res.toStack((int) tank.getAmountAsLong(0)));
+                    }
+                }
+            }
+        }
+    }
 }
 

@@ -31,10 +31,10 @@ import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import buildcraft.api.recipes.BuildcraftRecipeRegistry;
@@ -95,7 +95,7 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
      * </ul>
      */
     @Nullable
-    public FluidTank getFluidTankForDirection(@Nullable Direction direction) {
+    public FluidStacksResourceHandler getFluidTankForDirection(@Nullable Direction direction) {
         if (section == null || direction == null) return null;
         Direction facing = getFacing();
         if (facing == null) return null;
@@ -346,8 +346,8 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
     private int computeSyncHash() {
         if (section == null) return 0;
         int h = section instanceof ExchangeSectionStart ? 1 : 2;
-        h = h * 31 + section.tankInput.getFluidAmount();
-        h = h * 31 + section.tankOutput.getFluidAmount();
+        h = h * 31 + section.tankInput.getAmountAsInt(0);
+        h = h * 31 + section.tankOutput.getAmountAsInt(0);
         if (section instanceof ExchangeSectionStart s) {
             h = h * 31 + s.progressState.ordinal();
             h = h * 31 + s.middleCount;
@@ -411,11 +411,13 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
         if (section != null) {
             output.putBoolean("hasSection", true);
             output.putBoolean("isStart", section instanceof ExchangeSectionStart);
-            if (!section.tankInput.getFluid().isEmpty()) {
-                output.store("sectionInput", FluidStack.CODEC, section.tankInput.getFluid());
+            FluidStack inStack = section.tankInput.getResource(0).toStack(section.tankInput.getAmountAsInt(0));
+            if (!inStack.isEmpty()) {
+                output.store("sectionInput", FluidStack.CODEC, inStack);
             }
-            if (!section.tankOutput.getFluid().isEmpty()) {
-                output.store("sectionOutput", FluidStack.CODEC, section.tankOutput.getFluid());
+            FluidStack outStack = section.tankOutput.getResource(0).toStack(section.tankOutput.getAmountAsInt(0));
+            if (!outStack.isEmpty()) {
+                output.store("sectionOutput", FluidStack.CODEC, outStack);
             }
             if (section instanceof ExchangeSectionStart s) {
                 output.putInt("middleCount", s.middleCount);
@@ -442,8 +444,20 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
                 } else {
                     s = new ExchangeSectionStart(this);
                 }
-                s.tankInput.setFluid(input.read("sectionInput", FluidStack.CODEC).orElse(FluidStack.EMPTY));
-                s.tankOutput.setFluid(input.read("sectionOutput", FluidStack.CODEC).orElse(FluidStack.EMPTY));
+                FluidStack inFluid = input.read("sectionInput", FluidStack.CODEC).orElse(FluidStack.EMPTY);
+                if (!inFluid.isEmpty()) {
+                    try (Transaction tx = Transaction.openRoot()) {
+                        s.tankInput.insert(0, FluidResource.of(inFluid), inFluid.getAmount(), tx);
+                        tx.commit();
+                    }
+                }
+                FluidStack outFluid = input.read("sectionOutput", FluidStack.CODEC).orElse(FluidStack.EMPTY);
+                if (!outFluid.isEmpty()) {
+                    try (Transaction tx = Transaction.openRoot()) {
+                        s.tankOutput.insert(0, FluidResource.of(outFluid), outFluid.getAmount(), tx);
+                        tx.commit();
+                    }
+                }
                 s.middleCount = input.getIntOr("middleCount", 1);
                 // Only sync progressState — progress is computed independently on the
                 // client via updateProgress(), matching 1.12.2 behavior. Loading the server's
@@ -461,8 +475,20 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
                 } else {
                     e = new ExchangeSectionEnd(this);
                 }
-                e.tankInput.setFluid(input.read("sectionInput", FluidStack.CODEC).orElse(FluidStack.EMPTY));
-                e.tankOutput.setFluid(input.read("sectionOutput", FluidStack.CODEC).orElse(FluidStack.EMPTY));
+                FluidStack inFluid = input.read("sectionInput", FluidStack.CODEC).orElse(FluidStack.EMPTY);
+                if (!inFluid.isEmpty()) {
+                    try (Transaction tx = Transaction.openRoot()) {
+                        e.tankInput.insert(0, FluidResource.of(inFluid), inFluid.getAmount(), tx);
+                        tx.commit();
+                    }
+                }
+                FluidStack outFluid = input.read("sectionOutput", FluidStack.CODEC).orElse(FluidStack.EMPTY);
+                if (!outFluid.isEmpty()) {
+                    try (Transaction tx = Transaction.openRoot()) {
+                        e.tankOutput.insert(0, FluidResource.of(outFluid), outFluid.getAmount(), tx);
+                        tx.commit();
+                    }
+                }
                 section = e;
             }
         } else if (section != null) {
@@ -499,13 +525,13 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
     }
 
     public static abstract class ExchangeSection {
-        public final FluidTank tankInput, tankOutput;
+        public final FluidStacksResourceHandler tankInput, tankOutput;
         public final FluidSmoother smoothedTankInput, smoothedTankOutput;
         private TileHeatExchange tile;
 
         ExchangeSection(TileHeatExchange tile) {
-            tankInput = new FluidTank(2000);
-            tankOutput = new FluidTank(2000);
+            tankInput = new FluidStacksResourceHandler(1, 2000);
+            tankOutput = new FluidStacksResourceHandler(1, 2000);
             smoothedTankInput = new FluidSmoother(tankInput);
             smoothedTankOutput = new FluidSmoother(tankOutput);
             this.tile = tile;
@@ -521,8 +547,10 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
         }
 
         void getDebugInfo(List<String> left, List<String> right, Direction side) {
-            left.add("tank_input = " + FluidUtilBC.getDebugString(tankInput.getFluid()));
-            left.add("tank_output = " + FluidUtilBC.getDebugString(tankOutput.getFluid()));
+            FluidStack inStack = tankInput.getResource(0).toStack(tankInput.getAmountAsInt(0));
+            FluidStack outStack = tankOutput.getResource(0).toStack(tankOutput.getAmountAsInt(0));
+            left.add("tank_input = " + FluidUtilBC.getDebugString(inStack));
+            left.add("tank_output = " + FluidUtilBC.getDebugString(outStack));
         }
 
         void getClientDebugInfo(List<String> left, List<String> right, Direction side) {
@@ -630,17 +658,19 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
 
         private void craft() {
             if (endSection == null) return;
-            FluidTank c_in = endSection.tankInput;
-            FluidTank c_out = tankOutput;
-            FluidTank h_in = tankInput;
-            FluidTank h_out = endSection.tankOutput;
+            FluidStacksResourceHandler c_in = endSection.tankInput;
+            FluidStacksResourceHandler c_out = tankOutput;
+            FluidStacksResourceHandler h_in = tankInput;
+            FluidStacksResourceHandler h_out = endSection.tankOutput;
             IRefineryRecipeManager reg = BuildcraftRecipeRegistry.refineryRecipes;
             if (reg == null) {
                 progressState = EnumProgressState.STOPPING;
                 return;
             }
-            ICoolableRecipe c_recipe = reg.getCoolableRegistry().getRecipeForInput(c_in.getFluid());
-            IHeatableRecipe h_recipe = reg.getHeatableRegistry().getRecipeForInput(h_in.getFluid());
+            FluidStack c_in_fluid = c_in.getResource(0).toStack(c_in.getAmountAsInt(0));
+            FluidStack h_in_fluid = h_in.getResource(0).toStack(h_in.getAmountAsInt(0));
+            ICoolableRecipe c_recipe = reg.getCoolableRegistry().getRecipeForInput(c_in_fluid);
+            IHeatableRecipe h_recipe = reg.getHeatableRegistry().getRecipeForInput(h_in_fluid);
             if (h_recipe == null || c_recipe == null) {
                 progressState = EnumProgressState.STOPPING;
                 return;
@@ -664,13 +694,13 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
 
             int c_out_amount = c_out_f == null || c_out_f.isEmpty()
                     ? max_amount
-                    : c_out.fill(c_out_f.copy(), IFluidHandler.FluidAction.SIMULATE);
+                    : simulateInsert(c_out, c_out_f);
             int h_out_amount = h_out_f == null || h_out_f.isEmpty()
                     ? max_amount
-                    : h_out.fill(h_out_f.copy(), IFluidHandler.FluidAction.SIMULATE);
+                    : simulateInsert(h_out, h_out_f);
 
-            int c_in_amount = drainableAmount(c_in, c_in_f);
-            int h_in_amount = drainableAmount(h_in, h_in_f);
+            int c_in_amount = simulateExtract(c_in, c_in_f);
+            int h_in_amount = simulateExtract(h_in, h_in_f);
 
             int min_common = Math.min(Math.min(c_out_amount, h_out_amount),
                     Math.min(c_in_amount, h_in_amount));
@@ -700,7 +730,7 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
             if (end == null || getTile().level == null) return;
 
             Vec3 from = Vec3.atCenterOf(getTile().getBlockPos());
-            FluidStack c_in_f = end.tankInput.getFluid();
+            FluidStack c_in_f = end.tankInput.getResource(0).toStack(end.tankInput.getAmountAsInt(0));
             // If coolant is lava, spew smoke from start side
             if (!c_in_f.isEmpty() && c_in_f.getFluid() == Fluids.LAVA) {
                 Direction facing = getTile().getFacing();
@@ -709,7 +739,7 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
                 }
             }
 
-            FluidStack h_in_f = tankInput.getFluid();
+            FluidStack h_in_f = tankInput.getResource(0).toStack(tankInput.getAmountAsInt(0));
             from = Vec3.atCenterOf(end.getTile().getBlockPos());
             // If heatant is water, spew steam from end top
             if (!h_in_f.isEmpty() && h_in_f.getFluid() == Fluids.WATER) {
@@ -762,33 +792,42 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
             return fluid.copyWithAmount(amount);
         }
 
-        private static int drainableAmount(FluidTank t, @Nullable FluidStack fluid) {
+        private static int simulateExtract(FluidStacksResourceHandler t, @Nullable FluidStack fluid) {
             if (fluid == null || fluid.isEmpty()) return 0;
-            FluidStack f2 = t.drain(fluid.copy(), IFluidHandler.FluidAction.SIMULATE);
-            return f2.isEmpty() ? 0 : f2.getAmount();
-        }
-
-        private static void fillTank(FluidTank t, @Nullable FluidStack fluid) {
-            if (fluid == null || fluid.isEmpty()) return;
-            t.fill(fluid.copy(), IFluidHandler.FluidAction.EXECUTE);
-        }
-
-        private static void drainTank(FluidTank t, @Nullable FluidStack fluid) {
-            if (fluid == null || fluid.isEmpty()) return;
-            t.drain(fluid.copy(), IFluidHandler.FluidAction.EXECUTE);
-        }
-
-        @SuppressWarnings("removal")
-        private static void moveFluid(FluidTank from, ResourceHandler<FluidResource> to, int maxAmount) {
-            FluidStack drained = from.drain(maxAmount, IFluidHandler.FluidAction.SIMULATE);
-            if (drained.isEmpty()) return;
-            FluidResource resource = FluidResource.of(drained);
             try (Transaction tx = Transaction.openRoot()) {
-                int accepted = to.insert(resource, drained.getAmount(), tx);
-                if (accepted > 0) {
-                    from.drain(accepted, IFluidHandler.FluidAction.EXECUTE);
-                    tx.commit();
-                }
+                return t.extract(0, FluidResource.of(fluid), fluid.getAmount(), tx);
+            }
+        }
+
+        private static int simulateInsert(FluidStacksResourceHandler t, @Nullable FluidStack fluid) {
+            if (fluid == null || fluid.isEmpty()) return 0;
+            try (Transaction tx = Transaction.openRoot()) {
+                return t.insert(0, FluidResource.of(fluid), fluid.getAmount(), tx);
+            }
+        }
+
+        private static void fillTank(FluidStacksResourceHandler t, @Nullable FluidStack fluid) {
+            if (fluid == null || fluid.isEmpty()) return;
+            try (Transaction tx = Transaction.openRoot()) {
+                t.insert(0, FluidResource.of(fluid), fluid.getAmount(), tx);
+                tx.commit();
+            }
+        }
+
+        private static void drainTank(FluidStacksResourceHandler t, @Nullable FluidStack fluid) {
+            if (fluid == null || fluid.isEmpty()) return;
+            try (Transaction tx = Transaction.openRoot()) {
+                t.extract(0, FluidResource.of(fluid), fluid.getAmount(), tx);
+                tx.commit();
+            }
+        }
+
+        private static void moveFluid(FluidStacksResourceHandler from, ResourceHandler<FluidResource> to, int maxAmount) {
+            try (Transaction tx = Transaction.openRoot()) {
+                int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
+                    from, to, r -> true, maxAmount, tx
+                );
+                if (moved > 0) tx.commit();
             }
         }
     }

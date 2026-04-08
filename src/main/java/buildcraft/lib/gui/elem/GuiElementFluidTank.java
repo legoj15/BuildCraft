@@ -32,12 +32,12 @@ public class GuiElementFluidTank implements IInteractionElement {
 
     private final BuildCraftGui gui;
     private final IGuiArea area;
-    private final FluidTank tank;
+    private final net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler tank;
     private final WidgetFluidTank widget;
     private final GuiIcon overlay;
 
     public GuiElementFluidTank(BuildCraftGui gui, IGuiArea area,
-            FluidTank tank,
+            net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler tank,
             WidgetFluidTank widget,
             GuiIcon overlay) {
         this.gui = gui;
@@ -67,11 +67,13 @@ public class GuiElementFluidTank implements IInteractionElement {
     public void drawBackground(float partialTicks) {
         if (tank == null) return;
 
-        FluidStack fluid = tank.getFluid();
-        if (!fluid.isEmpty() && tank.getCapacity() > 0) {
+        net.neoforged.neoforge.transfer.fluid.FluidResource fluid = tank.getResource(0);
+        long capacity = tank.getCapacityAsLong(0, net.neoforged.neoforge.transfer.fluid.FluidResource.EMPTY);
+        long amount = tank.getAmountAsLong(0);
+        if (!fluid.isEmpty() && capacity > 0 && amount > 0) {
             GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
             if (graphics != null) {
-                drawFluid(graphics, fluid, tank.getFluidAmount(), tank.getCapacity());
+                drawFluid(graphics, fluid.toStack((int) amount), (int) amount, (int) capacity);
             }
         }
 
@@ -141,13 +143,16 @@ public class GuiElementFluidTank implements IInteractionElement {
         if (tank == null) return;
         if (!contains(gui.mouse.getX(), gui.mouse.getY())) return;
 
-        FluidStack fluid = tank.getFluid();
+        net.neoforged.neoforge.transfer.fluid.FluidResource fluid = tank.getResource(0);
+        long capacity = tank.getCapacityAsLong(0, net.neoforged.neoforge.transfer.fluid.FluidResource.EMPTY);
+        long amount = tank.getAmountAsLong(0);
+
         String text;
-        if (fluid.isEmpty()) {
+        if (fluid.isEmpty() || amount == 0) {
             text = "Empty";
         } else {
-            text = fluid.getHoverName().getString() + ": " +
-                    fluid.getAmount() + " / " + tank.getCapacity() + " mB";
+            text = fluid.toStack((int) amount).getHoverName().getString() + ": " +
+                    amount + " / " + capacity + " mB";
         }
         tooltips.add(new ToolTip(text));
     }

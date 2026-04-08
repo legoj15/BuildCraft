@@ -31,7 +31,9 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
@@ -85,7 +87,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         }
     }
 
-    private final FluidTank tank = new FluidTank(16 * 1000); // 16 buckets
+    private final FluidStacksResourceHandler tank = new FluidStacksResourceHandler(1, 16 * 1000); // 16 buckets
     private boolean queueBuilt = false;
     private final Map<BlockPos, FluidPath> paths = new HashMap<>();
     private BlockPos fluidConnection;
@@ -108,7 +110,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         return new MjRedstoneBatteryReceiver(battery);
     }
 
-    public FluidTank getTank() {
+    public FluidStacksResourceHandler getTank() {
         return tank;
     }
 
@@ -232,10 +234,10 @@ public class TilePump extends TileMiner implements IDebuggable {
 
     private boolean canDrain(BlockPos blockPos) {
         Fluid fluid = BlockUtil.getFluid(level, blockPos);
-        if (tank.isEmpty()) {
+        if (tank.getAmountAsInt(0) == 0) {
             return fluid != null;
         }
-        return FluidUtilBC.areFluidsEqual(fluid, tank.getFluid().getFluid());
+        return FluidUtilBC.areFluidsEqual(fluid, tank.getResource(0).getFluid());
     }
 
     private void nextPos() {
@@ -278,7 +280,7 @@ public class TilePump extends TileMiner implements IDebuggable {
 
     @Override
     protected void mine() {
-        if (tank.getFluidAmount() > tank.getCapacity() / 2) {
+        if (tank.getAmountAsInt(0) > tank.getCapacityAsInt(0, FluidResource.EMPTY) / 2) {
             return;
         }
 
@@ -307,7 +309,10 @@ public class TilePump extends TileMiner implements IDebuggable {
                     break drain_attempt;
                 }
 
-                tank.fill(drain, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+                try (Transaction tx = Transaction.openRoot()) {
+                    tank.insert(0, FluidResource.of(drain), drain.getAmount(), tx);
+                    tx.commit();
+                }
                 progress = 0;
 
                 if (getOwner() != null) {
@@ -407,7 +412,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         left.add("isComplete = " + isComplete());
         left.add("progress = " + MjAPI.formatMj((long) progress));
         // TilePump-specific fields
-        left.add("fluid = " + FluidUtilBC.getDebugString(tank));
+        left.add("fluid = " + FluidUtilBC.getDebugString(tank.getResource(0).toStack(tank.getAmountAsInt(0))));
         left.add("queue size = " + queue.size());
         left.add("infinite = " + isInfiniteWaterSource);
     }
@@ -420,7 +425,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         left.add("currentLength = " + currentLength);
         left.add("isComplete = " + isComplete());
         left.add("progress = " + MjAPI.formatMj((long) progress));
-        left.add("fluid = " + FluidUtilBC.getDebugString(tank));
+        left.add("fluid = " + FluidUtilBC.getDebugString(tank.getResource(0).toStack(tank.getAmountAsInt(0))));
         left.add("queue size = " + queue.size());
         left.add("infinite = " + isInfiniteWaterSource);
     }

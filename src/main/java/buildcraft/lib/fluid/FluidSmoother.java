@@ -7,7 +7,8 @@
 package buildcraft.lib.fluid;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
 
 /**
  * Provides smooth client-side interpolation of fluid tank levels for rendering.
@@ -17,12 +18,11 @@ import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
  * the distance, producing a smooth fill/drain animation instead of sudden jumps.
  * <p>
  * Simplified port of the 1.12.2 FluidSmoother that works with the standard
- * NeoForge {@link FluidTank} and {@code sendBlockUpdated()} sync mechanism.
+ * NeoForge {@link FluidStacksResourceHandler} and {@code sendBlockUpdated()} sync mechanism.
  */
-@SuppressWarnings("removal")
 public class FluidSmoother {
 
-    private final FluidTank tank;
+    private final FluidStacksResourceHandler tank;
 
     /** The amount currently displayed on the client. */
     private double displayAmount;
@@ -31,7 +31,7 @@ public class FluidSmoother {
     /** Whether the smoother has been initialized with a starting value. */
     private boolean initialized = false;
 
-    public FluidSmoother(FluidTank tank) {
+    public FluidSmoother(FluidStacksResourceHandler tank) {
         this.tank = tank;
     }
 
@@ -40,7 +40,7 @@ public class FluidSmoother {
      * tank's actual amount, producing a smooth transition.
      */
     public void tick() {
-        int target = tank.getFluidAmount();
+        int target = tank.getAmountAsInt(0);
 
         if (!initialized) {
             displayAmount = target;
@@ -69,7 +69,7 @@ public class FluidSmoother {
      * current tank level without any interpolation.
      */
     public void resetSmoothing() {
-        displayAmount = tank.getFluidAmount();
+        displayAmount = tank.getAmountAsInt(0);
         displayAmountPrev = displayAmount;
         initialized = true;
     }
@@ -90,12 +90,13 @@ public class FluidSmoother {
      * the smoothed quantity).
      */
     public FluidStack getFluid() {
-        return tank.getFluid();
+        FluidResource res = tank.getResource(0);
+        return res.isEmpty() ? FluidStack.EMPTY : res.toStack(tank.getAmountAsInt(0));
     }
 
-    /** Delegate for {@link FluidTank#getCapacity()}. */
+    /** Delegate for {@link FluidStacksResourceHandler#getCapacityAsInt}. */
     public int getCapacity() {
-        return tank.getCapacity();
+        return tank.getCapacityAsInt(0, FluidResource.EMPTY);
     }
 
     /** Returns the raw (non-smoothed) current display amount. */
@@ -104,12 +105,12 @@ public class FluidSmoother {
     }
 
     public void getDebugInfo(java.util.List<String> left, java.util.List<String> right, net.minecraft.core.Direction side) {
-        String contents = (tank.getFluid() != null && !tank.getFluid().isEmpty()) ? "Fluid" : "Empty";
+        String contents = (!tank.getResource(0).isEmpty()) ? "Fluid" : "Empty";
         left.add("smooth = " + String.format("%.1f", displayAmount) + " / " + target() + " (" + contents + ")");
     }
 
     private int target() {
-        return tank.getFluidAmount();
+        return tank.getAmountAsInt(0);
     }
 
     /**
@@ -122,10 +123,10 @@ public class FluidSmoother {
      * or {@code null} if the tank is empty.
      */
     public FluidStackInterp getFluidForRender(double partialTicks) {
-        FluidStack fluid = tank.getFluid();
-        if (fluid.isEmpty()) {
+        FluidResource res = tank.getResource(0);
+        if (res.isEmpty()) {
             return null;
         }
-        return new FluidStackInterp(fluid, getAmount(partialTicks));
+        return new FluidStackInterp(res.toStack(tank.getAmountAsInt(0)), getAmount(partialTicks));
     }
 }

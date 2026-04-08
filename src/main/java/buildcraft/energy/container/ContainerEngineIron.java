@@ -69,12 +69,12 @@ public class ContainerEngineIron extends ContainerBC_Neptune {
                         case DATA_BURNING -> engine.isBurning() ? 1 : 0;
                         case DATA_CURRENT_OUTPUT_HI -> (int) (engine.currentOutput >>> 32);
                         case DATA_CURRENT_OUTPUT_LO -> (int) (engine.currentOutput & 0xFFFFFFFFL);
-                        case DATA_FUEL_AMOUNT -> engine.tankFuel.getFluidAmount();
-                        case DATA_COOLANT_AMOUNT -> engine.tankCoolant.getFluidAmount();
-                        case DATA_RESIDUE_AMOUNT -> engine.tankResidue.getFluidAmount();
-                        case DATA_FUEL_FLUID_ID -> getFluidRegistryId(engine.tankFuel.getFluid());
-                        case DATA_COOLANT_FLUID_ID -> getFluidRegistryId(engine.tankCoolant.getFluid());
-                        case DATA_RESIDUE_FLUID_ID -> getFluidRegistryId(engine.tankResidue.getFluid());
+                        case DATA_FUEL_AMOUNT -> (int) engine.tankFuel.getAmountAsLong(0);
+                        case DATA_COOLANT_AMOUNT -> (int) engine.tankCoolant.getAmountAsLong(0);
+                        case DATA_RESIDUE_AMOUNT -> (int) engine.tankResidue.getAmountAsLong(0);
+                        case DATA_FUEL_FLUID_ID -> getFluidRegistryId(engine.tankFuel.getResource(0));
+                        case DATA_COOLANT_FLUID_ID -> getFluidRegistryId(engine.tankCoolant.getResource(0));
+                        case DATA_RESIDUE_FLUID_ID -> getFluidRegistryId(engine.tankResidue.getResource(0));
                         default -> 0;
                     };
                 }
@@ -170,9 +170,9 @@ public class ContainerEngineIron extends ContainerBC_Neptune {
         return getFluidFromRegistryId(data.get(DATA_RESIDUE_FLUID_ID));
     }
 
-    private static int getFluidRegistryId(net.neoforged.neoforge.fluids.FluidStack stack) {
-        if (stack.isEmpty()) return -1;
-        return BuiltInRegistries.FLUID.getId(stack.getFluid());
+    private static int getFluidRegistryId(net.neoforged.neoforge.transfer.fluid.FluidResource resource) {
+        if (resource.isEmpty()) return -1;
+        return BuiltInRegistries.FLUID.getId(resource.getFluid());
     }
 
     private static Fluid getFluidFromRegistryId(int id) {

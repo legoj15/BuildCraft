@@ -179,15 +179,15 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
         BlockEntity neighbor = tile.getLevel().getBlockEntity(neighborPos);
         if (neighbor instanceof TileTank otherTank) {
             if (!TileTank.canTanksConnect(tile, otherTank, direction)) return false;
-            FluidStack otherFluid = otherTank.tank.getFluid();
-            FluidStack thisFluid = tile.tank.getFluid();
+            net.neoforged.neoforge.transfer.fluid.FluidResource otherFluid = otherTank.tank.getResource(0);
+            net.neoforged.neoforge.transfer.fluid.FluidResource thisFluid = tile.tank.getResource(0);
             if (otherFluid.isEmpty() || thisFluid.isEmpty()) return false;
-            if (!FluidStack.isSameFluidSameComponents(thisFluid, otherFluid)) return false;
+            if (!thisFluid.equals(otherFluid)) return false;
 
             // For gaseous fluids, invert the direction check:
             // a tank below with matching gas connects seamlessly (gas floats up)
-            Direction checkDir = FluidUtilBC.isGaseous(thisFluid) ? direction.getOpposite() : direction;
-            return otherTank.tank.getFluidAmount() >= otherTank.tank.getCapacity()
+            Direction checkDir = FluidUtilBC.isGaseous(thisFluid.toStack(1)) ? direction.getOpposite() : direction;
+            return otherTank.tank.getAmountAsLong(0) >= otherTank.tank.getCapacityAsLong(0, net.neoforged.neoforge.transfer.fluid.FluidResource.EMPTY)
                     || checkDir == Direction.UP;
         }
         return false;

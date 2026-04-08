@@ -12,11 +12,12 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidUtil;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.api.fuels.BuildcraftFuelRegistry;
@@ -34,9 +35,9 @@ import buildcraft.lib.net.PacketBufferBC;
 public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
     private static final byte NET_CLICK = 0;
 
-    private final FluidTank tank;
+    private final FluidStacksResourceHandler tank;
 
-    public WidgetFluidTank(ContainerBC_Neptune container, FluidTank tank) {
+    public WidgetFluidTank(ContainerBC_Neptune container, FluidStacksResourceHandler tank) {
         super(container);
         this.tank = tank;
     }
@@ -63,7 +64,6 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
      * <p>
      * Ported from 1.12.2 Tank.onGuiClicked / transferStackToTank.
      */
-    @SuppressWarnings("deprecation") // FluidUtil is deprecated in 1.21.11 but still functional
     private void onGuiClicked() {
         Player player = container.player;
         ItemStack held = player.containerMenu.getCarried();
@@ -84,7 +84,6 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
      *
      * @return The resulting ItemStack after the transfer attempt
      */
-    @SuppressWarnings("deprecation") // FluidUtil is deprecated in 1.21.11 but still functional
     private ItemStack transferStackToTank(Player player, ItemStack stack) {
         if (player.level().isClientSide()) {
             return stack;
@@ -93,97 +92,55 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
         ItemStack original = stack;
         boolean isCreative = player.getAbilities().instabuild;
 
-        // --- Try filling the tank from the item ---
-        {
-            ItemStack singleCopy = stack.copyWithCount(1);
-            Optional<IFluidHandlerItem> opt = FluidUtil.getFluidHandler(singleCopy);
-            if (opt.isPresent()) {
-                IFluidHandlerItem itemHandler = opt.get();
-                // Simulate draining from the item
-                FluidStack drained = itemHandler.drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE);
-                if (!drained.isEmpty()) {
-                    // Simulate filling the tank
-                    int accepted = tank.fill(drained, IFluidHandler.FluidAction.SIMULATE);
-                    if (accepted > 0) {
-                        // Do it for real with a fresh copy
-                        ItemStack fillCopy = stack.copyWithCount(1);
-                        Optional<IFluidHandlerItem> fillOpt = FluidUtil.getFluidHandler(fillCopy);
-                        if (fillOpt.isPresent()) {
-                            IFluidHandlerItem fillHandler = fillOpt.get();
-                            FluidStack toDrain = drained.copyWithAmount(accepted);
-                            FluidStack realDrained = fillHandler.drain(toDrain, IFluidHandler.FluidAction.EXECUTE);
-                            if (!realDrained.isEmpty()) {
-                                int reallyFilled = tank.fill(realDrained, IFluidHandler.FluidAction.EXECUTE);
-                                if (reallyFilled > 0) {
-                                    ItemStack containerResult = fillHandler.getContainer();
-                                    if (isCreative) {
-                                        return original;
-                                    }
-                                    if (original.getCount() == 1) {
-                                        return containerResult;
-                                    } else {
-                                        original.shrink(1);
-                                        if (!containerResult.isEmpty()) {
-                                            if (!player.getInventory().add(containerResult)) {
-                                                player.drop(containerResult, false);
-                                            }
-                                        }
-                                        return original;
-                                    }
-                                }
-                            }
-                        }
+        ItemStack singleCopy = stack.copyWithCount(1);
+        ResourceHandler<FluidResource> itemHandlerIn = singleCopy.getCapability(Capabilities.Fluid.ITEM, net.neoforged.neoforge.transfer.access.ItemAccess.forPlayerInteraction(player, net.minecraft.world.InteractionHand.MAIN_HAND));
+        if (itemHandlerIn != null) {
+            // Try filling the tank from the item
+            try (Transaction tx = Transaction.openRoot()) {
+                int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
+                        itemHandlerIn, tank, r -> true, Integer.MAX_VALUE, tx
+                );
+                if (moved > 0) {
+                    tx.commit();
+                    if (isCreative) return stack;
+                    if (stack.getCount() == 1) return singleCopy;
+                    stack.shrink(1);
+                    if (!singleCopy.isEmpty() && !player.getInventory().add(singleCopy)) {
+                        player.drop(singleCopy, false);
                     }
+                    return stack;
                 }
             }
-        }
-
-        // --- Try draining the tank into the item ---
-        {
-            ItemStack drainCopy = stack.copyWithCount(1);
-            Optional<IFluidHandlerItem> opt = FluidUtil.getFluidHandler(drainCopy);
-            if (opt.isPresent()) {
-                IFluidHandlerItem drainHandler = opt.get();
-                FluidStack inTank = tank.drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE);
-                if (!inTank.isEmpty()) {
-                    int filled = drainHandler.fill(inTank, IFluidHandler.FluidAction.SIMULATE);
-                    if (filled > 0) {
-                        // Actually drain from tank and fill into item
-                        FluidStack reallyDrained = tank.drain(filled, IFluidHandler.FluidAction.EXECUTE);
-                        if (!reallyDrained.isEmpty()) {
-                            drainHandler.fill(reallyDrained, IFluidHandler.FluidAction.EXECUTE);
-                            ItemStack containerResult = drainHandler.getContainer();
-                            if (isCreative) {
-                                return original;
-                            }
-                            if (original.getCount() == 1) {
-                                return containerResult;
-                            } else {
-                                original.shrink(1);
-                                if (!containerResult.isEmpty()) {
-                                    if (!player.getInventory().add(containerResult)) {
-                                        player.drop(containerResult, false);
-                                    }
-                                }
-                                return original;
-                            }
-                        }
+            
+            // Try draining the tank into the item
+            try (Transaction tx = Transaction.openRoot()) {
+                int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
+                        tank, itemHandlerIn, r -> true, Integer.MAX_VALUE, tx
+                );
+                if (moved > 0) {
+                    tx.commit();
+                    if (isCreative) return stack;
+                    if (stack.getCount() == 1) return singleCopy;
+                    stack.shrink(1);
+                    if (!singleCopy.isEmpty() && !player.getInventory().add(singleCopy)) {
+                        player.drop(singleCopy, false);
                     }
+                    return stack;
                 }
             }
         }
 
         // --- Try solid coolant conversion (ice → water, ported from 1.12.2 Tank.map()) ---
         if (BuildcraftFuelRegistry.coolant != null) {
-            ItemStack singleCopy = stack.copyWithCount(1);
-            ISolidCoolant solidCoolant = BuildcraftFuelRegistry.coolant.getSolidCoolant(singleCopy);
+            ItemStack singleCopyCoolant = stack.copyWithCount(1);
+            ISolidCoolant solidCoolant = BuildcraftFuelRegistry.coolant.getSolidCoolant(singleCopyCoolant);
             if (solidCoolant != null) {
-                FluidStack fluidCoolant = solidCoolant.getFluidFromSolidCoolant(singleCopy);
+                FluidStack fluidCoolant = solidCoolant.getFluidFromSolidCoolant(singleCopyCoolant);
                 if (fluidCoolant != null && !fluidCoolant.isEmpty()) {
-                    int space = tank.getCapacity() - tank.getFluidAmount();
-                    if (fluidCoolant.getAmount() <= space) {
-                        int filled = tank.fill(fluidCoolant, IFluidHandler.FluidAction.EXECUTE);
-                        if (filled > 0) {
+                    try (Transaction tx = Transaction.openRoot()) {
+                        int filled = tank.insert(0, FluidResource.of(fluidCoolant), fluidCoolant.getAmount(), tx);
+                        if (filled == fluidCoolant.getAmount()) {
+                            tx.commit();
                             // Trigger "Ice cool" advancement for using solid coolant
                             buildcraft.lib.misc.AdvancementUtil.unlockAdvancement(
                                 player, net.minecraft.resources.Identifier.parse("buildcraftunofficial:ice_cool"));

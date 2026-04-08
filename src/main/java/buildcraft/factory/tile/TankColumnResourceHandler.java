@@ -8,13 +8,9 @@ package buildcraft.factory.tile;
 
 import java.util.List;
 
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 import net.neoforged.neoforge.transfer.TransferPreconditions;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
 import buildcraft.lib.misc.FluidUtilBC;
@@ -28,28 +24,12 @@ import buildcraft.lib.misc.FluidUtilBC;
  * Liquids fill from bottom to top and drain from top to bottom.
  */
 @SuppressWarnings("removal")
-public class TankColumnResourceHandler extends SnapshotJournal<List<FluidStack>> implements ResourceHandler<FluidResource> {
+public class TankColumnResourceHandler implements ResourceHandler<FluidResource> {
 
     private final TileTank owner;
 
     public TankColumnResourceHandler(TileTank owner) {
         this.owner = owner;
-    }
-
-    // --- Snapshot / rollback for transactions ---
-
-    @Override
-    protected List<FluidStack> createSnapshot() {
-        List<TileTank> tanks = owner.getTankColumn();
-        return tanks.stream().map(t -> t.tank.getFluid().copy()).toList();
-    }
-
-    @Override
-    protected void revertToSnapshot(List<FluidStack> snapshot) {
-        List<TileTank> tanks = owner.getTankColumn();
-        for (int i = 0; i < Math.min(snapshot.size(), tanks.size()); i++) {
-            tanks.get(i).tank.setFluid(snapshot.get(i));
-        }
     }
 
     // --- ResourceHandler implementation ---
@@ -64,9 +44,9 @@ public class TankColumnResourceHandler extends SnapshotJournal<List<FluidStack>>
         checkIndex(index);
         // Return the fluid type from the first non-empty tank in the column
         for (TileTank t : owner.getTankColumn()) {
-            FluidStack fluid = t.tank.getFluid();
+            FluidResource fluid = t.tank.getResource(0);
             if (!fluid.isEmpty()) {
-                return FluidResource.of(fluid);
+                return fluid;
             }
         }
         return FluidResource.EMPTY;
@@ -77,7 +57,7 @@ public class TankColumnResourceHandler extends SnapshotJournal<List<FluidStack>>
         checkIndex(index);
         long total = 0;
         for (TileTank t : owner.getTankColumn()) {
-            total += t.tank.getFluidAmount();
+            total += t.tank.getAmountAsLong(0);
         }
         return total;
     }
@@ -87,7 +67,7 @@ public class TankColumnResourceHandler extends SnapshotJournal<List<FluidStack>>
         checkIndex(index);
         long total = 0;
         for (TileTank t : owner.getTankColumn()) {
-            total += t.tank.getCapacity();
+            total += t.tank.getCapacityAsLong(0, resource);
         }
         return total;
     }
@@ -107,8 +87,8 @@ public class TankColumnResourceHandler extends SnapshotJournal<List<FluidStack>>
 
         // Check that existing fluid in the column is compatible
         for (TileTank t : tanks) {
-            FluidStack current = t.tank.getFluid();
-            if (!current.isEmpty() && !FluidResource.of(current).equals(resource)) {
+            FluidResource current = t.tank.getResource(0);
+            if (!current.isEmpty() && !current.equals(resource)) {
                 return 0; // Different fluid already present
             }
         }
@@ -118,20 +98,13 @@ public class TankColumnResourceHandler extends SnapshotJournal<List<FluidStack>>
         // Fill from bottom to top (liquids) or top to bottom (gases)
         int remaining = amount;
         int totalInserted = 0;
-        boolean snapshotted = false;
 
         if (gaseous) {
             for (int i = tanks.size() - 1; i >= 0; i--) {
                 TileTank t = tanks.get(i);
                 if (remaining <= 0) break;
-                FluidStack toFill = resource.toStack(remaining);
-                int accepted = t.tank.fill(toFill, IFluidHandler.FluidAction.SIMULATE);
+                int accepted = t.tank.insert(0, resource, remaining, transaction);
                 if (accepted > 0) {
-                    if (!snapshotted) {
-                        updateSnapshots(transaction);
-                        snapshotted = true;
-                    }
-                    t.tank.fill(toFill.copyWithAmount(accepted), IFluidHandler.FluidAction.EXECUTE);
                     remaining -= accepted;
                     totalInserted += accepted;
                 }
@@ -139,14 +112,8 @@ public class TankColumnResourceHandler extends SnapshotJournal<List<FluidStack>>
         } else {
             for (TileTank t : tanks) {
                 if (remaining <= 0) break;
-                FluidStack toFill = resource.toStack(remaining);
-                int accepted = t.tank.fill(toFill, IFluidHandler.FluidAction.SIMULATE);
+                int accepted = t.tank.insert(0, resource, remaining, transaction);
                 if (accepted > 0) {
-                    if (!snapshotted) {
-                        updateSnapshots(transaction);
-                        snapshotted = true;
-                    }
-                    t.tank.fill(toFill.copyWithAmount(accepted), IFluidHandler.FluidAction.EXECUTE);
                     remaining -= accepted;
                     totalInserted += accepted;
                 }
@@ -168,20 +135,12 @@ public class TankColumnResourceHandler extends SnapshotJournal<List<FluidStack>>
         // Drain from top to bottom (liquids) or bottom to top (gases)
         int remaining = amount;
         int totalExtracted = 0;
-        boolean snapshotted = false;
 
         if (gaseous) {
             for (TileTank t : tanks) {
                 if (remaining <= 0) break;
-                FluidStack toDrain = resource.toStack(remaining);
-                FluidStack simulated = t.tank.drain(toDrain, IFluidHandler.FluidAction.SIMULATE);
-                int extracted = simulated.isEmpty() ? 0 : simulated.getAmount();
+                int extracted = t.tank.extract(0, resource, remaining, transaction);
                 if (extracted > 0) {
-                    if (!snapshotted) {
-                        updateSnapshots(transaction);
-                        snapshotted = true;
-                    }
-                    t.tank.drain(toDrain.copyWithAmount(extracted), IFluidHandler.FluidAction.EXECUTE);
                     remaining -= extracted;
                     totalExtracted += extracted;
                 }
@@ -190,15 +149,8 @@ public class TankColumnResourceHandler extends SnapshotJournal<List<FluidStack>>
             for (int i = tanks.size() - 1; i >= 0; i--) {
                 if (remaining <= 0) break;
                 TileTank t = tanks.get(i);
-                FluidStack toDrain = resource.toStack(remaining);
-                FluidStack simulated = t.tank.drain(toDrain, IFluidHandler.FluidAction.SIMULATE);
-                int extracted = simulated.isEmpty() ? 0 : simulated.getAmount();
+                int extracted = t.tank.extract(0, resource, remaining, transaction);
                 if (extracted > 0) {
-                    if (!snapshotted) {
-                        updateSnapshots(transaction);
-                        snapshotted = true;
-                    }
-                    t.tank.drain(toDrain.copyWithAmount(extracted), IFluidHandler.FluidAction.EXECUTE);
                     remaining -= extracted;
                     totalExtracted += extracted;
                 }

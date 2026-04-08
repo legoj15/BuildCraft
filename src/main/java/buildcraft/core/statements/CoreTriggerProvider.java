@@ -12,8 +12,10 @@ import javax.annotation.Nonnull;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.ITriggerExternal;
@@ -62,8 +64,9 @@ public enum CoreTriggerProvider implements ITriggerProvider {
             blockFluidHandlerTriggers = defaults.blockFluidHandlerTriggers(side);
         }
 
-        if (!blockInventoryTriggers) {
-            if (tile instanceof IItemHandler) {
+        if (!blockInventoryTriggers && tile != null && tile.getLevel() != null) {
+            ResourceHandler<ItemResource> itemHandler = tile.getLevel().getCapability(Capabilities.Item.BLOCK, tile.getBlockPos(), side);
+            if (itemHandler != null && itemHandler.size() > 0) {
                 res.add(BCCoreStatements.TRIGGER_INVENTORY_EMPTY);
                 res.add(BCCoreStatements.TRIGGER_INVENTORY_SPACE);
                 res.add(BCCoreStatements.TRIGGER_INVENTORY_CONTAINS);
@@ -74,17 +77,16 @@ public enum CoreTriggerProvider implements ITriggerProvider {
             }
         }
 
-        if (!blockFluidHandlerTriggers) {
-            if (tile instanceof IFluidHandler fluidHandler) {
-                if (fluidHandler.getTanks() > 0) {
-                    res.add(BCCoreStatements.TRIGGER_FLUID_EMPTY);
-                    res.add(BCCoreStatements.TRIGGER_FLUID_SPACE);
-                    res.add(BCCoreStatements.TRIGGER_FLUID_CONTAINS);
-                    res.add(BCCoreStatements.TRIGGER_FLUID_FULL);
-                    res.add(BCCoreStatements.TRIGGER_FLUID_BELOW_25);
-                    res.add(BCCoreStatements.TRIGGER_FLUID_BELOW_50);
-                    res.add(BCCoreStatements.TRIGGER_FLUID_BELOW_75);
-                }
+        if (!blockFluidHandlerTriggers && tile != null && tile.getLevel() != null) {
+            ResourceHandler<FluidResource> fluidHandler = tile.getLevel().getCapability(Capabilities.Fluid.BLOCK, tile.getBlockPos(), side);
+            if (fluidHandler != null && fluidHandler.size() > 0) {
+                res.add(BCCoreStatements.TRIGGER_FLUID_EMPTY);
+                res.add(BCCoreStatements.TRIGGER_FLUID_SPACE);
+                res.add(BCCoreStatements.TRIGGER_FLUID_CONTAINS);
+                res.add(BCCoreStatements.TRIGGER_FLUID_FULL);
+                res.add(BCCoreStatements.TRIGGER_FLUID_BELOW_25);
+                res.add(BCCoreStatements.TRIGGER_FLUID_BELOW_50);
+                res.add(BCCoreStatements.TRIGGER_FLUID_BELOW_75);
             }
         }
 

@@ -168,7 +168,7 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
         }
         // Try bucket interaction first — use column-aware handler so buckets
         // fill/drain across the entire tank stack
-        boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, tank.getColumnFluidHandler());
+        boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, new buildcraft.factory.tile.TankColumnResourceHandler(tank));
         if (didChange) {
             if (!level.isClientSide()) {
                 AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);

@@ -28,8 +28,9 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.block.BlockFloodGate;
@@ -56,7 +57,7 @@ public class TileFloodGate extends BlockEntity {
 
     private static final int[] REBUILD_DELAYS = { 16, 32, 64, 128, 256 };
 
-    private final FluidTank tank = new FluidTank(2000); // 2 buckets
+    private final FluidStacksResourceHandler tank = new FluidStacksResourceHandler(1, 2000); // 2 buckets
     public final EnumSet<Direction> openSides = EnumSet.of(
             Direction.DOWN, Direction.NORTH, Direction.SOUTH,
             Direction.WEST, Direction.EAST);
@@ -69,7 +70,7 @@ public class TileFloodGate extends BlockEntity {
         super(BCFactoryBlockEntities.FLOOD_GATE.get(), pos, state);
     }
 
-    public FluidTank getTank() {
+    public FluidStacksResourceHandler getTank() {
         return tank;
     }
 
@@ -82,7 +83,7 @@ public class TileFloodGate extends BlockEntity {
     private void buildQueue() {
         queue.clear();
         paths.clear();
-        FluidStack fluid = tank.getFluid();
+        FluidResource fluid = tank.getResource(0);
         if (fluid.isEmpty()) {
             return;
         }
@@ -94,7 +95,7 @@ public class TileFloodGate extends BlockEntity {
             nextPosesToCheck.add(offset);
             paths.put(offset, ImmutableList.of(offset));
         }
-        Direction[] directions = FluidUtilBC.isGaseous(fluid) ? SEARCH_GASEOUS : SEARCH_NORMAL;
+        Direction[] directions = FluidUtilBC.isGaseous(fluid.toStack(1)) ? SEARCH_GASEOUS : SEARCH_NORMAL;
 
         outer:
         while (!nextPosesToCheck.isEmpty()) {
@@ -135,7 +136,7 @@ public class TileFloodGate extends BlockEntity {
             return true;
         }
         Fluid fluid = BlockUtil.getFluidWithFlowing(level, offsetPos);
-        return fluid != null && FluidUtilBC.areFluidsEqual(fluid, tank.getFluid().getFluid())
+        return fluid != null && FluidUtilBC.areFluidsEqual(fluid, tank.getResource(0).getFluid())
                 && BlockUtil.getFluidWithoutFlowing(level.getBlockState(offsetPos)) == null;
     }
 
@@ -144,7 +145,7 @@ public class TileFloodGate extends BlockEntity {
             return true;
         }
         Fluid fluid = BlockUtil.getFluid(level, offsetPos);
-        return FluidUtilBC.areFluidsEqual(fluid, tank.getFluid().getFluid());
+        return FluidUtilBC.areFluidsEqual(fluid, tank.getResource(0).getFluid());
     }
 
     private boolean canFillThrough(BlockPos pos) {
@@ -152,7 +153,7 @@ public class TileFloodGate extends BlockEntity {
             return false;
         }
         Fluid fluid = BlockUtil.getFluidWithFlowing(level, pos);
-        return FluidUtilBC.areFluidsEqual(fluid, tank.getFluid().getFluid());
+        return FluidUtilBC.areFluidsEqual(fluid, tank.getResource(0).getFluid());
     }
 
     // --- Ticking ---
@@ -162,15 +163,15 @@ public class TileFloodGate extends BlockEntity {
             return;
         }
 
-        if (tank.getFluidAmount() < 1000) {
+        if (tank.getAmountAsInt(0) < 1000) {
             return;
         }
 
         tick++;
         if (tick % 16 == 0) {
-            if (!tank.isEmpty() && !queue.isEmpty()) {
-                FluidStack fluid = tank.drain(1000, IFluidHandler.FluidAction.SIMULATE);
-                if (!fluid.isEmpty() && fluid.getAmount() >= 1000) {
+            if (!tank.getResource(0).isEmpty() && !queue.isEmpty()) {
+                FluidResource res = tank.getResource(0);
+                if (tank.getAmountAsInt(0) >= 1000) {
                     BlockPos currentPos = queue.removeLast();
                     List<BlockPos> path = paths.get(currentPos);
                     boolean canFill = true;
@@ -187,11 +188,14 @@ public class TileFloodGate extends BlockEntity {
                     }
                     if (canFill && canFill(currentPos)) {
                         // Place the fluid block
-                        Fluid fluidType = tank.getFluid().getFluid();
+                        Fluid fluidType = res.getFluid();
                         BlockState fluidBlock = fluidType.defaultFluidState().createLegacyBlock();
                         if (!fluidBlock.isAir()) {
                             level.setBlock(currentPos, fluidBlock, Block.UPDATE_ALL);
-                            tank.drain(1000, IFluidHandler.FluidAction.EXECUTE);
+                            try (Transaction tx = Transaction.openRoot()) {
+                                tank.extract(0, res, 1000, tx);
+                                tx.commit();
+                            }
                             delayIndex = 0;
                             tick = 0;
                         }

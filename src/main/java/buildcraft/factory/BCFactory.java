@@ -12,7 +12,9 @@ import org.slf4j.LoggerFactory;
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.core.BCCore;
-import buildcraft.lib.misc.FluidTankResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
 /**
  * BuildCraft Factory initializer. No longer a separate @Mod — called from BCCore.
@@ -60,15 +62,18 @@ public class BCFactory {
         event.registerBlockEntity(Capabilities.Fluid.BLOCK, BCFactoryBlockEntities.TANK.get(),
             (tank, direction) -> new buildcraft.factory.tile.TankColumnResourceHandler(tank));
         event.registerBlockEntity(Capabilities.Fluid.BLOCK, BCFactoryBlockEntities.PUMP.get(),
-            (pump, direction) -> new FluidTankResourceHandler(pump.getTank()) {
-                @Override
-                public int insert(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource,
-                                  int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
-                    return 0;
-                }
+            (pump, direction) -> new ResourceHandler<FluidResource>() {
+                private final ResourceHandler<FluidResource> tank = pump.getTank();
+                @Override public int size() { return tank.size(); }
+                @Override public FluidResource getResource(int index) { return tank.getResource(index); }
+                @Override public long getAmountAsLong(int index) { return tank.getAmountAsLong(index); }
+                @Override public long getCapacityAsLong(int index, FluidResource resource) { return tank.getCapacityAsLong(index, resource); }
+                @Override public boolean isValid(int index, FluidResource resource) { return tank.isValid(index, resource); }
+                @Override public int extract(int index, FluidResource resource, int amount, TransactionContext tx) { return tank.extract(index, resource, amount, tx); }
+                @Override public int insert(int index, FluidResource resource, int amount, TransactionContext tx) { return 0; }
             });
         event.registerBlockEntity(Capabilities.Fluid.BLOCK, BCFactoryBlockEntities.FLOOD_GATE.get(),
-            (floodGate, direction) -> new FluidTankResourceHandler(floodGate.getTank()));
+            (floodGate, direction) -> floodGate.getTank());
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCFactoryBlockEntities.CHUTE.get(),
             (chute, direction) -> chute.getMjReceiver());
         event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCFactoryBlockEntities.CHUTE.get(),
@@ -79,31 +84,32 @@ public class BCFactory {
             (distiller, direction) -> distiller.getMjReceiver());
         event.registerBlockEntity(Capabilities.Fluid.BLOCK, BCFactoryBlockEntities.DISTILLER.get(),
             (distiller, direction) -> {
-                net.neoforged.neoforge.fluids.capability.templates.FluidTank tank = distiller.getTankForSide(direction);
+                ResourceHandler<FluidResource> tank = distiller.getTankForSide(direction);
                 if (tank == null) return null;
                 if (tank == distiller.getTankIn()) {
-                    return new FluidTankResourceHandler(tank) {
-                        @Override
-                        public int extract(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource,
-                                           int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
-                            return 0;
-                        }
+                    return new ResourceHandler<FluidResource>() {
+                        @Override public int size() { return tank.size(); }
+                        @Override public FluidResource getResource(int index) { return tank.getResource(index); }
+                        @Override public long getAmountAsLong(int index) { return tank.getAmountAsLong(index); }
+                        @Override public long getCapacityAsLong(int index, FluidResource resource) { return tank.getCapacityAsLong(index, resource); }
+                        @Override public boolean isValid(int index, FluidResource resource) { return tank.isValid(index, resource); }
+                        @Override public int insert(int index, FluidResource resource, int amount, TransactionContext tx) { return tank.insert(index, resource, amount, tx); }
+                        @Override public int extract(int index, FluidResource resource, int amount, TransactionContext tx) { return 0; }
                     };
                 } else {
-                    return new FluidTankResourceHandler(tank) {
-                        @Override
-                        public int insert(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource,
-                                          int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
-                            return 0;
-                        }
+                    return new ResourceHandler<FluidResource>() {
+                        @Override public int size() { return tank.size(); }
+                        @Override public FluidResource getResource(int index) { return tank.getResource(index); }
+                        @Override public long getAmountAsLong(int index) { return tank.getAmountAsLong(index); }
+                        @Override public long getCapacityAsLong(int index, FluidResource resource) { return tank.getCapacityAsLong(index, resource); }
+                        @Override public boolean isValid(int index, FluidResource resource) { return tank.isValid(index, resource); }
+                        @Override public int extract(int index, FluidResource resource, int amount, TransactionContext tx) { return tank.extract(index, resource, amount, tx); }
+                        @Override public int insert(int index, FluidResource resource, int amount, TransactionContext tx) { return 0; }
                     };
                 }
             });
         event.registerBlockEntity(Capabilities.Fluid.BLOCK, BCFactoryBlockEntities.HEAT_EXCHANGE.get(),
-            (heatExchange, direction) -> {
-                net.neoforged.neoforge.fluids.capability.templates.FluidTank tank = heatExchange.getFluidTankForDirection(direction);
-                return tank != null ? new FluidTankResourceHandler(tank) : null;
-            });
+            (heatExchange, direction) -> heatExchange.getFluidTankForDirection(direction));
     }
 
     private static void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {

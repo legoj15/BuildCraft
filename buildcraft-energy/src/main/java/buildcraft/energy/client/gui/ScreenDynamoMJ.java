@@ -82,8 +82,11 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
         int x = (int) mainGui.rootElement.getX();
         int y = (int) mainGui.rootElement.getY();
         
-        // Item rendering for gears is deferred due to 1.21.11 rendering API changes 
-        // (GuiGraphicsExtractor lacks renderItem without full vertex pipelines access)
+        net.minecraft.world.item.ItemStack gearIron = new net.minecraft.world.item.ItemStack(buildcraft.core.BCCoreItems.GEAR_IRON.get());
+        net.minecraft.world.item.ItemStack gearGold = new net.minecraft.world.item.ItemStack(buildcraft.core.BCCoreItems.GEAR_GOLD.get());
+        
+        graphics.item(gearIron, x + 43, y + 21);
+        graphics.item(gearGold, x + 61, y + 21);
         
         graphics.blit(
             net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE,

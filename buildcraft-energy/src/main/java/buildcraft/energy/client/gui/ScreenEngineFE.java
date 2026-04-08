@@ -96,6 +96,12 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
         double scale = net.minecraft.client.Minecraft.getInstance().getWindow().getGuiScale();
         rfHeight = (Math.round(rfHeight * scale)) / scale;
         ICON_RF.drawCutInside(new buildcraft.lib.gui.pos.GuiRectangle(31, 18 + 60 - rfHeight, 6, rfHeight).offset(mainGui.rootElement));
+        
+        net.minecraft.world.item.ItemStack gearIron = new net.minecraft.world.item.ItemStack(buildcraft.core.BCCoreItems.GEAR_IRON.get());
+        net.minecraft.world.item.ItemStack gearGold = new net.minecraft.world.item.ItemStack(buildcraft.core.BCCoreItems.GEAR_GOLD.get());
+        
+        graphics.item(gearIron, x + 78, y + 21);
+        graphics.item(gearGold, x + 96, y + 21);
     }
 
     @Override

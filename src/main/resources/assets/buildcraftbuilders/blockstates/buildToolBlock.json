@@ -1,5 +1,5 @@
 {
     "variants": {
-        "normal": { "model": "buildcraftunofficial:buildToolBlock" }
+        "normal": { "model": "buildcraftunofficial:buildtoolblock" }
     }
 }

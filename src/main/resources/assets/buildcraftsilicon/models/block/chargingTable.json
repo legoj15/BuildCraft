@@ -1,5 +1,5 @@
 {
-    "parent": "buildcraftunofficial:block/laserTable",
+    "parent": "buildcraftunofficial:block/lasertable",
     "textures": {
         "top": "buildcraft:blocks/chargingtable_top",
         "side": "buildcraft:blocks/chargingtable_side",

@@ -1,0 +1,927 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :createMinecraftArtifacts UP-TO-DATE
+> Task :compileJava UP-TO-DATE
+> Task :processResources UP-TO-DATE
+> Task :classes UP-TO-DATE
+
+> Task :compileTestJava FAILED
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:6: error: package com.google.common.collect does not exist
+import com.google.common.collect.ImmutableList;
+                                ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:12: error: package net.minecraft.core does not exist
+import net.minecraft.core.BlockPos;
+                         ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:17: error: cannot find symbol
+    private static final BlockPos SIZE = new BlockPos(6, 4, 8);
+                         ^
+  symbol:   class BlockPos
+  location: class PosIndexTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:19: error: cannot find symbol
+    public static Stream<BlockPos> positions() {
+                         ^
+  symbol:   class BlockPos
+  location: class PosIndexTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:33: error: cannot find symbol
+    public void test(BlockPos pos) {
+                     ^
+  symbol:   class BlockPos
+  location: class PosIndexTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:13: error: package net.minecraft.core does not exist
+import net.minecraft.core.BlockPos;
+                         ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:14: error: package net.minecraft.world.phys does not exist
+import net.minecraft.world.phys.Vec3;
+                               ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:20: error: cannot find symbol
+    private static final BlockPos MIN = new BlockPos(1, 2, 3), MAX = new BlockPos(4, 5, 6);
+                         ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:21: error: cannot find symbol
+    private static final BlockPos SIZE = new BlockPos(4, 4, 4);
+                         ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:22: error: cannot find symbol
+    private static final BlockPos CENTER = new BlockPos(3, 4, 5);
+                         ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:23: error: cannot find symbol
+    private static final Vec3 CENTER_EXACT = new Vec3(3, 4, 5);
+                         ^
+  symbol:   class Vec3
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:25: error: cannot find symbol
+    public static Stream<Entry<Vec3, Boolean>> dataContainsVec3() {
+                               ^
+  symbol:   class Vec3
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:37: error: cannot find symbol
+    public void testContainsVec3(Entry<Vec3, Boolean> entry) {
+                                       ^
+  symbol:   class Vec3
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:10: error: package net.minecraft.core does not exist
+import net.minecraft.core.Direction;
+                         ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:11: error: package net.minecraft.core does not exist
+import net.minecraft.core.BlockPos;
+                         ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:34: error: cannot find symbol
+    public static final BlockPos[] SIZES = {
+                        ^
+  symbol:   class BlockPos
+  location: class ShapePatternsTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:50: error: cannot find symbol
+    private static IFilledTemplate createFilledTemplate(BlockPos size) {
+                                                        ^
+  symbol:   class BlockPos
+  location: class ShapePatternsTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\client\model\MutableQuadTest.java:6: error: package net.minecraft.core does not exist
+import net.minecraft.core.Direction;
+                         ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\client\model\MutableQuadTest.java:7: error: package net.minecraft.core does not exist
+import net.minecraft.core.Vec3i;
+                         ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\inventory\ItemTransactorTester.java:5: error: package net.minecraft.world.item does not exist
+import net.minecraft.world.item.Items;
+                               ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\inventory\ItemTransactorTester.java:6: error: package net.minecraft.world.item does not exist
+import net.minecraft.world.item.ItemStack;
+                               ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\list\ListTester.java:8: error: package net.minecraft.world.item does not exist
+import net.minecraft.world.item.Items;
+                               ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\list\ListTester.java:9: error: package net.minecraft.world.item does not exist
+import net.minecraft.world.item.ItemStack;
+                               ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\misc\data\AverageLongTester.java:6: error: package net.minecraft.nbt does not exist
+import net.minecraft.nbt.CompoundTag;
+                        ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\misc\data\BoxIteratorTester.java:8: error: package net.minecraft.core does not exist
+import net.minecraft.core.BlockPos;
+                         ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\misc\HashUtilTester.java:8: error: package net.minecraft.nbt does not exist
+import net.minecraft.nbt.CompoundTag;
+                        ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\misc\PositionUtilTester.java:6: error: package com.google.common.collect does not exist
+import com.google.common.collect.ImmutableList;
+                                ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\misc\PositionUtilTester.java:13: error: package net.minecraft.core does not exist
+import net.minecraft.core.BlockPos;
+                         ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\misc\PositionUtilTester.java:51: error: cannot find symbol
+    public void testNormalDataPoint(BlockPos[] path) {
+                                    ^
+  symbol:   class BlockPos
+  location: class PositionUtilTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\misc\PositionUtilTester.java:62: error: cannot find symbol
+    public void testBounds(BlockPos[] box) {
+                           ^
+  symbol:   class BlockPos
+  location: class PositionUtilTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PacketBufferBcTest.java:3: error: package io.netty.buffer does not exist
+import io.netty.buffer.Unpooled;
+                      ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PacketBufferBcTest.java:8: error: package net.minecraft.world.item does not exist
+import net.minecraft.world.item.DyeColor;
+                               ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PacketBufferBcTest.java:9: error: package net.minecraft.core does not exist
+import net.minecraft.core.Direction;
+                         ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:11: error: package io.netty.buffer does not exist
+import io.netty.buffer.ByteBuf;
+                      ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:13: error: package io.netty.buffer does not exist
+import io.netty.buffer.ByteBuf;
+                      ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:15: error: package net.minecraft.network does not exist
+import net.minecraft.network.FriendlyByteBuf;
+                            ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:22: error: cannot find symbol
+    public PrintingByteBuf(ByteBuf wrapped) {
+                           ^
+  symbol:   class ByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:28: error: cannot find symbol
+    public FriendlyByteBuf writeByte(int val) {
+           ^
+  symbol:   class FriendlyByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:35: error: cannot find symbol
+    public FriendlyByteBuf writeBytes(byte[] val) {
+           ^
+  symbol:   class FriendlyByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:43: error: cannot find symbol
+    public FriendlyByteBuf writeBytes(byte[] src, int srcIndex, int length) {
+           ^
+  symbol:   class FriendlyByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:51: error: cannot find symbol
+    public FriendlyByteBuf writeBytes(ByteBuf src) {
+                                      ^
+  symbol:   class ByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:51: error: cannot find symbol
+    public FriendlyByteBuf writeBytes(ByteBuf src) {
+           ^
+  symbol:   class FriendlyByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:57: error: cannot find symbol
+    public FriendlyByteBuf writeBytes(ByteBuf src, int length) {
+                                      ^
+  symbol:   class ByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:57: error: cannot find symbol
+    public FriendlyByteBuf writeBytes(ByteBuf src, int length) {
+           ^
+  symbol:   class FriendlyByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:65: error: cannot find symbol
+    public FriendlyByteBuf writeBytes(ByteBuf src, int srcIndex, int length) {
+                                      ^
+  symbol:   class ByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:65: error: cannot find symbol
+    public FriendlyByteBuf writeBytes(ByteBuf src, int srcIndex, int length) {
+           ^
+  symbol:   class FriendlyByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:73: error: cannot find symbol
+    public FriendlyByteBuf writeVarInt(int value) {
+           ^
+  symbol:   class FriendlyByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:81: error: cannot find symbol
+    public FriendlyByteBuf writeVarLong(long value) {
+           ^
+  symbol:   class FriendlyByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:89: error: cannot find symbol
+    public FriendlyByteBuf writeShort(int val) {
+           ^
+  symbol:   class FriendlyByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:96: error: cannot find symbol
+    public FriendlyByteBuf writeInt(int val) {
+           ^
+  symbol:   class FriendlyByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:103: error: cannot find symbol
+    public FriendlyByteBuf writeLong(long val) {
+           ^
+  symbol:   class FriendlyByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:110: error: cannot find symbol
+    public FriendlyByteBuf writeFloat(float val) {
+           ^
+  symbol:   class FriendlyByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:117: error: cannot find symbol
+    public FriendlyByteBuf writeDouble(double val) {
+           ^
+  symbol:   class FriendlyByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:124: error: cannot find symbol
+    public FriendlyByteBuf setByte(int index, int value) {
+           ^
+  symbol:   class FriendlyByteBuf
+  location: class PrintingByteBuf
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\TestHelper.java:5: error: package net.minecraft.world.phys does not exist
+import net.minecraft.world.phys.Vec3;
+                               ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\TestHelper.java:8: error: cannot find symbol
+    public static void assertVec3Equals(Vec3 expected, Vec3 centerExact2) {
+                                        ^
+  symbol:   class Vec3
+  location: class TestHelper
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\TestHelper.java:8: error: cannot find symbol
+    public static void assertVec3Equals(Vec3 expected, Vec3 centerExact2) {
+                                                       ^
+  symbol:   class Vec3
+  location: class TestHelper
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\VanillaSetupBaseTester.java:8: error: package net.minecraft.server does not exist
+import net.minecraft.server.Bootstrap;
+                           ^
+warning: unknown enum constant Dist.CLIENT
+  reason: class file for net.neoforged.api.distmarker.Dist not found
+warning: unknown enum constant Dist.DEDICATED_SERVER
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:17: error: cannot find symbol
+    private static final BlockPos SIZE = new BlockPos(6, 4, 8);
+                                             ^
+  symbol:   class BlockPos
+  location: class PosIndexTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:20: error: package ImmutableList does not exist
+        ImmutableList.Builder<BlockPos> builder = new ImmutableList.Builder<>();
+                     ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:20: error: cannot find symbol
+        ImmutableList.Builder<BlockPos> builder = new ImmutableList.Builder<>();
+                              ^
+  symbol:   class BlockPos
+  location: class PosIndexTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:20: error: package ImmutableList does not exist
+        ImmutableList.Builder<BlockPos> builder = new ImmutableList.Builder<>();
+                                                                   ^
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:24: error: cannot find symbol
+                    builder.add(new BlockPos(x, y, z));
+                                    ^
+  symbol:   class BlockPos
+  location: class PosIndexTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:20: error: cannot find symbol
+    private static final BlockPos MIN = new BlockPos(1, 2, 3), MAX = new BlockPos(4, 5, 6);
+                                            ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:20: error: cannot find symbol
+    private static final BlockPos MIN = new BlockPos(1, 2, 3), MAX = new BlockPos(4, 5, 6);
+                                                                         ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:21: error: cannot find symbol
+    private static final BlockPos SIZE = new BlockPos(4, 4, 4);
+                                             ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:22: error: cannot find symbol
+    private static final BlockPos CENTER = new BlockPos(3, 4, 5);
+                                               ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:23: error: cannot find symbol
+    private static final Vec3 CENTER_EXACT = new Vec3(3, 4, 5);
+                                                 ^
+  symbol:   class Vec3
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:27: error: cannot find symbol
+            new AbstractMap.SimpleEntry<>(new Vec3(0, 0, 0), false),
+                                              ^
+  symbol:   class Vec3
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:28: error: cannot find symbol
+            new AbstractMap.SimpleEntry<>(new Vec3(1, 2, 3), true),
+                                              ^
+  symbol:   class Vec3
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:29: error: cannot find symbol
+            new AbstractMap.SimpleEntry<>(new Vec3(1.3, 2.4, 3.5), true),
+                                              ^
+  symbol:   class Vec3
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:30: error: cannot find symbol
+            new AbstractMap.SimpleEntry<>(new Vec3(4.9, 5.9, 6.9), true),
+                                              ^
+  symbol:   class Vec3
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:31: error: cannot find symbol
+            new AbstractMap.SimpleEntry<>(new Vec3(5, 5, 6), false)
+                                              ^
+  symbol:   class Vec3
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:26: error: incompatible types: inferred type does not conform to equality constraint(s)
+        return Stream.of(
+                        ^
+    inferred: Object
+    equality constraints(s): Entry<Vec3,Boolean>
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:39: error: cannot find symbol
+        Vec3 in = entry.getKey();
+        ^
+  symbol:   class Vec3
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:76: error: cannot find symbol
+        Box box1 = new Box(new BlockPos(0, 0, 0), new BlockPos(2, 2, 2));
+                               ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:76: error: cannot find symbol
+        Box box1 = new Box(new BlockPos(0, 0, 0), new BlockPos(2, 2, 2));
+                                                      ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:77: error: cannot find symbol
+        Box box2 = new Box(new BlockPos(1, 1, 1), new BlockPos(3, 3, 3));
+                               ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:77: error: cannot find symbol
+        Box box2 = new Box(new BlockPos(1, 1, 1), new BlockPos(3, 3, 3));
+                                                      ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:78: error: cannot find symbol
+        Box inter = new Box(new BlockPos(1, 1, 1), new BlockPos(2, 2, 2));
+                                ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:78: error: cannot find symbol
+        Box inter = new Box(new BlockPos(1, 1, 1), new BlockPos(2, 2, 2));
+                                                       ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:85: error: cannot find symbol
+        Box box1 = new Box(new BlockPos(0, 0, 0), new BlockPos(2, 2, 2));
+                               ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:85: error: cannot find symbol
+        Box box1 = new Box(new BlockPos(0, 0, 0), new BlockPos(2, 2, 2));
+                                                      ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:86: error: cannot find symbol
+        Box box2 = new Box(new BlockPos(0, 0, 0), new BlockPos(3, 3, 3));
+                               ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:86: error: cannot find symbol
+        Box box2 = new Box(new BlockPos(0, 0, 0), new BlockPos(3, 3, 3));
+                                                      ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:87: error: cannot find symbol
+        Box inter = new Box(new BlockPos(0, 0, 0), new BlockPos(2, 2, 2));
+                                ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:87: error: cannot find symbol
+        Box inter = new Box(new BlockPos(0, 0, 0), new BlockPos(2, 2, 2));
+                                                       ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:94: error: cannot find symbol
+        Box box1 = new Box(new BlockPos(1, 1, 1), new BlockPos(2, 2, 2));
+                               ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:94: error: cannot find symbol
+        Box box1 = new Box(new BlockPos(1, 1, 1), new BlockPos(2, 2, 2));
+                                                      ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:95: error: cannot find symbol
+        Box box2 = new Box(new BlockPos(0, 0, 0), new BlockPos(1, 1, 1));
+                               ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:95: error: cannot find symbol
+        Box box2 = new Box(new BlockPos(0, 0, 0), new BlockPos(1, 1, 1));
+                                                      ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:96: error: cannot find symbol
+        Box inter = new Box(new BlockPos(1, 1, 1), new BlockPos(1, 1, 1));
+                                ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:96: error: cannot find symbol
+        Box inter = new Box(new BlockPos(1, 1, 1), new BlockPos(1, 1, 1));
+                                                       ^
+  symbol:   class BlockPos
+  location: class BoxTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:35: error: cannot find symbol
+        new BlockPos(1, 1, 1), new BlockPos(2, 1, 1), new BlockPos(3, 1, 1),
+            ^
+  symbol:   class BlockPos
+  location: class ShapePatternsTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:35: error: cannot find symbol
+        new BlockPos(1, 1, 1), new BlockPos(2, 1, 1), new BlockPos(3, 1, 1),
+                                   ^
+  symbol:   class BlockPos
+  location: class ShapePatternsTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:35: error: cannot find symbol
+        new BlockPos(1, 1, 1), new BlockPos(2, 1, 1), new BlockPos(3, 1, 1),
+                                                          ^
+  symbol:   class BlockPos
+  location: class ShapePatternsTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:36: error: cannot find symbol
+        new BlockPos(2, 2, 2), new BlockPos(3, 2, 2), new BlockPos(4, 2, 2),
+            ^
+  symbol:   class BlockPos
+  location: class ShapePatternsTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:36: error: cannot find symbol
+        new BlockPos(2, 2, 2), new BlockPos(3, 2, 2), new BlockPos(4, 2, 2),
+                                   ^
+  symbol:   class BlockPos
+  location: class ShapePatternsTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:36: error: cannot find symbol
+        new BlockPos(2, 2, 2), new BlockPos(3, 2, 2), new BlockPos(4, 2, 2),
+                                                          ^
+  symbol:   class BlockPos
+  location: class ShapePatternsTester
+E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:37: error: cannot find symbol
+        new BlockPos(2, 3, 2), new BlockPos(2, 2, 3), new BlockPos(2, 8, 2),
+            ^
+  symbol:   class BlockPos
+  location: class ShapePatternsTester
+Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+100 errors
+2 warnings
+
+
+[Incubating] Problems report is available at: file:///E:/GitHub/BuildCraft/build/reports/problems/problems-report.html
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileTestJava'.
+> Compilation failed; see the compiler output below.
+  warning: unknown enum constant Dist.CLIENT
+    reason: class file for net.neoforged.api.distmarker.Dist not found
+  warning: unknown enum constant Dist.DEDICATED_SERVER
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:26: error: incompatible types: inferred type does not conform to equality constraint(s)
+          return Stream.of(
+                          ^
+      inferred: Object
+      equality constraints(s): Entry<Vec3,Boolean>
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:17: error: cannot find symbol
+      private static final BlockPos SIZE = new BlockPos(6, 4, 8);
+                           ^
+    symbol:   class BlockPos
+    location: class PosIndexTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:19: error: cannot find symbol
+      public static Stream<BlockPos> positions() {
+                           ^
+    symbol:   class BlockPos
+    location: class PosIndexTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:33: error: cannot find symbol
+      public void test(BlockPos pos) {
+                       ^
+    symbol:   class BlockPos
+    location: class PosIndexTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:20: error: cannot find symbol
+      private static final BlockPos MIN = new BlockPos(1, 2, 3), MAX = new BlockPos(4, 5, 6);
+                           ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:21: error: cannot find symbol
+      private static final BlockPos SIZE = new BlockPos(4, 4, 4);
+                           ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:22: error: cannot find symbol
+      private static final BlockPos CENTER = new BlockPos(3, 4, 5);
+                           ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:23: error: cannot find symbol
+      private static final Vec3 CENTER_EXACT = new Vec3(3, 4, 5);
+                           ^
+    symbol:   class Vec3
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:25: error: cannot find symbol
+      public static Stream<Entry<Vec3, Boolean>> dataContainsVec3() {
+                                 ^
+    symbol:   class Vec3
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:37: error: cannot find symbol
+      public void testContainsVec3(Entry<Vec3, Boolean> entry) {
+                                         ^
+    symbol:   class Vec3
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:34: error: cannot find symbol
+      public static final BlockPos[] SIZES = {
+                          ^
+    symbol:   class BlockPos
+    location: class ShapePatternsTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:50: error: cannot find symbol
+      private static IFilledTemplate createFilledTemplate(BlockPos size) {
+                                                          ^
+    symbol:   class BlockPos
+    location: class ShapePatternsTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\misc\PositionUtilTester.java:51: error: cannot find symbol
+      public void testNormalDataPoint(BlockPos[] path) {
+                                      ^
+    symbol:   class BlockPos
+    location: class PositionUtilTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\misc\PositionUtilTester.java:62: error: cannot find symbol
+      public void testBounds(BlockPos[] box) {
+                             ^
+    symbol:   class BlockPos
+    location: class PositionUtilTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:22: error: cannot find symbol
+      public PrintingByteBuf(ByteBuf wrapped) {
+                             ^
+    symbol:   class ByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:28: error: cannot find symbol
+      public FriendlyByteBuf writeByte(int val) {
+             ^
+    symbol:   class FriendlyByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:35: error: cannot find symbol
+      public FriendlyByteBuf writeBytes(byte[] val) {
+             ^
+    symbol:   class FriendlyByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:43: error: cannot find symbol
+      public FriendlyByteBuf writeBytes(byte[] src, int srcIndex, int length) {
+             ^
+    symbol:   class FriendlyByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:51: error: cannot find symbol
+      public FriendlyByteBuf writeBytes(ByteBuf src) {
+                                        ^
+    symbol:   class ByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:51: error: cannot find symbol
+      public FriendlyByteBuf writeBytes(ByteBuf src) {
+             ^
+    symbol:   class FriendlyByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:57: error: cannot find symbol
+      public FriendlyByteBuf writeBytes(ByteBuf src, int length) {
+                                        ^
+    symbol:   class ByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:57: error: cannot find symbol
+      public FriendlyByteBuf writeBytes(ByteBuf src, int length) {
+             ^
+    symbol:   class FriendlyByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:65: error: cannot find symbol
+      public FriendlyByteBuf writeBytes(ByteBuf src, int srcIndex, int length) {
+                                        ^
+    symbol:   class ByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:65: error: cannot find symbol
+      public FriendlyByteBuf writeBytes(ByteBuf src, int srcIndex, int length) {
+             ^
+    symbol:   class FriendlyByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:73: error: cannot find symbol
+      public FriendlyByteBuf writeVarInt(int value) {
+             ^
+    symbol:   class FriendlyByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:81: error: cannot find symbol
+      public FriendlyByteBuf writeVarLong(long value) {
+             ^
+    symbol:   class FriendlyByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:89: error: cannot find symbol
+      public FriendlyByteBuf writeShort(int val) {
+             ^
+    symbol:   class FriendlyByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:96: error: cannot find symbol
+      public FriendlyByteBuf writeInt(int val) {
+             ^
+    symbol:   class FriendlyByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:103: error: cannot find symbol
+      public FriendlyByteBuf writeLong(long val) {
+             ^
+    symbol:   class FriendlyByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:110: error: cannot find symbol
+      public FriendlyByteBuf writeFloat(float val) {
+             ^
+    symbol:   class FriendlyByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:117: error: cannot find symbol
+      public FriendlyByteBuf writeDouble(double val) {
+             ^
+    symbol:   class FriendlyByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:124: error: cannot find symbol
+      public FriendlyByteBuf setByte(int index, int value) {
+             ^
+    symbol:   class FriendlyByteBuf
+    location: class PrintingByteBuf
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\TestHelper.java:8: error: cannot find symbol
+      public static void assertVec3Equals(Vec3 expected, Vec3 centerExact2) {
+                                          ^
+    symbol:   class Vec3
+    location: class TestHelper
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\TestHelper.java:8: error: cannot find symbol
+      public static void assertVec3Equals(Vec3 expected, Vec3 centerExact2) {
+                                                         ^
+    symbol:   class Vec3
+    location: class TestHelper
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:17: error: cannot find symbol
+      private static final BlockPos SIZE = new BlockPos(6, 4, 8);
+                                               ^
+    symbol:   class BlockPos
+    location: class PosIndexTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:20: error: cannot find symbol
+          ImmutableList.Builder<BlockPos> builder = new ImmutableList.Builder<>();
+                                ^
+    symbol:   class BlockPos
+    location: class PosIndexTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:24: error: cannot find symbol
+                      builder.add(new BlockPos(x, y, z));
+                                      ^
+    symbol:   class BlockPos
+    location: class PosIndexTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:20: error: cannot find symbol
+      private static final BlockPos MIN = new BlockPos(1, 2, 3), MAX = new BlockPos(4, 5, 6);
+                                              ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:20: error: cannot find symbol
+      private static final BlockPos MIN = new BlockPos(1, 2, 3), MAX = new BlockPos(4, 5, 6);
+                                                                           ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:21: error: cannot find symbol
+      private static final BlockPos SIZE = new BlockPos(4, 4, 4);
+                                               ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:22: error: cannot find symbol
+      private static final BlockPos CENTER = new BlockPos(3, 4, 5);
+                                                 ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:23: error: cannot find symbol
+      private static final Vec3 CENTER_EXACT = new Vec3(3, 4, 5);
+                                                   ^
+    symbol:   class Vec3
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:27: error: cannot find symbol
+              new AbstractMap.SimpleEntry<>(new Vec3(0, 0, 0), false),
+                                                ^
+    symbol:   class Vec3
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:28: error: cannot find symbol
+              new AbstractMap.SimpleEntry<>(new Vec3(1, 2, 3), true),
+                                                ^
+    symbol:   class Vec3
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:29: error: cannot find symbol
+              new AbstractMap.SimpleEntry<>(new Vec3(1.3, 2.4, 3.5), true),
+                                                ^
+    symbol:   class Vec3
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:30: error: cannot find symbol
+              new AbstractMap.SimpleEntry<>(new Vec3(4.9, 5.9, 6.9), true),
+                                                ^
+    symbol:   class Vec3
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:31: error: cannot find symbol
+              new AbstractMap.SimpleEntry<>(new Vec3(5, 5, 6), false)
+                                                ^
+    symbol:   class Vec3
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:39: error: cannot find symbol
+          Vec3 in = entry.getKey();
+          ^
+    symbol:   class Vec3
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:76: error: cannot find symbol
+          Box box1 = new Box(new BlockPos(0, 0, 0), new BlockPos(2, 2, 2));
+                                 ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:76: error: cannot find symbol
+          Box box1 = new Box(new BlockPos(0, 0, 0), new BlockPos(2, 2, 2));
+                                                        ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:77: error: cannot find symbol
+          Box box2 = new Box(new BlockPos(1, 1, 1), new BlockPos(3, 3, 3));
+                                 ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:77: error: cannot find symbol
+          Box box2 = new Box(new BlockPos(1, 1, 1), new BlockPos(3, 3, 3));
+                                                        ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:78: error: cannot find symbol
+          Box inter = new Box(new BlockPos(1, 1, 1), new BlockPos(2, 2, 2));
+                                  ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:78: error: cannot find symbol
+          Box inter = new Box(new BlockPos(1, 1, 1), new BlockPos(2, 2, 2));
+                                                         ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:85: error: cannot find symbol
+          Box box1 = new Box(new BlockPos(0, 0, 0), new BlockPos(2, 2, 2));
+                                 ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:85: error: cannot find symbol
+          Box box1 = new Box(new BlockPos(0, 0, 0), new BlockPos(2, 2, 2));
+                                                        ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:86: error: cannot find symbol
+          Box box2 = new Box(new BlockPos(0, 0, 0), new BlockPos(3, 3, 3));
+                                 ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:86: error: cannot find symbol
+          Box box2 = new Box(new BlockPos(0, 0, 0), new BlockPos(3, 3, 3));
+                                                        ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:87: error: cannot find symbol
+          Box inter = new Box(new BlockPos(0, 0, 0), new BlockPos(2, 2, 2));
+                                  ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:87: error: cannot find symbol
+          Box inter = new Box(new BlockPos(0, 0, 0), new BlockPos(2, 2, 2));
+                                                         ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:94: error: cannot find symbol
+          Box box1 = new Box(new BlockPos(1, 1, 1), new BlockPos(2, 2, 2));
+                                 ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:94: error: cannot find symbol
+          Box box1 = new Box(new BlockPos(1, 1, 1), new BlockPos(2, 2, 2));
+                                                        ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:95: error: cannot find symbol
+          Box box2 = new Box(new BlockPos(0, 0, 0), new BlockPos(1, 1, 1));
+                                 ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:95: error: cannot find symbol
+          Box box2 = new Box(new BlockPos(0, 0, 0), new BlockPos(1, 1, 1));
+                                                        ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:96: error: cannot find symbol
+          Box inter = new Box(new BlockPos(1, 1, 1), new BlockPos(1, 1, 1));
+                                  ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:96: error: cannot find symbol
+          Box inter = new Box(new BlockPos(1, 1, 1), new BlockPos(1, 1, 1));
+                                                         ^
+    symbol:   class BlockPos
+    location: class BoxTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:35: error: cannot find symbol
+          new BlockPos(1, 1, 1), new BlockPos(2, 1, 1), new BlockPos(3, 1, 1),
+              ^
+    symbol:   class BlockPos
+    location: class ShapePatternsTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:35: error: cannot find symbol
+          new BlockPos(1, 1, 1), new BlockPos(2, 1, 1), new BlockPos(3, 1, 1),
+                                     ^
+    symbol:   class BlockPos
+    location: class ShapePatternsTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:35: error: cannot find symbol
+          new BlockPos(1, 1, 1), new BlockPos(2, 1, 1), new BlockPos(3, 1, 1),
+                                                            ^
+    symbol:   class BlockPos
+    location: class ShapePatternsTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:36: error: cannot find symbol
+          new BlockPos(2, 2, 2), new BlockPos(3, 2, 2), new BlockPos(4, 2, 2),
+              ^
+    symbol:   class BlockPos
+    location: class ShapePatternsTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:36: error: cannot find symbol
+          new BlockPos(2, 2, 2), new BlockPos(3, 2, 2), new BlockPos(4, 2, 2),
+                                     ^
+    symbol:   class BlockPos
+    location: class ShapePatternsTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:36: error: cannot find symbol
+          new BlockPos(2, 2, 2), new BlockPos(3, 2, 2), new BlockPos(4, 2, 2),
+                                                            ^
+    symbol:   class BlockPos
+    location: class ShapePatternsTester
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:37: error: cannot find symbol
+          new BlockPos(2, 3, 2), new BlockPos(2, 2, 3), new BlockPos(2, 8, 2),
+              ^
+    symbol:   class BlockPos
+    location: class ShapePatternsTester
+  Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:6: error: package com.google.common.collect does not exist
+  import com.google.common.collect.ImmutableList;
+                                  ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:12: error: package net.minecraft.core does not exist
+  import net.minecraft.core.BlockPos;
+                           ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:13: error: package net.minecraft.core does not exist
+  import net.minecraft.core.BlockPos;
+                           ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\BoxTester.java:14: error: package net.minecraft.world.phys does not exist
+  import net.minecraft.world.phys.Vec3;
+                                 ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:10: error: package net.minecraft.core does not exist
+  import net.minecraft.core.Direction;
+                           ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\core\builders\patterns\ShapePatternsTester.java:11: error: package net.minecraft.core does not exist
+  import net.minecraft.core.BlockPos;
+                           ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\client\model\MutableQuadTest.java:6: error: package net.minecraft.core does not exist
+  import net.minecraft.core.Direction;
+                           ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\client\model\MutableQuadTest.java:7: error: package net.minecraft.core does not exist
+  import net.minecraft.core.Vec3i;
+                           ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\inventory\ItemTransactorTester.java:5: error: package net.minecraft.world.item does not exist
+  import net.minecraft.world.item.Items;
+                                 ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\inventory\ItemTransactorTester.java:6: error: package net.minecraft.world.item does not exist
+  import net.minecraft.world.item.ItemStack;
+                                 ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\list\ListTester.java:8: error: package net.minecraft.world.item does not exist
+  import net.minecraft.world.item.Items;
+                                 ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\list\ListTester.java:9: error: package net.minecraft.world.item does not exist
+  import net.minecraft.world.item.ItemStack;
+                                 ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\misc\data\AverageLongTester.java:6: error: package net.minecraft.nbt does not exist
+  import net.minecraft.nbt.CompoundTag;
+                          ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\misc\data\BoxIteratorTester.java:8: error: package net.minecraft.core does not exist
+  import net.minecraft.core.BlockPos;
+                           ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\misc\HashUtilTester.java:8: error: package net.minecraft.nbt does not exist
+  import net.minecraft.nbt.CompoundTag;
+                          ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\misc\PositionUtilTester.java:6: error: package com.google.common.collect does not exist
+  import com.google.common.collect.ImmutableList;
+                                  ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\misc\PositionUtilTester.java:13: error: package net.minecraft.core does not exist
+  import net.minecraft.core.BlockPos;
+                           ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PacketBufferBcTest.java:3: error: package io.netty.buffer does not exist
+  import io.netty.buffer.Unpooled;
+                        ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PacketBufferBcTest.java:8: error: package net.minecraft.world.item does not exist
+  import net.minecraft.world.item.DyeColor;
+                                 ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PacketBufferBcTest.java:9: error: package net.minecraft.core does not exist
+  import net.minecraft.core.Direction;
+                           ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:11: error: package io.netty.buffer does not exist
+  import io.netty.buffer.ByteBuf;
+                        ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:13: error: package io.netty.buffer does not exist
+  import io.netty.buffer.ByteBuf;
+                        ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\lib\net\PrintingByteBuf.java:15: error: package net.minecraft.network does not exist
+  import net.minecraft.network.FriendlyByteBuf;
+                              ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\TestHelper.java:5: error: package net.minecraft.world.phys does not exist
+  import net.minecraft.world.phys.Vec3;
+                                 ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\VanillaSetupBaseTester.java:8: error: package net.minecraft.server does not exist
+  import net.minecraft.server.Bootstrap;
+                             ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:20: error: package ImmutableList does not exist
+          ImmutableList.Builder<BlockPos> builder = new ImmutableList.Builder<>();
+                       ^
+  E:\GitHub\BuildCraft\src\test\java\buildcraft\test\builders\snapshot\PosIndexTester.java:20: error: package ImmutableList does not exist
+          ImmutableList.Builder<BlockPos> builder = new ImmutableList.Builder<>();
+                                                                     ^
+  100 errors
+  2 warnings
+
+* Try:
+> Check your code and dependencies to fix the compilation error(s)
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+BUILD FAILED in 7s
+4 actionable tasks: 1 executed, 3 up-to-date

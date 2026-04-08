@@ -12,7 +12,12 @@ repositories {
     mavenCentral()
 }
 
-
+sourceSets {
+    test {
+        compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+        runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+    }
+}
 
 // ─── NeoForge Configuration ─────────────────────────────────────────────────
 neoForge {

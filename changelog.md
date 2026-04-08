@@ -18,3 +18,4 @@
 - Fixed a stalling issue in the MJ Dynamo where reaching the maximum FE capacity (10,000 FE) would permanently halt energy dissemination, effectively killing the pipe network.
 - Fixed a client-side sync bug in the Quarry where the battery level was additively accumulating with every server packet instead of overwriting, causing the client-side UI battery values to balloon exponentially.
 - Fixed a visual bug in the MJ Dynamo where fractional leftover microJoules or a full FE buffer would cause the piston animation to pump indefinitely even when idle or at 20C.
+- Fixed Kinesis Pipes allowing their internal buffer to accumulate infinitely when pushed energy without demand, by strictly enforcing the capacity ceiling against `internalPower + internalNextPower` instead of just the per-tick insertion tracker.

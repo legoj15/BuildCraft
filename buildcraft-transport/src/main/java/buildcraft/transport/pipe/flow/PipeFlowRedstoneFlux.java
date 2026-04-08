@@ -461,7 +461,7 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         public int insert(int maxReceive, TransactionContext transaction) {
             if (isReceiver && maxReceive > 0) {
                 PipeFlowRedstoneFlux.this.step();
-                int maxCanAccept = maxPower - internalNextPower;
+                int maxCanAccept = maxPower - (internalPower + internalNextPower);
                 if (maxCanAccept <= 0) return 0;
 
                 int accepted = Math.min(maxCanAccept, maxReceive);
@@ -493,8 +493,8 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         int receivePowerInternal(int sent) {
             if (sent > 0) {
                 PipeFlowRedstoneFlux.this.step();
-                int max = maxPower - internalNextPower;
-                if (max < 0) {
+                int max = maxPower - (internalPower + internalNextPower);
+                if (max <= 0) {
                     return sent;
                 }
                 int accepted = Math.min(max, sent);

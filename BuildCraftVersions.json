@@ -1,18 +1,17 @@
 {
-    "homepage": "http://www.mod-buildcraft.com/",
+    "homepage": "https://github.com/legoj15/BuildCraft/releases/latest",
     "promos": {
-        "1.8.8-latest": "7.2.0pre4",
-        "1.8.8-recommended": "7.2.0pre4",
-        "1.8.9-latest": "7.2.0",
-        "1.8.9-recommended": "7.2.0"
+        "26.1.1-latest": "26.1.1_8.0.0-br5",
+        "26.1.1-recommended": "26.1.1_8.0.0-br5",
+        "26.1-latest": "26.1.1_8.0.0-br5",
+        "26.1-recommended": "26.1.1_8.0.0-br5"
     },
-    "1.8.8": {
-        "7.2.0pre2":"      Add this versioning scheme",
-        "7.2.0pre3":"      Make builders, quarrys and construction markers render at any distance\n      Fix aliasing issues with lasers at long distances",
-        "7.2.0pre4":"      Fix fluid pipes not rendering properly"
+    "26.1.1": {
+        "26.1.1_8.0.0-br5": "Introduction of this update system. Hello world! or something",
+        "26.1.1_8.0.0-br6": "Placeholder"
     },
-    "1.8.9": {
-        "7.2.0-pre6": "      Fix the builder and architect",
-        "7.2.0-pre12":"      Fix most things"
-	}
+    "26.1": {
+        "26.1.1_8.0.0-br5": "Introduction of this update system. Hello world! or something",
+        "26.1.1_8.0.0-br6": "Placeholder"
+    }
 }

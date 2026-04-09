@@ -1,0 +1,1 @@
+## 2024-05-18 - [Missing Distance Verification on Debug Requests] **Vulnerability:** Server trusting client position on C2S packet. **Learning:** C2S packets like `MessageDebugRequest` lacked distance verification. **Prevention:** Always check `distanceToSqr` for `BlockEntity` coordinate interactions.

@@ -57,9 +57,6 @@ generate_core_replace_scripts.py
 find_resourcelocation.py
 comment_errors.py
 gradle-debug.log
-diagram.png
-diagram.xcf
-*.xcf
 build_error.txt
 baked.txt
 compile_log*.txt

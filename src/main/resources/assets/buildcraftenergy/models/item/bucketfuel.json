@@ -1,6 +1,6 @@
 {
     "parent":"item/generated",
     "textures":{
-        "layer0":"buildcraftunofficial:items/bucketFuel"
+        "layer0":"buildcraftunofficial:items/bucketfuel"
     }
 }

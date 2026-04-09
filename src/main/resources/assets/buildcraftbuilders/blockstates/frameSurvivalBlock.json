@@ -2,8 +2,8 @@
     "forge_marker": 1,
     "defaults": {
         "textures": {
-            "frame":"buildcraftunofficial:blocks/frameBlock/default",
-            "particle":"buildcraftunofficial:blocks/frameBlock/default"
+            "frame":"buildcraftunofficial:blocks/frameblock/default",
+            "particle":"buildcraftunofficial:blocks/frameblock/default"
         }
     },
     "variants": {

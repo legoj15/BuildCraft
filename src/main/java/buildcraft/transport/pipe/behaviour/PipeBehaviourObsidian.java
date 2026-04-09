@@ -81,9 +81,10 @@ public class PipeBehaviourObsidian extends PipeBehaviour implements IMjRedstoneR
         Direction openFace = getOpenFace();
         if (openFace != null) {
             AABB collisionBox = new AABB(pipe.getHolder().getPipePos());
-            List<Entity> entities = pipe.getHolder().getPipeWorld()
-                .getEntities((Entity) null, collisionBox, e -> e instanceof ItemEntity && e.isAlive());
-            for (Entity entity : entities) {
+            // ⚡ Bolt: Use getEntitiesOfClass to avoid scanning non-item entities
+            List<ItemEntity> entities = pipe.getHolder().getPipeWorld()
+                .getEntitiesOfClass(ItemEntity.class, collisionBox, Entity::isAlive);
+            for (ItemEntity entity : entities) {
                 trySuckEntity(entity, openFace, Long.MAX_VALUE, false);
             }
         }
@@ -233,10 +234,11 @@ public class PipeBehaviourObsidian extends PipeBehaviour implements IMjRedstoneR
         // Scan expanding distance tiers (1–4 blocks)
         for (int d = 1; d < 5; d++) {
             AABB aabb = getSuckingBox(openFace, d);
-            List<Entity> discoveredEntities = pipe.getHolder().getPipeWorld()
-                .getEntities((Entity) null, aabb, e -> true);
+            // ⚡ Bolt: Use getEntitiesOfClass instead of getEntities to avoid scanning and allocating all entity types
+            List<ItemEntity> discoveredEntities = pipe.getHolder().getPipeWorld()
+                .getEntitiesOfClass(ItemEntity.class, aabb, Entity::isAlive);
 
-            for (Entity entity : discoveredEntities) {
+            for (ItemEntity entity : discoveredEntities) {
                 long leftOver = trySuckEntity(entity, openFace, microJoules, simulate);
                 if (leftOver < microJoules) {
                     return leftOver;

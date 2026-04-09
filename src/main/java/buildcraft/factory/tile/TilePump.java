@@ -16,6 +16,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
+
 import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
@@ -121,7 +124,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         paths.clear();
         Fluid queueFluid = null;
         isInfiniteWaterSource = false;
-        Set<BlockPos> checked = new HashSet<>();
+        LongSet checked = new LongOpenHashSet();
         List<BlockPos> nextPosesToCheck = new ArrayList<>();
 
         for (targetPos = worldPosition.below(); !level.isOutsideBuildHeight(targetPos); targetPos = targetPos.below()) {
@@ -132,7 +135,7 @@ public class TilePump extends TileMiner implements IDebuggable {
                 queueFluid = BlockUtil.getFluidWithFlowing(level, targetPos);
                 nextPosesToCheck.add(targetPos);
                 paths.put(targetPos, new FluidPath(targetPos, null));
-                checked.add(targetPos);
+                checked.add(targetPos.asLong());
                 if (BlockUtil.getFluid(level, targetPos) != null) {
                     queue.add(targetPos);
                 }
@@ -158,7 +161,7 @@ public class TilePump extends TileMiner implements IDebuggable {
             && (id.getPath().equals("oil") || id.getPath().startsWith("oil_heat_"));
     }
 
-    private void buildQueue0(Fluid queueFluid, List<BlockPos> nextPosesToCheck, Set<BlockPos> checked) {
+    private void buildQueue0(Fluid queueFluid, List<BlockPos> nextPosesToCheck, LongSet checked) {
         Direction[] directions = FluidUtilBC.isGaseous(queueFluid) ? SEARCH_GASEOUS : SEARCH_NORMAL;
         boolean isWater = !BCCoreConfig.pumpsConsumeWater.get()
                 && FluidUtilBC.areFluidsEqual(queueFluid, Fluids.WATER);
@@ -175,7 +178,7 @@ public class TilePump extends TileMiner implements IDebuggable {
                     if (offsetPos.distSqr(targetPos) > maxLengthSquared) {
                         continue;
                     }
-                    boolean isNew = checked.add(offsetPos);
+                    boolean isNew = checked.add(offsetPos.asLong());
                     if (isNew) {
                         Fluid fluidAt = BlockUtil.getFluidWithFlowing(level, offsetPos);
                         boolean eq = FluidUtilBC.areFluidsEqual(fluidAt, queueFluid);

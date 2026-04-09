@@ -62,6 +62,10 @@ public record MessageDebugRequest(
             ctx.reply(new MessageDebugResponse(List.of(), List.of()));
             return;
         }
+        // Security: Verify player is close to the requested position to prevent C2S trust exploits
+        if (player.distanceToSqr(message.pos.getX() + 0.5, message.pos.getY() + 0.5, message.pos.getZ() + 0.5) > 64.0) {
+            return;
+        }
         BlockEntity tile = player.level().getBlockEntity(message.pos);
         if (tile instanceof IDebuggable debuggable) {
             List<String> left = new ArrayList<>();

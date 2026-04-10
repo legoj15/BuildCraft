@@ -5,7 +5,6 @@
  */
 package buildcraft.lib.item;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.InteractionHand;
@@ -16,7 +15,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 import buildcraft.lib.BCLib;
-import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.misc.AdvancementUtil;
 
 /**
@@ -38,7 +36,7 @@ public class ItemGuide extends Item {
         if (level.isClientSide()) {
             ItemStack stack = player.getItemInHand(hand);
             String bookName = getBookName(stack);
-            Minecraft.getInstance().setScreen(new GuiGuide(bookName));
+            buildcraft.lib.client.BCLibClient.openGuideScreen(bookName);
         } else {
             AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);
         }

@@ -11,18 +11,11 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 
 import buildcraft.api.filler.FillerManager;
 import buildcraft.api.mj.MjAPI;
-import buildcraft.builders.gui.GuiArchitectTable;
-import buildcraft.builders.gui.GuiElectronicLibrary;
-import buildcraft.builders.gui.GuiFiller;
-import buildcraft.builders.gui.GuiReplacer;
-import buildcraft.builders.gui.GuiBuilder;
 import buildcraft.builders.registry.FillerRegistry;
 import buildcraft.core.BCCoreCreativeTabs;
 import buildcraft.lib.mj.MjBatteryEnergyHandler;
@@ -48,11 +41,9 @@ public class BCBuilders {
         modEventBus.addListener(this::postInit);
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::buildCreativeTabContents);
-        modEventBus.addListener(this::registerMenuScreens);
-
-        // Register quarry rendering via game event bus (not mod bus)
-        NeoForge.EVENT_BUS.addListener(RenderLevelStageEvent.AfterTranslucentBlocks.class,
-            event -> BCBuildersEventDist.INSTANCE.renderAllQuarries(event));
+        if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
+            buildcraft.builders.client.BCBuildersClient.initClient(modEventBus);
+        }
     }
 
 
@@ -109,13 +100,5 @@ public class BCBuilders {
             event.accept(BCBuildersBlocks.FRAME);
             event.accept(BCBuildersBlocks.QUARRY);
         }
-    }
-
-    private void registerMenuScreens(RegisterMenuScreensEvent event) {
-        event.register(BCBuildersMenuTypes.FILLER.get(), GuiFiller::new);
-        event.register(BCBuildersMenuTypes.BUILDER.get(), GuiBuilder::new);
-        event.register(BCBuildersMenuTypes.ARCHITECT.get(), GuiArchitectTable::new);
-        event.register(BCBuildersMenuTypes.LIBRARY.get(), GuiElectronicLibrary::new);
-        event.register(BCBuildersMenuTypes.REPLACER.get(), GuiReplacer::new);
     }
 }

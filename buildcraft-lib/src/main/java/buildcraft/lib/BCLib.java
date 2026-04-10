@@ -47,20 +47,7 @@ public class BCLib {
 
         // Wire ModelHolderRegistry into NeoForge model baking lifecycle
         if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
-            modEventBus.addListener(
-                net.neoforged.neoforge.client.event.ModelEvent.BakingCompleted.class,
-                event -> {
-                    // onTextureStitchPre loads the JSON variable models from disk
-                    java.util.HashSet<net.minecraft.resources.Identifier> sprites = new java.util.HashSet<>();
-                    buildcraft.lib.client.model.ModelHolderRegistry.onTextureStitchPre(sprites);
-                    // onModelBake tells model holders to finalize (NO-OP for variable models, but
-                    // needed for static ModelHolder subclasses)
-                    buildcraft.lib.client.model.ModelHolderRegistry.onModelBake();
-                    buildcraft.lib.misc.data.ModelVariableData.onModelBake();
-                }
-            );
-            // Register debug overlay for IDebuggable block entities on F3 screen
-            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(buildcraft.lib.client.BCDebugOverlay.class);
+            buildcraft.lib.client.BCLibClient.initClient(modEventBus);
         }
     }
 }

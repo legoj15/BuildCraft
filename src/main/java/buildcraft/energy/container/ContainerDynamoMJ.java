@@ -7,7 +7,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.SimpleContainerData;
 
-import net.neoforged.neoforge.items.SlotItemHandler;
+
 
 import buildcraft.energy.BCEnergyMenuTypes;
 import buildcraft.energy.tile.TileDynamoMJ;
@@ -69,7 +69,7 @@ public class ContainerDynamoMJ extends ContainerBC_Neptune {
 
         if (dynamo != null) {
             for (int slot = 0; slot < 4; slot++) {
-                addSlot(new SlotItemHandler(dynamo.upgrades, slot, 44 + 18 * slot, 44));
+                addSlot(new buildcraft.lib.gui.slot.SlotBase(dynamo.upgrades, slot, 44 + 18 * slot, 44));
             }
         }
 

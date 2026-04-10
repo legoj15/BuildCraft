@@ -34,9 +34,9 @@ public class ContainerDistiller extends ContainerBC_Neptune {
         this.tile = tile;
 
         if (tile != null) {
-            addSlot(new net.neoforged.neoforge.items.SlotItemHandler(tile.containerSlots, 0, 8, 35));
-            addSlot(new net.neoforged.neoforge.items.SlotItemHandler(tile.containerSlots, 1, 152, 10));
-            addSlot(new net.neoforged.neoforge.items.SlotItemHandler(tile.containerSlots, 2, 152, 55));
+            addSlot(new buildcraft.lib.gui.slot.SlotBase(tile.containerSlots, 0, 8, 35));
+            addSlot(new buildcraft.lib.gui.slot.SlotBase(tile.containerSlots, 1, 152, 10));
+            addSlot(new buildcraft.lib.gui.slot.SlotBase(tile.containerSlots, 2, 152, 55));
         }
 
         addFullPlayerInventory(8, 79);

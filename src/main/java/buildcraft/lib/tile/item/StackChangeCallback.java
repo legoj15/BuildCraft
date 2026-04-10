@@ -12,9 +12,9 @@ import javax.annotation.Nonnull;
 
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.items.IItemHandlerModifiable;
+
 
 @FunctionalInterface
 public interface StackChangeCallback {
-    void onStackChange(IItemHandlerModifiable itemHandler, int slot, @Nonnull ItemStack before, @Nonnull ItemStack after);
+    void onStackChange(ItemHandlerSimple itemHandler, int slot, @Nonnull ItemStack before, @Nonnull ItemStack after);
 }

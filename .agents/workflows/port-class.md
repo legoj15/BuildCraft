@@ -1,10 +1,10 @@
 ---
-description: How to port a class from BuildCraft 1.12 (Forge) to NeoForge 1.21.11
+description: How to port a class from BuildCraft 1.12 (Forge) to NeoForge 26.1.1
 ---
 
-# Port a Class to NeoForge 1.21.11
+# Port a Class to NeoForge 26.1.1
 
-Follow this checklist when porting any class from the old BuildCraft 1.12 codebase to NeoForge 1.21.11.
+Follow this checklist when porting any class from the old BuildCraft 1.12 codebase to NeoForge 26.1.1.
 
 ## Pre-Port
 

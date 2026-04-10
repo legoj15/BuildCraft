@@ -20,7 +20,6 @@ import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-import net.neoforged.neoforge.items.IItemHandler;
 
 import buildcraft.lib.inventory.filter.ArrayStackFilter;
 import buildcraft.lib.misc.CraftingUtil;
@@ -69,7 +68,7 @@ public class WorkbenchCrafting {
         return assumedResult;
     }
 
-    public void onInventoryChange(IItemHandler inv) {
+    public void onInventoryChange(ItemHandlerSimple inv) {
         if (inv == invBlueprint) {
             isBlueprintDirty = true;
         } else if (inv == invMaterials) {

@@ -8,7 +8,8 @@ package buildcraft.lib.tile.item;
 
 import net.minecraft.resources.Identifier;
 
-import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 
-/** A form of {@link IItemHandler} that provides insertion-checking functionality via {@link StackInsertionChecker} */
-public interface IItemHandlerAdv extends IItemHandler, StackInsertionChecker {}
+/** A form of {@link ResourceHandler} that provides insertion-checking functionality via {@link StackInsertionChecker} */
+public interface IItemHandlerAdv extends ResourceHandler<ItemResource>, StackInsertionChecker {}

@@ -41,7 +41,7 @@ public abstract class AbstractInvItemTransactor implements IItemTransactor {
     @Nonnull
     protected abstract ItemStack extract(int slot, IStackFilter filter, int min, int max, boolean simulate);
 
-    protected abstract int getSlots();
+    protected abstract int size();
 
     protected abstract boolean isEmpty(int slot);
 
@@ -57,9 +57,9 @@ public abstract class AbstractInvItemTransactor implements IItemTransactor {
 
     @Nonnull
     private ItemStack insertAnyAmount(@Nonnull ItemStack stack, boolean simulate) {
-        int slotCount = getSlots();
+        int slotCount = size();
         IntArrayList emptySlots = new IntArrayList(slotCount);
-        for (int slot = 0; slot < getSlots(); slot++) {
+        for (int slot = 0; slot < size(); slot++) {
             if (isEmpty(slot)) {
                 emptySlots.add(slot);
             } else {
@@ -77,9 +77,9 @@ public abstract class AbstractInvItemTransactor implements IItemTransactor {
     @Nonnull
     private ItemStack insertAllAtOnce(@Nonnull ItemStack stack, boolean simulate) {
         ItemStack before = asValid(stack);
-        IntArrayList insertedSlots = new IntArrayList(getSlots());
-        IntArrayList emptySlots = new IntArrayList(getSlots());
-        for (int slot = 0; slot < getSlots(); slot++) {
+        IntArrayList insertedSlots = new IntArrayList(size());
+        IntArrayList emptySlots = new IntArrayList(size());
+        for (int slot = 0; slot < size(); slot++) {
             if (isEmpty(slot)) {
                 emptySlots.add(slot);
             } else {
@@ -126,7 +126,7 @@ public abstract class AbstractInvItemTransactor implements IItemTransactor {
             filter = StackFilter.ALL;
         }
 
-        int slots = getSlots();
+        int slots = size();
         IntArrayList valids = new IntArrayList();
         int totalSize = 0;
         ItemStack toExtract = StackUtil.EMPTY;
@@ -170,7 +170,7 @@ public abstract class AbstractInvItemTransactor implements IItemTransactor {
 
     @Override
     public String toString() {
-        ItemStack[] stacks = new ItemStack[getSlots()];
+        ItemStack[] stacks = new ItemStack[size()];
         for (int i = 0; i < stacks.length; i++) {
             stacks[i] = extract(i, StackFilter.ALL, 1, Integer.MAX_VALUE, true);
         }

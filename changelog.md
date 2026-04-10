@@ -1,4 +1,6 @@
 ###### Changes since 26.1 Beta release 4:
+- Rebuilt Automated GUI/CLI GameTest Verification. Migrated old `@GameTest` runners to native datagen registries to remove unsupported dependencies and allow CI testing pipelines to correctly evaluate test suites.
+- Fixed a major item persistence flaw in `ItemHandlerSimple` where tests or external simulated transactions (`tx` = `null`) were correctly skipping the `tx.commit()` pipeline but skipping the journal snapshot tracker, meaning simulated interactions irreversibly permanently consumed items or injected phantom items without rolling back!
 - Fixed a rendering bug where fluid in fluid pipes would sometimes show adjacent wrong texture atlas sprites when scrolling
 - Fixed rendering double-titles on blocks like engines (noticable because one title would be left adjacent and the other would be centered)
 - Fixed MJ Dynamo and FE Engine GUI

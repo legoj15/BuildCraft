@@ -5,15 +5,12 @@ import java.util.BitSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.Assertions;
+
 
 import net.minecraft.core.Direction;
 import net.minecraft.core.BlockPos;
 
-import net.neoforged.testframework.gametest.GameTest;
-import net.neoforged.testframework.gametest.ExtendedGameTestHelper;
-import net.neoforged.testframework.gametest.EmptyTemplate;
-import net.neoforged.testframework.annotation.TestHolder;
+import net.minecraft.gametest.framework.GameTestHelper;
 
 import buildcraft.api.filler.FillerManager;
 import buildcraft.api.filler.IFilledTemplate;
@@ -30,6 +27,13 @@ import buildcraft.builders.snapshot.pattern.parameter.PatternParameterFacing;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterHollow;
 
 public class ShapePatternsTester {
+    private static void assertTrue(boolean val) {
+        if (!val) throw new IllegalStateException("Assertion failed!");
+    }
+
+    private static void assertFalse(boolean val) {
+        if (val) throw new IllegalStateException("Assertion failed!");
+    }
     public static List<IFillerPatternShape> patterns;
     public static final BlockPos[] SIZES = {
         new BlockPos(1, 1, 1), new BlockPos(2, 1, 1), new BlockPos(3, 1, 1),
@@ -55,10 +59,7 @@ public class ShapePatternsTester {
         return template.getFilledTemplate();
     }
 
-    @GameTest
-    @EmptyTemplate
-    @TestHolder(description = "Testing basic shape patterns")
-    public static void testTinyTemplate(ExtendedGameTestHelper helper) {
+    public static void testTinyTemplate(GameTestHelper helper) {
         if (patterns == null) setupRegistries();
         
         try {
@@ -74,9 +75,9 @@ public class ShapePatternsTester {
                     IFilledTemplate filledTemplate = createFilledTemplate(size);
                     boolean b = pattern.fillTemplate(filledTemplate, params);
                     if (pattern == BCBuildersStatements.PATTERN_NONE) {
-                        Assertions.assertFalse(b);
+                        assertFalse(b);
                     } else {
-                        Assertions.assertTrue(b);
+                        assertTrue(b);
                     }
                 }
             }
@@ -86,10 +87,7 @@ public class ShapePatternsTester {
         }
     }
 
-    @GameTest
-    @EmptyTemplate
-    @TestHolder(description = "Testing sphere equality")
-    public static void testSphereEquality(ExtendedGameTestHelper helper) {
+    public static void testSphereEquality(GameTestHelper helper) {
         if (patterns == null) setupRegistries();
         
         try {
@@ -99,7 +97,7 @@ public class ShapePatternsTester {
 
                 IStatementParameter[] fullParams = new IStatementParameter[] { PatternParameterHollow.HOLLOW };
                 IFilledTemplate filledTemplateFull = createFilledTemplate(fullSize);
-                Assertions.assertTrue(BCBuildersStatements.PATTERN_SPHERE.fillTemplate(filledTemplateFull, fullParams));
+                assertTrue(BCBuildersStatements.PATTERN_SPHERE.fillTemplate(filledTemplateFull, fullParams));
 
                 // Test halfs
                 for (Direction face : Direction.values()) {
@@ -109,7 +107,7 @@ public class ShapePatternsTester {
                         PatternParameterFacing.get(face)
                     };
                     IFilledTemplate filledTemplateHalf = createFilledTemplate(halfSize);
-                    Assertions.assertTrue(BCBuildersStatements.PATTERN_HEMI_SPHERE.fillTemplate(filledTemplateHalf, params));
+                    assertTrue(BCBuildersStatements.PATTERN_HEMI_SPHERE.fillTemplate(filledTemplateHalf, params));
                     
                     int dx = face == Direction.WEST ? filledTemplateHalf.getSize().getX() : 0;
                     int dy = face == Direction.DOWN ? filledTemplateHalf.getSize().getY() : 0;
@@ -118,7 +116,7 @@ public class ShapePatternsTester {
                         for (int y = 0; y <= filledTemplateHalf.getMax().getY(); y++) {
                             for (int x = 0; x <= filledTemplateHalf.getMax().getX(); x++) {
                                 if (filledTemplateFull.get(x + dx, y + dy, z + dz) != filledTemplateHalf.get(x, y, z)) {
-                                    Assertions.fail(String.format("Half sphere[%s] didn't match full sphere at (%s, %s, %s)", face, x, y, z));
+                                    throw new IllegalStateException(String.format("Half sphere[%s] didn't match full sphere at (%s, %s, %s)", face, x, y, z));
                                 }
                             }
                         }

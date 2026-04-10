@@ -82,6 +82,12 @@ public record MessageContainerPayload(
                     + " (got " + openContainer.getClass().getName() + ")");
                 return;
             }
+
+            // Security: Verify player can still interact with this container to prevent C2S reach/trust exploits
+            if (!player.level().isClientSide() && !bcContainer.stillValid(player)) {
+                return;
+            }
+
             PacketBufferBC buffer = new PacketBufferBC(Unpooled.wrappedBuffer(message.payload));
             try {
                 boolean isClient = player.level().isClientSide();

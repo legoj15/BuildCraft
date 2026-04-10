@@ -84,11 +84,12 @@ public class MarkerTester {
         BlockPos pos2 = new BlockPos(5, 2, 1);
         BlockPos wallPos = new BlockPos(3, 2, 1);
 
-        helper.setBlock(pos1, BCCoreBlocks.MARKER_VOLUME.get());
-        helper.setBlock(pos2, BCCoreBlocks.MARKER_VOLUME.get());
-        helper.setBlock(wallPos, Blocks.STONE); // Solid block obstructing
+        helper.runAfterDelay(10, () -> {
+            helper.setBlock(pos1, BCCoreBlocks.MARKER_VOLUME.get());
+            helper.setBlock(pos2, BCCoreBlocks.MARKER_VOLUME.get());
+            helper.setBlock(wallPos, Blocks.STONE); // Solid block obstructing
 
-        helper.runAfterDelay(1, () -> {
+            helper.runAfterDelay(2, () -> {
             if (helper.getLevel().getBlockEntity(helper.absolutePos(pos1)) instanceof TileMarkerVolume volume) {
                 volume.onManualConnectionAttempt(null);
                 
@@ -104,6 +105,7 @@ public class MarkerTester {
             } else {
                 throw new IllegalStateException("TileEntity at pos1 is not a TileMarkerVolume!");
             }
+            });
         });
     }
 
@@ -112,11 +114,12 @@ public class MarkerTester {
         BlockPos pos2 = new BlockPos(5, 2, 5); // Diagonal
         BlockPos wallPos = new BlockPos(3, 2, 3);
 
-        helper.setBlock(pos1, BCCoreBlocks.MARKER_PATH.get());
-        helper.setBlock(pos2, BCCoreBlocks.MARKER_PATH.get());
-        helper.setBlock(wallPos, Blocks.STONE); // Solid block obstructing
+        helper.runAfterDelay(20, () -> {
+            helper.setBlock(pos1, BCCoreBlocks.MARKER_PATH.get());
+            helper.setBlock(pos2, BCCoreBlocks.MARKER_PATH.get());
+            helper.setBlock(wallPos, Blocks.STONE); // Solid block obstructing
 
-        helper.runAfterDelay(1, () -> {
+            helper.runAfterDelay(2, () -> {
             if (helper.getLevel().getBlockEntity(helper.absolutePos(pos1)) instanceof TileMarkerPath path) {
                 path.getCache().getSubCache(helper.getLevel()).tryConnect(helper.absolutePos(pos1), helper.absolutePos(pos2));
                 
@@ -130,6 +133,7 @@ public class MarkerTester {
             } else {
                 throw new IllegalStateException("TileEntity at pos1 is not a TileMarkerPath!");
             }
+            });
         });
     }
 
@@ -138,11 +142,13 @@ public class MarkerTester {
         BlockPos pos2 = new BlockPos(5, 2, 1);
         BlockPos pos3 = new BlockPos(1, 2, 5);
 
-        helper.setBlock(pos1, BCCoreBlocks.MARKER_VOLUME.get());
-        helper.setBlock(pos2, BCCoreBlocks.MARKER_VOLUME.get());
-        helper.setBlock(pos3, BCCoreBlocks.MARKER_VOLUME.get());
-
-        helper.runAfterDelay(1, () -> {
+        // Offset start by 25 ticks to prevent Marker cache crosstalk with other concurrent spatial tests
+        helper.runAfterDelay(25, () -> {
+            helper.setBlock(pos1, BCCoreBlocks.MARKER_VOLUME.get());
+            helper.setBlock(pos2, BCCoreBlocks.MARKER_VOLUME.get());
+            helper.setBlock(pos3, BCCoreBlocks.MARKER_VOLUME.get());
+            
+            helper.runAfterDelay(2, () -> {
             if (helper.getLevel().getBlockEntity(helper.absolutePos(pos1)) instanceof TileMarkerVolume volume) {
                 volume.onManualConnectionAttempt(null);
                 
@@ -155,6 +161,7 @@ public class MarkerTester {
                     helper.succeed();
                 });
             }
+            });
         });
     }
 
@@ -164,12 +171,14 @@ public class MarkerTester {
         BlockPos pos3 = new BlockPos(2, 5, 2);
         BlockPos pos4 = new BlockPos(2, 2, 5);
 
-        helper.setBlock(pos1, BCCoreBlocks.MARKER_VOLUME.get());
-        helper.setBlock(pos2, BCCoreBlocks.MARKER_VOLUME.get());
-        helper.setBlock(pos3, BCCoreBlocks.MARKER_VOLUME.get());
-        helper.setBlock(pos4, BCCoreBlocks.MARKER_VOLUME.get());
-
-        helper.runAfterDelay(1, () -> {
+        // Offset start by 50 ticks to prevent Marker cache crosstalk
+        helper.runAfterDelay(50, () -> {
+            helper.setBlock(pos1, BCCoreBlocks.MARKER_VOLUME.get());
+            helper.setBlock(pos2, BCCoreBlocks.MARKER_VOLUME.get());
+            helper.setBlock(pos3, BCCoreBlocks.MARKER_VOLUME.get());
+            helper.setBlock(pos4, BCCoreBlocks.MARKER_VOLUME.get());
+            
+            helper.runAfterDelay(2, () -> {
             if (helper.getLevel().getBlockEntity(helper.absolutePos(pos1)) instanceof TileMarkerVolume volume) {
                 volume.onManualConnectionAttempt(null);
                 
@@ -182,6 +191,7 @@ public class MarkerTester {
                     helper.succeed();
                 });
             }
+            });
         });
     }
 }

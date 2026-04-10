@@ -42,6 +42,13 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:marker_path_los"), () -> buildcraft.core.marker.MarkerTester::testPathLineOfSight);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:marker_volume_triangulation_2d"), () -> buildcraft.core.marker.MarkerTester::testVolumeTriangulation2D);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:marker_volume_triangulation_3d"), () -> buildcraft.core.marker.MarkerTester::testVolumeTriangulation3D);
+
+            // Energy Engines
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_redstone_dry_run"), () -> buildcraft.energy.EngineTester::testRedstoneEngineDryRunHeat);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_redstone_safe_limit"), () -> buildcraft.energy.EngineTester::testRedstoneEngineSafeLimit);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_stirling_fuel"), () -> buildcraft.energy.EngineTester::testStirlingEngineFuel);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_stirling_explosion"), () -> buildcraft.energy.EngineTester::testStirlingEngineExplosion);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_combustion_stable"), () -> buildcraft.energy.EngineTester::testCombustionEngineStable);
         }
     }
 }

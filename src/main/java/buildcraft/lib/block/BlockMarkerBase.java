@@ -121,9 +121,17 @@ public abstract class BlockMarkerBase extends Block implements EntityBlock {
     @Override
     protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess scheduledTickAccess, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
         if (!state.canSurvive(level, pos)) {
-            return Blocks.AIR.defaultBlockState();
+            scheduledTickAccess.scheduleTick(pos, this, 1);
         }
         return super.updateShape(state, level, scheduledTickAccess, pos, direction, neighborPos, neighborState, random);
+    }
+
+    @Override
+    protected void tick(BlockState state, net.minecraft.server.level.ServerLevel level, BlockPos pos, RandomSource random) {
+        if (!state.canSurvive(level, pos)) {
+            level.destroyBlock(pos, false);
+            net.minecraft.world.level.block.Block.popResource(level, pos, new net.minecraft.world.item.ItemStack(this.asItem()));
+        }
     }
 
 

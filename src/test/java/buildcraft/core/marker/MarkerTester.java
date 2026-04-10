@@ -15,33 +15,65 @@ public class MarkerTester {
 
     public static void testMarkerOrientation(GameTestHelper helper) {
         // Test placing markers on all 6 faces of a central block.
-        BlockPos center = new BlockPos(2, 2, 2);
-        helper.setBlock(center, Blocks.STONE);
+        BlockPos centerVolume = new BlockPos(2, 2, 2);
+        BlockPos centerPath = new BlockPos(5, 2, 2);
+        helper.setBlock(centerVolume, Blocks.STONE);
+        helper.setBlock(centerPath, Blocks.STONE);
         
         for (Direction dir : Direction.values()) {
-            BlockPos markerPos = center.relative(dir);
-            // Place marker attached to the 'dir' face of the center block
-            BlockState state = BCCoreBlocks.MARKER_VOLUME.get().defaultBlockState()
-                    .setValue(BuildCraftProperties.BLOCK_FACING_6, dir.getOpposite());
-            helper.setBlock(markerPos, state);
-            
-            // Verify it was placed
-            if (!helper.getBlockState(markerPos).is(BCCoreBlocks.MARKER_VOLUME.get())) {
-                throw new IllegalStateException("Failed to place marker on face: " + dir);
+            // Place Volume markers (should float)
+            BlockPos volumePos = centerVolume.relative(dir);
+            BlockState volumeState = BCCoreBlocks.MARKER_VOLUME.get().defaultBlockState()
+                    .setValue(BuildCraftProperties.BLOCK_FACING_6, dir);
+            helper.setBlock(volumePos, volumeState);
+            if (!helper.getBlockState(volumePos).is(BCCoreBlocks.MARKER_VOLUME.get())) {
+                throw new IllegalStateException("Failed to place volume marker on face: " + dir);
+            }
+
+            // Place Path markers (should pop)
+            BlockPos pathPos = centerPath.relative(dir);
+            BlockState pathState = BCCoreBlocks.MARKER_PATH.get().defaultBlockState()
+                    .setValue(BuildCraftProperties.BLOCK_FACING_6, dir);
+            helper.setBlock(pathPos, pathState);
+            if (!helper.getBlockState(pathPos).is(BCCoreBlocks.MARKER_PATH.get())) {
+                throw new IllegalStateException("Failed to place path marker on face: " + dir);
             }
         }
         
-        // Remove the center block
-        helper.setBlock(center, Blocks.AIR);
+        // Remove the center blocks
+        helper.setBlock(centerVolume, Blocks.AIR);
+        helper.setBlock(centerPath, Blocks.AIR);
         
-        // Wait a tick for the block update to process
-        helper.runAfterDelay(2, () -> {
+        // Wait 5 ticks for the block update to process and drops to spawn
+        helper.runAfterDelay(5, () -> {
+            boolean droppedAnyPath = false;
             for (Direction dir : Direction.values()) {
-                BlockPos markerPos = center.relative(dir);
-                // All markers should have popped off because they are unsupported!
-                if (!helper.getBlockState(markerPos).isAir()) {
-                    throw new IllegalStateException("Marker did not pop off when its supporting block was removed: " + dir);
+                BlockPos volumePos = centerVolume.relative(dir);
+                // Volume markers should float independently!
+                if (!helper.getBlockState(volumePos).is(BCCoreBlocks.MARKER_VOLUME.get())) {
+                    throw new IllegalStateException("Volume Marker popped off when it should have freely suspended: " + dir);
                 }
+
+                BlockPos pathPos = centerPath.relative(dir);
+                // Path markers should have popped off because they are unsupported!
+                if (!helper.getBlockState(pathPos).isAir()) {
+                    throw new IllegalStateException("Path Marker did not pop off when its supporting block was removed: " + dir);
+                }
+
+                // Verify item was dropped using absolute coordinates (Entity check)
+                java.util.List<net.minecraft.world.entity.item.ItemEntity> items = helper.getLevel().getEntitiesOfClass(
+                        net.minecraft.world.entity.item.ItemEntity.class, 
+                        new net.minecraft.world.phys.AABB(helper.absolutePos(pathPos)).inflate(2.0)
+                );
+                for (net.minecraft.world.entity.item.ItemEntity itemEntity : items) {
+                    if (itemEntity.getItem().is(BCCoreBlocks.MARKER_PATH.get().asItem())) {
+                        droppedAnyPath = true;
+                        break;
+                    }
+                }
+            }
+            if (!droppedAnyPath) {
+                throw new IllegalStateException("Path marker popped off but did not drop an ItemEntity!");
             }
             helper.succeed();
         });

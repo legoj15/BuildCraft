@@ -45,6 +45,11 @@ public class BlockMarkerVolume extends BlockMarkerBase {
         checkSignalState(world, pos);
     }
 
+    @Override
+    public boolean canSurvive(BlockState state, net.minecraft.world.level.LevelReader level, BlockPos pos) {
+        return true;
+    }
+
     private static void checkSignalState(Level world, BlockPos pos) {
         if (world.isClientSide()) {
             return;

@@ -315,4 +315,18 @@ public class FluidUtilBC {
         }
         return false;
     }
+
+    public static ItemStack getFilledBucket(FluidStack fluidStack) {
+        if (fluidStack == null || fluidStack.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        if (fluidStack.getComponents().isEmpty()) {
+            if (fluidStack.is(Fluids.WATER)) {
+                return new ItemStack(net.minecraft.world.item.Items.WATER_BUCKET);
+            } else if (fluidStack.is(Fluids.LAVA)) {
+                return new ItemStack(net.minecraft.world.item.Items.LAVA_BUCKET);
+            }
+        }
+        return fluidStack.getFluidType().getBucket(fluidStack);
+    }
 }

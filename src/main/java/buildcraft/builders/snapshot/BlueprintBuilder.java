@@ -100,7 +100,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
             requiredFluids == null ? Stream.empty() : requiredFluids.stream()
                 .map(fluidStack -> {
                     // Create a bucket representation for display purposes
-                    ItemStack bucket = net.neoforged.neoforge.fluids.FluidUtil.getFilledBucket(fluidStack);
+                    ItemStack bucket = buildcraft.lib.misc.FluidUtilBC.getFilledBucket(fluidStack);
                     return bucket;
                 })
         );
@@ -150,7 +150,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                                     }
                                 })
                                 .map(fluidStack -> {
-                                    ItemStack stack = net.neoforged.neoforge.fluids.FluidUtil.getFilledBucket(fluidStack);
+                                    ItemStack stack = buildcraft.lib.misc.FluidUtilBC.getFilledBucket(fluidStack);
                                     CompoundTag tag = new CompoundTag();
                                     // TODO: In 1.21.11, ItemStack.save requires RegistryAccess
                                     CompoundTag wrapper = new CompoundTag();

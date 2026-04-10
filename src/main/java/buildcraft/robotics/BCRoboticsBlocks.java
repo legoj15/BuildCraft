@@ -13,8 +13,7 @@ public class BCRoboticsBlocks {
 
     public static final DeferredBlock<BlockZonePlanner> ZONE_PLANNER = BLOCKS.registerBlock(
             "zone_planner",
-            BlockZonePlanner::new,
-            BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockZonePlanner::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

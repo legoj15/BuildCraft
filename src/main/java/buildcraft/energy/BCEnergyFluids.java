@@ -194,14 +194,14 @@ public class BCEnergyFluids {
                         .noLootTable()
                         .liquid()
                         .lightLevel(s -> 0)
-                ), BlockBehaviour.Properties.of());
+                ), () -> BlockBehaviour.Properties.of());
 
         // Bucket
         bucketHolder[0] = ITEMS.registerItem(regName + "_bucket",
                 props -> new BucketItem(sourceHolder[0].get(), props
                         .craftRemainder(Items.BUCKET)
                         .stacksTo(1)
-                ), new Item.Properties());
+                ), () -> new Item.Properties());
 
         return new FluidEntry(
                 regName, baseName, heat, density, viscosity, temperature, gaseous, tintColor,

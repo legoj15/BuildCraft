@@ -1,4 +1,5 @@
 ###### Changes since 26.1 Beta release 4:
+- Eliminated 100+ deprecation warnings and compilation errors by completing the migration of legacy `IItemHandler` and `IFluidHandler` interfaces to NeoForge 1.21.11 `ResourceHandler` capabilities, and modernized all `DeferredRegister` initializations to use explicit functional suppliers.
 - Extended GameTest coverage with physical integration tests for `BlockSpring`. Verifies structural generation logic for both `WATER` (fast ticking) and `OIL` (low-chance slow-ticking injected via BCEnergy integration blocks).
 - Rebuilt Automated GUI/CLI GameTest Verification. Migrated old `@GameTest` runners to native datagen registries to remove unsupported dependencies and allow CI testing pipelines to correctly evaluate test suites.
 - Fixed a major item persistence flaw in `ItemHandlerSimple` where tests or external simulated transactions (`tx` = `null`) were correctly skipping the `tx.commit()` pipeline but skipping the journal snapshot tracker, meaning simulated interactions irreversibly permanently consumed items or injected phantom items without rolling back!

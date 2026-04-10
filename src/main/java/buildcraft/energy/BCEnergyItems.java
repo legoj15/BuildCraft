@@ -25,7 +25,7 @@ public class BCEnergyItems {
     private static final DeferredRegister.Items ENERGY_ITEMS = DeferredRegister.createItems("buildcraftunofficial");
 
     public static final DeferredItem<Item> GLOB_OF_OIL =
-            ENERGY_ITEMS.registerItem("glob_of_oil", Item::new);
+            ENERGY_ITEMS.registerSimpleItem("glob_of_oil");
 
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);

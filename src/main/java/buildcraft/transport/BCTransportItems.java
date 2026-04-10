@@ -35,7 +35,7 @@ public class BCTransportItems {
             BCTransportBlocks.FILTERED_BUFFER);
 
     /** Pipe Sealant — used to craft fluid pipes from item pipes. */
-    public static final DeferredItem<Item> WATERPROOF = ITEMS.registerItem("waterproof", Item::new);
+    public static final DeferredItem<Item> WATERPROOF = ITEMS.registerSimpleItem("waterproof");
 
     /** Plug — blocks a pipe face, preventing connections. */
     public static final DeferredItem<ItemPluggableSimple> PLUG_BLOCKER = ITEMS.registerItem("plug_blocker",

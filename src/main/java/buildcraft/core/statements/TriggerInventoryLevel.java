@@ -11,7 +11,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
-import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.capabilities.Capabilities;
 
 import buildcraft.api.items.IList;
 import buildcraft.api.statements.IStatement;
@@ -53,7 +55,9 @@ public class TriggerInventoryLevel extends BCStatement implements ITriggerExtern
     @Override
     public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer container,
         IStatementParameter[] parameters) {
-        if (!(tile instanceof IItemHandler itemHandler)) {
+        if (tile.getLevel() == null) return false;
+        ResourceHandler<ItemResource> itemHandler = tile.getLevel().getCapability(Capabilities.Item.BLOCK, tile.getBlockPos(), side);
+        if (itemHandler == null) {
             return false;
         }
 
@@ -62,29 +66,23 @@ public class TriggerInventoryLevel extends BCStatement implements ITriggerExtern
 
         int itemSpace = 0;
         int foundItems = 0;
-        for (int slot = 0; slot < itemHandler.getSlots(); slot++) {
-            ItemStack stackInSlot = itemHandler.getStackInSlot(slot);
+        for (int slot = 0; slot < itemHandler.size(); slot++) {
+            ItemResource res = itemHandler.getResource(slot);
+            ItemStack stackInSlot = res.isEmpty() ? ItemStack.EMPTY : res.toStack(itemHandler.getAmountAsInt(slot));
             if (stackInSlot.isEmpty()) {
                 if (searchStack.isEmpty()) {
-                    itemSpace += itemHandler.getSlotLimit(slot);
+                    itemSpace += itemHandler.getCapacityAsInt(slot, ItemResource.EMPTY);
                 } else {
                     if (searchStack.getItem() instanceof IList) {
                         // Lists are too generic; skip without a filtered inventory
                     } else {
-                        ItemStack stack = searchStack.copy();
-                        int count = Math.min(itemHandler.getSlotLimit(slot), searchStack.getMaxStackSize());
-                        stack.setCount(count);
-                        ItemStack leftOver = itemHandler.insertItem(slot, stack, true);
-                        if (leftOver.isEmpty()) {
-                            itemSpace += count;
-                        } else {
-                            itemSpace += count - leftOver.getCount();
-                        }
+                        int count = Math.min(itemHandler.getCapacityAsInt(slot, ItemResource.of(searchStack)), searchStack.getMaxStackSize());
+                        itemSpace += count;
                     }
                 }
             } else {
                 if (searchStack.isEmpty() || matchesStackOrList(searchStack, stackInSlot)) {
-                    itemSpace += Math.min(stackInSlot.getMaxStackSize(), itemHandler.getSlotLimit(slot));
+                    itemSpace += Math.min(stackInSlot.getMaxStackSize(), itemHandler.getCapacityAsInt(slot, res));
                     foundItems += stackInSlot.getCount();
                 }
             }

@@ -30,19 +30,19 @@ public class BCSiliconItems {
 
     // Chipsets — each variant is a separate item (replacing 1.12.2 metadata sub-items)
     public static final DeferredItem<Item> REDSTONE_RED_CHIPSET =
-            ITEMS.registerItem("redstone_red_chipset", Item::new);
+            ITEMS.registerSimpleItem("redstone_red_chipset");
 
     public static final DeferredItem<Item> REDSTONE_IRON_CHIPSET =
-            ITEMS.registerItem("redstone_iron_chipset", Item::new);
+            ITEMS.registerSimpleItem("redstone_iron_chipset");
 
     public static final DeferredItem<Item> REDSTONE_GOLD_CHIPSET =
-            ITEMS.registerItem("redstone_gold_chipset", Item::new);
+            ITEMS.registerSimpleItem("redstone_gold_chipset");
 
     public static final DeferredItem<Item> REDSTONE_QUARTZ_CHIPSET =
-            ITEMS.registerItem("redstone_quartz_chipset", Item::new);
+            ITEMS.registerSimpleItem("redstone_quartz_chipset");
 
     public static final DeferredItem<Item> REDSTONE_DIAMOND_CHIPSET =
-            ITEMS.registerItem("redstone_diamond_chipset", Item::new);
+            ITEMS.registerSimpleItem("redstone_diamond_chipset");
 
     // Gate Copier
     public static final DeferredItem<ItemGateCopier> GATE_COPIER =
@@ -66,11 +66,11 @@ public class BCSiliconItems {
 
     // Light Sensor
     public static final DeferredItem<Item> PLUG_LIGHT_SENSOR =
-            ITEMS.registerItem("plug_light_sensor", Item::new);
+            ITEMS.registerSimpleItem("plug_light_sensor");
 
     // Timer
     public static final DeferredItem<Item> PLUG_TIMER =
-            ITEMS.registerItem("plug_timer", Item::new);
+            ITEMS.registerSimpleItem("plug_timer");
 
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);

@@ -17,6 +17,14 @@ import buildcraft.factory.client.render.RenderPump;
 import buildcraft.factory.client.render.RenderTank;
 
 public class BCFactoryClient {
+    public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
+        modEventBus.register(BCFactoryClient.class);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentBlocks.class,
+                event -> buildcraft.factory.client.render.TubeRenderer.onRenderLevel(event)
+        );
+    }
+
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(BCFactoryMenuTypes.AUTO_WORKBENCH_ITEMS.get(), GuiAutoCraftItems::new);

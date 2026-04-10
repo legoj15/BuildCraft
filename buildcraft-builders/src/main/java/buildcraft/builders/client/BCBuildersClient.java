@@ -4,11 +4,9 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 import buildcraft.builders.BCBuildersMenuTypes;
-import buildcraft.builders.BCBuildersEntities;
 import buildcraft.builders.BCBuildersEventDist;
 import buildcraft.builders.gui.GuiArchitectTable;
 import buildcraft.builders.gui.GuiElectronicLibrary;

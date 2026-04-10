@@ -1,5 +1,4 @@
 apply plugin: 'java'
-apply plugin: 'maven'
 apply plugin: 'maven-publish'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
@@ -9,15 +8,17 @@ repositories {
 }
 
 dependencies {
-    compile "com.google.code.findbugs:jsr305:3.0.1"
-    testCompile "junit:junit:4.12"
+    implementation "com.google.code.findbugs:jsr305:3.0.1"
+    testImplementation "junit:junit:4.12"
 }
 
 group = "com.mod-buildcraft"
-archivesBaseName = "buildcraft-libexpression"
+base { archivesName = "buildcraft-libexpression" }
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
 
 sourceSets {
     main {
@@ -45,11 +46,16 @@ sourceSets {
 }
 
 task srcJar (type:Jar) {
-    classifier = "sources"
+    archiveClassifier.set("sources")
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
     from sourceSets.main.allSource
 }
 
 build.dependsOn(srcJar)
+
+tasks.withType(Copy).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
 
 task removeOldAutoGen {
     doLast {
@@ -59,7 +65,7 @@ task removeOldAutoGen {
 
 task generateSources(type: JavaExec, dependsOn: removeOldAutoGen) {
     classpath sourceSets.generator.runtimeClasspath
-    main = "buildcraft.meta.generate.AutoGenerator"
+    mainClass.set("buildcraft.meta.generate.AutoGenerator")
     args '-out', 'src/autogen/java', '-run', '-quiet'
 }
 

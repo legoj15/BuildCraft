@@ -33,12 +33,7 @@ public class BCFactory {
 
         // Register client-side extensions on the mod event bus
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
-            modEventBus.register(buildcraft.factory.client.BCFactoryClient.class);
-            // Register tube rendering on the GAME event bus (not mod bus)
-            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
-                    net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentBlocks.class,
-                    event -> buildcraft.factory.client.render.TubeRenderer.onRenderLevel(event)
-            );
+            buildcraft.factory.client.BCFactoryClient.initClient(modEventBus);
         }
 
         // Register capabilities and creative tab

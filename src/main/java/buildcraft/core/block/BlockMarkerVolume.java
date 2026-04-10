@@ -11,7 +11,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.redstone.Orientation;
 import net.minecraft.world.phys.BlockHitResult;
+import javax.annotation.Nullable;
 
 import buildcraft.lib.block.BlockMarkerBase;
 import buildcraft.core.tile.TileMarkerVolume;
@@ -39,8 +41,7 @@ public class BlockMarkerVolume extends BlockMarkerBase {
     }
 
     @Override
-    public void neighborChanged(BlockState state, Level world, BlockPos pos, Block blockIn, BlockPos fromPos,
-            boolean isMoving) {
+    protected void neighborChanged(BlockState state, Level world, BlockPos pos, Block blockIn, @Nullable Orientation orientation, boolean isMoving) {
         checkSignalState(world, pos);
     }
 

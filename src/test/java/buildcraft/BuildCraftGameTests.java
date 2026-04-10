@@ -35,6 +35,13 @@ public class BuildCraftGameTests {
             // Core Blocks
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:core_spring_water"), () -> buildcraft.core.block.SpringTester::testWaterSpring);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:core_spring_oil"), () -> buildcraft.core.block.SpringTester::testOilSpring);
+
+            // Core Markers
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:marker_orientation"), () -> buildcraft.core.marker.MarkerTester::testMarkerOrientation);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:marker_volume_los"), () -> buildcraft.core.marker.MarkerTester::testVolumeLineOfSight);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:marker_path_los"), () -> buildcraft.core.marker.MarkerTester::testPathLineOfSight);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:marker_volume_triangulation_2d"), () -> buildcraft.core.marker.MarkerTester::testVolumeTriangulation2D);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:marker_volume_triangulation_3d"), () -> buildcraft.core.marker.MarkerTester::testVolumeTriangulation3D);
         }
     }
 }

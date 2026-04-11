@@ -242,7 +242,7 @@ public class BCEnergyFluids {
             levelDecreasePerBlock = 2;
         } else if (quanta <= 6) {
             slopeFindDistance = 3;
-            levelDecreasePerBlock = 2;
+            levelDecreasePerBlock = 1;
         } else if (quanta <= 8) {
             slopeFindDistance = 4;
             levelDecreasePerBlock = 1;
@@ -294,42 +294,56 @@ public class BCEnergyFluids {
                 }
             }
             super.tick(level, pos, state, fluidState);
-        }
 
-        @Override
-        protected boolean isSolidFace(BlockGetter level, BlockPos pos, Direction direction) {
-            if (!isDenseFluid() && level.getFluidState(pos).is(FluidTags.WATER)) {
-                return true;
-            }
-            return super.isSolidFace(level, pos, direction);
-        }
-
-        @Override
-        protected void spreadTo(net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockState state, Direction direction, FluidState target) {
-            if (!isDenseFluid() && direction == Direction.DOWN && state.getFluidState().is(FluidTags.WATER)) {
-                if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
-                    BlockPos srcPos = pos.above();
-                    BlockState srcState = level.getBlockState(srcPos);
-                    java.util.Map<Direction, FluidState> map = this.getSpread(serverLevel, srcPos, srcState);
-                    for (java.util.Map.Entry<Direction, FluidState> entry : map.entrySet()) {
-                        Direction spreadDir = entry.getKey();
-                        FluidState spreadState = entry.getValue();
-                        BlockPos targetPos = srcPos.relative(spreadDir);
-                        BlockState targetBlockState = level.getBlockState(targetPos);
-                        this.spreadTo(level, targetPos, targetBlockState, spreadDir, spreadState);
+            if (!isDenseFluid() && !fluidState.isSource()) {
+                BlockPos below = pos.below();
+                FluidState belowFluid = level.getFluidState(below);
+                if (belowFluid.is(FluidTags.WATER) && !belowFluid.getType().isSame(this)) {
+                    BlockState currentState = level.getBlockState(pos);
+                    FluidState currentFluid = currentState.getFluidState();
+                    if (!currentFluid.isEmpty() && currentFluid.getType().isSame(this)) {
+                        int neighborAmount = currentFluid.getAmount() - this.getDropOff(level);
+                        if (currentFluid.getValue(FALLING)) {
+                            neighborAmount = 7;
+                        }
+                        
+                        if (neighborAmount > 0) {
+                            java.util.Map<Direction, FluidState> map = this.getSpread(level, pos, currentState);
+                            for (java.util.Map.Entry<Direction, FluidState> entry : map.entrySet()) {
+                                Direction dir = entry.getKey();
+                                FluidState targetFluid = entry.getValue();
+                                BlockPos targetPos = pos.relative(dir);
+                                BlockState targetState = level.getBlockState(targetPos);
+                                this.spreadTo(level, targetPos, targetState, dir, targetFluid);
+                            }
+                        }
                     }
                 }
-                return;
             }
-            super.spreadTo(level, pos, state, direction, target);
         }
 
         @Override
-        protected boolean canBeReplacedWith(FluidState state, BlockGetter level, BlockPos pos, Fluid fluidIn, Direction direction) {
-            if (fluidIn.is(FluidTags.WATER)) {
-                return false;
+        protected java.util.Map<Direction, FluidState> getSpread(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state) {
+            java.util.Map<Direction, FluidState> map = new java.util.EnumMap<>(super.getSpread(level, pos, state));
+            FluidState belowFluid = level.getFluidState(pos.below());
+            if (!isDenseFluid() && belowFluid.is(FluidTags.WATER) && !belowFluid.getType().isSame(this)) {
+                 for (Direction dir : Direction.Plane.HORIZONTAL) {
+                      if (!map.containsKey(dir)) {
+                           BlockPos targetPos = pos.relative(dir);
+                           BlockState targetState = level.getBlockState(targetPos);
+                           if (targetState.isAir() || targetState.canBeReplaced()) {
+                               FluidState targetFluidState = targetState.getFluidState();
+                               if (targetFluidState.getType().isSame(this)) continue;
+                               
+                               FluidState newFluid = this.getNewLiquid(level, targetPos, targetState);
+                               if (!newFluid.isEmpty() && targetFluidState.canBeReplacedWith(level, targetPos, newFluid.getType(), dir)) {
+                                   map.put(dir, newFluid);
+                               }
+                           }
+                      }
+                 }
             }
-            return super.canBeReplacedWith(state, level, pos, fluidIn, direction);
+            return map;
         }
     }
 
@@ -358,34 +372,54 @@ public class BCEnergyFluids {
                 }
             }
             super.tick(level, pos, state, fluidState);
-        }
 
-        @Override
-        protected boolean isSolidFace(BlockGetter level, BlockPos pos, Direction direction) {
-            if (!isDenseFluid() && level.getFluidState(pos).is(FluidTags.WATER)) {
-                return true;
-            }
-            return super.isSolidFace(level, pos, direction);
-        }
-
-        @Override
-        protected void spreadTo(net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockState state, Direction direction, FluidState target) {
-            if (!isDenseFluid() && direction == Direction.DOWN && state.getFluidState().is(FluidTags.WATER)) {
-                if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
-                    BlockPos srcPos = pos.above();
-                    BlockState srcState = level.getBlockState(srcPos);
-                    java.util.Map<Direction, FluidState> map = this.getSpread(serverLevel, srcPos, srcState);
-                    for (java.util.Map.Entry<Direction, FluidState> entry : map.entrySet()) {
-                        Direction spreadDir = entry.getKey();
-                        FluidState spreadState = entry.getValue();
-                        BlockPos targetPos = srcPos.relative(spreadDir);
-                        BlockState targetBlockState = level.getBlockState(targetPos);
-                        this.spreadTo(level, targetPos, targetBlockState, spreadDir, spreadState);
+            if (!isDenseFluid() && !fluidState.isSource()) {
+                BlockPos below = pos.below();
+                if (level.getFluidState(below).is(FluidTags.WATER)) {
+                    BlockState currentState = level.getBlockState(pos);
+                    FluidState currentFluid = currentState.getFluidState();
+                    if (!currentFluid.isEmpty() && currentFluid.getType().isSame(this)) {
+                        int neighborAmount = currentFluid.getAmount() - this.getDropOff(level);
+                        if (currentFluid.getValue(FALLING)) {
+                            neighborAmount = 7;
+                        }
+                        
+                        if (neighborAmount > 0) {
+                            java.util.Map<Direction, FluidState> map = this.getSpread(level, pos, currentState);
+                            for (java.util.Map.Entry<Direction, FluidState> entry : map.entrySet()) {
+                                Direction dir = entry.getKey();
+                                FluidState targetFluid = entry.getValue();
+                                BlockPos targetPos = pos.relative(dir);
+                                BlockState targetState = level.getBlockState(targetPos);
+                                this.spreadTo(level, targetPos, targetState, dir, targetFluid);
+                            }
+                        }
                     }
                 }
-                return;
             }
-            super.spreadTo(level, pos, state, direction, target);
+        }
+
+        @Override
+        protected java.util.Map<Direction, FluidState> getSpread(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state) {
+            java.util.Map<Direction, FluidState> map = new java.util.EnumMap<>(super.getSpread(level, pos, state));
+            if (!isDenseFluid() && level.getFluidState(pos.below()).is(FluidTags.WATER)) {
+                 for (Direction dir : Direction.Plane.HORIZONTAL) {
+                      if (!map.containsKey(dir)) {
+                           BlockPos targetPos = pos.relative(dir);
+                           BlockState targetState = level.getBlockState(targetPos);
+                           if (targetState.isAir() || targetState.canBeReplaced()) {
+                               FluidState targetFluidState = targetState.getFluidState();
+                               if (targetFluidState.getType().isSame(this)) continue;
+                               
+                               FluidState newFluid = this.getNewLiquid(level, targetPos, targetState);
+                               if (!newFluid.isEmpty() && targetFluidState.canBeReplacedWith(level, targetPos, newFluid.getType(), dir)) {
+                                   map.put(dir, newFluid);
+                               }
+                           }
+                      }
+                 }
+            }
+            return map;
         }
 
         @Override

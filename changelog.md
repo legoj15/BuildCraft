@@ -1,5 +1,9 @@
 ###### Changes since 26.1 Beta release 4:
 - Eliminated 100+ deprecation warnings and compilation errors by completing the migration of legacy `IItemHandler` and `IFluidHandler` interfaces to NeoForge 1.21.11 `ResourceHandler` capabilities, and modernized all `DeferredRegister` initializations to use explicit functional suppliers.
+- Completely overhauled custom BuildCraft Fluid flow mechanics to natively intertwine with Minecraft 1.21.11 physics. Dense fluids (Heavy Oil, Dense Oil, Residue) now rapidly annihilate water to physically sink, while lighter oils smoothly spread across ocean surfaces symmetrically, entirely bypassing Vanilla's coastline-bias glitch.
+- Engineered a specialized "Purgatory Escape Hatch" in the `tick()` simulation loop to break native Minecraft flow stalemates that occurred when light fluids hit flat water, fixing the bug that forced them to remain stuck as 1-block puddles.
+- Added strict self-collision block checks inside custom fluid propagation to fix an infinite "Layer Cake" feedback loop that caused massive floating slabs to build atop naturally generating ocean Oil Spouts.
+- Extended GameTest coverage with `FluidPhysicsTest`, asserting physical bobbing, dense fluid sinking, light spreading cascades, and self-collision layer cake protections natively within simulated worlds.
 - Fixed 4 remaining deprecation warnings from legacy `FluidUtil.getFilledBucket` by implementing a native backwards-compatible wrapper in `FluidUtilBC`.
 - Extended GameTest coverage with physical integration tests for `BlockSpring`. Verifies structural generation logic for both `WATER` (fast ticking) and `OIL` (low-chance slow-ticking injected via BCEnergy integration blocks).
 - Rebuilt Automated GUI/CLI GameTest Verification. Migrated old `@GameTest` runners to native datagen registries to remove unsupported dependencies and allow CI testing pipelines to correctly evaluate test suites.

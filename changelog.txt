@@ -3,3 +3,4 @@
 - Re-enable "Fluid Traversing" and "Items Traversing" triggers in gate trigger lists.
 - Fix Gate GUI tooltips not showing on hover (extractLabels was not calling super).
 - Restore GateContext ledger colors to use ColourUtil.getColourForSide() from 1.12.2.
+- Support gate tooltips by porting missing localization keys from 1.12.2 en_US.lang.

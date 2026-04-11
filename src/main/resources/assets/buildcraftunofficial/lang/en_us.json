@@ -550,5 +550,12 @@
     "gate.trigger.time.12": "Afternoon",
     "gate.trigger.time.18": "Evening",
     "gate.trigger.fuelLevelBelow": "Fuel level below %d%%",
-    "gate.trigger.coolantLevelBelow": "Coolant level below %d%%"
+    "gate.trigger.coolantLevelBelow": "Coolant level below %d%%",
+    "direction.up": "Top",
+    "direction.down": "Bottom",
+    "direction.north": "North",
+    "direction.south": "South",
+    "direction.east": "East",
+    "direction.west": "West",
+    "direction.center": "Center"
 }

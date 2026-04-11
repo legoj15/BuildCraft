@@ -230,11 +230,10 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     }
 
 
-    // TODO: uncomment when TRIGGER_FLUIDS_TRAVERSING is added to BCTransportStatements
-    // @PipeEventHandler
-    // public static void addTriggers(PipeEventStatement.AddTriggerInternal event) {
-    //     event.triggers.add(BCTransportStatements.TRIGGER_FLUIDS_TRAVERSING);
-    // }
+    @PipeEventHandler
+    public static void addTriggers(PipeEventStatement.AddTriggerInternal event) {
+        event.triggers.add(BCTransportStatements.TRIGGER_FLUIDS_TRAVERSING);
+    }
 
     // IFlowFluid
 

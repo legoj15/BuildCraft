@@ -24,6 +24,7 @@ import buildcraft.api.statements.ITriggerInternalSided;
 import buildcraft.api.statements.ITriggerProvider;
 import buildcraft.api.statements.containers.IRedstoneStatementContainer;
 import buildcraft.api.tiles.IHasWork;
+import buildcraft.api.transport.pipe.IPipeHolder;
 
 import buildcraft.core.BCCoreStatements;
 
@@ -50,6 +51,13 @@ public enum CoreTriggerProvider implements ITriggerProvider {
 
     @Override
     public void addExternalTriggers(Collection<ITriggerExternal> res, @Nonnull Direction side, BlockEntity tile) {
+        // Skip pipe holders — they have their own internal trigger system (TriggerProviderPipes).
+        // In 1.12.2, pipe sections returned getTankProperties()=empty so they were naturally filtered
+        // by the liquids.length > 0 check. In 26.1.1 ResourceHandler.size() returns 1 unconditionally,
+        // so we must explicitly exclude pipes to avoid false-positive fluid/item triggers.
+        if (tile instanceof IPipeHolder) {
+            return;
+        }
 
         if (TriggerPower.isTriggeringTile(tile, side.getOpposite())) {
             res.add(BCCoreStatements.TRIGGER_POWER_HIGH);
@@ -65,7 +73,7 @@ public enum CoreTriggerProvider implements ITriggerProvider {
         }
 
         if (!blockInventoryTriggers && tile != null && tile.getLevel() != null) {
-            ResourceHandler<ItemResource> itemHandler = tile.getLevel().getCapability(Capabilities.Item.BLOCK, tile.getBlockPos(), side);
+            ResourceHandler<ItemResource> itemHandler = tile.getLevel().getCapability(Capabilities.Item.BLOCK, tile.getBlockPos(), side.getOpposite());
             if (itemHandler != null && itemHandler.size() > 0) {
                 res.add(BCCoreStatements.TRIGGER_INVENTORY_EMPTY);
                 res.add(BCCoreStatements.TRIGGER_INVENTORY_SPACE);
@@ -78,7 +86,7 @@ public enum CoreTriggerProvider implements ITriggerProvider {
         }
 
         if (!blockFluidHandlerTriggers && tile != null && tile.getLevel() != null) {
-            ResourceHandler<FluidResource> fluidHandler = tile.getLevel().getCapability(Capabilities.Fluid.BLOCK, tile.getBlockPos(), side);
+            ResourceHandler<FluidResource> fluidHandler = tile.getLevel().getCapability(Capabilities.Fluid.BLOCK, tile.getBlockPos(), side.getOpposite());
             if (fluidHandler != null && fluidHandler.size() > 0) {
                 res.add(BCCoreStatements.TRIGGER_FLUID_EMPTY);
                 res.add(BCCoreStatements.TRIGGER_FLUID_SPACE);

@@ -48,6 +48,10 @@ import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.misc.data.DelayedList;
 
+import buildcraft.api.transport.pipe.PipeEventHandler;
+import buildcraft.api.transport.pipe.PipeEventStatement;
+
+import buildcraft.transport.BCTransportStatements;
 import buildcraft.transport.net.PipeItemMessageQueue;
 import buildcraft.transport.net.MessageMultiPipeItem.TravellingItemData;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourStone;
@@ -626,6 +630,11 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
         }
         items.add(item.timeToDest, item);
         sendItemDataToClient(item);
+    }
+
+    @PipeEventHandler
+    public static void addTriggers(PipeEventStatement.AddTriggerInternal event) {
+        event.triggers.add(BCTransportStatements.TRIGGER_ITEMS_TRAVERSING);
     }
 
     public boolean doesContainItems() {

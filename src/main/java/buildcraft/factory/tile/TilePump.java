@@ -43,6 +43,7 @@ import buildcraft.api.mj.MjAPI;
 
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.BCCoreConfig;
+import buildcraft.core.statements.IBlockDefaultTriggers;
 import buildcraft.core.tile.ITileOilSpring;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.BCFactoryBlocks;
@@ -58,7 +59,7 @@ import buildcraft.api.tiles.IDebuggable;
  * find connected source blocks and drains them using MJ power.
  * Ported from 1.12.2 TilePump.
  */
-public class TilePump extends TileMiner implements IDebuggable {
+public class TilePump extends TileMiner implements IDebuggable, IBlockDefaultTriggers {
 
     private static final Identifier ADVANCEMENT_DRAIN_ANY
         = Identifier.parse("buildcraftunofficial:draining_the_world");
@@ -446,5 +447,17 @@ public class TilePump extends TileMiner implements IDebuggable {
     @Override
     protected long getBatteryCapacity() {
         return 50 * MjAPI.MJ;
+    }
+
+    // IBlockDefaultTriggers — the pump's tank is internal (output-only), so it
+    // should not generate external "Space for Fluid" / "Tank Contains" triggers.
+    @Override
+    public boolean blockInventoryTriggers(Direction side) {
+        return true; // pump has no inventory
+    }
+
+    @Override
+    public boolean blockFluidHandlerTriggers(Direction side) {
+        return true; // pump's fluid tank is internal/output-only
     }
 }

@@ -208,6 +208,9 @@ public class GuiGate extends GuiBC8<ContainerGate> {
 
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        // Run the standard foreground + tooltip pipeline from GuiBC8
+        super.extractLabels(graphics, mouseX, mouseY);
+
         // Center the gate name at the top
         String titleStr = menu.gate.variant.getLocalizedName().getString();
         graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);

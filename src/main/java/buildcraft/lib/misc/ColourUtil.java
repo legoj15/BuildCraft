@@ -53,6 +53,20 @@ public class ColourUtil {
         COLOUR_TO_FORMAT[DyeColor.BLACK.ordinal()] = ChatFormatting.DARK_GRAY;
     }
 
+    /** Maps Direction ordinals to ARGB colours for gate ledger face indicators.
+     *  Ported from 1.12.2 — only DOWN and UP had explicit colours. */
+    private static final int[] FACE_TO_COLOUR = new int[6];
+
+    static {
+        FACE_TO_COLOUR[Direction.DOWN.ordinal()] = 0xFF_33_33_33;
+        FACE_TO_COLOUR[Direction.UP.ordinal()] = 0xFF_CC_CC_CC;
+    }
+
+    /** Returns the ledger-background colour associated with the given block face direction. */
+    public static int getColourForSide(Direction face) {
+        return FACE_TO_COLOUR[face.ordinal()];
+    }
+
     /** Returns a display-friendly name for the given dye colour (or "Clean" if null). */
     public static String getTextFullTooltip(@Nullable DyeColor colour) {
         if (colour == null) return "Clean";

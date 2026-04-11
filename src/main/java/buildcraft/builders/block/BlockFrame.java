@@ -72,8 +72,7 @@ public class BlockFrame extends Block {
 
     private boolean canConnectTo(BlockGetter level, BlockPos pos) {
         Block block = level.getBlockState(pos).getBlock();
-        return block instanceof BlockFrame;
-        // Future: || block instanceof BlockQuarry
+        return block instanceof BlockFrame || block instanceof BlockQuarry;
     }
 
     private BlockState computeConnections(BlockGetter level, BlockPos pos, BlockState state) {

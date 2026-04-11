@@ -153,12 +153,12 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
         logic = new GateLogic(this, packetBuffer);
     }
 
-    // @Override
-    // public void writeCreationPayload(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
-    //     super.writeCreationPayload(buffer);
-    //     PacketBufferBC packetBuffer = new PacketBufferBC(buffer);
-    //     logic.writeCreationToBuf(packetBuffer);
-    // }
+    @Override
+    public void writeCreationPayload(net.minecraft.network.FriendlyByteBuf buffer) {
+        super.writeCreationPayload(buffer);
+        PacketBufferBC packetBuffer = new PacketBufferBC(buffer);
+        logic.writeCreationToBuf(packetBuffer);
+    }
 
     public void sendMessage(IPayloadWriter writer) {
         PipeMessageReceiver to = PipeMessageReceiver.PLUGGABLES[side.ordinal()];
@@ -180,16 +180,16 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
         });
     }
 
-    // @Override
-    // public void writePayload(FriendlyByteBuf buffer, Object side) {
-    //     throw new Error("All messages must have an ID, and we can't just write a payload directly!");
-    // }
+    @Override
+    public void writePayload(FriendlyByteBuf buffer, Object side) {
+        throw new Error("All messages must have an ID, and we can't just write a payload directly!");
+    }
 
-    // @Override
-    // public void readPayload(FriendlyByteBuf b, Object side, Object ctx) throws IOException {
-    //     PacketBufferBC packetBuffer = new PacketBufferBC(b);
-    //     logic.readPayload(packetBuffer, ((Boolean) ctx).booleanValue());
-    // }
+    @Override
+    public void readPayload(FriendlyByteBuf b, Object side, Object ctx) throws IOException {
+        PacketBufferBC packetBuffer = new PacketBufferBC(b);
+        logic.readPayload(packetBuffer, ((Boolean) ctx).booleanValue());
+    }
 
     // PipePluggable
 

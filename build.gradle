@@ -35,6 +35,7 @@ neoForge {
         gameTestServer {
             type = "gameTestServer"
             systemProperty 'neoforge.enableGameTest', 'true'
+            gameDirectory = project.file('run-gameTestServer')
         }
     }
 

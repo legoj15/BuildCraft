@@ -23,6 +23,7 @@ libs
 #runtime
 run
 run_server
+run-gameTestServer
 
 #mac
 .DS_Store

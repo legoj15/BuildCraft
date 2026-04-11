@@ -75,6 +75,9 @@ public class MarkerTester {
             if (!droppedAnyPath) {
                 throw new IllegalStateException("Path marker popped off but did not drop an ItemEntity!");
             }
+            for (Direction dir : Direction.values()) {
+                helper.setBlock(centerVolume.relative(dir), Blocks.AIR);
+            }
             helper.succeed();
         });
     }
@@ -100,6 +103,9 @@ public class MarkerTester {
                     if (!volume.min().equals(expectedMin) || !volume.max().equals(expectedMax)) {
                         throw new IllegalStateException("Line of sight failed through solid block! Min: " + volume.min() + ", Max: " + volume.max());
                     }
+                    helper.setBlock(pos1, Blocks.AIR);
+                    helper.setBlock(pos2, Blocks.AIR);
+                    helper.setBlock(wallPos, Blocks.AIR);
                     helper.succeed();
                 });
             } else {
@@ -128,6 +134,9 @@ public class MarkerTester {
                     if (path.getCurrentConnection() == null || !path.getCurrentConnection().getMarkerPositions().contains(expectedPos)) {
                         throw new IllegalStateException("Diagonal Path line of sight failed through solid block!");
                     }
+                    helper.setBlock(pos1, Blocks.AIR);
+                    helper.setBlock(pos2, Blocks.AIR);
+                    helper.setBlock(wallPos, Blocks.AIR);
                     helper.succeed();
                 });
             } else {
@@ -158,6 +167,9 @@ public class MarkerTester {
                     if (!volume.min().equals(expectedMin) || !volume.max().equals(expectedMax)) {
                         throw new IllegalStateException("2D Triangulation failed! Expected plane: " + expectedMin + " to " + expectedMax + ". Got: " + volume.min() + " to " + volume.max());
                     }
+                    helper.setBlock(pos1, Blocks.AIR);
+                    helper.setBlock(pos2, Blocks.AIR);
+                    helper.setBlock(pos3, Blocks.AIR);
                     helper.succeed();
                 });
             }
@@ -188,6 +200,10 @@ public class MarkerTester {
                     if (!volume.min().equals(expectedMin) || !volume.max().equals(expectedMax)) {
                         throw new IllegalStateException("3D Triangulation failed! Expected volume: " + expectedMin + " to " + expectedMax + ". Got: " + volume.min() + " to " + volume.max());
                     }
+                    helper.setBlock(pos1, Blocks.AIR);
+                    helper.setBlock(pos2, Blocks.AIR);
+                    helper.setBlock(pos3, Blocks.AIR);
+                    helper.setBlock(pos4, Blocks.AIR);
                     helper.succeed();
                 });
             }

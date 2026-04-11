@@ -274,9 +274,31 @@ public class BCEnergyFluids {
             super(properties);
         }
 
+        private boolean isDenseFluid() {
+            net.minecraft.resources.Identifier loc = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(this);
+            if (loc != null) {
+                String path = loc.getPath();
+                return path.contains("oil_heavy") || path.contains("oil_dense") || path.contains("oil_residue");
+            }
+            return false;
+        }
+
+        @Override
+        public void tick(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state, FluidState fluidState) {
+            if (isDenseFluid()) {
+                BlockPos below = pos.below();
+                FluidState stateBelow = level.getFluidState(below);
+                if (stateBelow.is(FluidTags.WATER)) {
+                    // Annihilate the water block immediately to sink down!
+                    level.setBlockAndUpdate(below, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+                }
+            }
+            super.tick(level, pos, state, fluidState);
+        }
+
         @Override
         protected boolean isSolidFace(BlockGetter level, BlockPos pos, Direction direction) {
-            if (level.getFluidState(pos).is(FluidTags.WATER)) {
+            if (!isDenseFluid() && level.getFluidState(pos).is(FluidTags.WATER)) {
                 return true;
             }
             return super.isSolidFace(level, pos, direction);
@@ -284,7 +306,7 @@ public class BCEnergyFluids {
 
         @Override
         protected void spreadTo(net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockState state, Direction direction, FluidState target) {
-            if (direction == Direction.DOWN && state.getFluidState().is(FluidTags.WATER)) {
+            if (!isDenseFluid() && direction == Direction.DOWN && state.getFluidState().is(FluidTags.WATER)) {
                 if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
                     BlockPos srcPos = pos.above();
                     BlockState srcState = level.getBlockState(srcPos);
@@ -316,9 +338,31 @@ public class BCEnergyFluids {
             super(properties);
         }
 
+        private boolean isDenseFluid() {
+            net.minecraft.resources.Identifier loc = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(this);
+            if (loc != null) {
+                String path = loc.getPath();
+                return path.contains("oil_heavy") || path.contains("oil_dense") || path.contains("oil_residue");
+            }
+            return false;
+        }
+
+        @Override
+        public void tick(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state, FluidState fluidState) {
+            if (isDenseFluid()) {
+                BlockPos below = pos.below();
+                FluidState stateBelow = level.getFluidState(below);
+                if (stateBelow.is(FluidTags.WATER)) {
+                    // Annihilate the water block immediately to sink down!
+                    level.setBlockAndUpdate(below, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+                }
+            }
+            super.tick(level, pos, state, fluidState);
+        }
+
         @Override
         protected boolean isSolidFace(BlockGetter level, BlockPos pos, Direction direction) {
-            if (level.getFluidState(pos).is(FluidTags.WATER)) {
+            if (!isDenseFluid() && level.getFluidState(pos).is(FluidTags.WATER)) {
                 return true;
             }
             return super.isSolidFace(level, pos, direction);
@@ -326,7 +370,7 @@ public class BCEnergyFluids {
 
         @Override
         protected void spreadTo(net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockState state, Direction direction, FluidState target) {
-            if (direction == Direction.DOWN && state.getFluidState().is(FluidTags.WATER)) {
+            if (!isDenseFluid() && direction == Direction.DOWN && state.getFluidState().is(FluidTags.WATER)) {
                 if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
                     BlockPos srcPos = pos.above();
                     BlockState srcState = level.getBlockState(srcPos);

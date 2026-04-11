@@ -161,14 +161,20 @@ public class BCEnergyFluids {
         // Registry name: "oil" for heat_0, "oil_heat_1" for heat_1, etc.
         String regName = baseName + (heat == 0 ? "" : "_heat_" + heat);
 
+        boolean turnOffSplashes = baseName.equals("oil") || baseName.equals("residue");
+
         // FluidType
         DeferredHolder<FluidType, FluidType> fluidType = FLUID_TYPES.register(regName,
-                () -> new FluidType(FluidType.Properties.create()
+                () -> new BCCustomFluidType(FluidType.Properties.create()
                         .density(density)
                         .viscosity(viscosity)
                         .temperature(temperature)
                         .canExtinguish(false)
                         .canConvertToSource(false)
+                        .canSwim(true)
+                        .canPushEntity(true)
+                        .canDrown(true)
+                        .isWaterLike(!turnOffSplashes)
                         .sound(SoundActions.BUCKET_FILL, SoundEvents.BUCKET_FILL)
                         .sound(SoundActions.BUCKET_EMPTY, SoundEvents.BUCKET_EMPTY)
                 ));
@@ -344,6 +350,20 @@ public class BCEnergyFluids {
                 return false;
             }
             return super.canBeReplacedWith(state, level, pos, fluidIn, direction);
+        }
+    }
+
+    public static class BCCustomFluidType extends FluidType {
+        public BCCustomFluidType(Properties properties) {
+            super(properties);
+        }
+
+        @Override
+        public double motionScale(net.minecraft.world.entity.Entity entity) {
+            if (BCEnergyConfig.oilIsSticky != null && BCEnergyConfig.oilIsSticky.get()) {
+                return 0.007D; // Very sluggish, cobweb-like
+            }
+            return 0.010D; // Dense liquid (water is 0.014)
         }
     }
 }

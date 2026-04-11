@@ -1,0 +1,5 @@
+Secure client-server Gate GUI slot syncing via Container Neptune
+
+- Prior attempt uncommented readPayload/writePayload, but PluggableGate payloads natively flow through IPipeHolder.sendGuiMessage() which is unported + a no-op in 1.21.11.
+- Rerouted Gui Statement modifications into the Container's payload network channel using a `guiMessageOverride` consumer bound to GateLogic when ContainerGate mounts on the client.
+- Added ID_STATEMENT_CHANGE handler in ContainerGate.readMessage on the server to apply the incoming statement updates and echo resolve data back.

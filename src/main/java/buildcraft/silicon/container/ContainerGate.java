@@ -44,6 +44,7 @@ import buildcraft.silicon.BCSiliconMenuTypes;
 public class ContainerGate extends ContainerBC_Neptune {
     public static final int ID_CONNECTION = 1;
     public static final int ID_VALID_STATEMENTS = 2;
+    public static final int ID_STATEMENT_CHANGE = 3;
 
     public final GateLogic gate;
     public final IPipeHolder pipeHolder;
@@ -95,6 +96,7 @@ public class ContainerGate extends ContainerBC_Neptune {
         if (this.pipeHolder.getPipeWorld().isClientSide()) {
             possibleTriggers = new TreeSet<>();
             possibleActions = new TreeSet<>();
+            gate.guiMessageOverride = writer -> sendMessage(ID_STATEMENT_CHANGE, writer);
         } else {
             possibleTriggers = gate.getAllValidTriggers();
             possibleActions = gate.getAllValidActions();
@@ -160,6 +162,13 @@ public class ContainerGate extends ContainerBC_Neptune {
             } else if (id == ID_VALID_STATEMENTS) {
                 // Client asked for valid statements, send them
                 sendStatementsToClient();
+            } else if (id == ID_STATEMENT_CHANGE) {
+                try {
+                    gate.readPayload(buffer, false);
+                    gate.sendResolveData();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         } else {
             if (id == ID_VALID_STATEMENTS) {

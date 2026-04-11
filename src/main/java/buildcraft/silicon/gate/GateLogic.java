@@ -77,6 +77,8 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
 
     public final List<StatementSlot> activeActions = new ArrayList<>();
 
+    public java.util.function.Consumer<buildcraft.lib.net.IPayloadWriter> guiMessageOverride;
+
     /** Used to determine if gate logic should go across several trigger/action pairs. */
     public final boolean[] connections;
 
@@ -250,14 +252,20 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
     }
 
     public void sendStatementUpdate(boolean isAction, int slot) {
-        pluggable.sendGuiMessage((buffer) -> {
+        buildcraft.lib.net.IPayloadWriter writer = (buffer) -> {
             buffer.writeByte(NET_ID_CHANGE);
             buffer.writeBoolean(isAction);
             buffer.writeByte(slot);
             StatementPair s = statements[slot];
             PacketBufferBC temp = new PacketBufferBC(buffer);
             (isAction ? s.action : s.trigger).writeToBuffer(temp);
-        });
+        };
+        
+        if (guiMessageOverride != null) {
+            guiMessageOverride.accept(writer);
+        } else {
+            pluggable.sendGuiMessage(writer);
+        }
     }
 
     public void sendResolveData() {

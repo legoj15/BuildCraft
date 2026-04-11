@@ -27,3 +27,9 @@
 - Ensured Volume/Land Markers can freely suspend in the air without anchoring, per original 1.12.2 functionality.
 - Fixed 1.21.11 Item Entity dropping for the Path Marker, which now appropriately pops and spawns its dropped-item block representation natively when its anchor is dismantled.
 - Re-enabled 1.12.2 visual functionality where Quarry Frames physically "connect" to the actual Quarry block by updating `BlockFrame`'s `canConnectTo` logic to evaluate against `BlockQuarry` instances.
+- Fix Gate GUI missing side colored boxes and duplicate trigger options (caused by desync during packet enum reading).
+- Fix Gate GUI duplicate triggers caused by wrong capability face direction (use side.getOpposite() matching 1.12.2).
+- Re-enable "Fluid Traversing" and "Items Traversing" triggers in gate trigger lists.
+- Fix Gate GUI tooltips not showing on hover (extractLabels was not calling super).
+- Restore GateContext ledger colors to use ColourUtil.getColourForSide() from 1.12.2.
+- Support gate tooltips by porting missing localization keys from 1.12.2 en_US.lang.

@@ -277,6 +277,26 @@ public class BCEnergyFluids {
         }
 
         @Override
+        protected void spreadTo(net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockState state, Direction direction, FluidState target) {
+            if (direction == Direction.DOWN && state.getFluidState().is(FluidTags.WATER)) {
+                if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                    BlockPos srcPos = pos.above();
+                    BlockState srcState = level.getBlockState(srcPos);
+                    java.util.Map<Direction, FluidState> map = this.getSpread(serverLevel, srcPos, srcState);
+                    for (java.util.Map.Entry<Direction, FluidState> entry : map.entrySet()) {
+                        Direction spreadDir = entry.getKey();
+                        FluidState spreadState = entry.getValue();
+                        BlockPos targetPos = srcPos.relative(spreadDir);
+                        BlockState targetBlockState = level.getBlockState(targetPos);
+                        this.spreadTo(level, targetPos, targetBlockState, spreadDir, spreadState);
+                    }
+                }
+                return;
+            }
+            super.spreadTo(level, pos, state, direction, target);
+        }
+
+        @Override
         protected boolean canBeReplacedWith(FluidState state, BlockGetter level, BlockPos pos, Fluid fluidIn, Direction direction) {
             if (fluidIn.is(FluidTags.WATER)) {
                 return false;
@@ -296,6 +316,26 @@ public class BCEnergyFluids {
                 return true;
             }
             return super.isSolidFace(level, pos, direction);
+        }
+
+        @Override
+        protected void spreadTo(net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockState state, Direction direction, FluidState target) {
+            if (direction == Direction.DOWN && state.getFluidState().is(FluidTags.WATER)) {
+                if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                    BlockPos srcPos = pos.above();
+                    BlockState srcState = level.getBlockState(srcPos);
+                    java.util.Map<Direction, FluidState> map = this.getSpread(serverLevel, srcPos, srcState);
+                    for (java.util.Map.Entry<Direction, FluidState> entry : map.entrySet()) {
+                        Direction spreadDir = entry.getKey();
+                        FluidState spreadState = entry.getValue();
+                        BlockPos targetPos = srcPos.relative(spreadDir);
+                        BlockState targetBlockState = level.getBlockState(targetPos);
+                        this.spreadTo(level, targetPos, targetBlockState, spreadDir, spreadState);
+                    }
+                }
+                return;
+            }
+            super.spreadTo(level, pos, state, direction, target);
         }
 
         @Override

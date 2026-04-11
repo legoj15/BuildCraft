@@ -1,0 +1,1 @@
+- Fix Gate GUI missing side colored boxes and duplicate trigger options (caused by desync during packet enum reading).

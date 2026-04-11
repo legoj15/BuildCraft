@@ -4,14 +4,20 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.MapColor;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.SoundActions;
@@ -174,12 +180,12 @@ public class BCEnergyFluids {
         DeferredItem<BucketItem>[] bucketHolder = new DeferredItem[1];
 
         sourceHolder[0] = FLUIDS.register(regName,
-                () -> new BaseFlowingFluid.Source(makeProps(
+                () -> new BCCustomSourceFluid(makeProps(
                         fluidType, sourceHolder[0], flowingHolder[0],
                         blockHolder[0], bucketHolder[0], viscosity, quanta)));
 
         flowingHolder[0] = FLUIDS.register(regName + "_flowing",
-                () -> new BaseFlowingFluid.Flowing(makeProps(
+                () -> new BCCustomFlowingFluid(makeProps(
                         fluidType, sourceHolder[0], flowingHolder[0],
                         blockHolder[0], bucketHolder[0], viscosity, quanta)));
 
@@ -253,5 +259,51 @@ public class BCEnergyFluids {
         FLUIDS.register(modEventBus);
         BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
+    }
+
+    // ─── Custom Fluid Classes ─────────────────────────────────────────
+    
+    public static class BCCustomFlowingFluid extends BaseFlowingFluid.Flowing {
+        public BCCustomFlowingFluid(Properties properties) {
+            super(properties);
+        }
+
+        @Override
+        protected boolean isSolidFace(BlockGetter level, BlockPos pos, Direction direction) {
+            if (level.getFluidState(pos).is(FluidTags.WATER)) {
+                return true;
+            }
+            return super.isSolidFace(level, pos, direction);
+        }
+
+        @Override
+        protected boolean canBeReplacedWith(FluidState state, BlockGetter level, BlockPos pos, Fluid fluidIn, Direction direction) {
+            if (fluidIn.is(FluidTags.WATER)) {
+                return false;
+            }
+            return super.canBeReplacedWith(state, level, pos, fluidIn, direction);
+        }
+    }
+
+    public static class BCCustomSourceFluid extends BaseFlowingFluid.Source {
+        public BCCustomSourceFluid(Properties properties) {
+            super(properties);
+        }
+
+        @Override
+        protected boolean isSolidFace(BlockGetter level, BlockPos pos, Direction direction) {
+            if (level.getFluidState(pos).is(FluidTags.WATER)) {
+                return true;
+            }
+            return super.isSolidFace(level, pos, direction);
+        }
+
+        @Override
+        protected boolean canBeReplacedWith(FluidState state, BlockGetter level, BlockPos pos, Fluid fluidIn, Direction direction) {
+            if (fluidIn.is(FluidTags.WATER)) {
+                return false;
+            }
+            return super.canBeReplacedWith(state, level, pos, fluidIn, direction);
+        }
     }
 }

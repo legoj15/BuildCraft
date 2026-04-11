@@ -171,7 +171,7 @@ public class BCEnergyFluids {
                         .temperature(temperature)
                         .canExtinguish(false)
                         .canConvertToSource(false)
-                        .canSwim(true)
+                        .canSwim(!turnOffSplashes)
                         .canPushEntity(true)
                         .canDrown(true)
                         .isWaterLike(!turnOffSplashes)
@@ -361,9 +361,27 @@ public class BCEnergyFluids {
         @Override
         public double motionScale(net.minecraft.world.entity.Entity entity) {
             if (BCEnergyConfig.oilIsSticky != null && BCEnergyConfig.oilIsSticky.get()) {
-                return 0.007D; // Very sluggish, cobweb-like
+                return 0.5D; // Sluggish
             }
-            return 0.010D; // Dense liquid (water is 0.014)
+            return 0.8D; // Dense liquid (water is typically friction ~0.8)
+        }
+
+        @Override
+        public boolean move(net.minecraft.world.level.material.FluidState state, net.minecraft.world.entity.LivingEntity entity, net.minecraft.world.phys.Vec3 movementVector, double gravity) {
+            double scalar = motionScale(entity);
+            
+            // Apply fluid friction
+            net.minecraft.world.phys.Vec3 vel = entity.getDeltaMovement();
+            entity.setDeltaMovement(vel.multiply(scalar, 0.8D, scalar));
+
+            // Upward bobbing buoyancy
+            if (!entity.onGround()) {
+                entity.setDeltaMovement(entity.getDeltaMovement().add(0.0D, 0.02D, 0.0D));
+            }
+
+            // Move the physical entity based on the calculated delta
+            entity.move(net.minecraft.world.entity.MoverType.SELF, entity.getDeltaMovement());
+            return true;
         }
     }
 }

@@ -169,7 +169,7 @@ public class ContainerGate extends ContainerBC_Neptune {
                 int numActions = buffer.readInt();
                 for (int i = 0; i < numTriggers; i++) {
                     String tag = buffer.readUtf();
-                    EnumPipePart part = buffer.readEnumValue(EnumPipePart.class);
+                    EnumPipePart part = buffer.readEnum(EnumPipePart.class);
                     var state = StatementManager.statements.get(tag);
                     if (state == null) {
                         BCLog.logger.warn("Gate received invalid trigger tag from server: " + tag);
@@ -182,7 +182,7 @@ public class ContainerGate extends ContainerBC_Neptune {
                 }
                 for (int i = 0; i < numActions; i++) {
                     String tag = buffer.readUtf();
-                    EnumPipePart part = buffer.readEnumValue(EnumPipePart.class);
+                    EnumPipePart part = buffer.readEnum(EnumPipePart.class);
                     var state = StatementManager.statements.get(tag);
                     if (state == null) {
                         BCLog.logger.warn("Gate received invalid action tag: " + tag);
@@ -204,12 +204,12 @@ public class ContainerGate extends ContainerBC_Neptune {
             buffer.writeInt(possibleActions.size());
             for (TriggerWrapper wrapper : possibleTriggers) {
                 buffer.writeUtf(wrapper.getUniqueTag());
-                ((PacketBufferBC) buffer).writeEnumValue(wrapper.sourcePart);
+                buffer.writeEnum(wrapper.sourcePart);
             }
 
             for (ActionWrapper wrapper : possibleActions) {
                 buffer.writeUtf(wrapper.getUniqueTag());
-                ((PacketBufferBC) buffer).writeEnumValue(wrapper.sourcePart);
+                buffer.writeEnum(wrapper.sourcePart);
             }
 
             // Sync connections

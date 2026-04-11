@@ -38,7 +38,7 @@ public class GateContext<T extends IStatement> implements StatementContext<T> {
 
         @Override
         public ISimpleDrawable getSourceIcon() {
-            return null;
+            if (part == buildcraft.api.core.EnumPipePart.CENTER) return null; return buildcraft.lib.gui.statement.GuiElementStatement.SLOT_COLOUR.offset(0, (1 + part.getIndex()) * 18);
         }
 
         @Override

@@ -165,9 +165,12 @@ public class ContainerGate extends ContainerBC_Neptune {
             } else if (id == ID_STATEMENT_CHANGE) {
                 try {
                     gate.readPayload(buffer, false);
+                    if (pipeHolder instanceof net.minecraft.world.level.block.entity.BlockEntity be) {
+                        be.setChanged();
+                    }
                     gate.sendResolveData();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    BCLog.logger.error("[gate.sync] Error handling statement change", e);
                 }
             }
         } else {

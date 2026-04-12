@@ -134,19 +134,30 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
         for (int i = 0; i < statements.length; i++) {
             String tName = "trigger[" + i + "]";
             String aName = "action[" + i + "]";
-            // Legacy
+            // Only apply legacy conversion if the tag has the old format (kind at root)
+            // and NOT the new FullStatement format (data inside "s" sub-compound)
             if (nbt.contains(tName)) {
-                CompoundTag nbt2 = new CompoundTag();
-                nbt2.putString("kind", nbt.getCompound(tName).orElse(new CompoundTag()).getString("kind").orElse(""));
-                nbt2.putByte("side", nbt.getCompound(tName).orElse(new CompoundTag()).getByte("side").orElse((byte) 6));
-                nbt.put(tName, nbt2);
+                CompoundTag existing = nbt.getCompound(tName).orElse(new CompoundTag());
+                if (existing.contains("kind") && !existing.contains("s")) {
+                    // Old 1.12.2 format: kind and side at root level → wrap into "s" sub-compound
+                    CompoundTag nbt2 = new CompoundTag();
+                    CompoundTag sTag = new CompoundTag();
+                    sTag.putString("kind", existing.getString("kind").orElse(""));
+                    sTag.putByte("side", existing.getByte("side").orElse((byte) 6));
+                    nbt2.put("s", sTag);
+                    nbt.put(tName, nbt2);
+                }
             }
-            // Legacy
             if (nbt.contains(aName)) {
-                CompoundTag nbt2 = new CompoundTag();
-                nbt2.putString("kind", nbt.getCompound(aName).orElse(new CompoundTag()).getString("kind").orElse(""));
-                nbt2.putByte("side", nbt.getCompound(aName).orElse(new CompoundTag()).getByte("side").orElse((byte) 6));
-                nbt.put(aName, nbt2);
+                CompoundTag existing = nbt.getCompound(aName).orElse(new CompoundTag());
+                if (existing.contains("kind") && !existing.contains("s")) {
+                    CompoundTag nbt2 = new CompoundTag();
+                    CompoundTag sTag = new CompoundTag();
+                    sTag.putString("kind", existing.getString("kind").orElse(""));
+                    sTag.putByte("side", existing.getByte("side").orElse((byte) 6));
+                    nbt2.put("s", sTag);
+                    nbt.put(aName, nbt2);
+                }
             }
 
             statements[i].trigger.readFromNbt(nbt.getCompound(tName).orElse(new CompoundTag()));

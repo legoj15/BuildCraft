@@ -188,7 +188,11 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
     @Override
     public void readPayload(FriendlyByteBuf b, Object side, Object ctx) throws IOException {
         PacketBufferBC packetBuffer = new PacketBufferBC(b);
-        logic.readPayload(packetBuffer, ((Boolean) ctx).booleanValue());
+        byte id = packetBuffer.readByte();
+        // buildcraft.api.core.BCLog.logger.info("PluggableGate received payload ID: " + id + ", isClient = " + ctx);
+        if (id == ID_UPDATE_PLUG) {
+            logic.readPayload(packetBuffer, ((Boolean) ctx).booleanValue());
+        }
     }
 
     // PipePluggable

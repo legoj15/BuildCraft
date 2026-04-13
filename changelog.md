@@ -36,3 +36,4 @@
 - Fix Redstone wire physical connections failing to update automatically when a Gate acts as a neighbor connection point via Pipe Pluggable replacement on a pipe, by forcing block shape updates recursively.
 - Port `sendGuiMessage` to use the native NeoForge 1.21.11 `MessagePipePayload` chunk-broadcast system.
 - Restore `MessagePipePayload` routing to explicitly resolve `PipePluggables`, repairing Gate GUI logical synchronization (the "middle bar" dynamically animating) and external Gate block glowing when evaluating triggers.
+- Fix Gate statement drag-and-drop operations inexplicably reverting on the client by consuming the legacy `ID_UPDATE_PLUG` offset inside the `PluggableGate` networked packet deserializer, preventing subsequent valid packet contents from being discarded as corruption.

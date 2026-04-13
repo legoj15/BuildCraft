@@ -434,6 +434,50 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         }
     }
 
+    @Override
+    public boolean canConnectRedstone(BlockState state, BlockGetter level, BlockPos pos, @Nullable Direction direction) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TilePipeHolder tile) {
+            if (direction != null) {
+                Direction face = direction.getOpposite();
+                buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(face);
+                if (plug != null && plug.canConnectToRedstone(face)) {
+                    return true;
+                }
+            } else {
+                for (Direction dir : Direction.values()) {
+                    buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(dir);
+                    if (plug != null && plug.canConnectToRedstone(null)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean isSignalSource(BlockState state) {
+        return true;
+    }
+
+    @Override
+    public int getSignal(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TilePipeHolder tile) {
+            // direction in BlockBehaviour.getSignal is the side the neighbor is on.
+            // If the neighbor is DOWN, we are providing signal to the neighbor's UP face.
+            // So we are emitting from our DOWN face.
+            return tile.getRedstoneOutput(direction.getOpposite());
+        }
+        return 0;
+    }
+
+    @Override
+    public int getDirectSignal(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
+        return getSignal(state, level, pos, direction);
+    }
+
     // Pick block (middle click) — return the correct item for what's targeted
     @Override
     public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData, Player player) {

@@ -60,7 +60,7 @@ public class TriggerFluidContainer extends BCStatement implements ITriggerExtern
         }
 
         ResourceHandler<FluidResource> handler = tile.getLevel().getCapability(
-            Capabilities.Fluid.BLOCK, tile.getBlockPos(), side
+            Capabilities.Fluid.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null
         );
 
         if (handler == null) {

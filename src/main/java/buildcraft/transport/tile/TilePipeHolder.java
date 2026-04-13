@@ -200,9 +200,7 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     @Override
     public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
-        CompoundTag tag = this.saveCustomOnly(registries);
-        BCLog.logger.info("[GateSync] getUpdateTag: " + tag);
-        return tag;
+        return this.saveCustomOnly(registries);
     }
 
     @Override
@@ -211,9 +209,6 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         // Schedule client-side render refresh after receiving updated state
         requestModelDataUpdate();
         if (level != null && level.isClientSide()) {
-            input.read("plugs", CompoundTag.CODEC).ifPresent(p -> {
-                BCLog.logger.info("[GateSync] handleUpdateTag Client plugs: " + p);
-            });
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }
     }

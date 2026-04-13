@@ -56,7 +56,7 @@ public class TriggerInventory extends BCStatement implements ITriggerExternal {
     @Override
     public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer container, IStatementParameter[] parameters) {
         if (tile.getLevel() == null) return false;
-        ResourceHandler<ItemResource> handler = tile.getLevel().getCapability(Capabilities.Item.BLOCK, tile.getBlockPos(), side);
+        ResourceHandler<ItemResource> handler = tile.getLevel().getCapability(Capabilities.Item.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null);
         if (handler == null) {
             return false;
         }

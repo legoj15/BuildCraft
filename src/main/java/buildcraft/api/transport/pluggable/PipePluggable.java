@@ -47,6 +47,15 @@ public abstract class PipePluggable {
         return nbt;
     }
 
+    /** Attempts to update this pluggable in-place from NBT data, preserving the existing object
+     * identity. This is critical for GUI containers that hold direct references to the pluggable
+     * or its internal logic — recreating the pluggable from scratch would orphan those references.
+     *
+     * @return true if the pluggable was updated in-place, false if a full recreation is needed. */
+    public boolean readFromNbt(CompoundTag nbt) {
+        return false;
+    }
+
     /** Writes the payload that will be passed into
      * {@link PluggableDefinition#loadFromBuffer(IPipeHolder, Direction, FriendlyByteBuf)} on the client. (This is called
      * on the server and sent to the client). Note that this will be called *instead* of write and read payload. */

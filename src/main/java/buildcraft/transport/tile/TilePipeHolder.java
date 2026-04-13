@@ -149,7 +149,15 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
                                 ? PipeApi.pluggableRegistry.getDefinition(plugId) : null;
                         if (def != null) {
                             CompoundTag data = entry.getCompound("data").orElse(new CompoundTag());
-                            pluggables[face.ordinal()] = def.readFromNbt(this, face, data);
+                            // Reuse existing pluggable if the definition matches, to preserve
+                            // live references held by open GUI containers (e.g. ContainerGate → GateLogic)
+                            PipePluggable existing = pluggables[face.ordinal()];
+                            if (existing != null && existing.definition.identifier.equals(plugId)
+                                    && existing.readFromNbt(data)) {
+                                // Updated in-place — keep the existing instance
+                            } else {
+                                pluggables[face.ordinal()] = def.readFromNbt(this, face, data);
+                            }
                         } else {
                             pluggables[face.ordinal()] = null;
                         }

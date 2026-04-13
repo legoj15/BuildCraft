@@ -157,6 +157,10 @@ public class ContainerGate extends ContainerBC_Neptune {
                 boolean to = buffer.readBoolean();
                 if (index < gate.connections.length) {
                     gate.connections[index] = to;
+                    if (pipeHolder instanceof net.minecraft.world.level.block.entity.BlockEntity be) {
+                        be.setChanged();
+                        pipeHolder.scheduleRenderUpdate();
+                    }
                     gate.sendResolveData();
                 }
             } else if (id == ID_VALID_STATEMENTS) {
@@ -167,6 +171,7 @@ public class ContainerGate extends ContainerBC_Neptune {
                     gate.readPayload(buffer, false);
                     if (pipeHolder instanceof net.minecraft.world.level.block.entity.BlockEntity be) {
                         be.setChanged();
+                        pipeHolder.scheduleRenderUpdate();
                     }
                     gate.sendResolveData();
                 } catch (IOException e) {

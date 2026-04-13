@@ -145,6 +145,13 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
         return nbt;
     }
 
+    @Override
+    public boolean readFromNbt(CompoundTag nbt) {
+        CompoundTag data = nbt.getCompound("data").orElse(new CompoundTag());
+        logic.readConfigData(data);
+        return true;
+    }
+
     // Networking
 
     public PluggableGate(PluggableDefinition def, IPipeHolder holder, Direction side, net.minecraft.network.FriendlyByteBuf buffer) {

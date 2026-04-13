@@ -82,9 +82,21 @@ public record MessageContainerPayload(
                     + " (got " + openContainer.getClass().getName() + ")");
                 return;
             }
+
+            boolean isClient = player.level().isClientSide();
+
+            // Sentinel: Verify distance and container validity on server to prevent Reach/Interact exploits
+            if (!isClient && !bcContainer.stillValid(player)) {
+                BCLog.logger.warn("[lib.net] Received container message but container is no longer valid for player");
+                return;
+            }
+
             PacketBufferBC buffer = new PacketBufferBC(Unpooled.wrappedBuffer(message.payload));
             try {
                 boolean isClient = player.level().isClientSide();
+                if (!isClient && !bcContainer.stillValid(player)) {
+                    return; // Security: Prevent C2S interaction if the container is no longer valid (e.g. out of range)
+                }
                 bcContainer.readMessage(message.messageId, buffer, isClient, ctx);
             } catch (Exception e) {
                 BCLog.logger.warn("[lib.net] Error handling container message (id=" + message.messageId + ")", e);

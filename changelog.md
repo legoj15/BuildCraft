@@ -34,3 +34,5 @@
 - Restore GateContext ledger colors to use ColourUtil.getColourForSide() from 1.12.2.
 - Support gate tooltips by porting missing localization keys from 1.12.2 en_US.lang.
 - Fix Redstone wire physical connections failing to update automatically when a Gate acts as a neighbor connection point via Pipe Pluggable replacement on a pipe, by forcing block shape updates recursively.
+- Port `sendGuiMessage` to use the native NeoForge 1.21.11 `MessagePipePayload` chunk-broadcast system.
+- Restore `MessagePipePayload` routing to explicitly resolve `PipePluggables`, repairing Gate GUI logical synchronization (the "middle bar" dynamically animating) and external Gate block glowing when evaluating triggers.

@@ -534,7 +534,7 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     @Override
     public void sendGuiMessage(PipeMessageReceiver to, IWriter writer) {
-        // GUI messages not yet ported — no-op
+        sendMessage(to, writer);
     }
 
     @Override

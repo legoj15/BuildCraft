@@ -114,7 +114,10 @@ public record MessagePipePayload(
                     default -> {
                         // Pluggable messages — receiver has a face
                         if (receiver.face != null) {
-                            // Pluggables not yet ported — silently ignore
+                            buildcraft.api.transport.pluggable.PipePluggable plug = holder.getPluggable(receiver.face);
+                            if (plug != null) {
+                                plug.readPayload(buffer, receiver.face, Boolean.TRUE);
+                            }
                         }
                     }
                 }

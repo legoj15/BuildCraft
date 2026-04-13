@@ -33,3 +33,4 @@
 - Fix Gate GUI tooltips not showing on hover (extractLabels was not calling super).
 - Restore GateContext ledger colors to use ColourUtil.getColourForSide() from 1.12.2.
 - Support gate tooltips by porting missing localization keys from 1.12.2 en_US.lang.
+- Fix Redstone wire physical connections failing to update automatically when a Gate acts as a neighbor connection point via Pipe Pluggable replacement on a pipe, by forcing block shape updates recursively.

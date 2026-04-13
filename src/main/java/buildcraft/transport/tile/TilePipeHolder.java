@@ -192,7 +192,9 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     @Override
     public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
-        return this.saveCustomOnly(registries);
+        CompoundTag tag = this.saveCustomOnly(registries);
+        BCLog.logger.info("[GateSync] getUpdateTag: " + tag);
+        return tag;
     }
 
     @Override
@@ -201,6 +203,9 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         // Schedule client-side render refresh after receiving updated state
         requestModelDataUpdate();
         if (level != null && level.isClientSide()) {
+            input.read("plugs", CompoundTag.CODEC).ifPresent(p -> {
+                BCLog.logger.info("[GateSync] handleUpdateTag Client plugs: " + p);
+            });
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }
     }
@@ -264,6 +269,9 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     // --- Tick ---
 
     public void tick() {
+        // Prepare redstone outputs for this tick
+        java.util.Arrays.fill(redstoneOutputsThisTick, 0);
+
         wireManager.tick();
         if (pipe != null) {
             pipe.onTick();
@@ -276,6 +284,18 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         }
         if (pipe != null) {
             pipe.postPluggableTick();
+        }
+
+        // Commit redstone outputs
+        boolean redstoneChanged = false;
+        for (int i = 0; i < 6; i++) {
+            if (redstoneOutputs[i] != redstoneOutputsThisTick[i]) {
+                redstoneOutputs[i] = redstoneOutputsThisTick[i];
+                redstoneChanged = true;
+            }
+        }
+        if (redstoneChanged && level != null && !level.isClientSide()) {
+            level.updateNeighborsAt(worldPosition, getBlockState().getBlock());
         }
 
         // Schedule render update — server side only, to push block entity data to clients
@@ -375,6 +395,19 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         if (neighbourPipe != null) {
             neighbourPipe.markForUpdate();
         }
+        if (level != null && !level.isClientSide()) {
+            level.updateNeighborsAt(worldPosition, getBlockState().getBlock());
+            for (Direction dir : Direction.values()) {
+                BlockPos npos = worldPosition.relative(dir);
+                BlockState nstate = level.getBlockState(npos);
+                if (!nstate.isAir()) {
+                    BlockState res = nstate.updateShape(level, level, npos, dir.getOpposite(), worldPosition, getBlockState(), level.getRandom());
+                    if (res != nstate) {
+                        Block.updateOrDestroy(nstate, res, level, npos, Block.UPDATE_ALL);
+                    }
+                }
+            }
+        }
         scheduleRenderUpdate();
         setChanged();
         return old;
@@ -458,7 +491,12 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     @Override
     public void scheduleRenderUpdate() {
-        scheduleRenderUpdate = true;
+        if (level != null && level.isClientSide()) {
+            requestModelDataUpdate();
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+        } else {
+            scheduleRenderUpdate = true;
+        }
     }
 
     @Override
@@ -509,6 +547,9 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     // --- IRedstoneStatementContainer ---
 
+    private final int[] redstoneOutputs = new int[Direction.values().length];
+    private final int[] redstoneOutputsThisTick = new int[Direction.values().length];
+
     @Override
     public int getRedstoneInput(Direction side) {
         if (level == null) return 0;
@@ -518,9 +559,29 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         return level.getSignal(worldPosition.relative(side), side);
     }
 
+    public int getRedstoneOutput(Direction side) {
+        if (side == null) return 0;
+        return redstoneOutputs[side.ordinal()];
+    }
+
     @Override
     public boolean setRedstoneOutput(Direction side, int value) {
-        return false; // Redstone output not yet ported
+        if (side == null) {
+            boolean changed = false;
+            for (int i = 0; i < 6; i++) {
+                if (redstoneOutputsThisTick[i] < value) {
+                    redstoneOutputsThisTick[i] = value;
+                    changed = true;
+                }
+            }
+            return changed;
+        }
+        int idx = side.ordinal();
+        if (redstoneOutputsThisTick[idx] < value) {
+            redstoneOutputsThisTick[idx] = value;
+            return true;
+        }
+        return false;
     }
 
     // --- IDebuggable ---

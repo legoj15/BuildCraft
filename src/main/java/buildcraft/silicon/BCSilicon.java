@@ -37,6 +37,7 @@ public class BCSilicon {
 
         // Register pluggable definitions (facade, etc.)
         BCSiliconPlugs.preInit();
+        BCSiliconStatements.preInit();
 
         // Register client-side extensions on the mod event bus
         if (FMLEnvironment.getDist() == Dist.CLIENT) {

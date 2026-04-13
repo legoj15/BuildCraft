@@ -281,8 +281,10 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
                 readBoolArray(buffer, connections);
             } else if (id == NET_ID_GLOWING) {
                 isOn = true;
+                getPipeHolder().scheduleRenderUpdate();
             } else if (id == NET_ID_DARK) {
                 isOn = false;
+                getPipeHolder().scheduleRenderUpdate();
             } else {
                 BCLog.logger.warn("Unknown ID " + ID_ALLOC.getNameFor(id));
             }

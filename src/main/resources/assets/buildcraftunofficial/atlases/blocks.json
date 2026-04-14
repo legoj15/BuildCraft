@@ -56,6 +56,11 @@
       "prefix": "wires/"
     },
     {
+      "type": "directory",
+      "source": "block/plugs",
+      "prefix": "block/plugs/"
+    },
+    {
       "type": "single",
       "resource": "buildcraftunofficial:robot"
     }

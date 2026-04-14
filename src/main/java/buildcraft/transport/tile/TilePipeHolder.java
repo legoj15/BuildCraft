@@ -174,6 +174,12 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
                 pluggables[i] = null;
             }
         });
+        // Re-register all loaded pluggables with the event bus so their
+        // @PipeEventHandler methods (e.g. PluggableTimer.addInternalTriggers) fire
+        for (PipePluggable plug : pluggables) {
+            eventBus.unregisterHandler(plug); // avoid duplicate registration
+            eventBus.registerHandler(plug);
+        }
         // Load wire data
         input.read("wires", CompoundTag.CODEC).ifPresent(wireTag -> {
             wireManager.readFromNbt(wireTag);
@@ -390,6 +396,11 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     public PipePluggable replacePluggable(Direction side, @Nullable PipePluggable with) {
         PipePluggable old = pluggables[side.ordinal()];
         pluggables[side.ordinal()] = with;
+
+        // Register/unregister with the event bus so @PipeEventHandler methods fire
+        eventBus.unregisterHandler(old);
+        eventBus.registerHandler(with);
+
         if (pipe != null) {
             pipe.markForUpdate();
         }

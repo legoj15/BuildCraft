@@ -116,14 +116,12 @@ public class PluggablePulsar extends PipePluggable {
         buffer.writeBoolean(isPulsing());
         buffer.writeBoolean(gateEnabledTicks > 0 || gateSinglePulses > 0);
         buffer.writeBoolean(manuallyEnabled);
-        buffer.writeByte(pulseStage);
     }
 
     private void readData(FriendlyByteBuf buffer) {
         isPulsing = buffer.readBoolean();
         autoEnabled = buffer.readBoolean();
         manuallyEnabled = buffer.readBoolean();
-        pulseStage = buffer.readByte();
     }
 
     // PipePluggable
@@ -146,6 +144,7 @@ public class PluggablePulsar extends PipePluggable {
     @Override
     public void onTick() {
         if (holder.getPipeWorld().isClientSide()) {
+            isPulsing = isPulsing(); // UPDATE STATE ON CLIENT TOO!
             if (isPulsing) {
                 pulseStage++;
                 if (pulseStage == PULSE_STAGE) {
@@ -216,6 +215,23 @@ public class PluggablePulsar extends PipePluggable {
         gateSinglePulses++;
     }
 
+    // Getters for rendering
+    public boolean getIsPulsingClient() {
+        return isPulsing;
+    }
+
+    public boolean getAutoEnabledClient() {
+        return autoEnabled;
+    }
+
+    public boolean getManuallyEnabledClient() {
+        return manuallyEnabled;
+    }
+
+    public int getPulseStageClient() {
+        return pulseStage;
+    }
+
     private boolean isPulsing() {
         return manuallyEnabled || gateEnabledTicks > 0 || gateSinglePulses > 0;
     }
@@ -226,5 +242,15 @@ public class PluggablePulsar extends PipePluggable {
             event.actions.add(BCSiliconStatements.ACTION_PULSAR_CONSTANT);
             event.actions.add(BCSiliconStatements.ACTION_PULSAR_SINGLE);
         }
+    }
+
+    @Override
+    public buildcraft.silicon.client.model.key.KeyPlugSimple getModelRenderKey(Object layer) {
+        if (layer == null) return null;
+        String name = layer.toString().toLowerCase();
+        if (name.contains("cutout")) {
+            return new buildcraft.silicon.client.model.key.KeyPlugSimple("pulsar", this.isPulsing, layer, this.side);
+        }
+        return null;
     }
 }

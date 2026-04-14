@@ -208,15 +208,21 @@ public class GuiGate extends GuiBC8<ContainerGate> {
 
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        // Run the standard foreground + tooltip pipeline from GuiBC8
+        // Run the standard foreground + tooltip pipeline from GuiBC8.
+        // This also draws the dark overlay + variant popup when currentMenu is set.
         super.extractLabels(graphics, mouseX, mouseY);
 
-        // Center the gate name at the top
-        String titleStr = menu.gate.variant.getLocalizedName().getString();
-        graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
-        
-        // Offset the 'Inventory' label down into the correct place
-        String invStr = Component.translatable("container.inventory").getString();
-        graphics.text(font, invStr, 8, 16 + numRows * 18 + 4, 0xFF404040, false);
+        // Only draw text labels when no override popup is obscuring the GUI.
+        // The labels are submitted to the font batch AFTER super draws the overlay,
+        // so without this guard they would bleed through on top of the popup.
+        if (mainGui.currentMenu == null || !mainGui.currentMenu.shouldFullyOverride()) {
+            // Center the gate name at the top
+            String titleStr = menu.gate.variant.getLocalizedName().getString();
+            graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
+
+            // Offset the 'Inventory' label down into the correct place
+            String invStr = Component.translatable("container.inventory").getString();
+            graphics.text(font, invStr, 8, 16 + numRows * 18 + 4, 0xFF404040, false);
+        }
     }
 }

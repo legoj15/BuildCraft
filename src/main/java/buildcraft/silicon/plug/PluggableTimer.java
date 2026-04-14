@@ -67,4 +67,14 @@ public class PluggableTimer extends PipePluggable {
         event.triggers.add(BCSiliconStatements.TRIGGER_TIMER_MEDIUM);
         event.triggers.add(BCSiliconStatements.TRIGGER_TIMER_LONG);
     }
+
+    @Override
+    public buildcraft.silicon.client.model.key.KeyPlugSimple getModelRenderKey(Object layer) {
+        if (layer == null) return null;
+        String name = layer.toString().toLowerCase();
+        if (name.contains("cutout")) {
+            return new buildcraft.silicon.client.model.key.KeyPlugSimple("timer", false, layer, this.side);
+        }
+        return null;
+    }
 }

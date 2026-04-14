@@ -62,6 +62,9 @@ public class BCSiliconClient {
             PipeApiClient.registry.registerBaker(KeyPlugGate.class, buildcraft.silicon.client.model.plug.PlugGateBaker.INSTANCE);
             PipeApiClient.registry.registerBaker(KeyPlugFacade.class, PlugBakerFacade.INSTANCE);
             PipeApiClient.registry.registerBaker(buildcraft.silicon.client.model.key.KeyPlugLens.class, buildcraft.silicon.client.model.plug.PlugBakerLens.INSTANCE);
+            PipeApiClient.registry.registerBaker(buildcraft.silicon.client.model.key.KeyPlugSimple.class, buildcraft.silicon.client.model.plug.PlugBakerSimpleItems.INSTANCE);
+            // Dynamic renderers
+            PipeApiClient.registry.registerRenderer(buildcraft.silicon.plug.PluggablePulsar.class, buildcraft.silicon.client.render.PlugPulsarRenderer.INSTANCE);
         } else {
             LOGGER.warn("[silicon.client] PipeApiClient.registry is null at ModifyBakingResult! "
                 + "Facade in-world rendering will not work.");
@@ -87,6 +90,7 @@ public class BCSiliconClient {
         FacadeItemModel.onModelBake();
         buildcraft.silicon.client.model.GateItemModel.onModelBake();
         buildcraft.silicon.client.model.plug.PlugGateBaker.onModelBake();
+        buildcraft.silicon.client.model.plug.PlugBakerSimpleItems.onModelBake();
 
         // Cache the blockstate models for deferred facade deduplication.
         // We can't run dedup here because ItemStack components aren't bound yet

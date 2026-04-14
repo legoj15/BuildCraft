@@ -16,6 +16,7 @@ import buildcraft.transport.tile.TilePipeHolder;
 public class PipeHolderRenderState extends BlockEntityRenderState {
     /** Direct reference to the pipe holder tile, set during extractRenderState(). */
     public TilePipeHolder pipe;
+    public float partialTick;
 
     /** Pre-resolved item render states for items travelling through the pipe.
      *  Each entry contains the ItemStackRenderState (model already resolved),

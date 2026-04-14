@@ -91,9 +91,9 @@ public class BuildCraftGui {
         partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         this.lastPartialTicks = partialTicks;
         mouse.setMousePosition(mouseX, mouseY);
-        if (currentMenu == null || !currentMenu.shouldFullyOverride()) {
-            menuBackgroundRenderer.run();
-        }
+        // Always draw the gate background — even when a variant/menu popup is open.
+        // In 1.12.2, the background was always present; the popup simply drew on top with a dark overlay.
+        menuBackgroundRenderer.run();
     }
 
     public void drawElementBackgrounds() {
@@ -128,8 +128,17 @@ public class BuildCraftGui {
 
         IMenuElement m = currentMenu;
         if (m != null) {
-            if (m.shouldFullyOverride() && menuBackgroundRenderer != null) {
-                menuBackgroundRenderer.run();
+            if (m.shouldFullyOverride()) {
+                // Draw a dark overlay over the whole GUI to match 1.12.2's darkening effect
+                // when the quick-switch variant popup is open.
+                net.minecraft.client.gui.GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
+                if (graphics != null) {
+                    int sx = (int) screenElement.getX();
+                    int sy = (int) screenElement.getY();
+                    int sw = (int) screenElement.getWidth();
+                    int sh = (int) screenElement.getHeight();
+                    graphics.fill(sx, sy, sx + sw, sy + sh, 0xC0101010);
+                }
             }
             m.drawBackground(lastPartialTicks);
             m.drawForeground(lastPartialTicks);

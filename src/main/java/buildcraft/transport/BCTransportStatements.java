@@ -84,11 +84,14 @@ public class BCTransportStatements {
         ACTION_IRON_RF_LIMIT = new ActionPowerLimit[numLevels];
         ACTION_DIAMOND_RF_LIMIT = new ActionPowerLimit[numLevels];
 
+        // Fill in reverse shift order so index 0 = blocked (0 MJ/t shown at top of GUI),
+        // matching 1.12.2 where the list ran from lowest limit to highest.
         for (int i = 0; i < numLevels; i++) {
-            ACTION_IRON_POWER_LIMIT[i] = new ActionPowerLimit.ActionIronPowerLimit(i);
-            ACTION_DIAMOND_POWER_LIMIT[i] = new ActionPowerLimit.ActionDiamondPowerLimit(i);
-            ACTION_IRON_RF_LIMIT[i] = new ActionPowerLimit.ActionIronRfLimit(i);
-            ACTION_DIAMOND_RF_LIMIT[i] = new ActionPowerLimit.ActionDiamondRfLimit(i);
+            int shift = numLevels - 1 - i; // shift=MAX_SHIFT at i=0, shift=0 at i=MAX_SHIFT
+            ACTION_IRON_POWER_LIMIT[i]    = new ActionPowerLimit.ActionIronPowerLimit(shift);
+            ACTION_DIAMOND_POWER_LIMIT[i] = new ActionPowerLimit.ActionDiamondPowerLimit(shift);
+            ACTION_IRON_RF_LIMIT[i]       = new ActionPowerLimit.ActionIronRfLimit(shift);
+            ACTION_DIAMOND_RF_LIMIT[i]    = new ActionPowerLimit.ActionDiamondRfLimit(shift);
         }
 
         StatementManager.registerParameter(TriggerParameterSignal::readFromNbt, TriggerParameterSignal::readFromBuf);

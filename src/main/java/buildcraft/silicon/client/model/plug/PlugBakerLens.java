@@ -38,18 +38,20 @@ public enum PlugBakerLens implements IPluggableStaticBaker<KeyPlugLens> {
     }
 
     private static void addBox(List<MutableQuad> quads, TextureAtlasSprite sprite,
-            float x0, float y0, float z0, float x1, float y1, float z1) {
+            float x0, float y0, float z0, float x1, float y1, float z1, ModelUtil.UvFaceData[] faceUvs) {
         
         Vector3f center = new Vector3f((x0 + x1) / 2f, (y0 + y1) / 2f, (z0 + z1) / 2f);
         Vector3f radius = new Vector3f((x1 - x0) / 2f, (y1 - y0) / 2f, (z1 - z0) / 2f);
         AABB box = new AABB(x0, y0, z0, x1, y1, z1);
 
         for (Direction face : Direction.values()) {
-            ModelUtil.UvFaceData uvs = new ModelUtil.UvFaceData();
-            ModelUtil.mapBoxToUvs(box, face, uvs);
-            // The 1.12.2 model maps textures manually, but standard box mapping
-            // is close enough for a single color/texture frame.
+            ModelUtil.UvFaceData uvs = faceUvs != null ? faceUvs[face.ordinal()] : new ModelUtil.UvFaceData();
+            if (faceUvs == null) {
+                ModelUtil.mapBoxToUvs(box, face, uvs);
+            }
             MutableQuad q = ModelUtil.createFace(face, center, radius, uvs);
+            // 1.12.2 defined explicit rotations per-face in the JSON, but since
+            // these are 1px borders, default rotation is generally indistinguishable.
             q.setSprite(sprite);
             q.vertex_0.texFromSprite(sprite);
             q.vertex_1.texFromSprite(sprite);
@@ -60,7 +62,7 @@ public enum PlugBakerLens implements IPluggableStaticBaker<KeyPlugLens> {
     }
 
     private static void addTranslucentBox(List<MutableQuad> quads, TextureAtlasSprite sprite,
-            float x0, float y0, float z0, float x1, float y1, float z1) {
+            float x0, float y0, float z0, float x1, float y1, float z1, ModelUtil.UvFaceData[] faceUvs) {
 
         Vector3f center = new Vector3f((x0 + x1) / 2f, (y0 + y1) / 2f, (z0 + z1) / 2f);
         Vector3f radius = new Vector3f((x1 - x0) / 2f, (y1 - y0) / 2f, (z1 - z0) / 2f);
@@ -69,15 +71,10 @@ public enum PlugBakerLens implements IPluggableStaticBaker<KeyPlugLens> {
         // Translucent part only renders East and West faces!
         Direction[] faces = {Direction.EAST, Direction.WEST};
         for (Direction face : faces) {
-            ModelUtil.UvFaceData uvs = new ModelUtil.UvFaceData();
-            ModelUtil.mapBoxToUvs(box, face, uvs);
-            // Custom UV for the glass: { "uv": [ 6, 6, 10, 10 ] }
-            // To emulate this, we just map 6/16 to 10/16
-            uvs.minU = 6 / 16f;
-            uvs.maxU = 10 / 16f;
-            uvs.minV = 6 / 16f;
-            uvs.maxV = 10 / 16f;
-
+            ModelUtil.UvFaceData uvs = faceUvs != null ? faceUvs[face.ordinal()] : new ModelUtil.UvFaceData();
+            if (faceUvs == null) {
+                ModelUtil.mapBoxToUvs(box, face, uvs);
+            }
             MutableQuad q = ModelUtil.createFace(face, center, radius, uvs);
             q.setSprite(sprite);
             q.vertex_0.texFromSprite(sprite);
@@ -96,24 +93,67 @@ public enum PlugBakerLens implements IPluggableStaticBaker<KeyPlugLens> {
 
             if (layerName.contains("cutout")) {
                 TextureAtlasSprite sprite = SpriteUtil.getSprite(Identifier.fromNamespaceAndPath(BCSilicon.MODID,
-                    key.isFilter ? "plugs/filter" : "plugs/lens"));
+                    key.isFilter ? "block/plugs/filter" : "block/plugs/lens"));
                 if (sprite == null) sprite = SpriteUtil.missingSprite();
 
-                // West facing shape base 0-2 (2/16ths deep)
-                addBox(rawQuads, sprite, 0 / 16f, 3 / 16f, 3 / 16f, 2 / 16f, 4.01f / 16f, 13 / 16f);
-                addBox(rawQuads, sprite, 0 / 16f, 11.99f / 16f, 3 / 16f, 2 / 16f, 13 / 16f, 13 / 16f);
-                addBox(rawQuads, sprite, 0 / 16f, 4.01f / 16f, 3 / 16f, 2 / 16f, 11.99f / 16f, 4.01f / 16f);
-                addBox(rawQuads, sprite, 0 / 16f, 4.01f / 16f, 11.99f / 16f, 2 / 16f, 11.99f / 16f, 13 / 16f);
+                // Box 1
+                ModelUtil.UvFaceData[] box1 = new ModelUtil.UvFaceData[] {
+                    ModelUtil.UvFaceData.from16(2, 12, 4, 13), // DOWN
+                    ModelUtil.UvFaceData.from16(2, 3, 4, 4),   // UP
+                    ModelUtil.UvFaceData.from16(2, 12, 4, 13), // NORTH
+                    ModelUtil.UvFaceData.from16(2, 3, 4, 13),  // SOUTH
+                    ModelUtil.UvFaceData.from16(2, 3, 3, 13),  // WEST
+                    ModelUtil.UvFaceData.from16(3, 3, 4, 13)   // EAST
+                };
+                addBox(rawQuads, sprite, 0 / 16f, 3 / 16f, 3 / 16f, 2 / 16f, 4.01f / 16f, 13 / 16f, box1);
+                
+                // Box 2
+                ModelUtil.UvFaceData[] box2 = new ModelUtil.UvFaceData[] {
+                    ModelUtil.UvFaceData.from16(12, 12, 14, 13), // DOWN
+                    ModelUtil.UvFaceData.from16(12, 3, 14, 4),   // UP
+                    ModelUtil.UvFaceData.from16(12, 12, 14, 13), // NORTH
+                    ModelUtil.UvFaceData.from16(12, 3, 14, 13),  // SOUTH
+                    ModelUtil.UvFaceData.from16(12, 3, 13, 13),  // WEST
+                    ModelUtil.UvFaceData.from16(13, 3, 14, 13)   // EAST
+                };
+                addBox(rawQuads, sprite, 0 / 16f, 11.99f / 16f, 3 / 16f, 2 / 16f, 13 / 16f, 13 / 16f, box2);
+                
+                // Box 3
+                ModelUtil.UvFaceData[] box3 = new ModelUtil.UvFaceData[] {
+                    ModelUtil.UvFaceData.from16(3, 12, 13, 14), // DOWN
+                    ModelUtil.UvFaceData.from16(3, 2, 4, 4),    // UP
+                    ModelUtil.UvFaceData.from16(3, 2, 4, 4),    // NORTH
+                    ModelUtil.UvFaceData.from16(12, 2, 13, 4),  // SOUTH
+                    ModelUtil.UvFaceData.from16(3, 2, 13, 3),   // WEST
+                    ModelUtil.UvFaceData.from16(3, 3, 13, 4)    // EAST
+                };
+                addBox(rawQuads, sprite, 0 / 16f, 4.01f / 16f, 3 / 16f, 2 / 16f, 11.99f / 16f, 4.01f / 16f, box3);
+                
+                // Box 4
+                ModelUtil.UvFaceData[] box4 = new ModelUtil.UvFaceData[] {
+                    ModelUtil.UvFaceData.from16(3, 12, 4, 14),  // DOWN
+                    ModelUtil.UvFaceData.from16(12, 12, 13, 14),// UP
+                    ModelUtil.UvFaceData.from16(12, 12, 13, 14),// NORTH
+                    ModelUtil.UvFaceData.from16(3, 12, 4, 14),  // SOUTH
+                    ModelUtil.UvFaceData.from16(3, 12, 13, 13), // WEST
+                    ModelUtil.UvFaceData.from16(3, 13, 13, 14)  // EAST
+                };
+                addBox(rawQuads, sprite, 0 / 16f, 4.01f / 16f, 11.99f / 16f, 2 / 16f, 11.99f / 16f, 13 / 16f, box4);
             } else if (layerName.contains("translucent")) {
                 TextureAtlasSprite sprite;
                 if (!key.isFilter || key.colour != null) {
-                    sprite = SpriteUtil.getSprite(Identifier.fromNamespaceAndPath(BCSilicon.MODID, "plugs/overlay_lens"));
+                    sprite = SpriteUtil.getSprite(Identifier.fromNamespaceAndPath(BCSilicon.MODID, "block/plugs/overlay_lens"));
                 } else {
                     sprite = SpriteUtil.getSprite(Identifier.parse("minecraft:block/water_flow"));
                 }
                 if (sprite == null) sprite = SpriteUtil.missingSprite();
                 
-                addTranslucentBox(rawQuads, sprite, 0.5f / 16f, 4 / 16f, 4 / 16f, 1.5f / 16f, 12 / 16f, 12 / 16f);
+                // Translucent box
+                ModelUtil.UvFaceData[] translucentBox = new ModelUtil.UvFaceData[6];
+                for (int i = 0; i < 6; i++) {
+                    translucentBox[i] = ModelUtil.UvFaceData.from16(6, 6, 10, 10);
+                }
+                addTranslucentBox(rawQuads, sprite, 0.5f / 16f, 4 / 16f, 4 / 16f, 1.5f / 16f, 12 / 16f, 12 / 16f, translucentBox);
             }
 
             List<BakedQuad> baked = new ArrayList<>();

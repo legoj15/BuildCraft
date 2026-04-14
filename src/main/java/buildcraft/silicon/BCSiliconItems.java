@@ -66,11 +66,12 @@ public class BCSiliconItems {
 
     // Light Sensor
     public static final DeferredItem<Item> PLUG_LIGHT_SENSOR =
-            ITEMS.registerSimpleItem("plug_light_sensor");
+            ITEMS.registerItem("plug_light_sensor", props -> new buildcraft.transport.item.ItemPluggableSimple(props, buildcraft.silicon.BCSiliconPlugs.lightSensor, null));
 
     // Timer
     public static final DeferredItem<Item> PLUG_TIMER =
-            ITEMS.registerSimpleItem("plug_timer");
+            ITEMS.registerItem("plug_timer", props -> new buildcraft.transport.item.ItemPluggableSimple(props, buildcraft.silicon.BCSiliconPlugs.timer, null));
+
 
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);

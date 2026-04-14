@@ -256,10 +256,17 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         interpWidth = interp(lastWidth, currentWidth, partialTicks);
         interpHeight = interp(lastHeight, currentHeight, partialTicks);
 
-        int x = (int) getX();
-        int y = (int) getY();
-        int w = (int) interpWidth;
-        int h = (int) interpHeight;
+        // For left-side ledgers, getX() = anchorX - interpWidth which can be fractional.
+        // Using (int) cast (= truncate toward zero) rounds the left edge rightward by up to 1px,
+        // causing the well-known 1px gap near the 4px nine-slice border during animation.
+        // Fix: floor X so the sprite always starts at or left of the true position,
+        // and ceil W so it always covers full pixel width.
+        double rawX = getX();
+        double rawY = getY();
+        int x = (int) Math.floor(rawX);
+        int y = (int) Math.floor(rawY);
+        int w = (int) Math.ceil(interpWidth + (rawX - x)); // compensate for floor shift
+        int h = (int) Math.ceil(interpHeight + (rawY - y));
 
         if (w <= 0 || h <= 0) return;
 
@@ -268,7 +275,7 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         // matching 1.12.2 BCLibSprites.LEDGER_LEFT/RIGHT.
         SpriteNineSliced split = expandPositive ? SPRITE_SPLIT_RIGHT : SPRITE_SPLIT_LEFT;
         int tintColour = 0xFF000000 | (colour & 0xFFFFFF);
-        split.drawTinted(getX(), getY(), interpWidth, interpHeight, tintColour);
+        split.drawTinted(x, y, w, h, tintColour);
 
         // Scissor clip all content (icon + text) to the ledger's current animated bounds.
         // Matches 1.12.2's GuiUtil.scissor() which masked content during expand/contract.

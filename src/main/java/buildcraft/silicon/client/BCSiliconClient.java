@@ -87,8 +87,16 @@ public class BCSiliconClient {
             itemModels.put(gateId, new buildcraft.silicon.client.model.GateItemModel());
         }
 
+        // Swap vanilla lens item model with dynamic programmatic model
+        Identifier lensId = BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_LENS.get());
+        ItemModel vanillaLensModel = itemModels.get(lensId);
+        if (vanillaLensModel != null) {
+            itemModels.put(lensId, new buildcraft.silicon.client.model.LensItemModel());
+        }
+
         FacadeItemModel.onModelBake();
         buildcraft.silicon.client.model.GateItemModel.onModelBake();
+        buildcraft.silicon.client.model.LensItemModel.onModelBake();
         buildcraft.silicon.client.model.plug.PlugGateBaker.onModelBake();
         buildcraft.silicon.client.model.plug.PlugBakerSimpleItems.onModelBake();
 

@@ -11,6 +11,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
@@ -23,6 +24,7 @@ import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
+import buildcraft.lib.misc.ColourUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.SoundUtil;
 
@@ -32,6 +34,15 @@ import buildcraft.silicon.plug.PluggableLens;
 public class ItemPluggableLens extends Item implements IItemPluggable {
     public ItemPluggableLens(Item.Properties properties) {
         super(properties);
+    }
+
+    @Override
+    public Component getName(ItemStack stack) {
+        DyeColor colour = getColour(stack);
+        boolean filter = isFilter(stack);
+        String colourName = colour == null ? "Clear" : ColourUtil.getTextFullTooltip(colour);
+        String typeName = filter ? "Filter" : "Lens";
+        return Component.literal(colourName + " " + typeName);
     }
 
     /** Creates a lens/filter item stack with the given colour and filter state. */

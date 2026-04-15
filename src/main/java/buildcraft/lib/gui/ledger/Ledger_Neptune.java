@@ -256,17 +256,35 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         interpWidth = interp(lastWidth, currentWidth, partialTicks);
         interpHeight = interp(lastHeight, currentHeight, partialTicks);
 
-        // For left-side ledgers, getX() = anchorX - interpWidth which can be fractional.
-        // Using (int) cast (= truncate toward zero) rounds the left edge rightward by up to 1px,
-        // causing the well-known 1px gap near the 4px nine-slice border during animation.
-        // Fix: floor X so the sprite always starts at or left of the true position,
-        // and ceil W so it always covers full pixel width.
-        double rawX = getX();
-        double rawY = getY();
+        // Compute draw X directly from interpWidth (not via getX()→getWidth()) to
+        // guarantee both rawX and w use the same interpolation value.
+        // If getX() were used, it calls getWidth()→gui.getLastPartialTicks() which can
+        // differ from the partialTicks argument by a tiny epsilon; that epsilon causes
+        // ceil(interpWidth + (rawX - floor(rawX))) to jump ±1 across frames, flickering
+        // the rightmost 1–2px of the ledger during animation.
+        //
+        // Left ledgers:  rawX = anchorX - interpWidth  (fractional; floor pulls left edge out)
+        //                w    = anchorX - floor(rawX)  (guaranteed right edge = anchorX exactly)
+        // Right ledgers: rawX = start position (integer anchor, no width dependency)
+        //                w    = ceil(interpWidth)       (always covers full pixel width)
+        double rawX, rawY;
+        if (expandPositive) {
+            rawX = positionLedgerStart.getX();         // integer anchor; no width dependency
+        } else {
+            rawX = positionAnchor.getX() - interpWidth; // consistent with interpWidth
+        }
+        rawY = getY(); // Y never depends on width; no drift issue
         int x = (int) Math.floor(rawX);
         int y = (int) Math.floor(rawY);
-        int w = (int) Math.ceil(interpWidth + (rawX - x)); // compensate for floor shift
-        int h = (int) Math.ceil(interpHeight + (rawY - y));
+        int w, h;
+        if (expandPositive) {
+            // Right-side: anchor at left, grows rightward — ceil so right edge covers fully
+            w = (int) Math.ceil(interpWidth);
+        } else {
+            // Left-side: anchor at right — pin the right edge exactly to anchorX to avoid flicker
+            w = (int) positionAnchor.getX() - x;
+        }
+        h = (int) Math.ceil(interpHeight + (rawY - y));
 
         if (w <= 0 || h <= 0) return;
 

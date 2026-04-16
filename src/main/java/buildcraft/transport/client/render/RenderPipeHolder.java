@@ -141,7 +141,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         // (DynamicBlockStateModel). The BER only handles dynamic content.
 
         // --- Render wires ---
-        PipeWireRenderer.renderWires(pipe, poseStack.last());
+        PipeWireRenderer.renderWires(pipe, poseStack.last(), light);
 
         // --- Render pre-resolved item models ---
         // Following vanilla CampfireRenderer: item models were resolved in

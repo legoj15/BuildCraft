@@ -1,8 +1,9 @@
-﻿{
+{
     "textures": {
         "main": "buildcraftunofficial:block/plugs/lens",
         "particle": "buildcraftunofficial:block/plugs/lens"
     },
+    "gui_light": "front",
     "display": {
         "thirdperson_righthand": { "rotation": [ 75, 225, 0 ], "translation": [ 0, 2.5, 0 ], "scale": [ 0.675, 0.675, 0.675 ] },
         "thirdperson_lefthand":  { "rotation": [ 75, 45, 0 ],  "translation": [ 0, 2.5, 0 ], "scale": [ 0.675, 0.675, 0.675 ] },

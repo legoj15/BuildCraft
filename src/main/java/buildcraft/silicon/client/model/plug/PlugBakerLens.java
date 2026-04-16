@@ -56,28 +56,27 @@ public enum PlugBakerLens implements IPluggableStaticBaker<KeyPlugLens> {
 
     // ---- Helpers ----
 
-    /**
-     * Create a single face quad for a box, with explicit UV coordinates
-     * in 16ths and sprite-space transformation.
-     *
-     * UV values are in 16ths (0-16 range) matching the 1.12.2 JSON format.
-     */
     private static MutableQuad makeFace(Direction face,
             float x0, float y0, float z0, float x1, float y1, float z1,
-            float u0, float v0, float u1, float v1,
-            TextureAtlasSprite sprite) {
+            float[] uvArr, TextureAtlasSprite sprite) {
         Vector3f center = new Vector3f((x0 + x1) / 2f, (y0 + y1) / 2f, (z0 + z1) / 2f);
         Vector3f radius = new Vector3f((x1 - x0) / 2f, (y1 - y0) / 2f, (z1 - z0) / 2f);
-        ModelUtil.UvFaceData uvs = ModelUtil.UvFaceData.from16(u0, v0, u1, v1);
+        ModelUtil.UvFaceData uvs = ModelUtil.UvFaceData.from16(uvArr[0], uvArr[1], uvArr[2], uvArr[3]);
         MutableQuad q = ModelUtil.createFace(face, center, radius, uvs);
         q.setSprite(sprite);
         q.texFromSprite(sprite);
+        if (uvArr.length >= 5) {
+            int rotation = (int) uvArr[4];
+            if (rotation != 0) {
+                q.rotateTextureUp(rotation);
+            }
+        }
         return q;
     }
 
     /**
      * Add a box with per-face UV data (6 faces), matching a 1.12.2 JSON element.
-     * Each uvN array is [u0, v0, u1, v1] in 16ths.
+     * Each uvN array is [u0, v0, u1, v1] or [u0, v0, u1, v1, rotation] in 16ths.
      */
     private static void addBox(List<MutableQuad> quads, TextureAtlasSprite sprite,
             float x0, float y0, float z0, float x1, float y1, float z1,
@@ -87,12 +86,12 @@ public enum PlugBakerLens implements IPluggableStaticBaker<KeyPlugLens> {
         float bx0 = x0 / 16f, by0 = y0 / 16f, bz0 = z0 / 16f;
         float bx1 = x1 / 16f, by1 = y1 / 16f, bz1 = z1 / 16f;
 
-        quads.add(makeFace(Direction.DOWN,  bx0, by0, bz0, bx1, by1, bz1, uvDown[0],  uvDown[1],  uvDown[2],  uvDown[3],  sprite));
-        quads.add(makeFace(Direction.UP,    bx0, by0, bz0, bx1, by1, bz1, uvUp[0],    uvUp[1],    uvUp[2],    uvUp[3],    sprite));
-        quads.add(makeFace(Direction.NORTH, bx0, by0, bz0, bx1, by1, bz1, uvNorth[0], uvNorth[1], uvNorth[2], uvNorth[3], sprite));
-        quads.add(makeFace(Direction.SOUTH, bx0, by0, bz0, bx1, by1, bz1, uvSouth[0], uvSouth[1], uvSouth[2], uvSouth[3], sprite));
-        quads.add(makeFace(Direction.WEST,  bx0, by0, bz0, bx1, by1, bz1, uvWest[0],  uvWest[1],  uvWest[2],  uvWest[3],  sprite));
-        quads.add(makeFace(Direction.EAST,  bx0, by0, bz0, bx1, by1, bz1, uvEast[0],  uvEast[1],  uvEast[2],  uvEast[3],  sprite));
+        quads.add(makeFace(Direction.DOWN,  bx0, by0, bz0, bx1, by1, bz1, uvDown,  sprite));
+        quads.add(makeFace(Direction.UP,    bx0, by0, bz0, bx1, by1, bz1, uvUp,    sprite));
+        quads.add(makeFace(Direction.NORTH, bx0, by0, bz0, bx1, by1, bz1, uvNorth, sprite));
+        quads.add(makeFace(Direction.SOUTH, bx0, by0, bz0, bx1, by1, bz1, uvSouth, sprite));
+        quads.add(makeFace(Direction.WEST,  bx0, by0, bz0, bx1, by1, bz1, uvWest,  sprite));
+        quads.add(makeFace(Direction.EAST,  bx0, by0, bz0, bx1, by1, bz1, uvEast,  sprite));
     }
 
     // ---- Cutout geometry (frame bars) ----
@@ -113,64 +112,64 @@ public enum PlugBakerLens implements IPluggableStaticBaker<KeyPlugLens> {
         // ---- 4 outer frame bars (shared by lens and filter) ----
         // From lens.json cutout[0]: bottom bar [0,3,3] → [2,4.01,13]
         addBox(rawQuads, sprite, 0, 3, 3, 2, 4.01f, 13,
-            new float[]{2, 3, 4, 13},   // down
-            new float[]{2, 3, 4, 13},   // up
-            new float[]{2, 12, 4, 13},  // north
-            new float[]{2, 3, 4, 4},    // south
-            new float[]{2, 3, 3, 13},   // west  (note: 1.12.2 has rotation:1)
-            new float[]{3, 3, 4, 13}    // east  (note: 1.12.2 has rotation:3)
+            new float[]{2, 3, 4, 13},      // down
+            new float[]{2, 3, 4, 13},      // up
+            new float[]{2, 12, 4, 13},     // north
+            new float[]{2, 3, 4, 4},       // south
+            new float[]{2, 3, 3, 13, 1},   // west  (note: 1.12.2 has rotation:1)
+            new float[]{3, 3, 4, 13, 3}    // east  (note: 1.12.2 has rotation:3)
         );
 
         // From lens.json cutout[1]: top bar [0,11.99,3] → [2,13,13]
         addBox(rawQuads, sprite, 0, 11.99f, 3, 2, 13, 13,
-            new float[]{12, 3, 14, 13},  // down
-            new float[]{12, 3, 14, 13},  // up
-            new float[]{12, 12, 14, 13}, // north
-            new float[]{12, 3, 14, 4},   // south
-            new float[]{12, 3, 13, 13},  // west  (rotation:1)
-            new float[]{13, 3, 14, 13}   // east  (rotation:3)
+            new float[]{12, 3, 14, 13},    // down
+            new float[]{12, 3, 14, 13},    // up
+            new float[]{12, 12, 14, 13},   // north
+            new float[]{12, 3, 14, 4},     // south
+            new float[]{12, 3, 13, 13, 1}, // west  (rotation:1)
+            new float[]{13, 3, 14, 13, 3}  // east  (rotation:3)
         );
 
         // From lens.json cutout[2]: left bar [0,4.01,3] → [2,11.99,4.01]
         addBox(rawQuads, sprite, 0, 4.01f, 3, 2, 11.99f, 4.01f,
-            new float[]{12, 2, 13, 4},   // down   (rotation:1)
-            new float[]{3, 2, 4, 4},     // up     (rotation:1)
-            new float[]{3, 2, 13, 4},    // north  (rotation:1)
-            new float[]{3, 2, 13, 4},    // south  (rotation:3)
-            new float[]{3, 2, 13, 3},    // west   (rotation:3)
-            new float[]{3, 3, 13, 4}     // east   (rotation:1)
+            new float[]{12, 2, 13, 4, 1},  // down   (rotation:1)
+            new float[]{3, 2, 4, 4, 1},    // up     (rotation:1)
+            new float[]{3, 2, 13, 4, 1},   // north  (rotation:1)
+            new float[]{3, 2, 13, 4, 3},   // south  (rotation:3)
+            new float[]{3, 2, 13, 3, 3},   // west   (rotation:3)
+            new float[]{3, 3, 13, 4, 1}    // east   (rotation:1)
         );
 
         // From lens.json cutout[3]: right bar [0,4.01,11.99] → [2,11.99,13]
         addBox(rawQuads, sprite, 0, 4.01f, 11.99f, 2, 11.99f, 13,
-            new float[]{3, 12, 4, 14},   // down   (rotation:1)
-            new float[]{12, 12, 13, 14}, // up     (rotation:1)
-            new float[]{3, 12, 13, 14},  // north  (rotation:1)
-            new float[]{3, 12, 13, 14},  // south  (rotation:3)
-            new float[]{3, 12, 13, 13},  // west   (rotation:3)
-            new float[]{3, 13, 13, 14}   // east   (rotation:1)
+            new float[]{3, 12, 4, 14, 1},  // down   (rotation:1)
+            new float[]{12, 12, 13, 14, 1},// up     (rotation:1)
+            new float[]{3, 12, 13, 14, 1}, // north  (rotation:1)
+            new float[]{3, 12, 13, 14, 3}, // south  (rotation:3)
+            new float[]{3, 12, 13, 13, 3}, // west   (rotation:3)
+            new float[]{3, 13, 13, 14, 1}  // east   (rotation:1)
         );
 
         // ---- Filter-only: 2 additional vertical crossbars ----
         if (isFilter) {
             // From filter.json cutout[0]: crossbar 1 [0,4.01,6] → [2,11.99,7.01]
             addBox(rawQuads, sprite, 0, 4.01f, 6, 2, 11.99f, 7.01f,
-                new float[]{12, 12, 13, 14}, // down   (rotation:1)
-                new float[]{3, 12, 4, 14},   // up     (rotation:1)
-                new float[]{3, 12, 13, 14},  // north  (rotation:1)
-                new float[]{3, 12, 13, 14},  // south  (rotation:3)
-                new float[]{3, 12, 13, 13},  // west   (rotation:3)
-                new float[]{3, 13, 13, 14}   // east   (rotation:1)
+                new float[]{12, 12, 13, 14, 1},// down   (rotation:1)
+                new float[]{3, 12, 4, 14, 1},  // up     (rotation:1)
+                new float[]{3, 12, 13, 14, 1}, // north  (rotation:1)
+                new float[]{3, 12, 13, 14, 3}, // south  (rotation:3)
+                new float[]{3, 12, 13, 13, 3}, // west   (rotation:3)
+                new float[]{3, 13, 13, 14, 1}  // east   (rotation:1)
             );
 
             // From filter.json cutout[1]: crossbar 2 [0,4.01,9] → [2,11.99,10.01]
             addBox(rawQuads, sprite, 0, 4.01f, 9, 2, 11.99f, 10.01f,
-                new float[]{12, 2, 13, 4},   // down   (rotation:1)
-                new float[]{3, 2, 4, 4},     // up     (rotation:1)
-                new float[]{3, 2, 13, 4},    // north  (rotation:1)
-                new float[]{3, 2, 13, 4},    // south  (rotation:3)
-                new float[]{3, 2, 13, 3},    // west   (rotation:3)
-                new float[]{3, 3, 13, 4}     // east   (rotation:1)
+                new float[]{12, 2, 13, 4, 1},  // down   (rotation:1)
+                new float[]{3, 2, 4, 4, 1},    // up     (rotation:1)
+                new float[]{3, 2, 13, 4, 1},   // north  (rotation:1)
+                new float[]{3, 2, 13, 4, 3},   // south  (rotation:3)
+                new float[]{3, 2, 13, 3, 3},   // west   (rotation:3)
+                new float[]{3, 3, 13, 4, 1}    // east   (rotation:1)
             );
         }
     }
@@ -196,8 +195,8 @@ public enum PlugBakerLens implements IPluggableStaticBaker<KeyPlugLens> {
         if (colour != null) {
             sprite = SpriteUtil.getSprite(Identifier.fromNamespaceAndPath(BCSilicon.MODID, "block/plugs/overlay_lens"));
         } else {
-            // Clear lens uses the overlay_lens texture with white vertex colors
-            sprite = SpriteUtil.getSprite(Identifier.fromNamespaceAndPath(BCSilicon.MODID, "block/plugs/overlay_lens"));
+            // Clear lens uses the flowing water texture, patterned after 1.12.2 behavior
+            sprite = SpriteUtil.getSprite(Identifier.fromNamespaceAndPath("minecraft", "block/water_flow"));
         }
         if (sprite == null) sprite = SpriteUtil.missingSprite();
 
@@ -205,8 +204,8 @@ public enum PlugBakerLens implements IPluggableStaticBaker<KeyPlugLens> {
         float bx0 = 0.5f / 16f, by0 = 4f / 16f, bz0 = 4f / 16f;
         float bx1 = 1.5f / 16f, by1 = 12f / 16f, bz1 = 12f / 16f;
 
-        rawQuads.add(makeFace(Direction.EAST, bx0, by0, bz0, bx1, by1, bz1, 6, 6, 10, 10, sprite));
-        rawQuads.add(makeFace(Direction.WEST, bx0, by0, bz0, bx1, by1, bz1, 6, 6, 10, 10, sprite));
+        rawQuads.add(makeFace(Direction.EAST, bx0, by0, bz0, bx1, by1, bz1, new float[]{6, 6, 10, 10}, sprite));
+        rawQuads.add(makeFace(Direction.WEST, bx0, by0, bz0, bx1, by1, bz1, new float[]{6, 6, 10, 10}, sprite));
 
         // Apply colour tinting via vertex colors.
         // getTextureDiffuseColor() returns ARGB format (0xAARRGGBB).
@@ -217,6 +216,11 @@ public enum PlugBakerLens implements IPluggableStaticBaker<KeyPlugLens> {
             int b = argb & 0xFF;
             for (MutableQuad q : rawQuads) {
                 q.colouri(r, g, b, 255);
+            }
+        } else {
+            // Modern Minecraft uses pure greyscale for water, apply the default vanilla water tint (0x3F76E4)
+            for (MutableQuad q : rawQuads) {
+                q.colouri(63, 118, 228, 255);
             }
         }
     }
@@ -243,19 +247,21 @@ public enum PlugBakerLens implements IPluggableStaticBaker<KeyPlugLens> {
             List<MutableQuad> rawQuads = new ArrayList<>();
             String layerName = key.layer != null ? key.layer.toString().toLowerCase() : "";
 
-            if (layerName.contains("cutout")) {
-                bakeCutoutQuads(rawQuads, key.isFilter);
-            } else if (layerName.contains("translucent")) {
-                bakeTranslucentQuads(rawQuads, key.colour, key.isFilter);
-            }
-
             List<BakedQuad> baked = new ArrayList<>();
 
-            for (MutableQuad q : rawQuads) {
-                // Rotate from WEST facing to the desired side
-                q.rotate(Direction.WEST, key.side, 0.5f, 0.5f, 0.5f);
-                q.multShade();
-                baked.add(q.toBakedBlock());
+            if (layerName.contains("cutout")) {
+                bakeCutoutQuads(rawQuads, key.isFilter);
+                for (MutableQuad q : rawQuads) {
+                    q.rotate(Direction.WEST, key.side, 0.5f, 0.5f, 0.5f);
+                    q.multShade();
+                    baked.add(q.toBakedBlock());
+                }
+            } else if (layerName.contains("translucent")) {
+                bakeTranslucentQuads(rawQuads, key.colour, key.isFilter);
+                for (MutableQuad q : rawQuads) {
+                    q.rotate(Direction.WEST, key.side, 0.5f, 0.5f, 0.5f);
+                    baked.add(q.toBakedTranslucent());
+                }
             }
 
             cached.put(key, baked);

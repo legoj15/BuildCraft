@@ -62,6 +62,13 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     private static final VoxelShape ARM_EAST  = Block.box(12 + E, 4, 4, 16, 12, 12);
     private static final VoxelShape[] ARMS = { ARM_DOWN, ARM_UP, ARM_NORTH, ARM_SOUTH, ARM_WEST, ARM_EAST };
 
+    /** Inflation amount for wire hit detection boxes. The rendered wire boxes are only
+     *  1/32 wide, sitting at the corners of the center box. The ray trace hit point
+     *  from the merged VoxelShape lands on the center surface, barely touching the
+     *  wire boundary. Inflating the detection box by 1/16 makes wires much easier
+     *  to target without conflicting with other elements. */
+    private static final double WIRE_HIT_INFLATE = 1.0 / 16.0;
+
     public BlockPipeHolder(Properties props) {
         super(props);
     }
@@ -147,16 +154,17 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                         }
                     }
 
-                    // Check wire-between segments first (they are larger and more specific)
-                    buildcraft.transport.wire.EnumWireBetween hitBetween = getHitWireBetween(tile, lx, ly, lz);
-                    if (hitBetween != null) {
-                        return Shapes.create(hitBetween.boundingBox);
-                    }
-
-                    // Check wire nodes
+                    // Check wire nodes first — they're the smallest targets and
+                    // should take priority over the larger between segments
                     buildcraft.api.transport.EnumWirePart hitWire = getHitWire(tile, lx, ly, lz);
                     if (hitWire != null) {
-                        return Shapes.create(hitWire.boundingBox);
+                        return Shapes.create(hitWire.boundingBox.inflate(WIRE_HIT_INFLATE));
+                    }
+
+                    // Check wire-between segments (connecting bars between nodes)
+                    buildcraft.transport.wire.EnumWireBetween hitBetween = getHitWireBetween(tile, lx, ly, lz);
+                    if (hitBetween != null) {
+                        return Shapes.create(hitBetween.boundingBox.inflate(WIRE_HIT_INFLATE));
                     }
 
                     // If the hit point is outside the center's 0.25–0.75 range, it's in an arm
@@ -400,12 +408,12 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
 
     /**
      * Returns the EnumWirePart of the wire that the given local hit coordinates fall within,
-     * or null if no wire is hit.
+     * or null if no wire is hit. Uses inflated bounding boxes for easier targeting.
      */
     @Nullable
     public static buildcraft.api.transport.EnumWirePart getHitWire(TilePipeHolder tile, double lx, double ly, double lz) {
         for (buildcraft.api.transport.EnumWirePart part : tile.getWireManager().parts.keySet()) {
-            AABB box = part.boundingBox;
+            AABB box = part.boundingBox.inflate(WIRE_HIT_INFLATE);
             if (lx >= box.minX && lx <= box.maxX
                 && ly >= box.minY && ly <= box.maxY
                 && lz >= box.minZ && lz <= box.maxZ) {
@@ -417,12 +425,12 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
 
     /**
      * Returns the EnumWireBetween of the wire-between segment that the given local hit coordinates fall within,
-     * or null if no wire-between is hit.
+     * or null if no wire-between is hit. Uses inflated bounding boxes for easier targeting.
      */
     @Nullable
     public static buildcraft.transport.wire.EnumWireBetween getHitWireBetween(TilePipeHolder tile, double lx, double ly, double lz) {
         for (buildcraft.transport.wire.EnumWireBetween between : tile.getWireManager().betweens.keySet()) {
-            AABB box = between.boundingBox;
+            AABB box = between.boundingBox.inflate(WIRE_HIT_INFLATE);
             if (lx >= box.minX && lx <= box.maxX
                 && ly >= box.minY && ly <= box.maxY
                 && lz >= box.minZ && lz <= box.maxZ) {
@@ -463,7 +471,26 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                     return false; // Don't destroy the pipe, on client or server
                 }
                 
-                // Check wire-between segments first
+                // Check wire nodes first (smaller, more specific target)
+                buildcraft.api.transport.EnumWirePart hitWire = getHitWire(tile, lx, ly, lz);
+                if (hitWire != null) {
+                    if (!level.isClientSide()) {
+                        net.minecraft.world.item.DyeColor col = tile.getWireManager().getColorOfPart(hitWire);
+                        if (col != null) {
+                            ItemStack drop = new ItemStack(buildcraft.transport.BCTransportItems.WIRE_ITEMS.get(col).get());
+                            if (!player.isCreative() && !drop.isEmpty()) {
+                                Block.popResource(level, pos, drop);
+                            }
+                        }
+                    }
+                    tile.getWireManager().removePart(hitWire);
+                    if (!level.isClientSide()) {
+                        level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
+                    }
+                    return false; // Don't destroy the pipe
+                }
+
+                // Check wire-between segments
                 buildcraft.transport.wire.EnumWireBetween hitBetween = getHitWireBetween(tile, lx, ly, lz);
                 if (hitBetween != null) {
                     if (!level.isClientSide()) {
@@ -483,25 +510,6 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                     } else {
                         tile.getWireManager().removePart(hitBetween.parts[0]);
                     }
-                    if (!level.isClientSide()) {
-                        level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
-                    }
-                    return false; // Don't destroy the pipe
-                }
-
-                // Check wire nodes
-                buildcraft.api.transport.EnumWirePart hitWire = getHitWire(tile, lx, ly, lz);
-                if (hitWire != null) {
-                    if (!level.isClientSide()) {
-                        net.minecraft.world.item.DyeColor col = tile.getWireManager().getColorOfPart(hitWire);
-                        if (col != null) {
-                            ItemStack drop = new ItemStack(buildcraft.transport.BCTransportItems.WIRE_ITEMS.get(col).get());
-                            if (!player.isCreative() && !drop.isEmpty()) {
-                                Block.popResource(level, pos, drop);
-                            }
-                        }
-                    }
-                    tile.getWireManager().removePart(hitWire);
                     if (!level.isClientSide()) {
                         level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
                     }

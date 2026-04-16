@@ -59,11 +59,12 @@ public class LensItemModel implements ItemModel {
                 quads.add(mq.toBakedItem());
             }
 
-            // Bake translucent quads (coloured glass overlay) — preserve vertex colors from tinting
+            // Bake translucent quads (coloured glass overlay) — use toBakedTranslucent so the
+            // quad is routed to the correct render layer and vertex colours are preserved via BakedColors
             List<MutableQuad> translucentQuads = PlugBakerLens.bakeForItem(key.colour(), key.isFilter(), false);
             for (MutableQuad mq : translucentQuads) {
                 transformForItem(mq, false);
-                quads.add(mq.toBakedItem());
+                quads.add(mq.toBakedTranslucent());
             }
 
             return quads;
@@ -80,12 +81,11 @@ public class LensItemModel implements ItemModel {
         mq.setShade(false);
         // Rotate from WEST → NORTH so the lens face points at the camera
         mq.rotate(Direction.WEST, Direction.NORTH, 0.5f, 0.5f, 0.5f);
-        // Scale 1.8× around center, matching 1.12.2's TRANSFORM_PLUG_AS_ITEM_BIGGER
+        // Scale 1.8x around center, matching 1.12.2's TRANSFORM_PLUG_AS_ITEM_BIGGER
         mq.translatef(-0.5f, -0.5f, -0.5f);
         mq.scalef(1.8f);
         mq.translatef(0.5f, 0.5f, 0.5f);
-        // Set proper normals for item rendering (required for correct lighting)
-        mq.setCalculatedNormal();
+        
         // Set full white vertex colours only for cutout (frame) quads.
         // Translucent quads keep the dye color set by bakeTranslucentQuads.
         if (resetColors) {

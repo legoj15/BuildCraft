@@ -411,7 +411,7 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
     public boolean isEmitting(DyeColor colour) {
         BlockEntity tile = getPipeHolder().getPipeTile();
         if (tile.isRemoved()) {
-            throw new UnsupportedOperationException("Cannot check an invalid emitter!");
+            return false;
         }
         return wireBroadcasts.contains(colour);
     }

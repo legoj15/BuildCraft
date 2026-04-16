@@ -26,11 +26,11 @@ import buildcraft.api.transport.pipe.IPipeHolder;
 
 public class InventoryUtil {
     /** Extracts all items from the handler and adds them to the given list. */
-    public static void addAll(IItemHandler handler, List<ItemStack> list) {
-        for (int i = 0; i < handler.getSlots(); i++) {
-            ItemStack stack = handler.getStackInSlot(i);
-            if (!stack.isEmpty()) {
-                list.add(stack.copy());
+    public static void addAll(ResourceHandler<ItemResource> handler, List<ItemStack> list) {
+        for (int i = 0; i < handler.size(); i++) {
+            ItemResource res = handler.getResource(i);
+            if (!res.isEmpty()) {
+                list.add(res.toStack(handler.getAmountAsInt(i)));
             }
         }
     }

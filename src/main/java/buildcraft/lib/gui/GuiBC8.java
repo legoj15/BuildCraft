@@ -93,6 +93,10 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
         super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
+        // Draw the drag icon AFTER super (which draws slots/items/highlights) using nextStratum()
+        // so the drag icon always sorts on top, matching MC's own carried-item rendering.
+        graphics.nextStratum();
+        mainGui.drawDragLayer(graphics);
     }
 
     @Override

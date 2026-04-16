@@ -45,7 +45,7 @@ public class TriggerTimer extends BCStatement implements ITriggerInternal {
 
     @Override
     public String getDescription() {
-        return LocaleUtil.localize("gate.trigger.timer") + " (" + duration.duration + "s)";
+        return String.format(LocaleUtil.localize("gate.trigger.timer"), duration.duration);
     }
 
     @Override

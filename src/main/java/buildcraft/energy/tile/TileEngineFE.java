@@ -19,7 +19,7 @@ import net.neoforged.neoforge.transfer.energy.EnergyHandler;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import buildcraft.api.mj.MjRfConversion;
-import net.neoforged.neoforge.items.ItemStackHandler;
+
 import net.neoforged.neoforge.transfer.energy.SimpleEnergyHandler;
 
 import buildcraft.api.mj.IMjConnector;
@@ -46,18 +46,15 @@ public class TileEngineFE extends TileEngineBase_BC8 {
     }
 
 
-    public final ItemStackHandler upgrades = new ItemStackHandler(4) {
-        @Override
-        public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
+    public final buildcraft.lib.tile.item.ItemHandlerSimple upgrades = 
+        new buildcraft.lib.tile.item.ItemHandlerSimple(4, (handler, slot, bef, aft) -> setChanged());
+
+    {
+        upgrades.setChecker((slot, stack) -> {
             initUpgrades();
             return UPGRADE_VALUES.containsKey(stack.getItem());
-        }
-
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-        }
-    };
+        });
+    }
 
     public final SimpleEnergyHandler energyStorage = new SimpleEnergyHandler(MAX_FE, MAX_FE, 0) {
         @Override
@@ -217,13 +214,13 @@ public class TileEngineFE extends TileEngineBase_BC8 {
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
         output.putInt("currentFe", getCurrentFe());
-        upgrades.serialize(output);
+        output.store("upgrades", net.minecraft.nbt.CompoundTag.CODEC, upgrades.serializeNBT());
     }
 
     @Override
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         setCurrentFe(input.getIntOr("currentFe", 0));
-        upgrades.deserialize(input);
+        upgrades.deserializeNBT(input.read("upgrades", net.minecraft.nbt.CompoundTag.CODEC).orElseGet(net.minecraft.nbt.CompoundTag::new));
     }
 }

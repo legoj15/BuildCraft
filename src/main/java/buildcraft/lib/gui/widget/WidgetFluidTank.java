@@ -71,8 +71,7 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
             return;
         }
 
-        ItemStack result = transferStackToTank(player, held);
-        player.containerMenu.setCarried(result);
+        transferStackToTank(player);
         if (player instanceof ServerPlayer sp) {
             sp.containerMenu.broadcastChanges();
         }
@@ -84,54 +83,71 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
      *
      * @return The resulting ItemStack after the transfer attempt
      */
-    private ItemStack transferStackToTank(Player player, ItemStack stack) {
+    private void transferStackToTank(Player player) {
         if (player.level().isClientSide()) {
-            return stack;
+            return;
         }
-
-        ItemStack original = stack;
+        ItemStack carried = player.containerMenu.getCarried();
         boolean isCreative = player.getAbilities().instabuild;
 
-        ItemStack singleCopy = stack.copyWithCount(1);
-        ResourceHandler<FluidResource> itemHandlerIn = singleCopy.getCapability(Capabilities.Fluid.ITEM, net.neoforged.neoforge.transfer.access.ItemAccess.forPlayerInteraction(player, net.minecraft.world.InteractionHand.MAIN_HAND));
-        if (itemHandlerIn != null) {
-            // Try filling the tank from the item
-            try (Transaction tx = Transaction.openRoot()) {
-                int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
-                        itemHandlerIn, tank, r -> true, Integer.MAX_VALUE, tx
-                );
-                if (moved > 0) {
-                    tx.commit();
-                    if (isCreative) return stack;
-                    if (stack.getCount() == 1) return singleCopy;
-                    stack.shrink(1);
-                    if (!singleCopy.isEmpty() && !player.getInventory().add(singleCopy)) {
-                        player.drop(singleCopy, false);
+        if (isCreative) {
+            net.neoforged.neoforge.transfer.access.ItemAccess access = net.neoforged.neoforge.transfer.access.ItemAccess.forInfiniteMaterials(player, carried.copyWithCount(1));
+            ResourceHandler<FluidResource> itemHandlerIn = access.getCapability(Capabilities.Fluid.ITEM);
+            
+            if (itemHandlerIn != null) {
+                try (Transaction tx = Transaction.openRoot()) {
+                    int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
+                            itemHandlerIn, tank, r -> true, Integer.MAX_VALUE, tx
+                    );
+                    if (moved > 0) {
+                        tx.commit();
+                        return;
                     }
-                    return stack;
+                }
+                
+                try (Transaction tx = Transaction.openRoot()) {
+                    int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
+                            tank, itemHandlerIn, r -> true, Integer.MAX_VALUE, tx
+                    );
+                    if (moved > 0) {
+                        tx.commit();
+                        return;
+                    }
                 }
             }
+        } else {
+            ItemStack original = carried.copy();
+            net.neoforged.neoforge.transfer.access.ItemAccess access = net.neoforged.neoforge.transfer.access.ItemAccess.forPlayerCursor(player, player.containerMenu).oneByOne();
+            ResourceHandler<FluidResource> itemHandlerIn = access.getCapability(Capabilities.Fluid.ITEM);
             
-            // Try draining the tank into the item
-            try (Transaction tx = Transaction.openRoot()) {
-                int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
-                        tank, itemHandlerIn, r -> true, Integer.MAX_VALUE, tx
-                );
-                if (moved > 0) {
-                    tx.commit();
-                    if (isCreative) return stack;
-                    if (stack.getCount() == 1) return singleCopy;
-                    stack.shrink(1);
-                    if (!singleCopy.isEmpty() && !player.getInventory().add(singleCopy)) {
-                        player.drop(singleCopy, false);
+            if (itemHandlerIn != null) {
+                // Try filling the tank from the item
+                try (Transaction tx = Transaction.openRoot()) {
+                    int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
+                            itemHandlerIn, tank, r -> true, Integer.MAX_VALUE, tx
+                    );
+                    if (moved > 0) {
+                        tx.commit();
+                        return;
                     }
-                    return stack;
+                }
+                
+                // Try draining the tank into the item
+                try (Transaction tx = Transaction.openRoot()) {
+                    int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
+                            tank, itemHandlerIn, r -> true, Integer.MAX_VALUE, tx
+                    );
+                    if (moved > 0) {
+                        tx.commit();
+                        return;
+                    }
                 }
             }
         }
 
         // --- Try solid coolant conversion (ice → water, ported from 1.12.2 Tank.map()) ---
         if (BuildcraftFuelRegistry.coolant != null) {
+            ItemStack stack = player.containerMenu.getCarried();
             ItemStack singleCopyCoolant = stack.copyWithCount(1);
             ISolidCoolant solidCoolant = BuildcraftFuelRegistry.coolant.getSolidCoolant(singleCopyCoolant);
             if (solidCoolant != null) {
@@ -147,13 +163,11 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
                             if (!isCreative) {
                                 stack.shrink(1);
                             }
-                            return stack;
+                            return;
                         }
                     }
                 }
             }
         }
-
-        return stack;
     }
 }

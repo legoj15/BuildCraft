@@ -47,6 +47,24 @@ public class BCEnergyFluidsClient {
                     // No tint — colors are baked into the pre-recolored sprites
                     return 0xFFFFFFFF;
                 }
+
+                @Override
+                public void modifyFogColor(net.minecraft.client.Camera camera, float partialTick, net.minecraft.client.multiplayer.ClientLevel level, int renderDistance, float darkenWorldAmount, org.joml.Vector4f fluidFogColor) {
+                    int color = entry.tintColor();
+                    float r = ((color >> 16) & 0xFF) / 255.0F;
+                    float g = ((color >> 8) & 0xFF) / 255.0F;
+                    float b = (color & 0xFF) / 255.0F;
+                    fluidFogColor.set(r, g, b, 1.0F);
+                }
+
+                @Override
+                public void modifyFogRender(net.minecraft.client.Camera camera, net.minecraft.client.renderer.fog.environment.FogEnvironment environment, float renderDistance, float partialTick, net.minecraft.client.renderer.fog.FogData fogData) {
+                    float distance = entry.gaseous() ? 5.0F : 3.0F;
+                    fogData.environmentalStart = 0.0F;
+                    fogData.environmentalEnd = distance;
+                    fogData.renderDistanceStart = 0.0F;
+                    fogData.renderDistanceEnd = distance;
+                }
             }, entry.fluidType().get());
         }
     }

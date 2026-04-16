@@ -13,13 +13,11 @@ public class BCTransportBlocks {
 
     public static final DeferredBlock<BlockFilteredBuffer> FILTERED_BUFFER = BLOCKS.registerBlock(
             "filtered_buffer",
-            BlockFilteredBuffer::new,
-            BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockFilteredBuffer::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
 
     public static final DeferredBlock<BlockPipeHolder> PIPE_HOLDER = BLOCKS.registerBlock(
             "pipe_holder",
-            BlockPipeHolder::new,
-            BlockBehaviour.Properties.of()
+            BlockPipeHolder::new, () -> BlockBehaviour.Properties.of()
                 .strength(0.25f, 3.0f)
                 .noOcclusion()
                 .dynamicShape()

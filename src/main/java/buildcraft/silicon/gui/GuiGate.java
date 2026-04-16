@@ -45,6 +45,9 @@ public class GuiGate extends GuiBC8<ContainerGate> {
         
         // Drag handler must be added before sources so they can inject events into it
         mainGui.shownElements.add(new buildcraft.lib.gui.statement.GuiElementStatementDrag(mainGui));
+
+        // Help ledger — left side, matching 1.12.2
+        mainGui.shownElements.add(new buildcraft.lib.gui.ledger.LedgerHelp(mainGui, false));
         
         // Triggers possible
         mainGui.shownElements.add(new GuiElementStatementSource<>(mainGui, true, menu.possibleTriggersContext));
@@ -208,12 +211,22 @@ public class GuiGate extends GuiBC8<ContainerGate> {
 
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        // Center the gate name at the top
-        String titleStr = menu.gate.variant.getLocalizedName().getString();
-        graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
-        
-        // Offset the 'Inventory' label down into the correct place
-        String invStr = Component.translatable("container.inventory").getString();
-        graphics.text(font, invStr, 8, 16 + numRows * 18 + 4, 0xFF404040, false);
+        // Run the standard foreground + tooltip pipeline from GuiBC8.
+        // This also draws the dark overlay + variant popup when currentMenu is set.
+        super.extractLabels(graphics, mouseX, mouseY);
+
+        // Suppress text labels only when a full-override popup is active (the variant picker).
+        // During drag, currentMenu is set but shouldFullyOverride()=false — text should still
+        // render. The drag icon now renders at a higher stratum in extractRenderState so it
+        // sorts on top of the text without needing to hide it.
+        if (mainGui.currentMenu == null || !mainGui.currentMenu.shouldFullyOverride()) {
+            // Center the gate name at the top
+            String titleStr = menu.gate.variant.getLocalizedName().getString();
+            graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
+
+            // Offset the 'Inventory' label down into the correct place
+            String invStr = Component.translatable("container.inventory").getString();
+            graphics.text(font, invStr, 8, 16 + numRows * 18 + 4, 0xFF404040, false);
+        }
     }
 }

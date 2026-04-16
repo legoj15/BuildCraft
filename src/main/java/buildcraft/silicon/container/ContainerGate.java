@@ -44,6 +44,7 @@ import buildcraft.silicon.BCSiliconMenuTypes;
 public class ContainerGate extends ContainerBC_Neptune {
     public static final int ID_CONNECTION = 1;
     public static final int ID_VALID_STATEMENTS = 2;
+    public static final int ID_STATEMENT_CHANGE = 3;
 
     public final GateLogic gate;
     public final IPipeHolder pipeHolder;
@@ -95,6 +96,7 @@ public class ContainerGate extends ContainerBC_Neptune {
         if (this.pipeHolder.getPipeWorld().isClientSide()) {
             possibleTriggers = new TreeSet<>();
             possibleActions = new TreeSet<>();
+            gate.guiMessageOverride = writer -> sendMessage(ID_STATEMENT_CHANGE, writer);
         } else {
             possibleTriggers = gate.getAllValidTriggers();
             possibleActions = gate.getAllValidActions();
@@ -155,11 +157,26 @@ public class ContainerGate extends ContainerBC_Neptune {
                 boolean to = buffer.readBoolean();
                 if (index < gate.connections.length) {
                     gate.connections[index] = to;
+                    if (pipeHolder instanceof net.minecraft.world.level.block.entity.BlockEntity be) {
+                        be.setChanged();
+                        pipeHolder.scheduleRenderUpdate();
+                    }
                     gate.sendResolveData();
                 }
             } else if (id == ID_VALID_STATEMENTS) {
                 // Client asked for valid statements, send them
                 sendStatementsToClient();
+            } else if (id == ID_STATEMENT_CHANGE) {
+                try {
+                    gate.readPayload(buffer, false);
+                    if (pipeHolder instanceof net.minecraft.world.level.block.entity.BlockEntity be) {
+                        be.setChanged();
+                        pipeHolder.scheduleRenderUpdate();
+                    }
+                    gate.sendResolveData();
+                } catch (IOException e) {
+                    BCLog.logger.error("[gate.sync] Error handling statement change", e);
+                }
             }
         } else {
             if (id == ID_VALID_STATEMENTS) {
@@ -169,7 +186,7 @@ public class ContainerGate extends ContainerBC_Neptune {
                 int numActions = buffer.readInt();
                 for (int i = 0; i < numTriggers; i++) {
                     String tag = buffer.readUtf();
-                    EnumPipePart part = buffer.readEnumValue(EnumPipePart.class);
+                    EnumPipePart part = buffer.readEnum(EnumPipePart.class);
                     var state = StatementManager.statements.get(tag);
                     if (state == null) {
                         BCLog.logger.warn("Gate received invalid trigger tag from server: " + tag);
@@ -182,7 +199,7 @@ public class ContainerGate extends ContainerBC_Neptune {
                 }
                 for (int i = 0; i < numActions; i++) {
                     String tag = buffer.readUtf();
-                    EnumPipePart part = buffer.readEnumValue(EnumPipePart.class);
+                    EnumPipePart part = buffer.readEnum(EnumPipePart.class);
                     var state = StatementManager.statements.get(tag);
                     if (state == null) {
                         BCLog.logger.warn("Gate received invalid action tag: " + tag);
@@ -204,12 +221,12 @@ public class ContainerGate extends ContainerBC_Neptune {
             buffer.writeInt(possibleActions.size());
             for (TriggerWrapper wrapper : possibleTriggers) {
                 buffer.writeUtf(wrapper.getUniqueTag());
-                ((PacketBufferBC) buffer).writeEnumValue(wrapper.sourcePart);
+                buffer.writeEnum(wrapper.sourcePart);
             }
 
             for (ActionWrapper wrapper : possibleActions) {
                 buffer.writeUtf(wrapper.getUniqueTag());
-                ((PacketBufferBC) buffer).writeEnumValue(wrapper.sourcePart);
+                buffer.writeEnum(wrapper.sourcePart);
             }
 
             // Sync connections

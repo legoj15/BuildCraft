@@ -13,7 +13,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.statements.StatementSlot;
@@ -202,7 +203,7 @@ public abstract class DockingStation {
         return EnumPipePart.CENTER;
     }
 
-    public IFluidHandler getFluidOutput() {
+    public ResourceHandler<FluidResource> getFluidOutput() {
         return null;
     }
 
@@ -210,7 +211,7 @@ public abstract class DockingStation {
         return EnumPipePart.CENTER;
     }
 
-    public IFluidHandler getFluidInput() {
+    public ResourceHandler<FluidResource> getFluidInput() {
         return null;
     }
 

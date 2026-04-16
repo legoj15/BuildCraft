@@ -18,13 +18,6 @@ public class FluidItemDrops {
         }
     }
 
-    public static void addFluidDrops(NonNullList<ItemStack> toDrop, IFluidTank... tanks) {
-        if (item != null) {
-            for (IFluidTank tank : tanks) {
-                item.addFluidDrops(toDrop, tank.getFluid());
-            }
-        }
-    }
 
     @SafeVarargs
     public static void addFluidDrops(NonNullList<ItemStack> toDrop, net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource>... tanks) {

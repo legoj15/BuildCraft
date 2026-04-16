@@ -68,4 +68,14 @@ public class PluggableLightSensor extends PipePluggable {
             event.triggers.add(BCSiliconStatements.TRIGGER_LIGHT_HIGH);
         }
     }
+
+    @Override
+    public buildcraft.silicon.client.model.key.KeyPlugSimple getModelRenderKey(Object layer) {
+        if (layer == null) return null;
+        String name = layer.toString().toLowerCase();
+        if (name.contains("cutout")) {
+            return new buildcraft.silicon.client.model.key.KeyPlugSimple("daylight_sensor", false, layer, this.side);
+        }
+        return null;
+    }
 }

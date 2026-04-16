@@ -2,21 +2,20 @@ package buildcraft.lib.tile.item;
 
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.items.IItemHandler;
 
 import buildcraft.api.inventory.IItemHandlerFiltered;
 
 import buildcraft.lib.misc.StackUtil;
 
 /** A type of {@link ItemHandlerSimple} that gets it's {@link IItemHandlerFiltered#getFilter(int)} from a given
- * {@link IItemHandler} instance. This currently instantiates to having the same {@link IItemHandler#getSlots() slot
+ * {@link ItemHandlerSimple} instance. This currently instantiates to having the same {@link ItemHandlerSimple#size() slot
  * count} as the filter. */
 public class ItemHandlerFiltered extends ItemHandlerSimple implements IItemHandlerFiltered {
-    private final IItemHandler filter;
+    private final ItemHandlerSimple filter;
     private final boolean emptyIsAnything;
 
-    public ItemHandlerFiltered(IItemHandler filter, boolean emptyIsAnything) {
-        super(filter.getSlots());
+    public ItemHandlerFiltered(ItemHandlerSimple filter, boolean emptyIsAnything) {
+        super(filter.size());
         this.emptyIsAnything = emptyIsAnything;
         this.filter = filter;
         setChecker((slot, stack) -> {

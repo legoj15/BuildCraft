@@ -22,6 +22,7 @@ public enum NodeConstantBoolean implements INodeBoolean, IConstantNode {
     /**
      * @deprecated Use {@link #of(boolean)} instead
      */
+    @Deprecated
     public static NodeConstantBoolean get(boolean value) {
         return of(value);
     }

@@ -1,64 +1,54 @@
-/*
- * Copyright (c) 2017 SpaceToad and the BuildCraft team
- * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
- * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
- */
-
 package buildcraft.lib.tile.item;
 
-import javax.annotation.Nonnull;
-
-import net.minecraft.world.item.ItemStack;
-
-import net.neoforged.neoforge.items.IItemHandlerModifiable;
-
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import buildcraft.api.inventory.IItemHandlerFiltered;
 
-public class DelegateItemHandler implements IItemHandlerModifiable, IItemHandlerFiltered {
-    private final IItemHandlerModifiable delegate;
+public class DelegateItemHandler implements ResourceHandler<ItemResource>, IItemHandlerFiltered {
+    protected final ResourceHandler<ItemResource> delegate;
 
-    public DelegateItemHandler(IItemHandlerModifiable delegate) {
+    public DelegateItemHandler(ResourceHandler<ItemResource> delegate) {
         this.delegate = delegate;
     }
 
     @Override
-    public int getSlots() {
-        return delegate.getSlots();
+    public int size() {
+        return delegate.size();
     }
 
     @Override
-    public ItemStack getStackInSlot(int slot) {
-        return delegate.getStackInSlot(slot);
+    public ItemResource getResource(int index) {
+        return delegate.getResource(index);
     }
 
     @Override
-    public ItemStack insertItem(int slot, @Nonnull ItemStack stack, boolean simulate) {
-        return delegate.insertItem(slot, stack, simulate);
-    }
-
-    @Nonnull
-    @Override
-    public ItemStack extractItem(int slot, int amount, boolean simulate) {
-        return delegate.extractItem(slot, amount, simulate);
+    public long getAmountAsLong(int index) {
+        return delegate.getAmountAsLong(index);
     }
 
     @Override
-    public void setStackInSlot(int slot, @Nonnull ItemStack stack) {
-        delegate.setStackInSlot(slot, stack);
+    public long getCapacityAsLong(int index, ItemResource resource) {
+        return delegate.getCapacityAsLong(index, resource);
     }
 
     @Override
-    public int getSlotLimit(int slot) {
-        return delegate.getSlotLimit(slot);
+    public boolean isValid(int index, ItemResource resource) {
+        return delegate.isValid(index, resource);
     }
 
     @Override
-    public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-        return delegate.isItemValid(slot, stack);
+    public int insert(int index, ItemResource resource, int amount, TransactionContext tx) {
+        return delegate.insert(index, resource, amount, tx);
     }
 
     @Override
-    public ItemStack getFilter(int slot) {
+    public int extract(int index, ItemResource resource, int amount, TransactionContext tx) {
+        return delegate.extract(index, resource, amount, tx);
+    }
+
+    @Override
+    public net.minecraft.world.item.ItemStack getFilter(int slot) {
         if (delegate instanceof IItemHandlerFiltered) {
             return ((IItemHandlerFiltered) delegate).getFilter(slot);
         }

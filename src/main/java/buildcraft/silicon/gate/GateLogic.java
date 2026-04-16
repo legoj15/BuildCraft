@@ -77,6 +77,8 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
 
     public final List<StatementSlot> activeActions = new ArrayList<>();
 
+    public java.util.function.Consumer<buildcraft.lib.net.IPayloadWriter> guiMessageOverride;
+
     /** Used to determine if gate logic should go across several trigger/action pairs. */
     public final boolean[] connections;
 
@@ -129,22 +131,48 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
             connections[i] = ((c >>> i) & 1) == 1;
         }
 
+        // Read runtime display state (triggerOn, actionOn, isOn)
+        if (nbt.contains("triggerOn")) {
+            short tOn = nbt.getShort("triggerOn").orElse((short) 0);
+            for (int i = 0; i < triggerOn.length; i++) {
+                triggerOn[i] = ((tOn >>> i) & 1) == 1;
+            }
+        }
+        if (nbt.contains("actionOn")) {
+            short aOn = nbt.getShort("actionOn").orElse((short) 0);
+            for (int i = 0; i < actionOn.length; i++) {
+                actionOn[i] = ((aOn >>> i) & 1) == 1;
+            }
+        }
+        isOn = nbt.getBoolean("isOn").orElse(false);
+
         for (int i = 0; i < statements.length; i++) {
             String tName = "trigger[" + i + "]";
             String aName = "action[" + i + "]";
-            // Legacy
+            // Only apply legacy conversion if the tag has the old format (kind at root)
+            // and NOT the new FullStatement format (data inside "s" sub-compound)
             if (nbt.contains(tName)) {
-                CompoundTag nbt2 = new CompoundTag();
-                nbt2.putString("kind", nbt.getCompound(tName).orElse(new CompoundTag()).getString("kind").orElse(""));
-                nbt2.putByte("side", nbt.getCompound(tName).orElse(new CompoundTag()).getByte("side").orElse((byte) 6));
-                nbt.put(tName, nbt2);
+                CompoundTag existing = nbt.getCompound(tName).orElse(new CompoundTag());
+                if (existing.contains("kind") && !existing.contains("s")) {
+                    // Old 1.12.2 format: kind and side at root level → wrap into "s" sub-compound
+                    CompoundTag nbt2 = new CompoundTag();
+                    CompoundTag sTag = new CompoundTag();
+                    sTag.putString("kind", existing.getString("kind").orElse(""));
+                    sTag.putByte("side", existing.getByte("side").orElse((byte) 6));
+                    nbt2.put("s", sTag);
+                    nbt.put(tName, nbt2);
+                }
             }
-            // Legacy
             if (nbt.contains(aName)) {
-                CompoundTag nbt2 = new CompoundTag();
-                nbt2.putString("kind", nbt.getCompound(aName).orElse(new CompoundTag()).getString("kind").orElse(""));
-                nbt2.putByte("side", nbt.getCompound(aName).orElse(new CompoundTag()).getByte("side").orElse((byte) 6));
-                nbt.put(aName, nbt2);
+                CompoundTag existing = nbt.getCompound(aName).orElse(new CompoundTag());
+                if (existing.contains("kind") && !existing.contains("s")) {
+                    CompoundTag nbt2 = new CompoundTag();
+                    CompoundTag sTag = new CompoundTag();
+                    sTag.putString("kind", existing.getString("kind").orElse(""));
+                    sTag.putByte("side", existing.getByte("side").orElse((byte) 6));
+                    nbt2.put("s", sTag);
+                    nbt.put(aName, nbt2);
+                }
             }
 
             statements[i].trigger.readFromNbt(nbt.getCompound(tName).orElse(new CompoundTag()));
@@ -178,6 +206,20 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
             arr[idx++] = color.ordinal();
         }
         nbt.putIntArray("wireBroadcasts", arr);
+
+        // Write runtime display state so clients get correct visuals on initial sync
+        short tOn = 0;
+        for (int i = 0; i < triggerOn.length; i++) {
+            if (triggerOn[i]) tOn |= 1 << i;
+        }
+        nbt.putShort("triggerOn", tOn);
+        short aOn = 0;
+        for (int i = 0; i < actionOn.length; i++) {
+            if (actionOn[i]) aOn |= 1 << i;
+        }
+        nbt.putShort("actionOn", aOn);
+        nbt.putBoolean("isOn", isOn);
+
         return nbt;
     }
 
@@ -239,8 +281,10 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
                 readBoolArray(buffer, connections);
             } else if (id == NET_ID_GLOWING) {
                 isOn = true;
+                getPipeHolder().scheduleRenderUpdate();
             } else if (id == NET_ID_DARK) {
                 isOn = false;
+                getPipeHolder().scheduleRenderUpdate();
             } else {
                 BCLog.logger.warn("Unknown ID " + ID_ALLOC.getNameFor(id));
             }
@@ -250,22 +294,29 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
     }
 
     public void sendStatementUpdate(boolean isAction, int slot) {
-        pluggable.sendGuiMessage((buffer) -> {
-            buffer.writeByte(NET_ID_CHANGE);
-            buffer.writeBoolean(isAction);
-            buffer.writeByte(slot);
+        buildcraft.lib.net.IPayloadWriter writer = (buffer) -> {
+            PacketBufferBC buf = PacketBufferBC.asPacketBufferBc(buffer);
+            buf.writeByte(NET_ID_CHANGE);
+            buf.writeBoolean(isAction);
+            buf.writeByte(slot);
             StatementPair s = statements[slot];
-            PacketBufferBC temp = new PacketBufferBC(buffer);
-            (isAction ? s.action : s.trigger).writeToBuffer(temp);
-        });
+            (isAction ? s.action : s.trigger).writeToBuffer(buf);
+        };
+        
+        if (guiMessageOverride != null) {
+            guiMessageOverride.accept(writer);
+        } else {
+            pluggable.sendGuiMessage(writer);
+        }
     }
 
     public void sendResolveData() {
         pluggable.sendGuiMessage((buffer) -> {
-            buffer.writeByte(NET_ID_RESOLVE);
-            writeBoolArray(new PacketBufferBC(buffer), triggerOn);
-            writeBoolArray(new PacketBufferBC(buffer), actionOn);
-            writeBoolArray(new PacketBufferBC(buffer), connections);
+            PacketBufferBC buf = PacketBufferBC.asPacketBufferBc(buffer);
+            buf.writeByte(NET_ID_RESOLVE);
+            writeBoolArray(buf, triggerOn);
+            writeBoolArray(buf, actionOn);
+            writeBoolArray(buf, connections);
         });
     }
 
@@ -360,7 +411,7 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
     public boolean isEmitting(DyeColor colour) {
         BlockEntity tile = getPipeHolder().getPipeTile();
         if (tile.isRemoved()) {
-            throw new UnsupportedOperationException("Cannot check an invalid emitter!");
+            return false;
         }
         return wireBroadcasts.contains(colour);
     }

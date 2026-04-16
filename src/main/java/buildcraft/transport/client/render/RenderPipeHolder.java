@@ -82,6 +82,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
                                     float partialTick, Vec3 cameraPos, ModelFeatureRenderer.@Nullable CrumblingOverlay crumblingOverlay) {
         BlockEntityRenderer.super.extractRenderState(blockEntity, renderState, partialTick, cameraPos, crumblingOverlay);
         renderState.pipe = blockEntity;
+        renderState.partialTick = partialTick;
 
         // Pre-resolve item models for item pipe flow
         renderState.itemEntries.clear();
@@ -140,7 +141,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         // (DynamicBlockStateModel). The BER only handles dynamic content.
 
         // --- Render wires ---
-        PipeWireRenderer.renderWires(pipe, poseStack.last());
+        PipeWireRenderer.renderWires(pipe, poseStack.last(), light);
 
         // --- Render pre-resolved item models ---
         // Following vanilla CampfireRenderer: item models were resolved in
@@ -151,7 +152,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         // (fluids, power — these create their own buffer sources internally)
         // Also renders behaviours (stripes beam)
         ItemRenderUtil.beginItemBatch(poseStack, collector, light);
-        renderContents(pipe, 0, 0, 0, 0, poseStack.last());
+        renderContents(pipe, 0, 0, 0, renderState.partialTick, poseStack);
         ItemRenderUtil.endItemBatch();
 
         poseStack.popPose();
@@ -269,7 +270,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
     }
 
     private static void renderContents(TilePipeHolder pipe, double x, double y, double z,
-        float partialTicks, PoseStack.Pose pose) {
+        float partialTicks, PoseStack poseStack) {
         Pipe p = pipe.getPipe();
         if (p == null) {
             return;
@@ -277,10 +278,27 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         // Item flow rendering is now handled by submitItems() using pre-resolved states.
         // Only render non-item flows here (fluids, power).
         if (p.flow != null && !(p.flow instanceof PipeFlowItems)) {
-            renderFlow(p.flow, x, y, z, partialTicks, pose);
+            renderFlow(p.flow, x, y, z, partialTicks, poseStack.last());
         }
         if (p.behaviour != null) {
-            renderBehaviour(p.behaviour, x, y, z, partialTicks, pose);
+            renderBehaviour(p.behaviour, x, y, z, partialTicks, poseStack.last());
+        }
+        VertexConsumer plugBuffer = Minecraft.getInstance().renderBuffers().bufferSource()
+                .getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
+        for (Direction facing : Direction.values()) {
+            PipePluggable plug = pipe.getPluggable(facing);
+            if (plug != null) {
+                renderPluggable(plug, x, y, z, partialTicks, plugBuffer, poseStack);
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <P extends PipePluggable> void renderPluggable(P plug, double x, double y, double z,
+        float partialTicks, VertexConsumer plugBuffer, PoseStack poseStack) {
+        buildcraft.api.transport.pluggable.IPlugDynamicRenderer<P> renderer = PipeRegistryClient.getPlugRenderer(plug);
+        if (renderer != null) {
+            renderer.render(plug, x, y, z, partialTicks, plugBuffer, poseStack);
         }
     }
 

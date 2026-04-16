@@ -26,8 +26,14 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import org.jetbrains.annotations.Nullable;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.ScheduledTickAccess;
+import net.minecraft.util.RandomSource;
 
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.lib.tile.TileMarker;
@@ -105,15 +111,26 @@ public abstract class BlockMarkerBase extends Block implements EntityBlock {
     // public boolean canPlaceBlockOnSide(Level world, BlockPos pos, Direction side)
     // {...}
 
-    public void neighborChanged(BlockState state, Level world, BlockPos pos, Block blockIn, BlockPos fromPos,
-            boolean isMoving) {
-        if (state.getBlock() != this) {
-            return;
-        }
+    @Override
+    public boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
         Direction sideOn = state.getValue(BuildCraftProperties.BLOCK_FACING_6);
         BlockPos neighborPos = pos.relative(sideOn.getOpposite());
-        if (!world.getBlockState(neighborPos).isFaceSturdy(world, neighborPos, sideOn)) {
-            world.destroyBlock(pos, true);
+        return level.getBlockState(neighborPos).isFaceSturdy(level, neighborPos, sideOn);
+    }
+
+    @Override
+    protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess scheduledTickAccess, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
+        if (!state.canSurvive(level, pos)) {
+            scheduledTickAccess.scheduleTick(pos, this, 1);
+        }
+        return super.updateShape(state, level, scheduledTickAccess, pos, direction, neighborPos, neighborState, random);
+    }
+
+    @Override
+    protected void tick(BlockState state, net.minecraft.server.level.ServerLevel level, BlockPos pos, RandomSource random) {
+        if (!state.canSurvive(level, pos)) {
+            level.destroyBlock(pos, false);
+            net.minecraft.world.level.block.Block.popResource(level, pos, new net.minecraft.world.item.ItemStack(this.asItem()));
         }
     }
 

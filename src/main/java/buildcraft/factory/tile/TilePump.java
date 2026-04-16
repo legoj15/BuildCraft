@@ -447,4 +447,5 @@ public class TilePump extends TileMiner implements IDebuggable {
     protected long getBatteryCapacity() {
         return 50 * MjAPI.MJ;
     }
+
 }

@@ -22,6 +22,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
+import buildcraft.api.tiles.IHasWork;
 
 import buildcraft.core.BCCoreConfig;
 import buildcraft.factory.BCFactoryBlocks;
@@ -31,7 +32,7 @@ import buildcraft.lib.tile.TileBC_Neptune;
  * Abstract base class for mining machines (mining well, quarry).
  * Ported from 1.12.2 TileMiner.
  */
-public abstract class TileMiner extends TileBC_Neptune {
+public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
 
     protected int progress = 0;
     @Nullable
@@ -144,6 +145,11 @@ public abstract class TileMiner extends TileBC_Neptune {
 
     public boolean isComplete() {
         return level != null && level.isClientSide() ? isComplete : currentPos == null;
+    }
+
+    @Override
+    public boolean hasWork() {
+        return !isComplete();
     }
 
     /** Debug accessor for wanted tube length. */

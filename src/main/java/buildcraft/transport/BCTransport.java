@@ -42,6 +42,7 @@ public class BCTransport {
         // Initialize pipe and pluggable definitions BEFORE items register
         BCTransportPipes.preInit();
         BCTransportPlugs.preInit();
+        BCTransportStatements.preInit();
 
         // Register all deferred registries
         BCTransportBlocks.init(modEventBus);

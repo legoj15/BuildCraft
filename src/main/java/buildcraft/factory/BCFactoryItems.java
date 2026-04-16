@@ -37,12 +37,9 @@ public class BCFactoryItems {
 
     public static final DeferredItem<ItemWaterGel> WATER_GEL_SPAWN = ITEMS.registerItem(
             "water_gel_spawn",
-            ItemWaterGel::new,
-            new Item.Properties().stacksTo(16));
+            ItemWaterGel::new, () -> new Item.Properties().stacksTo(16));
 
-    public static final DeferredItem<Item> GELLED_WATER = ITEMS.registerItem(
-            "gelled_water",
-            Item::new);
+    public static final DeferredItem<Item> GELLED_WATER = ITEMS.registerSimpleItem("gelled_water");
 
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);

@@ -35,6 +35,12 @@ public class BCSiliconStatements {
     }
 
     public static void preInit() {
-        // NO-OP: just to call the above static block
+        buildcraft.api.statements.StatementManager.registerStatement(TRIGGER_LIGHT_LOW);
+        buildcraft.api.statements.StatementManager.registerStatement(TRIGGER_LIGHT_HIGH);
+        buildcraft.api.statements.StatementManager.registerStatement(TRIGGER_TIMER_SHORT);
+        buildcraft.api.statements.StatementManager.registerStatement(TRIGGER_TIMER_MEDIUM);
+        buildcraft.api.statements.StatementManager.registerStatement(TRIGGER_TIMER_LONG);
+        buildcraft.api.statements.StatementManager.registerStatement(ACTION_PULSAR_CONSTANT);
+        buildcraft.api.statements.StatementManager.registerStatement(ACTION_PULSAR_SINGLE);
     }
 }

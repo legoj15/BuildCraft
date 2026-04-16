@@ -37,7 +37,8 @@ public interface IExpressionNode {
 
         /** @deprecated As {@link #evaluate()} gives a better description as to the cost. */
         @Override
-        default double getAsDouble() {
+        @Deprecated
+    default double getAsDouble() {
             return evaluate();
         }
     }
@@ -58,13 +59,15 @@ public interface IExpressionNode {
 
         /** @deprecated As {@link #evaluate()} gives a better description as to the cost. */
         @Override
-        default long getAsLong() {
+        @Deprecated
+    default long getAsLong() {
             return evaluate();
         }
 
         /** @deprecated As {@link #evaluate()} gives a better description as to the cost. */
         @Override
-        default int getAsInt() {
+        @Deprecated
+    default int getAsInt() {
             return (int) evaluate();
         }
     }
@@ -85,7 +88,8 @@ public interface IExpressionNode {
 
         /** @deprecated As {@link #evaluate()} gives a better description as to the cost. */
         @Override
-        default boolean getAsBoolean() {
+        @Deprecated
+    default boolean getAsBoolean() {
             return evaluate();
         }
 
@@ -108,7 +112,8 @@ public interface IExpressionNode {
 
         /** @deprecated As {@link #evaluate()} gives a better description as to the cost. */
         @Override
-        default T get() {
+        @Deprecated
+    default T get() {
             return evaluate();
         }
 

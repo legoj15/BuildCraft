@@ -1,0 +1,68 @@
+{
+  "sources": [
+    {
+      "type": "directory",
+      "source": "addons",
+      "prefix": "addons/"
+    },
+    {
+      "type": "directory",
+      "source": "filler",
+      "prefix": "filler/"
+    },
+    {
+      "type": "directory",
+      "source": "gui",
+      "prefix": "gui/"
+    },
+    {
+      "type": "directory",
+      "source": "icons",
+      "prefix": "icons/"
+    },
+    {
+      "type": "directory",
+      "source": "items",
+      "prefix": "items/"
+    },
+    {
+      "type": "directory",
+      "source": "blocks",
+      "prefix": "blocks/"
+    },
+    {
+      "type": "directory",
+      "source": "lasers",
+      "prefix": "lasers/"
+    },
+    {
+      "type": "directory",
+      "source": "lasers_old",
+      "prefix": "lasers_old/"
+    },
+    {
+      "type": "directory",
+      "source": "pipes",
+      "prefix": "pipes/"
+    },
+    {
+      "type": "directory",
+      "source": "triggers",
+      "prefix": "triggers/"
+    },
+    {
+      "type": "directory",
+      "source": "wires",
+      "prefix": "wires/"
+    },
+    {
+      "type": "directory",
+      "source": "block/plugs",
+      "prefix": "block/plugs/"
+    },
+    {
+      "type": "single",
+      "resource": "buildcraftunofficial:robot"
+    }
+  ]
+}

@@ -145,6 +145,13 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
         return nbt;
     }
 
+    @Override
+    public boolean readFromNbt(CompoundTag nbt) {
+        CompoundTag data = nbt.getCompound("data").orElse(new CompoundTag());
+        logic.readConfigData(data);
+        return true;
+    }
+
     // Networking
 
     public PluggableGate(PluggableDefinition def, IPipeHolder holder, Direction side, net.minecraft.network.FriendlyByteBuf buffer) {
@@ -153,12 +160,12 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
         logic = new GateLogic(this, packetBuffer);
     }
 
-    // @Override
-    // public void writeCreationPayload(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
-    //     super.writeCreationPayload(buffer);
-    //     PacketBufferBC packetBuffer = new PacketBufferBC(buffer);
-    //     logic.writeCreationToBuf(packetBuffer);
-    // }
+    @Override
+    public void writeCreationPayload(net.minecraft.network.FriendlyByteBuf buffer) {
+        super.writeCreationPayload(buffer);
+        PacketBufferBC packetBuffer = new PacketBufferBC(buffer);
+        logic.writeCreationToBuf(packetBuffer);
+    }
 
     public void sendMessage(IPayloadWriter writer) {
         PipeMessageReceiver to = PipeMessageReceiver.PLUGGABLES[side.ordinal()];
@@ -180,16 +187,20 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
         });
     }
 
-    // @Override
-    // public void writePayload(FriendlyByteBuf buffer, Object side) {
-    //     throw new Error("All messages must have an ID, and we can't just write a payload directly!");
-    // }
+    @Override
+    public void writePayload(FriendlyByteBuf buffer, Object side) {
+        throw new Error("All messages must have an ID, and we can't just write a payload directly!");
+    }
 
-    // @Override
-    // public void readPayload(FriendlyByteBuf b, Object side, Object ctx) throws IOException {
-    //     PacketBufferBC packetBuffer = new PacketBufferBC(b);
-    //     logic.readPayload(packetBuffer, ((Boolean) ctx).booleanValue());
-    // }
+    @Override
+    public void readPayload(FriendlyByteBuf b, Object side, Object ctx) throws IOException {
+        PacketBufferBC packetBuffer = new PacketBufferBC(b);
+        byte id = packetBuffer.readByte();
+        // buildcraft.api.core.BCLog.logger.info("PluggableGate received payload ID: " + id + ", isClient = " + ctx);
+        if (id == ID_UPDATE_PLUG) {
+            logic.readPayload(packetBuffer, ((Boolean) ctx).booleanValue());
+        }
+    }
 
     // PipePluggable
 

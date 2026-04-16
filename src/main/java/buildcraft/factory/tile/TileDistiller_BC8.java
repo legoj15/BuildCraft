@@ -59,17 +59,12 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
     private final MjBattery mjBattery = new MjBattery(1024 * MjAPI.MJ);
     private final IMjReceiver mjReceiver = new MjBatteryReceiver(mjBattery);
 
-    public final net.neoforged.neoforge.items.ItemStackHandler containerSlots = new net.neoforged.neoforge.items.ItemStackHandler(3) {
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-        }
+    public final buildcraft.lib.tile.item.ItemHandlerSimple containerSlots = 
+        new buildcraft.lib.tile.item.ItemHandlerSimple(3, 1);
 
-        @Override
-        public int getSlotLimit(int slot) {
-            return 1;
-        }
-    };
+    {
+        containerSlots.setCallback((handler, slot, bef, aft) -> setChanged());
+    }
 
     // Client-side fluid smoothers for render interpolation
     private final FluidSmoother smoothIn = new FluidSmoother(tankIn);
@@ -207,7 +202,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
 
         if (level.getGameTime() % 5 == 0) {
             // Slot 0: Input container -> drain into tankIn
-            net.minecraft.world.item.ItemStack inStack = containerSlots.getStackInSlot(0);
+            net.minecraft.world.item.ItemStack inStack = containerSlots.getResource(0).toStack(containerSlots.getAmountAsInt(0));
             if (!inStack.isEmpty()) {
                 @SuppressWarnings("removal")
                 net.neoforged.neoforge.fluids.FluidActionResult result = net.neoforged.neoforge.fluids.FluidUtil.tryEmptyContainer(
@@ -218,7 +213,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
                 }
             }
             // Slot 1: Output container gas -> fill from tankGasOut
-            net.minecraft.world.item.ItemStack gasStack = containerSlots.getStackInSlot(1);
+            net.minecraft.world.item.ItemStack gasStack = containerSlots.getResource(1).toStack(containerSlots.getAmountAsInt(1));
             if (!gasStack.isEmpty()) {
                 @SuppressWarnings("removal")
                 net.neoforged.neoforge.fluids.FluidActionResult result = net.neoforged.neoforge.fluids.FluidUtil.tryFillContainer(
@@ -229,7 +224,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
                 }
             }
             // Slot 2: Output container liquid -> fill from tankLiquidOut
-            net.minecraft.world.item.ItemStack liqStack = containerSlots.getStackInSlot(2);
+            net.minecraft.world.item.ItemStack liqStack = containerSlots.getResource(2).toStack(containerSlots.getAmountAsInt(2));
             if (!liqStack.isEmpty()) {
                 @SuppressWarnings("removal")
                 net.neoforged.neoforge.fluids.FluidActionResult result = net.neoforged.neoforge.fluids.FluidUtil.tryFillContainer(
@@ -400,7 +395,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         output.putLong("distillPower", distillPower);
         output.putBoolean("isActive", isActive);
         output.putLong("powerAvgClient", powerAvgClient);
-        output.putChild("containerSlots", containerSlots);
+        output.store("containerSlots", net.minecraft.nbt.CompoundTag.CODEC, containerSlots.serializeNBT());
     }
 
     @Override
@@ -419,7 +414,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         distillPower = input.getLongOr("distillPower", 0L);
         isActive = input.getBooleanOr("isActive", false);
         powerAvgClient = input.getLongOr("powerAvgClient", 0L);
-        input.readChild("containerSlots", containerSlots);
+        containerSlots.deserializeNBT(input.read("containerSlots", net.minecraft.nbt.CompoundTag.CODEC).orElseGet(net.minecraft.nbt.CompoundTag::new));
     }
 
     // --- Network Sync ---

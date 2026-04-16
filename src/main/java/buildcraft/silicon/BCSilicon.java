@@ -37,6 +37,7 @@ public class BCSilicon {
 
         // Register pluggable definitions (facade, etc.)
         BCSiliconPlugs.preInit();
+        BCSiliconStatements.preInit();
 
         // Register client-side extensions on the mod event bus
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
@@ -101,14 +102,39 @@ public class BCSilicon {
             }
 
             buildcraft.silicon.item.ItemPluggableLens lensItem = BCSiliconItems.PLUG_LENS.get();
-            event.accept(lensItem.getStack(null, false));
-            for (net.minecraft.world.item.DyeColor color : net.minecraft.world.item.DyeColor.values()) {
+
+            net.minecraft.world.item.DyeColor[] legacyOrder = new net.minecraft.world.item.DyeColor[] {
+                net.minecraft.world.item.DyeColor.BLACK,
+                net.minecraft.world.item.DyeColor.RED,
+                net.minecraft.world.item.DyeColor.GREEN,
+                net.minecraft.world.item.DyeColor.BROWN,
+                net.minecraft.world.item.DyeColor.BLUE,
+                net.minecraft.world.item.DyeColor.PURPLE,
+                net.minecraft.world.item.DyeColor.CYAN,
+                net.minecraft.world.item.DyeColor.LIGHT_GRAY,
+                net.minecraft.world.item.DyeColor.GRAY,
+                net.minecraft.world.item.DyeColor.PINK,
+                net.minecraft.world.item.DyeColor.LIME,
+                net.minecraft.world.item.DyeColor.YELLOW,
+                net.minecraft.world.item.DyeColor.LIGHT_BLUE,
+                net.minecraft.world.item.DyeColor.MAGENTA,
+                net.minecraft.world.item.DyeColor.ORANGE,
+                net.minecraft.world.item.DyeColor.WHITE
+            };
+
+            // Colored Lenses (in legacy order)
+            for (net.minecraft.world.item.DyeColor color : legacyOrder) {
                 event.accept(lensItem.getStack(color, false));
             }
-            event.accept(lensItem.getStack(null, true));
-            for (net.minecraft.world.item.DyeColor color : net.minecraft.world.item.DyeColor.values()) {
+
+            // Colored Filters (in legacy order)
+            for (net.minecraft.world.item.DyeColor color : legacyOrder) {
                 event.accept(lensItem.getStack(color, true));
             }
+
+            // Clear Lens and Clear Filter
+            event.accept(lensItem.getStack(null, false));
+            event.accept(lensItem.getStack(null, true));
 
             event.accept(new ItemStack(BCSiliconItems.PLUG_PULSAR.get()));
             event.accept(new ItemStack(BCSiliconItems.PLUG_LIGHT_SENSOR.get()));

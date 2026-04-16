@@ -1,46 +1,58 @@
-/*
- * Copyright (c) 2017 SpaceToad and the BuildCraft team
- * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
- * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
- */
 package buildcraft.lib.tile.item;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.CrashReport;
+import net.minecraft.CrashReportCategory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import net.minecraft.CrashReport;
-import net.minecraft.CrashReportCategory;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.core.NonNullList;
-
-
-import net.minecraft.nbt.Tag;
-import buildcraft.lib.misc.INBTSerializable;
-import net.neoforged.neoforge.items.IItemHandlerModifiable;
-
 import buildcraft.api.core.IStackFilter;
-
 import buildcraft.lib.inventory.AbstractInvItemTransactor;
+import buildcraft.lib.misc.INBTSerializable;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.tile.item.StackInsertionFunction.InsertionResult;
 
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
+
+import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
+
 public class ItemHandlerSimple extends AbstractInvItemTransactor
-    implements IItemHandlerModifiable, IItemHandlerAdv, INBTSerializable<CompoundTag> {
-    // Function-called stuff (helpers etc)
+    implements IItemHandlerAdv, INBTSerializable<CompoundTag> {
+
+    private final SnapshotJournal<ItemStack[]> journal = new SnapshotJournal<>() {
+        @Override
+        protected ItemStack[] createSnapshot() {
+            ItemStack[] snap = new ItemStack[stacks.size()];
+            for (int i = 0; i < snap.length; i++) {
+                snap[i] = stacks.get(i).copy();
+            }
+            return snap;
+        }
+
+        @Override
+        protected void revertToSnapshot(ItemStack[] snapshot) {
+            for (int i = 0; i < snapshot.length; i++) {
+                stacks.set(i, snapshot[i] != null ? snapshot[i] : StackUtil.EMPTY);
+            }
+        }
+    };
+
+
     private StackInsertionChecker checker;
     private StackInsertionFunction inserter;
 
     @Nullable
     private StackChangeCallback callback;
 
-    // Actual item stacks used
     public final NonNullList<ItemStack> stacks;
 
-    // Transactor speedup (small)
     private int firstUsed = Integer.MAX_VALUE;
 
     public ItemHandlerSimple(int size) {
@@ -100,7 +112,7 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
     @Override
     public void deserializeNBT(CompoundTag nbt) {
         ListTag list = nbt.getList("items").orElseGet(ListTag::new);
-        for (int i = 0; i < list.size() && i < getSlots(); i++) {
+        for (int i = 0; i < list.size() && i < size(); i++) {
             CompoundTag itemNbt = list.getCompound(i).orElseGet(CompoundTag::new);
             ItemStack stack = ItemStack.EMPTY;
             if (itemNbt.contains("id")) {
@@ -116,14 +128,35 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
             }
             setStackInternal(i, stack);
         }
-        for (int i = list.size(); i < getSlots(); i++) {
+        for (int i = list.size(); i < size(); i++) {
             setStackInternal(i, StackUtil.EMPTY);
         }
     }
 
     @Override
-    public int getSlots() {
+    public int size() {
         return stacks.size();
+    }
+
+    public int getSlots() {
+        return size();
+    }
+
+    public net.minecraft.world.item.ItemStack getStackInSlot(int slot) {
+        if (badSlotIndex(slot)) return net.minecraft.world.item.ItemStack.EMPTY;
+        return stacks.get(slot);
+    }
+
+    public net.minecraft.world.item.ItemStack insertItem(int slot, @Nonnull net.minecraft.world.item.ItemStack stack, boolean simulate) {
+        return insert(slot, stack, simulate);
+    }
+
+    public net.minecraft.world.item.ItemStack extractItem(int slot, int amount, boolean simulate) {
+        return extract(slot, s -> true, 1, amount, simulate);
+    }
+
+    public int getSlotLimit(int slot) {
+        return 64; // Default legacy behavior
     }
 
     private boolean badSlotIndex(int slot) {
@@ -137,118 +170,85 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
     }
 
     @Override
-    @Nonnull
-    public ItemStack getStackInSlot(int slot) {
-        if (badSlotIndex(slot)) return StackUtil.EMPTY;
-        return asValid(stacks.get(slot));
+    public ItemResource getResource(int index) {
+        return badSlotIndex(index) ? ItemResource.EMPTY : ItemResource.of(stacks.get(index));
     }
 
     @Override
-    @Nonnull
-    public ItemStack insertItem(int slot, @Nonnull ItemStack stack, boolean simulate) {
-        if (badSlotIndex(slot)) {
-            return stack;
+    public long getAmountAsLong(int index) {
+        return badSlotIndex(index) ? 0 : stacks.get(index).getCount();
+    }
+
+    @Override
+    public long getCapacityAsLong(int index, ItemResource resource) {
+        return 64; // getSlotLimit
+    }
+
+    @Override
+    public boolean isValid(int index, ItemResource resource) {
+        return canSet(index, resource.toStack());
+    }
+
+    @Override
+    public int insert(int index, ItemResource resource, int amount, TransactionContext tx) {
+        if (badSlotIndex(index) || amount <= 0 || resource.isEmpty()) return 0;
+        ItemStack stack = resource.toStack(amount);
+        
+        ItemStack current = stacks.get(index);
+        if (!canSet(index, stack) || !canSet(index, current)) return 0;
+
+        InsertionResult result = inserter.modifyForInsertion(index, asValid(current.copy()), asValid(stack.copy()));
+        if (!canSet(index, result.toSet)) {
+            CrashReport report = new CrashReport("Inserting an item (buildcraft:ItemHandlerSimple)",
+                new IllegalStateException("Conflicting Insertion!"));
+            CrashReportCategory cat = report.addCategory("Inventory details");
+            cat.setDetail("Existing Item", current.toString());
+            cat.setDetail("Inserting Item", stack.toString());
+            cat.setDetail("To Set", result.toSet.toString());
+            cat.setDetail("To Return", result.toReturn.toString());
+            cat.setDetail("Slot", String.valueOf(index));
+            throw new RuntimeException("Conflicting Insertion! See log for details.");
         }
-        if (canSet(slot, stack)) {
-            ItemStack current = stacks.get(slot);
-            if (!canSet(slot, current)) {
-                // A bit odd, but can happen if the filter changed
-                return stack;
+        
+        int inserted = amount - result.toReturn.getCount();
+        if (inserted > 0) {
+            if (tx != null) {
+                journal.updateSnapshots(tx);
             }
-            InsertionResult result = inserter.modifyForInsertion(slot, asValid(current.copy()), asValid(stack.copy()));
-            if (!canSet(slot, result.toSet)) {
-                // We have a bad inserter or checker, as they should not be conflicting
-                CrashReport report = new CrashReport("Inserting an item (buildcraft:ItemHandlerSimple)",
-                    new IllegalStateException("Conflicting Insertion!"));
-                CrashReportCategory cat = report.addCategory("Inventory details");
-                cat.setDetail("Existing Item", current.toString());
-                cat.setDetail("Inserting Item", stack.toString());
-                cat.setDetail("To Set", result.toSet.toString());
-                cat.setDetail("To Return", result.toReturn.toString());
-                cat.setDetail("Slot", String.valueOf(slot));
-                cat.setDetail("Checker", checker.getClass().toString());
-                cat.setDetail("Inserter", inserter.getClass().toString());
-                throw new RuntimeException("Conflicting Insertion! See log for details.");
-            } else if (!simulate) {
-                setStackInternal(slot, result.toSet);
-                if (callback != null) {
-                    callback.onStackChange(this, slot, current, result.toSet);
-                }
-            }
-            return asValid(result.toReturn);
-        } else {
-            return stack;
-        }
-    }
-
-    @Override
-    @Nonnull
-    protected ItemStack insert(int slot, @Nonnull ItemStack stack, boolean simulate) {
-        return insertItem(slot, stack, simulate);
-    }
-
-    @Override
-    @Nonnull
-    public ItemStack extractItem(int slot, int amount, boolean simulate) {
-        if (badSlotIndex(slot)) return StackUtil.EMPTY;
-        // You can ALWAYS extract. if you couldn't then you could never take out items from anywhere
-        ItemStack current = stacks.get(slot);
-        if (current.isEmpty()) return StackUtil.EMPTY;
-        if (current.getCount() < amount) {
-            if (simulate) {
-                return asValid(current.copy());
-            }
-            setStackInternal(slot, StackUtil.EMPTY);
+            setStackInternal(index, result.toSet);
             if (callback != null) {
-                callback.onStackChange(this, slot, current, StackUtil.EMPTY);
+                callback.onStackChange(this, index, current, result.toSet);
             }
-            // no need to copy as we no longer have it
-            return current;
-        } else {
-            ItemStack before = current;
-            current = current.copy();
-            ItemStack split = current.split(amount);
-            if (!simulate) {
-                if (current.getCount() <= 0) current = StackUtil.EMPTY;
-                setStackInternal(slot, current);
-                if (callback != null) {
-                    callback.onStackChange(this, slot, before, current);
-                }
-            }
-            return split;
         }
+        return inserted;
     }
 
     @Override
-    @Nonnull
-    protected ItemStack extract(int slot, IStackFilter filter, int min, int max, boolean simulate) {
-        if (badSlotIndex(slot)) return StackUtil.EMPTY;
-        if (min <= 0) min = 1;
-        if (max < min) return StackUtil.EMPTY;
-        ItemStack current = stacks.get(slot);
-        ItemStack before = current.copy();
-        if (current.getCount() < min) return StackUtil.EMPTY;
-        if (filter.matches(asValid(current))) {
-            if (simulate) {
-                ItemStack copy = current.copy();
-                return copy.split(max);
+    public int extract(int index, ItemResource resource, int amount, TransactionContext tx) {
+        if (badSlotIndex(index) || amount <= 0 || resource.isEmpty()) return 0;
+        ItemStack current = stacks.get(index);
+        if (current.isEmpty() || !ItemResource.of(current).equals(resource)) return 0;
+
+        int toExtract = Math.min(amount, current.getCount());
+        if (toExtract > 0) {
+            ItemStack before = current.copy();
+            ItemStack after = current.copy();
+            after.shrink(toExtract);
+            if (after.getCount() <= 0) after = StackUtil.EMPTY;
+
+            if (tx != null) {
+                journal.updateSnapshots(tx);
             }
-            ItemStack split = current.split(max);
-            if (current.getCount() <= 0) {
-                stacks.set(slot, StackUtil.EMPTY);
-            }
+            setStackInternal(index, after);
             if (callback != null) {
-                callback.onStackChange(this, slot, before, stacks.get(slot));
+                callback.onStackChange(this, index, before, after);
             }
-            return split;
         }
-        return StackUtil.EMPTY;
+        return toExtract;
     }
 
-    @Override
     public void setStackInSlot(int slot, @Nonnull ItemStack stack) {
         if (badSlotIndex(slot)) {
-            // Its safe to throw here
             throw new IndexOutOfBoundsException("Slot index out of range: " + slot);
         }
         ItemStack before = stacks.get(slot);
@@ -261,17 +261,14 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
     @Override
     public final boolean canSet(int slot, @Nonnull ItemStack stack) {
         ItemStack copied = asValid(stack);
-        if (copied.isEmpty()) {
-            return true;
-        }
+        if (copied.isEmpty()) return true;
         return checker.canSet(slot, copied);
     }
 
     private void setStackInternal(int slot, @Nonnull ItemStack stack) {
         stacks.set(slot, asValid(stack));
-        // Transactor calc
         if (stack.isEmpty() && firstUsed == slot) {
-            for (int s = firstUsed; s < getSlots(); s++) {
+            for (int s = firstUsed; s < size(); s++) {
                 if (!stacks.get(s).isEmpty()) {
                     firstUsed = s;
                     break;
@@ -286,17 +283,30 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
     }
 
     @Override
-    public int getSlotLimit(int slot) {
-        return 64;
+    protected ItemStack insert(int slot, @Nonnull ItemStack stack, boolean simulate) {
+        if (stack.isEmpty()) return ItemStack.EMPTY;
+        try (Transaction tx = Transaction.openRoot()) {
+            int inserted = insert(slot, ItemResource.of(stack), stack.getCount(), tx);
+            if (!simulate) tx.commit();
+            return stack.copyWithCount(stack.getCount() - inserted);
+        }
+    }
+
+    @Override
+    protected ItemStack extract(int slot, IStackFilter filter, int min, int max, boolean simulate) {
+        if (badSlotIndex(slot) || max < min) return StackUtil.EMPTY;
+        ItemStack current = stacks.get(slot);
+        if (current.isEmpty() || current.getCount() < min || !filter.matches(asValid(current))) return StackUtil.EMPTY;
+        try (Transaction tx = Transaction.openRoot()) {
+            int toExtract = Math.min(max, current.getCount());
+            int ex = extract(slot, ItemResource.of(current), toExtract, tx);
+            if (!simulate) tx.commit();
+            return current.copyWithCount(ex);
+        }
     }
 
     @Override
     public String toString() {
         return "ItemHandlerSimple " + stacks;
-    }
-
-    @Override
-    public boolean isItemValid(int slot, ItemStack stack) {
-        return canSet(slot, stack);
     }
 }

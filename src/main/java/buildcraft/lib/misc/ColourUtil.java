@@ -10,6 +10,18 @@ public class ColourUtil {
     /** All 16 dye colours, in ordinal order. Equivalent to DyeColor.values() but cached. */
     public static final DyeColor[] COLOURS = DyeColor.values();
 
+    /** Maps Direction ordinals to ChatFormatting colours for display. matching 1.12.2 FACE_TO_FORMAT */
+    private static final ChatFormatting[] FACE_TO_FORMAT = new ChatFormatting[6];
+
+    static {
+        FACE_TO_FORMAT[Direction.UP.ordinal()] = ChatFormatting.WHITE;
+        FACE_TO_FORMAT[Direction.DOWN.ordinal()] = ChatFormatting.DARK_GRAY; // 1.12.2 mapped BLACK to DARK_GRAY for visibility
+        FACE_TO_FORMAT[Direction.NORTH.ordinal()] = ChatFormatting.RED;
+        FACE_TO_FORMAT[Direction.SOUTH.ordinal()] = ChatFormatting.BLUE;
+        FACE_TO_FORMAT[Direction.EAST.ordinal()] = ChatFormatting.YELLOW;
+        FACE_TO_FORMAT[Direction.WEST.ordinal()] = ChatFormatting.GREEN;
+    }
+
     /** Light (brighter) hex colour for each dye, used for pipe colouring.
      *  Values from 1.12.2, remapped to MC 26.1 DyeColor ordinal order. */
     private static final int[] LIGHT_HEX = {
@@ -53,6 +65,20 @@ public class ColourUtil {
         COLOUR_TO_FORMAT[DyeColor.BLACK.ordinal()] = ChatFormatting.DARK_GRAY;
     }
 
+    /** Maps Direction ordinals to ARGB colours for gate ledger face indicators.
+     *  Ported from 1.12.2 — only DOWN and UP had explicit colours. */
+    private static final int[] FACE_TO_COLOUR = new int[6];
+
+    static {
+        FACE_TO_COLOUR[Direction.DOWN.ordinal()] = 0xFF_33_33_33;
+        FACE_TO_COLOUR[Direction.UP.ordinal()] = 0xFF_CC_CC_CC;
+    }
+
+    /** Returns the ledger-background colour associated with the given block face direction. */
+    public static int getColourForSide(Direction face) {
+        return FACE_TO_COLOUR[face.ordinal()];
+    }
+
     /** Returns a display-friendly name for the given dye colour (or "Clean" if null). */
     public static String getTextFullTooltip(@Nullable DyeColor colour) {
         if (colour == null) return "Clean";
@@ -70,8 +96,9 @@ public class ColourUtil {
 
     /** Returns a display-friendly name for the given direction. */
     public static String getTextFullTooltip(Direction direction) {
-        String name = direction.getName();
-        return Character.toUpperCase(name.charAt(0)) + name.substring(1);
+        String localized = buildcraft.lib.misc.LocaleUtil.localize("direction." + direction.getName());
+        ChatFormatting format = FACE_TO_FORMAT[direction.ordinal()];
+        return format.toString() + localized + ChatFormatting.RESET;
     }
 
     /** Converts a {@link DyeColor} into an equivalent {@link ChatFormatting} for display.

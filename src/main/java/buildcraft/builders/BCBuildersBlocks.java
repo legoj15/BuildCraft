@@ -22,31 +22,31 @@ public class BCBuildersBlocks {
 
     public static final DeferredBlock<BlockFrame> FRAME = BLOCKS.registerBlock(
             "frame",
-            BlockFrame::new, BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL));
+            BlockFrame::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL));
 
     public static final DeferredBlock<BlockFiller> FILLER = BLOCKS.registerBlock(
             "filler",
-            BlockFiller::new, BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockFiller::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
 
     public static final DeferredBlock<BlockBuilder> BUILDER = BLOCKS.registerBlock(
             "builder",
-            BlockBuilder::new, BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockBuilder::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
 
     public static final DeferredBlock<BlockArchitectTable> ARCHITECT = BLOCKS.registerBlock(
             "architect",
-            BlockArchitectTable::new, BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockArchitectTable::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
 
     public static final DeferredBlock<BlockElectronicLibrary> LIBRARY = BLOCKS.registerBlock(
             "library",
-            BlockElectronicLibrary::new, BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockElectronicLibrary::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
 
     public static final DeferredBlock<BlockReplacer> REPLACER = BLOCKS.registerBlock(
             "replacer",
-            BlockReplacer::new, BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockReplacer::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
 
     public static final DeferredBlock<BlockQuarry> QUARRY = BLOCKS.registerBlock(
             "quarry",
-            BlockQuarry::new, BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockQuarry::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

@@ -11,7 +11,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidUtil;
 
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.PipeEventFluid;
@@ -37,7 +36,20 @@ public class PipeBehaviourDiamondFluid extends PipeBehaviourDiamond {
                 for (int i = 0; i < FILTERS_PER_SIDE; i++) {
                     ItemStack compareTo = filters.getStackInSlot(offset + i);
                     if (compareTo.isEmpty()) continue;
-                    FluidStack target = FluidUtil.getFluidContained(compareTo).orElse(FluidStack.EMPTY);
+                    
+                    net.neoforged.neoforge.transfer.access.ItemAccess access = net.neoforged.neoforge.transfer.access.ItemAccess.forStack(compareTo);
+                    net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> handler = access.getCapability(net.neoforged.neoforge.capabilities.Capabilities.Fluid.ITEM);
+                    FluidStack target = FluidStack.EMPTY;
+                    if (handler != null) {
+                        for (int j = 0; j < handler.size(); j++) {
+                            long amt = handler.getAmountAsLong(j);
+                            if (amt > 0) {
+                                target = handler.getResource(j).toStack((int)amt);
+                                break;
+                            }
+                        }
+                    }
+                    
                     if (target.isEmpty()) {
                         continue;
                     }

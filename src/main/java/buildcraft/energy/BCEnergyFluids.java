@@ -4,14 +4,20 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.MapColor;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.SoundActions;
@@ -155,14 +161,20 @@ public class BCEnergyFluids {
         // Registry name: "oil" for heat_0, "oil_heat_1" for heat_1, etc.
         String regName = baseName + (heat == 0 ? "" : "_heat_" + heat);
 
+        boolean turnOffSplashes = baseName.equals("oil") || baseName.equals("residue");
+
         // FluidType
         DeferredHolder<FluidType, FluidType> fluidType = FLUID_TYPES.register(regName,
-                () -> new FluidType(FluidType.Properties.create()
+                () -> new BCCustomFluidType(FluidType.Properties.create()
                         .density(density)
                         .viscosity(viscosity)
                         .temperature(temperature)
                         .canExtinguish(false)
                         .canConvertToSource(false)
+                        .canSwim(!turnOffSplashes)
+                        .canPushEntity(true)
+                        .canDrown(true)
+                        .isWaterLike(!turnOffSplashes)
                         .sound(SoundActions.BUCKET_FILL, SoundEvents.BUCKET_FILL)
                         .sound(SoundActions.BUCKET_EMPTY, SoundEvents.BUCKET_EMPTY)
                 ));
@@ -174,12 +186,12 @@ public class BCEnergyFluids {
         DeferredItem<BucketItem>[] bucketHolder = new DeferredItem[1];
 
         sourceHolder[0] = FLUIDS.register(regName,
-                () -> new BaseFlowingFluid.Source(makeProps(
+                () -> new BCCustomSourceFluid(makeProps(
                         fluidType, sourceHolder[0], flowingHolder[0],
                         blockHolder[0], bucketHolder[0], viscosity, quanta)));
 
         flowingHolder[0] = FLUIDS.register(regName + "_flowing",
-                () -> new BaseFlowingFluid.Flowing(makeProps(
+                () -> new BCCustomFlowingFluid(makeProps(
                         fluidType, sourceHolder[0], flowingHolder[0],
                         blockHolder[0], bucketHolder[0], viscosity, quanta)));
 
@@ -194,14 +206,14 @@ public class BCEnergyFluids {
                         .noLootTable()
                         .liquid()
                         .lightLevel(s -> 0)
-                ), BlockBehaviour.Properties.of());
+                ), () -> BlockBehaviour.Properties.of());
 
         // Bucket
         bucketHolder[0] = ITEMS.registerItem(regName + "_bucket",
                 props -> new BucketItem(sourceHolder[0].get(), props
                         .craftRemainder(Items.BUCKET)
                         .stacksTo(1)
-                ), new Item.Properties());
+                ), () -> new Item.Properties());
 
         return new FluidEntry(
                 regName, baseName, heat, density, viscosity, temperature, gaseous, tintColor,
@@ -230,7 +242,7 @@ public class BCEnergyFluids {
             levelDecreasePerBlock = 2;
         } else if (quanta <= 6) {
             slopeFindDistance = 3;
-            levelDecreasePerBlock = 2;
+            levelDecreasePerBlock = 1;
         } else if (quanta <= 8) {
             slopeFindDistance = 4;
             levelDecreasePerBlock = 1;
@@ -253,5 +265,216 @@ public class BCEnergyFluids {
         FLUIDS.register(modEventBus);
         BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
+    }
+
+    // ─── Custom Fluid Classes ─────────────────────────────────────────
+    
+    public static class BCCustomFlowingFluid extends BaseFlowingFluid.Flowing {
+        public BCCustomFlowingFluid(Properties properties) {
+            super(properties);
+        }
+
+        private boolean isDenseFluid() {
+            net.minecraft.resources.Identifier loc = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(this);
+            if (loc != null) {
+                String path = loc.getPath();
+                return path.contains("oil_heavy") || path.contains("oil_dense") || path.contains("oil_residue");
+            }
+            return false;
+        }
+
+        @Override
+        public void tick(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state, FluidState fluidState) {
+            if (isDenseFluid()) {
+                BlockPos below = pos.below();
+                FluidState stateBelow = level.getFluidState(below);
+                if (stateBelow.is(FluidTags.WATER)) {
+                    // Annihilate the water block immediately to sink down!
+                    level.setBlockAndUpdate(below, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+                }
+            }
+            super.tick(level, pos, state, fluidState);
+
+            if (!isDenseFluid() && !fluidState.isSource()) {
+                BlockPos below = pos.below();
+                FluidState belowFluid = level.getFluidState(below);
+                if (belowFluid.is(FluidTags.WATER) && !belowFluid.getType().isSame(this)) {
+                    BlockState currentState = level.getBlockState(pos);
+                    FluidState currentFluid = currentState.getFluidState();
+                    if (!currentFluid.isEmpty() && currentFluid.getType().isSame(this)) {
+                        int neighborAmount = currentFluid.getAmount() - this.getDropOff(level);
+                        if (currentFluid.getValue(FALLING)) {
+                            neighborAmount = 7;
+                        }
+                        
+                        if (neighborAmount > 0) {
+                            java.util.Map<Direction, FluidState> map = this.getSpread(level, pos, currentState);
+                            for (java.util.Map.Entry<Direction, FluidState> entry : map.entrySet()) {
+                                Direction dir = entry.getKey();
+                                FluidState targetFluid = entry.getValue();
+                                BlockPos targetPos = pos.relative(dir);
+                                BlockState targetState = level.getBlockState(targetPos);
+                                this.spreadTo(level, targetPos, targetState, dir, targetFluid);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        @Override
+        protected java.util.Map<Direction, FluidState> getSpread(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state) {
+            java.util.Map<Direction, FluidState> map = new java.util.EnumMap<>(super.getSpread(level, pos, state));
+            FluidState belowFluid = level.getFluidState(pos.below());
+            if (!isDenseFluid() && belowFluid.is(FluidTags.WATER) && !belowFluid.getType().isSame(this)) {
+                 for (Direction dir : Direction.Plane.HORIZONTAL) {
+                      if (!map.containsKey(dir)) {
+                           BlockPos targetPos = pos.relative(dir);
+                           BlockState targetState = level.getBlockState(targetPos);
+                           if (targetState.isAir() || targetState.canBeReplaced()) {
+                               FluidState targetFluidState = targetState.getFluidState();
+                               if (targetFluidState.getType().isSame(this)) continue;
+                               
+                               FluidState newFluid = this.getNewLiquid(level, targetPos, targetState);
+                               if (!newFluid.isEmpty() && targetFluidState.canBeReplacedWith(level, targetPos, newFluid.getType(), dir)) {
+                                   map.put(dir, newFluid);
+                               }
+                           }
+                      }
+                 }
+            }
+            return map;
+        }
+    }
+
+    public static class BCCustomSourceFluid extends BaseFlowingFluid.Source {
+        public BCCustomSourceFluid(Properties properties) {
+            super(properties);
+        }
+
+        private boolean isDenseFluid() {
+            net.minecraft.resources.Identifier loc = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(this);
+            if (loc != null) {
+                String path = loc.getPath();
+                return path.contains("oil_heavy") || path.contains("oil_dense") || path.contains("oil_residue");
+            }
+            return false;
+        }
+
+        @Override
+        public void tick(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state, FluidState fluidState) {
+            if (isDenseFluid()) {
+                BlockPos below = pos.below();
+                FluidState stateBelow = level.getFluidState(below);
+                if (stateBelow.is(FluidTags.WATER)) {
+                    // Annihilate the water block immediately to sink down!
+                    level.setBlockAndUpdate(below, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+                }
+            }
+            super.tick(level, pos, state, fluidState);
+
+            if (!isDenseFluid() && !fluidState.isSource()) {
+                BlockPos below = pos.below();
+                if (level.getFluidState(below).is(FluidTags.WATER)) {
+                    BlockState currentState = level.getBlockState(pos);
+                    FluidState currentFluid = currentState.getFluidState();
+                    if (!currentFluid.isEmpty() && currentFluid.getType().isSame(this)) {
+                        int neighborAmount = currentFluid.getAmount() - this.getDropOff(level);
+                        if (currentFluid.getValue(FALLING)) {
+                            neighborAmount = 7;
+                        }
+                        
+                        if (neighborAmount > 0) {
+                            java.util.Map<Direction, FluidState> map = this.getSpread(level, pos, currentState);
+                            for (java.util.Map.Entry<Direction, FluidState> entry : map.entrySet()) {
+                                Direction dir = entry.getKey();
+                                FluidState targetFluid = entry.getValue();
+                                BlockPos targetPos = pos.relative(dir);
+                                BlockState targetState = level.getBlockState(targetPos);
+                                this.spreadTo(level, targetPos, targetState, dir, targetFluid);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        @Override
+        protected java.util.Map<Direction, FluidState> getSpread(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state) {
+            java.util.Map<Direction, FluidState> map = new java.util.EnumMap<>(super.getSpread(level, pos, state));
+            if (!isDenseFluid() && level.getFluidState(pos.below()).is(FluidTags.WATER)) {
+                 for (Direction dir : Direction.Plane.HORIZONTAL) {
+                      if (!map.containsKey(dir)) {
+                           BlockPos targetPos = pos.relative(dir);
+                           BlockState targetState = level.getBlockState(targetPos);
+                           if (targetState.isAir() || targetState.canBeReplaced()) {
+                               FluidState targetFluidState = targetState.getFluidState();
+                               if (targetFluidState.getType().isSame(this)) continue;
+                               
+                               FluidState newFluid = this.getNewLiquid(level, targetPos, targetState);
+                               if (!newFluid.isEmpty() && targetFluidState.canBeReplacedWith(level, targetPos, newFluid.getType(), dir)) {
+                                   map.put(dir, newFluid);
+                               }
+                           }
+                      }
+                 }
+            }
+            return map;
+        }
+
+        @Override
+        protected boolean canBeReplacedWith(FluidState state, BlockGetter level, BlockPos pos, Fluid fluidIn, Direction direction) {
+            if (fluidIn.is(FluidTags.WATER)) {
+                return false;
+            }
+            return super.canBeReplacedWith(state, level, pos, fluidIn, direction);
+        }
+    }
+
+    public static class BCCustomFluidType extends FluidType {
+        public BCCustomFluidType(Properties properties) {
+            super(properties);
+        }
+
+        @Override
+        public double motionScale(net.minecraft.world.entity.Entity entity) {
+            if (BCEnergyConfig.oilIsSticky != null && BCEnergyConfig.oilIsSticky.get()) {
+                return 0.5D; // Sluggish
+            }
+            return 0.8D; // Dense liquid (water is typically friction ~0.8)
+        }
+
+        @Override
+        public boolean move(net.minecraft.world.level.material.FluidState state, net.minecraft.world.entity.LivingEntity entity, net.minecraft.world.phys.Vec3 movementVector, double gravity) {
+            double scalar = motionScale(entity);
+            boolean isSwimming = this.canSwim(entity);
+
+            // 1. Convert WASD movementVector to world movement delta
+            // Normal water uses 0.02F speed. Sprinting water uses ~0.02F + depth strider modifiers, but we'll use a fixed float.
+            float swimSpeed = isSwimming && entity.isSprinting() ? 0.04F : 0.02F;
+            
+            // If swimming is completely disabled (like in crude oil), remove horizontal input intent
+            if (!isSwimming) {
+                movementVector = new net.minecraft.world.phys.Vec3(0, movementVector.y, 0);
+            }
+
+            entity.moveRelative(swimSpeed, movementVector);
+
+            // 2. Perform the actual physical collision move
+            entity.move(net.minecraft.world.entity.MoverType.SELF, entity.getDeltaMovement());
+
+            // 3. Apply friction scalar
+            // Vanilla water applies 0.8F friction to all axes. We use our custom scalar to simulate stickiness!
+            net.minecraft.world.phys.Vec3 vel = entity.getDeltaMovement();
+            entity.setDeltaMovement(vel.multiply(scalar, 0.8D, scalar));
+
+            // 4. Bobbing Buoyancy vs Gravity
+            // If falling, vanilla water drastically reduces free-fall and begins floating you up
+            if (!entity.onGround()) {
+                entity.setDeltaMovement(entity.getDeltaMovement().add(0.0D, 0.02D, 0.0D));
+            }
+
+            return true;
+        }
     }
 }

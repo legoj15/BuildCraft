@@ -1,0 +1,10 @@
+{
+    "type":  "minecraft:function",
+    "function":  "buildcraftunofficial:engine_stirling_fuel",
+    "environment":  "minecraft:default",
+    "structure":  "minecraft:empty",
+    "max_ticks":  400,
+    "setup_ticks":  0,
+    "required":  true,
+    "batch":  "engine_stirling_fuel"
+}

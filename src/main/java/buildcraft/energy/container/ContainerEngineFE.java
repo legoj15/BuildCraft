@@ -7,7 +7,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.SimpleContainerData;
 
-import net.neoforged.neoforge.items.SlotItemHandler;
+
 
 import buildcraft.energy.BCEnergyMenuTypes;
 import buildcraft.energy.tile.TileEngineFE;
@@ -69,7 +69,7 @@ public class ContainerEngineFE extends ContainerBC_Neptune {
 
         if (engine != null) {
             for (int slot = 0; slot < 4; slot++) {
-                addSlot(new SlotItemHandler(engine.upgrades, slot, 62 + 18 * slot, 44));
+                addSlot(new buildcraft.lib.gui.slot.SlotBase(engine.upgrades, slot, 62 + 18 * slot, 44));
             }
         }
 

@@ -86,9 +86,13 @@ public class BCTransportSprites {
         int numLevels = PipeBehaviourLimiter.MAX_SHIFT + 1;
         POWER_LIMIT = new SpriteHolder[numLevels];
         POWER_LIMIT_RF = new SpriteHolder[numLevels];
+        // limitShift=0 = max flow (show fullest bar), limitShift=6 = blocked (show m0).
+        // Icons decrease in fill as shift increases. Both MJ and RF share the same 7-step range.
+        // RF files use "trigger_rf_limiter_mX" (note: rf before limiter), MJ uses "trigger_limiter_mX".
+        String[] limiterMasks = { "m256", "m128", "m64", "m16", "m8", "m2", "m0" };
         for (int i = 0; i < numLevels; i++) {
-            POWER_LIMIT[i] = getHolder("transport", "triggers/trigger_limiter_" + i);
-            POWER_LIMIT_RF[i] = getHolder("transport", "triggers/trigger_limiter_rf_" + i);
+            POWER_LIMIT[i]    = getHolder("transport", "triggers/trigger_limiter_"    + limiterMasks[i]);
+            POWER_LIMIT_RF[i] = getHolder("transport", "triggers/trigger_rf_limiter_" + limiterMasks[i]);
         }
     }
 

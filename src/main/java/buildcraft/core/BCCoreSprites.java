@@ -44,8 +44,8 @@ public class BCCoreSprites {
     // Triggers
     public static final SpriteHolder TRIGGER_MACHINE_ACTIVE = h("triggers/trigger_machine_active");
     public static final SpriteHolder TRIGGER_MACHINE_INACTIVE = h("triggers/trigger_machine_inactive");
-    public static final SpriteHolder TRIGGER_REDSTONE_ACTIVE = h("triggers/trigger_redstoneinput_active");
-    public static final SpriteHolder TRIGGER_REDSTONE_INACTIVE = h("triggers/trigger_redstoneinput_inactive");
+    public static final SpriteHolder TRIGGER_REDSTONE_ACTIVE = new SpriteHolder("minecraft:block/redstone_torch");
+    public static final SpriteHolder TRIGGER_REDSTONE_INACTIVE = new SpriteHolder("minecraft:block/redstone_torch_off");
     public static final SpriteHolder TRIGGER_TRUE = h("triggers/trigger_true");
     public static final SpriteHolder TRIGGER_POWER_HIGH = h("triggers/trigger_energy_storage_high");
     public static final SpriteHolder TRIGGER_POWER_LOW = h("triggers/trigger_energy_storage_low");
@@ -62,7 +62,7 @@ public class BCCoreSprites {
     public static final EnumMap<TriggerInventoryLevel.TriggerType, SpriteHolder> TRIGGER_INVENTORY_LEVEL = new EnumMap<>(TriggerInventoryLevel.TriggerType.class);
 
     // Actions
-    public static final SpriteHolder ACTION_REDSTONE = h("triggers/action_redstoneoutput");
+    public static final SpriteHolder ACTION_REDSTONE = new SpriteHolder("minecraft:block/redstone_torch");
     public static final EnumMap<Mode, SpriteHolder> ACTION_MACHINE_CONTROL = new EnumMap<>(Mode.class);
 
     // Parameters

@@ -12,24 +12,29 @@ import javax.annotation.Nonnull;
 
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 
 import buildcraft.api.core.IStackFilter;
 
 public class DelegatingItemHandlerFilter implements IStackFilter {
     private final ISingleStackFilter perStackFilter;
-    private final IItemHandler handler;
+    private final ResourceHandler<ItemResource> handler;
 
-    public DelegatingItemHandlerFilter(ISingleStackFilter perStackFilter, IItemHandler handler) {
+    public DelegatingItemHandlerFilter(ISingleStackFilter perStackFilter, ResourceHandler<ItemResource> handler) {
         this.perStackFilter = perStackFilter;
         this.handler = handler;
     }
 
     @Override
     public boolean matches(@Nonnull ItemStack stack) {
-        for (int slot = 0; slot < handler.getSlots(); slot++) {
-            if (perStackFilter.matches(handler.getStackInSlot(slot), stack)) {
-                return true;
+        for (int slot = 0; slot < handler.size(); slot++) {
+            ItemResource res = handler.getResource(slot);
+            if (!res.isEmpty()) {
+                ItemStack slotStack = res.toStack(handler.getAmountAsInt(slot));
+                if (perStackFilter.matches(slotStack, stack)) {
+                    return true;
+                }
             }
         }
         return false;

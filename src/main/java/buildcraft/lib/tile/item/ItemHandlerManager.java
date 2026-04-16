@@ -1,9 +1,3 @@
-/*
- * Copyright (c) 2017 SpaceToad and the BuildCraft team
- * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
- * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
- */
-
 package buildcraft.lib.tile.item;
 
 import net.minecraft.resources.Identifier;
@@ -26,8 +20,8 @@ import net.minecraft.core.NonNullList;
 
 
 import buildcraft.lib.misc.INBTSerializable;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.IItemHandlerModifiable;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 
 import buildcraft.api.core.EnumPipePart;
 
@@ -35,19 +29,15 @@ import buildcraft.lib.misc.InventoryUtil;
 
 public class ItemHandlerManager implements INBTSerializable<CompoundTag> {
     public enum EnumAccess {
-        /** An {@link IItemHandler} that shouldn't be accessible by external sources. */
         NONE,
-        /** Same as {@link #NONE}, but the contents of this inventory won't be dropped when the block is removed.
-         * Additionally the items will be considered "free", and so items can be duplicated into these slots */
         PHANTOM,
         INSERT,
         EXTRACT,
-        /** Full interaction is allowed. */
         BOTH
     }
 
     public final StackChangeCallback callback;
-    private final List<IItemHandlerModifiable> handlersToDrop = new ArrayList<>();
+    private final List<ResourceHandler<ItemResource>> handlersToDrop = new ArrayList<>();
     private final Map<EnumPipePart, Wrapper> wrappers = new EnumMap<>(EnumPipePart.class);
     private final Map<String, INBTSerializable<CompoundTag>> handlers = new HashMap<>();
 
@@ -59,12 +49,12 @@ public class ItemHandlerManager implements INBTSerializable<CompoundTag> {
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends INBTSerializable<CompoundTag> & IItemHandlerModifiable> T addInvHandler(String key, T handler,
+    public <T extends INBTSerializable<CompoundTag> & ResourceHandler<ItemResource>> T addInvHandler(String key, T handler,
         EnumAccess access, EnumPipePart... parts) {
         if (parts == null) {
             parts = new EnumPipePart[0];
         }
-        IItemHandlerModifiable external = handler;
+        ResourceHandler<ItemResource> external = handler;
         if (access == EnumAccess.NONE || access == EnumAccess.PHANTOM) {
             external = null;
             if (parts.length > 0) {
@@ -121,13 +111,13 @@ public class ItemHandlerManager implements INBTSerializable<CompoundTag> {
     }
 
     public void addDrops(NonNullList<ItemStack> toDrop) {
-        for (IItemHandlerModifiable itemHandler : handlersToDrop) {
+        for (ResourceHandler<ItemResource> itemHandler : handlersToDrop) {
             InventoryUtil.addAll(itemHandler, toDrop);
         }
     }
 
     /** Gets the combined item handler for the given direction, or null if none. */
-    public IItemHandler getItemHandler(Direction facing) {
+    public ResourceHandler<ItemResource> getItemHandler(Direction facing) {
         Wrapper wrapper = wrappers.get(EnumPipePart.fromFacing(facing));
         return wrapper.combined;
     }
@@ -151,8 +141,8 @@ public class ItemHandlerManager implements INBTSerializable<CompoundTag> {
     }
 
     private static class Wrapper {
-        private final List<IItemHandlerModifiable> handlers = new ArrayList<>();
-        private IItemHandlerModifiable combined = null;// TODO: This should be an IItemTransactor as well.
+        private final List<ResourceHandler<ItemResource>> handlers = new ArrayList<>();
+        private ResourceHandler<ItemResource> combined = null;
 
         public void genWrapper() {
             if (handlers.size() == 1) {
@@ -160,7 +150,8 @@ public class ItemHandlerManager implements INBTSerializable<CompoundTag> {
                 combined = handlers.get(0);
                 return;
             }
-            IItemHandlerModifiable[] arr = new IItemHandlerModifiable[handlers.size()];
+            @SuppressWarnings("unchecked")
+            ResourceHandler<ItemResource>[] arr = new ResourceHandler[handlers.size()];
             arr = handlers.toArray(arr);
             combined = new CombinedItemHandlerWrapper(arr);
         }

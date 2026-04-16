@@ -47,7 +47,7 @@ public class PipeWireRenderer {
 
     static {
         for (DyeColor color : DyeColor.values()) {
-            wireSprites.put(color, SpriteHolderRegistry.getHolder("buildcrafttransport:wires/" + color.getName()));
+            wireSprites.put(color, SpriteHolderRegistry.getHolder("buildcraftunofficial:wires/" + color.getName()));
         }
 
         for (EnumWirePart part : EnumWirePart.VALUES) {
@@ -184,7 +184,7 @@ public class PipeWireRenderer {
 
     // ---- Runtime rendering ----
 
-    public static void renderWires(TilePipeHolder pipe, PoseStack.Pose pose) {
+    public static void renderWires(TilePipeHolder pipe, PoseStack.Pose pose, int packedLight) {
         WireManager wm = pipe.getWireManager();
         if (wm == null || (wm.parts.isEmpty() && wm.betweens.isEmpty())) {
             return;
@@ -198,21 +198,21 @@ public class PipeWireRenderer {
             EnumWirePart part = entry.getKey();
             DyeColor color = entry.getValue();
             boolean isOn = wm.isPowered(part);
-            renderQuads(partQuads.get(part), color, isOn, bb, pose);
+            renderQuads(partQuads.get(part), color, isOn, bb, pose, packedLight);
         }
 
         for (Map.Entry<EnumWireBetween, DyeColor> entry : wm.betweens.entrySet()) {
             EnumWireBetween between = entry.getKey();
             DyeColor color = entry.getValue();
             boolean isOn = wm.isPowered(between.parts[0]);
-            renderQuads(betweenQuads.get(between), color, isOn, bb, pose);
+            renderQuads(betweenQuads.get(between), color, isOn, bb, pose, packedLight);
         }
 
         bufferSource.endBatch(Sheets.cutoutBlockSheet());
     }
 
     private static void renderQuads(MutableQuad[] quads, DyeColor colour, boolean isOn,
-                                     VertexConsumer bb, PoseStack.Pose pose) {
+                                     VertexConsumer bb, PoseStack.Pose pose, int packedLight) {
         SpriteHolder holder = wireSprites.get(colour);
         if (holder == null) return;
         TextureAtlasSprite sprite = holder.getSprite();
@@ -241,11 +241,13 @@ public class PipeWireRenderer {
                 q2.colourf(1, 1, 1, 1);
             }
 
-            // Lighting: powered wires are fullbright, unpowered use ambient
+            // Lighting: powered wires are fullbright, unpowered use ambient light at pipe position
             if (isOn) {
                 q2.lighti(15, 15);
             } else {
-                q2.lighti(0, 0);
+                int blockLight = packedLight & 0xFFFF;
+                int skyLight = (packedLight >> 16) & 0xFFFF;
+                q2.lighti(blockLight >> 4, skyLight >> 4);
             }
 
             q2.render(pose, bb);

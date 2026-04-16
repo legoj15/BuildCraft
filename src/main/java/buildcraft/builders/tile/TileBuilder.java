@@ -34,7 +34,8 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
 
 import buildcraft.api.core.IPathProvider;
 import buildcraft.api.enums.EnumSnapshotType;
@@ -87,14 +88,14 @@ public class TileBuilder extends TileBC_Neptune
     private boolean isDone = false;
 
     /** Stub fluid handler until Tank/TankManager are ported. */
-    private final IFluidHandler stubFluidHandler = new IFluidHandler() {
-        @Override public int getTanks() { return 0; }
-        @Override public FluidStack getFluidInTank(int tank) { return FluidStack.EMPTY; }
-        @Override public int getTankCapacity(int tank) { return 0; }
-        @Override public boolean isFluidValid(int tank, FluidStack stack) { return false; }
-        @Override public int fill(FluidStack resource, FluidAction action) { return 0; }
-        @Override public FluidStack drain(FluidStack resource, FluidAction action) { return FluidStack.EMPTY; }
-        @Override public FluidStack drain(int maxDrain, FluidAction action) { return FluidStack.EMPTY; }
+    private final ResourceHandler<FluidResource> stubFluidHandler = new ResourceHandler<FluidResource>() {
+        @Override public int size() { return 0; }
+        @Override public FluidResource getResource(int tank) { return FluidResource.EMPTY; }
+        @Override public long getAmountAsLong(int tank) { return 0; }
+        @Override public long getCapacityAsLong(int tank, FluidResource res) { return 0; }
+        @Override public boolean isValid(int tank, FluidResource stack) { return false; }
+        @Override public int insert(int slot, FluidResource resource, int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext ctx) { return 0; }
+        @Override public int extract(int slot, FluidResource resource, int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext ctx) { return 0; }
     };
 
     public TileBuilder(BlockPos pos, BlockState state) {
@@ -343,8 +344,7 @@ public class TileBuilder extends TileBC_Neptune
     }
 
     @Override
-    public IFluidHandler getTankManager() {
-        // TODO: Replace with real TankManager once Tank/TankManager are ported
+    public ResourceHandler<FluidResource> getTankManager() {
         return stubFluidHandler;
     }
 

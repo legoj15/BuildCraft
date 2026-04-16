@@ -85,6 +85,16 @@ public class GuiElementStatementDrag implements IMenuElement {
                     }
                 }
                 background.drawAt(x, y);
+
+                // Overlay a red tint when the cursor is over an invalid drop target,
+                // matching 1.12.2's uniform red-background feedback for all slot types.
+                if (!canPlace) {
+                    net.minecraft.client.gui.GuiGraphicsExtractor graphics = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
+                    if (graphics != null) {
+                        graphics.fill((int) x, (int) y, (int) x + 18, (int) y + 18, 0x80FF3535);
+                    }
+                }
+
                 if (dragging != null) {
                     ISprite sprite = dragging.getSprite();
                     if (sprite != null) {

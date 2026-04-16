@@ -8,12 +8,14 @@ package buildcraft.builders.snapshot;
 
 import buildcraft.api.inventory.IItemTransactor;
 
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
 
 public interface ITileForBlueprintBuilder extends ITileForSnapshotBuilder {
     Blueprint.BuildingInfo getBlueprintBuildingInfo();
 
     IItemTransactor getInvResources();
 
-    IFluidHandler getTankManager();
+    net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> getTankManager();
 }

@@ -1,17 +1,27 @@
 ###### Changes since 26.1 Beta release 4:
-- Fixed a rendering bug where fluid in fluid pipes would sometimes show adjacent wrong texture atlas sprites when scrolling
-- Fixed rendering double-titles on blocks like engines (noticable because one title would be left adjacent and the other would be centered)
+- Gates, lenses, filters, wires,the pulsar, timer, and light sensor all now look more correct, are placeable, and actually work
+- Overhauled underlying mod structure; some assets or code may still be missing
+- Fluid physics: dense oils (Heavy / Dense / Residue) now sink through water, and lighter oils spread evenly across ocean surfaces. Player interaction with fluids now actually exists as well
+- Fixed wrong neighbor-texture bleed while fluids scroll through pipes (like with the Kinesis/FE pipes)
+- Fixed Kinesis flow overlays rendering as solid opaque boxes instead of translucent
+- Fixed Wooden Kinesis Pipes showing the wood extraction plug when connected to FE Engines
+- Fixed MJ Dynamo and FE Engine deleting FE during transfers
+- Fixed MJ Dynamo stalling permanently once its 10,000 FE buffer filled up
+- Fixed MJ Dynamo piston animating indefinitely when no valid FE consumer was attached
+- Fixed MJ Dynamo FE-generation readout being erased every tick
+- Fixed double-title rendering on engine blocks (e.g. one title left-adjacent, another centered)
 - Fixed MJ Dynamo and FE Engine GUI
-- Fixed a bug where the MJ Dynamo and FE Engine were permanently deleting FE during simulated network transfers by migrating them to `SimpleEnergyHandler` with properly backed snapshot journals.
-- Fixed a bug where the MJ Dynamo's FE generation readout and piston animation were erased every tick by legacy MJ engine mechanics expecting native MJ output over FE pushing.
-- Fixed an issue in the Kinesis Pipe flow renderers where using cutoutBlockSheet() for the flow overlays caused them to render as solid opaque boxes instead of transparent overlays; migrated to RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS).
-- Fixed a bug where connecting a Wooden Kinesis Pipe to an FE Engine incorrectly rendered the solid wood extraction plug instead of connecting transparently, as the capability evaluation ignored FE consumers.
-- Fixed a energy accumulation bug in `PipeFlowRedstoneFlux`
-- Fixed a stalling issue in the MJ Dynamo where reaching the maximum FE capacity (10,000 FE) would permanently halt energy transfer.
-- Fixed a client-side sync bug in the Quarry where the battery level was additively accumulating with every server packet instead of overwriting, causing the client-side UI battery values to balloon exponentially.
-- Fixed a visual bug in the MJ Dynamo where fractional leftover microJoules or a full FE buffer would cause the piston animation to pump indefinitely even when there are no valid FE consumers or MJ being input.
-- Fixed Kinesis Pipes allowing their internal buffer to accumulate infinitely when pushed energy without demand, by strictly enforcing the capacity ceiling against `internalPower + internalNextPower` instead of just the per-tick insertion tracker.
-- Overhauled underlying mod structure; there may be missing assets or code...
-- Completely overhauled remaining fluid handling implementations to use the modern NeoForge 1.21.11 `ResourceHandler<FluidResource>` APIs, finalizing the migration away from legacy `IFluidHandler` and `FluidTank`.
-- Refactored `TileEngineIron_BC8` (Combustion Engine) to use `FluidStacksResourceHandler` to support proper transactional inserts and extracts for fuel, coolant, and residue operations.
-- Updated multiple GUI and Render components (e.g. `GuiTank`, `GuiDistiller`, `RenderTank`, `GuiElementFluidTank`) to be fully compatible with the new fluid resource handlers.
+- Fixed Kinesis Pipes accumulating energy past capacity when pushed without demand
+- Fixed an energy accumulation bug in Redstone Flux kinesis pipes
+- Fixed the Quarry's client-side battery readout ballooning exponentially due to additive packet sync
+- Volume / Land Markers can once again float freely in the air, matching 1.12.2 behavior
+- Path Marker now correctly drops its item when its anchor is broken
+- Quarry Frames visually connect to the Quarry block again, including frames placed by the Quarry itself
+- Gate redstone trigger/action icons now use vanilla's redstone torch textures so they match the current art style and respect resource packs
+- Fixed a save/shutdown hang on any world containing pipes
+- Fixed a 1px gap near the left ledger border when it moves in or out (was visible with help ledgers)
+
+**The following are changes that are not user facing:**
+
+- Eliminated deprecation warnings, wrapped legacy `FluidUtil.getFilledBucket`
+- Added `GameTest` validation testing

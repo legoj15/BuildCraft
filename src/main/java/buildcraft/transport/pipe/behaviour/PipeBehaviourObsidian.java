@@ -49,6 +49,10 @@ public class PipeBehaviourObsidian extends PipeBehaviour implements IMjRedstoneR
     private final WeakHashMap<ItemEntity, Long> entityDropTime = new WeakHashMap<>();
     private int toWaitTicks = 0;
 
+    private net.minecraft.core.BlockPos lastPos = null;
+    private AABB collisionBoxCache = null;
+    private Vec3 pipeCenterCache = null;
+
     public PipeBehaviourObsidian(IPipe pipe) {
         super(pipe);
     }
@@ -80,10 +84,16 @@ public class PipeBehaviourObsidian extends PipeBehaviour implements IMjRedstoneR
         // which is not available as a block override in this NeoForge version)
         Direction openFace = getOpenFace();
         if (openFace != null) {
-            AABB collisionBox = new AABB(pipe.getHolder().getPipePos());
+            net.minecraft.core.BlockPos pos = pipe.getHolder().getPipePos();
+            if (lastPos == null || !lastPos.equals(pos)) {
+                lastPos = pos;
+                collisionBoxCache = new AABB(pos);
+                pipeCenterCache = Vec3.atCenterOf(pos);
+            }
+
             // ⚡ Bolt: Use getEntitiesOfClass to avoid scanning non-item entities
             List<ItemEntity> entities = pipe.getHolder().getPipeWorld()
-                .getEntitiesOfClass(ItemEntity.class, collisionBox, Entity::isAlive);
+                .getEntitiesOfClass(ItemEntity.class, collisionBoxCache, Entity::isAlive);
             for (ItemEntity entity : entities) {
                 trySuckEntity(entity, openFace, Long.MAX_VALUE, false);
             }
@@ -170,8 +180,14 @@ public class PipeBehaviourObsidian extends PipeBehaviour implements IMjRedstoneR
                 max = Integer.MAX_VALUE;
                 powerReqPerItem = 0;
             } else {
-                double distance = Math.sqrt(entity.distanceToSqr(
-                    Vec3.atCenterOf(pipe.getHolder().getPipePos())));
+                net.minecraft.core.BlockPos pos = pipe.getHolder().getPipePos();
+                if (lastPos == null || !lastPos.equals(pos)) {
+                    lastPos = pos;
+                    collisionBoxCache = new AABB(pos);
+                    pipeCenterCache = Vec3.atCenterOf(pos);
+                }
+
+                double distance = Math.sqrt(entity.distanceToSqr(pipeCenterCache));
                 powerReqPerItem = (long) (Math.max(1, distance) * POWER_PER_METRE + POWER_PER_ITEM);
                 max = (int) (power / powerReqPerItem);
             }

@@ -11,7 +11,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
-import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.capabilities.Capabilities;
 
 import buildcraft.api.items.IList;
 import buildcraft.api.statements.IStatement;
@@ -53,7 +55,9 @@ public class TriggerInventory extends BCStatement implements ITriggerExternal {
 
     @Override
     public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer container, IStatementParameter[] parameters) {
-        if (!(tile instanceof IItemHandler handler)) {
+        if (tile.getLevel() == null) return false;
+        ResourceHandler<ItemResource> handler = tile.getLevel().getCapability(Capabilities.Item.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null);
+        if (handler == null) {
             return false;
         }
 
@@ -66,14 +70,29 @@ public class TriggerInventory extends BCStatement implements ITriggerExternal {
         boolean foundItems = false;
         boolean foundSpace = false;
 
-        for (int i = 0; i < handler.getSlots(); i++) {
+        for (int i = 0; i < handler.size(); i++) {
             hasSlots = true;
-            ItemStack stack = handler.getStackInSlot(i);
+            ItemResource res = handler.getResource(i);
+            ItemStack stack = res.isEmpty() ? ItemStack.EMPTY : res.toStack(handler.getAmountAsInt(i));
 
             foundItems |= !stack.isEmpty() && (searchedStack.isEmpty() || canStacksMerge(stack, searchedStack));
 
-            foundSpace |= (stack.isEmpty() || (canStacksMerge(stack, searchedStack) && stack.getCount() < stack.getMaxStackSize()))
-                && (searchedStack.isEmpty() || searchedStack.getItem() instanceof IList || handler.insertItem(i, searchedStack, true).isEmpty());
+            // check space exactly
+            boolean isList = searchedStack.getItem() instanceof IList;
+            boolean hasSpace = false;
+            
+            if (stack.isEmpty() || (canStacksMerge(stack, searchedStack) && stack.getCount() < stack.getMaxStackSize())) {
+                if (searchedStack.isEmpty() || isList) {
+                    hasSpace = true;
+                } else {
+                    int amount = Math.min(searchedStack.getCount(), stack.getMaxStackSize() - stack.getCount());
+                    if (amount > 0 && handler.getCapacityAsInt(i, ItemResource.of(searchedStack)) >= stack.getCount() + amount) {
+                        hasSpace = true;
+                    }
+                }
+            }
+            
+            foundSpace |= hasSpace;
         }
 
         if (!hasSlots) {

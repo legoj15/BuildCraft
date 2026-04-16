@@ -23,6 +23,7 @@ libs
 #runtime
 run
 run_server
+run-gameTestServer
 
 #mac
 .DS_Store
@@ -69,3 +70,4 @@ rendertypes.txt
 sheets.txt
 unbaked.txt
 Dump.class
+/.claude

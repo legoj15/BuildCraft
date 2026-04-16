@@ -7,9 +7,12 @@ package buildcraft.core.statements;
 
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.mj.IMjReadable;
+import buildcraft.api.mj.IMjReceiver;
+import buildcraft.api.mj.MjAPI;
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
@@ -62,14 +65,29 @@ public class TriggerPower extends BCStatement implements ITriggerInternal, ITrig
     }
 
     public static boolean isTriggeringTile(BlockEntity tile, Direction face) {
-        return tile instanceof IMjReadable;
+        if (tile instanceof IMjReadable) return true;
+        // Check NeoForge capability system — the pump/miner register MjBatteryReceiver
+        // (which implements IMjReadable) via RegisterCapabilitiesEvent
+        Level level = tile.getLevel();
+        if (level != null) {
+            IMjReceiver receiver = level.getCapability(MjAPI.CAP_RECEIVER, tile.getBlockPos(), face);
+            if (receiver instanceof IMjReadable) return true;
+        }
+        return false;
+    }
+
+    private static IMjReadable resolveReadable(Object tile, EnumPipePart side) {
+        if (tile instanceof IMjReadable readable) return readable;
+        if (tile instanceof BlockEntity be && be.getLevel() != null) {
+            IMjReceiver receiver = be.getLevel().getCapability(
+                MjAPI.CAP_RECEIVER, be.getBlockPos(), side.face);
+            if (receiver instanceof IMjReadable readable) return readable;
+        }
+        return null;
     }
 
     protected boolean isActive(Object tile, EnumPipePart side) {
-        if (tile instanceof IMjReadable readable) {
-            return isTriggeredMjConnector(readable);
-        }
-        return false;
+        return isTriggeredMjConnector(resolveReadable(tile, side));
     }
 
     @Override

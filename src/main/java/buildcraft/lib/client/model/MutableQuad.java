@@ -123,7 +123,20 @@ public class MutableQuad {
     //
     // ############################
 
-    /** Converts this MutableQuad into a MC 26.1 BakedQuad. */
+    /** Packs per-vertex colour components (0-255 each) into a single ARGB int for BakedColors. */
+    private static int packArgb(MutableVertex v) {
+        return ((v.colour_a & 0xFF) << 24) | ((v.colour_r & 0xFF) << 16)
+             | ((v.colour_g & 0xFF) << 8)  |  (v.colour_b & 0xFF);
+    }
+
+    /** Builds a NeoForge BakedColors from this quad's per-vertex colours. */
+    private net.neoforged.neoforge.client.model.quad.BakedColors buildBakedColors() {
+        return net.neoforged.neoforge.client.model.quad.BakedColors.of(
+            packArgb(vertex_0), packArgb(vertex_1),
+            packArgb(vertex_2), packArgb(vertex_3));
+    }
+
+    /** Converts this MutableQuad into a MC 26.1 BakedQuad, preserving per-vertex colours. */
     public BakedQuad toBakedBlock() {
         BakedQuad.MaterialInfo matInfo = new BakedQuad.MaterialInfo(
             sprite, net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT,
@@ -137,14 +150,16 @@ public class MutableQuad {
             UVPair.pack(vertex_1.tex_u, vertex_1.tex_v),
             UVPair.pack(vertex_2.tex_u, vertex_2.tex_v),
             UVPair.pack(vertex_3.tex_u, vertex_3.tex_v),
-            face, matInfo
+            face, matInfo,
+            net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
+            buildBakedColors()
         );
     }
 
-    /** Converts this MutableQuad into a BakedQuad routed to the TRANSLUCENT chunk section layer.
+    /** Converts this MutableQuad into a BakedQuad routed to the TRANSLUCENT chunk section layer,
+     *  preserving per-vertex colours via NeoForge's BakedColors extension.
      *  The chunk compiler uses MaterialInfo.layer() to route each quad to the correct buffer,
-     *  enabling alpha-blended rendering for colour overlays in the chunk mesh.
-     *  Uses translucentBlockItemSheet for correct item rendering of blocks-atlas sprites. */
+     *  enabling alpha-blended rendering for colour overlays in the chunk mesh. */
     public BakedQuad toBakedTranslucent() {
         BakedQuad.MaterialInfo matInfo = new BakedQuad.MaterialInfo(
             sprite, net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT,
@@ -158,7 +173,9 @@ public class MutableQuad {
             UVPair.pack(vertex_1.tex_u, vertex_1.tex_v),
             UVPair.pack(vertex_2.tex_u, vertex_2.tex_v),
             UVPair.pack(vertex_3.tex_u, vertex_3.tex_v),
-            face, matInfo
+            face, matInfo,
+            net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
+            buildBakedColors()
         );
     }
 

@@ -1,56 +1,27 @@
 ###### Changes since 26.1 Beta release 4:
-- Eliminated 100+ deprecation warnings and compilation errors by completing the migration of legacy `IItemHandler` and `IFluidHandler` interfaces to NeoForge 1.21.11 `ResourceHandler` capabilities, and modernized all `DeferredRegister` initializations to use explicit functional suppliers.
-- Completely overhauled custom BuildCraft Fluid flow mechanics to natively intertwine with Minecraft 1.21.11 physics. Dense fluids (Heavy Oil, Dense Oil, Residue) now rapidly annihilate water to physically sink, while lighter oils smoothly spread across ocean surfaces symmetrically, entirely bypassing Vanilla's coastline-bias glitch.
-- Engineered a specialized "Purgatory Escape Hatch" in the `tick()` simulation loop to break native Minecraft flow stalemates that occurred when light fluids hit flat water, fixing the bug that forced them to remain stuck as 1-block puddles.
-- Added strict self-collision block checks inside custom fluid propagation to fix an infinite "Layer Cake" feedback loop that caused massive floating slabs to build atop naturally generating ocean Oil Spouts.
-- Extended GameTest coverage with `FluidPhysicsTest`, asserting physical bobbing, dense fluid sinking, light spreading cascades, and self-collision layer cake protections natively within simulated worlds.
-- Fixed 4 remaining deprecation warnings from legacy `FluidUtil.getFilledBucket` by implementing a native backwards-compatible wrapper in `FluidUtilBC`.
-- Extended GameTest coverage with physical integration tests for `BlockSpring`. Verifies structural generation logic for both `WATER` (fast ticking) and `OIL` (low-chance slow-ticking injected via BCEnergy integration blocks).
-- Rebuilt Automated GUI/CLI GameTest Verification. Migrated old `@GameTest` runners to native datagen registries to remove unsupported dependencies and allow CI testing pipelines to correctly evaluate test suites.
-- Fixed a major item persistence flaw in `ItemHandlerSimple` where tests or external simulated transactions (`tx` = `null`) were correctly skipping the `tx.commit()` pipeline but skipping the journal snapshot tracker, meaning simulated interactions irreversibly permanently consumed items or injected phantom items without rolling back!
-- Fixed a rendering bug where fluid in fluid pipes would sometimes show adjacent wrong texture atlas sprites when scrolling
-- Fixed rendering double-titles on blocks like engines (noticable because one title would be left adjacent and the other would be centered)
+- Gates, lenses, filters, wires,the pulsar, timer, and light sensor all now look more correct, are placeable, and actually work
+- Overhauled underlying mod structure; some assets or code may still be missing
+- Fluid physics: dense oils (Heavy / Dense / Residue) now sink through water, and lighter oils spread evenly across ocean surfaces. Player interaction with fluids now actually exists as well
+- Fixed wrong neighbor-texture bleed while fluids scroll through pipes (like with the Kinesis/FE pipes)
+- Fixed Kinesis flow overlays rendering as solid opaque boxes instead of translucent
+- Fixed Wooden Kinesis Pipes showing the wood extraction plug when connected to FE Engines
+- Fixed MJ Dynamo and FE Engine deleting FE during transfers
+- Fixed MJ Dynamo stalling permanently once its 10,000 FE buffer filled up
+- Fixed MJ Dynamo piston animating indefinitely when no valid FE consumer was attached
+- Fixed MJ Dynamo FE-generation readout being erased every tick
+- Fixed double-title rendering on engine blocks (e.g. one title left-adjacent, another centered)
 - Fixed MJ Dynamo and FE Engine GUI
-- Fixed a bug where the MJ Dynamo and FE Engine were permanently deleting FE during simulated network transfers by migrating them to `SimpleEnergyHandler` with properly backed snapshot journals.
-- Fixed a bug where the MJ Dynamo's FE generation readout and piston animation were erased every tick by legacy MJ engine mechanics expecting native MJ output over FE pushing.
-- Fixed an issue in the Kinesis Pipe flow renderers where using cutoutBlockSheet() for the flow overlays caused them to render as solid opaque boxes instead of transparent overlays; migrated to RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS).
-- Fixed a bug where connecting a Wooden Kinesis Pipe to an FE Engine incorrectly rendered the solid wood extraction plug instead of connecting transparently, as the capability evaluation ignored FE consumers.
-- Fixed a energy accumulation bug in `PipeFlowRedstoneFlux`
-- Fixed a stalling issue in the MJ Dynamo where reaching the maximum FE capacity (10,000 FE) would permanently halt energy transfer.
-- Fixed a client-side sync bug in the Quarry where the battery level was additively accumulating with every server packet instead of overwriting, causing the client-side UI battery values to balloon exponentially.
-- Fixed a visual bug in the MJ Dynamo where fractional leftover microJoules or a full FE buffer would cause the piston animation to pump indefinitely even when there are no valid FE consumers or MJ being input.
-- Fixed Kinesis Pipes allowing their internal buffer to accumulate infinitely when pushed energy without demand, by strictly enforcing the capacity ceiling against `internalPower + internalNextPower` instead of just the per-tick insertion tracker.
-- Overhauled underlying mod structure; there may be missing assets or code...
-- Completely overhauled remaining fluid handling implementations to use the modern NeoForge 1.21.11 `ResourceHandler<FluidResource>` APIs, finalizing the migration away from legacy `IFluidHandler` and `FluidTank`.
-- Refactored `TileEngineIron_BC8` (Combustion Engine) to use `FluidStacksResourceHandler` to support proper transactional inserts and extracts for fuel, coolant, and residue operations.
-- Updated multiple GUI and Render components (e.g. `GuiTank`, `GuiDistiller`, `RenderTank`, `GuiElementFluidTank`) to be fully compatible with the new fluid resource handlers.- Developed and integrated 5 robust GameTests verifying the BuildCraft Marker system, including orientation detachment physics, Line-of-Sight algorithms, and geometric multi-marker volume computations. BlockMarkerBase and BlockMarkerVolume block states updated to adapt to 1.21 Block physics correctly.
-- Ensured Volume/Land Markers can freely suspend in the air without anchoring, per original 1.12.2 functionality.
-- Fixed 1.21.11 Item Entity dropping for the Path Marker, which now appropriately pops and spawns its dropped-item block representation natively when its anchor is dismantled.
-- Re-enabled 1.12.2 visual functionality where Quarry Frames physically "connect" to the actual Quarry block by updating `BlockFrame`'s `canConnectTo` logic to evaluate against `BlockQuarry` instances.
-- Fix regression where frames placed programmatically by the Quarry failed to render a visual connection to the Quarry block. `canConnectTo` permitted the join, but the newly-placed frame's `connected_*` property toward the quarry was never computed — `BlockQuarry` has no `updateShape` override, so the cascade that normally synchronises adjacent frame connections short-circuits when the neighbour is a quarry, and `setBlockAndUpdate(defaultBlockState())` bypasses `getStateForPlacement`. Added an `onPlace` override to `BlockFrame` that runs `computeConnections` against current neighbours on any placement path (programmatic or player), so the connection model reliably applies toward adjacent quarries.
-- Fix Gate GUI missing side colored boxes and duplicate trigger options (caused by desync during packet enum reading).
-- Fix Gate GUI duplicate triggers caused by wrong capability face direction (use side.getOpposite() matching 1.12.2).
-- Re-enable "Fluid Traversing" and "Items Traversing" triggers in gate trigger lists.
-- Fix Gate GUI tooltips not showing on hover (extractLabels was not calling super).
-- Restore GateContext ledger colors to use ColourUtil.getColourForSide() from 1.12.2.
-- Support gate tooltips by porting missing localization keys from 1.12.2 en_US.lang.
-- Fix Redstone wire physical connections failing to update automatically when a Gate acts as a neighbor connection point via Pipe Pluggable replacement on a pipe, by forcing block shape updates recursively.
-- Port `sendGuiMessage` to use the native NeoForge 1.21.11 `MessagePipePayload` chunk-broadcast system.
-- Restore `MessagePipePayload` routing to explicitly resolve `PipePluggables`, repairing Gate GUI logical synchronization (the "middle bar" dynamically animating) and external Gate block glowing when evaluating triggers.
-- Fix Gate statement drag-and-drop operations inexplicably reverting on the client by consuming the legacy `ID_UPDATE_PLUG` offset inside the `PluggableGate` networked packet deserializer, preventing subsequent valid packet contents from being discarded as corruption.
-- Fix Gate statement configurations immediately reverting visually on the Client when re-opening the GUI, despite saving to the Server properly. The Server's `sendBlockUpdated` correctly transmitted NBT back to the client, but `TilePipeHolder.loadAdditional()` unconditionally **recreated** the `PluggableGate` instance from scratch, orphaning the live `GateLogic` reference held by the open `ContainerGate`. The fix adds in-place `readFromNbt` to `PipePluggable`/`PluggableGate` (matching the existing Pipe pattern) so that `loadAdditional` updates the existing pluggable object identity instead of replacing it.
-- Fix Gate statement drag-and-drop silently failing to save on the server due to a `PacketBufferBC` bit-packing desync. `sendStatementUpdate` and `sendResolveData` created `new PacketBufferBC(buffer)` wrappers mid-stream, resetting the custom bit-offset tracking that compresses booleans into single bytes. The server read from a single continuous `PacketBufferBC`, causing all subsequent booleans to be read from wrong bit positions — the trigger always deserialized as `null`.
-- Fix Gate `triggerOn`, `actionOn`, and `isOn` visual display state (red GUI bar and world glow texture) not persisting across disconnect/reconnect. These runtime evaluation states were only transmitted via live pipe messages during gameplay but never included in the NBT serialization used by `getUpdateTag()`/`handleUpdateTag()` for initial client sync.
-- Fix pipe-specific gate triggers and actions ("Fluids Traversing", "Items Traversing", "Power Requested", pipe signal/color actions) never appearing in the Gate GUI. `BCTransportStatements.preInit()` was never called during module initialization, so `TriggerProviderPipes` and `ActionProviderPipes` were never registered with `StatementManager`. Also added missing `BCSiliconStatements.preInit()` for light sensor/timer/pulsar statement singletons.
-- Fix duplicate variable declaration in `MessageContainerPayload.handle()` that caused a compilation error.
-- Restore gate integration for factory machines (pump, mining well) matching 1.12.2 behavior: `TileMiner` now implements `IHasWork` (enabling "Machine Active/Inactive" triggers), removed incorrect `IBlockDefaultTriggers` from `TilePump` (re-enabling fluid tank triggers like "Tank Contains"/"Tank Full"), and updated `TriggerPower` to resolve `IMjReadable` via NeoForge's `CAP_RECEIVER` capability system (enabling "Stored Energy High/Low" triggers for tiles that expose MJ via capability registration rather than direct interface implementation).
-- Fix gate world texture not updating when `isOn` state changes dynamically. When `GateLogic.readPayload()` received `NET_ID_GLOWING` or `NET_ID_DARK` on the client, it updated the `isOn` field but never scheduled a block render update. Since the gate model is cached by `KeyPlugGate(side, variant, isOn)`, the old model persisted until a chunk reload.
-- Gate redstone trigger/action icons now use vanilla's `minecraft:block/redstone_torch` and `minecraft:block/redstone_torch_off` textures instead of static BuildCraft copies from 1.12. This ensures the icons match the current Minecraft version's art style and respect resource pack overrides.
-- Fix left-side ledger rendering artifacts during slide-in/out animation. Two related sub-pixel issues: (1) the 1px gap near the 4px nine-slice border — caused by `(int)` truncation rounding the left edge rightward instead of leftward; (2) a 1–2px right-edge flicker — caused by `getX()` calling `getWidth()→gui.getLastPartialTicks()` with a potentially different partial-tick snapshot than the one used to compute `interpWidth`, producing a tiny epsilon discrepancy that made `ceil(interpWidth + frac)` oscillate between `N` and `N+1` each frame. Fixed by deriving `rawX = anchorX - interpWidth` directly (ensuring both use the same interpolated value) and pinning the left-ledger right edge to `anchorX - floor(rawX)` so it always lands exactly on the anchor pixel.
-- Fix all lens/filter pluggable variants displaying the same name ("Lens") and identical appearance in the inventory. Ported the 1.12.2 `getItemStackDisplayName()` logic to `ItemPluggableLens.getName(ItemStack)` for dynamic names (e.g. "Red Lens", "Clear Filter"). Created `LensItemModel` dynamic item model to render colour-tinted 3D pluggable geometry in inventory, and refactored `PlugBakerLens` to extract shared `bakeForItem()` for reuse between in-world and item rendering.
-- Fix items like Lenses/Filters appearing aggressively shadowed in the inventory by adding "gui_light": "front" to plug_lens.json, explicitly overriding the GUI lighting pipeline.
-- Fix clear lenses and filters rendering as white squares in-world. Ported the 1.12.2 geometry fallback logic to map minecraft:block/water_flow directly for transparent pluggables whilst retaining modern vanilla MC dynamic biome-styled grey-scale water tinting.
-- Restored pipe wire placement, breaking, and middle-clicking logic missing from 1.12.2 port.
-- Fixed wire textures attempting to resolve from the dissolved buildcrafttransport namespace.
-- Fixed a major server crash `Cannot check an invalid emitter!` that occurred when destroying a pipe connected to a redstone gate wire system. `TilePipeHolder` now correctly invalidates and unregisters its internal wire manager during `setRemoved()`, preventing the wire system from caching and ticking destroyed gate emitters.
-- Fixed a consistent save/shutdown hang on worlds containing any pipe. The previous `TilePipeHolder#setRemoved` override called `wireManager.invalidate()` unconditionally, but `setRemoved` is also fired during chunk unload and world shutdown for every block entity — so every pipe mutated `SavedDataWireSystems` mid-serialization, hanging the save. Wire invalidation is now triggered from `BlockPipeHolder#playerWillDestroy` so it only runs when a pipe is actually destroyed, mirroring the same cleanup pattern used by `TilePump`. The `GateLogic#isEmitting` `return false` safety net on removed tiles (added in the same prior fix) still guards the original `Cannot check an invalid emitter!` path even without proactive invalidation.
+- Fixed Kinesis Pipes accumulating energy past capacity when pushed without demand
+- Fixed an energy accumulation bug in Redstone Flux kinesis pipes
+- Fixed the Quarry's client-side battery readout ballooning exponentially due to additive packet sync
+- Volume / Land Markers can once again float freely in the air, matching 1.12.2 behavior
+- Path Marker now correctly drops its item when its anchor is broken
+- Quarry Frames visually connect to the Quarry block again, including frames placed by the Quarry itself
+- Gate redstone trigger/action icons now use vanilla's redstone torch textures so they match the current art style and respect resource packs
+- Fixed a save/shutdown hang on any world containing pipes
+- Fixed a 1px gap near the left ledger border when it moves in or out (was visible with help ledgers)
+
+**The following are changes that are not user facing:**
+
+- Eliminated deprecation warnings, wrapped legacy `FluidUtil.getFilledBucket`
+- Added `GameTest` validation testing

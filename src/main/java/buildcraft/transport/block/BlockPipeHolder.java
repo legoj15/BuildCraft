@@ -546,6 +546,14 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
             if (!level.isClientSide() && !player.isCreative()) {
                 tile.dropPipeItems(level, pos);
             }
+            // Proactively disconnect this pipe from any wire systems it participates in,
+            // before the BlockEntity is removed. Doing this here (rather than in
+            // TilePipeHolder#setRemoved) ensures cleanup runs only on real destruction —
+            // setRemoved() is also called during chunk unload/save, and mutating
+            // SavedDataWireSystems mid-serialization causes a save hang.
+            if (!level.isClientSide()) {
+                tile.wireManager.invalidate();
+            }
         }
         return super.playerWillDestroy(level, pos, state, player);
     }

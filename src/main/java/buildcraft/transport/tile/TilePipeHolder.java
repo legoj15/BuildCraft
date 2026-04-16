@@ -202,12 +202,6 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         scheduleRenderUpdate = true;
     }
 
-    @Override
-    public void setRemoved() {
-        super.setRemoved();
-        wireManager.invalidate();
-    }
-
     // --- Client sync ---
 
     @Override

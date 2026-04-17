@@ -99,41 +99,43 @@ public class LevelSavedDataVolumeBoxes extends SavedData {
     }
 
     public void tick() {
-        AtomicBoolean dirty = new AtomicBoolean(false);
-        volumeBoxes.stream().filter(VolumeBox::isEditing).forEach(volumeBox -> {
-            Player player = volumeBox.getPlayer(world);
-            if (player == null) {
-                volumeBox.pauseEditing();
-                dirty.set(true);
-            } else {
-                AABB oldAabb = volumeBox.box.getBoundingBox();
-                volumeBox.box.reset();
-                volumeBox.box.extendToEncompass(volumeBox.getHeld());
-                BlockPos lookingAt = BlockPos.containing(
-                        player.position()
-                                .add(0, player.getEyeHeight(), 0)
-                                .add(player.getLookAngle().scale(volumeBox.getDist())));
-                volumeBox.box.extendToEncompass(lookingAt);
-                if (!volumeBox.box.getBoundingBox().equals(oldAabb)) {
-                    dirty.set(true);
+        boolean dirty = false;
+        for (int i = 0; i < volumeBoxes.size(); i++) {
+            VolumeBox volumeBox = volumeBoxes.get(i);
+            if (volumeBox.isEditing()) {
+                Player player = volumeBox.getPlayer(world);
+                if (player == null) {
+                    volumeBox.pauseEditing();
+                    dirty = true;
+                } else {
+                    AABB oldAabb = volumeBox.box.getBoundingBox();
+                    volumeBox.box.reset();
+                    volumeBox.box.extendToEncompass(volumeBox.getHeld());
+                    BlockPos lookingAt = BlockPos.containing(
+                            player.position()
+                                    .add(0, player.getEyeHeight(), 0)
+                                    .add(player.getLookAngle().scale(volumeBox.getDist())));
+                    volumeBox.box.extendToEncompass(lookingAt);
+                    if (!volumeBox.box.getBoundingBox().equals(oldAabb)) {
+                        dirty = true;
+                    }
                 }
             }
-        });
-        for (VolumeBox volumeBox : volumeBoxes) {
-            List<Lock> locksToRemove = new ArrayList<>(volumeBox.locks).stream()
-                    .filter(lock -> !lock.cause.stillWorks(world))
-                    .collect(Collectors.toList());
-            if (!locksToRemove.isEmpty()) {
-                volumeBox.locks.removeAll(locksToRemove);
-                dirty.set(true);
+
+            // Handle locks removal without streams
+            if (!volumeBox.locks.isEmpty()) {
+                boolean removed = volumeBox.locks.removeIf(lock -> !lock.cause.stillWorks(world));
+                if (removed) {
+                    dirty = true;
+                }
             }
         }
-        if (dirty.get()) {
+
+        if (dirty) {
             setDirty();
             // MessageManager.sendToDimension(new MessageVolumeBoxes(volumeBoxes), world.dimension());
         }
     }
-
     public static LevelSavedDataVolumeBoxes get(Level world) {
         if (world.isClientSide()) {
             throw new IllegalArgumentException("Tried to create a world saved data instance on the client!");

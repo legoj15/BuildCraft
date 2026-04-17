@@ -59,6 +59,16 @@ public class BCEnergyClient {
                 }));
     }
 
+    @SubscribeEvent
+    public static void setupClient(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
+        event.enqueueWork(() -> {
+            buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.energy.BCEnergyItems.ENGINE_STONE.get(), "tip.block.engine_stone");
+            buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.energy.BCEnergyItems.ENGINE_IRON.get(), "tip.block.engine_iron");
+            buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.energy.BCEnergyItems.ENGINE_FE.get(), "tip.block.engine_rf");
+            buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.energy.BCEnergyItems.DYNAMO_MJ.get(), "tip.block.mj_dynamo");
+        });
+    }
+
     public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
         modEventBus.register(buildcraft.energy.client.BCEnergyFluidsClient.class);
         modEventBus.register(BCEnergyClient.class);

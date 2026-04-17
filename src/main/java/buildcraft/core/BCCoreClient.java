@@ -63,6 +63,14 @@ public class BCCoreClient {
                 event -> event.register(BCCoreMenuTypes.LIST.get(),
                         buildcraft.core.list.GuiList::new)
         );
+        // Register static tooltips
+        modEventBus.addListener(
+                net.neoforged.fml.event.lifecycle.FMLClientSetupEvent.class,
+                event -> event.enqueueWork(() -> {
+                        buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.ENGINE_CREATIVE.get(), "tip.block.engine_creative");
+                        buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.ENGINE_REDSTONE.get(), "tip.block.engine_redstone");
+                })
+        );
         // Register List tooltip handler (shows 'Matches' in tooltip while List GUI is open)
         NeoForge.EVENT_BUS.register(buildcraft.core.list.ListTooltipHandler.INSTANCE);
 

@@ -17,6 +17,7 @@ public class BCLibClient {
             ModelVariableData.onModelBake();
         });
         NeoForge.EVENT_BUS.register(BCDebugOverlay.class);
+        NeoForge.EVENT_BUS.register(BCTooltips.class);
     }
 
     public static void openGuideScreen(String bookName) {

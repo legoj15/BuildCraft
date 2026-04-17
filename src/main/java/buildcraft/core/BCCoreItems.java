@@ -56,7 +56,19 @@ public class BCCoreItems {
         public static final DeferredItem<Item> GEAR_DIAMOND = ITEMS.registerItem("gear_diamond", Item::new, p -> p);
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> ENGINE_REDSTONE = ITEMS
-                        .registerSimpleBlockItem("engine_redstone", BCCoreBlocks.ENGINE_REDSTONE);
+                        .registerItem("engine_redstone", props -> new net.minecraft.world.item.BlockItem(
+                                BCCoreBlocks.ENGINE_REDSTONE.get(), props) {
+                                @Override
+                                public void appendHoverText(net.minecraft.world.item.ItemStack stack,
+                                        TooltipContext context,
+                                        net.minecraft.world.item.component.TooltipDisplay display,
+                                        java.util.function.Consumer<net.minecraft.network.chat.Component> tooltip,
+                                        net.minecraft.world.item.TooltipFlag flag) {
+                                        tooltip.accept(net.minecraft.network.chat.Component.translatable(
+                                                "tip.block.engine_redstone")
+                                                .withStyle(net.minecraft.ChatFormatting.GRAY));
+                                }
+                        });
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> ENGINE_CREATIVE = ITEMS
                         .registerItem("engine_creative", props -> new net.minecraft.world.item.BlockItem(

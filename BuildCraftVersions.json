@@ -1,17 +1,23 @@
 {
     "homepage": "https://github.com/legoj15/BuildCraft/releases/latest",
     "promos": {
+        "26.1.2-latest": "26.1.1_8.0.0-br5",
+        "26.1.2-recommended": "26.1.1_8.0.0-br5",
         "26.1.1-latest": "26.1.1_8.0.0-br5",
         "26.1.1-recommended": "26.1.1_8.0.0-br5",
         "26.1-latest": "26.1.1_8.0.0-br5",
         "26.1-recommended": "26.1.1_8.0.0-br5"
     },
+    "26.1.2": {
+        "26.1.1_8.0.0-br5": "Introduction of this update system. Hello world! or something",
+        "26.1.2_8.0.0-br6": "Placeholder"
+    },
     "26.1.1": {
         "26.1.1_8.0.0-br5": "Introduction of this update system. Hello world! or something",
-        "26.1.1_8.0.0-br6": "Placeholder"
+        "26.1.2_8.0.0-br6": "Placeholder"
     },
     "26.1": {
         "26.1.1_8.0.0-br5": "Introduction of this update system. Hello world! or something",
-        "26.1.1_8.0.0-br6": "Placeholder"
+        "26.1.2_8.0.0-br6": "Placeholder"
     }
 }

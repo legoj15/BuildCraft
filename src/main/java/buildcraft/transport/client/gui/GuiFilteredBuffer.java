@@ -39,7 +39,7 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
             if (stackMain.isEmpty()) {
                 if (!stackFilter.isEmpty()) {
                     graphics.item(stackFilter, currentX, currentY);
-                    graphics.fill(currentX, currentY, currentX + 16, currentY + 16, 0x608B8B8B);
+                    graphics.fill(currentX, currentY, currentX + 16, currentY + 16, 0xB28B8B8B); // 70% opacity grey veil
                 } else {
                     buildcraft.lib.gui.GuiIcon.drawAt(buildcraft.transport.BCTransportSprites.NOTHING_FILTERED_BUFFER_SLOT, currentX, currentY, 16);
                 }

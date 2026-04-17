@@ -31,6 +31,7 @@ public class BCBuildersClient {
             buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.builders.BCBuildersItems.ARCHITECT.get(), "tip.block.architect");
             buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.builders.BCBuildersItems.LIBRARY.get(), "tip.block.library");
             buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.builders.BCBuildersItems.REPLACER.get(), "tip.block.replacer");
+            buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.builders.BCBuildersItems.QUARRY.get(), "tip.block.quarry");
         });
     }
 

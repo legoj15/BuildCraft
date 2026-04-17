@@ -18,6 +18,13 @@ import buildcraft.factory.client.render.RenderTank;
 
 public class BCFactoryClient {
     @SubscribeEvent
+    public static void setupClient(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
+        event.enqueueWork(() -> {
+            buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.factory.BCFactoryItems.MINING_WELL.get(), "tip.block.mining_well");
+        });
+    }
+
+    @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(BCFactoryMenuTypes.AUTO_WORKBENCH_ITEMS.get(), GuiAutoCraftItems::new);
         event.register(BCFactoryMenuTypes.TANK.get(), GuiTank::new);

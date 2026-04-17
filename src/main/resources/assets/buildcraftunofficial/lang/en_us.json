@@ -50,6 +50,8 @@
     "tip.block.architect": "Not usable in survival",
     "tip.block.library": "Not usable in survival",
     "tip.block.replacer": "Not usable in survival",
+    "tip.block.quarry": "Mines a marked volume until reaching bedrock",
+    "tip.block.mining_well": "Mines straight down until reaching bedrock or a fluid",
     "tip.item.paintbrush.clean": "Can strip paint from pipes",
     "advancements.buildcraftunofficial.root.title": "BuildCraft",
     "advancements.buildcraftunofficial.root.description": "For all your engineering needs",

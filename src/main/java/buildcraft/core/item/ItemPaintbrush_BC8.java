@@ -93,6 +93,15 @@ public class ItemPaintbrush_BC8 extends Item {
     }
 
     @Override
+    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
+            java.util.function.Consumer<Component> tooltip, net.minecraft.world.item.TooltipFlag flag) {
+        super.appendHoverText(stack, context, display, tooltip, flag);
+        if (getColour(stack) == null) {
+            tooltip.accept(Component.translatable("tip.item.paintbrush.clean").withStyle(ChatFormatting.GRAY));
+        }
+    }
+
+    @Override
     public boolean isBarVisible(ItemStack stack) {
         DyeColor colour = getColour(stack);
         return colour != null && getUsesLeft(stack) < MAX_USES;

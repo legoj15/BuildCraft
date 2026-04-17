@@ -24,6 +24,16 @@ public class BCBuildersClient {
     }
 
     @SubscribeEvent
+    public static void setupClient(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
+        event.enqueueWork(() -> {
+            buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.builders.BCBuildersItems.FILLER.get(), "tip.block.filler");
+            buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.builders.BCBuildersItems.BUILDER.get(), "tip.block.builder");
+            buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.builders.BCBuildersItems.ARCHITECT.get(), "tip.block.architect");
+            buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.builders.BCBuildersItems.LIBRARY.get(), "tip.block.library");
+        });
+    }
+
+    @SubscribeEvent
     public static void registerMenuScreens(RegisterMenuScreensEvent event) {
         event.register(BCBuildersMenuTypes.FILLER.get(), GuiFiller::new);
         event.register(BCBuildersMenuTypes.BUILDER.get(), GuiBuilder::new);

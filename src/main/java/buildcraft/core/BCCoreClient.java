@@ -69,6 +69,8 @@ public class BCCoreClient {
                 event -> event.enqueueWork(() -> {
                         buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.ENGINE_CREATIVE.get(), "tip.block.engine_creative");
                         buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.ENGINE_REDSTONE.get(), "tip.block.engine_redstone");
+                        buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.MARKER_VOLUME.get(), "tip.block.marker_volume");
+                        buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.MARKER_PATH.get(), "tip.block.marker_path");
                 })
         );
         // Register List tooltip handler (shows 'Matches' in tooltip while List GUI is open)

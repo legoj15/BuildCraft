@@ -3,3 +3,4 @@
 - Fixed missing GUI textures for MJ Dynamo and FE Engine.
 - Added tooltips for Redstone, Stirling, Combustion, and FE engines, as well as MJ Dynamo.
 - Restored missing engine and dynamo block item translation strings by migrating to a centralized NeoForge ItemTooltipEvent registry.
+- Added usage tooltips to the Land Mark and Path Mark blocks.

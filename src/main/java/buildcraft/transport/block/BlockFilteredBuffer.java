@@ -70,6 +70,7 @@ public class BlockFilteredBuffer extends BaseEntityBlock {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof TileFilteredBuffer buffer) {
                 buffer.onPlacedBy(placer, stack);
+                level.sendBlockUpdated(pos, state, state, 3);
             }
         }
     }

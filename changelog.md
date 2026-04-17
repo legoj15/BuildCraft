@@ -15,3 +15,4 @@ Fix: Corrected GUI icon placement and restored translucency/handling for the NOT
 Fix: Restored Filtered Buffer ghost item rendering and dynamic ghost slot assignments
 Fix: Re-calibrated opacity levels for Filtered Buffer ghost items and ?? icon to match legacy 30% presence thresholds
 Fix: Restored Help and Ownership letgers to the Filtered Buffer GUI layout
+Fix: Propagated BlockFilteredBuffer placement events down to TileFilteredBuffer, resolving Unknown ownership displays on freshly placed Filtered Buffers

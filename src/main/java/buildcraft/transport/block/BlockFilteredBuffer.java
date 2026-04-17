@@ -61,4 +61,16 @@ public class BlockFilteredBuffer extends BaseEntityBlock {
         }
         return InteractionResult.SUCCESS;
     }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
+            @org.jetbrains.annotations.Nullable net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (!level.isClientSide()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileFilteredBuffer buffer) {
+                buffer.onPlacedBy(placer, stack);
+            }
+        }
+    }
 }

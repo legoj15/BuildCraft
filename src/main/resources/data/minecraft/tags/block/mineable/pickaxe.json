@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
-    "buildcraftunofficial:pipe_holder"
+    "buildcraftunofficial:pipe_holder",
+    "buildcraftunofficial:filtered_buffer"
   ]
 }

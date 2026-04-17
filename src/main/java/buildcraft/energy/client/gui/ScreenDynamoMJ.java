@@ -8,6 +8,8 @@ import net.minecraft.world.entity.player.Inventory;
 import buildcraft.energy.container.ContainerDynamoMJ;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.ledger.LedgerEngine;
 import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
@@ -44,6 +46,17 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
 
             mainGui.shownElements.add(new LedgerHelp(mainGui, false));
             
+            mainGui.shownElements.add(new DummyHelpElement(
+                RECT_UPGRADE_TYPES.offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.dynamo.upgrades.title", 0xFF_66_99_FF,
+                    "buildcraft.help.dynamo.upgrades")
+            ));
+            mainGui.shownElements.add(new DummyHelpElement(
+                RECT_RF_BATTERY.offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.dynamo.battery.title", 0xFF_33_AA_33,
+                    "buildcraft.help.dynamo.battery")
+            ));
+
             mainGui.shownElements.add(new buildcraft.lib.gui.GuiElementSimple(mainGui, RECT_UPGRADE_TYPES.offset(mainGui.rootElement)) {
                 @Override
                 public void addToolTips(java.util.List<buildcraft.lib.gui.elem.ToolTip> tooltips) {

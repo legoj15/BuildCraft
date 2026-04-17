@@ -21,6 +21,9 @@ public class BuildCraftGameTests {
         if (event.getRegistryKey().equals(Registries.TEST_FUNCTION)) {
             // Pipes
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_routing_test_simple"), () -> PipeRoutingTest::testSimplePipeExtraction);
+
+            // Transport Storage
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:filtered_buffer_drops"), () -> buildcraft.transport.FilteredBufferTester::testFilteredBufferDrops);
             
             // Fluids
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:oil_water_interaction"), () -> buildcraft.energy.OilWaterInteractionTest::testOilOverWater);

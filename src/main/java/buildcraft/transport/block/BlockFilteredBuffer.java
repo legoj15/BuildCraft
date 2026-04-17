@@ -63,6 +63,23 @@ public class BlockFilteredBuffer extends BaseEntityBlock {
     }
 
     @Override
+    protected java.util.List<net.minecraft.world.item.ItemStack> getDrops(BlockState state, net.minecraft.world.level.storage.loot.LootParams.Builder builder) {
+        java.util.List<net.minecraft.world.item.ItemStack> drops = new java.util.ArrayList<>();
+        drops.add(new net.minecraft.world.item.ItemStack(this));
+        
+        BlockEntity be = builder.getOptionalParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_ENTITY);
+        if (be instanceof TileFilteredBuffer buffer) {
+            for (int i = 0; i < buffer.invMain.getSlots(); i++) {
+                net.minecraft.world.item.ItemStack stack = buffer.invMain.getStackInSlot(i);
+                if (!stack.isEmpty()) {
+                    drops.add(stack.copy());
+                }
+            }
+        }
+        return drops;
+    }
+
+    @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state,
             @org.jetbrains.annotations.Nullable net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);

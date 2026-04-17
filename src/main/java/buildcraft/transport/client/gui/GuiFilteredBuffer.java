@@ -13,6 +13,9 @@ import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.help.ElementHelpInfo;
+import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.transport.container.ContainerFilteredBuffer;
 
 public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
@@ -56,6 +59,20 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
             ));
         }
         mainGui.shownElements.add(new buildcraft.lib.gui.ledger.LedgerHelp(mainGui, false));
+
+        // Filter Slots Help Element (y=27)
+        mainGui.shownElements.add(new DummyHelpElement(
+            new GuiRectangle(8, 27, 162, 18).offset(mainGui.rootElement),
+            new ElementHelpInfo("buildcraft.help.filtered_buffer.filter.title", 0xFF_55_55_FF,
+                "buildcraft.help.filtered_buffer.filter")
+        ));
+
+        // Buffer Slots Help Element (y=61)
+        mainGui.shownElements.add(new DummyHelpElement(
+            new GuiRectangle(8, 61, 162, 18).offset(mainGui.rootElement),
+            new ElementHelpInfo("buildcraft.help.filtered_buffer.main.title", 0xFF_55_FF_55,
+                "buildcraft.help.filtered_buffer.main")
+        ));
     }
 
     @Override

@@ -49,7 +49,13 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
 
     @Override
     protected void initGuiElements() {
-        // No ledgers or special elements — simple filtered buffer GUI
+        if (menu.tile != null) {
+            mainGui.shownElements.add(new buildcraft.lib.gui.ledger.LedgerOwnership(mainGui,
+                () -> menu.tile != null ? menu.tile.getOwner() : null,
+                true
+            ));
+        }
+        mainGui.shownElements.add(new buildcraft.lib.gui.ledger.LedgerHelp(mainGui, false));
     }
 
     @Override

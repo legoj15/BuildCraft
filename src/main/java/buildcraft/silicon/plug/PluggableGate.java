@@ -216,8 +216,7 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
 
     @Override
     public ItemStack getPickStack() {
-        // return BCSiliconItems.gate.getStack(logic.variant);
-        return ItemStack.EMPTY; // TODO: ItemPluggableGate
+        return buildcraft.silicon.BCSiliconItems.PLUG_GATE.get().getStack(logic.variant);
     }
 
     @Override

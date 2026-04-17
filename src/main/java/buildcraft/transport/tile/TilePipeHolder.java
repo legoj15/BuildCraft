@@ -353,6 +353,15 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
                 pluggables[i] = null;
             }
         }
+        // Drop wires
+        for (DyeColor color : wireManager.parts.values()) {
+            if (color != null) {
+                Item wireItem = buildcraft.transport.BCTransportItems.WIRE_ITEMS.get(color).get();
+                if (wireItem != null) {
+                    Block.popResource(lvl, pos, new ItemStack(wireItem));
+                }
+            }
+        }
     }
 
     // --- IPipeHolder ---

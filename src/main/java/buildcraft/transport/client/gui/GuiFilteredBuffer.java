@@ -33,14 +33,15 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
             net.minecraft.world.item.ItemStack stackFilter = menu.tile.invFilter.getStackInSlot(i);
             net.minecraft.world.item.ItemStack stackMain = menu.tile.invMain.getStackInSlot(i);
 
-            double currentX = mainGui.rootElement.getX() + 8 + i * 18;
-            double currentY = mainGui.rootElement.getY() + 61;
+            int currentX = (int) mainGui.rootElement.getX() + 8 + i * 18;
+            int currentY = (int) mainGui.rootElement.getY() + 61;
 
             if (stackMain.isEmpty()) {
                 if (!stackFilter.isEmpty()) {
-                    // TODO (1.21.11): Render ghost item using ItemStackRenderState here when generic UI item rendering is ported.
+                    graphics.item(stackFilter, currentX, currentY);
+                    graphics.fill(currentX, currentY, currentX + 16, currentY + 16, 0x608B8B8B);
                 } else {
-                    buildcraft.lib.gui.GuiIcon.drawAt(buildcraft.transport.BCTransportSprites.NOTHING_FILTERED_BUFFER_SLOT, (int) currentX, (int) currentY, 16);
+                    buildcraft.lib.gui.GuiIcon.drawAt(buildcraft.transport.BCTransportSprites.NOTHING_FILTERED_BUFFER_SLOT, currentX, currentY, 16);
                 }
             }
         }

@@ -12,3 +12,4 @@ Fix: Restored GUI slot background textures for the Filtered Buffer
 Fix: Added gui.json atlas to correctly stitch slot sprite backgrounds
 Fix: Corrected GUI atlas JSON path to merge with the vanilla minecraft namespace instead of creating a custom atlas
 Fix: Corrected GUI icon placement and restored translucency/handling for the NOTHING filter icon in the Filtered Buffer
+Fix: Restored Filtered Buffer ghost item rendering and dynamic ghost slot assignments

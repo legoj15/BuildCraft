@@ -6,3 +6,4 @@
 - Added usage tooltips to the Land Mark and Path Mark blocks.
 - Ported tooltips for the Filler, Builder, Architect Table, and Electronic Library from 1.12.2.
 - Added tooltip to unpainted Paintbrushes to clarify they can strip paint from pipes.
+- Added "Not usable in survival" tooltip to the Replacer block.

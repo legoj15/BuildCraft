@@ -125,4 +125,9 @@ public abstract class TileBC_Neptune extends BlockEntity {
     public void addDrops(NonNullList<ItemStack> toDrop, int fortune) {
         itemManager.addDrops(toDrop);
     }
+
+    @Nullable
+    public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> getItemHandler(net.minecraft.core.Direction facing) {
+        return itemManager.getItemHandler(facing);
+    }
 }

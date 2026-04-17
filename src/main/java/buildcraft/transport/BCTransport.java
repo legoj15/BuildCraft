@@ -271,6 +271,12 @@ public class BCTransport {
                 return null;
             }
         );
+
+        event.registerBlockEntity(
+            net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK, 
+            BCTransportBlockEntities.FILTERED_BUFFER.get(),
+            (tile, side) -> tile.getItemHandler(side)
+        );
     }
 
     private static void initStripesRegistry() {

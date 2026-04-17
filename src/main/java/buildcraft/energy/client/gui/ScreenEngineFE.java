@@ -14,7 +14,7 @@ import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.misc.LocaleUtil;
 
 public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
-    private static final Identifier TEXTURE = Identifier.parse("buildcraftenergy:textures/gui/rf_engine_gui.png");
+    private static final Identifier TEXTURE = Identifier.parse("buildcraftunofficial:textures/gui/rf_engine_gui.png");
     private static final int SIZE_X = 176, SIZE_Y = 177;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_RF = new GuiIcon(TEXTURE, SIZE_X, 0, 16, 60);

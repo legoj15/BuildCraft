@@ -19,3 +19,4 @@ Fix: Propagated BlockFilteredBuffer placement events down to TileFilteredBuffer,
 Fix: Resolved generic return type conflicts in TileBC_Neptune network sync implementation to restore client-side owner mapping
 Fix: Dynamically drew the block title onto the Filtered Buffer GUI, applying standard ARGB hex formatting to solve transparent text rendering errors
 Enhancement: Fleshed out Filtered Buffer's ledger Help integrations with dummy bounding box hover tags and custom en_us localized guidance
+Fix: Restored Shift-Click functionality to the Filtered Buffer by dropping broken placeholder implementations and permitting the generalized container logic to inherently read from the ItemHandlerFiltered ruleset

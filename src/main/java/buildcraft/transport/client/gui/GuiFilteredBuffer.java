@@ -62,14 +62,14 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
 
         // Filter Slots Help Element (y=27)
         mainGui.shownElements.add(new DummyHelpElement(
-            new GuiRectangle(8, 27, 162, 18).offset(mainGui.rootElement),
+            new GuiRectangle(8, 27, 160, 16).offset(mainGui.rootElement),
             new ElementHelpInfo("buildcraft.help.filtered_buffer.filter.title", 0xFF_55_55_FF,
                 "buildcraft.help.filtered_buffer.filter")
         ));
 
         // Buffer Slots Help Element (y=61)
         mainGui.shownElements.add(new DummyHelpElement(
-            new GuiRectangle(8, 61, 162, 18).offset(mainGui.rootElement),
+            new GuiRectangle(8, 61, 160, 16).offset(mainGui.rootElement),
             new ElementHelpInfo("buildcraft.help.filtered_buffer.main.title", 0xFF_55_FF_55,
                 "buildcraft.help.filtered_buffer.main")
         ));

@@ -54,9 +54,4 @@ public class ContainerFilteredBuffer extends ContainerBCTile<TileFilteredBuffer>
         return null;
     }
 
-    @Override
-    public ItemStack quickMoveStack(Player player, int slotIndex) {
-        // TODO: implement shift-click transfer
-        return ItemStack.EMPTY;
-    }
 }

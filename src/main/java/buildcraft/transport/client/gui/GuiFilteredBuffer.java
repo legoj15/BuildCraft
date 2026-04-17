@@ -60,6 +60,9 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
 
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        // Title is drawn as part of the GUI texture in 1.12.2
+        String titleStr = title.getString();
+        int titleWidth = font.width(titleStr);
+        int titleX = (imageWidth - titleWidth) / 2;
+        graphics.text(font, titleStr, titleX, 10, 0xFF404040, false);
     }
 }

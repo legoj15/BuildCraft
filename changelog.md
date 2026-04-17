@@ -17,3 +17,4 @@ Fix: Re-calibrated opacity levels for Filtered Buffer ghost items and ?? icon to
 Fix: Restored Help and Ownership letgers to the Filtered Buffer GUI layout
 Fix: Propagated BlockFilteredBuffer placement events down to TileFilteredBuffer, resolving Unknown ownership displays on freshly placed Filtered Buffers
 Fix: Resolved generic return type conflicts in TileBC_Neptune network sync implementation to restore client-side owner mapping
+Fix: Dynamically drew the block title onto the Filtered Buffer GUI, applying standard ARGB hex formatting to solve transparent text rendering errors

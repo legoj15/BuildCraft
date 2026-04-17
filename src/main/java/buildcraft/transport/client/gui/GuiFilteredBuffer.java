@@ -28,6 +28,22 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
     @Override
     protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
+
+        for (int i = 0; i < 9; i++) {
+            net.minecraft.world.item.ItemStack stackFilter = menu.tile.invFilter.getStackInSlot(i);
+            net.minecraft.world.item.ItemStack stackMain = menu.tile.invMain.getStackInSlot(i);
+
+            double currentX = mainGui.rootElement.getX() + 8 + i * 18;
+            double currentY = mainGui.rootElement.getY() + 61;
+
+            if (stackMain.isEmpty()) {
+                if (!stackFilter.isEmpty()) {
+                    // TODO (1.21.11): Render ghost item using ItemStackRenderState here when generic UI item rendering is ported.
+                } else {
+                    buildcraft.lib.gui.GuiIcon.drawAt(buildcraft.transport.BCTransportSprites.NOTHING_FILTERED_BUFFER_SLOT, (int) currentX, (int) currentY, 16);
+                }
+            }
+        }
     }
 
     @Override

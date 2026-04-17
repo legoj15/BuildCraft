@@ -32,11 +32,9 @@ public class ContainerFilteredBuffer extends ContainerBCTile<TileFilteredBuffer>
         for (int i = 0; i < 9; i++) {
             // Filter slots (phantom) at y=27
             SlotPhantom filterSlot = new SlotPhantom(tile.invFilter, i, 8 + i * 18, 27, false);
-            filterSlot.setBackground(buildcraft.transport.BCTransportSprites.NOTHING_FILTERED_BUFFER_SLOT.getResourceLocation());
             addSlot(filterSlot);
             // Inventory slots at y=61
             SlotBase mainSlot = new SlotBase(tile.invMain, i, 8 + i * 18, 61);
-            mainSlot.setBackground(buildcraft.transport.BCTransportSprites.EMPTY_FILTERED_BUFFER_SLOT.getResourceLocation());
             addSlot(mainSlot);
         }
 

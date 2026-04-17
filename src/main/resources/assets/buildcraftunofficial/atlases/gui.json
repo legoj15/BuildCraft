@@ -1,0 +1,12 @@
+{
+  "sources": [
+    {
+      "type": "single",
+      "resource": "buildcraftunofficial:gui/empty_filtered_buffer_slot"
+    },
+    {
+      "type": "single",
+      "resource": "buildcraftunofficial:gui/nothing_filtered_buffer_slot"
+    }
+  ]
+}

@@ -44,6 +44,29 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
         (statement, paramIndex) -> onStatementChange()
     );
 
+    public final buildcraft.lib.statement.StatementContext<IFillerPattern> possiblePatternsContext = () -> java.util.List.of(
+        new buildcraft.lib.statement.StatementContext.StatementGroup<IFillerPattern>() {
+            @Override
+            public java.util.List<IFillerPattern> getValues() {
+                return new java.util.ArrayList<>(buildcraft.builders.registry.FillerRegistry.INSTANCE.getPatterns());
+            }
+
+            @Override
+            public buildcraft.lib.gui.ISimpleDrawable getSourceIcon() {
+                return null;
+            }
+        }
+    );
+
+    public void onStatementChange() {
+        if (player != null && player.level() != null && player.level().isClientSide()) {
+            sendMessage(NET_STATEMENT, (buf) -> {
+                buildcraft.lib.net.PacketBufferBC buffer = new buildcraft.lib.net.PacketBufferBC(buf.unwrap());
+                patternStatementClient.writeToBuffer(buffer);
+            });
+        }
+    }
+
     // Client-side constructor (from network)
     public ContainerFiller(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
         this(containerId, playerInv, getTile(playerInv, buf));
@@ -134,12 +157,48 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
         return data.get(DATA_INVERTED) != 0;
     }
 
+    public static final int NET_EXCAVATE = 10;
+    public static final int NET_STATEMENT = 11;
+    public static final int NET_INVERT = 12;
+
     @Override
     public void setInverted(boolean value) {
         if (tile.addon != null) {
             tile.addon.inverted = value;
         } else {
             tile.inverted = value;
+        }
+    }
+
+    @Override
+    public void readMessage(int id, buildcraft.lib.net.PacketBufferBC buffer, boolean isClient, net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
+        super.readMessage(id, buffer, isClient, ctx);
+        if (isClient) return;
+        
+        if (id == NET_EXCAVATE) {
+            if (tile != null) {
+                tile.setCanExcavate(!tile.getCanExcavate());
+            }
+        } else if (id == NET_INVERT) {
+            if (tile != null) {
+                if (tile.addon != null) {
+                    tile.addon.inverted = !tile.addon.inverted;
+                } else {
+                    tile.inverted = !tile.inverted;
+                }
+            }
+        } else if (id == NET_STATEMENT) {
+            if (tile != null) {
+                try {
+                    buildcraft.lib.statement.FullStatement<IFillerPattern> stat = getPatternStatement();
+                    if (stat != null) {
+                        stat.readFromBuffer(buffer);
+                        tile.onStatementChange();
+                    }
+                } catch (java.io.IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 

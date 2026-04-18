@@ -32,3 +32,4 @@ Fix: Fixed oil well generation for modern world depth (minY=-64): sphere cavity 
 Fix: Fixed pump oil spring detection searching at Y=0 instead of the actual bedrock layer (minY=-64)
 Fixed an issue where Markers would not drop themselves as items when broken or washed away by fluids. 
 Enhancement: Restored full Filler block functionality: volume box detection on placement, TemplateBuilder integration for automated block placement/breaking, persistent 27-slot resource inventory, and owner tracking. The Filler GUI now opens when placed adjacent to volume markers.
+Feature: Completely rebuilt the Filler GUI from the deprecated 1.12.2 JSON framework to the modern GuiBC8 system, restoring Pattern Statement slots, parameter fields, toggles, and the custom progress ledger readout

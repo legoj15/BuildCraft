@@ -9,6 +9,7 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Invisible structural entity that provides physical collision for the Quarry's
@@ -20,6 +21,16 @@ import net.minecraft.world.phys.AABB;
  *       be targeted / clicked.</li>
  *   <li>{@link #isPushable()} — false; the quarry arms are immovable.</li>
  * </ul>
+ *
+ * <h3>Why we override {@code makeBoundingBox}:</h3>
+ * {@link Entity#setPos} calls {@code makeBoundingBox()} to rebuild the AABB
+ * from the entity type's default dimensions (1×1).  The vanilla networking
+ * layer calls {@code setPos} every position-sync tick, so any custom AABB set
+ * via {@code setBoundingBox()} gets silently replaced with a 1×1 box.  This
+ * caused a periodic one-frame collision gap (the "phasing" glitch) every time
+ * the server sent a position update.  By overriding {@code makeBoundingBox} to
+ * use our synched dimensions, every call to {@code setPos} — whether from our
+ * code or from the networking layer — produces the correct AABB.
  */
 public class EntityQuarryRig extends Entity {
     private static final EntityDataAccessor<Boolean> PHASING = SynchedEntityData.defineId(EntityQuarryRig.class, EntityDataSerializers.BOOLEAN);
@@ -51,6 +62,32 @@ public class EntityQuarryRig extends Entity {
     @Override
     public boolean shouldBeSaved() {
         return false;
+    }
+
+    // ── Custom AABB ──────────────────────────────────────────────────────
+
+    /**
+     * Overrides the base Entity's bounding box factory so that every call to
+     * {@code setPos()} builds our custom-sized AABB instead of the default
+     * 1×1 box from the EntityType dimensions.  This is the key fix for the
+     * periodic phasing glitch — the networking layer's position-sync calls
+     * {@code setPos()}, which calls this method, so the AABB is always correct.
+     */
+    @Override
+    protected AABB makeBoundingBox(Vec3 position) {
+        float halfX = this.entityData.get(SIZE_X) / 2.0f;
+        float halfY = this.entityData.get(SIZE_Y) / 2.0f;
+        float halfZ = this.entityData.get(SIZE_Z) / 2.0f;
+
+        // Before dimensions are set (SIZE_X is 0), fall back to default
+        if (halfX <= 0) {
+            return super.makeBoundingBox(position);
+        }
+
+        return new AABB(
+            position.x - halfX, position.y - halfY, position.z - halfZ,
+            position.x + halfX, position.y + halfY, position.z + halfZ
+        );
     }
 
     // ── Collision contract (mirrors AbstractBoat) ─────────────────────────
@@ -92,17 +129,6 @@ public class EntityQuarryRig extends Entity {
         super.tick();
         if (this.level().isClientSide()) {
             this.phasing = this.entityData.get(PHASING);
-            float halfX = this.entityData.get(SIZE_X) / 2.0f;
-            float halfY = this.entityData.get(SIZE_Y) / 2.0f;
-            float halfZ = this.entityData.get(SIZE_Z) / 2.0f;
-            
-            if (halfX > 0) {
-                net.minecraft.world.phys.Vec3 pos = this.position();
-                this.setBoundingBox(new AABB(
-                    pos.x - halfX, pos.y - halfY, pos.z - halfZ,
-                    pos.x + halfX, pos.y + halfY, pos.z + halfZ
-                ));
-            }
         }
     }
 
@@ -116,14 +142,19 @@ public class EntityQuarryRig extends Entity {
     /**
      * Sets the bounding box for this arm collision entity.
      * Called every tick by TileQuarry on the server.
+     *
+     * <p>Updates the synched size data <em>before</em> calling {@code setPos()},
+     * so that {@code makeBoundingBox()} (called inside {@code setPos()}) already
+     * has the correct dimensions available.  This eliminates the previous
+     * pattern of setPos → wrong AABB → setBoundingBox → correct AABB.
      */
     public void setRiggingBox(AABB aabb) {
-        // Sync center position. The base Entity will handle networking/interpolation.
-        this.setPos((aabb.minX + aabb.maxX) / 2.0, (aabb.minY + aabb.maxY) / 2.0, (aabb.minZ + aabb.maxZ) / 2.0);
-        this.setBoundingBox(aabb);
-
+        // Update synched size data first so makeBoundingBox() uses correct values
         this.entityData.set(SIZE_X, (float) (aabb.maxX - aabb.minX));
         this.entityData.set(SIZE_Y, (float) (aabb.maxY - aabb.minY));
         this.entityData.set(SIZE_Z, (float) (aabb.maxZ - aabb.minZ));
+
+        // Now setPos will call makeBoundingBox() which reads the updated sizes
+        this.setPos((aabb.minX + aabb.maxX) / 2.0, (aabb.minY + aabb.maxY) / 2.0, (aabb.minZ + aabb.maxZ) / 2.0);
     }
 }

@@ -578,10 +578,10 @@
     "direction.center": "Center",
     "buildcraft.help.dynamo.upgrades.title": "Supported Upgrades",
     "buildcraft.help.dynamo.upgrades": "Upgrades increase the speed at which energy is converted. Place iron or gold gears into these slots.\n1 compatible gear per slot.",
-    "buildcraft.help.dynamo.battery.title": "RF Battery",
+    "buildcraft.help.dynamo.battery.title": "RF Energy",
     "buildcraft.help.dynamo.battery": "Converts %s\nto %s",
     "buildcraft.help.rf_engine.upgrades.title": "Supported Upgrades",
     "buildcraft.help.rf_engine.upgrades": "Upgrades increase the speed at which FE is consumed and MJ is produced. Place iron or gold gears into these slots.\n1 compatible gear per slot.",
-    "buildcraft.help.rf_engine.battery.title": "RF Battery",
+    "buildcraft.help.rf_engine.battery.title": "RF Energy",
     "buildcraft.help.rf_engine.battery": "Converts %s\nto %s"
 }

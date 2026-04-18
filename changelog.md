@@ -26,3 +26,4 @@ Fix: Enforced max 1 gear per upgrade slot on MJ Dynamo and FE Engine (4 slots = 
 Test: Added EnergyConverterTester gametest suite for upgrade slot filtering and upgrade effectiveness on both machines
 Fix: MJ Dynamo power ledger now displays RF output and RF stored instead of MJ, matching 1.12.2 behavior and showing the actual benefit of gear upgrades
 Enhancement: Battery help ledgers on MJ Dynamo and FE Engine now dynamically display the current conversion rate based on installed gears, matching 1.12.2
+Fix: Fixed a GUI bug where shift-clicking a stack into a max-1 slot bypassed the stack limits, and shift-clicking into an occupied slot permanently deleted the items

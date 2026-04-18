@@ -24,16 +24,12 @@ public class GuidePage extends GuidePageBase {
     public GuidePage(GuiGuide gui, List<GuidePart> parts, PageValue<?> entry) {
         super(gui);
         this.title = entry.title;
-        // GuideChapterContents not yet ported — use simple chapter
-        this.chapterContents = new GuideChapterWithin(gui, title);
+        this.chapterContents = new GuideChapterContents(gui);
         this.entry = entry;
 
         List<GuidePart> allParts = new ArrayList<>();
         allParts.add(new GuideChapterWithin(gui, title));
         allParts.addAll(parts);
-
-        // GuidePartGroup, GuidePartNewPage, LocaleUtil references deferred
-        // Group linking and type-specific entries will be added when those classes are ported
 
         addTypeSpecific(gui, allParts, entry);
         this.parts = ImmutableList.copyOf(allParts);

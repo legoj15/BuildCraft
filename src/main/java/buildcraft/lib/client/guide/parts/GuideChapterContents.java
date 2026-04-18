@@ -16,7 +16,7 @@ public class GuideChapterContents extends GuideChapter {
 
     @Override
     protected boolean onClick() {
-        // gui.goBackToMenu() — deferred until full UI port
-        return false;
+        gui.goBackToMenu();
+        return true;
     }
 }

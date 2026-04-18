@@ -102,7 +102,10 @@ public class ContentsNodeGui {
                     GuidePageFactory factory = link.getFactoryLink();
                     if (factory != null) {
                         GuidePageBase page = factory.createNew(gui);
-                        // gui.openPage(page) — deferred until full UI port
+                        if (page != null) {
+                            gui.openPage(page);
+                            return null;
+                        }
                     }
                 }
             }

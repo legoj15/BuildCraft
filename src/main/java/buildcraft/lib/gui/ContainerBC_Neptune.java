@@ -245,13 +245,13 @@ public abstract class ContainerBC_Neptune extends RecipeBookMenu {
 
             ItemStack existing = targetSlot.getItem();
             if (!existing.isEmpty() && ItemStack.isSameItemSameComponents(stack, existing)) {
-                int maxSize = Math.min(targetSlot.getMaxStackSize(), stack.getMaxStackSize());
+                int maxSize = Math.min(targetSlot.getMaxStackSize(stack), stack.getMaxStackSize());
                 int space = maxSize - existing.getCount();
                 if (space > 0) {
                     int transfer = Math.min(space, stack.getCount());
                     existing.grow(transfer);
                     stack.shrink(transfer);
-                    targetSlot.setChanged();
+                    targetSlot.set(existing);
                     moved = true;
                 }
             }
@@ -263,7 +263,7 @@ public abstract class ContainerBC_Neptune extends RecipeBookMenu {
             if (!targetSlot.mayPlace(stack)) continue;
 
             if (targetSlot.getItem().isEmpty()) {
-                int maxSize = Math.min(targetSlot.getMaxStackSize(), stack.getMaxStackSize());
+                int maxSize = Math.min(targetSlot.getMaxStackSize(stack), stack.getMaxStackSize());
                 int transfer = Math.min(maxSize, stack.getCount());
                 targetSlot.set(stack.split(transfer));
                 moved = true;

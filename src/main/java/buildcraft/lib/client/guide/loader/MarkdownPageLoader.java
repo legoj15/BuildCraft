@@ -21,10 +21,6 @@ import buildcraft.api.registry.IScriptableRegistry.OptionallyDisabled;
 
 import buildcraft.lib.client.guide.entry.PageEntry;
 import buildcraft.lib.client.guide.parts.GuidePageFactory;
-import buildcraft.lib.client.guide.parts.GuidePage;
-import buildcraft.lib.client.guide.entry.PageValue;
-
-import com.google.common.collect.ImmutableList;
 
 public enum MarkdownPageLoader implements IPageLoaderText {
     INSTANCE;
@@ -77,15 +73,6 @@ public enum MarkdownPageLoader implements IPageLoaderText {
     @Override
     public GuidePageFactory loadPage(BufferedReader reader, Identifier name, PageEntry<?> entry, ProfilerFiller prof)
         throws IOException {
-        // XmlPageLoader not yet ported — return stub page
-        // Read and discard the content for now
-        StringBuilder sb = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            sb.append(line).append('\n');
-        }
-
-        // Just return a page stub that shows the entry name
-        return gui -> new GuidePage(gui, ImmutableList.of(), entry.toPageValue());
+        return XmlPageLoader.INSTANCE.loadPage(reader, name, entry, prof);
     }
 }

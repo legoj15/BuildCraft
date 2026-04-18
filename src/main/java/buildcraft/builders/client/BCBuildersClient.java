@@ -20,7 +20,10 @@ public class BCBuildersClient {
     public static void initClient(IEventBus modEventBus) {
         modEventBus.register(BCBuildersClient.class);
         NeoForge.EVENT_BUS.addListener(RenderLevelStageEvent.AfterTranslucentBlocks.class,
-                event -> BCBuildersEventDist.INSTANCE.renderAllQuarries(event));
+                event -> {
+                    BCBuildersEventDist.INSTANCE.renderAllQuarries(event);
+                    BCBuildersEventDist.INSTANCE.renderAllFillers(event);
+                });
     }
 
     @SubscribeEvent

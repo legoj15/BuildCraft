@@ -21,7 +21,14 @@ public class BCTooltips {
     public static void onItemTooltip(ItemTooltipEvent event) {
         String key = TOOLTIPS.get(event.getItemStack().getItem());
         if (key != null) {
-            event.getToolTip().add(Component.translatable(key).withStyle(ChatFormatting.GRAY));
+            if (net.minecraft.client.resources.language.I18n.exists(key)) {
+                String translated = net.minecraft.client.resources.language.I18n.get(key);
+                for (String line : translated.split("\n")) {
+                    event.getToolTip().add(Component.literal(line).withStyle(ChatFormatting.GRAY));
+                }
+            } else {
+                event.getToolTip().add(Component.translatable(key).withStyle(ChatFormatting.GRAY));
+            }
         }
     }
 }

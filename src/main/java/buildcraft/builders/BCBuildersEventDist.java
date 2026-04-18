@@ -31,6 +31,7 @@ import buildcraft.lib.client.sprite.SpriteHolderRegistry;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.VecUtil;
 
+import buildcraft.builders.tile.TileFiller;
 import buildcraft.builders.tile.TileQuarry;
 import buildcraft.core.client.BuildCraftLaserManager;
 
@@ -74,6 +75,7 @@ public enum BCBuildersEventDist {
     }
 
     private final Map<Level, Deque<WeakReference<TileQuarry>>> allQuarries = new WeakHashMap<>();
+    private final Map<Level, Deque<WeakReference<TileFiller>>> allFillers = new WeakHashMap<>();
 
     public synchronized void validateQuarry(TileQuarry quarry) {
         Deque<WeakReference<TileQuarry>> quarries =
@@ -91,6 +93,25 @@ public enum BCBuildersEventDist {
             WeakReference<TileQuarry> ref = iter.next();
             TileQuarry pos = ref.get();
             if (pos == null || pos == quarry) {
+                iter.remove();
+            }
+        }
+    }
+
+    public synchronized void validateFiller(TileFiller filler) {
+        Deque<WeakReference<TileFiller>> fillers =
+            allFillers.computeIfAbsent(filler.getLevel(), k -> new LinkedList<>());
+        fillers.add(new WeakReference<>(filler));
+    }
+
+    public synchronized void invalidateFiller(TileFiller filler) {
+        Deque<WeakReference<TileFiller>> fillers = allFillers.get(filler.getLevel());
+        if (fillers == null) return;
+        Iterator<WeakReference<TileFiller>> iter = fillers.iterator();
+        while (iter.hasNext()) {
+            WeakReference<TileFiller> ref = iter.next();
+            TileFiller f = ref.get();
+            if (f == null || f == filler) {
                 iter.remove();
             }
         }
@@ -212,6 +233,35 @@ public enum BCBuildersEventDist {
         } else {
             // No drill yet — show the whole frame box as laser outline (caution stripes)
             LaserBoxRenderer.renderLaserBoxStatic(poseStack, tile.frameBox, BuildCraftLaserManager.STRIPES_WRITE, true, false, cameraPos);
+        }
+    }
+
+    /** Called from RenderLevelStageEvent to render filler laser box outlines. */
+    public void renderAllFillers(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+
+        Deque<WeakReference<TileFiller>> fillers = allFillers.get(mc.level);
+        if (fillers == null || fillers.isEmpty()) return;
+
+        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
+        PoseStack poseStack = event.getPoseStack();
+
+        Iterator<WeakReference<TileFiller>> iter = fillers.iterator();
+        while (iter.hasNext()) {
+            WeakReference<TileFiller> ref = iter.next();
+            TileFiller filler = ref.get();
+            if (filler == null || filler.isRemoved()) {
+                iter.remove();
+                continue;
+            }
+            if (filler.markerBox && filler.box.isInitialized()) {
+                LaserBoxRenderer.renderLaserBoxStatic(
+                    poseStack, filler.box,
+                    BuildCraftLaserManager.STRIPES_WRITE,
+                    true, false, cameraPos
+                );
+            }
         }
     }
 }

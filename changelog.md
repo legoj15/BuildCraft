@@ -31,3 +31,4 @@ Fix: Fixed quarry rig collision phasing glitch caused by vanilla position-sync r
 Fix: Fixed oil well generation for modern world depth (minY=-64): sphere cavity no longer clips into the bedrock gradient, oil tube now actually generates between the cavity and bedrock (was broken by negative length), and the tube no longer replaces bedrock blocks with oil which could expose the void
 Fix: Fixed pump oil spring detection searching at Y=0 instead of the actual bedrock layer (minY=-64)
 Fixed an issue where Markers would not drop themselves as items when broken or washed away by fluids. 
+Enhancement: Restored full Filler block functionality: volume box detection on placement, TemplateBuilder integration for automated block placement/breaking, persistent 27-slot resource inventory, and owner tracking. The Filler GUI now opens when placed adjacent to volume markers.

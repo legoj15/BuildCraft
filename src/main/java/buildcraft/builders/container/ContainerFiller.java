@@ -87,11 +87,12 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
         addDataSlots(this.data);
 
         // 27 resource slots in a 3x9 grid starting at (8, 40) — matches 1.12.2 layout
+        // Uses a wrapper that reads/writes directly from the tile's invResources
         if (tile != null) {
-            ResourceContainer resourceContainer = new ResourceContainer(tile);
+            TileInventoryWrapper tileInv = new TileInventoryWrapper(tile);
             for (int sy = 0; sy < 3; sy++) {
                 for (int sx = 0; sx < 9; sx++) {
-                    addSlot(new Slot(resourceContainer, sx + sy * 9, 8 + sx * 18, 40 + sy * 18));
+                    addSlot(new Slot(tileInv, sx + sy * 9, 8 + sx * 18, 40 + sy * 18));
                 }
             }
         }
@@ -181,39 +182,39 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
         return data.get(DATA_TO_BREAK);
     }
 
-    /** A simple Container implementation wrapping the tile's 27-slot resource inventory. */
-    private static class ResourceContainer implements net.minecraft.world.Container {
+    /** A Container implementation wrapping the tile's persistent 27-slot resource inventory.
+     * Reads and writes directly to TileFiller.invResources so items persist and are
+     * accessible to the TemplateBuilder. */
+    private static class TileInventoryWrapper implements net.minecraft.world.Container {
         private final TileFiller tile;
-        private final ItemStack[] items = new ItemStack[27];
 
-        ResourceContainer(TileFiller tile) {
+        TileInventoryWrapper(TileFiller tile) {
             this.tile = tile;
-            for (int i = 0; i < 27; i++) {
-                items[i] = ItemStack.EMPTY;
-            }
         }
 
-        @Override public int getContainerSize() { return 27; }
+        @Override public int getContainerSize() { return TileFiller.INV_SIZE; }
         @Override public boolean isEmpty() {
-            for (ItemStack s : items) if (!s.isEmpty()) return false;
+            for (int i = 0; i < TileFiller.INV_SIZE; i++) {
+                if (!tile.invResources.get(i).isEmpty()) return false;
+            }
             return true;
         }
-        @Override public ItemStack getItem(int slot) { return items[slot]; }
+        @Override public ItemStack getItem(int slot) { return tile.invResources.get(slot); }
         @Override public ItemStack removeItem(int slot, int count) {
-            ItemStack stack = items[slot];
+            ItemStack stack = tile.invResources.get(slot);
             if (stack.isEmpty()) return ItemStack.EMPTY;
             ItemStack result = stack.split(count);
-            if (stack.isEmpty()) items[slot] = ItemStack.EMPTY;
+            if (stack.isEmpty()) tile.invResources.set(slot, ItemStack.EMPTY);
             setChanged();
             return result;
         }
         @Override public ItemStack removeItemNoUpdate(int slot) {
-            ItemStack stack = items[slot];
-            items[slot] = ItemStack.EMPTY;
+            ItemStack stack = tile.invResources.get(slot);
+            tile.invResources.set(slot, ItemStack.EMPTY);
             return stack;
         }
         @Override public void setItem(int slot, ItemStack stack) {
-            items[slot] = stack;
+            tile.invResources.set(slot, stack);
             setChanged();
         }
         @Override public void setChanged() {
@@ -221,7 +222,10 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
         }
         @Override public boolean stillValid(Player player) { return true; }
         @Override public void clearContent() {
-            for (int i = 0; i < 27; i++) items[i] = ItemStack.EMPTY;
+            for (int i = 0; i < TileFiller.INV_SIZE; i++) {
+                tile.invResources.set(i, ItemStack.EMPTY);
+            }
         }
     }
 }
+

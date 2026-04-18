@@ -231,7 +231,7 @@ public class OilGenerator {
             }
 
             // Generate a spring at the very bottom, with a + shaped tube
-            // connecting the sphere down through the bedrock gradient.
+            // connecting the cavity down through the bedrock gradient.
             //   minY:   solid bedrock floor (always 100%, prevents void access)
             //   minY+1: spring block (sits on bedrock; any air neighbors are safe)
             //   minY+2: single oil block above spring (force-placed by Spring.generate)

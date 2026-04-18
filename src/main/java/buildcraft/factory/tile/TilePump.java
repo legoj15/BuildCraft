@@ -213,7 +213,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         // Oil spring search — matches 1.12.2 logic
         if (isOil(queueFluid)) {
             List<BlockPos> springPositions = new ArrayList<>();
-            BlockPos center = VecUtil.replaceValue(worldPosition, Axis.Y, 0);
+            BlockPos center = VecUtil.replaceValue(worldPosition, Axis.Y, level.getMinY() + 1);
             for (BlockPos spring : BlockPos.betweenClosed(center.offset(-10, 0, -10), center.offset(10, 0, 10))) {
                 if (level.getBlockState(spring).is(BCCoreBlocks.SPRING_OIL.get())) {
                     BlockEntity tile = level.getBlockEntity(spring);

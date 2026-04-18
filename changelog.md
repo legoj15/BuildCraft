@@ -28,3 +28,5 @@ Fix: MJ Dynamo power ledger now displays RF output and RF stored instead of MJ, 
 Enhancement: Battery help ledgers on MJ Dynamo and FE Engine now dynamically display the current conversion rate based on installed gears, matching 1.12.2
 Fix: Fixed a GUI bug where shift-clicking a stack into a max-1 slot bypassed the stack limits, and shift-clicking into an occupied slot permanently deleted the items
 Fix: Fixed quarry rig collision phasing glitch caused by vanilla position-sync resetting the custom AABB to default 1x1 dimensions every few seconds
+Fix: Fixed oil well generation for modern world depth (minY=-64): sphere cavity no longer clips into the bedrock gradient, oil tube now actually generates between the cavity and bedrock (was broken by negative length), and the tube no longer replaces bedrock blocks with oil which could expose the void
+Fix: Fixed pump oil spring detection searching at Y=0 instead of the actual bedrock layer (minY=-64)

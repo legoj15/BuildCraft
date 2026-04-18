@@ -65,6 +65,15 @@ public abstract class OilGenStructure {
                 return true;
             }
         },
+        /** Replaces everything except bedrock. Used for the oil tube through the
+         *  bedrock gradient so that natural bedrock is preserved and the void
+         *  isn't exposed. */
+        NOT_BEDROCK {
+            @Override
+            public boolean canReplace(LevelAccessor level, BlockPos pos) {
+                return !level.getBlockState(pos).is(Blocks.BEDROCK);
+            }
+        },
         IS_FOR_LAKE {
             @Override
             public boolean canReplace(LevelAccessor level, BlockPos pos) {
@@ -282,6 +291,11 @@ public abstract class OilGenStructure {
         public void generate(LevelAccessor level, int count) {
             BlockState state = BCCoreBlocks.SPRING_OIL.get().defaultBlockState();
             level.setBlock(pos, state, 2);
+            // Force-place oil directly above the spring so it can function.
+            // In 1.12.2, Y=1 was always stone/oil above the flat bedrock at Y=0.
+            // In modern MC, the bedrock gradient means pos.above() is often bedrock,
+            // which would block the spring's oil regeneration (it checks for empty/air above).
+            setOil(level, pos.above());
             BlockEntity tile = level.getBlockEntity(pos);
             TileSpringOil spring;
             if (tile instanceof TileSpringOil) {

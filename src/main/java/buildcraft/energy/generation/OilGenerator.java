@@ -186,8 +186,13 @@ public class OilGenerator {
         structures.add(createTendril(new BlockPos(x, 62, z), lakeRadius, tendrilRadius, rand));
 
         if (type != GenType.LAKE) {
-            // Generate a spherical cave deposit
-            int wellY = 20 + rand.nextInt(10);
+            // Generate a spherical cave deposit.
+            // In 1.12.2 bedrock was a single flat layer at Y=0, so wellY=20..29 placed
+            // the cavity 20-29 blocks above bedrock. Modern worlds have a 5-block bedrock
+            // gradient from minY to minY+4. We use a base offset of 25 so the sphere
+            // (with max large radius of 16) never clips into the bedrock gradient:
+            //   sphere bottom = (minY + 25) - 16 = minY + 9, safely above minY + 4.
+            int wellY = level.getMinY() + 25 + rand.nextInt(10);
 
             int radius;
             if (type == GenType.LARGE) {
@@ -225,11 +230,19 @@ public class OilGenerator {
                 structures.add(createSpout(new BlockPos(x, wellY, z), height, radius));
             }
 
-            // Generate a spring at the very bottom
+            // Generate a spring at the very bottom, with a + shaped tube
+            // connecting the sphere down through the bedrock gradient.
+            //   minY:   solid bedrock floor (always 100%, prevents void access)
+            //   minY+1: spring block (sits on bedrock; any air neighbors are safe)
+            //   minY+2: single oil block above spring (force-placed by Spring.generate)
+            //   minY+3 → wellY: + shaped oil tube, ALWAYS replaces everything
+            //           (including bedrock) to create clear line-of-sight
             if (type == GenType.LARGE) {
-                structures.add(createTube(new BlockPos(x, level.getMinY() + 1, z), wellY, radius, Axis.Y));
+                int tubeStart = level.getMinY() + 3;
+                int tubeLength = wellY - tubeStart;
+                structures.add(createTube(new BlockPos(x, tubeStart, z), tubeLength, radius, Axis.Y));
                 if (BCCoreBlocks.SPRING_OIL != null) {
-                    structures.add(createSpring(new BlockPos(x, level.getMinY(), z)));
+                    structures.add(createSpring(new BlockPos(x, level.getMinY() + 1, z)));
                 }
             }
         }
@@ -249,13 +262,17 @@ public class OilGenerator {
     }
 
     public static OilGenStructure createTube(BlockPos center, int length, int radius, Axis axis) {
+        return createTube(center, length, radius, axis, ReplaceType.ALWAYS);
+    }
+
+    public static OilGenStructure createTube(BlockPos center, int length, int radius, Axis axis, ReplaceType replaceType) {
         int valForAxis = VecUtil.getValue(center, axis);
         BlockPos min = VecUtil.replaceValue(center.offset(-radius, -radius, -radius), axis, valForAxis);
         BlockPos max = VecUtil.replaceValue(center.offset(radius, radius, radius), axis, valForAxis + length);
         double radiusSq = radius * radius;
         int toReplace = valForAxis;
         Predicate<BlockPos> tester = p -> VecUtil.replaceValue(p, axis, toReplace).distSqr(center) <= radiusSq;
-        return new GenByPredicate(new Box(min, max), ReplaceType.ALWAYS, tester);
+        return new GenByPredicate(new Box(min, max), replaceType, tester);
     }
 
     public static OilGenStructure createSphere(BlockPos center, int radius) {

@@ -9,6 +9,13 @@ public class LocaleUtil {
         return Language.getInstance().getOrDefault(key);
     }
 
+    /** Translate a key and apply String.format with the given arguments.
+     *  Matches 1.12.2's LocaleUtil.localize(String, Object...) for parameterized translations. */
+    public static String localize(String key, Object... args) {
+        String template = Language.getInstance().getOrDefault(key);
+        return String.format(template, args);
+    }
+
     /** Format MJ value for display (e.g. "5.00 MJ") */
     public static String localizeMj(long microMj) {
         double mj = microMj / (double) MjAPI.MJ;
@@ -34,6 +41,16 @@ public class LocaleUtil {
     /** Format heat level for display from a float value. */
     public static String localizeHeat(float heat) {
         return localizeHeat((double) heat);
+    }
+
+    /** Format RF stored for display (e.g. "5,000 / 10,000 RF"). */
+    public static String localizeRf(int current, int max) {
+        return String.format("%,d / %,d RF", current, max);
+    }
+
+    /** Format RF/t flow for display as RF/s (per second = ×20 ticks), matching 1.12 format. */
+    public static String localizeRfFlow(int rfPerTick) {
+        return String.format("%,d RF/s", rfPerTick * 20);
     }
 
     /** Format fluid flow for display (e.g. "40 mB/t"), matching 1.12.2's tooltip format. */

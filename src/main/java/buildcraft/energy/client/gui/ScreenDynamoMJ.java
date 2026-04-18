@@ -10,7 +10,7 @@ import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
-import buildcraft.lib.gui.ledger.LedgerEngine;
+import buildcraft.lib.gui.ledger.LedgerEngineFE;
 import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.misc.LocaleUtil;
@@ -20,7 +20,8 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
     private static final int SIZE_X = 176, SIZE_Y = 177;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_RF = new GuiIcon(TEXTURE, SIZE_X, 0, 16, 60);
-    private static final buildcraft.lib.gui.pos.GuiRectangle RECT_UPGRADE_TYPES = new buildcraft.lib.gui.pos.GuiRectangle(42, 20, 74, 20);
+    private static final buildcraft.lib.gui.pos.GuiRectangle RECT_UPGRADE_HELP = new buildcraft.lib.gui.pos.GuiRectangle(44, 44, 70, 16);
+    private static final buildcraft.lib.gui.pos.GuiRectangle RECT_UPGRADE_TOOLTIP = new buildcraft.lib.gui.pos.GuiRectangle(42, 20, 74, 20);
     private static final buildcraft.lib.gui.pos.GuiRectangle RECT_RF_BATTERY = new buildcraft.lib.gui.pos.GuiRectangle(138, 17, 8, 62);
 
     public ScreenDynamoMJ(ContainerDynamoMJ menu, Inventory playerInv, Component title) {
@@ -35,9 +36,9 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
                 true
             ));
 
-            mainGui.shownElements.add(new LedgerEngine(mainGui,
-                menu::getSyncedCurrentOutput,
-                menu::getSyncedPower, // For Dynamo this is the mj battery stored
+            mainGui.shownElements.add(new LedgerEngineFE(mainGui,
+                () -> (int) menu.getSyncedCurrentOutput(),
+                menu::getSyncedPower, // MJ battery stored — FE is visible in the GUI battery bar
                 menu::getSyncedHeat,
                 menu::getSyncedPowerStage,
                 menu::isSyncedBurningEngine,
@@ -47,17 +48,13 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
             mainGui.shownElements.add(new LedgerHelp(mainGui, false));
             
             mainGui.shownElements.add(new DummyHelpElement(
-                RECT_UPGRADE_TYPES.offset(mainGui.rootElement),
+                RECT_UPGRADE_HELP.offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.dynamo.upgrades.title", 0xFF_66_99_FF,
                     "buildcraft.help.dynamo.upgrades")
             ));
-            mainGui.shownElements.add(new DummyHelpElement(
-                RECT_RF_BATTERY.offset(mainGui.rootElement),
-                new ElementHelpInfo("buildcraft.help.dynamo.battery.title", 0xFF_33_AA_33,
-                    "buildcraft.help.dynamo.battery")
-            ));
 
-            mainGui.shownElements.add(new buildcraft.lib.gui.GuiElementSimple(mainGui, RECT_UPGRADE_TYPES.offset(mainGui.rootElement)) {
+
+            mainGui.shownElements.add(new buildcraft.lib.gui.GuiElementSimple(mainGui, RECT_UPGRADE_TOOLTIP.offset(mainGui.rootElement)) {
                 @Override
                 public void addToolTips(java.util.List<buildcraft.lib.gui.elem.ToolTip> tooltips) {
                     if (contains(mainGui.mouse)) {
@@ -76,6 +73,20 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
             });
             
             mainGui.shownElements.add(new buildcraft.lib.gui.GuiElementSimple(mainGui, RECT_RF_BATTERY.offset(mainGui.rootElement)) {
+                @Override
+                public void addHelpElements(java.util.List<ElementHelpInfo.HelpPosition> elements) {
+                    // Dynamic help text showing current conversion rate based on installed gears
+                    // "Converts X.XX MJ/s\nto Y RF/s"
+                    long mjPerTick = menu.dynamo.getMjPerTick();
+                    int rfPerTick = menu.dynamo.getFeProductionRate(mjPerTick);
+                    String mj = LocaleUtil.localizeMjFlow(mjPerTick);
+                    String rf = LocaleUtil.localizeRfFlow(rfPerTick);
+                    String conversion = LocaleUtil.localize("buildcraft.help.dynamo.battery", mj, rf);
+                    ElementHelpInfo help = ElementHelpInfo
+                        .preTranslated("buildcraft.help.dynamo.battery.title", 0xFF_33_AA_33, conversion);
+                    elements.add(help.target(this));
+                }
+
                 @Override
                 public void addToolTips(java.util.List<buildcraft.lib.gui.elem.ToolTip> tooltips) {
                     if (contains(mainGui.mouse)) {

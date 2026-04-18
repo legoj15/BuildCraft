@@ -20,7 +20,8 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
     private static final int SIZE_X = 176, SIZE_Y = 177;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_RF = new GuiIcon(TEXTURE, SIZE_X, 0, 16, 60);
-    private static final buildcraft.lib.gui.pos.GuiRectangle RECT_UPGRADE_TYPES = new buildcraft.lib.gui.pos.GuiRectangle(60, 20, 74, 20);
+    private static final buildcraft.lib.gui.pos.GuiRectangle RECT_UPGRADE_HELP = new buildcraft.lib.gui.pos.GuiRectangle(62, 44, 70, 16);
+    private static final buildcraft.lib.gui.pos.GuiRectangle RECT_UPGRADE_TOOLTIP = new buildcraft.lib.gui.pos.GuiRectangle(60, 20, 74, 20);
     private static final buildcraft.lib.gui.pos.GuiRectangle RECT_RF_BATTERY = new buildcraft.lib.gui.pos.GuiRectangle(30, 17, 8, 62);
 
     public ScreenEngineFE(ContainerEngineFE menu, Inventory playerInv, Component title) {
@@ -47,17 +48,13 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
             mainGui.shownElements.add(new LedgerHelp(mainGui, false));
             
             mainGui.shownElements.add(new DummyHelpElement(
-                RECT_UPGRADE_TYPES.offset(mainGui.rootElement),
+                RECT_UPGRADE_HELP.offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.rf_engine.upgrades.title", 0xFF_66_99_FF,
                     "buildcraft.help.rf_engine.upgrades")
             ));
-            mainGui.shownElements.add(new DummyHelpElement(
-                RECT_RF_BATTERY.offset(mainGui.rootElement),
-                new ElementHelpInfo("buildcraft.help.rf_engine.battery.title", 0xFF_33_AA_33,
-                    "buildcraft.help.rf_engine.battery")
-            ));
 
-            mainGui.shownElements.add(new buildcraft.lib.gui.GuiElementSimple(mainGui, RECT_UPGRADE_TYPES.offset(mainGui.rootElement)) {
+
+            mainGui.shownElements.add(new buildcraft.lib.gui.GuiElementSimple(mainGui, RECT_UPGRADE_TOOLTIP.offset(mainGui.rootElement)) {
                 @Override
                 public void addToolTips(java.util.List<buildcraft.lib.gui.elem.ToolTip> tooltips) {
                     if (contains(mainGui.mouse)) {
@@ -76,6 +73,20 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
             });
 
             mainGui.shownElements.add(new buildcraft.lib.gui.GuiElementSimple(mainGui, RECT_RF_BATTERY.offset(mainGui.rootElement)) {
+                @Override
+                public void addHelpElements(java.util.List<ElementHelpInfo.HelpPosition> elements) {
+                    // Dynamic help text showing current conversion rate based on installed gears
+                    // Matches 1.12.2: "Converts X RF to Y.YY MJ/s"
+                    int rfPerTick = menu.engine.getFeConsumptionRate();
+                    long mjPerTick = menu.engine.getMjPerTick();
+                    String rf = LocaleUtil.localizeRfFlow(rfPerTick);
+                    String mj = LocaleUtil.localizeMjFlow(mjPerTick);
+                    String conversion = LocaleUtil.localize("buildcraft.help.rf_engine.battery", rf, mj);
+                    ElementHelpInfo help = ElementHelpInfo
+                        .preTranslated("buildcraft.help.rf_engine.battery.title", 0xFF_33_AA_33, conversion);
+                    elements.add(help.target(this));
+                }
+
                 @Override
                 public void addToolTips(java.util.List<buildcraft.lib.gui.elem.ToolTip> tooltips) {
                     if (contains(mainGui.mouse)) {

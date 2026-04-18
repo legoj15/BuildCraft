@@ -24,3 +24,5 @@ Fix: Fixed gates and wire objects failing to drop when their parent pipe is brok
 Enhancement: Implemented fully functional Help ledgers for the MJ Dynamo and FE Engine GUI
 Fix: Enforced max 1 gear per upgrade slot on MJ Dynamo and FE Engine (4 slots = 4 gear max)
 Test: Added EnergyConverterTester gametest suite for upgrade slot filtering and upgrade effectiveness on both machines
+Fix: MJ Dynamo power ledger now displays RF output and RF stored instead of MJ, matching 1.12.2 behavior and showing the actual benefit of gear upgrades
+Enhancement: Battery help ledgers on MJ Dynamo and FE Engine now dynamically display the current conversion rate based on installed gears, matching 1.12.2

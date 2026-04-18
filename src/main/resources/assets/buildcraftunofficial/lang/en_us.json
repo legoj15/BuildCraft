@@ -577,11 +577,11 @@
     "direction.west": "West",
     "direction.center": "Center",
     "buildcraft.help.dynamo.upgrades.title": "Supported Upgrades",
-    "buildcraft.help.dynamo.upgrades": "This Dynamo can accept any combination of the displayed upgrades to increase its capabilities. Right-click the block with an upgrade to apply it.",
-    "buildcraft.help.dynamo.battery.title": "FE Power Battery",
-    "buildcraft.help.dynamo.battery": "Displays the current level of FE power stored inside the Dynamo's internal buffer.",
+    "buildcraft.help.dynamo.upgrades": "Upgrades increase the speed at which energy is converted. Place iron or gold gears into these slots.\n1 compatible gear per slot.",
+    "buildcraft.help.dynamo.battery.title": "RF Battery",
+    "buildcraft.help.dynamo.battery": "Converts %s\nto %s",
     "buildcraft.help.rf_engine.upgrades.title": "Supported Upgrades",
-    "buildcraft.help.rf_engine.upgrades": "This Engine can accept any combination of the displayed upgrades to increase its capabilities. Right-click the block with an upgrade to apply it.",
-    "buildcraft.help.rf_engine.battery.title": "FE Power Battery",
-    "buildcraft.help.rf_engine.battery": "Displays the current level of FE power stored inside the Engine's internal buffer."
+    "buildcraft.help.rf_engine.upgrades": "Upgrades increase the speed at which FE is consumed and MJ is produced. Place iron or gold gears into these slots.\n1 compatible gear per slot.",
+    "buildcraft.help.rf_engine.battery.title": "RF Battery",
+    "buildcraft.help.rf_engine.battery": "Converts %s\nto %s"
 }

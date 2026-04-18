@@ -56,6 +56,12 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_stirling_fuel"), () -> buildcraft.energy.EngineTester::testStirlingEngineFuel);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_stirling_explosion"), () -> buildcraft.energy.EngineTester::testStirlingEngineExplosion);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_combustion_stable"), () -> buildcraft.energy.EngineTester::testCombustionEngineStable);
+
+            // Energy Converter (Dynamo MJ + FE Engine)
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:dynamo_upgrade_slot_filtering"), () -> buildcraft.energy.EnergyConverterTester::testDynamoUpgradeSlotFiltering);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_fe_upgrade_slot_filtering"), () -> buildcraft.energy.EnergyConverterTester::testEngineFeUpgradeSlotFiltering);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:dynamo_upgrade_effectiveness"), () -> buildcraft.energy.EnergyConverterTester::testDynamoUpgradeEffectiveness);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_fe_upgrade_effectiveness"), () -> buildcraft.energy.EnergyConverterTester::testEngineFeUpgradeEffectiveness);
         }
     }
 }

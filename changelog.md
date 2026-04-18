@@ -22,3 +22,5 @@ Enhancement: Fleshed out Filtered Buffer's ledger Help integrations with dummy b
 Fix: Restored Shift-Click functionality to the Filtered Buffer by dropping broken placeholder implementations and permitting the generalized container logic to inherently read from the ItemHandlerFiltered ruleset
 Fix: Fixed gates and wire objects failing to drop when their parent pipe is broken in survival mode
 Enhancement: Implemented fully functional Help ledgers for the MJ Dynamo and FE Engine GUI
+Fix: Enforced max 1 gear per upgrade slot on MJ Dynamo and FE Engine (4 slots = 4 gear max)
+Test: Added EnergyConverterTester gametest suite for upgrade slot filtering and upgrade effectiveness on both machines

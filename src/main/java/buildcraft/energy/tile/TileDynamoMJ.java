@@ -64,6 +64,7 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
             initUpgrades();
             return UPGRADE_VALUES.containsKey(stack.getItem());
         });
+        upgrades.setLimitedInsertor(1);
     }
 
     public final SimpleEnergyHandler energyStorage = new SimpleEnergyHandler(MAX_FE, 0, MAX_FE) {

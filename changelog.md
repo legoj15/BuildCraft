@@ -30,3 +30,4 @@ Fix: Fixed a GUI bug where shift-clicking a stack into a max-1 slot bypassed the
 Fix: Fixed quarry rig collision phasing glitch caused by vanilla position-sync resetting the custom AABB to default 1x1 dimensions every few seconds
 Fix: Fixed oil well generation for modern world depth (minY=-64): sphere cavity no longer clips into the bedrock gradient, oil tube now actually generates between the cavity and bedrock (was broken by negative length), and the tube no longer replaces bedrock blocks with oil which could expose the void
 Fix: Fixed pump oil spring detection searching at Y=0 instead of the actual bedrock layer (minY=-64)
+Fixed an issue where Markers would not drop themselves as items when broken or washed away by fluids. 

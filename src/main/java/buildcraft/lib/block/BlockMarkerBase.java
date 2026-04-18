@@ -6,10 +6,14 @@ package buildcraft.lib.block;
 
 import net.minecraft.resources.Identifier;
 
+import java.util.Collections;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import net.minecraft.world.phys.AABB;
 
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.state.properties.Property;
@@ -148,4 +152,9 @@ public abstract class BlockMarkerBase extends Block implements EntityBlock {
     }
 
     public abstract BlockEntity createTileEntity(BlockPos pos, BlockState state);
+
+    @Override
+    protected List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
+        return Collections.singletonList(new ItemStack(this.asItem()));
+    }
 }

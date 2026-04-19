@@ -397,11 +397,20 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     }
 
 
+    /**
+     * Client-side tick: extrapolates power between 5-tick server syncs for smooth animation.
+     * The prev/current snapshots are taken each tick for sub-tick render interpolation.
+     * Power never goes backward thanks to the max() merge in {@link #receiveServerTaskData}.
+     *
+     * IMPORTANT: We must NOT call extractPower() on the client battery — it's a read-only mirror
+     * of the server's state. Instead we estimate the power increment from the stored value.
+     */
     public void clientTick() {
+        long stored = tile.getBattery().getStored();
         long max = Math.min(
             (long) (
                 MAX_POWER_PER_TICK *
-                    (double) (tile.getBattery().getStored() + MAX_POWER_PER_TICK / 10) /
+                    (double) (stored + MAX_POWER_PER_TICK / 10) /
                     (tile.getBattery().getCapacity() * 2)
             ),
             MAX_POWER_PER_TICK
@@ -411,8 +420,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         for (BreakTask task : clientBreakTasks) {
             prevClientBreakTasks.add(new BreakTask(task.pos, task.power));
             long target = task.getTarget();
-            if (task.power < target) {
-                task.power += tile.getBattery().extractPower(0, Math.min(target - task.power, max / Math.max(1, clientBreakTasks.size())));
+            if (stored > 0 && task.power < target) {
+                long increment = Math.min(target - task.power, max / Math.max(1, clientBreakTasks.size()));
+                task.power += Math.min(increment, stored);
             }
         }
 
@@ -420,8 +430,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         for (PlaceTask task : clientPlaceTasks) {
             prevClientPlaceTasks.add(new PlaceTask(task.pos, task.items, task.power));
             long target = task.getTarget();
-            if (clientBreakTasks.isEmpty() && task.power < target) {
-                task.power += tile.getBattery().extractPower(0, Math.min(target - task.power, max / Math.max(1, clientPlaceTasks.size())));
+            if (stored > 0 && clientBreakTasks.isEmpty() && task.power < target) {
+                long increment = Math.min(target - task.power, max / Math.max(1, clientPlaceTasks.size()));
+                task.power += Math.min(increment, stored);
             }
         }
 
@@ -478,6 +489,56 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             visualRobotPos = null;
             visualPrevRobotPos = null;
         }
+    }
+
+    /**
+     * Called on the client when new task data arrives from the server (via loadAdditional / block entity sync).
+     * For tasks that exist on both client and server, uses max(client, server) power so the animation
+     * never jumps backwards. New server tasks are added; tasks the server removed are dropped.
+     * This prevents the loop on power-cut (server stalls → max() keeps client's position) while
+     * still allowing the client to receive new/completed task transitions.
+     */
+    public void receiveServerTaskData(Queue<BreakTask> serverBreakTasks, Queue<PlaceTask> serverPlaceTasks) {
+        receiveServerTaskData(serverBreakTasks, serverPlaceTasks, clientBreakTasks, clientPlaceTasks);
+    }
+
+    /**
+     * Overload that accepts pre-saved client tasks for merging. This is needed when loadAdditional()
+     * calls updateBuildingInfo() (which clears all task lists via cancel()) before the merge runs.
+     * The caller saves clientBreakTasks/clientPlaceTasks beforehand and passes them here.
+     */
+    public void receiveServerTaskData(
+            Queue<BreakTask> serverBreakTasks, Queue<PlaceTask> serverPlaceTasks,
+            Iterable<BreakTask> savedClientBreak, Iterable<PlaceTask> savedClientPlace) {
+        // Merge break tasks: keep max(client, server) power for matching positions
+        Queue<BreakTask> mergedBreak = new ArrayDeque<>();
+        for (BreakTask serverTask : serverBreakTasks) {
+            long mergedPower = serverTask.power;
+            for (BreakTask clientTask : savedClientBreak) {
+                if (clientTask.pos.equals(serverTask.pos)) {
+                    mergedPower = Math.max(mergedPower, clientTask.power);
+                    break;
+                }
+            }
+            mergedBreak.add(new BreakTask(serverTask.pos, mergedPower));
+        }
+        clientBreakTasks.clear();
+        clientBreakTasks.addAll(mergedBreak);
+
+        // Merge place tasks: keep max(client, server) power for matching positions
+        Queue<PlaceTask> mergedPlace = new ArrayDeque<>();
+        for (PlaceTask serverTask : serverPlaceTasks) {
+            long mergedPower = serverTask.power;
+            for (PlaceTask clientTask : savedClientPlace) {
+                if (clientTask.pos.equals(serverTask.pos)) {
+                    mergedPower = Math.max(mergedPower, clientTask.power);
+                    break;
+                }
+            }
+            mergedPlace.add(new PlaceTask(serverTask.pos, serverTask.items, mergedPower));
+        }
+        clientPlaceTasks.clear();
+        clientPlaceTasks.addAll(mergedPlace);
     }
 
     @SuppressWarnings("WeakerAccess")

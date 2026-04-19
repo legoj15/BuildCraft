@@ -352,12 +352,13 @@ public class TileFiller extends TileBC_Neptune
         // Resources
         input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
 
-        // Save rendering lists BEFORE destroying the builder!
-        java.util.List<SnapshotBuilder<ITileForTemplateBuilder>.BreakTask> tempBreak = new java.util.ArrayList<>();
-        java.util.List<SnapshotBuilder<ITileForTemplateBuilder>.PlaceTask> tempPlace = new java.util.ArrayList<>();
+        // Save client task lists BEFORE updateBuildingInfo() clears them via cancel().
+        // These are needed for the max() merge in receiveServerTaskData to prevent backward animation jumps.
+        java.util.List<SnapshotBuilder<ITileForTemplateBuilder>.BreakTask> savedBreak = new java.util.ArrayList<>();
+        java.util.List<SnapshotBuilder<ITileForTemplateBuilder>.PlaceTask> savedPlace = new java.util.ArrayList<>();
         if (level != null && level.isClientSide() && builder != null) {
-            tempBreak.addAll(builder.clientBreakTasks);
-            tempPlace.addAll(builder.clientPlaceTasks);
+            savedBreak.addAll(builder.clientBreakTasks);
+            savedPlace.addAll(builder.clientPlaceTasks);
         }
 
         // Rebuild building info FIRST so the builder has fresh arrays before we restore state
@@ -368,30 +369,18 @@ public class TileFiller extends TileBC_Neptune
             // Restore server-side builder progress (checkResults, breakTasks, etc.)
             input.read("builderState", net.minecraft.nbt.CompoundTag.CODEC).ifPresent(builder::deserializeNBT);
 
-            // Restore client rendering tasks (break/place task lists for robot + laser visuals)
-            builder.prevClientBreakTasks.clear();
-            if (level != null && level.isClientSide()) {
-                builder.prevClientBreakTasks.addAll(tempBreak);
-            } else {
-                builder.prevClientBreakTasks.addAll(builder.clientBreakTasks);
-            }
-            builder.clientBreakTasks.clear();
-
-            builder.prevClientPlaceTasks.clear();
-            if (level != null && level.isClientSide()) {
-                builder.prevClientPlaceTasks.addAll(tempPlace);
-            } else {
-                builder.prevClientPlaceTasks.addAll(builder.clientPlaceTasks);
-            }
-            builder.clientPlaceTasks.clear();
-
+            // On the client, deserialize the server's task data and merge with saved client tasks
+            // using max(client, server) power to prevent backward animation jumps.
             input.read("builderClientData", net.minecraft.nbt.CompoundTag.CODEC).ifPresent(tag -> {
+                java.util.Queue<SnapshotBuilder<ITileForTemplateBuilder>.BreakTask> serverBreak = new java.util.ArrayDeque<>();
+                java.util.Queue<SnapshotBuilder<ITileForTemplateBuilder>.PlaceTask> serverPlace = new java.util.ArrayDeque<>();
                 buildcraft.lib.misc.NBTUtilBC.readCompoundList(tag.get("breakTasks"))
                     .map(cmp -> builder.new BreakTask(cmp))
-                    .forEach(builder.clientBreakTasks::add);
+                    .forEach(serverBreak::add);
                 buildcraft.lib.misc.NBTUtilBC.readCompoundList(tag.get("placeTasks"))
                     .map(cmp -> builder.new PlaceTask(cmp))
-                    .forEach(builder.clientPlaceTasks::add);
+                    .forEach(serverPlace::add);
+                builder.receiveServerTaskData(serverBreak, serverPlace, savedBreak, savedPlace);
             });
         }
 

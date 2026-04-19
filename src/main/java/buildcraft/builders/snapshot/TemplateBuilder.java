@@ -59,6 +59,9 @@ public class TemplateBuilder extends SnapshotBuilder<ITileForTemplateBuilder> {
 
     @Override
     protected boolean doPlaceTask(PlaceTask placeTask) {
+        if (placeTask.items == null || placeTask.items.isEmpty()) {
+            return false;
+        }
         net.minecraft.world.entity.player.Player fakePlayer = BuildCraftAPI.fakePlayerProvider.getFakePlayer(
             (ServerLevel) tile.getWorldBC(),
             tile.getOwner(),

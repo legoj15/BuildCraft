@@ -636,11 +636,20 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             items = ImmutableList.copyOf(
                 NBTUtilBC.readCompoundList(nbt.get("items"))
                     .map(tag -> {
-                        // In 1.21.11, can't parse without RegistryAccess —
-                        // this will need to be updated when full networking is wired
-                        return ItemStack.EMPTY;
+                        if (tag.contains("id")) {
+                            String idStr = tag.getString("id").orElse("");
+                            net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(idStr);
+                            if (id != null) {
+                                net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(id);
+                                if (item != null && item != net.minecraft.world.item.Items.AIR) {
+                                    return new net.minecraft.world.item.ItemStack(item, tag.getInt("count").orElse(1));
+                                }
+                            }
+                        }
+                        return net.minecraft.world.item.ItemStack.EMPTY;
                     })
-                    .collect(Collectors.toList())
+                    .filter(stack -> !stack.isEmpty())
+                    .collect(java.util.stream.Collectors.toList())
             );
             power = nbt.getLongOr("power", 0L);
         }
@@ -665,8 +674,17 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             nbt.putLong("pos_x", pos.getX());
             nbt.putLong("pos_y", pos.getY());
             nbt.putLong("pos_z", pos.getZ());
-            // Items can't be saved to CompoundTag directly without RegistryAccess in 1.21.11
-            // This will need registry-aware serialization when full save/load is wired
+            net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
+            for (net.minecraft.world.item.ItemStack stack : items) {
+                if (!stack.isEmpty()) {
+                    net.minecraft.nbt.CompoundTag itemNbt = new net.minecraft.nbt.CompoundTag();
+                    net.minecraft.resources.Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+                    itemNbt.putString("id", itemId.toString());
+                    itemNbt.putInt("count", stack.getCount());
+                    list.add(itemNbt);
+                }
+            }
+            nbt.put("items", list);
             nbt.putLong("power", power);
             return nbt;
         }

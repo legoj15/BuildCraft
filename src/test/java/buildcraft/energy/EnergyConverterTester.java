@@ -451,4 +451,70 @@ public class EnergyConverterTester {
             helper.succeed();
         });
     }
+
+    public static void testDynamoUpgradeBulkInsertion(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(2, 2, 2);
+        helper.setBlock(pos, BCEnergyBlocks.DYNAMO_MJ.get().defaultBlockState()
+                .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP));
+
+        helper.runAfterDelay(2, () -> {
+            TileDynamoMJ dynamo = helper.getBlockEntity(pos, TileDynamoMJ.class);
+            if (dynamo == null) {
+                throw new IllegalStateException("Failed to place MJ Dynamo!");
+            }
+
+            ItemStack fourGears = new ItemStack(BCCoreItems.GEAR_IRON.get(), 4);
+            ItemStack leftover = fourGears.copy();
+            for (int slot = 0; slot < dynamo.upgrades.getSlots(); slot++) {
+                if (leftover.isEmpty()) break;
+                leftover = dynamo.upgrades.insertItem(slot, leftover, false);
+            }
+
+            if (!leftover.isEmpty()) {
+                throw new IllegalStateException("Bulk insertion test failed for Dynamo. Leftover count: " + leftover.getCount());
+            }
+
+            for (int i = 0; i < 4; i++) {
+                ItemStack inSlot = dynamo.upgrades.getStackInSlot(i);
+                if (inSlot.isEmpty() || inSlot.getCount() != 1) {
+                    throw new IllegalStateException("Dynamo Slot " + i + " should contain 1 gear, but contains " + inSlot.getCount());
+                }
+            }
+
+            helper.succeed();
+        });
+    }
+
+    public static void testEngineFeUpgradeBulkInsertion(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(2, 2, 2);
+        helper.setBlock(pos, BCEnergyBlocks.ENGINE_FE.get().defaultBlockState()
+                .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP));
+
+        helper.runAfterDelay(2, () -> {
+            TileEngineFE engine = helper.getBlockEntity(pos, TileEngineFE.class);
+            if (engine == null) {
+                throw new IllegalStateException("Failed to place FE Engine!");
+            }
+
+            ItemStack fourGears = new ItemStack(BCCoreItems.GEAR_GOLD.get(), 4);
+            ItemStack leftover = fourGears.copy();
+            for (int slot = 0; slot < engine.upgrades.getSlots(); slot++) {
+                if (leftover.isEmpty()) break;
+                leftover = engine.upgrades.insertItem(slot, leftover, false);
+            }
+
+            if (!leftover.isEmpty()) {
+                throw new IllegalStateException("Bulk insertion test failed for FE Engine. Leftover count: " + leftover.getCount());
+            }
+
+            for (int i = 0; i < 4; i++) {
+                ItemStack inSlot = engine.upgrades.getStackInSlot(i);
+                if (inSlot.isEmpty() || inSlot.getCount() != 1) {
+                    throw new IllegalStateException("FE Engine Slot " + i + " should contain 1 gear, but contains " + inSlot.getCount());
+                }
+            }
+
+            helper.succeed();
+        });
+    }
 }

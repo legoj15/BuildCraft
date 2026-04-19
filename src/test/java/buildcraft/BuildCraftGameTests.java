@@ -62,6 +62,8 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_fe_upgrade_slot_filtering"), () -> buildcraft.energy.EnergyConverterTester::testEngineFeUpgradeSlotFiltering);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:dynamo_upgrade_effectiveness"), () -> buildcraft.energy.EnergyConverterTester::testDynamoUpgradeEffectiveness);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_fe_upgrade_effectiveness"), () -> buildcraft.energy.EnergyConverterTester::testEngineFeUpgradeEffectiveness);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:dynamo_bulk_insertion"), () -> buildcraft.energy.EnergyConverterTester::testDynamoUpgradeBulkInsertion);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_fe_bulk_insertion"), () -> buildcraft.energy.EnergyConverterTester::testEngineFeUpgradeBulkInsertion);
             
             // GUI Headless Tests
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gui_test_dynamo_upgrade"), () -> buildcraft.lib.test.gui.GuiTester::testDynamoUpgrade);

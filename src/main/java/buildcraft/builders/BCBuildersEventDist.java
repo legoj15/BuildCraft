@@ -266,12 +266,13 @@ public enum BCBuildersEventDist {
             // Render the robot doodad and its break lasers
             if (filler.builder != null) {
                 float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-                Vec3 robotPos = filler.builder.robotPos;
+                Vec3 robotPos = filler.builder.visualRobotPos;
                 if (robotPos != null) {
+                    System.out.println("RENDER FIRED! visualRobotPos exists! breakTasks size: " + filler.builder.clientBreakTasks.size());
                     // Interpolate robot position for smooth movement
-                    if (filler.builder.prevRobotPos != null) {
-                        robotPos = filler.builder.prevRobotPos.add(
-                            robotPos.subtract(filler.builder.prevRobotPos).scale(partialTicks)
+                    if (filler.builder.visualPrevRobotPos != null) {
+                        robotPos = filler.builder.visualPrevRobotPos.add(
+                            robotPos.subtract(filler.builder.visualPrevRobotPos).scale(partialTicks)
                         );
                     }
 

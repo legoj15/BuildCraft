@@ -236,9 +236,6 @@ public class TileFiller extends TileBC_Neptune
             SnapshotBuilder<?> b = getBuilder();
             if (b != null) {
                 b.clientTick();
-                if (level.getGameTime() % 20 == 0) {
-                    System.out.println("Client tick: robotPos=" + b.robotPos + " tasks=" + b.clientBreakTasks.size());
-                }
             }
             return;
         }
@@ -252,6 +249,9 @@ public class TileFiller extends TileBC_Neptune
         }
         SnapshotBuilder<?> b = getBuilder();
         if (b != null) {
+            if (level.getGameTime() % 5 == 1) {
+                b.onNetworkSync();
+            }
             boolean done = b.tick();
             if (done) {
                 finished = true;
@@ -361,19 +361,15 @@ public class TileFiller extends TileBC_Neptune
             builder.prevClientBreakTasks.clear();
             builder.prevClientBreakTasks.addAll(builder.clientBreakTasks);
             builder.clientBreakTasks.clear();
-            
-            builder.prevClientPlaceTasks.clear();
-            builder.prevClientPlaceTasks.addAll(builder.clientPlaceTasks);
-            builder.clientPlaceTasks.clear();
-            
-            input.read("builderClientData", net.minecraft.nbt.CompoundTag.CODEC).ifPresent(tag -> {
+
+            input.read("builderClientData", net.minecraft.nbt.CompoundTag.CODEC).ifPresentOrElse(tag -> {
                 buildcraft.lib.misc.NBTUtilBC.readCompoundList(tag.get("breakTasks"))
                     .map(cmp -> builder.new BreakTask(cmp))
                     .forEach(builder.clientBreakTasks::add);
                 buildcraft.lib.misc.NBTUtilBC.readCompoundList(tag.get("placeTasks"))
                     .map(cmp -> builder.new PlaceTask(cmp))
                     .forEach(builder.clientPlaceTasks::add);
-            });
+            }, () -> {});
         }
 
         // Rebuild building info after loading

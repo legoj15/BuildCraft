@@ -55,6 +55,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     // Replaced WorldEventListenerAdapter with polling approach (approved in plan review)
     public final Queue<BreakTask> breakTasks = new ArrayDeque<>();
     public final Queue<BreakTask> clientBreakTasks = new ArrayDeque<>();
+    public final java.util.Set<BreakTask> clientBreakTasksCache = new java.util.HashSet<>();
     @SuppressWarnings("WeakerAccess")
     public final Queue<BreakTask> prevClientBreakTasks = new ArrayDeque<>();
     public final Queue<PlaceTask> placeTasks = new ArrayDeque<>();
@@ -68,8 +69,13 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     private int[] placeOrder;
     private int[] checkOrder;
     private int currentCheckIndex;
-    public Vec3 robotPos = null;
-    public Vec3 prevRobotPos = null;
+    /** The visual position of the robot for rendering. Updated over the network every 5 ticks. */
+    public Vec3 robotPos;
+    public Vec3 prevRobotPos;
+
+    /** The smoothed local representation of the robot on the client. */
+    public Vec3 visualRobotPos;
+    public Vec3 visualPrevRobotPos;
     public int leftToBreak = 0;
     public int leftToPlace = 0;
 
@@ -208,43 +214,6 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      * @return true if building is finished, false otherwise
      */
     public boolean tick() {
-        if (tile.getWorldBC().isClientSide()) {
-            prevClientBreakTasks.clear();
-            prevClientBreakTasks.addAll(clientBreakTasks);
-            clientBreakTasks.clear();
-            clientBreakTasks.addAll(breakTasks);
-            prevClientPlaceTasks.clear();
-            prevClientPlaceTasks.addAll(clientPlaceTasks);
-            clientPlaceTasks.clear();
-            clientPlaceTasks.addAll(placeTasks);
-            prevRobotPos = robotPos;
-            if (!breakTasks.isEmpty()) {
-                Vec3 newRobotPos = breakTasks.stream()
-                    .map(breakTask -> breakTask.pos)
-                    .map(Vec3::atLowerCornerOf)
-                    .map(VecUtil.VEC_HALF::add)
-                    .reduce(Vec3.ZERO, Vec3::add)
-                    .scale(1D / breakTasks.size());
-                newRobotPos = new Vec3(
-                    newRobotPos.x,
-                    breakTasks.stream()
-                        .map(breakTask -> breakTask.pos)
-                        .mapToDouble(BlockPos::getY)
-                        .max()
-                        .orElse(newRobotPos.y),
-                    newRobotPos.z
-                );
-                newRobotPos = newRobotPos.add(new Vec3(0, 3, 0));
-                Vec3 oldRobotPos = robotPos;
-                robotPos = newRobotPos;
-                if (oldRobotPos != null) {
-                    robotPos = oldRobotPos.add(newRobotPos.subtract(oldRobotPos).scale(1 / 4D));
-                }
-            } else {
-                robotPos = null;
-            }
-            return false;
-        }
 
         boolean checkResultsChanged = false;
 
@@ -338,6 +307,8 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             }
         }
 
+
+
         // Execute tasks
         long max = Math.min(
             (long) (
@@ -364,6 +335,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                     )
                 );
                 if (breakTask.power >= target) {
+                    clientBreakTasksCache.add(breakTask);
                     tile.getWorldBC().destroyBlockProgress(
                         breakTask.pos.hashCode(),
                         breakTask.pos,
@@ -383,6 +355,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                     }
                     iterator.remove();
                 } else {
+                    clientBreakTasksCache.add(breakTask);
                     tile.getWorldBC().destroyBlockProgress(
                         breakTask.pos.hashCode(),
                         breakTask.pos,
@@ -423,6 +396,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         return isDone;
     }
 
+
     public void clientTick() {
         prevClientBreakTasks.clear();
         prevClientBreakTasks.addAll(clientBreakTasks);
@@ -453,7 +427,6 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                 robotPos = oldRobotPos.add(newRobotPos.subtract(oldRobotPos).scale(1 / 4D));
             }
         } else if (!clientPlaceTasks.isEmpty()) {
-            // Optional place tasks logic for robot visual centering
             Vec3 newRobotPos = clientPlaceTasks.stream()
                 .map(placeTask -> placeTask.pos)
                 .map(Vec3::atLowerCornerOf)
@@ -469,8 +442,21 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         } else {
             robotPos = null;
         }
-    }
 
+        visualPrevRobotPos = visualRobotPos;
+
+        if (robotPos != null) {
+            if (visualRobotPos == null) {
+                visualRobotPos = robotPos;
+                visualPrevRobotPos = robotPos;
+            } else {
+                visualRobotPos = visualRobotPos.add(robotPos.subtract(visualRobotPos).scale(0.25D));
+            }
+        } else {
+            visualRobotPos = null;
+            visualPrevRobotPos = null;
+        }
+    }
 
     @SuppressWarnings("WeakerAccess")
     protected int posToIndex(BlockPos blockPos) {
@@ -538,9 +524,13 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
 
     public CompoundTag serializeClientNBT() {
         CompoundTag nbt = new CompoundTag();
-        nbt.put("breakTasks", NBTUtilBC.writeCompoundList(breakTasks.stream().map(BreakTask::writeToNBT)));
+        nbt.put("breakTasks", NBTUtilBC.writeCompoundList(clientBreakTasksCache.stream().map(BreakTask::writeToNBT)));
         nbt.put("placeTasks", NBTUtilBC.writeCompoundList(placeTasks.stream().map(PlaceTask::writeToNBT)));
         return nbt;
+    }
+
+    public void onNetworkSync() {
+        clientBreakTasksCache.clear();
     }
 
     public void deserializeNBT(CompoundTag nbt) {

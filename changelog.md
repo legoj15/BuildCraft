@@ -7,7 +7,9 @@
 - Ported tooltips for the Filler, Builder, Architect Table, and Electronic Library from 1.12.2.
 - Added tooltip to unpainted Paintbrushes to clarify they can strip paint from pipes.
 - Added "Not usable in survival" tooltip to the Replacer block.
-- Added usage tooltips to the Quarry and Mining Well blocks.Fix: Registered NeoForge Item capabilities for Filtered Buffer to allow transport pipes to connect
+- Added usage tooltips to the Quarry and Mining Well blocks.
+- Fixed an issue where the Filtered Buffer would not allow transport pipes to connect.
+- Fixed a regression in the BuildCraft Filler where the robot and lasers would fail to render when unpowered or idle.
 Fix: Restored GUI slot background textures for the Filtered Buffer
 Fix: Added gui.json atlas to correctly stitch slot sprite backgrounds
 Fix: Corrected GUI atlas JSON path to merge with the vanilla minecraft namespace instead of creating a custom atlas

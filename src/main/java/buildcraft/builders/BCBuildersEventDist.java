@@ -268,7 +268,6 @@ public enum BCBuildersEventDist {
                 float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
                 Vec3 robotPos = filler.builder.visualRobotPos;
                 if (robotPos != null) {
-                    System.out.println("RENDER FIRED! visualRobotPos exists! breakTasks size: " + filler.builder.clientBreakTasks.size());
                     // Interpolate robot position for smooth movement
                     if (filler.builder.visualPrevRobotPos != null) {
                         robotPos = filler.builder.visualPrevRobotPos.add(

@@ -306,8 +306,9 @@ public class TileFiller extends TileBC_Neptune
         // Resources
         output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
 
-        // Visual tasks for client rendering
+        // Builder state for persistence + client rendering data
         if (builder != null) {
+            output.store("builderState", net.minecraft.nbt.CompoundTag.CODEC, builder.serializeNBT());
             output.store("builderClientData", net.minecraft.nbt.CompoundTag.CODEC, builder.serializeClientNBT());
         }
 
@@ -356,24 +357,32 @@ public class TileFiller extends TileBC_Neptune
         // Resources
         input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
 
-        // Visual tasks for client rendering
+        // Rebuild building info FIRST so the builder has fresh arrays before we restore state
+        updateBuildingInfo();
+
+        // Restore full builder state (for disk persistence) and client rendering tasks
         if (builder != null) {
+            // Restore server-side builder progress (checkResults, breakTasks, etc.)
+            input.read("builderState", net.minecraft.nbt.CompoundTag.CODEC).ifPresent(builder::deserializeNBT);
+
+            // Restore client rendering tasks (break/place task lists for robot + laser visuals)
             builder.prevClientBreakTasks.clear();
             builder.prevClientBreakTasks.addAll(builder.clientBreakTasks);
             builder.clientBreakTasks.clear();
 
-            input.read("builderClientData", net.minecraft.nbt.CompoundTag.CODEC).ifPresentOrElse(tag -> {
+            builder.prevClientPlaceTasks.clear();
+            builder.prevClientPlaceTasks.addAll(builder.clientPlaceTasks);
+            builder.clientPlaceTasks.clear();
+
+            input.read("builderClientData", net.minecraft.nbt.CompoundTag.CODEC).ifPresent(tag -> {
                 buildcraft.lib.misc.NBTUtilBC.readCompoundList(tag.get("breakTasks"))
                     .map(cmp -> builder.new BreakTask(cmp))
                     .forEach(builder.clientBreakTasks::add);
                 buildcraft.lib.misc.NBTUtilBC.readCompoundList(tag.get("placeTasks"))
                     .map(cmp -> builder.new PlaceTask(cmp))
                     .forEach(builder.clientPlaceTasks::add);
-            }, () -> {});
+            });
         }
-
-        // Rebuild building info after loading
-        updateBuildingInfo();
 
         // Owner
         Optional<ValueInput> ownerInputOpt = input.child("owner");

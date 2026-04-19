@@ -92,6 +92,19 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
         super(BCBuildersBlockEntities.ARCHITECT.get(), pos, state);
     }
 
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        buildcraft.builders.BCBuildersEventDist.INSTANCE.invalidateArchitectTable(this);
+    }
+
+    @Override
+    public void clearRemoved() {
+        super.clearRemoved();
+        buildcraft.builders.BCBuildersEventDist.INSTANCE.validateArchitectTable(this);
+    }
+
+
     public void onPlacedBy(@Nullable LivingEntity placer, ItemStack stack) {
         if (level == null || level.isClientSide()) return;
 
@@ -131,6 +144,11 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
             BlockState state2 = level.getBlockState(worldPosition);
             state2 = state2.setValue(BlockArchitectTable.PROP_VALID, Boolean.FALSE);
             level.setBlock(worldPosition, state2, 3);
+        }
+
+        setChanged();
+        if (level != null && !level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }
 

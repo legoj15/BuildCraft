@@ -23,6 +23,7 @@ public class BCBuildersClient {
                 event -> {
                     BCBuildersEventDist.INSTANCE.renderAllQuarries(event);
                     BCBuildersEventDist.INSTANCE.renderAllFillers(event);
+                    BCBuildersEventDist.INSTANCE.renderAllArchitectTables(event);
                 });
         NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent.class,
                 event -> {

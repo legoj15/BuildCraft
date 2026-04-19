@@ -31,6 +31,7 @@ import buildcraft.lib.client.sprite.SpriteHolderRegistry;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.VecUtil;
 
+import buildcraft.builders.tile.TileArchitectTable;
 import buildcraft.builders.tile.TileFiller;
 import buildcraft.builders.tile.TileQuarry;
 import buildcraft.core.client.BuildCraftLaserManager;
@@ -76,6 +77,26 @@ public enum BCBuildersEventDist {
 
     private final Map<Level, Deque<WeakReference<TileQuarry>>> allQuarries = new WeakHashMap<>();
     private final Map<Level, Deque<WeakReference<TileFiller>>> allFillers = new WeakHashMap<>();
+    private final Map<Level, Deque<WeakReference<TileArchitectTable>>> allArchitectTables = new WeakHashMap<>();
+
+    public synchronized void validateArchitectTable(TileArchitectTable table) {
+        Deque<WeakReference<TileArchitectTable>> tables =
+            allArchitectTables.computeIfAbsent(table.getLevel(), k -> new LinkedList<>());
+        tables.add(new WeakReference<>(table));
+    }
+
+    public synchronized void invalidateArchitectTable(TileArchitectTable table) {
+        Deque<WeakReference<TileArchitectTable>> tables = allArchitectTables.get(table.getLevel());
+        if (tables == null) return;
+        Iterator<WeakReference<TileArchitectTable>> iter = tables.iterator();
+        while (iter.hasNext()) {
+            WeakReference<TileArchitectTable> ref = iter.next();
+            TileArchitectTable t = ref.get();
+            if (t == null || t == table) {
+                iter.remove();
+            }
+        }
+    }
 
     public synchronized void validateQuarry(TileQuarry quarry) {
         Deque<WeakReference<TileQuarry>> quarries =
@@ -233,6 +254,35 @@ public enum BCBuildersEventDist {
         } else {
             // No drill yet — show the whole frame box as laser outline (caution stripes)
             LaserBoxRenderer.renderLaserBoxStatic(poseStack, tile.frameBox, BuildCraftLaserManager.STRIPES_WRITE, true, false, cameraPos);
+        }
+    }
+
+    /** Called from RenderLevelStageEvent to render architect table laser box outlines. */
+    public void renderAllArchitectTables(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+
+        Deque<WeakReference<TileArchitectTable>> tables = allArchitectTables.get(mc.level);
+        if (tables == null || tables.isEmpty()) return;
+
+        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
+        PoseStack poseStack = event.getPoseStack();
+
+        Iterator<WeakReference<TileArchitectTable>> iter = tables.iterator();
+        while (iter.hasNext()) {
+            WeakReference<TileArchitectTable> ref = iter.next();
+            TileArchitectTable table = ref.get();
+            if (table == null || table.isRemoved()) {
+                iter.remove();
+                continue;
+            }
+            if (table.getIsValid() && table.markerBox && table.box.isInitialized()) {
+                LaserBoxRenderer.renderLaserBoxStatic(
+                    poseStack, table.box,
+                    BuildCraftLaserManager.STRIPES_READ,
+                    true, false, cameraPos
+                );
+            }
         }
     }
 

@@ -561,8 +561,21 @@ public class TileFiller extends TileBC_Neptune
 
     @Override
     public void setPattern(IFillerPattern pattern, IStatementParameter[] params) {
-        patternStatement.set(pattern, params);
-        finished = false;
+        boolean changed = patternStatement.get() != pattern;
+        if (!changed && params != null) {
+            IStatementParameter[] currentParams = patternStatement.getParameters();
+            for (int i = 0; i < params.length && i < currentParams.length; i++) {
+                if (currentParams[i] != params[i]) {
+                    changed = true;
+                    break;
+                }
+            }
+        }
+        
+        if (changed) {
+            patternStatement.set(pattern, params);
+            onStatementChange();
+        }
         lockedTicks = 3;
     }
 

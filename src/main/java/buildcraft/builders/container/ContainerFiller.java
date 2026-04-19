@@ -225,6 +225,10 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
                 if (isClient) {
                     patternStatementClient.readFromBuffer(buffer);
                 } else if (tile != null) {
+                    if (tile.isLocked()) {
+                        valuesChanged(); // Sync correct state back to client
+                        return;
+                    }
                     buildcraft.lib.statement.FullStatement<IFillerPattern> stat = getPatternStatement();
                     if (stat != null) {
                         stat.readFromBuffer(buffer);

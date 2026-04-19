@@ -144,6 +144,12 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
     }
 
     @Override
+    protected void containerTick() {
+        super.containerTick();
+        menu.getPatternStatementClient().canInteract = !menu.getSyncedLocked();
+    }
+
+    @Override
     protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
         graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
 

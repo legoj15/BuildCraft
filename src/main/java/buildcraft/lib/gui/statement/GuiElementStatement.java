@@ -73,7 +73,7 @@ public class GuiElementStatement<S extends IStatement> extends GuiElementSimple
 
     @Override
     public boolean canSet(S value) {
-        return ref.canSet(value);
+        return ref.canInteract && ref.canSet(value);
     }
 
     @Override

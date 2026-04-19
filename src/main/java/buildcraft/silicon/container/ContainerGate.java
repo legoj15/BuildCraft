@@ -211,6 +211,11 @@ public class ContainerGate extends ContainerBC_Neptune {
                     }
                 }
                 refreshPossibleGroups();
+
+                // Sync connections from server (matches the booleans written in sendStatementsToClient)
+                for (int i = 0; i < gate.connections.length; i++) {
+                    gate.connections[i] = buffer.readBoolean();
+                }
             }
         }
     }

@@ -81,7 +81,6 @@ public class BCBuildersStatements {
     }
 
     public static void preInit() {
-        // BCBuildersActionProvider is not yet ported
-        // StatementManager.registerActionProvider(BCBuildersActionProvider.INSTANCE);
+        StatementManager.registerActionProvider(BCBuildersActionProvider.INSTANCE);
     }
 }

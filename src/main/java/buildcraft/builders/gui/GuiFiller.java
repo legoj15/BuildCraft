@@ -113,6 +113,34 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
                 }
             }
         });
+
+        // Mode icon tooltip element
+        IGuiArea controlModeArea = new GuiRectangle(28, 16, 16, 16).offset(mainGui.rootElement);
+        mainGui.shownElements.add(new buildcraft.lib.gui.GuiElementSimple(mainGui, controlModeArea) {
+            @Override
+            public void addToolTips(List<ToolTip> tooltips) {
+                if (contains(mainGui.mouse)) {
+                    buildcraft.api.tiles.IControllable.Mode mode = menu.getSyncedMode();
+                    if (mode != buildcraft.api.tiles.IControllable.Mode.ON) {
+                        String key = "gate.action.machine." + mode.name().toLowerCase(java.util.Locale.ROOT);
+                        tooltips.add(new ToolTip(buildcraft.lib.misc.LocaleUtil.localize(key)));
+                    }
+                }
+            }
+        });
+
+        // Lock icon tooltip element
+        IGuiArea lockArea = new GuiRectangle(12, 16, 16, 16).offset(mainGui.rootElement);
+        mainGui.shownElements.add(new buildcraft.lib.gui.GuiElementSimple(mainGui, lockArea) {
+            @Override
+            public void addToolTips(List<ToolTip> tooltips) {
+                if (contains(mainGui.mouse)) {
+                    if (menu.getSyncedLocked()) {
+                        tooltips.add(new ToolTip("Locked"));
+                    }
+                }
+            }
+        });
     }
 
     @Override
@@ -136,7 +164,7 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
         new GuiIcon(TEXTURE, invertU, invertV, 16, 16).drawAt(leftPos + 152, topPos + 40);
 
         if (menu.getSyncedLocked()) {
-            new GuiIcon(Identifier.parse("buildcraftunofficial:textures/gui/icons/lock.png"), 0, 0, 16, 16).drawAt(leftPos + 12, topPos + 16);
+            new GuiIcon(Identifier.parse("buildcraftlib:textures/icons/lock.png"), 0, 0, 16, 16).drawAt(leftPos + 12, topPos + 16);
         }
     }
 

@@ -25,7 +25,7 @@ import buildcraft.builders.snapshot.Template;
 public enum FillerRegistry implements IFillerRegistry {
     INSTANCE;
 
-    private final Map<String, IFillerPattern> patterns = new HashMap<>();
+    private final Map<String, IFillerPattern> patterns = new java.util.LinkedHashMap<>();
 
     @Override
     public void addPattern(IFillerPattern pattern) {

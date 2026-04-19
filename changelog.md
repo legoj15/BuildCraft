@@ -45,3 +45,4 @@ Fixed an issue where Markers would not drop themselves as items when broken or w
 Enhancement: Restored full Filler block functionality: volume box detection on placement, TemplateBuilder integration for automated block placement/breaking, persistent 27-slot resource inventory, and owner tracking. The Filler GUI now opens when placed adjacent to volume markers.
 Feature: Completely rebuilt the Filler GUI from the deprecated 1.12.2 JSON framework to the modern GuiBC8 system, restoring Pattern Statement slots, parameter fields, toggles, and the custom progress ledger readout
 Fix: Resolved a compile error in TileFiller where generic types for the client rendering task lists conflicted with the TemplateBuilder's inner classes
+Fix: Reordered the patterns in the Filler GUI to perfectly match the 1.12.2 layout

@@ -47,3 +47,4 @@ Feature: Completely rebuilt the Filler GUI from the deprecated 1.12.2 JSON frame
 Fix: Resolved a compile error in TileFiller where generic types for the client rendering task lists conflicted with the TemplateBuilder's inner classes
 Fix: Reordered the patterns in the Filler GUI to perfectly match the 1.12.2 layout
 Fix: Restored the missing Ownership ledger to the Filler GUI and repaired the clipped vertical spacing/overlapping within the Filler's Progress ledger
+Fix: Restored visual rendering of Gate-controlled machine mode icons (Loop/Off) in the Filler GUI

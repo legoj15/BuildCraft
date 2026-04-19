@@ -67,6 +67,15 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
                     // Draw the "not set" slot background at 32x32
                     GuiElementStatement.ICON_SLOT_NOT_SET.drawAt(x, y);
                 }
+
+                // Draw control mode icon (Loop/Off) from gates
+                buildcraft.api.tiles.IControllable.Mode mode = menu.getSyncedMode();
+                if (mode != buildcraft.api.tiles.IControllable.Mode.ON) {
+                    buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder holder = buildcraft.core.BCCoreSprites.ACTION_MACHINE_CONTROL.get(mode);
+                    if (holder != null && holder.get() != null) {
+                        GuiIcon.drawAt(holder.get(), x + 16, y, 16);
+                    }
+                }
             }
         });
 

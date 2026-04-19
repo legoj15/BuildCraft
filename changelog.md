@@ -46,3 +46,4 @@ Enhancement: Restored full Filler block functionality: volume box detection on p
 Feature: Completely rebuilt the Filler GUI from the deprecated 1.12.2 JSON framework to the modern GuiBC8 system, restoring Pattern Statement slots, parameter fields, toggles, and the custom progress ledger readout
 Fix: Resolved a compile error in TileFiller where generic types for the client rendering task lists conflicted with the TemplateBuilder's inner classes
 Fix: Reordered the patterns in the Filler GUI to perfectly match the 1.12.2 layout
+Fix: Restored the missing Ownership ledger to the Filler GUI and repaired the clipped vertical spacing/overlapping within the Filler's Progress ledger

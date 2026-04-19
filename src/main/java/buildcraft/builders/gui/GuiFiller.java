@@ -37,6 +37,13 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
     protected void initGuiElements() {
         mainGui.shownElements.add(new GuiElementStatementDrag(mainGui));
 
+        if (menu.tile != null) {
+            mainGui.shownElements.add(new buildcraft.lib.gui.ledger.LedgerOwnership(mainGui,
+                () -> menu.tile != null ? menu.tile.getOwner() : null,
+                true
+            ));
+        }
+
         mainGui.shownElements.add(new LedgerHelp(mainGui, false));
 
         mainGui.shownElements.add(new LedgerFillerProgress(mainGui, menu));

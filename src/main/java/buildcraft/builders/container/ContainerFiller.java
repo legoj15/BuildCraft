@@ -50,13 +50,61 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
         new buildcraft.lib.statement.StatementContext.StatementGroup<IFillerPattern>() {
             @Override
             public java.util.List<IFillerPattern> getValues() {
-                return new java.util.ArrayList<>(buildcraft.builders.registry.FillerRegistry.INSTANCE.getPatterns());
+                return java.util.Arrays.asList(
+                    buildcraft.builders.BCBuildersStatements.PATTERN_NONE,
+                    buildcraft.builders.BCBuildersStatements.PATTERN_BOX,
+                    buildcraft.builders.BCBuildersStatements.PATTERN_CLEAR,
+                    buildcraft.builders.BCBuildersStatements.PATTERN_FILL
+                );
             }
-
+            @Override public buildcraft.lib.gui.ISimpleDrawable getSourceIcon() { return null; }
+        },
+        new buildcraft.lib.statement.StatementContext.StatementGroup<IFillerPattern>() {
             @Override
-            public buildcraft.lib.gui.ISimpleDrawable getSourceIcon() {
-                return null;
+            public java.util.List<IFillerPattern> getValues() {
+                return java.util.Arrays.asList(
+                    buildcraft.builders.BCBuildersStatements.PATTERN_FRAME,
+                    buildcraft.builders.BCBuildersStatements.PATTERN_PYRAMID,
+                    buildcraft.builders.BCBuildersStatements.PATTERN_SPHERE,
+                    buildcraft.builders.BCBuildersStatements.PATTERN_EIGHTH_SPHERE
+                );
             }
+            @Override public buildcraft.lib.gui.ISimpleDrawable getSourceIcon() { return null; }
+        },
+        new buildcraft.lib.statement.StatementContext.StatementGroup<IFillerPattern>() {
+            @Override
+            public java.util.List<IFillerPattern> getValues() {
+                return java.util.Arrays.asList(
+                    buildcraft.builders.BCBuildersStatements.PATTERN_HEMI_SPHERE,
+                    buildcraft.builders.BCBuildersStatements.PATTERN_QUARTER_SPHERE,
+                    buildcraft.builders.BCBuildersStatements.PATTERN_STAIRS
+                );
+            }
+            @Override public buildcraft.lib.gui.ISimpleDrawable getSourceIcon() { return null; }
+        },
+        new buildcraft.lib.statement.StatementContext.StatementGroup<IFillerPattern>() {
+            @Override
+            public java.util.List<IFillerPattern> getValues() {
+                return java.util.Arrays.asList(
+                    buildcraft.builders.BCBuildersStatements.PATTERN_ARC,
+                    buildcraft.builders.BCBuildersStatements.PATTERN_CIRCLE,
+                    buildcraft.builders.BCBuildersStatements.PATTERN_HEXAGON,
+                    buildcraft.builders.BCBuildersStatements.PATTERN_OCTAGON
+                );
+            }
+            @Override public buildcraft.lib.gui.ISimpleDrawable getSourceIcon() { return null; }
+        },
+        new buildcraft.lib.statement.StatementContext.StatementGroup<IFillerPattern>() {
+            @Override
+            public java.util.List<IFillerPattern> getValues() {
+                return java.util.Arrays.asList(
+                    buildcraft.builders.BCBuildersStatements.PATTERN_PENTAGON,
+                    buildcraft.builders.BCBuildersStatements.PATTERN_SEMI_CIRCLE,
+                    buildcraft.builders.BCBuildersStatements.PATTERN_SQUARE,
+                    buildcraft.builders.BCBuildersStatements.PATTERN_TRIANGLE
+                );
+            }
+            @Override public buildcraft.lib.gui.ISimpleDrawable getSourceIcon() { return null; }
         }
     );
 

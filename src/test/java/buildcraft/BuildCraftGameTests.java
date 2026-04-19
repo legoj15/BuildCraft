@@ -70,6 +70,9 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gui_test_filler_ui"), () -> buildcraft.lib.test.gui.GuiTester::testFillerUI);
             // Slot Tests
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:slot_max_stack_size"), () -> buildcraft.lib.gui.SlotBaseTester::testSlotMaxStackSize);
+
+            // Filler Inventory Filtering
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:filler_block_item_filter"), () -> buildcraft.builders.FillerInventoryTester::testFillerBlockItemFilter);
         }
     }
 }

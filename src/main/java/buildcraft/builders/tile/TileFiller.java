@@ -112,7 +112,13 @@ public class TileFiller extends TileBC_Neptune
 
     public TileFiller(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.FILLER.get(), pos, state);
-        invResources = itemManager.addInvHandler("resources", INV_SIZE, EnumAccess.INSERT, EnumPipePart.VALUES);
+        invResources = itemManager.addInvHandler(
+            "resources",
+            INV_SIZE,
+            (slot, stack) -> stack.getItem() instanceof net.minecraft.world.item.BlockItem,
+            EnumAccess.INSERT,
+            EnumPipePart.VALUES
+        );
         invResources.setCallback((handler, slot, before, after) -> {
             this.setChanged();
             if (level != null && !level.isClientSide()) {

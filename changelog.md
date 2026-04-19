@@ -62,3 +62,5 @@ Fix: Fixed a visual bug where the Filler's internal inventory count would flicke
 
 - Replaced deprecated AbstractContainerScreen GUI getter methods with their modern getters to fix compilation removal warnings.
 - Enhancement: Ported the contextual Help Ledger text for the Filler block (Excavate, Invert, Mode, Locked) from 1.12.2.
+- Fix: Restored the 1.12.2 Filler inventory filter that only accepts block-type items. Previously, any item (swords, sticks, ingots, etc.) could be placed into the Filler's resource slots, causing it to attempt building with unbuildable items. The filter now checks for BlockItem instances, matching the original ItemBlocks.getList() behavior.
+- Test: Added FillerInventoryTester game test to verify both block items are accepted and non-block items are rejected by the Filler's inventory.

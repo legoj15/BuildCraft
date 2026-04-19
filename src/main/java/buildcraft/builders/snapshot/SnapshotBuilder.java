@@ -57,7 +57,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     public final Queue<BreakTask> clientBreakTasks = new ArrayDeque<>();
     @SuppressWarnings("WeakerAccess")
     public final Queue<BreakTask> prevClientBreakTasks = new ArrayDeque<>();
-    private final Queue<PlaceTask> placeTasks = new ArrayDeque<>();
+    public final Queue<PlaceTask> placeTasks = new ArrayDeque<>();
     public final Queue<PlaceTask> clientPlaceTasks = new ArrayDeque<>();
     @SuppressWarnings("WeakerAccess")
     public final Queue<PlaceTask> prevClientPlaceTasks = new ArrayDeque<>();
@@ -420,18 +420,26 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             afterChecks();
         }
 
-        // Compute robotPos on the server so it can be synced to the client
+        return isDone;
+    }
+
+    public void clientTick() {
+        prevClientBreakTasks.clear();
+        prevClientBreakTasks.addAll(clientBreakTasks);
+        prevClientPlaceTasks.clear();
+        prevClientPlaceTasks.addAll(clientPlaceTasks);
+
         prevRobotPos = robotPos;
-        if (!breakTasks.isEmpty()) {
-            Vec3 newRobotPos = breakTasks.stream()
+        if (!clientBreakTasks.isEmpty()) {
+            Vec3 newRobotPos = clientBreakTasks.stream()
                 .map(breakTask -> breakTask.pos)
                 .map(Vec3::atLowerCornerOf)
                 .map(VecUtil.VEC_HALF::add)
                 .reduce(Vec3.ZERO, Vec3::add)
-                .scale(1D / breakTasks.size());
+                .scale(1D / clientBreakTasks.size());
             newRobotPos = new Vec3(
                 newRobotPos.x,
-                breakTasks.stream()
+                clientBreakTasks.stream()
                     .map(breakTask -> breakTask.pos)
                     .mapToDouble(BlockPos::getY)
                     .max()
@@ -444,14 +452,14 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             if (oldRobotPos != null) {
                 robotPos = oldRobotPos.add(newRobotPos.subtract(oldRobotPos).scale(1 / 4D));
             }
-        } else if (!placeTasks.isEmpty()) {
-            // Also show robot when placing
-            Vec3 newRobotPos = placeTasks.stream()
+        } else if (!clientPlaceTasks.isEmpty()) {
+            // Optional place tasks logic for robot visual centering
+            Vec3 newRobotPos = clientPlaceTasks.stream()
                 .map(placeTask -> placeTask.pos)
                 .map(Vec3::atLowerCornerOf)
                 .map(VecUtil.VEC_HALF::add)
                 .reduce(Vec3.ZERO, Vec3::add)
-                .scale(1D / placeTasks.size());
+                .scale(1D / clientPlaceTasks.size());
             newRobotPos = newRobotPos.add(new Vec3(0, 3, 0));
             Vec3 oldRobotPos = robotPos;
             robotPos = newRobotPos;
@@ -461,9 +469,8 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         } else {
             robotPos = null;
         }
-
-        return isDone;
     }
+
 
     @SuppressWarnings("WeakerAccess")
     protected int posToIndex(BlockPos blockPos) {
@@ -532,6 +539,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     public CompoundTag serializeClientNBT() {
         CompoundTag nbt = new CompoundTag();
         nbt.put("breakTasks", NBTUtilBC.writeCompoundList(breakTasks.stream().map(BreakTask::writeToNBT)));
+        nbt.put("placeTasks", NBTUtilBC.writeCompoundList(placeTasks.stream().map(PlaceTask::writeToNBT)));
         return nbt;
     }
 

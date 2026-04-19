@@ -228,11 +228,17 @@ public class TileFiller extends TileBC_Neptune
 
     // ==================== Tick ====================
 
+    private int prevBreakTasksSize = -1;
+
     public void tick() {
         if (level == null) return;
         if (level.isClientSide()) {
-            // Client: just update pattern interactability
+            // Client: update pattern interactability and compute smooth robot visual interpolations
             patternStatement.canInteract = !isLocked();
+            SnapshotBuilder<?> b = getBuilder();
+            if (b != null) {
+                b.clientTick();
+            }
             return;
         }
         battery.tick(level, worldPosition);
@@ -249,8 +255,8 @@ public class TileFiller extends TileBC_Neptune
             if (done) {
                 finished = true;
             }
-            // Sync robotPos to client periodically
-            if (level.getGameTime() % 5 == 0) {
+            if (b.breakTasks.size() != prevBreakTasksSize) {
+                prevBreakTasksSize = b.breakTasks.size();
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
             }
         }
@@ -300,16 +306,9 @@ public class TileFiller extends TileBC_Neptune
         // Resources
         output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
 
-        // Robot position and visual tasks for client rendering
+        // Visual tasks for client rendering
         if (builder != null) {
-            if (builder.robotPos != null) {
-                output.putDouble("robotX", builder.robotPos.x);
-                output.putDouble("robotY", builder.robotPos.y);
-                output.putDouble("robotZ", builder.robotPos.z);
-            }
-            if (!builder.breakTasks.isEmpty()) {
-                output.store("breakTasks", net.minecraft.nbt.CompoundTag.CODEC, builder.serializeClientNBT());
-            }
+            output.store("builderClientData", net.minecraft.nbt.CompoundTag.CODEC, builder.serializeClientNBT());
         }
 
         // Owner
@@ -357,26 +356,23 @@ public class TileFiller extends TileBC_Neptune
         // Resources
         input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
 
-        // Robot pos and tasks for client rendering
+        // Visual tasks for client rendering
         if (builder != null) {
-            double rx = input.getDoubleOr("robotX", Double.NaN);
-            double ry = input.getDoubleOr("robotY", Double.NaN);
-            double rz = input.getDoubleOr("robotZ", Double.NaN);
-            if (!Double.isNaN(rx) && !Double.isNaN(ry) && !Double.isNaN(rz)) {
-                builder.prevRobotPos = builder.robotPos;
-                builder.robotPos = new net.minecraft.world.phys.Vec3(rx, ry, rz);
-            } else {
-                builder.robotPos = null;
-                builder.prevRobotPos = null;
-            }
-
             builder.prevClientBreakTasks.clear();
             builder.prevClientBreakTasks.addAll(builder.clientBreakTasks);
             builder.clientBreakTasks.clear();
-            input.read("breakTasks", net.minecraft.nbt.CompoundTag.CODEC).ifPresent(tag -> {
+            
+            builder.prevClientPlaceTasks.clear();
+            builder.prevClientPlaceTasks.addAll(builder.clientPlaceTasks);
+            builder.clientPlaceTasks.clear();
+            
+            input.read("builderClientData", net.minecraft.nbt.CompoundTag.CODEC).ifPresent(tag -> {
                 buildcraft.lib.misc.NBTUtilBC.readCompoundList(tag.get("breakTasks"))
                     .map(cmp -> builder.new BreakTask(cmp))
                     .forEach(builder.clientBreakTasks::add);
+                buildcraft.lib.misc.NBTUtilBC.readCompoundList(tag.get("placeTasks"))
+                    .map(cmp -> builder.new PlaceTask(cmp))
+                    .forEach(builder.clientPlaceTasks::add);
             });
         }
 

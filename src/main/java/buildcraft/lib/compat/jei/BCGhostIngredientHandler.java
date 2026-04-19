@@ -48,9 +48,8 @@ public class BCGhostIngredientHandler<T extends GuiBC8<?>> implements IGhostIngr
             Slot slot = container.slots.get(i);
             if (slot instanceof IPhantomSlot) {
                 final int slotIndex = i;
-                // Slot coordinates are GUI-relative; convert to screen coordinates
-                int x = gui.getGuiLeft() + slot.x;
-                int y = gui.getGuiTop() + slot.y;
+                int x = gui.getLeftPos() + slot.x;
+                int y = gui.getTopPos() + slot.y;
                 targets.add(new PhantomSlotTarget<>(container, slotIndex, x, y));
             }
         }

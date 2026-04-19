@@ -92,3 +92,8 @@ tasks.named('jar') {
     archiveVersion = project.mod_version
 
 }
+
+task dumpMethods(type: JavaExec) {
+    mainClass = 'buildcraft.TestDump'
+    classpath = sourceSets.main.runtimeClasspath
+}

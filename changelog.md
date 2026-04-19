@@ -61,3 +61,4 @@ Fix: Fixed a visual bug where the Filler's internal inventory count would flicke
 - Fix: Fixed the Gate connector button (the vertical link between logic slots on Iron AND and higher gates) being a no-op. AbstractContainerScreen.mouseClicked() was swallowing the click before the connector hit-test could run. Reordered mouse handling to check connector buttons first and added optimistic client-side state update for instant visual feedback. Also fixed initial connection state sync when the Gate GUI is opened.
 
 - Replaced deprecated AbstractContainerScreen GUI getter methods with their modern getters to fix compilation removal warnings.
+- Enhancement: Ported the contextual Help Ledger text for the Filler block (Excavate, Invert, Mode, Locked) from 1.12.2.

@@ -22,6 +22,8 @@ import buildcraft.lib.gui.statement.GuiElementStatementParam;
 import buildcraft.lib.gui.statement.GuiElementStatementSource;
 import buildcraft.lib.gui.statement.GuiElementStatementDrag;
 import buildcraft.lib.gui.ledger.LedgerHelp;
+import buildcraft.lib.gui.help.ElementHelpInfo;
+import buildcraft.lib.gui.help.ElementHelpInfo.HelpPosition;
 import buildcraft.lib.misc.LocaleUtil;
 
 import java.util.List;
@@ -100,6 +102,11 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
                     tooltips.add(new ToolTip(LocaleUtil.localize(key)));
                 }
             }
+
+            @Override
+            public void addHelpElements(List<HelpPosition> elements) {
+                elements.add(new ElementHelpInfo("buildcraft.help.filler.excavate.title", 0xFFCCAA88, "buildcraft.help.filler.excavate.desc").target(this));
+            }
         });
 
         // Invert button tooltip element
@@ -111,6 +118,11 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
                     String key = menu.isInverted() ? "tip.filler.invert.on" : "tip.filler.invert.off";
                     tooltips.add(new ToolTip(LocaleUtil.localize(key)));
                 }
+            }
+
+            @Override
+            public void addHelpElements(List<HelpPosition> elements) {
+                elements.add(new ElementHelpInfo("buildcraft.help.filler.invert.title", 0xFFCCAA88, "buildcraft.help.filler.invert.desc").target(this));
             }
         });
 
@@ -127,6 +139,11 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
                     }
                 }
             }
+
+            @Override
+            public void addHelpElements(List<HelpPosition> elements) {
+                elements.add(new ElementHelpInfo("buildcraft.help.filler.mode.title", 0xFF33BBFF, "buildcraft.help.filler.mode.desc1", "buildcraft.help.filler.mode.desc2").target(this));
+            }
         });
 
         // Lock icon tooltip element
@@ -139,6 +156,11 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
                         tooltips.add(new ToolTip("Locked"));
                     }
                 }
+            }
+
+            @Override
+            public void addHelpElements(List<HelpPosition> elements) {
+                elements.add(new ElementHelpInfo("buildcraft.help.filler.locked.title", 0xFFFFBB33, "buildcraft.help.filler.locked.desc").target(this));
             }
         });
     }

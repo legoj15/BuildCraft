@@ -680,5 +680,14 @@
     "tip.filler.excavate.on": "Excavate",
     "tip.filler.excavate.off": "Do Not Excavate",
     "tip.filler.invert.on": "Invert",
-    "tip.filler.invert.off": "Do Not Invert"
+    "tip.filler.invert.off": "Do Not Invert",
+    "buildcraft.help.filler.excavate.title": "Excavate",
+    "buildcraft.help.filler.excavate.desc": "If the selected pattern should hollow out the shape and clear the interior before building.",
+    "buildcraft.help.filler.locked.title": "Locked",
+    "buildcraft.help.filler.locked.desc": "Shows a lock if the pattern is forced by a nearby pipe gate.",
+    "buildcraft.help.filler.mode.title": "Control mode",
+    "buildcraft.help.filler.mode.desc1": "Either ON, OFF, or LOOP.",
+    "buildcraft.help.filler.mode.desc2": "Set by gates.",
+    "buildcraft.help.filler.invert.title": "Invert",
+    "buildcraft.help.filler.invert.desc": "If the selected pattern should be inverted, building blocks outside the defined shape."
 }

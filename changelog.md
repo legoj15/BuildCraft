@@ -54,3 +54,4 @@ Fix: Fixed a visual bug where the Filler's internal inventory count would flicke
 - Fix: Restored legacy 1.12.2 block breaking particles and sound effects for the Filler (and other Builder logic) by migrating from world.removeBlock back to world.destroyBlock.
 - Fix: Fixed a bug where players could not top up existing item stacks in the Filler's resource inventory via the GUI. The root cause was SlotBase.getMaxStackSize(ItemStack) returning remaining insertion capacity instead of total slot capacity, causing vanilla's container logic to reject items when the slot was partially filled. This affected all BuildCraft containers using SlotBase.
 - Test: Added bulk insertion gameTests to verify 4 gears can be distributed across FE Engine and MJ Dynamo upgrade slots automatically.
+- Fix: Enforced maximum stack size of 1 on the FE Engine and MJ Dynamo GUI upgrade slots, preventing mouse dropping or shift-clicking an entire stack of gears into a single slot.

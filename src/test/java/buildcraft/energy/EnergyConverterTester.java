@@ -452,7 +452,7 @@ public class EnergyConverterTester {
         });
     }
 
-    public static void testDynamoUpgradeBulkInsertion(GameTestHelper helper) {
+    public static void testDynamoUpgradeGUIInsertion(GameTestHelper helper) {
         BlockPos pos = new BlockPos(2, 2, 2);
         helper.setBlock(pos, BCEnergyBlocks.DYNAMO_MJ.get().defaultBlockState()
                 .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP));
@@ -463,29 +463,38 @@ public class EnergyConverterTester {
                 throw new IllegalStateException("Failed to place MJ Dynamo!");
             }
 
+            net.minecraft.world.entity.player.Player mockPlayer = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            buildcraft.energy.container.ContainerDynamoMJ container = new buildcraft.energy.container.ContainerDynamoMJ(0, mockPlayer.getInventory(), dynamo);
+            
+            // Player inventory starts at slot 4 in the container. Let's put 4 gears there.
+            int playerSlot = 4;
             ItemStack fourGears = new ItemStack(BCCoreItems.GEAR_IRON.get(), 4);
-            ItemStack leftover = fourGears.copy();
-            for (int slot = 0; slot < dynamo.upgrades.getSlots(); slot++) {
-                if (leftover.isEmpty()) break;
-                leftover = dynamo.upgrades.insertItem(slot, leftover, false);
-            }
+            container.getSlot(playerSlot).set(fourGears);
 
-            if (!leftover.isEmpty()) {
-                throw new IllegalStateException("Bulk insertion test failed for Dynamo. Leftover count: " + leftover.getCount());
-            }
+            // Shift click (quick move) the stack
+            container.quickMoveStack(mockPlayer, playerSlot);
 
+            // Verify no upgrade slot has more than 1 gear
+            int inserted = 0;
             for (int i = 0; i < 4; i++) {
-                ItemStack inSlot = dynamo.upgrades.getStackInSlot(i);
-                if (inSlot.isEmpty() || inSlot.getCount() != 1) {
-                    throw new IllegalStateException("Dynamo Slot " + i + " should contain 1 gear, but contains " + inSlot.getCount());
+                ItemStack inSlot = container.getSlot(i).getItem();
+                inserted += inSlot.getCount();
+                if (inSlot.getCount() > 1) {
+                    throw new IllegalStateException("Dynamo Slot " + i + " contains > 1 gear! Found: " + inSlot.getCount() + ". Shift-click bypassing max stack limits.");
                 }
+            }
+            
+            if (inserted == 0) {
+                throw new IllegalStateException("quickMoveStack didn't move any gears!");
+            } else if (inserted < fourGears.getCount()) {
+                throw new IllegalStateException("quickMoveStack didn't move ALL gears! Only moved " + inserted);
             }
 
             helper.succeed();
         });
     }
 
-    public static void testEngineFeUpgradeBulkInsertion(GameTestHelper helper) {
+    public static void testEngineFeUpgradeGUIInsertion(GameTestHelper helper) {
         BlockPos pos = new BlockPos(2, 2, 2);
         helper.setBlock(pos, BCEnergyBlocks.ENGINE_FE.get().defaultBlockState()
                 .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP));
@@ -496,22 +505,29 @@ public class EnergyConverterTester {
                 throw new IllegalStateException("Failed to place FE Engine!");
             }
 
+            net.minecraft.world.entity.player.Player mockPlayer = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            buildcraft.energy.container.ContainerEngineFE container = new buildcraft.energy.container.ContainerEngineFE(0, mockPlayer.getInventory(), engine);
+
+            int playerSlot = 4;
             ItemStack fourGears = new ItemStack(BCCoreItems.GEAR_GOLD.get(), 4);
-            ItemStack leftover = fourGears.copy();
-            for (int slot = 0; slot < engine.upgrades.getSlots(); slot++) {
-                if (leftover.isEmpty()) break;
-                leftover = engine.upgrades.insertItem(slot, leftover, false);
-            }
+            container.getSlot(playerSlot).set(fourGears);
 
-            if (!leftover.isEmpty()) {
-                throw new IllegalStateException("Bulk insertion test failed for FE Engine. Leftover count: " + leftover.getCount());
-            }
+            // Shift click
+            container.quickMoveStack(mockPlayer, playerSlot);
 
+            int inserted = 0;
             for (int i = 0; i < 4; i++) {
-                ItemStack inSlot = engine.upgrades.getStackInSlot(i);
-                if (inSlot.isEmpty() || inSlot.getCount() != 1) {
-                    throw new IllegalStateException("FE Engine Slot " + i + " should contain 1 gear, but contains " + inSlot.getCount());
+                ItemStack inSlot = container.getSlot(i).getItem();
+                inserted += inSlot.getCount();
+                if (inSlot.getCount() > 1) {
+                    throw new IllegalStateException("FE Engine Slot " + i + " contains > 1 gear! Found: " + inSlot.getCount() + ". Shift-click bypassing limits.");
                 }
+            }
+            
+            if (inserted == 0) {
+                throw new IllegalStateException("quickMoveStack didn't move any gears!");
+            } else if (inserted < fourGears.getCount()) {
+                throw new IllegalStateException("quickMoveStack didn't move ALL gears! Only moved " + inserted);
             }
 
             helper.succeed();

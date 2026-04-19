@@ -69,7 +69,17 @@ public class ContainerEngineFE extends ContainerBC_Neptune {
 
         if (engine != null) {
             for (int slot = 0; slot < 4; slot++) {
-                addSlot(new buildcraft.lib.gui.slot.SlotBase(engine.upgrades, slot, 62 + 18 * slot, 44));
+                addSlot(new buildcraft.lib.gui.slot.SlotBase(engine.upgrades, slot, 62 + 18 * slot, 44) {
+                    @Override
+                    public int getMaxStackSize() {
+                        return 1;
+                    }
+
+                    @Override
+                    public int getMaxStackSize(net.minecraft.world.item.ItemStack stack) {
+                        return 1;
+                    }
+                });
             }
         }
 

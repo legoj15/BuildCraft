@@ -298,10 +298,7 @@ public class TileFiller extends TileBC_Neptune
         }
 
         // Pattern statement
-        IFillerPattern pattern = patternStatement.get();
-        if (pattern != null) {
-            output.putString("patternTag", pattern.getUniqueTag());
-        }
+        output.store("patternStatement", CompoundTag.CODEC, patternStatement.writeToNbt());
 
         // Resources
         output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
@@ -349,10 +346,7 @@ public class TileFiller extends TileBC_Neptune
         }
 
         // Pattern statement
-        String patternTag = input.getStringOr("patternTag", "");
-        if (!patternTag.isEmpty()) {
-            // TODO: resolve pattern from FillerManager.registry when fully wired
-        }
+        input.read("patternStatement", CompoundTag.CODEC).ifPresent(patternStatement::readFromNbt);
 
         // Resources
         input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);

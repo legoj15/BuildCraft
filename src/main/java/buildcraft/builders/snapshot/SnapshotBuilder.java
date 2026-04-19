@@ -538,6 +538,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     }
 
     public void deserializeNBT(CompoundTag nbt) {
+        if (getBuildingInfo() == null) {
+            return;
+        }
         updateSnapshot();
         checkResults = nbt.getByteArray("checkResults").orElse(new byte[0]);
         breakTasks.clear();

@@ -228,8 +228,6 @@ public class TileFiller extends TileBC_Neptune
 
     // ==================== Tick ====================
 
-    private int prevBreakTasksSize = -1;
-
     public void tick() {
         if (level == null) return;
         if (level.isClientSide()) {
@@ -238,6 +236,9 @@ public class TileFiller extends TileBC_Neptune
             SnapshotBuilder<?> b = getBuilder();
             if (b != null) {
                 b.clientTick();
+                if (level.getGameTime() % 20 == 0) {
+                    System.out.println("Client tick: robotPos=" + b.robotPos + " tasks=" + b.clientBreakTasks.size());
+                }
             }
             return;
         }
@@ -255,8 +256,7 @@ public class TileFiller extends TileBC_Neptune
             if (done) {
                 finished = true;
             }
-            if (b.breakTasks.size() != prevBreakTasksSize) {
-                prevBreakTasksSize = b.breakTasks.size();
+            if (level.getGameTime() % 5 == 0) {
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
             }
         }

@@ -159,11 +159,11 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
 
         addDataSlots(this.data);
 
-        // 27 resource slots in a 3x9 grid starting at (7, 84) — matches 1.12.2 layout
+        // 27 resource slots in a 3x9 grid
         if (tile != null) {
             for (int sy = 0; sy < 3; sy++) {
                 for (int sx = 0; sx < 9; sx++) {
-                    addSlot(new SlotBase(tile.invResources, sx + sy * 9, 8 + sx * 18, 84 + sy * 18));
+                    addSlot(new SlotBase(tile.invResources, sx + sy * 9, 8 + sx * 18, 85 + sy * 18));
                 }
             }
         }

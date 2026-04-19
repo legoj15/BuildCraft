@@ -275,17 +275,33 @@ public enum BCBuildersEventDist {
                         );
                     }
 
-                    // Render a beam from the filler block center to the robot (the "tether")
-                    Vec3 fillerCenter = Vec3.atCenterOf(filler.getBlockPos());
-                    LaserRenderer_BC8.renderLaserStatic(poseStack,
-                        new LaserData_BC8(
-                            BuildCraftLaserManager.POWER_LOW,
-                            fillerCenter,
-                            robotPos,
-                            1 / 16D
-                        ),
-                        cameraPos
-                    );
+                    // Render robot cube
+                    net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
+                    com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+
+                    poseStack.pushPose();
+                    poseStack.translate(robotPos.x - cameraPos.x, robotPos.y - cameraPos.y, robotPos.z - cameraPos.z);
+                    int worldLight = buildcraft.lib.client.render.laser.LaserRenderer_BC8.computeLightmap(robotPos.x, robotPos.y, robotPos.z, 0);
+
+                    int i = 0;
+                    for (net.minecraft.core.Direction face : net.minecraft.core.Direction.values()) {
+                        buildcraft.lib.client.model.ModelUtil.createFace(
+                            face,
+                            new org.joml.Vector3f(0f, 0f, 0f),
+                            new org.joml.Vector3f(4 / 16F, 4 / 16F, 4 / 16F),
+                            new buildcraft.lib.client.model.ModelUtil.UvFaceData(
+                                buildcraft.builders.BCBuildersSprites.ROBOT.getInterpU((i * 8) / 64D),
+                                buildcraft.builders.BCBuildersSprites.ROBOT.getInterpV(0 / 64D),
+                                buildcraft.builders.BCBuildersSprites.ROBOT.getInterpU(((i + 1) * 8) / 64D),
+                                buildcraft.builders.BCBuildersSprites.ROBOT.getInterpV(8 / 64D)
+                            )
+                        )
+                        .lighti(worldLight)
+                        .render(poseStack.last(), buffer);
+                        i++;
+                    }
+                    poseStack.popPose();
+                    bufferSource.endBatch();
 
                     // Render break lasers from robot to each break task position
                     for (buildcraft.builders.snapshot.SnapshotBuilder.BreakTask breakTask : filler.builder.clientBreakTasks) {

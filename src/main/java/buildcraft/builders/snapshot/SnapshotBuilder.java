@@ -415,11 +415,12 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                 task.power += tile.getBattery().extractPower(0, Math.min(target - task.power, max / Math.max(1, clientBreakTasks.size())));
             }
         }
+
         prevClientPlaceTasks.clear();
         for (PlaceTask task : clientPlaceTasks) {
             prevClientPlaceTasks.add(new PlaceTask(task.pos, task.items, task.power));
             long target = task.getTarget();
-            if (task.power < target) {
+            if (clientBreakTasks.isEmpty() && task.power < target) {
                 task.power += tile.getBattery().extractPower(0, Math.min(target - task.power, max / Math.max(1, clientPlaceTasks.size())));
             }
         }

@@ -16,7 +16,7 @@
 - Disabled directional shadowing on Marker and robot lasers to restore full emissive visibility even in the dark.
 - Fixed an issue where dragging a pattern into the Filler GUI would visually revert back to None upon reopening the interface.
 - Resolved a 'Network Protocol Error' crash in the internal server loop when attempting to override an active filler configuration with an invalid PlaceTask queue.
-- Restored the classic 1.12.2 block-throwing placement animation for the BuildCraft Filler using a SubmitCustomGeometryEvent integration, bypassing 1.21.11 ItemRender constraints, and disabled the robot visualization during filling tasks for legacy parity.
+- Restored the classic 1.12.2 block-throwing placement animation for the BuildCraft Filler using a SubmitCustomGeometryEvent integration, bypassing 1.21.11 ItemRender constraints, and disabled the robot visualization during filling tasks for legacy parity. Fixes also included mitigating animation stutter by implementing client-side target power extrapolation.
 Fix: Restored GUI slot background textures for the Filtered Buffer
 Fix: Added gui.json atlas to correctly stitch slot sprite backgrounds
 Fix: Corrected GUI atlas JSON path to merge with the vanilla minecraft namespace instead of creating a custom atlas
@@ -42,3 +42,4 @@ Fix: Fixed pump oil spring detection searching at Y=0 instead of the actual bedr
 Fixed an issue where Markers would not drop themselves as items when broken or washed away by fluids. 
 Enhancement: Restored full Filler block functionality: volume box detection on placement, TemplateBuilder integration for automated block placement/breaking, persistent 27-slot resource inventory, and owner tracking. The Filler GUI now opens when placed adjacent to volume markers.
 Feature: Completely rebuilt the Filler GUI from the deprecated 1.12.2 JSON framework to the modern GuiBC8 system, restoring Pattern Statement slots, parameter fields, toggles, and the custom progress ledger readout
+Fix: Resolved a compile error in TileFiller where generic types for the client rendering task lists conflicted with the TemplateBuilder's inner classes

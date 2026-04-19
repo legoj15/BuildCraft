@@ -322,6 +322,7 @@ public class TileFiller extends TileBC_Neptune
         super.loadAdditional(input);
         // Battery
         long stored = input.getLongOr("battery_mj", 0L);
+        battery.extractAll();
         battery.addPower(stored, false);
         canExcavate = input.getBooleanOr("canExcavate", true);
         inverted = input.getBooleanOr("inverted", false);
@@ -351,6 +352,14 @@ public class TileFiller extends TileBC_Neptune
         // Resources
         input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
 
+        // Save rendering lists BEFORE destroying the builder!
+        java.util.List<SnapshotBuilder<ITileForTemplateBuilder>.BreakTask> tempBreak = new java.util.ArrayList<>();
+        java.util.List<SnapshotBuilder<ITileForTemplateBuilder>.PlaceTask> tempPlace = new java.util.ArrayList<>();
+        if (level != null && level.isClientSide() && builder != null) {
+            tempBreak.addAll(builder.clientBreakTasks);
+            tempPlace.addAll(builder.clientPlaceTasks);
+        }
+
         // Rebuild building info FIRST so the builder has fresh arrays before we restore state
         updateBuildingInfo();
 
@@ -361,11 +370,19 @@ public class TileFiller extends TileBC_Neptune
 
             // Restore client rendering tasks (break/place task lists for robot + laser visuals)
             builder.prevClientBreakTasks.clear();
-            builder.prevClientBreakTasks.addAll(builder.clientBreakTasks);
+            if (level != null && level.isClientSide()) {
+                builder.prevClientBreakTasks.addAll(tempBreak);
+            } else {
+                builder.prevClientBreakTasks.addAll(builder.clientBreakTasks);
+            }
             builder.clientBreakTasks.clear();
 
             builder.prevClientPlaceTasks.clear();
-            builder.prevClientPlaceTasks.addAll(builder.clientPlaceTasks);
+            if (level != null && level.isClientSide()) {
+                builder.prevClientPlaceTasks.addAll(tempPlace);
+            } else {
+                builder.prevClientPlaceTasks.addAll(builder.clientPlaceTasks);
+            }
             builder.clientPlaceTasks.clear();
 
             input.read("builderClientData", net.minecraft.nbt.CompoundTag.CODEC).ifPresent(tag -> {

@@ -353,7 +353,7 @@ public enum BCBuildersEventDist {
                         .filter(task -> task.pos.equals(placeTask.pos))
                         .map(filler.builder::getPlaceTaskItemPos)
                         .findFirst()
-                        .orElse(filler.builder.getPlaceTaskItemPos(filler.builder.new PlaceTask(placeTask.pos, java.util.Collections.emptyList(), 0L)));
+                        .orElse(filler.builder.getPlaceTaskItemPos(placeTask));
                     
                     Vec3 pos = prevPos.add(filler.builder.getPlaceTaskItemPos(placeTask).subtract(prevPos).scale(partialTicks));
                     int light = buildcraft.lib.client.render.laser.LaserRenderer_BC8.computeLightmap(pos.x, pos.y, pos.z, 0);

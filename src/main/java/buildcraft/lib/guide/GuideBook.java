@@ -24,7 +24,9 @@ public final class GuideBook {
         Identifier itemIcon = Identifier.parse("buildcraftunofficial:guide_main");
         // Read title from JSON, falling back to name
         String titleStr = json.has("title") ? json.get("title").getAsString() : name.toString();
-        Component title = Component.literal(titleStr);
+        // Titles in book.txt scripts are translation keys (e.g. "buildcraft.guide.book.buildcraftcore_main").
+        // Use Component.translatable so the localized display name is shown, not the raw key.
+        Component title = Component.translatable(titleStr);
         boolean addAll = json.has("all_entries") ? json.get("all_entries").getAsBoolean() : true;
         return new GuideBook(name, itemIcon, title, addAll);
     }

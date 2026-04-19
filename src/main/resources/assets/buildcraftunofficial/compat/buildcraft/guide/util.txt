@@ -26,16 +26,26 @@ alias statement 4 `add_basic "%2" "statement" "%0" "%1" \`,
     "statement": "%3"
 \``
 
-alias item 3 `item_stack "item" "%0" "%1" "%2"`
+// 2-arg form used by guide.txt for placeholder entries: `item "placeholder/name" "mod:stack"`
+// Registers directly via `add`, preserving the full path so loadLangInternal finds the .md file.
+alias item 2 `add "%0" \`{
+    "type": "item_stack",
+    "book": "${0}",
+    "tag_type": "placeholder",
+    "tag_subtype": "",
+    "stack": "%1"
+}\``
+// 3-arg form used transitively by item_tool/item_gear/item_plug aliases
+alias item_typed 3 `item_stack "item" "%0" "%1" "%2"`
 alias block_full 3 `item_stack "block" "%0" "%1" "%2"`
 alias block 2 `item_stack "block" "%0" "%1" "buildcraftunofficial:%1"`
 alias pipe 3 `item_stack "pipe" "%0" "%1" "%2"`
 alias trigger 3 `statement "trigger" "%0" "%1" "%2"`
 alias action 3 `statement "action" "%0" "%1" "%2"`
 
-alias item_tool 2 `item "tool" "%0" "%1"`
-alias item_gear 2 `item "gear" "%0" "%1"`
-alias item_plug 2 `item "pipe_plug" "%0" "%1"`
+alias item_tool 2 `item_typed "tool" "%0" "%1"`
+alias item_gear 2 `item_typed "gear" "%0" "%1"`
+alias item_plug 2 `item_typed "pipe_plug" "%0" "%1"`
 alias pipe_item 2 `pipe "pipe_item" "%0" "%1"`
 alias pipe_fluid 2 `pipe "pipe_fluid" "%0" "%1"`
 // no "pipe_power" - no point writing the pages as they will be gone soonish :)

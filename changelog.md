@@ -48,3 +48,4 @@ Fix: Resolved a compile error in TileFiller where generic types for the client r
 Fix: Reordered the patterns in the Filler GUI to perfectly match the 1.12.2 layout
 Fix: Restored the missing Ownership ledger to the Filler GUI and repaired the clipped vertical spacing/overlapping within the Filler's Progress ledger
 Fix: Restored visual rendering of Gate-controlled machine mode icons (Loop/Off) in the Filler GUI
+Fix: Fixed an issue where the Filler's Invert and Excavate GUI buttons required a world reload to recalculate building tasks by explicitly forcing immediate statement evaluation and syncing.

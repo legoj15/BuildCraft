@@ -244,6 +244,8 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
         if (id == NET_EXCAVATE) {
             if (tile != null) {
                 tile.setCanExcavate(!tile.getCanExcavate());
+                tile.setChanged();
+                valuesChanged();
             }
         } else if (id == NET_INVERT) {
             if (tile != null) {
@@ -252,6 +254,8 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
                 } else {
                     tile.inverted = !tile.inverted;
                 }
+                tile.setChanged();
+                valuesChanged();
             }
         }
     }

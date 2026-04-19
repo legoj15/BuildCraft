@@ -15,6 +15,8 @@ import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
+import buildcraft.lib.gui.slot.SlotBase;
+
 import buildcraft.api.filler.IFillerPattern;
 import buildcraft.api.tiles.IControllable;
 
@@ -109,19 +111,17 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
 
         addDataSlots(this.data);
 
-        // 27 resource slots in a 3x9 grid starting at (8, 40) — matches 1.12.2 layout
-        // Uses a wrapper that reads/writes directly from the tile's invResources
+        // 27 resource slots in a 3x9 grid starting at (7, 84) — matches 1.12.2 layout
         if (tile != null) {
-            TileInventoryWrapper tileInv = new TileInventoryWrapper(tile);
             for (int sy = 0; sy < 3; sy++) {
                 for (int sx = 0; sx < 9; sx++) {
-                    addSlot(new Slot(tileInv, sx + sy * 9, 8 + sx * 18, 40 + sy * 18));
+                    addSlot(new SlotBase(tile.invResources, sx + sy * 9, 8 + sx * 18, 84 + sy * 18));
                 }
             }
         }
 
-        // Player inventory at y=153 (matches 1.12.2)
-        addFullPlayerInventory(8, 153, playerInv);
+        // Player inventory at y=152 (matches 1.12.2)
+        addFullPlayerInventory(8, 152, playerInv);
     }
 
     private static TileFiller getTile(Inventory playerInv, FriendlyByteBuf buf) {
@@ -240,51 +240,4 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
     public int getSyncedToBreak() {
         return data.get(DATA_TO_BREAK);
     }
-
-    /** A Container implementation wrapping the tile's persistent 27-slot resource inventory.
-     * Reads and writes directly to TileFiller.invResources so items persist and are
-     * accessible to the TemplateBuilder. */
-    private static class TileInventoryWrapper implements net.minecraft.world.Container {
-        private final TileFiller tile;
-
-        TileInventoryWrapper(TileFiller tile) {
-            this.tile = tile;
-        }
-
-        @Override public int getContainerSize() { return TileFiller.INV_SIZE; }
-        @Override public boolean isEmpty() {
-            for (int i = 0; i < TileFiller.INV_SIZE; i++) {
-                if (!tile.invResources.get(i).isEmpty()) return false;
-            }
-            return true;
-        }
-        @Override public ItemStack getItem(int slot) { return tile.invResources.get(slot); }
-        @Override public ItemStack removeItem(int slot, int count) {
-            ItemStack stack = tile.invResources.get(slot);
-            if (stack.isEmpty()) return ItemStack.EMPTY;
-            ItemStack result = stack.split(count);
-            if (stack.isEmpty()) tile.invResources.set(slot, ItemStack.EMPTY);
-            setChanged();
-            return result;
-        }
-        @Override public ItemStack removeItemNoUpdate(int slot) {
-            ItemStack stack = tile.invResources.get(slot);
-            tile.invResources.set(slot, ItemStack.EMPTY);
-            return stack;
-        }
-        @Override public void setItem(int slot, ItemStack stack) {
-            tile.invResources.set(slot, stack);
-            setChanged();
-        }
-        @Override public void setChanged() {
-            if (tile != null) tile.setChanged();
-        }
-        @Override public boolean stillValid(Player player) { return true; }
-        @Override public void clearContent() {
-            for (int i = 0; i < TileFiller.INV_SIZE; i++) {
-                tile.invResources.set(i, ItemStack.EMPTY);
-            }
-        }
-    }
 }
-

@@ -12,6 +12,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import buildcraft.lib.client.guide.GuiGuide;
+import buildcraft.lib.client.guide.font.IFontRenderer;
 import buildcraft.lib.gui.pos.GuiRectangle;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.input.KeyEvent;
@@ -116,7 +117,21 @@ public abstract class GuidePageBase extends GuidePart {
     }
 
     protected void renderPage(int x, int y, int width, int height, int index) {
-        // Stub — page navigation rendering deferred until full UI port
+        IFontRenderer font = getFontRenderer();
+        if (font == null || numPages <= 0) return;
+
+        // Draw the "X / Y" page index on both the left (even) and right (odd) pages.
+        if (index % 2 == 0) {
+            String text = (index + 1) + " / " + numPages;
+            double textX = x + GuiGuide.PAGE_LEFT_TEXT.getWidth() / 2 - font.getStringWidth(text) / 2;
+            font.drawString(text, (int) textX, y + height + 6, 0xFF90816a);
+        } else {
+            if (index + 1 <= numPages) {
+                String text = (index + 1) + " / " + numPages;
+                double textX = x + (GuiGuide.PAGE_RIGHT_TEXT.getWidth() - font.getStringWidth(text)) / 2;
+                font.drawString(text, (int) textX, y + height + 6, 0xFF90816a);
+            }
+        }
     }
 
     @Override

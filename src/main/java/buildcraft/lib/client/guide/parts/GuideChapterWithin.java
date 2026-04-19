@@ -31,7 +31,13 @@ public class GuideChapterWithin extends GuideChapter {
 
     @Override
     protected boolean onClick() {
-        // GuiGuide.getCurrentPage() not available until full UI port
+        if (lastPage != -1) {
+            GuidePageBase page = gui.getCurrentPage();
+            if (page != null && page.getChapters().contains(this)) {
+                page.goToPage(lastPage);
+                return true;
+            }
+        }
         return false;
     }
 }

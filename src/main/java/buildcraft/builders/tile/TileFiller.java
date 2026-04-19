@@ -19,7 +19,6 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
@@ -38,6 +37,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.IAreaProvider;
 import buildcraft.api.core.IBox;
@@ -53,8 +53,13 @@ import buildcraft.api.tiles.IControllable;
 import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.lib.misc.data.Box;
+import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.statement.FullStatement;
 import buildcraft.lib.tile.TileBC_Neptune;
+import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
+import buildcraft.lib.tile.item.ItemHandlerSimple;
+
+import buildcraft.api.core.EnumPipePart;
 
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.addon.AddonFillerPlanner;
@@ -76,6 +81,12 @@ public class TileFiller extends TileBC_Neptune
     public static final int INV_SIZE = 27;
 
     private final MjBattery battery = new MjBattery(16000 * MjAPI.MJ);
+    private final MjBatteryReceiver mjReceiver = new MjBatteryReceiver(battery);
+
+    public MjBatteryReceiver getMjReceiver() {
+        return mjReceiver;
+    }
+
     private boolean canExcavate = true;
     public boolean inverted = false;
     private boolean finished = false;
@@ -92,71 +103,16 @@ public class TileFiller extends TileBC_Neptune
         (statement, paramIndex) -> onStatementChange()
     );
 
-    /** The 27-slot resource inventory, persisted on the tile for builder access. */
-    public final NonNullList<ItemStack> invResources = NonNullList.withSize(INV_SIZE, ItemStack.EMPTY);
+    public final ItemHandlerSimple invResources;
 
     private Template.BuildingInfo buildingInfo;
     public TemplateBuilder builder = new TemplateBuilder(this);
     @Nullable
     private GameProfile owner;
 
-    /** IItemTransactor wrapping the resource inventory for TemplateBuilder access. */
-    private final IItemTransactor invTransactor = new IItemTransactor() {
-        @Nonnull
-        @Override
-        public ItemStack insert(@Nonnull ItemStack stack, boolean allOrNone, boolean simulate) {
-            if (stack.isEmpty()) return ItemStack.EMPTY;
-            ItemStack remaining = stack.copy();
-            for (int i = 0; i < INV_SIZE; i++) {
-                if (remaining.isEmpty()) break;
-                ItemStack existing = invResources.get(i);
-                if (existing.isEmpty()) {
-                    if (!simulate) {
-                        invResources.set(i, remaining.copy());
-                        setChanged();
-                    }
-                    return ItemStack.EMPTY;
-                } else if (ItemStack.isSameItemSameComponents(existing, remaining)) {
-                    int space = existing.getMaxStackSize() - existing.getCount();
-                    if (space > 0) {
-                        int toAdd = Math.min(space, remaining.getCount());
-                        if (!simulate) {
-                            existing.grow(toAdd);
-                            setChanged();
-                        }
-                        remaining.shrink(toAdd);
-                    }
-                }
-            }
-            return remaining;
-        }
-
-        @Nonnull
-        @Override
-        public ItemStack extract(@Nullable IStackFilter filter, int min, int max, boolean simulate) {
-            for (int i = 0; i < INV_SIZE; i++) {
-                ItemStack existing = invResources.get(i);
-                if (existing.isEmpty()) continue;
-                if (filter != null && !filter.matches(existing)) continue;
-                int available = existing.getCount();
-                if (available < min) continue;
-                int toExtract = Math.min(available, max);
-                ItemStack result = existing.copyWithCount(toExtract);
-                if (!simulate) {
-                    existing.shrink(toExtract);
-                    if (existing.isEmpty()) {
-                        invResources.set(i, ItemStack.EMPTY);
-                    }
-                    setChanged();
-                }
-                return result;
-            }
-            return ItemStack.EMPTY;
-        }
-    };
-
     public TileFiller(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.FILLER.get(), pos, state);
+        invResources = itemManager.addInvHandler("resources", INV_SIZE, EnumAccess.INSERT, EnumPipePart.VALUES);
     }
 
     // ==================== Lifecycle (laser render tracking) ====================
@@ -275,9 +231,7 @@ public class TileFiller extends TileBC_Neptune
     public void tick() {
         if (level == null) return;
         if (level.isClientSide()) {
-            if (isValid()) {
-                builder.tick();
-            }
+            // Client: just update pattern interactability
             patternStatement.canInteract = !isLocked();
             return;
         }
@@ -294,6 +248,10 @@ public class TileFiller extends TileBC_Neptune
             boolean done = b.tick();
             if (done) {
                 finished = true;
+            }
+            // Sync robotPos to client periodically
+            if (level.getGameTime() % 5 == 0) {
+                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
             }
         }
     }
@@ -339,15 +297,14 @@ public class TileFiller extends TileBC_Neptune
             output.putString("patternTag", pattern.getUniqueTag());
         }
 
-        // Resource inventory — use child subsections for each slot
-        ValueOutput.ValueOutputList invList = output.childrenList("invResources");
-        for (int i = 0; i < INV_SIZE; i++) {
-            ItemStack stack = invResources.get(i);
-            if (!stack.isEmpty()) {
-                ValueOutput slotChild = invList.addChild();
-                slotChild.putInt("Slot", i);
-                slotChild.store("Item", ItemStack.CODEC, stack);
-            }
+        // Resources
+        output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
+
+        // Robot position for client rendering
+        if (builder != null && builder.robotPos != null) {
+            output.putDouble("robotX", builder.robotPos.x);
+            output.putDouble("robotY", builder.robotPos.y);
+            output.putDouble("robotZ", builder.robotPos.z);
         }
 
         // Owner
@@ -392,18 +349,20 @@ public class TileFiller extends TileBC_Neptune
             // TODO: resolve pattern from FillerManager.registry when fully wired
         }
 
-        // Resource inventory — read from child subsections
-        for (int i = 0; i < INV_SIZE; i++) {
-            invResources.set(i, ItemStack.EMPTY);
-        }
-        Optional<ValueInput.ValueInputList> invListOpt = input.childrenList("invResources");
-        if (invListOpt.isPresent()) {
-            for (ValueInput slotInput : invListOpt.get()) {
-                int slot = slotInput.getIntOr("Slot", -1);
-                if (slot >= 0 && slot < INV_SIZE) {
-                    Optional<ItemStack> stackOpt = slotInput.read("Item", ItemStack.CODEC);
-                    stackOpt.ifPresent(stack -> invResources.set(slot, stack));
-                }
+        // Resources
+        input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
+
+        // Robot pos for client rendering
+        if (builder != null) {
+            double rx = input.getDoubleOr("robotX", Double.NaN);
+            double ry = input.getDoubleOr("robotY", Double.NaN);
+            double rz = input.getDoubleOr("robotZ", Double.NaN);
+            if (!Double.isNaN(rx) && !Double.isNaN(ry) && !Double.isNaN(rz)) {
+                builder.prevRobotPos = builder.robotPos;
+                builder.robotPos = new Vec3(rx, ry, rz);
+            } else {
+                builder.robotPos = null;
+                builder.prevRobotPos = null;
             }
         }
 
@@ -495,7 +454,7 @@ public class TileFiller extends TileBC_Neptune
 
     @Override
     public IItemTransactor getInvResources() {
-        return invTransactor;
+        return invResources;
     }
 
     // ==================== IPlayerOwned ====================

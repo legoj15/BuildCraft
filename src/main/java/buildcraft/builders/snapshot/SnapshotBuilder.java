@@ -419,6 +419,49 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         if (checkResultsChanged) {
             afterChecks();
         }
+
+        // Compute robotPos on the server so it can be synced to the client
+        prevRobotPos = robotPos;
+        if (!breakTasks.isEmpty()) {
+            Vec3 newRobotPos = breakTasks.stream()
+                .map(breakTask -> breakTask.pos)
+                .map(Vec3::atLowerCornerOf)
+                .map(VecUtil.VEC_HALF::add)
+                .reduce(Vec3.ZERO, Vec3::add)
+                .scale(1D / breakTasks.size());
+            newRobotPos = new Vec3(
+                newRobotPos.x,
+                breakTasks.stream()
+                    .map(breakTask -> breakTask.pos)
+                    .mapToDouble(BlockPos::getY)
+                    .max()
+                    .orElse(newRobotPos.y),
+                newRobotPos.z
+            );
+            newRobotPos = newRobotPos.add(new Vec3(0, 3, 0));
+            Vec3 oldRobotPos = robotPos;
+            robotPos = newRobotPos;
+            if (oldRobotPos != null) {
+                robotPos = oldRobotPos.add(newRobotPos.subtract(oldRobotPos).scale(1 / 4D));
+            }
+        } else if (!placeTasks.isEmpty()) {
+            // Also show robot when placing
+            Vec3 newRobotPos = placeTasks.stream()
+                .map(placeTask -> placeTask.pos)
+                .map(Vec3::atLowerCornerOf)
+                .map(VecUtil.VEC_HALF::add)
+                .reduce(Vec3.ZERO, Vec3::add)
+                .scale(1D / placeTasks.size());
+            newRobotPos = newRobotPos.add(new Vec3(0, 3, 0));
+            Vec3 oldRobotPos = robotPos;
+            robotPos = newRobotPos;
+            if (oldRobotPos != null) {
+                robotPos = oldRobotPos.add(newRobotPos.subtract(oldRobotPos).scale(1 / 4D));
+            }
+        } else {
+            robotPos = null;
+        }
+
         return isDone;
     }
 

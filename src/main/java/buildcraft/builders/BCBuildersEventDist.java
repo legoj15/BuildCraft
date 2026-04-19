@@ -262,6 +262,49 @@ public enum BCBuildersEventDist {
                     true, false, cameraPos
                 );
             }
+
+            // Render the robot doodad and its break lasers
+            if (filler.builder != null) {
+                float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+                Vec3 robotPos = filler.builder.robotPos;
+                if (robotPos != null) {
+                    // Interpolate robot position for smooth movement
+                    if (filler.builder.prevRobotPos != null) {
+                        robotPos = filler.builder.prevRobotPos.add(
+                            robotPos.subtract(filler.builder.prevRobotPos).scale(partialTicks)
+                        );
+                    }
+
+                    // Render a beam from the filler block center to the robot (the "tether")
+                    Vec3 fillerCenter = Vec3.atCenterOf(filler.getBlockPos());
+                    LaserRenderer_BC8.renderLaserStatic(poseStack,
+                        new LaserData_BC8(
+                            BuildCraftLaserManager.POWER_LOW,
+                            fillerCenter,
+                            robotPos,
+                            1 / 16D
+                        ),
+                        cameraPos
+                    );
+
+                    // Render break lasers from robot to each break task position
+                    for (buildcraft.builders.snapshot.SnapshotBuilder.BreakTask breakTask : filler.builder.clientBreakTasks) {
+                        double progress = Math.max(0, Math.min(1,
+                            breakTask.power * 1D / breakTask.getTarget()
+                        ));
+                        int powerIdx = (int) Math.round(progress * (BuildCraftLaserManager.POWERS.length - 1));
+                        LaserRenderer_BC8.renderLaserStatic(poseStack,
+                            new LaserData_BC8(
+                                BuildCraftLaserManager.POWERS[powerIdx],
+                                robotPos.subtract(new Vec3(0, 0.27, 0)),
+                                Vec3.atCenterOf(breakTask.pos),
+                                1 / 16D
+                            ),
+                            cameraPos
+                        );
+                    }
+                }
+            }
         }
     }
 }

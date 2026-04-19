@@ -1,0 +1,53 @@
+{
+    "test_name": "Filler UI Pattern And Excavate",
+    "block": "buildcraftunofficial:filler",
+    "actions": [
+        {
+            "type": "open_menu"
+        },
+        {
+            "type": "set_hotbar",
+            "slot": 0,
+            "item": "minecraft:stone",
+            "count": 64
+        },
+        {
+            "type": "click_slot",
+            "action": "quick_move",
+            "slot": 36
+        },
+        {
+            "type": "send_container_message",
+            "message_id": 10,
+            "string_payload": "excavate_toggle"
+        },
+        {
+            "type": "filler_excavate_equals",
+            "boolean_value": true
+        },
+        {
+            "type": "send_container_message",
+            "message_id": 11,
+            "string_payload": "set_pattern",
+            "pattern_tag": "buildcraft:cylinder",
+            "param_slot_0": "minecraft:stone"
+        }
+    ],
+    "asserts": [
+        {
+            "type": "slot_equals",
+            "slot": 0,
+            "item": "minecraft:stone",
+            "count": 64
+        },
+        {
+            "type": "filler_excavate_equals",
+            "boolean_value": false
+        },
+        {
+            "type": "filler_pattern_equals",
+            "pattern_tag": "buildcraftunofficial:fill",
+            "param_slot_0": "minecraft:stone"
+        }
+    ]
+}

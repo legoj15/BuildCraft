@@ -16,12 +16,15 @@ import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 
 import buildcraft.api.filler.FillerManager;
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.template.TemplateApi;
 import buildcraft.builders.gui.GuiArchitectTable;
 import buildcraft.builders.gui.GuiElectronicLibrary;
 import buildcraft.builders.gui.GuiFiller;
 import buildcraft.builders.gui.GuiReplacer;
 import buildcraft.builders.gui.GuiBuilder;
 import buildcraft.builders.registry.FillerRegistry;
+import buildcraft.builders.snapshot.TemplateHandlerDefault;
+import buildcraft.builders.snapshot.TemplateRegistry;
 import buildcraft.core.BCCore;
 import buildcraft.core.BCCoreCreativeTabs;
 import buildcraft.lib.mj.MjBatteryEnergyHandler;
@@ -44,6 +47,8 @@ public class BCBuilders {
         });
         modEventBus.addListener((FMLCommonSetupEvent event) -> {
             FillerManager.registry = FillerRegistry.INSTANCE;
+            TemplateApi.templateRegistry = TemplateRegistry.INSTANCE;
+            TemplateApi.templateRegistry.addHandler(TemplateHandlerDefault.INSTANCE);
         });
         modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);
@@ -59,12 +64,21 @@ public class BCBuilders {
     }
 
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
+        // Quarry
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCBuildersBlockEntities.QUARRY.get(),
             (quarry, direction) -> quarry.getMjReceiver());
         event.registerBlockEntity(Capabilities.Energy.BLOCK, BCBuildersBlockEntities.QUARRY.get(),
             (quarry, direction) -> new MjBatteryEnergyHandler(quarry.getBattery()));
         event.registerBlockEntity(Capabilities.Item.BLOCK, BCBuildersBlockEntities.QUARRY.get(),
             (quarry, direction) -> net.neoforged.neoforge.transfer.EmptyResourceHandler.instance());
+
+        // Filler
+        event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCBuildersBlockEntities.FILLER.get(),
+            (filler, direction) -> filler.getMjReceiver());
+        event.registerBlockEntity(Capabilities.Energy.BLOCK, BCBuildersBlockEntities.FILLER.get(),
+            (filler, direction) -> new MjBatteryEnergyHandler(filler.getBattery()));
+        event.registerBlockEntity(Capabilities.Item.BLOCK, BCBuildersBlockEntities.FILLER.get(),
+            (filler, direction) -> filler.getItemHandler(direction));
     }
 
     private static void buildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {

@@ -629,7 +629,10 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             return;
         }
         updateSnapshot();
-        checkResults = nbt.getByteArray("checkResults").orElse(new byte[0]);
+        byte[] loadedCheckResults = nbt.getByteArray("checkResults").orElse(new byte[0]);
+        if (loadedCheckResults.length == checkResults.length) {
+            System.arraycopy(loadedCheckResults, 0, checkResults, 0, checkResults.length);
+        }
         breakTasks.clear();
         NBTUtilBC.readCompoundList(nbt.get("breakTasks")).map(BreakTask::new).forEach(breakTasks::add);
         placeTasks.clear();

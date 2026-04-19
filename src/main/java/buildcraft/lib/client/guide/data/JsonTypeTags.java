@@ -6,6 +6,9 @@
 
 package buildcraft.lib.client.guide.data;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.resources.Identifier;
 
 
@@ -38,28 +41,36 @@ public class JsonTypeTags {
             return new String[] { type };
         }
 
-        String[] strings = new String[typeOrder.tags.size()];
-        for (int i = 0; i < strings.length; i++) {
+        // Build the list while skipping tags whose raw value is empty/null so we don't insert
+        // empty-label levels like "buildcraft.guide.chapter.subtype." into the TOC hierarchy.
+        List<String> collected = new ArrayList<>(typeOrder.tags.size());
+        for (int i = 0; i < typeOrder.tags.size(); i++) {
             ETypeTag tag = typeOrder.tags.get(i);
-            strings[i] = getTyped(tag);
+            String raw = getRaw(tag);
+            if (raw == null || raw.isEmpty()) {
+                continue;
+            }
+            collected.add(tag.preText + raw);
         }
-        return strings;
+        return collected.toArray(new String[0]);
+    }
+
+    private String getRaw(ETypeTag tag) {
+        if (tag == ETypeTag.MOD) {
+            return getMod(domain, 0);
+        } else if (tag == ETypeTag.SUB_MOD) {
+            return getMod(domain, 1);
+        } else if (tag == ETypeTag.TYPE) {
+            return type;
+        } else if (tag == ETypeTag.SUB_TYPE) {
+            return subType;
+        }
+        throw new IllegalStateException("Don't know the type " + tag);
     }
 
     private String getTyped(ETypeTag tag) {
-        String typed;
-        if (tag == ETypeTag.MOD) {
-            typed = getMod(domain, 0);
-        } else if (tag == ETypeTag.SUB_MOD) {
-            typed = getMod(domain, 1);
-        } else if (tag == ETypeTag.TYPE) {
-            typed = type;
-        } else if (tag == ETypeTag.SUB_TYPE) {
-            typed = subType;
-        } else {
-            throw new IllegalStateException("Don't know the type " + tag);
-        }
-        return tag.preText + typed;
+        String raw = getRaw(tag);
+        return tag.preText + (raw == null ? "" : raw);
     }
 
     private static String getMod(String domain, int index) {

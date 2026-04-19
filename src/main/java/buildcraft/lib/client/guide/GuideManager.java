@@ -57,6 +57,7 @@ import buildcraft.lib.guide.GuideBook;
 import buildcraft.lib.guide.GuideBookRegistry;
 import buildcraft.lib.guide.GuideContentsData;
 import buildcraft.lib.misc.ItemStackKey;
+import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.search.ISuffixArray;
 import buildcraft.lib.misc.search.SimpleSuffixArray;
 
@@ -248,7 +249,7 @@ public enum GuideManager {
         }
 
         // "All" group for books that opt-in
-        ContentsNode othersRoot = new ContentsNode("All", 0);
+        ContentsNode othersRoot = new ContentsNode(LocaleUtil.localize("buildcraft.guide.contents.all_group"), 0);
         for (Entry<GuideBook, Map<TypeOrder, ContentsNode>> bookEntry : contents.entrySet()) {
             @Nullable GuideBook book = bookEntry.getKey();
             if (book != null && !book.appendAllEntries) continue;
@@ -261,7 +262,7 @@ public enum GuideManager {
             if (pageLinksAdded.add(page)) {
                 quickSearcher.add(page, page.getSearchName());
             }
-            String title = tags.type;
+            String title = LocaleUtil.localize(tags.type);
             IContentsNode subNode = othersRoot.getChild(title);
             if (subNode instanceof ContentsNode) {
                 subNode.addChild(page);
@@ -310,7 +311,7 @@ public enum GuideManager {
                 ContentsNode[] nodePath = new ContentsNode[ordered.length];
                 ContentsNode node = entry.getValue();
                 for (int i = 0; i < ordered.length; i++) {
-                    String title = ordered[i];
+                    String title = LocaleUtil.localize(ordered[i]);
                     IContentsNode subNode = node.getChild(title);
                     if (subNode instanceof ContentsNode) {
                         node = (ContentsNode) subNode;

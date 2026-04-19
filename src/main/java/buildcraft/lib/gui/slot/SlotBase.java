@@ -66,16 +66,8 @@ public class SlotBase extends Slot {
 
     @Override
     public int getMaxStackSize(@Nonnull ItemStack stack) {
-        ItemStack maxAdd = stack.copy();
-        int maxStack = stack.getMaxStackSize();
-        maxAdd.setCount(maxStack);
-        int allowed = 0;
-        int extracted = 0;
-        
-        try (Transaction tx = Transaction.openRoot()) {
-            allowed = itemHandler.insert(handlerIndex, ItemResource.of(stack), maxStack, tx);
-        }
-        return allowed;
+        int slotLimit = (int) itemHandler.getCapacityAsLong(handlerIndex, ItemResource.of(stack));
+        return Math.min(slotLimit, stack.getMaxStackSize());
     }
 
     @Override

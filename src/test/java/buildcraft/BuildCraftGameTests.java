@@ -66,6 +66,8 @@ public class BuildCraftGameTests {
             // GUI Headless Tests
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gui_test_dynamo_upgrade"), () -> buildcraft.lib.test.gui.GuiTester::testDynamoUpgrade);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gui_test_filler_ui"), () -> buildcraft.lib.test.gui.GuiTester::testFillerUI);
+            // Slot Tests
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:slot_max_stack_size"), () -> buildcraft.lib.gui.SlotBaseTester::testSlotMaxStackSize);
         }
     }
 }

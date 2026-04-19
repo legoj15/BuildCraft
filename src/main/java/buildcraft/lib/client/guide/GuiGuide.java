@@ -145,8 +145,8 @@ public class GuiGuide extends Screen {
     );
 
     public static final TypeOrder[] SORTING_TYPES = {
-        new TypeOrder("buildcraft.guide.order.type_subtype"),
-        new TypeOrder("buildcraft.guide.order.mod_type"),
+        new TypeOrder("buildcraft.guide.order.type_subtype", ETypeTag.TYPE, ETypeTag.SUB_TYPE),
+        new TypeOrder("buildcraft.guide.order.mod_type", ETypeTag.MOD, ETypeTag.TYPE),
         new TypeOrder("buildcraft.guide.order.alphabetical")
     };
 

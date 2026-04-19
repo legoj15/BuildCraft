@@ -31,7 +31,7 @@ public class LaserBoxRenderer {
     private static final double RENDER_SCALE = 1 / 16.05;
 
     public static void renderLaserBoxStatic(PoseStack poseStack, Box box, LaserType type, boolean center, Vec3 cameraPos) {
-        renderLaserBoxStatic(poseStack, box, type, center, true, cameraPos);
+        renderLaserBoxStatic(poseStack, box, type, center, false, cameraPos);
     }
 
     public static void renderLaserBoxStatic(PoseStack poseStack, Box box, LaserType type, boolean center, boolean enableDiffuse, Vec3 cameraPos) {
@@ -119,6 +119,6 @@ public class LaserBoxRenderer {
         Vec3 dirMax = Vec3.atLowerCornerOf(faceForMax.getUnitVec3i());
         Vec3 one = min.add(dirMin.scale(1 / 16D));
         Vec3 two = max.add(dirMax.scale(1 / 16D));
-        return new LaserData_BC8(type, one, two, RENDER_SCALE, enableDiffuse, false, 0);
+        return new LaserData_BC8(type, one, two, RENDER_SCALE, enableDiffuse, false, 15);
     }
 }

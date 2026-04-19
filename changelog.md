@@ -12,6 +12,7 @@
 - Fixed a regression in the BuildCraft Filler where the robot and lasers would fail to render when unpowered or idle.
 - Fixed a critical progression wipe in the BuildCraft Filler that caused it to forget state upon world reload or chunk unloads.
 - Fixed a crash on world load caused by saving uninitialized Filler target layouts.
+- Restored persistence of active Filler patterns and parameters, resolving a block entity network desync on world reload.
 Fix: Restored GUI slot background textures for the Filtered Buffer
 Fix: Added gui.json atlas to correctly stitch slot sprite backgrounds
 Fix: Corrected GUI atlas JSON path to merge with the vanilla minecraft namespace instead of creating a custom atlas

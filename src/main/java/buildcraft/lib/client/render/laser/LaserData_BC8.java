@@ -23,7 +23,7 @@ public class LaserData_BC8 {
     private final int hash;
 
     public LaserData_BC8(LaserType laserType, Vec3 start, Vec3 end, double scale) {
-        this(laserType, start, end, scale, true, false, 0);
+        this(laserType, start, end, scale, false, false, 15);
     }
 
     public LaserData_BC8(LaserType laserType, Vec3 start, Vec3 end, double scale,

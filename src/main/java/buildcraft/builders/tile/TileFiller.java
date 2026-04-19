@@ -113,6 +113,15 @@ public class TileFiller extends TileBC_Neptune
     public TileFiller(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.FILLER.get(), pos, state);
         invResources = itemManager.addInvHandler("resources", INV_SIZE, EnumAccess.INSERT, EnumPipePart.VALUES);
+        invResources.setCallback((handler, slot, before, after) -> {
+            this.setChanged();
+            if (level != null && !level.isClientSide()) {
+                if (builder != null) {
+                    builder.resourcesChanged();
+                }
+                finished = false;
+            }
+        });
     }
 
     // ==================== Lifecycle (laser render tracking) ====================

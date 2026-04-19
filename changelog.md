@@ -49,3 +49,4 @@ Fix: Reordered the patterns in the Filler GUI to perfectly match the 1.12.2 layo
 Fix: Restored the missing Ownership ledger to the Filler GUI and repaired the clipped vertical spacing/overlapping within the Filler's Progress ledger
 Fix: Restored visual rendering of Gate-controlled machine mode icons (Loop/Off) in the Filler GUI
 Fix: Fixed an issue where the Filler's Invert and Excavate GUI buttons required a world reload to recalculate building tasks by explicitly forcing immediate statement evaluation and syncing.
+Fix: Fixed an issue where filling a stalled Filler's inventory would not cause it to immediately resume. Inventory interactions now correctly clear the builder's required resources cache and unset the completion flag.

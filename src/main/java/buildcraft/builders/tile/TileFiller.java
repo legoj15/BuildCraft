@@ -370,8 +370,15 @@ public class TileFiller extends TileBC_Neptune
             savedPlace.addAll(builder.clientPlaceTasks);
         }
 
-        // Rebuild building info FIRST so the builder has fresh arrays before we restore state
-        updateBuildingInfo();
+        // On the client during periodic network sync (level != null && level.isClientSide()),
+        // only rebuild building info if it hasn't been initialized yet.
+        // Calling updateBuildingInfo() every 5 ticks triggers cancel() which refunds items
+        // into the client inventory and resets all builder arrays, causing ghost items and
+        // item count flickering in the GUI.
+        // On the server (disk load) or on initial client sync (buildingInfo == null), always rebuild.
+        if (level == null || !level.isClientSide() || buildingInfo == null) {
+            updateBuildingInfo();
+        }
 
         // Restore full builder state (for disk persistence) and client rendering tasks
         if (builder != null) {
@@ -413,7 +420,9 @@ public class TileFiller extends TileBC_Neptune
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return this.saveCustomOnly(registries);
+        CompoundTag tag = this.saveCustomOnly(registries);
+        tag.remove("items");
+        return tag;
     }
 
     @Override

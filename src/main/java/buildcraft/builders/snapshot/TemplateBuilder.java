@@ -79,8 +79,14 @@ public class TemplateBuilder extends SnapshotBuilder<ITileForTemplateBuilder> {
     @Override
     protected void cancelPlaceTask(PlaceTask placeTask) {
         super.cancelPlaceTask(placeTask);
-        if (placeTask.items != null && !placeTask.items.isEmpty()) {
-            tile.getInvResources().insert(placeTask.items.get(0), false, false);
+        // Only refund items on the server — on the client this is called during
+        // every network sync (loadAdditional → cancel) which would inject ghost
+        // items into the GUI inventory that immediately vanish when the Container
+        // sync corrects them.
+        if (tile.getWorldBC() != null && !tile.getWorldBC().isClientSide()) {
+            if (placeTask.items != null && !placeTask.items.isEmpty()) {
+                tile.getInvResources().insert(placeTask.items.get(0), false, false);
+            }
         }
     }
 

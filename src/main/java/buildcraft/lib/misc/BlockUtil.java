@@ -160,8 +160,8 @@ public class BlockUtil {
 
         List<ItemStack> drops = new ArrayList<>(Block.getDrops(state, world, pos, world.getBlockEntity(pos)));
 
-        // Remove the block
-        world.removeBlock(pos, false);
+        // Remove the block and play breaking sound/particles
+        world.destroyBlock(pos, false);
 
         return Optional.of(drops);
     }

@@ -24,6 +24,10 @@ public class BCBuildersClient {
                     BCBuildersEventDist.INSTANCE.renderAllQuarries(event);
                     BCBuildersEventDist.INSTANCE.renderAllFillers(event);
                 });
+        NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent.class,
+                event -> {
+                    BCBuildersEventDist.INSTANCE.renderAllFillersCustomGeometry(event);
+                });
     }
 
     @SubscribeEvent

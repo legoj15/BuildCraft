@@ -16,6 +16,7 @@
 - Disabled directional shadowing on Marker and robot lasers to restore full emissive visibility even in the dark.
 - Fixed an issue where dragging a pattern into the Filler GUI would visually revert back to None upon reopening the interface.
 - Resolved a 'Network Protocol Error' crash in the internal server loop when attempting to override an active filler configuration with an invalid PlaceTask queue.
+- Restored the classic 1.12.2 block-throwing placement animation for the BuildCraft Filler using a SubmitCustomGeometryEvent integration, bypassing 1.21.11 ItemRender constraints, and disabled the robot visualization during filling tasks for legacy parity.
 Fix: Restored GUI slot background textures for the Filtered Buffer
 Fix: Added gui.json atlas to correctly stitch slot sprite backgrounds
 Fix: Corrected GUI atlas JSON path to merge with the vanilla minecraft namespace instead of creating a custom atlas

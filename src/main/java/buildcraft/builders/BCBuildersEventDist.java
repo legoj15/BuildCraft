@@ -275,33 +275,35 @@ public enum BCBuildersEventDist {
                         );
                     }
 
-                    // Render robot cube
-                    net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
-                    com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+                    // Only render robot cube if we are breaking (1.12.2 parity: Filler shouldn't use robot for placing)
+                    if (!filler.builder.clientBreakTasks.isEmpty()) {
+                        net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
+                        com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
 
-                    poseStack.pushPose();
-                    poseStack.translate(robotPos.x - cameraPos.x, robotPos.y - cameraPos.y, robotPos.z - cameraPos.z);
-                    int worldLight = buildcraft.lib.client.render.laser.LaserRenderer_BC8.computeLightmap(robotPos.x, robotPos.y, robotPos.z, 0);
+                        poseStack.pushPose();
+                        poseStack.translate(robotPos.x - cameraPos.x, robotPos.y - cameraPos.y, robotPos.z - cameraPos.z);
+                        int worldLight = buildcraft.lib.client.render.laser.LaserRenderer_BC8.computeLightmap(robotPos.x, robotPos.y, robotPos.z, 0);
 
-                    int i = 0;
-                    for (net.minecraft.core.Direction face : net.minecraft.core.Direction.values()) {
-                        buildcraft.lib.client.model.ModelUtil.createFace(
-                            face,
-                            new org.joml.Vector3f(0f, 0f, 0f),
-                            new org.joml.Vector3f(4 / 16F, 4 / 16F, 4 / 16F),
-                            new buildcraft.lib.client.model.ModelUtil.UvFaceData(
-                                buildcraft.builders.BCBuildersSprites.ROBOT.getInterpU((i * 8) / 64D),
-                                buildcraft.builders.BCBuildersSprites.ROBOT.getInterpV(0 / 64D),
-                                buildcraft.builders.BCBuildersSprites.ROBOT.getInterpU(((i + 1) * 8) / 64D),
-                                buildcraft.builders.BCBuildersSprites.ROBOT.getInterpV(8 / 64D)
+                        int i = 0;
+                        for (net.minecraft.core.Direction face : net.minecraft.core.Direction.values()) {
+                            buildcraft.lib.client.model.ModelUtil.createFace(
+                                face,
+                                new org.joml.Vector3f(0f, 0f, 0f),
+                                new org.joml.Vector3f(4 / 16F, 4 / 16F, 4 / 16F),
+                                new buildcraft.lib.client.model.ModelUtil.UvFaceData(
+                                    buildcraft.builders.BCBuildersSprites.ROBOT.getInterpU((i * 8) / 64D),
+                                    buildcraft.builders.BCBuildersSprites.ROBOT.getInterpV(0 / 64D),
+                                    buildcraft.builders.BCBuildersSprites.ROBOT.getInterpU(((i + 1) * 8) / 64D),
+                                    buildcraft.builders.BCBuildersSprites.ROBOT.getInterpV(8 / 64D)
+                                )
                             )
-                        )
-                        .lighti(worldLight)
-                        .render(poseStack.last(), buffer);
-                        i++;
+                            .lighti(worldLight)
+                            .render(poseStack.last(), buffer);
+                            i++;
+                        }
+                        poseStack.popPose();
+                        bufferSource.endBatch();
                     }
-                    poseStack.popPose();
-                    bufferSource.endBatch();
 
                     // Render break lasers from robot to each break task position
                     for (buildcraft.builders.snapshot.SnapshotBuilder.BreakTask breakTask : filler.builder.clientBreakTasks) {
@@ -320,6 +322,59 @@ public enum BCBuildersEventDist {
                         );
                     }
                 }
+            }
+        }
+    }
+
+    /** Called from SubmitCustomGeometryEvent to render items smoothly in world space using SubmitNodeCollector. */
+    public void renderAllFillersCustomGeometry(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+
+        Deque<WeakReference<TileFiller>> fillers = allFillers.get(mc.level);
+        if (fillers == null || fillers.isEmpty()) return;
+
+        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
+        com.mojang.blaze3d.vertex.PoseStack poseStack = event.getPoseStack();
+        float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        net.minecraft.client.renderer.SubmitNodeCollector collector = event.getSubmitNodeCollector();
+
+        Iterator<WeakReference<TileFiller>> iter = fillers.iterator();
+        while (iter.hasNext()) {
+            WeakReference<TileFiller> ref = iter.next();
+            TileFiller filler = ref.get();
+            if (filler == null || filler.isRemoved() || filler.builder == null) {
+                continue;
+            }
+
+            if (!filler.builder.clientPlaceTasks.isEmpty()) {
+                for (buildcraft.builders.snapshot.SnapshotBuilder.PlaceTask placeTask : filler.builder.clientPlaceTasks) {
+                    Vec3 prevPos = filler.builder.prevClientPlaceTasks.stream()
+                        .filter(task -> task.pos.equals(placeTask.pos))
+                        .map(filler.builder::getPlaceTaskItemPos)
+                        .findFirst()
+                        .orElse(filler.builder.getPlaceTaskItemPos(filler.builder.new PlaceTask(placeTask.pos, java.util.Collections.emptyList(), 0L)));
+                    
+                    Vec3 pos = prevPos.add(filler.builder.getPlaceTaskItemPos(placeTask).subtract(prevPos).scale(partialTicks));
+                    int light = buildcraft.lib.client.render.laser.LaserRenderer_BC8.computeLightmap(pos.x, pos.y, pos.z, 0);
+
+                    buildcraft.lib.client.render.ItemRenderUtil.beginItemBatch(poseStack, collector, light);
+                    for (Object itemObj : placeTask.items) {
+                        net.minecraft.world.item.ItemStack item = (net.minecraft.world.item.ItemStack) itemObj;
+                        buildcraft.lib.client.render.ItemRenderUtil.renderItemStack(
+                            pos.x - cameraPos.x,
+                            pos.y - cameraPos.y,
+                            pos.z - cameraPos.z,
+                            item,
+                            1, // stackCount
+                            light,
+                            net.minecraft.core.Direction.SOUTH,
+                            null
+                        );
+                    }
+                }
+                // We use endItemBatch manually if ItemRenderUtil had it, wait, ItemRenderUtil just clears state or nothing.
+                // In NeoForge 1.21.11, ItemRenderUtil.beginItemBatch state is cleared or overwritten per call.
             }
         }
     }

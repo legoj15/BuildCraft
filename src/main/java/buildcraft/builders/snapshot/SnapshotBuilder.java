@@ -515,7 +515,11 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
 
     public CompoundTag serializeNBT() {
         CompoundTag nbt = new CompoundTag();
-        nbt.putByteArray("checkResults", checkResults);
+        if (checkResults != null) {
+            nbt.putByteArray("checkResults", checkResults);
+        } else {
+            nbt.putByteArray("checkResults", new byte[0]);
+        }
         nbt.put("breakTasks", NBTUtilBC.writeCompoundList(breakTasks.stream().map(BreakTask::writeToNBT)));
         nbt.put("placeTasks", NBTUtilBC.writeCompoundList(placeTasks.stream().map(PlaceTask::writeToNBT)));
         nbt.putInt("currentCheckIndex", currentCheckIndex);

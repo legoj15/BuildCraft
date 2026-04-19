@@ -253,7 +253,7 @@ public class TileFiller extends TileBC_Neptune
         if (lockedTicks < 0) {
             lockedTicks = 0;
         }
-        if (mode == Mode.OFF) {
+        if (mode == Mode.OFF || isFinished()) {
             return;
         }
         SnapshotBuilder<?> b = getBuilder();
@@ -264,6 +264,11 @@ public class TileFiller extends TileBC_Neptune
             boolean done = b.tick();
             if (done) {
                 finished = true;
+                // Clear stale render cache so the client receives empty task lists
+                b.onNetworkSync();
+                // Sync immediately so the client sees the finished state
+                // (next tick's isFinished() early return will prevent further syncs)
+                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
             }
             if (level.getGameTime() % 5 == 0) {
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);

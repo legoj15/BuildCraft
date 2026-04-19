@@ -246,6 +246,19 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
 
         boolean isDone = true;
 
+        // Can't be done if any blocks haven't been scanned yet
+        for (byte result : checkResults) {
+            if (result == CHECK_RESULT_UNKNOWN) {
+                isDone = false;
+                break;
+            }
+        }
+
+        // Can't be done if there are tasks still being processed
+        if (isDone && (!breakTasks.isEmpty() || !placeTasks.isEmpty())) {
+            isDone = false;
+        }
+
         // Add break tasks
         if (tile.canExcavate()) {
             Set<Integer> breakTasksIndexes = breakTasks.stream()

@@ -53,7 +53,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
 
     protected final T tile;
     // Replaced WorldEventListenerAdapter with polling approach (approved in plan review)
-    private final Queue<BreakTask> breakTasks = new ArrayDeque<>();
+    public final Queue<BreakTask> breakTasks = new ArrayDeque<>();
     public final Queue<BreakTask> clientBreakTasks = new ArrayDeque<>();
     @SuppressWarnings("WeakerAccess")
     public final Queue<BreakTask> prevClientBreakTasks = new ArrayDeque<>();
@@ -526,6 +526,12 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         nbt.put("breakTasks", NBTUtilBC.writeCompoundList(breakTasks.stream().map(BreakTask::writeToNBT)));
         nbt.put("placeTasks", NBTUtilBC.writeCompoundList(placeTasks.stream().map(PlaceTask::writeToNBT)));
         nbt.putInt("currentCheckIndex", currentCheckIndex);
+        return nbt;
+    }
+
+    public CompoundTag serializeClientNBT() {
+        CompoundTag nbt = new CompoundTag();
+        nbt.put("breakTasks", NBTUtilBC.writeCompoundList(breakTasks.stream().map(BreakTask::writeToNBT)));
         return nbt;
     }
 

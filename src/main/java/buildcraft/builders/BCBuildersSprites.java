@@ -58,7 +58,7 @@ public class BCBuildersSprites {
 
     static {
         FILLER_PLANNER = getHolder("addons/filler_planner");
-        ROBOT = getHolder("robot");
+        ROBOT = getHolder("block/robot");
 
         FILLER_NONE = getHolder("filler/patterns/none");
         FILLER_CLEAR = getHolder("filler/patterns/clear");

@@ -300,11 +300,16 @@ public class TileFiller extends TileBC_Neptune
         // Resources
         output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
 
-        // Robot position for client rendering
-        if (builder != null && builder.robotPos != null) {
-            output.putDouble("robotX", builder.robotPos.x);
-            output.putDouble("robotY", builder.robotPos.y);
-            output.putDouble("robotZ", builder.robotPos.z);
+        // Robot position and visual tasks for client rendering
+        if (builder != null) {
+            if (builder.robotPos != null) {
+                output.putDouble("robotX", builder.robotPos.x);
+                output.putDouble("robotY", builder.robotPos.y);
+                output.putDouble("robotZ", builder.robotPos.z);
+            }
+            if (!builder.breakTasks.isEmpty()) {
+                output.store("breakTasks", net.minecraft.nbt.CompoundTag.CODEC, builder.serializeClientNBT());
+            }
         }
 
         // Owner
@@ -352,18 +357,27 @@ public class TileFiller extends TileBC_Neptune
         // Resources
         input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
 
-        // Robot pos for client rendering
+        // Robot pos and tasks for client rendering
         if (builder != null) {
             double rx = input.getDoubleOr("robotX", Double.NaN);
             double ry = input.getDoubleOr("robotY", Double.NaN);
             double rz = input.getDoubleOr("robotZ", Double.NaN);
             if (!Double.isNaN(rx) && !Double.isNaN(ry) && !Double.isNaN(rz)) {
                 builder.prevRobotPos = builder.robotPos;
-                builder.robotPos = new Vec3(rx, ry, rz);
+                builder.robotPos = new net.minecraft.world.phys.Vec3(rx, ry, rz);
             } else {
                 builder.robotPos = null;
                 builder.prevRobotPos = null;
             }
+
+            builder.prevClientBreakTasks.clear();
+            builder.prevClientBreakTasks.addAll(builder.clientBreakTasks);
+            builder.clientBreakTasks.clear();
+            input.read("breakTasks", net.minecraft.nbt.CompoundTag.CODEC).ifPresent(tag -> {
+                buildcraft.lib.misc.NBTUtilBC.readCompoundList(tag.get("breakTasks"))
+                    .map(cmp -> builder.new BreakTask(cmp))
+                    .forEach(builder.clientBreakTasks::add);
+            });
         }
 
         // Rebuild building info after loading

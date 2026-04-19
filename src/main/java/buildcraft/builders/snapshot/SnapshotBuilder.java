@@ -398,10 +398,31 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
 
 
     public void clientTick() {
+        long max = Math.min(
+            (long) (
+                MAX_POWER_PER_TICK *
+                    (double) (tile.getBattery().getStored() + MAX_POWER_PER_TICK / 10) /
+                    (tile.getBattery().getCapacity() * 2)
+            ),
+            MAX_POWER_PER_TICK
+        );
+
         prevClientBreakTasks.clear();
-        prevClientBreakTasks.addAll(clientBreakTasks);
+        for (BreakTask task : clientBreakTasks) {
+            prevClientBreakTasks.add(new BreakTask(task.pos, task.power));
+            long target = task.getTarget();
+            if (task.power < target) {
+                task.power += tile.getBattery().extractPower(0, Math.min(target - task.power, max / Math.max(1, clientBreakTasks.size())));
+            }
+        }
         prevClientPlaceTasks.clear();
-        prevClientPlaceTasks.addAll(clientPlaceTasks);
+        for (PlaceTask task : clientPlaceTasks) {
+            prevClientPlaceTasks.add(new PlaceTask(task.pos, task.items, task.power));
+            long target = task.getTarget();
+            if (task.power < target) {
+                task.power += tile.getBattery().extractPower(0, Math.min(target - task.power, max / Math.max(1, clientPlaceTasks.size())));
+            }
+        }
 
         prevRobotPos = robotPos;
         if (!clientBreakTasks.isEmpty()) {

@@ -113,20 +113,24 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      * Executed if break task failed
      */
     private void cancelBreakTask(BreakTask breakTask) {
-        tile.getBattery().addPower(
-            Math.min(breakTask.power, tile.getBattery().getCapacity() - tile.getBattery().getStored()),
-            false
-        );
+        if (tile.getWorldBC() != null && !tile.getWorldBC().isClientSide()) {
+            tile.getBattery().addPower(
+                Math.min(breakTask.power, tile.getBattery().getCapacity() - tile.getBattery().getStored()),
+                false
+            );
+        }
     }
 
     /**
      * Executed if {@link #doPlaceTask} failed
      */
     protected void cancelPlaceTask(PlaceTask placeTask) {
-        tile.getBattery().addPower(
-            Math.min(placeTask.power, tile.getBattery().getCapacity() - tile.getBattery().getStored()),
-            false
-        );
+        if (tile.getWorldBC() != null && !tile.getWorldBC().isClientSide()) {
+            tile.getBattery().addPower(
+                Math.min(placeTask.power, tile.getBattery().getCapacity() - tile.getBattery().getStored()),
+                false
+            );
+        }
     }
 
     /**

@@ -172,9 +172,27 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
 
     @Override
     public void readMessage(int id, buildcraft.lib.net.PacketBufferBC buffer, boolean isClient, net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
+        if (id == NET_STATEMENT) {
+            try {
+                if (isClient) {
+                    patternStatementClient.readFromBuffer(buffer);
+                } else if (tile != null) {
+                    buildcraft.lib.statement.FullStatement<IFillerPattern> stat = getPatternStatement();
+                    if (stat != null) {
+                        stat.readFromBuffer(buffer);
+                        tile.onStatementChange();
+                        tile.setChanged(); // Make sure chunk knows to save!
+                    }
+                }
+            } catch (java.io.IOException e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+
         super.readMessage(id, buffer, isClient, ctx);
         if (isClient) return;
-        
+
         if (id == NET_EXCAVATE) {
             if (tile != null) {
                 tile.setCanExcavate(!tile.getCanExcavate());
@@ -185,18 +203,6 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
                     tile.addon.inverted = !tile.addon.inverted;
                 } else {
                     tile.inverted = !tile.inverted;
-                }
-            }
-        } else if (id == NET_STATEMENT) {
-            if (tile != null) {
-                try {
-                    buildcraft.lib.statement.FullStatement<IFillerPattern> stat = getPatternStatement();
-                    if (stat != null) {
-                        stat.readFromBuffer(buffer);
-                        tile.onStatementChange();
-                    }
-                } catch (java.io.IOException e) {
-                    e.printStackTrace();
                 }
             }
         }
@@ -213,6 +219,31 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
     }
 
     // Synced accessors
+
+    private byte[] lastStatementHash = null;
+
+    @Override
+    public void broadcastChanges() {
+        super.broadcastChanges();
+        if (tile != null && tile.getLevel() != null && !tile.getLevel().isClientSide()) {
+            buildcraft.lib.statement.FullStatement<IFillerPattern> stat = getPatternStatement();
+            if (stat != null) {
+                io.netty.buffer.ByteBuf temp = io.netty.buffer.Unpooled.buffer();
+                buildcraft.lib.net.PacketBufferBC bcBuf = new buildcraft.lib.net.PacketBufferBC(temp);
+                stat.writeToBuffer(bcBuf);
+                byte[] current = new byte[temp.readableBytes()];
+                temp.readBytes(current);
+                temp.release();
+                
+                if (lastStatementHash == null || !java.util.Arrays.equals(lastStatementHash, current)) {
+                    lastStatementHash = current;
+                    sendMessage(NET_STATEMENT, (buf) -> {
+                        buf.writeBytes(current);
+                    });
+                }
+            }
+        }
+    }
 
     public boolean getSyncedCanExcavate() {
         return data.get(DATA_CAN_EXCAVATE) != 0;

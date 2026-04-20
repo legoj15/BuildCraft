@@ -131,11 +131,25 @@ public abstract class GuidePart {
             boolean render = current.page == pageRenderIndex;
             int _y = y + current.pixel;
             int _w = fontRenderer != null ? fontRenderer.getStringWidth(text) : text.length() * 6;
-            GuiRectangle rect = new GuiRectangle(_x, _y - 2, _w, neededSpace + 3);
+            // Hover "row" geometry: LINE_HEIGHT (16 px) tall, vertically aligned with the
+            // start icon's range (_y-5 to _y+11). Two consequences:
+            //   1. Adjacent TOC entries (16 px apart) are flush — no vertical overlap — so
+            //      the mouse is never inside two entries' hit-rects at once.
+            //   2. The highlight matches the icon's vertical extent exactly, making the row
+            //      feel like a single visual unit (icon + highlighted text).
+            int rowTop = _y - 5;
+            GuiRectangle rect = new GuiRectangle(_x, rowTop, _w, LINE_HEIGHT);
             wasHovered |= rect.contains(gui.mouse);
             if (render) {
                 didRender = true;
                 if (wasHovered) {
+                    // Hover highlight: cream/tan fill rect sized to the hover row.
+                    if (line.link) {
+                        net.minecraft.client.gui.GuiGraphicsExtractor g = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
+                        if (g != null) {
+                            g.fill(_x - 2, rowTop, _x + _w + 2, rowTop + LINE_HEIGHT, 0xFFD3AD6C);
+                        }
+                    }
                     renderTooltip();
                 }
                 if (fontRenderer != null) {

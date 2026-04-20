@@ -282,6 +282,7 @@ public class GuiGuide extends Screen {
         // Set the graphics context for font rendering and other sub-renderers
         MinecraftFont.setGuiGraphics(graphics);
         GuiIcon.setGuiGraphics(graphics);
+        buildcraft.lib.gui.GuiStack.setGuiGraphics(graphics);
 
         lastPartialTicks = partialTicks;
         minX = (this.width - PAGE_LEFT.width * 2) / 2;
@@ -308,6 +309,7 @@ public class GuiGuide extends Screen {
         // Clear the graphics context
         MinecraftFont.setGuiGraphics(null);
         GuiIcon.setGuiGraphics(null);
+        buildcraft.lib.gui.GuiStack.setGuiGraphics(null);
     }
 
     public float getLastPartialTicks() {

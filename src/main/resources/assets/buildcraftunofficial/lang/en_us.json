@@ -648,7 +648,7 @@
     "buildcraft.help.rf_engine.upgrades": "Upgrades increase the speed at which FE is consumed and MJ is produced. Place iron or gold gears into these slots.\n1 compatible gear per slot.",
     "buildcraft.help.rf_engine.battery.title": "RF Energy",
     "buildcraft.help.rf_engine.battery": "Converts %s\nto %s",
-    "gui.filling.resources": "Resources",
+    "gui.filling.resources": "Filling Resources",
     "gui.progress": "Progress",
     "gui.leftToBreak": "Left to Break",
     "gui.leftToPlace": "Left to Place",

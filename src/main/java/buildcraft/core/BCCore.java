@@ -207,6 +207,17 @@ public class BCCore {
                 MessageDebugResponse.STREAM_CODEC,
                 MessageDebugResponse::handle
         );
+        // Snapshots / Blueprints
+        registrar.playToServer(
+                buildcraft.builders.snapshot.SnapshotRequestPayload.TYPE,
+                buildcraft.builders.snapshot.SnapshotRequestPayload.STREAM_CODEC,
+                buildcraft.builders.snapshot.SnapshotRequestPayload::handle
+        );
+        registrar.playToClient(
+                buildcraft.builders.snapshot.SnapshotResponsePayload.TYPE,
+                buildcraft.builders.snapshot.SnapshotResponsePayload.STREAM_CODEC,
+                buildcraft.builders.snapshot.SnapshotResponsePayload::handle
+        );
     }
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {

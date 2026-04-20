@@ -23,6 +23,7 @@ import buildcraft.builders.item.ItemSnapshot;
 import buildcraft.builders.tile.TileArchitectTable;
 
 public class ContainerArchitectTable extends ContainerBCTile<TileArchitectTable> {
+    public static final int NET_SET_NAME = 10;
 
     // ContainerData indices
     private static final int DATA_SCANNING = 0;
@@ -75,11 +76,11 @@ public class ContainerArchitectTable extends ContainerBCTile<TileArchitectTable>
 
         // Snapshot slots
         snapshotContainer = new SnapshotContainer(tile);
-        addSlot(new SnapshotInputSlot(snapshotContainer, 0, 135, 35));
-        addSlot(new SnapshotOutputSlot(snapshotContainer, 1, 194, 35));
+        addSlot(new SnapshotInputSlot(snapshotContainer, 0, 52, 125));
+        addSlot(new SnapshotOutputSlot(snapshotContainer, 1, 111, 125));
 
-        // Player inventory at y=84 (matching 1.12.2 layout: addFullPlayerInventory(88, 84))
-        addFullPlayerInventory(8, 84, playerInv);
+        // Player inventory layout
+        addFullPlayerInventory(8, 158, playerInv);
     }
 
     private static TileArchitectTable getTile(Inventory playerInv, FriendlyByteBuf buf) {
@@ -121,6 +122,16 @@ public class ContainerArchitectTable extends ContainerBCTile<TileArchitectTable>
             tile.name = newName;
             tile.setChanged();
         }
+    }
+
+    @Override
+    public void readMessage(int id, buildcraft.lib.net.PacketBufferBC buffer, boolean isClient, net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
+        if (id == NET_SET_NAME && !isClient) {
+            String newName = buffer.readUtf();
+            setTileName(newName);
+            return;
+        }
+        super.readMessage(id, buffer, isClient, ctx);
     }
 
     /** A slot that only accepts snapshot items (clean blueprints/templates). */

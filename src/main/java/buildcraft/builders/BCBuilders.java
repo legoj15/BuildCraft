@@ -49,6 +49,7 @@ public class BCBuilders {
             FillerManager.registry = FillerRegistry.INSTANCE;
             TemplateApi.templateRegistry = TemplateRegistry.INSTANCE;
             TemplateApi.templateRegistry.addHandler(TemplateHandlerDefault.INSTANCE);
+            BCBuildersSchematics.preInit();
             BCBuildersStatements.preInit();
         });
         modEventBus.addListener((RegisterCapabilitiesEvent event) -> {

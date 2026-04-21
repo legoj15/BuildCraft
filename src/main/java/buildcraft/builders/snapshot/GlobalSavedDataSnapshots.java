@@ -32,6 +32,7 @@ import net.minecraft.world.level.Level;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.api.distmarker.Dist;
 
+import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.lib.misc.data.SingleCache;
 import buildcraft.lib.nbt.NbtSquisher;
 
@@ -93,6 +94,8 @@ public class GlobalSavedDataSnapshots {
                         if (Objects.equals(snapshot.key, key)) {
                             return Pair.of(snapshot, snapshotFile);
                         }
+                    } catch (InvalidInputDataException e) {
+                        System.err.println("[BuildCraft] Skipping corrupted snapshot file: " + snapshotFile + " - " + e.getMessage());
                     } catch (IOException e) {
                         new IOException("Failed to read the snapshot " + snapshotFile, e).printStackTrace();
                     }
@@ -113,6 +116,8 @@ public class GlobalSavedDataSnapshots {
                         if (snapshotFile.getName().startsWith(snapshot.key.toString())) {
                             listBuilder.add(snapshot.key);
                         }
+                    } catch (InvalidInputDataException e) {
+                        System.err.println("[BuildCraft] Skipping corrupted snapshot file: " + snapshotFile + " - " + e.getMessage());
                     } catch (IOException io) {
                         new IOException("Failed to read the snapshot " + snapshotFile, io).printStackTrace();
                     }

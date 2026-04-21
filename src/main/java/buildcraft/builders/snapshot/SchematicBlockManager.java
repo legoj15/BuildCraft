@@ -59,8 +59,7 @@ public class SchematicBlockManager {
         Identifier name = Identifier.parse(schematicBlockTag.getStringOr("name", ""));
         SchematicBlockFactory<?> factory = SchematicBlockFactoryRegistry.getFactoryByName(name);
         if (factory == null) {
-            // Return an air placeholder for unknown/missing schematic types (e.g., old corrupted snapshots)
-            return new AirSchematicBlock();
+            throw new InvalidInputDataException("Unknown schematic type " + name);
         }
         ISchematicBlock schematicBlock = factory.supplier.get();
         CompoundTag data = schematicBlockTag.getCompoundOrEmpty("data");
@@ -72,42 +71,8 @@ public class SchematicBlockManager {
         }
     }
 
-    /** Placeholder schematic block for unknown/missing schematic types. */
-    private static class AirSchematicBlock implements ISchematicBlock {
-        @Override
-        public void init(SchematicBlockContext context) {}
-
-        @Override
-        public CompoundTag serializeNBT() {
-            return new CompoundTag();
-        }
-
-        @Override
-        public void deserializeNBT(CompoundTag nbt) {}
-
-        @Override
-        public boolean isBuilt(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
-            return false;
-        }
-
-        @Override
-        public boolean canBuild(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
-            return false;
-        }
-
-        @Override
-        public boolean build(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
-            return false;
-        }
-
-        @Override
-        public boolean buildWithoutChecks(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
-            return false;
-        }
-
-        @Override
-        public ISchematicBlock getRotated(net.minecraft.world.level.block.Rotation rotation) {
-            return this;
-        }
+    /** Check if the given schematic type name is registered. */
+    public static boolean isSchematicTypeRegistered(Identifier name) {
+        return SchematicBlockFactoryRegistry.getFactoryByName(name) != null;
     }
 }

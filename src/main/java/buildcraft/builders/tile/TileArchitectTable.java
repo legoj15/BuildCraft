@@ -146,6 +146,9 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
             level.setBlock(worldPosition, state2, 3);
         }
 
+        // Call parent to set the owner properly
+        super.onPlacedBy(placer, stack);
+
         setChanged();
         if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
@@ -310,7 +313,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
         invSnapshotOut = usedItem.createUsedStack(
             new Header(
                 snapshot.key,
-                getOwner() != null ? getOwner().id() : null,
+                getOwner() != null ? getOwner().id() : new java.util.UUID(0, 0),
                 new Date(),
                 name
             )

@@ -1,4 +1,5 @@
 ###### Changes since 26.1 Beta release 5:
+- Fix: Fixed a NullPointerException crash when placing a blueprint in the architect table with no owner (e.g., in creative with no explicit owner set). The snapshot header serialization now uses a zero UUID as a fallback.
 - Fix: Addressed an issue causing the BuildCraft Filler to incorrectly render the flying block animation when unpowered. This was caused by the client-side battery artificially gaining massive amounts of power during unpowered network syncs due to task cancellation logic repeatedly refunding extrapolated block tasks to the client's local read-only battery mirror.
 - Fix: Filler flying block animation no longer loops when power is cut; blocks freeze in place matching 1.12.2 behavior. Server task data is now merged with max(client, server) power to prevent backward animation resets while maintaining smooth client-side extrapolation between 5-tick server syncs.
 - Updated NeoForge to 26.1.2.12-beta and JEI to 29.5.0.26 for Minecraft 26.1.2.

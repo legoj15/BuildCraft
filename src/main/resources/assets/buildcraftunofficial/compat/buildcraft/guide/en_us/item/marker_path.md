@@ -5,7 +5,7 @@ Other <bold>details <underline>include</underline> bold<italic> text</italic></b
 
 Just <blue>in</blue> c<bold>ase</bold> <green>you <red><italic>d<underline>id</red>n</italic>'t</underline> get</green> that...
 
-<recipes_usages stack="buildcraftcore:marker_path"/>
+<recipes_usages stack="buildcraftunofficial:marker_path"/>
 <chapter name="Information"/>
 <lore>
 Some loric information that is totally not just a lot of really long filler text to test next page logic.
@@ -27,5 +27,5 @@ HI THIS SHOULD BE ON ANOTHER PAGE
 <note id="mark_info">
 Hi there, I am a note!
 Just in case you wanted to know, this is how you make a path mark.
-<recipes stack="buildcraftcore:marker_path" join="false"/>
+<recipes stack="buildcraftunofficial:marker_path" join="false"/>
 </note>

@@ -6,4 +6,4 @@ As an added bonus it doesn't catch fire at all.
 <no_lore>
 The Stone Gear is basically an upgrade of the Wooden Gear, used to make stronger machines due to the hardness of stone.
 </no_lore>
-<recipes_usages stack="buildcraftcore:gear_stone"/>
+<recipes_usages stack="buildcraftunofficial:gear_stone"/>

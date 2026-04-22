@@ -6,4 +6,4 @@ Iron however is much better at these more demanding tasks.
 <no_lore>
 Upgrading your gears again allows you to obtain more complex machinery due to the nature of the metal.
 </no_lore>
-<recipes_usages stack="buildcraftcore:gear_iron"/>
+<recipes_usages stack="buildcraftunofficial:gear_iron"/>

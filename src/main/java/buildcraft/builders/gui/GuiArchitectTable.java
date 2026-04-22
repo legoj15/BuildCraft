@@ -63,7 +63,7 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
     public boolean keyPressed(KeyEvent event) {
         if (this.nameField.isFocused()) {
             if (event.key() == 257 || event.key() == 335) { // ENTER or NUMPAD_ENTER
-                this.nameField.setFocused(false);
+                this.setFocused(null);
                 return true;
             }
             if (this.minecraft.options.keyInventory.matches(event)) {
@@ -76,7 +76,7 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean entered) {
         if (this.nameField.isFocused() && !this.nameField.isMouseOver(event.x(), event.y())) {
-            this.nameField.setFocused(false);
+            this.setFocused(null);
         }
         return super.mouseClicked(event, entered);
     }

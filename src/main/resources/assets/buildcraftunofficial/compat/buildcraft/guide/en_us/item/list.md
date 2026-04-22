@@ -7,7 +7,7 @@ A List is used as a way to expand the capabilities of your item filtering.
 </no_lore>
 <chapter name="Information"/>
 To access the List GUI, hold it in your hand and right click it. You can then name your List at the top then insert the items you want to filter into the slots to create ghost items.
-<recipes_usages stack="buildcraftcore:list"/>
+<recipes_usages stack="buildcraftunofficial:list"/>
 
 <chapter name="Buttons"/>
 Just insert the item you want the other items to revolve around in the furthest left slot and select the right button you want.

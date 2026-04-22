@@ -6,4 +6,4 @@ Due to its strength, diamond gears allows for the most demanding of tasks to be 
 <no_lore>
 The final tier of gear, The Diamond Gear is the strongest gear which is required for the most complex of machines.
 </no_lore>
-<recipes_usages stack="buildcraftcore:gear_diamond"/>
+<recipes_usages stack="buildcraftunofficial:gear_diamond"/>

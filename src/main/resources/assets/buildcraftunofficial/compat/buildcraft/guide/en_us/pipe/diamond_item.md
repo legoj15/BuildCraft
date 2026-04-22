@@ -14,7 +14,7 @@ Placing a items you want in a certain slots colour will allow you to filter whic
 Having multiple of the same items in a colour will allow you to add 'weight' to where you fluids will go.
 
 A List can be used in a filtering slots to give you expanded filtering options.
-<link to="buildcraftcore:item/list"/> 
+<link to="buildcraftunofficial:item/list"/> 
 
 <chapter name="Pipe Mechanics"/>
 In case of their being multiple directions items could go, the items will be distributed (depending of the weight you give them) between them.

@@ -2,63 +2,213 @@
 
 import "buildcraftunofficial:util" "buildcraftunofficial:main"
 
-item "placeholder/advanced_crafting_table" "buildcraftunofficial:advanced_crafting_table"
-item "placeholder/architect" "buildcraftunofficial:architect"
-item "placeholder/assembly_table" "buildcraftunofficial:assembly_table"
-item "placeholder/blueprint_clean" "buildcraftunofficial:blueprint_clean"
-item "placeholder/blueprint_used" "buildcraftunofficial:blueprint_used"
-item "placeholder/builder" "buildcraftunofficial:builder"
-item "placeholder/debugger" "buildcraftunofficial:debugger"
-item "placeholder/decorated_blueprint" "buildcraftunofficial:decorated_blueprint"
-item "placeholder/decorated_destroy" "buildcraftunofficial:decorated_destroy"
-item "placeholder/decorated_laser" "buildcraftunofficial:decorated_laser"
-item "placeholder/decorated_leather" "buildcraftunofficial:decorated_leather"
-item "placeholder/decorated_paper" "buildcraftunofficial:decorated_paper"
-item "placeholder/decorated_template" "buildcraftunofficial:decorated_template"
-item "placeholder/engine_creative" "buildcraftunofficial:engine_creative"
-item "placeholder/engine_redstone" "buildcraftunofficial:engine_redstone"
-item "placeholder/filler" "buildcraftunofficial:filler"
-item "placeholder/filler_planner" "buildcraftunofficial:filler_planner"
-item "placeholder/filtered_buffer" "buildcraftunofficial:filtered_buffer"
-item "placeholder/fragile_fluid_container" "buildcraftunofficial:fragile_fluid_container"
-item "placeholder/frame" "buildcraftunofficial:frame"
-item "placeholder/gate_copier" "buildcraftunofficial:gate_copier"
-item "placeholder/gelled_water" "buildcraftunofficial:gelled_water"
-item "placeholder/glob_of_oil" "buildcraftunofficial:glob_of_oil"
-item "placeholder/goggles" "buildcraftunofficial:goggles"
-item "placeholder/guide_note" "buildcraftunofficial:guide_note"
-item "placeholder/integration_table" "buildcraftunofficial:integration_table"
-item "placeholder/laser" "buildcraftunofficial:laser"
-item "placeholder/library" "buildcraftunofficial:library"
-item "placeholder/map_location" "buildcraftunofficial:map_location"
-item "placeholder/marker_volume" "buildcraftunofficial:marker_volume"
-item "placeholder/pipe_cobble_power" "buildcraftunofficial:pipe_cobble_power"
-item "placeholder/pipe_diamond_power" "buildcraftunofficial:pipe_diamond_power"
-item "placeholder/pipe_diamond_wood_power" "buildcraftunofficial:pipe_diamond_wood_power"
-item "placeholder/pipe_gold_power" "buildcraftunofficial:pipe_gold_power"
-item "placeholder/pipe_iron_power" "buildcraftunofficial:pipe_iron_power"
-item "placeholder/pipe_quartz_power" "buildcraftunofficial:pipe_quartz_power"
-item "placeholder/pipe_sandstone_power" "buildcraftunofficial:pipe_sandstone_power"
-item "placeholder/pipe_stone_power" "buildcraftunofficial:pipe_stone_power"
-item "placeholder/pipe_wood_power" "buildcraftunofficial:pipe_wood_power"
-item "placeholder/plug_timer" "buildcraftunofficial:plug_timer"
-item "placeholder/quarry" "buildcraftunofficial:quarry"
-item "placeholder/redstone_diamond_chipset" "buildcraftunofficial:redstone_diamond_chipset"
-item "placeholder/redstone_gold_chipset" "buildcraftunofficial:redstone_gold_chipset"
-item "placeholder/redstone_iron_chipset" "buildcraftunofficial:redstone_iron_chipset"
-item "placeholder/redstone_quartz_chipset" "buildcraftunofficial:redstone_quartz_chipset"
-item "placeholder/redstone_red_chipset" "buildcraftunofficial:redstone_red_chipset"
-item "placeholder/replacer" "buildcraftunofficial:replacer"
-item "placeholder/schematic_single_clean" "buildcraftunofficial:schematic_single_clean"
-item "placeholder/schematic_single_used" "buildcraftunofficial:schematic_single_used"
-item "placeholder/special_rock" "buildcraftunofficial:special_rock"
-item "placeholder/spring_oil" "buildcraftunofficial:spring_oil"
-item "placeholder/spring_water" "buildcraftunofficial:spring_water"
-item "placeholder/template_clean" "buildcraftunofficial:template_clean"
-item "placeholder/template_used" "buildcraftunofficial:template_used"
-item "placeholder/tube" "buildcraftunofficial:tube"
-item "placeholder/volume_box" "buildcraftunofficial:volume_box"
-item "placeholder/water_gel" "buildcraftunofficial:water_gel"
-item "placeholder/water_gel_spawn" "buildcraftunofficial:water_gel_spawn"
-item "placeholder/waterproof" "buildcraftunofficial:waterproof"
-item "placeholder/zone_planner" "buildcraftunofficial:zone_planner"
+// ---------------------------------------------------------------------------
+// Real-content entries — each points at an en_us/<path>.md file that actually
+// has writeup (chapters, lore, recipes). Typed aliases set tag_type/tag_subtype
+// so these show up in proper "Blocks", "Items/Gears", "Items/Tools" TOC tabs.
+//
+// alias reference (see util.txt):
+//   block_engine   "<name>" "<stack>"   -> block/<name>.md  tag=engine
+//   block_mining   "<name>"             -> block/<name>.md  tag=mining   (auto-stack)
+//   block_fluid    "<name>"             -> block/<name>.md  tag=fluid
+//   block_refining "<name>"             -> block/<name>.md  tag=refining
+//   block_auto     "<name>"             -> block/<name>.md  tag=automation
+//   pipe_item      "<name>" "<stack>"   -> pipe/<name>.md   tag=pipe_item
+//   pipe_fluid     "<name>" "<stack>"   -> pipe/<name>.md   tag=pipe_fluid
+//   pipe           "<sub>" "<name>" "<stack>" -> pipe/<name>.md tag=<sub>
+//   gear           "<name>"             -> item/<name>.md   tag=gear     (auto-stack)
+//   tool           "<name>"             -> item/<name>.md   tag=tool
+//   plug           "<name>"             -> item/<name>.md   tag=pipe_plug
+// ---------------------------------------------------------------------------
+
+// ---- Blocks / Engines (real content) -------------------------------------
+block_engine "engine_redstone" "buildcraftunofficial:engine_redstone"
+block_engine "engine_stone"    "buildcraftunofficial:engine_stone"
+block_engine "engine_iron"     "buildcraftunofficial:engine_iron"
+
+// ---- Blocks / Mining (real content) --------------------------------------
+block_mining "mining_well"
+block_mining "pump"
+
+// ---- Blocks / Fluid (real content) ---------------------------------------
+block_fluid "flood_gate"
+block_fluid "tank"
+
+// ---- Blocks / Refining (real content) ------------------------------------
+block_refining "distiller"
+block_refining "heat_exchange"
+
+// ---- Blocks / Automation (real content) ----------------------------------
+block_auto "autoworkbench_item"
+block_auto "chute"
+
+// ---- Items / Gears (real content) ----------------------------------------
+gear "gear_wood"
+gear "gear_stone"
+gear "gear_iron"
+gear "gear_gold"
+gear "gear_diamond"
+
+// ---- Items / Tools (real content) ----------------------------------------
+tool "wrench"
+tool "paintbrush"
+
+// Other items with writeups but file names that don't match the stack id.
+item_stack "item" "tool" "box_volume"        "buildcraftunofficial:volume_box"
+item_stack "item" "tool" "marker_connector"  "buildcraftunofficial:marker_connector"
+item_stack "item" "tool" "marker_land"       "buildcraftunofficial:marker_volume"
+item_stack "item" "tool" "marker_path"       "buildcraftunofficial:marker_path"
+item_stack "item" "tool" "list"              "buildcraftunofficial:list"
+
+// ---- Items / Pluggables (real content) -----------------------------------
+plug "plug_blocker"
+plug "plug_power_adaptor"
+
+// Single shared wire page (file at item/wire.md). Register under the white
+// wire stack as the representative entry for the whole wire family.
+item_stack "item" "wire" "wire" "buildcraftunofficial:wire_white"
+
+// ---- Pipes / Item Transport (real content) -------------------------------
+pipe_item "wood_item"          "buildcraftunofficial:pipe_wood_item"
+pipe_item "cobble_item"        "buildcraftunofficial:pipe_cobble_item"
+pipe_item "stone_item"         "buildcraftunofficial:pipe_stone_item"
+pipe_item "quartz_item"        "buildcraftunofficial:pipe_quartz_item"
+pipe_item "iron_item"          "buildcraftunofficial:pipe_iron_item"
+pipe_item "gold_item"          "buildcraftunofficial:pipe_gold_item"
+pipe_item "clay_item"          "buildcraftunofficial:pipe_clay_item"
+pipe_item "sandstone_item"     "buildcraftunofficial:pipe_sandstone_item"
+pipe_item "void_item"          "buildcraftunofficial:pipe_void_item"
+pipe_item "obsidian_item"      "buildcraftunofficial:pipe_obsidian_item"
+pipe_item "diamond_item"       "buildcraftunofficial:pipe_diamond_item"
+pipe_item "diamond_wood_item"  "buildcraftunofficial:pipe_diamond_wood_item"
+pipe_item "lapis_item"         "buildcraftunofficial:pipe_lapis_item"
+pipe_item "daizuli_item"       "buildcraftunofficial:pipe_daizuli_item"
+pipe_item "emzuli_item"        "buildcraftunofficial:pipe_emzuli_item"
+pipe_item "stripes_item"       "buildcraftunofficial:pipe_stripes_item"
+
+// ---- Pipes / Fluid Transport (real content) ------------------------------
+pipe_fluid "wood_fluid"         "buildcraftunofficial:pipe_wood_fluid"
+pipe_fluid "cobble_fluid"       "buildcraftunofficial:pipe_cobble_fluid"
+pipe_fluid "stone_fluid"        "buildcraftunofficial:pipe_stone_fluid"
+pipe_fluid "quartz_fluid"       "buildcraftunofficial:pipe_quartz_fluid"
+pipe_fluid "iron_fluid"         "buildcraftunofficial:pipe_iron_fluid"
+pipe_fluid "gold_fluid"         "buildcraftunofficial:pipe_gold_fluid"
+pipe_fluid "clay_fluid"         "buildcraftunofficial:pipe_clay_fluid"
+pipe_fluid "sandstone_fluid"    "buildcraftunofficial:pipe_sandstone_fluid"
+pipe_fluid "void_fluid"         "buildcraftunofficial:pipe_void_fluid"
+pipe_fluid "diamond_fluid"      "buildcraftunofficial:pipe_diamond_fluid"
+pipe_fluid "diamond_wood_fluid" "buildcraftunofficial:pipe_diamond_wood_fluid"
+
+// ---- Pipes / Structure (real content) ------------------------------------
+pipe "pipe_structure" "structure" "buildcraftunofficial:pipe_structure"
+
+// ---------------------------------------------------------------------------
+// Placeholder entries — registered items for which we don't yet have a
+// writeup. The GuideManager loader generates a WIP stub at runtime for any
+// registered entry lacking a matching en_us/<path>.md file, so these still
+// show up in the TOC with proper typed categorization.
+//
+// Replace with a typed real-content entry above once its .md page is written.
+// ---------------------------------------------------------------------------
+
+// Blocks / Engine — stubs for engines beyond the three real writeups.
+place "engine_rf"         "block" "engine"          // FE Engine
+place "mj_dynamo"         "block" "engine"          // MJ Dynamo
+place "engine_creative"   "block" "engine"
+
+// Blocks / Automation — machines and tables that drive BC's automation chain.
+place "advanced_crafting_table" "block" "automation"
+place "architect"               "block" "automation"
+place "assembly_table"          "block" "automation"
+place "builder"                 "block" "automation"
+place "debugger"                "block" "automation"
+place "filler"                  "block" "automation"
+place "filler_planner"          "block" "automation"
+place "filtered_buffer"         "block" "automation"
+place "integration_table"       "block" "automation"
+place "library"                 "block" "automation"
+place "replacer"                "block" "automation"
+place "zone_planner"            "block" "automation"
+
+// Blocks / Mining — extraction machines.
+place "quarry"          "block" "mining"
+
+// Blocks / Fluid — fluid source blocks and fluid-handling blocks.
+place "spring_oil"      "block" "fluid"
+place "spring_water"    "block" "fluid"
+
+// Blocks / Laser — laser block (emits laser beams for assembly/integration).
+place "laser"           "block" "laser"
+
+// Blocks / Basic — misc blocks that don't fit a specific mechanic category.
+place "frame"            "block" "basic"
+place "marker_volume"    "block" "basic"
+place "special_rock"     "block" "basic"
+place "tube"             "block" "basic"
+place "water_gel_spawn"  "block" "basic"
+
+// Items / Tool — player-held utility items.
+place "gate_copier"     "item" "tool"
+place "goggles"         "item" "tool"
+place "guide_note"      "item" "tool"
+place "map_location"    "item" "tool"
+
+// Items / Pluggables — pipe plug items.
+place "plug_facade"       "item" "pipe_plug"
+place "plug_gate"         "item" "pipe_plug"
+place "plug_lens"         "item" "pipe_plug"
+place "plug_light_sensor" "item" "pipe_plug"
+place "plug_pulsar"       "item" "pipe_plug"
+place "plug_timer"        "item" "pipe_plug"
+
+// Items / Paperwork — blueprints, schematics, templates.
+place "blueprint_clean"        "item" "paperwork"
+place "blueprint_used"         "item" "paperwork"
+place "decorated_blueprint"    "item" "paperwork"
+place "decorated_destroy"      "item" "paperwork"
+place "decorated_laser"        "item" "paperwork"
+place "decorated_leather"      "item" "paperwork"
+place "decorated_paper"        "item" "paperwork"
+place "decorated_template"     "item" "paperwork"
+place "schematic_single_clean" "item" "paperwork"
+place "schematic_single_used"  "item" "paperwork"
+place "template_clean"         "item" "paperwork"
+place "template_used"          "item" "paperwork"
+
+// Items / Chipset — the five chipset tiers used in assembly recipes.
+place "redstone_red_chipset"     "item" "chipset"
+place "redstone_iron_chipset"    "item" "chipset"
+place "redstone_gold_chipset"    "item" "chipset"
+place "redstone_diamond_chipset" "item" "chipset"
+place "redstone_quartz_chipset"  "item" "chipset"
+
+// Items / Basic — waterproof and misc components.
+place "waterproof"             "item" "basic"
+
+// Items / Fluid — fluid item forms (oil globs, gelled water, etc.).
+place "fragile_fluid_container" "item" "fluid"
+place "gelled_water"            "item" "fluid"
+place "glob_of_oil"             "item" "fluid"
+place "water_gel"               "item" "fluid"
+
+// Pipes / Power Transport — MJ (kinesis) pipes (stubs; real writeups pending).
+place "pipe_cobble_power"       "pipe" "pipe_power"
+place "pipe_diamond_power"      "pipe" "pipe_power"
+place "pipe_diamond_wood_power" "pipe" "pipe_power"
+place "pipe_gold_power"         "pipe" "pipe_power"
+place "pipe_iron_power"         "pipe" "pipe_power"
+place "pipe_quartz_power"       "pipe" "pipe_power"
+place "pipe_sandstone_power"    "pipe" "pipe_power"
+place "pipe_stone_power"        "pipe" "pipe_power"
+place "pipe_wood_power"         "pipe" "pipe_power"
+
+// Pipes / FE Transport — RF/FE (electric) pipes (stubs; real writeups pending).
+place "pipe_wood_rf"            "pipe" "pipe_rf"
+place "pipe_cobble_rf"          "pipe" "pipe_rf"
+place "pipe_stone_rf"           "pipe" "pipe_rf"
+place "pipe_quartz_rf"          "pipe" "pipe_rf"
+place "pipe_iron_rf"            "pipe" "pipe_rf"
+place "pipe_gold_rf"            "pipe" "pipe_rf"
+place "pipe_sandstone_rf"       "pipe" "pipe_rf"
+place "pipe_diamond_rf"         "pipe" "pipe_rf"
+place "pipe_diamond_wood_rf"    "pipe" "pipe_rf"

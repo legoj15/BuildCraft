@@ -6,7 +6,7 @@ Pipe Wire: Travels indefinitely, Can carry lots of signals per pipe and is avail
 A Pipe Wire is a pipe pluggable system used to transmit signals indefinitely data along a pipe system.
 </no_lore>
 
-<recipes stack="buildcraftunofficial:wire"/>
+<recipes stack="buildcraftunofficial:wire_white"/>
 
 <chapter name="Wire Mechanics"/>
 A Gate is used to provide a signal to a pipe wire which is transmitted to other connected pipe wires of the same colour.
@@ -17,4 +17,4 @@ Pipe wire is available in all 16 colours.
 Pipe Wire be placed on each corner of a pipe and will only connect to pipe wires of the same colour in a cardinal direction to it.
 They can connect to other wires of the same colour over different pipes even if the pipes don't connect themselves.
 
-<usages stack="buildcraftunofficial:wire"/>
+<usages stack="buildcraftunofficial:wire_white"/>

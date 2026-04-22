@@ -35,6 +35,18 @@ alias item 2 `add "%0" \`{
     "tag_subtype": "",
     "stack": "%1"
 }\``
+
+// Placeholder entry with proper typing — path stays placeholder/<name>.md (so the
+// stub content still loads) but tag_type/tag_subtype drive TOC categorization,
+// so these show up under Blocks/Items/Pipes tabs instead of a single "Placeholder"
+// tab. Stack is auto-derived as buildcraftunofficial:<name>. Args: name, type, subtype.
+alias place 3 `add "placeholder/%0" \`{
+    "type": "item_stack",
+    "book": "${0}",
+    "tag_type": "%1",
+    "tag_subtype": "%2",
+    "stack": "buildcraftunofficial:%0"
+}\``
 // 3-arg form used transitively by item_tool/item_gear/item_plug aliases
 alias item_typed 3 `item_stack "item" "%0" "%1" "%2"`
 alias block_full 3 `item_stack "block" "%0" "%1" "%2"`

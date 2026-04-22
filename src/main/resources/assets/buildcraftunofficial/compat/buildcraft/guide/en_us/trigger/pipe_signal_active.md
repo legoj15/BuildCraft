@@ -8,7 +8,7 @@ Pipe Signal On is a gate trigger provided on any gate that also has a pipe wire 
 <chapter name="Requirements"/>
 When selected, the connected actions will only be activated when the connected pipe wire of the same colour is activated.
 
-<link to="buildcrafttransport:item/wire"/> 
+<link to="buildcraftunofficial:item/wire"/> 
 
 <chapter name="Parameters"/>
 When Pipe Signal On and the gate installed has parameters available, the Pipe Signal On and Pipe Signal Off of the other connected Pipe Wire Colours becomes available as a parameter.

@@ -18,9 +18,9 @@ Using Pipe Plugs or painting pipes a different colour can stop pipes connecting.
 
 <chapter name="Powering"/>
 It can receive power from any MJ power source such as: an engine, a power adaptor, or a pipe pulsar.
-<link to="buildcraftcore:block/engine_wood"/>
-<link to="buildcrafttransport:item/plug_power_adaptor"/>
-<link to="buildcraftsilicon:item/plug_pulsar"/> 
+<link to="buildcraftunofficial:block/engine_wood"/>
+<link to="buildcraftunofficial:item/plug_power_adaptor"/>
+<link to="buildcraftunofficial:item/plug_pulsar"/> 
 For each pulse of power it receives, it will extract items from the adjacent inventory.
 The more power a pulse has, the more items will be extracted per pulse.
 

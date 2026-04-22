@@ -7,9 +7,11 @@
 
 package buildcraft.lib.client.guide;
 
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,6 +45,7 @@ import buildcraft.lib.client.guide.entry.PageEntry;
 import buildcraft.lib.client.guide.entry.PageValueType;
 import buildcraft.lib.client.guide.loader.IPageLoader;
 import buildcraft.lib.client.guide.loader.MarkdownPageLoader;
+import buildcraft.lib.client.guide.loader.XmlPageLoader;
 import buildcraft.lib.client.guide.parts.GuidePageFactory;
 import buildcraft.lib.client.guide.parts.GuidePageStandInRecipes;
 import buildcraft.lib.client.guide.parts.contents.ContentsNode;
@@ -208,16 +211,39 @@ public enum GuideManager {
 
             if (pages.containsKey(entryKey)) continue;
 
-            String endings;
-            if (PAGE_LOADERS.size() == 1) {
-                endings = PAGE_LOADERS.keySet().iterator().next();
-            } else {
-                endings = PAGE_LOADERS.keySet().toString();
+            // Fallback: synthesize a stub page so every registered entry still shows
+            // in the TOC, even without a matching .md file on disk. This keeps the
+            // guide book working as we port content incrementally — missing pages
+            // render as a WIP placeholder rather than disappearing from the index.
+            try {
+                PageEntry<?> stubEntry = mapEntry.getValue();
+                String title = stubEntry.title != null ? stubEntry.title : entryKey.getPath();
+                String stubContent =
+                    "<chapter name=\"" + title + " (WIP)\"/>\n"
+                        + "This guide book entry is a placeholder and has not been written yet.\n";
+                try (BufferedReader stubReader = new BufferedReader(new StringReader(stubContent))) {
+                    GuidePageFactory factory = XmlPageLoader.INSTANCE.loadPage(
+                        stubReader, entryKey, stubEntry,
+                        net.minecraft.util.profiling.InactiveProfiler.INSTANCE
+                    );
+                    pages.put(entryKey, factory);
+                }
+                if (GuideManager.DEBUG) {
+                    BCLog.logger.info("[lib.guide.loader] Generated stub page for '" + entryKey + "'.");
+                }
+            } catch (IOException io) {
+                io.printStackTrace();
+                String endings;
+                if (PAGE_LOADERS.size() == 1) {
+                    endings = PAGE_LOADERS.keySet().iterator().next();
+                } else {
+                    endings = PAGE_LOADERS.keySet().toString();
+                }
+                BCLog.logger.warn(
+                    "[lib.guide.loader] Unable to load guide page '" + entryKey + "' (full path = '" + domain + ":"
+                        + path + "." + endings + "') and stub synthesis failed!"
+                );
             }
-            BCLog.logger.warn(
-                "[lib.guide.loader] Unable to load guide page '" + entryKey + "' (full path = '" + domain + ":" + path
-                    + "." + endings + "') because we couldn't find any of the valid paths in any resource pack!"
-            );
         }
     }
 

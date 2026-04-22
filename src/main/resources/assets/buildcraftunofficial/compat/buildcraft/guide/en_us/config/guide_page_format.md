@@ -15,10 +15,10 @@ Every tag has is in the form &lt;name arguments/&gt; - where the name is the tag
 These will make a link to another guide book page, using the title and icon from that linked page. Alternatively you can make a link to an ItemStack or Statement even if they don't have an existing guide book page.
 For example:
 <guide_md>
-&lt;link to="buildcraftlib:config/json_insn_format"/&gt;
+&lt;link to="buildcraftunofficial:config/json_insn_format"/&gt;
 </guide_md>
 will result in:
-<link to="buildcraftlib:config/json_insn_format"/>
+<link to="buildcraftunofficial:config/json_insn_format"/>
 
 or:
 <guide_md>
@@ -91,30 +91,30 @@ This is disabled by default, but toggle-able in-game and planned to be toggle-ab
 ## Recipe (singular)
 This tag shows the first recipe found for the given item stack. For example:
 <guide_md>
-&lt;recipes stack="buildcraftcore:gear_stone"&gt;
+&lt;recipes stack="buildcraftunofficial:gear_stone"&gt;
 </guide_md>
-<recipe stack="buildcraftcore:gear_stone"/>
+<recipe stack="buildcraftunofficial:gear_stone"/>
 
 ## Recipes
 This tag shows all recipes for the given item stack. For example:
 <guide_md>
-&lt;recipes stack="buildcraftcore:gear_wood"&gt;
+&lt;recipes stack="buildcraftunofficial:gear_wood"&gt;
 </guide_md>
-<recipes stack="buildcraftcore:gear_wood" chapter_level="2"/>
+<recipes stack="buildcraftunofficial:gear_wood" chapter_level="2"/>
 
 ## Usages
 Similar to recipes, this shows all usages for the given item stack. For example:
 <guide_md>
-&lt;usages stack="buildcraftcore:engine"&gt;
+&lt;usages stack="buildcraftunofficial:engine_redstone"&gt;
 </guide_md>
-<usages stack="buildcraftcore:engine" chapter_level="2"/>
+<usages stack="buildcraftunofficial:engine_redstone" chapter_level="2"/>
 
 ## Recipes and usages
 This effectively combines the above two tags into one, for example:
 <guide_md>
-&lt;recipes_usages stack="buildcrafttransport:pipe_structure"&gt;
+&lt;recipes_usages stack="buildcraftunofficial:pipe_structure"&gt;
 </guide_md>
-<recipes_usages stack="buildcrafttransport:pipe_structure" chapter_level="2"/>
+<recipes_usages stack="buildcraftunofficial:pipe_structure" chapter_level="2"/>
 
 ## Group
 This shows groups appropriate for the given item, statement, etc.

@@ -1,4 +1,3 @@
-<chapter name="tile.engineWood.name"/>
 <lore>
 In a quest to create power, you have discovered a way to produce a small amount of power using just a redstone signal.
 </lore>
@@ -7,7 +6,7 @@ The Redstone engine is a basic engine that only requires a redstone signal to ru
 </no_lore>
 <chapter name="Information"/>
 Due to the little amount of MJ they produce, they are only suitable to operate simple devices such as extraction pipes or pumps.
-<recipes_usages stack="buildcraftcore:engine"/>
+<recipes_usages stack="buildcraftunofficial:engine_redstone"/>
 
 
 <chapter name="Engine Mechanics"/>

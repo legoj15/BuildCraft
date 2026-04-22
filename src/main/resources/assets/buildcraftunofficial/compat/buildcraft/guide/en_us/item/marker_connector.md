@@ -8,4 +8,4 @@ The Marker Connector is used manipulate the size of a volume box or the directio
 <chapter name="Information"/>
 To use the Marker Connector, hold it in your had and click any laser box you want to adjust and move your cursor to adjust it. The click it again to stop adjusting it.
 You can shift click the laser boxes with the marker connector in hand to remove the laser box
-<recipes_usages stack="buildcraftcore:marker_connector"/>
+<recipes_usages stack="buildcraftunofficial:marker_connector"/>

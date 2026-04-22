@@ -118,9 +118,11 @@ public class ContainerArchitectTable extends ContainerBCTile<TileArchitectTable>
     }
 
     public void setTileName(String newName) {
-        if (tile != null && tile.getLevel() != null && !tile.getLevel().isClientSide()) {
+        if (tile != null && tile.getLevel() != null) {
             tile.name = newName;
-            tile.setChanged();
+            if (!tile.getLevel().isClientSide()) {
+                tile.setChanged();
+            }
         }
     }
 

@@ -22,6 +22,8 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.recipes.AssemblyRecipeBasic;
 import buildcraft.api.recipes.IngredientStack;
 
+import buildcraft.core.BCCoreBlocks;
+
 import buildcraft.lib.misc.ColourUtil;
 import buildcraft.lib.recipe.AssemblyRecipeRegistry;
 
@@ -45,10 +47,10 @@ public class BCSiliconRecipes {
     // --- Plug Recipes ---
 
     private static void registerPlugRecipes() {
-        // Pulsar: redstone engine (or redstone block) + 2 iron ingots
+        // Pulsar: redstone engine + 2 iron ingots (matches 1.12.2 behavior).
         {
             Set<IngredientStack> input = new HashSet<>();
-            input.add(new IngredientStack(Ingredient.of(Blocks.REDSTONE_BLOCK)));
+            input.add(new IngredientStack(Ingredient.of(BCCoreBlocks.ENGINE_REDSTONE.get())));
             input.add(new IngredientStack(Ingredient.of(Items.IRON_INGOT), 2));
             ItemStack output = new ItemStack(BCSiliconItems.PLUG_PULSAR.get());
             AssemblyRecipeRegistry.register(

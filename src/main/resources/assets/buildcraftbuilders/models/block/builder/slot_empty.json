@@ -1,6 +1,6 @@
 {
     "textures": {
-        "all": "buildcraftunofficial:blocks/builder/slot_empty"
+        "all": "buildcraftunofficial:block/builder/slot_empty"
     },
     "elements": [
         {

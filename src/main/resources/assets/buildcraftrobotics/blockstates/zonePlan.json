@@ -3,13 +3,13 @@
     "defaults": {
         "model": "buildcraftunofficial:default_cube",
         "textures": {
-            "particle":"buildcraftunofficial:blocks/zone_plan/top",
-            "down":"buildcraftunofficial:blocks/zone_plan/default",
-            "up":"buildcraftunofficial:blocks/zone_plan/top",
-            "north":"buildcraftunofficial:blocks/zone_plan/back",
-            "east":"buildcraftunofficial:blocks/zone_plan/right",
-            "south":"buildcraftunofficial:blocks/zone_plan/front",
-            "west":"buildcraftunofficial:blocks/zone_plan/left"
+            "particle":"buildcraftunofficial:block/zone_plan/top",
+            "down":"buildcraftunofficial:block/zone_plan/default",
+            "up":"buildcraftunofficial:block/zone_plan/top",
+            "north":"buildcraftunofficial:block/zone_plan/back",
+            "east":"buildcraftunofficial:block/zone_plan/right",
+            "south":"buildcraftunofficial:block/zone_plan/front",
+            "west":"buildcraftunofficial:block/zone_plan/left"
         }
     },
     "variants": {

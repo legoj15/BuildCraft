@@ -1,6 +1,6 @@
 {
     "parent": "builtin/entity",
     "textures": {
-        "particle":"buildcraftunofficial:blocks/refinery/default"
+        "particle":"buildcraftunofficial:block/refinery/default"
     }
 }

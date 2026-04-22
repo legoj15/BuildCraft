@@ -1,6 +1,6 @@
 {
     "textures": {
-        "slot": "buildcraftunofficial:blocks/builder/slot_blueprint"
+        "slot": "buildcraftunofficial:block/builder/slot_blueprint"
     },
     "elements": [
         {

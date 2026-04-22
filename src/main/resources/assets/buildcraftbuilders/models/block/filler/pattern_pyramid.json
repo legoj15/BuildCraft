@@ -1,6 +1,6 @@
 {
     "parent": "buildcraftunofficial:block/filler/pattern",
     "textures": {
-        "pattern": "buildcraftunofficial:blocks/filler/patterns/pyramid"
+        "pattern": "buildcraftunofficial:block/filler/patterns/pyramid"
     }
 }

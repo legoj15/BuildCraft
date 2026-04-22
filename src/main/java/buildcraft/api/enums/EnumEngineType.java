@@ -18,7 +18,7 @@ public enum EnumEngineType implements StringRepresentable, IEngineType {
 
     EnumEngineType(String mod, String loc) {
         unlocalizedTag = loc;
-        resourceLocation = "buildcraft" + mod + ":blocks/engine/inv/" + loc;
+        resourceLocation = "buildcraft" + mod + ":block/engine/inv/" + loc;
     }
 
     @Override

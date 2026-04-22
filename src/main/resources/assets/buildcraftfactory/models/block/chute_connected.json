@@ -15,12 +15,12 @@
         }
     ],
     "textures": {
-        "particle": "buildcraftunofficial:blocks/chute/top",
-        "top": "buildcraftunofficial:blocks/chute/top",
-        "top_bottom": "buildcraftunofficial:blocks/chute/top_bottom",
-        "top_side": "buildcraftunofficial:blocks/chute/top_side",
-        "bottom": "buildcraftunofficial:blocks/chute/bottom",
-        "side": "buildcraftunofficial:blocks/chute/side",
-        "side2": "buildcraftunofficial:blocks/chute/side2"
+        "particle": "buildcraftunofficial:block/chute/top",
+        "top": "buildcraftunofficial:block/chute/top",
+        "top_bottom": "buildcraftunofficial:block/chute/top_bottom",
+        "top_side": "buildcraftunofficial:block/chute/top_side",
+        "bottom": "buildcraftunofficial:block/chute/bottom",
+        "side": "buildcraftunofficial:block/chute/side",
+        "side2": "buildcraftunofficial:block/chute/side2"
     }
 }

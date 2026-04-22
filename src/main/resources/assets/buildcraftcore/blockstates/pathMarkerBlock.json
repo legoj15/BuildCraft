@@ -12,12 +12,12 @@
         "led_done": {
             "false": {
                 "textures": {
-                    "torch": "buildcraftunofficial:blocks/marker/path"
+                    "torch": "buildcraftunofficial:block/marker/path"
                 }
             },
             "true": {
                 "textures": {
-                    "torch": "buildcraftunofficial:blocks/marker/path_searching"
+                    "torch": "buildcraftunofficial:block/marker/path_searching"
                 }
             }
         }

@@ -4,3 +4,6 @@
 ## 2023-10-27 - Obsidian Pipe Memory Optimization
 **Learning:** In Minecraft mods, hot paths like block entity `tick()` methods can create immense GC pressure if they unconditionally allocate objects like `AABB` or `Vec3` every tick, especially for blocks that exist in large numbers (like transport pipes).
 **Action:** Cache static geometrical representations (`AABB`, `Vec3` center points) as class fields based on the block's current `BlockPos`. Re-evaluate these caches only if the `BlockPos` changes (e.g., via contraption mods), rather than allocating them anew every single tick.
+## 2024-04-17 - Avoid Stream Allocations in Tick Loops
+**Learning:** Using Java Streams (`.stream().filter().forEach()`) in hot paths like `LevelSavedDataVolumeBoxes#tick` creates numerous temporary objects (streams, iterators, lambdas) every tick, leading to high garbage collection overhead and server lag.
+**Action:** Replace `Stream` chains in frequently ticking server or client methods with standard `for` loops and standard `removeIf` or manual iterator removal to drastically reduce GC pressure and tick duration.

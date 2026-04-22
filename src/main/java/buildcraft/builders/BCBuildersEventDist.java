@@ -257,33 +257,88 @@ public enum BCBuildersEventDist {
         }
     }
 
-    /** Called from RenderLevelStageEvent to render architect table laser box outlines. */
+    /** Called from RenderLevelStageEvent to render architect table laser box outlines and the
+     * fading green "digitizing" cubes for blocks currently being scanned. */
     public void renderAllArchitectTables(RenderLevelStageEvent.AfterTranslucentBlocks event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
-        Deque<WeakReference<TileArchitectTable>> tables = allArchitectTables.get(mc.level);
-        if (tables == null || tables.isEmpty()) return;
-
         Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
         PoseStack poseStack = event.getPoseStack();
 
-        Iterator<WeakReference<TileArchitectTable>> iter = tables.iterator();
-        while (iter.hasNext()) {
-            WeakReference<TileArchitectTable> ref = iter.next();
-            TileArchitectTable table = ref.get();
-            if (table == null || table.isRemoved()) {
-                iter.remove();
-                continue;
-            }
-            if (table.getIsValid() && table.markerBox && table.box.isInitialized()) {
-                LaserBoxRenderer.renderLaserBoxStatic(
-                    poseStack, table.box,
-                    BuildCraftLaserManager.STRIPES_READ,
-                    true, false, cameraPos
-                );
+        Deque<WeakReference<TileArchitectTable>> tables = allArchitectTables.get(mc.level);
+        if (tables != null && !tables.isEmpty()) {
+            Iterator<WeakReference<TileArchitectTable>> iter = tables.iterator();
+            while (iter.hasNext()) {
+                WeakReference<TileArchitectTable> ref = iter.next();
+                TileArchitectTable table = ref.get();
+                if (table == null || table.isRemoved()) {
+                    iter.remove();
+                    continue;
+                }
+                if (table.getIsValid() && table.markerBox && table.box.isInitialized()) {
+                    LaserBoxRenderer.renderLaserBoxStatic(
+                        poseStack, table.box,
+                        BuildCraftLaserManager.STRIPES_READ,
+                        true, false, cameraPos
+                    );
+                }
             }
         }
+
+        renderDigitizingCubes(cameraPos, poseStack, mc);
+    }
+
+    /** Standalone scan texture — bound via RenderType directly so we don't depend on the block
+     * atlas stitching picking it up (atlas/blocks.json sources are hit-or-miss for textures that
+     * aren't referenced by a block model). */
+    private static final net.minecraft.resources.Identifier SCAN_TEXTURE =
+            net.minecraft.resources.Identifier.parse("buildcraftunofficial:textures/block/scan.png");
+
+    /** Draws a translucent green cube at every position reported by the server as being scanned
+     * this second. Alpha fades with the entry's remaining lifetime so blocks pulse out over
+     * ~2.5s, matching the 1.12.2 effect. */
+    private void renderDigitizingCubes(Vec3 cameraPos, PoseStack poseStack, Minecraft mc) {
+        Map<BlockPos, Integer> scanned = buildcraft.builders.snapshot.ClientArchitectScans.INSTANCE.getScanned();
+        if (scanned.isEmpty()) return;
+
+        // Far-to-near sort so translucent faces blend correctly when the camera is inside or
+        // near the scan volume.
+        java.util.List<Map.Entry<BlockPos, Integer>> sorted = new java.util.ArrayList<>(scanned.entrySet());
+        sorted.sort((a, b) -> Double.compare(
+                Vec3.atCenterOf(b.getKey()).distanceToSqr(cameraPos),
+                Vec3.atCenterOf(a.getKey()).distanceToSqr(cameraPos)
+        ));
+
+        net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
+        net.minecraft.client.renderer.rendertype.RenderType renderType =
+                net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(SCAN_TEXTURE);
+        com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(renderType);
+
+        // Direct-texture binding → full 0..1 UV spans the entire scan.png file.
+        buildcraft.lib.client.model.ModelUtil.UvFaceData uvs =
+                new buildcraft.lib.client.model.ModelUtil.UvFaceData(0f, 0f, 1f, 1f);
+        org.joml.Vector3f center = new org.joml.Vector3f(0.5f, 0.5f, 0.5f);
+        org.joml.Vector3f radius = new org.joml.Vector3f(0.5f, 0.5f, 0.5f);
+
+        for (Map.Entry<BlockPos, Integer> entry : sorted) {
+            BlockPos pos = entry.getKey();
+            int remaining = entry.getValue();
+            // 1.12.2 parity: alpha ramps 0..50 (not 0..255), so the cube stays translucent at
+            // peak instead of briefly going opaque when it first spawns.
+            int alpha = Math.max(0, Math.min(50, remaining));
+
+            poseStack.pushPose();
+            poseStack.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
+            for (net.minecraft.core.Direction face : net.minecraft.core.Direction.values()) {
+                buildcraft.lib.client.model.ModelUtil.createFace(face, center, radius, uvs)
+                        .lighti(15, 15)
+                        .colouri(255, 255, 255, alpha)
+                        .render(poseStack.last(), buffer);
+            }
+            poseStack.popPose();
+        }
+        bufferSource.endBatch(renderType);
     }
 
     /** Called from RenderLevelStageEvent to render filler laser box outlines. */

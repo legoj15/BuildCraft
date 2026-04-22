@@ -83,25 +83,50 @@ public class GlobalSavedDataSnapshots {
         return get(world.isClientSide() ? Side.CLIENT : Side.SERVER);
     }
 
+    private static final org.apache.logging.log4j.Logger LOGGER =
+            org.apache.logging.log4j.LogManager.getLogger("BCSavedSnapshots");
+
     private Pair<Snapshot, File> readSnapshot(Snapshot.Key key) {
+        String targetPrefix = key.toString();
+        LOGGER.info("readSnapshot: looking for key-prefix={} in dir={}", targetPrefix, snapshotsFile);
         File[] files = snapshotsFile.listFiles();
-        if (files != null) {
-            for (File snapshotFile : files) {
-                if (snapshotFile.getName().startsWith(key.toString()) &&
-                    snapshotFile.getName().endsWith(SNAPSHOT_FILE_EXTENSION)) {
-                    try (FileInputStream fileInputStream = new FileInputStream(snapshotFile)) {
-                        Snapshot snapshot = Snapshot.readFromNBT(NbtSquisher.expand(fileInputStream));
-                        if (Objects.equals(snapshot.key, key)) {
-                            return Pair.of(snapshot, snapshotFile);
-                        }
-                    } catch (InvalidInputDataException e) {
-                        System.err.println("[BuildCraft] Skipping corrupted snapshot file: " + snapshotFile + " - " + e.getMessage());
-                    } catch (IOException e) {
-                        new IOException("Failed to read the snapshot " + snapshotFile, e).printStackTrace();
+        if (files == null) {
+            LOGGER.warn("readSnapshot: listFiles() returned null for dir={}", snapshotsFile);
+            return null;
+        }
+        LOGGER.info("readSnapshot: directory has {} entries", files.length);
+        int matchedPrefix = 0;
+        for (File snapshotFile : files) {
+            if (snapshotFile.getName().startsWith(targetPrefix) &&
+                snapshotFile.getName().endsWith(SNAPSHOT_FILE_EXTENSION)) {
+                matchedPrefix++;
+                try (FileInputStream fileInputStream = new FileInputStream(snapshotFile)) {
+                    Snapshot snapshot = Snapshot.readFromNBT(NbtSquisher.expand(fileInputStream));
+                    String loadedHash = snapshot.key == null || snapshot.key.hash == null
+                            ? "null"
+                            : buildcraft.lib.misc.HashUtil.convertHashToString(snapshot.key.hash);
+                    boolean matches = Objects.equals(snapshot.key, key);
+                    LOGGER.info("readSnapshot: loaded {} class={} loadedHash={} loadedHeader={} "
+                            + "requestedHeader={} equals={}",
+                            snapshotFile.getName(),
+                            snapshot.getClass().getSimpleName(),
+                            loadedHash,
+                            snapshot.key != null && snapshot.key.header != null,
+                            key.header != null,
+                            matches);
+                    if (matches) {
+                        return Pair.of(snapshot, snapshotFile);
                     }
+                } catch (InvalidInputDataException e) {
+                    LOGGER.warn("readSnapshot: corrupted snapshot file {}: {}", snapshotFile, e.getMessage());
+                } catch (IOException e) {
+                    LOGGER.warn("readSnapshot: IO error reading {}", snapshotFile, e);
+                } catch (Throwable t) {
+                    LOGGER.error("readSnapshot: unexpected error reading {}", snapshotFile, t);
                 }
             }
         }
+        LOGGER.warn("readSnapshot: no file matched prefix={} (files-with-prefix-match={})", targetPrefix, matchedPrefix);
         return null;
     }
 

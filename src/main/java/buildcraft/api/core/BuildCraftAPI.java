@@ -10,6 +10,7 @@ import java.util.Set;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 
 import net.minecraft.core.BlockPos;
@@ -50,13 +51,21 @@ public final class BuildCraftAPI {
         return worldProperties.get("soft").get(world, pos);
     }
 
-    public static String nameToResourceLocation(String name) {
-        if (name.indexOf(':') > 0) return name;
-        ModContainer modContainer = null;
-        if (modContainer == null) {
-            throw new IllegalStateException("Illegal recipe name " + name + ". Provide domain id to register it correctly.");
-        }
-        return name;
+    /**
+     * Parses a "namespace:path" string into an {@link Identifier}. If no namespace is present the
+     * call fails fast — callers must supply a fully-qualified id rather than relying on an ambient
+     * "active mod" context (that context doesn't exist in the 1.21 NeoForge registry lifecycle).
+     * <p>
+     * Historical note: the 1.12.2 version of this method returned a raw {@code String}. The factory
+     * registries stored that string and later compared it against an {@code Identifier} passed in
+     * at deserialization time — {@code String.equals(Identifier)} is always false, so no factory
+     * could ever be looked up by name. That silent mismatch caused every saved blueprint to fail
+     * to load ("Unknown schematic type ..."). Returning {@code Identifier} here aligns the stored
+     * key with the lookup key.
+     */
+    public static Identifier nameToResourceLocation(String name) {
+        if (name.indexOf(':') > 0) return Identifier.parse(name);
+        throw new IllegalStateException("Illegal name " + name + ". Provide domain id (namespace:path) to register it correctly.");
     }
 }
 

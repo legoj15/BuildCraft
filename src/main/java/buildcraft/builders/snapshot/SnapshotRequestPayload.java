@@ -38,12 +38,24 @@ public record SnapshotRequestPayload(Snapshot.Key key) implements CustomPacketPa
         return TYPE;
     }
 
+    private static final org.apache.logging.log4j.Logger LOGGER =
+            org.apache.logging.log4j.LogManager.getLogger("BCSnapshotRequest");
+
     public static void handle(SnapshotRequestPayload payload, net.neoforged.neoforge.network.handling.IPayloadContext context) {
         context.enqueueWork(() -> {
-            Snapshot snapshot = GlobalSavedDataSnapshots.get(context.player().level()).getSnapshot(payload.key());
+            String hashHex = payload.key().hash == null ? "null"
+                    : buildcraft.lib.misc.HashUtil.convertHashToString(payload.key().hash);
+            net.minecraft.world.level.Level level = context.player().level();
+            Snapshot snapshot = GlobalSavedDataSnapshots.get(level).getSnapshot(payload.key());
             if (snapshot != null) {
-                // Return response to client that requested
+                LOGGER.info("Replying with snapshot: class={} hash={} size={} (player level={})",
+                        snapshot.getClass().getSimpleName(), hashHex, snapshot.size,
+                        level.dimension());
                 context.reply(new SnapshotResponsePayload(snapshot));
+            } else {
+                LOGGER.warn("Snapshot NOT FOUND on server: hash={} (player level={}). "
+                        + "Saved data is per-dimension — blueprint may have been created in a different dimension.",
+                        hashHex, level.dimension());
             }
         });
     }

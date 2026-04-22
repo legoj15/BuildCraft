@@ -11,8 +11,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
-
-
+import net.minecraft.resources.Identifier;
 
 import buildcraft.api.core.BuildCraftAPI;
 
@@ -56,10 +55,15 @@ public class SchematicEntityFactoryRegistry {
             .orElseThrow(() -> new IllegalStateException("Didn't find a factory for " + instance.getClass()));
     }
 
+    /** See {@link SchematicBlockFactoryRegistry#getFactoryByName(Object)} for the rationale. */
     @Nullable
     public static SchematicEntityFactory<?> getFactoryByName(Object name) {
+        Identifier id = name instanceof Identifier i ? i
+                : name instanceof String s ? BuildCraftAPI.nameToResourceLocation(s)
+                : null;
+        if (id == null) return null;
         return FACTORIES.stream()
-            .filter(schematicEntityFactory -> schematicEntityFactory.name.equals(name))
+            .filter(schematicEntityFactory -> id.equals(schematicEntityFactory.name))
             .findFirst()
             .orElse(null);
     }

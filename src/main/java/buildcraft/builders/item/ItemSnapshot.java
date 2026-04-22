@@ -7,6 +7,7 @@ package buildcraft.builders.item;
 
 import java.util.function.Consumer;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -17,7 +18,6 @@ import net.minecraft.nbt.CompoundTag;
 import buildcraft.api.enums.EnumSnapshotType;
 import buildcraft.lib.misc.HashUtil;
 
-import buildcraft.builders.snapshot.Snapshot;
 import buildcraft.builders.snapshot.Snapshot.Header;
 
 /**
@@ -78,16 +78,30 @@ public class ItemSnapshot extends Item {
             Consumer<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, display, tooltip, flag);
         Header header = getHeader(stack);
+        // Gray on every line except the item name. 1.12.2's vanilla tooltip pipeline auto-applied
+        // ChatFormatting.GRAY to anything added via addInformation; modern MC dropped that default
+        // and now renders unstyled Components in the item-name color, which made the hash / date /
+        // owner lines fight the "Blueprint" title for attention. We restore the old look by
+        // styling each line explicitly.
         if (header == null) {
-            tooltip.accept(Component.translatable("item.blueprint.blank"));
+            tooltip.accept(Component.translatable("item.blueprint.blank").withStyle(ChatFormatting.GRAY));
         } else {
-            tooltip.accept(Component.literal(header.name));
+            tooltip.accept(Component.literal(header.name).withStyle(ChatFormatting.GRAY));
             if (flag.isAdvanced()) {
-                tooltip.accept(Component.literal("Hash: " + HashUtil.convertHashToString(header.key.hash)));
-                tooltip.accept(Component.literal("Date: " + header.created));
-                tooltip.accept(Component.literal("Owner UUID: " + header.owner));
+                tooltip.accept(Component.literal("Hash: " + HashUtil.convertHashToString(header.key.hash))
+                        .withStyle(ChatFormatting.GRAY));
+                tooltip.accept(Component.literal("Date: " + header.created).withStyle(ChatFormatting.GRAY));
+                tooltip.accept(Component.literal("Owner UUID: " + header.owner).withStyle(ChatFormatting.GRAY));
             }
         }
     }
+
+    // The 3D preview is drawn as a SECOND tooltip panel below this item's main tooltip — see
+    // buildcraft.builders.client.tooltip.BlueprintTooltipOverlay. We deliberately do NOT
+    // implement getTooltipImage here: Minecraft's tooltip-image slot forces a ClientTooltipComponent
+    // of fixed width inside the main tooltip, which produces ugly dead space when the hash/UUID
+    // lines stretch the tooltip wider than the 100-pixel preview. The separate-panel approach
+    // mirrors the original 1.12.2 behavior (BCBuildersEventDist#onPostText) and keeps the main
+    // tooltip sized purely by its text.
 }
 

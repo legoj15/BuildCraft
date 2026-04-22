@@ -4,12 +4,14 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.event.RenderTooltipEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 import buildcraft.builders.BCBuildersMenuTypes;
 import buildcraft.builders.BCBuildersEntities;
 import buildcraft.builders.BCBuildersEventDist;
+import buildcraft.builders.client.tooltip.BlueprintTooltipOverlay;
 import buildcraft.builders.gui.GuiArchitectTable;
 import buildcraft.builders.gui.GuiElectronicLibrary;
 import buildcraft.builders.gui.GuiFiller;
@@ -25,10 +27,20 @@ public class BCBuildersClient {
                     BCBuildersEventDist.INSTANCE.renderAllFillers(event);
                     BCBuildersEventDist.INSTANCE.renderAllArchitectTables(event);
                 });
+        // Fade out architect "digitizing" cubes one tick at a time on the client.
+        NeoForge.EVENT_BUS.addListener(
+                net.neoforged.neoforge.client.event.ClientTickEvent.Post.class,
+                event -> buildcraft.builders.snapshot.ClientArchitectScans.INSTANCE.tick());
         NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent.class,
                 event -> {
                     BCBuildersEventDist.INSTANCE.renderAllFillersCustomGeometry(event);
                 });
+        // Draws a second tooltip-shaped panel below Blueprint/Template tooltips with a rotating
+        // 3D preview. Mirrors the 1.12.2 BCBuildersEventDist#onPostText pattern; the 1.12.2
+        // PostText event was removed in modern NeoForge, so we hook Pre and run the layout
+        // math ourselves. See BlueprintTooltipOverlay for the full explanation.
+        NeoForge.EVENT_BUS.addListener(RenderTooltipEvent.Pre.class,
+                BlueprintTooltipOverlay::onPreTooltip);
     }
 
     @SubscribeEvent
@@ -55,5 +67,19 @@ public class BCBuildersClient {
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(BCBuildersEntities.QUARRY_RIG.get(), net.minecraft.client.renderer.entity.NoopRenderer::new);
+    }
+
+    /**
+     * Register the PictureInPicture renderer that paints blueprint previews into an offscreen
+     * texture as real 3D block models. Without this, any
+     * {@code BlueprintPipRenderState} submitted by {@link buildcraft.builders.client.render.BlueprintRenderer}
+     * would be silently dropped by the GuiRenderer (no matching renderer class).
+     */
+    @SubscribeEvent
+    public static void registerPipRenderers(
+            net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEvent event) {
+        event.register(
+                buildcraft.builders.client.render.pip.BlueprintPipRenderState.class,
+                buildcraft.builders.client.render.pip.BlueprintPipRenderer::new);
     }
 }

@@ -217,6 +217,11 @@ public class SchematicBlockDefault implements ISchematicBlock {
     }
 
     @Override
+    public BlockState getBlockStateForRender() {
+        return blockState;
+    }
+
+    @Override
     public SchematicBlockDefault getRotated(Rotation rotation) {
         SchematicBlockDefault schematicBlock = SchematicBlockManager.createCleanCopy(this);
         requiredBlockOffsets.stream()

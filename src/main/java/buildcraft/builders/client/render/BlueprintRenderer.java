@@ -1,103 +1,105 @@
+/*
+ * Copyright (c) 2017 SpaceToad and the BuildCraft team
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
+ */
 package buildcraft.builders.client.render;
 
-import net.minecraft.client.Minecraft;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.core.BlockPos;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
-
-import buildcraft.api.schematics.ISchematicBlock;
+import buildcraft.builders.client.render.pip.BlueprintPipRenderState;
 import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.Snapshot;
-import buildcraft.lib.misc.VecUtil;
 
+/**
+ * Thin adapter from the {@link buildcraft.builders.client.tooltip.BlueprintTooltipOverlay
+ * BlueprintTooltipOverlay} call-site to the PiP pipeline. Builds a
+ * {@link BlueprintPipRenderState} sized to the requested viewport and hands it off to
+ * {@link GuiGraphicsExtractor#submitPictureInPictureRenderState}. The actual 3D rendering,
+ * including rotation animation and depth-buffer occlusion, happens in
+ * {@link buildcraft.builders.client.render.pip.BlueprintPipRenderer}.
+ * <p>
+ * This replaced an earlier 2D implementation that drew a stack of axis-aligned item sprites per
+ * cell; the sprites' positions rotated but their orientation didn't, so the preview looked like a
+ * wonky lattice shearing around rather than a cohesive rotating model.
+ */
 public class BlueprintRenderer {
 
-    public static void renderSnapshot(GuiGraphicsExtractor graphics, Snapshot snapshot, int viewportX, int viewportY, int viewportWidth, int viewportHeight) {
+    private static final Logger LOGGER = LogManager.getLogger("BCBlueprintRenderer");
+
+    /**
+     * Snapshots whose rejection (not a Blueprint) has already been logged, to prevent the
+     * re-render-every-frame tooltip from spamming the log. Identity-hashed because Snapshot is
+     * a mutable record-ish struct, not a value-equality type.
+     */
+    private static final Set<Integer> LOGGED_REJECTIONS =
+            Collections.synchronizedSet(new HashSet<>());
+
+    /**
+     * Safety margin on top of the structure's 3D diagonal. The diagonal already captures the
+     * worst-case projected extent for any combination of pitch and yaw (a structure rotated so
+     * its space diagonal aligns with the screen normal projects at most {@code diagonal} across
+     * in any screen-space direction). The envelope just adds a small slack so antialiased edges
+     * don't clip the PiP texture border.
+     * <p>
+     * Replaces an earlier max-dimension + sqrt(2) approach that only accounted for 2D rotation
+     * and let single-block or near-cube previews escape the viewport corners as they spun.
+     */
+    private static final float FIT_ENVELOPE = 1.05f;
+
+    public static void renderSnapshot(GuiGraphicsExtractor graphics, Snapshot snapshot,
+                                      int viewportX, int viewportY,
+                                      int viewportWidth, int viewportHeight) {
         if (!(snapshot instanceof Blueprint blueprint)) {
+            if (LOGGED_REJECTIONS.add(System.identityHashCode(snapshot))) {
+                // Templates (BitSet-only, no palette) go through here too; they have no
+                // per-block model to render, so the preview is empty — matches the 1.12.2
+                // behavior. If we add a template preview later, broaden the PiP state rather
+                // than branching here.
+                LOGGER.info("renderSnapshot skipped: not a Blueprint (class={}) size={}",
+                        snapshot.getClass().getSimpleName(), snapshot.size);
+            }
             return;
         }
 
-        double scale = Math.min(
-                (viewportWidth - 10) / (double) Math.max(1, snapshot.size.getX()),
-                (viewportHeight - 10) / (double) Math.max(1, snapshot.size.getY())
-        );
-        scale = Math.min(scale, (viewportWidth - 10) / (double) Math.max(1, snapshot.size.getZ()));
-        // Make items fit appropriately (fakeItem renders 16x16)
-        scale *= 12.0;
+        int sizeX = Math.max(1, snapshot.size.getX());
+        int sizeY = Math.max(1, snapshot.size.getY());
+        int sizeZ = Math.max(1, snapshot.size.getZ());
+        float diagonal = (float) Math.sqrt((double) sizeX * sizeX + (double) sizeY * sizeY + (double) sizeZ * sizeZ);
 
-        double yaw = (System.currentTimeMillis() % 3600) / 3600.0 * 2 * Math.PI;
-        double pitch = 20 * Math.PI / 180.0;
-        
-        double cosYaw = Math.cos(yaw);
-        double sinYaw = Math.sin(yaw);
-        double cosPitch = Math.cos(pitch);
-        double sinPitch = Math.sin(pitch);
-        
-        double cx = snapshot.size.getX() / 2.0;
-        double cy = snapshot.size.getY() / 2.0;
-        double cz = snapshot.size.getZ() / 2.0;
-        
-        graphics.enableScissor(viewportX, viewportY, viewportX + viewportWidth, viewportY + viewportHeight);
-        
-        // Collect all blocks to render
-        java.util.List<RenderBlock> blocks = new java.util.ArrayList<>();
-        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-        
-        for (int z = 0; z < snapshot.size.getZ(); z++) {
-            for (int y = 0; y < snapshot.size.getY(); y++) {
-                for (int x = 0; x < snapshot.size.getX(); x++) {
-                    pos.set(x, y, z);
-                    int index = blueprint.data[Snapshot.posToIndex(snapshot.size, pos)];
-                    if (index >= 0 && index < blueprint.palette.size()) {
-                        ISchematicBlock schBlock = blueprint.palette.get(index);
-                        if (schBlock != null && !schBlock.isAir()) {
-                            double px = (x + 0.5) - cx;
-                            double py = -(y + 0.5) + cy; // Y is flipped in screen space
-                            double pz = (z + 0.5) - cz;
-                            
-                            double rx = px * cosYaw - pz * sinYaw;
-                            double rz = px * sinYaw + pz * cosYaw;
-                            
-                            double ry = py * cosPitch - rz * sinPitch;
-                            double rz2 = py * sinPitch + rz * cosPitch; // Depth
-                            
-                            // To match standard isometric look
-                            int screenX = viewportX + viewportWidth / 2 + (int)(rx * scale);
-                            int screenY = viewportY + viewportHeight / 2 + (int)(ry * scale);
-                            
-                            // Visual offset tweaks
-                            screenY += 10;
-                            
-                            blocks.add(new RenderBlock(schBlock, screenX, screenY, rz2));
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Sort by depth (further away renders first)
-        blocks.sort((b1, b2) -> Double.compare(b1.depth, b2.depth));
-        
-        for (RenderBlock block : blocks) {
-            for (ItemStack stack : block.schBlock.computeRequiredItems()) {
-                if (!stack.isEmpty()) {
-                    graphics.fakeItem(stack, block.x - 8, block.y - 8);
-                }
-            }
-        }
-        
-        graphics.disableScissor();
-    }
-    
-    private static class RenderBlock {
-        final ISchematicBlock schBlock;
-        final int x, y;
-        final double depth;
-        RenderBlock(ISchematicBlock schBlock, int x, int y, double depth) {
-            this.schBlock = schBlock; this.x = x; this.y = y; this.depth = depth;
-        }
+        // The base PiP class multiplies the scale by guiScale when it sets up the inner pose
+        // (see PictureInPictureRenderer#prepare line: `float scale = guiScale * renderState.scale()`).
+        // The offscreen texture itself is `(x1-x0)*guiScale` pixels wide. So:
+        //     pixels_per_world_unit = guiScale * renderState.scale()
+        //     texture_width_in_world_units = textureWidthPx / pixels_per_world_unit
+        //                                  = ((x1-x0)*guiScale) / (guiScale * scale)
+        //                                  = (x1-x0) / scale
+        // We want that to equal diagonal*FIT_ENVELOPE, so:
+        //     scale = viewport / (diagonal * FIT_ENVELOPE)
+        // The guiScale factor cancels — we don't need to know or query it here. Using the 3D
+        // diagonal (rather than max(x,y,z)) keeps the structure inside the viewport at every
+        // yaw/pitch, including the corner-on angles where a near-cubic box like the Architect
+        // Table's 1×1×1 single-block live preview previously poked out of the PiP texture.
+        float viewportSpan = Math.min(viewportWidth, viewportHeight);
+        float scale = viewportSpan / (diagonal * FIT_ENVELOPE);
+
+        BlueprintPipRenderState state = new BlueprintPipRenderState(
+                blueprint,
+                viewportX,
+                viewportY,
+                viewportX + viewportWidth,
+                viewportY + viewportHeight,
+                scale,
+                // Pass the current scissor rectangle so the blit respects tooltip clipping. The
+                // PiP base class intersects this with the full bounds internally.
+                graphics.peekScissorStack());
+        graphics.submitPictureInPictureRenderState(state);
     }
 }

@@ -11,6 +11,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 
 
@@ -56,10 +57,22 @@ public class SchematicBlockFactoryRegistry {
             .orElseThrow(() -> new IllegalStateException("Didn't find a factory for " + instance.getClass()));
     }
 
+    /**
+     * Look up a factory by its registered id. Tolerates either an {@link Identifier} or a
+     * {@code String} with "namespace:path"; strings are parsed through
+     * {@link BuildCraftAPI#nameToResourceLocation(String)} so the comparison below is always
+     * {@code Identifier.equals(Identifier)}. This defends against the old bug where factories
+     * were keyed by {@code String} and the caller passed {@code Identifier} — the two types are
+     * never equal, which silently broke every deserialization path.
+     */
     @Nullable
     public static SchematicBlockFactory<?> getFactoryByName(Object name) {
+        Identifier id = name instanceof Identifier i ? i
+                : name instanceof String s ? BuildCraftAPI.nameToResourceLocation(s)
+                : null;
+        if (id == null) return null;
         return FACTORIES.stream()
-            .filter(schematicBlockFactory -> schematicBlockFactory.name.equals(name))
+            .filter(schematicBlockFactory -> id.equals(schematicBlockFactory.name))
             .findFirst()
             .orElse(null);
     }

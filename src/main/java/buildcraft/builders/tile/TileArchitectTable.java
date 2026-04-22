@@ -88,6 +88,18 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
     private int scanProgress = 0;
     private int scanTotal = 0;
 
+    // Positions scanned during the current server tick — drained at the end of tick() and
+    // shipped in a single ArchitectScanPayload so the client can spawn digitizing cubes.
+    private final List<BlockPos> scannedThisTick = new ArrayList<>();
+
+    // Live preview of the current scan-area contents (shown in the GUI before a blueprint is
+    // actually built). Regenerated lazily on request with a short TTL so repeated GUI queries
+    // don't rescan every frame, but block changes still surface within ~2s.
+    @Nullable private Blueprint cachedLivePreview;
+    private long livePreviewGeneratedTick = Long.MIN_VALUE;
+    private static final int LIVE_PREVIEW_TTL_TICKS = 40;
+    private static final int LIVE_PREVIEW_MAX_VOLUME = 32 * 32 * 32;
+
     public TileArchitectTable(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.ARCHITECT.get(), pos, state);
     }
@@ -95,6 +107,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
     @Override
     public void setRemoved() {
         super.setRemoved();
+        cachedLivePreview = null;
         buildcraft.builders.BCBuildersEventDist.INSTANCE.invalidateArchitectTable(this);
     }
 
@@ -107,6 +120,8 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
 
     public void onPlacedBy(@Nullable LivingEntity placer, ItemStack stack) {
         if (level == null || level.isClientSide()) return;
+
+        cachedLivePreview = null;
 
         BlockState blockState = level.getBlockState(worldPosition);
         Direction facing = blockState.getValue(HorizontalDirectionalBlock.FACING);
@@ -186,6 +201,15 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
                 finishScanning();
             }
         }
+
+        if (!scannedThisTick.isEmpty() && level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingChunk(
+                    serverLevel,
+                    new net.minecraft.world.level.ChunkPos(worldPosition.getX() >> 4, worldPosition.getZ() >> 4),
+                    new buildcraft.builders.snapshot.ArchitectScanPayload(new ArrayList<>(scannedThisTick))
+            );
+            scannedThisTick.clear();
+        }
     }
 
     private void scanMultipleBlocks() {
@@ -212,6 +236,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
         BlockPos min = box.min();
         BlockPos worldScanPos = new BlockPos(min.getX() + scanX, min.getY() + scanY, min.getZ() + scanZ);
         BlockPos schematicPos = new BlockPos(scanX, scanY, scanZ);
+        scannedThisTick.add(worldScanPos);
 
         if (snapshotType == EnumSnapshotType.TEMPLATE) {
             templateScannedBlocks.set(
@@ -256,6 +281,77 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
             level.getBlockState(worldScanPos),
             level.getBlockState(worldScanPos).getBlock()
         ));
+    }
+
+    /**
+     * Produces a transient {@link Blueprint} snapshot of the current scan-area contents without
+     * consuming an input item or persisting to {@link GlobalSavedDataSnapshots}. Used by the GUI
+     * to show a 3D preview of what the Architect would scan right now, before a blueprint is
+     * actually built.
+     * <p>
+     * Cached for {@link #LIVE_PREVIEW_TTL_TICKS} ticks so repeated requests during GUI
+     * interaction are cheap. Returns {@code null} if the box is invalid or exceeds
+     * {@link #LIVE_PREVIEW_MAX_VOLUME} to avoid stalling the server on pathological cases.
+     */
+    @Nullable
+    public Blueprint getOrRefreshLivePreview() {
+        if (level == null || level.isClientSide()) return null;
+        if (!isValid || !box.isInitialized()) return null;
+
+        BlockPos size = box.size();
+        long volume = (long) size.getX() * size.getY() * size.getZ();
+        if (volume <= 0 || volume > LIVE_PREVIEW_MAX_VOLUME) return null;
+
+        long now = level.getGameTime();
+        if (cachedLivePreview != null && now - livePreviewGeneratedTick < LIVE_PREVIEW_TTL_TICKS) {
+            return cachedLivePreview;
+        }
+
+        BlockState thisState = level.getBlockState(worldPosition);
+        if (thisState.getBlock() != BCBuildersBlocks.ARCHITECT.get()) return null;
+        Direction facing = thisState.getValue(HorizontalDirectionalBlock.FACING);
+
+        int sizeX = size.getX();
+        int sizeY = size.getY();
+        int sizeZ = size.getZ();
+        List<ISchematicBlock> palette = new ArrayList<>();
+        int[] data = new int[Snapshot.getDataSize(size)];
+        BlockPos min = box.min();
+
+        // XZY iteration order matches scanSingleBlock() above.
+        for (int y = 0; y < sizeY; y++) {
+            for (int z = 0; z < sizeZ; z++) {
+                for (int x = 0; x < sizeX; x++) {
+                    BlockPos worldScanPos = new BlockPos(min.getX() + x, min.getY() + y, min.getZ() + z);
+                    BlockPos schematicPos = new BlockPos(x, y, z);
+                    ISchematicBlock sb = readSchematicBlock(worldScanPos);
+                    int index = palette.indexOf(sb);
+                    if (index == -1) {
+                        index = palette.size();
+                        palette.add(sb);
+                    }
+                    data[Snapshot.posToIndex(size, schematicPos)] = index;
+                }
+            }
+        }
+
+        Blueprint preview = new Blueprint();
+        preview.size = size;
+        preview.facing = facing;
+        preview.offset = box.min().subtract(worldPosition.relative(facing.getOpposite()));
+        preview.palette.addAll(palette);
+        preview.data = data;
+        // Entities intentionally skipped: BlueprintPipRenderer doesn't render them, so scanning
+        // them here would just waste a level.getEntities() call per preview refresh.
+        // Compute a content-addressed key so the client can detect when a refresh response
+        // carries identical content and keep its existing Blueprint instance — that preserves
+        // the identity hashcode BlueprintPipRenderer uses to avoid log spam, and keeps the
+        // preview visible across periodic refreshes without a render-frame gap.
+        preview.computeKey();
+
+        cachedLivePreview = preview;
+        livePreviewGeneratedTick = now;
+        return preview;
     }
 
     private void scanEntities() {

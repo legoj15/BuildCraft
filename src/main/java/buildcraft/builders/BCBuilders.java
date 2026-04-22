@@ -23,6 +23,7 @@ import buildcraft.builders.gui.GuiFiller;
 import buildcraft.builders.gui.GuiReplacer;
 import buildcraft.builders.gui.GuiBuilder;
 import buildcraft.builders.registry.FillerRegistry;
+import buildcraft.builders.snapshot.RulesLoader;
 import buildcraft.builders.snapshot.TemplateHandlerDefault;
 import buildcraft.builders.snapshot.TemplateRegistry;
 import buildcraft.core.BCCore;
@@ -51,6 +52,13 @@ public class BCBuilders {
             TemplateApi.templateRegistry.addHandler(TemplateHandlerDefault.INSTANCE);
             BCBuildersSchematics.preInit();
             BCBuildersStatements.preInit();
+            // Populate RulesLoader.READ_DOMAINS. Without this call, every block fails
+            // SchematicBlockDefault.predicate (which requires the block's namespace be present in
+            // READ_DOMAINS), so every Architect Table scan falls through to SchematicBlockAir and
+            // produces a completely empty blueprint. loadAll() reads the per-mod rule JSON files
+            // shipped under assets/<modid>/compat/buildcraft/builders/index.json and seeds
+            // READ_DOMAINS with "minecraft".
+            RulesLoader.loadAll();
         });
         modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);

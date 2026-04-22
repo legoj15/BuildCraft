@@ -218,6 +218,23 @@ public class BCCore {
                 buildcraft.builders.snapshot.SnapshotResponsePayload.STREAM_CODEC,
                 buildcraft.builders.snapshot.SnapshotResponsePayload::handle
         );
+        // Architect Table live-area preview
+        registrar.playToServer(
+                buildcraft.builders.snapshot.ArchitectPreviewRequestPayload.TYPE,
+                buildcraft.builders.snapshot.ArchitectPreviewRequestPayload.STREAM_CODEC,
+                buildcraft.builders.snapshot.ArchitectPreviewRequestPayload::handle
+        );
+        registrar.playToClient(
+                buildcraft.builders.snapshot.ArchitectPreviewResponsePayload.TYPE,
+                buildcraft.builders.snapshot.ArchitectPreviewResponsePayload.STREAM_CODEC,
+                buildcraft.builders.snapshot.ArchitectPreviewResponsePayload::handle
+        );
+        // Architect Table scan-cube digitizing effect
+        registrar.playToClient(
+                buildcraft.builders.snapshot.ArchitectScanPayload.TYPE,
+                buildcraft.builders.snapshot.ArchitectScanPayload.STREAM_CODEC,
+                buildcraft.builders.snapshot.ArchitectScanPayload::handle
+        );
     }
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {

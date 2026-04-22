@@ -90,21 +90,27 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
                 SIZE_X, SIZE_Y,
                 256, 256);
 
-        // Draw progress bar
+        // Draw progress bar by blitting the 22×16 filled-arrow sprite at the bottom-left of
+        // architect.png over the empty arrow baked into the GUI background. Partial-width blit
+        // grows left-to-right as the scan progresses, matching the conventional Minecraft
+        // progress arrow look.
         int total = menu.getSyncedTotal();
         if (total > 0) {
             int progress = menu.getSyncedProgress();
-            int progressWidth = (int) (24.0f * progress / total);
-            // Filled progress texture might not be correctly mapped in the large GUI
-            // Assuming it sits roughly around the area
-            graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_BASE,
-                    leftPos + 76, topPos + 124,
-                    232f, 0f, // Sample fallback mapping for filled progress in large GUI
-                    progressWidth, 17,
-                    256, 256);
+            int progressWidth = Math.min(22, (int) (22.0f * progress / total));
+            if (progressWidth > 0) {
+                graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_BASE,
+                        leftPos + 77, topPos + 125,
+                        0f, 240f,
+                        progressWidth, 16,
+                        256, 256);
+            }
         }
 
-        // Draw Blueprint Preview
+        // Draw Blueprint Preview — prefer the output/input snapshot item if present, otherwise
+        // fall back to a live preview of the current scan-area contents so the player can see
+        // what will be captured before they actually build the blueprint.
+        buildcraft.builders.snapshot.Snapshot snapshot = null;
         net.minecraft.world.item.ItemStack snapshotStack = menu.getSlot(1).getItem();
         if (snapshotStack.isEmpty()) {
             snapshotStack = menu.getSlot(0).getItem();
@@ -112,15 +118,48 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
         if (!snapshotStack.isEmpty() && snapshotStack.getItem() instanceof buildcraft.builders.item.ItemSnapshot snapshotItem) {
             buildcraft.builders.snapshot.Snapshot.Header header = snapshotItem.getHeader(snapshotStack);
             if (header != null) {
-                buildcraft.builders.snapshot.Snapshot snapshot = buildcraft.builders.snapshot.ClientSnapshots.INSTANCE.getSnapshot(header.key);
-                if (snapshot != null) {
-                    // Preview window is located at x=8, y=18, w=160, h=100 in the UI
-                    buildcraft.builders.client.render.BlueprintRenderer.renderSnapshot(
-                        graphics, snapshot,
-                        leftPos + 8, topPos + 18, 160, 100
-                    );
-                }
+                snapshot = buildcraft.builders.snapshot.ClientSnapshots.INSTANCE.getSnapshot(header.key);
             }
+        }
+        if (snapshot == null && menu.tile != null) {
+            snapshot = buildcraft.builders.snapshot.ClientArchitectPreviews.INSTANCE.get(menu.tile.getBlockPos());
+        }
+        if (snapshot != null) {
+            // Dark backdrop in architect.png lives at (8, 8)–(167, 107); align the PiP viewport
+            // to that rectangle so the rotating block stays visually contained in the preview
+            // area instead of drifting into the gray GUI below it.
+            buildcraft.builders.client.render.BlueprintRenderer.renderSnapshot(
+                graphics, snapshot,
+                leftPos + 8, topPos + 8, 160, 100
+            );
+        }
+    }
+
+    private int previewRefreshCounter = 0;
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        if (menu.tile != null) {
+            previewRefreshCounter++;
+            if (previewRefreshCounter >= 40) {
+                previewRefreshCounter = 0;
+                // Fire a refresh without dropping the cached preview — the old one stays on
+                // screen until the reply arrives (if content changed) or forever (if it didn't),
+                // so block edits inside the scan area surface within ~2s without any visible
+                // render-frame gap.
+                buildcraft.builders.snapshot.ClientArchitectPreviews.INSTANCE
+                        .requestRefresh(menu.tile.getBlockPos());
+            }
+        }
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        if (menu.tile != null) {
+            buildcraft.builders.snapshot.ClientArchitectPreviews.INSTANCE
+                    .invalidate(menu.tile.getBlockPos());
         }
     }
 

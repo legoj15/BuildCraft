@@ -87,6 +87,11 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
     // Scanning progress for GUI
     private int scanProgress = 0;
     private int scanTotal = 0;
+    // Post-scan "drop" animation: when a scan finishes this counts down from 10, draining
+    // scanProgress at maxPerTick per tick — matches the 1.12.2 deltaProgress.addDelta(size,
+    // size+10, -1) closure flourish so the bar visibly relaxes instead of snapping to empty.
+    private static final int DROP_TICKS = 10;
+    private int dropCountdown = 0;
 
     // Positions scanned during the current server tick — drained at the end of tick() and
     // shipped in a single ArchitectScanPayload so the client can spawn digitizing cubes.
@@ -185,11 +190,14 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
                 scanProgress = 0;
                 scanning = true;
                 scanInitialized = false;
+                dropCountdown = 0;
             }
         } else {
             scanning = false;
-            scanProgress = 0;
-            scanTotal = 0;
+            if (dropCountdown == 0) {
+                scanProgress = 0;
+                scanTotal = 0;
+            }
         }
 
         if (scanning) {
@@ -199,6 +207,19 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
                     scanEntities();
                 }
                 finishScanning();
+                dropCountdown = DROP_TICKS;
+            }
+        }
+
+        if (dropCountdown > 0) {
+            dropCountdown--;
+            // Linear drop from scanTotal → 0 spread evenly across DROP_TICKS, so the bar
+            // visibly drains regardless of scan volume. 1.12.2 dropped by a fixed 10 deltaInt
+            // units, which was invisible on small scans.
+            scanProgress = (int) ((long) scanTotal * dropCountdown / DROP_TICKS);
+            if (dropCountdown == 0) {
+                scanProgress = 0;
+                scanTotal = 0;
             }
         }
 
@@ -415,12 +436,11 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
             )
         );
 
-        // Reset scan state
+        // Reset scan state (scanProgress / scanTotal are kept intact so tick()'s drop animation
+        // can drain them smoothly over DROP_TICKS ticks before zeroing).
         templateScannedBlocks = null;
         blueprintScannedData = null;
         blueprintScannedEntities.clear();
-        scanProgress = 0;
-        scanTotal = 0;
         if (getOwner() != null) {
             AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT);
         }

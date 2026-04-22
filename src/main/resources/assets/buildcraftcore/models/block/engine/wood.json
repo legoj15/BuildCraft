@@ -1,6 +1,6 @@
 {
   "parent":"block/cube_all",
   "textures": {
-    "all": "buildcraftunofficial:blocks/engine/wood/back"
+    "all": "buildcraftunofficial:block/engine/wood/back"
   }
 }

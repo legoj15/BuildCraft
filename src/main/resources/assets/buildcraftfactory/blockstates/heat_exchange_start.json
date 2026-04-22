@@ -3,8 +3,8 @@
     "defaults": {
     	"model": "buildcraftunofficial:heat_exchange_joiner",
         "textures": {
-            "sprite_a":"buildcraftunofficial:blocks/heat_exchange/sprite_a",
-            "sprite_b":"buildcraftunofficial:blocks/heat_exchange/sprite_b"
+            "sprite_a":"buildcraftunofficial:block/heat_exchange/sprite_a",
+            "sprite_b":"buildcraftunofficial:block/heat_exchange/sprite_b"
         }
     },
     "variants": {

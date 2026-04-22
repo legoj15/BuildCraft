@@ -1,12 +1,12 @@
 {
     "parent": "block/orientable",
     "textures": {
-        "particle": "buildcraftunofficial:blocks/architect/back",
-        "down": "buildcraftunofficial:blocks/architect/bottom",
-        "up": "buildcraftunofficial:blocks/architect/top",
-        "north": "buildcraftunofficial:blocks/architect/front_on",
-        "east": "buildcraftunofficial:blocks/architect/left",
-        "south": "buildcraftunofficial:blocks/architect/back",
-        "west": "buildcraftunofficial:blocks/architect/right"
+        "particle": "buildcraftunofficial:block/architect/back",
+        "down": "buildcraftunofficial:block/architect/bottom",
+        "up": "buildcraftunofficial:block/architect/top",
+        "north": "buildcraftunofficial:block/architect/front_on",
+        "east": "buildcraftunofficial:block/architect/left",
+        "south": "buildcraftunofficial:block/architect/back",
+        "west": "buildcraftunofficial:block/architect/right"
     }
 }

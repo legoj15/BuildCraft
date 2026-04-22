@@ -21,14 +21,14 @@
 		"tex": "power_average <= 0 ? '#off' : '#power_' + (power_average * 6 / power_max)"
 	},
 	"textures": {
-		"#off":     { "location":"buildcraftunofficial:blocks/distiller/power_sprite_a", "uv": [ 0, 0, 16, 8 ] },
+		"#off":     { "location":"buildcraftunofficial:block/distiller/power_sprite_a", "uv": [ 0, 0, 16, 8 ] },
 		"#power_0": "#power_1",
-		"#power_1": { "location":"buildcraftunofficial:blocks/distiller/power_sprite_a", "uv": [ 0, 8, 16, 16] },
-		"#power_2": { "location":"buildcraftunofficial:blocks/distiller/power_sprite_b", "uv": [ 0, 0, 16, 8 ] },
-		"#power_3": { "location":"buildcraftunofficial:blocks/distiller/power_sprite_b", "uv": [ 0, 8, 16, 16] },
-		"#power_4": { "location":"buildcraftunofficial:blocks/distiller/power_sprite_c", "uv": [ 0, 0, 16, 8 ] },
-		"#power_5": { "location":"buildcraftunofficial:blocks/distiller/power_sprite_c", "uv": [ 0, 8, 16, 16] },
-		"#power_6": { "location":"buildcraftunofficial:blocks/distiller/power_sprite_d", "uv": [ 0, 0, 16, 8 ] }
+		"#power_1": { "location":"buildcraftunofficial:block/distiller/power_sprite_a", "uv": [ 0, 8, 16, 16] },
+		"#power_2": { "location":"buildcraftunofficial:block/distiller/power_sprite_b", "uv": [ 0, 0, 16, 8 ] },
+		"#power_3": { "location":"buildcraftunofficial:block/distiller/power_sprite_b", "uv": [ 0, 8, 16, 16] },
+		"#power_4": { "location":"buildcraftunofficial:block/distiller/power_sprite_c", "uv": [ 0, 0, 16, 8 ] },
+		"#power_5": { "location":"buildcraftunofficial:block/distiller/power_sprite_c", "uv": [ 0, 8, 16, 16] },
+		"#power_6": { "location":"buildcraftunofficial:block/distiller/power_sprite_d", "uv": [ 0, 0, 16, 8 ] }
 	},
 	"elements": [
 		{

@@ -1,6 +1,6 @@
 {
     "parent": "buildcraftunofficial:block/centeredtorch",
     "textures": {
-        "torch": "buildcraftunofficial:blocks/marker/volume"
+        "torch": "buildcraftunofficial:block/marker/volume"
     }
 }

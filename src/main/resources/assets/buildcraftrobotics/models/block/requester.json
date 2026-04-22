@@ -1,12 +1,12 @@
 {
     "parent":"block/cube",
     "textures": {
-        "particle":"buildcraftunofficial:blocks/requester/side",
-        "down":"buildcraftunofficial:blocks/requester/bottom",
-        "up":"buildcraftunofficial:blocks/requester/top",
-        "north":"buildcraftunofficial:blocks/requester/side",
-        "east":"buildcraftunofficial:blocks/requester/front",
-        "south":"buildcraftunofficial:blocks/requester/side",
-        "west":"buildcraftunofficial:blocks/requester/side"
+        "particle":"buildcraftunofficial:block/requester/side",
+        "down":"buildcraftunofficial:block/requester/bottom",
+        "up":"buildcraftunofficial:block/requester/top",
+        "north":"buildcraftunofficial:block/requester/side",
+        "east":"buildcraftunofficial:block/requester/front",
+        "south":"buildcraftunofficial:block/requester/side",
+        "west":"buildcraftunofficial:block/requester/side"
     }
 }

@@ -27,8 +27,8 @@
     },
     {
       "type": "directory",
-      "source": "blocks",
-      "prefix": "blocks/"
+      "source": "block",
+      "prefix": "block/"
     },
     {
       "type": "directory",
@@ -54,11 +54,6 @@
       "type": "directory",
       "source": "wires",
       "prefix": "wires/"
-    },
-    {
-      "type": "directory",
-      "source": "block/plugs",
-      "prefix": "block/plugs/"
     },
     {
       "type": "single",

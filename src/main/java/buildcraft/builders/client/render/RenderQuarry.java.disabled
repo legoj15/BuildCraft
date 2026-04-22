@@ -42,7 +42,7 @@ public class RenderQuarry extends TileEntitySpecialRenderer<TileQuarry> {
 
     static {
         {
-            SpriteHolderRegistry.SpriteHolder sprite = SpriteHolderRegistry.getHolder("buildcraftunofficial:blocks/frame/default");
+            SpriteHolderRegistry.SpriteHolder sprite = SpriteHolderRegistry.getHolder("buildcraftunofficial:block/frame/default");
             LaserData_BC8.LaserRow capStart = new LaserData_BC8.LaserRow(sprite, 0, 0, 0, 0);
             LaserData_BC8.LaserRow start = null;
             LaserData_BC8.LaserRow[] middle = { new LaserData_BC8.LaserRow(sprite, 0, 4, 16, 12) };
@@ -51,7 +51,7 @@ public class RenderQuarry extends TileEntitySpecialRenderer<TileQuarry> {
             FRAME = new LaserData_BC8.LaserType(capStart, start, middle, end, capEnd);
         }
         {
-            SpriteHolderRegistry.SpriteHolder sprite = SpriteHolderRegistry.getHolder("buildcraftunofficial:blocks/frame/default");
+            SpriteHolderRegistry.SpriteHolder sprite = SpriteHolderRegistry.getHolder("buildcraftunofficial:block/frame/default");
             LaserData_BC8.LaserRow capStart = new LaserData_BC8.LaserRow(sprite, 0, 0, 0, 0);
             LaserData_BC8.LaserRow start = null;
             LaserData_BC8.LaserRow[] middle = { new LaserData_BC8.LaserRow(sprite, 0, 4, 16, 12) };
@@ -60,7 +60,7 @@ public class RenderQuarry extends TileEntitySpecialRenderer<TileQuarry> {
             FRAME_BOTTOM = new LaserData_BC8.LaserType(capStart, start, middle, end, capEnd);
         }
         {
-            SpriteHolderRegistry.SpriteHolder sprite = SpriteHolderRegistry.getHolder("buildcraftunofficial:blocks/quarry/drill");
+            SpriteHolderRegistry.SpriteHolder sprite = SpriteHolderRegistry.getHolder("buildcraftunofficial:block/quarry/drill");
             LaserData_BC8.LaserRow capStart = new LaserData_BC8.LaserRow(sprite, 6, 0, 10, 4);
             LaserData_BC8.LaserRow start = null;
             LaserData_BC8.LaserRow[] middle = { new LaserData_BC8.LaserRow(sprite, 0, 0, 16, 4) };

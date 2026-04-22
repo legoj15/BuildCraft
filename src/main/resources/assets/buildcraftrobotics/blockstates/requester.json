@@ -3,13 +3,13 @@
     "defaults": {
         "model":"buildcraftunofficial:default_cube",
         "textures": {
-            "particle":"buildcraftunofficial:blocks/requester/side",
-            "down":"buildcraftunofficial:blocks/requester/bottom",
-            "up":"buildcraftunofficial:blocks/requester/top",
-            "north":"buildcraftunofficial:blocks/requester/back",
-            "east":"buildcraftunofficial:blocks/requester/side",
-            "south":"buildcraftunofficial:blocks/requester/front",
-            "west":"buildcraftunofficial:blocks/requester/side"
+            "particle":"buildcraftunofficial:block/requester/side",
+            "down":"buildcraftunofficial:block/requester/bottom",
+            "up":"buildcraftunofficial:block/requester/top",
+            "north":"buildcraftunofficial:block/requester/back",
+            "east":"buildcraftunofficial:block/requester/side",
+            "south":"buildcraftunofficial:block/requester/front",
+            "west":"buildcraftunofficial:block/requester/side"
         }
     },
     "variants": {

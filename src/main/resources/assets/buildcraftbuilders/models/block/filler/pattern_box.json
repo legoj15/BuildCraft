@@ -1,6 +1,6 @@
 {
     "parent": "buildcraftunofficial:block/filler/pattern",
     "textures": {
-        "pattern": "buildcraftunofficial:blocks/filler/patterns/box"
+        "pattern": "buildcraftunofficial:block/filler/patterns/box"
     }
 }

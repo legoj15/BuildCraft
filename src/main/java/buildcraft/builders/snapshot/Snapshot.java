@@ -23,6 +23,8 @@ import net.minecraft.world.level.block.Rotation;
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.enums.EnumSnapshotType;
 
+import net.minecraft.network.FriendlyByteBuf;
+
 import buildcraft.lib.misc.HashUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.RotationUtil;
@@ -193,7 +195,10 @@ public abstract class Snapshot {
             header = nbt.contains("header") ? new Header(nbt.getCompoundOrEmpty("header")) : null;
         }
 
-        // TODO: PacketBufferBC constructor deferred to networking phase
+        public Key(FriendlyByteBuf buf) {
+            this.hash = buf.readByteArray();
+            this.header = (buf.readByte() != 0) ? new Header(buf) : null;
+        }
 
         public CompoundTag serializeNBT() {
             CompoundTag nbt = new CompoundTag();
@@ -204,7 +209,13 @@ public abstract class Snapshot {
             return nbt;
         }
 
-        // TODO: writeToByteBuf deferred to networking phase
+        public void writeToByteBuf(FriendlyByteBuf buf) {
+            buf.writeByteArray(hash);
+            buf.writeByte(header != null ? 1 : 0);
+            if (header != null) {
+                header.writeToByteBuf(buf);
+            }
+        }
 
         @Override
         public boolean equals(Object o) {
@@ -248,7 +259,12 @@ public abstract class Snapshot {
             name = nbt.getStringOr("name", "");
         }
 
-        // TODO: PacketBufferBC constructor deferred to networking phase
+        public Header(FriendlyByteBuf buf) {
+            key = new Key(buf);
+            owner = buf.readUUID();
+            created = new Date(buf.readLong());
+            name = buf.readUtf();
+        }
 
         public CompoundTag serializeNBT() {
             CompoundTag nbt = new CompoundTag();
@@ -259,7 +275,12 @@ public abstract class Snapshot {
             return nbt;
         }
 
-        // TODO: writeToByteBuf deferred to networking phase
+        public void writeToByteBuf(FriendlyByteBuf buf) {
+            key.writeToByteBuf(buf);
+            buf.writeUUID(owner);
+            buf.writeLong(created.getTime());
+            buf.writeUtf(name);
+        }
 
         public Player getOwnerPlayer(Level level) {
             return level.getPlayerByUUID(owner);

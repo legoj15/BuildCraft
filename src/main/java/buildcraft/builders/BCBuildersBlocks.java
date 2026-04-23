@@ -30,11 +30,18 @@ public class BCBuildersBlocks {
 
     public static final DeferredBlock<BlockBuilder> BUILDER = BLOCKS.registerBlock(
             "builder",
-            BlockBuilder::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockBuilder::new, () -> BlockBehaviour.Properties.of()
+                .strength(5.0f, 10.0f).sound(SoundType.METAL)
+                // 1.12.2 used Material.IRON which gates drops behind "correct tool" (a pickaxe).
+                // Without this, a bare hand still breaks the block and players lose it.
+                .requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockArchitectTable> ARCHITECT = BLOCKS.registerBlock(
             "architect",
-            BlockArchitectTable::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockArchitectTable::new, () -> BlockBehaviour.Properties.of()
+                .strength(5.0f, 10.0f).sound(SoundType.METAL)
+                // Same Material.IRON-style tool gate as the Builder (1.12.2 parity).
+                .requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockElectronicLibrary> LIBRARY = BLOCKS.registerBlock(
             "library",

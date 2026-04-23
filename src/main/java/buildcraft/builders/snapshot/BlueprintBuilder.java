@@ -151,11 +151,21 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                                 })
                                 .map(fluidStack -> {
                                     ItemStack stack = buildcraft.lib.misc.FluidUtilBC.getFilledBucket(fluidStack);
-                                    CompoundTag tag = new CompoundTag();
-                                    // TODO: In 1.21.11, ItemStack.save requires RegistryAccess
+                                    // Store fluid id + amount directly in the BuilderFluidStack
+                                    // tag so cancelPlaceTask can reconstitute the FluidStack for
+                                    // the tank refund. Earlier this used a TODO-stubbed empty
+                                    // CompoundTag, which made cancel crash the server with
+                                    // "Expected resource to be non-empty" as soon as a fluid
+                                    // task got cancelled.
+                                    CompoundTag fluidTag = new CompoundTag();
+                                    net.minecraft.resources.Identifier fluidId =
+                                        net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(fluidStack.getFluid());
+                                    if (fluidId != null) {
+                                        fluidTag.putString("fluid", fluidId.toString());
+                                        fluidTag.putInt("amount", fluidStack.getAmount());
+                                    }
                                     CompoundTag wrapper = new CompoundTag();
-                                    wrapper.put(FLUID_STACK_KEY, new CompoundTag()); // TODO: fluidStack.save needs RegistryAccess
-                                    // Store the fluid info on the item's custom data
+                                    wrapper.put(FLUID_STACK_KEY, fluidTag);
                                     if (!stack.isEmpty()) {
                                         stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
                                             net.minecraft.world.item.component.CustomData.of(wrapper));
@@ -184,10 +194,24 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     @Override
     protected boolean isReadyToPlace(BlockPos blockPos) {
         // noinspection ConstantConditions
-        return getSchematicBlock(blockPos).getRequiredBlockOffsets().stream()
+        ISchematicBlock self = getSchematicBlock(blockPos);
+        boolean selfIsFluid = self instanceof SchematicBlockFluid;
+        return self.getRequiredBlockOffsets().stream()
             .map(blockPos::offset)
-            .allMatch(pos -> getSchematicBlock(pos) == null || checkResults[posToIndex(pos)] == CHECK_RESULT_CORRECT) &&
-            getSchematicBlock(blockPos).isReadyToBuild(tile.getWorldBC(), blockPos);
+            .allMatch(pos -> {
+                ISchematicBlock neighbour = getSchematicBlock(pos);
+                if (neighbour == null) return true;
+                if (checkResults[posToIndex(pos)] == CHECK_RESULT_CORRECT) return true;
+                // Fluid-to-fluid dependency deadlock: two adjacent source blocks each list the
+                // other in their required offsets, so under the strict rule each waits for the
+                // other to be placed first and neither ever gets placed. Source fluids don't
+                // actually need each other built first — once both are placed the flowing
+                // cells they temporarily create in each other's positions get overwritten by
+                // the source placements. Skip this single inter-fluid constraint; the
+                // fluid-vs-wall constraints are preserved by the other neighbours.
+                if (selfIsFluid && neighbour instanceof SchematicBlockFluid) return true;
+                return false;
+            }) && self.isReadyToBuild(tile.getWorldBC(), blockPos);
     }
 
     @Override
@@ -229,14 +253,24 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
             .map(stack -> {
                 net.minecraft.world.item.component.CustomData customData =
                     stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
-                CompoundTag fluidTag = customData.copyTag().getCompoundOrEmpty("BuilderFluidStack");
-                if (!fluidTag.isEmpty()) {
-                    // FluidStack.parse requires RegistryAccess in 1.21.11
-                    // For now, return empty as this path handles resource return on cancel
-                    return FluidStack.EMPTY;
-                }
-                return FluidStack.EMPTY;
+                CompoundTag fluidTag = customData.copyTag().getCompoundOrEmpty(FLUID_STACK_KEY);
+                if (fluidTag.isEmpty()) return FluidStack.EMPTY;
+                String fluidIdStr = fluidTag.getString("fluid").orElse("");
+                int amount = fluidTag.getInt("amount").orElse(0);
+                if (fluidIdStr.isEmpty() || amount <= 0) return FluidStack.EMPTY;
+                net.minecraft.resources.Identifier id =
+                    net.minecraft.resources.Identifier.tryParse(fluidIdStr);
+                if (id == null) return FluidStack.EMPTY;
+                net.minecraft.world.level.material.Fluid fluid =
+                    net.minecraft.core.registries.BuiltInRegistries.FLUID.getValue(id);
+                if (fluid == null || fluid == net.minecraft.world.level.material.Fluids.EMPTY) return FluidStack.EMPTY;
+                return new FluidStack(fluid, amount);
             })
+            // Defensive filter — if for any reason the round-trip above came back empty (old
+            // save data from before this serialization existed, a fluid whose id has since
+            // been unregistered, …) skip it rather than crashing tankManager.insert on
+            // FluidResource.EMPTY.
+            .filter(fluidStack -> !fluidStack.isEmpty() && fluidStack.getAmount() > 0)
             .forEach(fluidStack -> {
                 try (net.neoforged.neoforge.transfer.transaction.Transaction tx = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
                     tile.getTankManager().insert(net.neoforged.neoforge.transfer.fluid.FluidResource.of(fluidStack), fluidStack.getAmount(), tx);

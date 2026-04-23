@@ -97,4 +97,25 @@ public class BlockArchitectTable extends HorizontalDirectionalBlock implements E
             architect.onPlacedBy(placer, stack);
         }
     }
+
+    /** Drops whatever is left in the snapshot in/out slots when the block is broken so a used
+     *  blueprint the player "forgot" in the output doesn't evaporate. The block itself drops
+     *  via loot_table/block/architect.json — this override only handles the tile contents. */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        if (!level.isClientSide()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileArchitectTable architect) {
+                ItemStack in = architect.getSnapshotIn();
+                if (!in.isEmpty()) {
+                    Block.popResource(level, pos, in);
+                }
+                ItemStack out = architect.getSnapshotOut();
+                if (!out.isEmpty()) {
+                    Block.popResource(level, pos, out);
+                }
+            }
+        }
+        return super.playerWillDestroy(level, pos, state, player);
+    }
 }

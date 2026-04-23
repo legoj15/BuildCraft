@@ -43,8 +43,10 @@ public interface ISchematicBlock {
     /**
      * Returns the {@link BlockState} that represents this schematic, purely for rendering
      * purposes (e.g. the blueprint tooltip preview). Implementations that don't correspond to a
-     * single BlockState (air, pure-fluid cells, custom logical schematics) should return
-     * {@code null} so the renderer can skip them.
+     * single BlockState (air, custom logical schematics) should return {@code null} so the
+     * renderer can skip them. Fluid schematics should return the captured fluid blockstate —
+     * the renderer has a dedicated path for fluid cells that reads {@link BlockState#getFluidState()}
+     * to draw them as textured cubes at the correct flow height.
      * <p>
      * Not used during actual world-building — that path goes through
      * {@link #build(Level, BlockPos)} which may mutate state, place entities, etc.

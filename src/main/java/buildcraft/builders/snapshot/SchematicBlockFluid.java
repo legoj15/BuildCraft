@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -58,6 +59,12 @@ public class SchematicBlockFluid implements ISchematicBlock {
             .map(Direction::getUnitVec3i)
             .map(BlockPos::new)
             .collect(Collectors.toSet());
+    }
+
+    @Nullable
+    @Override
+    public BlockState getBlockStateForRender() {
+        return blockState;
     }
 
     @Nonnull

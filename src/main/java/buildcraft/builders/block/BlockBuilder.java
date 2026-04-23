@@ -24,17 +24,26 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
+
+import buildcraft.api.enums.EnumOptionalSnapshotType;
 
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.tile.TileBuilder;
 
 public class BlockBuilder extends HorizontalDirectionalBlock implements EntityBlock {
     public static final MapCodec<BlockBuilder> CODEC = simpleCodec(BlockBuilder::new);
+    /** Drives the front-face "door" submodel: NONE = closed empty door, TEMPLATE / BLUEPRINT =
+     *  matching door variant. TileBuilder pushes this whenever its loaded snapshot changes. */
+    public static final EnumProperty<EnumOptionalSnapshotType> SNAPSHOT_TYPE =
+        EnumProperty.create("snapshot_type", EnumOptionalSnapshotType.class);
 
     public BlockBuilder(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
+        registerDefaultState(stateDefinition.any()
+            .setValue(FACING, Direction.NORTH)
+            .setValue(SNAPSHOT_TYPE, EnumOptionalSnapshotType.NONE));
     }
 
     @Override
@@ -44,12 +53,14 @@ public class BlockBuilder extends HorizontalDirectionalBlock implements EntityBl
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, SNAPSHOT_TYPE);
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        return defaultBlockState()
+            .setValue(FACING, context.getHorizontalDirection().getOpposite())
+            .setValue(SNAPSHOT_TYPE, EnumOptionalSnapshotType.NONE);
     }
 
     @Nullable
@@ -92,5 +103,38 @@ public class BlockBuilder extends HorizontalDirectionalBlock implements EntityBl
         if (tile instanceof TileBuilder builder) {
             builder.onPlacedBy(placer, stack);
         }
+    }
+
+    /**
+     * Drops the tile entity's contents (snapshot item, the 27-slot resource grid, and any
+     * fluid held in the 4 tanks as fluid-shard items) when the block is broken. The block
+     * itself drops via its loot table (loot_table/block/builder.json); this override only
+     * handles the <em>contents</em>, matching the 1.12.2 behaviour where
+     * {@code BlockBCTile_Neptune.breakBlock} delegated to the tile's own {@code onRemove}.
+     */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        if (!level.isClientSide()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileBuilder builder) {
+                ItemStack snapshot = builder.getSnapshot();
+                if (!snapshot.isEmpty()) {
+                    Block.popResource(level, pos, snapshot);
+                }
+                for (int i = 0; i < TileBuilder.RESOURCE_SLOTS; i++) {
+                    ItemStack stack = builder.getResource(i);
+                    if (!stack.isEmpty()) {
+                        Block.popResource(level, pos, stack);
+                    }
+                }
+                net.minecraft.core.NonNullList<ItemStack> fluidDrops = net.minecraft.core.NonNullList.create();
+                buildcraft.api.items.FluidItemDrops.addFluidDrops(fluidDrops,
+                    builder.getTank(0), builder.getTank(1), builder.getTank(2), builder.getTank(3));
+                for (ItemStack drop : fluidDrops) {
+                    Block.popResource(level, pos, drop);
+                }
+            }
+        }
+        return super.playerWillDestroy(level, pos, state, player);
     }
 }

@@ -74,7 +74,7 @@ Initialization order: `BCLib` → registries (blocks/items/BEs) → `FMLCommonSe
 - Blocks/items/BEs for each module live in `BC{Module}Blocks`, `BC{Module}Items`, `BC{Module}BlockEntities`.
 - Event listeners use `@SubscribeEvent` on `@EventBusSubscriber`-annotated classes, or `modEventBus.addListener()` in constructors.
 - Files with a `.disabled` extension were created from the initial forking of 1.12.2 to the first modern port on version 1.21.11. They exist as references to how the 1.12.2 version functioned, but can be safely deleted once their functionality has been either 1:1 ported or recreated in a new, updated, and/or improved way.
-- Commit successful updates or ports. Always squash or append commits that are related. Cleanup temporary files, even ones that were already (accidentally) commited.
+- Commit successful transactions to git. Always squash or append commits that are related. Cleanup temporary files, even ones that were already (accidentally) commited.
 - Write additions, fixes, and end-user facing changes to `changelog.md`. Combine related items concisely.
 - Mojang changed the Minecraft versioning scheme; The version immediately after 1.21.11 is 26.1, using a *year.major.hotfix* nomenclature now. 26.1.2 is the latest version at the time of writing.
 

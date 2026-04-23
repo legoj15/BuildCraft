@@ -10,6 +10,7 @@ import java.lang.ref.WeakReference;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -32,6 +33,7 @@ import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.VecUtil;
 
 import buildcraft.builders.tile.TileArchitectTable;
+import buildcraft.builders.tile.TileBuilder;
 import buildcraft.builders.tile.TileFiller;
 import buildcraft.builders.tile.TileQuarry;
 import buildcraft.core.client.BuildCraftLaserManager;
@@ -78,6 +80,7 @@ public enum BCBuildersEventDist {
     private final Map<Level, Deque<WeakReference<TileQuarry>>> allQuarries = new WeakHashMap<>();
     private final Map<Level, Deque<WeakReference<TileFiller>>> allFillers = new WeakHashMap<>();
     private final Map<Level, Deque<WeakReference<TileArchitectTable>>> allArchitectTables = new WeakHashMap<>();
+    private final Map<Level, Deque<WeakReference<TileBuilder>>> allBuilders = new WeakHashMap<>();
 
     public synchronized void validateArchitectTable(TileArchitectTable table) {
         Deque<WeakReference<TileArchitectTable>> tables =
@@ -93,6 +96,25 @@ public enum BCBuildersEventDist {
             WeakReference<TileArchitectTable> ref = iter.next();
             TileArchitectTable t = ref.get();
             if (t == null || t == table) {
+                iter.remove();
+            }
+        }
+    }
+
+    public synchronized void validateBuilder(TileBuilder builder) {
+        Deque<WeakReference<TileBuilder>> builders =
+            allBuilders.computeIfAbsent(builder.getLevel(), k -> new LinkedList<>());
+        builders.add(new WeakReference<>(builder));
+    }
+
+    public synchronized void invalidateBuilder(TileBuilder builder) {
+        Deque<WeakReference<TileBuilder>> builders = allBuilders.get(builder.getLevel());
+        if (builders == null) return;
+        Iterator<WeakReference<TileBuilder>> iter = builders.iterator();
+        while (iter.hasNext()) {
+            WeakReference<TileBuilder> ref = iter.next();
+            TileBuilder b = ref.get();
+            if (b == null || b == builder) {
                 iter.remove();
             }
         }
@@ -339,6 +361,197 @@ public enum BCBuildersEventDist {
             poseStack.popPose();
         }
         bufferSource.endBatch(renderType);
+    }
+
+    /** Called from RenderLevelStageEvent to render the Builder's laser box outline (the volume
+     *  the blueprint is going to be built in), the path between path-provider waypoints, the
+     *  floating robot cube while it's breaking blocks, and the break lasers from the robot to
+     *  each target. Place-task block-throwing animation lives in
+     *  {@link #renderAllBuildersCustomGeometry}. */
+    public void renderAllBuilders(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+
+        Deque<WeakReference<TileBuilder>> builders = allBuilders.get(mc.level);
+        if (builders == null || builders.isEmpty()) return;
+
+        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
+        PoseStack poseStack = event.getPoseStack();
+        float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+
+        Iterator<WeakReference<TileBuilder>> iter = builders.iterator();
+        while (iter.hasNext()) {
+            WeakReference<TileBuilder> ref = iter.next();
+            TileBuilder builder = ref.get();
+            if (builder == null || builder.isRemoved()) {
+                iter.remove();
+                continue;
+            }
+            // Only draw when there's an initialized box — before a snapshot is loaded the Builder
+            // has no footprint to advertise.
+            if (builder.getBox() != null && builder.getBox().isInitialized()) {
+                LaserBoxRenderer.renderLaserBoxStatic(
+                    poseStack, builder.getBox(),
+                    BuildCraftLaserManager.STRIPES_WRITE,
+                    true, false, cameraPos
+                );
+            }
+            // Path-based builders (fed by Landmarks) show yellow laser lines connecting the
+            // waypoints so the player can see the full route the Builder will traverse.
+            List<BlockPos> path = builder.path;
+            if (path != null && path.size() >= 2) {
+                for (int i = 1; i < path.size(); i++) {
+                    BlockPos from = path.get(i - 1);
+                    BlockPos to = path.get(i);
+                    LaserRenderer_BC8.renderLaserStatic(poseStack,
+                        new LaserData_BC8(
+                            BuildCraftLaserManager.STRIPES_WRITE,
+                            Vec3.atCenterOf(from),
+                            Vec3.atCenterOf(to),
+                            1 / 16D
+                        ),
+                        cameraPos
+                    );
+                }
+            }
+
+            // Robot + break lasers. The active SnapshotBuilder (template or blueprint) exposes
+            // clientBreakTasks / visualRobotPos that were synced from the server via
+            // level.sendBlockUpdated + getUpdateTag every 5 ticks and interpolated by
+            // SnapshotBuilder.clientTick().
+            buildcraft.builders.snapshot.SnapshotBuilder<?> active = builder.getBuilder();
+            if (active == null) continue;
+
+            Vec3 robotPos = active.visualRobotPos;
+            if (robotPos == null) continue;
+            if (active.visualPrevRobotPos != null) {
+                robotPos = active.visualPrevRobotPos.add(
+                    robotPos.subtract(active.visualPrevRobotPos).scale(partialTicks)
+                );
+            }
+
+            // Robot cube renders only during breaking (matches Filler behaviour and 1.12.2).
+            if (!active.clientBreakTasks.isEmpty()) {
+                net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource =
+                    mc.renderBuffers().bufferSource();
+                com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(
+                    net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(
+                        net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+
+                poseStack.pushPose();
+                poseStack.translate(robotPos.x - cameraPos.x, robotPos.y - cameraPos.y, robotPos.z - cameraPos.z);
+                int worldLight = buildcraft.lib.client.render.laser.LaserRenderer_BC8
+                    .computeLightmap(robotPos.x, robotPos.y, robotPos.z, 0);
+
+                int i = 0;
+                for (net.minecraft.core.Direction face : net.minecraft.core.Direction.values()) {
+                    buildcraft.lib.client.model.ModelUtil.createFace(
+                        face,
+                        new org.joml.Vector3f(0f, 0f, 0f),
+                        new org.joml.Vector3f(4 / 16F, 4 / 16F, 4 / 16F),
+                        new buildcraft.lib.client.model.ModelUtil.UvFaceData(
+                            buildcraft.builders.BCBuildersSprites.ROBOT.getInterpU((i * 8) / 64D),
+                            buildcraft.builders.BCBuildersSprites.ROBOT.getInterpV(0 / 64D),
+                            buildcraft.builders.BCBuildersSprites.ROBOT.getInterpU(((i + 1) * 8) / 64D),
+                            buildcraft.builders.BCBuildersSprites.ROBOT.getInterpV(8 / 64D)
+                        )
+                    )
+                    .lighti(worldLight)
+                    .render(poseStack.last(), buffer);
+                    i++;
+                }
+                poseStack.popPose();
+                bufferSource.endBatch();
+            }
+
+            // Break lasers fan out from the robot to every current break task. Laser colour
+            // tracks how far along that block's break is (white → red as power fills).
+            for (buildcraft.builders.snapshot.SnapshotBuilder.BreakTask breakTask : active.clientBreakTasks) {
+                double progress = Math.max(0, Math.min(1,
+                    breakTask.power * 1D / breakTask.getTarget()
+                ));
+                int powerIdx = (int) Math.round(progress * (BuildCraftLaserManager.POWERS.length - 1));
+                LaserRenderer_BC8.renderLaserStatic(poseStack,
+                    new LaserData_BC8(
+                        BuildCraftLaserManager.POWERS[powerIdx],
+                        robotPos.subtract(new Vec3(0, 0.27, 0)),
+                        Vec3.atCenterOf(breakTask.pos),
+                        1 / 16D
+                    ),
+                    cameraPos
+                );
+            }
+        }
+    }
+
+    /** Called from SubmitCustomGeometryEvent to render the block-throwing animation for each
+     *  active place task — items travel from the Builder toward their destination block. */
+    public void renderAllBuildersCustomGeometry(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+
+        Deque<WeakReference<TileBuilder>> builders = allBuilders.get(mc.level);
+        if (builders == null || builders.isEmpty()) return;
+
+        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
+        com.mojang.blaze3d.vertex.PoseStack poseStack = event.getPoseStack();
+        float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        net.minecraft.client.renderer.SubmitNodeCollector collector = event.getSubmitNodeCollector();
+
+        Iterator<WeakReference<TileBuilder>> iter = builders.iterator();
+        while (iter.hasNext()) {
+            WeakReference<TileBuilder> ref = iter.next();
+            TileBuilder builder = ref.get();
+            if (builder == null || builder.isRemoved()) {
+                continue;
+            }
+
+            buildcraft.builders.snapshot.SnapshotBuilder<?> active = builder.getBuilder();
+            if (active == null || active.clientPlaceTasks.isEmpty()) continue;
+
+            renderPlaceTasks(active, cameraPos, poseStack, collector, partialTicks);
+        }
+    }
+
+    /** Extracted so the wildcard on {@code active} gets captured into {@code T}, which lets the
+     *  {@code prevClientPlaceTasks} stream reference the same instance's {@code PlaceTask} type
+     *  as {@link buildcraft.builders.snapshot.SnapshotBuilder#getPlaceTaskItemPos}. Without this
+     *  the compiler treats each dereference of {@code ?} as a fresh capture and fails the
+     *  method-reference type check. */
+    private static <T extends buildcraft.builders.snapshot.ITileForSnapshotBuilder> void renderPlaceTasks(
+            buildcraft.builders.snapshot.SnapshotBuilder<T> active,
+            Vec3 cameraPos,
+            com.mojang.blaze3d.vertex.PoseStack poseStack,
+            net.minecraft.client.renderer.SubmitNodeCollector collector,
+            float partialTicks) {
+        for (buildcraft.builders.snapshot.SnapshotBuilder<T>.PlaceTask placeTask : active.clientPlaceTasks) {
+            Vec3 prevPos = active.prevClientPlaceTasks.stream()
+                .filter(task -> task.pos.equals(placeTask.pos))
+                .map(active::getPlaceTaskItemPos)
+                .findFirst()
+                .orElse(active.getPlaceTaskItemPos(placeTask));
+
+            Vec3 pos = prevPos.add(
+                active.getPlaceTaskItemPos(placeTask).subtract(prevPos).scale(partialTicks)
+            );
+            int light = buildcraft.lib.client.render.laser.LaserRenderer_BC8
+                .computeLightmap(pos.x, pos.y, pos.z, 0);
+
+            buildcraft.lib.client.render.ItemRenderUtil.beginItemBatch(poseStack, collector, light);
+            for (Object itemObj : placeTask.items) {
+                net.minecraft.world.item.ItemStack item = (net.minecraft.world.item.ItemStack) itemObj;
+                buildcraft.lib.client.render.ItemRenderUtil.renderItemStack(
+                    pos.x - cameraPos.x,
+                    pos.y - cameraPos.y,
+                    pos.z - cameraPos.z,
+                    item,
+                    1,
+                    light,
+                    net.minecraft.core.Direction.SOUTH,
+                    null
+                );
+            }
+        }
     }
 
     /** Called from RenderLevelStageEvent to render filler laser box outlines. */

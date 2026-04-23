@@ -91,30 +91,45 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
         boolean isCreative = player.getAbilities().instabuild;
 
         if (isCreative) {
-            net.neoforged.neoforge.transfer.access.ItemAccess access = net.neoforged.neoforge.transfer.access.ItemAccess.forInfiniteMaterials(player, carried.copyWithCount(1));
-            ResourceHandler<FluidResource> itemHandlerIn = access.getCapability(Capabilities.Fluid.ITEM);
-            
-            if (itemHandlerIn != null) {
-                try (Transaction tx = Transaction.openRoot()) {
-                    int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
-                            itemHandlerIn, tank, r -> true, Integer.MAX_VALUE, tx
-                    );
-                    if (moved > 0) {
-                        tx.commit();
-                        return;
+            // ItemAccess.forInfiniteMaterials had a nasty interaction with the bucket fluid
+            // capability: the move(bucket -> tank) path would swap the cursor bucket to an empty
+            // one via the infinite-materials sink but fail to actually commit the fluid into the
+            // tank, so the player lost their bucket AND got no fluid. Bypass the accessor here
+            // and do the bucket-fluid read against a detached copy so the cursor is untouched,
+            // then fill the tank with the bucket's full fluid contents.
+            ItemStack bucketCopy = carried.copy();
+            net.neoforged.neoforge.transfer.access.ItemAccess copyAccess =
+                net.neoforged.neoforge.transfer.access.ItemAccess.forStack(bucketCopy);
+            ResourceHandler<FluidResource> bucketCap = copyAccess.getCapability(Capabilities.Fluid.ITEM);
+
+            if (bucketCap != null && bucketCap.size() > 0) {
+                FluidResource bucketFluid = bucketCap.getResource(0);
+                long bucketAmount = bucketCap.getAmountAsLong(0);
+                if (!bucketFluid.isEmpty() && bucketAmount > 0) {
+                    try (Transaction tx = Transaction.openRoot()) {
+                        int filled = tank.insert(0, bucketFluid, (int) bucketAmount, tx);
+                        if (filled > 0) {
+                            tx.commit();
+                        }
                     }
+                    return;
                 }
-                
-                try (Transaction tx = Transaction.openRoot()) {
-                    int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
-                            tank, itemHandlerIn, r -> true, Integer.MAX_VALUE, tx
-                    );
-                    if (moved > 0) {
-                        tx.commit();
-                        return;
+                // Empty container in creative: drain one bucket's worth per click, don't swap
+                // the carried item (creative abundance — player keeps their empty bucket, tank
+                // gives up a bucket of fluid at a time matching the survival-mode feel).
+                if (!tank.getResource(0).isEmpty() && tank.getAmountAsLong(0) > 0) {
+                    try (Transaction tx = Transaction.openRoot()) {
+                        int drained = tank.extract(0,
+                            tank.getResource(0),
+                            (int) Math.min(1000L, tank.getAmountAsLong(0)),
+                            tx);
+                        if (drained > 0) {
+                            tx.commit();
+                        }
                     }
                 }
             }
+            return;
         } else {
             ItemStack original = carried.copy();
             net.neoforged.neoforge.transfer.access.ItemAccess access = net.neoforged.neoforge.transfer.access.ItemAccess.forPlayerCursor(player, player.containerMenu).oneByOne();

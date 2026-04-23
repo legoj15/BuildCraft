@@ -146,15 +146,14 @@ public class GuiElementFluidTank implements IInteractionElement {
         net.neoforged.neoforge.transfer.fluid.FluidResource fluid = tank.getResource(0);
         long capacity = tank.getCapacityAsLong(0, net.neoforged.neoforge.transfer.fluid.FluidResource.EMPTY);
         long amount = tank.getAmountAsLong(0);
-
-        String text;
-        if (fluid.isEmpty() || amount == 0) {
-            text = "Empty";
-        } else {
-            text = fluid.toStack((int) amount).getHoverName().getString() + ": " +
-                    amount + " / " + capacity + " mB";
-        }
-        tooltips.add(new ToolTip(text));
+        // 1.12.2 shape: first line = fluid name (or "Empty"), second line = "x / cap mB" in
+        // gray. Section sign §7 = ChatFormatting.GRAY, which the vanilla tooltip renderer picks
+        // up on per-line strings.
+        String name = fluid.isEmpty() || amount == 0 ? "Empty" : fluid.toStack(1).getHoverName().getString();
+        tooltips.add(new ToolTip(
+            name,
+            net.minecraft.ChatFormatting.GRAY + (amount + " / " + capacity + " mB")
+        ));
     }
 
     // --- Interaction ---

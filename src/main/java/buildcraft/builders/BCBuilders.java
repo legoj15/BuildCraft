@@ -89,6 +89,18 @@ public class BCBuilders {
             (filler, direction) -> new MjBatteryEnergyHandler(filler.getBattery()));
         event.registerBlockEntity(Capabilities.Item.BLOCK, BCBuildersBlockEntities.FILLER.get(),
             (filler, direction) -> filler.getItemHandler(direction));
+
+        // Builder — wires it into the same pipe/engine capability surfaces as the Filler so MJ
+        // engines push power into the battery, pipes push resources into the 27-slot grid, and
+        // fluid pipes can top off the 4 tanks for fluid-block placement.
+        event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCBuildersBlockEntities.BUILDER.get(),
+            (builder, direction) -> builder.getMjReceiver());
+        event.registerBlockEntity(Capabilities.Energy.BLOCK, BCBuildersBlockEntities.BUILDER.get(),
+            (builder, direction) -> new MjBatteryEnergyHandler(builder.getBattery()));
+        event.registerBlockEntity(Capabilities.Item.BLOCK, BCBuildersBlockEntities.BUILDER.get(),
+            (builder, direction) -> builder.getItemHandler(direction));
+        event.registerBlockEntity(Capabilities.Fluid.BLOCK, BCBuildersBlockEntities.BUILDER.get(),
+            (builder, direction) -> builder.getTankManager());
     }
 
     private static void buildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {

@@ -26,6 +26,7 @@ public class BCBuildersClient {
                     BCBuildersEventDist.INSTANCE.renderAllQuarries(event);
                     BCBuildersEventDist.INSTANCE.renderAllFillers(event);
                     BCBuildersEventDist.INSTANCE.renderAllArchitectTables(event);
+                    BCBuildersEventDist.INSTANCE.renderAllBuilders(event);
                 });
         // Fade out architect "digitizing" cubes one tick at a time on the client.
         NeoForge.EVENT_BUS.addListener(
@@ -34,6 +35,7 @@ public class BCBuildersClient {
         NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent.class,
                 event -> {
                     BCBuildersEventDist.INSTANCE.renderAllFillersCustomGeometry(event);
+                    BCBuildersEventDist.INSTANCE.renderAllBuildersCustomGeometry(event);
                 });
         // Draws a second tooltip-shaped panel below Blueprint/Template tooltips with a rotating
         // 3D preview. Mirrors the 1.12.2 BCBuildersEventDist#onPostText pattern; the 1.12.2

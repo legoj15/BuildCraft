@@ -1,19 +1,18 @@
 {
-    "variants": {
-        "facing=north": {
-            "model": "buildcraftunofficial:block/builder/main"
-        },
-        "facing=east": {
-            "model": "buildcraftunofficial:block/builder/main",
-            "y": 90
-        },
-        "facing=south": {
-            "model": "buildcraftunofficial:block/builder/main",
-            "y": 180
-        },
-        "facing=west": {
-            "model": "buildcraftunofficial:block/builder/main",
-            "y": 270
-        }
-    }
+    "multipart": [
+        {"when": {"facing": "north"}, "apply": {"model": "buildcraftunofficial:block/builder/main"}},
+        {"when": {"facing": "east"},  "apply": {"model": "buildcraftunofficial:block/builder/main", "y": 90}},
+        {"when": {"facing": "south"}, "apply": {"model": "buildcraftunofficial:block/builder/main", "y": 180}},
+        {"when": {"facing": "west"},  "apply": {"model": "buildcraftunofficial:block/builder/main", "y": 270}},
+
+        {"when": {"facing": "north", "snapshot_type": "blueprint"}, "apply": {"model": "buildcraftunofficial:block/builder/slot_blueprint"}},
+        {"when": {"facing": "east",  "snapshot_type": "blueprint"}, "apply": {"model": "buildcraftunofficial:block/builder/slot_blueprint", "y": 90}},
+        {"when": {"facing": "south", "snapshot_type": "blueprint"}, "apply": {"model": "buildcraftunofficial:block/builder/slot_blueprint", "y": 180}},
+        {"when": {"facing": "west",  "snapshot_type": "blueprint"}, "apply": {"model": "buildcraftunofficial:block/builder/slot_blueprint", "y": 270}},
+
+        {"when": {"facing": "north", "snapshot_type": "template"}, "apply": {"model": "buildcraftunofficial:block/builder/slot_template"}},
+        {"when": {"facing": "east",  "snapshot_type": "template"}, "apply": {"model": "buildcraftunofficial:block/builder/slot_template", "y": 90}},
+        {"when": {"facing": "south", "snapshot_type": "template"}, "apply": {"model": "buildcraftunofficial:block/builder/slot_template", "y": 180}},
+        {"when": {"facing": "west",  "snapshot_type": "template"}, "apply": {"model": "buildcraftunofficial:block/builder/slot_template", "y": 270}}
+    ]
 }

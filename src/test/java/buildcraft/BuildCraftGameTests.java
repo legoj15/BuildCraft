@@ -73,6 +73,9 @@ public class BuildCraftGameTests {
 
             // Filler Inventory Filtering
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:filler_block_item_filter"), () -> buildcraft.builders.FillerInventoryTester::testFillerBlockItemFilter);
+
+            // Builder Drops (self + inventory contents)
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_drops_contents_and_self"), () -> buildcraft.builders.BuilderDropsTester::testBuilderDropsContentsAndSelf);
         }
     }
 }

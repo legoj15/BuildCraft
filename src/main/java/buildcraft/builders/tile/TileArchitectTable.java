@@ -470,6 +470,16 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
         output.putInt("snapshotType", snapshotType.ordinal());
         output.putBoolean("isValid", isValid);
         output.putString("name", name);
+        // Persist slot contents. In 1.12.2 these were ItemHandlerSimple instances auto-saved
+        // by the lib's item-handler manager; after the 26.1 port they're plain ItemStack
+        // fields, so without this they evaporate on chunk unload and the used blueprint the
+        // player "forgot" in the output slot disappears.
+        if (!invSnapshotIn.isEmpty()) {
+            output.store("invSnapshotIn", ItemStack.CODEC, invSnapshotIn);
+        }
+        if (!invSnapshotOut.isEmpty()) {
+            output.store("invSnapshotOut", ItemStack.CODEC, invSnapshotOut);
+        }
     }
 
     @Override
@@ -493,6 +503,8 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
         snapshotType = (stOrd >= 0 && stOrd < stValues.length) ? stValues[stOrd] : EnumSnapshotType.BLUEPRINT;
         isValid = input.getBooleanOr("isValid", false);
         name = input.getStringOr("name", "<unnamed>");
+        invSnapshotIn = input.read("invSnapshotIn", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+        invSnapshotOut = input.read("invSnapshotOut", ItemStack.CODEC).orElse(ItemStack.EMPTY);
     }
 
     // IDebuggable

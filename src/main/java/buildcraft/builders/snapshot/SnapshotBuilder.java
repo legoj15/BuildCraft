@@ -190,7 +190,12 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     }
 
     public void resourcesChanged() {
-        Arrays.fill(requiredCache, REQUIRED_UNKNOWN);
+        // requiredCache is only allocated inside updateSnapshot() once a buildingInfo exists.
+        // Calls that arrive before the first updateSnapshot() (e.g. container-content sync on a
+        // client that doesn't have the full snapshot) would otherwise NPE here.
+        if (requiredCache != null) {
+            Arrays.fill(requiredCache, REQUIRED_UNKNOWN);
+        }
     }
 
     public void cancel() {
@@ -651,6 +656,26 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         placeTasks.clear();
         NBTUtilBC.readCompoundList(nbt.get("placeTasks")).map(PlaceTask::new).forEach(placeTasks::add);
         currentCheckIndex = nbt.getIntOr("currentCheckIndex", 0);
+    }
+
+    /**
+     * Client-side: given a {@code builderClientData} tag produced by {@link #serializeClientNBT()},
+     * decode the server's break/place task queues and merge them with the previously-cached
+     * client tasks using max(client, server) power per position.
+     * <p>
+     * Encapsulated here (rather than forcing callers to build the inner-class queues themselves)
+     * because {@code BreakTask}/{@code PlaceTask} are non-static inner classes tied to the enclosing
+     * {@code SnapshotBuilder} instance, and a wildcard-typed reference can't instantiate them
+     * without ugly raw-type casts. Callers pass the previously-held client queues so the power
+     * merge can survive the {@code updateSnapshot()} reset that happens during tile load.
+     */
+    public void loadClientNBT(CompoundTag tag,
+            Iterable<BreakTask> savedClientBreak, Iterable<PlaceTask> savedClientPlace) {
+        Queue<BreakTask> serverBreak = new ArrayDeque<>();
+        Queue<PlaceTask> serverPlace = new ArrayDeque<>();
+        NBTUtilBC.readCompoundList(tag.get("breakTasks")).map(BreakTask::new).forEach(serverBreak::add);
+        NBTUtilBC.readCompoundList(tag.get("placeTasks")).map(PlaceTask::new).forEach(serverPlace::add);
+        receiveServerTaskData(serverBreak, serverPlace, savedClientBreak, savedClientPlace);
     }
 
     public class BreakTask {

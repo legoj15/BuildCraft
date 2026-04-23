@@ -24,6 +24,7 @@ import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 
 import net.minecraft.client.Minecraft;
@@ -32,16 +33,25 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.FluidState;
+
+import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.Snapshot;
+import buildcraft.lib.misc.FluidUtilBC;
 
 /**
  * PiP renderer that paints a {@link Blueprint} into an offscreen texture as a real 3D scene of
@@ -270,6 +280,7 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         Map<BlockState, TrackingItemStackRenderState> stateCache = new HashMap<>();
 
         int submitted = 0;
+        int submittedFluid = 0;
         int skippedNoItem = 0;
         int skippedAirOrEmpty = 0;
         String sampleClassName = "n/a";
@@ -296,6 +307,17 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                     }
                     if (sampleClassName.equals("n/a")) {
                         sampleClassName = schBlock.getClass().getSimpleName();
+                    }
+
+                    // Fluid cells need a dedicated textured-cube path: LiquidBlock has no item
+                    // form, so the item-model path below would resolve to an empty ItemStack and
+                    // silently skip every water/lava/oil cell. Matches 1.12.2 behaviour where
+                    // both source and flowing cells appeared in the preview.
+                    FluidState fluidState = state.getFluidState();
+                    if (!fluidState.isEmpty()) {
+                        submitFluidCube(poseStack, blueprint, size, x, y, z, fluidState, FULL_BRIGHT);
+                        submittedFluid++;
+                        continue;
                     }
 
                     TrackingItemStackRenderState itemRenderState = stateCache.get(state);
@@ -350,10 +372,170 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         RenderSystem.setShaderLights(savedShaderLights);
 
         if (LOGGED_SNAPSHOTS.add(System.identityHashCode(blueprint))) {
-            LOGGER.info("renderToTexture: size={}x{}x{} submitted={} skippedNoItem={} skippedAirOrEmpty={} sampleSchBlock={} distinctStates={}",
-                    sizeX, sizeY, sizeZ, submitted, skippedNoItem, skippedAirOrEmpty,
+            LOGGER.info("renderToTexture: size={}x{}x{} submitted={} submittedFluid={} skippedNoItem={} skippedAirOrEmpty={} sampleSchBlock={} distinctStates={}",
+                    sizeX, sizeY, sizeZ, submitted, submittedFluid, skippedNoItem, skippedAirOrEmpty,
                     sampleClassName, stateCache.size());
         }
+    }
+
+    /**
+     * Emits a textured cube for a single fluid cell into the shared buffer source. Source fluids
+     * get a full 1.0-height cube; flowing cells use {@link FluidState#getOwnHeight()} so short
+     * streams read as shorter cubes (matching the classic 1.12.2 preview aesthetic of "looks
+     * like an in-game snippet"). Faces shared with same-type fluid neighbours are culled — a
+     * pool interior draws only its outer shell, avoiding both fill waste and (for translucent
+     * water) the visual mess of double-blended interior faces.
+     * <p>
+     * Winding is CCW-from-outside in world space. The base class's {@code scale(s, s, -s)} plus
+     * our own {@code scale(1, -1, -1)} produce a determinant of {@code -s³}, which is the
+     * handedness the item-rendering pipeline (and the active CullStateShard) expects, so
+     * standard block-authored winding works without inversion.
+     * <p>
+     * UVs come from vertex position via {@link TextureAtlasSprite#getU}/{@code getV} so a
+     * half-height flowing cube naturally shows the top half of the still sprite — same
+     * position-based mapping used by {@link buildcraft.factory.client.render.RenderTank}.
+     */
+    private void submitFluidCube(
+            PoseStack poseStack, Blueprint blueprint, BlockPos size,
+            int xCell, int yCell, int zCell,
+            FluidState fluidState, int lightmap) {
+        Fluid fluid = fluidState.getType();
+        // FluidUtilBC expects a FluidStack; the amount doesn't matter here — only the fluid
+        // identity is used to look up texture + colour.
+        FluidStack stack = new FluidStack(fluid, 1);
+
+        Identifier stillTexture = FluidUtilBC.getFluidTexture(stack);
+        if (stillTexture == null) return;
+
+        TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
+                .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+        TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
+        if (sprite == null) return;
+
+        int color = FluidUtilBC.getFluidColor(stack);
+        float a = ((color >> 24) & 0xFF) / 255.0f;
+        float r = ((color >> 16) & 0xFF) / 255.0f;
+        float g = ((color >>  8) & 0xFF) / 255.0f;
+        float b = ( color        & 0xFF) / 255.0f;
+        // Some fluids return ARGB with zero alpha from the no-arg tint getter; treat those as
+        // fully opaque rather than invisible. (Vanilla water/lava return proper alpha; BC
+        // energy fluids and anything else defaulting to 0xFFFFFFFF already match this.)
+        if (a <= 0) a = 1.0f;
+
+        // Source blocks render as full cubes. Flowing blocks use the level-derived height;
+        // Fluids.getOwnHeight() returns (8/9)f for max flow down to (1/9)f for thinnest. Floor
+        // at 1/8 so near-dry streams still have enough thickness to be visible in a rotating
+        // preview — the alternative, clamp-to-zero cells, would flicker at certain viewing
+        // angles because of z-fighting with empty cells.
+        float h = fluidState.isSource() ? 1.0f : Math.max(0.125f, fluidState.getOwnHeight());
+
+        // Face culling against same-type fluid neighbours. Uses FluidType equality so a WATER
+        // source and its FLOWING_WATER neighbour count as adjacent for culling purposes —
+        // otherwise you'd see ghost interior faces at every source/flowing boundary of a pour.
+        boolean cullTop    = neighborIsSameFluid(blueprint, size, xCell,   yCell + 1, zCell,   fluid);
+        boolean cullBottom = neighborIsSameFluid(blueprint, size, xCell,   yCell - 1, zCell,   fluid);
+        boolean cullNorth  = neighborIsSameFluid(blueprint, size, xCell,   yCell,     zCell - 1, fluid);
+        boolean cullSouth  = neighborIsSameFluid(blueprint, size, xCell,   yCell,     zCell + 1, fluid);
+        boolean cullWest   = neighborIsSameFluid(blueprint, size, xCell - 1, yCell,   zCell,   fluid);
+        boolean cullEast   = neighborIsSameFluid(blueprint, size, xCell + 1, yCell,   zCell,   fluid);
+
+        // Water reuses the entity-translucent sheet so its semi-transparent pixels blend; every
+        // other fluid (including BC energy fluids that tint the water sprite) uses entity-cutout
+        // so the alpha is clamped to binary and doesn't bleed the background through.
+        VertexConsumer vc = this.bufferSource.getBuffer(
+                FluidUtilBC.shouldRenderTranslucent(fluid)
+                        ? RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS)
+                        : RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
+
+        poseStack.pushPose();
+        poseStack.translate(xCell, yCell, zCell);
+        PoseStack.Pose pose = poseStack.last();
+        int overlay = OverlayTexture.NO_OVERLAY;
+
+        // Top (+Y): CCW viewed from above.
+        if (!cullTop) {
+            putFluidVertex(vc, pose, 0, h, 0, sprite.getU(0), sprite.getV(0), r, g, b, a,  0,  1,  0, lightmap, overlay);
+            putFluidVertex(vc, pose, 0, h, 1, sprite.getU(0), sprite.getV(1), r, g, b, a,  0,  1,  0, lightmap, overlay);
+            putFluidVertex(vc, pose, 1, h, 1, sprite.getU(1), sprite.getV(1), r, g, b, a,  0,  1,  0, lightmap, overlay);
+            putFluidVertex(vc, pose, 1, h, 0, sprite.getU(1), sprite.getV(0), r, g, b, a,  0,  1,  0, lightmap, overlay);
+        }
+        // Bottom (-Y): CCW viewed from below.
+        if (!cullBottom) {
+            putFluidVertex(vc, pose, 0, 0, 0, sprite.getU(0), sprite.getV(0), r, g, b, a,  0, -1,  0, lightmap, overlay);
+            putFluidVertex(vc, pose, 1, 0, 0, sprite.getU(1), sprite.getV(0), r, g, b, a,  0, -1,  0, lightmap, overlay);
+            putFluidVertex(vc, pose, 1, 0, 1, sprite.getU(1), sprite.getV(1), r, g, b, a,  0, -1,  0, lightmap, overlay);
+            putFluidVertex(vc, pose, 0, 0, 1, sprite.getU(0), sprite.getV(1), r, g, b, a,  0, -1,  0, lightmap, overlay);
+        }
+        // North (-Z): CCW viewed from -Z. Side-face V is derived from (1-y) so the water
+        // surface (low V on the sprite) sits at the top of the column — matches how still-
+        // water textures read in-world.
+        if (!cullNorth) {
+            putFluidVertex(vc, pose, 0, 0, 0, sprite.getU(0), sprite.getV(1),     r, g, b, a,  0,  0, -1, lightmap, overlay);
+            putFluidVertex(vc, pose, 0, h, 0, sprite.getU(0), sprite.getV(1 - h), r, g, b, a,  0,  0, -1, lightmap, overlay);
+            putFluidVertex(vc, pose, 1, h, 0, sprite.getU(1), sprite.getV(1 - h), r, g, b, a,  0,  0, -1, lightmap, overlay);
+            putFluidVertex(vc, pose, 1, 0, 0, sprite.getU(1), sprite.getV(1),     r, g, b, a,  0,  0, -1, lightmap, overlay);
+        }
+        // South (+Z): CCW viewed from +Z.
+        if (!cullSouth) {
+            putFluidVertex(vc, pose, 1, 0, 1, sprite.getU(0), sprite.getV(1),     r, g, b, a,  0,  0,  1, lightmap, overlay);
+            putFluidVertex(vc, pose, 1, h, 1, sprite.getU(0), sprite.getV(1 - h), r, g, b, a,  0,  0,  1, lightmap, overlay);
+            putFluidVertex(vc, pose, 0, h, 1, sprite.getU(1), sprite.getV(1 - h), r, g, b, a,  0,  0,  1, lightmap, overlay);
+            putFluidVertex(vc, pose, 0, 0, 1, sprite.getU(1), sprite.getV(1),     r, g, b, a,  0,  0,  1, lightmap, overlay);
+        }
+        // West (-X): CCW viewed from -X.
+        if (!cullWest) {
+            putFluidVertex(vc, pose, 0, 0, 1, sprite.getU(0), sprite.getV(1),     r, g, b, a, -1,  0,  0, lightmap, overlay);
+            putFluidVertex(vc, pose, 0, h, 1, sprite.getU(0), sprite.getV(1 - h), r, g, b, a, -1,  0,  0, lightmap, overlay);
+            putFluidVertex(vc, pose, 0, h, 0, sprite.getU(1), sprite.getV(1 - h), r, g, b, a, -1,  0,  0, lightmap, overlay);
+            putFluidVertex(vc, pose, 0, 0, 0, sprite.getU(1), sprite.getV(1),     r, g, b, a, -1,  0,  0, lightmap, overlay);
+        }
+        // East (+X): CCW viewed from +X.
+        if (!cullEast) {
+            putFluidVertex(vc, pose, 1, 0, 0, sprite.getU(0), sprite.getV(1),     r, g, b, a,  1,  0,  0, lightmap, overlay);
+            putFluidVertex(vc, pose, 1, h, 0, sprite.getU(0), sprite.getV(1 - h), r, g, b, a,  1,  0,  0, lightmap, overlay);
+            putFluidVertex(vc, pose, 1, h, 1, sprite.getU(1), sprite.getV(1 - h), r, g, b, a,  1,  0,  0, lightmap, overlay);
+            putFluidVertex(vc, pose, 1, 0, 1, sprite.getU(1), sprite.getV(1),     r, g, b, a,  1,  0,  0, lightmap, overlay);
+        }
+
+        poseStack.popPose();
+    }
+
+    /**
+     * True when the cell at the given palette coordinate holds a fluid schematic of the same
+     * {@link net.neoforged.neoforge.fluids.FluidType} as {@code fluid}. Out-of-bounds cells
+     * return false so exterior faces of the bounding box always render.
+     */
+    private static boolean neighborIsSameFluid(
+            Blueprint blueprint, BlockPos size,
+            int nx, int ny, int nz, Fluid fluid) {
+        if (nx < 0 || ny < 0 || nz < 0
+                || nx >= size.getX() || ny >= size.getY() || nz >= size.getZ()) {
+            return false;
+        }
+        int idx = blueprint.data[Snapshot.posToIndex(size, new BlockPos(nx, ny, nz))];
+        if (idx < 0 || idx >= blueprint.palette.size()) return false;
+        ISchematicBlock schBlock = blueprint.palette.get(idx);
+        if (schBlock == null) return false;
+        BlockState nState = schBlock.getBlockStateForRender();
+        if (nState == null) return false;
+        FluidState nFluid = nState.getFluidState();
+        // FluidType equality treats FLOWING_X and X as the same fluid for adjacency purposes,
+        // so a source next to its own flow doesn't render an interior wall.
+        return !nFluid.isEmpty() && nFluid.getType().getFluidType() == fluid.getFluidType();
+    }
+
+    private static void putFluidVertex(
+            VertexConsumer vc, PoseStack.Pose pose,
+            float x, float y, float z, float u, float v,
+            float r, float g, float b, float a,
+            float nx, float ny, float nz,
+            int light, int overlay) {
+        vc.addVertex(pose, x, y, z)
+                .setColor(r, g, b, a)
+                .setUv(u, v)
+                .setOverlay(overlay)
+                .setLight(light)
+                .setNormal(pose, nx, ny, nz);
     }
 
     /**

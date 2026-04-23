@@ -1,5 +1,6 @@
 {
     "parent": "block/cube",
+    "render_type": "minecraft:cutout",
     "textures": {
         "particle": "buildcraftunofficial:block/builder/side",
         "down": "buildcraftunofficial:block/builder/bottom",

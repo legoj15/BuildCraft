@@ -32,14 +32,23 @@ public record ArchitectPreviewRequestPayload(BlockPos architectPos) implements C
     public static void handle(ArchitectPreviewRequestPayload payload,
                               net.neoforged.neoforge.network.handling.IPayloadContext context) {
         context.enqueueWork(() -> {
-            Level level = context.player().level();
-            BlockEntity be = level.getBlockEntity(payload.architectPos());
+            net.minecraft.world.entity.player.Player player = context.player();
+            Level level = player.level();
+
+            // Security: Verify player is close to the requested position to prevent C2S trust exploits
+            BlockPos pos = payload.architectPos();
+            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 64.0) {
+                context.reply(new ArchitectPreviewResponsePayload(pos, null));
+                return;
+            }
+
+            BlockEntity be = level.getBlockEntity(pos);
             Blueprint preview = null;
             if (be instanceof TileArchitectTable architect) {
                 preview = architect.getOrRefreshLivePreview();
             }
             // Always reply — a null preview tells the client "nothing to show" so it stops pending.
-            context.reply(new ArchitectPreviewResponsePayload(payload.architectPos(), preview));
+            context.reply(new ArchitectPreviewResponsePayload(pos, preview));
         });
     }
 }

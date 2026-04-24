@@ -7,7 +7,6 @@
 package buildcraft.builders.snapshot;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,9 +51,93 @@ public class Blueprint extends Snapshot {
         return blueprint;
     }
 
+    /**
+     * Swap every palette entry that semantically matches {@code from} with {@code to}.
+     * <p>
+     * Matching is delegated to {@link #schematicsMatch(ISchematicBlock, ISchematicBlock)}:
+     * we compare {@code blockState} and {@code placeBlock} on {@link SchematicBlockDefault}
+     * rather than full {@code .equals()}, because freshly-captured single-block schematics
+     * carry scan-context annotations ({@code requiredBlockOffsets}, {@code ignoredProperties})
+     * that almost never line up with the palette entries the Architect serialized during its
+     * own scan. Whole-object equality would virtually never match — which is exactly the
+     * 1.12.2 bug (issue: "schematics get consumed, blueprint unchanged").
+     * <p>
+     * Palette-index swaps are done in place, so {@code data[]} needs no reallocation.
+     * If {@code to} already exists elsewhere in the palette this leaves a harmless duplicate;
+     * the blueprint still renders and builds identically. Deduplication is out of scope here.
+     */
     public void replace(ISchematicBlock from, ISchematicBlock to) {
-        Collections.replaceAll(palette, from, to);
-        // TODO: reallocate IDs
+        if (from == null || to == null) {
+            return;
+        }
+        for (int i = 0; i < palette.size(); i++) {
+            if (schematicsMatch(palette.get(i), from)) {
+                palette.set(i, to);
+            }
+        }
+    }
+
+    /** Count of palette entries matching {@code from}. Cheap — used for GUI feedback. */
+    public int countMatchingPaletteEntries(ISchematicBlock from) {
+        if (from == null) {
+            return 0;
+        }
+        int n = 0;
+        for (ISchematicBlock entry : palette) {
+            if (schematicsMatch(entry, from)) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /**
+     * Count of {@code data[]} cells whose palette entry matches {@code from}. This is the
+     * "how many blocks would actually be replaced" number shown in the GUI summary.
+     */
+    public int countMatchingCells(ISchematicBlock from) {
+        if (from == null || data == null) {
+            return 0;
+        }
+        // Precompute the matching palette indices so we walk data[] with a simple set contains.
+        java.util.BitSet matchingIndices = new java.util.BitSet(palette.size());
+        for (int i = 0; i < palette.size(); i++) {
+            if (schematicsMatch(palette.get(i), from)) {
+                matchingIndices.set(i);
+            }
+        }
+        if (matchingIndices.isEmpty()) {
+            return 0;
+        }
+        int n = 0;
+        for (int cell : data) {
+            if (cell >= 0 && cell < palette.size() && matchingIndices.get(cell)) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /**
+     * Semantic "same block" test for palette matching. Looser than {@code .equals()} on
+     * {@link SchematicBlockDefault}: compares only {@code blockState} and {@code placeBlock},
+     * ignoring scan-context fields like {@code requiredBlockOffsets} / {@code ignoredProperties}
+     * so that a hand-captured single-block schematic matches the palette entry the Architect
+     * captured in a different context. For non-{@code SchematicBlockDefault} implementations
+     * we fall back to normal equality, preserving whatever identity they defined.
+     */
+    private static boolean schematicsMatch(ISchematicBlock a, ISchematicBlock b) {
+        if (a == b) {
+            return true;
+        }
+        if (a == null || b == null) {
+            return false;
+        }
+        if (a instanceof SchematicBlockDefault ad && b instanceof SchematicBlockDefault bd) {
+            return java.util.Objects.equals(ad.blockState, bd.blockState)
+                && java.util.Objects.equals(ad.placeBlock, bd.placeBlock);
+        }
+        return a.equals(b);
     }
 
     @Override

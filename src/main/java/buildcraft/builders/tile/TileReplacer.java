@@ -57,46 +57,60 @@ public class TileReplacer extends TileBC_Neptune implements MenuProvider {
                 stack.getItem() instanceof ItemSchematicSingle s && s.isUsed());
     }
 
-    public void tick() {
+    /**
+     * Perform the palette replacement on whatever blueprint is currently in {@link #invSnapshot},
+     * using {@link #invSchematicFrom} / {@link #invSchematicTo} as the match/replacement pattern.
+     * Server-only; invoked by {@link ContainerReplacer} when the player clicks the Replace button.
+     * <p>
+     * Unlike the 1.12.2 version this does <b>not</b> consume the single-block schematics — the
+     * same from/to pair can be reused on a different blueprint. On success the slot-0 blueprint
+     * item is swapped for a new one referencing the newly-built blueprint's {@code Snapshot.Key}.
+     *
+     * @param newName optional rename for the produced blueprint. {@code null} or blank keeps
+     *                the original blueprint's name.
+     */
+    public void doReplace(@Nullable String newName) {
         if (level == null || level.isClientSide()) {
             return;
         }
-        if (!invSnapshot.getStackInSlot(0).isEmpty()
-                && !invSchematicFrom.getStackInSlot(0).isEmpty()
-                && !invSchematicTo.getStackInSlot(0).isEmpty()) {
-
-            Snapshot.Header header = ItemSnapshot.getHeader(invSnapshot.getStackInSlot(0));
-            if (header != null) {
-                Snapshot snapshot = GlobalSavedDataSnapshots.get(level).getSnapshot(header.key);
-                if (snapshot instanceof Blueprint blueprint) {
-                    try {
-                        ISchematicBlock from = ItemSchematicSingle.getSchematic(
-                                invSchematicFrom.getStackInSlot(0));
-                        ISchematicBlock to = ItemSchematicSingle.getSchematic(
-                                invSchematicTo.getStackInSlot(0));
-                        if (from != null && to != null) {
-                            Blueprint newBlueprint = blueprint.copy();
-                            newBlueprint.replace(from, to);
-                            newBlueprint.computeKey();
-                            GlobalSavedDataSnapshots.get(level).addSnapshot(newBlueprint);
-                            // Create a new used blueprint item with the updated header
-                            ItemSnapshot usedItem = BCBuildersItems.BLUEPRINT_USED.get();
-                            Snapshot.Header newHeader = new Snapshot.Header(
-                                    newBlueprint.key,
-                                    header.owner,
-                                    new Date(),
-                                    header.name
-                            );
-                            invSnapshot.setStackInSlot(0, usedItem.createUsedStack(newHeader));
-                            invSchematicFrom.setStackInSlot(0, ItemStack.EMPTY);
-                            invSchematicTo.setStackInSlot(0, ItemStack.EMPTY);
-                            setChanged();
-                        }
-                    } catch (InvalidInputDataException e) {
-                        e.printStackTrace();
-                    }
-                }
+        if (invSnapshot.getStackInSlot(0).isEmpty()
+                || invSchematicFrom.getStackInSlot(0).isEmpty()
+                || invSchematicTo.getStackInSlot(0).isEmpty()) {
+            return;
+        }
+        Snapshot.Header header = ItemSnapshot.getHeader(invSnapshot.getStackInSlot(0));
+        if (header == null) {
+            return;
+        }
+        Snapshot snapshot = GlobalSavedDataSnapshots.get(level).getSnapshot(header.key);
+        if (!(snapshot instanceof Blueprint blueprint)) {
+            return;
+        }
+        try {
+            ISchematicBlock from = ItemSchematicSingle.getSchematic(invSchematicFrom.getStackInSlot(0));
+            ISchematicBlock to = ItemSchematicSingle.getSchematic(invSchematicTo.getStackInSlot(0));
+            if (from == null || to == null) {
+                return;
             }
+            Blueprint newBlueprint = blueprint.copy();
+            newBlueprint.replace(from, to);
+            newBlueprint.computeKey();
+            GlobalSavedDataSnapshots.get(level).addSnapshot(newBlueprint);
+
+            String resolvedName = (newName != null && !newName.isBlank()) ? newName.trim() : header.name;
+            ItemSnapshot usedItem = BCBuildersItems.BLUEPRINT_USED.get();
+            Snapshot.Header newHeader = new Snapshot.Header(
+                    newBlueprint.key,
+                    header.owner,
+                    new Date(),
+                    resolvedName
+            );
+            invSnapshot.setStackInSlot(0, usedItem.createUsedStack(newHeader));
+            // Intentionally do NOT clear invSchematicFrom / invSchematicTo — the player can
+            // reuse the same from/to pair on the next blueprint they drop in.
+            setChanged();
+        } catch (InvalidInputDataException e) {
+            e.printStackTrace();
         }
     }
 
@@ -111,5 +125,15 @@ public class TileReplacer extends TileBC_Neptune implements MenuProvider {
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInv, Player player) {
         return new ContainerReplacer(containerId, playerInv, this);
+    }
+
+    /**
+     * Retained for backwards compatibility with any stray ticker call sites — no-op now that
+     * replacement is triggered on-demand by the Replace button. Safe to remove in a follow-up
+     * once the entire call graph is audited.
+     */
+    @Deprecated
+    public void tick() {
+        // Intentionally empty: replace() is no longer a tick-time operation.
     }
 }

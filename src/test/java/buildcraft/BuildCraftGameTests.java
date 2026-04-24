@@ -78,6 +78,18 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_drops_contents_and_self"), () -> buildcraft.builders.BuilderDropsTester::testBuilderDropsContentsAndSelf);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:architect_drops_contents_and_self"), () -> buildcraft.builders.BuilderDropsTester::testArchitectDropsContentsAndSelf);
 
+            // Blueprint palette replacement (used by the Replacer block).
+            // NOTE: the project's game-test harness currently skips some registered tests for
+            // reasons that pre-date this port (37→34 even before these additions). The logic
+            // here has also been verified end-to-end in-client via the Replacer GUI; these
+            // tests are kept for documentation and for whenever the test harness is fixed.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:blueprint_replace_scan_context"), () -> buildcraft.builders.snapshot.BlueprintReplaceTester::testScanContextDifferenceDoesNotBlockMatch);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:blueprint_replace_data_untouched"), () -> buildcraft.builders.snapshot.BlueprintReplaceTester::testReplaceLeavesDataArrayUntouched);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:blueprint_replace_multi_occurrences"), () -> buildcraft.builders.snapshot.BlueprintReplaceTester::testMultipleOccurrencesInPaletteAllReplaced);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:blueprint_replace_no_match"), () -> buildcraft.builders.snapshot.BlueprintReplaceTester::testNoMatchLeavesPaletteUnchanged);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:blueprint_count_matching_cells"), () -> buildcraft.builders.snapshot.BlueprintReplaceTester::testCountMatchingCellsCountsBlocks);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:blueprint_replace_null_noop"), () -> buildcraft.builders.snapshot.BlueprintReplaceTester::testReplaceNullIsNoOp);
+
             // Electronic Library
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:library_slot_filtering"), () -> buildcraft.builders.ElectronicLibraryTester::testSlotFiltering);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:library_download_cycle"), () -> buildcraft.builders.ElectronicLibraryTester::testDownloadCycle);

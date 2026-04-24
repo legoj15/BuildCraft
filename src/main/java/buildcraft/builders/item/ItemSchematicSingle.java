@@ -5,16 +5,20 @@
 package buildcraft.builders.item;
 
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -203,6 +207,34 @@ public class ItemSchematicSingle extends Item {
             BCLog.logger.warn("Invalid schematic " + e.getMessage());
             return null;
         }
+    }
+    // endregion
+
+    // region Tooltip — captured-block name
+    /**
+     * Show the captured block's display name under the main tooltip title for "used"
+     * variants. 1.12.2 never did this, which made the identical-looking items confusing
+     * to tell apart without hovering on an actual block. The separate 3D preview panel is
+     * drawn from {@code SchematicSingleTooltipOverlay}, matching the blueprint tooltip's
+     * handler pattern.
+     */
+    @Override
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context,
+                                TooltipDisplay display, Consumer<Component> tooltip,
+                                TooltipFlag flag) {
+        super.appendHoverText(stack, context, display, tooltip, flag);
+        if (!used) {
+            return;
+        }
+        ISchematicBlock schematic = getSchematicSafe(stack);
+        if (schematic == null) {
+            return;
+        }
+        BlockState state = schematic.getBlockStateForRender();
+        if (state == null) {
+            return;
+        }
+        tooltip.accept(state.getBlock().getName().copy().withStyle(ChatFormatting.GRAY));
     }
     // endregion
 }

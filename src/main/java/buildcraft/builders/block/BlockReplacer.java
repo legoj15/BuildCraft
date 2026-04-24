@@ -12,20 +12,21 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.BlockHitResult;
 
-import buildcraft.builders.BCBuildersBlockEntities;
+import buildcraft.lib.tile.TileBC_Neptune;
+
 import buildcraft.builders.tile.TileReplacer;
 
 public class BlockReplacer extends HorizontalDirectionalBlock implements EntityBlock {
@@ -57,18 +58,18 @@ public class BlockReplacer extends HorizontalDirectionalBlock implements EntityB
         return new TileReplacer(pos, state);
     }
 
-    @Nullable
+    /**
+     * Record the placing player as the owner so {@link buildcraft.lib.gui.ledger.LedgerOwnership}
+     * has a profile to display. Forwards to {@link TileBC_Neptune#onPlacedBy} which handles the
+     * {@code Player} -> {@code GameProfile} conversion.
+     */
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
-            BlockEntityType<T> blockEntityType) {
-        if (blockEntityType != BCBuildersBlockEntities.REPLACER.get()) {
-            return null;
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
+                            @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (level.getBlockEntity(pos) instanceof TileBC_Neptune tile) {
+            tile.onPlacedBy(placer, stack);
         }
-        return (lvl, pos, st, be) -> {
-            if (be instanceof TileReplacer replacer) {
-                replacer.tick();
-            }
-        };
     }
 
     @Override

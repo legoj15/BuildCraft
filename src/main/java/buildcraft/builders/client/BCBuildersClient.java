@@ -12,6 +12,7 @@ import buildcraft.builders.BCBuildersMenuTypes;
 import buildcraft.builders.BCBuildersEntities;
 import buildcraft.builders.BCBuildersEventDist;
 import buildcraft.builders.client.tooltip.BlueprintTooltipOverlay;
+import buildcraft.builders.client.tooltip.SchematicSingleTooltipOverlay;
 import buildcraft.builders.gui.GuiArchitectTable;
 import buildcraft.builders.gui.GuiElectronicLibrary;
 import buildcraft.builders.gui.GuiFiller;
@@ -43,6 +44,11 @@ public class BCBuildersClient {
         // math ourselves. See BlueprintTooltipOverlay for the full explanation.
         NeoForge.EVENT_BUS.addListener(RenderTooltipEvent.Pre.class,
                 BlueprintTooltipOverlay::onPreTooltip);
+        // Same treatment for used single-block schematics: synthesize a 1×1×1 Blueprint and
+        // render through the same PiP pipeline. Without this, two different "used" schematics
+        // in the inventory look identical — a 1.12.2 UX gap we're closing here.
+        NeoForge.EVENT_BUS.addListener(RenderTooltipEvent.Pre.class,
+                SchematicSingleTooltipOverlay::onPreTooltip);
     }
 
     @SubscribeEvent

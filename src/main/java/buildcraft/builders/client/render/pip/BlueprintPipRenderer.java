@@ -345,7 +345,17 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                     }
 
                     poseStack.pushPose();
-                    poseStack.translate(x, y, z);
+                    // Offset by +0.5 per axis so the block's geometric center lands at the
+                    // cell's center. Vanilla's ItemTransform.NO_TRANSFORM does an implicit
+                    // translate(-0.5, -0.5, -0.5) inside ItemStackRenderState.LayerRenderState.submit
+                    // (see ItemTransform.apply for the NO_TRANSFORM branch), so an item submitted
+                    // at pose-origin renders in [-0.5, 0.5]^3 — centered on the origin, NOT with
+                    // its BSW corner there. Without this +0.5, a 1×1×1 blueprint rotates around
+                    // a corner instead of its center, and larger blueprints are offset by half
+                    // a cell; the bug hides for larger structures because the offset is small
+                    // compared to the overall extent. Fluid cubes don't need this (submitFluidCube
+                    // emits vertices in [0, 1]^3 directly without going through ItemTransform).
+                    poseStack.translate(x + 0.5f, y + 0.5f, z + 0.5f);
                     itemRenderState.submit(poseStack, submitNodeStorage, FULL_BRIGHT,
                             OverlayTexture.NO_OVERLAY, 0);
                     poseStack.popPose();

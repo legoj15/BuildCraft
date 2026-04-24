@@ -7,6 +7,7 @@ package buildcraft.builders.gui;
 import java.util.List;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
@@ -15,6 +16,8 @@ import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.ledger.LedgerHelp;
+import buildcraft.lib.gui.ledger.LedgerOwnership;
 
 import buildcraft.builders.container.ContainerElectronicLibrary;
 import buildcraft.builders.snapshot.GlobalSavedDataSnapshots;
@@ -32,10 +35,26 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
     private static final int LIST_ROW_H = 8;
     private static final int LIST_MAX_ROWS = 12;
 
-    // Progress bar positions (GUI-local)
-    private static final int BAR_DOWN_X = 194, BAR_DOWN_Y = 58;
-    private static final int BAR_UP_X = 194, BAR_UP_Y = 79;
-    private static final int BAR_W = 22, BAR_H = 16;
+    // Static arrow positions (GUI-local). These mark the empty arrow graphics
+    // already baked into the GUI background texture.
+    //   Top row (←): DOWNLOAD from library (fills right→left, matches arrow direction)
+    //   Bottom row (→): UPLOAD to library (fills left→right, matches arrow direction)
+    private static final int ARROW_DOWN_X = 194, ARROW_DOWN_Y = 58;
+    private static final int ARROW_UP_X   = 194, ARROW_UP_Y   = 79;
+    private static final int ARROW_W = 22, ARROW_H = 16;
+
+    // Filled arrow overlay sprites baked into the same texture sheet at the bottom-right.
+    //   (234, 240): filled ← arrow — overlays the download row
+    //   (234, 224): filled → arrow — overlays the upload row
+    private static final int FILLED_DOWN_U = 234, FILLED_DOWN_V = 240; // ← sprite
+    private static final int FILLED_UP_U   = 234, FILLED_UP_V   = 224; // → sprite
+
+    // Delete button — matches 1.12.2 placement at (174, 109) in GUI-local coords.
+    // Uses Minecraft's native Button widget for textured appearance.
+    private static final int DEL_X = 174, DEL_Y = 109;
+    private static final int DEL_W = 60,  DEL_H = 20;
+
+    private Button deleteButton;
 
     public GuiElectronicLibrary(ContainerElectronicLibrary container, Inventory playerInv, Component title) {
         super(container, playerInv, title, SIZE_X, SIZE_Y);
@@ -43,8 +62,59 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
     }
 
     @Override
+    protected void init() {
+        super.init();
+
+        // Add the native-textured delete button at the 1.12.2 GUI-local position.
+        deleteButton = Button.builder(Component.translatable("gui.del"), b -> onDeletePressed())
+                .bounds(leftPos + DEL_X, topPos + DEL_Y, DEL_W, DEL_H)
+                .build();
+        addRenderableWidget(deleteButton);
+        updateDeleteButtonActive();
+    }
+
+    @Override
     protected void initGuiElements() {
-        // No additional GUI elements for now
+        // Owner ledger on the right side (skin face + player name)
+        if (menu.tile != null) {
+            mainGui.shownElements.add(new LedgerOwnership(mainGui,
+                () -> menu.tile != null ? menu.tile.getOwner() : null,
+                true
+            ));
+        }
+        // Help ledger on the left side (stub content; real help text is added in another session)
+        mainGui.shownElements.add(new LedgerHelp(mainGui, false));
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        updateDeleteButtonActive();
+    }
+
+    /** Enable/disable the delete button based on whether a snapshot is currently selected
+     *  and present in the local client library. */
+    private void updateDeleteButtonActive() {
+        if (deleteButton == null) return;
+        Snapshot.Key selected = menu.tile != null ? menu.tile.selected : null;
+        boolean canDelete = selected != null
+                && GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT)
+                        .getSnapshot(selected) != null;
+        deleteButton.active = canDelete;
+    }
+
+    private void onDeletePressed() {
+        GlobalSavedDataSnapshots clientSnapshots =
+                GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT);
+        Snapshot.Key selected = menu.tile != null ? menu.tile.selected : null;
+        if (selected == null || clientSnapshots.getSnapshot(selected) == null) return;
+
+        clientSnapshots.removeSnapshot(selected);
+        menu.sendSelectedToServer(null);
+        if (menu.tile != null) {
+            menu.tile.selected = null;
+        }
+        updateDeleteButtonActive();
     }
 
     @Override
@@ -55,25 +125,44 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
                 imageWidth, imageHeight,
                 256, 256);
 
-        // Progress bars (absolute screen coords since drawBackgroundTexture is not translated)
+        // Download arrow (← top row): reveal the filled ← sprite from RIGHT to LEFT.
         int progressDown = menu.getSyncedProgressDown();
-        if (progressDown >= 0) {
-            int w = (int) (BAR_W * (progressDown / 50.0f));
-            graphics.fill(leftPos + BAR_DOWN_X, topPos + BAR_DOWN_Y,
-                    leftPos + BAR_DOWN_X + w, topPos + BAR_DOWN_Y + BAR_H, 0xFF_40_80_FF);
+        if (progressDown > 0) {
+            int w = Math.min(ARROW_W, Math.max(1, (int) Math.ceil(ARROW_W * (progressDown / 50.0f))));
+            // Source region starts at (FILLED_DOWN_U + ARROW_W - w, FILLED_DOWN_V) — the right w
+            // pixels of the ← sprite. Draw at the matching right edge of the static arrow slot.
+            graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE,
+                    leftPos + ARROW_DOWN_X + ARROW_W - w, topPos + ARROW_DOWN_Y,
+                    (float) (FILLED_DOWN_U + ARROW_W - w), (float) FILLED_DOWN_V,
+                    w, ARROW_H,
+                    256, 256);
         }
+        // Upload arrow (→ bottom row): reveal the filled → sprite from LEFT to RIGHT.
         int progressUp = menu.getSyncedProgressUp();
-        if (progressUp >= 0) {
-            int w = (int) (BAR_W * (progressUp / 50.0f));
-            graphics.fill(leftPos + BAR_UP_X, topPos + BAR_UP_Y,
-                    leftPos + BAR_UP_X + w, topPos + BAR_UP_Y + BAR_H, 0xFF_40_FF_80);
+        if (progressUp > 0) {
+            int w = Math.min(ARROW_W, Math.max(1, (int) Math.ceil(ARROW_W * (progressUp / 50.0f))));
+            graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE,
+                    leftPos + ARROW_UP_X, topPos + ARROW_UP_Y,
+                    (float) FILLED_UP_U, (float) FILLED_UP_V,
+                    w, ARROW_H,
+                    256, 256);
+        }
+    }
+
+    @Override
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        // Let GuiBC8 draw element foregrounds (ledgers, tooltips) in translated space first.
+        super.extractLabels(graphics, mouseX, mouseY);
+
+        // After super the pose is in GUI-local coordinates (0,0 = GUI top-left).
+        if (mainGui.currentMenu == null || !mainGui.currentMenu.shouldFullyOverride()) {
+            String titleStr = Component.translatable("tile.buildcraftunofficial.library.name").getString();
+            graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
         }
     }
 
     @Override
     protected void drawForegroundLayer() {
-        // Called from extractLabels with the matrix in absolute coordinates
-        // (preDrawForeground translates back to screen origin).
         GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
         if (graphics == null) return;
 
@@ -101,6 +190,7 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
         double mouseX = event.x();
         double mouseY = event.y();
 
+        // Snapshot list row selection.
         GlobalSavedDataSnapshots snapshots = GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT);
         List<Snapshot.Key> list = snapshots.getList();
         int rowY = topPos + LIST_Y;
@@ -113,6 +203,7 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
                 if (menu.tile != null) {
                     menu.tile.selected = key;
                 }
+                updateDeleteButtonActive();
                 return true;
             }
             rowY += LIST_ROW_H;

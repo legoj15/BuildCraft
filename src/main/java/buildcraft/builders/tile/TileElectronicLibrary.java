@@ -16,6 +16,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -76,6 +77,17 @@ public class TileElectronicLibrary extends TileBC_Neptune implements MenuProvide
 
     public TileElectronicLibrary(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.LIBRARY.get(), pos, state);
+    }
+
+    @Override
+    public void onPlacedBy(@Nullable LivingEntity placer, ItemStack stack) {
+        super.onPlacedBy(placer, stack);   // sets owner on the parent TileBC_Neptune
+        if (level != null && !level.isClientSide()) {
+            setChanged();
+            // Sync the tile entity update tag (which includes owner) to nearby clients so
+            // the Owner ledger can display the placer's name/skin immediately on first open.
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
     }
 
     @Override

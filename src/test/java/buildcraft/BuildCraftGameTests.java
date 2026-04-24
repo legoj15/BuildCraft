@@ -77,6 +77,12 @@ public class BuildCraftGameTests {
             // Builder Drops (self + inventory contents)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_drops_contents_and_self"), () -> buildcraft.builders.BuilderDropsTester::testBuilderDropsContentsAndSelf);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:architect_drops_contents_and_self"), () -> buildcraft.builders.BuilderDropsTester::testArchitectDropsContentsAndSelf);
+
+            // Electronic Library
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:library_slot_filtering"), () -> buildcraft.builders.ElectronicLibraryTester::testSlotFiltering);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:library_download_cycle"), () -> buildcraft.builders.ElectronicLibraryTester::testDownloadCycle);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:library_upload_progress"), () -> buildcraft.builders.ElectronicLibraryTester::testUploadProgressIncrements);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:library_download_idle"), () -> buildcraft.builders.ElectronicLibraryTester::testDownloadIdleWhenEmpty);
         }
     }
 }

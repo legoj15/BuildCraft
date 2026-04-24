@@ -11,6 +11,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -36,7 +41,7 @@ import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.mj.MjBatteryReceiver;
 
-public class TileDynamoMJ extends TileEngineBase_BC8 {
+public class TileDynamoMJ extends TileEngineBase_BC8 implements MenuProvider {
     public static final int MAX_FE = 10_000;
     public static final long MAX_MJ = 1000 * MjAPI.MJ;
 
@@ -277,9 +282,19 @@ public class TileDynamoMJ extends TileEngineBase_BC8 {
         super.loadAdditional(input);
         setCurrentFe(input.getIntOr("currentFe", 0));
         upgrades.deserializeNBT(input.read("upgrades", net.minecraft.nbt.CompoundTag.CODEC).orElseGet(net.minecraft.nbt.CompoundTag::new));
-        
+
         CompoundTag mjTag = new CompoundTag();
         mjTag.putLong("stored", input.getLongOr("mjStored", 0L));
         mjBattery.deserializeNBT(mjTag);
+    }
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable("block.buildcraftunofficial.mj_dynamo");
+    }
+
+    @Override
+    public AbstractContainerMenu createMenu(int containerId, Inventory playerInv, Player player) {
+        return new buildcraft.energy.container.ContainerDynamoMJ(containerId, playerInv, this);
     }
 }

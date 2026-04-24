@@ -198,7 +198,7 @@ public class BCEnergyFluids {
         // Block
         MapColor mapColor = gaseous ? MapColor.NONE : MapColor.COLOR_BLACK;
         blockHolder[0] = BLOCKS.registerBlock(regName,
-                props -> new LiquidBlock(sourceHolder[0].get(), props
+                props -> new BCBuoyantLiquidBlock(sourceHolder[0].get(), props
                         .mapColor(mapColor)
                         .replaceable()
                         .strength(100.0F)
@@ -443,38 +443,30 @@ public class BCEnergyFluids {
             }
             return 0.8D; // Dense liquid (water is typically friction ~0.8)
         }
+    }
+
+    /**
+     * LiquidBlock subclass that applies buoyancy to entities inside it.
+     * FluidType.move() is a dead override point in 1.21.x — the call site was
+     * removed from Entity/LivingEntity, so buoyancy has to live on the block.
+     */
+    public static class BCBuoyantLiquidBlock extends LiquidBlock {
+        public BCBuoyantLiquidBlock(net.minecraft.world.level.material.FlowingFluid fluid, BlockBehaviour.Properties props) {
+            super(fluid, props);
+        }
 
         @Override
-        public boolean move(net.minecraft.world.level.material.FluidState state, net.minecraft.world.entity.LivingEntity entity, net.minecraft.world.phys.Vec3 movementVector, double gravity) {
-            double scalar = motionScale(entity);
-            boolean isSwimming = this.canSwim(entity);
-
-            // 1. Convert WASD movementVector to world movement delta
-            // Normal water uses 0.02F speed. Sprinting water uses ~0.02F + depth strider modifiers, but we'll use a fixed float.
-            float swimSpeed = isSwimming && entity.isSprinting() ? 0.04F : 0.02F;
-            
-            // If swimming is completely disabled (like in crude oil), remove horizontal input intent
-            if (!isSwimming) {
-                movementVector = new net.minecraft.world.phys.Vec3(0, movementVector.y, 0);
+        protected void entityInside(BlockState state, net.minecraft.world.level.Level level, BlockPos pos,
+                net.minecraft.world.entity.Entity entity,
+                net.minecraft.world.entity.InsideBlockEffectApplier applier, boolean wasInside) {
+            super.entityInside(state, level, pos, entity, applier, wasInside);
+            if (entity instanceof net.minecraft.world.entity.LivingEntity) {
+                net.minecraft.world.phys.Vec3 delta = entity.getDeltaMovement();
+                double scalar = 0.8D; // viscous friction on horizontal
+                double dy = Math.max(delta.y * 0.8D + 0.04D, 0.04D);
+                entity.setDeltaMovement(delta.x * scalar, dy, delta.z * scalar);
+                entity.resetFallDistance();
             }
-
-            entity.moveRelative(swimSpeed, movementVector);
-
-            // 2. Perform the actual physical collision move
-            entity.move(net.minecraft.world.entity.MoverType.SELF, entity.getDeltaMovement());
-
-            // 3. Apply friction scalar
-            // Vanilla water applies 0.8F friction to all axes. We use our custom scalar to simulate stickiness!
-            net.minecraft.world.phys.Vec3 vel = entity.getDeltaMovement();
-            entity.setDeltaMovement(vel.multiply(scalar, 0.8D, scalar));
-
-            // 4. Bobbing Buoyancy vs Gravity
-            // If falling, vanilla water drastically reduces free-fall and begins floating you up
-            if (!entity.onGround()) {
-                entity.setDeltaMovement(entity.getDeltaMovement().add(0.0D, 0.02D, 0.0D));
-            }
-
-            return true;
         }
     }
 }

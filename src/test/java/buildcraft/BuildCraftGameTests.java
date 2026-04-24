@@ -76,6 +76,7 @@ public class BuildCraftGameTests {
 
             // Builder Drops (self + inventory contents)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_drops_contents_and_self"), () -> buildcraft.builders.BuilderDropsTester::testBuilderDropsContentsAndSelf);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:architect_drops_contents_and_self"), () -> buildcraft.builders.BuilderDropsTester::testArchitectDropsContentsAndSelf);
         }
     }
 }

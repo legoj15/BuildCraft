@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:oil_water_interaction",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 400,
+    "setup_ticks": 0,
+    "required": true
+}

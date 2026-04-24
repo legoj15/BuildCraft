@@ -29,7 +29,6 @@ import buildcraft.api.blocks.ICustomRotationHandler;
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.api.transport.pipe.IItemPipe;
-import buildcraft.energy.BCEnergyConfig;
 import buildcraft.energy.tile.TileDynamoMJ;
 
 public class BlockDynamoMJ extends Block implements EntityBlock, ICustomRotationHandler {
@@ -152,13 +151,7 @@ public class BlockDynamoMJ extends Block implements EntityBlock, ICustomRotation
         }
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TileDynamoMJ dynamo && player instanceof ServerPlayer serverPlayer) {
-            serverPlayer.openMenu(
-                new net.minecraft.world.SimpleMenuProvider(
-                    (containerId, playerInv, p) -> new buildcraft.energy.container.ContainerDynamoMJ(containerId, playerInv, dynamo),
-                    net.minecraft.network.chat.Component.translatable(BCEnergyConfig.useRfNaming.get() ? "block.buildcraftunofficial.mj_dynamo" : "block.buildcraftunofficial.mj_dynamo")
-                ),
-                buf -> buf.writeBlockPos(pos)
-            );
+            serverPlayer.openMenu(dynamo, buf -> buf.writeBlockPos(pos));
         }
         return InteractionResult.SUCCESS;
     }

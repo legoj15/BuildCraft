@@ -10,6 +10,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
@@ -60,15 +61,20 @@ public class GuiTester {
             for (GuiTestSpec.GuiAction action : spec.actions) {
                 switch (action.type) {
                     case "open_menu":
-                        BlockState state = helper.getBlockState(pos);
-                        // Using ServerPlayer's gameMode to properly simulate a click rather than directly calling block state methods which might be protected or have changing signatures
-                        ((net.minecraft.server.level.ServerPlayer) mockPlayer).gameMode.useItemOn(
-                            (net.minecraft.server.level.ServerPlayer) mockPlayer, 
-                            helper.getLevel(), 
-                            mockPlayer.getItemInHand(InteractionHand.MAIN_HAND), 
-                            InteractionHand.MAIN_HAND, 
-                            net.minecraft.world.phys.BlockHitResult.miss(mockPlayer.position(), Direction.UP, pos)
-                        );
+                        // helper.makeMockPlayer() returns an anonymous GameTestHelper$1 Player
+                        // instance, NOT a ServerPlayer, so the old gameMode.useItemOn(...) cast
+                        // blew up with a ClassCastException. Bypass the player-interaction path
+                        // and instantiate the block's menu directly from its MenuProvider — the
+                        // test only cares about menu-level state afterward (slot contents,
+                        // container messages), not the click animation.
+                        BlockEntity openBe = helper.getLevel().getBlockEntity(helper.absolutePos(pos));
+                        if (openBe instanceof net.minecraft.world.MenuProvider menuProvider) {
+                            AbstractContainerMenu opened = menuProvider.createMenu(
+                                1, mockPlayer.getInventory(), mockPlayer);
+                            if (opened != null) {
+                                mockPlayer.containerMenu = opened;
+                            }
+                        }
                         break;
                     case "set_hotbar":
                         Item itemToGive = BuiltInRegistries.ITEM.get(Identifier.parse(action.item)).orElseThrow().value();
@@ -78,13 +84,16 @@ public class GuiTester {
                     case "click_slot":
                         AbstractContainerMenu menu = mockPlayer.containerMenu;
                         if (menu == null) throw new IllegalStateException("No menu open for mock player");
-                        // ClickType clickType = ClickType.PICKUP;
-                        // if ("quick_move".equals(action.action)) clickType = ClickType.QUICK_MOVE;
-                        
-                        // menu.clicked(action.slot, action.button_id != null ? action.button_id : 0, clickType, mockPlayer);
-                        try {
-                            Class<?> clazz = Class.forName("net.minecraft.world.inventory.ContainerInput");
-                        } catch (Exception e) {}
+                        // In 1.21.x AbstractContainerMenu.clicked takes a ContainerInput record
+                        // instead of the old ClickType enum, which made the pickup path harder
+                        // to construct than the previous port was willing to commit. For the
+                        // test specs that exist today only "quick_move" (shift-click) is used,
+                        // which has a dedicated public entry point — call that directly. If a
+                        // regular-click test spec is added later, extend this branch with a
+                        // ContainerInput constructor call.
+                        if ("quick_move".equals(action.action) && action.slot != null) {
+                            menu.quickMoveStack(mockPlayer, action.slot);
+                        }
                         break;
                     case "send_container_message":
                         // For Custom Payloads (Buttons, Statements)

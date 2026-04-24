@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:oil_bobbing_physics",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 600,
+    "setup_ticks": 0,
+    "required": true
+}

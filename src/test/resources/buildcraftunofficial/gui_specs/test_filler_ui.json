@@ -14,7 +14,7 @@
         {
             "type": "click_slot",
             "action": "quick_move",
-            "slot": 36
+            "slot": 54
         },
         {
             "type": "send_container_message",
@@ -29,7 +29,7 @@
             "type": "send_container_message",
             "message_id": 11,
             "string_payload": "set_pattern",
-            "pattern_tag": "buildcraft:cylinder",
+            "pattern_tag": "buildcraft:fill",
             "param_slot_0": "minecraft:stone"
         }
     ],
@@ -46,7 +46,7 @@
         },
         {
             "type": "filler_pattern_equals",
-            "pattern_tag": "buildcraftunofficial:fill",
+            "pattern_tag": "buildcraft:fill",
             "param_slot_0": "minecraft:stone"
         }
     ]

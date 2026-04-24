@@ -3,10 +3,10 @@
   "block": "buildcraftunofficial:mj_dynamo",
   "actions": [
     { "type": "open_menu" },
-    { "type": "set_hotbar", "slot": 0, "item": "buildcraftunofficial:iron_gear", "count": 1 },
-    { "type": "click_slot", "slot": 36, "action": "quick_move" }
+    { "type": "set_hotbar", "slot": 0, "item": "buildcraftunofficial:gear_iron", "count": 1 },
+    { "type": "click_slot", "slot": 31, "action": "quick_move" }
   ],
   "asserts": [
-    { "type": "slot_equals", "slot": 0, "item": "buildcraftunofficial:iron_gear", "count": 1 }
+    { "type": "slot_equals", "slot": 0, "item": "buildcraftunofficial:gear_iron", "count": 1 }
   ]
 }

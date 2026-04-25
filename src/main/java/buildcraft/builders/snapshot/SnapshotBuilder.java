@@ -26,6 +26,7 @@ import net.minecraft.nbt.NbtUtils;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.mj.MjAPI;
@@ -85,6 +86,15 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     }
 
     protected abstract Snapshot.BuildingInfo getBuildingInfo();
+
+    /**
+     * Current fluid-handling mode from the tile. Concrete subclasses may override if they
+     * want different semantics (e.g. {@link TemplateBuilder} always returns NO_REPLACE since
+     * template placement doesn't touch fluids).
+     */
+    protected EnumFluidHandlingMode getFluidMode() {
+        return tile.getFluidMode();
+    }
 
     public void validate() {
         // No-op: Using polling approach instead of WorldEventListener
@@ -278,7 +288,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             }
             Arrays.stream(blocks)
                 .mapToObj(this::indexToPos)
-                .filter(blockPos -> BlockUtil.getFluidWithFlowing(tile.getWorldBC(), blockPos) == null)
+                .filter(this::shouldBreakQueueAcceptFluid)
                 .map(blockPos ->
                     new BreakTask(
                         blockPos,
@@ -369,6 +379,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                         new ItemStack(Items.DIAMOND_PICKAXE),
                         tile.getOwner()
                     );
+                    // breakBlockAndGetDrops returns Optional.of(emptyList) for fluid sources
+                    // broken under CLEAR mode — the Optional is present (just holds no drops),
+                    // so isEmpty() here tests presence, not drop count. No refund, no cancel.
                     if (stacks.isEmpty()) {
                         cancelBreakTask(breakTask);
                     }
@@ -561,6 +574,41 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         }
         clientPlaceTasks.clear();
         clientPlaceTasks.addAll(mergedPlace);
+    }
+
+    /**
+     * Break-queue admission filter, mode-aware.
+     * <ul>
+     *   <li>NO_REPLACE — skip any position with a fluid (flowing or source). Original behavior.</li>
+     *   <li>REPLACE — also skip fluid positions; schematic-solid over fluid is handled through
+     *       the place path ({@link SchematicBlockDefault#build(net.minecraft.world.level.Level,
+     *       BlockPos, EnumFluidHandlingMode)}), which can waterlog instead of destroying.</li>
+     *   <li>CLEAR — allow fluid SOURCES through; flowing fluid is still skipped because it'll
+     *       drain on its own once sources are gone.</li>
+     * </ul>
+     */
+    private boolean shouldBreakQueueAcceptFluid(BlockPos blockPos) {
+        FluidState fs = tile.getWorldBC().getFluidState(blockPos);
+        if (fs.isEmpty()) return true;
+        if (getFluidMode() != EnumFluidHandlingMode.CLEAR) return false;
+        return fs.isSource();
+    }
+
+    /**
+     * Called from the tile when the player cycles the fluid-handling mode. Resets any
+     * check-result slots whose world position currently holds a fluid so the next tick
+     * re-classifies them under the new mode — otherwise an already-CORRECT water tile would
+     * never get rescheduled as TO_BREAK under CLEAR, and an already-TO_BREAK fluid tile under
+     * NO_REPLACE would stay stuck as TO_BREAK forever.
+     */
+    public void invalidateChecksForFluidPositions() {
+        if (checkResults == null || getBuildingInfo() == null) return;
+        for (int i = 0; i < checkResults.length; i++) {
+            BlockPos pos = indexToPos(i);
+            if (!tile.getWorldBC().getFluidState(pos).isEmpty()) {
+                checkResults[i] = CHECK_RESULT_UNKNOWN;
+            }
+        }
     }
 
     @SuppressWarnings("WeakerAccess")

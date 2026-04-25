@@ -8,6 +8,10 @@ package buildcraft.builders.gui;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.AbstractButton;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -18,6 +22,7 @@ import buildcraft.lib.gui.elem.GuiElementFluidTank;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
 import buildcraft.builders.container.ContainerBuilder;
+import buildcraft.builders.snapshot.EnumFluidHandlingMode;
 import buildcraft.builders.tile.TileBuilder;
 
 public class GuiBuilder extends GuiBC8<ContainerBuilder> {
@@ -51,6 +56,14 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
         return 179 + i * 18;
     }
 
+    // Fluid-mode cycling button — top-right of the main panel. 176px wide panel, button ends
+    // at x=170 (clear of the right edge and above the first resource-slot row at y=72).
+    private static final int FLUID_BUTTON_X = 150;
+    private static final int FLUID_BUTTON_Y = 20;
+    private static final int FLUID_BUTTON_SIZE = 20;
+
+    private FluidModeButton fluidModeButton;
+
     public GuiBuilder(ContainerBuilder container, Inventory playerInv, Component title) {
         super(container, playerInv, title, SIZE_BLUEPRINT_X, SIZE_Y);
         // Player inventory is at y=140 (set in ContainerBuilder). The "Inventory" label goes
@@ -70,6 +83,21 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
                     idx < menu.widgetTanks.size() ? menu.widgetTanks.get(idx) : null,
                     ICON_TANK_OVERLAY
             ));
+        }
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        fluidModeButton = new FluidModeButton(leftPos + FLUID_BUTTON_X, topPos + FLUID_BUTTON_Y);
+        addRenderableWidget(fluidModeButton);
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        if (fluidModeButton != null) {
+            fluidModeButton.refreshTooltip();
         }
     }
 
@@ -113,5 +141,48 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
         super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
+    }
+
+    /**
+     * 20×20 button that cycles the Builder's {@link EnumFluidHandlingMode} each click. The icon
+     * (barrier/bricks/bucket) and tooltip reflect the current server-synced mode, so there's no
+     * local optimistic state to reconcile — the button redraws whenever
+     * {@code ContainerBuilder}'s ContainerData pushes a new ordinal.
+     */
+    private class FluidModeButton extends AbstractButton {
+        private EnumFluidHandlingMode lastKnown;
+
+        FluidModeButton(int x, int y) {
+            super(x, y, FLUID_BUTTON_SIZE, FLUID_BUTTON_SIZE, Component.empty());
+            refreshTooltip();
+        }
+
+        @Override
+        public void onPress(InputWithModifiers modifiers) {
+            menu.sendMessage(ContainerBuilder.NET_FLUID_MODE_CLICK, buf -> {});
+        }
+
+        @Override
+        protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY,
+                                       float partialTick) {
+            // Vanilla widget/button sprite — 9-sliced, hover-aware via SPRITES.get(active, hovered).
+            // Matches the Replacer's Replace button and any other vanilla Button in the mod, so
+            // the BC GUI stays visually consistent with stock Minecraft + resource pack overrides.
+            extractDefaultSprite(graphics);
+            EnumFluidHandlingMode mode = menu.getSyncedFluidMode();
+            graphics.item(mode.icon(), getX() + 2, getY() + 2);
+        }
+
+        @Override
+        protected void updateWidgetNarration(NarrationElementOutput output) {
+            defaultButtonNarrationText(output);
+        }
+
+        void refreshTooltip() {
+            EnumFluidHandlingMode mode = menu.getSyncedFluidMode();
+            if (mode == lastKnown) return;
+            lastKnown = mode;
+            setTooltip(Tooltip.create(Component.translatable(mode.tooltipKey())));
+        }
     }
 }

@@ -65,6 +65,7 @@ import buildcraft.builders.container.ContainerBuilder;
 import buildcraft.builders.item.ItemSnapshot;
 import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.BlueprintBuilder;
+import buildcraft.builders.snapshot.EnumFluidHandlingMode;
 import buildcraft.builders.snapshot.GlobalSavedDataSnapshots;
 import buildcraft.builders.snapshot.ITileForBlueprintBuilder;
 import buildcraft.builders.snapshot.ITileForTemplateBuilder;
@@ -83,6 +84,7 @@ public class TileBuilder extends TileBC_Neptune
     private final MjBattery battery = new MjBattery(16000 * MjAPI.MJ);
     private final MjBatteryReceiver mjReceiver = new MjBatteryReceiver(battery);
     private boolean canExcavate = true;
+    private EnumFluidHandlingMode fluidMode = EnumFluidHandlingMode.NO_REPLACE;
 
     /** Stores the real path - just a few block positions. */
     public List<BlockPos> path = null;
@@ -596,6 +598,7 @@ public class TileBuilder extends TileBC_Neptune
         super.saveAdditional(output);
         output.putLong("battery_mj", battery.getStored());
         output.putBoolean("canExcavate", canExcavate);
+        output.putInt("fluidMode", fluidMode.ordinal());
         output.putInt("currentBasePosIndex", currentBasePosIndex);
         if (rotation != null) {
             output.putInt("rotation", rotation.ordinal());
@@ -657,6 +660,7 @@ public class TileBuilder extends TileBC_Neptune
         long stored = input.getLongOr("battery_mj", 0L);
         battery.addPower(stored, false);
         canExcavate = input.getBooleanOr("canExcavate", true);
+        fluidMode = EnumFluidHandlingMode.fromOrdinal(input.getIntOr("fluidMode", 0));
         currentBasePosIndex = input.getIntOr("currentBasePosIndex", 0);
         int rotOrdinal = input.getIntOr("rotation", -1);
         if (rotOrdinal >= 0 && rotOrdinal < Rotation.values().length) {
@@ -807,6 +811,26 @@ public class TileBuilder extends TileBC_Neptune
     @Override
     public boolean canExcavate() {
         return canExcavate;
+    }
+
+    @Override
+    public EnumFluidHandlingMode getFluidMode() {
+        return fluidMode;
+    }
+
+    /**
+     * Advance {@link #fluidMode} one step. Called from the Container on NET_FLUID_MODE_CLICK.
+     * Dirties the chunk so the new ordinal survives save/load and invalidates any fluid-adjacent
+     * check results so the builder re-evaluates whether those positions now need break or place
+     * tasks under the new mode.
+     */
+    public void cycleFluidMode() {
+        fluidMode = fluidMode.next();
+        setChanged();
+        SnapshotBuilder<?> b = getBuilder();
+        if (b != null) {
+            b.invalidateChecksForFluidPositions();
+        }
     }
 
     @Override

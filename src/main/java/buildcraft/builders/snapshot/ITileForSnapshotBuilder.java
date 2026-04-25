@@ -22,4 +22,8 @@ public interface ITileForSnapshotBuilder extends IPlayerOwned {
     boolean canExcavate();
 
     SnapshotBuilder<?> getBuilder();
+
+    default EnumFluidHandlingMode getFluidMode() {
+        return EnumFluidHandlingMode.NO_REPLACE;
+    }
 }

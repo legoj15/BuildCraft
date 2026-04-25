@@ -188,7 +188,17 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     @Override
     protected boolean canPlace(BlockPos blockPos) {
         // noinspection ConstantConditions
-        return !isAir(blockPos) && getSchematicBlock(blockPos).canBuild(tile.getWorldBC(), blockPos);
+        if (isAir(blockPos)) return false;
+        // Under REPLACE/CLEAR a fluid at this position doesn't block placement — the place path
+        // (SchematicBlockDefault#build with fluidMode) waterlogs or destroys the fluid before
+        // setBlock runs. Without this short-circuit the stock schematic.canBuild check would
+        // see level.isEmptyBlock == false and refuse, leaving the fluid position untouched.
+        EnumFluidHandlingMode mode = tile.getFluidMode();
+        if ((mode == EnumFluidHandlingMode.REPLACE || mode == EnumFluidHandlingMode.CLEAR)
+                && !tile.getWorldBC().getFluidState(blockPos).isEmpty()) {
+            return true;
+        }
+        return getSchematicBlock(blockPos).canBuild(tile.getWorldBC(), blockPos);
     }
 
     @Override
@@ -290,9 +300,18 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     @Override
     protected boolean doPlaceTask(PlaceTask placeTask) {
         // noinspection ConstantConditions
-        return getBuildingInfo() != null &&
-            getSchematicBlock(placeTask.pos) != null &&
-            getSchematicBlock(placeTask.pos).build(tile.getWorldBC(), placeTask.pos);
+        if (getBuildingInfo() == null) return false;
+        ISchematicBlock schematic = getSchematicBlock(placeTask.pos);
+        if (schematic == null) return false;
+        // Fluid-aware path: SchematicBlockDefault has an overload that waterlogs the placed block
+        // or destroys a fluid source at the target position under REPLACE/CLEAR. Third-party
+        // ISchematicBlock implementations fall back to the plain build(level, pos), which just
+        // won't handle fluids — acceptable because fluid-at-placement is mostly a vanilla
+        // blockstate concern.
+        if (schematic instanceof SchematicBlockDefault def) {
+            return def.build(tile.getWorldBC(), placeTask.pos, tile.getFluidMode());
+        }
+        return schematic.build(tile.getWorldBC(), placeTask.pos);
     }
 
     @Override

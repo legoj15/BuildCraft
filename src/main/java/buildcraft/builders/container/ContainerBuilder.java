@@ -38,6 +38,7 @@ import buildcraft.lib.net.PacketBufferBC;
 
 import buildcraft.builders.BCBuildersMenuTypes;
 import buildcraft.builders.item.ItemSnapshot;
+import buildcraft.builders.snapshot.EnumFluidHandlingMode;
 import buildcraft.builders.tile.TileBuilder;
 
 public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
@@ -46,7 +47,8 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
     private static final int DATA_SNAPSHOT_TYPE = 1;  // -1 = none, 0 = TEMPLATE, 1 = BLUEPRINT
     private static final int DATA_LEFT_TO_BREAK = 2;
     private static final int DATA_LEFT_TO_PLACE = 3;
-    private static final int DATA_COUNT = 4;
+    private static final int DATA_FLUID_MODE = 4;     // ordinal of EnumFluidHandlingMode
+    private static final int DATA_COUNT = 5;
 
     /** Container message: server pushes the current remainingDisplayRequired list to the client
      *  whenever it changes. {@link SimpleContainerData} only syncs ints, and the display slots
@@ -57,6 +59,8 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
      *  have to invoke on every fluid mutation — cheaper to piggy-back on the GUI broadcast tick
      *  while the player is actually looking at the tanks. */
     private static final int NET_TANK_LEVELS = 11;
+    /** Client → server: the player clicked the fluid-mode cycling button in the GUI. */
+    public static final int NET_FLUID_MODE_CLICK = 12;
 
     private final ContainerData data;
     public final List<WidgetFluidTank> widgetTanks;
@@ -98,6 +102,7 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
                         case DATA_SNAPSHOT_TYPE -> tile.snapshotType == null ? -1 : tile.snapshotType.ordinal();
                         case DATA_LEFT_TO_BREAK -> tile.getBuilder() != null ? tile.getBuilder().leftToBreak : 0;
                         case DATA_LEFT_TO_PLACE -> tile.getBuilder() != null ? tile.getBuilder().leftToPlace : 0;
+                        case DATA_FLUID_MODE -> tile.getFluidMode().ordinal();
                         default -> 0;
                     };
                 }
@@ -254,6 +259,12 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
 
     @Override
     public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+        if (id == NET_FLUID_MODE_CLICK && !isClient) {
+            if (tile != null) {
+                tile.cycleFluidMode();
+            }
+            return;
+        }
         if (id == NET_DISPLAY_LIST && isClient) {
             int count = buffer.readVarInt();
             List<ItemStack> newList = new ArrayList<>(count);
@@ -334,6 +345,10 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
 
     public int getSyncedLeftToPlace() {
         return data.get(DATA_LEFT_TO_PLACE);
+    }
+
+    public EnumFluidHandlingMode getSyncedFluidMode() {
+        return EnumFluidHandlingMode.fromOrdinal(data.get(DATA_FLUID_MODE));
     }
 
     /** Snapshot slot filter: only accepts used blueprint/template items. Mirrors

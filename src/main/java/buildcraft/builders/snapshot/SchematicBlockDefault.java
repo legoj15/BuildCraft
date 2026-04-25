@@ -30,10 +30,14 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FallingBlock;
+import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.storage.TagValueInput;
 
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -245,8 +249,20 @@ public class SchematicBlockDefault implements ISchematicBlock {
     }
 
     @Override
-    @SuppressWarnings("Duplicates")
     public boolean build(Level level, BlockPos blockPos) {
+        return build(level, blockPos, EnumFluidHandlingMode.NO_REPLACE);
+    }
+
+    /**
+     * Fluid-aware variant of {@link #build(Level, BlockPos)}. Under
+     * {@link EnumFluidHandlingMode#REPLACE} or {@link EnumFluidHandlingMode#CLEAR} a
+     * water source at {@code blockPos} is preserved as a waterlogged state if the
+     * {@code placeBlock} supports vanilla {@code WATERLOGGED}; otherwise the fluid is
+     * destroyed before placing. Lava and non-source fluids always fall through to
+     * destroy-then-place.
+     */
+    @SuppressWarnings("Duplicates")
+    public boolean build(Level level, BlockPos blockPos, EnumFluidHandlingMode fluidMode) {
         if (placeBlock == Blocks.AIR) {
             return true;
         }
@@ -261,6 +277,39 @@ public class SchematicBlockDefault implements ISchematicBlock {
         }
         for (Property<?> property : ignoredProperties) {
             newBlockState = copyProperty(property, newBlockState, placeBlock.defaultBlockState());
+        }
+        if (fluidMode == EnumFluidHandlingMode.REPLACE || fluidMode == EnumFluidHandlingMode.CLEAR) {
+            FluidState existing = level.getFluidState(blockPos);
+            if (!existing.isEmpty() && existing.isSource()) {
+                boolean waterloggable =
+                    existing.getType() == Fluids.WATER
+                        && newBlockState.hasProperty(BlockStateProperties.WATERLOGGED);
+                if (waterloggable) {
+                    newBlockState = newBlockState.setValue(BlockStateProperties.WATERLOGGED, true);
+                } else {
+                    level.destroyBlock(blockPos, false);
+                }
+            }
+        }
+        // Reject placement if the resulting block can't physically survive at this position
+        // (e.g. torch with no support). Without this, vanilla setBlock with flag 11 sets the
+        // state, then the immediate neighbor-update tick pops the block back off — but build()
+        // already returned true, so the item is consumed without being placed. Returning false
+        // here routes through SnapshotBuilder.cancelPlaceTask, which refunds the items so the
+        // position can be retried once the supporting block is built.
+        if (!newBlockState.canSurvive(level, blockPos)) {
+            return false;
+        }
+        // Builder-placed leaves should behave like player-placed leaves: persistent. Schematic
+        // data captured from natural foliage has persistent=false, distance=N — once placed in
+        // a new spot far from a log, vanilla's tick() pushes distance to 7 and decaying() fires,
+        // dropping the leaves to air. Without this override the Builder loops forever between
+        // place and decay (item consumed, position re-classified as TO_PLACE next check). Mirrors
+        // vanilla's LeavesBlock.getStateForPlacement, which sets PERSISTENT=true when a player
+        // places a leaves item.
+        if (newBlockState.getBlock() instanceof LeavesBlock
+                && newBlockState.hasProperty(LeavesBlock.PERSISTENT)) {
+            newBlockState = newBlockState.setValue(LeavesBlock.PERSISTENT, true);
         }
         boolean placed = level.setBlock(blockPos, newBlockState, 11);
         if (placed) {
@@ -317,8 +366,19 @@ public class SchematicBlockDefault implements ISchematicBlock {
     public boolean isBuilt(Level level, BlockPos blockPos) {
         if (blockState == null) return false;
         BlockState worldState = level.getBlockState(blockPos);
-        return canBeReplacedWithBlocks.contains(worldState.getBlock()) &&
-            blockStatesWithoutBlockEqual(blockState, worldState, ignoredProperties);
+        if (!canBeReplacedWithBlocks.contains(worldState.getBlock())) return false;
+        // The fluid-handling REPLACE/CLEAR modes can opportunistically set WATERLOGGED=true
+        // on a freshly placed block when there's a water source at the position. The schematic
+        // captured the block dry, so a strict equality check would re-trigger break+place every
+        // tick, wasting resources. Treat "schematic dry, world wet" as built — but not the
+        // reverse, so a genuinely-waterlogged schematic still demands a waterlogged world.
+        if (worldState.hasProperty(BlockStateProperties.WATERLOGGED)
+                && blockState.hasProperty(BlockStateProperties.WATERLOGGED)
+                && worldState.getValue(BlockStateProperties.WATERLOGGED)
+                && !blockState.getValue(BlockStateProperties.WATERLOGGED)) {
+            worldState = worldState.setValue(BlockStateProperties.WATERLOGGED, false);
+        }
+        return blockStatesWithoutBlockEqual(blockState, worldState, ignoredProperties);
     }
 
     @Override
@@ -393,6 +453,30 @@ public class SchematicBlockDefault implements ISchematicBlock {
             .map(Identifier::parse)
             .map(BuiltInRegistries.BLOCK::getValue)
             .forEach(canBeReplacedWithBlocks::add);
+        // Migrate old schematics to current JSON rules. Schematics saved before a rule was added
+        // (e.g. before walls/leaves got their connection/persistent properties listed in
+        // multiple_variants.json) have empty/incomplete ignoredProperties baked in — and since
+        // deserializeNBT, not init(), is what runs at load time, the old data would otherwise be
+        // authoritative forever. Re-derive ignoredProperties from the current rules so old
+        // blueprints pick up new ignored-property carve-outs without requiring a re-scan.
+        // Only ignoredProperties is migrated this way: the others are either rotation-baked
+        // (requiredBlockOffsets / updateBlockOffsets) or potentially deliberately overridden
+        // per-schematic at scan time (placeBlock / canBeReplacedWithBlocks / tileNbt).
+        java.util.Set<JsonRule> currentRules = RulesLoader.getRules(blockState, tileNbt);
+        java.util.Set<String> migratedIgnoredNames = new java.util.HashSet<>();
+        for (Property<?> existing : ignoredProperties) {
+            migratedIgnoredNames.add(existing.getName());
+        }
+        currentRules.stream()
+            .map(rule -> rule.ignoredProperties)
+            .filter(Objects::nonNull)
+            .flatMap(List::stream)
+            .filter(migratedIgnoredNames::add)
+            .flatMap(propertyName ->
+                blockState.getProperties().stream()
+                    .filter(property -> property.getName().equals(propertyName))
+            )
+            .forEach(ignoredProperties::add);
     }
 
     @SuppressWarnings("unchecked")

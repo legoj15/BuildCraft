@@ -191,16 +191,23 @@ These render as broken-image / missing-texture in the guide book GUI.
 - ✅ Updated the only two remaining `buildcraftlib:` callers: `GuiFiller.java:195` (lock icon) and `marker_path.md:17` (guide_book image).
 - Side effect (intended): engine icon animations now actually animate; button/slot atlases load with their full intended sources.
 
-**Step 7 — Bulk-delete the dead remainder.** ~250 files.
-- All `assets/buildcraft{core,builders,energy,factory,robotics,transport}/{advancements,blockstates,models,recipes}/` files.
-- All the orphan recipe JSONs in 1.12.2 format.
-- All `assets/buildcraftlib/{gui,models}/` orphans.
-- The 7 already-migrated engine textures in `buildcraftlib/textures/blocks/engine/`.
-- Risk: low once Steps 5-6 confirm no remaining references; high if done before.
+**Step 7 — Bulk-delete the dead remainder. DONE.** 248 files.
+- ✅ Whole-namespace `git rm -r` for `assets/buildcraftbuilders/`, `assets/buildcraftcore/`, `assets/buildcraftenergy/`, `assets/buildcraftfactory/`, `assets/buildcraftrobotics/`, `assets/buildcrafttransport/` — every remaining advancement/blockstate/model/recipe in those trees was wrong-namespace AND wrong-subdirectory (e.g. `assets/<ns>/recipes/` vs the modern `data/<ns>/recipe/` singular), so none were loaded by NeoForge regardless.
+- ✅ Subtree `git rm -r` of `assets/buildcraftlib/{advancements,gui,models,recipes,textures}/` — all 21 remaining lib resources after Step 6's six moves.
+- Verified zero references for the "possibly active" stragglers (`help_split.png`, `loading.png{,.mcmeta}`, `warning_{major,minor}.png`, `debugger.png`, `guide_note.png`, `trunk_creative.png`, `trunk_overheat.png`) before deleting; the only `help_split.png` mention is a Java comment, and `trunk_overheat` is aliased to `trunk_black` in the active models. Canonical `buildcraftunofficial:textures/item/guide_note.png` was already there for the registered guide_note item.
 
-**Step 8 — Quarantine, don't delete, the 1.12.2 lang reference files.**
-- Keep `assets/buildcraft/lang/en_US.lang` and `assets/buildcraftlib/lang/en_US.lang` as a reference for the future robotics port — but move them out of `assets/` so they aren't on the classpath. Suggested: `guidelines/legacy-lang/en_US.lang` (the repo already has a `guidelines/` folder) with a brief README explaining provenance.
-- Risk: zero (they don't load currently anyway).
+**Step 8 — Delete the 1.12.2 lang reference files. DONE.** 2 files.
+- Reconsidered after inspecting `guidelines/`: that directory is for Eclipse IDE config (`.epf`, `.checkstyle`), not reference material. Per CLAUDE.md, the canonical home for "how 1.12.2 worked" is the `8.0.x-1.12.2` branch's `src_old_license` / `common` folders, with in-branch `.disabled` files reserved for Java mirrors. `.lang` files don't load in modern Minecraft anyway (the format was dropped after 1.13), so a `.disabled` rename would just be sitting in `assets/<legacy-ns>/lang/` indefinitely.
+- ✅ `git rm`d `assets/buildcraft/lang/en_US.lang` (960 lines, robotics translations) and `assets/buildcraftlib/lang/en_US.lang` (35 lines, guide chapter category names). Whoever ports robotics later can pull the strings from git history or the 1.12.2 branch and rewrite them in the modern `lang/en_us.json` format.
+
+## Result
+
+After all 8 steps:
+- 0 of 8 legacy namespaces remain. `assets/` now contains only `buildcraftunofficial/` and the vanilla-merge `minecraft/`.
+- 0 silent-bug callers remain (RulesLoader's band-aid stripped, CraftingUtil's modid corrected, all `buildcraftlib:` references rewritten).
+- Two pre-existing latent rendering bugs fixed as a side effect of Step 6 (engine icon animations, button atlas).
+- Snapshot/blueprint NBT format untouched — no save-data migration needed.
+- Verified all 55 game tests pass at every commit boundary.
 
 ### Save-data / blueprint compatibility
 

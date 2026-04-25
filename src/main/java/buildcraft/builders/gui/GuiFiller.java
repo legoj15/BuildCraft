@@ -192,7 +192,7 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
         new GuiIcon(TEXTURE, invertU, invertV, 16, 16).drawAt(leftPos + 152, topPos + 40);
 
         if (menu.getSyncedLocked()) {
-            new GuiIcon(Identifier.parse("buildcraftlib:textures/icons/lock.png"), 0, 0, 16, 16, 16).drawAt(leftPos + 12, topPos + 16);
+            new GuiIcon(Identifier.parse("buildcraftunofficial:textures/icons/lock.png"), 0, 0, 16, 16, 16).drawAt(leftPos + 12, topPos + 16);
         }
     }
 

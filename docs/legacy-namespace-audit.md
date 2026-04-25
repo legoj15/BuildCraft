@@ -171,16 +171,25 @@ These render as broken-image / missing-texture in the guide book GUI.
 **Step 4 — Fix `CraftingUtil` modid. DONE.** 1-line edit.
 - ✅ `@EventBusSubscriber(modid = "buildcraftlib")` → `@EventBusSubscriber(modid = "buildcraftunofficial")` in `CraftingUtil.java`. The debug `onServerStarted` handler now actually registers; behavioral change is just a one-line `BCLog.info` dump of the vanilla `white_bundle` recipe class on each server start.
 
-**Step 5 — Fix or remove guide markdown texture references.** ~16 references in `compat/buildcraft/guide/en_us/`.
-- For `buildcraftlib:textures/...` references: move the underlying texture from `assets/buildcraftlib/textures/` to `assets/buildcraftunofficial/textures/` (singular `block/`, not `blocks/`), then rewrite the markdown.
-- For `buildcraftcore:` and `buildcraftenergy:` references: those textures don't exist anywhere — either find a substitute under canonical or remove the `<image>` tag.
-- Risk: medium — need to render-test each guide page after.
+**Step 5 — Fix or remove guide markdown texture references. DONE.**
+- Found two `<image>` tags pointing at non-existent textures, both in `marker_path.md` (a placeholder/filler stub page):
+  - ✅ `buildcraftcore:textures/items/marker_path.png` → `buildcraftunofficial:textures/items/marker_path.png` (canonical PNG existed all along).
+  - ✅ `buildcraftenergy:textures/gui/combustion_engine_gui.png` → `buildcraftunofficial:textures/gui/combustion_engine_gui.png` (canonical PNG existed; namespace was the only thing wrong).
+- ✅ `guide_page_format.md` two refs to `buildcraftcore:items/wrench` (one in escaped example text, one as a real image render) → `buildcraftunofficial:items/wrench`.
+- The `buildcraftlib:textures/items/guide_book.png` ref in `marker_path.md` was deferred to Step 6 (where the texture itself moves).
+- All other legacy-namespace strings under `compat/buildcraft/guide/en_us/` are inside `<json_insn>` example code blocks documenting the JSON-INSN script syntax, not real loads — left as-is.
 
-**Step 6 — Move actively-referenced lib textures.** ~12 textures.
-- The `buildcraftlib:textures/icons/lock.png` referenced from `GuiFiller.java`, plus other GUI icons that show up in ledger/widget code. Need to grep each candidate.
-- `git mv assets/buildcraftlib/textures/<x>` → `assets/buildcraftunofficial/textures/<x>` (and rename `blocks/` → `block/`).
-- Update the Java `Identifier.parse(...)` calls.
-- Risk: medium.
+**Step 6 — Move actively-referenced lib textures. DONE.** 6 files moved, 2 references rewritten. The grep for `buildcraftlib:` after this step should return only changelog/audit-doc mentions.
+- Discovery during the grep pass: `LedgerEngine.java`/`LedgerEngineFE.java` already reference `buildcraftunofficial:textures/icons/engine_active.png` + `engine_warm.png` via canonical paths, but the corresponding `.mcmeta` animation sidecars were sitting in `assets/buildcraftlib/textures/icons/` — Minecraft loads `.mcmeta` from the same namespace as the PNG, so the engine icons were not actually animating. Same shape: `StandardButtonTextureSets`/`GuiAutoCraftItems`/`GuiElementStatement` referenced `buildcraftunofficial:textures/gui/buttons.png` + `misc_slots.png`, but `buttons.png` itself and the `misc_slots.png.mcmeta` sidecar were also in legacy.
+- ✅ `git mv` of the 6 currently-referenced files (history preserved):
+  - `buildcraftlib/textures/gui/buttons.png` → `buildcraftunofficial/textures/gui/buttons.png`
+  - `buildcraftlib/textures/gui/misc_slots.png.mcmeta` → `buildcraftunofficial/textures/gui/misc_slots.png.mcmeta`
+  - `buildcraftlib/textures/icons/engine_active.png.mcmeta` → `buildcraftunofficial/textures/icons/engine_active.png.mcmeta`
+  - `buildcraftlib/textures/icons/engine_warm.png.mcmeta` → `buildcraftunofficial/textures/icons/engine_warm.png.mcmeta`
+  - `buildcraftlib/textures/icons/lock.png` → `buildcraftunofficial/textures/icons/lock.png`
+  - `buildcraftlib/textures/items/guide_book.png` → `buildcraftunofficial/textures/items/guide_book.png`
+- ✅ Updated the only two remaining `buildcraftlib:` callers: `GuiFiller.java:195` (lock icon) and `marker_path.md:17` (guide_book image).
+- Side effect (intended): engine icon animations now actually animate; button/slot atlases load with their full intended sources.
 
 **Step 7 — Bulk-delete the dead remainder.** ~250 files.
 - All `assets/buildcraft{core,builders,energy,factory,robotics,transport}/{advancements,blockstates,models,recipes}/` files.

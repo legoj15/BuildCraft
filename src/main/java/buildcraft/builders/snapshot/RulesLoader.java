@@ -71,22 +71,8 @@ public class RulesLoader {
     public static void loadAll() {
         RULES.clear();
         READ_DOMAINS.clear();
-        // Scan every loaded mod's resources for a compat/buildcraft/builders/index.json,
-        // PLUS the legacy "buildcraftbuilders" namespace. In 1.12.2 BuildCraft was a multi-mod
-        // suite (buildcraftcore, buildcraftbuilders, buildcrafttransport, …) and the rule JSONs
-        // were keyed by those split modids. The 26.1.x port merged the source into a single
-        // buildcraftunofficial mod but left the resource files at their historical paths under
-        // assets/buildcraftbuilders/. Without this fallback, ModList.get() never yields a mod
-        // named "buildcraftbuilders" so the entire set of vanilla compat rules silently fails
-        // to load — every block ends up with empty requiredBlockOffsets / ignoredProperties /
-        // placeBlock, which manifests as the Builder oscillating on torches, walls, leaves,
-        // etc.
-        java.util.Set<String> domainsToScan = new HashSet<>();
         for (IModInfo modInfo : ModList.get().getMods()) {
-            domainsToScan.add(modInfo.getModId());
-        }
-        domainsToScan.add("buildcraftbuilders");
-        for (String domain : domainsToScan) {
+            String domain = modInfo.getModId();
             if (!READ_DOMAINS.contains(domain)) {
                 String base = "assets/" + domain + "/compat/buildcraft/builders/";
                 InputStream inputStream = RulesLoader.class.getClassLoader().getResourceAsStream(

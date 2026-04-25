@@ -127,7 +127,7 @@ This shows an image. There are 3 arguments:
 
 For example:
 <guide_md>
-&lt;image src="buildcraftcore:items/wrench" width="64" height="64"/&gt;
+&lt;image src="buildcraftunofficial:items/wrench" width="64" height="64"/&gt;
 </guide_md>
-<image src="buildcraftcore:items/wrench" width="64" height="64"/>
+<image src="buildcraftunofficial:items/wrench" width="64" height="64"/>
 

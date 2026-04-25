@@ -546,6 +546,7 @@
     "buildcraftunofficial.configuration.oil.spawn_probability.mediumOilGenProb": "Medium Oil Gen Prob",
     "buildcraftunofficial.configuration.oil.spawn_probability.largeOilGenProb": "Large Oil Gen Prob",
     "buildcraftunofficial.configuration.excessiveBiomes": "Excessive Biomes",
+    "buildcraftunofficial.configuration.richSurfaceDepositBiomes": "Rich Surface Deposit Biomes",
     "buildcraftunofficial.configuration.surfaceDepositBiomes": "Surface Deposit Biomes",
     "buildcraftunofficial.configuration.excludedBiomes": "Excluded Biomes",
     "buildcraftunofficial.configuration.excludedBiomesIsBlackList": "Excluded Biomes is Blacklist",

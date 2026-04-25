@@ -143,9 +143,16 @@ public class OilGenerator {
             return ImmutableList.of();
         }
 
-        boolean oilBiome = BCEnergyConfig.getSurfaceDepositBiomes().contains(biomeId);
+        // Two-tier surface-deposit classification:
+        //   richBiome  → 1.5x bonus, eligible for the LAKE-style surface tendril roll
+        //   oilBiome   → 1.25x bonus, NOT eligible for LAKE (smaller wells only)
+        //   otherwise  → 1.0x bonus, NOT eligible for LAKE
+        // Defaults put deep oceans + deserts + badlands in the rich tier and shallow
+        // ocean variants in the light tier; see BCEnergyConfig.
+        boolean richBiome = BCEnergyConfig.getRichSurfaceDepositBiomes().contains(biomeId);
+        boolean oilBiome = richBiome || BCEnergyConfig.getSurfaceDepositBiomes().contains(biomeId);
 
-        double bonus = oilBiome ? 3.0 : 1.0;
+        double bonus = richBiome ? 1.5 : (oilBiome ? 1.25 : 1.0);
         bonus *= BCEnergyConfig.oilWellGenerationRate.get();
         if (BCEnergyConfig.getExcessiveBiomes().contains(biomeId)) {
             bonus *= 30.0;
@@ -156,7 +163,7 @@ public class OilGenerator {
             type = GenType.LARGE;
         } else if (rand.nextDouble() <= BCEnergyConfig.mediumOilGenProb.get() * bonus) {
             type = GenType.MEDIUM;
-        } else if (oilBiome && rand.nextDouble() <= BCEnergyConfig.smallOilGenProb.get() * bonus) {
+        } else if (richBiome && rand.nextDouble() <= BCEnergyConfig.smallOilGenProb.get() * bonus) {
             type = GenType.LAKE;
         } else {
             if (DEBUG_OILGEN_ALL & log) {

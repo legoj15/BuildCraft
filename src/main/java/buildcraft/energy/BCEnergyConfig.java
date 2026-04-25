@@ -29,6 +29,7 @@ public class BCEnergyConfig {
     public static ModConfigSpec.BooleanValue enableOilBurn;
 
     public static ModConfigSpec.ConfigValue<List<? extends String>> excessiveBiomes;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> richSurfaceDepositBiomes;
     public static ModConfigSpec.ConfigValue<List<? extends String>> surfaceDepositBiomes;
     public static ModConfigSpec.ConfigValue<List<? extends String>> excludedBiomes;
     public static ModConfigSpec.BooleanValue excludedBiomesIsBlackList;
@@ -64,7 +65,7 @@ public class BCEnergyConfig {
         builder.pop();
         builder.push("spawn_probability");
 
-        smallOilGenProb = builder.defineInRange("smallOilGenProb", 2.0 / 100, 0.0, 1.0);
+        smallOilGenProb = builder.defineInRange("smallOilGenProb", 0.5 / 100, 0.0, 1.0);
         mediumOilGenProb = builder.defineInRange("mediumOilGenProb", 0.1 / 100, 0.0, 1.0);
         largeOilGenProb = builder.defineInRange("largeOilGenProb", 0.04 / 100, 0.0, 1.0);
 
@@ -77,13 +78,28 @@ public class BCEnergyConfig {
                 s -> s instanceof String
         );
 
+        // Richest oil tier: largest LAKE-style surface tendrils are gated to these biomes,
+        // and they receive the highest bonus multiplier. By default this is deep oceans plus
+        // the existing land oil biomes (deserts, badlands).
+        richSurfaceDepositBiomes = builder.defineListAllowEmpty(
+                "richSurfaceDepositBiomes",
+                List.of(
+                        "minecraft:deep_ocean", "minecraft:deep_lukewarm_ocean",
+                        "minecraft:deep_cold_ocean", "minecraft:deep_frozen_ocean",
+                        "minecraft:desert",
+                        "minecraft:badlands", "minecraft:eroded_badlands", "minecraft:wooded_badlands"
+                ),
+                () -> "",
+                s -> s instanceof String
+        );
+
+        // Lighter oil tier: a small bonus multiplier, but no LAKE-style surface tendrils.
+        // By default this contains shallow ocean variants only.
         surfaceDepositBiomes = builder.defineListAllowEmpty(
                 "surfaceDepositBiomes",
                 List.of(
-                        "minecraft:desert", "minecraft:ocean", "minecraft:deep_ocean",
-                        "minecraft:warm_ocean", "minecraft:lukewarm_ocean", "minecraft:deep_lukewarm_ocean",
-                        "minecraft:cold_ocean", "minecraft:deep_cold_ocean", "minecraft:deep_frozen_ocean",
-                        "minecraft:badlands", "minecraft:eroded_badlands", "minecraft:wooded_badlands"
+                        "minecraft:ocean", "minecraft:warm_ocean", "minecraft:lukewarm_ocean",
+                        "minecraft:cold_ocean", "minecraft:frozen_ocean"
                 ),
                 () -> "",
                 s -> s instanceof String
@@ -123,6 +139,10 @@ public class BCEnergyConfig {
 
     public static Set<Identifier> getSurfaceDepositBiomes() {
         return surfaceDepositBiomes.get().stream().map(Identifier::parse).collect(Collectors.toSet());
+    }
+
+    public static Set<Identifier> getRichSurfaceDepositBiomes() {
+        return richSurfaceDepositBiomes.get().stream().map(Identifier::parse).collect(Collectors.toSet());
     }
 
     public static Set<Identifier> getExcludedBiomes() {

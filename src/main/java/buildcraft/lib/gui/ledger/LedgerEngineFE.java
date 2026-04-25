@@ -12,9 +12,11 @@ import java.util.function.Supplier;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.resources.Identifier;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 import buildcraft.api.enums.EnumPowerStage;
+import buildcraft.lib.client.sprite.SpriteHolderRegistry;
+import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.gui.BuildCraftGui;
 import buildcraft.lib.misc.LocaleUtil;
 
@@ -30,11 +32,11 @@ public class LedgerEngineFE extends Ledger_Neptune {
     private static final int SUB_HEADER_COLOUR = 0xAAAFB8;
     private static final int TEXT_COLOUR = 0x000000;
 
-    // Engine status icon textures (from 1.12.2 BCLibSprites)
-    private static final Identifier ICON_ACTIVE = Identifier.parse("buildcraftunofficial:textures/icons/engine_active.png");
-    private static final Identifier ICON_INACTIVE = Identifier.parse("buildcraftunofficial:textures/icons/engine_inactive.png");
-    private static final Identifier ICON_WARM = Identifier.parse("buildcraftunofficial:textures/icons/engine_warm.png");
-    private static final Identifier ICON_OVERHEAT = Identifier.parse("buildcraftunofficial:textures/icons/engine_overheat.png");
+    // Engine status icon sprites — see LedgerEngine for atlas-routing rationale.
+    private static final SpriteHolder ICON_ACTIVE = SpriteHolderRegistry.getHolder("buildcraftunofficial:icons/engine_active");
+    private static final SpriteHolder ICON_INACTIVE = SpriteHolderRegistry.getHolder("buildcraftunofficial:icons/engine_inactive");
+    private static final SpriteHolder ICON_WARM = SpriteHolderRegistry.getHolder("buildcraftunofficial:icons/engine_warm");
+    private static final SpriteHolder ICON_OVERHEAT = SpriteHolderRegistry.getHolder("buildcraftunofficial:icons/engine_overheat");
 
     private final Supplier<EnumPowerStage> powerStageSupplier;
     private final Supplier<Boolean> engineOnSupplier;
@@ -69,38 +71,22 @@ public class LedgerEngineFE extends Ledger_Neptune {
 
     @Override
     protected void drawIcon(double x, double y, GuiGraphicsExtractor graphics) {
-        Identifier icon;
-        boolean animated = false;
+        SpriteHolder holder;
         EnumPowerStage stage = powerStageSupplier.get();
         switch (stage) {
             case OVERHEAT:
-                icon = ICON_OVERHEAT;
+                holder = ICON_OVERHEAT;
                 break;
             case RED:
             case YELLOW:
-                icon = ICON_WARM;
-                animated = true;
+                holder = ICON_WARM;
                 break;
             default:
-                if (engineOnSupplier.get()) {
-                    icon = ICON_ACTIVE;
-                    animated = true;
-                } else {
-                    icon = ICON_INACTIVE;
-                }
+                holder = engineOnSupplier.get() ? ICON_ACTIVE : ICON_INACTIVE;
         }
-
-        if (animated) {
-            int totalFrames = 6;
-            int ticksPerFrame = 1;
-            long ticks = System.currentTimeMillis() / 50;
-            int frame = (int) ((ticks / ticksPerFrame) % totalFrames);
-            float vOffset = frame * 16f;
-            graphics.blit(RenderPipelines.GUI_TEXTURED, icon,
-                (int) x, (int) y, 0f, vOffset, 16, 16, 16, 96);
-        } else {
-            graphics.blit(RenderPipelines.GUI_TEXTURED, icon,
-                (int) x, (int) y, 0f, 0f, 16, 16, 16, 16);
+        TextureAtlasSprite sprite = holder.getSprite();
+        if (sprite != null) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, (int) x, (int) y, 16, 16);
         }
     }
 }

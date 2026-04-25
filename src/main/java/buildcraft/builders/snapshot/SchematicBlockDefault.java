@@ -29,9 +29,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -99,8 +104,69 @@ public class SchematicBlockDefault implements ISchematicBlock {
             .filter(Objects::nonNull)
             .flatMap(Collection::stream)
             .forEach(requiredBlockOffsets::add);
-        if (context.block instanceof FallingBlock) {
+        addClassBasedRequiredBlockOffsets(context.block, context.blockState);
+    }
+
+    /**
+     * Class-based requiredBlockOffsets, separate from the JSON rule path so they apply both at
+     * scan time (via {@link #setRequiredBlockOffsets}) and at load time for old saved
+     * schematics (via {@link #deserializeNBT} re-running the migration).
+     * <ul>
+     *   <li>{@link FallingBlock}: requires the block below (gravel, sand, anvil, concrete
+     *       powder, etc.) — preserves the existing behaviour from before this refactor.</li>
+     *   <li>{@link BedBlock}: a bed is two adjacent half-blocks (FOOT + HEAD) sharing one bed
+     *       item. The architect captures both halves separately, which used to mean the
+     *       Builder consumed two bed items and produced a "broken" bed if the halves placed in
+     *       the wrong order or if vanilla updateShape destroyed one half mid-place. We now
+     *       link the halves so only the FOOT queues a place task (HEAD's required items list
+     *       is also empty — see {@link #computeRequiredItems}), and the FOOT's build path
+     *       atomically setBlocks both halves. The required offsets reflect the dependency:
+     *       <ul>
+     *         <li>HEAD requires the FOOT position (so HEAD never queues — by the time FOOT is
+     *             CORRECT, HEAD is already placed and the next check pass classifies it
+     *             CORRECT too).</li>
+     *         <li>FOOT additionally requires the block below the HEAD position (so vanilla
+     *             updateShape doesn't destroy a bed whose HEAD half lacks support — the
+     *             standard block_below_required rule already covers FOOT's own
+     *             block-below).</li>
+     *       </ul></li>
+     * </ul>
+     */
+    @SuppressWarnings("WeakerAccess")
+    protected void addClassBasedRequiredBlockOffsets(Block block, BlockState state) {
+        if (block instanceof FallingBlock) {
             requiredBlockOffsets.add(new BlockPos(0, -1, 0));
+        }
+        if (block instanceof BedBlock && state != null
+                && state.hasProperty(BedBlock.PART) && state.hasProperty(BedBlock.FACING)) {
+            BedPart part = state.getValue(BedBlock.PART);
+            Direction facing = state.getValue(BedBlock.FACING);
+            if (part == BedPart.HEAD) {
+                // FOOT is at facing.opposite from HEAD (FACING points from FOOT toward HEAD).
+                requiredBlockOffsets.add(BlockPos.ZERO.relative(facing.getOpposite()));
+            } else if (part == BedPart.FOOT) {
+                // HEAD is at facing direction; the block below HEAD is at (facing.X, -1,
+                // facing.Z) relative to FOOT.
+                requiredBlockOffsets.add(new BlockPos(facing.getStepX(), -1, facing.getStepZ()));
+            }
+        }
+        if (block instanceof DoorBlock && state != null && state.hasProperty(DoorBlock.HALF)) {
+            DoubleBlockHalf half = state.getValue(DoorBlock.HALF);
+            if (half == DoubleBlockHalf.UPPER) {
+                // LOWER is at (0, -1, 0) from UPPER. The block_below_required JSON rule covers
+                // this for vanilla door variants, but instanceof here generalises to modded
+                // doors automatically. Adding it directly to a Set is idempotent — no
+                // duplicates if both paths apply.
+                requiredBlockOffsets.add(new BlockPos(0, -1, 0));
+            } else if (half == DoubleBlockHalf.LOWER) {
+                // LOWER's block-below (the floor under the door) is already covered by the
+                // standard block_below_required rule for vanilla doors; instanceof'ing it here
+                // generalises to modded doors that aren't enumerated in JSON. UPPER position
+                // is at (0, +1, 0) — but we don't require it as a precondition: the build()
+                // path for LOWER atomically places UPPER too, so blocking on it would
+                // deadlock.
+                requiredBlockOffsets.add(new BlockPos(0, -1, 0));
+            }
         }
     }
 
@@ -121,6 +187,38 @@ public class SchematicBlockDefault implements ISchematicBlock {
                     .filter(property -> property.getName().equals(propertyName))
             )
             .forEach(ignoredProperties::add);
+        addClassBasedIgnoredProperties();
+    }
+
+    /**
+     * Auto-detect neighbour-aware properties by block class. The JSON rule files cover the
+     * most common cases (fence/wall/pane connection bits) but vanilla has 50+ stair variants
+     * across wood / stone / brick / nether / deepslate / copper / etc. — listing them all in
+     * facings.json or multiple_variants.json is brittle, and it doesn't help with modded blocks.
+     * Instead we instanceof-check the placeBlock against well-known shape-aware classes here.
+     * <ul>
+     *   <li>{@link StairBlock} — adds "shape" so isBuilt doesn't false-fail when vanilla's
+     *       updateShape recomputes the corner shape against actual neighbour stairs (the
+     *       schematic captured one shape based on its source-world neighbours; the placed
+     *       location may have different ones, producing a mismatch even though the build is
+     *       semantically complete). Without this, stairs placed near other stairs cycle in
+     *       break+replace forever after a fluid-handling event nudges the corner shape.</li>
+     * </ul>
+     */
+    @SuppressWarnings("WeakerAccess")
+    protected void addClassBasedIgnoredProperties() {
+        if (placeBlock instanceof StairBlock) {
+            addIgnoredPropertyByName("shape");
+        }
+    }
+
+    private void addIgnoredPropertyByName(String name) {
+        if (blockState == null) return;
+        blockState.getProperties().stream()
+            .filter(p -> p.getName().equals(name))
+            .filter(p -> !ignoredProperties.contains(p))
+            .findFirst()
+            .ifPresent(ignoredProperties::add);
     }
 
     @SuppressWarnings({"unused", "WeakerAccess"})
@@ -200,6 +298,23 @@ public class SchematicBlockDefault implements ISchematicBlock {
     @Nonnull
     @Override
     public List<ItemStack> computeRequiredItems() {
+        // Bed HEAD positions don't require items: the FOOT half places both halves in one
+        // shot (see build() bed special-case). Listing items here would double-count beds in
+        // the resource panel and try to extract twice. The HEAD position never queues an
+        // independent place task anyway (its requiredBlockOffsets defer it on FOOT), but
+        // returning empty here ensures the resource display matches reality.
+        if (placeBlock instanceof BedBlock && blockState != null
+                && blockState.hasProperty(BedBlock.PART)
+                && blockState.getValue(BedBlock.PART) == BedPart.HEAD) {
+            return java.util.Collections.emptyList();
+        }
+        // Same as bed for doors: UPPER half of a door is placed atomically by LOWER's build,
+        // so it shouldn't list a door item — that would consume two doors per door.
+        if (placeBlock instanceof DoorBlock && blockState != null
+                && blockState.hasProperty(DoorBlock.HALF)
+                && blockState.getValue(DoorBlock.HALF) == DoubleBlockHalf.UPPER) {
+            return java.util.Collections.emptyList();
+        }
         Set<JsonRule> rules = RulesLoader.getRules(blockState, tileNbt);
         List<List<RequiredExtractor>> extractorLists = rules.stream()
             .map(rule -> rule.requiredExtractors)
@@ -299,21 +414,37 @@ public class SchematicBlockDefault implements ISchematicBlock {
                     existing.getType() == Fluids.WATER
                         && newBlockState.hasProperty(BlockStateProperties.WATERLOGGED);
                 if (waterloggable) {
-                    newBlockState = newBlockState.setValue(BlockStateProperties.WATERLOGGED, true);
+                    // REPLACE: opportunistic waterlog — preserve the water "for free" by setting
+                    // WATERLOGGED=true on the placed block.
+                    // CLEAR: respect the schematic's WATERLOGGED value. If the schematic
+                    // captured the block dry, we keep it dry (the setBlock at the end of build()
+                    // replaces the world's wet state with our dry state, clearing the water from
+                    // the waterlogged block — that's the user-requested CLEAR-mode behaviour).
+                    // If the schematic captured the block wet (genuinely waterlogged in the
+                    // source world), preserve the wet state — even CLEAR shouldn't override
+                    // explicit blueprint intent.
+                    boolean schematicWantsWater = blockState.hasProperty(BlockStateProperties.WATERLOGGED)
+                        && blockState.getValue(BlockStateProperties.WATERLOGGED);
+                    if (fluidMode == EnumFluidHandlingMode.REPLACE || schematicWantsWater) {
+                        newBlockState = newBlockState.setValue(BlockStateProperties.WATERLOGGED, true);
+                    } else {
+                        // CLEAR + schematic dry: ensure the placed state is explicitly dry. The
+                        // newBlockState is already from the schematic (with WATERLOGGED=false),
+                        // but if a rule rebuilt it from defaultBlockState we explicitly set it.
+                        newBlockState = newBlockState.setValue(BlockStateProperties.WATERLOGGED, false);
+                    }
                 } else {
                     willDestroyFluidAtPos = true;
                 }
             }
         }
-        // Reject placement if the resulting block can't physically survive at this position
-        // (e.g. torch with no support). Without this, vanilla setBlock with flag 11 sets the
-        // state, then the immediate neighbor-update tick pops the block back off — but build()
-        // already returned true, so the item is consumed without being placed. Returning false
-        // here routes through SnapshotBuilder.cancelPlaceTask, which refunds the items so the
-        // position can be retried once the supporting block is built.
-        if (!newBlockState.canSurvive(level, blockPos)) {
-            return false;
-        }
+        // (Pre-setBlock canSurvive check removed — it was too pessimistic for torch-on-wall
+        // setups where vanilla updateShape cascade from setBlock would set the wall's up=true
+        // because of the torch above, but canSurvive runs against the *current* world state
+        // where the wall's up=false. Replaced by a post-setBlock check via the updateShape
+        // iteration below: if vanilla updateShape returns AIR for any direction, the block has
+        // self-destructed and we undo the placement + refund items. That reflects post-cascade
+        // reality, which is what actually decides whether a block survives.)
         // Fragile-block defer: in REPLACE/CLEAR, when the block we're about to place is one whose
         // canBeReplaced(fluid) returns true (snow_layer, carpet, button, redstone wire, torch,
         // sapling, …), any adjacent fluid will flow into the freshly placed block on the next
@@ -335,6 +466,34 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 }
             }
         }
+        // Bed FOOT pre-check: HEAD position must also be clear (or replaceable) for the bed to
+        // be a valid two-half structure. Vanilla bed item placement fails if either half is
+        // blocked, leaving no bed and no item consumed. The Builder's flow is similar — defer
+        // FOOT placement (refund the bed item via cancelPlaceTask) until HEAD position is
+        // clear. Without this, FOOT would setBlock alone, then vanilla updateShape would
+        // destroy it on the next tick when it can't find its other half, and the Builder
+        // would have already consumed the bed item.
+        if (newBlockState.getBlock() instanceof BedBlock
+                && newBlockState.hasProperty(BedBlock.PART)
+                && newBlockState.getValue(BedBlock.PART) == BedPart.FOOT) {
+            Direction facing = newBlockState.getValue(BedBlock.FACING);
+            BlockPos headPos = blockPos.relative(facing);
+            BlockState atHead = level.getBlockState(headPos);
+            if (!atHead.isAir() && !atHead.canBeReplaced(Fluids.WATER)) {
+                return false;
+            }
+        }
+        // Same shape for doors: LOWER's atomic placement also sets the UPPER half. If UPPER
+        // position is blocked, defer the door placement (refunds the door item).
+        if (newBlockState.getBlock() instanceof DoorBlock
+                && newBlockState.hasProperty(DoorBlock.HALF)
+                && newBlockState.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
+            BlockPos upperPos = blockPos.above();
+            BlockState atUpper = level.getBlockState(upperPos);
+            if (!atUpper.isAir() && !atUpper.canBeReplaced(Fluids.WATER)) {
+                return false;
+            }
+        }
         // All checks passed; commit the deferred fluid-destroy now.
         if (willDestroyFluidAtPos) {
             level.destroyBlock(blockPos, false);
@@ -352,6 +511,64 @@ public class SchematicBlockDefault implements ISchematicBlock {
         }
         boolean placed = level.setBlock(blockPos, newBlockState, 11);
         if (placed) {
+            // Bed FOOT / Door LOWER atomic dual-half placement happens BEFORE the updateShape
+            // iteration. Otherwise the iteration's "other-half direction" call to updateShape
+            // would return AIR (because the other half hasn't been placed yet) and the
+            // iteration's AIR-handling below would undo this half too. With both halves in
+            // place first, BedBlock/DoorBlock.updateShape from the other-half direction sees
+            // the matching half and returns the synced state instead of AIR. One bed/door item
+            // per bed/door total — the HEAD/UPPER position's schematic returns empty required
+            // items and a linkage offset, so it never queues an independent place task.
+            BlockPos secondHalfPos = null;
+            if (newBlockState.getBlock() instanceof BedBlock
+                    && newBlockState.hasProperty(BedBlock.PART)
+                    && newBlockState.getValue(BedBlock.PART) == BedPart.FOOT) {
+                Direction facing = newBlockState.getValue(BedBlock.FACING);
+                secondHalfPos = blockPos.relative(facing);
+                BlockState headState = newBlockState.setValue(BedBlock.PART, BedPart.HEAD);
+                level.setBlock(secondHalfPos, headState, 3);
+            } else if (newBlockState.getBlock() instanceof DoorBlock
+                    && newBlockState.hasProperty(DoorBlock.HALF)
+                    && newBlockState.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
+                secondHalfPos = blockPos.above();
+                BlockState upperState = newBlockState.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER);
+                level.setBlock(secondHalfPos, upperState, 3);
+            }
+            // Force the placed block to recompute neighbour-aware properties (glass-pane /
+            // fence / wall connection bits, stair shape, redstone wire connections). Vanilla
+            // setBlock with flag 11 notifies neighbours of the change so THEY can update their
+            // connections to the placed block, but doesn't call updateShape on the placed
+            // block itself — meaning a glass pane placed by the Builder stays as a single
+            // column even when surrounded by valid connectible blocks. Iterating each
+            // direction and applying updateShape mirrors vanilla's getStateForPlacement chain.
+            // Doubles as the post-setBlock canSurvive check: if updateShape returns AIR the
+            // block decided it can't survive at this position (e.g. torch with no support
+            // below), so undo the placement and refund the items via cancelPlaceTask. This
+            // replaces the prior pre-setBlock canSurvive check, which was too pessimistic for
+            // torch-on-wall setups where vanilla's cascade from setBlock would set the wall's
+            // up=true and thus support the torch.
+            BlockState afterShape = newBlockState;
+            for (Direction dir : Direction.values()) {
+                BlockPos neighborPos = blockPos.relative(dir);
+                BlockState neighborState = level.getBlockState(neighborPos);
+                BlockState updated = afterShape.updateShape(
+                    level, level, blockPos, dir, neighborPos, neighborState, level.getRandom()
+                );
+                if (updated.isAir()) {
+                    // Block self-destructed via updateShape (e.g. torch with no sturdy block
+                    // below). Roll back this half AND the atomic other half (if applicable),
+                    // then return false so cancelPlaceTask refunds items.
+                    level.setBlock(blockPos, Blocks.AIR.defaultBlockState(), 3);
+                    if (secondHalfPos != null) {
+                        level.setBlock(secondHalfPos, Blocks.AIR.defaultBlockState(), 3);
+                    }
+                    return false;
+                }
+                if (!updated.equals(afterShape)) {
+                    level.setBlock(blockPos, updated, 3);
+                    afterShape = updated;
+                }
+            }
             updateBlockOffsets.stream()
                 .map(blockPos::offset)
                 .forEach(updatePos -> level.neighborChanged(updatePos, placeBlock, null));
@@ -403,18 +620,54 @@ public class SchematicBlockDefault implements ISchematicBlock {
 
     @Override
     public boolean isBuilt(Level level, BlockPos blockPos) {
+        return isBuilt(level, blockPos, EnumFluidHandlingMode.NO_REPLACE);
+    }
+
+    /**
+     * Returns true if this schematic, under {@code fluidMode}, would treat a placement at
+     * {@code blockPos} as a "dry the existing block" operation — i.e. the world already holds
+     * the same block as the schematic, but with WATERLOGGED=true while the schematic captured
+     * WATERLOGGED=false. Only meaningful in CLEAR mode (REPLACE/NO_REPLACE leave waterlogged
+     * blocks alone). The Builder uses this to skip item extraction for the place task: there's
+     * no block to be physically built, just a waterlog property to toggle, so consuming a fresh
+     * item from inventory would be wasteful (the user already has the block they want, just
+     * with water in it).
+     */
+    public boolean isWaterlogClearOnly(Level level, BlockPos blockPos, EnumFluidHandlingMode fluidMode) {
+        if (fluidMode != EnumFluidHandlingMode.CLEAR) return false;
+        if (blockState == null) return false;
+        BlockState worldState = level.getBlockState(blockPos);
+        if (worldState.getBlock() != blockState.getBlock()) return false;
+        if (!worldState.hasProperty(BlockStateProperties.WATERLOGGED)
+                || !blockState.hasProperty(BlockStateProperties.WATERLOGGED)) {
+            return false;
+        }
+        return worldState.getValue(BlockStateProperties.WATERLOGGED)
+                && !blockState.getValue(BlockStateProperties.WATERLOGGED);
+    }
+
+    /**
+     * Mode-aware variant. The plain {@link #isBuilt(Level, BlockPos)} treats "world wet,
+     * schematic dry" on a waterloggable block as built, because REPLACE-mode placement
+     * opportunistically sets WATERLOGGED=true when a source sits at the placement position
+     * (preserves water aesthetically) — without the leniency the schematic would mismatch and
+     * the Builder would break+place forever. Under CLEAR mode the user-stated intent is the
+     * opposite: clear the water, even from waterlogged blocks. So in CLEAR we want the strict
+     * comparison so "world wet, schematic dry" is reported as NOT built and the position gets
+     * re-classified as TO_PLACE; the build path then sets the block dry, which (since waterlog
+     * is the entire fluid state for a non-LiquidBlock waterloggable block) clears the water.
+     */
+    public boolean isBuilt(Level level, BlockPos blockPos, EnumFluidHandlingMode fluidMode) {
         if (blockState == null) return false;
         BlockState worldState = level.getBlockState(blockPos);
         if (!canBeReplacedWithBlocks.contains(worldState.getBlock())) return false;
-        // The fluid-handling REPLACE/CLEAR modes can opportunistically set WATERLOGGED=true
-        // on a freshly placed block when there's a water source at the position. The schematic
-        // captured the block dry, so a strict equality check would re-trigger break+place every
-        // tick, wasting resources. Treat "schematic dry, world wet" as built — but not the
-        // reverse, so a genuinely-waterlogged schematic still demands a waterlogged world.
-        if (worldState.hasProperty(BlockStateProperties.WATERLOGGED)
+        if (fluidMode != EnumFluidHandlingMode.CLEAR
+                && worldState.hasProperty(BlockStateProperties.WATERLOGGED)
                 && blockState.hasProperty(BlockStateProperties.WATERLOGGED)
                 && worldState.getValue(BlockStateProperties.WATERLOGGED)
                 && !blockState.getValue(BlockStateProperties.WATERLOGGED)) {
+            // NO_REPLACE / REPLACE: lenient — accept world-wet against schematic-dry.
+            // (CLEAR falls through to the strict comparison below.)
             worldState = worldState.setValue(BlockStateProperties.WATERLOGGED, false);
         }
         return blockStatesWithoutBlockEqual(blockState, worldState, ignoredProperties);
@@ -516,6 +769,33 @@ public class SchematicBlockDefault implements ISchematicBlock {
                     .filter(property -> property.getName().equals(propertyName))
             )
             .forEach(ignoredProperties::add);
+        // Same class-based migration for old saves: fresh scans go through setIgnoredProperties
+        // → addClassBasedIgnoredProperties; saved-then-loaded schematics need the same auto-
+        // detection applied here so old blueprints pick up StairBlock-shape ignoring etc.
+        addClassBasedIgnoredProperties();
+        // Same migration for class-based requiredBlockOffsets — old saved bed schematics had
+        // no HEAD-FOOT linkage and would consume two bed items per bed. Re-running the helper
+        // here adds the right offsets so the builder behaviour matches a fresh scan.
+        if (placeBlock != null) {
+            addClassBasedRequiredBlockOffsets(placeBlock, blockState);
+        }
+        // Migrate requiredBlockOffsets from current JSON rules when the saved set is empty.
+        // Schematics scanned before a JSON-rule modernisation can have empty offsets baked in
+        // (e.g. blueprints scanned when facings.json still used legacy `minecraft:torch[facing=up]`
+        // selectors that didn't match the modern `minecraft:torch` block) — without offsets, a
+        // torch's isReadyToPlace returns true vacuously and queues regardless of whether its
+        // support is built, producing the throw→undo→refund→re-queue loop the user sees as
+        // "torches floating in the sky on repeat." Only populate from rules if saved is empty:
+        // a non-empty saved set was written deliberately (potentially with rotation applied) and
+        // adding un-rotated rule offsets on top would over-defer rotated blueprints. Old broken
+        // saves are exactly the ones with empty sets, which is the case we want to migrate.
+        if (requiredBlockOffsets.isEmpty()) {
+            currentRules.stream()
+                .map(rule -> rule.requiredBlockOffsets)
+                .filter(Objects::nonNull)
+                .flatMap(java.util.Collection::stream)
+                .forEach(requiredBlockOffsets::add);
+        }
     }
 
     @SuppressWarnings("unchecked")

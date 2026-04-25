@@ -96,6 +96,63 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         return tile.getFluidMode();
     }
 
+    /**
+     * Tier value for sorting break-task candidates: 0 = source fluid, 1 = flowing fluid, 2 =
+     * non-fluid block. Used by {@link #tick()} so that source fluids go down before flowing in
+     * mixed-fluid scenarios and the flowing drains naturally after.
+     */
+    private int breakPriorityTier(BlockPos pos) {
+        net.minecraft.world.level.material.FluidState fs = tile.getWorldBC().getFluidState(pos);
+        if (fs.isEmpty()) return 2;
+        return fs.isSource() ? 0 : 1;
+    }
+
+    /**
+     * Per-position carve-out for the CLEAR-mode "wait for mop to finish before placing" gate.
+     * Default: never allowed (regular placements wait). Subclasses override to return true for
+     * positions whose placement is itself part of mopping — specifically waterlog-clear-only
+     * tasks that toggle WATERLOGGED off on already-existing world blocks. Without this exception
+     * a build area containing waterlogged blocks deadlocks: the waterlogged blocks emit water to
+     * neighbours, the corner-flow break tasks fire forever as water keeps refilling, and the
+     * place tasks that would dry the source-emitting blocks sit deferred behind the gate.
+     */
+    protected boolean isAllowedDuringFluidMop(BlockPos blockPos) {
+        return false;
+    }
+
+    /**
+     * Returns true if the schematic block at {@code blockPos} is "fragile" — i.e. its
+     * BlockBehaviour reports {@code canBeReplaced(state, fluid)} = true (snow_layer, carpet,
+     * button, redstone wire, sapling, torch, sign, lever, …). Used by the REPLACE-mode place-
+     * task-add filter to defer fragile placements when the area has any fluid; the per-build
+     * fragile defer catches most cases but has a blind spot for fluid 2+ cells away that flows
+     * in over a few ticks (timing race), and the visible symptom is a bouncing inventory slot
+     * count as items get repeatedly extracted-then-refunded by the place-then-defer loop.
+     * Default: false (no schematic awareness in the abstract base). Overridden in
+     * {@link BlueprintBuilder}.
+     */
+    protected boolean isFragileSchematicAt(BlockPos blockPos) {
+        return false;
+    }
+
+    /**
+     * O(n) scan of the build area for any fluid (source or flowing). Used by the place-task-add
+     * gate to defer placements in CLEAR mode until every fluid is mopped. Iteration short-
+     * circuits on the first fluid found, so the cost is a few microseconds when fluid is present
+     * (typical case while mopping) and the full O(n) only when fluid is fully cleared (one
+     * verification per tick at that point — negligible).
+     */
+    protected boolean buildAreaHasAnyFluid() {
+        Snapshot.BuildingInfo info = getBuildingInfo();
+        if (info == null) return false;
+        for (BlockPos pos : info.box.getBlocksInArea()) {
+            if (!tile.getWorldBC().getFluidState(pos).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void validate() {
         // No-op: Using polling approach instead of WorldEventListener
     }
@@ -286,9 +343,20 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             if (blocks.length != 0) {
                 isDone = false;
             }
+            // Source-first break ordering. The base breakOrder sorts by distance from the
+            // build-area centre; that's fine for solid blocks but suboptimal for fluids: in a
+            // mixed source+flowing pool, breaking flowing first is wasted work because the
+            // flowing immediately gets re-fed by the upstream sources, while breaking sources
+            // first makes the flowing drain naturally and infinite-water regen networks (a 2x2
+            // pool of sources where any 3-source-neighbour empty cell re-sources the broken one)
+            // get disrupted faster as several sources can break in the same tick once queued.
+            // Re-sort the candidates so source-fluid positions go first, then flowing-fluid
+            // positions, then everything else; within each tier the original distance order is
+            // preserved (Stream sort is stable).
             Arrays.stream(blocks)
                 .mapToObj(this::indexToPos)
                 .filter(this::shouldBreakQueueAcceptFluid)
+                .sorted(Comparator.comparingInt(this::breakPriorityTier))
                 .map(blockPos ->
                     new BreakTask(
                         blockPos,
@@ -310,6 +378,45 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                 .filter(i -> checkResults[i] == CHECK_RESULT_TO_PLACE && !placeTasksIndexes.contains(i))
                 .toArray();
             leftToPlace = blocks.length;
+            // CLEAR mode is "clear all fluids first, then build" by user-stated intent. If we
+            // queue normal place tasks while fluid still exists in the build area, even fragile
+            // blocks (snow_layer, carpet, button, redstone wire, …) sometimes pass the per-tick
+            // fragile-defer in SchematicBlockDefault.build because the defer can only see
+            // immediate-neighbour fluid at the moment of placement — water flowing in from one
+            // cell over within the same or next tick lands on the freshly placed block and
+            // destroys it (the dropped item entity is lost; the position re-classifies as
+            // TO_PLACE; the place-then-destroy loop wastes one item per cycle). Sequencing the
+            // operations defers normal placements until the mop finishes. Trade-off at a leaky
+            // boundary (source outside the build area): the Builder mops forever and never
+            // places — visible activity, user can extend the area / switch to REPLACE.
+            //
+            // EXCEPTION: waterlog-clear-only tasks bypass the gate. These positions hold a
+            // waterlogged block whose schematic counterpart is dry — drying them in-place
+            // *contributes* to mopping (a waterlogged block emits water to neighbours, so the
+            // block IS a fluid source as far as the build area's fluid presence is concerned).
+            // Waiting for fluid to clear before drying them is a deadlock: the area never goes
+            // dry while the waterlogged blocks keep emitting, and the waterlogged blocks never
+            // get dried while the area has fluid. Carve them out of the gate so they queue
+            // alongside fluid-break tasks.
+            // Build-area-fluid gates (mode-dependent):
+            // - CLEAR: defer everything except waterlog-clear-only (those contribute to mopping).
+            // - REPLACE: defer fragile placements only — solid placements proceed because they
+            //   displace water on placement and aren't replaceable. Without this, fragile
+            //   schematic blocks (snow_layer in the user's case) at positions where water flows
+            //   in over a few ticks get stuck in an extract-then-defer-then-refund loop: the
+            //   per-build fragile defer in SchematicBlockDefault.build catches the placement,
+            //   but only after items have already been extracted from inventory by
+            //   getToPlaceItems at queue time. The user-visible symptom is the inventory slot
+            //   counter bouncing up and down as items repeatedly cycle through extract+refund.
+            //   Gating at queue-add stops the cycle entirely — items never leave inventory if
+            //   the placement would defer.
+            boolean areaHasFluid = (getFluidMode() == EnumFluidHandlingMode.CLEAR
+                    || getFluidMode() == EnumFluidHandlingMode.REPLACE)
+                && buildAreaHasAnyFluid();
+            boolean clearStillMopping = areaHasFluid
+                && getFluidMode() == EnumFluidHandlingMode.CLEAR;
+            boolean replaceFragileGated = areaHasFluid
+                && getFluidMode() == EnumFluidHandlingMode.REPLACE;
             if (!tile.canExcavate() || breakTasks.isEmpty()) {
                 if (blocks.length != 0) {
                     isDone = false;
@@ -324,6 +431,11 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                         return has;
                     })
                     .mapToObj(this::indexToPos)
+                    .filter(pos -> {
+                        if (clearStillMopping) return isAllowedDuringFluidMop(pos);
+                        if (replaceFragileGated && isFragileSchematicAt(pos)) return false;
+                        return true;
+                    })
                     .filter(this::isReadyToPlace)
                     .limit(MAX_QUEUE_SIZE - placeTasks.size())
                     .filter(this::canPlace)

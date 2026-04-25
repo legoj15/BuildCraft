@@ -340,10 +340,10 @@ public class TileFiller extends TileBC_Neptune
     @Override
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
-        // Battery
+        // Battery: absolute set. Replaces the prior extractAll() + addPower() workaround that
+        // existed because addPower lacks capacity clamping; setStored is the proper API.
         long stored = input.getLongOr("battery_mj", 0L);
-        battery.extractAll();
-        battery.addPower(stored, false);
+        battery.setStored(stored);
         canExcavate = input.getBooleanOr("canExcavate", true);
         inverted = input.getBooleanOr("inverted", false);
         finished = input.getBooleanOr("finished", false);

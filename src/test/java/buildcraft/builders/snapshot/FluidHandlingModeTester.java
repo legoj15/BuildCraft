@@ -5,13 +5,25 @@
  */
 package buildcraft.builders.snapshot;
 
+import java.util.List;
+import java.util.Optional;
+
+import com.mojang.authlib.GameProfile;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
+
+import buildcraft.api.mj.MjAPI;
+import buildcraft.lib.misc.BlockUtil;
 
 /**
  * Covers the Builder's fluid-handling overload on {@link SchematicBlockDefault#build(net.minecraft.world.level.Level, BlockPos, EnumFluidHandlingMode)}.
@@ -118,11 +130,14 @@ public class FluidHandlingModeTester {
     }
 
     /**
-     * CLEAR behaves exactly like REPLACE at the place-call site — the schematic-air+source
-     * destruction happens in {@code SnapshotBuilder}'s break-queue filter, not in build(). So
-     * calling build(..., CLEAR) on a water+waterloggable pair must still waterlog.
+     * CLEAR diverges from REPLACE at the place-call site (this changed from the original
+     * "behaves like replace" assumption — that was correct when CLEAR's only contribution was
+     * destroying schematic-air+source positions, but the user's stated intent is "clear all
+     * fluids," which extends to *not* opportunistically waterlogging on the place path either).
+     * For a dry-fence schematic over a water source, CLEAR now destroys the source and places
+     * the fence dry; REPLACE keeps the opportunistic waterlog.
      */
-    public static void testClearAtPlaceSiteBehavesLikeReplace(GameTestHelper helper) {
+    public static void testClearDestroysSourceInsteadOfWaterlogging(GameTestHelper helper) {
         try {
             BlockPos local = new BlockPos(1, 2, 1);
             BlockPos abs = helper.absolutePos(local);
@@ -134,8 +149,10 @@ public class FluidHandlingModeTester {
 
             BlockState after = helper.getLevel().getBlockState(abs);
             assertTrue(after.getBlock() == Blocks.OAK_FENCE, "block should be oak fence");
-            assertTrue(after.getValue(BlockStateProperties.WATERLOGGED),
-                    "CLEAR should still waterlog at place sites (only schematic-air+source goes through break queue)");
+            assertTrue(!after.getValue(BlockStateProperties.WATERLOGGED),
+                    "CLEAR must NOT opportunistically waterlog — schematic captured the fence dry, so place it dry");
+            assertTrue(helper.getLevel().getFluidState(abs).isEmpty(),
+                    "the original water source must be cleared");
             helper.succeed();
         } catch (Throwable t) {
             helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
@@ -414,6 +431,313 @@ public class FluidHandlingModeTester {
             assertTrue(atPos.getBlock() == Blocks.OAK_FENCE, "fence should be present");
             assertTrue(atPos.getValue(BlockStateProperties.WATERLOGGED),
                     "fence should be waterlogged (REPLACE preserved the source by setting WATERLOGGED instead of destroying)");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * Regression test for the user-reported "CLEAR-mode laser fires at water source but the
+     * water never disappears" bug. Vanilla {@code Level.destroyBlock} preserves fluid via
+     * {@code fluidState.createLegacyBlock()} — for a position whose only "block" is the fluid
+     * itself, that's a silent no-op (the fluid block gets re-set to itself). The Builder's
+     * break path was "succeeding" against water (returning {@code Optional.of(emptyList)},
+     * removing the task from the queue) without actually clearing the water; the position
+     * re-queued forever and the user saw a perpetual phantom-laser loop. Fix in
+     * {@link BlockUtil#breakBlockAndGetDrops} routes pure-fluid blocks (LiquidBlock instances)
+     * through {@code setBlock(AIR)} instead.
+     */
+    public static void testBreakBlockAndGetDropsClearsWaterSource(GameTestHelper helper) {
+        try {
+            BlockPos local = new BlockPos(2, 2, 2);
+            BlockPos abs = helper.absolutePos(local);
+            helper.getLevel().setBlock(abs, Blocks.WATER.defaultBlockState(), 3);
+            assertTrue(helper.getLevel().getBlockState(abs).getBlock() instanceof LiquidBlock,
+                    "precondition: water block placed");
+
+            Optional<List<ItemStack>> result = BlockUtil.breakBlockAndGetDrops(
+                (ServerLevel) helper.getLevel(),
+                abs,
+                new ItemStack(Items.DIAMOND_PICKAXE),
+                (GameProfile) null);
+
+            assertTrue(result.isPresent(),
+                    "breakBlockAndGetDrops must report success for a fluid block");
+            assertTrue(helper.getLevel().getFluidState(abs).isEmpty(),
+                    "fluid state must actually be cleared — vanilla destroyBlock would preserve it via createLegacyBlock");
+            assertTrue(helper.getLevel().getBlockState(abs).isAir(),
+                    "block state must be air after break");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * Same fix applies to flowing fluid: the Builder's CLEAR mode now also accepts flowing
+     * water for breaking (so that flowing water perpetually refilling from outside the build
+     * area can be "mopped up"), and that path needs the fluid to actually disappear.
+     */
+    public static void testBreakBlockAndGetDropsClearsFlowingWater(GameTestHelper helper) {
+        try {
+            BlockPos local = new BlockPos(2, 2, 2);
+            BlockPos abs = helper.absolutePos(local);
+            // Set a flowing-water state (level=5, mid-flow). LiquidBlock.LEVEL is the flow
+            // level: 0 = source, 1-7 = falling/flowing levels.
+            BlockState flowing = Blocks.WATER.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.LiquidBlock.LEVEL, 5);
+            helper.getLevel().setBlock(abs, flowing, 3);
+
+            Optional<List<ItemStack>> result = BlockUtil.breakBlockAndGetDrops(
+                (ServerLevel) helper.getLevel(),
+                abs,
+                new ItemStack(Items.DIAMOND_PICKAXE),
+                (GameProfile) null);
+
+            assertTrue(result.isPresent(), "breakBlockAndGetDrops must succeed for flowing water");
+            assertTrue(helper.getLevel().getFluidState(abs).isEmpty(),
+                    "flowing fluid state must be cleared");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * Verifies that breaking a regular (non-fluid) block still uses {@code destroyBlock} so the
+     * sound/particle level-events fire correctly. Stone is a plain solid block; after break, no
+     * fluid restore should happen (there was no fluid to begin with). Guards against the fluid
+     * carve-out being applied too broadly.
+     */
+    public static void testBreakBlockAndGetDropsStillBreaksSolidBlocks(GameTestHelper helper) {
+        try {
+            BlockPos local = new BlockPos(2, 2, 2);
+            BlockPos abs = helper.absolutePos(local);
+            helper.getLevel().setBlock(abs, Blocks.STONE.defaultBlockState(), 3);
+
+            Optional<List<ItemStack>> result = BlockUtil.breakBlockAndGetDrops(
+                (ServerLevel) helper.getLevel(),
+                abs,
+                new ItemStack(Items.DIAMOND_PICKAXE),
+                (GameProfile) null);
+
+            assertTrue(result.isPresent(), "stone break must succeed");
+            assertTrue(!result.get().isEmpty(), "stone should drop cobblestone (or itself with silk touch — we use diamond pickaxe so cobblestone)");
+            assertTrue(helper.getLevel().getBlockState(abs).isAir(),
+                    "stone position must be air after break");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * Regression test for the user-reported "schematic captured a dry fence, world has the same
+     * fence waterlogged, CLEAR mode is supposed to clear the water." Without this fix the
+     * Builder treated world-wet/schematic-dry as already-built (a workaround for REPLACE-mode
+     * opportunistic waterlogging) so the position was never queued for any action and the water
+     * stayed in the fence forever. Under CLEAR, the strict comparison kicks in and the place
+     * path sets the placed state with WATERLOGGED=false, replacing the wet fence with a dry one
+     * (and clearing the water as a side effect — for non-LiquidBlock waterloggable blocks the
+     * fluid state IS the WATERLOGGED property).
+     */
+    public static void testClearModeDriesWaterloggedBlock(GameTestHelper helper) {
+        try {
+            BlockPos abs = helper.absolutePos(new BlockPos(2, 2, 2));
+            BlockState wetFence = Blocks.OAK_FENCE.defaultBlockState()
+                    .setValue(BlockStateProperties.WATERLOGGED, true);
+            BlockState dryFence = Blocks.OAK_FENCE.defaultBlockState();
+            helper.getLevel().setBlock(abs, wetFence, 3);
+            assertTrue(!helper.getLevel().getFluidState(abs).isEmpty(),
+                    "precondition: waterlogged fence has a water fluid state");
+
+            SchematicBlockDefault s = schem(dryFence);
+            s.canBeReplacedWithBlocks.add(Blocks.OAK_FENCE);
+            boolean placed = s.build(helper.getLevel(), abs, EnumFluidHandlingMode.CLEAR);
+            assertTrue(placed, "build() must succeed for the dry-fence-over-wet-fence case");
+
+            BlockState after = helper.getLevel().getBlockState(abs);
+            assertTrue(after.getBlock() == Blocks.OAK_FENCE, "fence should still be there");
+            assertTrue(!after.getValue(BlockStateProperties.WATERLOGGED),
+                    "CLEAR mode must dry the waterlogged fence to match the schematic");
+            assertTrue(helper.getLevel().getFluidState(abs).isEmpty(),
+                    "fluid state must be empty after drying");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * REPLACE mode keeps the existing opportunistic-waterlog behaviour: schematic dry, world has
+     * water source, place a waterloggable block — it ends up wet, preserving the water "for
+     * free." Regression guard against this round of changes accidentally breaking REPLACE.
+     */
+    public static void testReplaceModeStillOpportunisticallyWaterlogs(GameTestHelper helper) {
+        try {
+            BlockPos abs = helper.absolutePos(new BlockPos(2, 2, 2));
+            helper.getLevel().setBlock(abs, Blocks.WATER.defaultBlockState(), 3);
+            assertTrue(helper.getLevel().getFluidState(abs).getType() == Fluids.WATER,
+                    "precondition: water source set");
+
+            SchematicBlockDefault s = schem(Blocks.OAK_FENCE.defaultBlockState());
+            boolean placed = s.build(helper.getLevel(), abs, EnumFluidHandlingMode.REPLACE);
+            assertTrue(placed, "REPLACE place must succeed");
+
+            BlockState after = helper.getLevel().getBlockState(abs);
+            assertTrue(after.getBlock() == Blocks.OAK_FENCE, "fence placed");
+            assertTrue(after.getValue(BlockStateProperties.WATERLOGGED),
+                    "REPLACE must waterlog opportunistically (preserve water 'for free')");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * isBuilt's strict mode under CLEAR: schematic captured a dry fence, world has a wet fence,
+     * CLEAR fluidMode → must report NOT built (which is what triggers the dry-it placement).
+     */
+    public static void testIsBuiltStrictInClearMode(GameTestHelper helper) {
+        try {
+            BlockPos abs = helper.absolutePos(new BlockPos(2, 2, 2));
+            BlockState dryFence = Blocks.OAK_FENCE.defaultBlockState();
+            BlockState wetFence = dryFence.setValue(BlockStateProperties.WATERLOGGED, true);
+            helper.getLevel().setBlock(abs, wetFence, 3);
+
+            SchematicBlockDefault s = schem(dryFence);
+            s.canBeReplacedWithBlocks.add(Blocks.OAK_FENCE);
+            assertTrue(!s.isBuilt(helper.getLevel(), abs, EnumFluidHandlingMode.CLEAR),
+                    "CLEAR mode must report NOT built when world wet ≠ schematic dry");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * The mirror invariant: under REPLACE/NO_REPLACE, the lenient comparison still kicks in so
+     * the Builder doesn't mistakenly re-do break+place on a position that REPLACE itself
+     * waterlogged a moment ago. Without the fluidMode check on the leniency, my CLEAR fix would
+     * have broken REPLACE.
+     */
+    public static void testIsBuiltLenientInReplaceMode(GameTestHelper helper) {
+        try {
+            BlockPos abs = helper.absolutePos(new BlockPos(2, 2, 2));
+            BlockState dryFence = Blocks.OAK_FENCE.defaultBlockState();
+            BlockState wetFence = dryFence.setValue(BlockStateProperties.WATERLOGGED, true);
+            helper.getLevel().setBlock(abs, wetFence, 3);
+
+            SchematicBlockDefault s = schem(dryFence);
+            s.canBeReplacedWithBlocks.add(Blocks.OAK_FENCE);
+            assertTrue(s.isBuilt(helper.getLevel(), abs, EnumFluidHandlingMode.REPLACE),
+                    "REPLACE/NO_REPLACE must continue to treat world wet / schematic dry as built");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * isWaterlogClearOnly directly. Confirms the predicate the Builder uses to skip item
+     * extraction matches "world wet / schematic dry / same block / CLEAR mode." Other mode
+     * values must return false even with the same block setup, otherwise REPLACE/NO_REPLACE
+     * placements would skip their item costs.
+     */
+    public static void testIsWaterlogClearOnlyOnlyFiresUnderClear(GameTestHelper helper) {
+        try {
+            BlockPos abs = helper.absolutePos(new BlockPos(2, 2, 2));
+            BlockState wetFence = Blocks.OAK_FENCE.defaultBlockState()
+                    .setValue(BlockStateProperties.WATERLOGGED, true);
+            helper.getLevel().setBlock(abs, wetFence, 3);
+
+            SchematicBlockDefault s = schem(Blocks.OAK_FENCE.defaultBlockState());
+            assertTrue(s.isWaterlogClearOnly(helper.getLevel(), abs, EnumFluidHandlingMode.CLEAR),
+                    "CLEAR + matching block + world wet + schematic dry must flag as waterlog-clear-only");
+            assertTrue(!s.isWaterlogClearOnly(helper.getLevel(), abs, EnumFluidHandlingMode.REPLACE),
+                    "REPLACE must NOT flag — opportunistic waterlog is the correct behaviour there, the place would just keep it wet");
+            assertTrue(!s.isWaterlogClearOnly(helper.getLevel(), abs, EnumFluidHandlingMode.NO_REPLACE),
+                    "NO_REPLACE must NOT flag — fluid positions are skipped entirely in that mode");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * Different block in world vs schematic must NOT trigger the dry-only path — those are real
+     * place operations that need items extracted normally. Guards against the predicate being
+     * over-broad.
+     */
+    public static void testIsWaterlogClearOnlyRequiresMatchingBlock(GameTestHelper helper) {
+        try {
+            BlockPos abs = helper.absolutePos(new BlockPos(2, 2, 2));
+            BlockState wetFence = Blocks.OAK_FENCE.defaultBlockState()
+                    .setValue(BlockStateProperties.WATERLOGGED, true);
+            helper.getLevel().setBlock(abs, wetFence, 3);
+
+            // Schematic captured a different block — birch fence — at this position.
+            SchematicBlockDefault s = schem(Blocks.BIRCH_FENCE.defaultBlockState());
+            assertTrue(!s.isWaterlogClearOnly(helper.getLevel(), abs, EnumFluidHandlingMode.CLEAR),
+                    "different block types must not be treated as a waterlog-only modification — that's a real block placement");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * Vanilla water/lava ship with strength=100 — that's their *explosion resistance*, not break
+     * time, but {@code BlockUtil.computeBlockBreakPower}'s {@code (hardness+1)*2 * 16 MJ}
+     * formula reads it as time-to-break and produces 3232 MJ per fluid block (40× stone, more
+     * than obsidian). At MAX_POWER_PER_TICK = 256 MJ/tick the Builder spent ~13 ticks per single
+     * water break in CLEAR mode, breaking it for one tick before vanilla flow refilled and
+     * starting another 13-tick cycle — the user-visible "laser fires forever, water never
+     * clears" symptom that survived the BlockUtil fluid-clearing fix.
+     */
+    public static void testWaterBreakCostIsOneMj(GameTestHelper helper) {
+        try {
+            BlockPos abs = helper.absolutePos(new BlockPos(2, 2, 2));
+            helper.getLevel().setBlock(abs, Blocks.WATER.defaultBlockState(), 3);
+            long cost = BlockUtil.computeBlockBreakPower(helper.getLevel(), abs);
+            assertTrue(cost == MjAPI.MJ,
+                    "water break cost must be 1 MJ (vanilla treats fluids as free to break), got " + cost);
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * Same as above for lava — same hardness-100 trap. Confirms the LiquidBlock check covers all
+     * pure-fluid block types, not just water specifically.
+     */
+    public static void testLavaBreakCostIsOneMj(GameTestHelper helper) {
+        try {
+            BlockPos abs = helper.absolutePos(new BlockPos(2, 2, 2));
+            helper.getLevel().setBlock(abs, Blocks.LAVA.defaultBlockState(), 3);
+            long cost = BlockUtil.computeBlockBreakPower(helper.getLevel(), abs);
+            assertTrue(cost == MjAPI.MJ,
+                    "lava break cost must be 1 MJ, got " + cost);
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * Solid blocks must keep the original {@code (hardness+1)*2 * 16 MJ} formula — the carve-out
+     * is for LiquidBlock instances only, not for everything. Stone (hardness 1.5) should produce
+     * cost = 16 * 1MJ * (1.5+1)*2 = 80 MJ.
+     */
+    public static void testSolidBlockBreakCostUnchanged(GameTestHelper helper) {
+        try {
+            BlockPos abs = helper.absolutePos(new BlockPos(2, 2, 2));
+            helper.getLevel().setBlock(abs, Blocks.STONE.defaultBlockState(), 3);
+            long cost = BlockUtil.computeBlockBreakPower(helper.getLevel(), abs);
+            assertTrue(cost == 80L * MjAPI.MJ,
+                    "stone break cost must be 80 MJ (original formula), got " + (cost / MjAPI.MJ) + " MJ");
             helper.succeed();
         } catch (Throwable t) {
             helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());

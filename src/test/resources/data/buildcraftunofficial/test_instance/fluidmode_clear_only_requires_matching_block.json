@@ -1,6 +1,6 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:fluidmode_clear_behaves_like_replace",
+    "function": "buildcraftunofficial:fluidmode_clear_only_requires_matching_block",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
     "max_ticks": 100,

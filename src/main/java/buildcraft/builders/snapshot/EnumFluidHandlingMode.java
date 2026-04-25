@@ -18,13 +18,19 @@ import net.minecraft.world.item.Items;
  *   <li>{@link #NO_REPLACE} — original behavior: any position holding a fluid (flowing or
  *       source) is silently skipped.</li>
  *   <li>{@link #REPLACE} — the schematic block is placed. If the block supports vanilla
- *       {@code WATERLOGGED} and the fluid is a water source, it's placed as waterlogged;
- *       otherwise the fluid is destroyed first. Positions whose schematic entry is air are
- *       still left alone (so REPLACE ≠ CLEAR per user intent).</li>
- *   <li>{@link #CLEAR} — same as REPLACE, plus fluid SOURCES at schematic-air positions are
- *       also destroyed. Flowing fluid drains naturally once sources are gone. Positions where
- *       the blueprint itself specifies a fluid are preserved — this is what keeps CLEAR from
- *       oscillating on water-feature blueprints.</li>
+ *       {@code WATERLOGGED} and the fluid is a water source, it's placed as waterlogged
+ *       (preserving the water "for free"); otherwise the fluid is destroyed first. Positions
+ *       whose schematic entry is fluid (water-feature blueprints) keep their fluid intact, and
+ *       waterlogged blocks captured-dry-in-schematic stay wet in the world (the lenient
+ *       "world wet, schematic dry" comparison in {@link SchematicBlockDefault#isBuilt}).</li>
+ *   <li>{@link #CLEAR} — clear all fluids in the build area, full stop. Source AND flowing,
+ *       schematic-air positions AND schematic-fluid positions (blueprint-fluid is treated as
+ *       schematic-air for classification purposes), waterlogged blocks (the WATERLOGGED
+ *       property gets toggled off in-place to match the schematic's dry capture, no item
+ *       extracted from inventory). Subsequent placements wait until every fluid in the area is
+ *       cleared, except waterlog-clear-only places which run alongside mopping because they
+ *       contribute to it. Use REPLACE if you want a water-feature blueprint to preserve its
+ *       water; CLEAR is the "I want this area dry no matter what" mode.</li>
  * </ul>
  */
 public enum EnumFluidHandlingMode {

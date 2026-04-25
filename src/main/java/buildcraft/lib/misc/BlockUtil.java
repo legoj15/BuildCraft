@@ -135,6 +135,19 @@ public class BlockUtil {
     /** Computes the MJ power required to break a block, based on its hardness. */
     public static long computeBlockBreakPower(Level world, BlockPos pos) {
         BlockState state = world.getBlockState(pos);
+        // Vanilla pure-fluid blocks (water/lava and modded LiquidBlock instances) ship with
+        // strength=100 — that's their *explosion resistance*, not break time; vanilla treats
+        // fluids as free-to-break (clicking a water source clears it instantly with any tool or
+        // empty hand). Reading 100 here as "time to break" gives a target of 3232 MJ per fluid
+        // block (40× stone, more than obsidian), which makes the Builder's CLEAR-mode mopping
+        // appear stuck — the break beam fires for ~13 ticks per single water block while power
+        // accumulates, then clears it for one tick before vanilla flow refills the position. The
+        // user-visible symptom is "laser fires forever, water never clears." Charge a flat 1 MJ
+        // for any LiquidBlock so the cost lines up with vanilla's "free" intent and the mop is
+        // visibly fast.
+        if (state.getBlock() instanceof net.minecraft.world.level.block.LiquidBlock) {
+            return MjAPI.MJ;
+        }
         float hardness = state.getDestroySpeed(world, pos);
         return (long) Math.floor(16 * MjAPI.MJ * ((hardness + 1) * 2) * miningMultiplier);
     }
@@ -160,8 +173,22 @@ public class BlockUtil {
 
         List<ItemStack> drops = new ArrayList<>(Block.getDrops(state, world, pos, world.getBlockEntity(pos)));
 
-        // Remove the block and play breaking sound/particles
-        world.destroyBlock(pos, false);
+        // Pure-fluid blocks (LiquidBlock instances — Blocks.WATER, Blocks.LAVA, BC oil/fuel,
+        // etc.) need a hard setBlock(AIR), NOT world.destroyBlock(). Vanilla destroyBlock calls
+        // setBlock(pos, fluidState.createLegacyBlock(), 3) — for a position whose only "block"
+        // IS the fluid, createLegacyBlock returns the same fluid block, so destroyBlock is a
+        // silent no-op. The Builder's CLEAR-mode break tasks were "succeeding" against water
+        // (Optional.of(emptyList) returned, task removed from queue) but the water never
+        // actually disappeared, producing the user-visible "laser fires, water stays, beam
+        // re-queues forever" loop. For non-fluid blocks we keep destroyBlock so its sound /
+        // particle / level-event side effects run; waterlogged blocks (block != LiquidBlock,
+        // fluid via WATERLOGGED) are handled correctly by destroyBlock — the legacy-fluid
+        // restore is the right call there because we're breaking the block, not the fluid.
+        if (state.getBlock() instanceof LiquidBlock) {
+            world.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
+        } else {
+            world.destroyBlock(pos, false);
+        }
 
         return Optional.of(drops);
     }

@@ -26,7 +26,7 @@ public class MjBattery  {
     }
 
     public void deserializeNBT(CompoundTag nbt) {
-        microJoules = nbt.getLong("stored").orElse(0L);
+        setStored(nbt.getLong("stored").orElse(0L));
     }
 
     public void writeToBuffer(ByteBuf buffer) {
@@ -34,7 +34,25 @@ public class MjBattery  {
     }
 
     public void readFromBuffer(ByteBuf buffer) {
-        microJoules = buffer.readLong();
+        setStored(buffer.readLong());
+    }
+
+    /** Replace the stored power level absolutely. Clamps to {@code [0, capacity]}. Use this from
+     *  sync / load paths (NBT deserialise, network packet apply) where the incoming value is the
+     *  authoritative server snapshot, not a delta. The additive {@link #addPower} would silently
+     *  accumulate past capacity if called repeatedly with the same authoritative value, which is
+     *  exactly what every-5-tick block-entity sync does — that bug manifested as a Builder
+     *  client battery climbing to ~65× capacity within ~13 seconds while the server stayed at 0,
+     *  triggering phantom laser firing on the client because {@code SnapshotBuilder.clientTick}
+     *  uses {@code stored > 0} to gate animation extrapolation. */
+    public void setStored(long microJoules) {
+        if (microJoules < 0) {
+            this.microJoules = 0;
+        } else if (microJoules > capacity) {
+            this.microJoules = capacity;
+        } else {
+            this.microJoules = microJoules;
+        }
     }
 
     public long addPower(long microJoulesToAdd, boolean simulate) {

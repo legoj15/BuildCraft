@@ -658,7 +658,10 @@ public class TileBuilder extends TileBC_Neptune
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         long stored = input.getLongOr("battery_mj", 0L);
-        battery.addPower(stored, false);
+        // Absolute set, not addPower. ClientboundBlockEntityDataPacket re-runs loadAdditional on
+        // the client every 5 ticks; the additive call would accumulate the server's snapshot
+        // into the existing client value each time, climbing past capacity in seconds.
+        battery.setStored(stored);
         canExcavate = input.getBooleanOr("canExcavate", true);
         fluidMode = EnumFluidHandlingMode.fromOrdinal(input.getIntOr("fluidMode", 0));
         currentBasePosIndex = input.getIntOr("currentBasePosIndex", 0);

@@ -65,8 +65,23 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
 
     @Override
     protected boolean isAir(BlockPos blockPos) {
-        // noinspection ConstantConditions
-        return getSchematicBlock(blockPos) == null || getSchematicBlock(blockPos).isAir();
+        ISchematicBlock schematic = getSchematicBlock(blockPos);
+        if (schematic == null) return true;
+        if (schematic.isAir()) return true;
+        // CLEAR-mode override: positions where the blueprint itself specifies a fluid (the
+        // architect captured a water source / lava / oil cell) are treated as air for
+        // classification purposes, so {@link SnapshotBuilder#check} routes them into the air
+        // branch and a world-fluid there gets marked TO_BREAK and swept up by the mop. The
+        // earlier CLEAR spec preserved blueprint-fluid ("don't oscillate on water-feature
+        // blueprints"), but the user-stated intent of CLEAR is "clear all fluids in the build
+        // area" — water-feature blueprints can use REPLACE instead. Without this carve-out a
+        // schematic that captured water around solid features (snow trails through a stream,
+        // a flooded ruin reproduction) would leave every captured-fluid position untouched in
+        // CLEAR, defeating the mode entirely.
+        if (schematic instanceof SchematicBlockFluid && tile.getFluidMode() == EnumFluidHandlingMode.CLEAR) {
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -189,14 +204,24 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     protected boolean canPlace(BlockPos blockPos) {
         // noinspection ConstantConditions
         if (isAir(blockPos)) return false;
-        // Under REPLACE/CLEAR a fluid at this position doesn't block placement — the place path
-        // (SchematicBlockDefault#build with fluidMode) waterlogs or destroys the fluid before
-        // setBlock runs. Without this short-circuit the stock schematic.canBuild check would
-        // see level.isEmptyBlock == false and refuse, leaving the fluid position untouched.
         EnumFluidHandlingMode mode = tile.getFluidMode();
-        if ((mode == EnumFluidHandlingMode.REPLACE || mode == EnumFluidHandlingMode.CLEAR)
-                && !tile.getWorldBC().getFluidState(blockPos).isEmpty()) {
-            return true;
+        boolean hasFluid = !tile.getWorldBC().getFluidState(blockPos).isEmpty();
+        if (hasFluid) {
+            // CLEAR: force the position to TO_BREAK (canPlace returns false → check() routes
+            // into the TO_BREAK branch). Without this, schematic-non-air-non-fluid + world-fluid
+            // positions (e.g. schematic-snow + world-water-source where the user placed the
+            // blueprint in a watery area) sit in TO_PLACE forever — the mop gate defers them
+            // because the area still has fluid, and the area still has fluid because the fluid
+            // AT THIS POSITION is what's keeping the gate closed. Routing them through
+            // TO_BREAK first lets the mop sweep the fluid; the position re-classifies as
+            // TO_PLACE on the next check pass once the world position is empty, and the place
+            // runs after the rest of the area is also dry.
+            if (mode == EnumFluidHandlingMode.CLEAR) return false;
+            // REPLACE: the place path (SchematicBlockDefault#build with fluidMode) waterlogs
+            // or destroys the fluid in the same pass. No need to break separately first.
+            // Without this short-circuit the stock schematic.canBuild check would see
+            // level.isEmptyBlock == false and refuse, leaving the fluid position untouched.
+            if (mode == EnumFluidHandlingMode.REPLACE) return true;
         }
         return getSchematicBlock(blockPos).canBuild(tile.getWorldBC(), blockPos);
     }
@@ -206,7 +231,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         // noinspection ConstantConditions
         ISchematicBlock self = getSchematicBlock(blockPos);
         boolean selfIsFluid = self instanceof SchematicBlockFluid;
-        return self.getRequiredBlockOffsets().stream()
+        boolean dependenciesMet = self.getRequiredBlockOffsets().stream()
             .map(blockPos::offset)
             .allMatch(pos -> {
                 ISchematicBlock neighbour = getSchematicBlock(pos);
@@ -222,10 +247,65 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                 if (selfIsFluid && neighbour instanceof SchematicBlockFluid) return true;
                 return false;
             }) && self.isReadyToBuild(tile.getWorldBC(), blockPos);
+        if (!dependenciesMet) return false;
+        // Pre-check canSurvive against the current world. Without this, blocks like snow-on-air
+        // (where the schematic itself has air at the support position, so requiredBlockOffsets
+        // is vacuously CORRECT but no real support exists) or snow-on-partial-snow-below (where
+        // the support block exists but its top face isn't full) get queued, throw via the place
+        // task animation, the post-setBlock updateShape iteration sees no support and undoes
+        // the placement + refunds items, then re-classifies the position as TO_PLACE for the
+        // next cycle — wasted animation cycles and battery per loop. Defer impossible-now
+        // placements at queue time so they sit in TO_PLACE without ever attempting a throw.
+        // Trade-off: a torch on top of a wall whose `up=false` (rare, when the wall's
+        // connections add up to a "no post" pattern in vanilla's shouldRaisePost) will defer
+        // permanently — vanilla's normal player-placement-cascade would set up=true upon torch
+        // placement, but we never get there. If you hit it, manually placing the torch works.
+        if (self instanceof SchematicBlockDefault def && def.blockState != null
+                && !def.blockState.canSurvive(tile.getWorldBC(), blockPos)) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * The "dry an existing waterlogged block" operation is item-free: the user already has the
+     * block they want at the position, the only thing changing is its WATERLOGGED property. No
+     * fence/glass-pane/whatever needs to come out of inventory just to toggle a flag. Detected
+     * via the schematic's own {@link SchematicBlockDefault#isWaterlogClearOnly} helper which
+     * checks block-type match + world-wet/schematic-dry under CLEAR mode.
+     */
+    private boolean isWaterlogClearOnlyAt(BlockPos blockPos) {
+        ISchematicBlock schematic = getSchematicBlock(blockPos);
+        if (!(schematic instanceof SchematicBlockDefault def)) return false;
+        return def.isWaterlogClearOnly(tile.getWorldBC(), blockPos, tile.getFluidMode());
+    }
+
+    @Override
+    protected boolean isAllowedDuringFluidMop(BlockPos blockPos) {
+        // Waterlog-clear-only positions ARE part of mopping — drying a waterlogged block stops
+        // it from emitting water to neighbours. Without this carve-out, a build area with
+        // waterlogged source-emitting blocks (e.g. waterlogged stairs feeding a corner) would
+        // deadlock: corner break tasks fire forever as the stairs keep emitting, and the
+        // dry-the-stairs place tasks sit deferred behind the area-fluid-clear gate.
+        return isWaterlogClearOnlyAt(blockPos);
+    }
+
+    @Override
+    protected boolean isFragileSchematicAt(BlockPos blockPos) {
+        ISchematicBlock schematic = getSchematicBlock(blockPos);
+        if (!(schematic instanceof SchematicBlockDefault def)) return false;
+        if (def.blockState == null) return false;
+        // canBeReplaced is fluid-type-aware; passing WATER as the representative fluid is fine
+        // because every block whose canBeReplaced returns true for water (snow_layer, carpet,
+        // button, redstone wire, sapling, torch, sign, lever, …) is exactly the set of fragile
+        // blocks that can be displaced by fluid flow. The fluid-type sensitivity matters for
+        // LiquidBlocks-replacing-LiquidBlocks edge cases that don't apply here.
+        return def.blockState.canBeReplaced(net.minecraft.world.level.material.Fluids.WATER);
     }
 
     @Override
     protected boolean hasEnoughToPlaceItems(BlockPos blockPos) {
+        if (isWaterlogClearOnlyAt(blockPos)) return true;
         return tryExtractRequired(
             getBuildingInfo().toPlaceRequiredItems[posToIndex(blockPos)],
             getBuildingInfo().toPlaceRequiredFluids[posToIndex(blockPos)],
@@ -235,6 +315,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
 
     @Override
     protected List<ItemStack> getToPlaceItems(BlockPos blockPos) {
+        if (isWaterlogClearOnlyAt(blockPos)) return Collections.emptyList();
         return tryExtractRequired(
             getBuildingInfo().toPlaceRequiredItems[posToIndex(blockPos)],
             getBuildingInfo().toPlaceRequiredFluids[posToIndex(blockPos)],
@@ -292,9 +373,17 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     @Override
     protected boolean isBlockCorrect(BlockPos blockPos) {
         // noinspection ConstantConditions
-        return getBuildingInfo() != null &&
-            getSchematicBlock(blockPos) != null &&
-            getSchematicBlock(blockPos).isBuilt(tile.getWorldBC(), blockPos);
+        if (getBuildingInfo() == null) return false;
+        ISchematicBlock schematic = getSchematicBlock(blockPos);
+        if (schematic == null) return false;
+        // Pass fluidMode through to the SchematicBlockDefault overload so CLEAR mode reports
+        // "world wet, schematic dry" as NOT built (i.e. queue it for drying). REPLACE/NO_REPLACE
+        // keep the lenient comparison via the no-mode default. Other ISchematicBlock impls
+        // (SchematicBlockFluid, SchematicBlockAir) don't care about waterlogging mode.
+        if (schematic instanceof SchematicBlockDefault def) {
+            return def.isBuilt(tile.getWorldBC(), blockPos, tile.getFluidMode());
+        }
+        return schematic.isBuilt(tile.getWorldBC(), blockPos);
     }
 
     @Override

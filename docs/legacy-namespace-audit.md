@@ -162,14 +162,14 @@ These render as broken-image / missing-texture in the guide book GUI.
 - ✅ Stripped the `buildcraftbuilders` fallback set out of `RulesLoader.loadAll()`; back to the original simple `for (modInfo : ModList.get().getMods())` loop.
 - 55/55 game tests pass on the rebased base (was 34/34 before the rebase brought in the new fluid-mode + support-required testers).
 
-**Step 3 — Merge the active `data/` book.txt scripts.** 2 files.
-- Move the `add "main"` and `add "meta"` declarations from `data/buildcraftcore/compat/buildcraft/book.txt` and `data/buildcraftlib/compat/buildcraft/book.txt` into the existing `data/buildcraftunofficial/compat/buildcraft/book.txt`.
-- Then `git rm` the legacy ones.
-- Risk: small — script loader walks all `data/` subfolders, so the destination is equivalent.
+**Step 3 — Drop the dead-book legacy `book.txt` scripts. DONE.** 2 files.
+- Discovery: the legacy declarations register *separate* books (`buildcraftcore:main`, `buildcraftlib:meta`) under their respective namespaces, not duplicates of `buildcraftunofficial:main`. Nothing in Java references either, and `guide.txt` only fills `buildcraftunofficial:main`, so the two legacy books were registered-but-empty and unreachable from any item.
+- A literal "merge" into the canonical script would have hit `ScriptableRegistry.executeScripts()`'s "Multiple scripts attempting to add `<name>`" error path, since the canonical `book.txt` already adds `"main"`. Pure delete is the right outcome.
+- ✅ `git rm`d both `data/buildcraftcore/compat/buildcraft/book.txt` and `data/buildcraftlib/compat/buildcraft/book.txt`.
+- Note left for follow-up: `BCCoreCreativeTabs.java:43` calls `ItemGuide.createForBook(..., "buildcraftunofficial:config")`, but no script defines `buildcraftunofficial:config` — the lookup currently returns `null`. Out of scope for this cleanup; warrants its own commit.
 
-**Step 4 — Fix `CraftingUtil` modid.** 1-line edit.
-- `@EventBusSubscriber(modid = "buildcraftlib")` → `@EventBusSubscriber(modid = "buildcraftunofficial")`.
-- Now the debug `onServerStarted` handler will actually run. (Or just delete the handler — it's a debug print on a vanilla recipe.)
+**Step 4 — Fix `CraftingUtil` modid. DONE.** 1-line edit.
+- ✅ `@EventBusSubscriber(modid = "buildcraftlib")` → `@EventBusSubscriber(modid = "buildcraftunofficial")` in `CraftingUtil.java`. The debug `onServerStarted` handler now actually registers; behavioral change is just a one-line `BCLog.info` dump of the vanilla `white_bundle` recipe class on each server start.
 
 **Step 5 — Fix or remove guide markdown texture references.** ~16 references in `compat/buildcraft/guide/en_us/`.
 - For `buildcraftlib:textures/...` references: move the underlying texture from `assets/buildcraftlib/textures/` to `assets/buildcraftunofficial/textures/` (singular `block/`, not `blocks/`), then rewrite the markdown.

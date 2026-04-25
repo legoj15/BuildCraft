@@ -583,15 +583,24 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      *   <li>REPLACE — also skip fluid positions; schematic-solid over fluid is handled through
      *       the place path ({@link SchematicBlockDefault#build(net.minecraft.world.level.Level,
      *       BlockPos, EnumFluidHandlingMode)}), which can waterlog instead of destroying.</li>
-     *   <li>CLEAR — allow fluid SOURCES through; flowing fluid is still skipped because it'll
-     *       drain on its own once sources are gone.</li>
+     *   <li>CLEAR — allow ALL fluid (both sources and flowing) through. The earlier "sources
+     *       only" filter assumed flowing fluid would drain naturally once every contributing
+     *       source was inside the build area, but that's not true at a leaky boundary (a build
+     *       area at the edge of a pool, river, or any fluid body whose source extends outside).
+     *       Without breaking flowing fluid in that case, schematic-air positions classified as
+     *       TO_BREAK would sit there forever — no break beam fires because the flowing-fluid
+     *       filter rejects them, and the user sees the Builder appear stuck after one or two
+     *       break beams. Now CLEAR will perpetually mop flowing fluid that keeps refilling from
+     *       outside the build area; that does drain the battery indefinitely on a leaky boundary,
+     *       but the activity is visible (beams keep firing) so the user can stop the Builder /
+     *       extend the build area / deal with the external source rather than wondering why
+     *       nothing's happening.</li>
      * </ul>
      */
     private boolean shouldBreakQueueAcceptFluid(BlockPos blockPos) {
         FluidState fs = tile.getWorldBC().getFluidState(blockPos);
         if (fs.isEmpty()) return true;
-        if (getFluidMode() != EnumFluidHandlingMode.CLEAR) return false;
-        return fs.isSource();
+        return getFluidMode() == EnumFluidHandlingMode.CLEAR;
     }
 
     /**

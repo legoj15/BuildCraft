@@ -49,6 +49,14 @@ import buildcraft.api.schematics.SchematicBlockContext;
 import buildcraft.lib.misc.NBTUtilBC;
 
 public class SchematicBlockDefault implements ISchematicBlock {
+    /** Directions a fluid can flow from to reach this position: the four horizontals plus the
+     *  block above (water at the same Y level flows horizontally, water above flows down). The
+     *  block below is irrelevant — fluids don't flow upwards into a destination. Used by the
+     *  fragile-block defer in {@link #build(Level, BlockPos, EnumFluidHandlingMode)}. */
+    private static final Direction[] FRAGILE_FLUID_NEIGHBOUR_DIRS = {
+        Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST, Direction.UP
+    };
+
     @SuppressWarnings("WeakerAccess")
     protected final Set<BlockPos> requiredBlockOffsets = new HashSet<>();
     @SuppressWarnings("WeakerAccess")
@@ -278,6 +286,12 @@ public class SchematicBlockDefault implements ISchematicBlock {
         for (Property<?> property : ignoredProperties) {
             newBlockState = copyProperty(property, newBlockState, placeBlock.defaultBlockState());
         }
+        // Pre-compute fluid handling: under REPLACE/CLEAR, decide up-front whether the source at
+        // blockPos will be waterlogged into the placed state or destroyed first. Don't actually
+        // destroy yet — every "should we abort?" check (canSurvive, fragile-block defer) needs to
+        // run on the unmodified world so a failing check doesn't leave the world torn down with
+        // no replacement placed. The actual destroyBlock fires only after every check passes.
+        boolean willDestroyFluidAtPos = false;
         if (fluidMode == EnumFluidHandlingMode.REPLACE || fluidMode == EnumFluidHandlingMode.CLEAR) {
             FluidState existing = level.getFluidState(blockPos);
             if (!existing.isEmpty() && existing.isSource()) {
@@ -287,7 +301,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 if (waterloggable) {
                     newBlockState = newBlockState.setValue(BlockStateProperties.WATERLOGGED, true);
                 } else {
-                    level.destroyBlock(blockPos, false);
+                    willDestroyFluidAtPos = true;
                 }
             }
         }
@@ -299,6 +313,31 @@ public class SchematicBlockDefault implements ISchematicBlock {
         // position can be retried once the supporting block is built.
         if (!newBlockState.canSurvive(level, blockPos)) {
             return false;
+        }
+        // Fragile-block defer: in REPLACE/CLEAR, when the block we're about to place is one whose
+        // canBeReplaced(fluid) returns true (snow_layer, carpet, button, redstone wire, torch,
+        // sapling, …), any adjacent fluid will flow into the freshly placed block on the next
+        // fluid tick and destroy it. canSurvive doesn't catch this because it evaluates against
+        // the *current* world state, not the future state after fluid flow. Without the defer the
+        // user sees a place→destroy→place loop (item consumed once per cycle until the inventory
+        // drains) when REPLACE-ing snow into a leaky pool. Solid blocks aren't fragile
+        // (canBeReplaced returns false) and waterlogged blocks coexist with their fluid, so both
+        // skip the check naturally.
+        if (fluidMode == EnumFluidHandlingMode.REPLACE || fluidMode == EnumFluidHandlingMode.CLEAR) {
+            boolean placedAsWaterlogged = newBlockState.hasProperty(BlockStateProperties.WATERLOGGED)
+                    && newBlockState.getValue(BlockStateProperties.WATERLOGGED);
+            if (!placedAsWaterlogged) {
+                for (Direction dir : FRAGILE_FLUID_NEIGHBOUR_DIRS) {
+                    FluidState neighbour = level.getFluidState(blockPos.relative(dir));
+                    if (!neighbour.isEmpty() && newBlockState.canBeReplaced(neighbour.getType())) {
+                        return false;
+                    }
+                }
+            }
+        }
+        // All checks passed; commit the deferred fluid-destroy now.
+        if (willDestroyFluidAtPos) {
+            level.destroyBlock(blockPos, false);
         }
         // Builder-placed leaves should behave like player-placed leaves: persistent. Schematic
         // data captured from natural foliage has persistent=false, distance=N — once placed in

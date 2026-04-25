@@ -279,4 +279,172 @@ public class FluidHandlingModeTester {
             helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
         }
     }
+
+    /**
+     * Fragile-block defer regression test. The user's case: REPLACE-ing a snow_layer over a water
+     * source whose horizontal neighbour also holds a water source. Without the defer, the snow
+     * gets placed (canSurvive succeeds because there's a stone floor beneath), then the
+     * neighbour's water flows back into the snow position on the next fluid tick and destroys
+     * it; the Builder consumes one snow item per cycle and never finishes. With the defer,
+     * build() returns false and the existing cancelPlaceTask path refunds the item.
+     */
+    public static void testFragileBlockDeferredWhenNeighbourSourceExists(GameTestHelper helper) {
+        try {
+            BlockPos local = new BlockPos(2, 2, 2);
+            BlockPos abs = helper.absolutePos(local);
+            // Sturdy floor so the snow's own canSurvive check passes — we want the test to fail
+            // for the *fragile* reason, not the support reason.
+            helper.getLevel().setBlock(abs.below(), Blocks.STONE.defaultBlockState(), 3);
+            helper.getLevel().setBlock(abs, Blocks.WATER.defaultBlockState(), 3);
+            helper.getLevel().setBlock(abs.east(), Blocks.WATER.defaultBlockState(), 3);
+
+            SchematicBlockDefault s = schem(Blocks.SNOW.defaultBlockState());
+            boolean placed = s.build(helper.getLevel(), abs, EnumFluidHandlingMode.REPLACE);
+            assertTrue(!placed, "build() must defer: snow next to a water source would be flooded out the moment the source at this position is destroyed");
+
+            // The deferred fluid-destroy must NOT have fired — the source should still be there.
+            FluidState stillAtPos = helper.getLevel().getFluidState(abs);
+            assertTrue(!stillAtPos.isEmpty() && stillAtPos.isSource(),
+                    "deferring fragile placement must leave the world untouched: water source must still exist at the position");
+            BlockState atPos = helper.getLevel().getBlockState(abs);
+            assertTrue(atPos.getBlock() != Blocks.SNOW, "snow must not have been placed");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * Counterpart: an isolated source (no fluid neighbours) lets fragile placement succeed. The
+     * REPLACE path destroys the source and the snow stays because nothing flows back. Guards
+     * against the defer being too aggressive.
+     */
+    public static void testFragileBlockPlacedWhenSourceIsIsolated(GameTestHelper helper) {
+        try {
+            BlockPos local = new BlockPos(2, 2, 2);
+            BlockPos abs = helper.absolutePos(local);
+            helper.getLevel().setBlock(abs.below(), Blocks.STONE.defaultBlockState(), 3);
+            helper.getLevel().setBlock(abs, Blocks.WATER.defaultBlockState(), 3);
+            // No water at any horizontal/up neighbour — clean isolated source.
+
+            SchematicBlockDefault s = schem(Blocks.SNOW.defaultBlockState());
+            boolean placed = s.build(helper.getLevel(), abs, EnumFluidHandlingMode.REPLACE);
+            assertTrue(placed, "build() must succeed when the source is isolated; no neighbour fluid means nothing flows back to destroy the snow");
+
+            BlockState atPos = helper.getLevel().getBlockState(abs);
+            assertTrue(atPos.getBlock() == Blocks.SNOW, "snow should be present at the position");
+            assertTrue(helper.getLevel().getFluidState(abs).isEmpty(),
+                    "isolated source should have been destroyed before the snow placement");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * Solid blocks (canBeReplaced returns false because Properties.replaceable is unset) must
+     * not be deferred even when neighbour fluid exists — water can't displace stone, so the
+     * place→destroy loop the defer is guarding against can't happen. Without this carve-out the
+     * defer would over-fire and stall every leaky-pool replacement.
+     */
+    public static void testSolidBlockPlacedDespiteAdjacentFluid(GameTestHelper helper) {
+        try {
+            BlockPos local = new BlockPos(2, 2, 2);
+            BlockPos abs = helper.absolutePos(local);
+            helper.getLevel().setBlock(abs, Blocks.WATER.defaultBlockState(), 3);
+            helper.getLevel().setBlock(abs.east(), Blocks.WATER.defaultBlockState(), 3);
+
+            SchematicBlockDefault s = schem(Blocks.STONE.defaultBlockState());
+            boolean placed = s.build(helper.getLevel(), abs, EnumFluidHandlingMode.REPLACE);
+            assertTrue(placed, "stone is solid (canBeReplaced=false); fragile defer must NOT fire even with neighbour water");
+
+            BlockState atPos = helper.getLevel().getBlockState(abs);
+            assertTrue(atPos.getBlock() == Blocks.STONE, "stone should be present");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * Vertical case: water source above a target position is enough to defer fragile placement,
+     * because vanilla's fluid update tick lets water above flow downward. Catches the case the
+     * user explicitly called out — they wanted UP included in the neighbour check.
+     */
+    public static void testFragileBlockDeferredForFluidAbove(GameTestHelper helper) {
+        try {
+            BlockPos local = new BlockPos(2, 2, 2);
+            BlockPos abs = helper.absolutePos(local);
+            helper.getLevel().setBlock(abs.below(), Blocks.STONE.defaultBlockState(), 3);
+            // Position itself starts empty — no fluid here, so the willDestroyFluidAtPos branch
+            // won't fire. Only the fragile check (which inspects neighbours) should trip.
+            helper.getLevel().setBlock(abs.above(), Blocks.WATER.defaultBlockState(), 3);
+
+            SchematicBlockDefault s = schem(Blocks.SNOW.defaultBlockState());
+            boolean placed = s.build(helper.getLevel(), abs, EnumFluidHandlingMode.REPLACE);
+            assertTrue(!placed, "build() must defer when water sits above the target: it'll flow down into the snow on the next fluid tick");
+
+            BlockState atPos = helper.getLevel().getBlockState(abs);
+            assertTrue(atPos.isAir(), "position should remain air (no destructive operation should have happened)");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * Waterloggable blocks (oak_fence, glass_pane, …) coexist with their fluid: the REPLACE path
+     * sets WATERLOGGED=true on the placed state instead of destroying the source, and water
+     * naturally fills the block's collision void. canBeReplaced returns false for the waterlogged
+     * variant, but more importantly: even if it returned true, the defer's "if waterlogged, skip"
+     * branch exempts it. Confirms that the carve-out works.
+     */
+    public static void testWaterloggableBlockNotDeferredNearWater(GameTestHelper helper) {
+        try {
+            BlockPos local = new BlockPos(2, 2, 2);
+            BlockPos abs = helper.absolutePos(local);
+            helper.getLevel().setBlock(abs, Blocks.WATER.defaultBlockState(), 3);
+            helper.getLevel().setBlock(abs.east(), Blocks.WATER.defaultBlockState(), 3);
+
+            SchematicBlockDefault s = schem(Blocks.OAK_FENCE.defaultBlockState());
+            boolean placed = s.build(helper.getLevel(), abs, EnumFluidHandlingMode.REPLACE);
+            assertTrue(placed, "oak_fence is waterloggable; the REPLACE path should waterlog it and the fragile defer should not fire");
+
+            BlockState atPos = helper.getLevel().getBlockState(abs);
+            assertTrue(atPos.getBlock() == Blocks.OAK_FENCE, "fence should be present");
+            assertTrue(atPos.getValue(BlockStateProperties.WATERLOGGED),
+                    "fence should be waterlogged (REPLACE preserved the source by setting WATERLOGGED instead of destroying)");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * NO_REPLACE intentionally doesn't run the fragile defer — the mode's contract is "leave
+     * fluids alone", and adding fluid-aware deferrals to the no-fluid-handling mode would be
+     * surprising. The Builder's existing fluid-skip filter (in SnapshotBuilder) already keeps
+     * fluid positions out of the queue under NO_REPLACE, so the defer would only kick in for
+     * empty-position placements with adjacent water — a rarer case the mode's user opted out of
+     * fluid handling for.
+     */
+    public static void testNoReplaceModeSkipsFragileCheck(GameTestHelper helper) {
+        try {
+            BlockPos local = new BlockPos(2, 2, 2);
+            BlockPos abs = helper.absolutePos(local);
+            helper.getLevel().setBlock(abs.below(), Blocks.STONE.defaultBlockState(), 3);
+            // Position is air (no fluid). Adjacent water is present.
+            helper.getLevel().setBlock(abs.east(), Blocks.WATER.defaultBlockState(), 3);
+
+            SchematicBlockDefault s = schem(Blocks.SNOW.defaultBlockState());
+            boolean placed = s.build(helper.getLevel(), abs, EnumFluidHandlingMode.NO_REPLACE);
+            assertTrue(placed, "NO_REPLACE must skip the fragile defer entirely; the user opted out of fluid handling");
+
+            BlockState atPos = helper.getLevel().getBlockState(abs);
+            assertTrue(atPos.getBlock() == Blocks.SNOW, "snow should be placed under NO_REPLACE despite the adjacent water");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
 }

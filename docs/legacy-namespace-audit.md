@@ -157,12 +157,10 @@ These render as broken-image / missing-texture in the guide book GUI.
 - ✅ `assets/buildcrafttransport/recipes/_constants.json` — 1.12.2 forge recipe metadata, only consumed by `_factories.json` (now deleted).
 - Verified `./gradlew compileJava` passes after deletes.
 
-**Step 2 — Move-and-rewrite the live RulesLoader files.** 32 files in `assets/buildcraftbuilders/compat/buildcraft/builders/`.
-- `git mv` the whole subtree to `assets/buildcraftunofficial/compat/buildcraft/builders/`.
-- Remove the `buildcraftbuilders` fallback in `RulesLoader.loadAll()` once the move lands.
-- After this, the `RULES` list will populate via the canonical iteration without needing the band-aid.
-- Effort: small (mechanical move + one Java edit + a verifying game test for snapshot rules).
-- Risk: low — `RulesLoader` was producing an empty list before; this restores intended behavior.
+**Step 2 — Move-and-rewrite the live RulesLoader files. DONE.** 32 files in `assets/buildcraftbuilders/compat/buildcraft/builders/`.
+- ✅ `git mv`d the whole subtree to `assets/buildcraftunofficial/compat/buildcraft/builders/`.
+- ✅ Stripped the `buildcraftbuilders` fallback set out of `RulesLoader.loadAll()`; back to the original simple `for (modInfo : ModList.get().getMods())` loop.
+- 55/55 game tests pass on the rebased base (was 34/34 before the rebase brought in the new fluid-mode + support-required testers).
 
 **Step 3 — Merge the active `data/` book.txt scripts.** 2 files.
 - Move the `add "main"` and `add "meta"` declarations from `data/buildcraftcore/compat/buildcraft/book.txt` and `data/buildcraftlib/compat/buildcraft/book.txt` into the existing `data/buildcraftunofficial/compat/buildcraft/book.txt`.

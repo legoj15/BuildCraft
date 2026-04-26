@@ -12,8 +12,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import org.joml.Matrix4f;
 
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
@@ -23,10 +26,13 @@ import buildcraft.core.marker.volume.IFastAddonRenderer;
 
 public class AddonRendererFillerPlanner implements IFastAddonRenderer<AddonFillerPlanner> {
     @Override
-    public void renderAddonFast(AddonFillerPlanner addon, Player player, float partialTicks, VertexConsumer vb) {
+    public void renderAddonFast(AddonFillerPlanner addon, Player player, float partialTicks,
+                                 PoseStack poseStack, VertexConsumer vb) {
         if (addon.buildingInfo == null) {
             return;
         }
+
+        Matrix4f pose = poseStack.last().pose();
 
         List<BlockPos> list = StreamSupport.stream(
             BlockPos.betweenClosed(addon.buildingInfo.box.min(), addon.buildingInfo.box.max()).spliterator(),
@@ -49,49 +55,52 @@ public class AddonRendererFillerPlanner implements IFastAddonRenderer<AddonFille
         for (BlockPos p : list) {
             AABB bb = new AABB(Vec3.atLowerCornerOf(p), Vec3.atLowerCornerOf(p.offset(1, 1, 1))).inflate(-0.1);
 
-            // North face (-Z)
-            vertex(vb, bb.minX, bb.maxY, bb.minZ, 204, 204, 204, 127, 0, 0);
-            vertex(vb, bb.maxX, bb.maxY, bb.minZ, 204, 204, 204, 127, 0, 1);
-            vertex(vb, bb.maxX, bb.minY, bb.minZ, 204, 204, 204, 127, 1, 1);
-            vertex(vb, bb.minX, bb.minY, bb.minZ, 204, 204, 204, 127, 1, 0);
+            // North face (-Z), normal (0, 0, -1)
+            vertex(vb, pose, bb.minX, bb.maxY, bb.minZ, 204, 204, 204, 127, 0, 0, 0, 0, -1);
+            vertex(vb, pose, bb.maxX, bb.maxY, bb.minZ, 204, 204, 204, 127, 0, 1, 0, 0, -1);
+            vertex(vb, pose, bb.maxX, bb.minY, bb.minZ, 204, 204, 204, 127, 1, 1, 0, 0, -1);
+            vertex(vb, pose, bb.minX, bb.minY, bb.minZ, 204, 204, 204, 127, 1, 0, 0, 0, -1);
 
-            // South face (+Z)
-            vertex(vb, bb.minX, bb.minY, bb.maxZ, 204, 204, 204, 127, 0, 0);
-            vertex(vb, bb.maxX, bb.minY, bb.maxZ, 204, 204, 204, 127, 0, 1);
-            vertex(vb, bb.maxX, bb.maxY, bb.maxZ, 204, 204, 204, 127, 1, 1);
-            vertex(vb, bb.minX, bb.maxY, bb.maxZ, 204, 204, 204, 127, 1, 0);
+            // South face (+Z), normal (0, 0, 1)
+            vertex(vb, pose, bb.minX, bb.minY, bb.maxZ, 204, 204, 204, 127, 0, 0, 0, 0, 1);
+            vertex(vb, pose, bb.maxX, bb.minY, bb.maxZ, 204, 204, 204, 127, 0, 1, 0, 0, 1);
+            vertex(vb, pose, bb.maxX, bb.maxY, bb.maxZ, 204, 204, 204, 127, 1, 1, 0, 0, 1);
+            vertex(vb, pose, bb.minX, bb.maxY, bb.maxZ, 204, 204, 204, 127, 1, 0, 0, 0, 1);
 
-            // Bottom face (-Y)
-            vertex(vb, bb.minX, bb.minY, bb.minZ, 127, 127, 127, 127, 0, 0);
-            vertex(vb, bb.maxX, bb.minY, bb.minZ, 127, 127, 127, 127, 0, 1);
-            vertex(vb, bb.maxX, bb.minY, bb.maxZ, 127, 127, 127, 127, 1, 1);
-            vertex(vb, bb.minX, bb.minY, bb.maxZ, 127, 127, 127, 127, 1, 0);
+            // Bottom face (-Y), normal (0, -1, 0)
+            vertex(vb, pose, bb.minX, bb.minY, bb.minZ, 127, 127, 127, 127, 0, 0, 0, -1, 0);
+            vertex(vb, pose, bb.maxX, bb.minY, bb.minZ, 127, 127, 127, 127, 0, 1, 0, -1, 0);
+            vertex(vb, pose, bb.maxX, bb.minY, bb.maxZ, 127, 127, 127, 127, 1, 1, 0, -1, 0);
+            vertex(vb, pose, bb.minX, bb.minY, bb.maxZ, 127, 127, 127, 127, 1, 0, 0, -1, 0);
 
-            // Top face (+Y)
-            vertex(vb, bb.minX, bb.maxY, bb.maxZ, 255, 255, 255, 127, 0, 0);
-            vertex(vb, bb.maxX, bb.maxY, bb.maxZ, 255, 255, 255, 127, 0, 1);
-            vertex(vb, bb.maxX, bb.maxY, bb.minZ, 255, 255, 255, 127, 1, 1);
-            vertex(vb, bb.minX, bb.maxY, bb.minZ, 255, 255, 255, 127, 1, 0);
+            // Top face (+Y), normal (0, 1, 0)
+            vertex(vb, pose, bb.minX, bb.maxY, bb.maxZ, 255, 255, 255, 127, 0, 0, 0, 1, 0);
+            vertex(vb, pose, bb.maxX, bb.maxY, bb.maxZ, 255, 255, 255, 127, 0, 1, 0, 1, 0);
+            vertex(vb, pose, bb.maxX, bb.maxY, bb.minZ, 255, 255, 255, 127, 1, 1, 0, 1, 0);
+            vertex(vb, pose, bb.minX, bb.maxY, bb.minZ, 255, 255, 255, 127, 1, 0, 0, 1, 0);
 
-            // West face (-X)
-            vertex(vb, bb.minX, bb.minY, bb.maxZ, 153, 153, 153, 127, 0, 0);
-            vertex(vb, bb.minX, bb.maxY, bb.maxZ, 153, 153, 153, 127, 0, 1);
-            vertex(vb, bb.minX, bb.maxY, bb.minZ, 153, 153, 153, 127, 1, 1);
-            vertex(vb, bb.minX, bb.minY, bb.minZ, 153, 153, 153, 127, 1, 0);
+            // West face (-X), normal (-1, 0, 0)
+            vertex(vb, pose, bb.minX, bb.minY, bb.maxZ, 153, 153, 153, 127, 0, 0, -1, 0, 0);
+            vertex(vb, pose, bb.minX, bb.maxY, bb.maxZ, 153, 153, 153, 127, 0, 1, -1, 0, 0);
+            vertex(vb, pose, bb.minX, bb.maxY, bb.minZ, 153, 153, 153, 127, 1, 1, -1, 0, 0);
+            vertex(vb, pose, bb.minX, bb.minY, bb.minZ, 153, 153, 153, 127, 1, 0, -1, 0, 0);
 
-            // East face (+X)
-            vertex(vb, bb.maxX, bb.minY, bb.minZ, 153, 153, 153, 127, 0, 0);
-            vertex(vb, bb.maxX, bb.maxY, bb.minZ, 153, 153, 153, 127, 0, 1);
-            vertex(vb, bb.maxX, bb.maxY, bb.maxZ, 153, 153, 153, 127, 1, 1);
-            vertex(vb, bb.maxX, bb.minY, bb.maxZ, 153, 153, 153, 127, 1, 0);
+            // East face (+X), normal (1, 0, 0)
+            vertex(vb, pose, bb.maxX, bb.minY, bb.minZ, 153, 153, 153, 127, 0, 0, 1, 0, 0);
+            vertex(vb, pose, bb.maxX, bb.maxY, bb.minZ, 153, 153, 153, 127, 0, 1, 1, 0, 0);
+            vertex(vb, pose, bb.maxX, bb.maxY, bb.maxZ, 153, 153, 153, 127, 1, 1, 1, 0, 0);
+            vertex(vb, pose, bb.maxX, bb.minY, bb.maxZ, 153, 153, 153, 127, 1, 0, 1, 0, 0);
         }
     }
 
-    private void vertex(VertexConsumer vb, double x, double y, double z,
-                         int r, int g, int b, int a, float u, float v) {
-        vb.addVertex((float) x, (float) y, (float) z)
+    private void vertex(VertexConsumer vb, Matrix4f pose, double x, double y, double z,
+                         int r, int g, int b, int a, float u, float v,
+                         float nx, float ny, float nz) {
+        vb.addVertex(pose, (float) x, (float) y, (float) z)
             .setColor(r, g, b, a)
             .setUv(u, v)
-            .setLight(0xF000F0);
+            .setOverlay(OverlayTexture.NO_OVERLAY)
+            .setLight(0xF000F0)
+            .setNormal(nx, ny, nz);
     }
 }

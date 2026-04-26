@@ -50,6 +50,11 @@ public class BCBuilders {
             FillerManager.registry = FillerRegistry.INSTANCE;
             TemplateApi.templateRegistry = TemplateRegistry.INSTANCE;
             TemplateApi.templateRegistry.addHandler(TemplateHandlerDefault.INSTANCE);
+            // Register Volume Box addon classes for NBT round-trip identification.
+            buildcraft.core.marker.volume.AddonsRegistry.INSTANCE.register(
+                net.minecraft.resources.Identifier.parse("buildcraftunofficial:filler_planner"),
+                buildcraft.builders.addon.AddonFillerPlanner.class
+            );
             BCBuildersSchematics.preInit();
             BCBuildersStatements.preInit();
             // Populate RulesLoader.READ_DOMAINS. Without this call, every block fails

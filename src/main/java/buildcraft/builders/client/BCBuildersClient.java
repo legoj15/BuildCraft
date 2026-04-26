@@ -16,6 +16,7 @@ import buildcraft.builders.client.tooltip.SchematicSingleTooltipOverlay;
 import buildcraft.builders.gui.GuiArchitectTable;
 import buildcraft.builders.gui.GuiElectronicLibrary;
 import buildcraft.builders.gui.GuiFiller;
+import buildcraft.builders.gui.GuiFillerPlanner;
 import buildcraft.builders.gui.GuiReplacer;
 import buildcraft.builders.gui.GuiBuilder;
 
@@ -70,6 +71,7 @@ public class BCBuildersClient {
         event.register(BCBuildersMenuTypes.ARCHITECT.get(), GuiArchitectTable::new);
         event.register(BCBuildersMenuTypes.LIBRARY.get(), GuiElectronicLibrary::new);
         event.register(BCBuildersMenuTypes.REPLACER.get(), GuiReplacer::new);
+        event.register(BCBuildersMenuTypes.FILLER_PLANNER.get(), GuiFillerPlanner::new);
     }
 
     @SubscribeEvent

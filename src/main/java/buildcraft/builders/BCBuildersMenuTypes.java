@@ -12,6 +12,7 @@ import buildcraft.builders.container.ContainerArchitectTable;
 import buildcraft.builders.container.ContainerBuilder;
 import buildcraft.builders.container.ContainerElectronicLibrary;
 import buildcraft.builders.container.ContainerFiller;
+import buildcraft.builders.container.ContainerFillerPlanner;
 import buildcraft.builders.container.ContainerReplacer;
 
 public class BCBuildersMenuTypes {
@@ -37,6 +38,10 @@ public class BCBuildersMenuTypes {
     public static final Supplier<MenuType<ContainerReplacer>> REPLACER = MENU_TYPES.register(
             "replacer",
             () -> IMenuTypeExtension.create(ContainerReplacer::new));
+
+    public static final Supplier<MenuType<ContainerFillerPlanner>> FILLER_PLANNER = MENU_TYPES.register(
+            "filler_planner",
+            () -> IMenuTypeExtension.create(ContainerFillerPlanner::new));
 
     public static void init(IEventBus modEventBus) {
         MENU_TYPES.register(modEventBus);

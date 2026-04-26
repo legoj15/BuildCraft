@@ -1,6 +1,6 @@
 {
-    "parent": "minecraft:item/generated",
+    "parent": "block/cube_all",
     "textures": {
-        "layer0": "buildcraftunofficial:item/filler_planner"
+        "all": "buildcraftunofficial:addons/filler_planner"
     }
 }

@@ -3,6 +3,8 @@ package buildcraft.lib.tile.item;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
@@ -99,9 +101,11 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         for (ItemStack stack : stacks) {
             CompoundTag itemNbt = new CompoundTag();
             if (!stack.isEmpty()) {
-                net.minecraft.resources.Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
-                itemNbt.putString("id", itemId.toString());
-                itemNbt.putInt("count", stack.getCount());
+                // Use ItemStack.CODEC so DataComponentPatch (enchantments, custom name,
+                // damage, dyed colors, etc.) round-trips on save/load.
+                ItemStack.CODEC.encodeStart(NbtOps.INSTANCE, stack)
+                        .resultOrPartial()
+                        .ifPresent(payload -> itemNbt.put("stack", payload));
             }
             list.add(itemNbt);
         }
@@ -115,7 +119,13 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         for (int i = 0; i < list.size() && i < size(); i++) {
             CompoundTag itemNbt = list.getCompound(i).orElseGet(CompoundTag::new);
             ItemStack stack = ItemStack.EMPTY;
-            if (itemNbt.contains("id")) {
+            Tag stackPayload = itemNbt.get("stack");
+            if (stackPayload != null) {
+                stack = ItemStack.CODEC.parse(NbtOps.INSTANCE, stackPayload)
+                        .resultOrPartial()
+                        .orElse(ItemStack.EMPTY);
+            } else if (itemNbt.contains("id")) {
+                // Legacy format (id + count, no components) -- read existing world saves.
                 String idStr = itemNbt.getString("id").orElse("");
                 net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(idStr);
                 if (id != null) {

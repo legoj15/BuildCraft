@@ -121,9 +121,6 @@ public class MarkerRenderer {
      * Uses reflection-free approach: the BCCore module calls this via the public API.
      */
     private static void renderVolumeBoxes() {
-        // VolumeBox rendering is handled by VolumeBoxRenderer in buildcraft-core
-        // since ClientVolumeBoxes is in buildcraft-core and cannot be referenced from buildcraft-lib.
-        // The renderer is registered separately.
         if (volumeBoxRenderCallback != null) {
             volumeBoxRenderCallback.run();
         }

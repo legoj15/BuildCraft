@@ -5,27 +5,84 @@
  */
 package buildcraft.core.client;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
 import buildcraft.lib.client.render.MarkerRenderer;
 import buildcraft.lib.client.render.laser.LaserBoxRenderer;
+import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
 
+import buildcraft.core.marker.volume.Addon;
 import buildcraft.core.marker.volume.ClientVolumeBoxes;
+import buildcraft.core.marker.volume.IFastAddonRenderer;
+import buildcraft.core.marker.volume.Lock;
 import buildcraft.core.marker.volume.VolumeBox;
 
 /**
- * Renders all client-side VolumeBoxes as laser box outlines.
+ * Renders all client-side VolumeBoxes as laser box outlines plus their attached addon icons +
+ * pattern previews. Laser type switches based on edit/lock state: SIGNAL while a player drags a
+ * corner, the locking machine's stripes (STRIPES_WRITE for Filler, STRIPES_READ for Architect)
+ * when locked, otherwise CONNECTED.
  */
 public class VolumeBoxRenderer {
 
-    /** Renders all volume boxes from ClientVolumeBoxes using LaserBoxRenderer. */
     public static void renderAll() {
+        Player player = Minecraft.getInstance().player;
+        PoseStack poseStack = MarkerRenderer.getPoseStack();
+        Vec3 cameraPos = MarkerRenderer.getCameraPos();
+        if (poseStack == null || cameraPos == null) return;
+
+        // Wireframe boxes.
         for (VolumeBox volumeBox : ClientVolumeBoxes.INSTANCE.volumeBoxes) {
+            LaserType type = pickLaserType(volumeBox, player);
             LaserBoxRenderer.renderLaserBoxStatic(
-                    MarkerRenderer.getPoseStack(),
+                    poseStack,
                     volumeBox.box,
-                    BuildCraftLaserManager.MARKER_VOLUME_CONNECTED,
-                    true, false,
-                    MarkerRenderer.getCameraPos());
+                    type,
+                    false, false,
+                    cameraPos);
         }
+
+        if (player == null) return;
+
+        // Addon icons + per-addon overlays. Push a camera-relative translation so the addon
+        // renderers can write world-space coords directly.
+        poseStack.pushPose();
+        poseStack.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
+
+        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+        VertexConsumer consumer = bufferSource.getBuffer(
+                RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
+
+        for (VolumeBox volumeBox : ClientVolumeBoxes.INSTANCE.volumeBoxes) {
+            for (Addon addon : volumeBox.addons.values()) {
+                if (addon == null) continue;
+                @SuppressWarnings("unchecked")
+                IFastAddonRenderer<Addon> renderer = (IFastAddonRenderer<Addon>) addon.getRenderer();
+                renderer.renderAddonFast(addon, player, 1.0f, poseStack, consumer);
+            }
+        }
+
+        bufferSource.endBatch();
+        poseStack.popPose();
+    }
+
+    private static LaserType pickLaserType(VolumeBox volumeBox, Player player) {
+        if (player != null && volumeBox.isEditingBy(player)) {
+            return BuildCraftLaserManager.MARKER_VOLUME_SIGNAL;
+        }
+        return volumeBox.getLockTargetsStream()
+                .filter(Lock.Target.TargetUsedByMachine.class::isInstance)
+                .map(Lock.Target.TargetUsedByMachine.class::cast)
+                .map(target -> target.type.getLaserType())
+                .findFirst()
+                .orElse(BuildCraftLaserManager.MARKER_VOLUME_CONNECTED);
     }
 }

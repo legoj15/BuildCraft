@@ -12,7 +12,6 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
-import buildcraft.core.marker.volume.ClientVolumeBoxes;
 import buildcraft.core.marker.volume.VolumeBox;
 import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
 
@@ -27,13 +26,9 @@ public class ItemVolumeBox extends Item {
         BlockPos offset = context.getClickedPos().relative(context.getClickedFace());
 
         if (level.isClientSide()) {
-            // Client side: add to ClientVolumeBoxes for rendering
-            VolumeBox clientBox = new VolumeBox(level, offset);
-            ClientVolumeBoxes.INSTANCE.volumeBoxes.add(clientBox);
             return InteractionResult.SUCCESS;
         }
 
-        // Server side: add to saved data for persistence
         LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);
         VolumeBox current = volumeBoxes.getVolumeBoxAt(offset);
 

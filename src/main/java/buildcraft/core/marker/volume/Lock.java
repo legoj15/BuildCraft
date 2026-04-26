@@ -210,18 +210,18 @@ public class Lock {
             public enum EnumType {
                 STRIPES_WRITE {
                     @Override
-                    public LaserData_BC8 getLaserData(double scale) {
-                        return null; // BuildCraftLaserManager.STRIPES_WRITE
+                    public buildcraft.lib.client.render.laser.LaserData_BC8.LaserType getLaserType() {
+                        return buildcraft.core.client.BuildCraftLaserManager.STRIPES_WRITE;
                     }
                 },
                 STRIPES_READ {
                     @Override
-                    public LaserData_BC8 getLaserData(double scale) {
-                        return null; // BuildCraftLaserManager.STRIPES_READ
+                    public buildcraft.lib.client.render.laser.LaserData_BC8.LaserType getLaserType() {
+                        return buildcraft.core.client.BuildCraftLaserManager.STRIPES_READ;
                     }
                 };
 
-                public abstract LaserData_BC8 getLaserData(double scale);
+                public abstract buildcraft.lib.client.render.laser.LaserData_BC8.LaserType getLaserType();
             }
         }
 

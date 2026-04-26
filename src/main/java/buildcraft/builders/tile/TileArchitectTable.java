@@ -151,7 +151,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
                     )
                 )
             );
-            volumeBoxes.setDirty();
+            volumeBoxes.markDirtyAndBroadcast();
         } else if (tile instanceof IAreaProvider provider) {
             box.reset();
             box.setMin(provider.min());

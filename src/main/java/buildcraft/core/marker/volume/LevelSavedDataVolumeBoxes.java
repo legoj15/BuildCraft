@@ -24,9 +24,12 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.saveddata.SavedDataType;
+
+import net.neoforged.neoforge.network.PacketDistributor;
 
 public class LevelSavedDataVolumeBoxes extends SavedData {
     private static final String DATA_NAME = "buildcraft_volume_boxes";
@@ -88,6 +91,30 @@ public class LevelSavedDataVolumeBoxes extends SavedData {
     public void addVolumeBox(BlockPos pos) {
         volumeBoxes.add(new VolumeBox(world, pos));
         setDirty();
+        broadcastToDimension();
+    }
+
+    /** Sends the full current set of VolumeBoxes to every player in this dimension. Server-side only. */
+    public void broadcastToDimension() {
+        if (!(world instanceof ServerLevel sl)) return;
+        List<CompoundTag> tags = volumeBoxes.stream().map(VolumeBox::writeToNBT).toList();
+        PacketDistributor.sendToPlayersInDimension(sl, new MessageVolumeBoxes(tags));
+    }
+
+    /** Sends the full current set of VolumeBoxes to one specific player. Server-side only. */
+    public void sendTo(ServerPlayer player) {
+        List<CompoundTag> tags = volumeBoxes.stream().map(VolumeBox::writeToNBT).toList();
+        PacketDistributor.sendToPlayer(player, new MessageVolumeBoxes(tags));
+    }
+
+    /**
+     * Mark the saved data dirty AND broadcast the new state to clients in the dimension. Use this from
+     * any caller that mutates VolumeBoxes outside of {@link #addVolumeBox} or {@link #tick} (e.g.
+     * editing flow in ItemMarkerConnector, lock additions in TileFiller / TileArchitectTable).
+     */
+    public void markDirtyAndBroadcast() {
+        setDirty();
+        broadcastToDimension();
     }
 
     public VolumeBox getVolumeBoxFromId(UUID id) {
@@ -133,7 +160,7 @@ public class LevelSavedDataVolumeBoxes extends SavedData {
 
         if (dirty) {
             setDirty();
-            // MessageManager.sendToDimension(new MessageVolumeBoxes(volumeBoxes), world.dimension());
+            broadcastToDimension();
         }
     }
     public static LevelSavedDataVolumeBoxes get(Level world) {

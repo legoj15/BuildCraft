@@ -131,6 +131,45 @@ public class BCCore {
                 }
             }
         );
+
+        // Volume Box server tick (drives editing-state updates and lock expiry)
+        NeoForge.EVENT_BUS.addListener(
+            net.neoforged.neoforge.event.tick.LevelTickEvent.Post.class,
+            tickEvent -> {
+                if (tickEvent.getLevel() instanceof net.minecraft.server.level.ServerLevel sl) {
+                    buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes.get(sl).tick();
+                }
+            }
+        );
+
+        // Volume Box: send initial state to player on login, resume any paused edits
+        NeoForge.EVENT_BUS.addListener(
+            net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent.class,
+            loginEvent -> {
+                if (loginEvent.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp
+                        && sp.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                    buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes data =
+                        buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes.get(sl);
+                    data.sendTo(sp);
+                    data.volumeBoxes.stream()
+                        .filter(vb -> vb.isPausedEditingBy(sp))
+                        .forEach(buildcraft.core.marker.volume.VolumeBox::resumeEditing);
+                }
+            }
+        );
+
+        // Volume Box: re-sync when the player switches dimension
+        NeoForge.EVENT_BUS.addListener(
+            net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerChangedDimensionEvent.class,
+            dimEvent -> {
+                if (dimEvent.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp
+                        && sp.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                    buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes
+                        .get(sl)
+                        .sendTo(sp);
+                }
+            }
+        );
     }
 
     private void preInit(FMLCommonSetupEvent event) {
@@ -189,6 +228,11 @@ public class BCCore {
                 MessageMarker.TYPE,
                 MessageMarker.STREAM_CODEC,
                 MessageMarker::handle
+        );
+        registrar.playToClient(
+                buildcraft.core.marker.volume.MessageVolumeBoxes.TYPE,
+                buildcraft.core.marker.volume.MessageVolumeBoxes.STREAM_CODEC,
+                buildcraft.core.marker.volume.MessageVolumeBoxes::handle
         );
         registrar.playBidirectional(
                 MessageContainerPayload.TYPE,

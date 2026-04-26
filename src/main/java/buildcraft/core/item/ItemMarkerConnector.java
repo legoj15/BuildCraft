@@ -131,10 +131,10 @@ public class ItemMarkerConnector extends Item {
                 if (player.isShiftKeyDown()) {
                     addonVolumeBox.addons.get(addonSlot).onRemoved();
                     addonVolumeBox.addons.remove(addonSlot);
-                    volumeBoxes.setDirty();
+                    volumeBoxes.markDirtyAndBroadcast();
                 } else {
                     addonVolumeBox.addons.get(addonSlot).onPlayerRightClick(player);
-                    volumeBoxes.setDirty();
+                    volumeBoxes.markDirtyAndBroadcast();
                 }
             }
         } else if (player.isShiftKeyDown()) {
@@ -146,7 +146,7 @@ public class ItemMarkerConnector extends Item {
                         if (volumeBox.getLockTargetsStream().noneMatch(Lock.Target.TargetResize.class::isInstance)) {
                             volumeBox.addons.values().forEach(Addon::onRemoved);
                             iterator.remove();
-                            volumeBoxes.setDirty();
+                            volumeBoxes.markDirtyAndBroadcast();
                             return InteractionResult.SUCCESS;
                         } else {
                             return InteractionResult.FAIL;
@@ -155,7 +155,7 @@ public class ItemMarkerConnector extends Item {
                 }
             } else {
                 currentEditing.cancelEditing();
-                volumeBoxes.setDirty();
+                volumeBoxes.markDirtyAndBroadcast();
                 return InteractionResult.SUCCESS;
             }
         } else {
@@ -207,12 +207,12 @@ public class ItemMarkerConnector extends Item {
                         bestVolumeBox.box.min(),
                         bestVolumeBox.box.max()
                     );
-                    volumeBoxes.setDirty();
+                    volumeBoxes.markDirtyAndBroadcast();
                     return InteractionResult.SUCCESS;
                 }
             } else {
                 currentEditing.confirmEditing();
-                volumeBoxes.setDirty();
+                volumeBoxes.markDirtyAndBroadcast();
                 return InteractionResult.SUCCESS;
             }
         }

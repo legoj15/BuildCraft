@@ -185,7 +185,7 @@ public class TileFiller extends TileBC_Neptune
                         )
                     )
                 );
-                volumeBoxes.setDirty();
+                volumeBoxes.markDirtyAndBroadcast();
                 addon.updateBuildingInfo();
                 markerBox = false;
             } else {
@@ -202,7 +202,7 @@ public class TileFiller extends TileBC_Neptune
                         )
                     )
                 );
-                volumeBoxes.setDirty();
+                volumeBoxes.markDirtyAndBroadcast();
                 markerBox = false;
             }
         } else if (tile instanceof IAreaProvider provider) {

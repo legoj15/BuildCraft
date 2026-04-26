@@ -6,11 +6,14 @@
 
 package buildcraft.core.marker.volume;
 
+import org.apache.commons.lang3.tuple.Pair;
+
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 
 public abstract class ItemAddon extends Item {
@@ -20,17 +23,42 @@ public abstract class ItemAddon extends Item {
 
     public abstract Addon createAddon();
 
+    /** Block-targeted right-click — fires when the crosshair hits a block within reach. */
+    @Override
+    public InteractionResult useOn(UseOnContext context) {
+        if (context.getLevel().isClientSide()) return InteractionResult.PASS;
+        return tryAttach(context.getLevel(), context.getPlayer(), context.getHand());
+    }
+
+    /** Air right-click — fires when the crosshair is past block reach (or no block in front). */
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
-        if (level.isClientSide()) {
-            return InteractionResult.PASS;
-        }
+        if (level.isClientSide()) return InteractionResult.PASS;
+        return tryAttach(level, player, hand);
+    }
 
-        // TODO: Volume box addon system is not fully ported yet.
-        // When WorldSavedDataVolumeBoxes is ported, this will:
-        // 1. Look up the selected VolumeBox and EnumAddonSlot
-        // 2. Create and attach the addon if the slot is available
-        // 3. Mark the data as dirty
-        return InteractionResult.PASS;
+    private InteractionResult tryAttach(Level level, Player player, InteractionHand hand) {
+        LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);
+        Pair<VolumeBox, EnumAddonSlot> targeted =
+            EnumAddonSlot.getSelectingVolumeBoxAndSlot(player, volumeBoxes.volumeBoxes);
+        VolumeBox volumeBox = targeted.getLeft();
+        EnumAddonSlot slot = targeted.getRight();
+
+        if (volumeBox == null || slot == null) return InteractionResult.PASS;
+        if (volumeBox.addons.containsKey(slot)) return InteractionResult.PASS;
+
+        Addon addon = createAddon();
+        if (!addon.canBePlaceInto(volumeBox)) return InteractionResult.PASS;
+
+        addon.volumeBox = volumeBox;
+        volumeBox.addons.put(slot, addon);
+        addon.onAdded();
+        volumeBoxes.markDirtyAndBroadcast();
+
+        ItemStack held = player.getItemInHand(hand);
+        if (!player.getAbilities().instabuild) {
+            held.shrink(1);
+        }
+        return InteractionResult.SUCCESS;
     }
 }

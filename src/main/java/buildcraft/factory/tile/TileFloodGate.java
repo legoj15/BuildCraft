@@ -15,14 +15,21 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -31,6 +38,8 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
+
+import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.block.BlockFloodGate;
@@ -42,7 +51,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  * place source blocks into the world. Power-free.
  * Ported from 1.12.2 TileFloodGate.
  */
-public class TileFloodGate extends BlockEntity {
+public class TileFloodGate extends BlockEntity implements IDebuggable {
 
     private static final Direction[] SEARCH_NORMAL = new Direction[] {
         Direction.DOWN, Direction.NORTH, Direction.SOUTH,
@@ -65,6 +74,7 @@ public class TileFloodGate extends BlockEntity {
     private final Map<BlockPos, List<BlockPos>> paths = new HashMap<>();
     private int delayIndex = 0;
     private int tick = 0;
+    private int lastSyncedAmount = 0;
 
     public TileFloodGate(BlockPos pos, BlockState state) {
         super(BCFactoryBlockEntities.FLOOD_GATE.get(), pos, state);
@@ -76,6 +86,18 @@ public class TileFloodGate extends BlockEntity {
 
     private int getCurrentDelay() {
         return REBUILD_DELAYS[delayIndex];
+    }
+
+    /**
+     * Called when the wrench toggles a side. Clears the BFS queue and resets the
+     * adaptive rebuild delay so the gate immediately re-plans from the new side
+     * configuration on the next 16-tick boundary, rather than sitting idle for up
+     * to 256 ticks waiting for {@link #delayIndex} to time out.
+     */
+    public void onSidesToggled() {
+        queue.clear();
+        delayIndex = 0;
+        tick = 0;
     }
 
     // --- BFS Queue Building ---
@@ -163,6 +185,14 @@ public class TileFloodGate extends BlockEntity {
             return;
         }
 
+        // Sync tank fluid amount to clients whenever it changes (pipe inserts as
+        // well as our own extracts), so the F3 fluid line stays accurate.
+        int currentAmount = tank.getAmountAsInt(0);
+        if (currentAmount != lastSyncedAmount) {
+            lastSyncedAmount = currentAmount;
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+        }
+
         if (tank.getAmountAsInt(0) < 1000) {
             return;
         }
@@ -243,5 +273,41 @@ public class TileFloodGate extends BlockEntity {
 
         // Load tank fluid using FluidTank's built-in deserialization
         tank.deserialize(input);
+    }
+
+    // --- Client Sync ---
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        return this.saveCustomOnly(registries);
+    }
+
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    // --- IDebuggable ---
+
+    @Override
+    public void getDebugInfo(List<String> left, List<String> right, Direction side) {
+        left.add("fluid = " + FluidUtilBC.getDebugString(tank));
+        left.add("openSides = " + openSides.stream().map(Enum::name).collect(Collectors.joining(", ")));
+        left.add("delay = " + getCurrentDelay());
+        left.add("tick = " + tick);
+        left.add("queue size = " + queue.size());
+        left.add("paths size = " + paths.size());
+    }
+
+    @Override
+    public void getClientDebugInfo(List<String> left, List<String> right, Direction side) {
+        BlockState state = getBlockState();
+        List<String> open = new ArrayList<>();
+        for (Map.Entry<Direction, Property<Boolean>> e : BlockFloodGate.CONNECTED_MAP.entrySet()) {
+            if (state.getValue(e.getValue())) {
+                open.add(e.getKey().name());
+            }
+        }
+        left.add("openSides (state) = " + String.join(", ", open));
     }
 }

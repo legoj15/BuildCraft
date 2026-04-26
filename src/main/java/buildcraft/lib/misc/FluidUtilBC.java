@@ -180,7 +180,11 @@ public class FluidUtilBC {
         if (a == null || b == null) {
             return a == b;
         }
-        return a == b;
+        // Mojang split source/flowing into separate Fluid instances in 1.13, so
+        // strict `==` returns false between Fluids.WATER and Fluids.FLOWING_WATER.
+        // Compare by FluidType, which is shared between the two variants of the
+        // same base fluid (e.g. NeoForgeMod.WATER_TYPE for both water variants).
+        return a == b || a.getFluidType() == b.getFluidType();
     }
 
     /** 

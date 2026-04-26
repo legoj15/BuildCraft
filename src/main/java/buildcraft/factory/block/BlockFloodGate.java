@@ -109,14 +109,23 @@ public class BlockFloodGate extends BaseEntityBlock {
                         if (!floodGate.openSides.remove(side)) {
                             floodGate.openSides.add(side);
                         }
-                        floodGate.queue.clear();
+                        // Reset BFS queue + adaptive rebuild delay so the gate
+                        // re-plans from the new side configuration immediately.
+                        floodGate.onSidesToggled();
                         // Update the blockstate to reflect the new open/closed sides
                         BlockState newState = state;
                         for (Map.Entry<Direction, Property<Boolean>> entry : CONNECTED_MAP.entrySet()) {
                             newState = newState.setValue(entry.getValue(),
                                     floodGate.openSides.contains(entry.getKey()));
                         }
-                        level.setBlock(pos, newState, Block.UPDATE_ALL);
+                        // Use UPDATE_CLIENTS (not UPDATE_ALL) so we don't fire
+                        // neighborChanged on the attached pipe. The flood gate's
+                        // open/closed state is purely cosmetic — pipes connect by
+                        // fluid capability, which is registered on all sides
+                        // unconditionally — so no neighbour needs to react. Firing
+                        // neighborChanged would cause TilePipeHolder to rebake its
+                        // model, briefly dropping plug renderers (e.g. the pulsar).
+                        level.setBlock(pos, newState, Block.UPDATE_CLIENTS);
                         floodGate.setChanged();
                     }
                 }

@@ -8,11 +8,15 @@ package buildcraft.lib.client.guide.font;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.util.FormattedCharSequence;
 
 /** Implements a font that delegates to Minecraft's own {@link Font}.
@@ -83,12 +87,52 @@ public enum MinecraftFont implements IFontRenderer {
         List<String> result = new ArrayList<>(wrapped.size());
         for (FormattedCharSequence seq : wrapped) {
             StringBuilder sb = new StringBuilder();
+            // Track the previous style so we can re-emit legacy §X codes when it
+            // changes. Without this, `Component.literal(text)` parses §-codes from
+            // the input into per-character Style data and the bare codePoint loop
+            // strips them on the way out — so syntax-highlighted code blocks
+            // (json_insn, guide_md) lose all their colour.
+            Style[] last = { Style.EMPTY };
             seq.accept((index, style, codePoint) -> {
+                if (!stylesEquivalent(style, last[0])) {
+                    appendLegacyCodes(sb, style);
+                    last[0] = style;
+                }
                 sb.appendCodePoint(codePoint);
                 return true;
             });
             result.add(sb.toString());
         }
         return result;
+    }
+
+    private static boolean stylesEquivalent(Style a, Style b) {
+        return Objects.equals(a.getColor(), b.getColor())
+            && a.isBold() == b.isBold()
+            && a.isItalic() == b.isItalic()
+            && a.isUnderlined() == b.isUnderlined()
+            && a.isStrikethrough() == b.isStrikethrough()
+            && a.isObfuscated() == b.isObfuscated();
+    }
+
+    /** Emit a §r reset followed by the legacy codes for the given style's
+     *  colour and decoration flags, so that the resulting String renders the
+     *  same way the styled FormattedCharSequence did. */
+    private static void appendLegacyCodes(StringBuilder sb, Style style) {
+        sb.append(ChatFormatting.PREFIX_CODE).append(ChatFormatting.RESET.getChar());
+        TextColor color = style.getColor();
+        if (color != null) {
+            for (ChatFormatting fmt : ChatFormatting.values()) {
+                if (fmt.isColor() && fmt.getColor() != null && fmt.getColor() == color.getValue()) {
+                    sb.append(ChatFormatting.PREFIX_CODE).append(fmt.getChar());
+                    break;
+                }
+            }
+        }
+        if (style.isBold()) sb.append(ChatFormatting.PREFIX_CODE).append(ChatFormatting.BOLD.getChar());
+        if (style.isItalic()) sb.append(ChatFormatting.PREFIX_CODE).append(ChatFormatting.ITALIC.getChar());
+        if (style.isUnderlined()) sb.append(ChatFormatting.PREFIX_CODE).append(ChatFormatting.UNDERLINE.getChar());
+        if (style.isStrikethrough()) sb.append(ChatFormatting.PREFIX_CODE).append(ChatFormatting.STRIKETHROUGH.getChar());
+        if (style.isObfuscated()) sb.append(ChatFormatting.PREFIX_CODE).append(ChatFormatting.OBFUSCATED.getChar());
     }
 }

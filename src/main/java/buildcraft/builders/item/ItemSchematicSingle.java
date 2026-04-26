@@ -224,6 +224,11 @@ public class ItemSchematicSingle extends Item {
                                 TooltipFlag flag) {
         super.appendHoverText(stack, context, display, tooltip, flag);
         if (!used) {
+            tooltip.accept(Component.translatable("item.blueprint.blank").withStyle(ChatFormatting.GRAY));
+            tooltip.accept(
+                Component.translatable("item.schematic_single.use_hint", Component.keybind("key.use"))
+                    .withStyle(ChatFormatting.GRAY)
+            );
             return;
         }
         ISchematicBlock schematic = getSchematicSafe(stack);

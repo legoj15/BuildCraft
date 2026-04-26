@@ -13,9 +13,13 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.mojang.serialization.DynamicOps;
+
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.nbt.DoubleTag;
@@ -23,12 +27,52 @@ import net.minecraft.nbt.EndTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.world.phys.Vec3;
 
 public class NBTUtilBC {
 
     /** Sentinel value representing "no NBT value found". Use EndTag.INSTANCE. */
     public static final Tag NBT_NULL = EndTag.INSTANCE;
+
+    /** Resolve a registry-aware {@link DynamicOps} for NBT codecs that need to look up dynamic-
+     * registry entries (enchantments, banner patterns, painting variants, jukebox songs, etc.).
+     *
+     * <p>Without a {@link RegistryOps} wrapper around {@link NbtOps#INSTANCE}, codecs that
+     * reference dynamic registries fail silently — {@code DataResult} returns an error and
+     * {@code resultOrPartial()} yields {@link Optional#empty()}, so any
+     * {@code .ifPresent(payload -> tag.put(...))} call ends up writing nothing. This was the
+     * exact mode of failure behind the "Fortune III pickaxe placed in a list slot disappears
+     * on close/reopen" report.
+     *
+     * <p>Source priority: integrated/dedicated server's registry access (works in either) →
+     * client level's registry access → plain {@link NbtOps#INSTANCE} as a last-resort fallback
+     * (lossy, but prevents NPE if invoked before any world is loaded). */
+    public static DynamicOps<Tag> registryAwareOps() {
+        net.minecraft.server.MinecraftServer server =
+                net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server != null) {
+            return RegistryOps.create(NbtOps.INSTANCE, (HolderLookup.Provider) server.registryAccess());
+        }
+        if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
+            HolderLookup.Provider clientProvider = clientLevelRegistryAccess();
+            if (clientProvider != null) {
+                return RegistryOps.create(NbtOps.INSTANCE, clientProvider);
+            }
+        }
+        return NbtOps.INSTANCE;
+    }
+
+    /** Wrapped in its own method so the client-only class reference doesn't get loaded on
+     * dedicated servers (which don't have {@code Minecraft} on the classpath at all). */
+    private static HolderLookup.Provider clientLevelRegistryAccess() {
+        try {
+            net.minecraft.client.multiplayer.ClientLevel level = net.minecraft.client.Minecraft.getInstance().level;
+            return level == null ? null : level.registryAccess();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
 
     /** Returns Optional.empty() if tag is null or is NBT_NULL, otherwise Optional.of(tag). */
     @SuppressWarnings("unchecked")

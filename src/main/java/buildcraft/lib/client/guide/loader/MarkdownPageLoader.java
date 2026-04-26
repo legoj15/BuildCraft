@@ -8,6 +8,7 @@ package buildcraft.lib.client.guide.loader;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.StringReader;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
@@ -73,6 +74,37 @@ public enum MarkdownPageLoader implements IPageLoaderText {
     @Override
     public GuidePageFactory loadPage(BufferedReader reader, Identifier name, PageEntry<?> entry, ProfilerFiller prof)
         throws IOException {
-        return XmlPageLoader.INSTANCE.loadPage(reader, name, entry, prof);
+        StringBuilder replaced = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            replaced.append(replaceSpecialForXml(line));
+            replaced.append('\n');
+        }
+        BufferedReader nReader = new BufferedReader(new StringReader(replaced.toString()));
+        return XmlPageLoader.INSTANCE.loadPage(nReader, name, entry, prof);
+    }
+
+    /**
+     * Markdown-style preprocessing applied to each input line before XML parsing.
+     * Lines starting with one or more {@code #} characters are converted to a
+     * {@code <chapter>} tag (number of {@code #}s minus 1 = level), matching
+     * 1.12.2 behavior. Without this, {@code ## Foo} renders literally and never
+     * appears in the chapter TOC.
+     */
+    private static String replaceSpecialForXml(String line) {
+        if (line.startsWith("#")) {
+            int level = -1;
+            while (line.startsWith("#")) {
+                line = line.substring(1);
+                level++;
+            }
+            line = line.trim();
+            if (level == 0) {
+                return "<chapter name=\"" + line + "\"/>";
+            } else {
+                return "<chapter name=\"" + line + "\" level=\"" + level + "\"/>";
+            }
+        }
+        return line;
     }
 }

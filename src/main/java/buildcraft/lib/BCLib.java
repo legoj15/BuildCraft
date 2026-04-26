@@ -5,12 +5,7 @@
  */
 package buildcraft.lib;
 
-import java.util.function.Supplier;
-
-import net.minecraft.core.component.DataComponentType;
-import net.minecraft.core.registries.Registries;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.api.fuels.BuildcraftFuelRegistry;
 import buildcraft.api.recipes.BuildcraftRecipeRegistry;
@@ -18,22 +13,10 @@ import buildcraft.lib.fluid.FuelRegistry;
 import buildcraft.lib.fluid.CoolantRegistry;
 import buildcraft.lib.recipe.RefineryRecipeRegistry;
 
-import buildcraft.core.BCCore;
-
 /**
  * BuildCraft Lib initializer. No longer a separate @Mod — called from BCCore.
  */
 public class BCLib {
-
-    // --- Data Components ---
-    public static final DeferredRegister.DataComponents DATA_COMPONENTS =
-            DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, BCCore.MODID);
-
-    /** Stores the guide book name (e.g. "buildcraftunofficial:main" or "buildcraftunofficial:config"). */
-    public static final Supplier<DataComponentType<String>> GUIDE_BOOK_NAME = DATA_COMPONENTS
-            .registerComponentType("guide_book_name", builder -> builder
-                    .persistent(com.mojang.serialization.Codec.STRING)
-                    .networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8));
 
     public static void init(IEventBus modEventBus) {
         // Wire fuel/coolant registries
@@ -44,7 +27,6 @@ public class BCLib {
         BuildcraftRecipeRegistry.refineryRecipes = RefineryRecipeRegistry.INSTANCE;
 
         BCLibItems.ITEMS.register(modEventBus);
-        DATA_COMPONENTS.register(modEventBus);
 
         // Wire ModelHolderRegistry into NeoForge model baking lifecycle
         if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {

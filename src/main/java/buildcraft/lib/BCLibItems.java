@@ -18,7 +18,12 @@ public class BCLibItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCCore.MODID);
 
     public static final DeferredItem<ItemGuide> GUIDE = ITEMS.registerItem("guide",
-            ItemGuide::new, props -> props.stacksTo(1));
+            props -> new ItemGuide(props, "buildcraftunofficial:main"),
+            props -> props.stacksTo(1));
+
+    public static final DeferredItem<ItemGuide> GUIDE_CONFIG = ITEMS.registerItem("guide_config",
+            props -> new ItemGuide(props, "buildcraftunofficial:config"),
+            props -> props.stacksTo(1));
 
     public static final DeferredItem<ItemGuideNote> GUIDE_NOTE = ITEMS.registerItem("guide_note",
             ItemGuideNote::new, props -> props.stacksTo(1));

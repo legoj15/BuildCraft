@@ -76,3 +76,13 @@ alias block_refining 1 `block "refining" "%0"`
 alias block_fluid 1 `block "fluid" "%0"`
 alias block_mining 1 `block "mining" "%0"`
 alias block_auto 1 `block "automation" "%0"`
+
+// Config-guide page registration. Path stays config/<name>.md so loadLangInternal
+// finds the existing .md content. Uses ${0} so the book is set by the importer.
+alias cfg_res 1 `add "config/%0" \`{
+    "type": "external",
+    "book": "${0}",
+    "tag_type": "config",
+    "tag_subtype": "resourcepack",
+    "title": "%0"
+}\``

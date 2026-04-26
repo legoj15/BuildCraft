@@ -212,3 +212,88 @@ place "pipe_gold_rf"            "pipe" "pipe_rf"
 place "pipe_sandstone_rf"       "pipe" "pipe_rf"
 place "pipe_diamond_rf"         "pipe" "pipe_rf"
 place "pipe_diamond_wood_rf"    "pipe" "pipe_rf"
+
+// ---------------------------------------------------------------------------
+// Statements (Triggers + Actions) — typed entries with sub-categorization.
+// Each `trigger`/`action` invocation maps to an existing en_us/{trigger,action}/<name>.md
+// file (auto-stub if absent) and assigns the page to a sub-section under the
+// Triggers / Actions chapter (e.g. "Automation", "Item Transport", "Pluggables").
+// Without these, statements fall through to PageEntryStatement.iterateAllDefault
+// and appear in a flat alphabetical list with no sub-section headers.
+// ---------------------------------------------------------------------------
+
+// ---- Triggers / Basic ----------------------------------------------------
+trigger "basic" "always_on"          "buildcraftunofficial:trigger.true"
+trigger "basic" "redstone_active"    "buildcraft:redstone.input.active"
+trigger "basic" "redstone_inactive"  "buildcraft:redstone.input.inactive"
+
+// ---- Triggers / Inventory (item) -----------------------------------------
+trigger "item" "inventory_empty"     "buildcraft:inventory.empty"
+trigger "item" "inventory_contains"  "buildcraft:inventory.contains"
+trigger "item" "inventory_space"     "buildcraft:inventory.space"
+trigger "item" "inventory_full"      "buildcraft:inventory.full"
+trigger "item" "inventory_below_25"  "buildcraft:inventorylevel.below25"
+trigger "item" "inventory_below_50"  "buildcraft:inventorylevel.below50"
+trigger "item" "inventory_below_75"  "buildcraft:inventorylevel.below75"
+
+// ---- Triggers / Fluid ----------------------------------------------------
+trigger "fluid" "fluid_empty"        "buildcraft:fluid.empty"
+trigger "fluid" "fluid_contains"     "buildcraft:fluid.contains"
+trigger "fluid" "fluid_space"        "buildcraft:fluid.space"
+trigger "fluid" "fluid_full"         "buildcraft:fluid.full"
+trigger "fluid" "fluid_below_25"     "buildcraft:fluid.below25"
+trigger "fluid" "fluid_below_50"     "buildcraft:fluid.below50"
+trigger "fluid" "fluid_below_75"     "buildcraft:fluid.below75"
+
+// ---- Triggers / Engine ---------------------------------------------------
+trigger "engine" "engine_blue"       "buildcraft:engine.stage.blue"
+trigger "engine" "engine_green"      "buildcraft:engine.stage.green"
+trigger "engine" "engine_yellow"     "buildcraft:engine.stage.yellow"
+trigger "engine" "engine_red"        "buildcraft:engine.stage.red"
+trigger "engine" "engine_overheat"   "buildcraft:engine.stage.overheat"
+
+// ---- Triggers / Automation -----------------------------------------------
+trigger "automation" "machine_active"   "buildcraft:work.scheduled"
+trigger "automation" "machine_inactive" "buildcraft:work.done"
+
+// ---- Triggers / Item Transport (pipe_item) -------------------------------
+trigger "pipe_item" "items_traversing"  "buildcraft:pipe_contains_items"
+
+// ---- Triggers / Fluid Transport (pipe_fluid) -----------------------------
+trigger "pipe_fluid" "fluids_traversing" "buildcraft:pipe_contains_fluids"
+
+// ---- Triggers / Pluggables (pipe_plug) -----------------------------------
+trigger "pipe_plug" "pipe_signal_active"   "buildcraft:pipe.wire.input.black.active"
+trigger "pipe_plug" "pipe_signal_inactive" "buildcraft:pipe.wire.input.black.inactive"
+
+// ---- Actions / Basic -----------------------------------------------------
+action "basic" "redstone" "buildcraft:redstone.output"
+
+// ---- Actions / Automation ------------------------------------------------
+action "automation" "machine_control_on"   "buildcraft:machine.on"
+action "automation" "machine_control_off"  "buildcraft:machine.off"
+action "automation" "machine_control_loop" "buildcraft:machine.loop"
+
+// ---- Actions / Item Transport (pipe_item) --------------------------------
+action "pipe_item" "pipe_direction_north" "buildcraft:pipe.dir.north"
+action "pipe_item" "pipe_direction_east"  "buildcraft:pipe.dir.east"
+action "pipe_item" "pipe_direction_south" "buildcraft:pipe.dir.south"
+action "pipe_item" "pipe_direction_west"  "buildcraft:pipe.dir.west"
+action "pipe_item" "pipe_direction_above" "buildcraft:pipe.dir.up"
+action "pipe_item" "pipe_direction_below" "buildcraft:pipe.dir.down"
+action "pipe_item" "pipe_colour"          "buildcraft:pipe.color.black"
+action "pipe_item" "extraction_preset"    "buildcraft:extraction.preset.red"
+
+// ---- Actions / Pluggables (pipe_plug) ------------------------------------
+action "pipe_plug" "pipe_signal_active" "buildcraft:pipe.wire.output.black"
+
+// ---------------------------------------------------------------------------
+// Config Guide entries — separate book.
+// The second import rebinds ${0} to "buildcraftunofficial:config", so any
+// alias call after this point uses the config book. Keep cfg_res calls as
+// the ONLY alias use after this import — do not add other entries below.
+// ---------------------------------------------------------------------------
+import "buildcraftunofficial:util" "buildcraftunofficial:config"
+cfg_res "registry_overview"
+cfg_res "json_insn_format"
+cfg_res "guide_page_format"

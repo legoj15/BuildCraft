@@ -192,7 +192,23 @@ public enum GuideManager {
                 try {
                     var resource = resourceManager.getResource(fLoc);
                     if (resource.isPresent()) {
+                        // Read the resource bytes once. An empty / whitespace-only file is
+                        // treated as if missing — the loader returns a non-null but empty
+                        // factory which produces a page with no content, and that empty
+                        // page silently disappears from the TOC. Routing empty files to
+                        // the stub generator below makes them render as "(WIP)" placeholders
+                        // exactly like genuinely-missing files do.
+                        byte[] bytes;
                         try (InputStream stream = resource.get().open()) {
+                            bytes = stream.readAllBytes();
+                        }
+                        if (bytes.length == 0 || new String(bytes, java.nio.charset.StandardCharsets.UTF_8).trim().isEmpty()) {
+                            if (GuideManager.DEBUG) {
+                                BCLog.logger.info("[lib.guide.loader] Empty page '" + entryKey + "' — using stub.");
+                            }
+                            break;
+                        }
+                        try (InputStream stream = new java.io.ByteArrayInputStream(bytes)) {
                             GuidePageFactory factory = entry.getValue().loadPage(
                                 stream, entryKey, mapEntry.getValue(),
                                 net.minecraft.util.profiling.InactiveProfiler.INSTANCE
@@ -274,30 +290,32 @@ public enum GuideManager {
             }
         }
 
-        // "All" group for books that opt-in
-        ContentsNode othersRoot = new ContentsNode(LocaleUtil.localize("buildcraft.guide.contents.all_group"), 0);
-        for (Entry<GuideBook, Map<TypeOrder, ContentsNode>> bookEntry : contents.entrySet()) {
-            @Nullable GuideBook book = bookEntry.getKey();
-            if (book != null && !book.appendAllEntries) continue;
-            for (ContentsNode root : bookEntry.getValue().values()) {
-                root.addChild(othersRoot);
-            }
-        }
-
+        // Dynamically-iterated categories (Triggers, Actions, ...) become
+        // top-level chapters under each opted-in book root, parallel to the
+        // JSON-defined chapters (Blocks/Items/Pipes). 1.12.2 wrapped these in
+        // a single "Others" chapter, which collapsed Triggers and Actions into
+        // sub-items and lost the side-tab dividers users expected.
         final IEntryLinkConsumer adder = (tags, page) -> {
             if (pageLinksAdded.add(page)) {
                 quickSearcher.add(page, page.getSearchName());
             }
             String title = LocaleUtil.localize(tags.type);
-            IContentsNode subNode = othersRoot.getChild(title);
-            if (subNode instanceof ContentsNode) {
-                subNode.addChild(page);
-            } else if (subNode == null) {
-                ContentsNode subContents = new ContentsNode(title, 1);
-                othersRoot.addChild(subContents);
-                subContents.addChild(page);
-            } else {
-                throw new IllegalStateException("Unknown node type " + subNode.getClass());
+            for (Entry<GuideBook, Map<TypeOrder, ContentsNode>> bookEntry : contents.entrySet()) {
+                @Nullable GuideBook book = bookEntry.getKey();
+                if (book != null && !book.appendAllEntries) continue;
+                for (ContentsNode root : bookEntry.getValue().values()) {
+                    IContentsNode subNode = root.getChild(title);
+                    ContentsNode chapter;
+                    if (subNode instanceof ContentsNode) {
+                        chapter = (ContentsNode) subNode;
+                    } else if (subNode == null) {
+                        chapter = new ContentsNode(title, 0);
+                        root.addChild(chapter);
+                    } else {
+                        throw new IllegalStateException("Unknown node type " + subNode.getClass());
+                    }
+                    chapter.addChild(page);
+                }
             }
         };
 

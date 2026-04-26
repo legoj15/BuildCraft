@@ -17,7 +17,6 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -30,6 +29,7 @@ import buildcraft.api.lists.ListRegistry;
 public final class ListHandler {
     public static final int WIDTH = 9;
     public static final int HEIGHT = 2;
+
 
     public static class Line {
         public final NonNullList<ItemStack> stacks;
@@ -70,12 +70,27 @@ public final class ListHandler {
             switch (id) {
                 case 0:
                     precise = !precise;
+                    // Precise is mutually exclusive with the category modes — turning it on
+                    // clears By-Type and By-Material so the player sees clearly that those
+                    // groups don't compose. (Precise has no effect when either category mode
+                    // is active anyway, so this just makes the dead-button case impossible.)
+                    if (precise) {
+                        byType = false;
+                        byMaterial = false;
+                    }
                     break;
                 case 1:
                     byType = !byType;
+                    // Inverse of the above: turning on a category mode clears Precise.
+                    if (byType) {
+                        precise = false;
+                    }
                     break;
                 case 2:
                     byMaterial = !byMaterial;
+                    if (byMaterial) {
+                        precise = false;
+                    }
                     break;
             }
         }
@@ -135,7 +150,7 @@ public final class ListHandler {
                         Tag stackPayload = itemTag.get("stack");
                         if (stackPayload != null) {
                             final int slotIdx = i;
-                            ItemStack.CODEC.parse(NbtOps.INSTANCE, stackPayload)
+                            ItemStack.CODEC.parse(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), stackPayload)
                                     .resultOrPartial()
                                     .filter(s -> !s.isEmpty())
                                     .ifPresent(s -> line.stacks.set(slotIdx, s));
@@ -169,8 +184,9 @@ public final class ListHandler {
                 CompoundTag stackTag = new CompoundTag();
                 if (!stack.isEmpty()) {
                     // Preserve the full ItemStack — components included — via the standard codec
-                    // so Precise matching round-trips correctly.
-                    ItemStack.CODEC.encodeStart(NbtOps.INSTANCE, stack)
+                    // so Precise matching round-trips correctly. Uses RegistryOps so dynamic-
+                    // registry components (enchantments, etc.) survive the encode.
+                    ItemStack.CODEC.encodeStart(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), stack)
                             .resultOrPartial()
                             .ifPresent(payload -> stackTag.put("stack", payload));
                 }
@@ -213,6 +229,10 @@ public final class ListHandler {
             ItemStack source = stacks.get(0);
             if (source.isEmpty() || (!byType && !byMaterial)) return new ArrayList<>();
             Set<Item> seen = new HashSet<>();
+            // Exclude the exemplar itself — slot 0 already shows it; including it in the auto-
+            // fill would double up (e.g. an oak plank exemplar in by-type would also list
+            // oak plank in slots 1-8 alongside birch / cherry / spruce / etc.).
+            seen.add(source.getItem());
             List<ItemStack> out = new ArrayList<>();
             if (byType) collectExamples(source, Type.TYPE, seen, out);
             if (byMaterial) collectExamples(source, Type.MATERIAL, seen, out);

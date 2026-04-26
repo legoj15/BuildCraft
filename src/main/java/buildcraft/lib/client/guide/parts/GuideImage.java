@@ -28,6 +28,15 @@ public class GuideImage extends GuidePart {
             int imgX = x + (width - this.width) / 2;
             int imgY = y + current.pixel;
             GuiIcon.drawAt(sprite, imgX, imgY, this.width, this.height);
+            // Picture-frame corner brackets, matching 1.12.2. The four BORDER_* icons
+            // are 13×13 sprites already defined in GuiGuide; just blit them at each corner.
+            GuiGuide.BORDER_TOP_LEFT.drawAt(imgX, imgY);
+            GuiGuide.BORDER_TOP_RIGHT.drawAt(imgX + this.width - GuiGuide.BORDER_TOP_RIGHT.width, imgY);
+            GuiGuide.BORDER_BOTTOM_LEFT.drawAt(imgX, imgY + this.height - GuiGuide.BORDER_BOTTOM_LEFT.height);
+            GuiGuide.BORDER_BOTTOM_RIGHT.drawAt(
+                imgX + this.width - GuiGuide.BORDER_BOTTOM_RIGHT.width,
+                imgY + this.height - GuiGuide.BORDER_BOTTOM_RIGHT.height
+            );
         }
         return current.nextLine(this.height + 1, height);
     }

@@ -19,6 +19,8 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import buildcraft.api.registry.IScriptableRegistry.OptionallyDisabled;
 
 import buildcraft.lib.client.guide.data.JsonTypeTags;
+import buildcraft.lib.client.guide.loader.MarkdownPageLoader;
+import buildcraft.lib.client.guide.parts.contents.PageLinkItemStack;
 import buildcraft.lib.gui.GuiStack;
 import buildcraft.lib.gui.ISimpleDrawable;
 import buildcraft.lib.misc.ItemStackKey;
@@ -116,5 +118,18 @@ public class PageEntryItemStack extends PageValueType<ItemStackValueFilter> {
     @Override
     public Object getBasicValue(ItemStackValueFilter value) {
         return value.stack.baseStack.getItem();
+    }
+
+    @Override
+    public OptionallyDisabled<Object> createLink(String to, ProfilerFiller prof) {
+        // Mirrors 1.12.2: parse the "to" string as an item identifier (e.g. "minecraft:iron_ingot"),
+        // build a PageLinkItemStack from the resulting stack. Without this override, link tags
+        // with type="item_stack" go through PageValueType.createLink's stub and render as red
+        // failed-tag text.
+        OptionallyDisabled<ItemStack> stackq = MarkdownPageLoader.parseItemStack(to);
+        if (stackq.isPresent()) {
+            return new OptionallyDisabled<>(PageLinkItemStack.create(true, stackq.get(), prof));
+        }
+        return new OptionallyDisabled<>(stackq.getDisabledReason());
     }
 }

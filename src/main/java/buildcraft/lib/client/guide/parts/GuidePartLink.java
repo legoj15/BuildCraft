@@ -24,8 +24,7 @@ public class GuidePartLink extends GuidePart {
         if (pos.page == index && wasHovered()) {
             GuidePageFactory factory = link.getFactoryLink();
             if (factory != null) {
-                GuidePageBase page = factory.createNew(gui);
-                // gui.openPage(page) — deferred until full UI port
+                gui.openPage(factory.createNew(gui));
             }
         }
         return pos;

@@ -473,6 +473,34 @@ public class GuiGuide extends Screen {
         // Draw page turn arrows
         drawPageTurnArrows(cp, pc, isHalfPageShown);
 
+        // Render tooltips last so they sit above all other content. Item tooltips
+        // (set by GuidePartItem.drawItemStack when the mouse is over a stack)
+        // win over text tooltips, matching 1.12.2's `if (tooltipStack != null) ... else ...`.
+        // Without this pass `tooltipStack` and `tooltips` were assigned every frame
+        // but never consumed — hovering over an item or a link did nothing visible.
+        net.minecraft.client.gui.GuiGraphicsExtractor graphics = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
+        if (graphics != null) {
+            int mx = (int) mouse.getX();
+            int my = (int) mouse.getY();
+            if (tooltipStack != null && !tooltipStack.isEmpty()) {
+                graphics.setTooltipForNextFrame(net.minecraft.client.Minecraft.getInstance().font, tooltipStack, mx, my);
+            } else if (!tooltips.isEmpty()) {
+                java.util.List<net.minecraft.network.chat.Component> lines = new java.util.ArrayList<>();
+                for (java.util.List<String> tooltip : tooltips) {
+                    for (String line : tooltip) {
+                        lines.add(net.minecraft.network.chat.Component.literal(line));
+                    }
+                }
+                if (!lines.isEmpty()) {
+                    graphics.setTooltipForNextFrame(
+                        net.minecraft.client.Minecraft.getInstance().font,
+                        lines,
+                        java.util.Optional.empty(),
+                        mx, my
+                    );
+                }
+            }
+        }
     }
 
     private void drawPageTurnArrows(int currentPageIndex, int pageCount, boolean isHalfPage) {

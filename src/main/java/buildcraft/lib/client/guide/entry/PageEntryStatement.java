@@ -19,8 +19,11 @@ import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.ITrigger;
 import buildcraft.api.statements.StatementManager;
 
+import buildcraft.lib.client.guide.GuideManager;
 import buildcraft.lib.client.guide.data.JsonTypeTags;
+import buildcraft.lib.client.guide.parts.contents.PageLinkStatement;
 import buildcraft.lib.gui.ISimpleDrawable;
+import buildcraft.lib.gui.statement.GuiElementStatementSource;
 
 public class PageEntryStatement extends PageValueType<IStatement> {
 
@@ -36,8 +39,22 @@ public class PageEntryStatement extends PageValueType<IStatement> {
 
     @Override
     public void iterateAllDefault(IEntryLinkConsumer consumer, ProfilerFiller prof) {
-        // Deferred — needs GuideManager.objectsAdded and PageLinkStatement
-        // Will iterate all registered statements when the contents system is ported
+        for (IStatement statement : new TreeMap<>(StatementManager.statements).values()) {
+            if (!GuideManager.INSTANCE.objectsAdded.add(statement)) {
+                continue;
+            }
+
+            final JsonTypeTags parent;
+            if (statement instanceof ITrigger) {
+                parent = TRIGGER_TAGS;
+            } else if (statement instanceof IAction) {
+                parent = ACTION_TAGS;
+            } else {
+                continue;
+            }
+
+            consumer.addChild(parent, new PageLinkStatement(true, statement));
+        }
     }
 
     @Override
@@ -72,7 +89,6 @@ public class PageEntryStatement extends PageValueType<IStatement> {
     @Override
     @Nullable
     public ISimpleDrawable createDrawable(IStatement value) {
-        // Deferred — GuiElementStatementSource rendering requires the statement GUI system
-        return null;
+        return (x, y) -> GuiElementStatementSource.drawGuiSlot(value, x, y);
     }
 }

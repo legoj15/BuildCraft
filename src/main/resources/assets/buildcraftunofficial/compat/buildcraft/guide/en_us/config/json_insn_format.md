@@ -13,9 +13,9 @@ Strings must be started and finished with a quote (")
 Multi-line strings must be started and finished with backticks (`)
 For example with the function "remove":
 <json_insn>
-remove "buildcraftenergy:oil"
+remove "buildcraftunofficial:oil"
 remove `
-buildcraftenergy:oil
+buildcraftunofficial:oil
 `
 </json_insn>
 
@@ -24,7 +24,7 @@ buildcraftenergy:oil
 This function will remove the entry with the given name. This takes 1 argument, the name.
 For example:
 <json_insn>
-remove "buildcraftsilicon:diamond_chipset"
+remove "buildcraftunofficial:redstone_diamond_chipset"
 </json_insn>
 It is probably easiest to find out the name of entries by turning on debugging with debug "all".
 
@@ -46,11 +46,11 @@ add "wrench"
 </json_insn>
 And the insn file is in 
 <json_insn>
-"assets/buildcraftcore/compat/buildcraft/guide.txt"
+"assets/buildcraftunofficial/compat/buildcraft/guide.txt"
 </json_insn>
 then the wrench guide page will be loaded from
 <json_insn>
-"assets/buildcraftcore/compat/buildcraft/guide/item/wrench.md"
+"assets/buildcraftunofficial/compat/buildcraft/guide/item/wrench.md"
 </json_insn>
 <new_page/>
 ## The replace function
@@ -61,32 +61,32 @@ This also takes an optional third argument, the json to add. (This acts in exact
 ## The modify function
 This function acts in a very similar way to the replace function, except that this will inherit the json tags from the removed entry.
 
-For example if we wanted to make a combustion engine fuel recipe using buildcraft oil, but only generate reside if buildcraft factory is installed we might do it like this:
+For example if we wanted to add a combustion engine fuel recipe for oil and then have an addon mod layer in residue generation as a follow-up modification, we might do it like this:
 <json_insn>
 add "oil" `{
  "fuel": {
-  "id": "buildcraftenergy:oil", "amount": 4
+  "id": "buildcraftunofficial:oil", "amount": 4
  },
  "power": 3
 }`
 </json_insn>
-Then an entry in buildcraftfactory could look like this:
+Then an entry in the addon mod could look like this:
 <json_insn>
-modify "buildcraftenergy:oil" "oil" `{
+modify "buildcraftunofficial:oil" "oil" `{
  "residue": {
-  "id": "buildcraftenergy:residue",
+  "id": "buildcraftunofficial:oil_residue",
   "amount": 2
  }
 }`
 </json_insn>
-Which would result in only a single fuel recipe being added: "buildcraftfactory:oil"
+Which would result in only a single fuel recipe being added under the modifying mod's namespace, e.g. "myaddon:oil"
 <json_insn>
 {
  "fuel": {
-  "id": "buildcraftenergy:oil", "amount": 4
+  "id": "buildcraftunofficial:oil", "amount": 4
  },
  "residue": {
-  "id": "buildcraftenergy:residue",
+  "id": "buildcraftunofficial:oil_residue",
   "amount": 2
  },
  "power": 3
@@ -110,7 +110,7 @@ alias "add_fuel" 2 `
 ## Using pre-made alias files
 (TODO: Explanation)
 <json_insn>
-import "buildcraftlib:util"
+import "buildcraftunofficial:util"
 </json_insn>
 
 Imported files must start with

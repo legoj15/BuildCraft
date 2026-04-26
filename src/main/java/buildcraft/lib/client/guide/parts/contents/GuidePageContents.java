@@ -54,6 +54,11 @@ public class GuidePageContents extends GuidePageBase {
         searchText = new EditBox(Minecraft.getInstance().font, 0, 0, 80, 14, Component.empty());
         searchText.setBordered(false);
         searchText.setTextColor(0xFF_00_00_00);
+        // 1.12.2's GuiTextField rendered without text-shadow, but modern EditBox
+        // defaults to textShadow=true. The 1px offset darker copy reads as a
+        // double-render of the text and cursor — "guide_" looks like "guide_guide_"
+        // at the small font size used here. Disable to match 1.12.2.
+        searchText.setTextShadow(false);
         setupChapters();
     }
 
@@ -186,18 +191,17 @@ public class GuidePageContents extends GuidePageBase {
                 GuiGuide.SEARCH_TAB_OPEN.drawAt(x - 2, y - 22);
                 GuiGuide.SEARCH_ICON.drawAt(x + 8, y - 18);
             }
-            // EditBox requires GuiGraphics for rendering in 1.21
+            // Render the EditBox via NeoForge 1.21.11's extractRenderState pipeline.
+            // Was previously a reflective scan for any 4-arg method matching (?, int, int, float)
+            // which could silently bind to the wrong method (e.g. extractWidgetRenderState)
+            // since Class.getMethods() ordering isn't stable.
             if (GuiIcon.getGuiGraphics() != null) {
-                try {
-                    for (java.lang.reflect.Method m : searchText.getClass().getMethods()) {
-                        if (m.getParameterCount() == 4 && m.getParameterTypes()[1] == int.class && m.getParameterTypes()[2] == int.class && m.getParameterTypes()[3] == float.class) {
-                            m.invoke(searchText, GuiIcon.getGuiGraphics(), (int) gui.mouse.getX(), (int) gui.mouse.getY(), gui.getLastPartialTicks());
-                            break;
-                        }
-                    }
-                } catch(Exception e) {
-                   // System.out.println("Failed to reflexively call EditBox render");
-                }
+                searchText.extractRenderState(
+                    GuiIcon.getGuiGraphics(),
+                    (int) gui.mouse.getX(),
+                    (int) gui.mouse.getY(),
+                    gui.getLastPartialTicks()
+                );
             }
 
             if (realResultCount >= 0) {
@@ -298,7 +302,16 @@ public class GuidePageContents extends GuidePageBase {
              return true;
         }
 
-        if (!searchText.isFocused() && new GuiRectangle(searchText.getX() - 2, searchText.getY() - 34, 40, 34).contains(mouseX, mouseY)) {
+        // The click region needs to cover the magnifying-glass icon (drawn at
+        // pageX + 8, pageY - 19, 12x12) and the closed-tab handle. 1.12.2 used
+        // `new GuiRectangle(x - 2, y - 34, 40, 34)` where (x, y) was the page
+        // area top-left; the 26.1 port mis-translated this as offsets from
+        // searchText.getX()/getY() without accounting for the 23/-16 offset
+        // applied during render, so the click rect landed over the right side
+        // of the search text instead of over the icon. searchText.getX() = pageX + 23
+        // and searchText.getY() = pageY - 16, so the equivalent rect is at
+        // (searchText.getX() - 25, searchText.getY() - 18, 40, 34).
+        if (!searchText.isFocused() && new GuiRectangle(searchText.getX() - 25, searchText.getY() - 18, 40, 34).contains(mouseX, mouseY)) {
              searchText.setFocused(true);
              return true;
         }

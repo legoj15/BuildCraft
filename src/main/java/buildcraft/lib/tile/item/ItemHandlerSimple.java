@@ -103,7 +103,7 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
             if (!stack.isEmpty()) {
                 // Use ItemStack.CODEC so DataComponentPatch (enchantments, custom name,
                 // damage, dyed colors, etc.) round-trips on save/load.
-                ItemStack.CODEC.encodeStart(NbtOps.INSTANCE, stack)
+                ItemStack.CODEC.encodeStart(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), stack)
                         .resultOrPartial()
                         .ifPresent(payload -> itemNbt.put("stack", payload));
             }
@@ -121,7 +121,7 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
             ItemStack stack = ItemStack.EMPTY;
             Tag stackPayload = itemNbt.get("stack");
             if (stackPayload != null) {
-                stack = ItemStack.CODEC.parse(NbtOps.INSTANCE, stackPayload)
+                stack = ItemStack.CODEC.parse(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), stackPayload)
                         .resultOrPartial()
                         .orElse(ItemStack.EMPTY);
             } else if (itemNbt.contains("id")) {

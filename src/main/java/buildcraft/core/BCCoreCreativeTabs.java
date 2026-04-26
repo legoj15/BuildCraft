@@ -12,7 +12,6 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.lib.BCLibItems;
-import buildcraft.lib.item.ItemGuide;
 import buildcraft.core.item.ItemPaintbrush_BC8;
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.BCBuildersItems;
@@ -40,7 +39,7 @@ public class BCCoreCreativeTabs {
                             .icon(() -> BCCoreItems.WRENCH.get().getDefaultInstance())
                             .displayItems((parameters, output) -> {
                                 // Config Guide
-                                output.accept(ItemGuide.createForBook(BCLibItems.GUIDE.get(), "buildcraftunofficial:config"));
+                                output.accept(BCLibItems.GUIDE_CONFIG.get());
                                 // Guide Book
                                 output.accept(BCLibItems.GUIDE.get());
                                 // Book Note

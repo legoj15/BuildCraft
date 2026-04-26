@@ -7,6 +7,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.util.profiling.ProfilerFiller;
 
 import buildcraft.lib.client.guide.GuiGuide;
+import buildcraft.lib.client.guide.GuideManager;
 import buildcraft.lib.client.guide.PageLine;
 import buildcraft.lib.client.guide.parts.GuidePageFactory;
 import buildcraft.lib.gui.GuiStack;
@@ -57,8 +58,6 @@ public final class PageLinkItemStack extends PageLink {
 
     @Override
     public GuidePageFactory getFactoryLink() {
-        // GuideManager.INSTANCE.getPageFor() not yet ported
-        // Return null — callers should null-check
-        return null;
+        return GuideManager.INSTANCE.getPageFor(stack);
     }
 }

@@ -16,6 +16,7 @@ import buildcraft.lib.client.guide.entry.PageValue;
 import buildcraft.lib.client.guide.parts.GuidePage;
 import buildcraft.lib.client.guide.parts.GuidePageFactory;
 import buildcraft.lib.gui.ISimpleDrawable;
+import buildcraft.lib.gui.statement.GuiElementStatementSource;
 
 public class PageLinkStatement extends PageLink {
 
@@ -39,10 +40,10 @@ public class PageLinkStatement extends PageLink {
     }
 
     private static PageLine createPageLine(IStatement statement) {
-        // GuiElementStatementSource.drawGuiSlot not ported — use null icon
+        ISimpleDrawable icon = (x, y) -> GuiElementStatementSource.drawGuiSlot(statement, x, y);
         List<String> tooltip = statement.getTooltip();
         String title = tooltip.isEmpty() ? statement.getUniqueTag() : tooltip.get(0);
-        return new PageLine(null, null, 2, title, true);
+        return new PageLine(icon, icon, 2, title, true);
     }
 
     @Override

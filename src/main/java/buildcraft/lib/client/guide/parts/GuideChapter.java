@@ -135,6 +135,13 @@ public abstract class GuideChapter extends GuidePart {
         int baseY = drawCentral ? ((int) GuiGuide.FLOATING_CHAPTER_MENU.getY() + 6) : gui.minY;
         int y = baseY + (font.getMaxFontHeight() + 8) * (yIndex + 1);
         boolean hasChildren = !children.isEmpty();
+        // `width` is the text+hover footprint used for positioning the LEFT-side
+        // tab so its right edge aligns with the book spine. `_width` is the wider
+        // sprite-render footprint that adds 12px of internal padding plus a 16px
+        // arrow gutter for parent chapters. In 1.12.2 these were separate; the
+        // 26.1 port collapsed them into just `_width`, causing LEFT-side tabs to
+        // visually drift ~12-28px further left than their click hitbox.
+        float width = font.getStringWidth(text) + hoverWidth;
         float _width = font.getStringWidth(text) + 12 + hoverWidth + (hasChildren ? 16 : 0);
         int fullHeight = font.getFontHeight(text) + 6;
         int childHeight = 0;
@@ -180,7 +187,7 @@ public abstract class GuideChapter extends GuidePart {
 
             font.drawString(text, (int) (x + 6 + hoverWidth), y, 0xFF000000);
         } else if (lastDrawn == EnumGuiSide.LEFT) {
-            float x = gui.minX - _width + 5;
+            float x = gui.minX - width + 5;
             if (hasChildren) {
                 x -= 16;
             }

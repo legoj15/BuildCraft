@@ -83,8 +83,18 @@ public class ContainerList extends ContainerBC_Neptune {
 
         @Override
         public void set(@Nonnull ItemStack stack) {
-            super.set(stack);
             int slotIndex = getSlotIndex();
+            // Slots 1-8 in one-stack mode are read-only ghost previews of items the matcher
+            // would accept — refuse the click so the player can't transiently overwrite the
+            // ghost with a stack from their cursor (the in-memory display would change for
+            // a frame even though Line.setStack rejects the persistence, which used to
+            // produce the "I dropped an item in here and then it vanished on close/reopen"
+            // confusion). super.set() is what updates the visual; skipping it leaves the
+            // ghost preview intact.
+            if (slotIndex > 0 && lines[lineIndex].isOneStackMode()) {
+                return;
+            }
+            super.set(stack);
             lines[lineIndex].setStack(slotIndex, stack);
             ItemStack listStack = getListItemStack();
             ListHandler.saveLines(listStack, lines);

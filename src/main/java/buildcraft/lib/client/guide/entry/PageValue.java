@@ -8,6 +8,7 @@ import javax.annotation.Nullable;
 import com.google.gson.JsonObject;
 
 import buildcraft.lib.gui.ISimpleDrawable;
+import buildcraft.lib.misc.LocaleUtil;
 
 public class PageValue<T> {
 
@@ -22,9 +23,18 @@ public class PageValue<T> {
     }
 
     public static String getTitle(JsonObject json) {
-        // JsonUtil.getTextComponent not yet available — use raw title field
+        // Mirrors 1.12.2's JsonUtil.getTextComponent(json, "title", "buildcraft.guide.page.").
+        // The "title" field is a translation-key suffix; the prefix is prepended and the
+        // result is localized. "title_raw" bypasses localization. If no translation exists
+        // for the prefixed key, fall back to the raw string (better than showing the key).
         if (json.has("title")) {
-            return json.get("title").getAsString();
+            String str = json.get("title").getAsString();
+            String prefixed = "buildcraft.guide.page." + str;
+            String localized = LocaleUtil.localize(prefixed);
+            return prefixed.equals(localized) ? str : localized;
+        }
+        if (json.has("title_raw")) {
+            return json.get("title_raw").getAsString();
         }
         return "untitled";
     }

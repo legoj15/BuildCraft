@@ -9,7 +9,6 @@ package buildcraft.factory.tile;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 
 import javax.annotation.Nullable;
 
@@ -35,6 +34,7 @@ import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 
+import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
@@ -43,8 +43,10 @@ import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.block.BlockChute;
 import buildcraft.factory.container.ContainerChute;
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.tile.TileBC_Neptune;
+import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 /**
@@ -58,8 +60,7 @@ public class TileChute extends TileBC_Neptune implements MenuProvider {
     private static final long PROGRESS_TARGET = 100_000;
     private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:retired_hopper");
 
-    public final ItemHandlerSimple inv = new ItemHandlerSimple(4,
-            (handler, slot, before, after) -> this.setChanged());
+    public final ItemHandlerSimple inv;
 
     private final MjBattery battery = new MjBattery(1 * MjAPI.MJ);
     private final IMjReceiver mjReceiver = new MjBatteryReceiver(battery);
@@ -67,6 +68,7 @@ public class TileChute extends TileBC_Neptune implements MenuProvider {
 
     public TileChute(BlockPos pos, BlockState state) {
         super(BCFactoryBlockEntities.CHUTE.get(), pos, state);
+        this.inv = itemManager.addInvHandler("inv", 4, EnumAccess.BOTH, EnumPipePart.VALUES);
     }
 
     public IMjReceiver getMjReceiver() {
@@ -156,35 +158,44 @@ public class TileChute extends TileBC_Neptune implements MenuProvider {
     // --- Item Insertion ---
 
     private void putInNearInventories(Direction currentSide) {
-        List<Direction> sides = new ArrayList<>(List.of(Direction.values()));
-        Collections.shuffle(sides, new Random());
-        sides.remove(currentSide);
+        for (int ourSlot = 0; ourSlot < inv.getSlots(); ourSlot++) {
+            ItemStack inSlot = inv.getStackInSlot(ourSlot);
+            if (inSlot.isEmpty()) continue;
 
-        for (Direction side : sides) {
-            BlockPos neighborPos = worldPosition.relative(side);
+            // 1) Try BC pipes via IInjectable (skips intake side).
+            ItemStack oneItem = inSlot.copyWithCount(1);
+            ItemStack leftover = InventoryUtil.addToRandomInjectable(
+                    level, worldPosition, currentSide, oneItem);
+            if (leftover.isEmpty()) {
+                inv.extractItem(ourSlot, 1, false);
+                grantAdvancement();
+                return;
+            }
 
-            // Use NeoForge 1.21.11 ResourceHandler<ItemResource> capability
-            ResourceHandler<ItemResource> targetHandler = level.getCapability(
-                    Capabilities.Item.BLOCK,
-                    neighborPos,
-                    side.getOpposite());
-            if (targetHandler == null) continue;
-
-            // Try to move 1 item from our inventory to the neighbor
-            for (int ourSlot = 0; ourSlot < inv.getSlots(); ourSlot++) {
-                ItemStack inSlot = inv.getStackInSlot(ourSlot);
-                if (inSlot.isEmpty()) continue;
-
-                ItemResource resource = ItemResource.of(inSlot);
-                int inserted = ResourceHandlerUtil.insertStacking(targetHandler, resource, 1, null);
+            // 2) Try vanilla inventories on the 5 non-intake sides.
+            List<Direction> sides = new ArrayList<>(List.of(Direction.values()));
+            Collections.shuffle(sides);
+            sides.remove(currentSide);
+            ItemResource resource = ItemResource.of(inSlot);
+            for (Direction side : sides) {
+                ResourceHandler<ItemResource> handler = level.getCapability(
+                        Capabilities.Item.BLOCK,
+                        worldPosition.relative(side),
+                        side.getOpposite());
+                if (handler == null) continue;
+                int inserted = ResourceHandlerUtil.insertStacking(handler, resource, 1, null);
                 if (inserted > 0) {
                     inv.extractItem(ourSlot, inserted, false);
-                    if (getOwner() != null) {
-                        AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT);
-                    }
-                    return; // Moved item(s), done for this tick
+                    grantAdvancement();
+                    return;
                 }
             }
+        }
+    }
+
+    private void grantAdvancement() {
+        if (getOwner() != null) {
+            AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT);
         }
     }
 
@@ -208,8 +219,7 @@ public class TileChute extends TileBC_Neptune implements MenuProvider {
         super.saveAdditional(output);
         output.putInt("progress", progress);
         output.putLong("mjStored", battery.getStored());
-        // Save inventory using CompoundTag codec
-        output.store("inv", CompoundTag.CODEC, inv.serializeNBT());
+        output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
     }
 
     @Override
@@ -217,7 +227,6 @@ public class TileChute extends TileBC_Neptune implements MenuProvider {
         super.loadAdditional(input);
         progress = input.getIntOr("progress", 0);
         battery.addPowerChecking(input.getLongOr("mjStored", 0L), false);
-        // Load inventory
-        input.read("inv", CompoundTag.CODEC).ifPresent(inv::deserializeNBT);
+        input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
     }
 }

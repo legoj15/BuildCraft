@@ -60,8 +60,7 @@ public class BlockChute extends BaseEntityBlock {
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        // Face the direction the player is looking at (opposite of player facing)
-        return this.defaultBlockState().setValue(FACING, context.getNearestLookingDirection());
+        return this.defaultBlockState().setValue(FACING, context.getClickedFace());
     }
 
     @Nullable

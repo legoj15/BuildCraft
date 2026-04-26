@@ -78,6 +78,8 @@ public class BCFactory {
             (chute, direction) -> chute.getMjReceiver());
         event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCFactoryBlockEntities.CHUTE.get(),
             (chute, direction) -> chute.getMjReceiver());
+        event.registerBlockEntity(Capabilities.Item.BLOCK, BCFactoryBlockEntities.CHUTE.get(),
+            (chute, direction) -> chute.getItemHandler(direction));
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCFactoryBlockEntities.DISTILLER.get(),
             (distiller, direction) -> distiller.getMjReceiver());
         event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCFactoryBlockEntities.DISTILLER.get(),

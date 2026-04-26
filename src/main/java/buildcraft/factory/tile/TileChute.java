@@ -68,7 +68,10 @@ public class TileChute extends TileBC_Neptune implements MenuProvider {
 
     public TileChute(BlockPos pos, BlockState state) {
         super(BCFactoryBlockEntities.CHUTE.get(), pos, state);
-        this.inv = itemManager.addInvHandler("inv", 4, EnumAccess.BOTH, EnumPipePart.VALUES);
+        // INSERT-only side access matches 1.12.2: external blocks (hoppers, pipes) can push
+        // items into the chute, but cannot extract — chute output is MJ-gated through the
+        // tick logic to preserve power semantics.
+        this.inv = itemManager.addInvHandler("inv", 4, EnumAccess.INSERT, EnumPipePart.VALUES);
     }
 
     public IMjReceiver getMjReceiver() {

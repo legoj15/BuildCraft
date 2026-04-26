@@ -9,8 +9,6 @@ package buildcraft.factory.container;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.tile.TileChute;
@@ -47,11 +45,5 @@ public class ContainerChute extends ContainerBCTile<TileChute> {
             }
         }
         return null;
-    }
-
-    @Override
-    public ItemStack quickMoveStack(Player player, int slotIndex) {
-        // TODO: implement shift-click transfer
-        return ItemStack.EMPTY;
     }
 }

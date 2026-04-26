@@ -1,10 +1,17 @@
 {
-    "variants": {
-        "facing=down": { "model": "buildcraftunofficial:block/chute", "x": 180 },
-        "facing=up": { "model": "buildcraftunofficial:block/chute" },
-        "facing=north": { "model": "buildcraftunofficial:block/chute", "x": 90 },
-        "facing=south": { "model": "buildcraftunofficial:block/chute", "x": 90, "y": 180 },
-        "facing=west": { "model": "buildcraftunofficial:block/chute", "x": 90, "y": 270 },
-        "facing=east": { "model": "buildcraftunofficial:block/chute", "x": 90, "y": 90 }
-    }
+    "multipart": [
+        { "when": { "facing": "up" },    "apply": { "model": "buildcraftunofficial:block/chute" } },
+        { "when": { "facing": "down" },  "apply": { "model": "buildcraftunofficial:block/chute", "x": 180 } },
+        { "when": { "facing": "north" }, "apply": { "model": "buildcraftunofficial:block/chute", "x": 90 } },
+        { "when": { "facing": "south" }, "apply": { "model": "buildcraftunofficial:block/chute", "x": 90, "y": 180 } },
+        { "when": { "facing": "east" },  "apply": { "model": "buildcraftunofficial:block/chute", "x": 90, "y": 90 } },
+        { "when": { "facing": "west" },  "apply": { "model": "buildcraftunofficial:block/chute", "x": 90, "y": 270 } },
+
+        { "when": { "connected_down": "true" },  "apply": { "model": "buildcraftunofficial:block/chute_connected" } },
+        { "when": { "connected_up": "true" },    "apply": { "model": "buildcraftunofficial:block/chute_connected", "x": 180 } },
+        { "when": { "connected_north": "true" }, "apply": { "model": "buildcraftunofficial:block/chute_connected", "x": 90, "y": 180 } },
+        { "when": { "connected_south": "true" }, "apply": { "model": "buildcraftunofficial:block/chute_connected", "x": 90 } },
+        { "when": { "connected_east": "true" },  "apply": { "model": "buildcraftunofficial:block/chute_connected", "x": 90, "y": 270 } },
+        { "when": { "connected_west": "true" },  "apply": { "model": "buildcraftunofficial:block/chute_connected", "x": 90, "y": 90 } }
+    ]
 }

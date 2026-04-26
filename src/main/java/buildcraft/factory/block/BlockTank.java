@@ -41,6 +41,8 @@ import net.minecraft.core.NonNullList;
 import buildcraft.api.items.FluidItemDrops;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileTank;
+import net.neoforged.neoforge.capabilities.Capabilities;
+
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 
@@ -175,9 +177,12 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
             }
             return InteractionResult.SUCCESS;
         }
-        // If the player is holding a non-fluid item, open the GUI
-        // (useWithoutItem is NOT called when useItemOn returns PASS in 1.21.11)
-        if (!level.isClientSide()) {
+        // If the held item is a fluid container, the transfer had no valid result
+        // (tank full/empty) — consume silently without opening the GUI, matching
+        // 1.12.2 behavior where repeated right-clicking with a bucket did nothing.
+        // Only open the GUI for non-fluid items (e.g. a wrench or empty hand fallback).
+        boolean isFluidContainer = stack.getCapability(Capabilities.Fluid.ITEM, null) != null;
+        if (!isFluidContainer && !level.isClientSide()) {
             player.openMenu(tank, pos);
         }
         return InteractionResult.SUCCESS;

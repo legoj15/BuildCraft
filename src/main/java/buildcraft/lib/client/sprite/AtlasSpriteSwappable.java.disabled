@@ -1,5 +1,0 @@
-package buildcraft.lib.client.sprite;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-public class AtlasSpriteSwappable extends TextureAtlasSprite {
-    protected AtlasSpriteSwappable(net.minecraft.resources.Identifier name, net.minecraft.client.renderer.texture.SpriteContents contents, int x, int y, int width, int height) { super(name, contents, x, y, width, height); }
-}

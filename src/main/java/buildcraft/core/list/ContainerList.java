@@ -86,7 +86,9 @@ public class ContainerList extends ContainerBC_Neptune {
             super.set(stack);
             int slotIndex = getSlotIndex();
             lines[lineIndex].setStack(slotIndex, stack);
-            ListHandler.saveLines(getListItemStack(), lines);
+            ItemStack listStack = getListItemStack();
+            ListHandler.saveLines(listStack, lines);
+            ItemList_BC8.updateModelData(listStack);
         }
     }
 
@@ -128,7 +130,9 @@ public class ContainerList extends ContainerBC_Neptune {
             }
         }
 
-        ListHandler.saveLines(getListItemStack(), lines);
+        ItemStack listStack = getListItemStack();
+        ListHandler.saveLines(listStack, lines);
+        ItemList_BC8.updateModelData(listStack);
     }
 
     public void setLabel(final String text) {

@@ -47,8 +47,10 @@ public class ItemList_BC8 extends Item implements IList {
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
     }
 
-    /** Update the CustomModelData to reflect whether this list has items (used texture vs clean). */
-    private static void updateModelData(@Nonnull ItemStack stack) {
+    /** Update the CustomModelData to reflect whether this list has items (used texture vs clean).
+     * Must be called whenever the list's contents change so the {@code items/list.json} range_dispatch
+     * model selector picks the correct texture. */
+    public static void updateModelData(@Nonnull ItemStack stack) {
         boolean hasItems = ListHandler.hasItems(stack);
         if (hasItems) {
             stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(

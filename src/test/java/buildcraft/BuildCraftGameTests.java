@@ -38,6 +38,13 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:shape_pattern_sphere_equality"), () -> buildcraft.core.builders.patterns.ShapePatternsTester::testSphereEquality);
             // List Matching
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:list_tools_matching"), () -> buildcraft.lib.list.ListTester::testTools);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:list_tags_matching"), () -> buildcraft.lib.list.ListTester::testTags);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:list_armor_matching"), () -> buildcraft.lib.list.ListTester::testArmor);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:list_fluid_matching"), () -> buildcraft.lib.list.ListTester::testFluid);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:list_end_to_end_by_type"), () -> buildcraft.lib.list.ListTester::testEndToEndByType);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:list_tags_single_segment_material_fallback"), () -> buildcraft.lib.list.ListTester::testTagsSingleSegmentMaterialFallback);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:list_end_to_end_both_flags_union"), () -> buildcraft.lib.list.ListTester::testEndToEndBothFlagsUnion);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:list_precise_enchantment_round_trip"), () -> buildcraft.lib.list.ListTester::testPreciseEnchantmentRoundTrip);
             
             // Core Blocks
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:core_spring_water"), () -> buildcraft.core.block.SpringTester::testWaterSpring);

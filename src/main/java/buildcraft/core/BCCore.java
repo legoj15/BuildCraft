@@ -217,6 +217,7 @@ public class BCCore {
 
     private void init(FMLCommonSetupEvent event) {
         buildcraft.core.block.VanillaPaintHandlers.fmlInit();
+        buildcraft.lib.list.VanillaListHandlers.register();
     }
 
     private void postInit(net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent event) {

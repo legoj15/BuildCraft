@@ -17,6 +17,8 @@ import javax.annotation.Nullable;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.NonNullList;
 
+import buildcraft.api.items.IList;
+
 /** Provides various utils for interacting with {@link ItemStack}, and multiples. */
 public class StackUtil {
 
@@ -101,10 +103,14 @@ public class StackUtil {
         return ItemStack.isSameItemSameComponents(base, comparison);
     }
 
-    /** Checks if two stacks match by item identity and components.
-     * Named "OrList" for 1.12.2 compat — in 1.21 there is no OreDictionary,
-     * so this is identical to {@link #isMatchingItem(ItemStack, ItemStack)}. */
+    /** Checks if a filter matches a candidate stack. When {@code filter} is an {@link IList} item
+     * (BuildCraft's configurable filter), delegates to {@link IList#matches}. Otherwise compares
+     * by item identity and components. */
     public static boolean isMatchingItemOrList(@Nonnull ItemStack filter, @Nonnull ItemStack toTest) {
+        if (filter.isEmpty() || toTest.isEmpty()) return false;
+        if (filter.getItem() instanceof IList list) {
+            return list.matches(filter, toTest);
+        }
         return isMatchingItem(filter, toTest);
     }
 

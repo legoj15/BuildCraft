@@ -6,8 +6,10 @@
 
 package buildcraft.lib.list;
 
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
 
@@ -15,8 +17,15 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
+
+import buildcraft.api.lists.ListMatchHandler;
+import buildcraft.api.lists.ListMatchHandler.Type;
+import buildcraft.api.lists.ListRegistry;
 
 public final class ListHandler {
     public static final int WIDTH = 9;
@@ -72,14 +81,32 @@ public final class ListHandler {
         }
 
         public boolean matches(@Nonnull ItemStack target) {
+            if (target.isEmpty()) return false;
             if (byType || byMaterial) {
-                // Advanced type/material matching via ListRegistry handlers is not yet ported.
-                // Stub: only match if the exemplar stack is the same item.
-                ItemStack compare = stacks.get(0);
-                if (compare.isEmpty()) {
-                    return false;
+                ItemStack source = stacks.get(0);
+                if (source.isEmpty()) return false;
+                // When both flags are on, treat as union: match if either TYPE or MATERIAL
+                // criteria fire. Single-flag cases delegate to the corresponding mode only.
+                boolean anyClaimed = false;
+                if (byType) {
+                    for (ListMatchHandler h : ListRegistry.getHandlers()) {
+                        if (h.isValidSource(Type.TYPE, source)) {
+                            anyClaimed = true;
+                            if (h.matches(Type.TYPE, source, target, precise)) return true;
+                        }
+                    }
                 }
-                return ItemStack.isSameItem(compare, target);
+                if (byMaterial) {
+                    for (ListMatchHandler h : ListRegistry.getHandlers()) {
+                        if (h.isValidSource(Type.MATERIAL, source)) {
+                            anyClaimed = true;
+                            if (h.matches(Type.MATERIAL, source, target, precise)) return true;
+                        }
+                    }
+                }
+                // No handler recognized the source as a category exemplar — fall back to
+                // identity match so the slot still does *something* useful.
+                return !anyClaimed && ItemStack.isSameItem(source, target);
             } else {
                 for (ItemStack s : stacks) {
                     if (!s.isEmpty() && ItemStack.isSameItem(s, target)) {
@@ -100,12 +127,25 @@ public final class ListHandler {
                 if (l != null) {
                     for (int i = 0; i < l.size() && i < WIDTH; i++) {
                         CompoundTag itemTag = l.getCompound(i).orElse(null);
-                        if (itemTag != null && itemTag.contains("id")) {
+                        if (itemTag == null) continue;
+                        // Use ItemStack.CODEC so components (enchantments, custom name, damage,
+                        // etc.) round-trip — Precise mode compares components, so the saved
+                        // exemplar must preserve them. The `id` shorthand below covers stacks
+                        // saved by older builds before this fix landed.
+                        Tag stackPayload = itemTag.get("stack");
+                        if (stackPayload != null) {
+                            final int slotIdx = i;
+                            ItemStack.CODEC.parse(NbtOps.INSTANCE, stackPayload)
+                                    .resultOrPartial()
+                                    .filter(s -> !s.isEmpty())
+                                    .ifPresent(s -> line.stacks.set(slotIdx, s));
+                        } else if (itemTag.contains("id")) {
+                            // Legacy format (id + count, no components).
                             String itemId = itemTag.getString("id").orElse("");
                             int count = itemTag.getInt("count").orElse(1);
                             net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(itemId);
                             if (id != null) {
-                                net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(id);
+                                Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(id);
                                 if (item != null && item != net.minecraft.world.item.Items.AIR) {
                                     line.stacks.set(i, new ItemStack(item, count));
                                 }
@@ -128,9 +168,11 @@ public final class ListHandler {
             for (ItemStack stack : stacks) {
                 CompoundTag stackTag = new CompoundTag();
                 if (!stack.isEmpty()) {
-                    net.minecraft.resources.Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
-                    stackTag.putString("id", itemId.toString());
-                    stackTag.putInt("count", stack.getCount());
+                    // Preserve the full ItemStack — components included — via the standard codec
+                    // so Precise matching round-trips correctly.
+                    ItemStack.CODEC.encodeStart(NbtOps.INSTANCE, stack)
+                            .resultOrPartial()
+                            .ifPresent(payload -> stackTag.put("stack", payload));
                 }
                 stackList.add(stackTag);
             }
@@ -162,9 +204,32 @@ public final class ListHandler {
             }
         }
 
-        /** Stub: advanced example generation requires ListRegistry, which is not yet ported. */
+        /** Auto-fill examples for the GUI when in By-Type or By-Material mode. Iterates registered
+         * handlers and unions whatever {@link ListMatchHandler#getClientExamples} returns, deduping
+         * by item. When both flags are on, examples from BOTH modes are merged (matching the union
+         * semantics of {@link #matches}). Returns an empty list when no mode flag is active or no
+         * handler claims the slot-0 exemplar. */
         public List<ItemStack> getExamples() {
-            return Collections.emptyList();
+            ItemStack source = stacks.get(0);
+            if (source.isEmpty() || (!byType && !byMaterial)) return new ArrayList<>();
+            Set<Item> seen = new HashSet<>();
+            List<ItemStack> out = new ArrayList<>();
+            if (byType) collectExamples(source, Type.TYPE, seen, out);
+            if (byMaterial) collectExamples(source, Type.MATERIAL, seen, out);
+            return out;
+        }
+
+        private static void collectExamples(ItemStack source, Type t, Set<Item> seen, List<ItemStack> out) {
+            for (ListMatchHandler h : ListRegistry.getHandlers()) {
+                if (!h.isValidSource(t, source)) continue;
+                NonNullList<ItemStack> examples = h.getClientExamples(t, source);
+                if (examples == null) continue;
+                for (ItemStack ex : examples) {
+                    if (!ex.isEmpty() && seen.add(ex.getItem())) {
+                        out.add(ex);
+                    }
+                }
+            }
         }
     }
 

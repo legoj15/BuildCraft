@@ -50,6 +50,10 @@ public class GuiList extends GuiBC8<ContainerList> {
     protected void initGuiElements() {
         // Help ledger on the left side (matching 1.12.2)
         mainGui.shownElements.add(new LedgerHelp(mainGui, false));
+        // Match-info ledger — when expanded and the player hovers over slot 0 of a By-Type or
+        // By-Material line, displays which tags / capabilities the registered handlers use to
+        // match items against the exemplar.
+        mainGui.shownElements.add(new LedgerListMatch(mainGui, menu));
 
         // Label text field — bordered, with setResponder for automatic sync
         EditBox labelField = new EditBox(this.font, leftPos + 10, topPos + 10, 156, 12, Component.empty());
@@ -114,6 +118,16 @@ public class GuiList extends GuiBC8<ContainerList> {
     // --- Toggle image button widget ---
 
     private class ToggleImageButton extends AbstractWidget {
+        // Bevel palette mirrors the look 1.12.2's GuiImageButton produced via its 5-state
+        // background sprites — light top/left + dark bottom/right when "off" (raised), inverted
+        // when "on" (pressed in), brighter overall when hovered.
+        private static final int BEVEL_LIGHT = 0xFFFFFFFF;
+        private static final int BEVEL_DARK = 0xFF373737;
+        private static final int BEVEL_LIGHT_HOVER = 0xFFFFFFA0;
+        private static final int BEVEL_DARK_HOVER = 0xFF8B7B00;
+        private static final int BG_OFF = 0xFF8B8B8B;
+        private static final int BG_ON = 0xFF6B6B6B;
+
         private final Identifier texture;
         private final int uOff, vOff, uOn, vOn;
         private boolean toggled;
@@ -151,11 +165,37 @@ public class GuiList extends GuiBC8<ContainerList> {
 
         @Override
         protected void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+            int x = getX();
+            int y = getY();
+            int w = width;
+            int h = height;
+            boolean hovered = isHovered();
+
+            // Background fill behind the icon — slightly darker when toggled-on for "pressed" feel.
+            graphics.fill(x, y, x + w, y + h, toggled ? BG_ON : BG_OFF);
+
+            // Icon sprite (the existing texture-sheet artwork). Inset by 1px on each side so the
+            // surrounding bevel frame doesn't clip into the icon glyph.
             int u = toggled ? uOn : uOff;
             int v = toggled ? vOn : vOff;
             graphics.blit(RenderPipelines.GUI_TEXTURED, texture,
-                    getX(), getY(), (float) u, (float) v,
-                    width, height, 256, 256);
+                    x + 1, y + 1, (float) (u + 1), (float) (v + 1),
+                    w - 2, h - 2, 256, 256);
+
+            // Bevel frame — light/dark swap depending on toggle state, brighter on hover.
+            int light = hovered ? BEVEL_LIGHT_HOVER : BEVEL_LIGHT;
+            int dark = hovered ? BEVEL_DARK_HOVER : BEVEL_DARK;
+            int topLeft = toggled ? dark : light;
+            int botRight = toggled ? light : dark;
+
+            // Top edge
+            graphics.fill(x, y, x + w, y + 1, topLeft);
+            // Left edge (skip corner already drawn by top edge)
+            graphics.fill(x, y + 1, x + 1, y + h, topLeft);
+            // Bottom edge
+            graphics.fill(x, y + h - 1, x + w, y + h, botRight);
+            // Right edge (skip corner already drawn by bottom edge)
+            graphics.fill(x + w - 1, y + 1, x + w, y + h - 1, botRight);
         }
 
         @Override

@@ -70,28 +70,40 @@ public class TriggerInventory extends BCStatement implements ITriggerExternal {
         boolean foundItems = false;
         boolean foundSpace = false;
 
+        boolean isList = !searchedStack.isEmpty() && searchedStack.getItem() instanceof IList;
+        IList listFilter = isList ? (IList) searchedStack.getItem() : null;
+
         for (int i = 0; i < handler.size(); i++) {
             hasSlots = true;
             ItemResource res = handler.getResource(i);
             ItemStack stack = res.isEmpty() ? ItemStack.EMPTY : res.toStack(handler.getAmountAsInt(i));
 
-            foundItems |= !stack.isEmpty() && (searchedStack.isEmpty() || canStacksMerge(stack, searchedStack));
+            boolean stackMatchesSearch;
+            if (searchedStack.isEmpty()) {
+                stackMatchesSearch = true;
+            } else if (isList) {
+                stackMatchesSearch = !stack.isEmpty() && listFilter.matches(searchedStack, stack);
+            } else {
+                stackMatchesSearch = canStacksMerge(stack, searchedStack);
+            }
+
+            foundItems |= !stack.isEmpty() && stackMatchesSearch;
 
             // check space exactly
-            boolean isList = searchedStack.getItem() instanceof IList;
             boolean hasSpace = false;
-            
-            if (stack.isEmpty() || (canStacksMerge(stack, searchedStack) && stack.getCount() < stack.getMaxStackSize())) {
-                if (searchedStack.isEmpty() || isList) {
+            if (stack.isEmpty()) {
+                hasSpace = true;
+            } else if (searchedStack.isEmpty()) {
+                hasSpace = stack.getCount() < stack.getMaxStackSize();
+            } else if (isList) {
+                hasSpace = stackMatchesSearch && stack.getCount() < stack.getMaxStackSize();
+            } else if (canStacksMerge(stack, searchedStack) && stack.getCount() < stack.getMaxStackSize()) {
+                int amount = Math.min(searchedStack.getCount(), stack.getMaxStackSize() - stack.getCount());
+                if (amount > 0 && handler.getCapacityAsInt(i, ItemResource.of(searchedStack)) >= stack.getCount() + amount) {
                     hasSpace = true;
-                } else {
-                    int amount = Math.min(searchedStack.getCount(), stack.getMaxStackSize() - stack.getCount());
-                    if (amount > 0 && handler.getCapacityAsInt(i, ItemResource.of(searchedStack)) >= stack.getCount() + amount) {
-                        hasSpace = true;
-                    }
                 }
             }
-            
+
             foundSpace |= hasSpace;
         }
 

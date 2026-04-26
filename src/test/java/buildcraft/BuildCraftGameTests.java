@@ -32,6 +32,8 @@ public class BuildCraftGameTests {
             // Inventory Transactors
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:item_transactor_simple_moving"), () -> buildcraft.lib.inventory.ItemTransactorTester::testSimpleMoving);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:item_transactor_limited_inventory"), () -> buildcraft.lib.inventory.ItemTransactorTester::testLimitedInventory);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:item_handler_simple_component_round_trip"), () -> buildcraft.lib.inventory.ItemTransactorTester::testComponentRoundTrip);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:item_handler_simple_legacy_id_count_fallback"), () -> buildcraft.lib.inventory.ItemTransactorTester::testLegacyIdCountFallback);
             
             // Shape Patterns
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:shape_pattern_tiny_template"), () -> buildcraft.core.builders.patterns.ShapePatternsTester::testTinyTemplate);

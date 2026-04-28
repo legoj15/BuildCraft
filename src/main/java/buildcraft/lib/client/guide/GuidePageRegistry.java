@@ -7,6 +7,7 @@ import java.util.Map;
 
 import buildcraft.lib.client.guide.entry.PageEntry;
 import buildcraft.lib.client.guide.entry.PageEntryExternal;
+import buildcraft.lib.client.guide.entry.PageEntryFluidStack;
 import buildcraft.lib.client.guide.entry.PageEntryItemStack;
 import buildcraft.lib.client.guide.entry.PageEntryStatement;
 import buildcraft.lib.client.guide.entry.PageValueType;
@@ -21,6 +22,7 @@ public class GuidePageRegistry extends ScriptableRegistry<PageEntry<?>> {
     private GuidePageRegistry() {
         super(PackType.RESOURCE_PACK, "buildcraft/guide");
         addType("item_stack", PageEntryItemStack.INSTANCE);
+        addType("fluid_stack", PageEntryFluidStack.INSTANCE);
         addType("external", PageEntryExternal.INSTANCE);
         addType("statement", PageEntryStatement.INSTANCE);
     }

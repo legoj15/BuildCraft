@@ -111,60 +111,134 @@ public abstract class GuidePart {
         current = current.guaranteeSpace(neededSpace, height);
 
         int _x = x + INDENT_WIDTH * line.indent;
-        if (icon != null && current.page == pageRenderIndex) {
-            int iconX = _x - 18;
-            int iconY = y + current.pixel - 5;
-            GuiRectangle rect = new GuiRectangle(iconX, iconY, 16, 16);
-            if (rect.contains(gui.mouse) && line.startIconHovered != null) {
-                icon = line.startIconHovered;
-            }
-            icon.drawAt(iconX, iconY);
-        }
+
+        // Icon geometry up front so the hit-test below can fold the icon rect into
+        // the unified entry-hover region — making the icon part of the same click
+        // target as the text. The icon DRAW is deferred until after the hit-test
+        // (and after the highlight fill) so we can pick the hovered drawable from
+        // the whole-entry hover state, and so the icon paints on top of the
+        // extended highlight rather than under it.
+        //
+        // Note that iconRect is computed whenever an icon is configured, NOT gated
+        // on current.page == pageRenderIndex — click handling calls renderLine with
+        // pageRenderIndex == -1, so a page-gated rect would never hit. The
+        // wrong-page false positive is filtered by callers via `pos.page == index`,
+        // matching how text segments already work.
+        int iconX = _x - 18;
+        int iconY = y + current.pixel - 5;
+        GuiRectangle iconRect = (icon != null) ? new GuiRectangle(iconX, iconY, 16, 16) : null;
+        boolean iconVisibleHere = (icon != null) && (current.page == pageRenderIndex);
+
         didRender = false;
 
+        // Layout pass: walk the wrap segments and record geometry for each. Decoupling
+        // layout from render lets us compute a single hover state for the whole entry
+        // BEFORE drawing — so a multi-line wrapped entry highlights as one cohesive
+        // block rather than each visual line lighting up independently.
+        java.util.List<WrapSegment> segments = new java.util.ArrayList<>();
+        PagePosition cursor = current;
         while (next != null) {
             FormatString[] strings = fontRenderer != null
                 ? next.wrap(fontRenderer, allowedWidth)
                 : new FormatString[] { next };
 
             String text = strings[0].getFormatted();
-            boolean render = current.page == pageRenderIndex;
-            int _y = y + current.pixel;
+            int _y = y + cursor.pixel;
             int _w = fontRenderer != null ? fontRenderer.getStringWidth(text) : text.length() * 6;
             // Hover "row" geometry: LINE_HEIGHT (16 px) tall, vertically aligned with the
-            // start icon's range (_y-5 to _y+11). Two consequences:
-            //   1. Adjacent TOC entries (16 px apart) are flush — no vertical overlap — so
-            //      the mouse is never inside two entries' hit-rects at once.
-            //   2. The highlight matches the icon's vertical extent exactly, making the row
-            //      feel like a single visual unit (icon + highlighted text).
+            // start icon's range (_y-5 to _y+11) so the highlight matches the icon and
+            // adjacent TOC entries (16 px apart) are flush.
             int rowTop = _y - 5;
             GuiRectangle rect = new GuiRectangle(_x, rowTop, _w, LINE_HEIGHT);
-            wasHovered |= rect.contains(gui.mouse);
-            if (render) {
-                didRender = true;
-                if (wasHovered) {
-                    // Hover highlight: cream/tan fill rect sized to the hover row.
-                    if (line.link) {
-                        net.minecraft.client.gui.GuiGraphicsExtractor g = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
-                        if (g != null) {
-                            g.fill(_x - 2, rowTop, _x + _w + 2, rowTop + LINE_HEIGHT, 0xFFD3AD6C);
-                        }
-                    }
-                    renderTooltip();
-                }
-                if (fontRenderer != null) {
-                    fontRenderer.drawString(text, _x, _y, 0xFF000000);
-                }
-            }
+            boolean rendered = cursor.page == pageRenderIndex;
+            segments.add(new WrapSegment(text, rect, _y, rowTop, _w, rendered));
+
             next = strings.length == 1 ? null : strings[1];
             int fontHeight = fontRenderer != null ? fontRenderer.getFontHeight(text) : 9;
-            current = current.nextLine(fontHeight + 3, height);
+            cursor = cursor.nextLine(fontHeight + 3, height);
+        }
+        current = cursor;
+
+        // Hit-test pass: one hover flag for the whole entry — true if the mouse is
+        // over the icon OR any wrapped text segment, so icon and text act as a single
+        // click target. wasIconHovered is also exposed for callers that need to know
+        // whether the icon specifically was the target.
+        boolean iconHovered = iconRect != null && iconRect.contains(gui.mouse);
+        boolean entryHovered = iconHovered;
+        if (!entryHovered) {
+            for (WrapSegment seg : segments) {
+                if (seg.rect.contains(gui.mouse)) {
+                    entryHovered = true;
+                    break;
+                }
+            }
+        }
+        wasHovered = entryHovered;
+        wasIconHovered = iconHovered;
+
+        // Render pass — order matters for z-stacking:
+        //   1) Highlight fills first, extended back over the icon column on the
+        //      first rendered segment so the visual click-target matches the hit
+        //      region (icon + text read as one row).
+        //   2) Icon next, on top of the extended fill so it stays visible.
+        //   3) Text last.
+        // Hovering text now also swaps the icon to its hovered drawable, since both
+        // share the unified entryHovered state.
+        boolean drewAny = false;
+        if (entryHovered && line.link) {
+            net.minecraft.client.gui.GuiGraphicsExtractor g = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
+            if (g != null) {
+                boolean isFirstRendered = true;
+                for (WrapSegment seg : segments) {
+                    if (!seg.rendered) continue;
+                    int fillLeft = (isFirstRendered && iconVisibleHere) ? _x - 20 : _x - 2;
+                    g.fill(fillLeft, seg.rowTop, _x + seg.width + 2, seg.rowTop + LINE_HEIGHT, 0xFFD3AD6C);
+                    isFirstRendered = false;
+                }
+            }
+        }
+        if (iconVisibleHere) {
+            ISimpleDrawable toDraw = (entryHovered && line.startIconHovered != null)
+                ? line.startIconHovered
+                : icon;
+            toDraw.drawAt(iconX, iconY);
+        }
+        for (WrapSegment seg : segments) {
+            if (!seg.rendered) continue;
+            drewAny = true;
+            if (fontRenderer != null) {
+                fontRenderer.drawString(seg.text, _x, seg.y, 0xFF000000);
+            }
+        }
+        didRender = drewAny;
+        if (entryHovered) {
+            renderTooltip();
         }
 
         int fontHeight = fontRenderer != null ? fontRenderer.getFontHeight(toRender) : 9;
         int additional = LINE_HEIGHT - fontHeight - 3;
         current = current.nextLine(additional, height);
         return current;
+    }
+
+    /** One wrapped segment of a PageLine — its text, hover rect, draw position, and
+     *  whether it falls on the page being rendered this frame. */
+    private static final class WrapSegment {
+        final String text;
+        final GuiRectangle rect;
+        final int y;
+        final int rowTop;
+        final int width;
+        final boolean rendered;
+
+        WrapSegment(String text, GuiRectangle rect, int y, int rowTop, int width, boolean rendered) {
+            this.text = text;
+            this.rect = rect;
+            this.y = y;
+            this.rowTop = rowTop;
+            this.width = width;
+            this.rendered = rendered;
+        }
     }
 
     protected PagePosition renderLines(Iterable<PageLine> lines, PagePosition part, int x, int y, int width, int height,

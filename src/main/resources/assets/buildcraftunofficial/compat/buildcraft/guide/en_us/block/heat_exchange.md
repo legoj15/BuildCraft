@@ -1,4 +1,3 @@
-<chapter name="tile.heat_exchange.name"/>
 <lore>
 In your attempts to make the best use out of your combustible fuels, using cool fluids just isn't enough anymore and the need to heat and cool fluids into its various temperatures is required.
 </lore>

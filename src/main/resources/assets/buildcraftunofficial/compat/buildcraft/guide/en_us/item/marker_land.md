@@ -1,4 +1,3 @@
-<chapter name="tile.markerBlock.name"/>
 <lore>
 Controlling where you want your machines to run is very important during construction, otherwise they may end up out of control.
 </lore>

@@ -19,9 +19,12 @@ import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.ITrigger;
 import buildcraft.api.statements.StatementManager;
 
+import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.GuideManager;
 import buildcraft.lib.client.guide.data.JsonTypeTags;
+import buildcraft.lib.client.guide.parts.GuidePart;
 import buildcraft.lib.client.guide.parts.contents.PageLinkStatement;
+import buildcraft.lib.client.guide.ref.GuideGroupManager;
 import buildcraft.lib.gui.ISimpleDrawable;
 import buildcraft.lib.gui.statement.GuiElementStatementSource;
 
@@ -90,5 +93,10 @@ public class PageEntryStatement extends PageValueType<IStatement> {
     @Nullable
     public ISimpleDrawable createDrawable(IStatement value) {
         return (x, y) -> GuiElementStatementSource.drawGuiSlot(value, x, y);
+    }
+
+    @Override
+    public void addPageEntries(IStatement value, GuiGuide gui, List<GuidePart> parts) {
+        GuideGroupManager.appendLinkedChapters(INSTANCE.wrap(value), gui, parts);
     }
 }

@@ -1,4 +1,3 @@
-<chapter name="item.list.name"/>
 <lore>
 With so many blocks and items, 9 slots isn't very practical when trying to route every single possibility of items through diamond pipes.
 </lore>

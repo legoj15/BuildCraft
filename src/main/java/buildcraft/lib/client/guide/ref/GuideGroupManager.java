@@ -15,10 +15,15 @@ import javax.annotation.Nullable;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.material.Fluid;
+
+import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.statements.IStatement;
 
+import buildcraft.lib.client.guide.entry.FluidStackValueFilter;
 import buildcraft.lib.client.guide.entry.ItemStackValueFilter;
+import buildcraft.lib.client.guide.entry.PageEntryFluidStack;
 import buildcraft.lib.client.guide.entry.PageEntryItemStack;
 import buildcraft.lib.client.guide.entry.PageEntryStatement;
 import buildcraft.lib.client.guide.entry.PageValue;
@@ -33,12 +38,16 @@ public class GuideGroupManager {
 
     static {
         addValidClass(ItemStackValueFilter.class, PageEntryItemStack.INSTANCE);
+        addValidClass(FluidStackValueFilter.class, PageEntryFluidStack.INSTANCE);
         addValidClass(IStatement.class, PageEntryStatement.INSTANCE);
         addTransformer(ItemStack.class, ItemStackValueFilter.class, ItemStackValueFilter::new);
         addTransformer(Item.class, ItemStack.class, ItemStack::new);
         addTransformer(Block.class, ItemStack.class, ItemStack::new);
+        addTransformer(FluidStack.class, FluidStackValueFilter.class, FluidStackValueFilter::new);
+        addTransformer(Fluid.class, FluidStack.class, fluid -> new FluidStack(fluid, 1));
 
-        // temp() — hardcoded group entries deferred (BCBlocks/BCItems not populated yet)
+        // Group population happens lazily in populateDefaultGroups(), called from
+        // GuideManager.reload0() — by which time BC modules and registries are loaded.
     }
 
     public static <F, T> void addTransformer(Class<F> fromClass, Class<T> toClass, Function<F, T> transform) {
@@ -172,5 +181,221 @@ public class GuideGroupManager {
 
     public static GuideGroupSet addKeys(String domain, String group, Collection<Object> values) {
         return getOrCreate(domain, group).addKeyCollection(values);
+    }
+
+    /** One-shot population of all guide groups, called from {@link
+     *  buildcraft.lib.client.guide.GuideManager#reload(net.minecraft.server.packs.resources.ResourceManager)}.
+     *  Clears existing groups (re-entry safe under {@code /reload} or F3+T) then registers
+     *  the four conceptual groups carried over from 1.12.2 plus auto-derived groups
+     *  populated from the fuel/coolant/refinery registries. */
+    public static void populateDefaultGroups() {
+        sets.clear();
+
+        // ---- Hardcoded conceptual groups (1.12.2 verbatim, retargeted to 26.1.x constants) ----
+
+        // Pipe-power providers: things that emit MJ into a wood/diamond-wood/emzuli pipe.
+        addEntries("buildcraft", "pipe_power_providers",
+            buildcraft.silicon.BCSiliconItems.PLUG_PULSAR.get(),
+            buildcraft.transport.BCTransportItems.PLUG_POWER_ADAPTOR.get(),
+            buildcraft.core.BCCoreItems.ENGINE_REDSTONE.get(),
+            buildcraft.energy.BCEnergyItems.ENGINE_STONE.get(),
+            buildcraft.energy.BCEnergyItems.ENGINE_IRON.get());
+        addKeys("buildcraft", "pipe_power_providers",
+            buildcraft.transport.BCTransportItems.PIPE_WOOD_ITEM.get(),
+            buildcraft.transport.BCTransportItems.PIPE_DIAMOND_WOOD_ITEM.get(),
+            buildcraft.transport.BCTransportItems.PIPE_EMZULI_ITEM.get(),
+            buildcraft.transport.BCTransportItems.PIPE_WOOD_FLUID.get(),
+            buildcraft.transport.BCTransportItems.PIPE_DIAMOND_WOOD_FLUID.get());
+
+        // Full-power providers: machines that accept MJ via direct contact (not pipes).
+        addEntries("buildcraft", "full_power_providers",
+            buildcraft.energy.BCEnergyItems.ENGINE_STONE.get(),
+            buildcraft.energy.BCEnergyItems.ENGINE_IRON.get());
+        addKeys("buildcraft", "full_power_providers",
+            buildcraft.builders.BCBuildersItems.BUILDER.get(),
+            buildcraft.builders.BCBuildersItems.FILLER.get(),
+            buildcraft.builders.BCBuildersItems.QUARRY.get(),
+            buildcraft.factory.BCFactoryItems.DISTILLER.get(),
+            buildcraft.factory.BCFactoryItems.MINING_WELL.get(),
+            buildcraft.factory.BCFactoryItems.PUMP.get(),
+            buildcraft.silicon.BCSiliconItems.LASER.get());
+
+        // Laser-power providers: laser tables that the laser block beams power into.
+        addEntries("buildcraft", "laser_power_providers",
+            buildcraft.silicon.BCSiliconItems.LASER.get());
+        addKeys("buildcraft", "laser_power_providers",
+            buildcraft.silicon.BCSiliconItems.ADVANCED_CRAFTING_TABLE.get(),
+            buildcraft.silicon.BCSiliconItems.ASSEMBLY_TABLE.get(),
+            buildcraft.silicon.BCSiliconItems.INTEGRATION_TABLE.get());
+
+        // Area markers: the quarry/architect/filler area-of-effect machines depend on these.
+        addEntries("buildcraft", "area_markers",
+            buildcraft.core.BCCoreItems.MARKER_VOLUME.get(),
+            buildcraft.core.BCCoreItems.VOLUME_BOX.get());
+        addKeys("buildcraft", "area_markers",
+            buildcraft.builders.BCBuildersItems.QUARRY.get(),
+            buildcraft.builders.BCBuildersItems.ARCHITECT.get(),
+            buildcraft.builders.BCBuildersItems.FILLER.get());
+
+        // ---- Auto-derived groups from registries ----
+
+        // Combustion fuels: every registered IFuel becomes an entry, the iron (combustion)
+        // engine is the consumer/key. Skip the empty-fluid sentinel.
+        if (buildcraft.api.fuels.BuildcraftFuelRegistry.fuel != null) {
+            for (buildcraft.api.fuels.IFuel fuel : buildcraft.api.fuels.BuildcraftFuelRegistry.fuel.getFuels()) {
+                net.neoforged.neoforge.fluids.FluidStack fs = fuel.getFluid();
+                if (fs == null || fs.isEmpty()) continue;
+                addEntry("buildcraft", "combustion_fuels", fs);
+            }
+            addKey("buildcraft", "combustion_fuels",
+                buildcraft.energy.BCEnergyItems.ENGINE_IRON.get());
+        }
+
+        // Coolants: both fluid and solid coolants flow into the combustion (iron) engine.
+        // Solid coolants get listed alongside fluids in the same group.
+        if (buildcraft.api.fuels.BuildcraftFuelRegistry.coolant != null) {
+            for (buildcraft.api.fuels.ICoolant c : buildcraft.api.fuels.BuildcraftFuelRegistry.coolant.getCoolants()) {
+                net.neoforged.neoforge.fluids.FluidStack fs = c.getRepresentativeFluid();
+                if (fs == null || fs.isEmpty()) continue;
+                addEntry("buildcraft", "coolants", fs);
+            }
+            for (buildcraft.api.fuels.ISolidCoolant sc : buildcraft.api.fuels.BuildcraftFuelRegistry.coolant.getSolidCoolants()) {
+                net.minecraft.world.item.ItemStack stack = sc.getRepresentativeStack();
+                if (stack == null || stack.isEmpty()) continue;
+                addEntry("buildcraft", "coolants", stack);
+            }
+            addKey("buildcraft", "coolants",
+                buildcraft.energy.BCEnergyItems.ENGINE_IRON.get());
+        }
+
+        // Distillation recipes: each input fluid links into the distiller, each output
+        // links from it. The two are split into separate groups so the distiller's page
+        // shows "Distillation Inputs" (entries it consumes) and "Distillation Outputs"
+        // (entries it produces) under distinct headings.
+        if (buildcraft.api.recipes.BuildcraftRecipeRegistry.refineryRecipes != null) {
+            net.minecraft.world.item.Item distiller = buildcraft.factory.BCFactoryItems.DISTILLER.get();
+            for (var recipe : buildcraft.api.recipes.BuildcraftRecipeRegistry.refineryRecipes
+                .getDistillationRegistry().getAllRecipes()) {
+                if (recipe.in() != null && !recipe.in().isEmpty()) {
+                    addEntry("buildcraft", "distillation_inputs", recipe.in());
+                }
+                if (recipe.outGas() != null && !recipe.outGas().isEmpty()) {
+                    addEntry("buildcraft", "distillation_outputs", recipe.outGas());
+                }
+                if (recipe.outLiquid() != null && !recipe.outLiquid().isEmpty()) {
+                    addEntry("buildcraft", "distillation_outputs", recipe.outLiquid());
+                }
+            }
+            addKey("buildcraft", "distillation_inputs", distiller);
+            addKey("buildcraft", "distillation_outputs", distiller);
+        }
+
+        // Heat exchanger recipes: heatable inputs/outputs and coolable inputs/outputs both
+        // funnel through the heat exchange block.
+        if (buildcraft.api.recipes.BuildcraftRecipeRegistry.refineryRecipes != null) {
+            net.minecraft.world.item.Item heatExchange = buildcraft.factory.BCFactoryItems.HEAT_EXCHANGE.get();
+            for (var recipe : buildcraft.api.recipes.BuildcraftRecipeRegistry.refineryRecipes
+                .getHeatableRegistry().getAllRecipes()) {
+                if (recipe.in() != null && !recipe.in().isEmpty()) {
+                    addEntry("buildcraft", "heat_exchange_inputs", recipe.in());
+                }
+                if (recipe.out() != null && !recipe.out().isEmpty()) {
+                    addEntry("buildcraft", "heat_exchange_outputs", recipe.out());
+                }
+            }
+            for (var recipe : buildcraft.api.recipes.BuildcraftRecipeRegistry.refineryRecipes
+                .getCoolableRegistry().getAllRecipes()) {
+                if (recipe.in() != null && !recipe.in().isEmpty()) {
+                    addEntry("buildcraft", "heat_exchange_inputs", recipe.in());
+                }
+                if (recipe.out() != null && !recipe.out().isEmpty()) {
+                    addEntry("buildcraft", "heat_exchange_outputs", recipe.out());
+                }
+            }
+            addKey("buildcraft", "heat_exchange_inputs", heatExchange);
+            addKey("buildcraft", "heat_exchange_outputs", heatExchange);
+        }
+
+        int totalEntries = 0;
+        for (GuideGroupSet set : sets.values()) {
+            totalEntries += set.entries.size() + set.sources.size();
+        }
+        buildcraft.api.core.BCLog.logger.info(
+            "[lib.guide] Populated " + sets.size() + " guide groups with " + totalEntries
+                + " total members.");
+    }
+
+    /** Appends a "Linked To" / "Linked From" pair of chapters to {@code parts} for any
+     *  group that contains {@code wrapped}. This is the auto-derivation hook called from
+     *  each {@link PageValueType}'s {@code addPageEntries} override.
+     *
+     *  <p>Algorithm (faithful to 1.12.2): for each {@link GuideGroupSet} —
+     *  <ul>
+     *    <li>If {@code wrapped} is in the set's {@code sources}, this entry is a "key/source" and
+     *        the set's {@code entries} are what it links TO. Append a {@link buildcraft.lib.client.guide.parts.GuidePartGroup}
+     *        with {@link GuideGroupSet.GroupDirection#SRC_TO_ENTRY}.</li>
+     *    <li>If {@code wrapped} is in the set's {@code entries}, this entry is a "value/target" and
+     *        the set's {@code sources} link FROM it. Append with {@link GuideGroupSet.GroupDirection#ENTRY_TO_SRC}.</li>
+     *  </ul>
+     *  Then de-duplicate against any {@code <group>} tag the markdown already declared, and emit
+     *  {@code GuideChapterWithin} headings labelled "Linked To" / "Linked From" before the
+     *  respective groups, each followed by a forced page break. */
+    public static void appendLinkedChapters(@Nullable PageValue<?> wrapped,
+        buildcraft.lib.client.guide.GuiGuide gui,
+        List<buildcraft.lib.client.guide.parts.GuidePart> parts) {
+        if (wrapped == null) return;
+
+        List<buildcraft.lib.client.guide.parts.GuidePartGroup> linksToOther = new ArrayList<>();
+        List<buildcraft.lib.client.guide.parts.GuidePartGroup> linksToThis = new ArrayList<>();
+
+        for (GuideGroupSet set : sets.values()) {
+            if (containsValue(set.sources, wrapped)) {
+                linksToOther.add(new buildcraft.lib.client.guide.parts.GuidePartGroup(
+                    gui, set, GuideGroupSet.GroupDirection.SRC_TO_ENTRY));
+            } else if (containsValue(set.entries, wrapped)) {
+                linksToThis.add(new buildcraft.lib.client.guide.parts.GuidePartGroup(
+                    gui, set, GuideGroupSet.GroupDirection.ENTRY_TO_SRC));
+            }
+        }
+
+        // De-dup against <group> tags already declared in the markdown.
+        for (buildcraft.lib.client.guide.parts.GuidePart p : parts) {
+            if (p instanceof buildcraft.lib.client.guide.parts.GuidePartGroup g) {
+                linksToOther.removeIf(x -> x.group == g.group);
+                linksToThis.removeIf(x -> x.group == g.group);
+            }
+        }
+
+        if (!linksToOther.isEmpty()) {
+            parts.add(new buildcraft.lib.client.guide.parts.GuideChapterWithin(gui,
+                buildcraft.lib.misc.LocaleUtil.localize("buildcraft.guide.meta.group.linking_to")));
+            for (buildcraft.lib.client.guide.parts.GuidePartGroup g : linksToOther) {
+                parts.add(g);
+                parts.add(new buildcraft.lib.client.guide.parts.GuidePartNewPage(gui,
+                    buildcraft.lib.client.guide.loader.XmlPageLoader.RECIPE_BREAK_THRESHOLD));
+            }
+        }
+        if (!linksToThis.isEmpty()) {
+            parts.add(new buildcraft.lib.client.guide.parts.GuideChapterWithin(gui,
+                buildcraft.lib.misc.LocaleUtil.localize("buildcraft.guide.meta.group.linked_from")));
+            for (buildcraft.lib.client.guide.parts.GuidePartGroup g : linksToThis) {
+                parts.add(g);
+                parts.add(new buildcraft.lib.client.guide.parts.GuidePartNewPage(gui,
+                    buildcraft.lib.client.guide.loader.XmlPageLoader.RECIPE_BREAK_THRESHOLD));
+            }
+        }
+    }
+
+    /** Linear search using the type's {@link PageValueType#matches} contract instead of
+     *  {@link Object#equals}. {@code matches} captures stack-vs-stack/item/fluid identity
+     *  semantics that {@code equals} on {@link ItemStackValueFilter} doesn't, and was the
+     *  lookup mechanism 1.12.2 used. */
+    private static boolean containsValue(List<PageValue<?>> list, PageValue<?> wrapped) {
+        if (wrapped == null) return false;
+        for (PageValue<?> pv : list) {
+            if (pv == wrapped) return true;
+            if (pv != null && pv.matches(wrapped.value)) return true;
+        }
+        return false;
     }
 }

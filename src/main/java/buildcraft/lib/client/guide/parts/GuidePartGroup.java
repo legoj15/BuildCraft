@@ -79,8 +79,11 @@ public class GuidePartGroup extends GuidePart {
                 Object value = values[i - 1];
                 GuidePageFactory factory = GuideManager.INSTANCE.getFactoryFor(value);
                 if (factory != null) {
-                    // gui.openPage(factory.createNew(gui)) — deferred until full UI port
-                    return new PagePosition(Integer.MAX_VALUE / 4, 0);
+                    GuidePageBase newPage = factory.createNew(gui);
+                    if (newPage != null) {
+                        gui.openPage(newPage);
+                        return new PagePosition(Integer.MAX_VALUE / 4, 0);
+                    }
                 }
             }
         }

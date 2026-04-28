@@ -32,9 +32,8 @@ public final class GuideGroupSet {
     }
 
     public String getTitle(GroupDirection dir) {
-        // LocaleUtil.localize not ported — return raw key
         String post = group.getNamespace() + "." + group.getPath();
-        return dir.localePrefix + post;
+        return buildcraft.lib.misc.LocaleUtil.localize(dir.localePrefix + post);
     }
 
     public List<PageValue<?>> getValues(GroupDirection direction) {

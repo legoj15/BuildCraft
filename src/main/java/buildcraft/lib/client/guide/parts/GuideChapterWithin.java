@@ -11,22 +11,51 @@ import buildcraft.lib.client.guide.GuiGuide;
 public class GuideChapterWithin extends GuideChapter {
     private int lastPage = -1;
 
+    /** When false, the chapter still produces a side-tab and remains clickable as a
+     *  jump anchor, but skips its inline page-body render (the colored heading rect
+     *  + chapter line). Used by GuidePage for the auto-prepended page-title chapter,
+     *  which would otherwise duplicate the title that's already drawn at the top of
+     *  every page. */
+    private final boolean inlineRender;
+
     public GuideChapterWithin(GuiGuide gui, int level, String text) {
-        super(gui, level, text);
+        this(gui, level, text, true);
     }
 
     public GuideChapterWithin(GuiGuide gui, String chapter) {
-        this(gui, 0, chapter);
+        this(gui, 0, chapter, true);
+    }
+
+    public GuideChapterWithin(GuiGuide gui, int level, String text, boolean inlineRender) {
+        super(gui, level, text);
+        this.inlineRender = inlineRender;
+    }
+
+    public GuideChapterWithin(GuiGuide gui, String chapter, boolean inlineRender) {
+        this(gui, 0, chapter, inlineRender);
     }
 
     @Override
     public PagePosition renderIntoArea(int x, int y, int width, int height, PagePosition current, int index) {
+        if (!inlineRender) {
+            // No body render and no cursor advance — but still record where we are
+            // so onClick can navigate back to the entry's first page.
+            lastPage = current.page;
+            return current;
+        }
         PagePosition pos = super.renderIntoArea(x, y, width, height, current, index);
         lastPage = pos.page;
         if (pos.pixel == 0) {
             lastPage = pos.page - 1;
         }
         return pos;
+    }
+
+    @Override
+    public PagePosition handleMouseClick(int x, int y, int width, int height, PagePosition current, int index,
+        int mouseX, int mouseY) {
+        if (!inlineRender) return current;
+        return super.handleMouseClick(x, y, width, height, current, index, mouseX, mouseY);
     }
 
     @Override

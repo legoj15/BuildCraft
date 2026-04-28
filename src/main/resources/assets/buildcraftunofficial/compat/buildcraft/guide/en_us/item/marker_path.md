@@ -1,4 +1,3 @@
-<chapter name="tile.pathMarkerBlock.name"/>
 The path marker is useful for <bold>stuffs</bold> and linking up a builders oart path woops that was spelt wrong lol oh well I guess this is just filler.
 <chapter name="Other"/>
 Other <bold>details <underline>include</underline> bold<italic> text</italic></bold>:

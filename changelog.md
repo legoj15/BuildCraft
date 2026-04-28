@@ -1,18 +1,13 @@
-###### Changes since 26.1 Beta release 5:
-- Finished porting the Filler, the Filler Planner, Blueprint, Architect's Table, Electronic Library, Builder, Single Block Schematic, and Replacer
-- Fixed the spawnable Volume Box entity
-- Finished porting the Flood Gate
-- Finished porting the Chute
-- Correctly implemented the List item for advanced pipe filtering for 26.1.x and added a new "Matches" ledger and implemented its help ledger
-- Got the BuildCraft Guide Book and the (now distinct) BuildCraft Configuration Guide into a usable state. Still needs polish and information additions.
-- Updated NeoForge to 26.1.2.12-beta and JEI to 29.5.0.26 for Minecraft 26.1.2.
-- Tuned oil world generation: shallow oceans now slightly oilier than land, deep oceans the rare prize tier, average per-chunk ocean rate roughly 15× lower than before so oil isn't guaranteed wherever there is water. 
-- Engine & MJ Dynamo polish: usage tooltips, restored block-name translations, fixed GUI textures, max-1-gear-per-slot enforcement, MJ Dynamo power ledger now reports RF (not MJ) and Help ledger shows the live conversion rate as gears are installed; engine power-ledger icon animations are now driven by the sprite atlas so resource packs can override frametime/frames/interpolation.
-- Finished porting the Filtered Buffer.
-- Markers now drop themselves when broken or washed away
-- Fixed being able to phase through the Quarry rigging every so often
-- Fixed oil-well generation and the pump's infinite-spring detection for the −64 world floor
-- Added usage tooltips to the Land Mark, Path Mark, Quarry, Mining Well, and unpainted Paintbrush
-- Pipe gates and wire pluggables now drop themselves when the parent pipe is broken in survival
-- Fixed the Iron-AND/OR (and higher) Gate connector buttons being click-through no-ops
-- All `ItemHandlerSimple`-backed inventories (Builder/Filler resource grids, Architect input/output, Auto Workbench, the silicon laser tables, Filtered Buffer, Chute, diamond/emerald/emzuli pipe filters, Electronic Library, Replacer, Zone Planner, engine upgrade slots) now preserve item components (enchantments, custom names, damage, dye colour, banner patterns, written-book pages, bundle contents, etc.) across save/load. Existing worlds keep the components on legacy stacks where the data was preserved.
+###### Changes since 26.1.x Beta release 6:
+- Guide book polish:
+  - Fix the open Guide Book GUI rendering blank or unresponsive content after `/reload` or a datapack sync. Open pages now rebuild themselves against the freshly-loaded registry on the next tick (preserving search text and page position) instead of holding stale references that required closing and reopening the book to recover.
+  - Fix the configuration and gameplay guides showing identical content on the first open. The guide registry is now populated synchronously before the guide-book screen is constructed, so book identifiers resolve correctly on every open.
+  - Side bookmark tabs that have an expand/collapse arrow no longer slide on hover, so the arrow stays in place and is easier to click.
+  - Side bookmark tabs now clamp their hover-extension and wrap their title text onto multiple lines when the screen is too narrow, instead of animating off-screen or overflowing past the viewport.
+  - Eliminate the 1-pixel jitter between an animating tab and the book by snapping nine-sliced sprite endpoints to whole pixels.
+  - Multi-line clickable chapter entries on the contents page now highlight as a single cohesive block instead of each wrapped line behaving like a separate clickable.
+  - Clicking an entry's icon (on contents/index pages and on group/category pages) now opens that entry, matching the affordance the icon-hover already suggested. Hovering either the icon or the text now lights up the whole row and swaps the icon to its hovered drawable, so icon and text read as a single click target.
+  - Restore smooth interpolation on the bookmark-tab hover animation (and the cover-flip when the book opens) by using Minecraft 1.21+'s partial-tick fraction instead of the per-frame delta that was being incorrectly substituted.
+  - Stop double-defining the page title on entries (e.g. Auto Workbench) that previously had a redundant `<chapter name="tile.X.name"/>` at the top of their markdown. The auto-prepended page-title chapter now contributes only a side-tab + jump anchor, never an inline body heading.
+  - Render the page title centered over each visible page rather than over the spine — readable on every spread, and skipped on the back-of-book half-page when an entry ends on an odd page.
+  - Restore the "Linked From" / "Linked To" chapters on entry pages. The combustion (iron) engine page now lists every registered fuel, the heat exchange lists its coolants and recipe fluids, the distiller lists its inputs and outputs, and the four conceptual groups from 1.12.2 (pipe power, full power, laser power, area markers) are restored. New `fluid_stack` page-entry type lets fluid endpoints render as proper fluid icons. Group entries are now clickable to navigate to the target page, and `<group direction="from"/>` lets markdown override the default direction.

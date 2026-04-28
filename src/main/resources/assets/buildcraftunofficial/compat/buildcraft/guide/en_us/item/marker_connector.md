@@ -1,4 +1,3 @@
-<chapter name="item.markerConnector.name"/>
 <lore>
 Finer control over the areas that your machines work is vital in any large scale engineering project and you need a tool to control that.
 </lore>

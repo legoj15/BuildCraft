@@ -113,9 +113,14 @@ public enum CoolantRegistry implements ICoolantManager {
             }
             return 0;
         }
+
+        @Override
+        public FluidStack getRepresentativeFluid() {
+            return fluid;
+        }
     }
 
-    private static class SolidCoolant implements ISolidCoolant {
+    public static class SolidCoolant implements ISolidCoolant {
         private final ItemStack solid;
         private final FluidStack fluid;
         private final float multiplier;
@@ -133,6 +138,11 @@ public enum CoolantRegistry implements ICoolantManager {
             }
             int liquidAmount = (int) (stack.getCount() * fluid.getAmount() * multiplier / solid.getCount());
             return new FluidStack(fluid.getFluid(), liquidAmount);
+        }
+
+        @Override
+        public ItemStack getRepresentativeStack() {
+            return solid;
         }
     }
 }

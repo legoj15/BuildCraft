@@ -7,6 +7,7 @@
 package buildcraft.lib.client.guide.parts;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -122,32 +123,37 @@ public abstract class GuideChapter extends GuidePart {
 
     /** @return The additional number of chapter segments drawn. */
     public int draw(int yIndex, float partialTicks, boolean drawCentral) {
-        int drawnCount = 1;
-
         IFontRenderer font = gui.getCurrentFont();
-        if (font == null) return drawnCount;
+        if (font == null) return 1;
 
-        String text = chapter.text;
         float hoverWidth = getHoverWidth(partialTicks);
         int colour = getColour();
         int argb = asARGB(colour);
-
-        int baseY = drawCentral ? ((int) GuiGuide.FLOATING_CHAPTER_MENU.getY() + 6) : gui.minY;
-        int y = baseY + (font.getMaxFontHeight() + 8) * (yIndex + 1);
         boolean hasChildren = !children.isEmpty();
+        int arrowOffset = hasChildren ? 16 : 0;
+
+        int lineStride = font.getMaxFontHeight() + 8;
+        int baseY = drawCentral ? ((int) GuiGuide.FLOATING_CHAPTER_MENU.getY() + 6) : gui.minY;
+        int y = baseY + lineStride * (yIndex + 1);
+
+        // Wrap the title onto multiple lines when the natural single-line width would
+        // push the tab past the screen edge. Tabs grow vertically (taller, narrower)
+        // instead of overflowing. Central (small-screen) mode keeps single-line.
+        List<String> lines = drawCentral ? Collections.singletonList(chapter.text) : getWrappedTitle();
+        int effectiveTextW = effectiveTextWidth(font, lines);
+        int drawnCount = lines.size();
+        int spriteFullHeight = lines.size() * lineStride - 2;
+
         // `width` is the text+hover footprint used for positioning the LEFT-side
         // tab so its right edge aligns with the book spine. `_width` is the wider
         // sprite-render footprint that adds 12px of internal padding plus a 16px
-        // arrow gutter for parent chapters. In 1.12.2 these were separate; the
-        // 26.1 port collapsed them into just `_width`, causing LEFT-side tabs to
-        // visually drift ~12-28px further left than their click hitbox.
-        float width = font.getStringWidth(text) + hoverWidth;
-        float _width = font.getStringWidth(text) + 12 + hoverWidth + (hasChildren ? 16 : 0);
-        int fullHeight = font.getFontHeight(text) + 6;
+        // arrow gutter for parent chapters.
+        float width = effectiveTextW + hoverWidth;
+        float _width = effectiveTextW + 12 + hoverWidth + arrowOffset;
         int childHeight = 0;
 
         if (hasChildren && expanded) {
-            childHeight = fullHeight + getChildrenFullHeight();
+            childHeight = spriteFullHeight + getChildrenFullHeight();
         }
 
         if (drawCentral || lastDrawn == EnumGuiSide.RIGHT) {
@@ -168,9 +174,9 @@ public abstract class GuideChapter extends GuidePart {
 
             SpriteNineSliced icon = drawCentral ? GuiGuide.CHAPTER_MARKER_9 : GuiGuide.CHAPTER_MARKER_9_RIGHT;
             if (childHeight > 0) {
-                icon.drawTinted(x + 10, y + fullHeight - 12, _width - 16, childHeight, argb);
+                icon.drawTinted(x + 10, y + spriteFullHeight - 12, _width - 16, childHeight, argb);
             }
-            icon.drawTinted(x, y - 4, _width, fullHeight, argb);
+            icon.drawTinted(x, y - 4, _width, spriteFullHeight, argb);
             if (hasChildren) {
                 (expanded ? GuiGuide.EXPANDED_ARROW : GuiGuide.CLOSED_ARROW).drawAt(x + hoverWidth, y - 4);
                 x += 16;
@@ -185,7 +191,9 @@ public abstract class GuideChapter extends GuidePart {
                 }
             }
 
-            font.drawString(text, (int) (x + 6 + hoverWidth), y, 0xFF000000);
+            for (int i = 0; i < lines.size(); i++) {
+                font.drawString(lines.get(i), (int) (x + 6 + hoverWidth), y + i * lineStride, 0xFF000000);
+            }
         } else if (lastDrawn == EnumGuiSide.LEFT) {
             float x = gui.minX - width + 5;
             if (hasChildren) {
@@ -193,9 +201,9 @@ public abstract class GuideChapter extends GuidePart {
             }
 
             if (childHeight > 0) {
-                GuiGuide.CHAPTER_MARKER_9_LEFT.drawTinted(x + 10, y + fullHeight - 12, _width - 16, childHeight, argb);
+                GuiGuide.CHAPTER_MARKER_9_LEFT.drawTinted(x + 10, y + spriteFullHeight - 12, _width - 16, childHeight, argb);
             }
-            GuiGuide.CHAPTER_MARKER_9_LEFT.drawTinted(x - 6, y - 4, _width, fullHeight, argb);
+            GuiGuide.CHAPTER_MARKER_9_LEFT.drawTinted(x - 6, y - 4, _width, spriteFullHeight, argb);
 
             if (hasChildren) {
                 (expanded ? GuiGuide.EXPANDED_ARROW : GuiGuide.CLOSED_ARROW).drawAt(x - 6, y - 4);
@@ -211,9 +219,55 @@ public abstract class GuideChapter extends GuidePart {
                 }
             }
 
-            font.drawString(text, (int) x, y, 0xFF000000);
+            for (int i = 0; i < lines.size(); i++) {
+                font.drawString(lines.get(i), (int) x, y + i * lineStride, 0xFF000000);
+            }
         }
         return drawnCount;
+    }
+
+    /** How many vertical slots this chapter currently occupies — equal to the number of
+     * lines its title wraps to (1 for un-wrapped). Used by sibling-y-position math in
+     * getMousePart so multi-line tabs don't overlap the next chapter. Excludes children. */
+    public int getDrawnSlotCount() {
+        return getWrappedTitle().size();
+    }
+
+    /** Wrap the chapter title against the per-side viewport-margin constraint. Returns
+     * a singleton if the unwrapped width fits or the side hasn't been determined yet. */
+    private List<String> getWrappedTitle() {
+        IFontRenderer font = gui.getCurrentFont();
+        if (font == null) return Collections.singletonList(chapter.text);
+        if (lastDrawn == null) return Collections.singletonList(chapter.text);
+        int maxLineW = computeMaxLineWidth();
+        if (maxLineW >= Integer.MAX_VALUE / 2 || font.getStringWidth(chapter.text) <= maxLineW) {
+            return Collections.singletonList(chapter.text);
+        }
+        return font.wrapString(chapter.text, maxLineW, false, 1f);
+    }
+
+    /** The widest rendered line out of a wrapped title. */
+    private static int effectiveTextWidth(IFontRenderer font, List<String> lines) {
+        int max = 0;
+        for (String line : lines) {
+            max = Math.max(max, font.getStringWidth(line));
+        }
+        return max;
+    }
+
+    /** Maximum width a single line of the title can occupy without the resulting tab
+     * extending past the screen edge. Floored at 20 so degenerate window sizes don't
+     * produce absurdly tall tabs. */
+    private int computeMaxLineWidth() {
+        int arrowOffset = hasChildren() ? 16 : 0;
+        if (lastDrawn == EnumGuiSide.LEFT) {
+            return Math.max(20, gui.minX - 1 - arrowOffset);
+        } else if (lastDrawn == EnumGuiSide.RIGHT) {
+            return Math.max(20, gui.width - gui.minX
+                - GuiGuide.PAGE_LEFT.width - GuiGuide.PAGE_RIGHT.width
+                - 1 - arrowOffset);
+        }
+        return Integer.MAX_VALUE;
     }
 
     private int getChildrenFullHeight() {
@@ -221,8 +275,9 @@ public abstract class GuideChapter extends GuidePart {
         int fullHeight = 0;
         IFontRenderer font = gui.getCurrentFont();
         if (font == null) return 0;
+        int lineStride = font.getMaxFontHeight() + 8;
         for (GuideChapter c : children) {
-            fullHeight += font.getFontHeight(c.chapter.text) + 6;
+            fullHeight += c.getDrawnSlotCount() * lineStride - 2;
             fullHeight += c.getChildrenFullHeight();
             fullHeight += 2;
         }
@@ -233,12 +288,6 @@ public abstract class GuideChapter extends GuidePart {
     protected int getMousePart() {
         IFontRenderer font = gui.getCurrentFont();
         if (font == null) return 0;
-        String text = chapter.text;
-        float hoverWidth = getHoverWidth(0);
-        final float realHoverWidth = hoverWidth;
-        int width = (int) (font.getStringWidth(text) + hoverWidth) + (children.isEmpty() ? 0 : 16);
-
-        int chapterIndex = 0;
 
         GuideChapter p = parent;
         while (p != null) {
@@ -246,22 +295,38 @@ public abstract class GuideChapter extends GuidePart {
             p = p.parent;
         }
 
+        List<String> lines = getWrappedTitle();
+        int effectiveTextW = effectiveTextWidth(font, lines);
+        float hoverWidth = getHoverWidth(0);
+        final float realHoverWidth = hoverWidth;
+        int width = (int) (effectiveTextW + hoverWidth) + (children.isEmpty() ? 0 : 16);
+
+        // Walk the visible chapters before this one to compute its slot offset. Each
+        // visible chapter contributes its own slot count (line-wrapped titles consume
+        // multiple slots), so a multi-line tab doesn't get its hitbox shifted under
+        // the next chapter's tab.
+        int chapterIndex = 1;
         for (GuideChapter c : gui.getChapters()) {
-            chapterIndex++;
             if (c == this) break;
-            p = c.parent;
-            while (p != null) {
-                if (!p.expanded) {
-                    chapterIndex--;
+            boolean visible = true;
+            GuideChapter cp = c.parent;
+            while (cp != null) {
+                if (!cp.expanded) {
+                    visible = false;
                     break;
                 }
-                p = p.parent;
+                cp = cp.parent;
+            }
+            if (visible) {
+                chapterIndex += c.getDrawnSlotCount();
             }
         }
 
         boolean isCentral = gui.isSmallScreen();
+        int lineStride = font.getMaxFontHeight() + 8;
         int baseY = isCentral ? ((int) GuiGuide.FLOATING_CHAPTER_MENU.getY() + 6) : gui.minY;
-        int y = baseY + (font.getMaxFontHeight() + 8) * chapterIndex;
+        int y = baseY + lineStride * chapterIndex;
+        int rectHeight = lines.size() * lineStride - 1;
 
         if (isCentral || lastDrawn == EnumGuiSide.RIGHT) {
             int x;
@@ -279,8 +344,10 @@ public abstract class GuideChapter extends GuidePart {
                 p = p.parent;
             }
 
-            GuiRectangle drawRect = new GuiRectangle(x - realHoverWidth, y - 4, width + 16, 16);
+            GuiRectangle drawRect = new GuiRectangle(x - realHoverWidth, y - 4, width + 16, rectHeight);
             if (drawRect.contains(gui.mouse)) {
+                // The arrow only occupies the top line of a multi-line tab — keep its
+                // hitbox at the original 16 px height regardless of how tall the tab is.
                 GuiRectangle arrowRect = new GuiRectangle(x - realHoverWidth, y - 4, 24 + realHoverWidth, 16);
                 if (hasChildren() && arrowRect.contains(gui.mouse)) {
                     return 2;
@@ -289,7 +356,7 @@ public abstract class GuideChapter extends GuidePart {
             }
         } else if (lastDrawn == EnumGuiSide.LEFT) {
             int x = gui.minX - width - 5;
-            GuiRectangle drawRect = new GuiRectangle(x, y - 4, width + 16, 16);
+            GuiRectangle drawRect = new GuiRectangle(x, y - 4, width + 16, rectHeight);
             if (drawRect.contains(gui.mouse)) {
                 if (hasChildren() && new GuiRectangle(x, y - 4, 24, 16).contains(gui.mouse)) {
                     return 2;
@@ -301,8 +368,38 @@ public abstract class GuideChapter extends GuidePart {
     }
 
     private float getHoverWidth(float partialTicks) {
+        // Tabs with an expand/collapse arrow stay pinned so the arrow is a stable click
+        // target. Animating them would slide the arrow out from under the cursor mid-click.
+        if (hasChildren()) return 0;
         float prog = partialTicks * hoverProgress + (1 - partialTicks) * hoverProgressLast;
-        return (prog * MAX_HOVER_DISTANCE) / MAX_HOWEVER_PROGRESS;
+        float raw = (prog * MAX_HOVER_DISTANCE) / MAX_HOWEVER_PROGRESS;
+        // Clamp at the screen edge so the tab never animates off-screen. `hoverProgress`
+        // continues to advance to MAX_HOWEVER_PROGRESS in the background — if the user
+        // resizes the window wider mid-hover, the tab smoothly fills the new room
+        // without snapping. getMousePart uses getHoverWidth(0) for hit-testing, so the
+        // clickable hitbox follows the visible tab.
+        return Math.min(raw, getMaxAllowedHoverWidth());
+    }
+
+    /** Maximum extension `hoverWidth` can take before the tab's outer edge would push
+     * past the viewport. Uses the widest *wrapped* line as the effective text width,
+     * so tabs whose titles got wrapped (Fix 6) correctly clamp their hover at 0. */
+    private float getMaxAllowedHoverWidth() {
+        IFontRenderer font = gui.getCurrentFont();
+        if (font == null) return MAX_HOVER_DISTANCE;
+        int textW = effectiveTextWidth(font, getWrappedTitle());
+        int arrowOffset = hasChildren() ? 16 : 0;
+        if (lastDrawn == EnumGuiSide.LEFT) {
+            // LEFT tab outer (left) edge = gui.minX - textW - hoverWidth - 1 - arrowOffset.
+            return Math.max(0, gui.minX - textW - 1 - arrowOffset);
+        } else if (lastDrawn == EnumGuiSide.RIGHT) {
+            // RIGHT tab outer (right) edge = gui.minX + 387 + textW + arrowOffset + hoverWidth.
+            int rightLimit = gui.width - gui.minX
+                - GuiGuide.PAGE_LEFT.width - GuiGuide.PAGE_RIGHT.width
+                - textW - arrowOffset - 1;
+            return Math.max(0, rightLimit);
+        }
+        return MAX_HOVER_DISTANCE;
     }
 
     public int handleClick() {

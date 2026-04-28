@@ -85,6 +85,18 @@ public enum GuideManager {
 
     private boolean isInReload = false;
 
+    // Bumped at the end of every successful reload0(). GuiGuide polls this in tick()
+    // and rebuilds its open pages via GuidePageBase.createReloaded() when it changes,
+    // so an open Guide Book stays usable after /reload or datapack sync rather than
+    // rendering against the stale ContentsNode / GuidePageFactory references the reload
+    // just orphaned. volatile because reads happen on the client thread; writes happen
+    // wherever reload() is dispatched from.
+    private volatile int reloadGeneration = 0;
+
+    public int getReloadGeneration() {
+        return reloadGeneration;
+    }
+
     static {
         PAGE_LOADERS.put("md", MarkdownPageLoader.INSTANCE);
     }
@@ -103,6 +115,16 @@ public enum GuideManager {
 
     public void reload() {
         reload(Minecraft.getInstance().getResourceManager());
+    }
+
+    /** Trigger a reload only if the contents tree hasn't been built yet. Belt-and-suspenders
+     * for the guide-book entry path: callers can invoke this before opening a guide screen
+     * to guarantee the registry is populated, even if the resource-manager listener didn't
+     * fire (e.g. tests, dev environments, listener registration regressions). */
+    public void ensureLoaded() {
+        if (contents.isEmpty()) {
+            reload();
+        }
     }
 
     private void reload(ResourceManager resourceManager) {
@@ -164,6 +186,11 @@ public enum GuideManager {
             loadLangInternal(resourceManager, langCode);
         }
 
+        // Populate guide-group memberships now that BC modules are loaded and the
+        // fuel/coolant/refinery registries are stable. Must happen before
+        // generateContentsPage() so any group-derived contents can resolve correctly.
+        GuideGroupManager.populateDefaultGroups();
+
         generateContentsPage();
 
         watch.stop();
@@ -175,6 +202,11 @@ public enum GuideManager {
             "[lib.guide] Loaded " + p + " possible and " + a + " actual guide pages (" + e + " not found) in "
                 + time / 1000 + "ms."
         );
+
+        // Last statement so a thrown reload leaves the counter unchanged — the open
+        // GuiGuide keeps using its previous (still-coherent) state instead of thrashing
+        // against a half-built registry.
+        reloadGeneration++;
     }
 
     @SuppressWarnings("unchecked")

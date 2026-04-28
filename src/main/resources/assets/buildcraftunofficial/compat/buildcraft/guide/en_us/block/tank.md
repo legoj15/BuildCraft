@@ -1,4 +1,3 @@
-<chapter name="tile.tankBlock.name"/>
 <lore>
 While attempting to collect fluids found in the world, you have found a need to store your fluids without the need of buckets.
 </lore>

@@ -1,4 +1,3 @@
-<chapter name="item.paintbrush.name"/>
 <lore>
 While the amount of splash and colour that is found around the world is quite amazing, imagine being able to change the color of certain blocks in world with a simple stroke.
 While painting blocks for decoration is nice, it can also have a practical use such as separating pipes.

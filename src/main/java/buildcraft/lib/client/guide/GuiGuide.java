@@ -189,6 +189,13 @@ public class GuiGuide extends Screen {
     private IFontRenderer currentFont = FontManager.INSTANCE.getOrLoadFont("SansSerif", 9);
     private float lastPartialTicks;
 
+    // Snapshot of GuideManager.getReloadGeneration() at GUI-construction time. tick()
+    // compares against the current value and rebuilds open pages via createReloaded()
+    // when the registry has been reloaded out from under us — without this, /reload
+    // leaves the contents tree referencing orphaned ContentsNode / PageLink instances
+    // and search returns blank.
+    private int seenReloadGeneration = GuideManager.INSTANCE.getReloadGeneration();
+
     public GuiGuide() {
         this((GuideBook) null);
     }
@@ -253,10 +260,74 @@ public class GuiGuide extends Screen {
         }
     }
 
+    private void refreshAfterReload(int currentGen) {
+        // Snapshot history head→tail (top-of-stack first) and rebuild each page
+        // against the freshly-reloaded registry. createReloaded preserves user state
+        // (search text, page index, etc.) per page subclass.
+        List<GuidePageBase> snapshot = new ArrayList<>(pages);
+        pages.clear();
+        List<GuidePageBase> survivors = new ArrayList<>(snapshot.size());
+        for (GuidePageBase old : snapshot) {
+            GuidePageBase rebuilt = null;
+            try {
+                rebuilt = old.createReloaded();
+            } catch (Throwable t) {
+                buildcraft.api.core.BCLog.logger.warn(
+                    "[lib.guide] Failed to rebuild history page " + old.getClass().getSimpleName()
+                        + " after reload — dropping.", t
+                );
+            }
+            if (rebuilt != null) {
+                survivors.add(rebuilt);
+            }
+        }
+
+        GuidePageBase rebuiltCurrent = null;
+        if (currentPage != null) {
+            try {
+                rebuiltCurrent = currentPage.createReloaded();
+            } catch (Throwable t) {
+                buildcraft.api.core.BCLog.logger.warn(
+                    "[lib.guide] Failed to rebuild current page " + currentPage.getClass().getSimpleName()
+                        + " after reload — falling back to contents.", t
+                );
+            }
+        }
+        if (rebuiltCurrent == null) {
+            // Fall back to a fresh contents page so the user lands somewhere usable
+            // rather than seeing a stale render.
+            rebuiltCurrent = new GuidePageContents(this);
+        }
+        currentPage = rebuiltCurrent;
+
+        for (GuidePageBase survivor : survivors) {
+            pages.addLast(survivor);
+        }
+
+        refreshChapters();
+        seenReloadGeneration = currentGen;
+
+        if (GuideManager.DEBUG) {
+            buildcraft.api.core.BCLog.logger.info(
+                "[lib.guide] GuiGuide refreshed for reload generation " + currentGen
+                    + "; rebuilt " + (1 + survivors.size()) + " page(s), "
+                    + (snapshot.size() - survivors.size()) + " dropped."
+            );
+        }
+    }
+
     // --- Screen overrides ---
 
     @Override
     public void tick() {
+        // Capture once per tick so a reload landing mid-tick doesn't leave seenReloadGeneration
+        // ahead of what we actually rebuilt against. Run before super.tick() and the
+        // currentPage.updateScreen() call below so updateScreen sees the rebuilt page.
+        int currentGen = GuideManager.INSTANCE.getReloadGeneration();
+        if (currentGen != seenReloadGeneration) {
+            refreshAfterReload(currentGen);
+        }
+
         super.tick();
         if (isOpen) {
             currentPage.updateScreen();
@@ -283,6 +354,16 @@ public class GuiGuide extends Screen {
         MinecraftFont.setGuiGraphics(graphics);
         GuiIcon.setGuiGraphics(graphics);
         buildcraft.lib.gui.GuiStack.setGuiGraphics(graphics);
+        buildcraft.lib.gui.GuiFluid.setGuiGraphics(graphics);
+
+        // In 1.21+, Screen.extractRenderState receives getGameTimeDeltaTicks() — the
+        // PER-FRAME delta in tick units (e.g., ~0.33 at 60 fps), NOT the 0-1 fraction
+        // within the current tick that the lerp formulas in this class were ported from
+        // 1.12.2 expecting. Using the delta directly makes every frame render a position
+        // ~0.33 of the way from "last" to "next", visibly snapping rather than smoothly
+        // interpolating. Substitute the proper 0-1 fraction here so all downstream
+        // partialTicks consumers (cover flip, chapter hover lerp) interpolate correctly.
+        partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
         lastPartialTicks = partialTicks;
         minX = (this.width - PAGE_LEFT.width * 2) / 2;
@@ -310,6 +391,7 @@ public class GuiGuide extends Screen {
         MinecraftFont.setGuiGraphics(null);
         GuiIcon.setGuiGraphics(null);
         buildcraft.lib.gui.GuiStack.setGuiGraphics(null);
+        buildcraft.lib.gui.GuiFluid.setGuiGraphics(null);
     }
 
     public float getLastPartialTicks() {
@@ -408,17 +490,21 @@ public class GuiGuide extends Screen {
         }
         lastPageIcon.drawAt(minX + PAGE_LEFT.width, minY);
 
-        // Draw the title
+        // Draw the title — once over the centre of each content page rather than
+        // once over the spine. This is more readable (the spine art partly obscures
+        // text drawn over the gutter) and gives every page a clear header. The
+        // back-of-book "blank" half-page (when the entry ends on an odd page) gets
+        // no title, since there's no content there to label.
         String title = currentPage.getTitle();
         if (title != null) {
-            final int x;
             int titleWidth = currentFont.getStringWidth(title);
-            if (isHalfPageShown) {
-                x = (int) (minX + PAGE_LEFT_TEXT.getX() + (PAGE_LEFT_TEXT.getWidth() - titleWidth) / 2);
-            } else {
-                x = (this.width - titleWidth) / 2;
+            int leftX = (int) (minX + PAGE_LEFT_TEXT.getX() + (PAGE_LEFT_TEXT.getWidth() - titleWidth) / 2);
+            currentFont.drawString(title, leftX, minY + 12, 0xFF90816a);
+            if (!isHalfPageShown) {
+                int rightX = (int) (minX + PAGE_LEFT.width + PAGE_RIGHT_TEXT.getX()
+                    + (PAGE_RIGHT_TEXT.getWidth() - titleWidth) / 2);
+                currentFont.drawString(title, rightX, minY + 12, 0xFF90816a);
             }
-            currentFont.drawString(title, x, minY + 12, 0xFF90816a);
         }
 
         // Reset state for content rendering

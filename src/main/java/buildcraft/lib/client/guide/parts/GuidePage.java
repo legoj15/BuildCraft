@@ -28,7 +28,10 @@ public class GuidePage extends GuidePageBase {
         this.entry = entry;
 
         List<GuidePart> allParts = new ArrayList<>();
-        allParts.add(new GuideChapterWithin(gui, title));
+        // The auto-prepended page-title chapter only contributes a side-tab + jump
+        // anchor; its inline body render is suppressed because the page title is
+        // already drawn at the top of every spread (see GuiGuide#drawOpen).
+        allParts.add(new GuideChapterWithin(gui, title, false));
         allParts.addAll(parts);
 
         addTypeSpecific(gui, allParts, entry);

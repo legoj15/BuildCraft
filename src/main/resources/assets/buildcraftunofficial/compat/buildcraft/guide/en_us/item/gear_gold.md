@@ -1,4 +1,3 @@
-<chapter name="item.goldGearItem.name"/>
 <lore>
 More complex tasks require lots of very small interlocking gears, and iron gears break easily when used in this fashion.
 Gold never breaks when crafted into tiny gears, which allows it to be used for complex mechanisms.

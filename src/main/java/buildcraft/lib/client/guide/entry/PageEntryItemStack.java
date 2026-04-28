@@ -18,9 +18,12 @@ import net.minecraft.core.registries.BuiltInRegistries;
 
 import buildcraft.api.registry.IScriptableRegistry.OptionallyDisabled;
 
+import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.data.JsonTypeTags;
 import buildcraft.lib.client.guide.loader.MarkdownPageLoader;
+import buildcraft.lib.client.guide.parts.GuidePart;
 import buildcraft.lib.client.guide.parts.contents.PageLinkItemStack;
+import buildcraft.lib.client.guide.ref.GuideGroupManager;
 import buildcraft.lib.gui.GuiStack;
 import buildcraft.lib.gui.ISimpleDrawable;
 import buildcraft.lib.misc.ItemStackKey;
@@ -118,6 +121,11 @@ public class PageEntryItemStack extends PageValueType<ItemStackValueFilter> {
     @Override
     public Object getBasicValue(ItemStackValueFilter value) {
         return value.stack.baseStack.getItem();
+    }
+
+    @Override
+    public void addPageEntries(ItemStackValueFilter value, GuiGuide gui, List<GuidePart> parts) {
+        GuideGroupManager.appendLinkedChapters(INSTANCE.wrap(value), gui, parts);
     }
 
     @Override

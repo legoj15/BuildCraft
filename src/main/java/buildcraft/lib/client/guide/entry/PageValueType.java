@@ -20,6 +20,8 @@ import net.minecraft.util.profiling.ProfilerFiller;
 
 import buildcraft.api.registry.IScriptableRegistry.OptionallyDisabled;
 
+import buildcraft.lib.client.guide.GuiGuide;
+import buildcraft.lib.client.guide.parts.GuidePart;
 import buildcraft.lib.gui.ISimpleDrawable;
 
 /** Abstract base for guide page value types. Subclasses define how to deserialize, display, and match
@@ -68,9 +70,14 @@ public abstract class PageValueType<T> {
         return true;
     }
 
-    /** Override to add page entries when this entry is viewed.
-     * Deferred until GuiGuide and GuidePart are ported. */
-    public void addPageEntries(T value, Object gui, List<?> parts) {
-        // Stub — rendering system not yet ported
-    }
+    /** Override to append type-specific guide parts when an entry of this type is opened.
+     *  Used to auto-emit the "Linked From" / "Linked To" chapters from
+     *  {@link buildcraft.lib.client.guide.ref.GuideGroupManager} group memberships, and
+     *  potentially other type-specific page extensions. The default is a no-op.
+     *
+     *  <p>Called from {@link buildcraft.lib.client.guide.parts.GuidePage#GuidePage GuidePage}'s
+     *  constructor after markdown-defined parts have been added but before the parts list is
+     *  frozen, so implementations can both inspect existing parts (e.g. de-duplicate against
+     *  manually-declared {@code <group>} tags) and append new ones. */
+    public void addPageEntries(T value, GuiGuide gui, List<GuidePart> parts) {}
 }

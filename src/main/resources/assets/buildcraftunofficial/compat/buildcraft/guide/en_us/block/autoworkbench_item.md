@@ -1,4 +1,3 @@
-<chapter name="tile.autoWorkbenchBlock.name"/>
 <lore>
 As with every engineers duty, you find the need to automate everything. Manual crafting can be a tedious task, so why why not automate it?
 </lore>

@@ -10,5 +10,12 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 public interface ISolidCoolant {
     FluidStack getFluidFromSolidCoolant(ItemStack stack);
+
+    /** @return A canonical ItemStack identifying the solid form of this coolant, or
+     *  {@link ItemStack#EMPTY} if no single representative stack applies. Used by external
+     *  systems (the guide book's group population) to enumerate registered solid coolants. */
+    default ItemStack getRepresentativeStack() {
+        return ItemStack.EMPTY;
+    }
 }
 

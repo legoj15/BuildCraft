@@ -162,8 +162,16 @@ public class GuiIcon implements ISimpleDrawable {
             double uMin, double vMin, double uMax, double vMax, int colour) {
         if (currentGraphics == null || lastBoundLocation == null) return;
 
-        int drawW = (int) (xMax - xMin);
-        int drawH = (int) (yMax - yMin);
+        // Snap each endpoint to its nearest integer pixel rather than truncating toward zero.
+        // Truncation made `(int) xMin + (int) (xMax - xMin)` not equal `(int) xMax` when both
+        // values had non-zero fractional parts — visible as a 1-pixel gap that flickered as
+        // an animated tab's `hoverWidth` lerped through fractional values each frame.
+        int xLow  = (int) Math.round(xMin);
+        int yLow  = (int) Math.round(yMin);
+        int xHigh = (int) Math.round(xMax);
+        int yHigh = (int) Math.round(yMax);
+        int drawW = xHigh - xLow;
+        int drawH = yHigh - yLow;
         float uPx = (float) (uMin * lastBoundTexSize);
         float vPx = (float) (vMin * lastBoundTexSize);
         int uW = (int) ((uMax - uMin) * lastBoundTexSize);
@@ -171,7 +179,7 @@ public class GuiIcon implements ISimpleDrawable {
 
         currentGraphics.blit(
             RenderPipelines.GUI_TEXTURED, lastBoundLocation,
-            (int) xMin, (int) yMin,
+            xLow, yLow,
             uPx, vPx,
             drawW, drawH,
             uW, vH,

@@ -611,7 +611,11 @@ public enum XmlPageLoader implements IPageLoaderText {
         List<GuidePartFactory> list = new ArrayList<>();
         List<GuidePartFactory> recipeParts = RecipeLookupHelper.getAllRecipes(stack);
         if (recipeParts.size() > 0) {
-            list.add(GuidePartNewPage::new);
+            // Soft break: gives recipes a clean spread when the body text leaves enough room
+            // for a heading, but skips the advance when the cursor is already at or near the
+            // top of a fresh page (so we don't strand a blank page between the body and the
+            // recipes when the body happens to fill its page exactly).
+            list.add(gui -> new GuidePartNewPage(gui, RECIPE_BREAK_THRESHOLD));
             if (recipeParts.size() == 1) {
                 list.add(chapter("buildcraft.guide.recipe.create", chapterLevel));
             } else {
@@ -624,7 +628,7 @@ public enum XmlPageLoader implements IPageLoaderText {
         usageParts.removeAll(recipeParts);
         if (usageParts.size() > 0) {
             if (recipeParts.size() != 1) {
-                list.add(GuidePartNewPage::new);
+                list.add(gui -> new GuidePartNewPage(gui, RECIPE_BREAK_THRESHOLD));
             }
             if (usageParts.size() == 1) {
                 list.add(chapter("buildcraft.guide.recipe.use", chapterLevel));
@@ -636,6 +640,14 @@ public enum XmlPageLoader implements IPageLoaderText {
         return list;
     }
 
+    /** Below this cursor-pixel offset, programmatic page-break parts (recipe/use/group
+     *  breathing-room breaks) skip the advance. Tuned to ~2 lines of text — small
+     *  enough that "the page has content" feels true, large enough to suppress
+     *  forced breaks that would strand a blank page after a body that exactly
+     *  filled its own page. The {@code <new_page/>} markdown tag bypasses this
+     *  threshold (author-requested breaks always fire). */
+    public static final int RECIPE_BREAK_THRESHOLD = 30;
+
     public static void appendAllCrafting(ItemStack stack, List<GuidePart> parts, GuiGuide gui) {
         List<GuidePartFactory> recipeFactories = RecipeLookupHelper.getAllRecipes(stack);
         List<GuidePart> recipeParts = new ArrayList<>();
@@ -644,7 +656,7 @@ public enum XmlPageLoader implements IPageLoaderText {
         }
         recipeParts.removeAll(parts);
         if (recipeParts.size() > 0) {
-            parts.add(new GuidePartNewPage(gui));
+            parts.add(new GuidePartNewPage(gui, RECIPE_BREAK_THRESHOLD));
             if (recipeParts.size() == 1) {
                 parts.add(chapter("buildcraft.guide.recipe.create", 0).createNew(gui));
             } else {
@@ -660,7 +672,7 @@ public enum XmlPageLoader implements IPageLoaderText {
         usageParts.removeAll(parts);
         if (usageParts.size() > 0) {
             if (usageParts.size() != 1) {
-                parts.add(new GuidePartNewPage(gui));
+                parts.add(new GuidePartNewPage(gui, RECIPE_BREAK_THRESHOLD));
             }
             if (usageParts.size() == 1) {
                 parts.add(chapter("buildcraft.guide.recipe.use", 0).createNew(gui));
@@ -700,7 +712,16 @@ public enum XmlPageLoader implements IPageLoaderText {
             BCLog.logger.warn("[lib.guide.loader.xml] Unknown group " + domain + ":" + group);
             return null;
         }
-        return gui -> new GuidePartGroup(gui, set, GroupDirection.SRC_TO_ENTRY);
+        // Optional `direction` attribute: "to" (default) lists the group's entries — the
+        // things this page links TO. "from" lists the group's sources — the things that
+        // link FROM other pages into this one. Lets markdown override the default direction
+        // and ensures any explicit declaration suppresses the auto-emitted Linked From/To
+        // chapter for the same group (de-dup is by group identity, not direction).
+        String dirAttr = tag.get("direction");
+        GroupDirection direction = "from".equalsIgnoreCase(dirAttr)
+            ? GroupDirection.ENTRY_TO_SRC
+            : GroupDirection.SRC_TO_ENTRY;
+        return gui -> new GuidePartGroup(gui, set, direction);
     }
 
     public static ItemStack loadItemStack(XmlTag tag) {

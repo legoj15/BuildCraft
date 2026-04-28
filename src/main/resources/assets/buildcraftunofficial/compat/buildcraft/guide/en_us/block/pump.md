@@ -1,4 +1,3 @@
-<chapter name="tile.pumpBlock.name"/>
 <lore>
 The collection of fluids by hand can be quite tedious and dangerous at times, creating the need for an automated way to gather fluids.
 </lore>

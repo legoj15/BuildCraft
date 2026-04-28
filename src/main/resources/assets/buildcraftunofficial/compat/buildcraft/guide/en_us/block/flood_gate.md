@@ -1,4 +1,3 @@
-<chapter name="tile.floodGateBlock.name"/>
 <lore>
 With many large building projects, flooding large area's with fluids is a tedious task which you could do without.
 </lore>

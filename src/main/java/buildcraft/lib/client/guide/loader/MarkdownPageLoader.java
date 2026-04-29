@@ -20,8 +20,11 @@ import buildcraft.api.core.BCDebugging;
 import buildcraft.api.core.BCLog;
 import buildcraft.api.registry.IScriptableRegistry.OptionallyDisabled;
 
+import java.util.List;
+
 import buildcraft.lib.client.guide.entry.PageEntry;
 import buildcraft.lib.client.guide.parts.GuidePageFactory;
+import buildcraft.lib.client.guide.parts.GuidePartFactory;
 
 public enum MarkdownPageLoader implements IPageLoaderText {
     INSTANCE;
@@ -74,14 +77,24 @@ public enum MarkdownPageLoader implements IPageLoaderText {
     @Override
     public GuidePageFactory loadPage(BufferedReader reader, Identifier name, PageEntry<?> entry, ProfilerFiller prof)
         throws IOException {
+        BufferedReader nReader = preprocess(reader);
+        return XmlPageLoader.INSTANCE.loadPage(nReader, name, entry, prof);
+    }
+
+    /** Parts-only counterpart to {@link #loadPage} — applies the same markdown
+     *  preprocessing then delegates to {@link XmlPageLoader#loadParts}. */
+    public List<GuidePartFactory> loadParts(BufferedReader reader, ProfilerFiller prof) throws IOException {
+        return XmlPageLoader.loadParts(preprocess(reader), prof);
+    }
+
+    private static BufferedReader preprocess(BufferedReader reader) throws IOException {
         StringBuilder replaced = new StringBuilder();
         String line;
         while ((line = reader.readLine()) != null) {
             replaced.append(replaceSpecialForXml(line));
             replaced.append('\n');
         }
-        BufferedReader nReader = new BufferedReader(new StringReader(replaced.toString()));
-        return XmlPageLoader.INSTANCE.loadPage(nReader, name, entry, prof);
+        return new BufferedReader(new StringReader(replaced.toString()));
     }
 
     /**

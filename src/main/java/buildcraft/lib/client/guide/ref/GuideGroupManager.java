@@ -290,6 +290,27 @@ public class GuideGroupManager {
             addKey("buildcraft", "distillation_outputs", distiller);
         }
 
+        // Filler patterns: every IFillerPattern (in the order it shows up in the filler's
+        // GUI, NOT alphabetical) becomes an entry; the filler block is the consumer/key.
+        // The "Filler Patterns" category entry in the TOC opens a page that lists this
+        // group, so individual patterns are reachable from there instead of cluttering
+        // the top-level Actions chapter with N alphabetical leaves. Keep the order in
+        // sync with BCBuildersStatements.PATTERNS — that array is the GUI's own source.
+        addEntries("buildcraft", "filler_patterns",
+            (Object[]) buildcraft.builders.BCBuildersStatements.PATTERNS);
+        addKey("buildcraft", "filler_patterns",
+            buildcraft.builders.BCBuildersItems.FILLER.get());
+
+        // Emzuli extraction presets: the four colour-keyed extraction-preset actions, in
+        // SlotIndex order (RED → GREEN → BLUE → YELLOW). Like filler patterns, surfaced
+        // via a single "Emzuli Extraction Presets" category entry in the TOC, with the
+        // emzuli pipe as the consumer/key so its page auto-emits a Linked-To listing the
+        // presets — and the presets' pages auto-emit a Linked-From back to the pipe.
+        addEntries("buildcraft", "extraction_presets",
+            (Object[]) buildcraft.transport.BCTransportStatements.ACTION_EXTRACTION_PRESET);
+        addKey("buildcraft", "extraction_presets",
+            buildcraft.transport.BCTransportItems.PIPE_EMZULI_ITEM.get());
+
         // Heat exchanger recipes: heatable inputs/outputs and coolable inputs/outputs both
         // funnel through the heat exchange block.
         if (buildcraft.api.recipes.BuildcraftRecipeRegistry.refineryRecipes != null) {

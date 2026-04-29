@@ -25,6 +25,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableList;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
@@ -42,20 +43,31 @@ import buildcraft.lib.client.guide.data.JsonTypeTags;
 import buildcraft.lib.client.guide.entry.IEntryLinkConsumer;
 import buildcraft.lib.client.guide.entry.ItemStackValueFilter;
 import buildcraft.lib.client.guide.entry.PageEntry;
+import buildcraft.lib.client.guide.entry.PageEntryExternal;
+import buildcraft.lib.client.guide.entry.PageValue;
 import buildcraft.lib.client.guide.entry.PageValueType;
 import buildcraft.lib.client.guide.loader.IPageLoader;
 import buildcraft.lib.client.guide.loader.MarkdownPageLoader;
 import buildcraft.lib.client.guide.loader.XmlPageLoader;
+import buildcraft.lib.client.guide.parts.GuidePage;
 import buildcraft.lib.client.guide.parts.GuidePageFactory;
 import buildcraft.lib.client.guide.parts.GuidePageStandInRecipes;
+import buildcraft.lib.client.guide.parts.GuidePart;
+import buildcraft.lib.client.guide.parts.GuidePartFactory;
+import buildcraft.lib.client.guide.parts.GuidePartGroup;
+import buildcraft.lib.client.guide.parts.GuidePartLink;
+import buildcraft.lib.client.guide.parts.GuideText;
 import buildcraft.lib.client.guide.parts.contents.ContentsNode;
 import buildcraft.lib.client.guide.parts.contents.ContentsNodeGui;
 import buildcraft.lib.client.guide.parts.contents.GuidePageContents;
 import buildcraft.lib.client.guide.parts.contents.IContentsNode;
 import buildcraft.lib.client.guide.parts.contents.PageLink;
+import buildcraft.lib.client.guide.parts.contents.PageLinkItemStack;
 import buildcraft.lib.client.guide.parts.contents.PageLinkNormal;
 import buildcraft.lib.client.guide.ref.GuideGroupManager;
+import buildcraft.lib.client.guide.ref.GuideGroupSet;
 import buildcraft.lib.gui.ISimpleDrawable;
+import buildcraft.lib.gui.statement.GuiElementStatementSource;
 import buildcraft.lib.guide.GuideBook;
 import buildcraft.lib.guide.GuideBookRegistry;
 import buildcraft.lib.guide.GuideContentsData;
@@ -80,6 +92,31 @@ public enum GuideManager {
     public ISuffixArray<PageLink> quickSearcher;
     private final Set<PageLink> pageLinksAdded = new HashSet<>();
     private final Map<GuideBook, Map<TypeOrder, ContentsNode>> contents = new HashMap<>();
+    /** Page links for programmatic "category" entries (e.g. "Filler Patterns", "Emzuli
+     *  Extraction Presets") — those entries don't live in {@link GuidePageRegistry}'s
+     *  reloadable map but still need to be linkable from markdown via the
+     *  {@code <link to="..."/>} tag. {@link buildcraft.lib.client.guide.loader.XmlPageLoader#loadLink}
+     *  consults this map at render time after failing to find a regular page entry.
+     *  Cleared at the start of every {@link #generateContentsPage()} so reloads stay
+     *  coherent. Keyed by an {@link Identifier} of the form {@code domain:group_name}
+     *  matching the {@link GuideGroupManager} group identifier so authors can use the
+     *  same id from markdown that they'd use for a {@code <group>} tag. */
+    private final Map<Identifier, PageLink> categoryLinks = new HashMap<>();
+
+    /** Cached body parts (description text + any inline tags) parsed from each category's
+     *  .md file. Populated during {@link #reload0} after {@code loadLangInternal}. The
+     *  category-page builder consumes these factories to materialize the description on
+     *  page open, then appends programmatic extras (group listing, back-link). Keyed
+     *  the same way as {@link #categoryLinks}. */
+    private final Map<Identifier, List<GuidePartFactory>> categoryBodies = new HashMap<>();
+
+    /** {@link buildcraft.api.statements.IStatement}s that have been folded into a
+     *  category-collapsed TOC entry (filler patterns, Emzuli extraction presets, ...)
+     *  and so should be suppressed from the default leaf-iteration in
+     *  {@link buildcraft.lib.client.guide.entry.PageEntryStatement#iterateAllDefault}.
+     *  Populated by walking the groups named in {@link #CATEGORY_BODY_SOURCES} —
+     *  data-driven, so adding the next category needs no PageEntryStatement edit. */
+    private final Set<buildcraft.api.statements.IStatement> hiddenStatements = new HashSet<>();
 
     public final Set<Object> objectsAdded = new HashSet<>();
 
@@ -95,6 +132,23 @@ public enum GuideManager {
 
     public int getReloadGeneration() {
         return reloadGeneration;
+    }
+
+    /** Look up the {@link PageLink} for a programmatic "category" entry (e.g.
+     *  {@code buildcraft:filler_patterns}). Returns {@code null} if no category is
+     *  registered under that id — callers should fall back to whatever they were
+     *  doing before. */
+    @Nullable
+    public PageLink getCategoryLink(Identifier id) {
+        return categoryLinks.get(id);
+    }
+
+    /** True iff {@code statement} has been folded into a category-collapsed TOC entry
+     *  (e.g. filler patterns, Emzuli extraction presets) and should NOT be emitted as
+     *  its own leaf entry in the auto-iterated index. Consulted by
+     *  {@link buildcraft.lib.client.guide.entry.PageEntryStatement#iterateAllDefault}. */
+    public boolean isStatementHiddenByCategory(buildcraft.api.statements.IStatement statement) {
+        return hiddenStatements.contains(statement);
     }
 
     static {
@@ -190,6 +244,11 @@ public enum GuideManager {
         // fuel/coolant/refinery registries are stable. Must happen before
         // generateContentsPage() so any group-derived contents can resolve correctly.
         GuideGroupManager.populateDefaultGroups();
+
+        // Read the category-page bodies from disk while ResourceManager is still in
+        // hand. The .md files are parsed into GuidePartFactory lists that the
+        // category-page builder will materialize on each page open.
+        loadCategoryBodies(resourceManager, langCode);
 
         generateContentsPage();
 
@@ -298,6 +357,11 @@ public enum GuideManager {
     private void generateContentsPage() {
         objectsAdded.clear();
         contents.clear();
+        // Pre-compute the set of statements that category entries will absorb, so the
+        // iterateAllDefault sweep below sees up-to-date membership and skips those leaves.
+        // Has to happen BEFORE the PageValueType iteration loop, not inside addCategoryEntries
+        // (which runs after) — otherwise leaves are added before the category replaces them.
+        populateHiddenStatements();
         genTypeMap(null);
         for (GuideBook book : GuideBookRegistry.INSTANCE.getAllEntries()) {
             genTypeMap(book);
@@ -311,6 +375,22 @@ public enum GuideManager {
             GuidePageFactory entryFactory = GuideManager.INSTANCE.getFactoryFor(partialLocation);
 
             PageEntry<?> entry = mapEntry.getValue();
+
+            // Suppress entries whose value has been folded into a category-collapsed
+            // TOC entry (e.g. the JSON-INSN registration of "Red Extraction Preset"
+            // via guide.txt — the Emzuli Extraction Presets category surfaces it
+            // instead, and we don't want a duplicate leaf under "Item Transport").
+            // We still mark the value as added so iterateAllDefault below dedups
+            // against it, AND we keep the entry in the registry so click-resolution
+            // from the category page (GuideManager#getFactoryFor → getEntryFor) can
+            // still find the factory and open its stub/markdown page.
+            Object basicValue = entry.getBasicValue();
+            if (basicValue instanceof buildcraft.api.statements.IStatement stmt
+                && isStatementHiddenByCategory(stmt)) {
+                objectsAdded.add(basicValue);
+                continue;
+            }
+
             String translatedTitle = entry.title;
             ISimpleDrawable icon = entry.createDrawable();
             PageLine line = new PageLine(icon, icon, 2, translatedTitle, true);
@@ -355,6 +435,13 @@ public enum GuideManager {
             type.iterateAllDefault(adder, net.minecraft.util.profiling.InactiveProfiler.INSTANCE);
         }
 
+        // Consolidated category entries: single TOC links that open a page listing
+        // many small entries that would otherwise clutter the index alphabetically.
+        // Each is paired with a group registered in GuideGroupManager so the listed
+        // entries also de-dup from the auto-iterated leaves above (see e.g.
+        // PageEntryStatement#iterateAllDefault skipping IFillerPattern).
+        addCategoryEntries(adder);
+
         quickSearcher.generate(net.minecraft.util.profiling.InactiveProfiler.INSTANCE);
 
         for (Map<TypeOrder, ContentsNode> map : contents.values()) {
@@ -362,6 +449,191 @@ public enum GuideManager {
                 node.sort();
             }
         }
+    }
+
+    /** Source-of-truth list of category .md files to load. Each entry is
+     *  {@code (groupDomain, groupName, mdRelativePath)} where the mdRelativePath is the
+     *  resource-pack path under {@code compat/buildcraft/guide/<lang>/} (sans extension).
+     *  Adding a new category means: register the group in
+     *  {@link GuideGroupManager#populateDefaultGroups}, add its {@code addXCategory}
+     *  helper below, drop a row here, and create the .md file. */
+    private static final String[][] CATEGORY_BODY_SOURCES = {
+        { "buildcraft", "filler_patterns",     "buildcraftunofficial:concept/filler_patterns" },
+        { "buildcraft", "extraction_presets",  "buildcraftunofficial:concept/emzuli_extraction_presets" },
+    };
+
+    /** Walk the groups named in {@link #CATEGORY_BODY_SOURCES} and stash every
+     *  {@link buildcraft.api.statements.IStatement} that's an entry of any of them into
+     *  {@link #hiddenStatements}. Done at the top of {@link #generateContentsPage()} so
+     *  {@link buildcraft.lib.client.guide.entry.PageEntryStatement#iterateAllDefault}
+     *  can suppress those statements from the alphabetical leaf index — they're
+     *  surfaced via the category entry instead. Adding the next category needs no
+     *  edits here: just register the group + the source row, and statements in that
+     *  group automatically get hidden. */
+    private void populateHiddenStatements() {
+        hiddenStatements.clear();
+        for (String[] row : CATEGORY_BODY_SOURCES) {
+            GuideGroupSet set = GuideGroupManager.get(row[0], row[1]);
+            if (set == null) continue;
+            for (PageValue<?> entry : set.entries) {
+                if (entry.value instanceof buildcraft.api.statements.IStatement stmt) {
+                    hiddenStatements.add(stmt);
+                }
+            }
+        }
+    }
+
+    /** Read each category's body .md from the resource pack and parse it into a list of
+     *  {@link GuidePartFactory}s, keyed by {@code domain:groupName} (matching the
+     *  {@link #categoryLinks} key scheme). Falls back to {@link #DEFAULT_LANG} when the
+     *  current language has no localized variant. Logs but does not throw on a missing
+     *  or malformed file — the category page just renders without its description text
+     *  in that case. */
+    private void loadCategoryBodies(ResourceManager rm, String langCode) {
+        categoryBodies.clear();
+        for (String[] row : CATEGORY_BODY_SOURCES) {
+            String domain = row[0];
+            String groupName = row[1];
+            Identifier mdRel = Identifier.parse(row[2]);
+
+            List<GuidePartFactory> factories = tryLoadCategoryBody(rm, mdRel, langCode);
+            if (factories == null && !DEFAULT_LANG.equals(langCode)) {
+                factories = tryLoadCategoryBody(rm, mdRel, DEFAULT_LANG);
+            }
+            if (factories != null) {
+                categoryBodies.put(Identifier.fromNamespaceAndPath(domain, groupName), factories);
+            } else {
+                BCLog.logger.warn("[lib.guide] Missing category body markdown at "
+                    + mdRel + " — the " + domain + ":" + groupName
+                    + " category page will render without its description.");
+            }
+        }
+    }
+
+    @Nullable
+    private List<GuidePartFactory> tryLoadCategoryBody(ResourceManager rm, Identifier mdRel, String lang) {
+        Identifier full = Identifier.fromNamespaceAndPath(mdRel.getNamespace(),
+            "compat/buildcraft/guide/" + lang + "/" + mdRel.getPath() + ".md");
+        try {
+            var resource = rm.getResource(full);
+            if (resource.isEmpty()) return null;
+            try (InputStream in = resource.get().open();
+                 java.io.InputStreamReader isr =
+                     new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8);
+                 BufferedReader br = new BufferedReader(isr)) {
+                return MarkdownPageLoader.INSTANCE.loadParts(
+                    br, net.minecraft.util.profiling.InactiveProfiler.INSTANCE);
+            }
+        } catch (IOException io) {
+            BCLog.logger.warn("[lib.guide] Failed to read category body " + full + ": " + io);
+            return null;
+        }
+    }
+
+    /** Append the hardcoded "category" TOC entries — single index links whose pages list
+     *  a guide-group of related items. The companion-side bookkeeping (registering the
+     *  group, suppressing the individual leaves from the auto-iterated index) lives next
+     *  to the data: groups in {@link GuideGroupManager#populateDefaultGroups()}, leaf
+     *  filtering inside the relevant {@code iterateAllDefault} (e.g.
+     *  {@code PageEntryStatement} skipping {@code IFillerPattern}). */
+    private void addCategoryEntries(IEntryLinkConsumer adder) {
+        // Reset before each rebuild so a /reload doesn't accumulate stale links from the
+        // previous generation (the matching ContentsNode is rebuilt fresh, so leftover
+        // entries here would only manifest as stale <link> targets).
+        categoryLinks.clear();
+        addFillerPatternsCategory(adder);
+        addEmzuliExtractionPresetsCategory(adder);
+    }
+
+    /** Build a category TOC entry plus the matching markdown-linkable {@link PageLink}.
+     *  All categories share the same shape: an icon, a title, a description body parsed
+     *  from a per-category {@code .md} file, and a {@link GuidePartGroup} that lists the
+     *  named group's entries in registration order. The entry is filed under
+     *  {@code chapterTagType} (a localization key — typically the same chapter the leaf
+     *  entries used to live in, so readers find it where they already look) and
+     *  registered in {@link #categoryLinks} under {@code domain:groupName} so
+     *  {@code <link to="domain:groupName"/>} works in markdown.
+     *
+     *  <p>{@code extraParts} (nullable) supplies any additional {@link GuidePart}s to
+     *  insert between the description and the group listing — typically a manual
+     *  {@code <link>}-style backlink to a related page that {@link GuideGroupManager}'s
+     *  auto Linked-To/From machinery doesn't already cover. Evaluated per page open so
+     *  the parts can capture the live {@link GuiGuide}. */
+    private void registerCategory(IEntryLinkConsumer adder, String domain, String groupName,
+        String chapterTagType, ISimpleDrawable icon, String title,
+        @Nullable java.util.function.Function<GuiGuide, List<GuidePart>> extraParts) {
+        GuideGroupSet groupSet = GuideGroupManager.get(domain, groupName);
+        if (groupSet == null) return;
+
+        Identifier groupId = Identifier.fromNamespaceAndPath(domain, groupName);
+        PageLine line = new PageLine(icon, icon, 2, title, true);
+        GuidePageFactory factory = g -> {
+            List<GuidePart> parts = new ArrayList<>();
+            // Description body — parsed from the category's .md file at reload time.
+            // If the file was missing or unparseable, the page just renders without it
+            // (the warning is logged once during reload, see loadCategoryBodies).
+            List<GuidePartFactory> bodyFactories = categoryBodies.get(groupId);
+            if (bodyFactories != null) {
+                for (GuidePartFactory bf : bodyFactories) {
+                    GuidePart part = bf.createNew(g);
+                    if (part != null) parts.add(part);
+                }
+            }
+            if (extraParts != null) {
+                parts.addAll(extraParts.apply(g));
+            }
+            parts.add(new GuidePartGroup(g, groupSet, GuideGroupSet.GroupDirection.SRC_TO_ENTRY));
+            // PageEntryExternal carries no value-specific behaviour beyond exposing the
+            // string as the page title — perfect for a category page that doesn't map
+            // to a single in-world object.
+            return new GuidePage(g, parts, new PageValue<>(PageEntryExternal.INSTANCE, title));
+        };
+
+        PageLinkNormal link = new PageLinkNormal(line, true, ImmutableList.of(title), factory);
+        categoryLinks.put(groupId, link);
+        adder.addChild(new JsonTypeTags(chapterTagType), link);
+    }
+
+    /** "Filler Patterns" — collapses ~19 alphabetically-listed pattern actions into one
+     *  category entry under Actions, using the stairs sprite as the icon. The body
+     *  comes from {@code concept/filler_patterns.md}; this method just supplies the
+     *  TOC-side metadata (icon, title, chapter placement). */
+    private void addFillerPatternsCategory(IEntryLinkConsumer adder) {
+        // Use the same statement-slot rendering the patterns themselves use elsewhere in
+        // the guide (16x16 framed slot with the pattern's sprite), so the icon visually
+        // matches the leaf entries this category replaces.
+        ISimpleDrawable icon = (x, y) -> GuiElementStatementSource.drawGuiSlot(
+            buildcraft.builders.BCBuildersStatements.PATTERN_STAIRS, x, y);
+        registerCategory(adder, "buildcraft", "filler_patterns",
+            "buildcraft.guide.contents.actions",
+            icon,
+            "Filler Patterns",
+            null);
+    }
+
+    /** "Emzuli Extraction Presets" — collapses the four colour-keyed extraction-preset
+     *  actions (red/green/blue/yellow) into one category entry, using the red preset's
+     *  sprite as the icon. The body comes from {@code concept/emzuli_extraction_presets.md};
+     *  the manual back-link to the Emzuli pipe is appended programmatically because
+     *  the auto-emitted Linked-From machinery doesn't cover the source-of-group case
+     *  (the pipe is the SOURCE of the {@code extraction_presets} group, not an entry
+     *  in some other group containing the category). */
+    private void addEmzuliExtractionPresetsCategory(IEntryLinkConsumer adder) {
+        ISimpleDrawable icon = (x, y) -> GuiElementStatementSource.drawGuiSlot(
+            // ACTION_EXTRACTION_PRESET[0] is the SQUARE/RED preset (see SlotIndex enum
+            // order in PipeBehaviourEmzuli) — the visually-canonical "default" preset.
+            buildcraft.transport.BCTransportStatements.ACTION_EXTRACTION_PRESET[0], x, y);
+        registerCategory(adder, "buildcraft", "extraction_presets",
+            "buildcraft.guide.contents.actions",
+            icon,
+            "Emzuli Extraction Presets",
+            g -> {
+                ItemStack emzuliStack = new ItemStack(
+                    buildcraft.transport.BCTransportItems.PIPE_EMZULI_ITEM.get());
+                PageLink emzuliLink = PageLinkItemStack.create(true, emzuliStack,
+                    net.minecraft.util.profiling.InactiveProfiler.INSTANCE);
+                return ImmutableList.of(new GuidePartLink(g, emzuliLink));
+            });
     }
 
     private void genTypeMap(GuideBook book) {

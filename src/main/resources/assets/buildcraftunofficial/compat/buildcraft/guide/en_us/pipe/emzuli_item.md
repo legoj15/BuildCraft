@@ -22,14 +22,13 @@ Placing items in the slots will allow you to what each filter extracts.
 The colours of the paintbrushes next to the slots will determine what colour they will be painted when extracted can can be changed by clicking on them.
 To select which of the four filters is extracted, It requires a gate placed on it with a coloured Extraction Preset action provided. I.e. Redstone signal - > Red Extraction Preset.
 
+<link to="buildcraft:extraction_presets"/>
+
 A List can be used in a filtering slots to give you expanded filtering options.
 <link to="buildcraftunofficial:item/list"/> 
 
 <chapter name="Powering"/>
 It can receive power from any MJ power source such as: an engine, a power adaptor, or a pipe pulsar.
-<link to="buildcraftunofficial:block/engine_wood"/>
-<link to="buildcraftunofficial:item/plug_power_adaptor"/>
-<link to="buildcraftunofficial:item/plug_pulsar"/> 
 For each pulse of power it receives, it will extract items from the adjacent inventory.
 The more power a pulse has, the more items will be extracted per pulse.
 

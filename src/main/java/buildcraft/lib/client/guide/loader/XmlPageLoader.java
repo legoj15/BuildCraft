@@ -204,8 +204,35 @@ public enum XmlPageLoader implements IPageLoaderText {
         }
     }
 
+    /** Parse a markdown/XML guide source into the list of {@link GuidePartFactory}s it
+     *  describes — without wrapping them in a {@link buildcraft.lib.client.guide.parts.GuidePage}.
+     *  Useful when the caller assembles a page that mixes loaded markdown content with
+     *  programmatically-built parts (e.g. category pages, where the .md supplies the
+     *  description but the group listing and back-link are appended in code). The
+     *  returned factories can be invoked once per {@link buildcraft.lib.client.guide.GuiGuide}. */
+    public static List<GuidePartFactory> loadParts(BufferedReader reader, ProfilerFiller prof) throws IOException {
+        prof.push("xml");
+        try {
+            return parsePartFactories(reader, prof);
+        } finally {
+            prof.pop();
+        }
+    }
+
     private static GuidePageFactory loadPage0(BufferedReader reader, Identifier name, PageEntry<?> entry,
         ProfilerFiller prof) throws IOException, InvalidInputDataException {
+        List<GuidePartFactory> factories = parsePartFactories(reader, prof);
+        return (gui) -> {
+            List<GuidePart> parts = new ArrayList<>();
+            for (GuidePartFactory factory : factories) {
+                parts.add(factory.createNew(gui));
+            }
+            return new GuidePageEntry(gui, parts, entry, name);
+        };
+    }
+
+    private static List<GuidePartFactory> parsePartFactories(BufferedReader reader, ProfilerFiller prof)
+        throws IOException, InvalidInputDataException {
 
         Deque<List<GuidePartFactory>> nestedParts = new ArrayDeque<>();
         Deque<XmlTag> nestedTags = new ArrayDeque<>();
@@ -335,13 +362,7 @@ public enum XmlPageLoader implements IPageLoaderText {
         if (nestedParts.size() != 0) {
             throw new InvalidInputDataException("We haven't closed " + nestedTags);
         }
-        return (gui) -> {
-            List<GuidePart> parts = new ArrayList<>();
-            for (GuidePartFactory factory : factories) {
-                parts.add(factory.createNew(gui));
-            }
-            return new GuidePageEntry(gui, parts, entry, name);
-        };
+        return factories;
     }
 
     /** Parses a single tag. Note that the tag might not be the length of the whole string. */
@@ -482,8 +503,21 @@ public enum XmlPageLoader implements IPageLoaderText {
             Identifier location = Identifier.parse(to);
             PageEntry<?> entry = (PageEntry<?>) GuidePageRegistry.INSTANCE.getReloadableEntryMap().get(location);
             if (entry == null) {
-                BCLog.logger.warn("[lib.guide.loader.xml] Found a link tag to an unknown page! " + tag);
-                return null;
+                // Programmatic "category" entries (filler patterns, emzuli extraction
+                // presets, ...) live in GuideManager#categoryLinks rather than the
+                // reloadable entry map, and that map is populated AFTER this parser
+                // runs (in generateContentsPage). Defer the lookup to render time so
+                // the link resolves once the contents page has been built — which is
+                // always before the user can navigate to a markdown page that contains
+                // the link.
+                return gui -> {
+                    PageLink categoryLink = GuideManager.INSTANCE.getCategoryLink(location);
+                    if (categoryLink == null) {
+                        BCLog.logger.warn("[lib.guide.loader.xml] Found a link tag to an unknown page! " + tag);
+                        return null;
+                    }
+                    return new GuidePartLink(gui, categoryLink);
+                };
             }
             String translatedTitle = entry.title;
             ISimpleDrawable icon = entry.createDrawable();

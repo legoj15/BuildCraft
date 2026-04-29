@@ -43,6 +43,15 @@ public class PageEntryStatement extends PageValueType<IStatement> {
     @Override
     public void iterateAllDefault(IEntryLinkConsumer consumer, ProfilerFiller prof) {
         for (IStatement statement : new TreeMap<>(StatementManager.statements).values()) {
+            // Statements folded into a consolidated "category" TOC entry (filler
+            // patterns, Emzuli extraction presets, ...) are surfaced via that entry
+            // and must not ALSO appear as alphabetical leaves under Actions/Triggers.
+            // The set is populated by GuideManager#populateHiddenStatements from each
+            // registered category's group membership — data-driven, so adding a new
+            // category needs no edits here.
+            if (GuideManager.INSTANCE.isStatementHiddenByCategory(statement)) {
+                continue;
+            }
             if (!GuideManager.INSTANCE.objectsAdded.add(statement)) {
                 continue;
             }

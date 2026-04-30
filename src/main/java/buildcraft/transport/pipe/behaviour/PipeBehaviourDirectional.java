@@ -18,9 +18,14 @@ import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver;
 import buildcraft.api.transport.pipe.PipeBehaviour;
+import buildcraft.api.transport.pipe.PipeEventActionActivate;
+import buildcraft.api.transport.pipe.PipeEventHandler;
+import buildcraft.api.transport.pipe.PipeEventStatement;
 import buildcraft.api.transport.pipe.PipeFaceTex;
 
 import buildcraft.lib.misc.NBTUtilBC;
+
+import buildcraft.transport.BCTransportStatements;
 
 public abstract class PipeBehaviourDirectional extends PipeBehaviour {
 
@@ -149,5 +154,24 @@ public abstract class PipeBehaviourDirectional extends PipeBehaviour {
         return 0;
     }
 
-    // Statement handlers removed — BCTransportStatements not yet ported
+    @PipeEventHandler
+    public void addInternalActions(PipeEventStatement.AddActionInternal event) {
+        for (Direction face : Direction.values()) {
+            if (canFaceDirection(face)) {
+                event.actions.add(BCTransportStatements.ACTION_PIPE_DIRECTION[face.ordinal()]);
+            }
+        }
+    }
+
+    @PipeEventHandler
+    public void onActionActivate(PipeEventActionActivate event) {
+        for (Direction face : Direction.values()) {
+            if (event.action == BCTransportStatements.ACTION_PIPE_DIRECTION[face.ordinal()]) {
+                if (canFaceDirection(face)) {
+                    setCurrentDir(face);
+                }
+                return;
+            }
+        }
+    }
 }

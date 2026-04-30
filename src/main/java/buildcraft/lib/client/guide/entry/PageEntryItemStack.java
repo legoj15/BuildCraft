@@ -13,12 +13,14 @@ import com.google.gson.JsonSyntaxException;
 
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.core.registries.BuiltInRegistries;
 
 import buildcraft.api.registry.IScriptableRegistry.OptionallyDisabled;
 
 import buildcraft.lib.client.guide.GuiGuide;
+import buildcraft.lib.client.guide.GuideManager;
 import buildcraft.lib.client.guide.data.JsonTypeTags;
 import buildcraft.lib.client.guide.loader.MarkdownPageLoader;
 import buildcraft.lib.client.guide.parts.GuidePart;
@@ -45,10 +47,32 @@ public class PageEntryItemStack extends PageValueType<ItemStackValueFilter> {
         return !typed.stack.baseStack.isEmpty();
     }
 
+    /** Tag used to file vanilla / non-guide items under a search-only chapter. The
+     *  chapter is invisible by default (every emitted link uses startVisible=false,
+     *  so {@link buildcraft.lib.client.guide.parts.contents.ContentsNode#isVisible}
+     *  returns false until a search match flips at least one child visible) and
+     *  surfaces under "Other Items" only while a search box query is active. */
+    private static final JsonTypeTags OTHER_ITEMS_TAGS =
+        new JsonTypeTags("buildcraft.guide.contents.other_items");
+
     @Override
     public void iterateAllDefault(IEntryLinkConsumer consumer, ProfilerFiller prof) {
-        // Deferred — full item iteration requires GuideManager and contents system
-        // Will be implemented when the contents page system is ported
+        // 1.12.2 parity: every registered item is searchable, even ones without a BC
+        // markdown page. Click resolution falls through to GuideManager#getPageFor's
+        // GuidePageStandInRecipes synthesis so the result is always openable.
+        prof.push("iterate_all_items");
+        for (Item item : BuiltInRegistries.ITEM) {
+            if (item == Items.AIR) continue;
+            ItemStack stack = new ItemStack(item);
+            if (stack.isEmpty()) continue;
+            // Dedup against guide-defined entries (matched JSON loop adds the Item
+            // instance) so BC items keep their authored chapter placement.
+            if (!GuideManager.INSTANCE.objectsAdded.add(item)) continue;
+            String displayName = stack.getHoverName().getString();
+            if (displayName == null || displayName.trim().isEmpty()) continue;
+            consumer.addChild(OTHER_ITEMS_TAGS, PageLinkItemStack.create(false, stack, prof));
+        }
+        prof.pop();
     }
 
     @Override

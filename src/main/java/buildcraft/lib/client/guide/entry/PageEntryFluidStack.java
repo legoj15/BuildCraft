@@ -20,13 +20,17 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.registry.IScriptableRegistry.OptionallyDisabled;
 
 import buildcraft.lib.client.guide.GuiGuide;
+import buildcraft.lib.client.guide.GuideManager;
+import buildcraft.lib.client.guide.data.JsonTypeTags;
 import buildcraft.lib.client.guide.parts.GuidePart;
+import buildcraft.lib.client.guide.parts.contents.PageLinkFluidStack;
 import buildcraft.lib.client.guide.ref.GuideGroupManager;
 import buildcraft.lib.gui.GuiFluid;
 import buildcraft.lib.gui.ISimpleDrawable;
@@ -48,9 +52,27 @@ public class PageEntryFluidStack extends PageValueType<FluidStackValueFilter> {
         return !typed.stack.isEmpty();
     }
 
+    /** Tag used to file vanilla / non-guide fluids under a search-only chapter,
+     *  mirroring {@code PageEntryItemStack#OTHER_ITEMS_TAGS}. The chapter is invisible
+     *  by default (every emitted link uses startVisible=false) and surfaces as
+     *  "Other Fluids" only while a search query matches at least one entry. */
+    private static final JsonTypeTags OTHER_FLUIDS_TAGS =
+        new JsonTypeTags("buildcraft.guide.contents.other_fluids");
+
     @Override
     public void iterateAllDefault(IEntryLinkConsumer consumer, ProfilerFiller prof) {
-        // Deferred — fluid iteration into the contents tree is not needed for groups.
+        prof.push("iterate_all_fluids");
+        for (Fluid fluid : BuiltInRegistries.FLUID) {
+            if (fluid == Fluids.EMPTY) continue;
+            FluidStack stack = new FluidStack(fluid, 1);
+            if (stack.isEmpty()) continue;
+            // Dedup against guide-defined fluid entries (refinery fuels, coolants).
+            if (!GuideManager.INSTANCE.objectsAdded.add(fluid)) continue;
+            String displayName = fluid.getFluidType().getDescription(stack).getString();
+            if (displayName == null || displayName.trim().isEmpty()) continue;
+            consumer.addChild(OTHER_FLUIDS_TAGS, PageLinkFluidStack.create(false, stack, prof));
+        }
+        prof.pop();
     }
 
     @Override

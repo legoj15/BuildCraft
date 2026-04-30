@@ -311,6 +311,51 @@ public class GuideGroupManager {
         addKey("buildcraft", "extraction_presets",
             buildcraft.transport.BCTransportItems.PIPE_EMZULI_ITEM.get());
 
+        // Pipe Signals: every <colour> Pipe Signal action plus every <colour> Pipe Signal
+        // On / Off trigger — 16 colours × (1 action + 2 triggers) = 48 statements that
+        // would otherwise sprawl across the Triggers and Actions chapters. Surfaced via
+        // a single "Pipe Signals" category entry in the TOC. Order them by colour first
+        // so the GuidePartGroup listing reads as Black/Black On/Black Off, Red/Red On/...
+        // rather than 16 actions then 16 trigger-on then 16 trigger-off.
+        //
+        // No source/key is registered on purpose. The wire pluggable would be the
+        // semantic source, but having it as such would make wire.md auto-emit a
+        // Linked-To chapter that listed all 48 entries — too much clutter given the
+        // whole point of this collapse is to spare the reader that wall. Cross-linking
+        // is done explicitly: pipe_signals.md links to wire via <link to="...item/wire"/>,
+        // and wire.md links back to the category via <link to="buildcraft:pipe_signals"/>.
+        Object[] pipeSignals = new Object[3 * buildcraft.lib.misc.ColourUtil.COLOURS.length];
+        int psIdx = 0;
+        for (net.minecraft.world.item.DyeColor colour : buildcraft.lib.misc.ColourUtil.COLOURS) {
+            pipeSignals[psIdx++] = buildcraft.transport.BCTransportStatements.ACTION_PIPE_SIGNAL[colour.ordinal()];
+            pipeSignals[psIdx++] = buildcraft.transport.BCTransportStatements.TRIGGER_PIPE_SIGNAL[colour.ordinal() * 2 + 0];
+            pipeSignals[psIdx++] = buildcraft.transport.BCTransportStatements.TRIGGER_PIPE_SIGNAL[colour.ordinal() * 2 + 1];
+        }
+        addEntries("buildcraft", "pipe_signals", pipeSignals);
+
+        // Set Pipe Direction: the six "Face the X side" actions, one per Direction (in
+        // Minecraft's canonical Direction.values() order: DOWN, UP, NORTH, SOUTH, WEST,
+        // EAST — matches the order BCTransportStatements builds the array). Surfaced
+        // via a single "Set pipe direction" category entry in the TOC. The keys are
+        // every pipe whose behaviour responds to these actions — anything extending
+        // PipeBehaviourDirectional (Iron, Wood, Wood-Diamond, Daizuli, Emzuli, plus the
+        // fluid variants of the first three) and Stripes (which adds the actions on its
+        // own). Registering them as sources gives each direction page a "Linked From:
+        // Used by" chapter listing every directional pipe, and each pipe page a
+        // "Linked To: Set Pipe Direction" chapter listing the six actions.
+        addEntries("buildcraft", "set_pipe_direction",
+            (Object[]) buildcraft.transport.BCTransportStatements.ACTION_PIPE_DIRECTION);
+        addKeys("buildcraft", "set_pipe_direction",
+            buildcraft.transport.BCTransportItems.PIPE_IRON_ITEM.get(),
+            buildcraft.transport.BCTransportItems.PIPE_IRON_FLUID.get(),
+            buildcraft.transport.BCTransportItems.PIPE_WOOD_ITEM.get(),
+            buildcraft.transport.BCTransportItems.PIPE_WOOD_FLUID.get(),
+            buildcraft.transport.BCTransportItems.PIPE_DIAMOND_WOOD_ITEM.get(),
+            buildcraft.transport.BCTransportItems.PIPE_DIAMOND_WOOD_FLUID.get(),
+            buildcraft.transport.BCTransportItems.PIPE_DAIZULI_ITEM.get(),
+            buildcraft.transport.BCTransportItems.PIPE_EMZULI_ITEM.get(),
+            buildcraft.transport.BCTransportItems.PIPE_STRIPES_ITEM.get());
+
         // Heat exchanger recipes: heatable inputs/outputs and coolable inputs/outputs both
         // funnel through the heat exchange block.
         if (buildcraft.api.recipes.BuildcraftRecipeRegistry.refineryRecipes != null) {

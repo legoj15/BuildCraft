@@ -43,15 +43,6 @@ public class PageEntryStatement extends PageValueType<IStatement> {
     @Override
     public void iterateAllDefault(IEntryLinkConsumer consumer, ProfilerFiller prof) {
         for (IStatement statement : new TreeMap<>(StatementManager.statements).values()) {
-            // Statements folded into a consolidated "category" TOC entry (filler
-            // patterns, Emzuli extraction presets, ...) are surfaced via that entry
-            // and must not ALSO appear as alphabetical leaves under Actions/Triggers.
-            // The set is populated by GuideManager#populateHiddenStatements from each
-            // registered category's group membership — data-driven, so adding a new
-            // category needs no edits here.
-            if (GuideManager.INSTANCE.isStatementHiddenByCategory(statement)) {
-                continue;
-            }
             if (!GuideManager.INSTANCE.objectsAdded.add(statement)) {
                 continue;
             }
@@ -65,7 +56,14 @@ public class PageEntryStatement extends PageValueType<IStatement> {
                 continue;
             }
 
-            consumer.addChild(parent, new PageLinkStatement(true, statement));
+            // Statements folded into a consolidated "category" TOC entry (filler
+            // patterns, Emzuli extraction presets, ...) are surfaced via that entry
+            // in the default TOC, but stay searchable: emit them with startVisible=false
+            // so the suffix array still indexes them and a search match reveals them
+            // in their natural Actions/Triggers chapter without re-cluttering the
+            // alphabetical leaf list when no search is active.
+            boolean hidden = GuideManager.INSTANCE.isStatementHiddenByCategory(statement);
+            consumer.addChild(parent, new PageLinkStatement(!hidden, statement));
         }
     }
 

@@ -53,7 +53,7 @@ public class BCTransportSprites {
 
         ACTION_PIPE_COLOUR = new SpriteHolder[ColourUtil.COLOURS.length];
         for (DyeColor colour : ColourUtil.COLOURS) {
-            ACTION_PIPE_COLOUR[colour.ordinal()] = getHolder("core", "items/paintbrush/" + colour.getName());
+            ACTION_PIPE_COLOUR[colour.ordinal()] = getHolder("core", "item/paintbrush/" + colour.getName());
         }
 
         PIPE_SIGNAL_OFF = new EnumMap<>(DyeColor.class);

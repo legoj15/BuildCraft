@@ -1,5 +1,7 @@
 package buildcraft.transport.pipe.behaviour;
 
+import java.util.Collections;
+
 import javax.annotation.Nullable;
 
 import net.minecraft.nbt.CompoundTag;
@@ -12,13 +14,18 @@ import net.minecraft.world.phys.HitResult;
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver;
-import buildcraft.api.transport.pipe.PipeFaceTex;
+import buildcraft.api.transport.pipe.PipeEventActionActivate;
 import buildcraft.api.transport.pipe.PipeEventHandler;
 import buildcraft.api.transport.pipe.PipeEventItem;
+import buildcraft.api.transport.pipe.PipeEventStatement;
+import buildcraft.api.transport.pipe.PipeFaceTex;
 
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.NBTUtilBC;
+
+import buildcraft.transport.BCTransportStatements;
+import buildcraft.transport.statements.ActionPipeColor;
 
 public class PipeBehaviourDaizuli extends PipeBehaviourDirectional {
     private static final net.minecraft.resources.Identifier ADVANCEMENT
@@ -107,5 +114,18 @@ public class PipeBehaviourDaizuli extends PipeBehaviourDirectional {
         }
     }
 
-    // Statement handlers removed — BCTransportStatements not yet ported
+    @PipeEventHandler
+    public void addPaintActions(PipeEventStatement.AddActionInternal event) {
+        Collections.addAll(event.actions, BCTransportStatements.ACTION_PIPE_COLOUR);
+    }
+
+    @PipeEventHandler
+    public void onPaintActionActivate(PipeEventActionActivate event) {
+        if (event.action instanceof ActionPipeColor action) {
+            if (this.colour != action.color) {
+                this.colour = action.color;
+                pipe.getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
+            }
+        }
+    }
 }

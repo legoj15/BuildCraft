@@ -17,4 +17,6 @@ Pipe wire is available in all 16 colours.
 Pipe Wire be placed on each corner of a pipe and will only connect to pipe wires of the same colour in a cardinal direction to it.
 They can connect to other wires of the same colour over different pipes even if the pipes don't connect themselves.
 
+<link to="buildcraft:pipe_signals"/>
+
 <usages stack="buildcraftunofficial:wire_white"/>

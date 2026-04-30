@@ -164,6 +164,16 @@ public enum GuideManager {
     }
 
     public void onResourceManagerReload(ResourceManager resourceManager) {
+        // Skip if we haven't loaded yet. The very first resource-manager reload fires
+        // during Minecraft construction — before BC item Holders have their components
+        // bound — and populateDefaultGroups()'s ItemStack constructions throw
+        // "Components not bound yet" NPEs at that stage. The first real load happens
+        // through ensureLoaded() when the user opens a guide book (by which point
+        // FMLLoadCompleteEvent has fired and components are bound), and after that
+        // contents is non-empty so subsequent F3+T reloads proceed normally. The
+        // contents.isEmpty() check is the same predicate ensureLoaded() uses, so
+        // "already loaded" and "ready to reload" are the same condition.
+        if (contents.isEmpty()) return;
         reload(resourceManager);
     }
 
@@ -376,30 +386,31 @@ public enum GuideManager {
 
             PageEntry<?> entry = mapEntry.getValue();
 
-            // Suppress entries whose value has been folded into a category-collapsed
-            // TOC entry (e.g. the JSON-INSN registration of "Red Extraction Preset"
-            // via guide.txt — the Emzuli Extraction Presets category surfaces it
-            // instead, and we don't want a duplicate leaf under "Item Transport").
-            // We still mark the value as added so iterateAllDefault below dedups
-            // against it, AND we keep the entry in the registry so click-resolution
-            // from the category page (GuideManager#getFactoryFor → getEntryFor) can
-            // still find the factory and open its stub/markdown page.
+            // Entries whose value has been folded into a category-collapsed TOC entry
+            // (e.g. the JSON-INSN registration of "Red Extraction Preset" via guide.txt —
+            // the Emzuli Extraction Presets category surfaces it instead) get hidden in
+            // the default TOC but stay searchable: emit them as startVisible=false so the
+            // suffix array still indexes them and a search match reveals them under their
+            // natural chapter. The factory remains registered so click-resolution from
+            // the category page (GuideManager#getFactoryFor → getEntryFor) still opens
+            // the stub/markdown page.
             Object basicValue = entry.getBasicValue();
-            if (basicValue instanceof buildcraft.api.statements.IStatement stmt
-                && isStatementHiddenByCategory(stmt)) {
-                objectsAdded.add(basicValue);
-                continue;
-            }
+            boolean hidden = basicValue instanceof buildcraft.api.statements.IStatement stmt
+                && isStatementHiddenByCategory(stmt);
 
             String translatedTitle = entry.title;
             ISimpleDrawable icon = entry.createDrawable();
             PageLine line = new PageLine(icon, icon, 2, translatedTitle, true);
 
             if (entryFactory != null) {
-                objectsAdded.add(entry.getBasicValue());
-                PageLinkNormal pageLink = new PageLinkNormal(line, true, entry.getTooltip(), entryFactory);
+                objectsAdded.add(basicValue);
+                PageLinkNormal pageLink = new PageLinkNormal(line, !hidden, entry.getTooltip(), entryFactory);
                 addChild(entry.book, entry.typeTags, pageLink);
             }
+            // entryFactory == null path intentionally falls through without
+            // touching objectsAdded — PageEntryStatement#iterateAllDefault will
+            // emit a synthesizing PageLinkStatement (with the same hidden-by-category
+            // visibility flag baked into iterateAllDefault) so the leaf still exists.
         }
 
         // Dynamically-iterated categories (Triggers, Actions, ...) become
@@ -460,6 +471,8 @@ public enum GuideManager {
     private static final String[][] CATEGORY_BODY_SOURCES = {
         { "buildcraft", "filler_patterns",     "buildcraftunofficial:concept/filler_patterns" },
         { "buildcraft", "extraction_presets",  "buildcraftunofficial:concept/emzuli_extraction_presets" },
+        { "buildcraft", "pipe_signals",        "buildcraftunofficial:concept/pipe_signals" },
+        { "buildcraft", "set_pipe_direction",  "buildcraftunofficial:concept/set_pipe_direction" },
     };
 
     /** Walk the groups named in {@link #CATEGORY_BODY_SOURCES} and stash every
@@ -543,16 +556,25 @@ public enum GuideManager {
         categoryLinks.clear();
         addFillerPatternsCategory(adder);
         addEmzuliExtractionPresetsCategory(adder);
+        addPipeSignalsCategory(adder);
+        addSetPipeDirectionCategory(adder);
     }
 
     /** Build a category TOC entry plus the matching markdown-linkable {@link PageLink}.
      *  All categories share the same shape: an icon, a title, a description body parsed
      *  from a per-category {@code .md} file, and a {@link GuidePartGroup} that lists the
-     *  named group's entries in registration order. The entry is filed under
-     *  {@code chapterTagType} (a localization key — typically the same chapter the leaf
-     *  entries used to live in, so readers find it where they already look) and
+     *  named group's entries in registration order. The entry is filed under each tag in
+     *  {@code chapterTagTypes} (each a localization key — typically the same chapter the
+     *  leaf entries used to live in, so readers find it where they already look) and
      *  registered in {@link #categoryLinks} under {@code domain:groupName} so
      *  {@code <link to="domain:groupName"/>} works in markdown.
+     *
+     *  <p>Most categories pass a single chapter tag — they collapse leaves that all live
+     *  in one chapter (Filler Patterns are pure actions; Emzuli presets are pure actions).
+     *  Pipe Signals span both Triggers and Actions, so the same TOC link is filed under
+     *  both — the {@link IEntryLinkConsumer} dedups its search-index population for us
+     *  (see {@code pageLinksAdded.add(page)}), so this only adds the link to two
+     *  ContentsNodes.
      *
      *  <p>{@code extraParts} (nullable) supplies any additional {@link GuidePart}s to
      *  insert between the description and the group listing — typically a manual
@@ -560,7 +582,7 @@ public enum GuideManager {
      *  auto Linked-To/From machinery doesn't already cover. Evaluated per page open so
      *  the parts can capture the live {@link GuiGuide}. */
     private void registerCategory(IEntryLinkConsumer adder, String domain, String groupName,
-        String chapterTagType, ISimpleDrawable icon, String title,
+        String[] chapterTagTypes, ISimpleDrawable icon, String title,
         @Nullable java.util.function.Function<GuiGuide, List<GuidePart>> extraParts) {
         GuideGroupSet groupSet = GuideGroupManager.get(domain, groupName);
         if (groupSet == null) return;
@@ -591,7 +613,9 @@ public enum GuideManager {
 
         PageLinkNormal link = new PageLinkNormal(line, true, ImmutableList.of(title), factory);
         categoryLinks.put(groupId, link);
-        adder.addChild(new JsonTypeTags(chapterTagType), link);
+        for (String chapterTagType : chapterTagTypes) {
+            adder.addChild(new JsonTypeTags(chapterTagType), link);
+        }
     }
 
     /** "Filler Patterns" — collapses ~19 alphabetically-listed pattern actions into one
@@ -605,7 +629,7 @@ public enum GuideManager {
         ISimpleDrawable icon = (x, y) -> GuiElementStatementSource.drawGuiSlot(
             buildcraft.builders.BCBuildersStatements.PATTERN_STAIRS, x, y);
         registerCategory(adder, "buildcraft", "filler_patterns",
-            "buildcraft.guide.contents.actions",
+            new String[] { "buildcraft.guide.contents.actions" },
             icon,
             "Filler Patterns",
             null);
@@ -624,7 +648,7 @@ public enum GuideManager {
             // order in PipeBehaviourEmzuli) — the visually-canonical "default" preset.
             buildcraft.transport.BCTransportStatements.ACTION_EXTRACTION_PRESET[0], x, y);
         registerCategory(adder, "buildcraft", "extraction_presets",
-            "buildcraft.guide.contents.actions",
+            new String[] { "buildcraft.guide.contents.actions" },
             icon,
             "Emzuli Extraction Presets",
             g -> {
@@ -634,6 +658,49 @@ public enum GuideManager {
                     net.minecraft.util.profiling.InactiveProfiler.INSTANCE);
                 return ImmutableList.of(new GuidePartLink(g, emzuliLink));
             });
+    }
+
+    /** "Pipe Signals" — collapses 16 colours × (1 action + 2 triggers) = 48 statements
+     *  that previously sprawled across the Triggers and Actions chapters into a single
+     *  TOC entry. Filed under BOTH chapter tags so a reader looking under either Triggers
+     *  or Actions still finds it where they would have looked for the per-colour leaves.
+     *  The body comes from {@code concept/pipe_signals.md} — including its own
+     *  {@code <link to="buildcraftunofficial:item/wire"/>} back to the pipe wire page,
+     *  so no extraParts are needed (unlike Emzuli, whose md had no inline wire link). */
+    private void addPipeSignalsCategory(IEntryLinkConsumer adder) {
+        // Use the BLACK active sprite for the icon — the user's reference document was
+        // "Black Pipe Signal", and BLACK's the canonical example wire colour throughout
+        // the codebase (it's the colour the now-removed guide.txt entries pointed at).
+        ISimpleDrawable icon = (x, y) -> GuiElementStatementSource.drawGuiSlot(
+            buildcraft.transport.BCTransportStatements.ACTION_PIPE_SIGNAL[
+                net.minecraft.world.item.DyeColor.BLACK.ordinal()], x, y);
+        registerCategory(adder, "buildcraft", "pipe_signals",
+            new String[] {
+                "buildcraft.guide.contents.triggers",
+                "buildcraft.guide.contents.actions",
+            },
+            icon,
+            "Pipe Signals",
+            null);
+    }
+
+    /** "Set pipe direction" — collapses the six "Face the X side" actions (one per
+     *  Direction) into a single category entry under Actions. The icon is a vanilla
+     *  compass — the only directional vanilla item that visually communicates "this
+     *  is about which way to face" without picking one specific Direction's sprite.
+     *  The body comes from {@code concept/set_pipe_direction.md}; the per-direction
+     *  pages at {@code action/pipe_direction_*.md} stay on disk and remain reachable
+     *  by clicking from the category page (their guide.txt registrations are kept,
+     *  so {@link #getFactoryFor} still resolves them — the {@code hiddenStatements}
+     *  filter only suppresses TOC leaves, not click-resolution from the group). */
+    private void addSetPipeDirectionCategory(IEntryLinkConsumer adder) {
+        ISimpleDrawable icon = new buildcraft.lib.gui.GuiStack(
+            new ItemStack(net.minecraft.world.item.Items.COMPASS));
+        registerCategory(adder, "buildcraft", "set_pipe_direction",
+            new String[] { "buildcraft.guide.contents.actions" },
+            icon,
+            "Set Pipe Direction",
+            null);
     }
 
     private void genTypeMap(GuideBook book) {

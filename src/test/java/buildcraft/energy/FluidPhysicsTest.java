@@ -4,7 +4,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.Blocks;
 
 import buildcraft.energy.BCEnergyFluids;
@@ -17,9 +16,11 @@ public class FluidPhysicsTest {
             helper.setBlock(new BlockPos(1, y, 1), BCEnergyFluids.OIL_COOL.block().get());
         }
 
-        // Spawn a pig at the bottom!
-        BlockPos bottomPos = new BlockPos(1, 1, 1);
-        Entity pig = helper.spawnWithNoFreeWill(EntityType.PIG, 1, 1, 1);
+        // Spawn a pig at the bottom with AI intact: NeoForge 26.1.x exposes no
+        // per-fluid entity-physics hook, so oil falls back to vanilla water physics
+        // (oil is in FluidTags.WATER). The pig's FloatGoal — which only triggers
+        // while AI is enabled — drives the bob to the surface.
+        helper.spawn(EntityType.PIG, 1, 1, 1);
 
         // Assert that the pig successfully bobs to the surface block over time
         helper.succeedWhen(() -> {

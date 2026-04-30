@@ -262,9 +262,9 @@ trigger "pipe_item" "items_traversing"  "buildcraft:pipe_contains_items"
 // ---- Triggers / Fluid Transport (pipe_fluid) -----------------------------
 trigger "pipe_fluid" "fluids_traversing" "buildcraft:pipe_contains_fluids"
 
-// ---- Triggers / Pluggables (pipe_plug) -----------------------------------
-trigger "pipe_plug" "pipe_signal_active"   "buildcraft:pipe.wire.input.black.active"
-trigger "pipe_plug" "pipe_signal_inactive" "buildcraft:pipe.wire.input.black.inactive"
+// Pipe Signal triggers (16 colours × on/off) are surfaced via a single "Pipe Signals"
+// category entry under both the Triggers and Actions chapters — see
+// GuideManager#addPipeSignalsCategory. The body lives at concept/pipe_signals.md.
 
 // ---- Actions / Basic -----------------------------------------------------
 action "basic" "redstone" "buildcraft:redstone.output"
@@ -275,6 +275,10 @@ action "automation" "machine_control_off"  "buildcraft:machine.off"
 action "automation" "machine_control_loop" "buildcraft:machine.loop"
 
 // ---- Actions / Item Transport (pipe_item) --------------------------------
+// The six pipe_direction_* actions are surfaced via a single "Set pipe direction"
+// category entry under Actions — see GuideManager#addSetPipeDirectionCategory. The
+// body lives at concept/set_pipe_direction.md. The entries below stay so the per-
+// direction .md files remain loadable for click-resolution from the category page.
 action "pipe_item" "pipe_direction_north" "buildcraft:pipe.dir.north"
 action "pipe_item" "pipe_direction_east"  "buildcraft:pipe.dir.east"
 action "pipe_item" "pipe_direction_south" "buildcraft:pipe.dir.south"
@@ -284,8 +288,8 @@ action "pipe_item" "pipe_direction_below" "buildcraft:pipe.dir.down"
 action "pipe_item" "pipe_colour"          "buildcraft:pipe.color.black"
 action "pipe_item" "extraction_preset"    "buildcraft:extraction.preset.red"
 
-// ---- Actions / Pluggables (pipe_plug) ------------------------------------
-action "pipe_plug" "pipe_signal_active" "buildcraft:pipe.wire.output.black"
+// Pipe Signal actions live in the "Pipe Signals" category alongside their trigger
+// counterparts — see the comment above the Actions / Basic section.
 
 // ---------------------------------------------------------------------------
 // Config Guide entries — separate book.

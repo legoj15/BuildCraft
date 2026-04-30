@@ -1,7 +1,9 @@
 package buildcraft.lib.client;
 
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -20,8 +22,25 @@ public class BCLibClient {
             ModelVariableData.onModelBake();
         });
 
-        // Catch data-pack reloads (`/reload`) so the guide regenerates against the new entries.
-        // Guarded internally by isInReload + reloadingRegistries-contains-GuideBookRegistry.
+        // Wire the guide into the client resource-manager reload pipeline so F3+T (and any
+        // other client-side resource reload) regenerates guide content against the new
+        // resource pack contents. Without this, GuideManager#onResourceManagerReload is
+        // never invoked — so editing a guide .md file in the resource pack and pressing
+        // F3+T appeared to be a no-op. The cast routes through the
+        // ResourceManagerReloadListener single-method form (the event takes the broader
+        // PreparableReloadListener interface, which would otherwise be ambiguous).
+        modEventBus.addListener(AddClientReloadListenersEvent.class, event ->
+            event.addListener(
+                Identifier.fromNamespaceAndPath("buildcraftunofficial", "guide"),
+                (ResourceManagerReloadListener) GuideManager.INSTANCE::onResourceManagerReload
+            )
+        );
+
+        // Catch BC-registry reloads (anything routed through ReloadableRegistryManager) so
+        // the guide regenerates against the new entries. Guarded internally by isInReload
+        // + reloadingRegistries-contains-GuideBookRegistry. Note: the vanilla `/reload`
+        // command does NOT trigger this — it's a datapack reload (server-side), and our
+        // guide content is resource-pack content (client-side). F3+T is the right gesture.
         NeoForge.EVENT_BUS.addListener(
             EventBuildCraftReload.FinishLoad.class,
             GuideManager.INSTANCE::onRegistryReload

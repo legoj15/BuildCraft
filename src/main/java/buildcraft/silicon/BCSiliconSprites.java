@@ -31,7 +31,7 @@ public class BCSiliconSprites {
         ACTION_PULSAR_SINGLE = getHolder("triggers/action_pulsar_single");
         ACTION_PIPE_COLOUR = new SpriteHolder[ColourUtil.COLOURS.length];
         for (DyeColor colour : ColourUtil.COLOURS) {
-            ACTION_PIPE_COLOUR[colour.ordinal()] = getHolder("core", "items/paintbrush/" + colour.getName());
+            ACTION_PIPE_COLOUR[colour.ordinal()] = getHolder("core", "item/paintbrush/" + colour.getName());
         }
     }
 

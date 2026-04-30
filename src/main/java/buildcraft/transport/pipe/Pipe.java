@@ -310,8 +310,15 @@ public final class Pipe implements IPipe, IDebuggable {
                     holder.fireEvent(new PipeEventConnectionChange(holder, face));
                 }
             }
+            // Only sync to clients when connections actually changed. Previously this fired
+            // unconditionally, which created a feedback loop on every redstone toggle: the
+            // pipe powers a redstone block (e.g. a lamp) → the redstone block's setBlock fires
+            // updateNeighborsAt back → BlockPipeHolder.neighborChanged calls pipe.markForUpdate()
+            // → next tick runs updateConnections (with no real change) → scheduleNetworkUpdate
+            // → full BE sync → client re-parses all 6 pluggables NBT and 27 chunk sections re-mesh.
+            // That feedback loop is what caused the 80–95 ms FPS spikes on every gate ON/OFF.
+            getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
         }
-        getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
     }
 
     public void addDrops(NonNullList<ItemStack> toDrop, int fortune) {

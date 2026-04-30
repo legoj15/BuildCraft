@@ -104,6 +104,23 @@ public class PluggablePulsar extends PipePluggable {
     public void readPayload(FriendlyByteBuf buffer, Object side, Object ctx) throws java.io.IOException {
         super.readPayload(buffer, side, ctx);
         readData(buffer);
+        // Visual state booleans (isPulsing, autoEnabled, manuallyEnabled) feed into the chunk
+        // geometry key via KeyPlugSimple — must mark the chunk dirty so the pulsar's pulse animation
+        // updates. scheduleRenderUpdate() on the client calls level.sendBlockUpdated with
+        // UPDATE_CLIENTS, which marks the 3x3x3 section cube dirty exactly once for this transition.
+        if (holder.getPipeWorld().isClientSide()) {
+            holder.scheduleRenderUpdate();
+        }
+    }
+
+    /** Sends the visual-state booleans (isPulsing, autoEnabled, manuallyEnabled) directly via a
+     *  custom payload to all tracking clients, bypassing the full block-entity sync path that
+     *  scheduleNetworkUpdate() would trigger via TilePipeHolder.scheduleRenderUpdate. The full BE
+     *  sync re-syncs the entire pipe + all 6 pluggables NBT and triggers an extra client-side
+     *  level.sendBlockUpdated in onDataPacket — both wasted work for a 3-bit visual change. */
+    private void sendPulseStateUpdate() {
+        if (holder.getPipeWorld().isClientSide()) return;
+        holder.sendMessage(IPipeHolder.PipeMessageReceiver.PLUGGABLES[side.ordinal()], this::writeData);
     }
 
     @Override
@@ -188,7 +205,7 @@ public class PluggablePulsar extends PipePluggable {
         }
         if (isOn != lastPulsing) {
             lastPulsing = isOn;
-            scheduleNetworkUpdate();
+            sendPulseStateUpdate();
         }
     }
 
@@ -200,7 +217,7 @@ public class PluggablePulsar extends PipePluggable {
             holder.getPipeWorld().playSound(null, holder.getPipePos(),
                 SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.3F,
                 manuallyEnabled ? 0.6F : 0.5F);
-            scheduleNetworkUpdate();
+            sendPulseStateUpdate();
         }
         return true;
     }

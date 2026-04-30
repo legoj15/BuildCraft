@@ -157,6 +157,12 @@ public class SavedDataWireSystems extends SavedData {
     }
 
     public void tick() {
+        // gatesChanged is intentionally NOT reset here. Resetting it after the recalc broke the
+        // client<->server sync of wire powered state in subtle steady-state cases (the user could
+        // see wires never glowing and receive-gates never firing until the world was closed and
+        // reopened). The wasted CPU of running this every tick is small compared to the value of
+        // robust sync, so we recalculate every tick and rely on changedSystems being empty in
+        // steady state to avoid sending payloads when nothing actually changed.
         if (gatesChanged) {
             wireSystems.replaceAll((wireSystem, oldPowered) -> {
                 boolean newPowered = wireSystem.update(this);

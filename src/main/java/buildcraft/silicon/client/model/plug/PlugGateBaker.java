@@ -56,49 +56,21 @@ public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
 
     @Override
     public List<BakedQuad> bake(KeyPlugGate key) {
-        if (cached.containsKey(key)) {
-            return cached.get(key);
-        }
-
-        List<BakedQuad> list = new ArrayList<>();
-
-        // Helper to convert 16th scale coordinates to a box
-        float baseMinX = 2f / 16f, baseMaxX = 4.01f / 16f;
-        float baseYMin = 5f / 16f, baseYMax = 11f / 16f;
-        float baseZMin = 5f / 16f, baseZMax = 11f / 16f;
-
-        // Base Material
-        TextureAtlasSprite matSprite = getSprite(getMaterialSpritePath(key.variant.material));
-        buildBox(list, baseMinX, baseYMin, baseZMin, baseMaxX, baseYMax, baseZMax, matSprite, key.side, true, 0);
-
-        // Logic Component
-        if (key.variant.material != buildcraft.silicon.gate.EnumGateMaterial.CLAY_BRICK) {
-            TextureAtlasSprite logicSprite = getSprite("buildcraftunofficial:block/gates/gate_" + key.variant.logic.tag);
-            buildBox(list, 1.8f / 16f, 7f / 16f, 7f / 16f, 4.2f / 16f, 9f / 16f, 9f / 16f, logicSprite, key.side, true, 0);
-        }
-
-        // Dynamic State Component
-        // In 1.12.2, gate_dynamic.json forced "light": "on ? 15 : 0" on this quad.
-        // BakedQuad in MC 26.1 doesn't carry vertex colors, so we use black_concrete for off state.
-        if (key.active) {
-            TextureAtlasSprite dynSprite = getSprite("buildcraftunofficial:block/gates/gate_on");
-            buildBox(list, 1.9f / 16f, 6f / 16f, 6f / 16f, 4.1f / 16f, 10f / 16f, 10f / 16f, dynSprite, key.side, false, 15);
-        } else {
-            TextureAtlasSprite dynSprite = getSprite("minecraft:block/black_concrete");
-            buildBox(list, 1.9f / 16f, 6f / 16f, 6f / 16f, 4.1f / 16f, 10f / 16f, 10f / 16f, dynSprite, key.side, true, 0);
-        }
-
-        // Modifiers
-        if (key.variant.modifier != buildcraft.silicon.gate.EnumGateModifier.NO_MODIFIER) {
-            TextureAtlasSprite modSprite = getSprite(getModifierSpritePath(key.variant.modifier));
-            buildBox(list, 1.8f / 16f, 5.5f / 16f, 5.5f / 16f, 4.2f / 16f, 6.5f / 16f, 6.5f / 16f, modSprite, key.side, true, 0);
-            buildBox(list, 1.8f / 16f, 9.5f / 16f, 5.5f / 16f, 4.2f / 16f, 10.5f / 16f, 6.5f / 16f, modSprite, key.side, true, 0);
-            buildBox(list, 1.8f / 16f, 5.5f / 16f, 9.5f / 16f, 4.2f / 16f, 6.5f / 16f, 10.5f / 16f, modSprite, key.side, true, 0);
-            buildBox(list, 1.8f / 16f, 9.5f / 16f, 9.5f / 16f, 4.2f / 16f, 10.5f / 16f, 10.5f / 16f, modSprite, key.side, true, 0);
-        }
-
-        cached.put(key, list);
-        return list;
+        // The gate contributes ZERO quads to the chunk mesh — every visible part (base material,
+        // logic icon, modifier dots, on/off overlay) is rendered per-frame by PlugGateRenderer.
+        //
+        // Why: chunk re-mesh cost scales with the quad count of every block in the section, plus
+        // the per-vertex AO/lighting work the chunk renderer does. Each gate previously
+        // contributed 12–36 quads to the chunk mesh. When a player placed/broke any block within
+        // the 27-section cube around a pipe network, EVERY pipe in those sections re-meshed,
+        // and the cost was directly proportional to the gate count nearby. Moving gate geometry
+        // to BER eliminates that scaling — chunks with 100 gates now re-mesh at the same speed
+        // as chunks with 0 gates.
+        //
+        // The trade-off is a slight continuous BER cost per visible gate (~30 quads per frame
+        // after back-face cull). On modern hardware that's negligible compared to the avoided
+        // re-mesh spike.
+        return java.util.Collections.emptyList();
     }
 
     /**
@@ -151,6 +123,15 @@ public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
         Vector3f radius = new Vector3f(maxX - center.x, maxY - center.y, maxZ - center.z);
 
         for (Direction face : Direction.values()) {
+            // Skip the EAST face: pre-rotation, EAST is the face of the box that sits against
+            // the pipe surface (gate boxes are mounted at x=2..4.x in the WEST-facing build, so
+            // their EAST face is at the pipe body's WEST surface and is hidden by the pipe body
+            // quad in front of it). After rotate(WEST, targetSide), the equivalent face still
+            // ends up flush against the pipe body. Cutting it eliminates one quad per box per
+            // gate from the chunk mesh — meaningful when many gates land in the same 27-section
+            // re-mesh after a nearby block placement.
+            if (face == Direction.EAST) continue;
+
             ModelUtil.UvFaceData uv = makeGateUVs(face);
 
             MutableQuad q = ModelUtil.createFace(face, center, radius, uv);
@@ -161,13 +142,13 @@ public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
                 q.setLightEmission(light);
             }
             q.rotate(Direction.WEST, targetSide, 0.5f, 0.5f, 0.5f);
-            
+
             // Adjust normal after rotate
             q.setCalculatedNormal();
-            
+
             // We need to apply diffuse lighting manually since it's an item/block hybrid
             q.setCalculatedDiffuse();
-            
+
             list.add(q.toBakedBlock());
         }
     }

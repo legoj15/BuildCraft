@@ -212,20 +212,21 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     @Override
     public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
         super.handleUpdateTag(input);
-        // Schedule client-side render refresh after receiving updated state
+        // Schedule client-side render refresh after receiving updated state.
+        // UPDATE_CLIENTS (not UPDATE_ALL): client doesn't need the UPDATE_NEIGHBORS bit, and on
+        // the server side it would re-fire updateNeighborsAt redundantly with tick()'s explicit one.
         requestModelDataUpdate();
         if (level != null && level.isClientSide()) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
         }
     }
 
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
         super.onDataPacket(net, input);
-        // Schedule client-side render refresh after receiving updated state
         requestModelDataUpdate();
         if (level != null && level.isClientSide()) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
         }
     }
 
@@ -307,10 +308,13 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
             level.updateNeighborsAt(worldPosition, getBlockState().getBlock());
         }
 
-        // Schedule render update — server side only, to push block entity data to clients
+        // Schedule render update — server side only, to push block entity data to clients.
+        // UPDATE_CLIENTS (not UPDATE_ALL): the explicit updateNeighborsAt above already covered
+        // the redstone-changed case, and a model-only resync (e.g. pulsar pulse animation) does
+        // not need to re-notify neighbors.
         if (scheduleRenderUpdate && level != null && !level.isClientSide()) {
             scheduleRenderUpdate = false;
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
         }
 
         if (level != null && !level.isClientSide()) {
@@ -430,6 +434,27 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
                     }
                 }
             }
+            // If the pluggable being added or removed is a wire emitter (e.g. a gate with a
+            // Pipe Signal action), the wire system needs to re-walk its elements so it picks
+            // up (or drops) this emitter side. Without this, placing a gate AFTER the wires
+            // already exist means the wire system was built with no emitter elements and the
+            // wires never glow even when the gate fires — visible only after the player breaks
+            // and re-places a wire (which forces WireManager.addPart → buildAndAddWireSystem).
+            boolean oldWasEmitter = old instanceof buildcraft.api.transport.IWireEmitter;
+            boolean newIsEmitter = with instanceof buildcraft.api.transport.IWireEmitter;
+            if (oldWasEmitter || newIsEmitter) {
+                buildcraft.transport.wire.SavedDataWireSystems wireSystems =
+                    buildcraft.transport.wire.SavedDataWireSystems.get(level);
+                wireSystems.rebuildWireSystemsAround(this);
+                // Also rebuild systems anchored on connected neighbour pipes — wires on a
+                // neighbour can extend through this pipe to reach the new/removed emitter.
+                for (Direction dir : Direction.values()) {
+                    IPipe neighbour = getNeighbourPipe(dir);
+                    if (neighbour != null) {
+                        wireSystems.rebuildWireSystemsAround(neighbour.getHolder());
+                    }
+                }
+            }
         }
         scheduleRenderUpdate();
         setChanged();
@@ -516,7 +541,7 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     public void scheduleRenderUpdate() {
         if (level != null && level.isClientSide()) {
             requestModelDataUpdate();
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
         } else {
             scheduleRenderUpdate = true;
         }

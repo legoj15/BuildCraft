@@ -280,11 +280,13 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
                 readBoolArray(buffer, actionOn);
                 readBoolArray(buffer, connections);
             } else if (id == NET_ID_GLOWING) {
+                // isOn is no longer in the chunk geometry hash (KeyPlugGate.equals excludes it);
+                // the on/off visual is rendered per-frame by PlugGateRenderer, which reads this
+                // field directly each frame. So a chunk re-mesh is intentionally NOT triggered
+                // here — that's what avoids the 27-section re-mesh storm on every gate cycle.
                 isOn = true;
-                getPipeHolder().scheduleRenderUpdate();
             } else if (id == NET_ID_DARK) {
                 isOn = false;
-                getPipeHolder().scheduleRenderUpdate();
             } else {
                 BCLog.logger.warn("Unknown ID " + ID_ALLOC.getNameFor(id));
             }

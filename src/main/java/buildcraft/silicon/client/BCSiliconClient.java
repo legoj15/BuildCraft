@@ -65,6 +65,7 @@ public class BCSiliconClient {
             PipeApiClient.registry.registerBaker(buildcraft.silicon.client.model.key.KeyPlugSimple.class, buildcraft.silicon.client.model.plug.PlugBakerSimpleItems.INSTANCE);
             // Dynamic renderers
             PipeApiClient.registry.registerRenderer(buildcraft.silicon.plug.PluggablePulsar.class, buildcraft.silicon.client.render.PlugPulsarRenderer.INSTANCE);
+            PipeApiClient.registry.registerRenderer(buildcraft.silicon.plug.PluggableGate.class, buildcraft.silicon.client.render.PlugGateRenderer.INSTANCE);
         } else {
             LOGGER.warn("[silicon.client] PipeApiClient.registry is null at ModifyBakingResult! "
                 + "Facade in-world rendering will not work.");
@@ -98,6 +99,13 @@ public class BCSiliconClient {
         buildcraft.silicon.client.model.GateItemModel.onModelBake();
         buildcraft.silicon.client.model.LensItemModel.onModelBake();
         buildcraft.silicon.client.model.plug.PlugGateBaker.onModelBake();
+        buildcraft.silicon.client.render.PlugGateRenderer.onModelBake();
+        // Also invalidate the upstream PipeModelCacheAll cache so any pipe model that previously
+        // baked non-empty gate quads (back when PlugGateBaker.bake didn't return an empty list)
+        // gets re-baked. Without this, those old chunk-mesh gate quads can persist in the
+        // joined-cache layer above PlugGateBaker and render UNDERNEATH the BER, producing dim
+        // gates that look like the BER is broken when the actual issue is stale chunk geometry.
+        buildcraft.transport.client.model.PipeModelCacheAll.clearModels();
         buildcraft.silicon.client.model.plug.PlugBakerSimpleItems.onModelBake();
 
         // Cache the blockstate models for deferred facade deduplication.

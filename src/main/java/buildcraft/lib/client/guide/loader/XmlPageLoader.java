@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
+import java.util.function.Function;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -42,6 +43,8 @@ import buildcraft.lib.client.guide.entry.PageEntry;
 import buildcraft.lib.client.guide.entry.PageValueType;
 import buildcraft.lib.client.guide.parts.GuideChapterWithin;
 import buildcraft.lib.client.guide.parts.GuideImageFactory;
+import buildcraft.lib.client.guide.parts.GuideInlineLinkText;
+import buildcraft.lib.client.guide.parts.GuideInlineLinkText.InlineLinkSpan;
 import buildcraft.lib.client.guide.parts.GuidePageEntry;
 import buildcraft.lib.client.guide.parts.GuidePageFactory;
 import buildcraft.lib.client.guide.parts.GuidePart;
@@ -312,6 +315,10 @@ public enum XmlPageLoader implements IPageLoaderText {
             Set<ChatFormatting> formattingElements = EnumSet.noneOf(ChatFormatting.class);
             Deque<ChatFormatting> formatColours = new ArrayDeque<>();
             String completeLine = "";
+            // Inline-link spans collected from <link inline="true" .../> tags found
+            // mid-line. Empty list = a plain GuideTextFactory is enough; non-empty =
+            // emit a GuideInlineLinkText so the embedded titles are clickable.
+            List<InlineLinkSpan> inlineLinks = new ArrayList<>();
             int i = 0;
             while (i < line.length()) {
                 char c = line.charAt(i);
@@ -342,6 +349,45 @@ public enum XmlPageLoader implements IPageLoaderText {
                             i += currentTag.originalString.length();
                             continue;
                         }
+                        // <link inline="ns:path"/> (shorthand) or
+                        // <link inline="true" to="ns:path"/> (explicit) — embed a
+                        // clickable hyperlink inside the current paragraph. The
+                        // block-level <link to=".../> path (above, in the tag-dispatch
+                        // block) handles the case where this is the only thing on a
+                        // source line; this branch handles mid-line use.
+                        // NOTE: bare `inline` (without `="..."`) won't reach here — the
+                        // attribute parser at parseTag breaks on the first key without
+                        // an `=`, also dropping `to=`. Authors must give `inline` a
+                        // value.
+                        if ("link".equals(currentTag.name) && currentTag.get("inline") != null) {
+                            ResolvedLink resolved = resolveLinkTarget(currentTag, prof);
+                            if (resolved != null) {
+                                int visibleStart = GuideInlineLinkText.visibleLengthOf(completeLine);
+                                completeLine += ChatFormatting.RESET;
+                                completeLine += ChatFormatting.UNDERLINE;
+                                completeLine += ChatFormatting.BLUE;
+                                completeLine += resolved.title;
+                                completeLine += ChatFormatting.RESET;
+                                // Re-emit ambient formatting so surrounding <bold>/colour
+                                // resumes after the link's trailing reset. Mirrors the
+                                // colour-tag close branch above.
+                                if (!formatColours.isEmpty() && formatColours.peek() != null) {
+                                    completeLine += formatColours.peek();
+                                }
+                                for (ChatFormatting format : formattingElements) {
+                                    completeLine += format;
+                                }
+                                inlineLinks.add(new InlineLinkSpan(
+                                    visibleStart, resolved.title.length(), resolved.factoryFn, resolved.title
+                                ));
+                            } else {
+                                // Resolver already logged; fall back to literal tag text
+                                // so the broken link is visible to the author.
+                                completeLine += currentTag.originalString;
+                            }
+                            i += currentTag.originalString.length();
+                            continue;
+                        }
                     }
                 } else if (line.startsWith("&lt;", i)) {
                     c = '<';
@@ -355,7 +401,12 @@ public enum XmlPageLoader implements IPageLoaderText {
             }
 
             final String modLine = completeLine;
-            nestedParts.peek().add(new GuideTextFactory(modLine));
+            if (inlineLinks.isEmpty()) {
+                nestedParts.peek().add(new GuideTextFactory(modLine));
+            } else {
+                final List<InlineLinkSpan> spans = ImmutableList.copyOf(inlineLinks);
+                nestedParts.peek().add(gui -> new GuideInlineLinkText(gui, modLine, spans));
+            }
             prof.pop();
         }
         List<GuidePartFactory> factories = nestedParts.pop();
@@ -492,6 +543,21 @@ public enum XmlPageLoader implements IPageLoaderText {
     }
 
     private static GuidePartFactory loadLink(XmlTag tag, ProfilerFiller prof) {
+        // <link inline="true" to="..."/> at the start of a line: produce the same
+        // icon-less hyperlink visual as the mid-line case, so authors get consistent
+        // styling regardless of where the directive sits.
+        if (tag.get("inline") != null) {
+            ResolvedLink resolved = resolveLinkTarget(tag, prof);
+            if (resolved == null) {
+                return null;
+            }
+            String formatted = "" + ChatFormatting.RESET + ChatFormatting.UNDERLINE + ChatFormatting.BLUE
+                + resolved.title + ChatFormatting.RESET;
+            List<InlineLinkSpan> spans = ImmutableList.of(
+                new InlineLinkSpan(0, resolved.title.length(), resolved.factoryFn, resolved.title)
+            );
+            return gui -> new GuideInlineLinkText(gui, formatted, spans);
+        }
         String to = tag.get("to");
         String type = tag.get("type");
         if (to == null) {
@@ -550,6 +616,93 @@ public enum XmlPageLoader implements IPageLoaderText {
             }
         }
         return gui -> new GuidePartLink(gui, link);
+    }
+
+    /** Holds the parse-time outputs of resolving a {@code <link to=".../>} directive
+     *  for inline use: a title (used as the visible text) and a factory function that,
+     *  given a {@link GuiGuide}, produces the {@link GuidePageFactory} to navigate to.
+     *  The function form preserves the deferred-resolution pattern that
+     *  {@link #loadLink}'s category-link branch needs (categoryLinks aren't populated
+     *  until after this parser runs). */
+    private static final class ResolvedLink {
+        final String title;
+        final Function<GuiGuide, GuidePageFactory> factoryFn;
+
+        ResolvedLink(String title, Function<GuiGuide, GuidePageFactory> factoryFn) {
+            this.title = title;
+            this.factoryFn = factoryFn;
+        }
+    }
+
+    /** Resolves a {@code <link>} tag to its title and a factory-function for inline
+     *  use. Returns null and logs a warning if the target can't be resolved.
+     *
+     *  Accepts two equivalent author syntaxes:
+     *  <ul>
+     *    <li>{@code <link inline="true" to="ns:path"/>} — explicit flag + target</li>
+     *    <li>{@code <link inline="ns:path"/>} — shorthand, the {@code inline} value
+     *        IS the target (only kicks in when {@code to} is absent and the inline
+     *        value isn't the literal string {@code "true"} acting as a flag)</li>
+     *  </ul>
+     */
+    @Nullable
+    private static ResolvedLink resolveLinkTarget(XmlTag tag, ProfilerFiller prof) {
+        String to = tag.get("to");
+        String type = tag.get("type");
+        // Shorthand: <link inline="ns:path"/> with no `to` attribute. Promote the
+        // inline value to act as the target. Excludes "true" (flag form) and the
+        // empty string (probably a typo, let it fall through to the warning below).
+        if (to == null) {
+            String inline = tag.get("inline");
+            if (inline != null && !inline.isEmpty() && !"true".equals(inline)) {
+                to = inline;
+            }
+        }
+        if (to == null) {
+            BCLog.logger.warn("[lib.guide.loader.xml] Found a link tag without a 'to' tag! " + tag);
+            return null;
+        }
+        if (type == null) {
+            Identifier location = Identifier.parse(to);
+            PageEntry<?> entry = (PageEntry<?>) GuidePageRegistry.INSTANCE.getReloadableEntryMap().get(location);
+            if (entry != null) {
+                return new ResolvedLink(
+                    entry.title,
+                    gui -> GuideManager.INSTANCE.getFactoryFor(location)
+                );
+            }
+            // Deferred categoryLink: the title isn't known at parse time (categoryLinks
+            // are populated after this parser runs). Use the raw `to` as a placeholder
+            // title so the link still renders and clicks dispatch correctly via the
+            // deferred lookup. Better than dropping the link entirely.
+            return new ResolvedLink(to, gui -> {
+                PageLink categoryLink = GuideManager.INSTANCE.getCategoryLink(location);
+                if (categoryLink == null) {
+                    BCLog.logger.warn("[lib.guide.loader.xml] Found a link tag to an unknown page! " + tag);
+                    return null;
+                }
+                return categoryLink.getFactoryLink();
+            });
+        }
+        PageValueType<?> valueType = GuidePageRegistry.INSTANCE.types.get(type);
+        if (valueType == null) {
+            BCLog.logger.warn(
+                "[lib.guide.loader.xml] Found a link tag with an unknown 'type'! (valid ones are "
+                    + GuidePageRegistry.INSTANCE.types.keySet() + ") " + tag
+            );
+            return null;
+        }
+        @SuppressWarnings("unchecked")
+        OptionallyDisabled<PageLink> linkq = (OptionallyDisabled<PageLink>) (OptionallyDisabled<?>) valueType.createLink(to, prof);
+        if (!linkq.isPresent()) {
+            BCLog.logger.warn(
+                "[lib.guide.loader.xml] Found a link tag that didn't link to anything valid: " + linkq
+                    .getDisabledReason() + " " + tag
+            );
+            return null;
+        }
+        PageLink resolved = linkq.get();
+        return new ResolvedLink(resolved.text.text, gui -> resolved.getFactoryLink());
     }
 
     private static GuidePartFactory loadImage(XmlTag tag, ProfilerFiller prof) {

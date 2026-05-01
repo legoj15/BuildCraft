@@ -136,10 +136,22 @@ public class FormatString {
                         new FormatString(next)
                     };
                 } else {
+                    // Couldn't fit any portion of segments[segmentIndex] on this row
+                    // (no word boundary fit, and either segmentIndex>0 or even the
+                    // words=false fallback above didn't help). Spill segments[segmentIndex..end]
+                    // into the remainder so they retry on a fresh row.
+                    //
+                    // Earlier this used `segments[j + 1]`, which for any segmentIndex>0
+                    // duplicated already-emitted segments and dropped trailing ones —
+                    // visible to authors as e.g. mid-paragraph words appearing twice
+                    // and the tail of a paragraph silently disappearing. The bug only
+                    // surfaced once paragraphs gained multiple style-bearing segments
+                    // (notably from `<link inline>`), which is why it stayed latent for
+                    // a long time.
                     int left = segments.length - segmentIndex;
                     FormatSegment[] next = new FormatSegment[left];
                     for (int j = 0; j < left; j++) {
-                        next[j] = segments[j + 1];
+                        next[j] = segments[segmentIndex + j];
                     }
                     return new FormatString[] {
                         new FormatString(thisLine.toArray(new FormatSegment[0])),

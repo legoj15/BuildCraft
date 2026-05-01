@@ -28,10 +28,10 @@ block_engine "engine_iron"     "buildcraftunofficial:engine_iron"
 
 // ---- Blocks / Mining (real content) --------------------------------------
 block_mining "mining_well"
-block_mining "pump"
 
 // ---- Blocks / Fluid (real content) ---------------------------------------
 block_fluid "flood_gate"
+block_fluid "pump"
 block_fluid "tank"
 
 // ---- Blocks / Refining (real content) ------------------------------------
@@ -202,7 +202,7 @@ place "pipe_sandstone_power"    "pipe" "pipe_power"
 place "pipe_stone_power"        "pipe" "pipe_power"
 place "pipe_wood_power"         "pipe" "pipe_power"
 
-// Pipes / FE Transport — RF/FE (electric) pipes (stubs; real writeups pending).
+// Pipes / FE Transport — RF/FE pipes (stubs; real writeups pending).
 place "pipe_wood_rf"            "pipe" "pipe_rf"
 place "pipe_cobble_rf"          "pipe" "pipe_rf"
 place "pipe_stone_rf"           "pipe" "pipe_rf"
@@ -274,6 +274,14 @@ action "automation" "machine_control_on"   "buildcraft:machine.on"
 action "automation" "machine_control_off"  "buildcraft:machine.off"
 action "automation" "machine_control_loop" "buildcraft:machine.loop"
 
+// ---- Actions / Pluggables (pipe_plug) ------------------------------------
+// Pulsar plug actions — registering them here gives them a tag_subtype of
+// pipe_plug so they file under Actions > Pluggables alongside the wire and
+// plug pages, instead of falling through to PageEntryStatement.iterateAllDefault
+// which would emit them as un-subtyped leaves directly under Actions.
+action "pipe_plug" "power_pulsar"        "buildcraft:pulsar.constant"
+action "pipe_plug" "single_power_pulse"  "buildcraft:pulsar.single"
+
 // ---- Actions / Item Transport (pipe_item) --------------------------------
 // The six pipe_direction_* actions are surfaced via a single "Set pipe direction"
 // category entry under Actions — see GuideManager#addSetPipeDirectionCategory. The
@@ -294,6 +302,15 @@ action "pipe_item" "extraction_preset"    "buildcraft:extraction.preset.red"
 
 // Pipe Signal actions live in the "Pipe Signals" category alongside their trigger
 // counterparts — see the comment above the Actions / Basic section.
+
+// Power-limit actions (28 total: 4 limiter pipes × 7 levels each — Iron/Diamond
+// Kinesis and Iron/Diamond FE) are surfaced via a single "Set Power Limit" category
+// entry under Actions — see GuideManager#addSetPowerLimitCategory. The body lives
+// at concept/set_power_limit.md. No leaf entries are registered here on purpose:
+// the per-action pages would just be 28 near-identical "Switch to N MJ/t / RF/t
+// limit" stubs. PageEntryStatement.iterateAllDefault skips the 28 statements via
+// populateHiddenStatements (which reads CATEGORY_BODY_SOURCES) so they don't sprawl
+// across the alphabetical Actions index either.
 
 // ---------------------------------------------------------------------------
 // Config Guide entries — separate book.

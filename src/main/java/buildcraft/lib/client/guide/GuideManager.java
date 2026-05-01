@@ -474,6 +474,7 @@ public enum GuideManager {
         { "buildcraft", "pipe_signals",        "buildcraftunofficial:concept/pipe_signals" },
         { "buildcraft", "set_pipe_direction",  "buildcraftunofficial:concept/set_pipe_direction" },
         { "buildcraft", "paint_pipe_colour",   "buildcraftunofficial:action/pipe_colour" },
+        { "buildcraft", "set_power_limit",     "buildcraftunofficial:concept/set_power_limit" },
     };
 
     /** Walk the groups named in {@link #CATEGORY_BODY_SOURCES} and stash every
@@ -560,6 +561,59 @@ public enum GuideManager {
         addPipeSignalsCategory(adder);
         addSetPipeDirectionCategory(adder);
         addPaintPipeColourCategory(adder);
+        addSetPowerLimitCategory(adder);
+    }
+
+    /** File {@code page} under {@code chapterKey > subtypeKey} in every per-book contents
+     *  tree that opts into receiving all entries (mirroring the {@link IEntryLinkConsumer}
+     *  adder lambda's book filter). When {@code subtypeKey} is {@code null} or empty the
+     *  page lands at {@code chapterKey} only — same shape as the lambda. The two-level walk
+     *  is what lets a category entry land at e.g. {@code Actions > Item Transport} rather
+     *  than as a peer of the subtype headers under {@code Actions} (which sorts
+     *  alphabetically among them and reads as "tucked under Basic").
+     *
+     *  <p>Both keys are full localization keys — same convention {@link IEntryLinkConsumer}
+     *  uses for {@code tags.type} (e.g. {@code "buildcraft.guide.contents.actions"} and
+     *  {@code "buildcraft.guide.chapter.subtype.pipe_item"}). Idempotent on
+     *  {@link #pageLinksAdded} / {@link #quickSearcher}, so calling it multiple times for
+     *  the same page (e.g. Pipe Signals filed under both Triggers and Actions) is safe. */
+    private void addToChapterSubtype(String chapterKey, @Nullable String subtypeKey, PageLink page) {
+        if (pageLinksAdded.add(page)) {
+            quickSearcher.add(page, page.getSearchName());
+        }
+        String chapterTitle = LocaleUtil.localize(chapterKey);
+        String subtypeTitle = (subtypeKey == null || subtypeKey.isEmpty())
+            ? null : LocaleUtil.localize(subtypeKey);
+        for (Entry<GuideBook, Map<TypeOrder, ContentsNode>> bookEntry : contents.entrySet()) {
+            @Nullable GuideBook book = bookEntry.getKey();
+            if (book != null && !book.appendAllEntries) continue;
+            for (ContentsNode root : bookEntry.getValue().values()) {
+                ContentsNode chapter = getOrCreateChapter(root, chapterTitle, 0);
+                if (subtypeTitle == null) {
+                    chapter.addChild(page);
+                } else {
+                    ContentsNode sub = getOrCreateChapter(chapter, subtypeTitle, 1);
+                    sub.addChild(page);
+                }
+            }
+        }
+    }
+
+    /** Locate or create a child {@link ContentsNode} of {@code parent} with the given
+     *  localized {@code title}. Throws if a non-{@link ContentsNode} child already exists
+     *  at that key — same invariant the inline walk in {@link #addChild} and the
+     *  {@link IEntryLinkConsumer} adder lambda enforce. */
+    private static ContentsNode getOrCreateChapter(ContentsNode parent, String title, int indent) {
+        IContentsNode subNode = parent.getChild(title);
+        if (subNode instanceof ContentsNode) {
+            return (ContentsNode) subNode;
+        } else if (subNode == null) {
+            ContentsNode created = new ContentsNode(title, indent);
+            parent.addChild(created);
+            return created;
+        } else {
+            throw new IllegalStateException("Unknown node type " + subNode.getClass());
+        }
     }
 
     /** Build a category TOC entry plus the matching markdown-linkable {@link PageLink}.
@@ -578,13 +632,23 @@ public enum GuideManager {
      *  (see {@code pageLinksAdded.add(page)}), so this only adds the link to two
      *  ContentsNodes.
      *
+     *  <p>{@code chapterSubtypes} (nullable, or with nullable elements) is a parallel array
+     *  to {@code chapterTagTypes}: when non-null at index {@code i}, the entry lands at
+     *  {@code chapterTagTypes[i] > chapterSubtypes[i]} instead of directly under the
+     *  chapter. Without this, a category entry sits as a peer of the chapter's subtype
+     *  headers ({@code Basic}, {@code Item Transport}, {@code Pluggables}, ...) and sorts
+     *  alphabetically into them — reading as "tucked under Basic". Subtype keys are full
+     *  localization keys (e.g. {@code "buildcraft.guide.chapter.subtype.pipe_item"}),
+     *  same convention {@code chapterTagTypes} uses.
+     *
      *  <p>{@code extraParts} (nullable) supplies any additional {@link GuidePart}s to
      *  insert between the description and the group listing — typically a manual
      *  {@code <link>}-style backlink to a related page that {@link GuideGroupManager}'s
      *  auto Linked-To/From machinery doesn't already cover. Evaluated per page open so
      *  the parts can capture the live {@link GuiGuide}. */
     private void registerCategory(IEntryLinkConsumer adder, String domain, String groupName,
-        String[] chapterTagTypes, ISimpleDrawable icon, String title,
+        String[] chapterTagTypes, @Nullable String[] chapterSubtypes,
+        ISimpleDrawable icon, String title,
         @Nullable java.util.function.Function<GuiGuide, List<GuidePart>> extraParts) {
         GuideGroupSet groupSet = GuideGroupManager.get(domain, groupName);
         if (groupSet == null) return;
@@ -615,8 +679,15 @@ public enum GuideManager {
 
         PageLinkNormal link = new PageLinkNormal(line, true, ImmutableList.of(title), factory);
         categoryLinks.put(groupId, link);
-        for (String chapterTagType : chapterTagTypes) {
-            adder.addChild(new JsonTypeTags(chapterTagType), link);
+        for (int i = 0; i < chapterTagTypes.length; i++) {
+            String chapterKey = chapterTagTypes[i];
+            String subtypeKey = (chapterSubtypes != null && i < chapterSubtypes.length)
+                ? chapterSubtypes[i] : null;
+            if (subtypeKey == null || subtypeKey.isEmpty()) {
+                adder.addChild(new JsonTypeTags(chapterKey), link);
+            } else {
+                addToChapterSubtype(chapterKey, subtypeKey, link);
+            }
         }
     }
 
@@ -632,6 +703,10 @@ public enum GuideManager {
             buildcraft.builders.BCBuildersStatements.PATTERN_STAIRS, x, y);
         registerCategory(adder, "buildcraft", "filler_patterns",
             new String[] { "buildcraft.guide.contents.actions" },
+            // Filed under Automation: the filler block is an automation machine, and
+            // the patterns are GUI choices for how it shapes its area-fill — same
+            // subtype the filler itself sits under (Blocks > Automation).
+            new String[] { "buildcraft.guide.chapter.subtype.automation" },
             icon,
             "Filler Patterns",
             null);
@@ -651,6 +726,7 @@ public enum GuideManager {
             buildcraft.transport.BCTransportStatements.ACTION_EXTRACTION_PRESET[0], x, y);
         registerCategory(adder, "buildcraft", "extraction_presets",
             new String[] { "buildcraft.guide.contents.actions" },
+            new String[] { "buildcraft.guide.chapter.subtype.pipe_item" },
             icon,
             "Emzuli Extraction Presets",
             g -> {
@@ -680,6 +756,15 @@ public enum GuideManager {
             new String[] {
                 "buildcraft.guide.contents.triggers",
                 "buildcraft.guide.contents.actions",
+            },
+            // Filed under Pluggables in both chapters: the wire pluggable (and the
+            // pulsar that drives it) is the semantic source of pipe signals — readers
+            // looking for "anything to do with wires" find the category there alongside
+            // the wire and pulsar pages, instead of in Item Transport with the items
+            // those signals end up gating.
+            new String[] {
+                "buildcraft.guide.chapter.subtype.pipe_plug",
+                "buildcraft.guide.chapter.subtype.pipe_plug",
             },
             icon,
             "Pipe Signals",
@@ -723,6 +808,7 @@ public enum GuideManager {
         };
         registerCategory(adder, "buildcraft", "set_pipe_direction",
             new String[] { "buildcraft.guide.contents.actions" },
+            new String[] { "buildcraft.guide.chapter.subtype.pipe_item" },
             icon,
             "Set Pipe Direction",
             null);
@@ -740,8 +826,31 @@ public enum GuideManager {
                 net.minecraft.world.item.DyeColor.BLACK.ordinal()], x, y);
         registerCategory(adder, "buildcraft", "paint_pipe_colour",
             new String[] { "buildcraft.guide.contents.actions" },
+            new String[] { "buildcraft.guide.chapter.subtype.pipe_item" },
             icon,
             "Paint Passing Items",
+            null);
+    }
+
+    /** "Set Power Limit" — collapses the 4 limiter pipes × 7 levels = 28
+     *  "Switch to N MJ/t / RF/t limit" actions into a single category entry under
+     *  Actions. The icon is the iron-MJ limiter at limitShift=3 (the {@code m16}
+     *  partially-filled bar sprite), a mid-range limit that reads as "throttling"
+     *  rather than "fully open" or "blocked". The body comes from
+     *  {@code concept/set_power_limit.md}. The four limiter-pipe entries (Iron/Diamond
+     *  Kinesis and Iron/Diamond FE pipes) are registered as keys in the group, so
+     *  each pipe page auto-emits a "Linked To: Set Power Limit" chapter. */
+    private void addSetPowerLimitCategory(IEntryLinkConsumer adder) {
+        // ACTION_IRON_POWER_LIMIT[3] is the limitShift=3 entry — sprite m16. See
+        // BCTransportStatements (i = numLevels-1-shift); i=3 ⇒ shift=3 ⇒ index 3 of
+        // {m256, m128, m64, m16, m8, m2, m0} = m16, a partially-filled limiter bar.
+        ISimpleDrawable icon = (x, y) -> GuiElementStatementSource.drawGuiSlot(
+            buildcraft.transport.BCTransportStatements.ACTION_IRON_POWER_LIMIT[3], x, y);
+        registerCategory(adder, "buildcraft", "set_power_limit",
+            new String[] { "buildcraft.guide.contents.actions" },
+            new String[] { "buildcraft.guide.chapter.subtype.pipe_item" },
+            icon,
+            "Set Power Limit",
             null);
     }
 

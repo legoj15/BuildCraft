@@ -102,6 +102,8 @@
     "buildcraft.guide.group.from.buildcraft.set_pipe_direction": "Used by",
     "buildcraft.guide.group.to.buildcraft.paint_pipe_colour": "Paint Passing Items",
     "buildcraft.guide.group.from.buildcraft.paint_pipe_colour": "Used by",
+    "buildcraft.guide.group.to.buildcraft.set_power_limit": "Set Power Limit",
+    "buildcraft.guide.group.from.buildcraft.set_power_limit": "Used by",
     "item.buildcraftunofficial.debugger": "Debugger",
     "item.buildcraftunofficial.wrench": "Wrench",
     "item.buildcraftunofficial.goggles": "Robot Goggles",

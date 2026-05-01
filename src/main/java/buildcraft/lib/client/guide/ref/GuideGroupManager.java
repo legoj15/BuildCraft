@@ -343,6 +343,29 @@ public class GuideGroupManager {
             buildcraft.transport.BCTransportItems.PIPE_LAPIS_ITEM.get(),
             buildcraft.transport.BCTransportItems.PIPE_DAIZULI_ITEM.get());
 
+        // Set Power Limit: the 4 limiter pipes × 7 levels = 28 "Switch to N MJ/t / RF/t limit"
+        // actions. Surfaced via a single "Set Power Limit" category entry in the TOC. The
+        // entries are listed pipe-by-pipe in the same order ActionProviderPipes offers them
+        // to gates (Iron MJ → Diamond MJ → Iron RF → Diamond RF; within each, max-throughput
+        // first stepping down to 0). The keys are the four limiter pipes, so each pipe page
+        // auto-emits a "Linked To: Set Power Limit" chapter.
+        Object[] powerLimits = new Object[
+            buildcraft.transport.BCTransportStatements.ACTION_IRON_POWER_LIMIT.length
+                + buildcraft.transport.BCTransportStatements.ACTION_DIAMOND_POWER_LIMIT.length
+                + buildcraft.transport.BCTransportStatements.ACTION_IRON_RF_LIMIT.length
+                + buildcraft.transport.BCTransportStatements.ACTION_DIAMOND_RF_LIMIT.length];
+        int plIdx = 0;
+        for (var a : buildcraft.transport.BCTransportStatements.ACTION_IRON_POWER_LIMIT)    powerLimits[plIdx++] = a;
+        for (var a : buildcraft.transport.BCTransportStatements.ACTION_DIAMOND_POWER_LIMIT) powerLimits[plIdx++] = a;
+        for (var a : buildcraft.transport.BCTransportStatements.ACTION_IRON_RF_LIMIT)       powerLimits[plIdx++] = a;
+        for (var a : buildcraft.transport.BCTransportStatements.ACTION_DIAMOND_RF_LIMIT)    powerLimits[plIdx++] = a;
+        addEntries("buildcraft", "set_power_limit", powerLimits);
+        addKeys("buildcraft", "set_power_limit",
+            buildcraft.transport.BCTransportItems.PIPE_IRON_POWER.get(),
+            buildcraft.transport.BCTransportItems.PIPE_DIAMOND_POWER.get(),
+            buildcraft.transport.BCTransportItems.PIPE_IRON_RF.get(),
+            buildcraft.transport.BCTransportItems.PIPE_DIAMOND_RF.get());
+
         // Set Pipe Direction: the six "Face the X side" actions, one per Direction (in
         // Minecraft's canonical Direction.values() order: DOWN, UP, NORTH, SOUTH, WEST,
         // EAST — matches the order BCTransportStatements builds the array). Surfaced

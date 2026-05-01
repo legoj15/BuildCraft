@@ -473,6 +473,7 @@ public enum GuideManager {
         { "buildcraft", "extraction_presets",  "buildcraftunofficial:concept/emzuli_extraction_presets" },
         { "buildcraft", "pipe_signals",        "buildcraftunofficial:concept/pipe_signals" },
         { "buildcraft", "set_pipe_direction",  "buildcraftunofficial:concept/set_pipe_direction" },
+        { "buildcraft", "paint_pipe_colour",   "buildcraftunofficial:action/pipe_colour" },
     };
 
     /** Walk the groups named in {@link #CATEGORY_BODY_SOURCES} and stash every
@@ -558,6 +559,7 @@ public enum GuideManager {
         addEmzuliExtractionPresetsCategory(adder);
         addPipeSignalsCategory(adder);
         addSetPipeDirectionCategory(adder);
+        addPaintPipeColourCategory(adder);
     }
 
     /** Build a category TOC entry plus the matching markdown-linkable {@link PageLink}.
@@ -700,6 +702,23 @@ public enum GuideManager {
             new String[] { "buildcraft.guide.contents.actions" },
             icon,
             "Set Pipe Direction",
+            null);
+    }
+
+    /** "Paint Passing Items" — collapses the 16 "Paint Items &lt;colour&gt;" actions (one per
+     *  dye colour) into a single category entry under Actions. The icon is the black
+     *  paintbrush sprite (the canonical example used in the existing pipe_colour.md
+     *  writeup). The body is the existing "Paint Items Black" page
+     *  ({@code action/pipe_colour.md}), whose text applies equally to all colour
+     *  variants since the only difference between them is which colour they paint. */
+    private void addPaintPipeColourCategory(IEntryLinkConsumer adder) {
+        ISimpleDrawable icon = (x, y) -> GuiElementStatementSource.drawGuiSlot(
+            buildcraft.transport.BCTransportStatements.ACTION_PIPE_COLOUR[
+                net.minecraft.world.item.DyeColor.BLACK.ordinal()], x, y);
+        registerCategory(adder, "buildcraft", "paint_pipe_colour",
+            new String[] { "buildcraft.guide.contents.actions" },
+            icon,
+            "Paint Passing Items",
             null);
     }
 

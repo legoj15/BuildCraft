@@ -285,6 +285,10 @@ action "pipe_item" "pipe_direction_south" "buildcraft:pipe.dir.south"
 action "pipe_item" "pipe_direction_west"  "buildcraft:pipe.dir.west"
 action "pipe_item" "pipe_direction_above" "buildcraft:pipe.dir.up"
 action "pipe_item" "pipe_direction_below" "buildcraft:pipe.dir.down"
+// Paint Pipe Colour actions (16 colours) are surfaced via a single "Paint Passing Items"
+// category entry under Actions — see GuideManager#addPaintPipeColourCategory. The black
+// entry stays registered so the action/pipe_colour.md page remains loadable by click-
+// resolution from the category page's group listing.
 action "pipe_item" "pipe_colour"          "buildcraft:pipe.color.black"
 action "pipe_item" "extraction_preset"    "buildcraft:extraction.preset.red"
 

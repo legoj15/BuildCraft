@@ -333,6 +333,16 @@ public class GuideGroupManager {
         }
         addEntries("buildcraft", "pipe_signals", pipeSignals);
 
+        // Paint Pipe Colour: the 16 "Paint Items <colour>" actions, one per dye colour.
+        // Surfaced via a single "Paint Passing Items" category entry in the TOC. The keys
+        // are the Lazuli and Daizuli pipes — the only pipe behaviours that act on this
+        // action — so their pages auto-emit a "Linked To: Paint Passing Items" chapter.
+        addEntries("buildcraft", "paint_pipe_colour",
+            (Object[]) buildcraft.transport.BCTransportStatements.ACTION_PIPE_COLOUR);
+        addKeys("buildcraft", "paint_pipe_colour",
+            buildcraft.transport.BCTransportItems.PIPE_LAPIS_ITEM.get(),
+            buildcraft.transport.BCTransportItems.PIPE_DAIZULI_ITEM.get());
+
         // Set Pipe Direction: the six "Face the X side" actions, one per Direction (in
         // Minecraft's canonical Direction.values() order: DOWN, UP, NORTH, SOUTH, WEST,
         // EAST — matches the order BCTransportStatements builds the array). Surfaced

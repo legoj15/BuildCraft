@@ -698,22 +698,25 @@ public enum GuideManager {
      *  <p>
      *  The icon blits {@code minecraft:item/compass_16} (vanilla's needle-straight-up
      *  frame, the threshold-0.0 entry in {@code items/compass.json}'s range_dispatch)
-     *  directly from the block atlas, bypassing the dispatch entirely — without a
-     *  level/entity context the dispatch falls back to a time-based wobble, which is
-     *  why a plain {@code ItemStack(Items.COMPASS)} icon spins. Resource packs that
-     *  retexture the compass replace the per-frame {@code compass_XX.png} textures,
-     *  so the rendered sprite still reflects the active resource pack. */
+     *  directly as a sprite, bypassing the dispatch entirely — without a level/entity
+     *  context the dispatch falls back to a time-based wobble, which is why a plain
+     *  {@code ItemStack(Items.COMPASS)} icon spins. Resolution goes through
+     *  {@link buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder} because
+     *  modern Minecraft (1.21+) stitches item textures onto a separate
+     *  {@link net.minecraft.client.renderer.texture.TextureAtlas#LOCATION_ITEMS} atlas
+     *  rather than the historical unified blocks atlas — going straight at
+     *  {@code LOCATION_BLOCKS} returns the missing-texture sprite. The holder walks
+     *  blocks → items → GUI in order and caches the hit. Resource packs that retexture
+     *  the compass replace the per-frame {@code compass_XX.png} textures, so the
+     *  rendered sprite still reflects the active resource pack. */
     private void addSetPipeDirectionCategory(IEntryLinkConsumer adder) {
+        buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder compassFrame =
+            buildcraft.lib.client.sprite.SpriteHolderRegistry.getHolder("minecraft:item/compass_16");
         ISimpleDrawable icon = (x, y) -> {
             net.minecraft.client.gui.GuiGraphicsExtractor graphics =
                 buildcraft.lib.gui.GuiIcon.getGuiGraphics();
             if (graphics == null) return;
-            net.minecraft.client.renderer.texture.TextureAtlas atlas =
-                (net.minecraft.client.renderer.texture.TextureAtlas) Minecraft.getInstance()
-                    .getTextureManager().getTexture(
-                        net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);
-            net.minecraft.client.renderer.texture.TextureAtlasSprite sprite =
-                atlas.getSprite(Identifier.parse("minecraft:item/compass_16"));
+            net.minecraft.client.renderer.texture.TextureAtlasSprite sprite = compassFrame.getSprite();
             if (sprite == null) return;
             graphics.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
                 sprite, (int) x, (int) y, 16, 16, 0xFFFFFFFF);

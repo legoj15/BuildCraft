@@ -10,11 +10,10 @@ A Pipe Wire glows when its connected gate emits a signal, and stops glowing when
 <chapter name="As an Action"/>
 Emitting a Pipe Signal is done on the Actions side of the gate. Select the color of pipe signal you wish to send, and when the gate is triggered, it will activate, causing the associated pipe wire color to glow.
 
-<chapter name="As a Trigger"/>
-There are two trigger states for each color of Pipe Signal; "Pipe Signal On" will trigger the gate when that color of Pipe Wire is glowing, and "Pipe Signal Off" will trigger the gate when that color of Pipe Wire is <italic>not</italic> glowing.
-
 <link to="buildcraftunofficial:item/wire"/>
 
+<chapter name="As a Trigger"/>
+There are two trigger states for each color of Pipe Signal; "Pipe Signal On" will trigger the gate when that color of Pipe Wire is glowing, and "Pipe Signal Off" will trigger the gate when that color of Pipe Wire is <italic>not</italic> glowing.
 <chapter name="Parameters"/>
 When a gate has parameter slots free, the Pipe Signal On / Off entries for every connected wire colour become available as parameters. Adding one to a <bold>Trigger</bold> means the gate fires only when that secondary wire matches its required state, so you can require the states of multiple wires to matched before an Action is activated.
 Adding one to an <bold>Action</bold> is the equivalent of activating that color of pipe wire, so for a gate with 1 Action Parameter, each Action slot could activate 2 Pipe Wires.

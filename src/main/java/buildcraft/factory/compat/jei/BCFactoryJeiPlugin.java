@@ -6,14 +6,23 @@
 
 package buildcraft.factory.compat.jei;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.constants.RecipeTypes;
+import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
+import mezz.jei.api.registration.IRecipeCategoryRegistration;
+import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.resources.Identifier;
 
+import buildcraft.api.recipes.BuildcraftRecipeRegistry;
+import buildcraft.api.recipes.IRefineryRecipeManager.ICoolableRecipe;
+import buildcraft.api.recipes.IRefineryRecipeManager.IHeatableRecipe;
 import buildcraft.factory.BCFactoryItems;
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.client.gui.GuiAutoCraftItems;
@@ -24,7 +33,9 @@ import buildcraft.lib.compat.jei.BlueprintTransferHandler;
 /**
  * JEI integration plugin for BuildCraft Factory.
  * Registers the Auto Workbench as a crafting station with recipe transfer
- * support and a clickable progress bar.
+ * support and a clickable progress bar, and surfaces every valid heat
+ * exchanger pairing as its own recipe entry under a single category whose
+ * layout mirrors the in-world GUI.
  */
 @JeiPlugin
 public class BCFactoryJeiPlugin implements IModPlugin {
@@ -33,6 +44,35 @@ public class BCFactoryJeiPlugin implements IModPlugin {
     @Override
     public Identifier getPluginUid() {
         return UID;
+    }
+
+    @Override
+    public void registerCategories(IRecipeCategoryRegistration registration) {
+        IGuiHelper guiHelper = registration.getJeiHelpers().getGuiHelper();
+        registration.addRecipeCategories(new HeatExchangerCategory(guiHelper));
+    }
+
+    @Override
+    public void registerRecipes(IRecipeRegistration registration) {
+        registration.addRecipes(HeatExchangerRecipeTypes.PAIR, enumerateHeatExchangerPairs());
+    }
+
+    /**
+     * Cross every heatable with every coolable hotter than it. The runtime
+     * pairing rule in {@code TileHeatExchange.craft()} is exactly
+     * {@code coolable.heatFrom() > heatable.heatFrom()}, so each pair we
+     * yield is a real operation the machine can run.
+     */
+    private static List<HeatExchangerRecipePair> enumerateHeatExchangerPairs() {
+        List<HeatExchangerRecipePair> pairs = new ArrayList<>();
+        for (IHeatableRecipe h : BuildcraftRecipeRegistry.refineryRecipes.getHeatableRegistry().getAllRecipes()) {
+            for (ICoolableRecipe c : BuildcraftRecipeRegistry.refineryRecipes.getCoolableRegistry().getAllRecipes()) {
+                if (c.heatFrom() > h.heatFrom()) {
+                    pairs.add(new HeatExchangerRecipePair(h, c));
+                }
+            }
+        }
+        return pairs;
     }
 
     @Override
@@ -63,8 +103,9 @@ public class BCFactoryJeiPlugin implements IModPlugin {
 
     @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
-        // Register the Auto Workbench block as a crafting catalyst.
-        // Pressing "U" (uses) on it in JEI shows all crafting recipes.
+        // Auto Workbench: vanilla crafting catalyst with full-recipe transfer.
         registration.addCraftingStation(RecipeTypes.CRAFTING, BCFactoryItems.AUTOWORKBENCH_ITEM.get());
+        // Heat Exchanger: catalyst for the paired-recipe category.
+        registration.addCraftingStation(HeatExchangerRecipeTypes.PAIR, BCFactoryItems.HEAT_EXCHANGE.get());
     }
 }

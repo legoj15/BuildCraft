@@ -755,5 +755,6 @@
     "buildcraft.help.filler.mode.desc1": "Either ON, OFF, or LOOP.",
     "buildcraft.help.filler.mode.desc2": "Set by gates.",
     "buildcraft.help.filler.invert.title": "Invert",
-    "buildcraft.help.filler.invert.desc": "If the selected pattern should be inverted, building blocks outside the defined shape."
+    "buildcraft.help.filler.invert.desc": "If the selected pattern should be inverted, building blocks outside the defined shape.",
+    "gui.jei.category.buildcraftunofficial.heat_exchanger": "Heat Exchanger"
 }

@@ -9,6 +9,7 @@ import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.client.gui.GuiAutoCraftItems;
 import buildcraft.factory.client.gui.GuiChute;
 import buildcraft.factory.client.gui.GuiDistiller;
+import buildcraft.factory.client.gui.GuiHeatExchange;
 import buildcraft.factory.client.gui.GuiTank;
 import buildcraft.factory.client.render.RenderDistiller;
 import buildcraft.factory.client.render.RenderHeatExchange;
@@ -30,6 +31,7 @@ public class BCFactoryClient {
         event.register(BCFactoryMenuTypes.TANK.get(), GuiTank::new);
         event.register(BCFactoryMenuTypes.CHUTE.get(), GuiChute::new);
         event.register(BCFactoryMenuTypes.DISTILLER.get(), GuiDistiller::new);
+        event.register(BCFactoryMenuTypes.HEAT_EXCHANGE.get(), GuiHeatExchange::new);
     }
 
     @SubscribeEvent

@@ -157,27 +157,41 @@ public class BlockHeatExchange extends BaseEntityBlock {
             return InteractionResult.PASS;
         }
         TileHeatExchange.ExchangeSection section = exchange.getSection();
-        if (section == null) {
-            return InteractionResult.PASS;
-        }
-        // Try bucket/fluid container interaction with section tanks
-        @SuppressWarnings("removal")
-        boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, section.tankInput);
-        if (!didChange) {
+        if (section != null) {
+            // Try bucket/fluid container interaction with section tanks
             @SuppressWarnings("removal")
-            boolean didChangeOutput = FluidUtilBC.onTankActivated(player, pos, hand, section.tankOutput);
-            didChange = didChangeOutput;
+            boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, section.tankInput);
+            if (!didChange) {
+                @SuppressWarnings("removal")
+                boolean didChangeOutput = FluidUtilBC.onTankActivated(player, pos, hand, section.tankOutput);
+                didChange = didChangeOutput;
+            }
+            if (didChange) {
+                return InteractionResult.SUCCESS;
+            }
         }
-        if (didChange) {
-            return InteractionResult.SUCCESS;
-        }
-        return InteractionResult.PASS;
+        return openExchangeMenu(level, exchange, player);
     }
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
             Player player, BlockHitResult hitResult) {
-        return InteractionResult.PASS;
+        BlockEntity be = level.getBlockEntity(pos);
+        if (!(be instanceof TileHeatExchange exchange)) {
+            return InteractionResult.PASS;
+        }
+        return openExchangeMenu(level, exchange, player);
+    }
+
+    private static InteractionResult openExchangeMenu(Level level, TileHeatExchange exchange, Player player) {
+        TileHeatExchange start = exchange.findStart();
+        if (start == null) {
+            return InteractionResult.PASS;
+        }
+        if (!level.isClientSide()) {
+            player.openMenu(start, start.getBlockPos());
+        }
+        return InteractionResult.SUCCESS;
     }
 
     // --- Block removal: drop fluid shards ---
@@ -194,6 +208,14 @@ public class BlockHeatExchange extends BaseEntityBlock {
                     FluidItemDrops.addFluidDrops(toDrop, section.tankOutput);
                     for (ItemStack drop : toDrop) {
                         Block.popResource(level, pos, drop);
+                    }
+                }
+                // Drop bucket / fluid-shard slot contents from the START tile.
+                for (int i = 0; i < exchange.containerSlots.size(); i++) {
+                    ItemStack slotStack = exchange.containerSlots.getResource(i)
+                            .toStack(exchange.containerSlots.getAmountAsInt(i));
+                    if (!slotStack.isEmpty()) {
+                        Block.popResource(level, pos, slotStack);
                     }
                 }
             }

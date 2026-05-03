@@ -9,6 +9,7 @@ package buildcraft.factory.tile;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -16,9 +17,15 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -35,7 +42,7 @@ import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
 import buildcraft.api.recipes.BuildcraftRecipeRegistry;
 import buildcraft.api.recipes.IRefineryRecipeManager;
@@ -46,15 +53,17 @@ import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.block.BlockHeatExchange;
 import buildcraft.factory.block.BlockHeatExchange.EnumExchangePart;
+import buildcraft.factory.container.ContainerHeatExchange;
 import buildcraft.lib.fluid.FluidSmoother;
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 /**
  * Heat Exchanger tile entity. Manages the multi-block structure logic,
  * fluid exchange between heatable and coolable fluids, and client-side
  * rendering state. Ported from 1.12.2 TileHeatExchange.
  */
-public class TileHeatExchange extends BlockEntity implements IDebuggable {
+public class TileHeatExchange extends BlockEntity implements MenuProvider, IDebuggable {
 
     /** Maximum fluid transfer per tick for each number of middle sections (1-3 middles).
      * Numbers should be divisors of 1000. */
@@ -65,6 +74,24 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
 
     // Sync tracking
     private int lastSyncHash = 0;
+
+    /**
+     * Bucket / fluid-shard slots, used by the START tile to drain filled containers
+     * into the input tanks and fill empty containers from the output tanks.
+     * <ul>
+     *   <li>0: drains into END.tankInput (the multi-block's hot/coolable input)</li>
+     *   <li>1: drains into START.tankInput (the cold/heatable input)</li>
+     *   <li>2: fills from END.tankOutput (the heated output)</li>
+     *   <li>3: fills from START.tankOutput (the cooled output)</li>
+     * </ul>
+     * Present on every tile (NBT-persistent) but only ticked when {@link #isStart()};
+     * dropped on block break by {@code BlockHeatExchange.playerWillDestroy}.
+     */
+    public final ItemHandlerSimple containerSlots = new ItemHandlerSimple(4, 1);
+
+    {
+        containerSlots.setCallback((handler, slot, bef, aft) -> setChanged());
+    }
 
     public TileHeatExchange(BlockPos pos, BlockState state) {
         super(BCFactoryBlockEntities.HEAT_EXCHANGE.get(), pos, state);
@@ -120,6 +147,35 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
 
     public void markCheckNeighbours() {
         checkNeighbours = true;
+    }
+
+    /**
+     * Walks the multi-block (clockwise from this tile, the direction towards the
+     * START section) and returns the START tile, or {@code null} if no start is
+     * adjacent or the multi-block isn't formed. Used by the GUI to always open
+     * a menu pointing at the section that owns the recipe state and end-section link.
+     */
+    @Nullable
+    public TileHeatExchange findStart() {
+        if (isStart()) return this;
+        if (level == null) return null;
+        Direction facing = getFacing();
+        if (facing == null) return null;
+        Direction dirToStart = facing.getClockWise();
+        for (int i = 1; i < 6; i++) {
+            BlockEntity neighbour = level.getBlockEntity(worldPosition.relative(dirToStart, i));
+            if (neighbour instanceof TileHeatExchange other) {
+                if (other.getFacing() != facing) {
+                    return null;
+                }
+                if (other.isStart()) {
+                    return other;
+                }
+            } else {
+                return null;
+            }
+        }
+        return null;
     }
 
     @Nullable
@@ -403,11 +459,25 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
         checkNeighbours = true;
     }
 
+    // --- MenuProvider ---
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable("block.buildcraftunofficial.heat_exchange");
+    }
+
+    @Nullable
+    @Override
+    public AbstractContainerMenu createMenu(int containerId, Inventory playerInv, Player player) {
+        return new ContainerHeatExchange(containerId, playerInv, this);
+    }
+
     // --- Save / Load ---
 
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
+        output.store("containerSlots", CompoundTag.CODEC, containerSlots.serializeNBT());
         if (section != null) {
             output.putBoolean("hasSection", true);
             output.putBoolean("isStart", section instanceof ExchangeSectionStart);
@@ -434,6 +504,7 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
     @Override
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
+        containerSlots.deserializeNBT(input.read("containerSlots", CompoundTag.CODEC).orElseGet(CompoundTag::new));
         if (input.getBooleanOr("hasSection", false)) {
             boolean isStart = input.getBooleanOr("isStart", true);
             if (isStart) {
@@ -444,19 +515,15 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
                 } else {
                     s = new ExchangeSectionStart(this);
                 }
+                // Use set() to bypass the heatant/output isValid filters — saved fluid is trusted,
+                // and the recipe registry may not be ready during early chunk load.
                 FluidStack inFluid = input.read("sectionInput", FluidStack.CODEC).orElse(FluidStack.EMPTY);
                 if (!inFluid.isEmpty()) {
-                    try (Transaction tx = Transaction.openRoot()) {
-                        s.tankInput.insert(0, FluidResource.of(inFluid), inFluid.getAmount(), tx);
-                        tx.commit();
-                    }
+                    s.tankInput.set(0, FluidResource.of(inFluid), inFluid.getAmount());
                 }
                 FluidStack outFluid = input.read("sectionOutput", FluidStack.CODEC).orElse(FluidStack.EMPTY);
                 if (!outFluid.isEmpty()) {
-                    try (Transaction tx = Transaction.openRoot()) {
-                        s.tankOutput.insert(0, FluidResource.of(outFluid), outFluid.getAmount(), tx);
-                        tx.commit();
-                    }
+                    s.tankOutput.set(0, FluidResource.of(outFluid), outFluid.getAmount());
                 }
                 s.middleCount = input.getIntOr("middleCount", 1);
                 // Only sync progressState — progress is computed independently on the
@@ -477,17 +544,11 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
                 }
                 FluidStack inFluid = input.read("sectionInput", FluidStack.CODEC).orElse(FluidStack.EMPTY);
                 if (!inFluid.isEmpty()) {
-                    try (Transaction tx = Transaction.openRoot()) {
-                        e.tankInput.insert(0, FluidResource.of(inFluid), inFluid.getAmount(), tx);
-                        tx.commit();
-                    }
+                    e.tankInput.set(0, FluidResource.of(inFluid), inFluid.getAmount());
                 }
                 FluidStack outFluid = input.read("sectionOutput", FluidStack.CODEC).orElse(FluidStack.EMPTY);
                 if (!outFluid.isEmpty()) {
-                    try (Transaction tx = Transaction.openRoot()) {
-                        e.tankOutput.insert(0, FluidResource.of(outFluid), outFluid.getAmount(), tx);
-                        tx.commit();
-                    }
+                    e.tankOutput.set(0, FluidResource.of(outFluid), outFluid.getAmount());
                 }
                 section = e;
             }
@@ -525,13 +586,19 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
     }
 
     public static abstract class ExchangeSection {
-        public final FluidStacksResourceHandler tankInput, tankOutput;
+        public final FluidStacksResourceHandler tankInput;
+        public final OutputTank tankOutput;
         public final FluidSmoother smoothedTankInput, smoothedTankOutput;
         private TileHeatExchange tile;
 
-        ExchangeSection(TileHeatExchange tile) {
-            tankInput = new FluidStacksResourceHandler(1, 2000);
-            tankOutput = new FluidStacksResourceHandler(1, 2000);
+        ExchangeSection(TileHeatExchange tile, Predicate<FluidStack> inputFilter) {
+            tankInput = new FluidStacksResourceHandler(1, 2000) {
+                @Override
+                public boolean isValid(int index, FluidResource resource) {
+                    return inputFilter.test(resource.toStack(1));
+                }
+            };
+            tankOutput = new OutputTank();
             smoothedTankInput = new FluidSmoother(tankInput);
             smoothedTankOutput = new FluidSmoother(tankOutput);
             this.tile = tile;
@@ -572,6 +639,36 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
         }
     }
 
+    /**
+     * Output tank that rejects all external insertions — matches 1.12.2's
+     * {@code tankOutput.setCanFill(false)}. The exchanger's craft() logic
+     * fills via {@link #insertInternal} which bypasses the {@code isValid}
+     * gate. External callers (capability access, bucket right-clicks, GUI
+     * tank widget clicks) all funnel through {@code insert}, which checks
+     * {@code isValid} and so is blocked.
+     */
+    public static class OutputTank extends FluidStacksResourceHandler {
+        private boolean internalInsert = false;
+
+        public OutputTank() {
+            super(1, 2000);
+        }
+
+        @Override
+        public boolean isValid(int index, FluidResource resource) {
+            return internalInsert;
+        }
+
+        public int insertInternal(int index, FluidResource resource, int amount, TransactionContext tx) {
+            internalInsert = true;
+            try {
+                return super.insert(index, resource, amount, tx);
+            } finally {
+                internalInsert = false;
+            }
+        }
+    }
+
     public static class ExchangeSectionStart extends ExchangeSection {
         ExchangeSectionEnd endSection;
         public int middleCount;
@@ -582,7 +679,7 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
         int inputHeatantAmountCharge = 0;
 
         ExchangeSectionStart(TileHeatExchange tile) {
-            super(tile);
+            super(tile, ExchangeSectionStart::isHeatant);
         }
 
         public ExchangeSectionEnd getEndSection() {
@@ -597,7 +694,8 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
             return (progressLast + (progress - progressLast) * partialTicks) / 120.0;
         }
 
-        private boolean isHeatant(FluidStack fluid) {
+        /** Heatant filter: water, oil, fuel — fluids that get heated by the START's coolant counterpart. */
+        private static boolean isHeatant(FluidStack fluid) {
             IRefineryRecipeManager manager = BuildcraftRecipeRegistry.refineryRecipes;
             if (manager == null) return false;
             return manager.getHeatableRegistry().getRecipeForInput(fluid) != null;
@@ -624,6 +722,64 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
                     progressState = EnumProgressState.STOPPING;
                 }
                 output();
+                processContainerSlots();
+            }
+        }
+
+        /**
+         * Drains filled fluid containers in slots 0/1 into the input tanks and fills empty
+         * containers in slots 2/3 from the output tanks. Runs every 5 game ticks to match
+         * the Distiller's slot cadence. Slots whose corresponding tank is unavailable
+         * (END not yet linked) are skipped — items just sit in the slot until the
+         * structure completes.
+         */
+        @SuppressWarnings("removal")
+        private void processContainerSlots() {
+            TileHeatExchange tile = getTile();
+            if (tile == null || tile.level == null) return;
+            if (tile.level.getGameTime() % 5 != 0) return;
+
+            // Slot 0: filled bucket → END.tankInput (hot fluid)
+            if (endSection != null) {
+                drainSlotIntoTank(tile, 0, endSection.tankInput);
+            }
+            // Slot 1: filled bucket → START.tankInput (cold fluid)
+            drainSlotIntoTank(tile, 1, this.tankInput);
+            // Slot 2: empty bucket ← END.tankOutput (heated fluid)
+            if (endSection != null) {
+                fillSlotFromTank(tile, 2, endSection.tankOutput);
+            }
+            // Slot 3: empty bucket ← START.tankOutput (cooled fluid)
+            fillSlotFromTank(tile, 3, this.tankOutput);
+        }
+
+        @SuppressWarnings("removal")
+        private static void drainSlotIntoTank(TileHeatExchange tile, int slot, FluidStacksResourceHandler tank) {
+            ItemStack stack = tile.containerSlots.getResource(slot)
+                    .toStack(tile.containerSlots.getAmountAsInt(slot));
+            if (stack.isEmpty()) return;
+            net.neoforged.neoforge.fluids.FluidActionResult result =
+                    net.neoforged.neoforge.fluids.FluidUtil.tryEmptyContainer(
+                            stack,
+                            net.neoforged.neoforge.fluids.capability.IFluidHandler.of(tank),
+                            Integer.MAX_VALUE, null, true);
+            if (result.isSuccess()) {
+                tile.containerSlots.setStackInSlot(slot, result.getResult());
+            }
+        }
+
+        @SuppressWarnings("removal")
+        private static void fillSlotFromTank(TileHeatExchange tile, int slot, FluidStacksResourceHandler tank) {
+            ItemStack stack = tile.containerSlots.getResource(slot)
+                    .toStack(tile.containerSlots.getAmountAsInt(slot));
+            if (stack.isEmpty()) return;
+            net.neoforged.neoforge.fluids.FluidActionResult result =
+                    net.neoforged.neoforge.fluids.FluidUtil.tryFillContainer(
+                            stack,
+                            net.neoforged.neoforge.fluids.capability.IFluidHandler.of(tank),
+                            Integer.MAX_VALUE, null, true);
+            if (result.isSuccess()) {
+                tile.containerSlots.setStackInSlot(slot, result.getResult());
             }
         }
 
@@ -659,9 +815,9 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
         private void craft() {
             if (endSection == null) return;
             FluidStacksResourceHandler c_in = endSection.tankInput;
-            FluidStacksResourceHandler c_out = tankOutput;
+            OutputTank c_out = tankOutput;
             FluidStacksResourceHandler h_in = tankInput;
-            FluidStacksResourceHandler h_out = endSection.tankOutput;
+            OutputTank h_out = endSection.tankOutput;
             IRefineryRecipeManager reg = BuildcraftRecipeRegistry.refineryRecipes;
             if (reg == null) {
                 progressState = EnumProgressState.STOPPING;
@@ -799,17 +955,17 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
             }
         }
 
-        private static int simulateInsert(FluidStacksResourceHandler t, @Nullable FluidStack fluid) {
+        private static int simulateInsert(OutputTank t, @Nullable FluidStack fluid) {
             if (fluid == null || fluid.isEmpty()) return 0;
             try (Transaction tx = Transaction.openRoot()) {
-                return t.insert(0, FluidResource.of(fluid), fluid.getAmount(), tx);
+                return t.insertInternal(0, FluidResource.of(fluid), fluid.getAmount(), tx);
             }
         }
 
-        private static void fillTank(FluidStacksResourceHandler t, @Nullable FluidStack fluid) {
+        private static void fillTank(OutputTank t, @Nullable FluidStack fluid) {
             if (fluid == null || fluid.isEmpty()) return;
             try (Transaction tx = Transaction.openRoot()) {
-                t.insert(0, FluidResource.of(fluid), fluid.getAmount(), tx);
+                t.insertInternal(0, FluidResource.of(fluid), fluid.getAmount(), tx);
                 tx.commit();
             }
         }
@@ -834,10 +990,11 @@ public class TileHeatExchange extends BlockEntity implements IDebuggable {
 
     public static class ExchangeSectionEnd extends ExchangeSection {
         ExchangeSectionEnd(TileHeatExchange tile) {
-            super(tile);
+            super(tile, ExchangeSectionEnd::isCoolant);
         }
 
-        private boolean isCoolant(FluidStack fluid) {
+        /** Coolant filter: lava, hot oil, hot fuel — fluids that get cooled by the END's heatant counterpart. */
+        private static boolean isCoolant(FluidStack fluid) {
             IRefineryRecipeManager manager = BuildcraftRecipeRegistry.refineryRecipes;
             if (manager == null) return false;
             return manager.getCoolableRegistry().getRecipeForInput(fluid) != null;

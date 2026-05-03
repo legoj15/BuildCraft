@@ -142,6 +142,11 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_deserialize_migrates_wall_ignored_properties"), () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testDeserializeMigratesIgnoredPropertiesFromCurrentRules);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_deserialize_migrates_leaves_ignored_properties"), () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testDeserializeMigratesLeavesIgnoredProperties);
 
+            // Heat Exchanger fluid filtering (heatant on START, coolant on END; output drain-only)
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:heat_exchanger_output_rejects_external_insert"), () -> buildcraft.factory.HeatExchangerTester::testOutputTankRejectsExternalInsert);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:heat_exchanger_output_accepts_internal_insert"), () -> buildcraft.factory.HeatExchangerTester::testOutputTankAcceptsInternalInsert);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:heat_exchanger_internal_flag_resets"), () -> buildcraft.factory.HeatExchangerTester::testOutputTankInternalFlagResetsAfterCall);
+
             // Electronic Library
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:library_slot_filtering"), () -> buildcraft.builders.ElectronicLibraryTester::testSlotFiltering);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:library_download_cycle"), () -> buildcraft.builders.ElectronicLibraryTester::testDownloadCycle);

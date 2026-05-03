@@ -6,8 +6,6 @@
 
 package buildcraft.lib.gui.widget;
 
-import java.util.Optional;
-
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -56,6 +54,42 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
      */
     public void sendClick() {
         sendWidgetData(buf -> buf.writeByte(NET_CLICK));
+    }
+
+    /**
+     * Walk the player inventory looking for an empty fluid container we can fill from
+     * the tank. Used as a fallback when the cursor is already holding a full bucket of
+     * the tank's fluid — without this, repeated clicks on an output tank stop draining
+     * after the first bucket because the cursor has no room and the tank rejects the
+     * filled bucket as input. Returns {@code true} on success.
+     */
+    private boolean drainTankIntoInventoryBucket(Player player) {
+        FluidResource tankFluid = tank.size() > 0 ? tank.getResource(0) : FluidResource.EMPTY;
+        if (tankFluid.isEmpty() || tank.getAmountAsLong(0) <= 0) {
+            return false;
+        }
+        net.minecraft.world.entity.player.Inventory inv = player.getInventory();
+        int size = inv.getContainerSize();
+        for (int i = 0; i < size; i++) {
+            ItemStack invStack = inv.getItem(i);
+            if (invStack.isEmpty()) continue;
+            net.neoforged.neoforge.transfer.access.ItemAccess slotAccess =
+                    net.neoforged.neoforge.transfer.access.ItemAccess.forPlayerSlot(player, i).oneByOne();
+            ResourceHandler<FluidResource> slotCap = slotAccess.getCapability(Capabilities.Fluid.ITEM);
+            if (slotCap == null || slotCap.size() == 0) continue;
+            // Skip non-empty containers — only fill empty ones to avoid silently swapping
+            // the player's existing fluid containers.
+            if (!slotCap.getResource(0).isEmpty()) continue;
+            try (Transaction tx = Transaction.openRoot()) {
+                int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
+                        tank, slotCap, r -> true, Integer.MAX_VALUE, tx);
+                if (moved > 0) {
+                    tx.commit();
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -134,7 +168,7 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
             ItemStack original = carried.copy();
             net.neoforged.neoforge.transfer.access.ItemAccess access = net.neoforged.neoforge.transfer.access.ItemAccess.forPlayerCursor(player, player.containerMenu).oneByOne();
             ResourceHandler<FluidResource> itemHandlerIn = access.getCapability(Capabilities.Fluid.ITEM);
-            
+
             if (itemHandlerIn != null) {
                 // Try filling the tank from the item
                 try (Transaction tx = Transaction.openRoot()) {
@@ -146,7 +180,7 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
                         return;
                     }
                 }
-                
+
                 // Try draining the tank into the item
                 try (Transaction tx = Transaction.openRoot()) {
                     int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
@@ -156,6 +190,16 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
                         tx.commit();
                         return;
                     }
+                }
+
+                // Cursor-direct flow above is one-shot per bucket: with a 1-stack bucket the
+                // cursor swaps to a filled bucket on the first click, and a second click finds
+                // the same fluid in the cursor and the tank with no room to grow on either side.
+                // Repeated clicks then appear to do nothing. Fall back to the inventory: locate
+                // an empty bucket and fill it, leaving the cursor untouched. This mirrors the
+                // way 1.12.2's in-world right-click happily swallowed buckets in succession.
+                if (drainTankIntoInventoryBucket(player)) {
+                    return;
                 }
             }
         }

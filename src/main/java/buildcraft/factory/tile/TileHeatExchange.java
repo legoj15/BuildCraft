@@ -517,14 +517,8 @@ public class TileHeatExchange extends BlockEntity implements MenuProvider, IDebu
                 }
                 // Use set() to bypass the heatant/output isValid filters — saved fluid is trusted,
                 // and the recipe registry may not be ready during early chunk load.
-                FluidStack inFluid = input.read("sectionInput", FluidStack.CODEC).orElse(FluidStack.EMPTY);
-                if (!inFluid.isEmpty()) {
-                    s.tankInput.set(0, FluidResource.of(inFluid), inFluid.getAmount());
-                }
-                FluidStack outFluid = input.read("sectionOutput", FluidStack.CODEC).orElse(FluidStack.EMPTY);
-                if (!outFluid.isEmpty()) {
-                    s.tankOutput.set(0, FluidResource.of(outFluid), outFluid.getAmount());
-                }
+                loadTank(s.tankInput, input, "sectionInput");
+                loadTank(s.tankOutput, input, "sectionOutput");
                 s.middleCount = input.getIntOr("middleCount", 1);
                 // Only sync progressState — progress is computed independently on the
                 // client via updateProgress(), matching 1.12.2 behavior. Loading the server's
@@ -542,20 +536,32 @@ public class TileHeatExchange extends BlockEntity implements MenuProvider, IDebu
                 } else {
                     e = new ExchangeSectionEnd(this);
                 }
-                FluidStack inFluid = input.read("sectionInput", FluidStack.CODEC).orElse(FluidStack.EMPTY);
-                if (!inFluid.isEmpty()) {
-                    e.tankInput.set(0, FluidResource.of(inFluid), inFluid.getAmount());
-                }
-                FluidStack outFluid = input.read("sectionOutput", FluidStack.CODEC).orElse(FluidStack.EMPTY);
-                if (!outFluid.isEmpty()) {
-                    e.tankOutput.set(0, FluidResource.of(outFluid), outFluid.getAmount());
-                }
+                loadTank(e.tankInput, input, "sectionInput");
+                loadTank(e.tankOutput, input, "sectionOutput");
                 section = e;
             }
         } else if (section != null) {
             section = null;
         }
         checkNeighbours = true;
+    }
+
+    /**
+     * Reads a fluid stack from {@code input} under {@code key} and writes it directly into
+     * {@code tank} via {@link FluidStacksResourceHandler#set}. <em>Always</em> writes — when
+     * the key is absent (saveAdditional only stores non-empty tanks) the tank is forced to
+     * empty. Without this, a client whose tank previously held fluid would never see a server
+     * drain reflected: the {@code getUpdateTag} → {@code loadAdditional} round-trip omits the
+     * key for an empty server-side tank, and the old guard {@code if (!fluid.isEmpty())} would
+     * leave the stale client value in place forever.
+     */
+    private static void loadTank(FluidStacksResourceHandler tank, ValueInput input, String key) {
+        FluidStack fluid = input.read(key, FluidStack.CODEC).orElse(FluidStack.EMPTY);
+        if (fluid.isEmpty()) {
+            tank.set(0, FluidResource.EMPTY, 0);
+        } else {
+            tank.set(0, FluidResource.of(fluid), fluid.getAmount());
+        }
     }
 
     // --- Network Sync ---
@@ -758,6 +764,12 @@ public class TileHeatExchange extends BlockEntity implements MenuProvider, IDebu
             ItemStack stack = tile.containerSlots.getResource(slot)
                     .toStack(tile.containerSlots.getAmountAsInt(slot));
             if (stack.isEmpty()) return;
+            // Defensive: tryEmptyContainer copies the input down to count 1 and returns a
+            // single empty container. Calling setStackInSlot with that result on a >1 stack
+            // would silently delete the rest. With ItemHandlerSimple's slot capacity now
+            // pinned at 1 this shouldn't happen, but bail out anyway in case some other
+            // path puts a larger stack in.
+            if (stack.getCount() > 1) return;
             net.neoforged.neoforge.fluids.FluidActionResult result =
                     net.neoforged.neoforge.fluids.FluidUtil.tryEmptyContainer(
                             stack,
@@ -773,6 +785,8 @@ public class TileHeatExchange extends BlockEntity implements MenuProvider, IDebu
             ItemStack stack = tile.containerSlots.getResource(slot)
                     .toStack(tile.containerSlots.getAmountAsInt(slot));
             if (stack.isEmpty()) return;
+            // See drainSlotIntoTank — same data-loss risk if a >1 stack ever sneaks in.
+            if (stack.getCount() > 1) return;
             net.neoforged.neoforge.fluids.FluidActionResult result =
                     net.neoforged.neoforge.fluids.FluidUtil.tryFillContainer(
                             stack,
@@ -870,10 +884,30 @@ public class TileHeatExchange extends BlockEntity implements MenuProvider, IDebu
                 if (progressState == EnumProgressState.OFF) {
                     progressState = EnumProgressState.PREPARING;
                 } else if (progressState == EnumProgressState.RUNNING) {
-                    fillTank(c_out, c_out_f);
-                    drainTank(c_in, c_in_f);
-                    fillTank(h_out, h_out_f);
-                    drainTank(h_in, h_in_f);
+                    // All four operations must succeed by exactly min_common, or none commit.
+                    // Without atomicity, a partial failure (e.g. fill matches simulation but a
+                    // later drain returns less) leaks fluid — which manifests as input residue
+                    // when one cycle's fill+drain pair gets out of sync near tank capacity.
+                    try (Transaction tx = Transaction.openRoot()) {
+                        boolean ok = true;
+                        if (c_out_f != null && !c_out_f.isEmpty()) {
+                            int n = c_out.insertInternal(0, FluidResource.of(c_out_f), c_out_f.getAmount(), tx);
+                            ok = ok && n == c_out_f.getAmount();
+                        }
+                        if (ok && h_out_f != null && !h_out_f.isEmpty()) {
+                            int n = h_out.insertInternal(0, FluidResource.of(h_out_f), h_out_f.getAmount(), tx);
+                            ok = ok && n == h_out_f.getAmount();
+                        }
+                        if (ok) {
+                            int n = c_in.extract(0, FluidResource.of(c_in_f), c_in_f.getAmount(), tx);
+                            ok = n == c_in_f.getAmount();
+                        }
+                        if (ok) {
+                            int n = h_in.extract(0, FluidResource.of(h_in_f), h_in_f.getAmount(), tx);
+                            ok = n == h_in_f.getAmount();
+                        }
+                        if (ok) tx.commit();
+                    }
                 }
             } else {
                 progressState = EnumProgressState.STOPPING;
@@ -959,22 +993,6 @@ public class TileHeatExchange extends BlockEntity implements MenuProvider, IDebu
             if (fluid == null || fluid.isEmpty()) return 0;
             try (Transaction tx = Transaction.openRoot()) {
                 return t.insertInternal(0, FluidResource.of(fluid), fluid.getAmount(), tx);
-            }
-        }
-
-        private static void fillTank(OutputTank t, @Nullable FluidStack fluid) {
-            if (fluid == null || fluid.isEmpty()) return;
-            try (Transaction tx = Transaction.openRoot()) {
-                t.insertInternal(0, FluidResource.of(fluid), fluid.getAmount(), tx);
-                tx.commit();
-            }
-        }
-
-        private static void drainTank(FluidStacksResourceHandler t, @Nullable FluidStack fluid) {
-            if (fluid == null || fluid.isEmpty()) return;
-            try (Transaction tx = Transaction.openRoot()) {
-                t.extract(0, FluidResource.of(fluid), fluid.getAmount(), tx);
-                tx.commit();
             }
         }
 

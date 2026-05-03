@@ -6,13 +6,18 @@
 package buildcraft.factory;
 
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.material.Fluids;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import buildcraft.factory.tile.TileHeatExchange.OutputTank;
+import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 /**
  * Regression coverage for the heat exchanger fluid restrictions.
@@ -92,6 +97,120 @@ public class HeatExchangerTester {
         }
         assertTrue(tank.getAmountAsLong(0) == 100,
                 "OutputTank amount should be unchanged after rejected external insert");
+        helper.succeed();
+    }
+
+    /**
+     * Simulates one craft cycle: fill an output tank and drain an input tank inside a single
+     * transaction. When everything fits, both halves commit and the totals balance. The
+     * exchanger relies on this for fluid conservation — without the atomic transaction the
+     * old code committed each operation separately, so a simulation/execution mismatch on
+     * the fill (e.g. only 4mb fits when 5mb was promised) still drained the full 5mb from
+     * the input, leaking fluid one tick at a time.
+     */
+    public static void testAtomicCraftCommitsBalancedFillAndDrain(GameTestHelper helper) {
+        OutputTank out = new OutputTank();
+        FluidStacksResourceHandler in = new FluidStacksResourceHandler(1, 2000);
+        FluidResource water = FluidResource.of(new FluidStack(Fluids.WATER, 1));
+        // Pre-fill input
+        in.set(0, water, 2000);
+        // One craft step transfers 5mb
+        try (Transaction tx = Transaction.openRoot()) {
+            int filled = out.insertInternal(0, water, 5, tx);
+            int drained = in.extract(0, water, 5, tx);
+            assertTrue(filled == 5, "fill should put 5mb, got " + filled);
+            assertTrue(drained == 5, "drain should pull 5mb, got " + drained);
+            tx.commit();
+        }
+        assertTrue(out.getAmountAsLong(0) == 5,
+                "Output should hold 5mb, got " + out.getAmountAsLong(0));
+        assertTrue(in.getAmountAsLong(0) == 1995,
+                "Input should hold 1995mb, got " + in.getAmountAsLong(0));
+        helper.succeed();
+    }
+
+    /**
+     * Heat-exchanger container slots are constructed as {@code new ItemHandlerSimple(4, 1)}
+     * to enforce one bucket per slot. Without this, dropping a stack of buckets into an
+     * output slot triggered a data-loss path: the auto-fill loop's {@code tryFillContainer}
+     * extracted one bucket and {@code setStackInSlot}'d the single filled bucket back over
+     * the entire stack, vaporising the rest. Both the slot capacity (read by the slot
+     * widget's {@code getMaxStackSize}) and the per-call {@code insert} cap must reflect
+     * the limit; previously only the inserter respected it while {@code getCapacityAsLong}
+     * always returned 64 — so the slot widget cheerfully accepted the full stack.
+     */
+    public static void testItemHandlerRespectsConfiguredMaxStackSize(GameTestHelper helper) {
+        ItemHandlerSimple handler = new ItemHandlerSimple(4, 1);
+        long cap = handler.getCapacityAsLong(0, ItemResource.of(new ItemStack(Items.BUCKET)));
+        assertTrue(cap == 1,
+                "Slot capacity should be 1 for ItemHandlerSimple(4, 1), got " + cap);
+        // insert() is also limited to 1 by the inserter
+        try (Transaction tx = Transaction.openRoot()) {
+            int inserted = handler.insert(0, ItemResource.of(new ItemStack(Items.BUCKET)), 5, tx);
+            assertTrue(inserted == 1,
+                    "insert() should cap at 1 even when 5 are offered, got " + inserted);
+            tx.commit();
+        }
+        assertTrue(handler.getAmountAsLong(0) == 1,
+                "After capped insert, slot should hold 1 bucket, got " + handler.getAmountAsLong(0));
+        helper.succeed();
+    }
+
+    /**
+     * Round-trip the tank state through {@code set(0, EMPTY, 0)} the way the new loadTank
+     * helper does when the server's saveAdditional emits no key for an empty tank. Without
+     * this clear, a client that previously held fluid would never see a server drain (the
+     * NBT round-trip omits the absent key, the old guard skipped the update, and the stale
+     * value lingered on the client — exactly the screenshot bug where the END's tank_output
+     * showed empty server-side and 1000mB hot oil client-side).
+     */
+    public static void testTankClearsWhenLoadedFromEmptySave(GameTestHelper helper) {
+        OutputTank tank = new OutputTank();
+        // Seed with a non-empty value, mirroring a stale client-side cache.
+        FluidResource hotOil = FluidResource.of(new FluidStack(Fluids.WATER, 1));
+        try (Transaction tx = Transaction.openRoot()) {
+            tank.insertInternal(0, hotOil, 1000, tx);
+            tx.commit();
+        }
+        assertTrue(tank.getAmountAsLong(0) == 1000,
+                "Setup: tank should hold 1000mB before the simulated load");
+        // Simulated load: server saved no key (tank was empty there), so loadTank clears.
+        tank.set(0, FluidResource.EMPTY, 0);
+        assertTrue(tank.getAmountAsLong(0) == 0,
+                "Tank must be empty after load-of-empty, got " + tank.getAmountAsLong(0));
+        assertTrue(tank.getResource(0).isEmpty(),
+                "Tank's resource must be EMPTY after load-of-empty");
+        helper.succeed();
+    }
+
+    /**
+     * If any half of the craft step undersizes (here, the output is nearly full and accepts
+     * less than requested), the wrapper code declines to commit the surrounding transaction.
+     * Both the partial fill and the drain must roll back so no input fluid is consumed
+     * without a matching output.
+     */
+    public static void testAtomicCraftRollsBackOnUndersizedFill(GameTestHelper helper) {
+        OutputTank out = new OutputTank();
+        FluidStacksResourceHandler in = new FluidStacksResourceHandler(1, 2000);
+        FluidResource water = FluidResource.of(new FluidStack(Fluids.WATER, 1));
+        // Output is 1mb shy of full — only 1mb of the requested 5 will fit.
+        try (Transaction setup = Transaction.openRoot()) {
+            out.insertInternal(0, water, 1999, setup);
+            setup.commit();
+        }
+        in.set(0, water, 100);
+        // Mimic the production code: probe both halves, abort the whole transaction if
+        // either falls short of the requested amount.
+        try (Transaction tx = Transaction.openRoot()) {
+            int filled = out.insertInternal(0, water, 5, tx);
+            int drained = in.extract(0, water, 5, tx);
+            boolean ok = filled == 5 && drained == 5;
+            if (ok) tx.commit();
+        }
+        assertTrue(out.getAmountAsLong(0) == 1999,
+                "Output amount should be unchanged after rolled-back partial fill, got " + out.getAmountAsLong(0));
+        assertTrue(in.getAmountAsLong(0) == 100,
+                "Input amount should be unchanged after rolled-back drain, got " + in.getAmountAsLong(0));
         helper.succeed();
     }
 }

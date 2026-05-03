@@ -146,6 +146,10 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:heat_exchanger_output_rejects_external_insert"), () -> buildcraft.factory.HeatExchangerTester::testOutputTankRejectsExternalInsert);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:heat_exchanger_output_accepts_internal_insert"), () -> buildcraft.factory.HeatExchangerTester::testOutputTankAcceptsInternalInsert);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:heat_exchanger_internal_flag_resets"), () -> buildcraft.factory.HeatExchangerTester::testOutputTankInternalFlagResetsAfterCall);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:heat_exchanger_atomic_craft_balanced"), () -> buildcraft.factory.HeatExchangerTester::testAtomicCraftCommitsBalancedFillAndDrain);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:heat_exchanger_atomic_craft_rolls_back"), () -> buildcraft.factory.HeatExchangerTester::testAtomicCraftRollsBackOnUndersizedFill);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:heat_exchanger_tank_clears_on_empty_load"), () -> buildcraft.factory.HeatExchangerTester::testTankClearsWhenLoadedFromEmptySave);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:heat_exchanger_slot_caps_at_max_stack_size"), () -> buildcraft.factory.HeatExchangerTester::testItemHandlerRespectsConfiguredMaxStackSize);
 
             // Electronic Library
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:library_slot_filtering"), () -> buildcraft.builders.ElectronicLibraryTester::testSlotFiltering);

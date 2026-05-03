@@ -56,6 +56,14 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
     public final NonNullList<ItemStack> stacks;
 
     private int firstUsed = Integer.MAX_VALUE;
+    /** Per-slot capacity reported by {@link #getCapacityAsLong} and consulted by
+     * {@link buildcraft.lib.gui.slot.SlotBase#getMaxStackSize} when vanilla decides
+     * how many items a click or shift-click may deposit. Defaults to 64; the
+     * {@code (size, maxStackSize)} constructor lowers it for tiles like the heat
+     * exchanger that want true single-bucket slots. Without this the slot widget
+     * would let players drop a 64-stack into a 1-bucket slot — and the auto-fill
+     * loop would then replace the whole stack with a single filled bucket. */
+    private int slotCapacity = 64;
 
     public ItemHandlerSimple(int size) {
         this(size, (slot, stack) -> true, StackInsertionFunction.getDefaultInserter(), null);
@@ -64,6 +72,7 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
     public ItemHandlerSimple(int size, int maxStackSize) {
         this(size);
         setLimitedInsertor(maxStackSize);
+        this.slotCapacity = maxStackSize;
     }
 
     public ItemHandlerSimple(int size, @Nullable StackChangeCallback callback) {
@@ -88,6 +97,7 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
 
     public void setLimitedInsertor(int maxStackSize) {
         setInsertor(StackInsertionFunction.getInsertionFunction(maxStackSize));
+        this.slotCapacity = maxStackSize;
     }
 
     public void setCallback(StackChangeCallback callback) {
@@ -191,7 +201,7 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
 
     @Override
     public long getCapacityAsLong(int index, ItemResource resource) {
-        return 64; // getSlotLimit
+        return slotCapacity;
     }
 
     @Override

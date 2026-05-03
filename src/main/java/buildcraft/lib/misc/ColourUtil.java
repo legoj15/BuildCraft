@@ -79,7 +79,9 @@ public class ColourUtil {
         return FACE_TO_COLOUR[face.ordinal()];
     }
 
-    /** Returns a display-friendly name for the given dye colour (or "Clean" if null). */
+    /** Returns a display-friendly name for the given dye colour, wrapped in the matching
+     *  {@link ChatFormatting} colour code (and trailing reset) so it renders coloured in
+     *  tooltips and gate labels — matching 1.12.2 behaviour. Returns "Clean" if null. */
     public static String getTextFullTooltip(@Nullable DyeColor colour) {
         if (colour == null) return "Clean";
         String name = colour.getName();
@@ -91,7 +93,8 @@ public class ColourUtil {
             sb.append(Character.toUpperCase(parts[i].charAt(0)));
             sb.append(parts[i].substring(1));
         }
-        return sb.toString();
+        ChatFormatting format = COLOUR_TO_FORMAT[colour.ordinal()];
+        return format.toString() + sb + ChatFormatting.RESET;
     }
 
     /** Returns a display-friendly name for the given direction. */

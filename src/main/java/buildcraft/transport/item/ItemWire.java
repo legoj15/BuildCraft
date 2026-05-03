@@ -28,8 +28,7 @@ public class ItemWire extends Item {
 
     @Override
     public Component getName(ItemStack stack) {
-        Component colorName = Component.literal(ColourUtil.getTextFullTooltip(color))
-            .withStyle(ColourUtil.convertColourToTextFormat(color));
+        Component colorName = Component.literal(ColourUtil.getTextFullTooltip(color));
         return Component.translatable("item.buildcraftunofficial.wire", colorName);
     }
 }

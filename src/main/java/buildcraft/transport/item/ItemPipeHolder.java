@@ -53,8 +53,7 @@ public class ItemPipeHolder extends BlockItem implements IItemPipe {
     public Component getName(ItemStack stack) {
         DyeColor col = stack.get(BCTransportItems.PIPE_COLOUR.get());
         if (col != null) {
-            Component colourName = Component.literal(ColourUtil.getTextFullTooltip(col))
-                    .withStyle(ColourUtil.convertColourToTextFormat(col));
+            Component colourName = Component.literal(ColourUtil.getTextFullTooltip(col));
             return Component.literal("").append(colourName).append(" ").append(super.getName(stack));
         }
         return super.getName(stack);

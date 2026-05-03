@@ -116,11 +116,8 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
             if (colour == null) {
                 tooltip = Component.translatable("gui.pipes.emzuli.nopaint");
             } else {
-                // Format the color name in the matching ChatFormatting color
-                String colourName = ColourUtil.convertColourToTextFormat(colour)
-                        + ColourUtil.getTextFullTooltip(colour)
-                        + net.minecraft.ChatFormatting.RESET;
-                tooltip = Component.translatable("gui.pipes.emzuli.paint", colourName);
+                tooltip = Component.translatable("gui.pipes.emzuli.paint",
+                        ColourUtil.getTextFullTooltip(colour));
             }
             this.setTooltip(net.minecraft.client.gui.components.Tooltip.create(tooltip));
         }

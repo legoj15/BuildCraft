@@ -3,72 +3,184 @@
 import "buildcraftunofficial:util" "buildcraftunofficial:main"
 
 // ---------------------------------------------------------------------------
-// Real-content entries — each points at an en_us/<path>.md file that actually
-// has writeup (chapters, lore, recipes). Typed aliases set tag_type/tag_subtype
-// so these show up in proper "Blocks", "Items/Gears", "Items/Tools" TOC tabs.
+// Sections below mirror the in-game TOC order: Blocks → Items → Pipes →
+// Triggers → Actions, with subchapters listed alphabetically by their localized
+// title (the same order ContentsNode.sort produces in-game). Entries with a
+// real `block/`, `item/`, or `pipe/` writeup and `place`-style stub entries
+// (whose .md content lives at `placeholder/<name>.md`, or auto-stubs at runtime
+// when missing) sit side-by-side in their natural section so the file reads
+// the same way the contents page does.
 //
 // alias reference (see util.txt):
-//   block_engine   "<name>" "<stack>"   -> block/<name>.md  tag=engine
-//   block_mining   "<name>"             -> block/<name>.md  tag=mining   (auto-stack)
-//   block_fluid    "<name>"             -> block/<name>.md  tag=fluid
-//   block_refining "<name>"             -> block/<name>.md  tag=refining
-//   block_auto     "<name>"             -> block/<name>.md  tag=automation
-//   pipe_item      "<name>" "<stack>"   -> pipe/<name>.md   tag=pipe_item
-//   pipe_fluid     "<name>" "<stack>"   -> pipe/<name>.md   tag=pipe_fluid
-//   pipe           "<sub>" "<name>" "<stack>" -> pipe/<name>.md tag=<sub>
-//   gear           "<name>"             -> item/<name>.md   tag=gear     (auto-stack)
-//   tool           "<name>"             -> item/<name>.md   tag=tool
-//   plug           "<name>"             -> item/<name>.md   tag=pipe_plug
+//   block_engine   "<name>" "<stack>"   -> block/<name>.md       tag=engine
+//   block_mining   "<name>"             -> block/<name>.md       tag=mining     (auto-stack)
+//   block_fluid    "<name>"             -> block/<name>.md       tag=fluid
+//   block_refining "<name>"             -> block/<name>.md       tag=refining
+//   block_auto     "<name>"             -> block/<name>.md       tag=automation
+//   pipe_item      "<name>" "<stack>"   -> pipe/<name>.md        tag=pipe_item
+//   pipe_fluid     "<name>" "<stack>"   -> pipe/<name>.md        tag=pipe_fluid
+//   pipe           "<sub>" "<name>" "<stack>" -> pipe/<name>.md  tag=<sub>
+//   gear           "<name>"             -> item/<name>.md        tag=gear       (auto-stack)
+//   tool           "<name>"             -> item/<name>.md        tag=tool
+//   plug           "<name>"             -> item/<name>.md        tag=pipe_plug
+//   place          "<name>" "<type>" "<sub>" -> placeholder/<name>.md tag=<type>:<sub>
+//                  (used for stub entries — auto-stubs at runtime when no .md exists)
 // ---------------------------------------------------------------------------
 
-// ---- Blocks / Engines (real content) -------------------------------------
+// ===========================================================================
+// BLOCKS
+// ===========================================================================
+
+// ---- Blocks / Automation -------------------------------------------------
+block_auto "autoworkbench_item"
+block_auto "chute"
+place "advanced_crafting_table" "block" "automation"
+place "architect"               "block" "automation"
+place "assembly_table"          "block" "automation"
+place "builder"                 "block" "automation"
+place "debugger"                "block" "automation"
+place "filler"                  "block" "automation"
+place "filler_planner"          "block" "automation"
+place "filtered_buffer"         "block" "automation"
+place "integration_table"       "block" "automation"
+place "library"                 "block" "automation"
+place "replacer"                "block" "automation"
+place "zone_planner"            "block" "automation"
+
+// ---- Blocks / Engines ----------------------------------------------------
 block_engine "engine_redstone" "buildcraftunofficial:engine_redstone"
 block_engine "engine_stone"    "buildcraftunofficial:engine_stone"
 block_engine "engine_iron"     "buildcraftunofficial:engine_iron"
+place "engine_rf"         "block" "engine"          // FE Engine
+place "mj_dynamo"         "block" "engine"          // MJ Dynamo
+place "engine_creative"   "block" "engine"
 
-// ---- Blocks / Mining (real content) --------------------------------------
-block_mining "mining_well"
-
-// ---- Blocks / Fluid (real content) ---------------------------------------
+// ---- Blocks / Fluid ------------------------------------------------------
 block_fluid "flood_gate"
 block_fluid "pump"
 block_fluid "tank"
+place "spring_oil"      "block" "fluid"
+place "spring_water"    "block" "fluid"
 
-// ---- Blocks / Refining (real content) ------------------------------------
+// ---- Blocks / Laser Power ------------------------------------------------
+place "laser"           "block" "laser"
+
+// ---- Blocks / Mining -----------------------------------------------------
+block_mining "mining_well"
+place "quarry"          "block" "mining"
+
+// ---- Blocks / Refining ---------------------------------------------------
 block_refining "distiller"
 block_refining "heat_exchange"
 
-// ---- Blocks / Automation (real content) ----------------------------------
-block_auto "autoworkbench_item"
-block_auto "chute"
+// ---- Blocks / Specialized ------------------------------------------------
+// Single-purpose blocks that don't fit a specific mechanic category. Path
+// Mark and Land Mark are the entries with real writeups (block/marker_path.md
+// and block/marker_volume.md); the rest auto-stub via their placeholder/<name>.md
+// content (or the runtime WIP stub when no .md exists).
+block "specialized" "marker_path"
+block "specialized" "marker_volume"
+place "special_rock"     "block" "specialized"
+place "tube"             "block" "specialized"
+place "water_gel_spawn"  "block" "specialized"
 
-// ---- Items / Gears (real content) ----------------------------------------
+// ===========================================================================
+// ITEMS
+// ===========================================================================
+
+// ---- Items / Basic -------------------------------------------------------
+place "waterproof"             "item" "basic"
+
+// ---- Items / Chipsets ----------------------------------------------------
+place "redstone_red_chipset"     "item" "chipset"
+place "redstone_iron_chipset"    "item" "chipset"
+place "redstone_gold_chipset"    "item" "chipset"
+place "redstone_diamond_chipset" "item" "chipset"
+place "redstone_quartz_chipset"  "item" "chipset"
+
+// ---- Items / Fluid -------------------------------------------------------
+place "fragile_fluid_container" "item" "fluid"
+place "gelled_water"            "item" "fluid"
+place "glob_of_oil"             "item" "fluid"
+place "water_gel"               "item" "fluid"
+
+// ---- Items / Gears -------------------------------------------------------
 gear "gear_wood"
 gear "gear_stone"
 gear "gear_iron"
 gear "gear_gold"
 gear "gear_diamond"
 
-// ---- Items / Tools (real content) ----------------------------------------
-tool "wrench"
-tool "paintbrush"
+// ---- Items / Paperwork ---------------------------------------------------
+place "blueprint_clean"        "item" "paperwork"
+place "blueprint_used"         "item" "paperwork"
+place "decorated_blueprint"    "item" "paperwork"
+place "decorated_destroy"      "item" "paperwork"
+place "decorated_laser"        "item" "paperwork"
+place "decorated_leather"      "item" "paperwork"
+place "decorated_paper"        "item" "paperwork"
+place "decorated_template"     "item" "paperwork"
+place "schematic_single_clean" "item" "paperwork"
+place "schematic_single_used"  "item" "paperwork"
+place "template_clean"         "item" "paperwork"
+place "template_used"          "item" "paperwork"
 
-// Other items with writeups but file names that don't match the stack id.
-item_stack "item" "tool" "box_volume"        "buildcraftunofficial:volume_box"
-item_stack "item" "tool" "marker_connector"  "buildcraftunofficial:marker_connector"
-item_stack "item" "tool" "marker_land"       "buildcraftunofficial:marker_volume"
-item_stack "item" "tool" "marker_path"       "buildcraftunofficial:marker_path"
-item_stack "item" "tool" "list"              "buildcraftunofficial:list"
-
-// ---- Items / Pluggables (real content) -----------------------------------
+// ---- Items / Pluggables --------------------------------------------------
 plug "plug_blocker"
 plug "plug_power_adaptor"
+plug "plug_facade"
+plug "plug_gate"
+plug "plug_lens"
+plug "plug_light_sensor"
+plug "plug_pulsar"
+place "plug_timer"        "item" "pipe_plug"
 
+// ---- Items / Tools -------------------------------------------------------
+tool "wrench"
+tool "paintbrush"
+// Tool items with writeups but file names that don't match the stack id.
+item_stack "item" "tool" "box_volume"        "buildcraftunofficial:volume_box"
+item_stack "item" "tool" "marker_connector"  "buildcraftunofficial:marker_connector"
+item_stack "item" "tool" "list"              "buildcraftunofficial:list"
+place "gate_copier"     "item" "tool"
+place "goggles"         "item" "tool"
+place "guide_note"      "item" "tool"
+place "map_location"    "item" "tool"
+
+// ---- Items / Wires -------------------------------------------------------
 // Single shared wire page (file at item/wire.md). Register under the white
 // wire stack as the representative entry for the whole wire family.
 item_stack "item" "wire" "wire" "buildcraftunofficial:wire_white"
 
-// ---- Pipes / Item Transport (real content) -------------------------------
+// ===========================================================================
+// PIPES
+// ===========================================================================
+
+// ---- Pipes / FE Transport ------------------------------------------------
+place "pipe_wood_rf"            "pipe" "pipe_rf"
+place "pipe_cobble_rf"          "pipe" "pipe_rf"
+place "pipe_stone_rf"           "pipe" "pipe_rf"
+place "pipe_quartz_rf"          "pipe" "pipe_rf"
+place "pipe_iron_rf"            "pipe" "pipe_rf"
+place "pipe_gold_rf"            "pipe" "pipe_rf"
+place "pipe_sandstone_rf"       "pipe" "pipe_rf"
+place "pipe_diamond_rf"         "pipe" "pipe_rf"
+place "pipe_diamond_wood_rf"    "pipe" "pipe_rf"
+
+// ---- Pipes / Fluid Transport ---------------------------------------------
+pipe_fluid "wood_fluid"         "buildcraftunofficial:pipe_wood_fluid"
+pipe_fluid "cobble_fluid"       "buildcraftunofficial:pipe_cobble_fluid"
+pipe_fluid "stone_fluid"        "buildcraftunofficial:pipe_stone_fluid"
+pipe_fluid "quartz_fluid"       "buildcraftunofficial:pipe_quartz_fluid"
+pipe_fluid "iron_fluid"         "buildcraftunofficial:pipe_iron_fluid"
+pipe_fluid "gold_fluid"         "buildcraftunofficial:pipe_gold_fluid"
+pipe_fluid "clay_fluid"         "buildcraftunofficial:pipe_clay_fluid"
+pipe_fluid "sandstone_fluid"    "buildcraftunofficial:pipe_sandstone_fluid"
+pipe_fluid "void_fluid"         "buildcraftunofficial:pipe_void_fluid"
+pipe_fluid "diamond_fluid"      "buildcraftunofficial:pipe_diamond_fluid"
+pipe_fluid "diamond_wood_fluid" "buildcraftunofficial:pipe_diamond_wood_fluid"
+
+// ---- Pipes / Item Transport ----------------------------------------------
 pipe_item "wood_item"          "buildcraftunofficial:pipe_wood_item"
 pipe_item "cobble_item"        "buildcraftunofficial:pipe_cobble_item"
 pipe_item "stone_item"         "buildcraftunofficial:pipe_stone_item"
@@ -86,112 +198,7 @@ pipe_item "daizuli_item"       "buildcraftunofficial:pipe_daizuli_item"
 pipe_item "emzuli_item"        "buildcraftunofficial:pipe_emzuli_item"
 pipe_item "stripes_item"       "buildcraftunofficial:pipe_stripes_item"
 
-// ---- Pipes / Fluid Transport (real content) ------------------------------
-pipe_fluid "wood_fluid"         "buildcraftunofficial:pipe_wood_fluid"
-pipe_fluid "cobble_fluid"       "buildcraftunofficial:pipe_cobble_fluid"
-pipe_fluid "stone_fluid"        "buildcraftunofficial:pipe_stone_fluid"
-pipe_fluid "quartz_fluid"       "buildcraftunofficial:pipe_quartz_fluid"
-pipe_fluid "iron_fluid"         "buildcraftunofficial:pipe_iron_fluid"
-pipe_fluid "gold_fluid"         "buildcraftunofficial:pipe_gold_fluid"
-pipe_fluid "clay_fluid"         "buildcraftunofficial:pipe_clay_fluid"
-pipe_fluid "sandstone_fluid"    "buildcraftunofficial:pipe_sandstone_fluid"
-pipe_fluid "void_fluid"         "buildcraftunofficial:pipe_void_fluid"
-pipe_fluid "diamond_fluid"      "buildcraftunofficial:pipe_diamond_fluid"
-pipe_fluid "diamond_wood_fluid" "buildcraftunofficial:pipe_diamond_wood_fluid"
-
-// ---- Pipes / Structure (real content) ------------------------------------
-pipe "pipe_structure" "structure" "buildcraftunofficial:pipe_structure"
-
-// ---------------------------------------------------------------------------
-// Placeholder entries — registered items for which we don't yet have a
-// writeup. The GuideManager loader generates a WIP stub at runtime for any
-// registered entry lacking a matching en_us/<path>.md file, so these still
-// show up in the TOC with proper typed categorization.
-//
-// Replace with a typed real-content entry above once its .md page is written.
-// ---------------------------------------------------------------------------
-
-// Blocks / Engine — stubs for engines beyond the three real writeups.
-place "engine_rf"         "block" "engine"          // FE Engine
-place "mj_dynamo"         "block" "engine"          // MJ Dynamo
-place "engine_creative"   "block" "engine"
-
-// Blocks / Automation — machines and tables that drive BC's automation chain.
-place "advanced_crafting_table" "block" "automation"
-place "architect"               "block" "automation"
-place "assembly_table"          "block" "automation"
-place "builder"                 "block" "automation"
-place "debugger"                "block" "automation"
-place "filler"                  "block" "automation"
-place "filler_planner"          "block" "automation"
-place "filtered_buffer"         "block" "automation"
-place "integration_table"       "block" "automation"
-place "library"                 "block" "automation"
-place "replacer"                "block" "automation"
-place "zone_planner"            "block" "automation"
-
-// Blocks / Mining — extraction machines.
-place "quarry"          "block" "mining"
-
-// Blocks / Fluid — fluid source blocks and fluid-handling blocks.
-place "spring_oil"      "block" "fluid"
-place "spring_water"    "block" "fluid"
-
-// Blocks / Laser — laser block (emits laser beams for assembly/integration).
-place "laser"           "block" "laser"
-
-// Blocks / Basic — misc blocks that don't fit a specific mechanic category.
-place "frame"            "block" "basic"
-place "marker_volume"    "block" "basic"
-place "special_rock"     "block" "basic"
-place "tube"             "block" "basic"
-place "water_gel_spawn"  "block" "basic"
-
-// Items / Tool — player-held utility items.
-place "gate_copier"     "item" "tool"
-place "goggles"         "item" "tool"
-place "guide_note"      "item" "tool"
-place "map_location"    "item" "tool"
-
-// Items / Pluggables — pipe plug items.
-place "plug_facade"       "item" "pipe_plug"
-place "plug_gate"         "item" "pipe_plug"
-place "plug_lens"         "item" "pipe_plug"
-place "plug_light_sensor" "item" "pipe_plug"
-place "plug_pulsar"       "item" "pipe_plug"
-place "plug_timer"        "item" "pipe_plug"
-
-// Items / Paperwork — blueprints, schematics, templates.
-place "blueprint_clean"        "item" "paperwork"
-place "blueprint_used"         "item" "paperwork"
-place "decorated_blueprint"    "item" "paperwork"
-place "decorated_destroy"      "item" "paperwork"
-place "decorated_laser"        "item" "paperwork"
-place "decorated_leather"      "item" "paperwork"
-place "decorated_paper"        "item" "paperwork"
-place "decorated_template"     "item" "paperwork"
-place "schematic_single_clean" "item" "paperwork"
-place "schematic_single_used"  "item" "paperwork"
-place "template_clean"         "item" "paperwork"
-place "template_used"          "item" "paperwork"
-
-// Items / Chipset — the five chipset tiers used in assembly recipes.
-place "redstone_red_chipset"     "item" "chipset"
-place "redstone_iron_chipset"    "item" "chipset"
-place "redstone_gold_chipset"    "item" "chipset"
-place "redstone_diamond_chipset" "item" "chipset"
-place "redstone_quartz_chipset"  "item" "chipset"
-
-// Items / Basic — waterproof and misc components.
-place "waterproof"             "item" "basic"
-
-// Items / Fluid — fluid item forms (oil globs, gelled water, etc.).
-place "fragile_fluid_container" "item" "fluid"
-place "gelled_water"            "item" "fluid"
-place "glob_of_oil"             "item" "fluid"
-place "water_gel"               "item" "fluid"
-
-// Pipes / Power Transport — MJ (kinesis) pipes (stubs; real writeups pending).
+// ---- Pipes / Power Transport (MJ kinesis) --------------------------------
 place "pipe_cobble_power"       "pipe" "pipe_power"
 place "pipe_diamond_power"      "pipe" "pipe_power"
 place "pipe_diamond_wood_power" "pipe" "pipe_power"
@@ -202,39 +209,40 @@ place "pipe_sandstone_power"    "pipe" "pipe_power"
 place "pipe_stone_power"        "pipe" "pipe_power"
 place "pipe_wood_power"         "pipe" "pipe_power"
 
-// Pipes / FE Transport — RF/FE pipes (stubs; real writeups pending).
-place "pipe_wood_rf"            "pipe" "pipe_rf"
-place "pipe_cobble_rf"          "pipe" "pipe_rf"
-place "pipe_stone_rf"           "pipe" "pipe_rf"
-place "pipe_quartz_rf"          "pipe" "pipe_rf"
-place "pipe_iron_rf"            "pipe" "pipe_rf"
-place "pipe_gold_rf"            "pipe" "pipe_rf"
-place "pipe_sandstone_rf"       "pipe" "pipe_rf"
-place "pipe_diamond_rf"         "pipe" "pipe_rf"
-place "pipe_diamond_wood_rf"    "pipe" "pipe_rf"
+// ---- Pipes / Structure ---------------------------------------------------
+pipe "pipe_structure" "structure" "buildcraftunofficial:pipe_structure"
 
-// ---------------------------------------------------------------------------
-// Statements (Triggers + Actions) — typed entries with sub-categorization.
+// ===========================================================================
+// STATEMENTS (Triggers + Actions)
+// ===========================================================================
 // Each `trigger`/`action` invocation maps to an existing en_us/{trigger,action}/<name>.md
 // file (auto-stub if absent) and assigns the page to a sub-section under the
-// Triggers / Actions chapter (e.g. "Automation", "Item Transport", "Pluggables").
+// Triggers / Actions chapter (Automation, Item Transport, Pluggables, ...).
 // Without these, statements fall through to PageEntryStatement.iterateAllDefault
 // and appear in a flat alphabetical list with no sub-section headers.
 // ---------------------------------------------------------------------------
+
+// ---- Triggers / Automation -----------------------------------------------
+trigger "automation" "machine_active"   "buildcraft:work.scheduled"
+trigger "automation" "machine_inactive" "buildcraft:work.done"
+// Timer plug triggers — registering them under "automation" gives them a
+// tag_subtype that puts them with the other automation-clock-style triggers
+// rather than as un-subtyped leaves directly under Triggers (1.12.2 layout).
+trigger "automation" "timer_short"      "buildcraft:timer_short"
+trigger "automation" "timer_medium"     "buildcraft:timer_medium"
+trigger "automation" "timer_long"       "buildcraft:timer_long"
 
 // ---- Triggers / Basic ----------------------------------------------------
 trigger "basic" "always_on"          "buildcraftunofficial:trigger.true"
 trigger "basic" "redstone_active"    "buildcraft:redstone.input.active"
 trigger "basic" "redstone_inactive"  "buildcraft:redstone.input.inactive"
 
-// ---- Triggers / Inventory (item) -----------------------------------------
-trigger "item" "inventory_empty"     "buildcraft:inventory.empty"
-trigger "item" "inventory_contains"  "buildcraft:inventory.contains"
-trigger "item" "inventory_space"     "buildcraft:inventory.space"
-trigger "item" "inventory_full"      "buildcraft:inventory.full"
-trigger "item" "inventory_below_25"  "buildcraft:inventorylevel.below25"
-trigger "item" "inventory_below_50"  "buildcraft:inventorylevel.below50"
-trigger "item" "inventory_below_75"  "buildcraft:inventorylevel.below75"
+// ---- Triggers / Engines --------------------------------------------------
+trigger "engine" "engine_blue"       "buildcraft:engine.stage.blue"
+trigger "engine" "engine_green"      "buildcraft:engine.stage.green"
+trigger "engine" "engine_yellow"     "buildcraft:engine.stage.yellow"
+trigger "engine" "engine_red"        "buildcraft:engine.stage.red"
+trigger "engine" "engine_overheat"   "buildcraft:engine.stage.overheat"
 
 // ---- Triggers / Fluid ----------------------------------------------------
 trigger "fluid" "fluid_empty"        "buildcraft:fluid.empty"
@@ -245,42 +253,50 @@ trigger "fluid" "fluid_below_25"     "buildcraft:fluid.below25"
 trigger "fluid" "fluid_below_50"     "buildcraft:fluid.below50"
 trigger "fluid" "fluid_below_75"     "buildcraft:fluid.below75"
 
-// ---- Triggers / Engine ---------------------------------------------------
-trigger "engine" "engine_blue"       "buildcraft:engine.stage.blue"
-trigger "engine" "engine_green"      "buildcraft:engine.stage.green"
-trigger "engine" "engine_yellow"     "buildcraft:engine.stage.yellow"
-trigger "engine" "engine_red"        "buildcraft:engine.stage.red"
-trigger "engine" "engine_overheat"   "buildcraft:engine.stage.overheat"
+// ---- Triggers / Fluid Transport (pipe_fluid) -----------------------------
+trigger "pipe_fluid" "fluids_traversing" "buildcraft:pipe_contains_fluids"
 
-// ---- Triggers / Automation -----------------------------------------------
-trigger "automation" "machine_active"   "buildcraft:work.scheduled"
-trigger "automation" "machine_inactive" "buildcraft:work.done"
+// ---- Triggers / Item (inventory) -----------------------------------------
+trigger "item" "inventory_empty"     "buildcraft:inventory.empty"
+trigger "item" "inventory_contains"  "buildcraft:inventory.contains"
+trigger "item" "inventory_space"     "buildcraft:inventory.space"
+trigger "item" "inventory_full"      "buildcraft:inventory.full"
+trigger "item" "inventory_below_25"  "buildcraft:inventorylevel.below25"
+trigger "item" "inventory_below_50"  "buildcraft:inventorylevel.below50"
+trigger "item" "inventory_below_75"  "buildcraft:inventorylevel.below75"
 
 // ---- Triggers / Item Transport (pipe_item) -------------------------------
 trigger "pipe_item" "items_traversing"  "buildcraft:pipe_contains_items"
 
-// ---- Triggers / Fluid Transport (pipe_fluid) -----------------------------
-trigger "pipe_fluid" "fluids_traversing" "buildcraft:pipe_contains_fluids"
+// ---- Triggers / Pluggables (pipe_plug) -----------------------------------
+// Light Sensor's Bright/Dark triggers — registering them here gives them a tag_subtype
+// of pipe_plug so they file under Triggers > Pluggables alongside the wire and plug
+// pages. The plug_light_sensor.md article cross-links to both.
+trigger "pipe_plug" "light_high"  "buildcraft:light_bright"
+trigger "pipe_plug" "light_low"   "buildcraft:light_dark"
+
+// ---- Triggers / Power Delivery (power_delivery) --------------------------
+// Power-storage and power-request triggers — backed by TriggerPower
+// (energyStored high/low) and TriggerPowerRequested (powerRequested). The
+// 1.12.2 guide filed these under their own "Power Delivery" subchapter
+// rather than alongside Engine stages, since they apply to any MJ receiver
+// (machine batteries, kinesis pipes) rather than to engine temperature.
+// New `buildcraft.guide.chapter.subtype.power_delivery` localization key.
+trigger "power_delivery" "power_high"      "buildcraft:energyStoredhigh"
+trigger "power_delivery" "power_low"       "buildcraft:energyStoredlow"
+trigger "power_delivery" "power_requested" "buildcraft:powerRequested"
 
 // Pipe Signal triggers (16 colours × on/off) are surfaced via a single "Pipe Signals"
 // category entry under both the Triggers and Actions chapters — see
 // GuideManager#addPipeSignalsCategory. The body lives at concept/pipe_signals.md.
-
-// ---- Actions / Basic -----------------------------------------------------
-action "basic" "redstone" "buildcraft:redstone.output"
 
 // ---- Actions / Automation ------------------------------------------------
 action "automation" "machine_control_on"   "buildcraft:machine.on"
 action "automation" "machine_control_off"  "buildcraft:machine.off"
 action "automation" "machine_control_loop" "buildcraft:machine.loop"
 
-// ---- Actions / Pluggables (pipe_plug) ------------------------------------
-// Pulsar plug actions — registering them here gives them a tag_subtype of
-// pipe_plug so they file under Actions > Pluggables alongside the wire and
-// plug pages, instead of falling through to PageEntryStatement.iterateAllDefault
-// which would emit them as un-subtyped leaves directly under Actions.
-action "pipe_plug" "power_pulsar"        "buildcraft:pulsar.constant"
-action "pipe_plug" "single_power_pulse"  "buildcraft:pulsar.single"
+// ---- Actions / Basic -----------------------------------------------------
+action "basic" "redstone" "buildcraft:redstone.output"
 
 // ---- Actions / Item Transport (pipe_item) --------------------------------
 // The six pipe_direction_* actions are surfaced via a single "Set pipe direction"
@@ -300,8 +316,16 @@ action "pipe_item" "pipe_direction_below" "buildcraft:pipe.dir.down"
 action "pipe_item" "pipe_colour"          "buildcraft:pipe.color.black"
 action "pipe_item" "extraction_preset"    "buildcraft:extraction.preset.red"
 
+// ---- Actions / Pluggables (pipe_plug) ------------------------------------
+// Pulsar plug actions — registering them here gives them a tag_subtype of
+// pipe_plug so they file under Actions > Pluggables alongside the wire and
+// plug pages, instead of falling through to PageEntryStatement.iterateAllDefault
+// which would emit them as un-subtyped leaves directly under Actions.
+action "pipe_plug" "power_pulsar"        "buildcraft:pulsar.constant"
+action "pipe_plug" "single_power_pulse"  "buildcraft:pulsar.single"
+
 // Pipe Signal actions live in the "Pipe Signals" category alongside their trigger
-// counterparts — see the comment above the Actions / Basic section.
+// counterparts — see the comment above the Actions / Automation section.
 
 // Power-limit actions (28 total: 4 limiter pipes × 7 levels each — Iron/Diamond
 // Kinesis and Iron/Diamond FE) are surfaced via a single "Set Power Limit" category

@@ -1,5 +1,5 @@
 <lore>
-What colour is the engine next to the gate? Is it blue?
+What colour is the engine next to the gate? Is it red?
 </lore>
 <no_lore>
 Engine Red is a gate trigger provided on any gate that has an Engine next to it.

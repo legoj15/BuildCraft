@@ -32,19 +32,27 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
     protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
 
+        int rootX = (int) mainGui.rootElement.getX();
+        int rootY = (int) mainGui.rootElement.getY();
+
         for (int i = 0; i < 9; i++) {
             net.minecraft.world.item.ItemStack stackFilter = menu.tile.invFilter.getStackInSlot(i);
             net.minecraft.world.item.ItemStack stackMain = menu.tile.invMain.getStackInSlot(i);
 
-            int currentX = (int) mainGui.rootElement.getX() + 8 + i * 18;
-            int currentY = (int) mainGui.rootElement.getY() + 61;
+            int x = rootX + 8 + i * 18;
+            int filterY = rootY + 27;
+            int mainY = rootY + 61;
+
+            if (stackFilter.isEmpty()) {
+                buildcraft.lib.gui.GuiIcon.drawAt(buildcraft.transport.BCTransportSprites.EMPTY_FILTERED_BUFFER_SLOT, x, filterY, 16);
+            }
 
             if (stackMain.isEmpty()) {
                 if (!stackFilter.isEmpty()) {
-                    graphics.item(stackFilter, currentX, currentY);
-                    graphics.fill(currentX, currentY, currentX + 16, currentY + 16, 0xB28B8B8B); // 70% opacity grey veil
+                    graphics.item(stackFilter, x, mainY);
+                    graphics.fill(x, mainY, x + 16, mainY + 16, 0xB28B8B8B); // 70% opacity grey veil
                 } else {
-                    buildcraft.lib.gui.GuiIcon.drawAt(buildcraft.transport.BCTransportSprites.NOTHING_FILTERED_BUFFER_SLOT, currentX, currentY, 16);
+                    buildcraft.lib.gui.GuiIcon.drawAt(buildcraft.transport.BCTransportSprites.NOTHING_FILTERED_BUFFER_SLOT, x, mainY, 16);
                 }
             }
         }

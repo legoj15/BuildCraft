@@ -30,10 +30,10 @@ public class ContainerFilteredBuffer extends ContainerBCTile<TileFilteredBuffer>
         super(BCTransportMenuTypes.FILTERED_BUFFER.get(), containerId, playerInv.player, tile);
 
         for (int i = 0; i < 9; i++) {
-            // Filter slots (phantom) at y=27
-            SlotPhantom filterSlot = new SlotPhantom(tile.invFilter, i, 8 + i * 18, 27, false);
-            filterSlot.setBackground(buildcraft.transport.BCTransportSprites.EMPTY_FILTERED_BUFFER_SLOT.getResourceLocation());
-            addSlot(filterSlot);
+            // Filter slots (phantom) at y=27 — empty-slot icon is drawn in GuiFilteredBuffer
+            // rather than via Slot.setBackground, because vanilla resolves slot backgrounds on
+            // the GUI atlas only and our gui/* sprites live on the blocks atlas.
+            addSlot(new SlotPhantom(tile.invFilter, i, 8 + i * 18, 27, false));
             // Inventory slots at y=61
             SlotBase mainSlot = new SlotBase(tile.invMain, i, 8 + i * 18, 61);
             addSlot(mainSlot);

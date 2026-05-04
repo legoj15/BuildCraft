@@ -10,6 +10,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.pipe.PipeApi;
+import buildcraft.api.transport.pipe.PipeApi.FluidTransferInfo;
 import buildcraft.api.transport.pipe.PipeApi.PowerTransferInfo;
 import buildcraft.api.transport.pipe.PipeDefinition;
 
@@ -30,6 +31,9 @@ public class BCTransportConfig {
 
     /** Base multiplier for RF pipe transfer rates (RF/t). Default: 40. */
     public static ModConfigSpec.IntValue baseRfRate;
+
+    /** Base multiplier for fluid pipe transfer rates (mB/t). Default: 10. */
+    public static ModConfigSpec.IntValue baseFlowRate;
 
     public static void buildGeneral(ModConfigSpec.Builder builder) {
         disableRfPipe = builder
@@ -53,6 +57,10 @@ public class BCTransportConfig {
         baseRfRate = builder
                 .comment("Base multiplier for RF pipe transfer rates (RF/t). Default: 40.")
                 .defineInRange("baseRfRate", 40, 10, 4000);
+
+        baseFlowRate = builder
+                .comment("Base multiplier for fluid pipe transfer rates (mB/t). Default: 10.")
+                .defineInRange("baseFlowRate", 10, 1, 40);
 
         builder.pop();
     }
@@ -107,5 +115,29 @@ public class BCTransportConfig {
 
     private static void rfTransfer(PipeDefinition def, int maxTransfer, boolean recv) {
         PipeApi.rfTransferData.put(def, new PipeApi.RedstoneFluxTransferInfo(maxTransfer, recv));
+    }
+
+    /** Register default fluid transfer info for all fluid pipe definitions.
+     *  Should be called after BCTransportPipes.preInit().
+     *  <p>Mirrors the 1.12.2 tier mapping: cobble/wood = base, stone/sandstone = 2x,
+     *  clay/iron/quartz = 4x, diamond/diaWood/gold/void = 8x. Gold uses delay 2 (faster
+     *  flow); the rest use delay 10. */
+    public static void registerFluidTransferData() {
+        int rate = baseFlowRate.get();
+        fluidTransfer(BCTransportPipes.cobbleFluid, rate, 10);
+        fluidTransfer(BCTransportPipes.woodFluid, rate, 10);
+        fluidTransfer(BCTransportPipes.stoneFluid, rate * 2, 10);
+        fluidTransfer(BCTransportPipes.sandstoneFluid, rate * 2, 10);
+        fluidTransfer(BCTransportPipes.clayFluid, rate * 4, 10);
+        fluidTransfer(BCTransportPipes.ironFluid, rate * 4, 10);
+        fluidTransfer(BCTransportPipes.quartzFluid, rate * 4, 10);
+        fluidTransfer(BCTransportPipes.diamondFluid, rate * 8, 10);
+        fluidTransfer(BCTransportPipes.diaWoodFluid, rate * 8, 10);
+        fluidTransfer(BCTransportPipes.goldFluid, rate * 8, 2);
+        fluidTransfer(BCTransportPipes.voidFluid, rate * 8, 10);
+    }
+
+    private static void fluidTransfer(PipeDefinition def, int rate, int delay) {
+        PipeApi.fluidTransferData.put(def, new FluidTransferInfo(rate, delay));
     }
 }

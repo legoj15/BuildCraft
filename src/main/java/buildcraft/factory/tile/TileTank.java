@@ -339,6 +339,27 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
         tank.deserialize(input);
     }
 
+    /**
+     * Strip the fluid-stacks payload from the tag that gets attached as
+     * {@code BLOCK_ENTITY_DATA} when this tile is captured into an item — i.e. via creative
+     * Ctrl+middle-click pickblock, which calls {@code BlockEntity#saveCustomOnly} then
+     * {@code BlockEntity#removeComponentsFromTag} in {@code addBlockDataToItem}, then sets
+     * the result as the picked item's {@code BLOCK_ENTITY_DATA} component. Without this
+     * override, picking a full tank yields a tank item carrying its 16 000 mB of fluid;
+     * placing that item creates a fresh tank already filled, with the source tank still
+     * full — effectively duplicating fluid on every placement.
+     * <p>
+     * BC's fluid economy expects tanks to be broken (which drops fluid as separate item
+     * shards) before being moved, so a picked tank should always come back empty. The
+     * {@code "stacks"} key is the {@link net.neoforged.neoforge.transfer.StacksResourceHandler#VALUE_IO_KEY},
+     * which is what {@code tank.serialize(output)} writes above.
+     */
+    @Override
+    public void removeComponentsFromTag(ValueOutput output) {
+        super.removeComponentsFromTag(output);
+        output.discard("stacks");
+    }
+
     // --- MenuProvider (GUI) ---
 
     @Override

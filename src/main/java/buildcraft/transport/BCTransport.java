@@ -56,12 +56,13 @@ public class BCTransport {
             buildcraft.transport.client.BCTransportClient.initClient(modEventBus);
         }
 
-        // Register power transfer data for kinesis pipes (deferred to commonSetup
+        // Register power/RF/fluid transfer data for pipes (deferred to commonSetup
         // because config values aren't available during mod construction)
         modEventBus.addListener((FMLCommonSetupEvent event) -> {
             event.enqueueWork(() -> {
                 BCTransportConfig.registerPowerTransferData();
                 BCTransportConfig.registerRfTransferData();
+                BCTransportConfig.registerFluidTransferData();
             });
         });
 

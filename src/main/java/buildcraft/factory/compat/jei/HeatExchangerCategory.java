@@ -41,14 +41,23 @@ import buildcraft.factory.BCFactoryItems;
  * it on either side.
  */
 public class HeatExchangerCategory extends AbstractRecipeCategory<HeatExchangerRecipePair> {
-    private static final int WIDTH = 176;
-    private static final int HEIGHT = 86;
+    // The GUI's outer border and player-inventory section are visual noise in
+    // a JEI category, so we crop the background to the inner machine panel:
+    // a 170x84 region starting at (3, 4) of heat_exchanger.png. Slot positions
+    // are shifted by the same (-3, -4) offset so they still land on the tank
+    // graphics inside the cropped texture.
+    private static final int TEX_U = 3, TEX_V = 4;
+    private static final int TEX_W = 170, TEX_H = 84;
 
-    // Tank coordinates match GuiHeatExchange exactly.
-    private static final int START_IN_X = 44, START_IN_Y = 64, START_IN_W = 34, START_IN_H = 17;
-    private static final int START_OUT_X = 116, START_OUT_Y = 43, START_OUT_W = 16, START_OUT_H = 38;
-    private static final int END_IN_X = 44, END_IN_Y = 12, END_IN_W = 16, END_IN_H = 38;
-    private static final int END_OUT_X = 98, END_OUT_Y = 12, END_OUT_W = 34, END_OUT_H = 17;
+    private static final int WIDTH = TEX_W;
+    private static final int HEIGHT = TEX_H;
+
+    // Tank coordinates from GuiHeatExchange, shifted by (-TEX_U, -TEX_V) to
+    // match the cropped texture's origin.
+    private static final int START_IN_X = 44 - TEX_U, START_IN_Y = 64 - TEX_V, START_IN_W = 34, START_IN_H = 17;
+    private static final int START_OUT_X = 116 - TEX_U, START_OUT_Y = 43 - TEX_V, START_OUT_W = 16, START_OUT_H = 38;
+    private static final int END_IN_X = 44 - TEX_U, END_IN_Y = 12 - TEX_V, END_IN_W = 16, END_IN_H = 38;
+    private static final int END_OUT_X = 98 - TEX_U, END_OUT_Y = 12 - TEX_V, END_OUT_W = 34, END_OUT_H = 17;
 
     private final IDrawable background;
 
@@ -61,7 +70,7 @@ public class HeatExchangerCategory extends AbstractRecipeCategory<HeatExchangerR
         );
         this.background = guiHelper.createDrawable(
                 Identifier.parse("buildcraftunofficial:textures/gui/heat_exchanger.png"),
-                0, 0, WIDTH, HEIGHT);
+                TEX_U, TEX_V, TEX_W, TEX_H);
     }
 
     @Override

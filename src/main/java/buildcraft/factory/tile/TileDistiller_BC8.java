@@ -74,6 +74,8 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
     private IDistillationRecipe currentRecipe;
     private long distillPower = 0;
     private boolean isActive = false;
+    /** True when a recipe exists for the input fluid but at least one output tank can't accept the recipe's output. */
+    private boolean isStuck = false;
 
     // Power average: exponential moving average in micro-MJ,
     // approximating 1.12.2's AverageLong(100) rolling average.
@@ -90,6 +92,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
     private int lastSyncedGas = -1;
     private int lastSyncedLiquid = -1;
     private boolean lastSyncedActive = false;
+    private boolean lastSyncedStuck = false;
     private long lastSyncedPower = -1;
 
     public TileDistiller_BC8(BlockPos pos, BlockState state) {
@@ -144,6 +147,11 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
 
     public boolean isActive() {
         return isActive;
+    }
+
+    /** Returns true when a recipe is matched but at least one output tank is full. */
+    public boolean isStuck() {
+        return isStuck;
     }
 
     /** Returns the client-synced power average in micro-MJ. */
@@ -251,14 +259,15 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
             mjBattery.addPowerChecking(distillPower, false);
             distillPower = 0;
             isActive = false;
+            isStuck = false;
         } else {
             FluidStack reqIn = currentRecipe.in();
             FluidStack outLiquid = currentRecipe.outLiquid();
             FluidStack outGas = currentRecipe.outGas();
 
             FluidResource resIn = tankIn.getResource(0);
-            boolean canExtract = !resIn.isEmpty() 
-                    && resIn.equals(FluidResource.of(reqIn)) 
+            boolean canExtract = !resIn.isEmpty()
+                    && resIn.equals(FluidResource.of(reqIn))
                     && tankIn.getAmountAsInt(0) >= reqIn.getAmount();
 
             boolean canFillLiquid;
@@ -269,6 +278,8 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
             try (Transaction tx = Transaction.openRoot()) {
                 canFillGas = tankGasOut.insert(0, FluidResource.of(outGas), outGas.getAmount(), tx) >= outGas.getAmount();
             }
+
+            isStuck = !canFillLiquid || !canFillGas;
 
             if (canExtract && canFillLiquid && canFillGas) {
                 long max = MAX_MJ_PER_TICK;
@@ -314,12 +325,13 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         int curGas = tankGasOut.getAmountAsInt(0);
         int curLiq = tankLiquidOut.getAmountAsInt(0);
         boolean needsSync = curIn != lastSyncedIn || curGas != lastSyncedGas || curLiq != lastSyncedLiquid
-                || isActive != lastSyncedActive || powerAvgClient != lastSyncedPower;
+                || isActive != lastSyncedActive || isStuck != lastSyncedStuck || powerAvgClient != lastSyncedPower;
         if (needsSync) {
             lastSyncedIn = curIn;
             lastSyncedGas = curGas;
             lastSyncedLiquid = curLiq;
             lastSyncedActive = isActive;
+            lastSyncedStuck = isStuck;
             lastSyncedPower = powerAvgClient;
             setChanged();
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
@@ -394,6 +406,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         output.putLong("mjStored", mjBattery.getStored());
         output.putLong("distillPower", distillPower);
         output.putBoolean("isActive", isActive);
+        output.putBoolean("isStuck", isStuck);
         output.putLong("powerAvgClient", powerAvgClient);
         output.store("containerSlots", net.minecraft.nbt.CompoundTag.CODEC, containerSlots.serializeNBT());
     }
@@ -401,20 +414,33 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
     @Override
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
-        FluidStack in = input.read("fluidIn", FluidStack.CODEC).orElse(FluidStack.EMPTY);
-        FluidStack gas = input.read("fluidGasOut", FluidStack.CODEC).orElse(FluidStack.EMPTY);
-        FluidStack liq = input.read("fluidLiquidOut", FluidStack.CODEC).orElse(FluidStack.EMPTY);
-        try (Transaction tx = Transaction.openRoot()) {
-            if (!in.isEmpty()) tankIn.insert(0, FluidResource.of(in), in.getAmount(), tx);
-            if (!gas.isEmpty()) tankGasOut.insert(0, FluidResource.of(gas), gas.getAmount(), tx);
-            if (!liq.isEmpty()) tankLiquidOut.insert(0, FluidResource.of(liq), liq.getAmount(), tx);
-            tx.commit();
-        }
+        loadTank(tankIn, input, "fluidIn");
+        loadTank(tankGasOut, input, "fluidGasOut");
+        loadTank(tankLiquidOut, input, "fluidLiquidOut");
         mjBattery.addPowerChecking(input.getLongOr("mjStored", 0L), false);
         distillPower = input.getLongOr("distillPower", 0L);
         isActive = input.getBooleanOr("isActive", false);
+        isStuck = input.getBooleanOr("isStuck", false);
         powerAvgClient = input.getLongOr("powerAvgClient", 0L);
         containerSlots.deserializeNBT(input.read("containerSlots", net.minecraft.nbt.CompoundTag.CODEC).orElseGet(net.minecraft.nbt.CompoundTag::new));
+    }
+
+    /**
+     * Reads a fluid stack from {@code input} under {@code key} and writes it directly into
+     * {@code tank} via {@link FluidStacksResourceHandler#set}. <em>Always</em> writes — when
+     * the key is absent (saveAdditional only stores non-empty tanks) the tank is forced to
+     * empty. Without this, a client whose tank previously held fluid would never see a server
+     * drain reflected: the {@code getUpdateTag} → {@code loadAdditional} round-trip omits the
+     * key for an empty server-side tank, so {@code insert()} (which adds to existing contents)
+     * leaves stale client values in place forever.
+     */
+    private static void loadTank(FluidStacksResourceHandler tank, ValueInput input, String key) {
+        FluidStack fluid = input.read(key, FluidStack.CODEC).orElse(FluidStack.EMPTY);
+        if (fluid.isEmpty()) {
+            tank.set(0, FluidResource.EMPTY, 0);
+        } else {
+            tank.set(0, FluidResource.of(fluid), fluid.getAmount());
+        }
     }
 
     // --- Network Sync ---

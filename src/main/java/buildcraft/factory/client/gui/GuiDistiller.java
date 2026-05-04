@@ -32,6 +32,19 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     private static final int SIZE_X = 176, SIZE_Y = 161;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
 
+    // Tank gauge overlays drawn over the fluid colour. Sourced from the spare regions
+    // below the main 176x161 GUI window.
+    private static final GuiIcon OVERLAY_VERTICAL = new GuiIcon(TEXTURE, 0, 161, 16, 38);
+    private static final GuiIcon OVERLAY_HORIZONTAL = new GuiIcon(TEXTURE, 17, 161, 34, 17);
+
+    // Center pipe-schematic overlays drawn at GUI (61,12), 36x57. The "stuck" variant
+    // is shown when a recipe is matched but at least one output tank is full; the
+    // "running" variant is shown while distillation is actively consuming power.
+    private static final int CENTER_DST_X = 61, CENTER_DST_Y = 12;
+    private static final int CENTER_W = 36, CENTER_H = 57;
+    private static final GuiIcon OVERLAY_STUCK = new GuiIcon(TEXTURE, 176, 0, CENTER_W, CENTER_H);
+    private static final GuiIcon OVERLAY_RUNNING = new GuiIcon(TEXTURE, 212, 0, CENTER_W, CENTER_H);
+
     // Tank positions (matching the 1.12.2 GUI layout)
     // Input tank: x=44, y=23, 16x38
     private static final int TANK_IN_X = 44, TANK_IN_Y = 23;
@@ -57,21 +70,21 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
                 new GuiRectangle(TANK_IN_X, TANK_IN_Y, TANK_IN_W, TANK_IN_H).offset(mainGui.rootElement),
                 menu.tile.getTankIn(),
                 menu.widgetTankIn,
-                null
+                OVERLAY_VERTICAL
             ));
             mainGui.shownElements.add(new GuiElementFluidTank(
                 mainGui,
                 new GuiRectangle(TANK_GAS_X, TANK_GAS_Y, TANK_GAS_W, TANK_GAS_H).offset(mainGui.rootElement),
                 menu.tile.getTankGasOut(),
                 menu.widgetTankGasOut,
-                null
+                OVERLAY_HORIZONTAL
             ));
             mainGui.shownElements.add(new GuiElementFluidTank(
                 mainGui,
                 new GuiRectangle(TANK_LIQ_X, TANK_LIQ_Y, TANK_LIQ_W, TANK_LIQ_H).offset(mainGui.rootElement),
                 menu.tile.getTankLiquidOut(),
                 menu.widgetTankLiquidOut,
-                null
+                OVERLAY_HORIZONTAL
             ));
         }
     }
@@ -93,12 +106,31 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
         super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
+        drawCenterStateOverlay();
         renderTankTooltip(graphics, mouseX, mouseY, menu.tile != null ? menu.tile.getTankIn() : null,
                 TANK_IN_X, TANK_IN_Y, TANK_IN_W, TANK_IN_H);
         renderTankTooltip(graphics, mouseX, mouseY, menu.tile != null ? menu.tile.getTankGasOut() : null,
                 TANK_GAS_X, TANK_GAS_Y, TANK_GAS_W, TANK_GAS_H);
         renderTankTooltip(graphics, mouseX, mouseY, menu.tile != null ? menu.tile.getTankLiquidOut() : null,
                 TANK_LIQ_X, TANK_LIQ_Y, TANK_LIQ_W, TANK_LIQ_H);
+    }
+
+    /**
+     * Draws the center pipe-schematic overlay reflecting tile state. The bright/animated
+     * variant is drawn while the distiller is actively consuming power; the dim variant
+     * is drawn when a recipe is matched but at least one output tank is full.
+     */
+    private void drawCenterStateOverlay() {
+        if (menu.tile == null) return;
+        GuiIcon overlay = null;
+        if (menu.tile.isActive()) {
+            overlay = OVERLAY_RUNNING;
+        } else if (menu.tile.isStuck()) {
+            overlay = OVERLAY_STUCK;
+        }
+        if (overlay != null) {
+            overlay.drawAt(leftPos + CENTER_DST_X, topPos + CENTER_DST_Y);
+        }
     }
 
     private void renderTankTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY,

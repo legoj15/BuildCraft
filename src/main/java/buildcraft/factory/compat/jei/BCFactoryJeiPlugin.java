@@ -22,6 +22,7 @@ import net.minecraft.resources.Identifier;
 
 import buildcraft.api.recipes.BuildcraftRecipeRegistry;
 import buildcraft.api.recipes.IRefineryRecipeManager.ICoolableRecipe;
+import buildcraft.api.recipes.IRefineryRecipeManager.IDistillationRecipe;
 import buildcraft.api.recipes.IRefineryRecipeManager.IHeatableRecipe;
 import buildcraft.factory.BCFactoryItems;
 import buildcraft.factory.BCFactoryMenuTypes;
@@ -33,9 +34,10 @@ import buildcraft.lib.compat.jei.BlueprintTransferHandler;
 /**
  * JEI integration plugin for BuildCraft Factory.
  * Registers the Auto Workbench as a crafting station with recipe transfer
- * support and a clickable progress bar, and surfaces every valid heat
- * exchanger pairing as its own recipe entry under a single category whose
- * layout mirrors the in-world GUI.
+ * support and a clickable progress bar, surfaces every valid heat exchanger
+ * pairing as its own recipe entry, and surfaces every distillation recipe
+ * (including its MJ cost). Both refinery categories use a layout that mirrors
+ * the in-world GUI of the corresponding machine.
  */
 @JeiPlugin
 public class BCFactoryJeiPlugin implements IModPlugin {
@@ -50,11 +52,13 @@ public class BCFactoryJeiPlugin implements IModPlugin {
     public void registerCategories(IRecipeCategoryRegistration registration) {
         IGuiHelper guiHelper = registration.getJeiHelpers().getGuiHelper();
         registration.addRecipeCategories(new HeatExchangerCategory(guiHelper));
+        registration.addRecipeCategories(new DistillerCategory(guiHelper));
     }
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
         registration.addRecipes(HeatExchangerRecipeTypes.PAIR, enumerateHeatExchangerPairs());
+        registration.addRecipes(DistillerRecipeTypes.DISTILLER, enumerateDistillationRecipes());
     }
 
     /**
@@ -73,6 +77,24 @@ public class BCFactoryJeiPlugin implements IModPlugin {
             }
         }
         return pairs;
+    }
+
+    /**
+     * Every registered distillation recipe with at least one valid input and
+     * one valid output. The defensive filter guards against config-disabled
+     * fluids slipping into the registry — the runtime would refuse to run
+     * such a recipe anyway, so showing it in JEI would only mislead.
+     */
+    private static List<IDistillationRecipe> enumerateDistillationRecipes() {
+        List<IDistillationRecipe> recipes = new ArrayList<>();
+        for (IDistillationRecipe r : BuildcraftRecipeRegistry.refineryRecipes.getDistillationRegistry().getAllRecipes()) {
+            if (r.in() == null || r.in().isEmpty()) continue;
+            boolean hasGas = r.outGas() != null && !r.outGas().isEmpty();
+            boolean hasLiquid = r.outLiquid() != null && !r.outLiquid().isEmpty();
+            if (!hasGas && !hasLiquid) continue;
+            recipes.add(r);
+        }
+        return recipes;
     }
 
     @Override
@@ -107,5 +129,7 @@ public class BCFactoryJeiPlugin implements IModPlugin {
         registration.addCraftingStation(RecipeTypes.CRAFTING, BCFactoryItems.AUTOWORKBENCH_ITEM.get());
         // Heat Exchanger: catalyst for the paired-recipe category.
         registration.addCraftingStation(HeatExchangerRecipeTypes.PAIR, BCFactoryItems.HEAT_EXCHANGE.get());
+        // Distiller: catalyst for the distillation recipe category.
+        registration.addCraftingStation(DistillerRecipeTypes.DISTILLER, BCFactoryItems.DISTILLER.get());
     }
 }

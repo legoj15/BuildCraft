@@ -105,10 +105,8 @@ public class OilGenerator {
 
     /** Check if the dimension is excluded based on config. */
     private static boolean isDimensionExcluded(ResourceKey<Level> dimKey) {
-        if (BCEnergyConfig.getExcludedDimensions().contains(dimKey.identifier())) {
-            return BCEnergyConfig.excludedDimensionsIsBlackList.get();
-        }
-        return !BCEnergyConfig.excludedDimensionsIsBlackList.get();
+        boolean inList = BCEnergyConfig.getExcludedDimensions().contains(dimKey.identifier());
+        return BCEnergyConfig.dimensionListMode.get() == BCEnergyConfig.ListMode.BLACKLIST ? inList : !inList;
     }
 
     public static List<OilGenStructure> getStructures(Level level, int cx, int cz) {
@@ -129,7 +127,8 @@ public class OilGenerator {
 
         // Do not generate oil in excluded biomes
         boolean isExcludedBiome = BCEnergyConfig.getExcludedBiomes().contains(biomeId);
-        if (isExcludedBiome == BCEnergyConfig.excludedBiomesIsBlackList.get()) {
+        boolean biomeBlacklisted = BCEnergyConfig.biomeListMode.get() == BCEnergyConfig.ListMode.BLACKLIST;
+        if (isExcludedBiome == biomeBlacklisted) {
             if (DEBUG_OILGEN_BASIC & log) {
                 BCLog.logger.info("[energy.oilgen] Not generating oil in chunk " + cx + ", " + cz
                     + " because the biome (" + biomeId + ") is excluded!");
@@ -154,7 +153,7 @@ public class OilGenerator {
 
         double bonus = richBiome ? 1.5 : (oilBiome ? 1.25 : 1.0);
         bonus *= BCEnergyConfig.oilWellGenerationRate.get();
-        if (BCEnergyConfig.getExcessiveBiomes().contains(biomeId)) {
+        if (BCEnergyConfig.getForceExcessiveOilBiomes().contains(biomeId)) {
             bonus *= 30.0;
         }
         final GenType type;

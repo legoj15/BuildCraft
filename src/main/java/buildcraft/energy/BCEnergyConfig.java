@@ -26,15 +26,20 @@ public class BCEnergyConfig {
     public static ModConfigSpec.DoubleValue largeOilGenProb;
 
     public static ModConfigSpec.BooleanValue oilIsSticky;
-    public static ModConfigSpec.BooleanValue enableOilBurn;
 
-    public static ModConfigSpec.ConfigValue<List<? extends String>> excessiveBiomes;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> forceExcessiveOilBiomes;
     public static ModConfigSpec.ConfigValue<List<? extends String>> richSurfaceDepositBiomes;
     public static ModConfigSpec.ConfigValue<List<? extends String>> surfaceDepositBiomes;
     public static ModConfigSpec.ConfigValue<List<? extends String>> excludedBiomes;
-    public static ModConfigSpec.BooleanValue excludedBiomesIsBlackList;
+    public static ModConfigSpec.EnumValue<ListMode> biomeListMode;
     public static ModConfigSpec.ConfigValue<List<? extends String>> excludedDimensions;
-    public static ModConfigSpec.BooleanValue excludedDimensionsIsBlackList;
+    public static ModConfigSpec.EnumValue<ListMode> dimensionListMode;
+
+    /** Polarity for the excludedBiomes / excludedDimensions lists. */
+    public enum ListMode {
+        BLACKLIST,
+        WHITELIST
+    }
 
     public static ModConfigSpec.BooleanValue useRfNaming;
 
@@ -49,7 +54,8 @@ public class BCEnergyConfig {
                 .comment("Multiplier for oil well generation rate")
                 .defineInRange("oilWellGenerationRate", 1.0, 0.0, 100.0);
 
-        enableOilBurn = builder.define("enableOilBurn", true);
+        // enableOilBurn removed — oil flammability isn't implemented in 26.1.1's fluid registration
+        // (BCEnergyFluids ignores it). Re-add when oil burn behaviour is ported.
 
         builder.push("spouts");
 
@@ -57,26 +63,46 @@ public class BCEnergyConfig {
                 .comment("Set true to enable oil spouts generating")
                 .define("enableOilSpouts", true);
 
-        smallSpoutMinHeight = builder.defineInRange("smallSpoutMinHeight", 6, 0, 256);
-        smallSpoutMaxHeight = builder.defineInRange("smallSpoutMaxHeight", 12, 0, 256);
-        largeSpoutMinHeight = builder.defineInRange("largeSpoutMinHeight", 10, 0, 256);
-        largeSpoutMaxHeight = builder.defineInRange("largeSpoutMaxHeight", 20, 0, 256);
+        smallSpoutMinHeight = builder
+                .comment("Minimum height (in blocks) for small oil spouts")
+                .defineInRange("smallSpoutMinHeight", 6, -64, 320);
+        smallSpoutMaxHeight = builder
+                .comment("Maximum height (in blocks) for small oil spouts")
+                .defineInRange("smallSpoutMaxHeight", 12, -64, 320);
+        largeSpoutMinHeight = builder
+                .comment("Minimum height (in blocks) for large oil spouts")
+                .defineInRange("largeSpoutMinHeight", 10, -64, 320);
+        largeSpoutMaxHeight = builder
+                .comment("Maximum height (in blocks) for large oil spouts")
+                .defineInRange("largeSpoutMaxHeight", 20, -64, 320);
 
         builder.pop();
-        builder.push("spawn_probability");
+        builder.push("spawnProbability");
 
-        smallOilGenProb = builder.defineInRange("smallOilGenProb", 0.5 / 100, 0.0, 1.0);
-        mediumOilGenProb = builder.defineInRange("mediumOilGenProb", 0.1 / 100, 0.0, 1.0);
-        largeOilGenProb = builder.defineInRange("largeOilGenProb", 0.04 / 100, 0.0, 1.0);
+        smallOilGenProb = builder
+                .comment("Per-chunk probability (0..1) of rolling a small oil deposit. Default 0.005 = 0.5%.")
+                .defineInRange("smallOilGenProb", 0.5 / 100, 0.0, 1.0);
+        mediumOilGenProb = builder
+                .comment("Per-chunk probability (0..1) of rolling a medium oil deposit. Default 0.001 = 0.1%.")
+                .defineInRange("mediumOilGenProb", 0.1 / 100, 0.0, 1.0);
+        largeOilGenProb = builder
+                .comment("Per-chunk probability (0..1) of rolling a large oil deposit. Default 0.0004 = 0.04%.")
+                .defineInRange("largeOilGenProb", 0.04 / 100, 0.0, 1.0);
 
         builder.pop();
 
-        excessiveBiomes = builder.defineListAllowEmpty(
-                "excessiveBiomes",
-                List.of(),
-                () -> "",
-                s -> s instanceof String
-        );
+        forceExcessiveOilBiomes = builder
+                .comment(
+                        "Biome IDs that should always receive a 30x oil bonus (small/medium/large rolls all multiplied).",
+                        "Originally targeted BuildCraft's own oil_desert/oil_ocean biomes (which no longer exist);",
+                        "can now be used to force vanilla or modded biomes to gush oil. Empty by default."
+                )
+                .defineListAllowEmpty(
+                        "forceExcessiveOilBiomes",
+                        List.of(),
+                        () -> "",
+                        s -> s instanceof String
+                );
 
         // Richest oil tier: largest LAKE-style surface tendrils are gated to these biomes,
         // and they receive the highest bonus multiplier. By default this is deep oceans plus
@@ -105,36 +131,58 @@ public class BCEnergyConfig {
                 s -> s instanceof String
         );
 
-        excludedBiomes = builder.defineListAllowEmpty(
-                "excludedBiomes",
-                List.of("minecraft:the_void"),
-                () -> "",
-                s -> s instanceof String
-        );
+        excludedBiomes = builder
+                .comment("Biome IDs that participate in the include/exclude check below. See biomeListMode.")
+                .defineListAllowEmpty(
+                        "excludedBiomes",
+                        List.of("minecraft:the_void"),
+                        () -> "",
+                        s -> s instanceof String
+                );
 
-        excludedBiomesIsBlackList = builder.define("excludedBiomesIsBlackList", true);
+        biomeListMode = builder
+                .comment(
+                        "BLACKLIST: oil never generates in biomes from the excludedBiomes list.",
+                        "WHITELIST: oil only generates in biomes from the excludedBiomes list."
+                )
+                .defineEnum("biomeListMode", ListMode.BLACKLIST);
 
-        excludedDimensions = builder.defineListAllowEmpty(
-                "excludedDimensions",
-                List.of("minecraft:the_nether", "minecraft:the_end"),
-                () -> "",
-                s -> s instanceof String
-        );
+        excludedDimensions = builder
+                .comment("Dimension IDs that participate in the include/exclude check below. See dimensionListMode.")
+                .defineListAllowEmpty(
+                        "excludedDimensions",
+                        List.of("minecraft:the_nether", "minecraft:the_end"),
+                        () -> "",
+                        s -> s instanceof String
+                );
 
-        excludedDimensionsIsBlackList = builder.define("excludedDimensionsIsBlackList", true);
+        dimensionListMode = builder
+                .comment(
+                        "BLACKLIST: oil never generates in dimensions from the excludedDimensions list.",
+                        "WHITELIST: oil only generates in dimensions from the excludedDimensions list."
+                )
+                .defineEnum("dimensionListMode", ListMode.BLACKLIST);
+
+        oilIsSticky = builder
+                .comment("If true, oil source blocks slow down entities standing or moving through them")
+                .define("oilIsSticky", false);
 
         builder.pop();
     }
 
     public static void buildGeneral(ModConfigSpec.Builder builder) {
-        oilIsSticky = builder.define("oilIsSticky", false);
+        // No general-section options remain in BCEnergy — oilIsSticky moved to worldgen.oil,
+        // useRfNaming moved to display.
+    }
+
+    public static void buildDisplay(ModConfigSpec.Builder builder) {
         useRfNaming = builder
                 .comment("If true, use the classic 'Redstone Flux' (RF) names instead of 'Forge Energy' (FE)")
                 .define("useRfNaming", true);
     }
 
-    public static Set<Identifier> getExcessiveBiomes() {
-        return excessiveBiomes.get().stream().map(Identifier::parse).collect(Collectors.toSet());
+    public static Set<Identifier> getForceExcessiveOilBiomes() {
+        return forceExcessiveOilBiomes.get().stream().map(Identifier::parse).collect(Collectors.toSet());
     }
 
     public static Set<Identifier> getSurfaceDepositBiomes() {

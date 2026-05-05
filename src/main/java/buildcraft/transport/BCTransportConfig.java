@@ -36,11 +36,11 @@ public class BCTransportConfig {
     public static ModConfigSpec.IntValue baseFlowRate;
 
     public static void buildGeneral(ModConfigSpec.Builder builder) {
+        builder.push("pipes");
+
         disableRfPipe = builder
                 .comment("Set true to disable the RF pipe")
                 .define("disableRfPipe", false);
-
-        builder.push("pipes");
 
         mjPerItem = builder
                 .comment("MJ cost per item extracted by a wooden pipe. Default: 1 MJ (= 1,000,000 µMJ).")

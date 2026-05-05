@@ -4,15 +4,19 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class BCCoreConfig {
 
+    // TODO: wire as global worldgen kill switch over BCCoreWorldGen / BCEnergyWorldGen
     public static ModConfigSpec.BooleanValue worldGen;
-    public static ModConfigSpec.BooleanValue worldGenWaterSpring;
+    // TODO: wire into TileQuarry / TileMiner break-block path; respects player-protection mods
     public static ModConfigSpec.BooleanValue minePlayerProtected;
+    // TODO: wire into tile GUIs to hide MJ/MJ-rate readouts
     public static ModConfigSpec.BooleanValue hidePower;
+    // TODO: wire into tile GUIs to hide mB/mB-rate readouts
     public static ModConfigSpec.BooleanValue hideFluid;
     public static ModConfigSpec.BooleanValue pumpsConsumeWater;
     public static ModConfigSpec.IntValue markerMaxDistance;
     public static ModConfigSpec.IntValue pumpMaxDistance;
     public static ModConfigSpec.IntValue networkUpdateRate;
+    // TODO: thread into mining-tile MJ-per-block math (TileQuarry, TileMiner, TileMiningWell)
     public static ModConfigSpec.DoubleValue miningMultiplier;
     public static ModConfigSpec.IntValue miningMaxDepth;
 
@@ -61,8 +65,7 @@ public class BCCoreConfig {
                 .comment("Set true to allow world generation for BuildCraft")
                 .define("worldGen", true);
 
-        worldGenWaterSpring = builder
-                .comment("Set true to allow water springs to generate")
-                .define("worldGenWaterSpring", true);
+        // worldGenWaterSpring removed — there are no water springs in 26.1.1.
+        // Re-add when/if springs come back.
     }
 }

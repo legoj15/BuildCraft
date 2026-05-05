@@ -301,8 +301,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                     break;
             }
         }
-        if (max.getY() - min.getY() < BCBuildersConfig.QUARRY_FRAME_MIN_HEIGHT.get()) {
-            max = new BlockPos(max.getX(), min.getY() + BCBuildersConfig.QUARRY_FRAME_MIN_HEIGHT.get(), max.getZ());
+        if (max.getY() - min.getY() < BCBuildersConfig.quarryFrameMinHeight.get()) {
+            max = new BlockPos(max.getX(), min.getY() + BCBuildersConfig.quarryFrameMinHeight.get(), max.getZ());
         }
         if (level.isOutsideBuildHeight(max)) {
             int dist = max.getY() - min.getY();
@@ -497,14 +497,14 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         blockPercentSoFar = 0;
         moveDistanceSoFar = 0;
 
-        int maxTasks = Math.max(1, (int) (max * BCBuildersConfig.QUARRY_MAX_TASKS_PER_TICK.get() / MAX_POWER_PER_TICK));
+        int maxTasks = Math.max(1, (int) (max * BCBuildersConfig.quarryMaxTasksPerTick.get() / MAX_POWER_PER_TICK));
         boolean sendUpdate = false;
         power_loop: for (int i = 0; i < maxTasks; i++) {
 
             if (currentTask != null) {
                 long needed = currentTask.getRequiredPowerThisTick();
                 long added;
-                final int mult = BCBuildersConfig.QUARRY_TASK_POWER_DIVISOR.get();
+                final int mult = BCBuildersConfig.quarryTaskPowerDivisor.get();
                 if (mult > 0) {
                     long nNeeded = needed * (mult + i) / mult;
                     long leftover = (needed * (mult + i)) % mult;
@@ -1021,7 +1021,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         public long getRequiredPowerThisTick() {
             long target = getTarget();
             long req = Math.max(0, target - power);
-            double rate = BCBuildersConfig.QUARRY_MAX_BLOCK_MINE_RATE.get();
+            double rate = BCBuildersConfig.quarryMaxBlockMineRate.get();
             if (rate < 0.1) {
                 return req;
             }
@@ -1132,7 +1132,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         public long getRequiredPowerThisTick() {
             long req = Math.max(0, getTarget() - power);
 
-            double max = BCBuildersConfig.QUARRY_MAX_FRAME_MOVE_SPEED.get();
+            double max = BCBuildersConfig.quarryMaxFrameMoveSpeed.get();
             if (max < 0.1) {
                 return req;
             }

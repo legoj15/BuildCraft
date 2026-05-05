@@ -26,10 +26,8 @@ public class BCUnifiedConfig {
         buildcraft.builders.BCBuildersConfig.buildGeneral(builder);
         builder.pop();
 
-        builder.push("display");
-        BCCoreConfig.buildDisplay(builder);
-        buildcraft.transport.BCTransportConfig.buildDisplay(builder);
-        builder.pop();
+        // display.* moved to BCUnifiedClientConfig (CLIENT scope) — per-player UI prefs
+        // should not be server-authoritative.
 
         builder.push("worldgen");
         BCCoreConfig.buildWorldgen(builder);

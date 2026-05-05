@@ -6,6 +6,9 @@ import net.neoforged.neoforge.common.NeoForge;
 
 public class BCCoreClient {
     public static void init(ModContainer modContainer, IEventBus modEventBus) {
+        // Per-player display preferences — registered client-side only so each client owns its own copy.
+        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, BCUnifiedClientConfig.SPEC);
+
         modContainer.registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
                 net.neoforged.neoforge.client.gui.ConfigurationScreen::new);
 

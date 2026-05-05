@@ -8,10 +8,13 @@ import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.core.BCCore;
 import buildcraft.core.BCCoreItems;
+import buildcraft.core.item.ItemFragileFluidContainer;
 import buildcraft.lib.gui.GuiBC8;
 
 /**
@@ -36,6 +39,24 @@ public class BCCoreJeiPlugin implements IModPlugin {
         registration.registerFromDataComponentTypes(
                 BCCoreItems.PAINTBRUSH.get(),
                 BCCore.BRUSH_COLOR.get()
+        );
+
+        // Differentiate fragile fluid shards by their stored fluid type, but
+        // ignore the mB amount in the FLUID_CONTENT component. registerFromDataComponentTypes
+        // would key on the whole SimpleFluidContent (including amount), so a 250 mB
+        // and 500 mB water shard would hash to different ingredients and the recipe
+        // alias (a 500 mB shard, see FluidContainerAliases) would only match
+        // exactly-full shards. Keying on the fluid resource location alone keeps
+        // alias matching robust regardless of how full the player's shard is.
+        registration.registerSubtypeInterpreter(
+                BCCoreItems.FRAGILE_FLUID_CONTAINER.get(),
+                (stack, context) -> {
+                    FluidStack fluid = ItemFragileFluidContainer.getFluid(stack);
+                    if (fluid.isEmpty()) {
+                        return null;
+                    }
+                    return BuiltInRegistries.FLUID.getKey(fluid.getFluid());
+                }
         );
     }
 

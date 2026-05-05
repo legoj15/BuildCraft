@@ -16,13 +16,12 @@ import mezz.jei.api.recipe.category.AbstractRecipeCategory;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.recipes.IRefineryRecipeManager.ICoolableRecipe;
 import buildcraft.api.recipes.IRefineryRecipeManager.IHeatableRecipe;
 import buildcraft.factory.BCFactoryItems;
+import buildcraft.lib.compat.jei.FluidContainerAliases;
 
 /**
  * Single JEI category for the heat exchanger. Each entry is a complete
@@ -90,14 +89,14 @@ public class HeatExchangerCategory extends AbstractRecipeCategory<HeatExchangerR
             builder.addInputSlot(START_IN_X, START_IN_Y)
                     .setFluidRenderer(hIn.getAmount(), false, START_IN_W, START_IN_H)
                     .add(hIn.getFluid(), hIn.getAmount(), hIn.getComponentsPatch());
-            addBucketAlias(builder, hIn, RecipeIngredientRole.INPUT);
+            FluidContainerAliases.addAliases(builder, hIn, RecipeIngredientRole.INPUT);
         }
         FluidStack cIn = coolable.in();
         if (!cIn.isEmpty()) {
             builder.addInputSlot(END_IN_X, END_IN_Y)
                     .setFluidRenderer(cIn.getAmount(), false, END_IN_W, END_IN_H)
                     .add(cIn.getFluid(), cIn.getAmount(), cIn.getComponentsPatch());
-            addBucketAlias(builder, cIn, RecipeIngredientRole.INPUT);
+            FluidContainerAliases.addAliases(builder, cIn, RecipeIngredientRole.INPUT);
         }
 
         // Outputs cross diagonally — matches TileHeatExchange.craft() (c_out =
@@ -109,28 +108,14 @@ public class HeatExchangerCategory extends AbstractRecipeCategory<HeatExchangerR
             builder.addOutputSlot(END_OUT_X, END_OUT_Y)
                     .setFluidRenderer(hOut.getAmount(), false, END_OUT_W, END_OUT_H)
                     .add(hOut.getFluid(), hOut.getAmount(), hOut.getComponentsPatch());
-            addBucketAlias(builder, hOut, RecipeIngredientRole.OUTPUT);
+            FluidContainerAliases.addAliases(builder, hOut, RecipeIngredientRole.OUTPUT);
         }
         FluidStack cOut = coolable.out();
         if (cOut != null && !cOut.isEmpty()) {
             builder.addOutputSlot(START_OUT_X, START_OUT_Y)
                     .setFluidRenderer(cOut.getAmount(), false, START_OUT_W, START_OUT_H)
                     .add(cOut.getFluid(), cOut.getAmount(), cOut.getComponentsPatch());
-            addBucketAlias(builder, cOut, RecipeIngredientRole.OUTPUT);
-        }
-    }
-
-    /**
-     * Register the fluid's bucket item as an invisible lookup ingredient with
-     * the same role as the fluid slot. The recipe view stays clean (the bucket
-     * isn't drawn — the fluid renderer keeps its tank shape), but pressing R/U
-     * on a bucket of cool oil now surfaces this recipe alongside the bare-fluid
-     * lookup, which matches what a survival-mode player actually has in hand.
-     */
-    private static void addBucketAlias(IRecipeLayoutBuilder builder, FluidStack stack, RecipeIngredientRole role) {
-        Item bucket = stack.getFluid().getBucket();
-        if (bucket != null && bucket != Items.AIR) {
-            builder.addInvisibleIngredients(role).add(bucket);
+            FluidContainerAliases.addAliases(builder, cOut, RecipeIngredientRole.OUTPUT);
         }
     }
 }

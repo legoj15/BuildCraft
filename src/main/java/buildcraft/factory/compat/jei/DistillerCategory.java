@@ -18,13 +18,12 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.recipes.IRefineryRecipeManager.IDistillationRecipe;
 import buildcraft.factory.BCFactoryItems;
+import buildcraft.lib.compat.jei.FluidContainerAliases;
 
 /**
  * Single JEI category for the distiller. Each registered
@@ -102,35 +101,21 @@ public class DistillerCategory extends AbstractRecipeCategory<IDistillationRecip
             builder.addInputSlot(TANK_IN_X, TANK_IN_Y)
                     .setFluidRenderer(in.getAmount(), false, TANK_IN_W, TANK_IN_H)
                     .add(in.getFluid(), in.getAmount(), in.getComponentsPatch());
-            addBucketAlias(builder, in, RecipeIngredientRole.INPUT);
+            FluidContainerAliases.addAliases(builder, in, RecipeIngredientRole.INPUT);
         }
         FluidStack outGas = recipe.outGas();
         if (outGas != null && !outGas.isEmpty()) {
             builder.addOutputSlot(TANK_GAS_X, TANK_GAS_Y)
                     .setFluidRenderer(outGas.getAmount(), false, TANK_GAS_W, TANK_GAS_H)
                     .add(outGas.getFluid(), outGas.getAmount(), outGas.getComponentsPatch());
-            addBucketAlias(builder, outGas, RecipeIngredientRole.OUTPUT);
+            FluidContainerAliases.addAliases(builder, outGas, RecipeIngredientRole.OUTPUT);
         }
         FluidStack outLiquid = recipe.outLiquid();
         if (outLiquid != null && !outLiquid.isEmpty()) {
             builder.addOutputSlot(TANK_LIQ_X, TANK_LIQ_Y)
                     .setFluidRenderer(outLiquid.getAmount(), false, TANK_LIQ_W, TANK_LIQ_H)
                     .add(outLiquid.getFluid(), outLiquid.getAmount(), outLiquid.getComponentsPatch());
-            addBucketAlias(builder, outLiquid, RecipeIngredientRole.OUTPUT);
-        }
-    }
-
-    /**
-     * Register the fluid's bucket item as an invisible lookup ingredient with
-     * the same role as the fluid slot. The recipe view stays clean (the bucket
-     * isn't drawn — the fluid renderer keeps its tank shape), but pressing R/U
-     * on a bucket of the fluid now surfaces this recipe alongside the bare-fluid
-     * lookup, which matches what a survival-mode player actually has in hand.
-     */
-    private static void addBucketAlias(IRecipeLayoutBuilder builder, FluidStack stack, RecipeIngredientRole role) {
-        Item bucket = stack.getFluid().getBucket();
-        if (bucket != null && bucket != Items.AIR) {
-            builder.addInvisibleIngredients(role).add(bucket);
+            FluidContainerAliases.addAliases(builder, outLiquid, RecipeIngredientRole.OUTPUT);
         }
     }
 }

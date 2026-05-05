@@ -33,7 +33,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.core.NonNullList;
 
 
+import buildcraft.api.blocks.ICustomRotationHandler;
 import buildcraft.api.items.FluidItemDrops;
+import buildcraft.api.tools.IToolWrench;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileDistiller_BC8;
 import buildcraft.lib.misc.FluidUtilBC;
@@ -43,7 +45,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  * (output down) products using MJ power.
  * Ported from 1.12.2 BlockDistiller.
  */
-public class BlockDistiller extends BaseEntityBlock {
+public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHandler {
     public static final MapCodec<BlockDistiller> CODEC = simpleCodec(BlockDistiller::new);
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
@@ -93,17 +95,33 @@ public class BlockDistiller extends BaseEntityBlock {
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
+        // Wrenches handle rotation via ICustomRotationHandler — fall through to
+        // ItemWrench_Neptune.useOn() so the slide sound and advancement still fire.
+        if (stack.getItem() instanceof IToolWrench) {
+            return InteractionResult.PASS;
+        }
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TileDistiller_BC8 distiller)) {
             return InteractionResult.PASS;
         }
-        // 1.12.2 behaviour: TileBC_Neptune.onActivated ignores the hit face and
-        // calls tankManager.onActivated, which tries every tank in order.
-        // Only tankIn accepts fill (the output tanks have canFill=false), so
-        // bucket interaction always targets the input tank regardless of which
-        // face the player clicks.
+        // 1.12.2 behaviour: TileBC_Neptune.onActivated calls tankManager.onActivated,
+        // which iterates the tanks. Each distiller tank is gated:
+        // tankIn rejects external extracts and accepts only distillable inserts,
+        // and the two output tanks reject external inserts. So the bucket "lands"
+        // on whichever tank the held item is compatible with — a distillable bucket
+        // empties into tankIn, an empty bucket fills from gasOut (then liquidOut).
         @SuppressWarnings("removal")
         boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, distiller.getTankIn());
+        if (!didChange) {
+            @SuppressWarnings("removal")
+            boolean drainedGas = FluidUtilBC.onTankActivated(player, pos, hand, distiller.getTankGasOut());
+            didChange = drainedGas;
+        }
+        if (!didChange) {
+            @SuppressWarnings("removal")
+            boolean drainedLiquid = FluidUtilBC.onTankActivated(player, pos, hand, distiller.getTankLiquidOut());
+            didChange = drainedLiquid;
+        }
         if (didChange) {
             return InteractionResult.SUCCESS;
         }
@@ -111,6 +129,23 @@ public class BlockDistiller extends BaseEntityBlock {
         if (!level.isClientSide()) {
             player.openMenu(distiller, pos);
         }
+        return InteractionResult.SUCCESS;
+    }
+
+    // --- ICustomRotationHandler ---
+
+    /**
+     * Called by the wrench's useOn() via CustomRotationHelper.attemptRotateBlock().
+     * Rotates the horizontal facing clockwise (1.12.2 parity: IBlockWithFacing's
+     * EnumFacing.rotateY(), which equals Direction.getClockWise() in 1.21+).
+     */
+    @Override
+    public InteractionResult attemptRotation(Level level, BlockPos pos, BlockState state, Direction sideWrenched) {
+        if (level.isClientSide()) {
+            return InteractionResult.SUCCESS;
+        }
+        Direction current = state.getValue(FACING);
+        level.setBlock(pos, state.setValue(FACING, current.getClockWise()), Block.UPDATE_ALL);
         return InteractionResult.SUCCESS;
     }
 

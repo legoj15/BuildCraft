@@ -151,6 +151,15 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:heat_exchanger_tank_clears_on_empty_load"), () -> buildcraft.factory.HeatExchangerTester::testTankClearsWhenLoadedFromEmptySave);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:heat_exchanger_slot_caps_at_max_stack_size"), () -> buildcraft.factory.HeatExchangerTester::testItemHandlerRespectsConfiguredMaxStackSize);
 
+            // Distiller wrench rotation (1.12.2 parity)
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_wrench_rotates_clockwise"), () -> buildcraft.factory.DistillerTester::testWrenchRotatesClockwise);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_wrench_passes_through_use_item_on"), () -> buildcraft.factory.DistillerTester::testWrenchPassesThroughUseItemOn);
+
+            // Distiller tank gating (1.12.2 setFilter / setCanDrain / setCanFill parity)
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_input_rejects_non_distillable"), () -> buildcraft.factory.DistillerTester::testInputTankRejectsNonDistillableInsert);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_input_blocks_external_extract"), () -> buildcraft.factory.DistillerTester::testInputTankBlocksExternalExtract);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_output_rejects_external_insert"), () -> buildcraft.factory.DistillerTester::testOutputTanksRejectExternalInsertButAcceptInternal);
+
             // Electronic Library
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:library_slot_filtering"), () -> buildcraft.builders.ElectronicLibraryTester::testSlotFiltering);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:library_download_cycle"), () -> buildcraft.builders.ElectronicLibraryTester::testDownloadCycle);

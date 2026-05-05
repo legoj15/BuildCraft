@@ -29,6 +29,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
@@ -52,9 +53,9 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
 
     public static final long MAX_MJ_PER_TICK = 6 * MjAPI.MJ;
 
-    private final FluidStacksResourceHandler tankIn = new FluidStacksResourceHandler(1, 4000);
-    private final FluidStacksResourceHandler tankGasOut = new FluidStacksResourceHandler(1, 4000);
-    private final FluidStacksResourceHandler tankLiquidOut = new FluidStacksResourceHandler(1, 4000);
+    private final InputTank tankIn = new InputTank();
+    private final OutputTank tankGasOut = new OutputTank();
+    private final OutputTank tankLiquidOut = new OutputTank();
 
     private final MjBattery mjBattery = new MjBattery(1024 * MjAPI.MJ);
     private final IMjReceiver mjReceiver = new MjBatteryReceiver(mjBattery);
@@ -101,15 +102,15 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
 
     // --- Accessors ---
 
-    public FluidStacksResourceHandler getTankIn() {
+    public InputTank getTankIn() {
         return tankIn;
     }
 
-    public FluidStacksResourceHandler getTankGasOut() {
+    public OutputTank getTankGasOut() {
         return tankGasOut;
     }
 
-    public FluidStacksResourceHandler getTankLiquidOut() {
+    public OutputTank getTankLiquidOut() {
         return tankLiquidOut;
     }
 
@@ -272,11 +273,11 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
 
             boolean canFillLiquid;
             try (Transaction tx = Transaction.openRoot()) {
-                canFillLiquid = tankLiquidOut.insert(0, FluidResource.of(outLiquid), outLiquid.getAmount(), tx) >= outLiquid.getAmount();
+                canFillLiquid = tankLiquidOut.insertInternal(0, FluidResource.of(outLiquid), outLiquid.getAmount(), tx) >= outLiquid.getAmount();
             }
             boolean canFillGas;
             try (Transaction tx = Transaction.openRoot()) {
-                canFillGas = tankGasOut.insert(0, FluidResource.of(outGas), outGas.getAmount(), tx) >= outGas.getAmount();
+                canFillGas = tankGasOut.insertInternal(0, FluidResource.of(outGas), outGas.getAmount(), tx) >= outGas.getAmount();
             }
 
             isStuck = !canFillLiquid || !canFillGas;
@@ -296,9 +297,9 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
                     isActive = true;
                     distillPower -= powerReq;
                     try (Transaction tx = Transaction.openRoot()) {
-                        tankIn.extract(0, FluidResource.of(reqIn), reqIn.getAmount(), tx);
-                        tankGasOut.insert(0, FluidResource.of(outGas), outGas.getAmount(), tx);
-                        tankLiquidOut.insert(0, FluidResource.of(outLiquid), outLiquid.getAmount(), tx);
+                        tankIn.extractInternal(0, FluidResource.of(reqIn), reqIn.getAmount(), tx);
+                        tankGasOut.insertInternal(0, FluidResource.of(outGas), outGas.getAmount(), tx);
+                        tankLiquidOut.insertInternal(0, FluidResource.of(outLiquid), outLiquid.getAmount(), tx);
                         tx.commit();
                     }
                 }
@@ -453,6 +454,76 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    /**
+     * Input tank that gates external interactions to match 1.12.2's
+     * {@code tankIn.setFilter(isDistillableFluid)} + {@code setCanDrain(false)}:
+     * external {@code insert} accepts only fluids with a registered distillation
+     * recipe, and external {@code extract} returns 0 outright. The serverTick craft
+     * loop drains the tank via {@link #extractInternal}, which flips a guard for the
+     * duration of one {@code super.extract} call so recipes still consume input.
+     * NBT load uses {@code set()} directly to bypass both gates (saved fluid is
+     * trusted, and the recipe registry may not be ready during early chunk load).
+     */
+    public class InputTank extends FluidStacksResourceHandler {
+        private boolean internalExtract = false;
+
+        public InputTank() {
+            super(1, 4000);
+        }
+
+        @Override
+        public boolean isValid(int index, FluidResource resource) {
+            // Accept anything during initial registry load (when distillation
+            // registry may be empty) — set() bypasses this anyway, but keep the
+            // check robust against simulated capability checks before recipes load.
+            return isDistillableFluid(resource.toStack(1));
+        }
+
+        @Override
+        public int extract(int index, FluidResource resource, int amount, TransactionContext tx) {
+            return internalExtract ? super.extract(index, resource, amount, tx) : 0;
+        }
+
+        public int extractInternal(int index, FluidResource resource, int amount, TransactionContext tx) {
+            internalExtract = true;
+            try {
+                return super.extract(index, resource, amount, tx);
+            } finally {
+                internalExtract = false;
+            }
+        }
+    }
+
+    /**
+     * Output tank that rejects external insertions, matching 1.12.2's
+     * {@code tankOut.setCanFill(false)}. The craft loop fills via
+     * {@link #insertInternal}, which flips a guard for the duration of one
+     * {@code super.insert} call so recipe results still land. External callers
+     * (capability access, bucket right-clicks, GUI tank widget clicks) all funnel
+     * through {@code insert}, which checks {@code isValid} and so is blocked.
+     */
+    public static class OutputTank extends FluidStacksResourceHandler {
+        private boolean internalInsert = false;
+
+        public OutputTank() {
+            super(1, 4000);
+        }
+
+        @Override
+        public boolean isValid(int index, FluidResource resource) {
+            return internalInsert;
+        }
+
+        public int insertInternal(int index, FluidResource resource, int amount, TransactionContext tx) {
+            internalInsert = true;
+            try {
+                return super.insert(index, resource, amount, tx);
+            } finally {
+                internalInsert = false;
+            }
+        }
     }
 }
 

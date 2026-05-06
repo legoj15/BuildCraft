@@ -9,8 +9,11 @@ package buildcraft.silicon.compat.jei;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.constants.RecipeTypes;
+import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
+import mezz.jei.api.registration.IRecipeCategoryRegistration;
+import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.resources.Identifier;
 
@@ -24,7 +27,9 @@ import buildcraft.silicon.gui.GuiAdvancedCraftingTable;
 /**
  * JEI integration plugin for BuildCraft Silicon.
  * Registers the Advanced Crafting Table as a crafting station with recipe
- * transfer support and a clickable progress bar.
+ * transfer support and a clickable progress bar, and surfaces every Assembly
+ * Table recipe via a custom category — facades collapse into a single cycling
+ * entry so JEI's index doesn't explode with thousands of variants.
  */
 @JeiPlugin
 public class BCSiliconJeiPlugin implements IModPlugin {
@@ -33,6 +38,17 @@ public class BCSiliconJeiPlugin implements IModPlugin {
     @Override
     public Identifier getPluginUid() {
         return UID;
+    }
+
+    @Override
+    public void registerCategories(IRecipeCategoryRegistration registration) {
+        IGuiHelper guiHelper = registration.getJeiHelpers().getGuiHelper();
+        registration.addRecipeCategories(new AssemblyTableCategory(guiHelper));
+    }
+
+    @Override
+    public void registerRecipes(IRecipeRegistration registration) {
+        registration.addRecipes(AssemblyRecipeJeiTypes.ASSEMBLY, AssemblyRecipeCollector.collect());
     }
 
     @Override
@@ -83,5 +99,7 @@ public class BCSiliconJeiPlugin implements IModPlugin {
         // Register the Advanced Crafting Table block as a crafting catalyst.
         // Pressing "U" (uses) on it in JEI shows all crafting recipes.
         registration.addCraftingStation(RecipeTypes.CRAFTING, BCSiliconItems.ADVANCED_CRAFTING_TABLE.get());
+        // Assembly Table: catalyst for the assembly category.
+        registration.addCraftingStation(AssemblyRecipeJeiTypes.ASSEMBLY, BCSiliconItems.ASSEMBLY_TABLE.get());
     }
 }

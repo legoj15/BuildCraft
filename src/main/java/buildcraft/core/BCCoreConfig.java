@@ -8,10 +8,6 @@ public class BCCoreConfig {
     public static ModConfigSpec.BooleanValue worldGen;
     // TODO: wire into TileQuarry / TileMiner break-block path; respects player-protection mods
     public static ModConfigSpec.BooleanValue minePlayerProtected;
-    // TODO: wire into tile GUIs to hide MJ/MJ-rate readouts
-    public static ModConfigSpec.BooleanValue hidePower;
-    // TODO: wire into tile GUIs to hide mB/mB-rate readouts
-    public static ModConfigSpec.BooleanValue hideFluid;
     public static ModConfigSpec.BooleanValue pumpsConsumeWater;
     public static ModConfigSpec.IntValue markerMaxDistance;
     public static ModConfigSpec.IntValue pumpMaxDistance;
@@ -48,16 +44,6 @@ public class BCCoreConfig {
         miningMaxDepth = builder
                 .comment("How deep can mining machines dig?")
                 .defineInRange("miningMaxDepth", 512, 1, 2048);
-    }
-
-    public static void buildDisplay(ModConfigSpec.Builder builder) {
-        hidePower = builder
-                .comment("Should power indicators be hidden?")
-                .define("hidePower", false);
-
-        hideFluid = builder
-                .comment("Should fluid indicators be hidden?")
-                .define("hideFluid", false);
     }
 
     public static void buildWorldgen(ModConfigSpec.Builder builder) {

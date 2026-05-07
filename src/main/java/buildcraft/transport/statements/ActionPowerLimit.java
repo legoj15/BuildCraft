@@ -15,7 +15,6 @@ import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.LocaleUtil;
 
 import buildcraft.core.statements.BCStatement;
-import buildcraft.transport.BCTransportConfig;
 import buildcraft.transport.BCTransportPipes;
 import buildcraft.transport.BCTransportSprites;
 import buildcraft.transport.BCTransportStatements;
@@ -70,12 +69,7 @@ public abstract class ActionPowerLimit extends BCStatement implements IActionInt
 
     @Override
     public ISprite getSprite() {
-        SpriteHolder[] sprites;
-        if (BCTransportConfig.powerPipeUseOldMjTexture.get() || !isRf()) {
-            sprites = BCTransportSprites.POWER_LIMIT;
-        } else {
-            sprites = BCTransportSprites.POWER_LIMIT_RF;
-        }
+        SpriteHolder[] sprites = isRf() ? BCTransportSprites.POWER_LIMIT_RF : BCTransportSprites.POWER_LIMIT;
         return sprites[limitShift];
     }
 

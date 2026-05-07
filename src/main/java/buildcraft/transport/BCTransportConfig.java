@@ -18,7 +18,6 @@ import buildcraft.api.transport.pipe.PipeDefinition;
 public class BCTransportConfig {
 
     public static ModConfigSpec.BooleanValue disableRfPipe;
-    public static ModConfigSpec.BooleanValue powerPipeUseOldMjTexture;
 
     /** MJ cost per item extracted by a wooden pipe. Default: 1 MJ (= 1_000_000 µMJ). */
     public static ModConfigSpec.LongValue mjPerItem;
@@ -61,16 +60,6 @@ public class BCTransportConfig {
         baseFlowRate = builder
                 .comment("Base multiplier for fluid pipe transfer rates (mB/t). Default: 10.")
                 .defineInRange("baseFlowRate", 10, 1, 40);
-
-        builder.pop();
-    }
-
-    public static void buildDisplay(ModConfigSpec.Builder builder) {
-        builder.push("pipes");
-
-        powerPipeUseOldMjTexture = builder
-                .comment("Set true to use the old MJ texture for power pipes")
-                .define("powerPipeUseOldMjTexture", false);
 
         builder.pop();
     }

@@ -17,7 +17,6 @@ public class BCUnifiedClientConfig {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
         builder.push("display");
-        buildcraft.transport.BCTransportConfig.buildDisplay(builder);
         buildcraft.energy.BCEnergyConfig.buildDisplay(builder);
         builder.pop();
 

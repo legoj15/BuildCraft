@@ -177,8 +177,20 @@ public class BCEnergyConfig {
 
     public static void buildDisplay(ModConfigSpec.Builder builder) {
         useRfNaming = builder
-                .comment("If true, use the classic 'Redstone Flux' (RF) names instead of 'Forge Energy' (FE)")
-                .define("useRfNaming", true);
+                .comment(
+                        "If true, use the classic 'Redstone Flux' (RF) names instead of 'Forge Energy' (FE).",
+                        "Default is false (FE), matching the modern Forge/NeoForge convention."
+                )
+                .define("useRfNaming", false);
+    }
+
+    /**
+     * Returns the translation key to use given a base (FE-default) key. When the
+     * {@code useRfNaming} toggle is on, returns {@code baseKey + ".rf"} so callers
+     * can pick up the RF-named sibling entry from the lang file.
+     */
+    public static String rfFeKey(String baseKey) {
+        return useRfNaming != null && useRfNaming.get() ? baseKey + ".rf" : baseKey;
     }
 
     public static Set<Identifier> getForceExcessiveOilBiomes() {

@@ -21,13 +21,20 @@ public class BCTooltips {
     public static void onItemTooltip(ItemTooltipEvent event) {
         String key = TOOLTIPS.get(event.getItemStack().getItem());
         if (key != null) {
-            if (net.minecraft.client.resources.language.I18n.exists(key)) {
-                String translated = net.minecraft.client.resources.language.I18n.get(key);
+            // Prefer an RF-naming sibling (key + ".rf") if the user has the toggle on
+            // AND that variant exists in the lang file. Falls back to the base key otherwise.
+            String rfFeKey = buildcraft.energy.BCEnergyConfig.rfFeKey(key);
+            String resolved = !rfFeKey.equals(key)
+                    && net.minecraft.client.resources.language.I18n.exists(rfFeKey)
+                    ? rfFeKey
+                    : key;
+            if (net.minecraft.client.resources.language.I18n.exists(resolved)) {
+                String translated = net.minecraft.client.resources.language.I18n.get(resolved);
                 for (String line : translated.split("\n")) {
                     event.getToolTip().add(Component.literal(line).withStyle(ChatFormatting.GRAY));
                 }
             } else {
-                event.getToolTip().add(Component.translatable(key).withStyle(ChatFormatting.GRAY));
+                event.getToolTip().add(Component.translatable(resolved).withStyle(ChatFormatting.GRAY));
             }
         }
     }

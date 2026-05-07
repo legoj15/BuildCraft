@@ -23,6 +23,7 @@ import buildcraft.api.transport.pipe.IItemPipe;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeDefinition;
 
+import buildcraft.energy.BCEnergyConfig;
 import buildcraft.lib.misc.ColourUtil;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.transport.BCTransportItems;
@@ -48,15 +49,24 @@ public class ItemPipeHolder extends BlockItem implements IItemPipe {
     }
 
     /** Prepends the paint colour name (in matching chat colour) to the item name, e.g.
-     *  "Orange Diamond Kinesis Pipe" with "Orange" rendered in gold — matching 1.12.2. */
+     *  "Orange Diamond Kinesis Pipe" with "Orange" rendered in gold — matching 1.12.2.
+     *  FE pipes (identifier ending in {@code _rf}) also flip between "FE"/"RF" wording
+     *  based on {@link BCEnergyConfig#useRfNaming}; other pipe types are unaffected. */
     @Override
     public Component getName(ItemStack stack) {
+        Component baseName = isFePipe()
+                ? Component.translatable(BCEnergyConfig.rfFeKey(getDescriptionId()))
+                : super.getName(stack);
         DyeColor col = stack.get(BCTransportItems.PIPE_COLOUR.get());
         if (col != null) {
             Component colourName = Component.literal(ColourUtil.getTextFullTooltip(col));
-            return Component.literal("").append(colourName).append(" ").append(super.getName(stack));
+            return Component.literal("").append(colourName).append(" ").append(baseName);
         }
-        return super.getName(stack);
+        return baseName;
+    }
+
+    private boolean isFePipe() {
+        return definition.identifier != null && definition.identifier.endsWith("_rf");
     }
 
     @Override

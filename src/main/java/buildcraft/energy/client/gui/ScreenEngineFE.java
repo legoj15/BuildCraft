@@ -61,11 +61,13 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
                         java.util.List<String> lines = new java.util.ArrayList<>();
                         lines.add(LocaleUtil.localize("buildcraft.gui.rf_engine.upgrade_types"));
                         buildcraft.energy.tile.TileEngineFE.initUpgrades();
+                        String unitLabel = LocaleUtil.localize(
+                            buildcraft.energy.BCEnergyConfig.rfFeKey("buildcraft.gui.rf_engine.upgrade_rate_unit"));
                         for (java.util.Map.Entry<net.minecraft.world.item.Item, Long> entry : buildcraft.energy.tile.TileEngineFE.UPGRADE_VALUES.entrySet()) {
                             String itemName = new net.minecraft.world.item.ItemStack(entry.getKey()).getHoverName().getString();
                             long mj = entry.getValue();
                             int rfPerTick = (int) (mj / 100000L); // 100,000 microMJ = 1 RF fallback
-                            lines.add(itemName + " = +" + (rfPerTick * 20) + " Redstone Flux per second");
+                            lines.add(itemName + " = +" + (rfPerTick * 20) + " " + unitLabel);
                         }
                         tooltips.add(new buildcraft.lib.gui.elem.ToolTip(lines));
                     }
@@ -81,9 +83,12 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
                     long mjPerTick = menu.engine.getMjPerTick();
                     String rf = LocaleUtil.localizeRfFlow(rfPerTick);
                     String mj = LocaleUtil.localizeMjFlow(mjPerTick);
-                    String conversion = LocaleUtil.localize("buildcraft.help.rf_engine.battery", rf, mj);
+                    String conversion = LocaleUtil.localize(
+                        buildcraft.energy.BCEnergyConfig.rfFeKey("buildcraft.help.rf_engine.battery"), rf, mj);
                     ElementHelpInfo help = ElementHelpInfo
-                        .preTranslated("buildcraft.help.rf_engine.battery.title", 0xFF_33_AA_33, conversion);
+                        .preTranslated(
+                            buildcraft.energy.BCEnergyConfig.rfFeKey("buildcraft.help.rf_engine.battery.title"),
+                            0xFF_33_AA_33, conversion);
                     elements.add(help.target(this));
                 }
 
@@ -92,7 +97,8 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
                     if (contains(mainGui.mouse)) {
                         int current = menu.getSyncedFeStored();
                         int max = buildcraft.energy.tile.TileEngineFE.MAX_FE;
-                        tooltips.add(new buildcraft.lib.gui.elem.ToolTip(String.format("%,d / %,d FE", current, max)));
+                        tooltips.add(new buildcraft.lib.gui.elem.ToolTip(
+                            String.format("%,d / %,d %s", current, max, LocaleUtil.energyUnit())));
                     }
                 }
             });

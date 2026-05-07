@@ -3,8 +3,10 @@ package buildcraft.energy;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.bus.api.IEventBus;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 public class BCEnergyItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems("buildcraftunofficial");
@@ -15,8 +17,19 @@ public class BCEnergyItems {
     public static final DeferredItem<BlockItem> ENGINE_IRON = ITEMS.registerSimpleBlockItem(
             BCEnergyBlocks.ENGINE_IRON);
 
-    public static final DeferredItem<BlockItem> ENGINE_FE = ITEMS.registerSimpleBlockItem(
-            BCEnergyBlocks.ENGINE_FE);
+    /** FE/RF naming-aware BlockItem: flips display name based on {@link BCEnergyConfig#useRfNaming}.
+     *  Uses {@code useBlockDescriptionPrefix()} so the auto-generated descriptionId resolves to the
+     *  {@code block.buildcraftunofficial.engine_rf} lang entry (matching how registerSimpleBlockItem
+     *  sets up other engines), letting {@link BCEnergyConfig#rfFeKey} pick up the {@code .rf} sibling. */
+    public static final DeferredItem<BlockItem> ENGINE_FE = ITEMS.registerItem(
+            BCEnergyBlocks.ENGINE_FE.getId().getPath(),
+            props -> new BlockItem(BCEnergyBlocks.ENGINE_FE.get(), props) {
+                @Override
+                public Component getName(ItemStack stack) {
+                    return Component.translatable(BCEnergyConfig.rfFeKey(getDescriptionId()));
+                }
+            },
+            props -> props.useBlockDescriptionPrefix());
 
     public static final DeferredItem<BlockItem> DYNAMO_MJ = ITEMS.registerSimpleBlockItem(
             BCEnergyBlocks.DYNAMO_MJ);

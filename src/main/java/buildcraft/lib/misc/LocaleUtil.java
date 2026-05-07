@@ -1,6 +1,7 @@
 package buildcraft.lib.misc;
 
 import buildcraft.api.mj.MjAPI;
+import buildcraft.energy.BCEnergyConfig;
 import net.minecraft.locale.Language;
 
 /** Localization utility. Uses Minecraft's Language registry for translation to avoid preemptive formatting errors. */
@@ -43,14 +44,21 @@ public class LocaleUtil {
         return localizeHeat((double) heat);
     }
 
-    /** Format RF stored for display (e.g. "5,000 / 10,000 RF"). */
+    /** Format stored Forge Energy for display (e.g. "5,000 / 10,000 FE"). Unit follows
+     *  {@link BCEnergyConfig#useRfNaming} — "FE" by default, "RF" when the toggle is on. */
     public static String localizeRf(int current, int max) {
-        return String.format("%,d / %,d RF", current, max);
+        return String.format("%,d / %,d %s", current, max, energyUnit());
     }
 
-    /** Format RF/t flow for display as RF/s (per second = ×20 ticks), matching 1.12 format. */
+    /** Format Forge Energy flow for display as per-second (×20 ticks), matching 1.12 format.
+     *  Unit follows {@link BCEnergyConfig#useRfNaming} — "FE/s" by default, "RF/s" when on. */
     public static String localizeRfFlow(int rfPerTick) {
-        return String.format("%,d RF/s", rfPerTick * 20);
+        return String.format("%,d %s/s", rfPerTick * 20, energyUnit());
+    }
+
+    /** Returns "RF" or "FE" depending on the user's display preference. */
+    public static String energyUnit() {
+        return BCEnergyConfig.useRfNaming != null && BCEnergyConfig.useRfNaming.get() ? "RF" : "FE";
     }
 
     /** Format fluid flow for display (e.g. "40 mB/t"), matching 1.12.2's tooltip format. */

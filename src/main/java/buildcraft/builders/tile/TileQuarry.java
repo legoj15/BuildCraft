@@ -332,7 +332,18 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             return false;
         }
         Fluid fluid = BlockUtil.getFluidWithFlowing(level, blockPos);
-        return fluid == null;
+        if (fluid != null) {
+            return false;
+        }
+        // Respects player-protection mods via BCCoreConfig.minePlayerProtected.
+        // The box iterator's advance loop already skips positions where canMine() is false,
+        // and the in-flight task at finish() returns true (task complete, no retry) — so a
+        // protected position is naturally bypassed without stalling the quarry.
+        if (level instanceof ServerLevel serverLevel
+                && !BlockUtil.canMachineBreak(serverLevel, blockPos, getOwner())) {
+            return false;
+        }
+        return true;
     }
 
     private boolean canMoveThrough(BlockPos blockPos) {

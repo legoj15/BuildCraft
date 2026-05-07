@@ -6,10 +6,12 @@
 
 package buildcraft.lib.misc;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -18,6 +20,7 @@ import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -30,13 +33,46 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.fluids.FluidStack;
 
+import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.mj.MjAPI;
+
+import buildcraft.core.BCCoreConfig;
 
 public class BlockUtil {
     /** Mining multiplier, set by BCCoreConfig on init. Default 1.0. */
     public static double miningMultiplier = 1.0;
+
+    /** Fallback profile used when a mining tile has no recorded owner (e.g. set-block, worldgen).
+     *  Same UUID seed and display name as BCCore's BC_PROFILE so protection mods see one identity. */
+    private static final GameProfile MACHINE_FAKE_PROFILE = new GameProfile(
+            UUID.nameUUIDFromBytes("BuildCraft".getBytes(StandardCharsets.UTF_8)),
+            "[BuildCraft]"
+    );
+
+    /**
+     * Returns true if a BuildCraft mining machine is permitted to break the block at {@code pos}.
+     * <p>
+     * If {@link BCCoreConfig#minePlayerProtected} is true, always returns true (the option is
+     * an "override protection" toggle). Otherwise, posts a {@link BreakBlockEvent} with an
+     * owner-bound FakePlayer positioned at {@code pos} and returns {@code !event.isCanceled()},
+     * so third-party protection mods (FTB Chunks, GriefPrevention, OpenPartiesAndClaims, server
+     * protection plugins) can gate the break by cancelling the event.
+     */
+    public static boolean canMachineBreak(ServerLevel level, BlockPos pos, GameProfile owner) {
+        if (BCCoreConfig.minePlayerProtected.get()) {
+            return true;
+        }
+        GameProfile profile = (owner != null && owner.name() != null) ? owner : MACHINE_FAKE_PROFILE;
+        Player fp = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, profile, pos);
+        BlockState state = level.getBlockState(pos);
+        BreakBlockEvent event = new BreakBlockEvent(level, pos, state, fp);
+        NeoForge.EVENT_BUS.post(event);
+        return !event.isCanceled();
+    }
 
     /** Returns the fluid associated with a block if it is a fluid block, or null otherwise. */
     @Nullable

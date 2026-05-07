@@ -107,6 +107,13 @@ public class TileMiningWell extends TileMiner {
                 break;
             }
             if (canBreak()) {
+                // Honor third-party player-protection mods. If the owner is not allowed to
+                // break this position, skip past it instead of stopping — claims are usually
+                // small and there may be unclaimed terrain further down.
+                if (level instanceof ServerLevel serverLevel
+                        && !BlockUtil.canMachineBreak(serverLevel, currentPos, getOwner())) {
+                    continue;
+                }
                 updateLength();
                 return;
             }

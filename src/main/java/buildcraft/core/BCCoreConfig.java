@@ -6,7 +6,6 @@ public class BCCoreConfig {
 
     // TODO: wire as global worldgen kill switch over BCCoreWorldGen / BCEnergyWorldGen
     public static ModConfigSpec.BooleanValue worldGen;
-    // TODO: wire into TileQuarry / TileMiner break-block path; respects player-protection mods
     public static ModConfigSpec.BooleanValue minePlayerProtected;
     public static ModConfigSpec.BooleanValue pumpsConsumeWater;
     public static ModConfigSpec.IntValue markerMaxDistance;
@@ -18,7 +17,12 @@ public class BCCoreConfig {
 
     public static void buildGeneral(ModConfigSpec.Builder builder) {
         minePlayerProtected = builder
-                .comment("Set true to prevent quarries from mining player-protected areas")
+                .comment(
+                        "If true, mining machines (Quarry, Mining Well, Builder/Filler clear-mode) " +
+                                "ignore third-party protection mods and break player-protected blocks. " +
+                                "Default false respects BreakBlockEvent cancellation from mods like " +
+                                "FTB Chunks or GriefPrevention. Does not affect Pumps."
+                )
                 .define("minePlayerProtected", false);
 
         pumpsConsumeWater = builder

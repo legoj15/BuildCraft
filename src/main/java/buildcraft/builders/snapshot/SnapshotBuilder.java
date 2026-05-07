@@ -468,6 +468,10 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             for (Iterator<BreakTask> iterator = breakTasks.iterator(); iterator.hasNext(); ) {
                 BreakTask breakTask = iterator.next();
                 if (breakTask.isImpossible()) {
+                    // Drain the task: refund any accumulated power and drop it from the queue
+                    // so the builder isn't stuck retrying an unbreakable / protected block.
+                    cancelBreakTask(breakTask);
+                    iterator.remove();
                     continue;
                 }
                 long target = breakTask.getTarget();
@@ -875,7 +879,16 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
 
         @SuppressWarnings("WeakerAccess")
         public boolean isImpossible() {
-            return BlockUtil.isUnbreakableBlock(tile.getWorldBC(), pos, tile.getOwner());
+            if (BlockUtil.isUnbreakableBlock(tile.getWorldBC(), pos, tile.getOwner())) {
+                return true;
+            }
+            // Honor third-party player-protection mods (gated by BCCoreConfig.minePlayerProtected).
+            // Cancelled BreakEvent → task is impossible → drained from the queue with a refund.
+            if (tile.getWorldBC() instanceof ServerLevel serverLevel
+                    && !BlockUtil.canMachineBreak(serverLevel, pos, tile.getOwner())) {
+                return true;
+            }
+            return false;
         }
 
         public long getTarget() {

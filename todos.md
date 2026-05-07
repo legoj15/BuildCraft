@@ -1,6 +1,6 @@
 # BuildCraft 1.12.2 → 26.1.x Port Status
 
-Last audited: 2026-04-25.
+Last audited: 2026-05-07. The changelog block in `changelog.md` titled "Changes since 26.1.x Beta release 6" is authoritative for what has shipped since the previous audit; consult it before re-auditing this file.
 
 ## Module Status Overview
 
@@ -22,14 +22,13 @@ Last audited: 2026-04-25.
 
 ## 🔧 Outstanding work
 
-### Advancements — 18 orphaned triggers
-The `minecraft:impossible` trigger is intentional in this codebase: it's the "don't double-grant from JSON" placeholder for advancements granted via `AdvancementUtil.unlockAdvancement(...)` in Java. 23 of 41 impossible-trigger advancements ARE wired up that way. The remaining 18 are truly orphaned — JSON exists, no Java grant:
+### Advancements — 17 orphaned triggers
+The `minecraft:impossible` trigger is intentional in this codebase: it's the "don't double-grant from JSON" placeholder for advancements granted via `AdvancementUtil.unlockAdvancement(...)` in Java. 24 of 41 impossible-trigger advancements ARE wired up that way (`diggy_diggy_hole` is granted at `TileQuarry.java:606` when a quarry's mining frame finishes; the 2026-04-25 audit had it incorrectly on the orphan list). The remaining 17 are truly orphaned — JSON exists, no Java grant:
 
 - [ ] `all_plugged_up`
 - [ ] `building_for_the_future`
 - [ ] `colorful_electricial`
 - [ ] `destroying_the_world`
-- [ ] `diggy_diggy_hole`
 - [ ] `flooding_the_world`
 - [ ] `goggles`
 - [ ] `heating_and_distilling`
@@ -45,11 +44,10 @@ The `minecraft:impossible` trigger is intentional in this codebase: it's the "do
 - [ ] `too_many_pipe_filters`
 
 ### Block Sounds
-- [ ] Most blocks use default `SoundType` — review and set appropriate sounds per block type (engines, pipes, facades, tanks, machines). Only `BlockSpring` (`SoundType.STONE`) and ~42 other explicit declarations exist; a deliberate sound pass is still needed.
+- [ ] Most blocks use default `SoundType` — review and set appropriate sounds per block type (engines, pipes, facades, tanks, machines). Only 43 explicit `SoundType` declarations exist across the codebase (mostly `METAL`, with three `STONE` and three `SLIME_BLOCK` cases); a deliberate sound pass is still needed.
 
 ### Config System
-- [ ] Replace hardcoded `BCCoreConfig` defaults with NeoForge `ModConfigSpec` file I/O for power, energy, transport, builders sub-modules.
-- [ ] **Power unit display configuration** — MJ ↔ RF/FE, full text vs abbreviated, per tick vs per second.
+- [ ] **Power unit display configuration** — MJ ↔ RF/FE wording is done (`useRfNaming`, post-Beta-6); abbreviation (`1.2k MJ`) and per-tick/per-second toggle still missing.
 - [ ] **Fullbright fluid rendering in tanks** — config option to recreate the 1.12.2 "neon glow" look.
 - [ ] **Heat-level color shifting** — config option to subtly brighten/warm fluid colors at higher heat levels.
 
@@ -68,8 +66,6 @@ The `minecraft:impossible` trigger is intentional in this codebase: it's the "do
 
 - [ ] Quarry LEDs
 - [ ] Facade smooth shading (AO infrastructure exists in `MutableQuad`; needs facade-specific wiring)
-- [ ] Distiller and heat exchanger recipes in JEI/REI (currently only `BCFactoryJeiPlugin` covers Auto Workbench)
-- [ ] Advanced facade recipe handling in JEI/REI (no `transport/compat/jei/` exists)
 - [ ] Fix texture filtering bug and crash *(needs description / repro to be actionable)*
 
 ---

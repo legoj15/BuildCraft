@@ -90,8 +90,23 @@ public class TilePump extends TileMiner implements IDebuggable {
         }
     }
 
+    /**
+     * Bumped whenever the COMMON config reloads, so running pumps re-evaluate
+     * {@code pumpsConsumeWater} on their next tick instead of waiting for
+     * natural queue exhaustion (which can be effectively never if the pump's
+     * tank stays full, leaving the cached infinite-source state stuck).
+     * See {@link buildcraft.factory.BCFactory#init} for the listener.
+     */
+    private static final java.util.concurrent.atomic.AtomicLong CONFIG_REVISION
+        = new java.util.concurrent.atomic.AtomicLong();
+
+    public static void onConfigReloaded() {
+        CONFIG_REVISION.incrementAndGet();
+    }
+
     private final FluidStacksResourceHandler tank = new FluidStacksResourceHandler(1, 16 * 1000); // 16 buckets
     private boolean queueBuilt = false;
+    private long builtAtRevision = -1;
     private final Map<BlockPos, FluidPath> paths = new HashMap<>();
     private BlockPos fluidConnection;
     private final Deque<BlockPos> queue = new ArrayDeque<>();
@@ -120,6 +135,7 @@ public class TilePump extends TileMiner implements IDebuggable {
     // --- Queue Building (BFS flood-fill) ---
 
     private void buildQueue() {
+        builtAtRevision = CONFIG_REVISION.get();
         queue.clear();
         paths.clear();
         Fluid queueFluid = null;
@@ -271,7 +287,7 @@ public class TilePump extends TileMiner implements IDebuggable {
 
     @Override
     public void serverTick() {
-        if (!queueBuilt) {
+        if (!queueBuilt || builtAtRevision != CONFIG_REVISION.get()) {
             buildQueue();
             queueBuilt = true;
         }

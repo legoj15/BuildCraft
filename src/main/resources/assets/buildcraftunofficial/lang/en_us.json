@@ -559,7 +559,7 @@
     "buildcraftunofficial.configuration.powerMode": "Power Mode",
     "buildcraftunofficial.configuration.mjRfConversionAmount": "MJ to RF Conversion Amount",
     "buildcraftunofficial.configuration.minePlayerProtected": "Mine Player Protected Blocks",
-    "buildcraftunofficial.configuration.pumpsConsumeWater": "Pumps Consume Infinite Water",
+    "buildcraftunofficial.configuration.pumpsConsumeWater": "Pumps Drain Water Source Blocks",
     "buildcraftunofficial.configuration.markerMaxDistance": "Marker Max Distance",
     "buildcraftunofficial.configuration.pumpMaxDistance": "Pump Max Distance",
     "buildcraftunofficial.configuration.networkUpdateRate": "Network Update Rate",

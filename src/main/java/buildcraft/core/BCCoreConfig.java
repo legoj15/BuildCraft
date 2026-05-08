@@ -26,7 +26,12 @@ public class BCCoreConfig {
                 .define("minePlayerProtected", false);
 
         pumpsConsumeWater = builder
-                .comment("Should pumps slowly drain infinite water sources?")
+                .comment(
+                        "If true, pumps will consume fluid source blocks from infinite pools " +
+                                "instead of just simulating the pumping action. " +
+                                "Has a negative impact on performance when true, enable for " +
+                                "mods that disable infinite-water regeneration."
+                )
                 .define("pumpsConsumeWater", false);
 
         markerMaxDistance = builder

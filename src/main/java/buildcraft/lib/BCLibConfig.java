@@ -22,6 +22,7 @@ public class BCLibConfig {
     public static ModConfigSpec.EnumValue<ThousandsSeparator> thousandsSeparator;
     public static ModConfigSpec.EnumValue<DecimalSeparator> decimalSeparator;
     public static ModConfigSpec.BooleanValue abbreviateLargeNumbers;
+    public static ModConfigSpec.EnumValue<FlowDisplay> flowDisplay;
 
     public static void buildGeneral(ModConfigSpec.Builder builder) {
         powerMode = builder
@@ -57,6 +58,16 @@ public class BCLibConfig {
                         "those values are either small in normal play or load-bearing precision. Default false."
                 )
                 .define("abbreviateLargeNumbers", false);
+
+        flowDisplay = builder
+                .comment(
+                        "How flow rates render in machine readouts (engine ledgers, conversion-help bodies,",
+                        "kinesis-pipe hovers, the silicon laser ledger).",
+                        "PER_SECOND: 100.00 MJ/s   (default, matches 1.12.2's display convention)",
+                        "PER_TICK:   5.00 MJ/t    (same figure as the underlying API gives)",
+                        "BOTH:       100.00 MJ/s (5.00 MJ/t)"
+                )
+                .defineEnum("flowDisplay", FlowDisplay.PER_SECOND);
     }
 
     /** Thousands grouping separator used by {@link buildcraft.lib.misc.LocaleUtil}'s number formatters. */
@@ -83,6 +94,14 @@ public class BCLibConfig {
         DecimalSeparator(char ch) {
             this.ch = ch;
         }
+    }
+
+    /** How {@link buildcraft.lib.misc.LocaleUtil#localizeMjFlow(long)} and
+     *  {@link buildcraft.lib.misc.LocaleUtil#localizeRfFlow(int)} render flow rates. */
+    public enum FlowDisplay {
+        PER_SECOND,
+        PER_TICK,
+        BOTH
     }
 
     public enum PowerMode {

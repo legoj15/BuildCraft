@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import buildcraft.lib.BCLibConfig.DecimalSeparator;
+import buildcraft.lib.BCLibConfig.FlowDisplay;
 import buildcraft.lib.BCLibConfig.ThousandsSeparator;
 
 /** Exercises every supported (thousands × decimal) combination of {@link LocaleUtil}'s number
@@ -142,5 +143,58 @@ public class LocaleUtilNumberFormatTester {
         // doesn't surface in the abbreviated output (no group ever forms past the suffix).
         Assertions.assertEquals("1.5k",
                 LocaleUtil.formatLong(1500L, ThousandsSeparator.NONE, DecimalSeparator.DOT, true));
+    }
+
+    // -- Flow display modes ---------------------------------------------------
+
+    @Test
+    public void mjFlow_perSecond_multipliesByTwentyTicks() {
+        // 5 mj/tick * 20 = 100 mj/sec
+        Assertions.assertEquals("100.00 MJ/s",
+                LocaleUtil.formatMjFlow(5.0, FlowDisplay.PER_SECOND, "MJ"));
+    }
+
+    @Test
+    public void mjFlow_perTick_passesThroughRaw() {
+        Assertions.assertEquals("5.00 MJ/t",
+                LocaleUtil.formatMjFlow(5.0, FlowDisplay.PER_TICK, "MJ"));
+    }
+
+    @Test
+    public void mjFlow_both_rendersBothInParens() {
+        Assertions.assertEquals("100.00 MJ/s (5.00 MJ/t)",
+                LocaleUtil.formatMjFlow(5.0, FlowDisplay.BOTH, "MJ"));
+    }
+
+    @Test
+    public void mjFlow_acceptsAnyUnitString() {
+        // Long-form unit name plumbs through unchanged.
+        Assertions.assertEquals("100.00 Minecraft Joules/s (5.00 Minecraft Joules/t)",
+                LocaleUtil.formatMjFlow(5.0, FlowDisplay.BOTH, "Minecraft Joules"));
+    }
+
+    @Test
+    public void rfFlow_perSecond_multipliesByTwentyTicks() {
+        // 100 fe/tick * 20 = 2000 fe/sec, formatted with default COMMA grouping (config null).
+        Assertions.assertEquals("2,000 FE/s",
+                LocaleUtil.formatRfFlow(100, FlowDisplay.PER_SECOND, "FE"));
+    }
+
+    @Test
+    public void rfFlow_perTick_passesThroughRaw() {
+        Assertions.assertEquals("100 FE/t",
+                LocaleUtil.formatRfFlow(100, FlowDisplay.PER_TICK, "FE"));
+    }
+
+    @Test
+    public void rfFlow_both_rendersBothInParens() {
+        Assertions.assertEquals("2,000 FE/s (100 FE/t)",
+                LocaleUtil.formatRfFlow(100, FlowDisplay.BOTH, "FE"));
+    }
+
+    @Test
+    public void rfFlow_zeroValueRendersZeroOnBothSides() {
+        Assertions.assertEquals("0 FE/s (0 FE/t)",
+                LocaleUtil.formatRfFlow(0, FlowDisplay.BOTH, "FE"));
     }
 }

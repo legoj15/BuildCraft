@@ -30,18 +30,13 @@ public class LocaleUtil {
         return formatDouble(mj, 2) + " " + mjUnit();
     }
 
-    /** Format MJ/t flow for display as MJ/s (per second = ×20 ticks), matching 1.12 format.
-     *  Unit and separators follow {@link BCEnergyConfig#useFullEnergyNames},
-     *  {@link BCLibConfig#thousandsSeparator}, and {@link BCLibConfig#decimalSeparator}. */
+    /** Format MJ flow for display, picking PER_SECOND ("100.00 MJ/s"), PER_TICK ("5.00 MJ/t"), or
+     *  BOTH ("100.00 MJ/s (5.00 MJ/t)") per {@link BCLibConfig#flowDisplay}. Unit and separators
+     *  follow {@link BCEnergyConfig#useFullEnergyNames}, {@link BCLibConfig#thousandsSeparator},
+     *  and {@link BCLibConfig#decimalSeparator}. */
     public static String localizeMjFlow(long microMjPerTick) {
-        double mjPerSecond = (microMjPerTick / (double) MjAPI.MJ) * 20.0;
-        return formatDouble(mjPerSecond, 2) + " " + mjUnit() + "/s";
-    }
-
-    /** Format MJ/t flow for display (e.g. "5.00 MJ/t"). Unit and separators follow the
-     *  matching {@link BCEnergyConfig} / {@link BCLibConfig} display flags. */
-    public static String localizeMjFlow(double mjPerTick) {
-        return formatDouble(mjPerTick, 2) + " " + mjUnit() + "/t";
+        double mjPerTick = microMjPerTick / (double) MjAPI.MJ;
+        return formatMjFlow(mjPerTick, currentFlowDisplay(), mjUnit());
     }
 
     /** Format heat level for display (e.g. "20.00 °C"), matching 1.12's format. The decimal
@@ -63,11 +58,12 @@ public class LocaleUtil {
         return formatLong(current) + " / " + formatLong(max) + " " + energyUnit();
     }
 
-    /** Format Forge Energy flow for display as per-second (×20 ticks), matching 1.12 format.
-     *  Unit follows {@link BCEnergyConfig#useFullEnergyNames} and {@link BCEnergyConfig#useRfNaming};
-     *  thousands separator follows {@link BCLibConfig#thousandsSeparator}. */
+    /** Format Forge Energy flow for display, picking PER_SECOND, PER_TICK, or BOTH per
+     *  {@link BCLibConfig#flowDisplay}. Unit follows {@link BCEnergyConfig#useFullEnergyNames} and
+     *  {@link BCEnergyConfig#useRfNaming}; thousands separator follows
+     *  {@link BCLibConfig#thousandsSeparator}. */
     public static String localizeRfFlow(int rfPerTick) {
-        return formatLong(rfPerTick * 20L) + " " + energyUnit() + "/s";
+        return formatRfFlow(rfPerTick, currentFlowDisplay(), energyUnit());
     }
 
     /** Returns the FE-family unit label for the user's display preferences:
@@ -132,6 +128,34 @@ public class LocaleUtil {
 
     private static boolean shouldAbbreviate() {
         return BCLibConfig.abbreviateLargeNumbers != null && BCLibConfig.abbreviateLargeNumbers.get();
+    }
+
+    private static BCLibConfig.FlowDisplay currentFlowDisplay() {
+        return BCLibConfig.flowDisplay != null ? BCLibConfig.flowDisplay.get() : BCLibConfig.FlowDisplay.PER_SECOND;
+    }
+
+    /** Package-visible — takes the unit string explicitly so unit tests can exercise every
+     *  {@link BCLibConfig.FlowDisplay} mode without depending on the {@code mjUnit()} default. */
+    static String formatMjFlow(double mjPerTick, BCLibConfig.FlowDisplay mode, String unit) {
+        String perSec = formatDouble(mjPerTick * 20.0, 2) + " " + unit + "/s";
+        String perTick = formatDouble(mjPerTick, 2) + " " + unit + "/t";
+        return switch (mode) {
+            case PER_SECOND -> perSec;
+            case PER_TICK -> perTick;
+            case BOTH -> perSec + " (" + perTick + ")";
+        };
+    }
+
+    /** Package-visible test variant. The {@code rfPerTick * 20L} widening matches
+     *  {@link #localizeRfFlow(int)}'s overflow-safe widening. */
+    static String formatRfFlow(int rfPerTick, BCLibConfig.FlowDisplay mode, String unit) {
+        String perSec = formatLong(rfPerTick * 20L) + " " + unit + "/s";
+        String perTick = formatLong(rfPerTick) + " " + unit + "/t";
+        return switch (mode) {
+            case PER_SECOND -> perSec;
+            case PER_TICK -> perTick;
+            case BOTH -> perSec + " (" + perTick + ")";
+        };
     }
 
     /** Walks {@code value} down through powers of 1000 and renders the result with one decimal

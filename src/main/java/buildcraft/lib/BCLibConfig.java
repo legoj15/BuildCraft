@@ -21,6 +21,7 @@ public class BCLibConfig {
 
     public static ModConfigSpec.EnumValue<ThousandsSeparator> thousandsSeparator;
     public static ModConfigSpec.EnumValue<DecimalSeparator> decimalSeparator;
+    public static ModConfigSpec.BooleanValue abbreviateLargeNumbers;
 
     public static void buildGeneral(ModConfigSpec.Builder builder) {
         powerMode = builder
@@ -46,6 +47,16 @@ public class BCLibConfig {
                         "DOT: 1.5   COMMA: 1,5."
                 )
                 .defineEnum("decimalSeparator", DecimalSeparator.DOT);
+
+        abbreviateLargeNumbers = builder
+                .comment(
+                        "If true, collapse FE/RF readouts at or above 1,000 into compact suffixed form:",
+                        "1,234 -> 1.2k, 1,500,000 -> 1.5M, 2,500,000,000 -> 2.5G, 4,000,000,000,000 -> 4.0T.",
+                        "Suffixes (k = thousand, M = million, G = billion, T = trillion) honour the configured",
+                        "decimal separator. MJ readouts and JEI category power labels stay unabbreviated since",
+                        "those values are either small in normal play or load-bearing precision. Default false."
+                )
+                .define("abbreviateLargeNumbers", false);
     }
 
     /** Thousands grouping separator used by {@link buildcraft.lib.misc.LocaleUtil}'s number formatters. */

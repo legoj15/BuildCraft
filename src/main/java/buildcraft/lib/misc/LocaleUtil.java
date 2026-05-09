@@ -94,27 +94,64 @@ public class LocaleUtil {
         return mbPerTick + " mB/t";
     }
 
-    /** Format a long with the configured thousands grouping separator (no decimal portion). */
+    /** Format a long with the configured thousands grouping separator. When
+     *  {@link BCLibConfig#abbreviateLargeNumbers} is on AND |value| ≥ 1000, collapses to a compact
+     *  suffixed form (k / M / G / T) at one decimal place using the configured decimal separator. */
     public static String formatLong(long value) {
-        return formatLong(value, currentThousandsSep());
+        return formatLong(value, currentThousandsSep(), currentDecimalSep(), shouldAbbreviate());
     }
 
     /** Format a double with the configured thousands grouping and decimal separators,
-     *  rounded to {@code decimals} fractional digits. */
+     *  rounded to {@code decimals} fractional digits. Always returns the raw expanded form —
+     *  the abbreviation toggle does not apply, so MJ/heat readouts and JEI recipe-cost labels
+     *  keep their full precision. */
     public static String formatDouble(double value, int decimals) {
         return formatDouble(value, decimals, currentThousandsSep(), currentDecimalSep());
     }
 
-    /** Package-visible variant taking explicit separators — used by unit tests to exercise every
-     *  combination without booting NeoForge's config system. */
+    /** Two-arg test overload — preserves the original test API without abbreviation. */
     static String formatLong(long value, BCLibConfig.ThousandsSeparator t) {
-        return numberFormat(t, BCLibConfig.DecimalSeparator.DOT, 0).format(value);
+        return formatLong(value, t, BCLibConfig.DecimalSeparator.DOT, false);
+    }
+
+    /** Package-visible variant taking explicit separators and abbreviation flag — used by unit
+     *  tests to exercise every combination without booting NeoForge's config system. */
+    static String formatLong(long value, BCLibConfig.ThousandsSeparator t,
+                             BCLibConfig.DecimalSeparator d, boolean abbreviate) {
+        if (abbreviate && Math.abs(value) >= 1000L) {
+            return formatAbbreviated((double) value, t, d);
+        }
+        return numberFormat(t, d, 0).format(value);
     }
 
     /** Package-visible variant taking explicit separators — used by unit tests. */
     static String formatDouble(double value, int decimals,
                                BCLibConfig.ThousandsSeparator t, BCLibConfig.DecimalSeparator d) {
         return numberFormat(t, d, decimals).format(value);
+    }
+
+    private static boolean shouldAbbreviate() {
+        return BCLibConfig.abbreviateLargeNumbers != null && BCLibConfig.abbreviateLargeNumbers.get();
+    }
+
+    /** Walks {@code value} down through powers of 1000 and renders the result with one decimal
+     *  followed by the matching k/M/G/T suffix. Handles the tier-crossing rounding edge — a value
+     *  like 999,950 divides to 999.95, which would format as "1000.0k" at one-decimal precision;
+     *  the second loop iteration bumps it to the next tier so the output reads "1.0M" instead. */
+    private static String formatAbbreviated(double value, BCLibConfig.ThousandsSeparator t,
+                                            BCLibConfig.DecimalSeparator d) {
+        String[] suffixes = { "", "k", "M", "G", "T" };
+        double v = value;
+        int tier = 0;
+        while (Math.abs(v) >= 1000.0 && tier < suffixes.length - 1) {
+            v /= 1000.0;
+            tier++;
+        }
+        if (Math.abs(v) >= 999.95 && tier < suffixes.length - 1) {
+            v /= 1000.0;
+            tier++;
+        }
+        return numberFormat(t, d, 1).format(v) + suffixes[tier];
     }
 
     private static BCLibConfig.ThousandsSeparator currentThousandsSep() {

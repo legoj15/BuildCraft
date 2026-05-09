@@ -578,6 +578,7 @@
     "buildcraftunofficial.configuration.useFullEnergyNames": "Spell Energy Units in Full",
     "buildcraftunofficial.configuration.thousandsSeparator": "Thousands Separator",
     "buildcraftunofficial.configuration.decimalSeparator": "Decimal Separator",
+    "buildcraftunofficial.configuration.abbreviateLargeNumbers": "Abbreviate Large Numbers",
     "buildcraftunofficial.configuration.oilIsSticky": "Oil is Sticky",
     "buildcraftunofficial.configuration.bptStoreExternalThreshold": "Blueprint External Storage Threshold",
     "buildcraftunofficial.configuration.quarryFrameMinHeight": "Quarry Frame Min Height",

@@ -68,8 +68,79 @@ public class LocaleUtilNumberFormatTester {
     @Test
     public void publicHelpers_useDocumentedDefaultsWhenConfigUnset() {
         // BCLibConfig.thousandsSeparator and decimalSeparator are null under JUnit (no NeoForge boot),
-        // so the public helpers should fall back to COMMA / DOT.
+        // so the public helpers should fall back to COMMA / DOT and abbreviation OFF.
         Assertions.assertEquals("1,000", LocaleUtil.formatLong(1000L));
         Assertions.assertEquals("12,345.50", LocaleUtil.formatDouble(12345.5, 2));
+    }
+
+    @Test
+    public void abbreviation_off_returnsRawValue() {
+        // Below threshold: identical to abbreviation-on.
+        Assertions.assertEquals("999",
+                LocaleUtil.formatLong(999L, ThousandsSeparator.COMMA, DecimalSeparator.DOT, false));
+        // Above threshold but abbreviation off: full grouping applies.
+        Assertions.assertEquals("1,500,000",
+                LocaleUtil.formatLong(1_500_000L, ThousandsSeparator.COMMA, DecimalSeparator.DOT, false));
+    }
+
+    @Test
+    public void abbreviation_belowThreshold_returnsRaw() {
+        // |value| < 1000 never abbreviates regardless of toggle.
+        Assertions.assertEquals("0",
+                LocaleUtil.formatLong(0L, ThousandsSeparator.COMMA, DecimalSeparator.DOT, true));
+        Assertions.assertEquals("999",
+                LocaleUtil.formatLong(999L, ThousandsSeparator.COMMA, DecimalSeparator.DOT, true));
+        Assertions.assertEquals("-999",
+                LocaleUtil.formatLong(-999L, ThousandsSeparator.COMMA, DecimalSeparator.DOT, true));
+    }
+
+    @Test
+    public void abbreviation_eachTier() {
+        Assertions.assertEquals("1.0k",
+                LocaleUtil.formatLong(1000L, ThousandsSeparator.COMMA, DecimalSeparator.DOT, true));
+        Assertions.assertEquals("1.2k",
+                LocaleUtil.formatLong(1234L, ThousandsSeparator.COMMA, DecimalSeparator.DOT, true));
+        Assertions.assertEquals("1.5M",
+                LocaleUtil.formatLong(1_500_000L, ThousandsSeparator.COMMA, DecimalSeparator.DOT, true));
+        Assertions.assertEquals("2.5G",
+                LocaleUtil.formatLong(2_500_000_000L, ThousandsSeparator.COMMA, DecimalSeparator.DOT, true));
+        Assertions.assertEquals("4.0T",
+                LocaleUtil.formatLong(4_000_000_000_000L, ThousandsSeparator.COMMA, DecimalSeparator.DOT, true));
+    }
+
+    @Test
+    public void abbreviation_negativeValues() {
+        Assertions.assertEquals("-1.5k",
+                LocaleUtil.formatLong(-1500L, ThousandsSeparator.COMMA, DecimalSeparator.DOT, true));
+        Assertions.assertEquals("-2.5M",
+                LocaleUtil.formatLong(-2_500_000L, ThousandsSeparator.COMMA, DecimalSeparator.DOT, true));
+    }
+
+    @Test
+    public void abbreviation_tierCrossingEdge() {
+        // 999,950 / 1000 = 999.95 which rounds to 1000.0 at one decimal — bump to the next tier
+        // so we render "1.0M" rather than the awkward "1000.0k".
+        Assertions.assertEquals("1.0M",
+                LocaleUtil.formatLong(999_950L, ThousandsSeparator.COMMA, DecimalSeparator.DOT, true));
+        // 999,949 still rounds to 999.9 at one decimal, so it stays at the k tier.
+        Assertions.assertEquals("999.9k",
+                LocaleUtil.formatLong(999_949L, ThousandsSeparator.COMMA, DecimalSeparator.DOT, true));
+    }
+
+    @Test
+    public void abbreviation_honoursDecimalSeparator() {
+        // Configured decimal separator applies to the abbreviated form's fractional digit.
+        Assertions.assertEquals("1,5k",
+                LocaleUtil.formatLong(1500L, ThousandsSeparator.DOT, DecimalSeparator.COMMA, true));
+        Assertions.assertEquals("2,5M",
+                LocaleUtil.formatLong(2_500_000L, ThousandsSeparator.SPACE, DecimalSeparator.COMMA, true));
+    }
+
+    @Test
+    public void abbreviation_thousandsSeparatorIrrelevantBelow1000() {
+        // Abbreviated values are always < 1000 in their integer portion, so the thousands separator
+        // doesn't surface in the abbreviated output (no group ever forms past the suffix).
+        Assertions.assertEquals("1.5k",
+                LocaleUtil.formatLong(1500L, ThousandsSeparator.NONE, DecimalSeparator.DOT, true));
     }
 }

@@ -42,6 +42,7 @@ public class BCEnergyConfig {
     }
 
     public static ModConfigSpec.BooleanValue useRfNaming;
+    public static ModConfigSpec.BooleanValue useFullEnergyNames;
 
     public static void buildWorldgen(ModConfigSpec.Builder builder) {
         builder.push("oil");
@@ -179,6 +180,12 @@ public class BCEnergyConfig {
                         "Default is false (FE), matching the modern Forge/NeoForge convention."
                 )
                 .define("useRfNaming", false);
+        useFullEnergyNames = builder
+                .comment(
+                        "If true, spell energy units in full ('Minecraft Joules', 'Forge Energy', 'Redstone Flux')",
+                        "instead of the abbreviated 'MJ', 'FE', and 'RF'. Default is false (abbreviated)."
+                )
+                .define("useFullEnergyNames", false);
     }
 
     /**

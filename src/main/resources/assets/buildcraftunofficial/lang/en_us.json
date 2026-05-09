@@ -575,6 +575,7 @@
     "buildcraftunofficial.configuration.baseRfRate": "Base RF Rate",
     "buildcraftunofficial.configuration.baseFlowRate": "Base Fluid Flow Rate",
     "buildcraftunofficial.configuration.useRfNaming": "Use RF Naming",
+    "buildcraftunofficial.configuration.useFullEnergyNames": "Spell Energy Units in Full",
     "buildcraftunofficial.configuration.oilIsSticky": "Oil is Sticky",
     "buildcraftunofficial.configuration.bptStoreExternalThreshold": "Blueprint External Storage Threshold",
     "buildcraftunofficial.configuration.quarryFrameMinHeight": "Quarry Frame Min Height",
@@ -775,7 +776,7 @@
     "buildcraft.help.filler.invert.desc": "If the selected pattern should be inverted, building blocks outside the defined shape.",
     "gui.jei.category.buildcraftunofficial.heat_exchanger": "Heat Exchanger",
     "gui.jei.category.buildcraftunofficial.distiller": "Distiller",
-    "gui.jei.category.buildcraftunofficial.distiller.power": "%s MJ",
+    "gui.jei.category.buildcraftunofficial.distiller.power": "%s %s",
     "gui.jei.category.buildcraftunofficial.assembly_table": "Assembly Table",
-    "gui.jei.category.buildcraftunofficial.assembly_table.power": "%s MJ"
+    "gui.jei.category.buildcraftunofficial.assembly_table.power": "%s %s"
 }

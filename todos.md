@@ -47,9 +47,7 @@ The `minecraft:impossible` trigger is intentional in this codebase: it's the "do
 - [ ] Most blocks use default `SoundType` — review and set appropriate sounds per block type (engines, pipes, facades, tanks, machines). Only 43 explicit `SoundType` declarations exist across the codebase (mostly `METAL`, with three `STONE` and three `SLIME_BLOCK` cases); a deliberate sound pass is still needed.
 
 ### Config System
-- [ ] **Power unit display configuration** — MJ ↔ RF/FE wording is done (`useRfNaming`, post-Beta-6); abbreviation (`1.2k MJ`) and per-tick/per-second toggle still missing.
-- [ ] **Fullbright fluid rendering in tanks** — config option to recreate the 1.12.2 "neon glow" look.
-- [ ] **Heat-level color shifting** — config option to subtly brighten/warm fluid colors at higher heat levels.
+- [ ] **Power unit display configuration** — MJ ↔ RF/FE wording is done (`useRfNaming`, post-Beta-6) and the abbreviated-vs-full unit naming toggle (`useFullEnergyNames`, `MJ` ↔ `Minecraft Joules` / `FE` ↔ `Forge Energy` / `RF` ↔ `Redstone Flux`) is done; large-number abbreviation (`1.2k MJ`) and per-tick/per-second toggle still missing.
 
 ### Guidebook
 - [ ] Fill the last 2 stubs: `engine_basics.md` (1-line title only) and `registry_overview.md` (empty).

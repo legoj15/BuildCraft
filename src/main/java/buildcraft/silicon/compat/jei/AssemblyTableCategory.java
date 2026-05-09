@@ -89,7 +89,8 @@ public class AssemblyTableCategory extends AbstractRecipeCategory<AssemblyRecipe
         double mj = recipe.microJoules() / (double) MjAPI.MJ;
         String powerStr = Component.translatable(
                 "gui.jei.category.buildcraftunofficial.assembly_table.power",
-                String.format("%.1f", mj)).getString();
+                String.format("%.1f", mj),
+                buildcraft.lib.misc.LocaleUtil.mjUnit()).getString();
         Font font = Minecraft.getInstance().font;
         graphics.text(font, powerStr, POWER_X, POWER_Y, POWER_COLOR, false);
     }

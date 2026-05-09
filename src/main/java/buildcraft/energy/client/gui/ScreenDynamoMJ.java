@@ -97,8 +97,7 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
                     if (contains(mainGui.mouse)) {
                         int current = menu.getSyncedFeStored();
                         int max = buildcraft.energy.tile.TileDynamoMJ.MAX_FE;
-                        tooltips.add(new buildcraft.lib.gui.elem.ToolTip(
-                            String.format("%,d / %,d %s", current, max, LocaleUtil.energyUnit())));
+                        tooltips.add(new buildcraft.lib.gui.elem.ToolTip(LocaleUtil.localizeRf(current, max)));
                     }
                 }
             });

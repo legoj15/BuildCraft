@@ -19,6 +19,9 @@ public class BCLibConfig {
     public static ModConfigSpec.EnumValue<PowerMode> powerMode;
     public static ModConfigSpec.DoubleValue mjRfConversionAmount;
 
+    public static ModConfigSpec.EnumValue<ThousandsSeparator> thousandsSeparator;
+    public static ModConfigSpec.EnumValue<DecimalSeparator> decimalSeparator;
+
     public static void buildGeneral(ModConfigSpec.Builder builder) {
         powerMode = builder
                 .comment("Power mode. Options are MJ_ONLY, MJ_AUTOCONVERT_RF, DISPLAY_RF")
@@ -27,6 +30,48 @@ public class BCLibConfig {
         mjRfConversionAmount = builder
                 .comment("Conversion ratio for MJ <-> RF if autoconvert is enabled (MJ per RF)")
                 .defineInRange("mjRfConversionAmount", 0.1, 0.0001, 0.2);
+    }
+
+    public static void buildDisplay(ModConfigSpec.Builder builder) {
+        thousandsSeparator = builder
+                .comment(
+                        "Thousands grouping for large numbers in machine readouts and JEI labels.",
+                        "COMMA: 1,000   DOT: 1.000   SPACE: 1 000   NONE: 1000."
+                )
+                .defineEnum("thousandsSeparator", ThousandsSeparator.COMMA);
+
+        decimalSeparator = builder
+                .comment(
+                        "Separator before the decimal portion of fractional readouts (e.g. MJ values, heat).",
+                        "DOT: 1.5   COMMA: 1,5."
+                )
+                .defineEnum("decimalSeparator", DecimalSeparator.DOT);
+    }
+
+    /** Thousands grouping separator used by {@link buildcraft.lib.misc.LocaleUtil}'s number formatters. */
+    public enum ThousandsSeparator {
+        COMMA(','),
+        DOT('.'),
+        SPACE(' '),
+        NONE('\0');
+
+        public final char ch;
+
+        ThousandsSeparator(char ch) {
+            this.ch = ch;
+        }
+    }
+
+    /** Separator placed before the decimal portion of a fractional number. */
+    public enum DecimalSeparator {
+        DOT('.'),
+        COMMA(',');
+
+        public final char ch;
+
+        DecimalSeparator(char ch) {
+            this.ch = ch;
+        }
     }
 
     public enum PowerMode {

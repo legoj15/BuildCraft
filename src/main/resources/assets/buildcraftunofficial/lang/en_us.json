@@ -576,6 +576,8 @@
     "buildcraftunofficial.configuration.baseFlowRate": "Base Fluid Flow Rate",
     "buildcraftunofficial.configuration.useRfNaming": "Use RF Naming",
     "buildcraftunofficial.configuration.useFullEnergyNames": "Spell Energy Units in Full",
+    "buildcraftunofficial.configuration.thousandsSeparator": "Thousands Separator",
+    "buildcraftunofficial.configuration.decimalSeparator": "Decimal Separator",
     "buildcraftunofficial.configuration.oilIsSticky": "Oil is Sticky",
     "buildcraftunofficial.configuration.bptStoreExternalThreshold": "Blueprint External Storage Threshold",
     "buildcraftunofficial.configuration.quarryFrameMinHeight": "Quarry Frame Min Height",

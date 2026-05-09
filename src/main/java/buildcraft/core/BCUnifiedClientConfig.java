@@ -18,6 +18,7 @@ public class BCUnifiedClientConfig {
 
         builder.push("display");
         buildcraft.energy.BCEnergyConfig.buildDisplay(builder);
+        buildcraft.lib.BCLibConfig.buildDisplay(builder);
         builder.pop();
 
         SPEC = builder.build();

@@ -17,8 +17,8 @@ public class LocaleUtil {
         return String.format(template, args);
     }
 
-    /** Format MJ value for display (e.g. "5.00 MJ"). Unit follows
-     *  {@link BCEnergyConfig#useFullEnergyNames} — "MJ" by default, "Minecraft Joules" when on. */
+    /** Format MJ value for display (e.g. "5.00 Minecraft Joules"). Unit follows
+     *  {@link BCEnergyConfig#useFullEnergyNames} — "Minecraft Joules" by default, "MJ" when off. */
     public static String localizeMj(long microMj) {
         double mj = microMj / (double) MjAPI.MJ;
         return String.format("%.2f %s", mj, mjUnit());
@@ -47,32 +47,35 @@ public class LocaleUtil {
         return localizeHeat((double) heat);
     }
 
-    /** Format stored Forge Energy for display (e.g. "5,000 / 10,000 FE"). Unit follows
-     *  {@link BCEnergyConfig#useRfNaming} — "FE" by default, "RF" when the toggle is on. */
+    /** Format stored Forge Energy for display (e.g. "5,000 / 10,000 Forge Energy"). The unit
+     *  follows {@link BCEnergyConfig#useFullEnergyNames} (default on → "Forge Energy") and
+     *  {@link BCEnergyConfig#useRfNaming} (off by default → FE branch; on → RF branch). */
     public static String localizeRf(int current, int max) {
         return String.format("%,d / %,d %s", current, max, energyUnit());
     }
 
     /** Format Forge Energy flow for display as per-second (×20 ticks), matching 1.12 format.
-     *  Unit follows {@link BCEnergyConfig#useRfNaming} — "FE/s" by default, "RF/s" when on. */
+     *  Unit follows {@link BCEnergyConfig#useFullEnergyNames} and {@link BCEnergyConfig#useRfNaming};
+     *  default reads as "Forge Energy/s". */
     public static String localizeRfFlow(int rfPerTick) {
         return String.format("%,d %s/s", rfPerTick * 20, energyUnit());
     }
 
     /** Returns the FE-family unit label for the user's display preferences:
-     *  abbreviated "FE"/"RF" (default) or full "Forge Energy"/"Redstone Flux"
-     *  when {@link BCEnergyConfig#useFullEnergyNames} is on. */
+     *  full "Forge Energy"/"Redstone Flux" (default) or abbreviated "FE"/"RF"
+     *  when {@link BCEnergyConfig#useFullEnergyNames} is off. */
     public static String energyUnit() {
         boolean rf = BCEnergyConfig.useRfNaming != null && BCEnergyConfig.useRfNaming.get();
-        boolean full = BCEnergyConfig.useFullEnergyNames != null && BCEnergyConfig.useFullEnergyNames.get();
+        boolean full = BCEnergyConfig.useFullEnergyNames == null
+                || BCEnergyConfig.useFullEnergyNames.get();
         if (full) return rf ? "Redstone Flux" : "Forge Energy";
         return rf ? "RF" : "FE";
     }
 
-    /** Returns "MJ" or "Minecraft Joules" depending on
+    /** Returns "Minecraft Joules" (default) or "MJ" depending on
      *  {@link BCEnergyConfig#useFullEnergyNames}. */
     public static String mjUnit() {
-        return BCEnergyConfig.useFullEnergyNames != null && BCEnergyConfig.useFullEnergyNames.get()
+        return BCEnergyConfig.useFullEnergyNames == null || BCEnergyConfig.useFullEnergyNames.get()
                 ? "Minecraft Joules"
                 : "MJ";
     }

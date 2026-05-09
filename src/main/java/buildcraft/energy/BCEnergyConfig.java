@@ -183,9 +183,10 @@ public class BCEnergyConfig {
         useFullEnergyNames = builder
                 .comment(
                         "If true, spell energy units in full ('Minecraft Joules', 'Forge Energy', 'Redstone Flux')",
-                        "instead of the abbreviated 'MJ', 'FE', and 'RF'. Default is false (abbreviated)."
+                        "instead of the abbreviated 'MJ', 'FE', and 'RF'. Default is true (full names);",
+                        "set false to get the compact 'MJ'/'FE'/'RF' suffixes back."
                 )
-                .define("useFullEnergyNames", false);
+                .define("useFullEnergyNames", true);
     }
 
     /**

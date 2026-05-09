@@ -19,7 +19,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.api.core.BCLog;
 
@@ -52,7 +52,7 @@ public class ModelHolderVariable extends ModelHolder {
     }
 
     @Override
-    protected void onTextureStitchPre(Set<Identifier> toRegisterSprites) {
+    protected void onTextureStitchPre(Set<ResourceLocation> toRegisterSprites) {
         rawModel = null;
         failReason = null;
         loadAttempted = false;
@@ -110,7 +110,7 @@ public class ModelHolderVariable extends ModelHolder {
                 sprite = atlas.getSprite(MissingTextureAtlasSprite.getLocation());
             }
         } else {
-            sprite = atlas.getSprite(Identifier.parse(lookup));
+            sprite = atlas.getSprite(ResourceLocation.parse(lookup));
         }
         TexturedFace face = new TexturedFace();
         face.sprite = sprite;

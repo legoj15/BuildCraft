@@ -20,7 +20,7 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
@@ -61,7 +61,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
 
         // Resolve sprite + tint from the fluid type
         IClientFluidTypeExtensions fluidExt = IClientFluidTypeExtensions.of(forRender.getFluid());
-        Identifier stillTexture = fluidExt.getStillTexture(forRender);
+        ResourceLocation stillTexture = fluidExt.getStillTexture(forRender);
         if (stillTexture == null) {
             return;
         }
@@ -83,7 +83,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer fluidBB = bufferSource.getBuffer(
             FluidUtilBC.shouldRenderTranslucent(forRender)
-                ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
+                ? Sheets.translucentItemSheet() : Sheets.cutoutBlockSheet());
 
         double[] amounts = flow.getAmountsForRender(partialTicks);
         Vec3[] offsets = flow.getOffsetsForRender(partialTicks);
@@ -170,7 +170,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
 
         // Flush only the render type we used — don't disturb other renderers' in-progress buffers
         boolean translucent = FluidUtilBC.shouldRenderTranslucent(forRender);
-        bufferSource.endBatch(translucent ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
+        bufferSource.endBatch(translucent ? Sheets.translucentItemSheet() : Sheets.cutoutBlockSheet());
     }
 
     /** Renders a fluid cuboid using {@link MutableQuad}s, with fill-level scaling on the Y axis.

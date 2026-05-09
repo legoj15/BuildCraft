@@ -12,7 +12,7 @@ import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.lib.compat.jei.BCGhostIngredientHandler;
 import buildcraft.lib.compat.jei.BlueprintTransferHandler;
@@ -28,10 +28,10 @@ import buildcraft.silicon.gui.GuiAdvancedCraftingTable;
  */
 @JeiPlugin
 public class BCSiliconJeiPlugin implements IModPlugin {
-    private static final Identifier UID = Identifier.parse("buildcraftsilicon:jei_plugin");
+    private static final ResourceLocation UID = ResourceLocation.parse("buildcraftsilicon:jei_plugin");
 
     @Override
-    public Identifier getPluginUid() {
+    public ResourceLocation getPluginUid() {
         return UID;
     }
 

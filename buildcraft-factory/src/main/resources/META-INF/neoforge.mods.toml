@@ -4,7 +4,7 @@ license="MIT"
 
 [[mods]]
 modId="buildcraftfactory"
-version="1.21.11-8.0.0"
+version="1.21.10-8.0.0"
 displayName="BuildCraft Factory"
 description='''
 The factory module for BuildCraft 8. (Stub)

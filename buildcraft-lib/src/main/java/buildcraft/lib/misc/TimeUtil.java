@@ -1,6 +1,6 @@
 package buildcraft.lib.misc;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

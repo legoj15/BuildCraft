@@ -15,7 +15,7 @@ import net.minecraft.client.gui.screens.recipebook.RecipeCollection;
 import net.minecraft.client.gui.screens.recipebook.SearchRecipeBookCategory;
 import net.minecraft.network.chat.Component;
 import net.minecraft.recipebook.PlaceRecipeHelper;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.context.ContextMap;
 import net.minecraft.world.entity.player.StackedItemContents;
 import net.minecraft.world.inventory.Slot;
@@ -33,10 +33,10 @@ import buildcraft.factory.container.ContainerAutoCraftItems;
  */
 public class AWRecipeBookComponent extends RecipeBookComponent<ContainerAutoCraftItems> {
     private static final WidgetSprites FILTER_BUTTON_SPRITES = new WidgetSprites(
-        Identifier.withDefaultNamespace("recipe_book/filter_enabled"),
-        Identifier.withDefaultNamespace("recipe_book/filter_disabled"),
-        Identifier.withDefaultNamespace("recipe_book/filter_enabled_highlighted"),
-        Identifier.withDefaultNamespace("recipe_book/filter_disabled_highlighted")
+        ResourceLocation.withDefaultNamespace("recipe_book/filter_enabled"),
+        ResourceLocation.withDefaultNamespace("recipe_book/filter_disabled"),
+        ResourceLocation.withDefaultNamespace("recipe_book/filter_enabled_highlighted"),
+        ResourceLocation.withDefaultNamespace("recipe_book/filter_disabled_highlighted")
     );
     private static final Component ONLY_CRAFTABLES_TOOLTIP = Component.translatable("gui.recipebook.toggleRecipes.craftable");
     private static final List<RecipeBookComponent.TabInfo> TABS = List.of(
@@ -98,9 +98,12 @@ public class AWRecipeBookComponent extends RecipeBookComponent<ContainerAutoCraf
         }
     }
 
-    @Override
     protected WidgetSprites getFilterButtonTextures() {
         return FILTER_BUTTON_SPRITES;
+    }
+
+    @Override
+    protected void initFilterButtonTextures() {
     }
 
     @Override

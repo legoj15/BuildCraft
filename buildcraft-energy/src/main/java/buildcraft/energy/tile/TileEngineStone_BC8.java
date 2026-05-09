@@ -24,8 +24,8 @@ import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.AdvancementUtil;
 
 public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
-    private static final net.minecraft.resources.Identifier ADVANCEMENT_POWERING_UP
-        = net.minecraft.resources.Identifier.parse("buildcraftenergy:powering_up");
+    private static final net.minecraft.resources.ResourceLocation ADVANCEMENT_POWERING_UP
+        = net.minecraft.resources.ResourceLocation.parse("buildcraftenergy:powering_up");
 
     private static final long MAX_OUTPUT = MjAPI.MJ;
     private static final long MIN_OUTPUT = MAX_OUTPUT / 3;
@@ -212,7 +212,7 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
         output.putInt("totalBurnTime", totalBurnTime);
         output.putLong("esum", esum);
         if (!fuelStack.isEmpty()) {
-            net.minecraft.resources.Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(fuelStack.getItem());
+            net.minecraft.resources.ResourceLocation itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(fuelStack.getItem());
             output.putString("fuelId", itemId.toString());
             output.putInt("fuelCount", fuelStack.getCount());
         }
@@ -226,7 +226,7 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
         esum = input.getLongOr("esum", 0L);
         String fuelId = input.getStringOr("fuelId", "");
         if (!fuelId.isEmpty()) {
-            net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(fuelId);
+            net.minecraft.resources.ResourceLocation id = net.minecraft.resources.ResourceLocation.tryParse(fuelId);
             if (id != null) {
                 net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(id);
                 int count = input.getIntOr("fuelCount", 1);

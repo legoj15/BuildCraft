@@ -8,18 +8,18 @@ package buildcraft.lib.client.sprite;
 
 
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.api.core.render.ISprite;
 import buildcraft.lib.gui.GuiIcon;
 
 /** Defines a sprite that is taken directly from the given resource location. */
 public class SpriteRaw implements ISprite {
-    public final Identifier location;
+    public final ResourceLocation location;
     public final double uMin, vMin, width, height;
     public final int texSize;
 
-    public SpriteRaw(Identifier location, double xMin, double yMin, double width, double height, double textureSize) {
+    public SpriteRaw(ResourceLocation location, double xMin, double yMin, double width, double height, double textureSize) {
         this.location = location;
         this.uMin = xMin / textureSize;
         this.vMin = yMin / textureSize;
@@ -28,7 +28,7 @@ public class SpriteRaw implements ISprite {
         this.texSize = (int) textureSize;
     }
 
-    public SpriteRaw(Identifier location, double xMin, double yMin, double width, double height) {
+    public SpriteRaw(ResourceLocation location, double xMin, double yMin, double width, double height) {
         this.location = location;
         this.uMin = xMin;
         this.vMin = yMin;

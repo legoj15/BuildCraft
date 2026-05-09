@@ -14,7 +14,7 @@ import com.google.common.collect.ImmutableList;
 
 import io.netty.buffer.Unpooled;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -152,7 +152,7 @@ public abstract class ContainerBC_Neptune extends RecipeBookMenu {
         } else if (id == NET_JEI_RECIPE_TRANSFER && !isClient) {
             // Server-side: JEI requested recipe placement into blueprint phantom slots.
             // Look up the recipe by resource location and delegate to handlePlacement().
-            Identifier recipeId = Identifier.parse(buffer.readUtf());
+            ResourceLocation recipeId = ResourceLocation.parse(buffer.readUtf());
             if (player.level() instanceof ServerLevel serverLevel) {
                 net.minecraft.resources.ResourceKey<net.minecraft.world.item.crafting.Recipe<?>> key =
                         net.minecraft.resources.ResourceKey.create(
@@ -171,7 +171,7 @@ public abstract class ContainerBC_Neptune extends RecipeBookMenu {
             String itemId = buffer.readUtf();
             if (slotIdx >= 0 && slotIdx < slots.size() && slots.get(slotIdx) instanceof SlotPhantom phantom) {
                 net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
-                        Identifier.parse(itemId)).ifPresent(itemRef -> {
+                        ResourceLocation.parse(itemId)).ifPresent(itemRef -> {
                     ItemStack stack = new ItemStack(itemRef.value(), 1);
                     phantom.set(stack);
                 });

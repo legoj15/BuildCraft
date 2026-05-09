@@ -16,7 +16,7 @@ import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
@@ -56,7 +56,7 @@ public class TileChute extends TileBC_Neptune implements MenuProvider {
 
     private static final int PICKUP_MAX = 3;
     private static final long PROGRESS_TARGET = 100_000;
-    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftfactory:retired_hopper");
+    private static final ResourceLocation ADVANCEMENT = ResourceLocation.parse("buildcraftfactory:retired_hopper");
 
     public final ItemHandlerSimple inv = new ItemHandlerSimple(4,
             (handler, slot, before, after) -> this.setChanged());

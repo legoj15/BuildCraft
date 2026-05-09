@@ -11,7 +11,7 @@ import java.util.function.Supplier;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.lib.gui.BuildCraftGui;
@@ -30,10 +30,10 @@ public class LedgerEngine extends Ledger_Neptune {
     private static final int TEXT_COLOUR = 0x000000;
 
     // Engine status icon textures (from 1.12.2 BCLibSprites)
-    private static final Identifier ICON_ACTIVE = Identifier.parse("buildcraftlib:textures/icons/engine_active.png");
-    private static final Identifier ICON_INACTIVE = Identifier.parse("buildcraftlib:textures/icons/engine_inactive.png");
-    private static final Identifier ICON_WARM = Identifier.parse("buildcraftlib:textures/icons/engine_warm.png");
-    private static final Identifier ICON_OVERHEAT = Identifier.parse("buildcraftlib:textures/icons/engine_overheat.png");
+    private static final ResourceLocation ICON_ACTIVE = ResourceLocation.parse("buildcraftlib:textures/icons/engine_active.png");
+    private static final ResourceLocation ICON_INACTIVE = ResourceLocation.parse("buildcraftlib:textures/icons/engine_inactive.png");
+    private static final ResourceLocation ICON_WARM = ResourceLocation.parse("buildcraftlib:textures/icons/engine_warm.png");
+    private static final ResourceLocation ICON_OVERHEAT = ResourceLocation.parse("buildcraftlib:textures/icons/engine_overheat.png");
 
     private final Supplier<EnumPowerStage> powerStageSupplier;
     private final Supplier<Boolean> engineOnSupplier;
@@ -65,7 +65,7 @@ public class LedgerEngine extends Ledger_Neptune {
     protected void drawIcon(double x, double y, GuiGraphics graphics) {
         // Select the appropriate engine status icon based on power stage
         // Matches 1.12.2 LedgerEngine.drawIcon() logic
-        Identifier icon;
+        ResourceLocation icon;
         boolean animated = false;
         EnumPowerStage stage = powerStageSupplier.get();
         switch (stage) {

@@ -12,7 +12,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
@@ -125,9 +125,9 @@ public class OilGenerator {
         int z = cz * 16 + 8 + rand.nextInt(16);
 
         Holder<Biome> biomeHolder = level.getBiome(new BlockPos(x, 64, z));
-        // Get the biome's Identifier from the holder's registered name
+        // Get the biome's ResourceLocation from the holder's registered name
         String registeredName = biomeHolder.getRegisteredName();
-        Identifier biomeId = Identifier.parse(registeredName);
+        ResourceLocation biomeId = ResourceLocation.parse(registeredName);
 
         // Do not generate oil in excluded biomes
         boolean isExcludedBiome = BCEnergyConfig.excludedBiomes.contains(biomeId);
@@ -140,7 +140,7 @@ public class OilGenerator {
         }
 
         // Skip end biome near dragon fight
-        if (biomeId.equals(Identifier.withDefaultNamespace("the_end"))
+        if (biomeId.equals(ResourceLocation.withDefaultNamespace("the_end"))
                 && (Math.abs(x) < 1200 || Math.abs(z) < 1200)) {
             return ImmutableList.of();
         }

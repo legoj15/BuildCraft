@@ -102,7 +102,7 @@ public class BlockGenericPipe extends BlockBuildCraft implements IColorRemovable
         public final EnumFacing sideHit, partSide;
 
         RaytraceResult(MovingObjectPosition movingObjectPosition, IdentifiableAABB<Part> boundingBox, EnumFacing side, EnumFacing partSide) {
-            this.hitPart = boundingBox.identifier;
+            this.hitPart = boundingBox.ResourceLocation;
             this.movingObjectPosition = movingObjectPosition;
             this.boundingBox = boundingBox;
             this.sideHit = side;

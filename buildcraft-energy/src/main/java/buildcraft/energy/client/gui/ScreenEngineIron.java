@@ -11,7 +11,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
@@ -35,7 +35,7 @@ import buildcraft.lib.misc.LocaleUtil;
  * (fuel, coolant, residue) with actual fluid textures, glass overlays, and tooltips.
  */
 public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
-    private static final Identifier TEXTURE = Identifier.parse("buildcraftenergy:textures/gui/combustion_engine_gui.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.parse("buildcraftenergy:textures/gui/combustion_engine_gui.png");
     private static final int SIZE_X = 176, SIZE_Y = 177;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_TANK_OVERLAY = new GuiIcon(TEXTURE, 176, 0, 16, 60);
@@ -132,7 +132,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
      */
     private void drawFluidTexture(GuiGraphics graphics, int x, int y, int width, int height, Fluid fluid) {
         IClientFluidTypeExtensions fluidExt = IClientFluidTypeExtensions.of(fluid);
-        Identifier stillTexture = fluidExt.getStillTexture();
+        ResourceLocation stillTexture = fluidExt.getStillTexture();
         if (stillTexture == null) return;
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()

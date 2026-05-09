@@ -6,7 +6,7 @@
 
 package buildcraft.lib.client.guide;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 public enum ETypeTag {
     MOD("mod."),

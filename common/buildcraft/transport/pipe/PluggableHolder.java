@@ -50,7 +50,7 @@ public final class PluggableHolder {
     public NBTTagCompound writeToNbt() {
         NBTTagCompound nbt = new NBTTagCompound();
         if (pluggable != null) {
-            nbt.setString("id", pluggable.definition.identifier.toString());
+            nbt.setString("id", pluggable.definition.ResourceLocation.toString());
             nbt.setTag("data", pluggable.writeToNbt());
         }
         return nbt;
@@ -63,8 +63,8 @@ public final class PluggableHolder {
         }
         String id = nbt.getString("id");
         NBTTagCompound data = nbt.getCompoundTag("data");
-        ResourceLocation identifier = new ResourceLocation(id);
-        PluggableDefinition def = PipeApi.pluggableRegistry.getDefinition(identifier);
+        ResourceLocation ResourceLocation = new ResourceLocation(id);
+        PluggableDefinition def = PipeApi.pluggableRegistry.getDefinition(ResourceLocation);
         if (def == null) {
             BCLog.logger.warn("Unknown pluggable id '" + id + "'");
             throw new Error("Def was null!");
@@ -87,7 +87,7 @@ public final class PluggableHolder {
             buffer.writeByte(ID_REMOVE_PLUG);
         } else {
             buffer.writeByte(ID_CREATE_PLUG);
-            buffer.writeString(pluggable.definition.identifier.toString());
+            buffer.writeString(pluggable.definition.ResourceLocation.toString());
             pluggable.writeCreationPayload(buffer);
         }
     }
@@ -105,10 +105,10 @@ public final class PluggableHolder {
     }
 
     private void readCreateInternal(PacketBuffer buffer) throws InvalidInputDataException {
-        ResourceLocation identifier = new ResourceLocation(buffer.readString(256));
-        PluggableDefinition def = PipeApi.pluggableRegistry.getDefinition(identifier);
+        ResourceLocation ResourceLocation = new ResourceLocation(buffer.readString(256));
+        PluggableDefinition def = PipeApi.pluggableRegistry.getDefinition(ResourceLocation);
         if (def == null) {
-            throw new InvalidInputDataException("Unknown remote pluggable \"" + identifier + "\"");
+            throw new InvalidInputDataException("Unknown remote pluggable \"" + ResourceLocation + "\"");
         }
         if (pluggable != null) {
             holder.eventBus.unregisterHandler(pluggable);

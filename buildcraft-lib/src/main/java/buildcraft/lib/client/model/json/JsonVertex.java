@@ -6,7 +6,7 @@
 
 package buildcraft.lib.client.model.json;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import org.joml.Vector2f; // was Vector2f
 import org.joml.Vector3f; // was Vector3f

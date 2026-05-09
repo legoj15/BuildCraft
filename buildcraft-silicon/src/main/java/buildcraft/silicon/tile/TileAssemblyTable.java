@@ -23,7 +23,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.recipes.AssemblyRecipe;
@@ -39,7 +39,7 @@ import buildcraft.silicon.BCSiliconBlockEntities;
 import buildcraft.silicon.EnumAssemblyRecipeState;
 
 public class TileAssemblyTable extends TileLaserTableBase {
-    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftsilicon:precision_crafting");
+    private static final ResourceLocation ADVANCEMENT = ResourceLocation.parse("buildcraftsilicon:precision_crafting");
 
     public final ItemHandlerSimple inv = itemManager.addInvHandler(
         "inv",
@@ -285,8 +285,8 @@ public class TileAssemblyTable extends TileLaserTableBase {
             if (recipeCompare != 0) return recipeCompare;
             if (ItemStack.isSameItemSameComponents(output, o.output)) return 0;
             
-            net.minecraft.resources.Identifier thisId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(output.getItem());
-            net.minecraft.resources.Identifier otherId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(o.output.getItem());
+            net.minecraft.resources.ResourceLocation thisId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(output.getItem());
+            net.minecraft.resources.ResourceLocation otherId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(o.output.getItem());
             int idCompare = thisId.compareTo(otherId);
             if (idCompare != 0) return idCompare;
             

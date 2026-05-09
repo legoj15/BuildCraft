@@ -5,7 +5,7 @@ license="MIT"
 # ─── BuildCraft API ───────────────────────────────────────────────────────────
 [[mods]]
 modId="buildcraftapi"
-version="1.21.11-8.0.0"
+version="1.21.10-8.0.0"
 displayName="BuildCraft API"
 description='''
 The API module for BuildCraft 8.
@@ -14,7 +14,7 @@ The API module for BuildCraft 8.
 # ─── BuildCraft Library ──────────────────────────────────────────────────────
 [[mods]]
 modId="buildcraftlib"
-version="1.21.11-8.0.0"
+version="1.21.10-8.0.0"
 displayName="BuildCraft Library"
 description='''
 The library module for BuildCraft 8.
@@ -23,19 +23,19 @@ The library module for BuildCraft 8.
 # ─── BuildCraft Core ─────────────────────────────────────────────────────────
 [[mods]]
 modId="buildcraftcore"
-version="1.21.11-8.0.0"
+version="1.21.10-8.0.0"
 displayName="BuildCraft Core"
 logoFile="logo.png"
 credits="Created by SpaceToad"
 authors="SpaceToad, BuildCraft Team, legoj15 with Antigravity"
 description='''
-Extending Minecraft 1.21.11 with pipes, auto-crafting, quarries, engines and much more!
+Extending Minecraft 1.21.10 with pipes, auto-crafting, quarries, engines and much more!
 '''
 
 # ─── BuildCraft Builders ─────────────────────────────────────────────────────
 [[mods]]
 modId="buildcraftbuilders"
-version="1.21.11-8.0.0"
+version="1.21.10-8.0.0"
 displayName="BuildCraft Builders"
 description='''
 The builders module for BuildCraft 8.
@@ -44,7 +44,7 @@ The builders module for BuildCraft 8.
 # ─── BuildCraft Energy ───────────────────────────────────────────────────────
 [[mods]]
 modId="buildcraftenergy"
-version="1.21.11-8.0.0"
+version="1.21.10-8.0.0"
 displayName="BuildCraft Energy"
 description='''
 The energy module for BuildCraft 8.
@@ -53,7 +53,7 @@ The energy module for BuildCraft 8.
 # ─── BuildCraft Factory ──────────────────────────────────────────────────────
 [[mods]]
 modId="buildcraftfactory"
-version="1.21.11-8.0.0"
+version="1.21.10-8.0.0"
 displayName="BuildCraft Factory"
 description='''
 The factory module for BuildCraft 8.
@@ -62,7 +62,7 @@ The factory module for BuildCraft 8.
 # ─── BuildCraft Transport ────────────────────────────────────────────────────
 [[mods]]
 modId="buildcrafttransport"
-version="1.21.11-8.0.0"
+version="1.21.10-8.0.0"
 displayName="BuildCraft Transport"
 description='''
 The transport module for BuildCraft 8.
@@ -71,7 +71,7 @@ The transport module for BuildCraft 8.
 # ─── BuildCraft Silicon ──────────────────────────────────────────────────────
 [[mods]]
 modId="buildcraftsilicon"
-version="1.21.11-8.0.0"
+version="1.21.10-8.0.0"
 displayName="BuildCraft Silicon"
 description='''
 The silicon module for BuildCraft 8.
@@ -80,7 +80,7 @@ The silicon module for BuildCraft 8.
 # ─── BuildCraft Robotics ─────────────────────────────────────────────────────
 [[mods]]
 modId="buildcraftrobotics"
-version="1.21.11-8.0.0"
+version="1.21.10-8.0.0"
 displayName="BuildCraft Robotics"
 description='''
 The robotics module for BuildCraft 8.

@@ -6,7 +6,7 @@
 
 package buildcraft.core.marker.volume;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,19 +16,19 @@ import net.minecraft.world.InteractionResult;
 public enum AddonsRegistry {
     INSTANCE;
 
-    private final Map<Identifier, Class<? extends Addon>> addonClasses = new HashMap<>();
+    private final Map<ResourceLocation, Class<? extends Addon>> addonClasses = new HashMap<>();
 
-    public void register(Identifier name, Class<? extends Addon> clazz) {
+    public void register(ResourceLocation name, Class<? extends Addon> clazz) {
         if (!addonClasses.containsKey(name)) {
             addonClasses.put(name, clazz);
         }
     }
 
-    public Class<? extends Addon> getClassByName(Identifier name) {
+    public Class<? extends Addon> getClassByName(ResourceLocation name) {
         return addonClasses.get(name);
     }
 
-    public Identifier getNameByClass(Class<? extends Addon> clazz) {
+    public ResourceLocation getNameByClass(Class<? extends Addon> clazz) {
         return addonClasses.entrySet().stream().filter(nameClass -> nameClass.getValue().equals(clazz)).findFirst().orElse(null).getKey();
     }
 }

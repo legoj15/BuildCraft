@@ -6,7 +6,7 @@
 
 package buildcraft.lib.client.guide;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import com.google.common.collect.ImmutableList;
 

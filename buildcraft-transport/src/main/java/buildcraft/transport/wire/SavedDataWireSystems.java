@@ -36,13 +36,13 @@ import buildcraft.api.transport.IWireEmitter;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
-import org.jspecify.annotations.Nullable;
+import javax.annotation.Nullable;
 
 public class SavedDataWireSystems extends SavedData {
     public static final SavedDataType<SavedDataWireSystems> TYPE = new SavedDataType<>(
         "buildcraft_wire_systems",
-        SavedDataWireSystems::new,
-        SavedDataWireSystems::makeCodec
+        (context) -> new SavedDataWireSystems(context.level()),
+        (context) -> SavedDataWireSystems.makeCodec(context.level())
     );
 
     public Level world;

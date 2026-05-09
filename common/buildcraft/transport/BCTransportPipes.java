@@ -255,7 +255,7 @@ public class BCTransportPipes {
         }
 
         public DefinitionBuilder id(String post) {
-            builder.identifier = new ResourceLocation("buildcrafttransport", post);
+            builder.ResourceLocation = new ResourceLocation("buildcrafttransport", post);
             return this;
         }
 

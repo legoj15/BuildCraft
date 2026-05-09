@@ -10,7 +10,7 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
@@ -37,7 +37,7 @@ public record MessageContainerPayload(
 ) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<MessageContainerPayload> TYPE =
-            new CustomPacketPayload.Type<>(Identifier.parse("buildcraftlib:container"));
+            new CustomPacketPayload.Type<>(ResourceLocation.parse("buildcraftlib:container"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, MessageContainerPayload> STREAM_CODEC =
             StreamCodec.of(MessageContainerPayload::encode, MessageContainerPayload::decode);

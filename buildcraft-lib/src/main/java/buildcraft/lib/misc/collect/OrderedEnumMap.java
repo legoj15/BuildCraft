@@ -6,7 +6,7 @@
 
 package buildcraft.lib.misc.collect;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nullable;
 

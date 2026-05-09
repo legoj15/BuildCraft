@@ -10,7 +10,7 @@ import java.util.Optional;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.crafting.CraftingRecipe;
@@ -86,7 +86,7 @@ public class BlueprintTransferHandler<C extends AbstractContainerMenu>
             // Send a custom container message with the recipe's resource location.
             // The server-side handler in ContainerBC_Neptune will look up the recipe
             // and call CraftingUtil.placeRecipeInBlueprint().
-            String recipeIdStr = recipe.id().identifier().toString();
+            String recipeIdStr = recipe.id().location().toString();
             bcContainer.sendMessage(NET_JEI_RECIPE_TRANSFER, buf -> {
                 buf.writeUtf(recipeIdStr);
             });

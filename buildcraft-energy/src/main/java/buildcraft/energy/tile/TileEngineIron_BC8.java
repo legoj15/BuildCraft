@@ -37,10 +37,10 @@ import buildcraft.lib.misc.AdvancementUtil;
  * Ported from 1.12.2 TileEngineIron_BC8.
  */
 public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
-    private static final net.minecraft.resources.Identifier ADVANCEMENT_POWERING_UP
-        = net.minecraft.resources.Identifier.parse("buildcraftenergy:powering_up");
-    private static final net.minecraft.resources.Identifier ADVANCEMENT_ICE_COOL
-        = net.minecraft.resources.Identifier.parse("buildcraftenergy:ice_cool");
+    private static final net.minecraft.resources.ResourceLocation ADVANCEMENT_POWERING_UP
+        = net.minecraft.resources.ResourceLocation.parse("buildcraftenergy:powering_up");
+    private static final net.minecraft.resources.ResourceLocation ADVANCEMENT_ICE_COOL
+        = net.minecraft.resources.ResourceLocation.parse("buildcraftenergy:ice_cool");
 
     public static final int MAX_FLUID = 10_000;
     public static final double COOLDOWN_RATE = 0.05;
@@ -370,17 +370,17 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
 
         // Save fluid tanks
         if (!tankFuel.getFluid().isEmpty()) {
-            net.minecraft.resources.Identifier fuelId = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(tankFuel.getFluid().getFluid());
+            net.minecraft.resources.ResourceLocation fuelId = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(tankFuel.getFluid().getFluid());
             output.putString("fuelFluid", fuelId.toString());
             output.putInt("fuelAmount", tankFuel.getFluidAmount());
         }
         if (!tankCoolant.getFluid().isEmpty()) {
-            net.minecraft.resources.Identifier coolId = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(tankCoolant.getFluid().getFluid());
+            net.minecraft.resources.ResourceLocation coolId = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(tankCoolant.getFluid().getFluid());
             output.putString("coolantFluid", coolId.toString());
             output.putInt("coolantAmount", tankCoolant.getFluidAmount());
         }
         if (!tankResidue.getFluid().isEmpty()) {
-            net.minecraft.resources.Identifier resId = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(tankResidue.getFluid().getFluid());
+            net.minecraft.resources.ResourceLocation resId = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(tankResidue.getFluid().getFluid());
             output.putString("residueFluid", resId.toString());
             output.putInt("residueAmountTank", tankResidue.getFluidAmount());
         }
@@ -402,7 +402,7 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
     private void loadTank(ValueInput input, String fluidKey, String amountKey, FluidTank tank) {
         String fluidId = input.getStringOr(fluidKey, "");
         if (!fluidId.isEmpty()) {
-            net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(fluidId);
+            net.minecraft.resources.ResourceLocation id = net.minecraft.resources.ResourceLocation.tryParse(fluidId);
             if (id != null) {
                 net.minecraft.world.level.material.Fluid fluid =
                     net.minecraft.core.registries.BuiltInRegistries.FLUID.getValue(id);

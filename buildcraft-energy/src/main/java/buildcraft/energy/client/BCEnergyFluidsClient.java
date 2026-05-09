@@ -1,7 +1,7 @@
 package buildcraft.energy.client;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.material.FluidState;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -20,8 +20,8 @@ import buildcraft.energy.BCEnergyFluids;
  */
 public class BCEnergyFluidsClient {
 
-    private static final Identifier WATER_STILL = Identifier.withDefaultNamespace("block/water_still");
-    private static final Identifier WATER_FLOW = Identifier.withDefaultNamespace("block/water_flow");
+    private static final ResourceLocation WATER_STILL = ResourceLocation.withDefaultNamespace("block/water_still");
+    private static final ResourceLocation WATER_FLOW = ResourceLocation.withDefaultNamespace("block/water_flow");
 
     @SubscribeEvent
     public static void onRegisterClientExtensions(RegisterClientExtensionsEvent event) {
@@ -30,12 +30,12 @@ public class BCEnergyFluidsClient {
 
             event.registerFluidType(new IClientFluidTypeExtensions() {
                 @Override
-                public Identifier getStillTexture() {
+                public ResourceLocation getStillTexture() {
                     return WATER_STILL;
                 }
 
                 @Override
-                public Identifier getFlowingTexture() {
+                public ResourceLocation getFlowingTexture() {
                     return WATER_FLOW;
                 }
 

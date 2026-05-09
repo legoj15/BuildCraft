@@ -88,9 +88,12 @@ public class CraftingRecipeBookComponent extends RecipeBookComponent<AbstractCra
         }
     }
 
-    @Override
     protected WidgetSprites getFilterButtonTextures() {
         return FILTER_BUTTON_SPRITES;
+    }
+    
+    @Override
+    protected void initFilterButtonTextures() {
     }
 
     @Override

@@ -6,7 +6,7 @@
 
 package buildcraft.lib.list;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nonnull;
 

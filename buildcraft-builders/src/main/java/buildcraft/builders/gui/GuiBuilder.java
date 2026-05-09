@@ -10,16 +10,16 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.builders.container.ContainerBuilder;
 
 public class GuiBuilder extends AbstractContainerScreen<ContainerBuilder> {
-    private static final Identifier TEXTURE_BASE =
-            Identifier.parse("buildcraftbuilders:textures/gui/builder.png");
-    private static final Identifier TEXTURE_BLUEPRINT =
-            Identifier.parse("buildcraftbuilders:textures/gui/builder_blueprint.png");
+    private static final ResourceLocation TEXTURE_BASE =
+            ResourceLocation.parse("buildcraftbuilders:textures/gui/builder.png");
+    private static final ResourceLocation TEXTURE_BLUEPRINT =
+            ResourceLocation.parse("buildcraftbuilders:textures/gui/builder_blueprint.png");
     private static final int SIZE_X = 176, SIZE_BLUEPRINT_X = 256, SIZE_Y = 222, BLUEPRINT_WIDTH = 87;
 
     public GuiBuilder(ContainerBuilder container, Inventory playerInv, Component title) {

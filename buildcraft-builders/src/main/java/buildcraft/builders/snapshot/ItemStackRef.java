@@ -14,13 +14,13 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 /**
  * Resolves an ItemStack from NBT references (item id, amount, tag compound).
- * In 1.21.11, metadata/damage is gone — items are looked up by Identifier only.
+ * In 1.21.11, metadata/damage is gone — items are looked up by ResourceLocation only.
  */
 public class ItemStackRef {
     private final NbtRef<StringTag> item;
@@ -38,7 +38,7 @@ public class ItemStackRef {
     }
 
     public ItemStack get(Tag nbt) {
-        Identifier itemId = Identifier.parse(
+        ResourceLocation itemId = ResourceLocation.parse(
             item
                 .get(nbt)
                 .orElseThrow(NullPointerException::new)

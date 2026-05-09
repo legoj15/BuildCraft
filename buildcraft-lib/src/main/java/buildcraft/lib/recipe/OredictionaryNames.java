@@ -6,7 +6,7 @@
 
 package buildcraft.lib.recipe;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 public class OredictionaryNames {
     public static final String GEAR_WOOD = "gearWood";

@@ -6,7 +6,7 @@
 
 package buildcraft.lib.particle;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import net.minecraft.world.phys.Vec3;
 

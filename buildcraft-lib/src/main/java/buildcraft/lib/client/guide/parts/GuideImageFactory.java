@@ -1,6 +1,6 @@
 package buildcraft.lib.client.guide.parts;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.render.ISprite;
@@ -25,11 +25,11 @@ public class GuideImageFactory implements GuidePartFactory {
         ISprite s;
         int sw = 16, sh = 16;
         try {
-            Identifier resLoc = Identifier.parse(location);
+            ResourceLocation resLoc = ResourceLocation.parse(location);
             s = new SpriteRaw(resLoc, 0, 0, 1, 1);
         } catch (Exception e) {
             BCLog.logger.warn("[lib.guide.loader.image] Couldn't load image '" + location + "': " + e.getMessage());
-            s = new SpriteRaw(Identifier.parse("buildcraftlib:missing"), 0, 0, 1, 1);
+            s = new SpriteRaw(ResourceLocation.parse("buildcraftlib:missing"), 0, 0, 1, 1);
         }
         this.sprite = s;
         this.srcWidth = sw;

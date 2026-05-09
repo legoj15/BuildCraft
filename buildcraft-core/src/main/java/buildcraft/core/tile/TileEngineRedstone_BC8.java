@@ -4,7 +4,7 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.core.tile;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nonnull;
 
@@ -21,7 +21,7 @@ import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.AdvancementUtil;
 
 public class TileEngineRedstone_BC8 extends TileEngineBase_BC8 {
-    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftcore:free_power");
+    private static final ResourceLocation ADVANCEMENT = ResourceLocation.parse("buildcraftcore:free_power");
     private boolean givenAdvancement = false;
 
     public TileEngineRedstone_BC8(BlockPos pos, BlockState state) {

@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -24,7 +24,7 @@ import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.item.ModelRenderProperties;
-import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.ItemOwner;
@@ -86,7 +86,7 @@ public class PipeItemModel implements ItemModel {
     @SuppressWarnings("unchecked")
     private final Function<ItemStack, RenderType> vanillaRenderType;
     @SuppressWarnings("unchecked")
-    private final java.util.function.Supplier<org.joml.Vector3fc[]> extents;
+    private final java.util.function.Supplier<org.joml.Vector3f[]> extents;
 
     /** Pre-baked overlay quads per DyeColor. */
     private final Map<DyeColor, List<BakedQuad>> overlayQuadCache = new EnumMap<>(DyeColor.class);
@@ -101,7 +101,7 @@ public class PipeItemModel implements ItemModel {
             this.itemTransforms = renderProperties.transforms();
             this.usesBlockLight = renderProperties.usesBlockLight();
             this.vanillaRenderType = (Function<ItemStack, RenderType>) RENDER_TYPE_FIELD.get(vanillaWrapper);
-            this.extents = (java.util.function.Supplier<org.joml.Vector3fc[]>) EXTENTS_FIELD.get(vanillaWrapper);
+            this.extents = (java.util.function.Supplier<org.joml.Vector3f[]>) EXTENTS_FIELD.get(vanillaWrapper);
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to read BlockModelWrapper fields", e);
         }
@@ -138,7 +138,7 @@ public class PipeItemModel implements ItemModel {
 
             // Use blocks-atlas translucent render type — overlay sprites are on
             // the blocks atlas and need alpha blending for transparent areas
-            overlayLayer.setRenderType(net.minecraft.client.renderer.Sheets.translucentBlockItemSheet());
+            overlayLayer.setRenderType(net.minecraft.client.renderer.Sheets.translucentItemSheet());
             renderProperties.applyToLayer(overlayLayer, displayContext);
         }
     }

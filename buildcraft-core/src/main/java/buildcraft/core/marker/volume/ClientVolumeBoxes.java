@@ -6,7 +6,7 @@
 
 package buildcraft.core.marker.volume;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;

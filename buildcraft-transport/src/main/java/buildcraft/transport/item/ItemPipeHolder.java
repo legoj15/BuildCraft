@@ -64,7 +64,7 @@ public class ItemPipeHolder extends BlockItem implements IItemPipe {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
                                 Consumer<Component> tooltip, TooltipFlag flag) {
         // Descriptive tip from lang file (e.g. "Extraction pipe", "Sorts items")
-        String id = definition.identifier; // e.g. "buildcrafttransport:wood_item"
+        String id = definition.ResourceLocation; // e.g. "buildcrafttransport:wood_item"
         int colon = id.indexOf(':');
         String path = colon >= 0 ? id.substring(colon + 1) : id;
         String tipKey = "tip.pipe." + path;

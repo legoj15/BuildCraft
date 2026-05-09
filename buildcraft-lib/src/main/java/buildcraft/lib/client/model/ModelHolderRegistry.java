@@ -6,7 +6,7 @@
 
 package buildcraft.lib.client.model;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -22,7 +22,7 @@ public class ModelHolderRegistry {
 
     static final List<ModelHolder> HOLDERS = new ArrayList<>();
 
-    public static void onTextureStitchPre(Set<Identifier> toRegisterSprites) {
+    public static void onTextureStitchPre(Set<ResourceLocation> toRegisterSprites) {
         for (ModelHolder holder : HOLDERS) {
             holder.onTextureStitchPre(toRegisterSprites);
         }

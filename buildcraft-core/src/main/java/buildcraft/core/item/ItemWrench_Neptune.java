@@ -4,7 +4,7 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.core.item;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -22,7 +22,7 @@ import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.SoundUtil;
 
 public class ItemWrench_Neptune extends Item implements IToolWrench {
-    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftcore:wrenched");
+    private static final ResourceLocation ADVANCEMENT = ResourceLocation.parse("buildcraftcore:wrenched");
 
     public ItemWrench_Neptune(Item.Properties properties) {
         super(properties);

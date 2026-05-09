@@ -12,7 +12,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.lib.marker.MarkerCache;
@@ -36,7 +36,7 @@ public record MessageMarker(
 ) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<MessageMarker> TYPE =
-            new CustomPacketPayload.Type<>(Identifier.parse("buildcraftlib:marker"));
+            new CustomPacketPayload.Type<>(ResourceLocation.parse("buildcraftlib:marker"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, MessageMarker> STREAM_CODEC =
             StreamCodec.of(MessageMarker::encode, MessageMarker::decode);

@@ -127,8 +127,8 @@ public class FacadeAssemblyRecipes extends AssemblyRecipe implements IRecipeView
         java.util.TreeSet<ItemStack> set = new java.util.TreeSet<>((a, b) -> {
             if (ItemStack.isSameItemSameComponents(a, b)) return 0;
             
-            net.minecraft.resources.Identifier thisId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(a.getItem());
-            net.minecraft.resources.Identifier otherId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(b.getItem());
+            net.minecraft.resources.ResourceLocation thisId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(a.getItem());
+            net.minecraft.resources.ResourceLocation otherId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(b.getItem());
             int idCompare = thisId.compareTo(otherId);
             if (idCompare != 0) return idCompare;
             
@@ -140,7 +140,7 @@ public class FacadeAssemblyRecipes extends AssemblyRecipe implements IRecipeView
     }
 
     private static ItemStack baseRequirementStack() {
-        net.minecraft.world.item.Item pipe = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse("buildcrafttransport:pipe_structure"));
+        net.minecraft.world.item.Item pipe = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.ResourceLocation.parse("buildcrafttransport:pipe_structure"));
         if (pipe == Items.AIR) {
             return new ItemStack(Items.COBBLESTONE_WALL);
         }

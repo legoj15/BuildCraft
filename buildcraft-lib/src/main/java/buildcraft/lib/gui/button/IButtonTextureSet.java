@@ -6,7 +6,7 @@
 
 package buildcraft.lib.gui.button;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import net.minecraft.world.InteractionResult;
 
@@ -21,5 +21,5 @@ public interface IButtonTextureSet {
 
     int getWidth();
 
-    Identifier getTexture();
+    ResourceLocation getTexture();
 }

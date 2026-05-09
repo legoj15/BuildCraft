@@ -6,7 +6,7 @@
 
 package buildcraft.lib.misc.data;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 /** A speed-improved simplex noise algorithm for 2D, 3D and 4D in Java.
  *

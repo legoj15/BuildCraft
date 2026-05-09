@@ -1,6 +1,6 @@
 package buildcraft.lib.client.guide;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,7 +28,7 @@ public class GuidePageRegistry extends ScriptableRegistry<PageEntry<?>> {
     public <T> void addType(String name, PageValueType<T> type) {
         types.put(name, type);
         addCustomType(name, (id, json, ctx) -> {
-            OptionallyDisabled<PageEntry<T>> o1 = type.deserialize((Identifier) id, json, ctx);
+            OptionallyDisabled<PageEntry<T>> o1 = type.deserialize((ResourceLocation) id, json, ctx);
             // While we can cast PageEntry<T> to PageEntry<?>
             // we can't cast from OpDis<PageEntry<T>> to OpDis<PageEntry<?>>
             // so this is a little hoop jumping to allow it to compile safely.

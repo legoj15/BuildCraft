@@ -11,7 +11,7 @@ import java.util.List;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.lib.debug.ClientDebuggables;
 
@@ -25,7 +25,7 @@ public record MessageDebugResponse(
 ) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<MessageDebugResponse> TYPE =
-            new CustomPacketPayload.Type<>(Identifier.parse("buildcraftlib:debug_response"));
+            new CustomPacketPayload.Type<>(ResourceLocation.parse("buildcraftlib:debug_response"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, MessageDebugResponse> STREAM_CODEC =
             StreamCodec.of(MessageDebugResponse::encode, MessageDebugResponse::decode);

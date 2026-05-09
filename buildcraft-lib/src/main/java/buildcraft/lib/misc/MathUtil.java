@@ -6,7 +6,7 @@
 
 package buildcraft.lib.misc;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 public class MathUtil {
     // ItemStacks are commonly found in small stacks -- precompute for smaller numbers

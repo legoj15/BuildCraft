@@ -235,7 +235,7 @@ public class BCTransportPipes {
         }
 
         public DefinitionBuilder id(String post) {
-            builder.identifier = MODID + ":" + post;
+            builder.ResourceLocation = MODID + ":" + post;
             return this;
         }
 

@@ -13,7 +13,7 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.lib.client.model.MutableVertex;
 
@@ -45,7 +45,7 @@ public class RenderPartCube {
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
                 .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
         // MissingTextureAtlasSprite is a pure white sprite on the block atlas.
-        TextureAtlasSprite white = atlas.getSprite(Identifier.withDefaultNamespace("missingno"));
+        TextureAtlasSprite white = atlas.getSprite(ResourceLocation.withDefaultNamespace("missingno"));
         float u = (white.getU0() + white.getU1()) / 2f;
         float v = (white.getV0() + white.getV1()) / 2f;
         center.texf(u, v);

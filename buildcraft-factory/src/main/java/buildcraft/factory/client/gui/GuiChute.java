@@ -8,7 +8,7 @@ package buildcraft.factory.client.gui;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.factory.container.ContainerChute;
@@ -16,8 +16,8 @@ import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 
 public class GuiChute extends GuiBC8<ContainerChute> {
-    private static final Identifier TEXTURE =
-            Identifier.parse("buildcraftfactory:textures/gui/chute.png");
+    private static final ResourceLocation TEXTURE =
+            ResourceLocation.parse("buildcraftfactory:textures/gui/chute.png");
     private static final int SIZE_X = 176, SIZE_Y = 153;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
 

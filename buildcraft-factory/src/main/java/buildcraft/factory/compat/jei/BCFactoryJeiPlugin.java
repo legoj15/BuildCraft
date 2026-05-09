@@ -12,7 +12,7 @@ import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.factory.BCFactoryItems;
 import buildcraft.factory.BCFactoryMenuTypes;
@@ -28,10 +28,10 @@ import buildcraft.lib.compat.jei.BlueprintTransferHandler;
  */
 @JeiPlugin
 public class BCFactoryJeiPlugin implements IModPlugin {
-    private static final Identifier UID = Identifier.parse("buildcraftfactory:jei_plugin");
+    private static final ResourceLocation UID = ResourceLocation.parse("buildcraftfactory:jei_plugin");
 
     @Override
-    public Identifier getPluginUid() {
+    public ResourceLocation getPluginUid() {
         return UID;
     }
 

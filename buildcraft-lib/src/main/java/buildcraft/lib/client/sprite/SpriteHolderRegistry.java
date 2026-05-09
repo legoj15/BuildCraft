@@ -3,7 +3,7 @@ package buildcraft.lib.client.sprite;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.api.core.render.ISprite;
 
@@ -16,20 +16,20 @@ public class SpriteHolderRegistry {
      */
     public static class SpriteHolder implements ISprite {
         private final String location;
-        private final Identifier resourceLocation;
+        private final ResourceLocation resourceLocation;
         private TextureAtlasSprite cachedSprite;
 
         public SpriteHolder(String location) {
             this.location = location;
             // location is in the format "modid:path"
-            this.resourceLocation = Identifier.parse(location);
+            this.resourceLocation = ResourceLocation.parse(location);
         }
 
         public String getLocation() {
             return location;
         }
 
-        public Identifier getResourceLocation() {
+        public ResourceLocation getResourceLocation() {
             return resourceLocation;
         }
 

@@ -1,6 +1,6 @@
 package buildcraft.lib.client.guide.loader;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -194,7 +194,7 @@ public enum XmlPageLoader implements IPageLoaderText {
     }
 
     @Override
-    public GuidePageFactory loadPage(BufferedReader reader, Identifier name, PageEntry<?> entry, ProfilerFiller prof)
+    public GuidePageFactory loadPage(BufferedReader reader, ResourceLocation name, PageEntry<?> entry, ProfilerFiller prof)
         throws IOException {
         prof.push("xml");
         try {
@@ -204,7 +204,7 @@ public enum XmlPageLoader implements IPageLoaderText {
         }
     }
 
-    private static GuidePageFactory loadPage0(BufferedReader reader, Identifier name, PageEntry<?> entry,
+    private static GuidePageFactory loadPage0(BufferedReader reader, ResourceLocation name, PageEntry<?> entry,
         ProfilerFiller prof) throws IOException, InvalidInputDataException {
 
         Deque<List<GuidePartFactory>> nestedParts = new ArrayDeque<>();
@@ -479,7 +479,7 @@ public enum XmlPageLoader implements IPageLoaderText {
         }
         final PageLink link;
         if (type == null) {
-            Identifier location = Identifier.parse(to);
+            ResourceLocation location = ResourceLocation.parse(to);
             PageEntry<?> entry = (PageEntry<?>) GuidePageRegistry.INSTANCE.getReloadableEntryMap().get(location);
             if (entry == null) {
                 BCLog.logger.warn("[lib.guide.loader.xml] Found a link tag to an unknown page! " + tag);
@@ -711,7 +711,7 @@ public enum XmlPageLoader implements IPageLoaderText {
             BCLog.logger.warn("[lib.guide.loader.xml] Missing 'stack' for an itemstack from " + tag);
             return null;
         }
-        Identifier itemId = Identifier.parse(id.trim());
+        ResourceLocation itemId = ResourceLocation.parse(id.trim());
         Optional<Item> optionalItem = BuiltInRegistries.ITEM.getOptional(itemId);
         if (optionalItem.isEmpty()) {
             BCLog.logger.warn("[lib.guide.loader.xml] " + id + " was not a valid item!");

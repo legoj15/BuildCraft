@@ -1,4 +1,4 @@
-## **UNOFFICIAL** BuildCraft for Minecraft 1.21.11
+## **UNOFFICIAL** BuildCraft for Minecraft 1.21.10
 
 ### Reporting an issue
 
@@ -82,7 +82,7 @@ Instructions for depending on BC 7.1.x can be found [here](https://github.com/Bu
 
 8.0.x hasn't been finished yet, so there are no instructions for depending on it :(
 
-The following instructions are for BC 8.0.x (1.21.11):
+The following instructions are for BC 8.0.x (1.21.10):
 
 Add the following to your build.gradle file:
 ```

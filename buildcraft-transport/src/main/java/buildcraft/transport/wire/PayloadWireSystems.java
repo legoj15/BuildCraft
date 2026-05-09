@@ -16,13 +16,13 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public class PayloadWireSystems implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<PayloadWireSystems> TYPE =
-        new CustomPacketPayload.Type<>(Identifier.parse("buildcrafttransport:wire_systems"));
+        new CustomPacketPayload.Type<>(ResourceLocation.parse("buildcrafttransport:wire_systems"));
 
     public static final StreamCodec<FriendlyByteBuf, PayloadWireSystems> STREAM_CODEC =
         StreamCodec.of(PayloadWireSystems::encode, PayloadWireSystems::decode);

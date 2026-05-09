@@ -5,7 +5,7 @@
  */
 package buildcraft.lib.tile.item;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -87,7 +87,7 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         for (ItemStack stack : stacks) {
             CompoundTag itemNbt = new CompoundTag();
             if (!stack.isEmpty()) {
-                net.minecraft.resources.Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+                net.minecraft.resources.ResourceLocation itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
                 itemNbt.putString("id", itemId.toString());
                 itemNbt.putInt("count", stack.getCount());
             }
@@ -105,7 +105,7 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
             ItemStack stack = ItemStack.EMPTY;
             if (itemNbt.contains("id")) {
                 String idStr = itemNbt.getString("id").orElse("");
-                net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(idStr);
+                net.minecraft.resources.ResourceLocation id = net.minecraft.resources.ResourceLocation.tryParse(idStr);
                 if (id != null) {
                     net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(id);
                     int count = itemNbt.getInt("count").orElse(1);

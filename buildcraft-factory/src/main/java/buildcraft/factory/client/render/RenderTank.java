@@ -22,7 +22,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
@@ -84,7 +84,7 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
         if (amount <= 0 || capacity <= 0) return;
 
         IClientFluidTypeExtensions fluidExt = IClientFluidTypeExtensions.of(fluid.getFluid());
-        Identifier stillTexture = fluidExt.getStillTexture(fluid);
+        ResourceLocation stillTexture = fluidExt.getStillTexture(fluid);
         if (stillTexture == null) return;
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
@@ -127,7 +127,7 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
         // Translucent for vanilla water, cutout for BC fluids (reuse water texture opaquely)
         VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
+                    ? Sheets.translucentItemSheet() : Sheets.cutoutBlockSheet());
         PoseStack.Pose pose = poseStack.last();
 
         boolean renderBottom = !connectedDown;

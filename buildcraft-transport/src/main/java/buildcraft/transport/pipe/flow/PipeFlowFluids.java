@@ -100,8 +100,8 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             // Deserialize fluid using registry key string (no HolderLookup.Provider needed)
             String fluidId = nbt.getStringOr("fluid_id", "");
             if (!fluidId.isEmpty()) {
-                net.minecraft.resources.Identifier fluidRL =
-                    net.minecraft.resources.Identifier.parse(fluidId);
+                net.minecraft.resources.ResourceLocation fluidRL =
+                    net.minecraft.resources.ResourceLocation.parse(fluidId);
                 net.minecraft.world.level.material.Fluid fluid =
                     net.minecraft.core.registries.BuiltInRegistries.FLUID.getValue(fluidRL);
                 if (fluid != null && fluid != net.minecraft.world.level.material.Fluids.EMPTY) {
@@ -154,8 +154,8 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         if (nbt.contains("fluid_id")) {
             String fluidId = nbt.getStringOr("fluid_id", "");
             if (!fluidId.isEmpty()) {
-                net.minecraft.resources.Identifier fluidRL =
-                    net.minecraft.resources.Identifier.parse(fluidId);
+                net.minecraft.resources.ResourceLocation fluidRL =
+                    net.minecraft.resources.ResourceLocation.parse(fluidId);
                 net.minecraft.world.level.material.Fluid fluid =
                     net.minecraft.core.registries.BuiltInRegistries.FLUID.getValue(fluidRL);
                 if (fluid != null && fluid != net.minecraft.world.level.material.Fluids.EMPTY) {
@@ -741,8 +741,8 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             if (buffer.readBoolean()) {
                 String fluidId = buffer.readUtf();
                 // Client-side fluid lookup from registry — simplified
-                net.minecraft.resources.Identifier fluidRL =
-                    net.minecraft.resources.Identifier.parse(fluidId);
+                net.minecraft.resources.ResourceLocation fluidRL =
+                    net.minecraft.resources.ResourceLocation.parse(fluidId);
                 net.minecraft.world.level.material.Fluid fluid =
                     net.minecraft.core.registries.BuiltInRegistries.FLUID.getValue(fluidRL);
                 if (fluid != null && fluid != net.minecraft.world.level.material.Fluids.EMPTY) {

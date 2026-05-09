@@ -112,7 +112,7 @@ public abstract class GateExpansionBuildcraft implements IGateExpansion {
 
     @SideOnly(Side.CLIENT)
     private class RenderState extends BakedModelHolder implements IExpansionBaker<BCModelKey> {
-        private final ResourceLocation identifier = new ResourceLocation("buildcrafttransport:gate/expansion/identifier");
+        private final ResourceLocation ResourceLocation = new ResourceLocation("buildcrafttransport:gate/expansion/ResourceLocation");
         private ImmutableList<BakedQuad> transformedQuads;
 
         @Override
@@ -123,7 +123,7 @@ public abstract class GateExpansionBuildcraft implements IGateExpansion {
         @Override
         public ImmutableList<BakedQuad> bake(BCModelKey key) {
             if (transformedQuads == null) {
-                IBakedModel baked = getModelItemLayer(identifier, sprite);
+                IBakedModel baked = getModelItemLayer(ResourceLocation, sprite);
                 List<BakedQuad> quads = baked.getGeneralQuads();
                 List<BakedQuad> transformedQuads = Lists.newArrayList();
                 Matrix4f translation = new Matrix4f();

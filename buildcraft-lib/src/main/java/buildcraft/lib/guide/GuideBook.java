@@ -1,6 +1,6 @@
 package buildcraft.lib.guide;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
@@ -13,15 +13,15 @@ public final class GuideBook {
 
     public static final ISimpleEntryDeserializer<GuideBook> DESERIALISER = GuideBook::deserialize;
 
-    public final Identifier name;
-    public final Identifier itemIcon;
+    public final ResourceLocation name;
+    public final ResourceLocation itemIcon;
     public final Component title;
     public final boolean appendAllEntries;
     public final GuideContentsData data = new GuideContentsData(this);
 
     private static GuideBook deserialize(Object nameObj, JsonObject json, JsonDeserializationContext ctx) {
-        Identifier name = (Identifier) nameObj;
-        Identifier itemIcon = Identifier.parse("buildcraftcore:guide_main");
+        ResourceLocation name = (ResourceLocation) nameObj;
+        ResourceLocation itemIcon = ResourceLocation.parse("buildcraftcore:guide_main");
         // Read title from JSON, falling back to name
         String titleStr = json.has("title") ? json.get("title").getAsString() : name.toString();
         Component title = Component.literal(titleStr);
@@ -29,7 +29,7 @@ public final class GuideBook {
         return new GuideBook(name, itemIcon, title, addAll);
     }
 
-    public GuideBook(Identifier name, Identifier itemIcon, Component title, boolean appendAllEntries) {
+    public GuideBook(ResourceLocation name, ResourceLocation itemIcon, Component title, boolean appendAllEntries) {
         this.name = name;
         this.itemIcon = itemIcon;
         this.title = title;

@@ -1,6 +1,6 @@
 package buildcraft.lib.script;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.Objects;
 

@@ -31,7 +31,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
@@ -130,7 +130,7 @@ public class RulesLoader {
                         selector.matches(
                             base -> {
                                 boolean complex = base.contains("[");
-                                Identifier blockId = Identifier.parse(
+                                ResourceLocation blockId = ResourceLocation.parse(
                                     complex
                                         ? base.substring(0, base.indexOf("["))
                                         : base
@@ -174,7 +174,7 @@ public class RulesLoader {
     }
 
     @SuppressWarnings("WeakerAccess")
-    public static Set<JsonRule> getRules(Identifier entityId, CompoundTag tileNbt) {
+    public static Set<JsonRule> getRules(ResourceLocation entityId, CompoundTag tileNbt) {
         return RulesLoader.RULES.stream()
             .filter(rule -> rule.selectors != null)
             .filter(rule ->

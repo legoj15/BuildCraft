@@ -1,7 +1,7 @@
 package buildcraft.lib.client;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -13,7 +13,7 @@ import buildcraft.lib.misc.data.ModelVariableData;
 public class BCLibClient {
     public static void initClient(IEventBus modEventBus) {
         modEventBus.addListener(ModelEvent.BakingCompleted.class, event -> {
-            java.util.HashSet<Identifier> sprites = new java.util.HashSet<>();
+            java.util.HashSet<ResourceLocation> sprites = new java.util.HashSet<>();
             ModelHolderRegistry.onTextureStitchPre(sprites);
             ModelHolderRegistry.onModelBake();
             ModelVariableData.onModelBake();

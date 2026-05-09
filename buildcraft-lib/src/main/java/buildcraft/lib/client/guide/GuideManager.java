@@ -25,7 +25,7 @@ import javax.annotation.Nullable;
 import com.google.common.base.Stopwatch;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -70,7 +70,7 @@ public enum GuideManager {
 
     private final List<PageEntry<?>> entries = new ArrayList<>();
 
-    private final Map<Identifier, GuidePageFactory> pages = new HashMap<>();
+    private final Map<ResourceLocation, GuidePageFactory> pages = new HashMap<>();
     private final Map<ItemStack, GuidePageFactory> generatedPages = new HashMap<>();
 
     public ISuffixArray<PageLink> quickSearcher;
@@ -178,12 +178,12 @@ public enum GuideManager {
         main_iteration:
         for (Entry<Object, PageEntry<?>> mapEntry : GuidePageRegistry.INSTANCE
             .getReloadableEntryMap().entrySet()) {
-            Identifier entryKey = (Identifier) mapEntry.getKey();
+            ResourceLocation entryKey = (ResourceLocation) mapEntry.getKey();
             String domain = entryKey.getNamespace();
             String path = "compat/buildcraft/guide/" + lang + "/" + entryKey.getPath();
 
             for (Entry<String, IPageLoader> entry : PAGE_LOADERS.entrySet()) {
-                Identifier fLoc = Identifier.fromNamespaceAndPath(domain, path + "." + entry.getKey());
+                ResourceLocation fLoc = ResourceLocation.fromNamespaceAndPath(domain, path + "." + entry.getKey());
 
                 try {
                     var resource = resourceManager.getResource(fLoc);
@@ -232,7 +232,7 @@ public enum GuideManager {
 
         for (Entry<Object, PageEntry<?>> mapEntry : GuidePageRegistry.INSTANCE.getReloadableEntryMap()
             .entrySet()) {
-            Identifier partialLocation = (Identifier) mapEntry.getKey();
+            ResourceLocation partialLocation = (ResourceLocation) mapEntry.getKey();
             GuidePageFactory entryFactory = GuideManager.INSTANCE.getFactoryFor(partialLocation);
 
             PageEntry<?> entry = mapEntry.getValue();
@@ -295,7 +295,7 @@ public enum GuideManager {
         }
     }
 
-    private void addChild(Identifier bookType, JsonTypeTags tags, PageLink page) {
+    private void addChild(ResourceLocation bookType, JsonTypeTags tags, PageLink page) {
         if (pageLinksAdded.add(page)) {
             quickSearcher.add(page, page.getSearchName());
         }
@@ -334,7 +334,7 @@ public enum GuideManager {
     }
 
     @Nullable
-    public GuidePageFactory getFactoryFor(Identifier partialLocation) {
+    public GuidePageFactory getFactoryFor(ResourceLocation partialLocation) {
         return pages.get(partialLocation);
     }
 
@@ -351,11 +351,11 @@ public enum GuideManager {
         return getFactoryFor(getEntryFor(value));
     }
 
-    public static Identifier getEntryFor(Object obj) {
+    public static ResourceLocation getEntryFor(Object obj) {
         for (Entry<Object, PageEntry<?>> entry : GuidePageRegistry.INSTANCE.getReloadableEntryMap()
             .entrySet()) {
             if (entry.getValue().matches(obj)) {
-                return (Identifier) entry.getKey();
+                return (ResourceLocation) entry.getKey();
             }
         }
         return null;
@@ -363,7 +363,7 @@ public enum GuideManager {
 
     @Nonnull
     public GuidePageFactory getPageFor(@Nonnull ItemStack stack) {
-        Identifier entry = getEntryFor(stack);
+        ResourceLocation entry = getEntryFor(stack);
         if (entry != null) {
             GuidePageFactory factory = getFactoryFor(entry);
             if (factory != null) {

@@ -6,7 +6,7 @@
  */
 package buildcraft.core.item;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.Iterator;
 import java.util.Optional;
@@ -45,8 +45,8 @@ import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
 
 public class ItemMarkerConnector extends Item {
 
-    private static final Identifier ADVANCEMENT_VOLUME_MARKER = Identifier.parse("buildcraftcore:markers");
-    private static final Identifier ADVANCEMENT_PATH_MARKER = Identifier.parse("buildcraftcore:path_markers");
+    private static final ResourceLocation ADVANCEMENT_VOLUME_MARKER = ResourceLocation.parse("buildcraftcore:markers");
+    private static final ResourceLocation ADVANCEMENT_PATH_MARKER = ResourceLocation.parse("buildcraftcore:path_markers");
 
     public ItemMarkerConnector(Item.Properties properties) {
         super(properties);

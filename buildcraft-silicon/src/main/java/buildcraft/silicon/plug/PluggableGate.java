@@ -12,7 +12,7 @@ import buildcraft.silicon.item.ItemGateCopier;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
@@ -57,11 +57,11 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
 
     private static final AABB[] BOXES = new AABB[6];
 
-    private static final Identifier ADVANCEMENT_PLACE_GATE
-        = Identifier.parse("buildcrafttransport:pipe_logic");
+    private static final ResourceLocation ADVANCEMENT_PLACE_GATE
+        = ResourceLocation.parse("buildcrafttransport:pipe_logic");
 
-    private static final Identifier ADVANCEMENT_PLACE_ADV_GATE
-        = Identifier.parse("buildcrafttransport:extended_logic");
+    private static final ResourceLocation ADVANCEMENT_PLACE_ADV_GATE
+        = ResourceLocation.parse("buildcrafttransport:extended_logic");
 
     public final GateLogic logic;
 

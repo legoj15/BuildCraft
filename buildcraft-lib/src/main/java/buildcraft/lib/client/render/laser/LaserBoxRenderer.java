@@ -13,7 +13,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
@@ -43,7 +43,7 @@ public class LaserBoxRenderer {
 
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer consumer = bufferSource.getBuffer(
-                RenderTypes.entitySolid(TextureAtlas.LOCATION_BLOCKS));
+                RenderType.entitySolid(TextureAtlas.LOCATION_BLOCKS));
         for (LaserData_BC8 data : datas) {
             LaserRenderer_BC8.renderLaser(poseStack, consumer, data, cameraPos);
         }

@@ -17,12 +17,12 @@ public class PluggableRegistry implements IPluggableRegistry {
     private final Map<Object, PluggableDefinition> definitions = new HashMap<>();
 
     @Override
-    public void register(Object identifier, PluggableDefinition definition) {
-        definitions.put(identifier, definition);
+    public void register(Object ResourceLocation, PluggableDefinition definition) {
+        definitions.put(ResourceLocation, definition);
     }
 
     @Override
-    public PluggableDefinition getDefinition(Object identifier) {
-        return definitions.get(identifier);
+    public PluggableDefinition getDefinition(Object ResourceLocation) {
+        return definitions.get(ResourceLocation);
     }
 }

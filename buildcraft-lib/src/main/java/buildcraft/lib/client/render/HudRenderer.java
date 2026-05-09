@@ -6,7 +6,7 @@
 
 package buildcraft.lib.client.render;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import org.lwjgl.opengl.GL11;
 

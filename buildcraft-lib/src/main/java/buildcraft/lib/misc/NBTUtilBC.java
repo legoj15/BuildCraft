@@ -182,7 +182,7 @@ public class NBTUtilBC {
             return new CompoundTag();
         }
         CompoundTag nbt = new CompoundTag();
-        net.minecraft.resources.Identifier itemId =
+        net.minecraft.resources.ResourceLocation itemId =
             net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
         nbt.putString("id", itemId.toString());
         nbt.putInt("count", stack.getCount());
@@ -199,7 +199,7 @@ public class NBTUtilBC {
         if (idStr.isEmpty()) {
             return net.minecraft.world.item.ItemStack.EMPTY;
         }
-        net.minecraft.resources.Identifier itemId = net.minecraft.resources.Identifier.parse(idStr);
+        net.minecraft.resources.ResourceLocation itemId = net.minecraft.resources.ResourceLocation.parse(idStr);
         net.minecraft.world.item.Item item =
             net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(itemId);
         if (item == null || item == net.minecraft.world.item.Items.AIR) {

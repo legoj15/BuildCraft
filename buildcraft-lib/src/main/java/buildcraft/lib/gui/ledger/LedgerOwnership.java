@@ -14,7 +14,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.lib.gui.BuildCraftGui;
 
@@ -23,7 +23,7 @@ import buildcraft.lib.gui.BuildCraftGui;
 public class LedgerOwnership extends Ledger_Neptune {
     private static final int COLOUR = 0xE0F0FF;
     /** Fallback skin for when no owner profile is available. */
-    private static final Identifier STEVE_SKIN = Identifier.parse("textures/entity/player/wide/steve.png");
+    private static final ResourceLocation STEVE_SKIN = ResourceLocation.parse("textures/entity/player/wide/steve.png");
 
     private final Supplier<GameProfile> ownerSupplier;
 
@@ -43,7 +43,7 @@ public class LedgerOwnership extends Ledger_Neptune {
 
     @Override
     protected void drawIcon(double x, double y, GuiGraphics graphics) {
-        Identifier skinTexture = getSkinTexture(ownerSupplier.get());
+        ResourceLocation skinTexture = getSkinTexture(ownerSupplier.get());
 
         // Draw the 8x8 face region from the 64x64 skin texture, scaled to 16x16.
         // The face pixels are at UV (8, 8) → (16, 16) in the skin texture.
@@ -56,9 +56,9 @@ public class LedgerOwnership extends Ledger_Neptune {
             (int) x, (int) y, 40f, 8f, 16, 16, 8, 8, 64, 64);
     }
 
-    /** Get the skin texture Identifier for the given player profile.
+    /** Get the skin texture ResourceLocation for the given player profile.
      *  Tries the network connection first (for online players), then falls back to Steve. */
-    private static Identifier getSkinTexture(GameProfile profile) {
+    private static ResourceLocation getSkinTexture(GameProfile profile) {
         if (profile == null || profile.id() == null) {
             return STEVE_SKIN;
         }

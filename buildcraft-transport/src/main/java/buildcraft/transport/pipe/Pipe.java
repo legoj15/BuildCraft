@@ -91,7 +91,7 @@ public final class Pipe implements IPipe, IDebuggable {
         if (colour != null) {
             nbt.put("col", NBTUtilBC.writeEnum(colour));
         }
-        nbt.putString("def", definition.identifier);
+        nbt.putString("def", definition.ResourceLocation);
         nbt.put("beh", behaviour.writeToNbt());
         nbt.put("flow", flow.writeToNbt());
 
@@ -387,7 +387,7 @@ public final class Pipe implements IPipe, IDebuggable {
     @Override
     public void getDebugInfo(List<String> left, List<String> right, Direction side) {
         left.add("Colour = " + colour);
-        left.add("Definition = " + definition.identifier);
+        left.add("Definition = " + definition.ResourceLocation);
         if (behaviour instanceof IDebuggable) {
             left.add("Behaviour:");
             ((IDebuggable) behaviour).getDebugInfo(left, right, side);

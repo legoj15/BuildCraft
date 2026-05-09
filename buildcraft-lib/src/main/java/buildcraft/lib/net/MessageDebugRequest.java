@@ -13,7 +13,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
@@ -31,7 +31,7 @@ public record MessageDebugRequest(
 ) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<MessageDebugRequest> TYPE =
-            new CustomPacketPayload.Type<>(Identifier.parse("buildcraftlib:debug_request"));
+            new CustomPacketPayload.Type<>(ResourceLocation.parse("buildcraftlib:debug_request"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, MessageDebugRequest> STREAM_CODEC =
             StreamCodec.of(MessageDebugRequest::encode, MessageDebugRequest::decode);

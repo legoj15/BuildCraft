@@ -1,6 +1,6 @@
 package buildcraft.lib.client.guide.entry;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
 import java.util.TreeMap;
@@ -41,7 +41,7 @@ public class PageEntryStatement extends PageValueType<IStatement> {
     }
 
     @Override
-    public OptionallyDisabled<PageEntry<IStatement>> deserialize(Identifier name, JsonObject json,
+    public OptionallyDisabled<PageEntry<IStatement>> deserialize(ResourceLocation name, JsonObject json,
         JsonDeserializationContext ctx) {
         if (!json.has("statement")) {
             throw new JsonSyntaxException("Missing 'statement' field in " + json);

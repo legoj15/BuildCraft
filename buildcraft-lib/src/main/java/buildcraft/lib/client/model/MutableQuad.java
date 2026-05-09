@@ -15,13 +15,12 @@ import org.joml.Vector4f;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.model.geom.builders.UVPair;
 import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.FaceBakery;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.util.ARGB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.client.model.quad.BakedColors;
-import net.neoforged.neoforge.client.model.quad.BakedNormals;
 
 /** Holds all of the information necessary to make a {@link BakedQuad}. This provides a variety of methods to quickly
  * set or get different elements. This currently holds 4 {@link MutableVertex}. */
@@ -127,24 +126,14 @@ public class MutableQuad {
 
     /** Converts this MutableQuad into a NeoForge 1.21.11 BakedQuad. */
     public BakedQuad toBakedBlock() {
+        int[] data = new int[32];
+        vertex_0.toBakedBlock(data, 0);
+        vertex_1.toBakedBlock(data, 8);
+        vertex_2.toBakedBlock(data, 16);
+        vertex_3.toBakedBlock(data, 24);
         return new BakedQuad(
-            vertex_0.positionvf(), vertex_1.positionvf(),
-            vertex_2.positionvf(), vertex_3.positionvf(),
-            UVPair.pack(vertex_0.tex_u, vertex_0.tex_v),
-            UVPair.pack(vertex_1.tex_u, vertex_1.tex_v),
-            UVPair.pack(vertex_2.tex_u, vertex_2.tex_v),
-            UVPair.pack(vertex_3.tex_u, vertex_3.tex_v),
+            data,
             tintIndex, face, sprite, shade, lightEmission,
-            BakedNormals.of(
-                vertex_0.normalToPackedInt(), vertex_1.normalToPackedInt(),
-                vertex_2.normalToPackedInt(), vertex_3.normalToPackedInt()
-            ),
-            BakedColors.of(
-                ARGB.color(vertex_0.colour_a, vertex_0.colour_r, vertex_0.colour_g, vertex_0.colour_b),
-                ARGB.color(vertex_1.colour_a, vertex_1.colour_r, vertex_1.colour_g, vertex_1.colour_b),
-                ARGB.color(vertex_2.colour_a, vertex_2.colour_r, vertex_2.colour_g, vertex_2.colour_b),
-                ARGB.color(vertex_3.colour_a, vertex_3.colour_r, vertex_3.colour_g, vertex_3.colour_b)
-            ),
             hasAmbientOcclusion
         );
     }
@@ -185,29 +174,15 @@ public class MutableQuad {
         lightEmission = quad.lightEmission();
         hasAmbientOcclusion = quad.hasAmbientOcclusion();
 
-        readVertexFromBaked(vertex_0, quad.position0(), quad.packedUV0(),
-            quad.bakedNormals().normal(0), quad.bakedColors().color(0));
-        readVertexFromBaked(vertex_1, quad.position1(), quad.packedUV1(),
-            quad.bakedNormals().normal(1), quad.bakedColors().color(1));
-        readVertexFromBaked(vertex_2, quad.position2(), quad.packedUV2(),
-            quad.bakedNormals().normal(2), quad.bakedColors().color(2));
-        readVertexFromBaked(vertex_3, quad.position3(), quad.packedUV3(),
-            quad.bakedNormals().normal(3), quad.bakedColors().color(3));
+        int[] data = quad.vertices();
+        int stride = data.length / 4;
+
+        vertex_0.fromBakedBlock(data, 0);
+        vertex_1.fromBakedBlock(data, stride);
+        vertex_2.fromBakedBlock(data, stride * 2);
+        vertex_3.fromBakedBlock(data, stride * 3);
 
         return this;
-    }
-
-    private static void readVertexFromBaked(MutableVertex v, Vector3fc pos, long packedUV,
-            int packedNormal, int argbColor) {
-        v.positionf(pos.x(), pos.y(), pos.z());
-        // UVPair.pack stores two floats in a long; unpack manually
-        v.texf(Float.intBitsToFloat((int) (packedUV >> 32)), Float.intBitsToFloat((int) packedUV));
-        v.normali(packedNormal);
-        // BakedColors stores ARGB, convert to our r/g/b/a shorts
-        v.colour_a = (short) ((argbColor >> 24) & 0xFF);
-        v.colour_r = (short) ((argbColor >> 16) & 0xFF);
-        v.colour_g = (short) ((argbColor >> 8) & 0xFF);
-        v.colour_b = (short) (argbColor & 0xFF);
     }
 
     /** Alias for {@link #fromBakedBlock(BakedQuad)}. */

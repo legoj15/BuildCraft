@@ -4,7 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerAdvancements;
 import net.minecraft.server.ServerAdvancementManager;
@@ -15,13 +15,13 @@ import net.minecraft.world.level.Level;
 import buildcraft.api.core.BCLog;
 
 public class AdvancementUtil {
-    private static final Set<Identifier> UNKNOWN_ADVANCEMENTS = new HashSet<>();
+    private static final Set<ResourceLocation> UNKNOWN_ADVANCEMENTS = new HashSet<>();
 
-    public static void unlockAdvancement(Player player, Identifier advancementName) {
+    public static void unlockAdvancement(Player player, ResourceLocation advancementName) {
         unlockAdvancement(player, advancementName, "code_trigger");
     }
 
-    public static void unlockAdvancement(Player player, Identifier advancementName, String criterionName) {
+    public static void unlockAdvancement(Player player, ResourceLocation advancementName, String criterionName) {
         if (player instanceof ServerPlayer serverPlayer) {
             MinecraftServer server = player.level().getServer();
             if (server == null) {
@@ -39,7 +39,7 @@ public class AdvancementUtil {
         }
     }
 
-    public static boolean unlockAdvancement(UUID playerId, Level level, Identifier advancementName) {
+    public static boolean unlockAdvancement(UUID playerId, Level level, ResourceLocation advancementName) {
         if (level.isClientSide()) {
             return false;
         }

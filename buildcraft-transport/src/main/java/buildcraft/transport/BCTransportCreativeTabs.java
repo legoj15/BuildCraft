@@ -3,7 +3,7 @@ package buildcraft.transport;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -17,7 +17,7 @@ public class BCTransportCreativeTabs {
 
     public static final ResourceKey<CreativeModeTab> PIPES_TAB_KEY =
             ResourceKey.create(Registries.CREATIVE_MODE_TAB,
-                    Identifier.fromNamespaceAndPath(BCTransport.MODID, "pipes"));
+                    ResourceLocation.fromNamespaceAndPath(BCTransport.MODID, "pipes"));
 
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> PIPES_TAB =
             CREATIVE_MODE_TABS.register("pipes", () ->
@@ -29,7 +29,7 @@ public class BCTransportCreativeTabs {
 
     public static final ResourceKey<CreativeModeTab> PLUGS_TAB_KEY =
             ResourceKey.create(Registries.CREATIVE_MODE_TAB,
-                    Identifier.fromNamespaceAndPath(BCTransport.MODID, "plugs"));
+                    ResourceLocation.fromNamespaceAndPath(BCTransport.MODID, "plugs"));
 
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> PLUGS_TAB =
             CREATIVE_MODE_TABS.register("plugs", () ->

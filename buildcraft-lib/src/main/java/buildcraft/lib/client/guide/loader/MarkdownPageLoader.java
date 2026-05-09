@@ -9,7 +9,7 @@ package buildcraft.lib.client.guide.loader;
 import java.io.BufferedReader;
 import java.io.IOException;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -45,9 +45,9 @@ public enum MarkdownPageLoader implements IPageLoaderText {
         if (args.length == 0) {
             return new OptionallyDisabled<>(line + " was not a valid complex item string!");
         }
-        Identifier itemId = Identifier.tryParse(args[0].trim());
+        ResourceLocation itemId = ResourceLocation.tryParse(args[0].trim());
         if (itemId == null) {
-            return new OptionallyDisabled<>(args[0] + " was not a valid item identifier!");
+            return new OptionallyDisabled<>(args[0] + " was not a valid item ResourceLocation!");
         }
         Item item = BuiltInRegistries.ITEM.get(itemId)
             .map(ref -> ref.value())
@@ -75,7 +75,7 @@ public enum MarkdownPageLoader implements IPageLoaderText {
     }
 
     @Override
-    public GuidePageFactory loadPage(BufferedReader reader, Identifier name, PageEntry<?> entry, ProfilerFiller prof)
+    public GuidePageFactory loadPage(BufferedReader reader, ResourceLocation name, PageEntry<?> entry, ProfilerFiller prof)
         throws IOException {
         // XmlPageLoader not yet ported — return stub page
         // Read and discard the content for now

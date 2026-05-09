@@ -11,7 +11,7 @@ import java.util.List;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.lib.gui.BuildCraftGui;
 import buildcraft.lib.gui.GuiIcon;
@@ -26,7 +26,7 @@ import buildcraft.lib.misc.LocaleUtil;
  *  with colored overlays. Hovering over a highlighted element updates the ledger text.
  *  Positioned on the LEFT side, matching 1.12.2 behavior. */
 public class LedgerHelp extends Ledger_Neptune {
-    private static final Identifier ICON_HELP = Identifier.parse("buildcraftlib:textures/icons/help.png");
+    private static final ResourceLocation ICON_HELP = ResourceLocation.parse("buildcraftlib:textures/icons/help.png");
 
     /** Border thickness for the highlight overlays (in pixels). */
     private static final int BORDER = 2;

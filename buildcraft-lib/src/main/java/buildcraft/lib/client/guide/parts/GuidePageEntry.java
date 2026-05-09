@@ -1,6 +1,6 @@
 package buildcraft.lib.client.guide.parts;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
 
@@ -12,9 +12,9 @@ import buildcraft.lib.client.guide.entry.PageEntry;
 
 public class GuidePageEntry extends GuidePage {
 
-    public final Identifier name;
+    public final ResourceLocation name;
 
-    public GuidePageEntry(GuiGuide gui, List<GuidePart> parts, PageEntry<?> entry, Identifier name) {
+    public GuidePageEntry(GuiGuide gui, List<GuidePart> parts, PageEntry<?> entry, ResourceLocation name) {
         super(gui, parts, entry);
         this.name = name;
     }

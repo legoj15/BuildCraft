@@ -6,7 +6,7 @@
 
 package buildcraft.lib.client.model;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -22,10 +22,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.server.packs.resources.Resource;
 
 public class ResourceLoaderContext {
-    private final Set<Identifier> loaded = new HashSet<>();
-    private final Deque<Identifier> loadingStack = new ArrayDeque<>();
+    private final Set<ResourceLocation> loaded = new HashSet<>();
+    private final Deque<ResourceLocation> loadingStack = new ArrayDeque<>();
 
-    public InputStreamReader startLoading(Identifier location) throws IOException {
+    public InputStreamReader startLoading(ResourceLocation location) throws IOException {
         if (!loaded.add(location)) {
             throw new JsonSyntaxException("Already loaded " + location + " from " + loadingStack.peek());
         }

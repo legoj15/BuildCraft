@@ -4,14 +4,14 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.builders.container.ContainerFiller;
 
 public class GuiFiller extends AbstractContainerScreen<ContainerFiller> {
-    private static final Identifier TEXTURE =
-            Identifier.parse("buildcraftbuilders:textures/gui/filler.png");
+    private static final ResourceLocation TEXTURE =
+            ResourceLocation.parse("buildcraftbuilders:textures/gui/filler.png");
 
     public GuiFiller(ContainerFiller container, Inventory playerInv, Component title) {
         super(container, playerInv, title);

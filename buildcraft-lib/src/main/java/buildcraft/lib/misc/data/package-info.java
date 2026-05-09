@@ -9,4 +9,4 @@
  * data class for a particular use. */
 package buildcraft.lib.misc.data;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;

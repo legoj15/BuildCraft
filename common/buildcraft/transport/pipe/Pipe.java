@@ -102,7 +102,7 @@ public final class Pipe implements IPipe, IDebuggable {
     public NBTTagCompound writeToNbt() {
         NBTTagCompound nbt = new NBTTagCompound();
         nbt.setTag("col", NBTUtilBC.writeEnum(colour));
-        nbt.setString("def", definition.identifier.toString());
+        nbt.setString("def", definition.ResourceLocation.toString());
         nbt.setTag("beh", behaviour.writeToNbt());
         nbt.setTag("flow", flow.writeToNbt());
 
@@ -134,7 +134,7 @@ public final class Pipe implements IPipe, IDebuggable {
     }
 
     public void writeCreationPayload(PacketBufferBC buffer) {
-        buffer.writeString(definition.identifier.toString());
+        buffer.writeString(definition.ResourceLocation.toString());
         writePayload(buffer, Side.SERVER);
         flow.writePayload(PipeFlow.NET_ID_FULL_STATE, buffer, Side.SERVER);
     }
@@ -414,7 +414,7 @@ public final class Pipe implements IPipe, IDebuggable {
     @Override
     public void getDebugInfo(List<String> left, List<String> right, EnumFacing side) {
         left.add("Colour = " + colour);
-        left.add("Definition = " + definition.identifier);
+        left.add("Definition = " + definition.ResourceLocation);
         if (behaviour instanceof IDebuggable) {
             left.add("Behaviour:");
             ((IDebuggable) behaviour).getDebugInfo(left, right, side);

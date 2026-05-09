@@ -1,6 +1,6 @@
 package buildcraft.lib.json;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.LinkedHashMap;
 import java.util.Locale;

@@ -10,4 +10,4 @@
  * this has turned into a "throw all util classes in here" sort of package. */
 package buildcraft.lib.misc;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;

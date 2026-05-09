@@ -6,7 +6,7 @@
 
 package buildcraft.lib.inventory.filter;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nonnull;
 

@@ -14,7 +14,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.BlockPos;
@@ -88,7 +88,7 @@ public class RenderLaser implements BlockEntityRenderer<TileLaser, LaserRenderSt
         MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer consumer = bufferSource.getBuffer(
-                RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
+                RenderType.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
         Vec3 cameraZero = Vec3.ZERO;
         LaserRenderer_BC8.renderLaser(poseStack, consumer, laser, cameraZero);
 

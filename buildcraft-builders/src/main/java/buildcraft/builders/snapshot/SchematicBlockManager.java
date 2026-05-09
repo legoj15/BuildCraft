@@ -11,7 +11,7 @@ import javax.annotation.Nonnull;
 import com.google.common.collect.Lists;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.schematics.ISchematicBlock;
@@ -56,7 +56,7 @@ public class SchematicBlockManager {
 
     @Nonnull
     public static ISchematicBlock readFromNBT(CompoundTag schematicBlockTag) throws InvalidInputDataException {
-        Identifier name = Identifier.parse(schematicBlockTag.getStringOr("name", ""));
+        ResourceLocation name = ResourceLocation.parse(schematicBlockTag.getStringOr("name", ""));
         SchematicBlockFactory<?> factory = SchematicBlockFactoryRegistry.getFactoryByName(name);
         if (factory == null) {
             throw new InvalidInputDataException("Unknown schematic type " + name);

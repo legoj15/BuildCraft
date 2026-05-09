@@ -6,7 +6,7 @@
 
 package buildcraft.transport;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
@@ -33,7 +33,7 @@ public class BCTransportPlugs {
         return def;
     }
 
-    private static Identifier idFor(String name) {
-        return Identifier.fromNamespaceAndPath(BCTransport.MODID, name);
+    private static ResourceLocation idFor(String name) {
+        return ResourceLocation.fromNamespaceAndPath(BCTransport.MODID, name);
     }
 }

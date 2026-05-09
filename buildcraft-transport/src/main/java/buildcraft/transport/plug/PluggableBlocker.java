@@ -9,7 +9,7 @@ package buildcraft.transport.plug;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.AABB;
 
 import buildcraft.api.transport.pipe.IPipeHolder;
@@ -25,7 +25,7 @@ import buildcraft.transport.client.model.key.KeyPlugBlocker;
 public class PluggableBlocker extends PipePluggable {
     private static final AABB[] BOXES = new AABB[6];
 
-    private static final Identifier ADVANCEMENT_PLACE_PLUG = Identifier.parse(
+    private static final ResourceLocation ADVANCEMENT_PLACE_PLUG = ResourceLocation.parse(
         "buildcrafttransport:plugging_the_gap"
     );
 

@@ -103,7 +103,7 @@ public final class ListHandler {
                         if (itemTag != null && itemTag.contains("id")) {
                             String itemId = itemTag.getString("id").orElse("");
                             int count = itemTag.getInt("count").orElse(1);
-                            net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(itemId);
+                            net.minecraft.resources.ResourceLocation id = net.minecraft.resources.ResourceLocation.tryParse(itemId);
                             if (id != null) {
                                 net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(id);
                                 if (item != null && item != net.minecraft.world.item.Items.AIR) {
@@ -128,7 +128,7 @@ public final class ListHandler {
             for (ItemStack stack : stacks) {
                 CompoundTag stackTag = new CompoundTag();
                 if (!stack.isEmpty()) {
-                    net.minecraft.resources.Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+                    net.minecraft.resources.ResourceLocation itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
                     stackTag.putString("id", itemId.toString());
                     stackTag.putInt("count", stack.getCount());
                 }

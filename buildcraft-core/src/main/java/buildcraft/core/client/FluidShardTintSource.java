@@ -14,14 +14,14 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.data.AtlasIds;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
 
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 import buildcraft.core.BCCore;
 
@@ -56,7 +56,7 @@ public final class FluidShardTintSource implements ItemTintSource {
         }
 
         // Fluid has pre-colored textures (e.g. lava) — sample the sprite
-        Identifier flowingTex = ext.getFlowingTexture(fluid);
+        ResourceLocation flowingTex = ext.getFlowingTexture(fluid);
         if (flowingTex == null) {
             flowingTex = ext.getStillTexture(fluid);
         }

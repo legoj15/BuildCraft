@@ -23,7 +23,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -67,7 +67,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
         if (context.blockState.isAir()) {
             return false;
         }
-        Identifier registryName = BuiltInRegistries.BLOCK.getKey(context.block);
+        ResourceLocation registryName = BuiltInRegistries.BLOCK.getKey(context.block);
         if (registryName == null) return false;
         if (!RulesLoader.READ_DOMAINS.contains(registryName.getNamespace())) return false;
         BlockEntity be = context.world.getBlockEntity(context.pos);
@@ -126,7 +126,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
             .map(rule -> rule.placeBlock)
             .filter(Objects::nonNull)
             .findFirst()
-            .map(Identifier::parse)
+            .map(ResourceLocation::parse)
             .map(BuiltInRegistries.BLOCK::getValue)
             .orElse(context.block);
     }
@@ -156,7 +156,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
             .map(rule -> rule.canBeReplacedWithBlocks)
             .filter(Objects::nonNull)
             .flatMap(Collection::stream)
-            .map(Identifier::parse)
+            .map(ResourceLocation::parse)
             .map(BuiltInRegistries.BLOCK::getValue)
             .forEach(canBeReplacedWithBlocks::add);
         canBeReplacedWithBlocks.add(context.block);
@@ -380,12 +380,12 @@ public class SchematicBlockDefault implements ISchematicBlock {
         }
         tileRotation = NBTUtilBC.readEnum(nbt.get("tileRotation"), Rotation.class);
         if (tileRotation == null) tileRotation = Rotation.NONE;
-        placeBlock = BuiltInRegistries.BLOCK.getValue(Identifier.parse(nbt.getStringOr("placeBlock", "")));
+        placeBlock = BuiltInRegistries.BLOCK.getValue(ResourceLocation.parse(nbt.getStringOr("placeBlock", "")));
         NBTUtilBC.readCompoundList(nbt.get("updateBlockOffsets"))
             .map(NBTUtilBC::readBlockPos)
             .forEach(updateBlockOffsets::add);
         NBTUtilBC.readStringList(nbt.get("canBeReplacedWithBlocks"))
-            .map(Identifier::parse)
+            .map(ResourceLocation::parse)
             .map(BuiltInRegistries.BLOCK::getValue)
             .forEach(canBeReplacedWithBlocks::add);
     }

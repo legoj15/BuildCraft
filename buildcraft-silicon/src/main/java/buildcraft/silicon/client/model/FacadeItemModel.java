@@ -14,7 +14,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.block.model.BakedQuad;
@@ -25,7 +25,7 @@ import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.item.ModelRenderProperties;
-import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.ItemOwner;
@@ -104,7 +104,7 @@ public class FacadeItemModel implements ItemModel {
     @SuppressWarnings("unchecked")
     private final java.util.function.Function<ItemStack, RenderType> vanillaRenderType;
     @SuppressWarnings("unchecked")
-    private final java.util.function.Supplier<org.joml.Vector3fc[]> extents;
+    private final java.util.function.Supplier<org.joml.Vector3f[]> extents;
 
     @SuppressWarnings("unchecked")
     public FacadeItemModel(BlockModelWrapper vanillaWrapper) {
@@ -113,7 +113,7 @@ public class FacadeItemModel implements ItemModel {
             this.vanillaQuads = (List<BakedQuad>) QUADS_FIELD.get(vanillaWrapper);
             this.renderProperties = (ModelRenderProperties) PROPERTIES_FIELD.get(vanillaWrapper);
             this.vanillaRenderType = (java.util.function.Function<ItemStack, RenderType>) RENDER_TYPE_FIELD.get(vanillaWrapper);
-            this.extents = (java.util.function.Supplier<org.joml.Vector3fc[]>) EXTENTS_FIELD.get(vanillaWrapper);
+            this.extents = (java.util.function.Supplier<org.joml.Vector3f[]>) EXTENTS_FIELD.get(vanillaWrapper);
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to read BlockModelWrapper fields", e);
         }

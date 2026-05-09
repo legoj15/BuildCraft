@@ -13,7 +13,7 @@ import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.api.transport.pipe.IPipeBehaviourRenderer;
 import buildcraft.lib.client.model.MutableQuad;
@@ -79,7 +79,7 @@ public enum PipeBehaviourRendererStripes implements IPipeBehaviourRenderer<PipeB
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
             .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
-        TextureAtlasSprite sprite = atlas.getSprite(Identifier.parse("minecraft:block/gold_block"));
+        TextureAtlasSprite sprite = atlas.getSprite(ResourceLocation.parse("minecraft:block/gold_block"));
 
         float u0 = sprite.getU(0);
         float u1 = sprite.getU(1);

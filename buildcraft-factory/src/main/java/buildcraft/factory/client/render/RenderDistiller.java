@@ -25,7 +25,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -55,14 +55,14 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
      * Each entry is { texture_id, u0, v0, u1, v1 } in pixel coords (0-16 range).
      * Index 0 = off, 1-6 = power levels.
      */
-    private static final Identifier[] POWER_TEXTURES = {
-        Identifier.parse("buildcraftfactory:block/distiller/power_sprite_a"),
-        Identifier.parse("buildcraftfactory:block/distiller/power_sprite_a"),
-        Identifier.parse("buildcraftfactory:block/distiller/power_sprite_b"),
-        Identifier.parse("buildcraftfactory:block/distiller/power_sprite_b"),
-        Identifier.parse("buildcraftfactory:block/distiller/power_sprite_c"),
-        Identifier.parse("buildcraftfactory:block/distiller/power_sprite_c"),
-        Identifier.parse("buildcraftfactory:block/distiller/power_sprite_d"),
+    private static final ResourceLocation[] POWER_TEXTURES = {
+        ResourceLocation.parse("buildcraftfactory:block/distiller/power_sprite_a"),
+        ResourceLocation.parse("buildcraftfactory:block/distiller/power_sprite_a"),
+        ResourceLocation.parse("buildcraftfactory:block/distiller/power_sprite_b"),
+        ResourceLocation.parse("buildcraftfactory:block/distiller/power_sprite_b"),
+        ResourceLocation.parse("buildcraftfactory:block/distiller/power_sprite_c"),
+        ResourceLocation.parse("buildcraftfactory:block/distiller/power_sprite_c"),
+        ResourceLocation.parse("buildcraftfactory:block/distiller/power_sprite_d"),
     };
     /** Whether to use the top half (true) or bottom half (false) of the texture. */
     private static final boolean[] POWER_TOP_HALF = {
@@ -160,7 +160,7 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
         if (capacity <= 0) return;
 
         IClientFluidTypeExtensions fluidExt = IClientFluidTypeExtensions.of(fluid.getFluid());
-        Identifier stillTexture = fluidExt.getStillTexture(fluid);
+        ResourceLocation stillTexture = fluidExt.getStillTexture(fluid);
         if (stillTexture == null) return;
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
@@ -201,7 +201,7 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
         // Translucent for vanilla water, cutout for BC fluids (reuse water texture opaquely)
         VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockSheet());
+                    ? Sheets.translucentItemSheet() : Sheets.cutoutBlockSheet());
         PoseStack.Pose pose = poseStack.last();
         int overlay = OverlayTexture.NO_OVERLAY;
 

@@ -62,12 +62,12 @@ import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.pipe.PipeEventBus;
 
 public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebuggable {
-    private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_DREAM
-        = net.minecraft.resources.Identifier.parse("buildcrafttransport:pipe_dream");
-    private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_DIVERSIFICATION
-        = net.minecraft.resources.Identifier.parse("buildcrafttransport:pipe_diversification");
-    private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_FANATIC
-        = net.minecraft.resources.Identifier.parse("buildcrafttransport:pipe_fanatic");
+    private static final net.minecraft.resources.ResourceLocation ADVANCEMENT_PIPE_DREAM
+        = net.minecraft.resources.ResourceLocation.parse("buildcrafttransport:pipe_dream");
+    private static final net.minecraft.resources.ResourceLocation ADVANCEMENT_PIPE_DIVERSIFICATION
+        = net.minecraft.resources.ResourceLocation.parse("buildcrafttransport:pipe_diversification");
+    private static final net.minecraft.resources.ResourceLocation ADVANCEMENT_PIPE_FANATIC
+        = net.minecraft.resources.ResourceLocation.parse("buildcrafttransport:pipe_fanatic");
 
     /** ModelData property that passes this tile reference to ModelPipe for baked model generation. */
     public static final net.neoforged.neoforge.model.data.ModelProperty<TilePipeHolder> PIPE_MODEL_DATA =
@@ -102,7 +102,7 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
             PipePluggable plug = pluggables[face.ordinal()];
             if (plug != null) {
                 CompoundTag entry = new CompoundTag();
-                entry.putString("id", plug.definition.identifier.toString());
+                entry.putString("id", plug.definition.ResourceLocation.toString());
                 entry.put("data", plug.writeToNbt());
                 plugTag.put(face.getName(), entry);
             }
@@ -138,7 +138,7 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
                     CompoundTag entry = plugTag.getCompound(face.getName()).orElse(new CompoundTag());
                     String id = entry.getString("id").orElse("");
                     if (!id.isEmpty()) {
-                        net.minecraft.resources.Identifier plugId = net.minecraft.resources.Identifier.parse(id);
+                        net.minecraft.resources.ResourceLocation plugId = net.minecraft.resources.ResourceLocation.parse(id);
                         PluggableDefinition def = PipeApi.pluggableRegistry != null
                                 ? PipeApi.pluggableRegistry.getDefinition(plugId) : null;
                         if (def != null) {
@@ -235,8 +235,8 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
                 if (flowCriterion != null) {
                     AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PIPE_DIVERSIFICATION, flowCriterion);
                 }
-                // Pipe fanatic: award criterion by pipe identifier
-                AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PIPE_FANATIC, def.identifier);
+                // Pipe fanatic: award criterion by pipe ResourceLocation
+                AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PIPE_FANATIC, def.ResourceLocation);
             }
         }
         scheduleRenderUpdate();

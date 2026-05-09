@@ -9,14 +9,14 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.builders.container.ContainerReplacer;
 
 public class GuiReplacer extends AbstractContainerScreen<ContainerReplacer> {
-    private static final Identifier TEXTURE =
-            Identifier.parse("buildcraftbuilders:textures/gui/replacer.png");
+    private static final ResourceLocation TEXTURE =
+            ResourceLocation.parse("buildcraftbuilders:textures/gui/replacer.png");
     private static final int SIZE_X = 176, SIZE_Y = 241;
 
     public GuiReplacer(ContainerReplacer container, Inventory playerInv, Component title) {

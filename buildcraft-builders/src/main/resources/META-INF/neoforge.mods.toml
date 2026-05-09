@@ -4,7 +4,7 @@ license="MIT"
 
 [[mods]]
 modId="buildcraftbuilders"
-version="1.21.11-8.0.0"
+version="1.21.10-8.0.0"
 displayName="BuildCraft Builders"
 description='''
 The builders module for BuildCraft 8.

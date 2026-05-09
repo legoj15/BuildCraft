@@ -334,7 +334,7 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
         // Get the plug texture sprite
         net.minecraft.client.renderer.texture.TextureAtlasSprite sprite =
             buildcraft.lib.misc.SpriteUtil.getSprite(
-                net.minecraft.resources.Identifier.fromNamespaceAndPath("buildcrafttransport", "pipes/plug"));
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("buildcrafttransport", "pipes/plug"));
         if (sprite == null) {
             sprite = buildcraft.lib.misc.SpriteUtil.missingSprite();
         }

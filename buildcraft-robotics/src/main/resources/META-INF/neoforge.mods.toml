@@ -4,7 +4,7 @@ license="MIT"
 
 [[mods]]
 modId="buildcraftrobotics"
-version="1.21.11-8.0.0"
+version="1.21.10-8.0.0"
 displayName="BuildCraft Robotics"
 description='''
 The robotics module for BuildCraft 8. (Stub)

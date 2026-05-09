@@ -37,8 +37,8 @@ import buildcraft.core.marker.VolumeConnection;
 import buildcraft.core.marker.VolumeSubCache;
 
 public class TileMarkerVolume extends TileMarker<VolumeConnection> implements ITileAreaProvider {
-    private static final net.minecraft.resources.Identifier ADVANCEMENT_MARKERS
-        = net.minecraft.resources.Identifier.parse("buildcraftcore:markers");
+    private static final net.minecraft.resources.ResourceLocation ADVANCEMENT_MARKERS
+        = net.minecraft.resources.ResourceLocation.parse("buildcraftcore:markers");
 
     private boolean showSignals = false;
 

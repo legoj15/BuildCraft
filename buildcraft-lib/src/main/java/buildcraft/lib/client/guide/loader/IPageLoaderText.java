@@ -7,7 +7,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.profiling.ProfilerFiller;
 
 import buildcraft.lib.client.guide.entry.PageEntry;
@@ -15,10 +15,10 @@ import buildcraft.lib.client.guide.parts.GuidePageFactory;
 
 public interface IPageLoaderText extends IPageLoader {
     @Override
-    default GuidePageFactory loadPage(InputStream in, Identifier name, PageEntry<?> entry, ProfilerFiller prof) throws IOException {
+    default GuidePageFactory loadPage(InputStream in, ResourceLocation name, PageEntry<?> entry, ProfilerFiller prof) throws IOException {
         Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8);
         return loadPage(new BufferedReader(reader), name, entry, prof);
     }
 
-    GuidePageFactory loadPage(BufferedReader reader, Identifier name, PageEntry<?> entry, ProfilerFiller prof) throws IOException;
+    GuidePageFactory loadPage(BufferedReader reader, ResourceLocation name, PageEntry<?> entry, ProfilerFiller prof) throws IOException;
 }

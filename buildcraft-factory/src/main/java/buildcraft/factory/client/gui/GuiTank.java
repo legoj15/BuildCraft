@@ -15,7 +15,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.level.material.Fluids;
 
@@ -28,8 +28,8 @@ import buildcraft.lib.gui.elem.GuiElementFluidTank;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
 public class GuiTank extends GuiBC8<ContainerTank> {
-    private static final Identifier TEXTURE =
-            Identifier.parse("buildcraftfactory:textures/gui/tank.png");
+    private static final ResourceLocation TEXTURE =
+            ResourceLocation.parse("buildcraftfactory:textures/gui/tank.png");
     private static final int SIZE_X = 176, SIZE_Y = 181;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_TANK_OVERLAY = new GuiIcon(TEXTURE, 176, 0, 16, 64);

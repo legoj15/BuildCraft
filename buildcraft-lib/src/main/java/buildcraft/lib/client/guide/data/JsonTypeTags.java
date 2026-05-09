@@ -6,7 +6,7 @@
 
 package buildcraft.lib.client.guide.data;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 
 

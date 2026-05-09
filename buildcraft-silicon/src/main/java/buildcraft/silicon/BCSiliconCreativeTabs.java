@@ -3,7 +3,7 @@ package buildcraft.silicon;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -17,14 +17,14 @@ public class BCSiliconCreativeTabs {
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, BCSilicon.MODID);
 
-    // Reference the transport plugs tab key by identifier (avoids cross-module compile dependency)
+    // Reference the transport plugs tab key by ResourceLocation (avoids cross-module compile dependency)
     static final ResourceKey<CreativeModeTab> TRANSPORT_PLUGS_TAB_KEY =
             ResourceKey.create(Registries.CREATIVE_MODE_TAB,
-                    Identifier.fromNamespaceAndPath("buildcrafttransport", "plugs"));
+                    ResourceLocation.fromNamespaceAndPath("buildcrafttransport", "plugs"));
 
     public static final ResourceKey<CreativeModeTab> FACADE_TAB_KEY =
             ResourceKey.create(Registries.CREATIVE_MODE_TAB,
-                    Identifier.fromNamespaceAndPath(BCSilicon.MODID, "facades"));
+                    ResourceLocation.fromNamespaceAndPath(BCSilicon.MODID, "facades"));
 
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> FACADE_TAB =
             CREATIVE_MODE_TABS.register("facades", () ->

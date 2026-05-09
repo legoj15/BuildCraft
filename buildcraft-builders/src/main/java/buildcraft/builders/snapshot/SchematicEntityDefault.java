@@ -22,7 +22,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -52,7 +52,7 @@ public class SchematicEntityDefault implements ISchematicEntity {
     private Rotation entityRotation = Rotation.NONE;
 
     public static boolean predicate(SchematicEntityContext context) {
-        Identifier registryName = BuiltInRegistries.ENTITY_TYPE.getKey(context.entity.getType());
+        ResourceLocation registryName = BuiltInRegistries.ENTITY_TYPE.getKey(context.entity.getType());
         if (registryName == null) return false;
         if (!RulesLoader.READ_DOMAINS.contains(registryName.getNamespace())) return false;
         TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, context.world.registryAccess());
@@ -86,7 +86,7 @@ public class SchematicEntityDefault implements ISchematicEntity {
     @Nonnull
     @Override
     public List<ItemStack> computeRequiredItems() {
-        Identifier entityId = Identifier.parse(entityNbt.getStringOr("id", ""));
+        ResourceLocation entityId = ResourceLocation.parse(entityNbt.getStringOr("id", ""));
         Set<JsonRule> rules = RulesLoader.getRules(entityId, entityNbt);
         if (rules.isEmpty()) {
             return Collections.emptyList();
@@ -103,7 +103,7 @@ public class SchematicEntityDefault implements ISchematicEntity {
     @Nonnull
     @Override
     public List<FluidStack> computeRequiredFluids() {
-        Identifier entityId = Identifier.parse(entityNbt.getStringOr("id", ""));
+        ResourceLocation entityId = ResourceLocation.parse(entityNbt.getStringOr("id", ""));
         Set<JsonRule> rules = RulesLoader.getRules(entityId, entityNbt);
         return rules.stream()
             .map(rule -> rule.requiredExtractors)

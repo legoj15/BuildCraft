@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -23,7 +23,7 @@ import buildcraft.lib.misc.AdvancementUtil;
  */
 public class TileSpringOil extends BlockEntity implements ITileOilSpring {
 
-    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftfactory:black_gold");
+    private static final ResourceLocation ADVANCEMENT = ResourceLocation.parse("buildcraftfactory:black_gold");
 
     private final Map<GameProfile, PlayerPumpInfo> pumpProgress = new ConcurrentHashMap<>();
 

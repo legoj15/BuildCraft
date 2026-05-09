@@ -11,7 +11,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
@@ -44,7 +44,7 @@ public record MessagePipePayload(
 ) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<MessagePipePayload> TYPE =
-            new CustomPacketPayload.Type<>(Identifier.parse("buildcrafttransport:pipe_payload"));
+            new CustomPacketPayload.Type<>(ResourceLocation.parse("buildcrafttransport:pipe_payload"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, MessagePipePayload> STREAM_CODEC =
             StreamCodec.of(MessagePipePayload::encode, MessagePipePayload::decode);

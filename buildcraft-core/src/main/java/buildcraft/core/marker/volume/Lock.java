@@ -14,7 +14,7 @@ import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 
 
@@ -110,7 +110,7 @@ public class Lock {
                 }
                 String blockKey = nbt.getString("block").orElse("minecraft:air");
                 block = net.minecraft.core.registries.BuiltInRegistries.BLOCK
-                        .getValue(Identifier.parse(blockKey));
+                        .getValue(ResourceLocation.parse(blockKey));
             }
 
             @Override

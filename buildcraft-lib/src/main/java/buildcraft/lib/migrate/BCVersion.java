@@ -6,7 +6,7 @@
 
 package buildcraft.lib.migrate;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 public enum BCVersion {
     BEFORE_RECORDS(0, "0.x -> 7.2.0-pre12"),

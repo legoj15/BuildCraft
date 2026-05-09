@@ -12,7 +12,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
@@ -92,8 +92,8 @@ public class BCSiliconPlugs {
         return def;
     }
 
-    private static Identifier idFor(String name) {
-        return Identifier.fromNamespaceAndPath(BCSilicon.MODID, name);
+    private static ResourceLocation idFor(String name) {
+        return ResourceLocation.fromNamespaceAndPath(BCSilicon.MODID, name);
     }
 }
 

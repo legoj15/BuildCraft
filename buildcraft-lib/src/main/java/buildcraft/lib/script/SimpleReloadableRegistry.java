@@ -11,7 +11,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.Iterables;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.api.registry.IReloadableRegistry;
 import buildcraft.api.registry.IReloadableRegistryManager;

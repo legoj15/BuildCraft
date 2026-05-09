@@ -37,7 +37,7 @@ public enum PipeRegistry implements IPipeRegistry {
 
     @Override
     public void registerPipe(PipeDefinition definition) {
-        definitions.put(definition.identifier, definition);
+        definitions.put(definition.ResourceLocation, definition);
     }
 
     @Override
@@ -80,15 +80,15 @@ public enum PipeRegistry implements IPipeRegistry {
 
     @Override
     @Nullable
-    public PipeDefinition getDefinition(ResourceLocation identifier) {
-        return definitions.get(identifier);
+    public PipeDefinition getDefinition(ResourceLocation ResourceLocation) {
+        return definitions.get(ResourceLocation);
     }
 
     @Nonnull
-    public PipeDefinition loadDefinition(String identifier) throws InvalidInputDataException {
-        PipeDefinition def = getDefinition(new ResourceLocation(identifier));
+    public PipeDefinition loadDefinition(String ResourceLocation) throws InvalidInputDataException {
+        PipeDefinition def = getDefinition(new ResourceLocation(ResourceLocation));
         if (def == null) {
-            throw new InvalidInputDataException("Unknown pipe definition " + identifier);
+            throw new InvalidInputDataException("Unknown pipe definition " + ResourceLocation);
         }
         return def;
     }

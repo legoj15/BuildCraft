@@ -1,6 +1,6 @@
 package buildcraft.lib.engine;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.api.enums.EnumPowerStage;
 

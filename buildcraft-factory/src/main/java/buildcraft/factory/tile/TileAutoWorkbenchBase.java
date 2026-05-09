@@ -24,7 +24,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.mj.IMjConnector;
@@ -42,7 +42,7 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IHasWork, IAutoCraft {
 
-    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftfactory:lazy_crafting");
+    private static final ResourceLocation ADVANCEMENT = ResourceLocation.parse("buildcraftfactory:lazy_crafting");
 
     /** A redstone engine generates 1 * MjAPI.MJ per tick.
      *  This passive rate makes the workbench much slower without one powering it. */

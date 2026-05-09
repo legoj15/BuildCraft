@@ -2,7 +2,7 @@ package buildcraft.core.client;
 
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import buildcraft.core.BCCoreBlockEntities;
 import buildcraft.core.BCCoreModels;
 import buildcraft.core.BCCoreMenuTypes;
@@ -40,7 +40,7 @@ public class BCCoreClient {
                 net.neoforged.neoforge.client.event.RegisterGuiLayersEvent.class,
                 event -> {
                     event.registerAboveAll(
-                        Identifier.parse("buildcraftcore:debug_overlay"),
+                        ResourceLocation.parse("buildcraftcore:debug_overlay"),
                         buildcraft.core.client.DebugOverlayRenderer::render
                     );
                 }

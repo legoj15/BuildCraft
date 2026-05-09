@@ -6,7 +6,7 @@
 
 package buildcraft.lib.client.model;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;

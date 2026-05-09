@@ -22,7 +22,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
@@ -55,10 +55,10 @@ import buildcraft.api.tiles.IDebuggable;
  */
 public class TilePump extends TileMiner implements IDebuggable {
 
-    private static final Identifier ADVANCEMENT_DRAIN_ANY
-        = Identifier.parse("buildcraftfactory:draining_the_world");
-    private static final Identifier ADVANCEMENT_DRAIN_OIL
-        = Identifier.parse("buildcraftfactory:oil_platform");
+    private static final ResourceLocation ADVANCEMENT_DRAIN_ANY
+        = ResourceLocation.parse("buildcraftfactory:draining_the_world");
+    private static final ResourceLocation ADVANCEMENT_DRAIN_OIL
+        = ResourceLocation.parse("buildcraftfactory:oil_platform");
 
     private static final Direction[] SEARCH_NORMAL = new Direction[] {
         Direction.UP, Direction.NORTH, Direction.SOUTH,
@@ -150,7 +150,7 @@ public class TilePump extends TileMiner implements IDebuggable {
 
     /** Returns true if the fluid is crude oil (any heat variant). */
     private static boolean isOil(Fluid fluid) {
-        Identifier id = BuiltInRegistries.FLUID.getKey(fluid);
+        ResourceLocation id = BuiltInRegistries.FLUID.getKey(fluid);
         // Covers "buildcraftenergy:oil", "buildcraftenergy:oil_heat_1", "buildcraftenergy:oil_heat_2"
         return id.getNamespace().equals("buildcraftenergy")
             && (id.getPath().equals("oil") || id.getPath().startsWith("oil_heat_"));

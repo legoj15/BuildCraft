@@ -6,7 +6,7 @@
 
 package buildcraft.lib.client.model.json;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -50,12 +50,12 @@ public class JsonVariableModel extends JsonVariableObject {
     public final JsonModelRule[] rules;
     public final JsonVariableModelPart[] cutoutElements, translucentElements;
 
-    public static JsonVariableModel deserialize(Identifier from, FunctionContext fnCtx)
+    public static JsonVariableModel deserialize(ResourceLocation from, FunctionContext fnCtx)
         throws JsonParseException, IOException {
         return deserialize(from, fnCtx, new ResourceLoaderContext());
     }
 
-    public static JsonVariableModel deserialize(Identifier from, FunctionContext fnCtx, ResourceLoaderContext ctx)
+    public static JsonVariableModel deserialize(ResourceLocation from, FunctionContext fnCtx, ResourceLoaderContext ctx)
         throws JsonParseException, IOException {
         try (InputStreamReader isr = ctx.startLoading(from)) {
             return new JsonVariableModel(JsonUtil.inlineCustom(new Gson().fromJson(isr, JsonObject.class)), fnCtx, ctx);
@@ -102,7 +102,7 @@ public class JsonVariableModel extends JsonVariableObject {
         if (obj.has("parent")) {
             String parentName = GsonHelper.getAsString(obj, "parent");
             parentName += ".json";
-            Identifier from = Identifier.parse(parentName);
+            ResourceLocation from = ResourceLocation.parse(parentName);
             JsonVariableModel parent;
             try {
                 parent = deserialize(from, fnCtx, ctx);
@@ -164,7 +164,7 @@ public class JsonVariableModel extends JsonVariableObject {
         ambientOcclusion = from.ambientOcclusion;
     }
 
-    public void onTextureStitchPre(Identifier modelLocation, Set<Identifier> toRegisterSprites) {
+    public void onTextureStitchPre(ResourceLocation modelLocation, Set<ResourceLocation> toRegisterSprites) {
         if (ModelHolderRegistry.DEBUG) {
             BCLog.logger.info("[lib.model] The model " + modelLocation + " requires these sprites:");
         }
@@ -175,7 +175,7 @@ public class JsonVariableModel extends JsonVariableObject {
                 // it's somewhere else in the map so we don't need to register it twice
                 continue;
             }
-            Identifier textureLoc = Identifier.parse(location);
+            ResourceLocation textureLoc = ResourceLocation.parse(location);
             toRegisterSprites.add(textureLoc);
             if (ModelHolderRegistry.DEBUG) {
                 BCLog.logger.info("[lib.model]  - " + location);
@@ -218,7 +218,7 @@ public class JsonVariableModel extends JsonVariableObject {
         lookup = texture.location;
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
                 .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
-        sprite = atlas.getSprite(Identifier.parse(lookup));
+        sprite = atlas.getSprite(ResourceLocation.parse(lookup));
         TexturedFace face = new TexturedFace();
         face.sprite = sprite;
         face.faceData = texture.faceData;

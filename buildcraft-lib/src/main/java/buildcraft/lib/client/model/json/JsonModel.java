@@ -6,7 +6,7 @@
 
 package buildcraft.lib.client.model.json;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -35,11 +35,11 @@ public class JsonModel {
     public final Map<String, String> textures;
     public final JsonModelPart[] cutoutElements, translucentElements;
 
-    public static JsonModel deserialize(Identifier from) throws JsonParseException, IOException {
+    public static JsonModel deserialize(ResourceLocation from) throws JsonParseException, IOException {
         return deserialize(from, new ResourceLoaderContext());
     }
 
-    public static JsonModel deserialize(Identifier from, ResourceLoaderContext ctx) throws JsonParseException, IOException {
+    public static JsonModel deserialize(ResourceLocation from, ResourceLoaderContext ctx) throws JsonParseException, IOException {
         try (InputStreamReader isr = ctx.startLoading(from)) {
             return new JsonModel(new Gson().fromJson(isr, JsonObject.class), ctx);
         } finally {
@@ -50,7 +50,7 @@ public class JsonModel {
     public static void deserializePart(List<JsonModelPart> to, boolean translucent, JsonElement json, ResourceLoaderContext ctx) throws JsonParseException, IOException {
         if (json.isJsonPrimitive() && json.getAsJsonPrimitive().isString()) {
             String str = json.getAsString();
-            Identifier parent = Identifier.parse(str);
+            ResourceLocation parent = ResourceLocation.parse(str);
             JsonModel model = deserialize(parent, ctx);
             if (translucent) {
                 Collections.addAll(to, model.translucentElements);

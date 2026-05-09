@@ -19,8 +19,26 @@ allprojects {
 subprojects {
     apply plugin: 'net.neoforged.moddev'
 
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
+
+    // if (project.name == 'buildcraft-lib') {
+    //     afterEvaluate {
+    //         sourceSets.main.java.srcDir(rootProject.file('sub_projects/expression/src/main/java'))
+
+    //         tasks.register('printMainJavaSrcDirs') {
+    //             doLast {
+    //                 sourceSets.main.java.srcDirs.each {
+    //                     println it
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+
     neoForge {
-        version = '21.11.38-beta'
+        version = '21.10.64'
 
         // Load access transformers from any subproject that has the file
         def atFile = project.file('src/main/resources/META-INF/accesstransformer.cfg')

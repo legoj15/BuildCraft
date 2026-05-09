@@ -1,6 +1,6 @@
 package buildcraft.lib.client.guide.ref;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -21,11 +21,11 @@ public final class GuideGroupSet {
         }
     }
 
-    public final Identifier group;
+    public final ResourceLocation group;
     public final List<PageValue<?>> sources;
     public final List<PageValue<?>> entries;
 
-    public GuideGroupSet(Identifier group) {
+    public GuideGroupSet(ResourceLocation group) {
         this.group = group;
         this.sources = new ArrayList<>();
         this.entries = new ArrayList<>();

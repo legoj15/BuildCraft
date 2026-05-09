@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import net.minecraft.client.renderer.item.BlockModelWrapper;
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
@@ -57,7 +57,7 @@ public class BCSiliconClient {
 
         // Swap vanilla item model with dynamic facade model
         var itemModels = event.getBakingResult().itemStackModels();
-        Identifier facadeId = BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_FACADE.get());
+        ResourceLocation facadeId = BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_FACADE.get());
         ItemModel vanillaModel = itemModels.get(facadeId);
         if (vanillaModel instanceof BlockModelWrapper wrapper) {
             itemModels.put(facadeId, new FacadeItemModel(wrapper));

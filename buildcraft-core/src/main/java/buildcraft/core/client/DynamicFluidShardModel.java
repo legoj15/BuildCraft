@@ -22,12 +22,13 @@ import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.item.ModelRenderProperties;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BlockModelRotation;
 import net.minecraft.client.resources.model.Material;
 import net.minecraft.client.resources.model.ModelDebugName;
 import net.minecraft.client.resources.model.ModelState;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -49,7 +50,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 import buildcraft.core.BCCore;
 
@@ -75,17 +76,17 @@ public class DynamicFluidShardModel implements ItemModel {
     // CUTOUT uses binary alpha (opaque fluids like lava, oil)
     // TRANSLUCENT uses alpha blending (translucent fluids like water)
     private static final RenderTypeGroup RENDER_TYPES_CUTOUT =
-            new RenderTypeGroup(ChunkSectionLayer.CUTOUT, NeoForgeRenderTypes::getItemLayeredCutout);
+            new RenderTypeGroup(ChunkSectionLayer.CUTOUT, NeoForgeRenderTypes.getItemLayeredCutout(TextureAtlas.LOCATION_BLOCKS));
     private static final RenderTypeGroup RENDER_TYPES_TRANSLUCENT =
-            new RenderTypeGroup(ChunkSectionLayer.TRANSLUCENT, NeoForgeRenderTypes::getItemLayeredTranslucent);
+            new RenderTypeGroup(ChunkSectionLayer.TRANSLUCENT, NeoForgeRenderTypes.getItemLayeredTranslucent(TextureAtlas.LOCATION_BLOCKS));
     private static final RenderTypeGroup RENDER_TYPES_UNLIT =
-            new RenderTypeGroup(ChunkSectionLayer.TRANSLUCENT, NeoForgeRenderTypes::getUnlitTranslucent);
+            new RenderTypeGroup(ChunkSectionLayer.TRANSLUCENT, NeoForgeRenderTypes.getUnlitTranslucent(TextureAtlas.LOCATION_BLOCKS));
 
     // Texture locations for the shard
-    private static final Identifier BASE_TEXTURE =
-            Identifier.parse("buildcraftcore:item/fragile_fluid_shard_base");
-    private static final Identifier FLUID_MASK_TEXTURE =
-            Identifier.parse("buildcraftcore:item/fragile_fluid_shard_fluid");
+    private static final ResourceLocation BASE_TEXTURE =
+            ResourceLocation.parse("buildcraftcore:item/fragile_fluid_shard_base");
+    private static final ResourceLocation FLUID_MASK_TEXTURE =
+            ResourceLocation.parse("buildcraftcore:item/fragile_fluid_shard_fluid");
 
     private final BakingContext bakingContext;
     private final ItemTransforms itemTransforms;
@@ -93,7 +94,7 @@ public class DynamicFluidShardModel implements ItemModel {
 
     private DynamicFluidShardModel(BakingContext bakingContext) {
         this.bakingContext = bakingContext;
-        var baseItemModel = bakingContext.blockModelBaker().getModel(Identifier.withDefaultNamespace("item/generated"));
+        var baseItemModel = bakingContext.blockModelBaker().getModel(ResourceLocation.withDefaultNamespace("item/generated"));
         if (baseItemModel == null) {
             throw new IllegalStateException("Failed to access item/generated model");
         }
@@ -103,7 +104,7 @@ public class DynamicFluidShardModel implements ItemModel {
     @SubscribeEvent
     public static void registerItemModels(RegisterItemModelsEvent event) {
         event.register(
-                Identifier.parse("buildcraftcore:fluid_shard"),
+                ResourceLocation.parse("buildcraftcore:fluid_shard"),
                 Unbaked.MAP_CODEC
         );
     }
@@ -111,14 +112,14 @@ public class DynamicFluidShardModel implements ItemModel {
     private ItemModel bakeModelForFluid(Fluid fluid) {
         var sprites = bakingContext.blockModelBaker().sprites();
 
-        Material baseMaterial = ClientHooks.getItemMaterial(BASE_TEXTURE);
-        Material fluidMaskMaterial = ClientHooks.getItemMaterial(FLUID_MASK_TEXTURE);
+        Material baseMaterial = ClientHooks.getBlockMaterial(BASE_TEXTURE);
+        Material fluidMaskMaterial = ClientHooks.getBlockMaterial(FLUID_MASK_TEXTURE);
 
         TextureAtlasSprite baseSprite = sprites.get(baseMaterial, DEBUG_NAME);
 
         // Get the fluid's STILL texture for the look inside the shard
         IClientFluidTypeExtensions ext = IClientFluidTypeExtensions.of(fluid);
-        Identifier stillTexId = ext.getStillTexture();
+        ResourceLocation stillTexId = ext.getStillTexture();
         TextureAtlasSprite fluidSprite = (fluid != Fluids.EMPTY && stillTexId != null)
                 ? sprites.get(ClientHooks.getBlockMaterial(stillTexId), DEBUG_NAME)
                 : null;
@@ -127,7 +128,7 @@ public class DynamicFluidShardModel implements ItemModel {
         TextureAtlasSprite maskSprite = sprites.get(fluidMaskMaterial, DEBUG_NAME);
 
         TextureAtlasSprite particleSprite = fluidSprite != null ? fluidSprite : baseSprite;
-        ModelState state = BlockModelRotation.IDENTITY;
+        ModelState state = BlockModelRotation.X0_Y0;
 
         List<ItemModel> subModels = new ArrayList<>();
         ModelRenderProperties renderProperties = new ModelRenderProperties(false, particleSprite, itemTransforms);
@@ -136,7 +137,7 @@ public class DynamicFluidShardModel implements ItemModel {
         {
             var unbaked = UnbakedElementsHelper.createUnbakedItemElements(0, baseSprite);
             var quads = UnbakedElementsHelper.bakeElements(unbaked, $ -> baseSprite, state);
-            var renderType = RenderTypeHelper.detectItemModelRenderType(quads, RENDER_TYPES_CUTOUT);
+            var renderType = RENDER_TYPES_CUTOUT.entity();
             subModels.add(new BlockModelWrapper(List.of(), quads, renderProperties, renderType));
         }
 
@@ -162,7 +163,7 @@ public class DynamicFluidShardModel implements ItemModel {
                 renderTypeGroup = RENDER_TYPES_CUTOUT;
             }
 
-            var renderType = RenderTypeHelper.detectItemModelRenderType(quads, renderTypeGroup);
+            var renderType = renderTypeGroup.entity();
             if (emissive) {
                 quads = new ArrayList<>(quads);
                 quads.replaceAll(DynamicFluidShardModel::setMaxEmissivity);
@@ -178,7 +179,7 @@ public class DynamicFluidShardModel implements ItemModel {
                 var coverState = new ComposedModelState(state, COVER_TRANSFORM);
                 var coverUnbaked = UnbakedElementsHelper.createUnbakedItemMaskElements(0, maskSprite);
                 var coverQuads = UnbakedElementsHelper.bakeElements(coverUnbaked, $ -> baseSprite, coverState);
-                var coverRenderType = RenderTypeHelper.detectItemModelRenderType(coverQuads, RENDER_TYPES_CUTOUT);
+                var coverRenderType = RENDER_TYPES_CUTOUT.entity();
                 subModels.add(new BlockModelWrapper(List.of(), coverQuads, renderProperties, coverRenderType));
             }
         }
@@ -188,21 +189,12 @@ public class DynamicFluidShardModel implements ItemModel {
 
     private static BakedQuad setMaxEmissivity(BakedQuad quad) {
         return new BakedQuad(
-                quad.position0(),
-                quad.position1(),
-                quad.position2(),
-                quad.position3(),
-                quad.packedUV0(),
-                quad.packedUV1(),
-                quad.packedUV2(),
-                quad.packedUV3(),
+                quad.vertices(),
                 quad.tintIndex(),
                 quad.direction(),
                 quad.sprite(),
                 quad.shade(),
                 Level.MAX_BRIGHTNESS,
-                quad.bakedNormals(),
-                quad.bakedColors(),
                 quad.hasAmbientOcclusion());
     }
 

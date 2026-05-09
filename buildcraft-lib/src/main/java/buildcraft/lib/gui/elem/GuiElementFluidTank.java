@@ -13,7 +13,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -84,7 +84,7 @@ public class GuiElementFluidTank implements IInteractionElement {
 
     private void drawFluid(GuiGraphics graphics, FluidStack fluid, int amount, int capacity) {
         IClientFluidTypeExtensions fluidExt = IClientFluidTypeExtensions.of(fluid.getFluid());
-        Identifier stillTexture = fluidExt.getStillTexture(fluid);
+        ResourceLocation stillTexture = fluidExt.getStillTexture(fluid);
         if (stillTexture == null) return;
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()

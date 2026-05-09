@@ -6,7 +6,7 @@
 
 package buildcraft.lib.client.sprite;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.api.core.render.ISprite;
 

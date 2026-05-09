@@ -6,7 +6,7 @@
 
 package buildcraft.lib.client.model.json;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.Arrays;

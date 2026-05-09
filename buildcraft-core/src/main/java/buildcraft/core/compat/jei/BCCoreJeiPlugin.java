@@ -8,7 +8,7 @@ import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.core.BCCore;
 import buildcraft.core.BCCoreItems;
@@ -22,10 +22,10 @@ import buildcraft.lib.gui.GuiBC8;
  */
 @JeiPlugin
 public class BCCoreJeiPlugin implements IModPlugin {
-    private static final Identifier UID = Identifier.parse("buildcraftcore:jei_plugin");
+    private static final ResourceLocation UID = ResourceLocation.parse("buildcraftcore:jei_plugin");
 
     @Override
-    public Identifier getPluginUid() {
+    public ResourceLocation getPluginUid() {
         return UID;
     }
 

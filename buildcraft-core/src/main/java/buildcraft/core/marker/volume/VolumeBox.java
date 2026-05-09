@@ -18,7 +18,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
@@ -81,7 +81,7 @@ public class VolumeBox {
                 String addonClassName = addonsEntryTag.getString("addonClass").orElse("");
                 try {
                     Class<? extends Addon> addonClass = AddonsRegistry.INSTANCE
-                            .getClassByName(Identifier.parse(addonClassName));
+                            .getClassByName(ResourceLocation.parse(addonClassName));
                     Addon addon = addonClass.getDeclaredConstructor().newInstance();
                     addon.volumeBox = this;
                     addon.readFromNBT(addonsEntryTag.getCompound("addonData").orElseGet(CompoundTag::new));

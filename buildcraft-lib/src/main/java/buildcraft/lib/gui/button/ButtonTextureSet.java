@@ -6,19 +6,19 @@
 
 package buildcraft.lib.gui.button;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import net.minecraft.world.InteractionResult;
 
 public class ButtonTextureSet implements IButtonTextureSet {
-    private final Identifier texture;
+    private final ResourceLocation texture;
     private final int x, y, height, width;
 
     public ButtonTextureSet(int x, int y, int height, int width) {
         this(x, y, height, width, StandardButtonTextureSets.BUTTON_TEXTURES);
     }
 
-    public ButtonTextureSet(int x, int y, int height, int width, Identifier texture) {
+    public ButtonTextureSet(int x, int y, int height, int width, ResourceLocation texture) {
         this.x = x;
         this.y = y;
         this.height = height;
@@ -47,7 +47,7 @@ public class ButtonTextureSet implements IButtonTextureSet {
     }
 
     @Override
-    public Identifier getTexture() {
+    public ResourceLocation getTexture() {
         return texture;
     }
 }

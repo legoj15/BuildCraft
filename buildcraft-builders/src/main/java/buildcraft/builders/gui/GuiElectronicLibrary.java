@@ -10,7 +10,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.builders.container.ContainerElectronicLibrary;
@@ -18,8 +18,8 @@ import buildcraft.builders.snapshot.GlobalSavedDataSnapshots;
 import buildcraft.builders.snapshot.Snapshot;
 
 public class GuiElectronicLibrary extends AbstractContainerScreen<ContainerElectronicLibrary> {
-    private static final Identifier TEXTURE =
-            Identifier.parse("buildcraftbuilders:textures/gui/electronic_library.png");
+    private static final ResourceLocation TEXTURE =
+            ResourceLocation.parse("buildcraftbuilders:textures/gui/electronic_library.png");
     private static final int SIZE_X = 244, SIZE_Y = 220;
 
     public GuiElectronicLibrary(ContainerElectronicLibrary container, Inventory playerInv, Component title) {

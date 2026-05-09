@@ -6,7 +6,7 @@
 
 package buildcraft.lib.misc;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Rotation;

@@ -1,6 +1,6 @@
 package buildcraft.lib.client.guide.entry;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.Collections;
 import java.util.List;
@@ -47,7 +47,7 @@ public class PageEntryItemStack extends PageValueType<ItemStackValueFilter> {
     }
 
     @Override
-    public OptionallyDisabled<PageEntry<ItemStackValueFilter>> deserialize(Identifier name, JsonObject json,
+    public OptionallyDisabled<PageEntry<ItemStackValueFilter>> deserialize(ResourceLocation name, JsonObject json,
         JsonDeserializationContext ctx) {
         if (!json.has("stack")) {
             throw new JsonSyntaxException(
@@ -58,7 +58,7 @@ public class PageEntryItemStack extends PageValueType<ItemStackValueFilter> {
         if (str.startsWith("(") && str.endsWith(")")) {
             str = str.substring(1, str.length() - 1);
         }
-        Identifier loc = Identifier.parse(str);
+        ResourceLocation loc = ResourceLocation.parse(str);
         Item item = BuiltInRegistries.ITEM.get(loc).map(ref -> ref.value()).orElse(null);
         if (item == null) {
             throw new JsonSyntaxException("Unknown item " + str);

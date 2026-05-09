@@ -6,7 +6,7 @@
 
 package buildcraft.lib.client.guide.entry;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
 import java.util.Objects;
@@ -26,7 +26,7 @@ import buildcraft.lib.gui.ISimpleDrawable;
  * entries of a specific type (item stacks, statements, external pages, etc.). */
 public abstract class PageValueType<T> {
 
-    public abstract OptionallyDisabled<PageEntry<T>> deserialize(Identifier name, JsonObject json,
+    public abstract OptionallyDisabled<PageEntry<T>> deserialize(ResourceLocation name, JsonObject json,
         JsonDeserializationContext ctx);
 
     public abstract Class<T> getEntryClass();

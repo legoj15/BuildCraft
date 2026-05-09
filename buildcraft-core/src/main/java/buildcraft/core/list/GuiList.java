@@ -16,7 +16,7 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.core.item.ItemList_BC8;
@@ -25,8 +25,8 @@ import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.ledger.LedgerHelp;
 
 public class GuiList extends GuiBC8<ContainerList> {
-    private static final Identifier TEXTURE_BASE =
-        Identifier.parse("buildcraftcore:textures/gui/list_new.png");
+    private static final ResourceLocation TEXTURE_BASE =
+        ResourceLocation.parse("buildcraftcore:textures/gui/list_new.png");
     private static final int SIZE_X = 176, SIZE_Y = 191;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE_BASE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_ONE_STACK = new GuiIcon(TEXTURE_BASE, 0, 191, 20, 20);
@@ -114,13 +114,13 @@ public class GuiList extends GuiBC8<ContainerList> {
     // --- Toggle image button widget ---
 
     private class ToggleImageButton extends AbstractWidget {
-        private final Identifier texture;
+        private final ResourceLocation texture;
         private final int uOff, vOff, uOn, vOn;
         private boolean toggled;
         private final int lineIdx, btnIdx;
 
         ToggleImageButton(int x, int y, int w, int h,
-                          Identifier texture, int uOff, int vOff, int uOn, int vOn,
+                          ResourceLocation texture, int uOff, int vOff, int uOn, int vOn,
                           boolean initialState, Component tooltip,
                           int lineIdx, int btnIdx) {
             super(x, y, w, h, Component.empty());

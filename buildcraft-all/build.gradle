@@ -32,7 +32,7 @@ dependencies {
     // JEI — loaded as a proper mod in dev runs so NeoForge integrates it
     // into the mod loading pipeline alongside BuildCraft modules.
     // This enables @JeiPlugin annotation discovery in buildcraft-core.
-    runtimeOnly "mezz.jei:jei-1.21.11-neoforge:27.4.0.15"
+    runtimeOnly "mezz.jei:jei-1.21.10-neoforge:26.2.0.27"
 }
 
 // ─── Fat JAR ─────────────────────────────────────────────────────────────────
@@ -43,7 +43,7 @@ tasks.register('fatJar', Jar) {
     description = 'Assembles a single JAR containing all BuildCraft modules.'
 
     archiveBaseName = 'BuildCraft-all'
-    archiveVersion = '1.21.11-8.0.0'
+    archiveVersion = '1.21.10-8.0.0'
     archiveClassifier = ''
 
     // Include buildcraft-all's own resources first (merged mods.toml, AT)

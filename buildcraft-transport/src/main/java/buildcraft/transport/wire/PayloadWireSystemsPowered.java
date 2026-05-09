@@ -12,7 +12,7 @@ import java.util.Map;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
@@ -23,7 +23,7 @@ import buildcraft.api.transport.pipe.IPipeHolder;
 
 public class PayloadWireSystemsPowered implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<PayloadWireSystemsPowered> TYPE =
-        new CustomPacketPayload.Type<>(Identifier.parse("buildcrafttransport:wire_systems_powered"));
+        new CustomPacketPayload.Type<>(ResourceLocation.parse("buildcrafttransport:wire_systems_powered"));
 
     public static final StreamCodec<FriendlyByteBuf, PayloadWireSystemsPowered> STREAM_CODEC =
         StreamCodec.of(PayloadWireSystemsPowered::encode, PayloadWireSystemsPowered::decode);

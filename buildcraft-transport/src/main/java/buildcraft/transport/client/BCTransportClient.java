@@ -4,7 +4,7 @@ import net.minecraft.client.renderer.block.model.BlockStateModel;
 import net.minecraft.client.renderer.item.BlockModelWrapper;
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -68,7 +68,7 @@ public class BCTransportClient {
     @SubscribeEvent
     public static void registerItemTintSources(RegisterColorHandlersEvent.ItemTintSources event) {
         event.register(
-                Identifier.fromNamespaceAndPath(BCTransport.MODID, "pipe_colour"),
+                ResourceLocation.fromNamespaceAndPath(BCTransport.MODID, "pipe_colour"),
                 PipeColourTintSource.MAP_CODEC
         );
     }
@@ -92,7 +92,7 @@ public class BCTransportClient {
         for (PipeDefinition def : PipeApi.pipeRegistry.getAllRegisteredPipes()) {
             Item pipeItem = (Item) PipeApi.pipeRegistry.getItemForPipe(def);
             if (pipeItem != null) {
-                Identifier itemId = BuiltInRegistries.ITEM.getKey(pipeItem);
+                ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(pipeItem);
                 ItemModel vanillaItemModel = itemModels.get(itemId);
                 if (vanillaItemModel instanceof BlockModelWrapper wrapper) {
                     itemModels.put(itemId, new PipeItemModel(wrapper, def));

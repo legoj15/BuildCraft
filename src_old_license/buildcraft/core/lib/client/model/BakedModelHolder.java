@@ -70,14 +70,14 @@ public abstract class BakedModelHolder extends BuildCraftBakedModel {
         return models.get(loc);
     }
 
-    protected IBakedModel getModelItemLayer(ResourceLocation identifier, TextureAtlasSprite sprite) {
-        return getModelItemLayer(identifier, ImmutableList.of(sprite));
+    protected IBakedModel getModelItemLayer(ResourceLocation ResourceLocation, TextureAtlasSprite sprite) {
+        return getModelItemLayer(ResourceLocation, ImmutableList.of(sprite));
     }
 
-    protected IBakedModel getModelItemLayer(ResourceLocation identifier, List<TextureAtlasSprite> sprites) {
-        if (!bakedModels.containsKey(identifier)) {
-            bakedModels.put(identifier, createModelItemLayer(sprites));
+    protected IBakedModel getModelItemLayer(ResourceLocation ResourceLocation, List<TextureAtlasSprite> sprites) {
+        if (!bakedModels.containsKey(ResourceLocation)) {
+            bakedModels.put(ResourceLocation, createModelItemLayer(sprites));
         }
-        return bakedModels.get(identifier);
+        return bakedModels.get(ResourceLocation);
     }
 }

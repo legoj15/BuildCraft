@@ -1,6 +1,6 @@
 package buildcraft.lib.misc.search;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.Collection;

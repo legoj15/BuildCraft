@@ -6,7 +6,7 @@
 
 package buildcraft.lib.client.render.fluid;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import net.minecraft.world.level.material.Fluid;
 

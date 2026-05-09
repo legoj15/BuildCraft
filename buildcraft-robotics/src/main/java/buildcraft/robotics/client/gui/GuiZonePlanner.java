@@ -8,7 +8,7 @@ package buildcraft.robotics.client.gui;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.robotics.container.ContainerZonePlanner;
@@ -16,8 +16,8 @@ import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 
 public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
-    private static final Identifier TEXTURE =
-            Identifier.parse("buildcraftrobotics:textures/gui/zone_planner.png");
+    private static final ResourceLocation TEXTURE =
+            ResourceLocation.parse("buildcraftrobotics:textures/gui/zone_planner.png");
     private static final int SIZE_X = 256, SIZE_Y = 228;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
 

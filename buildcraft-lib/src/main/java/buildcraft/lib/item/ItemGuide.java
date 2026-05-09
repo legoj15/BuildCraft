@@ -6,7 +6,7 @@
 package buildcraft.lib.item;
 
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -24,7 +24,7 @@ import buildcraft.lib.misc.AdvancementUtil;
  * currently shows a placeholder chat message.
  */
 public class ItemGuide extends Item {
-    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftcore:guide");
+    private static final ResourceLocation ADVANCEMENT = ResourceLocation.parse("buildcraftcore:guide");
     public static final String DEFAULT_BOOK = "buildcraftcore:main";
 
     public ItemGuide(Item.Properties properties) {

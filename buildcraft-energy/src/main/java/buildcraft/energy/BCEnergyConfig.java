@@ -3,7 +3,7 @@ package buildcraft.energy;
 import java.util.HashSet;
 import java.util.Set;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * Simplified configuration for BuildCraft Energy.
@@ -33,43 +33,43 @@ public class BCEnergyConfig {
 
     // --- Biome lists ---
     /** Biomes that get a 30x oil generation bonus. */
-    public static final Set<Identifier> excessiveBiomes = new HashSet<>();
+    public static final Set<ResourceLocation> excessiveBiomes = new HashSet<>();
 
     /** Biomes that get a 3x bonus and allow surface lakes (smallOilGenProb). */
-    public static final Set<Identifier> surfaceDepositBiomes = new HashSet<>();
+    public static final Set<ResourceLocation> surfaceDepositBiomes = new HashSet<>();
 
     /** Biomes where oil generation is disabled. */
-    public static final Set<Identifier> excludedBiomes = new HashSet<>();
+    public static final Set<ResourceLocation> excludedBiomes = new HashSet<>();
 
     /** If true, excludedBiomes is a blacklist; if false, a whitelist. */
     public static boolean excludedBiomesIsBlackList = true;
 
     /** Dimension keys where oil generation is disabled. */
-    public static final Set<Identifier> excludedDimensions = new HashSet<>();
+    public static final Set<ResourceLocation> excludedDimensions = new HashSet<>();
 
     /** If true, excludedDimensions is a blacklist; if false, a whitelist. */
     public static boolean excludedDimensionsIsBlackList = true;
 
     static {
         // Default: no oil in the nether or end
-        excludedDimensions.add(Identifier.withDefaultNamespace("the_nether"));
-        excludedDimensions.add(Identifier.withDefaultNamespace("the_end"));
+        excludedDimensions.add(ResourceLocation.withDefaultNamespace("the_nether"));
+        excludedDimensions.add(ResourceLocation.withDefaultNamespace("the_end"));
 
         // Default excluded biomes (equivalent to 1.12 minecraft:hell, minecraft:sky)
-        excludedBiomes.add(Identifier.withDefaultNamespace("the_void"));
+        excludedBiomes.add(ResourceLocation.withDefaultNamespace("the_void"));
 
         // Default surface deposit biomes — deserts and oceans get surface lakes
-        surfaceDepositBiomes.add(Identifier.withDefaultNamespace("desert"));
-        surfaceDepositBiomes.add(Identifier.withDefaultNamespace("ocean"));
-        surfaceDepositBiomes.add(Identifier.withDefaultNamespace("deep_ocean"));
-        surfaceDepositBiomes.add(Identifier.withDefaultNamespace("warm_ocean"));
-        surfaceDepositBiomes.add(Identifier.withDefaultNamespace("lukewarm_ocean"));
-        surfaceDepositBiomes.add(Identifier.withDefaultNamespace("deep_lukewarm_ocean"));
-        surfaceDepositBiomes.add(Identifier.withDefaultNamespace("cold_ocean"));
-        surfaceDepositBiomes.add(Identifier.withDefaultNamespace("deep_cold_ocean"));
-        surfaceDepositBiomes.add(Identifier.withDefaultNamespace("deep_frozen_ocean"));
-        surfaceDepositBiomes.add(Identifier.withDefaultNamespace("badlands"));
-        surfaceDepositBiomes.add(Identifier.withDefaultNamespace("eroded_badlands"));
-        surfaceDepositBiomes.add(Identifier.withDefaultNamespace("wooded_badlands"));
+        surfaceDepositBiomes.add(ResourceLocation.withDefaultNamespace("desert"));
+        surfaceDepositBiomes.add(ResourceLocation.withDefaultNamespace("ocean"));
+        surfaceDepositBiomes.add(ResourceLocation.withDefaultNamespace("deep_ocean"));
+        surfaceDepositBiomes.add(ResourceLocation.withDefaultNamespace("warm_ocean"));
+        surfaceDepositBiomes.add(ResourceLocation.withDefaultNamespace("lukewarm_ocean"));
+        surfaceDepositBiomes.add(ResourceLocation.withDefaultNamespace("deep_lukewarm_ocean"));
+        surfaceDepositBiomes.add(ResourceLocation.withDefaultNamespace("cold_ocean"));
+        surfaceDepositBiomes.add(ResourceLocation.withDefaultNamespace("deep_cold_ocean"));
+        surfaceDepositBiomes.add(ResourceLocation.withDefaultNamespace("deep_frozen_ocean"));
+        surfaceDepositBiomes.add(ResourceLocation.withDefaultNamespace("badlands"));
+        surfaceDepositBiomes.add(ResourceLocation.withDefaultNamespace("eroded_badlands"));
+        surfaceDepositBiomes.add(ResourceLocation.withDefaultNamespace("wooded_badlands"));
     }
 }

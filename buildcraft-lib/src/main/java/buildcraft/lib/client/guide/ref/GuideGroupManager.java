@@ -1,6 +1,6 @@
 package buildcraft.lib.client.guide.ref;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,7 +26,7 @@ import buildcraft.lib.client.guide.entry.PageValueType;
 
 public class GuideGroupManager {
     public static final List<PageValueType<?>> knownTypes = new ArrayList<>();
-    public static final Map<Identifier, GuideGroupSet> sets = new HashMap<>();
+    public static final Map<ResourceLocation, GuideGroupSet> sets = new HashMap<>();
 
     private static final Map<Class<?>, PageValueType<?>> knownClasses = new WeakHashMap<>();
     private static final Map<Class<?>, Function<Object, PageValue<?>>> transformers = new WeakHashMap<>();
@@ -137,17 +137,17 @@ public class GuideGroupManager {
     }
 
     @Nullable
-    public static GuideGroupSet get(Identifier group) {
+    public static GuideGroupSet get(ResourceLocation group) {
         return sets.get(group);
     }
 
     @Nullable
     public static GuideGroupSet get(String domain, String group) {
-        return get(Identifier.fromNamespaceAndPath(domain, group));
+        return get(ResourceLocation.fromNamespaceAndPath(domain, group));
     }
 
     public static GuideGroupSet getOrCreate(String domain, String group) {
-        return sets.computeIfAbsent(Identifier.fromNamespaceAndPath(domain, group), GuideGroupSet::new);
+        return sets.computeIfAbsent(ResourceLocation.fromNamespaceAndPath(domain, group), GuideGroupSet::new);
     }
 
     public static GuideGroupSet addEntry(String domain, String group, Object value) {

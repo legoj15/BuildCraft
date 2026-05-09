@@ -6,7 +6,7 @@
 
 package buildcraft.lib.gui.button;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import net.minecraft.world.InteractionResult;
 
@@ -16,7 +16,7 @@ public enum StandardButtonTextureSets implements IButtonTextureSet {
     LEFT_BUTTON(204, 0, 16, 10),
     RIGHT_BUTTON(214, 0, 16, 10);
 
-    public static final Identifier BUTTON_TEXTURES = Identifier.parse("buildcraftcore:textures/gui/buttons.png");
+    public static final ResourceLocation BUTTON_TEXTURES = ResourceLocation.parse("buildcraftcore:textures/gui/buttons.png");
     private final int x, y, height, width;
 
     StandardButtonTextureSets(int x, int y, int height, int width) {
@@ -47,7 +47,7 @@ public enum StandardButtonTextureSets implements IButtonTextureSet {
     }
 
     @Override
-    public Identifier getTexture() {
+    public ResourceLocation getTexture() {
         return BUTTON_TEXTURES;
     }
 }

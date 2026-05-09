@@ -6,7 +6,7 @@
 
 package buildcraft.lib.nbt;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.io.DataInput;
 import java.io.DataOutput;

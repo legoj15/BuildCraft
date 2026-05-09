@@ -172,7 +172,7 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
                 : maskBaseName;
             String maskLoc = namespace + ":" + maskPath;
 
-            array[i] = SpriteUtil.getSprite(net.minecraft.resources.Identifier.parse(maskLoc));
+            array[i] = SpriteUtil.getSprite(net.minecraft.resources.ResourceLocation.parse(maskLoc));
             if (array[i] == null || array[i] == missing) {
                 array[i] = missing;
                 allResolved = false;

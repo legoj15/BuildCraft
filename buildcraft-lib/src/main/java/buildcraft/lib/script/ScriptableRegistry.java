@@ -1,6 +1,6 @@
 package buildcraft.lib.script;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.io.File;
 import java.io.IOException;
@@ -248,8 +248,8 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
     }
 
     private void executeScripts(Gson gson, List<ScriptAction> actions) {
-        Multimap<Identifier, ScriptAction> added = HashMultimap.create();
-        Multimap<Identifier, ScriptAction> removed = HashMultimap.create();
+        Multimap<ResourceLocation, ScriptAction> added = HashMultimap.create();
+        Multimap<ResourceLocation, ScriptAction> removed = HashMultimap.create();
 
         for (ScriptAction action : actions) {
             if (action instanceof ScriptActionRemove) {
@@ -274,7 +274,7 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
 
         // Multiple things remove however
 
-        for (Identifier name : added.keySet()) {
+        for (ResourceLocation name : added.keySet()) {
             Collection<ScriptAction> adders = added.get(name);
             if (adders.size() > 1) {
                 SimpleScript.logForAll("Multiple scripts attempting to add " + name
@@ -295,7 +295,7 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
                     ScriptActionReplace replace = (ScriptActionReplace) adder;
                     if (replace.inheritTags) {
                         // Long and complicated
-                        Identifier location = replace.toReplace;
+                        ResourceLocation location = replace.toReplace;
                         adders = added.get(location);
                         if (adders.size() > 1) {
                             // This will be logged by the above code
@@ -340,7 +340,7 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
         }
     }
 
-    private void loadReloadable(Identifier name, Gson gson, JsonObject json) throws JsonSyntaxException {
+    private void loadReloadable(ResourceLocation name, Gson gson, JsonObject json) throws JsonSyntaxException {
         String type = "";
         if (json.has("type")) {
             type = json.get("type").getAsString();

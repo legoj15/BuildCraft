@@ -9,14 +9,14 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.builders.container.ContainerArchitectTable;
 
 public class GuiArchitectTable extends AbstractContainerScreen<ContainerArchitectTable> {
-    private static final Identifier TEXTURE_BASE =
-            Identifier.parse("buildcraftbuilders:textures/gui/architect.png");
+    private static final ResourceLocation TEXTURE_BASE =
+            ResourceLocation.parse("buildcraftbuilders:textures/gui/architect.png");
     private static final int SIZE_X = 256, SIZE_Y = 166;
 
     private EditBox nameField;

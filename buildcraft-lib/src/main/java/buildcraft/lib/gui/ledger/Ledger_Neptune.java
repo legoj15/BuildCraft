@@ -15,7 +15,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 
@@ -38,9 +38,9 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     // 16x16 nine-sliced ledger background sprites (matches 1.12.2 BCLibSprites.LEDGER_LEFT/RIGHT).
     // Scale = 16.0 so the 4/16 = 0.25 normalized border maps to 4 actual pixels.
     private static final ISprite SPRITE_LEFT = new SpriteRaw(
-        Identifier.parse("buildcraftlib:textures/icons/ledger_left.png"), 0, 0, 1.0, 1.0);
+        ResourceLocation.parse("buildcraftlib:textures/icons/ledger_left.png"), 0, 0, 1.0, 1.0);
     private static final ISprite SPRITE_RIGHT = new SpriteRaw(
-        Identifier.parse("buildcraftlib:textures/icons/ledger_right.png"), 0, 0, 1.0, 1.0);
+        ResourceLocation.parse("buildcraftlib:textures/icons/ledger_right.png"), 0, 0, 1.0, 1.0);
     private static final SpriteNineSliced SPRITE_SPLIT_LEFT =
         new SpriteNineSliced(SPRITE_LEFT, 4.0 / 16, 4.0 / 16, 12.0 / 16, 12.0 / 16, 16.0);
     private static final SpriteNineSliced SPRITE_SPLIT_RIGHT =

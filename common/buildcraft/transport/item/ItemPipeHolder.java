@@ -63,7 +63,7 @@ public class ItemPipeHolder extends ItemBlock implements IItemBuildCraft, IItemP
 
     /** Creates a new {@link ItemPipeHolder} with a tag that will be taken from {@link TagManager}. */
     public static ItemPipeHolder createAndTag(PipeDefinition definition) {
-        ResourceLocation reg = definition.identifier;
+        ResourceLocation reg = definition.ResourceLocation;
         String tagId = "item.pipe." + reg.getResourceDomain() + "." + reg.getResourcePath();
         return new ItemPipeHolder(definition, tagId);
     }

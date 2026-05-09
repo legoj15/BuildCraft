@@ -9,7 +9,7 @@ package buildcraft.lib.gui;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import buildcraft.api.core.render.ISprite;
 
@@ -43,11 +43,11 @@ public class GuiIcon implements ISimpleDrawable {
         this.height = (int) (Math.abs(sprite.getInterpV(1) - sprite.getInterpV(0)) * textureSize);
     }
 
-    public GuiIcon(Identifier texture, double u, double v, double width, double height, int texSize) {
+    public GuiIcon(ResourceLocation texture, double u, double v, double width, double height, int texSize) {
         this(new SpriteRaw(texture, u, v, width, height, texSize), texSize);
     }
 
-    public GuiIcon(Identifier texture, double u, double v, double width, double height) {
+    public GuiIcon(ResourceLocation texture, double u, double v, double width, double height) {
         this(texture, u, v, width, height, 256);
     }
 
@@ -176,14 +176,14 @@ public class GuiIcon implements ISimpleDrawable {
     }
 
     /** Track the last bound texture location for drawBoundQuad. */
-    static Identifier lastBoundLocation;
+    static ResourceLocation lastBoundLocation;
     static int lastBoundTexSize = 256;
 
-    public static void setLastBoundLocation(Identifier location) {
+    public static void setLastBoundLocation(ResourceLocation location) {
         lastBoundLocation = location;
     }
 
-    public static void setLastBoundLocation(Identifier location, int texSize) {
+    public static void setLastBoundLocation(ResourceLocation location, int texSize) {
         lastBoundLocation = location;
         lastBoundTexSize = texSize;
     }

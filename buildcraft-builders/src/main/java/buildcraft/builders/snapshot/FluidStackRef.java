@@ -12,7 +12,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.material.Fluid;
 
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -31,7 +31,7 @@ public class FluidStackRef {
     }
 
     public FluidStack get(Tag nbt) {
-        Identifier fluidId = Identifier.parse(
+        ResourceLocation fluidId = ResourceLocation.parse(
             fluid
                 .get(nbt)
                 .orElseThrow(NullPointerException::new)

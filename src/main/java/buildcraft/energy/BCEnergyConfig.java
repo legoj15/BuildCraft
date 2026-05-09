@@ -163,16 +163,13 @@ public class BCEnergyConfig {
                 )
                 .defineEnum("dimensionListMode", ListMode.BLACKLIST);
 
-        oilIsSticky = builder
-                .comment("If true, oil source blocks slow down entities standing or moving through them")
-                .define("oilIsSticky", false);
-
         builder.pop();
     }
 
     public static void buildGeneral(ModConfigSpec.Builder builder) {
-        // No general-section options remain in BCEnergy — oilIsSticky moved to worldgen.oil,
-        // useRfNaming moved to display.
+        oilIsSticky = builder
+                .comment("If true, oil source blocks slow down entities standing or moving through them")
+                .define("oilIsSticky", false);
     }
 
     public static void buildDisplay(ModConfigSpec.Builder builder) {

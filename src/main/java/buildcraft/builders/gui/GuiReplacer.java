@@ -22,8 +22,11 @@ import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.schematics.ISchematicBlock;
 
 import buildcraft.lib.gui.GuiBC8;
+import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
+import buildcraft.lib.gui.pos.GuiRectangle;
 
 import buildcraft.builders.client.render.BlueprintRenderer;
 import buildcraft.builders.container.ContainerReplacer;
@@ -104,6 +107,41 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
             ));
         }
         mainGui.shownElements.add(new LedgerHelp(mainGui, false)); // left side
+
+        // Help-ledger entries — non-drawing IGuiElements that register an ElementHelpInfo at a
+        // screen rect. LedgerHelp discovers them by iterating gui.shownElements and calling
+        // addHelpElements. Coordinates mirror the constants at the top of this class.
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(PREVIEW_X, PREVIEW_Y, PREVIEW_W, PREVIEW_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.replacer.preview.title", 0xFF_88_CC_FF,
+                        "buildcraft.help.replacer.preview.desc1",
+                        "buildcraft.help.replacer.preview.desc2")));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(8, 115, 16, 16).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.replacer.snapshot.title", 0xFF_88_CC_88,
+                        "buildcraft.help.replacer.snapshot.desc")));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(NAME_X, NAME_Y, NAME_W, NAME_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.replacer.name.title", 0xFF_E1_C9_2F,
+                        "buildcraft.help.replacer.name.desc")));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(8, 137, 16, 16).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.replacer.from.title", 0xFF_FF_88_88,
+                        "buildcraft.help.replacer.from.desc")));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(56, 137, 16, 16).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.replacer.to.title", 0xFF_88_FF_88,
+                        "buildcraft.help.replacer.to.desc")));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(REPLACE_X, REPLACE_Y, REPLACE_W, REPLACE_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.replacer.replace.title", 0xFF_CC_AA_88,
+                        "buildcraft.help.replacer.replace.desc1",
+                        "buildcraft.help.replacer.replace.desc2")));
     }
 
     @Override

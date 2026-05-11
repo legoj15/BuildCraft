@@ -29,6 +29,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -190,6 +191,14 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     @Override
     public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
         return getFullShape(level, pos);
+    }
+
+    // Mob pathfinding treats the cell as solid so land mobs path around or jump on
+    // top (the pipe's 0.75-block-tall collision is within step-up range), preventing
+    // exploits where players wall mobs out with cheap structure pipes.
+    @Override
+    public boolean isPathfindable(BlockState state, PathComputationType type) {
+        return false;
     }
 
     // Rendering — MODEL so quads participate in breaking overlay; pipe geometry

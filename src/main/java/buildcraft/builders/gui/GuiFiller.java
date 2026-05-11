@@ -2,8 +2,10 @@ package buildcraft.builders.gui;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.client.input.MouseButtonEvent;
 
@@ -218,17 +220,13 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
 
             if (mx >= 130 && mx < 146 && my >= 40 && my < 56) {
                 menu.sendMessage(ContainerFiller.NET_EXCAVATE, (buf) -> {});
-                if (this.minecraft.player != null) {
-                    this.minecraft.player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 1.0F, 1.0F);
-                }
+                this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
                 return true;
             }
 
             if (mx >= 152 && mx < 168 && my >= 40 && my < 56) {
                 menu.sendMessage(ContainerFiller.NET_INVERT, (buf) -> {});
-                if (this.minecraft.player != null) {
-                    this.minecraft.player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 1.0F, 1.0F);
-                }
+                this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
                 return true;
             }
         }

@@ -8,7 +8,6 @@ package buildcraft.transport.client.model;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -44,27 +43,63 @@ import buildcraft.transport.client.model.PipeModelCacheBase.PipeBaseTranslucentK
 public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
     INSTANCE;
 
-    // Textures — sprites are loaded lazily from the atlas via PipeDefinition texture names
-    private static final Map<PipeDefinition, TextureAtlasSprite[]> SPRITES = new IdentityHashMap<>();
-    private static final Map<PipeDefinition, TextureAtlasSprite[]> MASK_SPRITES = new IdentityHashMap<>();
-    /** Cache of dyed fluid pipe sprites, keyed by (PipeDefinition, DyeColor ordinal). */
+    // Textures — sprites are loaded lazily from the atlas via PipeDefinition texture names.
+    // Caches are keyed by (def, colourblind-bit) so both variants can stay resolved simultaneously
+    // — same pattern as DYED_SPRITES, which is keyed by (def, dyeColor ordinal).
+    private static final Map<Long, TextureAtlasSprite[]> SPRITES = new java.util.HashMap<>();
+    private static final Map<Long, TextureAtlasSprite[]> MASK_SPRITES = new java.util.HashMap<>();
+    /** Cache of dyed fluid pipe sprites, keyed by (PipeDefinition, DyeColor ordinal, colourblind-bit). */
     private static final Map<Long, TextureAtlasSprite[]> DYED_SPRITES = new java.util.HashMap<>();
+
+    /** Read the effective colourblind state — delegates to {@link buildcraft.lib.client.ColorBlindUtil#isActive()}
+     *  which folds in both the BC config tri-state and (in AUTO mode) the vanilla MC
+     *  High Contrast accessibility option. */
+    private static boolean isCb() {
+        return buildcraft.lib.client.ColorBlindUtil.isActive();
+    }
+
+    /** Cache key for SPRITES / MASK_SPRITES: top 32 bits = identityHashCode(def), low bit = cb.
+     *  Package-visible for unit tests. */
+    static long defKey(PipeDefinition def, boolean cb) {
+        return ((long) System.identityHashCode(def) << 32) | (cb ? 1L : 0L);
+    }
+
+    /** Cache key for DYED_SPRITES: top 32 bits = identityHashCode(def), middle bits = colour ordinal, low bit = cb.
+     *  Package-visible for unit tests. */
+    static long dyedKey(PipeDefinition def, DyeColor colour, boolean cb) {
+        return ((long) System.identityHashCode(def) << 32) | ((long) colour.ordinal() << 1) | (cb ? 1L : 0L);
+    }
+
+    /** Append "_cb" to a texture name only if a `_cb` companion sprite actually exists on
+     *  the atlas. Falls through to the original name when no variant exists, so we don't
+     *  paint missing-texture pink on pipes that have no colourblind variant. */
+    private static String maybeCbName(String texName, boolean cb) {
+        if (!cb) return texName;
+        String candidate = texName + "_cb";
+        TextureAtlasSprite probe = SpriteUtil.getSprite(candidate);
+        return (probe == null || probe == SpriteUtil.missingSprite()) ? texName : candidate;
+    }
 
     @Override
     public TextureAtlasSprite[] getItemSprites(PipeDefinition def) {
-        return SPRITES.get(def);
+        return SPRITES.get(defKey(def, isCb()));
     }
 
     /** Ensure sprites are populated for a pipe definition. Resolves from the block atlas
-     *  using the texture names in PipeDefinition.textures[]. */
+     *  using the texture names in PipeDefinition.textures[]. When the colourblind toggle is
+     *  on, each name is routed through {@link #maybeCbName} so any texture with a "_cb"
+     *  companion on the atlas swaps to its colourblind variant. */
     private static TextureAtlasSprite[] ensureSprites(PipeDefinition def) {
-        TextureAtlasSprite[] cached = SPRITES.get(def);
+        boolean cb = isCb();
+        long key = defKey(def, cb);
+        TextureAtlasSprite[] cached = SPRITES.get(key);
         if (cached != null) return cached;
         TextureAtlasSprite missing = SpriteUtil.missingSprite();
         TextureAtlasSprite[] array = new TextureAtlasSprite[def.textures.length];
         boolean allResolved = true;
         for (int i = 0; i < array.length; i++) {
-            array[i] = SpriteUtil.getSprite(def.textures[i]);
+            String name = maybeCbName(def.textures[i], cb);
+            array[i] = SpriteUtil.getSprite(name);
             if (array[i] == null || array[i] == missing) {
                 array[i] = missing;
                 allResolved = false;
@@ -73,7 +108,7 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
         // Only cache if all sprites resolved successfully — allows re-resolution
         // when atlas is reloaded or sprites become available later
         if (allResolved) {
-            SPRITES.put(def, array);
+            SPRITES.put(key, array);
         }
         return array;
     }
@@ -154,14 +189,20 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
      *  where the frame is. Used for reverse-cutout colour rendering.
      *  Multiple textures sharing the same alpha pattern share one mask file. */
     static TextureAtlasSprite[] ensureMaskSprites(PipeDefinition def) {
-        TextureAtlasSprite[] cached = MASK_SPRITES.get(def);
+        boolean cb = isCb();
+        long key = defKey(def, cb);
+        TextureAtlasSprite[] cached = MASK_SPRITES.get(key);
         if (cached != null) return cached;
         TextureAtlasSprite missing = SpriteUtil.missingSprite();
         TextureAtlasSprite[] array = new TextureAtlasSprite[def.textures.length];
         boolean allResolved = true;
         for (int i = 0; i < array.length; i++) {
-            // textures[i] is e.g. "buildcraftunofficial:pipes/stone_item"
-            String texName = def.textures[i];
+            // textures[i] is e.g. "buildcraftunofficial:pipes/stone_item"; with cb on this
+            // becomes e.g. ".../diamond_item_west_cb" when the _cb companion exists. MASK_MAP
+            // already has entries for "diamond_item_west_cb" / "diamond_fluid_west_cb" → the
+            // same shared-mask names as their non-_cb counterparts (see static initialiser),
+            // so no MASK_MAP edits are needed.
+            String texName = maybeCbName(def.textures[i], cb);
             int colonIdx = texName.indexOf(':');
             String namespace = colonIdx >= 0 ? texName.substring(0, colonIdx) : "minecraft";
             String path = colonIdx >= 0 ? texName.substring(colonIdx + 1) : texName;
@@ -182,17 +223,21 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
             }
         }
         if (allResolved) {
-            MASK_SPRITES.put(def, array);
+            MASK_SPRITES.put(key, array);
         }
         return array;
     }
 
     /** Resolve dyed sprites for a painted fluid pipe. Appends "_dyed_<colour>" to each
-     *  texture name in PipeDefinition.textures[] and resolves from the block atlas.
-     *  Returns null if any sprite fails to resolve (fallback to mask overlay). */
+     *  texture name in PipeDefinition.textures[] (after applying any colourblind suffix)
+     *  and resolves from the block atlas. Returns null if any sprite fails to resolve
+     *  (fallback to mask overlay). The 16 `diamond_fluid_west_cb_dyed_<colour>.png` files
+     *  ship with the mod, so painted diamond fluid pipes get colourblind treatment for
+     *  free through this path. */
     @Nullable
     static TextureAtlasSprite[] ensureDyedSprites(PipeDefinition def, DyeColor colour) {
-        long cacheKey = ((long) System.identityHashCode(def) << 32) | colour.ordinal();
+        boolean cb = isCb();
+        long cacheKey = dyedKey(def, colour, cb);
         TextureAtlasSprite[] cached = DYED_SPRITES.get(cacheKey);
         if (cached != null) return cached;
         TextureAtlasSprite missing = SpriteUtil.missingSprite();
@@ -200,7 +245,7 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
         String dyeSuffix = "_dyed_" + colour.getName();
         boolean allResolved = true;
         for (int i = 0; i < array.length; i++) {
-            String dyedTex = def.textures[i] + dyeSuffix;
+            String dyedTex = maybeCbName(def.textures[i], cb) + dyeSuffix;
             array[i] = SpriteUtil.getSprite(Identifier.parse(dyedTex));
             if (array[i] == null || array[i] == missing) {
                 // No dyed variant for this texture — fallback
@@ -209,6 +254,34 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
         }
         DYED_SPRITES.put(cacheKey, array);
         return array;
+    }
+
+    /** Called from the BC client config-reload listener (BCCoreClient) when our config spec
+     *  changes — typically a player flipping {@code colorBlindMode} between AUTO/ON/OFF.
+     *  Both texture variants are already baked into the block atlas (the `pipes/` directory
+     *  source picks them up at startup), and our caches are keyed by (def, cb) so they don't
+     *  need to be cleared — but in-world chunks hold references to the old sprite array, so
+     *  request a level re-render to swap them. Equivalent to F3+A. */
+    public static void onColorBlindToggle() {
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        if (mc != null && mc.levelRenderer != null) {
+            mc.levelRenderer.allChanged();
+        }
+    }
+
+    /** Called from the resource-manager reload listener (BCLibClient) — fires on F3+T, on
+     *  any resource-pack change, AND on vanilla MC's High Contrast toggle (which switches
+     *  the built-in {@code minecraft:high_contrast} pack and triggers a reload). After a
+     *  reload the atlas has been restitched: any {@link TextureAtlasSprite} reference cached
+     *  here points at freed atlas slots from the previous stitch, which would render as
+     *  garbage UVs on the new atlas. Drop everything; the next {@code ensureSprites} call
+     *  per pipe definition will re-resolve against the current atlas. The level renderer's
+     *  own reload path takes care of triggering chunk re-bakes, so no explicit
+     *  {@code allChanged()} call is needed here. */
+    public static void clearSpriteCaches() {
+        SPRITES.clear();
+        MASK_SPRITES.clear();
+        DYED_SPRITES.clear();
     }
 
     // Models - pre-built geometry templates

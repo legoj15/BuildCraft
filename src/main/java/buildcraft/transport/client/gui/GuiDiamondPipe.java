@@ -17,8 +17,11 @@ import buildcraft.transport.container.ContainerDiamondPipe;
 public class GuiDiamondPipe extends GuiBC8<ContainerDiamondPipe> {
     private static final Identifier TEXTURE =
             Identifier.parse("buildcraftunofficial:textures/gui/filter.png");
+    private static final Identifier TEXTURE_CB =
+            Identifier.parse("buildcraftunofficial:textures/gui/filter_cb.png");
     private static final int SIZE_X = 175, SIZE_Y = 225;
-    private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
+    private static final GuiIcon ICON_GUI    = new GuiIcon(TEXTURE,    0, 0, SIZE_X, SIZE_Y);
+    private static final GuiIcon ICON_GUI_CB = new GuiIcon(TEXTURE_CB, 0, 0, SIZE_X, SIZE_Y);
 
     public GuiDiamondPipe(ContainerDiamondPipe menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title, SIZE_X, SIZE_Y);
@@ -26,7 +29,8 @@ public class GuiDiamondPipe extends GuiBC8<ContainerDiamondPipe> {
 
     @Override
     protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
-        ICON_GUI.drawAt(mainGui.rootElement);
+        GuiIcon icon = buildcraft.lib.client.ColorBlindUtil.isActive() ? ICON_GUI_CB : ICON_GUI;
+        icon.drawAt(mainGui.rootElement);
     }
 
     @Override

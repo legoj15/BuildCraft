@@ -23,6 +23,7 @@ public class BCLibConfig {
     public static ModConfigSpec.EnumValue<DecimalSeparator> decimalSeparator;
     public static ModConfigSpec.BooleanValue abbreviateLargeNumbers;
     public static ModConfigSpec.EnumValue<FlowDisplay> flowDisplay;
+    public static ModConfigSpec.EnumValue<ColorBlindMode> colorBlindMode;
 
     public static void buildGeneral(ModConfigSpec.Builder builder) {
         powerMode = builder
@@ -68,6 +69,20 @@ public class BCLibConfig {
                         "BOTH:       100.00 MJ/s (5.00 MJ/t)"
                 )
                 .defineEnum("flowDisplay", FlowDisplay.PER_SECOND);
+
+        colorBlindMode = builder
+                .comment(
+                        "Whether BuildCraft swaps to colourblind-friendly texture variants where available:",
+                        "the diamond pipe filter GUI shows numbered slot labels, and diamond item/fluid",
+                        "pipes show numbered west-face textures so each filter row is identifiable without",
+                        "colour vision. Restored from 1.12.2.",
+                        "AUTO: follow Minecraft's Options → Accessibility → High Contrast toggle (default).",
+                        "      The MC option triggers a resource pack reload when toggled, which restitches",
+                        "      the block atlas — BuildCraft picks up the change on the next chunk re-bake.",
+                        "OFF:  force off regardless of MC's accessibility setting.",
+                        "ON:   force on regardless of MC's accessibility setting."
+                )
+                .defineEnum("colorBlindMode", ColorBlindMode.AUTO);
     }
 
     /** Thousands grouping separator used by {@link buildcraft.lib.misc.LocaleUtil}'s number formatters. */
@@ -102,6 +117,19 @@ public class BCLibConfig {
         PER_SECOND,
         PER_TICK,
         BOTH
+    }
+
+    /** Tri-state toggle for colourblind-friendly texture variants. {@code AUTO} (default) reads
+     *  Minecraft's Options → Accessibility → High Contrast and mirrors that — keeps a player who
+     *  has set their MC accessibility preference from having to also flip a separate BuildCraft
+     *  knob. {@code ON} / {@code OFF} override regardless of the MC option, for players who want
+     *  the BuildCraft variants without enabling the broader MC high-contrast resource pack
+     *  (or vice versa). The effective state is resolved by
+     *  {@link buildcraft.lib.client.ColorBlindUtil#isActive()} on the client side. */
+    public enum ColorBlindMode {
+        AUTO,
+        OFF,
+        ON
     }
 
     public enum PowerMode {

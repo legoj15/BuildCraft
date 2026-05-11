@@ -36,6 +36,26 @@ public class BCLibClient {
             )
         );
 
+        // Drop PipeBaseModelGenStandard's sprite caches whenever the client resource manager
+        // reloads. Three scenarios trigger this: F3+T (player-initiated reload), a resource
+        // pack list change in the menu, AND vanilla MC's Options → Accessibility → High
+        // Contrast toggle (which enables/disables the built-in `minecraft:high_contrast`
+        // pack and calls Minecraft#reloadResourcePacks under the hood). The cached
+        // TextureAtlasSprite references point at slots in the previous atlas stitch and
+        // would render garbage UVs against the new atlas if not invalidated. Doing this
+        // unconditionally — rather than gating on "did the cb state actually change" — is
+        // both simpler and necessary: the atlas restitches even when only the high-contrast
+        // pack toggles (no cb state change for ON/OFF users), and our cached sprites would
+        // be just as stale in that case. The next chunk re-bake will populate the cache
+        // afresh on demand.
+        modEventBus.addListener(AddClientReloadListenersEvent.class, event ->
+            event.addListener(
+                Identifier.fromNamespaceAndPath("buildcraftunofficial", "pipe_sprite_cache"),
+                (ResourceManagerReloadListener) rm ->
+                    buildcraft.transport.client.model.PipeBaseModelGenStandard.clearSpriteCaches()
+            )
+        );
+
         // Catch BC-registry reloads (anything routed through ReloadableRegistryManager) so
         // the guide regenerates against the new entries. Guarded internally by isInReload
         // + reloadingRegistries-contains-GuideBookRegistry. Note: the vanilla `/reload`

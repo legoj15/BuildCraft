@@ -16,8 +16,11 @@ import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
+import buildcraft.lib.gui.pos.GuiRectangle;
 
 import buildcraft.builders.container.ContainerElectronicLibrary;
 import buildcraft.builders.snapshot.GlobalSavedDataSnapshots;
@@ -28,12 +31,29 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
             Identifier.parse("buildcraftunofficial:textures/gui/electronic_library.png");
     private static final int SIZE_X = 244, SIZE_Y = 220;
 
-    // Snapshot list bounds (GUI-local coordinates)
+    // Snapshot list bounds (GUI-local coordinates). These drive row text positions and the
+    // selection-highlight fill, both of which are correctly aligned at x=8 / y=22.
     private static final int LIST_X = 8;
     private static final int LIST_Y = 22;
     private static final int LIST_W = 154;
     private static final int LIST_ROW_H = 8;
-    private static final int LIST_MAX_ROWS = 12;
+    private static final int LIST_MAX_ROWS = 13;
+
+    // Visible list panel in the texture, used only for the help-ledger hover-highlight. The
+    // texture panel extends 1 px further left than the text inset and continues well below the
+    // 12th-row baseline (the area beyond LIST_MAX_ROWS rows is empty space reserved for future
+    // scrolling). Matching the panel rather than the text-render bounds means the help
+    // highlight covers the whole dark rectangle the player sees.
+    private static final int LIST_HELP_X = LIST_X - 1;
+    private static final int LIST_HELP_W = LIST_W + 1;
+    private static final int LIST_HELP_H = 108;
+
+    // Slot positions — mirror ContainerElectronicLibrary's addSlot calls so the help highlight
+    // matches the visible slot exactly. Top row is DOWNLOAD (out←in), bottom row is UPLOAD (in→out).
+    private static final int DOWN_OUT_X = 175, DOWN_OUT_Y = 57;
+    private static final int DOWN_IN_X  = 219, DOWN_IN_Y  = 57;
+    private static final int UP_IN_X    = 175, UP_IN_Y    = 79;
+    private static final int UP_OUT_X   = 219, UP_OUT_Y   = 79;
 
     // Static arrow positions (GUI-local). These mark the empty arrow graphics
     // already baked into the GUI background texture.
@@ -82,8 +102,53 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
                 true
             ));
         }
-        // Help ledger on the left side (stub content; real help text is added in another session)
+        // Help ledger on the left side. LedgerHelp pulls ElementHelpInfo from every element in
+        // mainGui.shownElements at expand-time, so the DummyHelpElements below light up under the
+        // cursor whether the ledger is open or closed.
         mainGui.shownElements.add(new LedgerHelp(mainGui, false));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(LIST_HELP_X, LIST_Y, LIST_HELP_W, LIST_HELP_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.library.list.title", 0xFF_FF_FA_A0,
+                        "buildcraft.help.library.list.desc1",
+                        "buildcraft.help.library.list.desc2")));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(DOWN_IN_X, DOWN_IN_Y, 16, 16).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.library.download_in.title", 0xFF_88_CC_88,
+                        "buildcraft.help.library.download_in.desc1",
+                        "buildcraft.help.library.download_in.desc2")));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(ARROW_DOWN_X, ARROW_DOWN_Y, ARROW_W, ARROW_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.library.download_arrow.title", 0xFF_88_CC_FF,
+                        "buildcraft.help.library.download_arrow.desc")));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(DOWN_OUT_X, DOWN_OUT_Y, 16, 16).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.library.download_out.title", 0xFF_88_FF_88,
+                        "buildcraft.help.library.download_out.desc")));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(UP_IN_X, UP_IN_Y, 16, 16).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.library.upload_in.title", 0xFF_FF_CC_88,
+                        "buildcraft.help.library.upload_in.desc1",
+                        "buildcraft.help.library.upload_in.desc2")));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(ARROW_UP_X, ARROW_UP_Y, ARROW_W, ARROW_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.library.upload_arrow.title", 0xFF_88_AA_FF,
+                        "buildcraft.help.library.upload_arrow.desc")));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(UP_OUT_X, UP_OUT_Y, 16, 16).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.library.upload_out.title", 0xFF_CC_AA_88,
+                        "buildcraft.help.library.upload_out.desc")));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(DEL_X, DEL_Y, DEL_W, DEL_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.library.delete.title", 0xFF_FF_88_88,
+                        "buildcraft.help.library.delete.desc")));
     }
 
     @Override

@@ -19,6 +19,9 @@ import net.minecraft.world.entity.player.Inventory;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.elem.GuiElementFluidTank;
+import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.help.ElementHelpInfo;
+import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
 import buildcraft.builders.container.ContainerBuilder;
@@ -62,6 +65,16 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
     private static final int FLUID_BUTTON_Y = 20;
     private static final int FLUID_BUTTON_SIZE = 20;
 
+    // Help-ledger rectangles. Mirror ContainerBuilder's slot positions so the hover-highlight
+    // covers the visible cells exactly (1.12.2 used the same coordinates).
+    private static final int SNAPSHOT_X = 80, SNAPSHOT_Y = 27;
+    private static final int RESOURCE_X = 8, RESOURCE_Y = 72;
+    private static final int RESOURCE_W = 9 * 18 - 2, RESOURCE_H = 3 * 18 - 2;
+    private static final int DISPLAY_X = 179, DISPLAY_Y = 18;
+    private static final int DISPLAY_W = 4 * 18 - 2, DISPLAY_H = 6 * 18 - 2;
+    private static final int TANK_ROW_X = 179;
+    private static final int TANK_ROW_W = TileBuilder.TANK_COUNT * 18 - 2;
+
     private FluidModeButton fluidModeButton;
 
     public GuiBuilder(ContainerBuilder container, Inventory playerInv, Component title) {
@@ -84,6 +97,43 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
                     ICON_TANK_OVERLAY
             ));
         }
+
+        // Help ledger — pinned to the left edge so it doesn't fight the blueprint side-panel
+        // for screen space. LedgerHelp walks gui.shownElements and collects every element's
+        // ElementHelpInfo, so the DummyHelpElements below light up under the cursor whether the
+        // ledger is open or closed.
+        mainGui.shownElements.add(new LedgerHelp(mainGui, false)); // left side
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(SNAPSHOT_X, SNAPSHOT_Y, 16, 16).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.builder.snapshot.title", 0xFF_88_CC_88,
+                        "buildcraft.help.builder.snapshot.desc1",
+                        "buildcraft.help.builder.snapshot.desc2")));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(RESOURCE_X, RESOURCE_Y, RESOURCE_W, RESOURCE_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.builder.resources.title", 0xFF_FF_CC_88,
+                        "buildcraft.help.builder.resources.desc1",
+                        "buildcraft.help.builder.resources.desc2")));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(FLUID_BUTTON_X, FLUID_BUTTON_Y, FLUID_BUTTON_SIZE, FLUID_BUTTON_SIZE)
+                        .offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.builder.fluid_mode.title", 0xFF_88_CC_FF,
+                        "buildcraft.help.builder.fluid_mode.desc1",
+                        "buildcraft.help.builder.fluid_mode.desc2")));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(DISPLAY_X, DISPLAY_Y, DISPLAY_W, DISPLAY_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.builder.display.title", 0xFF_E1_C9_2F,
+                        "buildcraft.help.builder.display.desc1",
+                        "buildcraft.help.builder.display.desc2")));
+
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(TANK_ROW_X, TANK_Y, TANK_ROW_W, TANK_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.builder.tanks.title", 0xFF_88_AA_FF,
+                        "buildcraft.help.builder.tanks.desc1",
+                        "buildcraft.help.builder.tanks.desc2")));
     }
 
     @Override

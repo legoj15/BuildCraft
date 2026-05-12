@@ -441,6 +441,12 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
             AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT);
         }
         setChanged();
+        // Push the slot-state change to clients so the architect BER picks up the
+        // scanning → done transition (full → half-lit red LED) immediately, rather
+        // than waiting for the next chunk reload or GUI open.
+        if (level != null && !level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
     }
 
     // NBT

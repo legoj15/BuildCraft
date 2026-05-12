@@ -34,13 +34,22 @@ import buildcraft.builders.tile.TileArchitectTable;
  * positions originally hand-drawn into the 1.12.2 {@code led_green.png}
  * ({@code u=5, v=12}) and {@code led_red.png} ({@code u=3, v=12}) overlay textures.
  * <p>
- * State: green lit when the architect has a valid marker box neighbour
- * ({@link TileArchitectTable#getIsValid()} returns {@code true}); red lit otherwise.
- * The {@code valid} state was previously driven by a {@code PROP_VALID} blockstate
- * property swapping between identical {@code front_on}/{@code front_off} textures —
- * a no-op visually. With this BER the same boolean drives a real visible change.
+ * Four states, driven by ({@link TileArchitectTable#getIsValid valid},
+ * input-slot-present, output-slot-present):
+ * <ul>
+ *   <li><b>Invalid</b> — marker box missing/malformed → red lit, green dark.</li>
+ *   <li><b>Idle</b> — valid box, no work pending → green lit, red dark.</li>
+ *   <li><b>Scanning</b> — valid + input present + output empty (the same gate
+ *       {@code TileArchitectTable.tick} uses to start scanning) → both lit.</li>
+ *   <li><b>Done</b> — valid + output has a finished snapshot waiting for pickup →
+ *       green lit, red half-lit (a "please remove the blueprint" cue).</li>
+ * </ul>
  */
 public class RenderArchitectTable implements BlockEntityRenderer<TileArchitectTable, ArchitectTableRenderState> {
+    /** Half-intensity red. Roughly half of {@link LedRenderUtil#COLOUR_RED_ON} per ABGR channel —
+     *  visible enough to read as lit, but clearly dimmer than the "scanning" red. */
+    private static final int COLOUR_RED_HALF = 0xFF_11_11_77;
+
     private static final double LED_INSET = 0.4 / 16.0;
     /** Inner offset = 2.5/16, derived from {@code led_green.png} pixel u=5 → world-x 10.5/16 = face-centre + 2.5/16. */
     private static final double GREEN_OFFSET = 2.5 / 16.0;
@@ -96,8 +105,30 @@ public class RenderArchitectTable implements BlockEntityRenderer<TileArchitectTa
     private void renderLEDs(TileArchitectTable tile, Direction facing,
                             PoseStack poseStack, MultiBufferSource.BufferSource bufferSource) {
         boolean valid = tile.getIsValid();
-        int greenColour = valid ? LedRenderUtil.COLOUR_GREEN_ON : LedRenderUtil.COLOUR_OFF;
-        int redColour = valid ? LedRenderUtil.COLOUR_OFF : LedRenderUtil.COLOUR_RED_ON;
+        boolean hasInput = !tile.getSnapshotIn().isEmpty();
+        boolean hasOutput = !tile.getSnapshotOut().isEmpty();
+
+        int greenColour;
+        int redColour;
+        if (!valid) {
+            // No valid marker box neighbour
+            greenColour = LedRenderUtil.COLOUR_OFF;
+            redColour = LedRenderUtil.COLOUR_RED_ON;
+        } else if (hasOutput) {
+            // Output occupied — scanning is paused/done; the player needs to pull the snapshot out.
+            // Checked before hasInput so the "input still present but output blocked" transient
+            // case lands on done rather than scanning.
+            greenColour = LedRenderUtil.COLOUR_GREEN_ON;
+            redColour = COLOUR_RED_HALF;
+        } else if (hasInput) {
+            // Actively scanning — matches the gate in TileArchitectTable.tick().
+            greenColour = LedRenderUtil.COLOUR_GREEN_ON;
+            redColour = LedRenderUtil.COLOUR_RED_ON;
+        } else {
+            // Valid + idle (no input, no output)
+            greenColour = LedRenderUtil.COLOUR_GREEN_ON;
+            redColour = LedRenderUtil.COLOUR_OFF;
+        }
 
         LedRenderUtil.setFacePosition(LED_GREEN, facing, LED_INSET, GREEN_OFFSET, Y);
         LedRenderUtil.setFacePosition(LED_RED, facing, LED_INSET, RED_OFFSET, Y);

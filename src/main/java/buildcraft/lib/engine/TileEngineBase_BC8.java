@@ -20,6 +20,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -313,6 +315,9 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
     // --- Tick logic ---
 
     public static <T extends TileEngineBase_BC8> void serverTick(Level level, BlockPos pos, BlockState state, T engine) {
+        ProfilerFiller _profiler = Profiler.get();
+        _profiler.push("buildcraft:engine_serverTick");
+        try {
         // Periodically poll redstone state every 10 ticks as workaround for
         // neighborChanged not being called in NeoForge 1.21.11
         engine.redstonePollTimer++;
@@ -418,6 +423,9 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
         }
         if (needsSync) {
             level.sendBlockUpdated(pos, state, state, 3);
+        }
+        } finally {
+            _profiler.pop();
         }
     }
 

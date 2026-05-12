@@ -26,6 +26,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
@@ -181,6 +182,14 @@ public class TilePump extends TileMiner implements IDebuggable {
         Direction[] directions = FluidUtilBC.isGaseous(queueFluid) ? SEARCH_GASEOUS : SEARCH_NORMAL;
         boolean isWater = !BCCoreConfig.pumpsConsumeWater.get()
                 && FluidUtilBC.areFluidsEqual(queueFluid, Fluids.WATER);
+        // Anchor-block rule: the strip is only "infinite" when the tube lands on a
+        // position that would regenerate under vanilla's own water-source rule
+        // (≥2 horizontal source neighbours, water/solid below). Pumping from an
+        // edge of a 1×N strip therefore falls through to a full BFS so the finite
+        // tail blocks land in the queue and get consumed, matching what a player
+        // bucketing the edge would experience.
+        boolean targetPosIsInfinite = isWater && isInfiniteSourceAt(level, targetPos);
+        isInfiniteWaterSource = targetPosIsInfinite;
         final int maxLengthSquared = BCCoreConfig.pumpMaxDistance.get() * BCCoreConfig.pumpMaxDistance.get();
 
         outer:
@@ -188,7 +197,6 @@ public class TilePump extends TileMiner implements IDebuggable {
             List<BlockPos> nextPosesToCheckCopy = new ArrayList<>(nextPosesToCheck);
             nextPosesToCheck.clear();
             for (BlockPos posToCheck : nextPosesToCheckCopy) {
-                int count = 0;
                 for (Direction side : directions) {
                     BlockPos offsetPos = posToCheck.relative(side);
                     if (offsetPos.distSqr(targetPos) > maxLengthSquared) {
@@ -206,22 +214,13 @@ public class TilePump extends TileMiner implements IDebuggable {
                                 queue.add(offsetPos);
                             }
                             nextPosesToCheck.add(offsetPos);
-                            count++;
                         }
-                    } else {
-                        // We've already tested this block: it *must* be a valid water source
-                        count++;
                     }
                 }
-                if (isWater) {
-                    if (count >= 2) {
-                        BlockState below = level.getBlockState(posToCheck.below());
-                        Fluid fluidBelow = BlockUtil.getFluidWithFlowing(level, posToCheck.below());
-                        if (FluidUtilBC.areFluidsEqual(fluidBelow, Fluids.WATER) || below.isSolid()) {
-                            isInfiniteWaterSource = true;
-                            break outer;
-                        }
-                    }
+                // Once anchored on a regenerable position the pump will sit on a
+                // single block forever, so further BFS is wasted work — short-circuit.
+                if (targetPosIsInfinite) {
+                    break outer;
                 }
             }
         }
@@ -257,6 +256,37 @@ public class TilePump extends TileMiner implements IDebuggable {
             return fluid != null;
         }
         return FluidUtilBC.areFluidsEqual(fluid, tank.getResource(0).getFluid());
+    }
+
+    /**
+     * Returns true if {@code pos} would naturally regenerate as a water source under
+     * vanilla rules: at least two horizontally adjacent source-water neighbours plus
+     * a water-or-solid block below to support the new source. Caller is responsible
+     * for the {@code pumpsConsumeWater} config gate and the fluid-is-water check.
+     *
+     * <p>Vertical neighbours are deliberately ignored — vanilla's regen check is
+     * horizontal-only (a water source above does not seed a regenerated source
+     * below; water just flows down).
+     */
+    public static boolean isInfiniteSourceAt(@Nullable Level level, @Nullable BlockPos pos) {
+        if (level == null || pos == null) {
+            return false;
+        }
+        BlockState below = level.getBlockState(pos.below());
+        Fluid fluidBelow = BlockUtil.getFluidWithFlowing(level, pos.below());
+        if (!FluidUtilBC.areFluidsEqual(fluidBelow, Fluids.WATER) && !below.isSolid()) {
+            return false;
+        }
+        int sources = 0;
+        for (Direction dir : Direction.Plane.HORIZONTAL) {
+            Fluid neighbour = BlockUtil.getFluid(level, pos.relative(dir));
+            if (FluidUtilBC.areFluidsEqual(neighbour, Fluids.WATER)) {
+                if (++sources >= 2) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private void nextPos() {
@@ -338,10 +368,13 @@ public class TilePump extends TileMiner implements IDebuggable {
                     AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT_DRAIN_ANY);
                 }
 
-                isInfiniteWaterSource &= !BCCoreConfig.pumpsConsumeWater.get();
-                if (isInfiniteWaterSource) {
-                    isInfiniteWaterSource = FluidUtilBC.areFluidsEqual(drain.getFluid(), Fluids.WATER);
-                }
+                // Re-evaluate against the live world state so state changes since the
+                // queue build (player scooped a neighbour, mob placed a block) flip the
+                // pump back to consume mode on the very next tick instead of the next
+                // queue rebuild.
+                isInfiniteWaterSource = !BCCoreConfig.pumpsConsumeWater.get()
+                        && FluidUtilBC.areFluidsEqual(drain.getFluid(), Fluids.WATER)
+                        && isInfiniteSourceAt(level, targetPos);
 
                 if (!isInfiniteWaterSource) {
                     BlockUtil.drainBlock(level, currentPos, true);

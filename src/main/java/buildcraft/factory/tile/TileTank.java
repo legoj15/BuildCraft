@@ -17,6 +17,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -70,6 +72,9 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
 
     public void serverTick() {
         if (level == null || level.isClientSide()) return;
+        ProfilerFiller _profiler = Profiler.get();
+        _profiler.push("buildcraft:tank_serverTick");
+        try {
 
         int currentAmount = tank.getAmountAsInt(0);
 
@@ -84,6 +89,9 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
         if (compLevel != lastComparatorLevel) {
             lastComparatorLevel = compLevel;
             setChanged();
+        }
+        } finally {
+            _profiler.pop();
         }
     }
 

@@ -91,6 +91,20 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     // Client fields for interpolating amounts
     private long lastMessage, lastMessageMinus1;
 
+    // === Render cache (client-side only) ===
+    // Populated and read by PipeFlowRendererFluids. Stored on the flow so the cache
+    // lifetime matches the pipe's lifetime; invalidated by reference-comparing
+    // {@link #renderCacheFluid} against the current fluid in the renderer.
+    // Field types are shared-side classes (Fluid, Identifier) so this is safe on
+    // dedicated servers — the fields are simply never touched there.
+    public transient net.minecraft.world.level.material.Fluid renderCacheFluid;
+    public transient net.minecraft.resources.Identifier renderCacheSpriteId;
+    public transient int renderCacheTintR = 0xFF;
+    public transient int renderCacheTintG = 0xFF;
+    public transient int renderCacheTintB = 0xFF;
+    public transient int renderCacheTintA = 0xFF;
+    public transient boolean renderCacheTranslucent;
+
     public PipeFlowFluids(IPipe pipe) {
         super(pipe);
         for (EnumPipePart part : EnumPipePart.VALUES) {
@@ -420,33 +434,44 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         return currentFluid.isEmpty() ? null : currentFluid;
     }
 
-    /** Returns fluid amounts per section for rendering.
-     *  Index 0-5 = Direction.ordinal(), index 6 = CENTER.
-     *  Uses client-side interpolated values for smooth fluid animation. */
-    public double[] getAmountsForRender(float partialTicks) {
-        double[] arr = new double[7];
+    /** Writes per-section interpolated fluid amounts into {@code out} (length 7).
+     *  Index follows {@link EnumPipePart#getIndex()}: 0-5 = facings, 6 = CENTER.
+     *  Caller supplies the buffer to avoid the per-frame {@code double[7]} allocation. */
+    public void writeAmountsForRender(float partialTicks, double[] out) {
+        boolean clientSide = pipe.getHolder().getPipeWorld().isClientSide();
+        double pt = partialTicks;
+        double invPt = 1 - partialTicks;
         for (EnumPipePart part : EnumPipePart.VALUES) {
             Section s = sections.get(part);
-            if (pipe.getHolder().getPipeWorld().isClientSide()) {
-                arr[part.getIndex()] = s.clientAmountLast * (1 - partialTicks) + s.clientAmountThis * partialTicks;
+            int i = part.getIndex();
+            if (clientSide) {
+                out[i] = s.clientAmountLast * invPt + s.clientAmountThis * pt;
             } else {
-                arr[part.getIndex()] = s.amount;
+                out[i] = s.amount;
             }
         }
-        return arr;
     }
 
-    /** Returns flow offsets per section for rendering (used for flow animation).
-     *  Index 0-5 = Direction.ordinal(), index 6 = CENTER. */
-    public Vec3[] getOffsetsForRender(float partialTicks) {
-        Vec3[] arr = new Vec3[7];
+    /** Writes per-section interpolated flow offsets into the three component arrays
+     *  (each length 7). Sections with no offset are written as 0.
+     *  Index follows {@link EnumPipePart#getIndex()}. Caller supplies buffers to
+     *  avoid per-frame allocation of a {@code Vec3[]} plus 21 transient {@code Vec3}. */
+    public void writeOffsetsForRender(float partialTicks, double[] outX, double[] outY, double[] outZ) {
+        double pt = partialTicks;
+        double invPt = 1 - partialTicks;
         for (EnumPipePart part : EnumPipePart.VALUES) {
             Section s = sections.get(part);
+            int i = part.getIndex();
             if (s.offsetLast != null && s.offsetThis != null) {
-                arr[part.getIndex()] = s.offsetLast.scale(1 - partialTicks).add(s.offsetThis.scale(partialTicks));
+                outX[i] = s.offsetLast.x * invPt + s.offsetThis.x * pt;
+                outY[i] = s.offsetLast.y * invPt + s.offsetThis.y * pt;
+                outZ[i] = s.offsetLast.z * invPt + s.offsetThis.z * pt;
+            } else {
+                outX[i] = 0;
+                outY[i] = 0;
+                outZ[i] = 0;
             }
         }
-        return arr;
     }
 
     // Internal logic
@@ -463,10 +488,23 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             section.currentTime = 0;
             section.ticksInDirection = 0;
         }
-        // Schedule client sync so the fluid type reaches the client-side instance
-        if (pipe.getHolder().getPipeWorld() != null && !pipe.getHolder().getPipeWorld().isClientSide()) {
-            pipe.getHolder().scheduleRenderUpdate();
-        }
+        // NOTE: Do NOT call pipe.getHolder().scheduleRenderUpdate() here, even though it looks
+        // like the right place to push the fluid-type change to the client. scheduleRenderUpdate
+        // queues a *full* BlockEntity NBT sync via level.sendBlockUpdated(), and on the client
+        // TilePipeHolder.onDataPacket re-invokes level.sendBlockUpdated() — which marks the
+        // pipe's chunk section dirty and forces a chunk-mesh rebuild. When a pipe is bouncing
+        // fluid against a full downstream sink (e.g. a combustion engine that's at capacity),
+        // every empty↔non-empty transition went through this path: two chunk rebuilds per
+        // bounce per pipe in the path, producing the visible lag spike "every time the gas
+        // moves into the next pipe." The lightweight MessagePipePayload (NET_FLUID_AMOUNTS)
+        // already covers everything the renderer needs: writePayload writes the fluid registry
+        // id when currentFluid is non-empty, and the per-section amount loop fires whenever
+        // section.amount differs from lastSentAmount — which is exactly the condition that
+        // setFluid is paired with (empty → non-empty when fluid arrives at section.fill, and
+        // non-empty → empty when totalFluid drops to 0 in onTick). The pipe's *block model*
+        // doesn't depend on fluid state — connections / paint / pluggables drive the model,
+        // and those have their own scheduleRenderUpdate calls — so the chunk-rebuild was
+        // pure waste in the fluid path.
     }
 
     @Override

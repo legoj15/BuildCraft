@@ -155,6 +155,16 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_wrench_rotates_clockwise"), () -> buildcraft.factory.DistillerTester::testWrenchRotatesClockwise);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_wrench_passes_through_use_item_on"), () -> buildcraft.factory.DistillerTester::testWrenchPassesThroughUseItemOn);
 
+            // Pump infinite-source detection (vanilla regen-rule parity per anchor block)
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_strip_1x3_centre_vs_edges"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testStrip1x3CentreInfiniteEdgesFinite);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_isolated_source_finite"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testIsolatedSourceFinite);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_pond_2x2_all_corners"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testPond2x2AllCornersInfinite);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_strip_1x5_interior_vs_edges"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testStrip1x5InteriorInfiniteEdgesFinite);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_no_support_below"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testNoSupportBelowIsFinite);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_diagonals_dont_count"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testDiagonalNeighboursDoNotCount);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_water_below_supports"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testWaterBelowProvidesSupport);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_null_safety"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testNullSafetyShortCircuits);
+
             // Distiller tank gating (1.12.2 setFilter / setCanDrain / setCanFill parity)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_input_rejects_non_distillable"), () -> buildcraft.factory.DistillerTester::testInputTankRejectsNonDistillableInsert);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_input_blocks_external_extract"), () -> buildcraft.factory.DistillerTester::testInputTankBlocksExternalExtract);

@@ -18,6 +18,8 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
@@ -50,6 +52,9 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
     @Override
     public void submit(EngineRenderState state, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
+        ProfilerFiller _profiler = Profiler.get();
+        _profiler.push("buildcraft:engine_submit");
+        try {
         Vec3 camPos = cameraState.pos;
         if (camPos == null) return;
         org.joml.Vector3f t = new org.joml.Vector3f();
@@ -67,7 +72,13 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
 
         // Get animated quads from the quad provider (injected by energy module)
         float partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        MutableQuad[] quads = quadProvider.apply(engine, partialTicks);
+        _profiler.push("buildcraft:engine_model_refresh");
+        MutableQuad[] quads;
+        try {
+            quads = quadProvider.apply(engine, partialTicks);
+        } finally {
+            _profiler.pop();
+        }
         if (quads == null || quads.length == 0) return;
 
         poseStack.pushPose();
@@ -87,7 +98,17 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
             quad.render(poseStack.last(), buffer);
         }
 
-        bufferSource.endBatch();
+        // Intentionally not calling bufferSource.endBatch() here — the previous
+        // implementation issued a *full* flush per engine per frame (no render-type
+        // argument means MultiBufferSource.BufferSource walks every registered
+        // RenderType and drains its builder), forcing extra draw calls and
+        // GPU-sync overhead per visible engine. The BlockEntityRenderDispatcher
+        // already calls endBatch on the shared buffer source after all BE
+        // renders complete, so the quads we just wrote get drained at the
+        // correct time without any per-engine intervention.
         poseStack.popPose();
+        } finally {
+            _profiler.pop();
+        }
     }
 }

@@ -23,6 +23,8 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
@@ -60,6 +62,9 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
     @Override
     public void submit(TankRenderState renderState, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
+        ProfilerFiller _profiler = Profiler.get();
+        _profiler.push("buildcraft:tank_submit");
+        try {
         Vec3 camPos = cameraState.pos;
         if (camPos == null) return;
         org.joml.Vector3f t = new org.joml.Vector3f();
@@ -167,6 +172,9 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
         }
 
         poseStack.popPose();
+        } finally {
+            _profiler.pop();
+        }
     }
 
     /** Checks if the shared face between this tank and its neighbor should be hidden.

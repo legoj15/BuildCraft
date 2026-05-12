@@ -184,6 +184,16 @@ public class MutableQuad {
         return toBakedBlock();
     }
 
+    // Reusable scratch vectors for renderVertex. Block-entity renderers are called
+    // many thousands of times per frame; allocating two Vector3f per vertex was the
+    // dominant per-frame GC source for fluid pipes (≈ 8 vec3 × ~6 quads × ~7 cuboids
+    // × N pipes × 60 fps). The scratch is per-thread so any future off-thread render
+    // submission stays correct.
+    private static final ThreadLocal<Vector3f> TL_POS_SCRATCH =
+        ThreadLocal.withInitial(Vector3f::new);
+    private static final ThreadLocal<Vector3f> TL_NORM_SCRATCH =
+        ThreadLocal.withInitial(Vector3f::new);
+
     /** Renders this quad directly into the given VertexConsumer, applying the given PoseStack transform.
      * The tex_u/tex_v values should already be atlas-mapped (via texFromSprite). */
     public void render(com.mojang.blaze3d.vertex.PoseStack.Pose pose, VertexConsumer buffer) {
@@ -194,9 +204,11 @@ public class MutableQuad {
     }
 
     private static void renderVertex(com.mojang.blaze3d.vertex.PoseStack.Pose pose, VertexConsumer buffer, MutableVertex v) {
-        Vector3f pos = new Vector3f(v.position_x, v.position_y, v.position_z);
+        Vector3f pos = TL_POS_SCRATCH.get();
+        pos.set(v.position_x, v.position_y, v.position_z);
         pose.pose().transformPosition(pos);
-        Vector3f norm = new Vector3f(v.normal_x, v.normal_y, v.normal_z);
+        Vector3f norm = TL_NORM_SCRATCH.get();
+        norm.set(v.normal_x, v.normal_y, v.normal_z);
         pose.normal().transform(norm);
         buffer.addVertex(pos.x, pos.y, pos.z)
               .setColor(v.colour_r, v.colour_g, v.colour_b, v.colour_a)
@@ -293,8 +305,28 @@ public class MutableQuad {
         colourf(diffuse, diffuse, diffuse, 1);
     }
 
+    /** Computes the face normal from vertex positions inline (no Vector3f
+     *  allocations) and sets the per-vertex colour to the diffuse value. This
+     *  is the hot path in every BlockEntityRenderer that emits MutableQuads —
+     *  the previous {@code getCalculatedNormal} variant allocated 7
+     *  {@link Vector3f} per call (4 from {@code positionvf} + 3 explicit
+     *  {@code new Vector3f}), which under engine-heavy scenes (1 quad per face
+     *  per element × 4 elements × 6 face orientations × N engines × 60 fps)
+     *  added up to a measurable GC source. */
     public void setCalculatedDiffuse() {
-        float diffuse = getCalculatedDiffuse();
+        // edge1 = v1 - v0
+        float ax = vertex_1.position_x - vertex_0.position_x;
+        float ay = vertex_1.position_y - vertex_0.position_y;
+        float az = vertex_1.position_z - vertex_0.position_z;
+        // edge2 = v2 - v0
+        float bx = vertex_2.position_x - vertex_0.position_x;
+        float by = vertex_2.position_y - vertex_0.position_y;
+        float bz = vertex_2.position_z - vertex_0.position_z;
+        // normal = edge1 × edge2
+        float nx = ay * bz - az * by;
+        float ny = az * bx - ax * bz;
+        float nz = ax * by - ay * bx;
+        float diffuse = diffuseLight(nx, ny, nz);
         colourf(diffuse, diffuse, diffuse, 1);
     }
 

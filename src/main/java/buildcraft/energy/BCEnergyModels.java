@@ -15,6 +15,7 @@ import buildcraft.api.enums.EnumPowerStage;
 
 import buildcraft.lib.client.model.ModelHolderVariable;
 import buildcraft.lib.client.model.MutableQuad;
+import buildcraft.lib.client.model.json.JsonVariableModel;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.expression.DefaultContexts;
 import buildcraft.lib.expression.FunctionContext;
@@ -64,32 +65,115 @@ public class BCEnergyModels {
         );
     }
 
+    // ─── Bake cache ──────────────────────────────────────────────────
+    //
+    // The JSON variable model rebakes every frame per engine (~22 MutableQuads
+    // + their backing MutableVertex objects + the ArrayList + result array per
+    // call). With several engines in view at 60 fps that's ~3 MB/s of GC churn
+    // pure from the bake. We cache the result keyed by the only inputs the
+    // model expressions look at — power stage, animation progress, and facing.
+    //
+    // Progress is quantised to 1/16 because the engine_base.json
+    // `progress_size = progress * 15.99` expression has 1-pixel resolution at
+    // 1/16 steps, so the quantised animation is visually identical to the
+    // unquantised one. Bounded by 5 (stage) × 17 (progress 0..16) × 6 (facing)
+    // = 510 entries per engine type; each entry holds the bake's MutableQuad[]
+    // reference, so the steady-state memory cost is one MutableQuad[] per
+    // distinct (stage, progress, facing) combination that has actually been
+    // seen, not the worst case.
+    //
+    // The cached MutableQuad instances are shared across all engines of the
+    // same type and state. RenderEngine_BC8 mutates `colour` (via
+    // setCalculatedDiffuse) and `lighti` on each emitted quad, but those are
+    // overwritten deterministically every render before the quad is read by
+    // the vertex consumer, so cache reuse is safe.
+    //
+    // Cache invalidation happens automatically by comparing
+    // `ModelHolderVariable.getModel()` (the raw JsonVariableModel reference)
+    // against the one the cache was built against — `onTextureStitchPre`
+    // nulls the holder's rawModel and `loadModelFromDisk` reassigns a fresh
+    // instance, so a resource pack swap or atlas restitch produces a new
+    // reference and the cache wipes itself on the next lookup.
+
+    private static final int PROGRESS_QUANTIZATION = 16;
+    private static final int FACING_COUNT = 6;
+    private static final int PROGRESS_VALUES = PROGRESS_QUANTIZATION + 1;
+    private static final int CACHE_SIZE =
+        EnumPowerStage.values().length * PROGRESS_VALUES * FACING_COUNT;
+
+    private static final class EngineQuadCache {
+        final MutableQuad[][] entries = new MutableQuad[CACHE_SIZE][];
+        JsonVariableModel lastRawModel;
+    }
+
+    private static final EngineQuadCache CACHE_STONE = new EngineQuadCache();
+    private static final EngineQuadCache CACHE_IRON = new EngineQuadCache();
+    private static final EngineQuadCache CACHE_FE = new EngineQuadCache();
+    private static final EngineQuadCache CACHE_DYNAMO = new EngineQuadCache();
+
+    private static int cacheKey(EnumPowerStage stage, int progressQuant, Direction facing) {
+        return stage.ordinal() * PROGRESS_VALUES * FACING_COUNT
+            + progressQuant * FACING_COUNT
+            + facing.ordinal();
+    }
+
     private static MutableQuad[] getEngineQuads(ModelHolderVariable model,
+                                                EngineQuadCache cache,
                                                 TileEngineBase_BC8 tile,
                                                 float partialTicks) {
-        ENGINE_PROGRESS.value = tile.getProgressClient(partialTicks);
-        ENGINE_STAGE.value = tile.getPowerStage();
-        ENGINE_FACING.value = tile.getOrientation();
+        JsonVariableModel rawModel = model.getModel();
+        if (rawModel == null) return MutableQuad.EMPTY_ARRAY;
+
+        // Detect resource reload (model reload) and wipe stale cache entries.
+        // Cached MutableQuads embed atlas-mapped UVs and sprite references; a
+        // new rawModel implies a fresh stitch, so the prior UVs are stale.
+        if (rawModel != cache.lastRawModel) {
+            Arrays.fill(cache.entries, null);
+            cache.lastRawModel = rawModel;
+        }
+
+        float progress = tile.getProgressClient(partialTicks);
+        EnumPowerStage stage = tile.getPowerStage();
+        Direction facing = tile.getOrientation();
+
+        int progressQuant = Math.max(0, Math.min(PROGRESS_QUANTIZATION,
+            (int) (progress * PROGRESS_QUANTIZATION + 0.5f)));
+        int key = cacheKey(stage, progressQuant, facing);
+
+        MutableQuad[] cached = cache.entries[key];
+        if (cached != null) {
+            return cached;
+        }
+
+        // Cache miss: set the model variables to the quantised values, refresh
+        // the tile's tickable nodes (a no-op for engines whose expressions are
+        // pure functions of progress/stage/facing, but cheap to keep), and bake.
+        ENGINE_PROGRESS.value = (double) progressQuant / PROGRESS_QUANTIZATION;
+        ENGINE_STAGE.value = stage;
+        ENGINE_FACING.value = facing;
         if (tile.clientModelData.hasNoNodes()) {
             tile.clientModelData.setNodes(model.createTickableNodes());
         }
         tile.clientModelData.refresh();
-        return model.getCutoutQuads();
+
+        MutableQuad[] quads = model.getCutoutQuads();
+        cache.entries[key] = quads;
+        return quads;
     }
 
     public static MutableQuad[] getStoneEngineQuads(TileEngineStone_BC8 tile, float partialTicks) {
-        return getEngineQuads(ENGINE_STONE, tile, partialTicks);
+        return getEngineQuads(ENGINE_STONE, CACHE_STONE, tile, partialTicks);
     }
 
     public static MutableQuad[] getIronEngineQuads(TileEngineIron_BC8 tile, float partialTicks) {
-        return getEngineQuads(ENGINE_IRON, tile, partialTicks);
+        return getEngineQuads(ENGINE_IRON, CACHE_IRON, tile, partialTicks);
     }
 
     public static MutableQuad[] getFeEngineQuads(TileEngineFE tile, float partialTicks) {
-        return getEngineQuads(ENGINE_FE, tile, partialTicks);
+        return getEngineQuads(ENGINE_FE, CACHE_FE, tile, partialTicks);
     }
 
     public static MutableQuad[] getDynamoQuads(TileDynamoMJ tile, float partialTicks) {
-        return getEngineQuads(ENGINE_DYNAMO, tile, partialTicks);
+        return getEngineQuads(ENGINE_DYNAMO, CACHE_DYNAMO, tile, partialTicks);
     }
 }

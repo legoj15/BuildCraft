@@ -25,7 +25,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
-import net.minecraft.world.phys.Vec3;
 import net.minecraft.ChatFormatting;
 import net.minecraft.world.level.Level;
 
@@ -55,7 +54,6 @@ import buildcraft.api.transport.pipe.PipeFlow;
 import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.MathUtil;
-import buildcraft.lib.misc.VecUtil;
 
 import buildcraft.core.BCCoreConfig;
 import buildcraft.transport.BCTransportStatements;
@@ -453,24 +451,20 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     }
 
     /** Writes per-section interpolated flow offsets into the three component arrays
-     *  (each length 7). Sections with no offset are written as 0.
-     *  Index follows {@link EnumPipePart#getIndex()}. Caller supplies buffers to
-     *  avoid per-frame allocation of a {@code Vec3[]} plus 21 transient {@code Vec3}. */
+     *  (each length 7). Index follows {@link EnumPipePart#getIndex()}. Caller
+     *  supplies buffers to avoid per-frame allocation of a {@code Vec3[]} plus
+     *  21 transient {@code Vec3}. The section's offset state is stored as
+     *  primitive doubles (see {@link Section#offsetThisX} etc.), so default
+     *  values (0) are correct before {@code tickClient} runs for the first time. */
     public void writeOffsetsForRender(float partialTicks, double[] outX, double[] outY, double[] outZ) {
         double pt = partialTicks;
         double invPt = 1 - partialTicks;
         for (EnumPipePart part : EnumPipePart.VALUES) {
             Section s = sections.get(part);
             int i = part.getIndex();
-            if (s.offsetLast != null && s.offsetThis != null) {
-                outX[i] = s.offsetLast.x * invPt + s.offsetThis.x * pt;
-                outY[i] = s.offsetLast.y * invPt + s.offsetThis.y * pt;
-                outZ[i] = s.offsetLast.z * invPt + s.offsetThis.z * pt;
-            } else {
-                outX[i] = 0;
-                outY[i] = 0;
-                outZ[i] = 0;
-            }
+            outX[i] = s.offsetLastX * invPt + s.offsetThisX * pt;
+            outY[i] = s.offsetLastY * invPt + s.offsetThisY * pt;
+            outZ[i] = s.offsetLastZ * invPt + s.offsetThisZ * pt;
         }
     }
 
@@ -832,7 +826,13 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         // Client side fields
         int clientAmountThis, clientAmountLast;
         int target = 0;
-        Vec3 offsetLast, offsetThis;
+        // Interpolated flow-animation offset, stored as primitives so tickClient
+        // produces zero garbage. Values start at 0 and are bounded to [-0.5, 0.5]
+        // by the wrap step below; the previous Vec3 fields produced ~17 Vec3
+        // allocations per CENTER tick + ~3 per face tick, which added up on
+        // pipe-heavy networks.
+        double offsetLastX, offsetLastY, offsetLastZ;
+        double offsetThisX, offsetThisY, offsetThisZ;
 
         Section(EnumPipePart part) {
             this.part = part;
@@ -939,38 +939,67 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                 }
             }
 
-            if (offsetThis == null || (clientAmountThis == 0 && clientAmountLast == 0)) {
-                offsetThis = Vec3.ZERO;
+            // When the section has been empty for two ticks, snap the animation
+            // offset back to zero — matches the prior null-check / Vec3.ZERO
+            // path on the previous Vec3 fields.
+            if (clientAmountThis == 0 && clientAmountLast == 0) {
+                offsetThisX = 0;
+                offsetThisY = 0;
+                offsetThisZ = 0;
             }
-            offsetLast = offsetThis;
+            // offsetLast = offsetThis (carry the previous tick's value forward
+            // for partialTicks interpolation in writeOffsetsForRender).
+            offsetLastX = offsetThisX;
+            offsetLastY = offsetThisY;
+            offsetLastZ = offsetThisZ;
 
             if (part.face == null) {
-                Vec3 dir = Vec3.ZERO;
+                // Centre: sum the unit step vectors of every face section with
+                // an active flow direction, then signum each component so the
+                // centre animates along the dominant axis regardless of
+                // simultaneous in/out flows.
+                double dirX = 0, dirY = 0, dirZ = 0;
                 for (EnumPipePart p : EnumPipePart.FACES) {
                     Section s = sections.get(p);
                     if (s.ticksInDirection > 0) {
-                        dir = dir.add(p.face.getStepX(), p.face.getStepY(), p.face.getStepZ());
+                        dirX += p.face.getStepX();
+                        dirY += p.face.getStepY();
+                        dirZ += p.face.getStepZ();
                     }
                 }
                 for (EnumPipePart p : EnumPipePart.FACES) {
                     Section s = sections.get(p);
                     if (s.ticksInDirection < 0) {
-                        dir = dir.add(-p.face.getStepX(), -p.face.getStepY(), -p.face.getStepZ());
+                        dirX -= p.face.getStepX();
+                        dirY -= p.face.getStepY();
+                        dirZ -= p.face.getStepZ();
                     }
                 }
-                dir = new Vec3(Math.signum(dir.x), Math.signum(dir.y), Math.signum(dir.z));
-                offsetThis = offsetThis.add(dir.scale(-FLOW_MULTIPLIER));
+                dirX = Math.signum(dirX);
+                dirY = Math.signum(dirY);
+                dirZ = Math.signum(dirZ);
+                offsetThisX += dirX * -FLOW_MULTIPLIER;
+                offsetThisY += dirY * -FLOW_MULTIPLIER;
+                offsetThisZ += dirZ * -FLOW_MULTIPLIER;
             } else {
+                // Face section: advance along its face axis, sign chosen by
+                // whether ticksInDirection marks the section as input or output.
                 double mult = Math.signum(ticksInDirection);
-                offsetThis = VecUtil.offset(offsetLast, part.face, -FLOW_MULTIPLIER * (mult));
+                double delta = -FLOW_MULTIPLIER * mult;
+                offsetThisX = offsetLastX + part.face.getStepX() * delta;
+                offsetThisY = offsetLastY + part.face.getStepY() * delta;
+                offsetThisZ = offsetLastZ + part.face.getStepZ() * delta;
             }
 
-            double dx = offsetThis.x >= 0.5 ? -1 : offsetThis.x <= -0.5 ? 1 : 0;
-            double dy = offsetThis.y >= 0.5 ? -1 : offsetThis.y <= -0.5 ? 1 : 0;
-            double dz = offsetThis.z >= 0.5 ? -1 : offsetThis.z <= -0.5 ? 1 : 0;
+            // Wrap into [-0.5, 0.5] when the offset crosses ±0.5; shift both
+            // last and this by the same amount so the interpolation remains
+            // continuous across the wrap.
+            double dx = offsetThisX >= 0.5 ? -1 : offsetThisX <= -0.5 ? 1 : 0;
+            double dy = offsetThisY >= 0.5 ? -1 : offsetThisY <= -0.5 ? 1 : 0;
+            double dz = offsetThisZ >= 0.5 ? -1 : offsetThisZ <= -0.5 ? 1 : 0;
             if (dx != 0 || dy != 0 || dz != 0) {
-                offsetThis = offsetThis.add(dx, dy, dz);
-                offsetLast = offsetLast.add(dx, dy, dz);
+                offsetThisX += dx; offsetThisY += dy; offsetThisZ += dz;
+                offsetLastX += dx; offsetLastY += dy; offsetLastZ += dz;
             }
             return clientAmountThis > 0 | clientAmountLast > 0;
         }

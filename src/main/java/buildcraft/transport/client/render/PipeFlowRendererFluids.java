@@ -170,12 +170,26 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
                 cuboidAmount = amount;
                 cuboidCapacity = flow.capacity;
             }
+            // Face-section cuboid: skip the *inward* face (the one at the centre
+            // boundary, x=0.74 for an EAST section etc.) whenever the centre
+            // cuboid is also going to be rendered. That plane is otherwise
+            // covered by *two* quads at the same depth — the face section's
+            // inward-facing face and the centre cuboid's matching outward face —
+            // which is the source of the z-fight that becomes visible when fill
+            // ratios diverge between centre and face (most commonly when a pipe
+            // upstream is broken mid-pipeline). The centre cuboid keeps all 6
+            // faces, so the boundary is always covered by exactly one quad.
+            int faceSkipMask = 0;
+            int centerIdx = EnumPipePart.CENTER.getIndex();
+            if (amounts[centerIdx] > 0) {
+                faceSkipMask = 1 << face.getOpposite().ordinal();
+            }
             renderFluidCuboid(
                 minX, minY, minZ, maxX, maxY, maxZ,
                 minX + ox, minY + oy, minZ + oz,
                 maxX + ox, maxY + oy, maxZ + oz,
                 cuboidAmount, cuboidCapacity, gas,
-                sprite, tR, tG, tB, tA, fluidBB, pose);
+                sprite, tR, tG, tB, tA, faceSkipMask, fluidBB, pose);
         }
 
         // --- Centre section ---
@@ -185,6 +199,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
         double coy = offY[ci];
         double coz = offZ[ci];
 
+        boolean renderedHorizCenter = false;
         double horizPos = 0.26;
         if (horizontal || !vertical) {
             double minX = 0.26, minY = 0.26, minZ = 0.26;
@@ -194,8 +209,9 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
                 minX + cox, minY + coy, minZ + coz,
                 maxX + cox, maxY + coy, maxZ + coz,
                 centerAmount, flow.capacity, gas,
-                sprite, tR, tG, tB, tA, fluidBB, pose);
+                sprite, tR, tG, tB, tA, 0, fluidBB, pose);
             horizPos += (maxY - minY) * centerAmount / flow.capacity;
+            renderedHorizCenter = true;
         }
 
         if (vertical && horizPos < 0.74) {
@@ -205,12 +221,22 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             double yMin = gas ? 0.26 : horizPos;
             double yMax = gas ? 1 - horizPos : 0.74;
 
+            // Vertical-pillar cuboid: when the horizontal centre cuboid also
+            // rendered, the two meet at y=horizPos (gas: pillar below centre,
+            // pillar top face touches centre bottom face; liquid: pillar above
+            // centre, pillar bottom face touches centre top face). Suppress the
+            // pillar's joining face to eliminate the shared-plane z-fight that
+            // becomes visible at intermediate fill ratios.
+            int pillarSkipMask = 0;
+            if (renderedHorizCenter) {
+                pillarSkipMask = 1 << (gas ? Direction.UP.ordinal() : Direction.DOWN.ordinal());
+            }
             renderFluidCuboid(
                 minXZ, yMin, minXZ, maxXZ, yMax, maxXZ,
                 minXZ + cox, yMin + coy, minXZ + coz,
                 maxXZ + cox, yMax + coy, maxXZ + coz,
                 1, 1, gas,
-                sprite, tR, tG, tB, tA, fluidBB, pose);
+                sprite, tR, tG, tB, tA, pillarSkipMask, fluidBB, pose);
         }
     }
 
@@ -250,6 +276,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             double amount, double capacity, boolean gas,
             TextureAtlasSprite sprite,
             int tR, int tG, int tB, int tA,
+            int skipFaceMask,
             VertexConsumer bb, PoseStack.Pose pose) {
         if (amount <= 0 || capacity <= 0) return;
 
@@ -295,6 +322,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
         int fMaxZ = (int) Math.floor(mvMaxZ);
 
         for (Direction face : Direction.values()) {
+            if ((skipFaceMask & (1 << face.ordinal())) != 0) continue;
             for (int i = fMinX; i <= fMaxX; i++) {
                 for (int j = fMinY; j <= fMaxY; j++) {
                     for (int k = fMinZ; k <= fMaxZ; k++) {

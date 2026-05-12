@@ -598,6 +598,18 @@ public class TileFiller extends TileBC_Neptune
             finished = false;
         }
         this.mode = mode;
+        // Push the mode change to clients. The periodic sync inside tick() is gated on
+        // mode != OFF && !isFinished(), so transitions *into* OFF (or into LOOP from
+        // ON-finished) would otherwise leave the client with stale state — and the
+        // BER would render the wrong LED pattern until the next chunk reload.
+        setChanged();
+        if (level != null && !level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    public boolean hasPower() {
+        return battery.getStored() > 0;
     }
 
     // ==================== MenuProvider ====================

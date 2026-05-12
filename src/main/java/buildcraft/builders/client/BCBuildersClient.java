@@ -83,6 +83,9 @@ public class BCBuildersClient {
         event.registerBlockEntityRenderer(
                 buildcraft.builders.BCBuildersBlockEntities.ARCHITECT.get(),
                 buildcraft.builders.client.render.RenderArchitectTable::new);
+        event.registerBlockEntityRenderer(
+                buildcraft.builders.BCBuildersBlockEntities.FILLER.get(),
+                buildcraft.builders.client.render.RenderFiller::new);
     }
 
     /**

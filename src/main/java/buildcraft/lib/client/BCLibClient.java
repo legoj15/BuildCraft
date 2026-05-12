@@ -5,16 +5,25 @@ import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
+import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 import buildcraft.api.registry.EventBuildCraftReload;
 
 import buildcraft.lib.client.guide.GuideManager;
 import buildcraft.lib.client.model.ModelHolderRegistry;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.lib.misc.data.ModelVariableData;
 
 public class BCLibClient {
     public static void initClient(IEventBus modEventBus) {
+        // Register custom render pipelines (LED indicator pipeline, etc.). Must fire on the
+        // mod event bus during the registration phase so the pipeline is known to the
+        // rendering engine before any RenderType referencing it is queried.
+        modEventBus.addListener(RegisterRenderPipelinesEvent.class, event ->
+            event.registerPipeline(BCLibRenderTypes.LED_PIPELINE)
+        );
+
         modEventBus.addListener(ModelEvent.BakingCompleted.class, event -> {
             java.util.HashSet<Identifier> sprites = new java.util.HashSet<>();
             ModelHolderRegistry.onTextureStitchPre(sprites);

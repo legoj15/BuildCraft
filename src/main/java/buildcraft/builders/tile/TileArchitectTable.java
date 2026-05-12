@@ -46,7 +46,6 @@ import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.BCBuildersItems;
-import buildcraft.builders.block.BlockArchitectTable;
 import buildcraft.builders.container.ContainerArchitectTable;
 import buildcraft.builders.item.ItemSnapshot;
 import buildcraft.builders.snapshot.Blueprint;
@@ -161,9 +160,6 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
             provider.removeFromWorld();
         } else {
             isValid = false;
-            BlockState state2 = level.getBlockState(worldPosition);
-            state2 = state2.setValue(BlockArchitectTable.PROP_VALID, Boolean.FALSE);
-            level.setBlock(worldPosition, state2, 3);
         }
 
         // Call parent to set the owner properly

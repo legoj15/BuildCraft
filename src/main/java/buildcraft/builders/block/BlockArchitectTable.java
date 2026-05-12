@@ -24,7 +24,6 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
 import buildcraft.builders.BCBuildersBlockEntities;
@@ -32,13 +31,10 @@ import buildcraft.builders.tile.TileArchitectTable;
 
 public class BlockArchitectTable extends HorizontalDirectionalBlock implements EntityBlock {
     public static final MapCodec<BlockArchitectTable> CODEC = simpleCodec(BlockArchitectTable::new);
-    public static final BooleanProperty PROP_VALID = BooleanProperty.create("valid");
 
     public BlockArchitectTable(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any()
-                .setValue(FACING, Direction.NORTH)
-                .setValue(PROP_VALID, Boolean.TRUE));
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
     @Override
@@ -48,7 +44,7 @@ public class BlockArchitectTable extends HorizontalDirectionalBlock implements E
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, PROP_VALID);
+        builder.add(FACING);
     }
 
     @Override

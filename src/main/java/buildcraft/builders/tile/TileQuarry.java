@@ -457,6 +457,14 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         }
     }
 
+    public boolean hasPower() {
+        return battery.getStored() > 0;
+    }
+
+    public boolean isMining() {
+        return currentTask != null;
+    }
+
     /** Called once per tick by the BlockEntityTicker. */
     public void tick() {
         if (level == null) return;

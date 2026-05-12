@@ -77,6 +77,9 @@ public class BCBuildersClient {
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(BCBuildersEntities.QUARRY_RIG.get(), net.minecraft.client.renderer.entity.NoopRenderer::new);
+        event.registerBlockEntityRenderer(
+                buildcraft.builders.BCBuildersBlockEntities.QUARRY.get(),
+                buildcraft.builders.client.render.RenderQuarry::new);
     }
 
     /**

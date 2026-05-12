@@ -66,7 +66,7 @@ The `minecraft:impossible` trigger is intentional in this codebase: it's the "do
 
 ## 🆕 New Features (Post-Port)
 
-- [ ] Quarry LEDs
+- [x] Quarry LEDs — two LEDs (green + red) on the front and two side faces (rear face omitted because it's the typical cabling/wall side). States: **Green only** = actively mining (`hasPower` && `currentTask != null`); **Red only** = no power but has work; **Both** = no current task (done, or not yet surveying). Pump's `RenderPartCube` positions reused unchanged (`Y=13.5/16`, side offsets `1.5/16` and `3.5/16`). New BER `RenderQuarry` reads `TileQuarry.hasPower()` / `isMining()` and skips the iteration where `dir == FACING.getOpposite()`; existing event-based laser/rig rendering in `BCBuildersEventDist` is untouched.
 - [ ] Facade smooth shading (AO infrastructure exists in `MutableQuad`; needs facade-specific wiring)
 - [ ] Fix texture filtering bug and crash *(needs description / repro to be actionable)*
 

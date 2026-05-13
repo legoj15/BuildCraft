@@ -216,6 +216,15 @@ public final class Pipe implements IPipe, IDebuggable {
         if (definition.canBeColoured) {
             this.colour = colour;
             markForUpdate();
+            // markForUpdate() only schedules a connections recompute; if nothing's
+            // actually connecting differently (the common paint case) the tick-driven
+            // scheduleNetworkUpdate path skips the BE sync, leaving clients with a
+            // stale colour until something else invalidates the chunk. scheduleRenderUpdate
+            // is the correct trigger for paint changes — server-side it sets the
+            // sendBlockUpdated flag for the next tick, client-side it does the
+            // requestModelDataUpdate + sendBlockUpdated immediately. Matches the comment
+            // in PipeFlowFluids.setFluid that calls out paint as having its own render-update.
+            holder.scheduleRenderUpdate();
         }
     }
 

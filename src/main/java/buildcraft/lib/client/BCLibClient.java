@@ -6,6 +6,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
+import net.neoforged.neoforge.client.event.RegisterSpriteSourcesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 import buildcraft.api.registry.EventBuildCraftReload;
@@ -13,6 +14,7 @@ import buildcraft.api.registry.EventBuildCraftReload;
 import buildcraft.lib.client.guide.GuideManager;
 import buildcraft.lib.client.model.ModelHolderRegistry;
 import buildcraft.lib.client.render.BCLibRenderTypes;
+import buildcraft.lib.client.sprite.DyeReplaceSpriteSource;
 import buildcraft.lib.misc.data.ModelVariableData;
 
 public class BCLibClient {
@@ -22,6 +24,13 @@ public class BCLibClient {
         // rendering engine before any RenderType referencing it is queried.
         modEventBus.addListener(RegisterRenderPipelinesEvent.class, event ->
             event.registerPipeline(BCLibRenderTypes.LED_PIPELINE)
+        );
+
+        // Register custom SpriteSource types. dye_replace synthesises the 16 dyed
+        // variants of each fluid-pipe base sprite at atlas stitch time, replacing
+        // the on-disk *_dyed_<colour>.png files that used to ship with the mod.
+        modEventBus.addListener(RegisterSpriteSourcesEvent.class, event ->
+            event.register(DyeReplaceSpriteSource.ID, DyeReplaceSpriteSource.MAP_CODEC)
         );
 
         modEventBus.addListener(ModelEvent.BakingCompleted.class, event -> {

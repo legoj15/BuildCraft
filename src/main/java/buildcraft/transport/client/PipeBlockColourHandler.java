@@ -39,25 +39,31 @@ public class PipeBlockColourHandler {
     /** No-op tint: full-alpha white = no colour modification. */
     private static final BlockTintSource NO_TINT = state -> 0xFFFFFFFF;
 
-    /** Semi-transparent alpha for the overlay (76/255 ≈ 30%, matching overlay_stained.png). */
-    private static final int OVERLAY_ALPHA = 76;
-
     /** BlockTintSource for tintIndex=1 (translucent colour overlay quads).
-     *  Returns ARGB with alpha=76 for semi-transparent stained-glass effect. */
+     *
+     *  <p>Returns ARGB with alpha=255 (full opacity) — the actual stained-glass
+     *  transparency lives in the geometry layer below: either the alpha-multiply
+     *  the model gen applies to mask-sprite quads ({@code multColouri(0xFF,0xFF,0xFF,76)}
+     *  in {@code generateTranslucentMutable}), or the 76-alpha pixels baked into
+     *  {@code overlay_stained.png} on the fallback path. Returning alpha=76 here as
+     *  well stacks a second multiplication on top of those, producing ~22 final alpha
+     *  (≈9%) — basically invisible, which matched the regression we just hit. The
+     *  1.12.2 path used a texture-alpha-only model; mirroring that here means the
+     *  tint contributes colour, not transparency. */
     private static final BlockTintSource PIPE_COLOUR_TINT = new BlockTintSource() {
         @Override
         public int color(BlockState state) {
-            return (OVERLAY_ALPHA << 24) | 0xFFFFFF; // semi-transparent white fallback
+            return 0xFFFFFFFF; // opaque white fallback (no colour, no alpha change)
         }
 
         @Override
         public int colorInWorld(BlockState state, BlockAndTintGetter level, BlockPos pos) {
             var be = level.getBlockEntity(pos);
-            if (!(be instanceof TilePipeHolder tile)) return (OVERLAY_ALPHA << 24) | 0xFFFFFF;
-            if (tile.getPipe() == null) return (OVERLAY_ALPHA << 24) | 0xFFFFFF;
+            if (!(be instanceof TilePipeHolder tile)) return 0xFFFFFFFF;
+            if (tile.getPipe() == null) return 0xFFFFFFFF;
             DyeColor colour = tile.getPipe().getModel().colour;
-            if (colour == null) return (OVERLAY_ALPHA << 24) | 0xFFFFFF;
-            return (OVERLAY_ALPHA << 24) | ColourUtil.getLightHex(colour);
+            if (colour == null) return 0xFFFFFFFF;
+            return 0xFF000000 | ColourUtil.getLightHex(colour);
         }
     };
 

@@ -25,7 +25,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 
@@ -489,17 +488,24 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                         breakTask.pos,
                         -1
                     );
-                    Optional<List<ItemStack>> stacks = BlockUtil.breakBlockAndGetDrops(
+                    // Tool tier and drop-routing both come from the tile so Builder and Filler
+                    // can apply their iron-tier nerf + custom drop destinations (invResources for
+                    // the Builder, adjacent non-pipe inventory else world for the Filler) without
+                    // SnapshotBuilder needing to know about either tile type.
+                    Optional<BlockUtil.BreakResult> result = BlockUtil.breakBlockAndGetDropsWithXp(
                         (ServerLevel) tile.getWorldBC(),
                         breakTask.pos,
-                        new ItemStack(Items.DIAMOND_PICKAXE),
+                        tile.getBreakingTool(),
                         tile.getOwner()
                     );
-                    // breakBlockAndGetDrops returns Optional.of(emptyList) for fluid sources
-                    // broken under CLEAR mode — the Optional is present (just holds no drops),
-                    // so isEmpty() here tests presence, not drop count. No refund, no cancel.
-                    if (stacks.isEmpty()) {
+                    // Returns Optional.of(emptyList) for fluid sources broken under CLEAR mode
+                    // — the Optional is present (just holds no drops), so isEmpty() here tests
+                    // presence, not drop count. No refund, no cancel.
+                    if (result.isEmpty()) {
                         cancelBreakTask(breakTask);
+                    } else {
+                        BlockUtil.BreakResult br = result.get();
+                        tile.onBlockBroken(breakTask.pos, br.drops(), br.xp(), br.capturedFluid());
                     }
                     if (check(breakTask.pos)) {
                         checkResultsChanged = true;

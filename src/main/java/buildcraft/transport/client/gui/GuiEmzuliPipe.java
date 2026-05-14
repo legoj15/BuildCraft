@@ -9,6 +9,10 @@ import net.minecraft.world.item.DyeColor;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.help.ElementHelpInfo;
+import buildcraft.lib.gui.ledger.LedgerHelp;
+import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.misc.ColourUtil;
 
 import buildcraft.transport.container.ContainerEmzuliPipe;
@@ -31,12 +35,32 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
         ICON_GUI.drawAt(mainGui.rootElement);
     }
 
+    // Filter slot positions (16×16) — match ContainerEmzuliPipe.
+    private static final int[][] FILTER_SLOTS = { {25, 21}, {25, 49}, {134, 21}, {134, 49} };
+    // Paint button positions (20×20) — match the addPaintButton calls below.
+    private static final int[][] PAINT_BUTTONS = { {49, 19}, {49, 47}, {106, 19}, {106, 47} };
+
     @Override
     protected void initGuiElements() {
         paintButtons[0] = addPaintButton(SlotIndex.SQUARE, 49, 19);
         paintButtons[1] = addPaintButton(SlotIndex.CIRCLE, 49, 47);
         paintButtons[2] = addPaintButton(SlotIndex.TRIANGLE, 106, 19);
         paintButtons[3] = addPaintButton(SlotIndex.CROSS, 106, 47);
+
+        mainGui.shownElements.add(new LedgerHelp(mainGui, false));
+        for (int[] pos : FILTER_SLOTS) {
+            mainGui.shownElements.add(new DummyHelpElement(
+                    new GuiRectangle(pos[0], pos[1], 16, 16).offset(mainGui.rootElement),
+                    new ElementHelpInfo("buildcraft.help.emzuli.filter.title", 0xFF_88_CC_FF,
+                            "buildcraft.help.emzuli.filter.desc")));
+        }
+        for (int[] pos : PAINT_BUTTONS) {
+            mainGui.shownElements.add(new DummyHelpElement(
+                    new GuiRectangle(pos[0], pos[1], 20, 20).offset(mainGui.rootElement),
+                    new ElementHelpInfo("buildcraft.help.emzuli.paint.title", 0xFF_DD_AA_FF,
+                            "buildcraft.help.emzuli.paint.desc1",
+                            "buildcraft.help.emzuli.paint.desc2")));
+        }
     }
 
     private PaintButton addPaintButton(SlotIndex index, int x, int y) {

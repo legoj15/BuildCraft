@@ -9,7 +9,7 @@
   ],
   "key": {
     "i": "#c:ingots/iron",
-    "G": "buildcraftunofficial:gear_stone"
+    "G": "#c:gears/stone"
   },
   "result": {
     "id": "buildcraftunofficial:gear_iron"

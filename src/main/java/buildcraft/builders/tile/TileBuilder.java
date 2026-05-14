@@ -881,6 +881,65 @@ public class TileBuilder extends TileBC_Neptune
         return tankManager;
     }
 
+    // Destruction-laser tier + drop routing ─────────────────────────────────────
+
+    /**
+     * Iron-pickaxe tier matches the {@code mining_well} ingredient that's nested in the Builder
+     * recipe (Builder → Filler → Mining Well). {@code NEEDS_DIAMOND_TOOL} blocks (obsidian,
+     * ancient debris, …) still destroy under this tool, they just don't drop anything — that
+     * matches the user-visible "destroy hard blocks" fallback the Builder needs for CLEAR mode.
+     */
+    @Override
+    public ItemStack getBreakingTool() {
+        return new ItemStack(net.minecraft.world.item.Items.IRON_PICKAXE);
+    }
+
+    /**
+     * Builder routing: drops go into {@link #invResources} via the same transactor pipes use, so
+     * the broken blocks stack with player-supplied resources for the place phase. Anything that
+     * doesn't fit spills into the world at the broken position — picking "spill at brokenPos"
+     * over "drop at builderPos" because the broken block is where players intuitively expect any
+     * uncaught items to appear. XP is spawned at the Builder block (parallel to Mining Well /
+     * Quarry convention) — players collect it at the machine they placed.
+     * <p>
+     * Captured fluid: only the CLEAR fluid mode can produce a non-empty {@code capturedFluid}
+     * here (NO_REPLACE skips fluid positions entirely; REPLACE handles them in the place phase
+     * via waterlog / destroy, not the break path). Under CLEAR we absorb the source into the
+     * Builder's tanks so the player gets the water/lava/oil back instead of it just vanishing.
+     * Tank-full overflow is silently dropped — spilling the fluid back at brokenPos would
+     * recreate exactly the block we just cleared, defeating CLEAR's purpose, and the tanks are
+     * generous enough (4 × 8 buckets = 32) that overflow in practice means "you need to plumb
+     * an output pipe."
+     */
+    @Override
+    public void onBlockBroken(BlockPos brokenPos, java.util.List<ItemStack> drops, int xp,
+            net.neoforged.neoforge.fluids.FluidStack capturedFluid) {
+        if (!(level instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
+        for (ItemStack stack : drops) {
+            if (stack.isEmpty()) continue;
+            ItemStack remaining = invResourcesTransactor.insert(stack.copy(), false, false);
+            if (!remaining.isEmpty()) {
+                net.minecraft.world.level.block.Block.popResource(serverLevel, brokenPos, remaining);
+            }
+        }
+        if (xp > 0) {
+            getBlockState().getBlock().popExperience(serverLevel, worldPosition, xp);
+        }
+        // Tank-absorb cleared fluid (CLEAR mode only). Defensive recheck on the mode here
+        // even though the break queue only admits fluids under CLEAR — keeps the contract
+        // local to this method so a future caller change can't accidentally tank-fill.
+        if (!capturedFluid.isEmpty() && getFluidMode() == buildcraft.builders.snapshot.EnumFluidHandlingMode.CLEAR) {
+            try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
+                    net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+                tankManager.insert(
+                        net.neoforged.neoforge.transfer.fluid.FluidResource.of(capturedFluid),
+                        capturedFluid.getAmount(),
+                        tx);
+                tx.commit();
+            }
+        }
+    }
+
     // MenuProvider
 
     @Override

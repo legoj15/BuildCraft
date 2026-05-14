@@ -501,6 +501,75 @@ public class TileFiller extends TileBC_Neptune
         return invResources;
     }
 
+    // ==================== Destruction-laser tier + drop routing ====================
+
+    /**
+     * Iron-pickaxe tier matches the {@code mining_well} ingredient in the Filler recipe.
+     * {@code NEEDS_DIAMOND_TOOL} blocks (obsidian, ancient debris, …) still destroy under this
+     * tool — they just don't drop anything, matching the Filler's "destroy hard blocks" fallback.
+     */
+    @Override
+    public ItemStack getBreakingTool() {
+        return new ItemStack(net.minecraft.world.item.Items.IRON_PICKAXE);
+    }
+
+    /**
+     * Filler routing: drops eject into the world unless a non-pipe inventory block is placed
+     * adjacent (any of the 6 faces), in which case insert there first. Pipes are explicitly
+     * skipped — they shuttle items away from the Filler, defeating the point of "destruction
+     * laser drops show up at your collection station next to the Filler." XP at the Filler block
+     * (parallel to Mining Well / Builder convention). Captured fluid is ignored — the Filler
+     * has no tanks, so a cleared water/lava source simply disappears.
+     */
+    @Override
+    public void onBlockBroken(BlockPos brokenPos, List<ItemStack> drops, int xp,
+            net.neoforged.neoforge.fluids.FluidStack capturedFluid) {
+        if (!(level instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
+        for (ItemStack stack : drops) {
+            if (stack.isEmpty()) continue;
+            ItemStack remaining = insertIntoAdjacentNonPipeInventory(serverLevel, stack.copy());
+            if (!remaining.isEmpty()) {
+                // Eject into the world at brokenPos (not the Filler) — matches the "you can
+                // collect drops where the block used to be" intuition for sweeping fillers.
+                net.minecraft.world.level.block.Block.popResource(serverLevel, brokenPos, remaining);
+            }
+        }
+        if (xp > 0) {
+            getBlockState().getBlock().popExperience(serverLevel, worldPosition, xp);
+        }
+    }
+
+    /** Try each of the 6 adjacent positions in shuffled order; insert via the standard item
+     *  handler capability but skip any block whose BE implements {@code IPipeHolder} so pipes
+     *  don't intercept Filler drops. Returns the leftover that didn't fit anywhere. */
+    private ItemStack insertIntoAdjacentNonPipeInventory(
+            net.minecraft.server.level.ServerLevel serverLevel, ItemStack stack) {
+        if (stack.isEmpty()) return ItemStack.EMPTY;
+        java.util.List<Direction> faces = new java.util.ArrayList<>(java.util.List.of(Direction.values()));
+        java.util.Collections.shuffle(faces);
+        net.neoforged.neoforge.transfer.item.ItemResource resource =
+                net.neoforged.neoforge.transfer.item.ItemResource.of(stack);
+        int remaining = stack.getCount();
+        for (Direction face : faces) {
+            if (remaining <= 0) break;
+            BlockPos adj = worldPosition.relative(face);
+            BlockEntity adjBe = serverLevel.getBlockEntity(adj);
+            // IPipeHolder skip: BC pipes shouldn't act as drop sinks for the Filler's destruction
+            // laser per the user's "non-pipe inventory block" requirement. Other mods' transport
+            // systems aren't recognized here — if a modded pipe registers Capabilities.Item.BLOCK
+            // it would still siphon, but that's a known edge case we accept.
+            if (adjBe instanceof buildcraft.api.transport.pipe.IPipeHolder) continue;
+            var handler = serverLevel.getCapability(
+                    net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK,
+                    adj, face.getOpposite());
+            if (handler == null) continue;
+            int inserted = net.neoforged.neoforge.transfer.ResourceHandlerUtil.insertStacking(
+                    handler, resource, remaining, null);
+            remaining -= inserted;
+        }
+        return remaining <= 0 ? ItemStack.EMPTY : stack.copyWithCount(remaining);
+    }
+
     // ==================== IPlayerOwned ====================
 
     @Override

@@ -16,6 +16,10 @@ import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.help.ElementHelpInfo;
+import buildcraft.lib.gui.ledger.LedgerHelp;
+import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.transport.container.ContainerDiamondWoodPipe;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond.FilterMode;
 
@@ -28,6 +32,11 @@ public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_ROUND_ROBIN_INDEX = new GuiIcon(TEXTURE, 176, 0, 20, 20);
     private static final GuiIcon ICON_ROUND_ROBIN_NONE = new GuiIcon(TEXTURE, 176, 20, 20, 20);
+
+    // Filter row matches ContainerDiamondWoodPipe slot layout: 9 slots at (8+i*18, 18).
+    private static final int FILTER_X = 8, FILTER_Y = 18, FILTER_W = 9 * 18 - 2, FILTER_H = 16;
+    // Mode buttons row — three 18×18 buttons at (7, 41) packed shoulder-to-shoulder.
+    private static final int MODE_X = 7, MODE_Y = 41, MODE_W = 18 * 3, MODE_H = 18;
 
     private FilterButton whiteListButton;
     private FilterButton blackListButton;
@@ -65,6 +74,17 @@ public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
             roundRobinButton = new FilterButton(bx + 36, by, FilterMode.ROUND_ROBIN, 55, 19, "tip.PipeItemsEmerald.roundrobin");
             addRenderableWidget(roundRobinButton);
         }
+
+        mainGui.shownElements.add(new LedgerHelp(mainGui, false));
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(FILTER_X, FILTER_Y, FILTER_W, FILTER_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.diamond_wood_pipe.filter.title", 0xFF_88_CC_FF,
+                        "buildcraft.help.diamond_wood_pipe.filter.desc1",
+                        "buildcraft.help.diamond_wood_pipe.filter.desc2")));
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(MODE_X, MODE_Y, MODE_W, MODE_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.diamond_wood_pipe.mode.title", 0xFF_FF_CC_88,
+                        "buildcraft.help.diamond_wood_pipe.mode.desc")));
     }
 
     private void setFilterMode(FilterMode mode) {

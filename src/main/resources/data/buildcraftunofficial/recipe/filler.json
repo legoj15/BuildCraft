@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "bmb",
+    "ywy",
+    "gcg"
+  ],
+  "key": {
+    "b": "#c:dyes/black",
+    "m": "buildcraftunofficial:marker_volume",
+    "y": "#c:dyes/yellow",
+    "w": "buildcraftunofficial:mining_well",
+    "g": "buildcraftunofficial:gear_gold",
+    "c": "minecraft:chest"
+  },
+  "result": {
+    "id": "buildcraftunofficial:filler"
+  }
+}

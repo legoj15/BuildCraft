@@ -20,6 +20,7 @@ import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -189,7 +190,28 @@ public class BlockUtil {
     }
 
     /**
+     * Bundle returned by {@link #breakBlockAndGetDropsWithXp}: the loot the block produced under
+     * the wielded tool, the XP the block would have awarded for that break, and (if the broken
+     * block was a {@link LiquidBlock} source) the captured fluid that the position no longer
+     * holds.
+     * <p>
+     * XP is captured here (rather than spawned at {@code pos}) so callers can re-anchor the orb
+     * at the machine that fired the laser. Doing it this way side-steps the duplication concerns
+     * a "spawn at pos then teleport to machine" approach has — the orb is only ever created at
+     * the machine's chosen location, with {@code Block.popExperience} / {@code ExperienceOrb.award}
+     * doing the splitting.
+     * <p>
+     * Captured fluid is reported (rather than auto-tanked) so the Builder can absorb 1000 mB per
+     * cleared source under CLEAR mode without other callers (Quarry / Filler / Stripes / Mining
+     * Well) inheriting the behaviour by accident. {@code capturedFluid} is empty for non-fluid
+     * blocks and for flowing (non-source) fluid breaks — flowing fluid is transient world-state
+     * with no meaningful volume to bucket up.
+     */
+    public record BreakResult(List<ItemStack> drops, int xp, FluidStack capturedFluid) {}
+
+    /**
      * Breaks a block in the world and returns its drops, or empty if the block could not be broken.
+     * Backwards-compatible wrapper around {@link #breakBlockAndGetDropsWithXp} that discards the XP.
      *
      * @param world  the server world
      * @param pos    the position of the block
@@ -199,15 +221,46 @@ public class BlockUtil {
      */
     public static Optional<List<ItemStack>> breakBlockAndGetDrops(
             ServerLevel world, BlockPos pos, @Nonnull ItemStack tool, GameProfile owner) {
+        return breakBlockAndGetDropsWithXp(world, pos, tool, owner).map(BreakResult::drops);
+    }
+
+    /**
+     * Like {@link #breakBlockAndGetDrops} but also returns the XP the wielded tool would have
+     * awarded. Callers spawn the orb wherever they want (e.g. the machine block instead of the
+     * broken position) — this helper never creates an orb itself.
+     */
+    public static Optional<BreakResult> breakBlockAndGetDropsWithXp(
+            ServerLevel world, BlockPos pos, @Nonnull ItemStack tool, GameProfile owner) {
         BlockState state = world.getBlockState(pos);
         if (state.isAir()) {
-            return Optional.of(List.of());
+            return Optional.of(new BreakResult(List.of(), 0, FluidStack.EMPTY));
         }
         if (state.getDestroySpeed(world, pos) < 0) {
             return Optional.empty();
         }
 
-        List<ItemStack> drops = new ArrayList<>(Block.getDrops(state, world, pos, world.getBlockEntity(pos)));
+        // Snapshot the BlockEntity BEFORE destroying — getDrops and getExpDrop both read it
+        // (sculk-family blocks compute XP off BE state, container blocks include contents in
+        // drops, etc.) and `world.destroyBlock` below clears the BE as a side effect.
+        BlockEntity be = world.getBlockEntity(pos);
+
+        // Pass `tool` through to the 6-arg getDrops so the loot context's TOOL parameter
+        // matches the wielded tool. The 4-arg overload defaults TOOL to ItemStack.EMPTY,
+        // which makes `minecraft:match_tool` conditions (iron ore needs stone+, diamond
+        // ore needs iron+, obsidian needs diamond, etc.) fail — so the block destroys
+        // but nothing drops. Vanilla `BreakBlock` does the same routing internally;
+        // 1.12.2's version achieved the same via a fake-player-wielding-tool path through
+        // canHarvestBlock + harvestBlock. Entity parameter is null — none of our machines
+        // are "the breaker" in a way the loot context cares about (e.g. THIS_ENTITY is
+        // only read by entity-specific drop rules like player kills).
+        List<ItemStack> drops = new ArrayList<>(
+                Block.getDrops(state, world, pos, be, (Entity) null, tool));
+
+        // XP via NeoForge's IBlockStateExtension.getExpDrop — delegates to
+        // block.getExpDrop(state, level, pos, blockEntity, breaker, tool). Same tool/breaker
+        // shape as getDrops above so tool-gated blocks return zero XP under an insufficient
+        // tool tier (parallel to the empty drops list — no harvest, no XP).
+        int xp = state.getExpDrop(world, pos, be, (Entity) null, tool);
 
         // Pure-fluid blocks (LiquidBlock instances — Blocks.WATER, Blocks.LAVA, BC oil/fuel,
         // etc.) need a hard setBlock(AIR), NOT world.destroyBlock(). Vanilla destroyBlock calls
@@ -220,12 +273,25 @@ public class BlockUtil {
         // particle / level-event side effects run; waterlogged blocks (block != LiquidBlock,
         // fluid via WATERLOGGED) are handled correctly by destroyBlock — the legacy-fluid
         // restore is the right call there because we're breaking the block, not the fluid.
+        // Capture sourced fluid before destroying. Source-only because flowing fluid is a
+        // transient steady-state expression of nearby sources — it has no "bucket volume" we
+        // can meaningfully extract. Callers that care (Builder under CLEAR) absorb this into
+        // their tanks; callers that don't (Quarry / Mining Well / Stripes / Filler) leave it
+        // in the result and let it fall on the floor.
+        FluidStack capturedFluid = FluidStack.EMPTY;
+        if (state.getBlock() instanceof LiquidBlock) {
+            FluidState fluidState = state.getFluidState();
+            if (!fluidState.isEmpty() && fluidState.isSource()) {
+                capturedFluid = new FluidStack(fluidState.getType(), 1000);
+            }
+        }
+
         if (state.getBlock() instanceof LiquidBlock) {
             world.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
         } else {
             world.destroyBlock(pos, false);
         }
 
-        return Optional.of(drops);
+        return Optional.of(new BreakResult(drops, xp, capturedFluid));
     }
 }

@@ -9,7 +9,7 @@
   ],
   "key": {
     "d": "#c:gems/diamond",
-    "G": "buildcraftunofficial:gear_gold"
+    "G": "#c:gears/gold"
   },
   "result": {
     "id": "buildcraftunofficial:gear_diamond"

@@ -10,6 +10,7 @@ import javax.annotation.Nonnull;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
@@ -51,14 +52,30 @@ public class TileMiningWell extends TileMiner {
                 progress = 0;
                 level.destroyBlockProgress(currentPos.hashCode(), currentPos, -1);
                 if (level instanceof ServerLevel serverLevel) {
-                    BlockUtil.breakBlockAndGetDrops(
+                    // Iron pickaxe matches the recipe ingredient. Combined with the
+                    // NEEDS_DIAMOND_TOOL gate in canBreak(), the well stops at obsidian /
+                    // ancient debris / netherite-tier blocks rather than chewing through
+                    // them yielding nothing — the loot context's match_tool condition
+                    // would otherwise fail and the block would destroy without drops.
+                    // breakBlockAndGetDropsWithXp captures the BlockEntity + BlockState
+                    // BEFORE destroying so XP / container-drops are computed correctly.
+                    BlockUtil.breakBlockAndGetDropsWithXp(
                         serverLevel,
                         currentPos,
-                        new ItemStack(Items.DIAMOND_PICKAXE),
+                        new ItemStack(Items.IRON_PICKAXE),
                         getOwner()
-                    ).ifPresent(stacks ->
-                        stacks.forEach(stack -> InventoryUtil.addToBestAcceptor(level, worldPosition, null, stack))
-                    );
+                    ).ifPresent(result -> {
+                        result.drops().forEach(stack ->
+                            InventoryUtil.addToBestAcceptor(level, worldPosition, null, stack));
+                        // Spawn XP at the well itself rather than the broken position. The orb
+                        // is only ever created at worldPosition — no "spawn-then-teleport"
+                        // tick-boundary window for duplication. popExperience uses
+                        // ExperienceOrb.award which splits the integer XP into multiple
+                        // appropriately-sized orbs and respects BLOCK_DROPS / restoringBlockSnapshots.
+                        if (result.xp() > 0) {
+                            getBlockState().getBlock().popExperience(serverLevel, worldPosition, result.xp());
+                        }
+                    });
                 }
                 nextPos();
             } else {
@@ -84,6 +101,17 @@ public class TileMiningWell extends TileMiner {
 
     private boolean canBreak() {
         if (level.isEmptyBlock(currentPos) || BlockUtil.isUnbreakableBlock(level, currentPos, getOwner())) {
+            return false;
+        }
+
+        // Iron-pickaxe tier limit. Anything with NEEDS_DIAMOND_TOOL (obsidian, ancient
+        // debris, netherite-family blocks, crying obsidian, respawn anchor, etc.) is
+        // refused — nextPos() then falls into its "impassable, stop" branch, mirroring
+        // how the well stops at lava/oil. Without this the well would drill through
+        // obsidian leaving no drops (the loot table's match_tool condition fails for
+        // anything below diamond-tier), which is misleading to the player.
+        BlockState state = level.getBlockState(currentPos);
+        if (state.is(BlockTags.NEEDS_DIAMOND_TOOL)) {
             return false;
         }
 

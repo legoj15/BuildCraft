@@ -24,6 +24,9 @@ import buildcraft.factory.container.ContainerTank;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.elem.GuiElementFluidTank;
+import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.help.ElementHelpInfo;
+import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
 public class GuiTank extends GuiBC8<ContainerTank> {
@@ -50,6 +53,14 @@ public class GuiTank extends GuiBC8<ContainerTank> {
                 menu.tile.tank,
                 menu.widgetTank,
                 ICON_TANK_OVERLAY
+            ));
+
+            mainGui.shownElements.add(new LedgerHelp(mainGui, false));
+            mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(TANK_X, TANK_Y, TANK_WIDTH, TANK_HEIGHT).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.tank.title.tankGeneric", 0xFF_55_AA_FF,
+                    "buildcraft.help.tank.generic_block.desc",
+                    "buildcraft.help.tank.generic")
             ));
         }
     }

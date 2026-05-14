@@ -14,6 +14,9 @@ import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.help.ElementHelpInfo;
+import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
 import buildcraft.silicon.container.ContainerIntegrationTable;
@@ -25,6 +28,11 @@ public class GuiIntegrationTable extends GuiBC8<ContainerIntegrationTable> {
     private static final GuiIcon ICON_PROGRESS = new GuiIcon(TEXTURE_BASE, SIZE_X, 0, 4, 70);
     private static final GuiRectangle RECT_PROGRESS = new GuiRectangle(164, 22, 4, 70);
 
+    // Help regions — match ContainerIntegrationTable's 3×3 input grid at (19, 24), pitch 25.
+    private static final int INPUT_X = 19, INPUT_Y = 24, INPUT_W = 3 * 25 - 9, INPUT_H = 3 * 25 - 9;
+    // Display + output slots span (101, 36) → (138+16, 49+16). One block covers both.
+    private static final int OUTPUT_X = 101, OUTPUT_Y = 36, OUTPUT_W = 138 + 16 - 101, OUTPUT_H = 49 + 16 - 36;
+
     public GuiIntegrationTable(ContainerIntegrationTable container, Inventory playerInventory, Component title) {
         super(container, playerInventory, title, SIZE_X, SIZE_Y);
     }
@@ -32,6 +40,20 @@ public class GuiIntegrationTable extends GuiBC8<ContainerIntegrationTable> {
     @Override
     protected void initGuiElements() {
         mainGui.shownElements.add(new LedgerTablePower(mainGui, menu.tile, true));
+
+        mainGui.shownElements.add(new LedgerHelp(mainGui, false));
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(INPUT_X, INPUT_Y, INPUT_W, INPUT_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.integration_table.input.title", 0xFF_FF_CC_88,
+                        "buildcraft.help.integration_table.input.desc")));
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(OUTPUT_X, OUTPUT_Y, OUTPUT_W, OUTPUT_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.integration_table.output.title", 0xFF_88_CC_88,
+                        "buildcraft.help.integration_table.output.desc")));
+        mainGui.shownElements.add(new DummyHelpElement(
+                RECT_PROGRESS.offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.integration_table.power.title", 0xFF_DD_AA_FF,
+                        "buildcraft.help.integration_table.power.desc")));
     }
 
     @Override

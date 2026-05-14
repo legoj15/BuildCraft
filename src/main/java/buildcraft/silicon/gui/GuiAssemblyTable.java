@@ -16,6 +16,9 @@ import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.help.ElementHelpInfo;
+import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.gui.pos.IGuiArea;
 
@@ -32,6 +35,10 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
     private static final GuiIcon ICON_PROGRESS = new GuiIcon(TEXTURE_BASE, SIZE_X, 48, 4, 70);
     private static final GuiRectangle RECT_PROGRESS = new GuiRectangle(86, 36, 4, 70);
 
+    // Help regions — mirror ContainerAssemblyTable slot layout (3×4 grid at (8,36) and (116,36), 18px pitch).
+    private static final int INPUT_X = 8, INPUT_Y = 36, INPUT_W = 3 * 18 - 2, INPUT_H = 4 * 18 - 2;
+    private static final int RECIPES_X = 116, RECIPES_Y = 36, RECIPES_W = 3 * 18 - 2, RECIPES_H = 4 * 18 - 2;
+
     public GuiAssemblyTable(ContainerAssemblyTable container, Inventory playerInventory, Component title) {
         super(container, playerInventory, title, SIZE_X, SIZE_Y);
     }
@@ -39,6 +46,21 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
     @Override
     protected void initGuiElements() {
         mainGui.shownElements.add(new LedgerTablePower(mainGui, menu.tile, true));
+
+        mainGui.shownElements.add(new LedgerHelp(mainGui, false));
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(INPUT_X, INPUT_Y, INPUT_W, INPUT_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.assembly_table.input.title", 0xFF_FF_CC_88,
+                        "buildcraft.help.assembly_table.input.desc")));
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(RECIPES_X, RECIPES_Y, RECIPES_W, RECIPES_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.assembly_table.recipes.title", 0xFF_88_CC_88,
+                        "buildcraft.help.assembly_table.recipes.desc1",
+                        "buildcraft.help.assembly_table.recipes.desc2")));
+        mainGui.shownElements.add(new DummyHelpElement(
+                RECT_PROGRESS.offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.assembly_table.power.title", 0xFF_DD_AA_FF,
+                        "buildcraft.help.assembly_table.power.desc")));
     }
 
     @Override

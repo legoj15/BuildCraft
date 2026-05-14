@@ -94,6 +94,17 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
                         "buildcraft.help.filler.invert.desc").target(this));
             }
         });
+
+        // Pattern slot help (32×32 at 12,32) and 4 param slots (18×18 at 53+18i, 39) — same geometry as GuiFiller.
+        mainGui.shownElements.add(new buildcraft.lib.gui.help.DummyHelpElement(
+                new GuiRectangle(12, 32, 32, 32).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.filler.pattern.title", 0xFF_88_CC_88,
+                        "buildcraft.help.filler.pattern.desc1",
+                        "buildcraft.help.filler.pattern.desc2")));
+        mainGui.shownElements.add(new buildcraft.lib.gui.help.DummyHelpElement(
+                new GuiRectangle(53, 39, 4 * 18, 18).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.filler.params.title", 0xFF_DD_AA_FF,
+                        "buildcraft.help.filler.params.desc")));
     }
 
     @Override

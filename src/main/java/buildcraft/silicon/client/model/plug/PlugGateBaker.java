@@ -191,21 +191,30 @@ public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
         return uv;
     }
 
-    /** UV mapping for NORTH-facing item geometry (X↔Z swapped from in-world). */
+    /**
+     * UV mapping for NORTH-facing item geometry. The box is wide in X (6/16)
+     * and Y (6/16) but thin in Z (2/16), so three branches are needed:
+     * front/back use the 6x6 face region; WEST/EAST edges use a 2x6 strip
+     * with the thin axis on U; UP/DOWN edges use a 6x2 strip with the thin
+     * axis on V (since ModelUtil maps U to X and V to Z for the top face).
+     */
     private static ModelUtil.UvFaceData makeGateItemUVs(Direction face) {
         ModelUtil.UvFaceData uv = new ModelUtil.UvFaceData();
         if (face == Direction.NORTH || face == Direction.SOUTH) {
-            // Big front/back faces
             uv.minU = 5f / 16f;
             uv.maxU = 11f / 16f;
             uv.minV = 5f / 16f;
             uv.maxV = 11f / 16f;
-        } else {
-            // Thin edge faces
+        } else if (face == Direction.WEST || face == Direction.EAST) {
             uv.minU = 2f / 16f;
             uv.maxU = 4f / 16f;
             uv.minV = 5f / 16f;
             uv.maxV = 11f / 16f;
+        } else {
+            uv.minU = 5f / 16f;
+            uv.maxU = 11f / 16f;
+            uv.minV = 2f / 16f;
+            uv.maxV = 4f / 16f;
         }
         return uv;
     }

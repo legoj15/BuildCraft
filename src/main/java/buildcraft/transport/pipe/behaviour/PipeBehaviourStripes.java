@@ -171,12 +171,21 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
                         world.destroyBlockProgress(offsetHash, offset, (int) (progress * 9 / target));
                     }
                 } else {
-                    BlockUtil.breakBlockAndGetDrops(
+                    BlockUtil.breakBlockAndGetDropsWithXp(
                         (ServerLevel) world,
                         offset,
                         new ItemStack(Items.DIAMOND_PICKAXE),
                         pipe.getHolder().getOwner()
-                    ).ifPresent(stacks -> stacks.forEach(stack -> sendItem(stack, direction)));
+                    ).ifPresent(result -> {
+                        result.drops().forEach(stack -> sendItem(stack, direction));
+                        // XP at the broken-block position rather than the pipe — the stripes
+                        // pipe is a thin transient digger, the player is usually right where
+                        // the block was, and there's no "machine block" the orb should follow.
+                        if (result.xp() > 0) {
+                            world.getBlockState(offset).getBlock()
+                                .popExperience((ServerLevel) world, offset, result.xp());
+                        }
+                    });
                     progress = 0;
                 }
             }

@@ -8,6 +8,8 @@ import net.minecraft.client.input.MouseButtonEvent;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.gui.pos.IGuiArea;
 import buildcraft.lib.gui.statement.GuiElementStatement;
@@ -48,7 +50,42 @@ public class GuiGate extends GuiBC8<ContainerGate> {
 
         // Help ledger — left side, matching 1.12.2
         mainGui.shownElements.add(new buildcraft.lib.gui.ledger.LedgerHelp(mainGui, false));
-        
+
+        // Help regions — one column-wide rect per role per pair, covering all rows in that pair.
+        int totalHeight = verticalSlotCount * 18;
+        int rowBaseY = 16;
+        for (int col = 0; col < horizontalSlotCount; col++) {
+            int baseX = slotPairStart + 7 + col * (18 + slotPairWidth);
+            int actionStartX = baseX + 18 * (2 + numTriggerArgs);
+
+            mainGui.shownElements.add(new DummyHelpElement(
+                    new GuiRectangle(baseX, rowBaseY, 18, totalHeight).offset(mainGui.rootElement),
+                    new ElementHelpInfo("buildcraft.help.gate.trigger.title", 0xFF_FF_88_88,
+                            "buildcraft.help.gate.trigger.desc1",
+                            "buildcraft.help.gate.trigger.desc2")));
+            if (numTriggerArgs > 0) {
+                mainGui.shownElements.add(new DummyHelpElement(
+                        new GuiRectangle(baseX + 18, rowBaseY, 18 * numTriggerArgs, totalHeight).offset(mainGui.rootElement),
+                        new ElementHelpInfo("buildcraft.help.gate.params.title", 0xFF_DD_AA_FF,
+                                "buildcraft.help.gate.params.desc")));
+            }
+            mainGui.shownElements.add(new DummyHelpElement(
+                    new GuiRectangle(baseX + 18 * (1 + numTriggerArgs), rowBaseY, 18, totalHeight).offset(mainGui.rootElement),
+                    new ElementHelpInfo("buildcraft.help.gate.connection.title", 0xFF_88_FF_AA,
+                            "buildcraft.help.gate.connection.desc")));
+            mainGui.shownElements.add(new DummyHelpElement(
+                    new GuiRectangle(actionStartX, rowBaseY, 18, totalHeight).offset(mainGui.rootElement),
+                    new ElementHelpInfo("buildcraft.help.gate.action.title", 0xFF_88_CC_FF,
+                            "buildcraft.help.gate.action.desc1",
+                            "buildcraft.help.gate.action.desc2")));
+            if (numActionArgs > 0) {
+                mainGui.shownElements.add(new DummyHelpElement(
+                        new GuiRectangle(actionStartX + 18, rowBaseY, 18 * numActionArgs, totalHeight).offset(mainGui.rootElement),
+                        new ElementHelpInfo("buildcraft.help.gate.params.title", 0xFF_DD_AA_FF,
+                                "buildcraft.help.gate.params.desc")));
+            }
+        }
+
         // Triggers possible
         mainGui.shownElements.add(new GuiElementStatementSource<>(mainGui, true, menu.possibleTriggersContext));
         // Actions possible

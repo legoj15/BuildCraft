@@ -1071,16 +1071,30 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             }
             level.destroyBlockProgress(breakPos.hashCode(), breakPos, -1);
             if (level instanceof ServerLevel serverLevel) {
-                Optional<List<ItemStack>> stacks = BlockUtil.breakBlockAndGetDrops(
+                // Diamond-pickaxe tier — quarry chews through obsidian, ancient debris, the lot.
+                // Destruction-laser blocks (above the mining surface) and mining-laser blocks
+                // (the proper mining column) share this code path; per the user's spec, both
+                // tiers route drops "as if mined by the rig itself," i.e. through the same
+                // addToBestAcceptor pipeline the quarry already uses for its harvest.
+                Optional<BlockUtil.BreakResult> result = BlockUtil.breakBlockAndGetDropsWithXp(
                     serverLevel, breakPos, new ItemStack(Items.DIAMOND_PICKAXE), getOwner()
                 );
-                if (stacks.isPresent()) {
+                if (result.isPresent()) {
                     if (drillPos != null) {
-                        stacks.get().forEach(stack -> InventoryUtil.addToBestAcceptor(level, worldPosition, null, stack));
+                        result.get().drops().forEach(stack ->
+                            InventoryUtil.addToBestAcceptor(level, worldPosition, null, stack));
+                    }
+                    // XP at the Quarry block itself rather than the broken position — matches
+                    // the Mining Well / Builder / Filler convention so players collect XP at the
+                    // machine they placed. Block.popExperience splits the integer into multiple
+                    // orbs at one location and respects BLOCK_DROPS / restoringBlockSnapshots.
+                    int xp = result.get().xp();
+                    if (xp > 0) {
+                        getBlockState().getBlock().popExperience(serverLevel, worldPosition, xp);
                     }
                 }
                 check(breakPos);
-                return stacks.isPresent();
+                return result.isPresent();
             }
             return false;
         }

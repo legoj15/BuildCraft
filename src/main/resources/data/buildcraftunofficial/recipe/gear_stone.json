@@ -8,8 +8,8 @@
     " c "
   ],
   "key": {
-    "c": "#c:cobblestones/normal",
-    "G": "buildcraftunofficial:gear_wood"
+    "c": "#c:cobblestones",
+    "G": "#c:gears/wooden"
   },
   "result": {
     "id": "buildcraftunofficial:gear_stone"

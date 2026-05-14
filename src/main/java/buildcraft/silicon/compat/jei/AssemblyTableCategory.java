@@ -9,6 +9,7 @@ package buildcraft.silicon.compat.jei;
 import java.util.List;
 
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
+import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.helpers.IGuiHelper;
@@ -99,6 +100,7 @@ public class AssemblyTableCategory extends AbstractRecipeCategory<AssemblyRecipe
     public void setRecipe(IRecipeLayoutBuilder builder, AssemblyRecipeJei recipe, IFocusGroup focuses) {
         List<List<ItemStack>> inputs = recipe.inputSlots();
         int inputCount = Math.min(inputs.size(), MAX_INPUT_SLOTS);
+        IRecipeSlotBuilder[] inputSlotBuilders = new IRecipeSlotBuilder[inputCount];
         for (int i = 0; i < inputCount; i++) {
             List<ItemStack> slot = inputs.get(i);
             if (slot.isEmpty()) continue;
@@ -106,13 +108,25 @@ public class AssemblyTableCategory extends AbstractRecipeCategory<AssemblyRecipe
             int row = i / 3;
             int x = SLOT_X + col * SLOT_PITCH;
             int y = SLOT_Y + row * SLOT_PITCH;
-            builder.addInputSlot(x, y).addItemStacks(slot);
+            inputSlotBuilders[i] = builder.addInputSlot(x, y).addItemStacks(slot);
         }
 
+        IRecipeSlotBuilder outputSlotBuilder = null;
         if (!recipe.outputs().isEmpty()) {
-            builder.addOutputSlot(OUTPUT_X, OUTPUT_Y)
+            outputSlotBuilder = builder.addOutputSlot(OUTPUT_X, OUTPUT_Y)
                     .setOutputSlotBackground()
                     .addItemStacks(recipe.outputs());
+        }
+
+        // Focus-link the cycling block slot to the output slot for the facade
+        // recipes: without this, a focus on a specific block (e.g. JEI "see
+        // uses" on leaves) narrows only the input slot, leaving the output to
+        // cycle through every facade and pair leaves with the wrong variant.
+        int linkIdx = recipe.focusLinkInputIndex();
+        if (linkIdx >= 0 && linkIdx < inputCount
+                && inputSlotBuilders[linkIdx] != null
+                && outputSlotBuilder != null) {
+            builder.createFocusLink(inputSlotBuilders[linkIdx], outputSlotBuilder);
         }
     }
 }

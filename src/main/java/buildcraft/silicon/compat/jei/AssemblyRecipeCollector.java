@@ -8,6 +8,7 @@ package buildcraft.silicon.compat.jei;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import net.minecraft.core.Holder;
@@ -21,6 +22,7 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.recipes.AssemblyRecipe;
 import buildcraft.api.recipes.IngredientStack;
 
+import buildcraft.lib.misc.ItemStackKey;
 import buildcraft.lib.recipe.AssemblyRecipeRegistry;
 
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
@@ -33,12 +35,16 @@ import buildcraft.silicon.recipe.FacadeAssemblyRecipes;
  *
  * <p>Two paths:
  * <ul>
- *   <li>{@link FacadeAssemblyRecipes} → exactly ONE entry whose two input
- *       slots and one output slot each carry a list-of-stacks. JEI's native
- *       slot-cycling (via {@code addItemStacks(List)}) renders this as one
- *       browsable recipe with cycling source-block input and cycling facade
- *       output, instead of the ~5,000 separate entries a naive port would
- *       produce.</li>
+ *   <li>{@link FacadeAssemblyRecipes} → TWO entries (basic + hollow) whose
+ *       input block slot and output slot are equal-length, deduplicated lists.
+ *       JEI's slot-cycling shares one global index per recipe layout and picks
+ *       {@code list.get(index % list.size())} per slot, so the two slots only
+ *       stay paired when their lists have the same length and no adjacent
+ *       duplicates that JEI's normalised-stack cache could collapse. Iterating
+ *       {@link FacadeStateManager#validFacadeStates} once and keying by
+ *       {@link ItemStackKey} produces one block-stack per unique source item,
+ *       paired with one representative facade variant, keeping the JEI index
+ *       count at (non-facade outputs + 2) instead of thousands.</li>
  *   <li>Every other recipe → one entry per {@code getOutputPreviews()} stack,
  *       with input slots gathered from {@code getInputsFor(output)} and the
  *       MJ cost from {@code getRequiredMicroJoulesFor(output)}.</li>
@@ -55,10 +61,7 @@ public final class AssemblyRecipeCollector {
 
         for (AssemblyRecipe recipe : AssemblyRecipeRegistry.REGISTRY.values()) {
             if (recipe instanceof FacadeAssemblyRecipes facade) {
-                AssemblyRecipeJei facadeEntry = collectFacade(facade);
-                if (facadeEntry != null) {
-                    out.add(facadeEntry);
-                }
+                out.addAll(collectFacade(facade));
                 continue;
             }
             collectStandard(recipe, out);
@@ -99,7 +102,7 @@ public final class AssemblyRecipeCollector {
         }
     }
 
-    private static AssemblyRecipeJei collectFacade(FacadeAssemblyRecipes facade) {
+    private static List<AssemblyRecipeJei> collectFacade(FacadeAssemblyRecipes facade) {
         // Slot 0: 3x structure pipe (the base requirement, fixed across every facade).
         // We don't try to fall back to the cobblestone-wall placeholder used inside
         // FacadeAssemblyRecipes — if structure pipe isn't registered, JEI would
@@ -107,33 +110,48 @@ public final class AssemblyRecipeCollector {
         net.minecraft.world.item.Item structurePipe = BuiltInRegistries.ITEM.getValue(
                 Identifier.parse("buildcraftunofficial:pipe_structure"));
         if (structurePipe == Items.AIR) {
-            return null;
+            return List.of();
         }
         List<ItemStack> baseSlot = List.of(new ItemStack(structurePipe, 3));
 
-        // Slot 1 (block) and the output column (basic + hollow facade) cycle
-        // in step. Doubling each block on the input side mirrors the
-        // FacadeAssemblyRecipes.getRecipeInputs() pairing so input-block N
-        // is on screen at the same time as both facade variants of N.
-        List<ItemStack> blockSlot = new ArrayList<>();
-        List<ItemStack> outputs = new ArrayList<>();
+        // Dedup by source ItemStack: validFacadeStates is keyed by BlockState,
+        // so multi-state blocks (e.g. furnace = 8 states) appear many times with
+        // the same requiredStack. Adjacent duplicates in the block slot get
+        // collapsed by JEI's NormalizedTypedItemStack cache, leaving the block
+        // slot's effective length shorter than the output slot's — and since
+        // JEI's CycleTicker is shared but each slot uses (index % list.size()),
+        // mismatched lengths desync the cycle. One representative facade per
+        // unique source item keeps both lists the same length.
+        LinkedHashMap<ItemStackKey, FacadeBlockStateInfo> uniqueBlocks = new LinkedHashMap<>();
         for (FacadeBlockStateInfo info : FacadeStateManager.validFacadeStates.values()) {
             if (!info.isVisible) continue;
             if (info.requiredStack.isEmpty()) continue;
-            blockSlot.add(info.requiredStack.copy());
-            blockSlot.add(info.requiredStack.copy());
-            outputs.add(FacadeAssemblyRecipes.createFacadeStack(info, false));
-            outputs.add(FacadeAssemblyRecipes.createFacadeStack(info, true));
+            uniqueBlocks.putIfAbsent(new ItemStackKey(info.requiredStack), info);
         }
-        if (outputs.isEmpty()) {
-            return null;
+        if (uniqueBlocks.isEmpty()) {
+            return List.of();
         }
 
-        return new AssemblyRecipeJei(
-                facade.getRegistryName(),
-                List.of(baseSlot, blockSlot),
-                outputs,
-                64L * MjAPI.MJ
+        List<ItemStack> blockSlot = new ArrayList<>(uniqueBlocks.size());
+        List<ItemStack> basicOutputs = new ArrayList<>(uniqueBlocks.size());
+        List<ItemStack> hollowOutputs = new ArrayList<>(uniqueBlocks.size());
+        for (FacadeBlockStateInfo info : uniqueBlocks.values()) {
+            blockSlot.add(info.requiredStack.copy());
+            basicOutputs.add(FacadeAssemblyRecipes.createFacadeStack(info, false));
+            hollowOutputs.add(FacadeAssemblyRecipes.createFacadeStack(info, true));
+        }
+
+        long mjCost = 64L * MjAPI.MJ;
+        List<List<ItemStack>> inputSlots = List.of(baseSlot, blockSlot);
+        // focusLinkInputIndex=1 ties the block input slot (slot 1, not the
+        // structure-pipe base at slot 0) to the output slot, so that when the
+        // user opens JEI focused on a specific block — e.g. "see uses" on
+        // leaves — the output slot stays pinned to that block's facade
+        // instead of cycling independently and pairing leaves with the
+        // emerald-ore facade. See JEI's createFocusLink javadoc.
+        return List.of(
+                new AssemblyRecipeJei(facade.getRegistryName() + ":basic", inputSlots, basicOutputs, mjCost, 1),
+                new AssemblyRecipeJei(facade.getRegistryName() + ":hollow", inputSlots, hollowOutputs, mjCost, 1)
         );
     }
 

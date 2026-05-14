@@ -10,6 +10,7 @@
     "buildcraft.guide.page.registry_overview": "Json Registry Overview",
     "buildcraft.guide.page.json_insn_format": "Json Instruction File Format",
     "buildcraft.guide.page.guide_page_format": "Guide Page File Format",
+    "buildcraft.guide.page.pipe_wires": "Pipe Wires",
     "buildcraft.guide.not_available": "Guide book not yet available.",
     "buildcraft_guide_book.reloaded": "Guide Book Reloaded",
     "buildcraft.guide.too_many_results": "Too many results to display: %s",

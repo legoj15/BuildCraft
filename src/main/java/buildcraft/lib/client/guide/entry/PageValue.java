@@ -17,12 +17,26 @@ public class PageValue<T> {
     public final T value;
 
     public PageValue(PageValueType<T> type, T value) {
+        this(type, value, null);
+    }
+
+    public PageValue(PageValueType<T> type, T value, @Nullable String titleOverride) {
         this.type = type;
-        this.title = type.getTitle(value);
+        this.title = titleOverride != null ? titleOverride : type.getTitle(value);
         this.value = value;
     }
 
     public static String getTitle(JsonObject json) {
+        String override = getTitleOverride(json);
+        return override != null ? override : "untitled";
+    }
+
+    /** Reads the optional `title` / `title_raw` field from a page-entry JSON, returning
+     *  null when neither is present. Lets entry types whose default {@code getTitle}
+     *  pulls from elsewhere (e.g. {@link PageEntryItemStack} reading the item's hover
+     *  name) accept an explicit override without disturbing existing defaults. */
+    @Nullable
+    public static String getTitleOverride(JsonObject json) {
         // Mirrors 1.12.2's JsonUtil.getTextComponent(json, "title", "buildcraft.guide.page.").
         // The "title" field is a translation-key suffix; the prefix is prepended and the
         // result is localized. "title_raw" bypasses localization. If no translation exists
@@ -36,7 +50,7 @@ public class PageValue<T> {
         if (json.has("title_raw")) {
             return json.get("title_raw").getAsString();
         }
-        return "untitled";
+        return null;
     }
 
     /** @param test An unknown object.

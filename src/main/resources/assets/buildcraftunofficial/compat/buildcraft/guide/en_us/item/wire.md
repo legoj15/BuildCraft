@@ -6,8 +6,6 @@ Pipe Wire: Travels indefinitely, Can carry lots of signals per pipe and is avail
 A Pipe Wire is a pipe pluggable system used to transmit signals indefinitely data along a pipe system.
 </no_lore>
 
-<recipes stack="buildcraftunofficial:wire_white"/>
-
 <chapter name="Wire Mechanics"/>
 A Gate is used to provide a signal to a pipe wire which is transmitted to other connected pipe wires of the same colour.
 A signal can only be On or Off and will travel over an indefinite distance (unlike redstone).
@@ -19,4 +17,25 @@ They can connect to other wires of the same colour over different pipes even if 
 
 <link to="buildcraft:pipe_signals"/>
 
-<usages stack="buildcraftunofficial:wire_white"/>
+<chapter name="Available Colours"/>
+Every dye colour gets its own pipe wire item. The recipe is identical across colours — only the dye changes — so the assembly table cost is the same for every shade.
+<link to="buildcraftunofficial:wire_white" type="item_stack"/>
+<link to="buildcraftunofficial:wire_orange" type="item_stack"/>
+<link to="buildcraftunofficial:wire_magenta" type="item_stack"/>
+<link to="buildcraftunofficial:wire_light_blue" type="item_stack"/>
+<link to="buildcraftunofficial:wire_yellow" type="item_stack"/>
+<link to="buildcraftunofficial:wire_lime" type="item_stack"/>
+<link to="buildcraftunofficial:wire_pink" type="item_stack"/>
+<link to="buildcraftunofficial:wire_gray" type="item_stack"/>
+<link to="buildcraftunofficial:wire_light_gray" type="item_stack"/>
+<link to="buildcraftunofficial:wire_cyan" type="item_stack"/>
+<link to="buildcraftunofficial:wire_purple" type="item_stack"/>
+<link to="buildcraftunofficial:wire_blue" type="item_stack"/>
+<link to="buildcraftunofficial:wire_brown" type="item_stack"/>
+<link to="buildcraftunofficial:wire_green" type="item_stack"/>
+<link to="buildcraftunofficial:wire_red" type="item_stack"/>
+<link to="buildcraftunofficial:wire_black" type="item_stack"/>
+
+<recipes stack="buildcraftunofficial:wire_orange"/>
+
+<usages stack="buildcraftunofficial:wire_orange"/>

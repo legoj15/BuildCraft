@@ -33,13 +33,13 @@ import "buildcraftunofficial:util" "buildcraftunofficial:main"
 
 // ---- Blocks / Automation -------------------------------------------------
 block_auto "autoworkbench_item"
+block_auto "builder"
 block_auto "chute"
+block_auto "filler"
 place "advanced_crafting_table" "block" "automation"
 place "architect"               "block" "automation"
 place "assembly_table"          "block" "automation"
-place "builder"                 "block" "automation"
 place "debugger"                "block" "automation"
-place "filler"                  "block" "automation"
 place "filler_planner"          "block" "automation"
 place "filtered_buffer"         "block" "automation"
 place "integration_table"       "block" "automation"
@@ -67,7 +67,7 @@ place "laser"           "block" "laser"
 
 // ---- Blocks / Mining -----------------------------------------------------
 block_mining "mining_well"
-place "quarry"          "block" "mining"
+block_mining "quarry"
 
 // ---- Blocks / Refining ---------------------------------------------------
 block_refining "distiller"
@@ -148,9 +148,22 @@ place "guide_note"      "item" "tool"
 place "map_location"    "item" "tool"
 
 // ---- Items / Wires -------------------------------------------------------
-// Single shared wire page (file at item/wire.md). Register under the white
-// wire stack as the representative entry for the whole wire family.
-item_stack "item" "wire" "wire" "buildcraftunofficial:wire_white"
+// Single shared wire page (file at item/wire.md). The page is the general
+// "Pipe Wires" overview for the whole wire family; the orange wire is used as
+// the entry icon (clearly visible against the book background, where white
+// blends in) and the title is overridden to "Pipe Wires" so the TOC reads as
+// the family entry rather than a per-colour leaf. The `book` field is hard-
+// coded rather than templated as ${0} because the ${N} substitutions only run
+// on imported files (util.txt sees the import arg as ${0}); guide.txt itself
+// has no `~args` declaration so ${0} would be left as a literal.
+add "item/wire" `{
+    "type": "item_stack",
+    "book": "buildcraftunofficial:main",
+    "tag_type": "item",
+    "tag_subtype": "wire",
+    "stack": "buildcraftunofficial:wire_orange",
+    "title": "pipe_wires"
+}`
 
 // ===========================================================================
 // PIPES

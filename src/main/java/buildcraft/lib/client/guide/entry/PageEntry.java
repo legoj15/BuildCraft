@@ -18,7 +18,7 @@ public final class PageEntry<T> extends PageValue<T> {
     }
 
     public PageEntry(PageValueType<T> type, Identifier name, JsonObject json, T value) {
-        super(type, value);
+        super(type, value, PageValue.getTitleOverride(json));
         // Read book identifier from JSON
         this.book = json.has("book")
             ? Identifier.parse(json.get("book").getAsString())

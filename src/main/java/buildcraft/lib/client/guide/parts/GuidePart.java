@@ -126,7 +126,10 @@ public abstract class GuidePart {
         // matching how text segments already work.
         int iconX = _x - 18;
         int iconY = y + current.pixel - 5;
-        GuiRectangle iconRect = (icon != null) ? new GuiRectangle(iconX, iconY, 16, 16) : null;
+        // Hit rect spans [_x - 20, _x] to match the highlight's leftward extent and to
+        // meet the first text segment's expanded rect at _x — closing the dead strip
+        // that used to sit between icon and text. Icon is still DRAWN at iconX (16×16).
+        GuiRectangle iconRect = (icon != null) ? new GuiRectangle(_x - 20, iconY, 20, 16) : null;
         boolean iconVisibleHere = (icon != null) && (current.page == pageRenderIndex);
 
         didRender = false;
@@ -149,7 +152,10 @@ public abstract class GuidePart {
             // start icon's range (_y-5 to _y+11) so the highlight matches the icon and
             // adjacent TOC entries (16 px apart) are flush.
             int rowTop = _y - 5;
-            GuiRectangle rect = new GuiRectangle(_x, rowTop, _w, LINE_HEIGHT);
+            // Hit rect inflated by 2 px on each side to match the highlight's horizontal
+            // padding (see fill bounds below). With the icon rect now ending at _x and
+            // this rect starting at _x - 2, the two overlap by 2 px and leave no gap.
+            GuiRectangle rect = new GuiRectangle(_x - 2, rowTop, _w + 4, LINE_HEIGHT);
             boolean rendered = cursor.page == pageRenderIndex;
             segments.add(new WrapSegment(text, rect, _y, rowTop, _w, rendered));
 
@@ -211,7 +217,13 @@ public abstract class GuidePart {
             }
         }
         didRender = drewAny;
-        if (entryHovered) {
+        // Tooltip is gated on didRender: the hit-test above intentionally isn't page-
+        // gated (click handling reuses the same rects via pageRenderIndex=-1 and
+        // filters by `pos.page == index` at the caller), which means an entry on the
+        // opposite page still produces entryHovered==true when the mouse is at the
+        // same y inside the other page's column. Without this gate the right-page
+        // entry's tooltip would surface while the user is mousing over the left page.
+        if (entryHovered && didRender) {
             renderTooltip();
         }
 

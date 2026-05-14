@@ -33,6 +33,8 @@ import buildcraft.silicon.gate.EnumGateModifier;
 import buildcraft.silicon.gate.GateVariant;
 import buildcraft.silicon.recipe.FacadeAssemblyRecipes;
 
+import buildcraft.transport.BCTransportItems;
+
 public class BCSiliconRecipes {
 
     public static void init() {
@@ -40,6 +42,7 @@ public class BCSiliconRecipes {
         registerGateAssemblyRecipes();
         registerChipsetRecipes();
         registerLensRecipes();
+        registerWireRecipes();
         registerGateCopierRecipe();
         registerFacadeRecipes();
     }
@@ -176,6 +179,47 @@ public class BCSiliconRecipes {
         input = ImmutableSet.of(glass, new IngredientStack(Ingredient.of(Blocks.IRON_BARS)));
         AssemblyRecipeRegistry.register(
             new AssemblyRecipeBasic("lens-filter", 500 * MjAPI.MJ, input, output));
+    }
+
+    // --- Wire Recipes ---
+
+    private static void registerWireRecipes() {
+        // 1.12.2 parity: assembly-table recipe per colour, dye + redstone + iron → 8 wires
+        // at 5,000 MJ. The 1.12.2 mod only registered four (RED/BLUE/GREEN/YELLOW); we
+        // register all 16 here since every colour ships as a registered item and is usable
+        // in-world.
+        for (DyeColor colour : ColourUtil.COLOURS) {
+            String name = String.format("wire-%s", colour.getName());
+            ImmutableSet<IngredientStack> input = ImmutableSet.of(
+                new IngredientStack(Ingredient.of(getDyeItem(colour))),
+                new IngredientStack(Ingredient.of(Items.REDSTONE)),
+                new IngredientStack(Ingredient.of(Items.IRON_INGOT)));
+            ItemStack output = new ItemStack(BCTransportItems.WIRE_ITEMS.get(colour).get(), 8);
+            AssemblyRecipeRegistry.register(
+                new AssemblyRecipeBasic(name, 5_000 * MjAPI.MJ, input, output));
+        }
+    }
+
+    /** Maps a DyeColor to its corresponding vanilla dye item. */
+    private static net.minecraft.world.item.Item getDyeItem(DyeColor colour) {
+        return switch (colour) {
+            case WHITE -> Items.WHITE_DYE;
+            case ORANGE -> Items.ORANGE_DYE;
+            case MAGENTA -> Items.MAGENTA_DYE;
+            case LIGHT_BLUE -> Items.LIGHT_BLUE_DYE;
+            case YELLOW -> Items.YELLOW_DYE;
+            case LIME -> Items.LIME_DYE;
+            case PINK -> Items.PINK_DYE;
+            case GRAY -> Items.GRAY_DYE;
+            case LIGHT_GRAY -> Items.LIGHT_GRAY_DYE;
+            case CYAN -> Items.CYAN_DYE;
+            case PURPLE -> Items.PURPLE_DYE;
+            case BLUE -> Items.BLUE_DYE;
+            case BROWN -> Items.BROWN_DYE;
+            case GREEN -> Items.GREEN_DYE;
+            case RED -> Items.RED_DYE;
+            case BLACK -> Items.BLACK_DYE;
+        };
     }
 
     // --- Gate Copier Recipe ---

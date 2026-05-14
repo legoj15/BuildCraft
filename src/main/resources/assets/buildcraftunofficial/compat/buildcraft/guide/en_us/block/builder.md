@@ -14,8 +14,8 @@ Drops are inserted directly into the Builder's own resource inventory, so cobble
 Anything an iron pickaxe couldn't harvest (obsidian, ancient debris, and similar diamond-tier blocks) is destroyed instead of mined: the block is removed so the build can continue, but no drops are produced for that position. Experience awarded by harvestable blocks (redstone ore, lapis ore, diamond ore, and so on) spawns at the Builder itself.
 <chapter name="Fluid Handling"/>
 The fluid-mode button cycles between three behaviours for fluid blocks that fall inside the build area:
-- **Skip Fluids** (Barrier icon) keeps the world as-is — fluid positions are left untouched and the snapshot is built around them.
-- **Replace Fluids** (Bricks icon) places schematic blocks on top of fluids. Vanilla waterloggable blocks preserve the source water "for free"; other blocks destroy the fluid first.
-- **Clear Fluids** (Bucket icon) sweeps every fluid out of the build area before placement. Source blocks the Builder breaks are absorbed into its four internal tanks (one bucket per source) so a CLEAR-mode build over a small lake gives you the water back. When the tanks are full, additional sources are discarded; plumb a fluid output pipe if you want to keep collecting.
+- <bold>Skip Fluids</bold> (Barrier icon) keeps the world as-is — fluid positions are left untouched and the snapshot is built around them.
+- <bold>Replace Fluids</bold> (Bricks icon) places schematic blocks on top of fluids. Vanilla waterloggable blocks preserve the source water "for free"; other blocks destroy the fluid first.
+- <bold>Clear Fluids</bold> (Bucket icon) sweeps every fluid out of the build area before placement. Source blocks the Builder breaks are absorbed into its four internal tanks (one bucket per source) so a CLEAR-mode build over a small lake gives you the water back. When the tanks are full, additional sources are discarded; plumb a fluid output pipe if you want to keep collecting.
 <chapter name="Fluid Tanks"/>
 The Builder has four internal tanks, each holding up to eight buckets. They serve two roles: storing the fluid the snapshot needs when it captures fluid blocks (filled by pipes, by clicking with a bucket, or by the CLEAR-mode absorption described above), and acting as a buffer the place-phase pulls from when it needs to set a fluid block from the schematic.

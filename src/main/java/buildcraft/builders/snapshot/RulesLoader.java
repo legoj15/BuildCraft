@@ -107,18 +107,13 @@ public class RulesLoader {
             }
         }
         READ_DOMAINS.add("minecraft");
-        READ_DOMAINS.add("buildcraftunofficial");
-        READ_DOMAINS.add("buildcraftunofficial");
-        READ_DOMAINS.add("buildcraftunofficial");
-        READ_DOMAINS.add("buildcraftunofficial");
-        READ_DOMAINS.add("buildcraftunofficial");
-        READ_DOMAINS.add("buildcraftunofficial");
-        READ_DOMAINS.add("buildcraftunofficial");
-        READ_DOMAINS.add("buildcraftunofficial");
-        // TODO: Replace with BCLib.DEV when implemented
-        if (true) {
-            READ_DOMAINS.removeIf(domain -> domain.startsWith("buildcraft"));
-        }
+        // Note: BC blocks aren't in the default-schematic whitelist. They have
+        // dedicated schematic factories registered via SchematicBlockFactoryRegistry,
+        // so they shouldn't fall through to SchematicBlockDefault. In 1.12.2 a planned
+        // BCLib.DEV flag was meant to gate this — letting devs force-fallback to the
+        // default factory for testing — but the flag was never implemented. If you
+        // need that toggle later, add a single `READ_DOMAINS.add("buildcraftunofficial")`
+        // here under the dev-mode condition.
     }
 
     private static Set<JsonRule> getBlockRulesInternal(BlockState blockState, CompoundTag tileNbt) {

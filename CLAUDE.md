@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 BuildCraft is a NeoForge mod for Minecraft 26.1.x targeting **NeoForge 26.1.x** with **Java 25**. It adds automation machinery: pipes/transport, engines/energy, builders/blueprints, quarries, factories, silicon logic gates, and robots.
 
+Java 25 is the project toolchain — used for compile, test, and the actual game runtime (NeoForge 26.1.2's `fancymodloader`, `neoform`, and friends are themselves built for Java 25 and refuse to resolve against a Java 21 consumer). The moddev plugin additionally runs its NFRT tooling tasks (`downloadAssets`, `prepareClientRun`, …) on Java 21, but that's invisible to contributors: the [Foojay toolchain resolver](https://github.com/gradle/foojay-toolchains) applied in [settings.gradle](settings.gradle) auto-provisions a JDK 21 into Gradle's user home (`~/.gradle/jdks/`) on first build. The only JDK a contributor needs to install manually is **Java 25**.
+
 ## Build Commands
 
 ```bash

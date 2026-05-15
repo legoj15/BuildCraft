@@ -23,9 +23,20 @@ public class LedgerFillerProgress extends Ledger_Neptune {
 
     @Override
     protected void calculateMaxSize() {
-        super.calculateMaxSize();
-        this.maxHeight = 60;
-        this.maxWidth = 100;
+        Font font = Minecraft.getInstance().font;
+        int overhead = 2 + 16 + LEDGER_GAP + LEDGER_GAP + 2; // 28: borders + title icon + gaps
+
+        // Each progress row's content within the text area = row icon (16) + LEDGER_GAP +
+        // number string. The base class's textEntries-driven sizing doesn't see these rows
+        // because drawBackground renders them manually, so we measure them here.
+        int row1 = 16 + LEDGER_GAP + font.width(String.valueOf(container.getSyncedToBreak()));
+        int row2 = 16 + LEDGER_GAP + font.width(String.valueOf(container.getSyncedToPlace()));
+        int titleW = font.width(getTitle());
+        int contentW = Math.max(Math.max(row1, row2), titleW);
+
+        maxWidth = Math.max(CLOSED_WIDTH, overhead + contentW);
+        // Two fixed 18px progress rows below the title — drawBackground steps textY by 18.
+        maxHeight = Math.max(CLOSED_HEIGHT, LEDGER_GAP + (font.lineHeight + 3) + 2 * 18 + LEDGER_GAP);
     }
 
     @Override

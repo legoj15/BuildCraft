@@ -7,7 +7,16 @@
             "minecraft:beetroots",
             "minecraft:carrots",
             "minecraft:potatoes",
-            "minecraft:reeds"
+            "minecraft:torchflower_crop",
+            "minecraft:pitcher_crop",
+            "minecraft:sugar_cane",
+            "minecraft:cactus",
+            "minecraft:bamboo",
+            "minecraft:bamboo_sapling",
+            "minecraft:nether_wart",
+            "minecraft:sweet_berry_bush",
+            "minecraft:cocoa",
+            "minecraft:kelp"
         ],
         "ignoredProperties": ["age"]
     }

@@ -2,173 +2,73 @@
     {
         "selectors": ["minecraft:cake"],
         "requiredExtractors": [
-            {
-                "type": "constant",
-                "items": [
-                    {
-                        "item": "minecraft:cake"
-                    }
-                ]
-            }
+            { "type": "constant", "items": [{ "item": "minecraft:cake" }] }
         ]
     },
     {
         "selectors": ["minecraft:wheat"],
         "requiredExtractors": [
-            {
-                "type": "constant",
-                "items": [
-                    {
-                        "item": "minecraft:wheat_seeds"
-                    }
-                ]
-            }
+            { "type": "constant", "items": [{ "item": "minecraft:wheat_seeds" }] }
         ]
     },
     {
-        "selectors": ["minecraft:pumpkin_stem"],
+        "selectors": ["minecraft:pumpkin_stem", "minecraft:attached_pumpkin_stem"],
         "requiredExtractors": [
-            {
-                "type": "constant",
-                "items": [
-                    {
-                        "item": "minecraft:pumpkin_seeds"
-                    }
-                ]
-            }
+            { "type": "constant", "items": [{ "item": "minecraft:pumpkin_seeds" }] }
         ]
     },
     {
-        "selectors": ["minecraft:melon_stem"],
+        "selectors": ["minecraft:melon_stem", "minecraft:attached_melon_stem"],
         "requiredExtractors": [
-            {
-                "type": "constant",
-                "items": [
-                    {
-                        "item": "minecraft:melon_seeds"
-                    }
-                ]
-            }
+            { "type": "constant", "items": [{ "item": "minecraft:melon_seeds" }] }
         ]
     },
     {
         "selectors": ["minecraft:beetroots"],
         "requiredExtractors": [
-            {
-                "type": "constant",
-                "items": [
-                    {
-                        "item": "minecraft:beetroot_seeds"
-                    }
-                ]
-            }
+            { "type": "constant", "items": [{ "item": "minecraft:beetroot_seeds" }] }
         ]
     },
     {
         "selectors": ["minecraft:carrots"],
         "requiredExtractors": [
-            {
-                "type": "constant",
-                "items": [
-                    {
-                        "item": "minecraft:carrot"
-                    }
-                ]
-            }
+            { "type": "constant", "items": [{ "item": "minecraft:carrot" }] }
         ]
     },
     {
         "selectors": ["minecraft:potatoes"],
         "requiredExtractors": [
-            {
-                "type": "constant",
-                "items": [
-                    {
-                        "item": "minecraft:potato"
-                    }
-                ]
-            }
+            { "type": "constant", "items": [{ "item": "minecraft:potato" }] }
         ]
     },
     {
-        "selectors": ["minecraft:reeds"],
+        "selectors": ["minecraft:torchflower_crop"],
         "requiredExtractors": [
-            {
-                "type": "constant",
-                "items": [
-                    {
-                        "item": "minecraft:reeds"
-                    }
-                ]
-            }
+            { "type": "constant", "items": [{ "item": "minecraft:torchflower_seeds" }] }
         ]
     },
     {
-        "selectors": ["minecraft:standing_sign", "minecraft:wall_sign"],
+        "selectors": ["minecraft:pitcher_crop"],
         "requiredExtractors": [
-            {
-                "type": "constant",
-                "items": [
-                    {
-                        "item": "minecraft:sign"
-                    }
-                ]
-            }
+            { "type": "constant", "items": [{ "item": "minecraft:pitcher_pod" }] }
         ]
     },
     {
-        "selectors": ["minecraft:double_plant[variant=double_grass]"],
+        "selectors": ["minecraft:cocoa"],
         "requiredExtractors": [
-            {
-                "type": "constant",
-                "items": [
-                    {
-                        "item": "minecraft:double_plant",
-                        "meta": 2
-                    }
-                ]
-            }
+            { "type": "constant", "items": [{ "item": "minecraft:cocoa_beans" }] }
         ]
     },
     {
-        "selectors": ["minecraft:tallgrass[type=tall_grass]"],
+        "selectors": ["minecraft:sweet_berry_bush"],
         "requiredExtractors": [
-            {
-                "type": "constant",
-                "items": [
-                    {
-                        "item": "minecraft:tallgrass",
-                        "meta": 1
-                    }
-                ]
-            }
+            { "type": "constant", "items": [{ "item": "minecraft:sweet_berries" }] }
         ]
     },
     {
-        "selectors": ["minecraft:tallgrass[type=fern]"],
+        "selectors": ["minecraft:cauldron", "minecraft:water_cauldron", "minecraft:lava_cauldron", "minecraft:powder_snow_cauldron"],
         "requiredExtractors": [
-            {
-                "type": "constant",
-                "items": [
-                    {
-                        "item": "minecraft:tallgrass",
-                        "meta": 2
-                    }
-                ]
-            }
-        ]
-    },
-    {
-        "selectors": ["minecraft:cauldron"],
-        "requiredExtractors": [
-            {
-                "type": "constant",
-                "items": [
-                    {
-                        "item": "minecraft:cauldron"
-                    }
-                ]
-            }
+            { "type": "constant", "items": [{ "item": "minecraft:cauldron" }] }
         ]
     }
 ]

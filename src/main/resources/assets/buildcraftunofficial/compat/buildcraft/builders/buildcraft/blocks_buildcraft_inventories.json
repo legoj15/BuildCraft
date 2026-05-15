@@ -87,28 +87,6 @@
     },
     {
         "selectors": [
-            "buildcraftunofficial:autoworkbench_item"
-        ],
-        "requiredExtractors": [
-            {
-                "type": "item_from_block"
-            }, {
-                "type": "items_list",
-                "path": ["items", "blueprint", "items"]
-            }, {
-                "type": "items_list",
-                "path": ["items", "materials", "items"]
-            }, {
-                "type": "items_list",
-                "path": ["items", "result", "items"]
-            }, {
-                "type": "items_list",
-                "path": ["items", "overflow", "items"]
-            }
-        ]
-    },
-    {
-        "selectors": [
             "buildcraftunofficial:chute"
         ],
         "requiredExtractors": [
@@ -204,7 +182,7 @@
     },
     {
         "selectors": [
-            "buildcraftunofficial:engine[type=stone]"
+            "buildcraftunofficial:engine_stone"
         ],
         "requiredExtractors": [
             {

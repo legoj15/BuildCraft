@@ -45,7 +45,11 @@ import buildcraft.lib.misc.ColourUtil;
  * tolerance, same {@code LIGHT_HEX} dye palette. Output is pixel-identical to
  * those PNGs.
  *
- * <p>JSON form (inside {@code assets/<ns>/atlases/blocks.json}):
+ * <p>JSON form (must live inside {@code assets/minecraft/atlases/blocks.json} —
+ * the vanilla blocks atlas only loads its config from the {@code minecraft}
+ * namespace; a copy in {@code assets/buildcraftunofficial/atlases/blocks.json}
+ * would be silently ignored since no {@code buildcraftunofficial:blocks} atlas
+ * is registered):
  * <pre>
  * {
  *   "type":   "buildcraftunofficial:dye_replace",

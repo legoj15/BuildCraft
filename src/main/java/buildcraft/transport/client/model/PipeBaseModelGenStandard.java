@@ -230,11 +230,10 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
 
     /** Resolve dyed sprites for a painted fluid pipe. Appends "_dyed_<colour>" to each
      *  texture name in PipeDefinition.textures[] (after applying any colourblind suffix)
-     *  and resolves from the block atlas. Returns null if any sprite fails to resolve
-     *  (fallback to mask overlay). The 16 `diamond_fluid_west_cb_dyed_<colour>.png` files
-     *  ship with the mod, so painted diamond fluid pipes get colourblind treatment for
-     *  free through this path. */
-    @Nullable
+     *  and resolves from the block atlas. Throws {@link IllegalStateException} if any
+     *  sprite is missing — dye_replace is supposed to generate every variant at stitch
+     *  time, so a missing sprite means the atlas config regressed and we want a loud
+     *  failure rather than a silent fall-through to mask-overlay rendering. */
     static TextureAtlasSprite[] ensureDyedSprites(PipeDefinition def, DyeColor colour) {
         boolean cb = isCb();
         long cacheKey = dyedKey(def, colour, cb);
@@ -243,13 +242,16 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
         TextureAtlasSprite missing = SpriteUtil.missingSprite();
         TextureAtlasSprite[] array = new TextureAtlasSprite[def.textures.length];
         String dyeSuffix = "_dyed_" + colour.getName();
-        boolean allResolved = true;
         for (int i = 0; i < array.length; i++) {
             String dyedTex = maybeCbName(def.textures[i], cb) + dyeSuffix;
             array[i] = SpriteUtil.getSprite(Identifier.parse(dyedTex));
             if (array[i] == null || array[i] == missing) {
-                // No dyed variant for this texture — fallback
-                return null;
+                throw new IllegalStateException(
+                    "Dyed sprite missing from blocks atlas: " + dyedTex
+                        + " — DyeReplaceSpriteSource didn't emit it. Check that "
+                        + "assets/minecraft/atlases/blocks.json has a buildcraftunofficial:dye_replace "
+                        + "entry whose source matches " + def.textures[i]
+                        + " and that the source/mask PNGs exist and have matching dimensions.");
             }
         }
         DYED_SPRITES.put(cacheKey, array);
@@ -402,16 +404,13 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
     public List<MutableQuad> generateCutoutMutable(PipeBaseCutoutKey key) {
         List<MutableQuad> quads = new ArrayList<>();
 
-        // For painted fluid pipes, use pre-generated dyed texture variants
-        // instead of the original sprites (colour baked into texture at build time)
+        // For painted fluid pipes, use the dye_replace-generated sprite variants
+        // (colour baked into texture at stitch time). ensureDyedSprites throws on
+        // missing — no silent fallback, per design.
         TextureAtlasSprite[] spriteArray;
         if (key.definition != null && key.colour != null
                 && key.definition.flowType == PipeApi.flowFluids) {
             spriteArray = ensureDyedSprites(key.definition, key.colour);
-            if (spriteArray == null) {
-                // Dyed variant not found — fall back to normal sprites
-                spriteArray = ensureSprites(key.definition);
-            }
         } else {
             spriteArray = key.definition != null ? ensureSprites(key.definition) : null;
         }
@@ -541,12 +540,12 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
         List<MutableQuad> mutableQuads;
         if (key.cutoutKey != null && key.cutoutKey.definition != null
                 && key.cutoutKey.definition.flowType == PipeApi.flowFluids) {
-            // Fluid pipes — colour is baked into the dyed cutout texture.
-            // No translucent overlay needed. Fall back to mask quads only
-            // if dyed sprites are unavailable.
-            if (key.cutoutKey.colour != null
-                    && ensureDyedSprites(key.cutoutKey.definition, key.cutoutKey.colour) != null) {
-                return ImmutableList.of(); // dyed texture handles colour — no overlay
+            // Fluid pipes: for painted variants, colour is baked into the cutout
+            // sprite by DyeReplaceSpriteSource — no overlay needed. ensureDyedSprites
+            // (called from the cutout path) throws on missing, so reaching here for a
+            // painted fluid pipe means the dyed sprite is on the atlas.
+            if (key.cutoutKey.colour != null) {
+                return ImmutableList.of();
             }
             mutableQuads = generateMaskMutable(key.cutoutKey, 255);
         } else {

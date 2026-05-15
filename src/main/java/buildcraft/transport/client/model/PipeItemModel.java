@@ -125,21 +125,20 @@ public class PipeItemModel implements ItemModel {
         renderState.appendModelIdentityElement(colour);
 
         if (definition.flowType == PipeApi.flowFluids) {
-            // Fluid pipes: replace base quads with dyed-sprite quads
+            // Fluid pipes: render with the dye_replace-generated sprite variant.
+            // ensureDyedSprites throws on missing — no silent fallback, per design.
             TextureAtlasSprite[] dyedSprites = PipeBaseModelGenStandard.ensureDyedSprites(definition, colour);
-            if (dyedSprites != null && dyedSprites.length > 0) {
-                int itemTexIndex = definition.itemTextureTop;
-                TextureAtlasSprite dyedSprite = itemTexIndex < dyedSprites.length
-                        ? dyedSprites[itemTexIndex] : dyedSprites[0];
-                var layer = renderState.newLayer();
-                layer.prepareQuadList().addAll(generatePipeQuads(dyedSprite));
-                if (extents != null) layer.setExtents(extents);
-                renderProperties.applyToLayer(layer, displayContext);
-                return;
-            }
+            int itemTexIndex = definition.itemTextureTop;
+            TextureAtlasSprite dyedSprite = itemTexIndex < dyedSprites.length
+                    ? dyedSprites[itemTexIndex] : dyedSprites[0];
+            var layer = renderState.newLayer();
+            layer.prepareQuadList().addAll(generatePipeQuads(dyedSprite));
+            if (extents != null) layer.setExtents(extents);
+            renderProperties.applyToLayer(layer, displayContext);
+            return;
         }
 
-        // Transport/kinesis/fallback: base quads + overlay layer
+        // Transport/kinesis: base quads + overlay layer
         // Layer 1: base pipe quads from vanilla model
         var baseLayer = renderState.newLayer();
         baseLayer.prepareQuadList().addAll(vanillaQuads.getAll());

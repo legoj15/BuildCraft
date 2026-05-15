@@ -32,11 +32,6 @@
         },
         {
             "type": "minecraft:directory",
-            "source": "robot",
-            "prefix": "robot/"
-        },
-        {
-            "type": "minecraft:directory",
             "source": "triggers",
             "prefix": "triggers/"
         },
@@ -54,6 +49,132 @@
             "type": "minecraft:directory",
             "source": "block/pump",
             "prefix": "block/pump/"
+        },
+
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/andesite_fluid",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/clay_fluid",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/cobblestone_fluid",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/diamond_fluid",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/diamond_fluid_down",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/diamond_fluid_east",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/diamond_fluid_itemstack",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/diamond_fluid_north",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/diamond_fluid_south",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/diamond_fluid_up",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/diamond_fluid_west",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/diamond_fluid_west_cb",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/diamond_wood_fluid_clear",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/diamond_wood_fluid_filled",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/diorite_fluid",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/gold_fluid",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/granite_fluid",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/iron_fluid_clear",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/iron_fluid_filled",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/quartz_fluid",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/sandstone_fluid",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/stone_fluid",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/void_fluid",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/wood_fluid_clear",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+        {
+            "type": "buildcraftunofficial:dye_replace",
+            "source": "buildcraftunofficial:pipes/wood_fluid_filled",
+            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
         }
     ]
 }

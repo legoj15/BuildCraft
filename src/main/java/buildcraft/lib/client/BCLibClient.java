@@ -19,6 +19,15 @@ import buildcraft.lib.misc.data.ModelVariableData;
 
 public class BCLibClient {
     public static void initClient(IEventBus modEventBus) {
+        // Persist ledger open/closed state across MC restarts. Stored alongside the other
+        // BuildCraft per-mod files, separate from the NeoForge ModConfigSpec configs (which
+        // would have been overkill for a couple of booleans). Loads existing state synchronously
+        // so the first GUI open already sees restored values.
+        buildcraft.lib.gui.config.GuiConfigManager.init(
+            net.neoforged.fml.loading.FMLPaths.CONFIGDIR.get()
+                .resolve("buildcraft").resolve("gui_state.json")
+        );
+
         // Register custom render pipelines (LED indicator pipeline, etc.). Must fire on the
         // mod event bus during the registration phase so the pipeline is known to the
         // rendering engine before any RenderType referencing it is queried.

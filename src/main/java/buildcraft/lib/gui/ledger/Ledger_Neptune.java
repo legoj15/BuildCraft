@@ -73,6 +73,15 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     /** -1 means shrinking, 0 no change, 1 expanding */
     private int currentDifference = 0;
 
+    /** Persisted open/closed flag for this ledger. State survives GUI close/reopen and MC restarts.
+     *  Key is {@code (parentScreenClass, ledgerClass)}, mirroring 1.12.2's per-GUI per-ledger scoping. */
+    private final buildcraft.lib.gui.config.GuiPropertyBoolean openProperty;
+    /** True iff the persisted value was open at construction time. Applied on first
+     *  {@link #drawBackground} — deferred so subclass {@code appendText} calls land first
+     *  and {@link #calculateMaxSize()} sees the full content. */
+    private boolean pendingInitialOpen;
+    private boolean appliedInitialState;
+
     /**
      * Copy the full animation state from another ledger instance.
      * Used to seamlessly continue animation across window resizes,
@@ -93,6 +102,9 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         this.currentHeight = Math.min(this.currentHeight, this.maxHeight);
         this.lastWidth = Math.min(this.lastWidth, this.maxWidth);
         this.lastHeight = Math.min(this.lastHeight, this.maxHeight);
+        // Window-resize copy supersedes the persisted-state apply — the in-flight animation
+        // from the previous instance is more accurate than the saved boolean.
+        this.appliedInitialState = true;
     }
 
     // Text entries for open-panel content
@@ -118,6 +130,13 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
             gui.lowerLeftLedgerPos = gui.lowerLeftLedgerPos.offset(0, () -> this.getHeight() + 5);
             positionLedgerIconStart = positionLedgerStart.offset(LEDGER_GAP, LEDGER_GAP);
         }
+
+        // Resolve the persisted open/closed flag. Keyed by parent screen class so each GUI
+        // remembers its own ledger state independently (matches 1.12.2 GuiConfigManager semantics).
+        String guiId = gui.gui != null ? gui.gui.getClass().getName() : "unknown";
+        String propName = this.getClass().getSimpleName() + ".is_open";
+        this.openProperty = buildcraft.lib.gui.config.GuiConfigManager.getOrAddBoolean(guiId, propName, false);
+        this.pendingInitialOpen = this.openProperty.get();
     }
 
     /** Append a static text line to the ledger. */
@@ -253,6 +272,22 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
         if (graphics == null) return;
 
+        // First-frame snap from persisted state. Done here (rather than in the constructor)
+        // because subclass appendText() calls run after super(), so this is the earliest point
+        // calculateMaxSize() sees the full content. Snapping rather than animating means the
+        // restored ledger appears already-open from frame zero — no startup-flicker.
+        if (!appliedInitialState) {
+            appliedInitialState = true;
+            if (pendingInitialOpen) {
+                calculateMaxSize();
+                currentDifference = 1;
+                currentWidth = maxWidth;
+                currentHeight = maxHeight;
+                lastWidth = maxWidth;
+                lastHeight = maxHeight;
+            }
+        }
+
         interpWidth = interp(lastWidth, currentWidth, partialTicks);
         interpHeight = interp(lastHeight, currentHeight, partialTicks);
 
@@ -353,12 +388,16 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         double mouseX = gui.mouse.getX();
         double mouseY = gui.mouse.getY();
         if (contains(mouseX, mouseY)) {
+            boolean nowOpen;
             if (currentDifference == 1) {
                 currentDifference = -1;
+                nowOpen = false;
             } else {
                 currentDifference = 1;
                 calculateMaxSize();
+                nowOpen = true;
             }
+            openProperty.set(nowOpen);
         }
     }
 

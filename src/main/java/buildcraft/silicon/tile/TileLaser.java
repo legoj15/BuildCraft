@@ -238,7 +238,9 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
             output.putInt("target_z", targetPos.getZ());
             output.putBoolean("has_target", true);
         }
-        output.putLong("average_client", averageClient);
+        CompoundTag avgTag = new CompoundTag();
+        avgPower.writeToNbt(avgTag, "average_power");
+        output.store("avg_power", CompoundTag.CODEC, avgTag);
     }
 
     @Override
@@ -262,7 +264,9 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
                 input.getDoubleOr("laser_z", 0)
             );
         }
-        averageClient = input.getLongOr("average_client", 0L);
+        input.read("avg_power", CompoundTag.CODEC)
+            .ifPresent(tag -> avgPower.readFromNbt(tag, "average_power"));
+        averageClient = (long) avgPower.getAverage();
     }
 
     // --- Network Sync ---

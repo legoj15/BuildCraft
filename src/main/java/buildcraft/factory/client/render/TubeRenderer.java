@@ -31,8 +31,9 @@ import buildcraft.factory.tile.TilePump;
 
 /**
  * Renders pump/mining well tubes as world-space lasers via RenderLevelStageEvent,
- * bypassing the BER pipeline to avoid chunk-section frustum culling.
- * Follows the same pattern as buildcraft.silicon.client.RenderLaser.
+ * bypassing the BER pipeline to avoid chunk-section frustum culling — the tube
+ * extends straight down from the source block and the destination chunk often
+ * isn't in the BE renderer's set when the source chunk is.
  */
 public class TubeRenderer {
     private static final Set<TileMiner> ACTIVE_MINERS = Collections.newSetFromMap(new WeakHashMap<>());

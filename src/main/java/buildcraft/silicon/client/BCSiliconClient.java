@@ -8,20 +8,17 @@ import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 
 import buildcraft.api.transport.pipe.PipeApiClient;
 
-import buildcraft.silicon.BCSiliconBlockEntities;
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.BCSiliconMenuTypes;
 import buildcraft.silicon.client.model.FacadeItemModel;
 import buildcraft.silicon.client.model.key.KeyPlugFacade;
 import buildcraft.silicon.client.model.key.KeyPlugGate;
 import buildcraft.silicon.client.model.plug.PlugBakerFacade;
-import buildcraft.silicon.client.render.RenderLaser;
 import buildcraft.silicon.gui.GuiAdvancedCraftingTable;
 import buildcraft.silicon.gui.GuiAssemblyTable;
 import buildcraft.silicon.gui.GuiIntegrationTable;
@@ -33,11 +30,6 @@ public class BCSiliconClient {
     /** Cached blockstate model map from the last bake, used for deferred facade dedup. */
     private static java.util.Map<net.minecraft.world.level.block.state.BlockState,
             net.minecraft.client.renderer.block.dispatch.BlockStateModel> cachedBlockStateModels;
-
-    @SubscribeEvent
-    public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerBlockEntityRenderer(BCSiliconBlockEntities.LASER.get(), RenderLaser::new);
-    }
 
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {

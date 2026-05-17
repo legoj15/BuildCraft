@@ -81,10 +81,19 @@ public class TubeRenderer {
 
         PoseStack poseStack = event.getPoseStack();
         Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
-        float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
         for (TileMiner miner : ACTIVE_MINERS) {
-            double length = miner.getLength(partialTicks);
+            // Snap to integer length instead of using partialTicks-interpolated value.
+            // The tube's LaserType marks `start = middle` (the top segment absorbs the
+            // fractional leftover length), so a continuously-varying length causes the
+            // start segment's geometry and texture remap to jump abruptly each time
+            // length crosses an integer (numMiddle increments, startLength collapses
+            // from ~middleWidth to ~0). Integer-only length keeps numMiddle stable and
+            // makes the start segment always exactly one block of full texture, which
+            // eliminates the per-frame "alternating frame" flicker at the top segment.
+            // Trade-off: tube extends in 1-block steps instead of smoothly easing —
+            // visually acceptable since each step lands on a real BlockTube boundary.
+            int length = miner.getWantedLength();
             if (length <= 0) continue;
 
             BlockPos pos = miner.getBlockPos();

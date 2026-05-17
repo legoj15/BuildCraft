@@ -182,6 +182,14 @@ public class TileAssemblyTable extends TileLaserTableBase {
         }
 
         if (getTarget() > 0) {
+            // Award precision_crafting on "started a craft" (active recipe exists),
+            // not "finished a craft" — matches the 1.12.2 trigger position and the
+            // advancement's description ("Start crafting with an assembly table").
+            // Fires every tick while a recipe is active until the player has it;
+            // tracker.award is idempotent so re-firing is a no-op HashMap lookup.
+            if (getOwner() != null) {
+                AdvancementUtil.unlockAdvancement(getOwner().id(), getLevel(), ADVANCEMENT);
+            }
             if (power >= getTarget()) {
                 AssemblyInstruction instruction = getActiveRecipe();
                 if (instruction != null) {
@@ -189,9 +197,6 @@ public class TileAssemblyTable extends TileLaserTableBase {
                     InventoryUtil.addToBestAcceptor(getLevel(), getBlockPos(), null, instruction.output.copy());
                     power -= getTarget();
                     activateNextRecipe();
-                    if (getOwner() != null) {
-                        AdvancementUtil.unlockAdvancement(getOwner().id(), getLevel(), ADVANCEMENT);
-                    }
                 }
             }
         }

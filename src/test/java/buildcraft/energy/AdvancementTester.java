@@ -52,6 +52,7 @@ public class AdvancementTester {
 
     private static final Identifier FINE_RICHES_ID = Identifier.parse("buildcraftunofficial:fine_riches");
     private static final Identifier STICKY_DIPPING_ID = Identifier.parse("buildcraftunofficial:sticky_dipping");
+    private static final Identifier PRECISION_CRAFTING_ID = Identifier.parse("buildcraftunofficial:precision_crafting");
     private static final TagKey<Block> OIL_FLUIDS_TAG = TagKey.create(
             Registries.BLOCK, Identifier.parse("buildcraftunofficial:oil_fluids"));
 
@@ -67,13 +68,46 @@ public class AdvancementTester {
         // For sticky_dipping specifically, also verify the criterion isn't `minecraft:impossible`
         // — that would mean we accidentally reverted to the broken stub state.
         boolean hasNonImpossibleCriterion = holder.value().criteria().values().stream()
-                .anyMatch(c -> !c.trigger().toString().contains("impossible"));
+                .anyMatch(c -> !isImpossibleTrigger(c));
         if (!hasNonImpossibleCriterion) {
             throw new AssertionError("sticky_dipping has only impossible-trigger criteria; "
                     + "expected at least one real trigger (likely minecraft:location). "
                     + "This suggests the trigger fix was reverted.");
         }
         helper.succeed();
+    }
+
+    public static void testPrecisionCraftingAdvancementLoaded(GameTestHelper helper) {
+        AdvancementHolder holder = assertAdvancementLoaded(helper, PRECISION_CRAFTING_ID);
+        // Precision crafting is code-driven (TileAssemblyTable.serverTick calls
+        // AdvancementUtil.unlockAdvancement which writes to the default "code_trigger"
+        // criterion name). The JSON must therefore keep a minecraft:impossible-shaped
+        // criterion named code_trigger; if the JSON criterion type or name changes without
+        // updating the handler, the trigger silently stops working.
+        boolean hasImpossibleTrigger = holder.value().criteria().values().stream()
+                .anyMatch(AdvancementTester::isImpossibleTrigger);
+        if (!hasImpossibleTrigger) {
+            throw new AssertionError("precision_crafting no longer has a minecraft:impossible criterion. "
+                    + "TileAssemblyTable awards this via AdvancementUtil.unlockAdvancement, which writes "
+                    + "to the default 'code_trigger' criterion. Either restore the JSON criterion or "
+                    + "update the handler call to match the new criterion name/type.");
+        }
+        boolean hasCodeTriggerCriterion = holder.value().criteria().containsKey("code_trigger");
+        if (!hasCodeTriggerCriterion) {
+            throw new AssertionError("precision_crafting's impossible criterion is not named 'code_trigger' "
+                    + "(found: " + holder.value().criteria().keySet() + "). "
+                    + "AdvancementUtil.unlockAdvancement's default criterionName is 'code_trigger', so "
+                    + "the handler call will silently fail to grant the advancement.");
+        }
+        helper.succeed();
+    }
+
+    /** Resolves the trigger's registry ID and compares to {@code minecraft:impossible}.
+     * Going through the registry rather than class-name string-matching means renames
+     * of the {@code ImpossibleTrigger} class don't silently make the check pass. */
+    private static boolean isImpossibleTrigger(net.minecraft.advancements.Criterion<?> c) {
+        Identifier id = net.minecraft.core.registries.BuiltInRegistries.TRIGGER_TYPES.getKey(c.trigger());
+        return id != null && id.equals(Identifier.withDefaultNamespace("impossible"));
     }
 
     // ─── Block tag content ───────────────────────────────────────────────

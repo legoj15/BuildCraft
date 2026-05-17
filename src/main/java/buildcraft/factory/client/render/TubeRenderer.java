@@ -81,35 +81,44 @@ public class TubeRenderer {
 
         PoseStack poseStack = event.getPoseStack();
         Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
+        float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
         for (TileMiner miner : ACTIVE_MINERS) {
-            // Snap to integer length instead of using partialTicks-interpolated value.
-            // The tube's LaserType marks `start = middle` (the top segment absorbs the
-            // fractional leftover length), so a continuously-varying length causes the
-            // start segment's geometry and texture remap to jump abruptly each time
-            // length crosses an integer (numMiddle increments, startLength collapses
-            // from ~middleWidth to ~0). Integer-only length keeps numMiddle stable and
-            // makes the start segment always exactly one block of full texture, which
-            // eliminates the per-frame "alternating frame" flicker at the top segment.
-            // Trade-off: tube extends in 1-block steps instead of smoothly easing —
-            // visually acceptable since each step lands on a real BlockTube boundary.
-            int length = miner.getWantedLength();
+            double length = miner.getLength(partialTicks);
             if (length <= 0) continue;
 
             BlockPos pos = miner.getBlockPos();
-            Vec3 start = new Vec3(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+            // Offset the laser's start position by a tiny epsilon below the well's bottom
+            // face. The start segment's elasticity (it absorbs the fractional leftover
+            // length as numMiddle increments) is itself smooth — what isn't smooth is the
+            // lightmap interpolation. Without the offset, the start segment's top vertex
+            // sits at y = well.y, which BlockPos.containing resolves to the well block
+            // itself — an opaque block whose interior light is 0. When the start segment
+            // is full (~middleWidth tall), the quad's lightmap interpolates from dark
+            // (well-block-interior) at the top to bright (open block below) at the bottom.
+            // When numMiddle increments and the start collapses to a sliver, the visible
+            // first block is now occupied by a new middle whose top vertex is just below
+            // the well — both vertices in the bright below-well block, uniform lightmap.
+            // Same world pixel, two different lightmap interpolations, flips each numMiddle
+            // increment — the "world shading vs block shading" alternation. Pushing the
+            // start down by 1e-3 puts the start segment's top vertex squarely in the
+            // below-well block, so both configurations sample the same lighting state and
+            // the alternation can't happen. The 1mm-thin strip at exactly y = well.y is
+            // no longer rendered but it was inside the opaque well block anyway —
+            // invisible either way.
+            Vec3 start = new Vec3(pos.getX() + 0.5, pos.getY() - 1e-3, pos.getZ() + 0.5);
             Vec3 end = new Vec3(pos.getX() + 0.5, pos.getY() - length, pos.getZ() + 0.5);
 
             LaserType type = (miner instanceof TilePump) ? PUMP_TUBE : MINING_WELL_TUBE;
-            // Tubes use world block-light per vertex (smooth gradient along the column
-            // as it descends into darker rock) but NO per-face diffuse — the 4-arg
-            // default's enableDiffuse=true gives top/bottom/sides each their own flat
-            // brightness (1.0/0.5/0.8), which produces a visible discontinuity at face
-            // edges that shifts with the camera angle and looks like "two systems
-            // competing" against the per-vertex gradient. Explicit (false, false, 0)
-            // = uniform face brightness, world-lit per vertex.
+            // (true, false, 0) — per-face diffuse + world-lit per vertex, no fullbright
+            // floor. Per-face diffuse gives the tube vanilla-style block shading (the
+            // four side faces each get a brightness from their world-space normal: ~0.6
+            // for ±X faces, ~0.8 for ±Z faces; caps get 1.0 up / 0.5 down). The diffuse
+            // value is fixed per face per render — it depends on the laser's rotation
+            // matrix only, not on numMiddle or startLength, so it's orthogonal to the
+            // lightmap-interpolation alternation that the start-offset fix above handles.
             LaserData_BC8 data = new LaserData_BC8(type, start, end, 1 / 16.0,
-                false, false, 0);
+                true, false, 0);
             LaserRenderer_BC8.renderLaserStatic(poseStack, data, cameraPos);
         }
     }

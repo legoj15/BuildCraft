@@ -244,23 +244,34 @@ public class BlockUtil {
         // drops, etc.) and `world.destroyBlock` below clears the BE as a side effect.
         BlockEntity be = world.getBlockEntity(pos);
 
-        // Pass `tool` through to the 6-arg getDrops so the loot context's TOOL parameter
-        // matches the wielded tool. The 4-arg overload defaults TOOL to ItemStack.EMPTY,
-        // which makes `minecraft:match_tool` conditions (iron ore needs stone+, diamond
-        // ore needs iron+, obsidian needs diamond, etc.) fail — so the block destroys
-        // but nothing drops. Vanilla `BreakBlock` does the same routing internally;
-        // 1.12.2's version achieved the same via a fake-player-wielding-tool path through
-        // canHarvestBlock + harvestBlock. Entity parameter is null — none of our machines
-        // are "the breaker" in a way the loot context cares about (e.g. THIS_ENTITY is
-        // only read by entity-specific drop rules like player kills).
-        List<ItemStack> drops = new ArrayList<>(
-                Block.getDrops(state, world, pos, be, (Entity) null, tool));
+        // Replicate vanilla's tier gate. NEEDS_STONE_TOOL / NEEDS_IRON_TOOL /
+        // NEEDS_DIAMOND_TOOL block tags flip `requiresCorrectToolForDrops()` on; on the
+        // player path, `Block.dropFromBlock` short-circuits to empty drops + 0 XP before
+        // calling getDrops when the wielded item fails `isCorrectToolForDrops`. Vanilla
+        // loot tables only carry `match_tool` for enchantment branches (silk_touch /
+        // fortune) — they do NOT encode the tier check — so a raw `Block.getDrops` call
+        // would drop raw_iron under a wooden pickaxe and obsidian under an iron pickaxe.
+        // Each break-laser caller declares its tier via `getBreakingTool()`; this gate
+        // enforces it (Mining Well iron, Quarry diamond, Builder iron, Filler iron,
+        // Stripes diamond — obsidian and ancient debris destroy without dropping under
+        // iron). 1.12.2's pipeline achieved the same via canHarvestBlock + harvestBlock
+        // through a fake player wielding the tool.
+        boolean tierGated = state.requiresCorrectToolForDrops()
+                && !tool.isCorrectToolForDrops(state);
 
-        // XP via NeoForge's IBlockStateExtension.getExpDrop — delegates to
-        // block.getExpDrop(state, level, pos, blockEntity, breaker, tool). Same tool/breaker
-        // shape as getDrops above so tool-gated blocks return zero XP under an insufficient
-        // tool tier (parallel to the empty drops list — no harvest, no XP).
-        int xp = state.getExpDrop(world, pos, be, (Entity) null, tool);
+        // 6-arg getDrops so the loot context's TOOL parameter carries the wielded tool's
+        // enchantments — silk_touch returns the block itself, fortune multiplies ore drops.
+        // The 4-arg overload defaults TOOL to ItemStack.EMPTY and loses both. Entity is
+        // null — none of our machines are "the breaker" in a way the loot context cares
+        // about (THIS_ENTITY is only read by entity-specific drop rules like player kills).
+        List<ItemStack> drops = tierGated
+                ? new ArrayList<>()
+                : new ArrayList<>(Block.getDrops(state, world, pos, be, (Entity) null, tool));
+
+        // XP via NeoForge's IBlockStateExtension.getExpDrop — same tool/breaker shape as
+        // getDrops above. Zeroed under a tier-gated break to parallel the empty drops list
+        // (no harvest, no XP), matching the order vanilla `Block.dropFromBlock` uses.
+        int xp = tierGated ? 0 : state.getExpDrop(world, pos, be, (Entity) null, tool);
 
         // Pure-fluid blocks (LiquidBlock instances — Blocks.WATER, Blocks.LAVA, BC oil/fuel,
         // etc.) need a hard setBlock(AIR), NOT world.destroyBlock(). Vanilla destroyBlock calls

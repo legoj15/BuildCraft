@@ -533,17 +533,18 @@ public class FluidHandlingModeTester {
     }
 
     /**
-     * Regression test for the silently-dropped tool parameter. Before the fix,
-     * {@code BlockUtil.breakBlockAndGetDrops} called {@code Block.getDrops} via the 4-arg overload,
-     * which builds a loot context with {@code LootContextParams.TOOL = ItemStack.EMPTY}. Iron ore's
-     * loot table has a top-level {@code minecraft:match_tool} condition (needs a stone+ pickaxe),
-     * so the condition failed and the call returned an empty drops list — even though the caller
-     * was passing an iron pickaxe through the {@code tool} parameter, intending exactly to satisfy
-     * that condition. Net effect: the Mining Well / Quarry / Builder-CLEAR destroyed the ore block
-     * but produced no item.
+     * Iron pickaxe on iron ore must yield raw_iron. Guards two pieces of the break path:
+     * (a) the {@code tool} stack is threaded into the loot context — the 4-arg
+     * {@code Block.getDrops} overload silently used {@code ItemStack.EMPTY} pre-fix, which
+     * neuters silk_touch / fortune branches on any loot table that reads them; (b) the
+     * BlockUtil tier gate recognises an iron pickaxe as a correct tool for iron ore —
+     * over-gating would empty the drops list even though the wielded tool is sufficient.
      * <p>
-     * After the fix the 6-arg overload threads {@code tool} into the loot context, so a wielded
-     * iron pickaxe satisfies the iron-tier requirement and the iron raw drops out.
+     * Tier gating lives in BlockUtil (not in the loot table — vanilla ore loot tables only
+     * carry {@code match_tool} for silk_touch), mirroring vanilla's
+     * {@code requiresCorrectToolForDrops}/{@code isCorrectToolForDrops} short-circuit on the
+     * player destroy path. The complement — wooden pickaxe under-gates and yields nothing —
+     * is covered by {@link #testBreakBlockAndGetDropsRespectsToolTier}.
      */
     public static void testBreakBlockAndGetDropsHonoursToolForLoot(GameTestHelper helper) {
         try {
@@ -632,14 +633,14 @@ public class FluidHandlingModeTester {
     }
 
     /**
-     * Regression: the XP-aware helper {@link BlockUtil#breakBlockAndGetDropsWithXp} must
-     * return non-zero XP for a tool-gated ore mined with a sufficient tier. Vanilla iron ore
-     * gives 0–2 XP under any successful pickaxe break, so iron-on-iron-ore is the cleanest
-     * tier-positive case to assert against. The drops side is already covered by
-     * {@link #testBreakBlockAndGetDropsHonoursToolForLoot}; this guards the XP branch
-     * specifically — the {@code state.getExpDrop(level, pos, blockEntity, breaker, tool)}
-     * call inside the helper would silently return 0 if the tool param were ever to slip
-     * back out of the loot context (mirroring the original drops regression).
+     * The XP-aware helper {@link BlockUtil#breakBlockAndGetDropsWithXp} must return a sane
+     * non-negative XP value for a tier-positive ore break. Vanilla iron ore gives 0–2 XP
+     * (UniformInt) per successful pickaxe break — iron-on-iron-ore is the cleanest tier-
+     * positive case to exercise the {@code state.getExpDrop(...)} call shape end-to-end. The
+     * tier-negative side is asymmetric: BlockUtil zeroes XP under a tier-gated break (no
+     * harvest, no XP, parallel to the empty drops list), so a wooden-pick-on-iron-ore call
+     * deterministically returns 0 — see {@link #testBreakBlockAndGetDropsRespectsToolTier}
+     * for the drops side of that gate.
      */
     public static void testBreakBlockAndGetDropsWithXpReportsXp(GameTestHelper helper) {
         try {
@@ -671,9 +672,12 @@ public class FluidHandlingModeTester {
     }
 
     /**
-     * Complement of the above: a wooden pickaxe should NOT satisfy iron ore's match_tool
-     * condition, so the block destroys but drops nothing. Confirms the loot context actually
-     * cares about the wielded tier rather than just "any non-empty ItemStack".
+     * Complement of {@link #testBreakBlockAndGetDropsHonoursToolForLoot}: a wooden pickaxe
+     * fails {@code isCorrectToolForDrops(ironOreState)}, so BlockUtil's tier gate empties the
+     * drops list while still destroying the block. Without the gate, {@code Block.getDrops}
+     * would happily run iron ore's loot table (which has no tier {@code match_tool} — only
+     * silk_touch) and return raw_iron under any pickaxe, silently letting Builder/Filler
+     * iron-tier laser-mine obsidian and ancient debris for free.
      */
     public static void testBreakBlockAndGetDropsRespectsToolTier(GameTestHelper helper) {
         try {
@@ -688,7 +692,8 @@ public class FluidHandlingModeTester {
 
             assertTrue(result.isPresent(), "iron ore break must report success (block was removed)");
             assertTrue(result.get().isEmpty(),
-                    "wooden pickaxe does not satisfy iron ore's match_tool condition — drops must be empty");
+                    "wooden pickaxe fails isCorrectToolForDrops on iron ore — BlockUtil tier "
+                            + "gate must empty the drops list");
             assertTrue(helper.getLevel().getBlockState(abs).isAir(),
                     "iron ore position must still be air after break (drops absent ≠ break failed)");
             helper.succeed();

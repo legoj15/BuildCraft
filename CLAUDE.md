@@ -84,6 +84,34 @@ Initialization order: `BCLib` → registries (blocks/items/BEs) → `FMLCommonSe
 
 Unit tests use JUnit 5 and live under `src/test/`. NeoForge game tests are registered dynamically via `RegisterEvent` on `Registries.TEST_FUNCTION` and cover pipes, transport, fluids, inventory, shapes, markers, and engines.
 
+### Adding a new game test (read this — past agents kept getting it wrong)
+
+Adding a game test in MC 26.1+ takes **three** things, not two. If you do only the first two it silently skips — there is no error, no warning, and `runGameTestServer` keeps reporting "N GAME TESTS COMPLETE" without your test included in N. This is the same footgun called out in the `blueprint_replace` comment in [BuildCraftGameTests](src/test/java/buildcraft/BuildCraftGameTests.java) ("37→34 even before these additions") — most of those skipped tests are missing the third piece.
+
+1. **Java method** — static, signature `void name(GameTestHelper helper)`, throws on failure, calls `helper.succeed()` (or one of the async `succeedWhen*` variants) on pass. Put it in a `*Tester.java` class under the right module subpackage of `src/test/java/buildcraft/`.
+
+2. **Registration in [BuildCraftGameTests.onRegister](src/test/java/buildcraft/BuildCraftGameTests.java)** — one line like `event.register(Registries.TEST_FUNCTION, Identifier.parse("buildcraftunofficial:your_test_id"), () -> YourTester::yourMethod);`
+
+3. **Test-instance manifest JSON** at `src/test/resources/data/buildcraftunofficial/test_instance/<your_test_id>.json` — the test ID (no namespace) MUST match the file name and the `function` field. For most tests the body is just:
+
+   ```json
+   {
+       "type": "minecraft:function",
+       "function": "buildcraftunofficial:your_test_id",
+       "environment": "minecraft:default",
+       "structure": "minecraft:empty",
+       "max_ticks": 100,
+       "setup_ticks": 0,
+       "required": true
+   }
+   ```
+
+   `structure` can point at a saved arena structure if the test needs a pre-built world; `minecraft:empty` gives you a void arena to `helper.setBlock(...)` into. `max_ticks` is the watchdog timeout — async tests with `succeedWhen*` need enough headroom; synchronous tests that throw or succeed immediately can use `20`.
+
+**To verify your test is actually running** (not silently skipped): note the "N GAME TESTS COMPLETE" count before and after. Each new test should bump N by 1. If it doesn't, the manifest is missing or its `function` field doesn't match the registered ID. Confirm by temporarily making the test throw — if the failure shows up in the "required tests failed" list, it's wired correctly; if it doesn't, fix the manifest first before debugging the test logic.
+
+**Player-state testing limitation**: `GameTestHelper.makeMockPlayer(GameType)` returns an anonymous `Player` (see [GuiTester.java:64-66](src/test/java/buildcraft/lib/test/gui/GuiTester.java)), NOT a `ServerPlayer`. Anything guarded by `instanceof ServerPlayer` (including `AdvancementUtil.unlockAdvancement(Player, …)`) short-circuits silently. Test the predicates and the wiring around player-state calls; the final award/tracker write needs in-client verification.
+
 ### User notes
 - When cross-referencing code from 1.12.2, there are multiple locations code can be; as a .disabled file in the current branch, or in the 8.0.x-1.12.2 branch in either the `src_old_license` folder (for code that was written before the license migration, very old) or in the `common` folder (actually used 1.12.2 code)
 - Creating and running tests is critical, they should be written whenever and for whatever reason. Minecraft version bumps entail a lot of architectural changes all the time.

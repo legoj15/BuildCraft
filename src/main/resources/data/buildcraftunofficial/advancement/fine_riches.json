@@ -7,11 +7,6 @@
   },
   "parent": "buildcraftunofficial:root",
   "criteria": {
-    "has_oil": {
-      "trigger": "minecraft:inventory_changed",
-      "conditions": {
-        "items": [{ "items": "buildcraftunofficial:glob_of_oil" }]
-      }
-    }
+    "code_trigger": { "trigger": "minecraft:impossible" }
   }
 }

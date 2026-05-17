@@ -51,25 +51,111 @@ public class OilGenerator {
     }
 
     /**
+     * Whether oil generation is permitted in this level at all (regardless of biome
+     * and the per-chunk RNG roll). Combines the flat-world veto and the dimension
+     * include/exclude config check that {@link #generateForChunk} already performs.
+     * <p>
+     * Extracted so that observers of the oil-gen pipeline (e.g. the
+     * {@code fine_riches} advancement handler in {@code BCEnergyWorldGen}) can ask
+     * the same question without re-running generation.
+     */
+    public static boolean canGenerateOilIn(ServerLevel level) {
+        if (level.getChunkSource().getGenerator() instanceof net.minecraft.world.level.levelgen.FlatLevelSource) {
+            return false;
+        }
+        return !isDimensionExcluded(level.dimension());
+    }
+
+    /**
+     * Composite predicate: would {@link #generateForChunk} place oil whose origin is
+     * the given chunk, given the current world and config state? This mirrors what
+     * {@code generateForChunk} actually does for the centre cell of its 5-chunk loop
+     * — {@link #canGenerateOilIn} (level-wide veto) AND {@link #getStructures}
+     * non-empty (biome + per-chunk RNG roll). Oil that spills in from a neighbouring
+     * origin chunk is intentionally NOT counted here; callers tracking per-chunk
+     * events will see the neighbour fire on its own watch.
+     */
+    public static boolean wouldGenerateOilForOriginChunk(ServerLevel level, int chunkX, int chunkZ) {
+        return canGenerateOilIn(level) && !getStructures(level, chunkX, chunkZ).isEmpty();
+    }
+
+    /**
+     * Whether the given biome ID is one the player can reasonably call an
+     * "oil biome" for the {@code fine_riches} advancement: the rich tier or
+     * the (debug) excessive tier. <b>Excludes the light tier on purpose.</b>
+     * <p>
+     * Why excluded: light tier (shallow ocean variants by default) gets a 1.25×
+     * bonus on the chunk roll, but a MEDIUM roll there produces (a) a 4-block
+     * surface tendril at y=62 — inside the water column for an ocean, easy to
+     * swim past unnoticed — plus (b) an underground sphere at y=minY+25..34
+     * and (c) a small spout that extends only 6-12 blocks up from there, ending
+     * around y=-33..-18 in a modern overworld. None of those reach the seafloor,
+     * let alone the surface, so the player rolls "oil found" without anything
+     * visible. A small patch of light-tier biome inside a non-oil region (e.g.
+     * 2-3 chunks of cold_ocean inside a taiga) then false-fires the advancement.
+     * <p>
+     * Rich-tier biomes (deep oceans, deserts, badlands by default) avoid this
+     * because they're either deeper-water (so the surface pool is reachable by
+     * swimming) or terrestrial (oil clearly visible on land). Excessive tier is
+     * an explicit admin opt-in so we honour it regardless.
+     * <p>
+     * Also excludes the implicit 1.0× base tier (any other biome), which was
+     * the previous bug — getStructures rolls LARGE/MEDIUM in any biome at the
+     * base rate, so without any tier gate the advancement fires anywhere at
+     * large render distances.
+     */
+    public static boolean isOilDesignBiome(Identifier biomeId) {
+        return BCEnergyConfig.getRichSurfaceDepositBiomes().contains(biomeId)
+                || BCEnergyConfig.getForceExcessiveOilBiomes().contains(biomeId);
+    }
+
+    /**
+     * Stricter sibling of {@link #wouldGenerateOilForOriginChunk}: additionally
+     * requires the sampled biome to be in an oil-design tier (see
+     * {@link #isOilDesignBiome}). This is what the {@code fine_riches} advancement
+     * handler calls — it stops the advancement from firing in unrelated biomes
+     * that happen to roll an oil deposit via the per-chunk RNG.
+     * <p>
+     * Re-derives {@code getStructures}'s sample point from the same deterministic
+     * chunk RNG so chunks straddling a biome border are evaluated against the same
+     * biome the actual roll uses. The biome lookup runs twice (once here, once
+     * inside {@code getStructures}) — accepted for code simplicity, marginal cost.
+     */
+    public static boolean wouldGenerateOilForOriginChunkInOilBiome(ServerLevel level, int chunkX, int chunkZ) {
+        if (!canGenerateOilIn(level)) return false;
+        if (!isOilDesignBiome(sampleBiomeForChunkRoll(level, chunkX, chunkZ))) return false;
+        return !getStructures(level, chunkX, chunkZ).isEmpty();
+    }
+
+    /** Replays {@link #getStructures}'s sample-point derivation so the biome
+     * checked here matches the biome the actual roll evaluates against. */
+    private static Identifier sampleBiomeForChunkRoll(Level level, int cx, int cz) {
+        Random rand = RandUtil.createRandomForChunk(level, cx, cz, MAGIC_GEN_NUMBER);
+        int x = cx * 16 + 8 + rand.nextInt(16);
+        int z = cz * 16 + 8 + rand.nextInt(16);
+        return Identifier.parse(level.getBiome(new BlockPos(x, 64, z)).getRegisteredName());
+    }
+
+    /** Convenience: {@code isOilDesignBiome} applied to the biome
+     * {@link #getStructures} would sample for the given chunk. Used by the
+     * {@code fine_riches} handler to check whether the player's current chunk
+     * is an oil-design biome, before scanning the 3×3 neighbourhood for an
+     * actual rolled oil deposit. */
+    public static boolean isOilDesignBiomeAt(Level level, int chunkX, int chunkZ) {
+        return isOilDesignBiome(sampleBiomeForChunkRoll(level, chunkX, chunkZ));
+    }
+
+    /**
      * Called from {@link buildcraft.energy.BCEnergyWorldGen} when a chunk is loaded for the first time.
      * Generates oil structures that overlap with this chunk.
      */
     public static void generateForChunk(ServerLevel level, int chunkX, int chunkZ) {
-        // Don't generate in flat worlds
-        if (level.getChunkSource().getGenerator() instanceof net.minecraft.world.level.levelgen.FlatLevelSource) {
+        if (!canGenerateOilIn(level)) {
             if (DEBUG_OILGEN_BASIC) {
+                String reason = level.getChunkSource().getGenerator() instanceof net.minecraft.world.level.levelgen.FlatLevelSource
+                        ? "the world is FLAT" : "dimension is excluded";
                 BCLog.logger.info("[energy.oilgen] Not generating oil in chunk " + chunkX + ", " + chunkZ
-                    + " because the world is FLAT.");
-            }
-            return;
-        }
-
-        // Check dimension exclusion by comparing ResourceKey directly
-        ResourceKey<Level> dimKey = level.dimension();
-        if (isDimensionExcluded(dimKey)) {
-            if (DEBUG_OILGEN_BASIC) {
-                BCLog.logger.info("[energy.oilgen] Not generating oil in chunk " + chunkX + ", " + chunkZ
-                    + " because dimension is excluded.");
+                    + " because " + reason + ".");
             }
             return;
         }

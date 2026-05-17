@@ -175,6 +175,14 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_input_blocks_external_extract"), () -> buildcraft.factory.DistillerTester::testInputTankBlocksExternalExtract);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_output_rejects_external_insert"), () -> buildcraft.factory.DistillerTester::testOutputTanksRejectExternalInsertButAcceptInternal);
 
+            // Advancements (fine_riches + sticky_dipping JSON shape, oil_fluids tag content, predicate sanity)
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:advancement_fine_riches_loaded"), () -> buildcraft.energy.AdvancementTester::testFineRichesAdvancementLoaded);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:advancement_sticky_dipping_loaded"), () -> buildcraft.energy.AdvancementTester::testStickyDippingAdvancementLoaded);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:advancement_oil_fluids_tag_contents"), () -> buildcraft.energy.AdvancementTester::testOilFluidsTagContainsAllOilSourceBlocks);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:advancement_oil_fluids_tag_exclusivity"), () -> buildcraft.energy.AdvancementTester::testOilFluidsTagExcludesNonOilFluids);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:advancement_fine_riches_predicate_negative"), () -> buildcraft.energy.AdvancementTester::testWouldGenerateOilReturnsFalseInTestEnvironment);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:advancement_fine_riches_biome_tier_gate"), () -> buildcraft.energy.AdvancementTester::testFineRichesBiomeTierGate);
+
             // Electronic Library
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:library_slot_filtering"), () -> buildcraft.builders.ElectronicLibraryTester::testSlotFiltering);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:library_download_cycle"), () -> buildcraft.builders.ElectronicLibraryTester::testDownloadCycle);

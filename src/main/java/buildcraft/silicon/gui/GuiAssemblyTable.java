@@ -19,6 +19,7 @@ import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.ledger.LedgerHelp;
+import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.gui.pos.IGuiArea;
 
@@ -45,6 +46,11 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
 
     @Override
     protected void initGuiElements() {
+        // Right-side ledger order (matches 1.12.2): ownership on top, then power.
+        if (menu.tile != null) {
+            mainGui.shownElements.add(new LedgerOwnership(mainGui,
+                    () -> menu.tile != null ? menu.tile.getOwner() : null, true));
+        }
         mainGui.shownElements.add(new LedgerTablePower(mainGui, menu.tile, true));
 
         mainGui.shownElements.add(new LedgerHelp(mainGui, false));

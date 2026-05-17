@@ -9,6 +9,7 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -102,6 +103,21 @@ public class BlockLaserTable extends Block implements ILaserTargetBlock, EntityB
             return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;
+    }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
+            @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        // Record the placing player on the tile so the Owner ledger has something to show.
+        // sendBlockUpdated pushes the post-placement NBT (which now includes the owner) to
+        // clients immediately — without it the owner only reaches the client on the first
+        // serverTick power-change sync, leaving the ledger blank if the GUI is opened first.
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TileLaserTableBase table) {
+            table.onPlacedBy(placer, stack);
+            level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
+        }
     }
 
     @Override

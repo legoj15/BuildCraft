@@ -7,7 +7,11 @@
 package buildcraft.silicon.gui;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
+import buildcraft.lib.client.sprite.SpriteHolderRegistry;
+import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.gui.BuildCraftGui;
 import buildcraft.lib.gui.ledger.Ledger_Neptune;
 import buildcraft.lib.misc.LocaleUtil;
@@ -18,6 +22,12 @@ public class LedgerTablePower extends Ledger_Neptune {
     private static final int OVERLAY_COLOUR = 0xFF_D4_6C_1F;
     private static final int SUB_HEADER_COLOUR = 0xFF_AA_AF_b8;
     private static final int TEXT_COLOUR = 0xFF_00_00_00;
+
+    // Engine status icons — stitched into the blocks atlas via the "icons/" source
+    // in assets/minecraft/atlases/blocks.json. Routing through TextureAtlasSprite
+    // honours engine_active.png.mcmeta so the icon animates while power is flowing.
+    private static final SpriteHolder ICON_ACTIVE = SpriteHolderRegistry.getHolder("buildcraftunofficial:icons/engine_active");
+    private static final SpriteHolder ICON_INACTIVE = SpriteHolderRegistry.getHolder("buildcraftunofficial:icons/engine_inactive");
 
     public final TileLaserTableBase tile;
 
@@ -37,6 +47,10 @@ public class LedgerTablePower extends Ledger_Neptune {
 
     @Override
     protected void drawIcon(double x, double y, GuiGraphicsExtractor graphics) {
-        // TODO: draw engine active/inactive sprite when BCLibSprites is re-enabled
+        SpriteHolder holder = tile.avgPowerClient > 0 ? ICON_ACTIVE : ICON_INACTIVE;
+        TextureAtlasSprite sprite = holder.getSprite();
+        if (sprite != null) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, (int) x, (int) y, 16, 16);
+        }
     }
 }

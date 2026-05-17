@@ -82,6 +82,9 @@ public abstract class TileBC_Neptune extends BlockEntity {
     public void onPlacedBy(@Nullable LivingEntity placer, ItemStack stack) {
         if (placer instanceof Player player) {
             setOwner(player.getGameProfile());
+            // Mark the chunk dirty so the owner persists even if the block is never
+            // mutated again before the chunk unloads.
+            setChanged();
         }
     }
 

@@ -48,6 +48,7 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
 
     private final SafeTimeTracker clientLaserMoveInterval = new SafeTimeTracker(5, 10);
     private final SafeTimeTracker serverTargetMoveInterval = new SafeTimeTracker(10, 20);
+    private final SafeTimeTracker rescanInterval = new SafeTimeTracker(40, 20);
 
     private final List<BlockPos> targetPositions = new ArrayList<>();
     private BlockPos targetPos;
@@ -177,7 +178,7 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
         avgPower.tick();
 
         BlockPos previousTargetPos = targetPos;
-        if (worldHasUpdated) {
+        if (worldHasUpdated || rescanInterval.markTimeIfDelay(level)) {
             findPossibleTargets();
             worldHasUpdated = false;
         }

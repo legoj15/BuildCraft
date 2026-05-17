@@ -21,6 +21,7 @@ import net.minecraft.world.inventory.Slot;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
 import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
@@ -46,6 +47,11 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     // ledger on this screen for the same reason via shouldAddHelpLedger() returning false.
     @Override
     protected void initGuiElements() {
+        // Right-side ledger order (matches 1.12.2): ownership on top, then power.
+        if (menu.tile != null) {
+            mainGui.shownElements.add(new LedgerOwnership(mainGui,
+                    () -> menu.tile != null ? menu.tile.getOwner() : null, true));
+        }
         mainGui.shownElements.add(new LedgerTablePower(mainGui, menu.tile, true));
     }
 

@@ -5,33 +5,41 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 
-import javax.annotation.Nonnull;
-
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.state.BlockState;
+
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 
 /**
- * Listens for BlockUpdates in a given world and notifies all registered IBlockUpdateSubscribers of the update provided
- * it was within the update range of the ILocalBlockUpdateSubscriber.
+ * Listens for block updates in a given level and notifies all registered
+ * {@link ILocalBlockUpdateSubscriber}s whose update range covers the event
+ * position.
  *
- * Note: ILevelEventListener was removed in MC 1.21+. This class is stubbed out.
- * TODO: Re-implement using NeoForge event bus (@SubscribeEvent on BlockEvent or similar).
+ * The 1.12.2 version hooked {@code IWorldEventListener.notifyBlockUpdate} for
+ * a single catch-all signal. That API was removed in MC 1.21+, so this version
+ * hooks NeoForge's {@link BlockEvent.EntityPlaceEvent},
+ * {@link BreakBlockEvent}, and {@link BlockEvent.NeighborNotifyEvent}. Together
+ * those cover player placements/breaks and any {@code setBlock} call that
+ * propagates neighbor updates. Consumers (e.g. {@link buildcraft.silicon.tile.TileLaser})
+ * should still maintain a periodic rescan as a safety net for sources that
+ * skip these events.
  */
+@EventBusSubscriber(modid = "buildcraftunofficial")
 public class LocalBlockUpdateNotifier {
 
     private static final Map<Level, LocalBlockUpdateNotifier> instanceMap = new WeakHashMap<>();
     private final Set<ILocalBlockUpdateSubscriber> subscriberSet = new HashSet<>();
 
     private LocalBlockUpdateNotifier(Level world) {
-        // TODO: Register listener via NeoForge event bus for block update events
     }
 
     public static LocalBlockUpdateNotifier instance(Level world) {
-        if (!instanceMap.containsKey(world)) {
-            instanceMap.put(world, new LocalBlockUpdateNotifier(world));
-        }
-        return instanceMap.get(world);
+        return instanceMap.computeIfAbsent(world, LocalBlockUpdateNotifier::new);
     }
 
     public void registerSubscriberForUpdateNotifications(ILocalBlockUpdateSubscriber subscriber) {
@@ -42,7 +50,6 @@ public class LocalBlockUpdateNotifier {
         subscriberSet.remove(subscriber);
     }
 
-    // Called when a block updates - hook this via NeoForge events
     public void notifySubscribersInRange(Level world, BlockPos eventPos, BlockState oldState, BlockState newState, int flags) {
         for (ILocalBlockUpdateSubscriber subscriber : subscriberSet) {
             BlockPos keyPos = subscriber.getSubscriberPos();
@@ -52,6 +59,36 @@ public class LocalBlockUpdateNotifier {
                     Math.abs(keyPos.getZ() - eventPos.getZ()) <= updateRange) {
                 subscriber.setLevelUpdated(world, eventPos, oldState, newState, flags);
             }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onBlockPlaced(BlockEvent.EntityPlaceEvent event) {
+        if (event.getLevel() instanceof Level level && !level.isClientSide()) {
+            dispatch(level, event.getPos(), event.getPlacedAgainst(), event.getPlacedBlock());
+        }
+    }
+
+    @SubscribeEvent
+    public static void onBlockBroken(BreakBlockEvent event) {
+        LevelAccessor accessor = event.getLevel();
+        if (accessor instanceof Level level && !level.isClientSide()) {
+            dispatch(level, event.getPos(), event.getState(), level.getBlockState(event.getPos()));
+        }
+    }
+
+    @SubscribeEvent
+    public static void onNeighborNotify(BlockEvent.NeighborNotifyEvent event) {
+        if (event.getLevel() instanceof Level level && !level.isClientSide()) {
+            BlockState state = event.getState();
+            dispatch(level, event.getPos(), state, state);
+        }
+    }
+
+    private static void dispatch(Level level, BlockPos pos, BlockState oldState, BlockState newState) {
+        LocalBlockUpdateNotifier notifier = instanceMap.get(level);
+        if (notifier != null) {
+            notifier.notifySubscribersInRange(level, pos, oldState, newState, 0);
         }
     }
 }

@@ -23,7 +23,11 @@ public class LaserData_BC8 {
     private final int hash;
 
     public LaserData_BC8(LaserType laserType, Vec3 start, Vec3 end, double scale) {
-        this(laserType, start, end, scale, false, false, 15);
+        // Defaults match 1.12.2: diffuse shading enabled, single-sided, world block-light
+        // (minBlockLight=0 means "use the world's actual block-light at each vertex" — a value
+        // of 15 would force fullbright, which is wrong for tubes/frames/drills that need to
+        // darken underground).
+        this(laserType, start, end, scale, true, false, 0);
     }
 
     public LaserData_BC8(LaserType laserType, Vec3 start, Vec3 end, double scale,

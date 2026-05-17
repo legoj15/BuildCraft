@@ -42,7 +42,7 @@ public class BCEnergyConfig {
     }
 
     public static ModConfigSpec.BooleanValue useRfNaming;
-    public static ModConfigSpec.BooleanValue useFullEnergyNames;
+    public static ModConfigSpec.BooleanValue useFullUnitNames;
 
     public static void buildWorldgen(ModConfigSpec.Builder builder) {
         builder.push("oil");
@@ -180,13 +180,15 @@ public class BCEnergyConfig {
                         "Default is false (FE), matching the modern Forge/NeoForge convention."
                 )
                 .define("useRfNaming", false);
-        useFullEnergyNames = builder
+        useFullUnitNames = builder
                 .comment(
-                        "If true, spell energy units in full ('Minecraft Joules', 'Forge Energy', 'Redstone Flux')",
-                        "instead of the abbreviated 'MJ', 'FE', and 'RF'. Default is true (full names);",
-                        "set false to get the compact 'MJ'/'FE'/'RF' suffixes back."
+                        "If true, spell units in full ('Minecraft Joules', 'Forge Energy', 'Redstone Flux',",
+                        "'millibuckets') AND spell out time suffixes (' per second' / ' per tick') instead of",
+                        "the abbreviated 'MJ'/'FE'/'RF'/'mB' units and '/s'/'/t' suffixes. Also applies to fluid",
+                        "pipe tooltips. Default is true (full names + spelled-out time suffix, matching 1.12.2);",
+                        "set false to get the compact 'MJ/s'/'FE/t'/'mB/t' form back."
                 )
-                .define("useFullEnergyNames", true);
+                .define("useFullUnitNames", true);
     }
 
     /**

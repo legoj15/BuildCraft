@@ -22,21 +22,25 @@ public class LocaleUtil {
         return String.format(template, args);
     }
 
-    /** Format MJ value for display (e.g. "5.00 Minecraft Joules"). Unit follows
-     *  {@link BCEnergyConfig#useFullEnergyNames}; thousands and decimal separators follow
-     *  {@link BCLibConfig#thousandsSeparator} and {@link BCLibConfig#decimalSeparator}. */
+    /** Format MJ value for display (e.g. "5.00 Minecraft Joules", or "10.0k Minecraft Joules" when
+     *  the abbreviation toggle is on and the value is ≥ 1000). Unit follows
+     *  {@link BCEnergyConfig#useFullUnitNames}; thousands and decimal separators follow
+     *  {@link BCLibConfig#thousandsSeparator} and {@link BCLibConfig#decimalSeparator};
+     *  abbreviation follows {@link BCLibConfig#abbreviateLargeNumbers}. */
     public static String localizeMj(long microMj) {
         double mj = microMj / (double) MjAPI.MJ;
-        return formatDouble(mj, 2) + " " + mjUnit();
+        return formatMjAmount(mj, 2, shouldAbbreviate()) + " " + mjUnit();
     }
 
     /** Format MJ flow for display, picking PER_SECOND ("100.00 MJ/s"), PER_TICK ("5.00 MJ/t"), or
-     *  BOTH ("100.00 MJ/s (5.00 MJ/t)") per {@link BCLibConfig#flowDisplay}. Unit and separators
-     *  follow {@link BCEnergyConfig#useFullEnergyNames}, {@link BCLibConfig#thousandsSeparator},
-     *  and {@link BCLibConfig#decimalSeparator}. */
+     *  BOTH ("100.00 MJ/s (5.00 MJ/t)") per {@link BCLibConfig#flowDisplay}. Unit, time suffix, and
+     *  separators follow {@link BCEnergyConfig#useFullUnitNames} (full names also spell out
+     *  " per second" / " per tick" instead of "/s" / "/t"), {@link BCLibConfig#thousandsSeparator},
+     *  and {@link BCLibConfig#decimalSeparator}; abbreviation follows
+     *  {@link BCLibConfig#abbreviateLargeNumbers}. */
     public static String localizeMjFlow(long microMjPerTick) {
         double mjPerTick = microMjPerTick / (double) MjAPI.MJ;
-        return formatMjFlow(mjPerTick, currentFlowDisplay(), mjUnit());
+        return formatMjFlow(mjPerTick, currentFlowDisplay(), mjUnit(), shouldUseFullNames(), shouldAbbreviate());
     }
 
     /** Format heat level for display (e.g. "20.00 °C"), matching 1.12's format. The decimal
@@ -51,7 +55,7 @@ public class LocaleUtil {
     }
 
     /** Format stored Forge Energy for display (e.g. "5,000 / 10,000 Forge Energy"). The unit
-     *  follows {@link BCEnergyConfig#useFullEnergyNames} (default on → "Forge Energy") and
+     *  follows {@link BCEnergyConfig#useFullUnitNames} (default on → "Forge Energy") and
      *  {@link BCEnergyConfig#useRfNaming} (off by default → FE branch; on → RF branch); the
      *  thousands separator follows {@link BCLibConfig#thousandsSeparator}. */
     public static String localizeRf(int current, int max) {
@@ -59,35 +63,83 @@ public class LocaleUtil {
     }
 
     /** Format Forge Energy flow for display, picking PER_SECOND, PER_TICK, or BOTH per
-     *  {@link BCLibConfig#flowDisplay}. Unit follows {@link BCEnergyConfig#useFullEnergyNames} and
-     *  {@link BCEnergyConfig#useRfNaming}; thousands separator follows
-     *  {@link BCLibConfig#thousandsSeparator}. */
+     *  {@link BCLibConfig#flowDisplay}. Unit and time suffix follow
+     *  {@link BCEnergyConfig#useFullUnitNames} (full names also spell out " per second" /
+     *  " per tick" instead of "/s" / "/t") and {@link BCEnergyConfig#useRfNaming}; thousands
+     *  separator follows {@link BCLibConfig#thousandsSeparator}. */
     public static String localizeRfFlow(int rfPerTick) {
-        return formatRfFlow(rfPerTick, currentFlowDisplay(), energyUnit());
+        return formatRfFlow(rfPerTick, currentFlowDisplay(), energyUnit(), shouldUseFullNames());
     }
 
     /** Returns the FE-family unit label for the user's display preferences:
      *  full "Forge Energy"/"Redstone Flux" (default) or abbreviated "FE"/"RF"
-     *  when {@link BCEnergyConfig#useFullEnergyNames} is off. */
+     *  when {@link BCEnergyConfig#useFullUnitNames} is off. */
     public static String energyUnit() {
         boolean rf = BCEnergyConfig.useRfNaming != null && BCEnergyConfig.useRfNaming.get();
-        boolean full = BCEnergyConfig.useFullEnergyNames == null
-                || BCEnergyConfig.useFullEnergyNames.get();
-        if (full) return rf ? "Redstone Flux" : "Forge Energy";
+        if (shouldUseFullNames()) return rf ? "Redstone Flux" : "Forge Energy";
         return rf ? "RF" : "FE";
     }
 
     /** Returns "Minecraft Joules" (default) or "MJ" depending on
-     *  {@link BCEnergyConfig#useFullEnergyNames}. */
+     *  {@link BCEnergyConfig#useFullUnitNames}. */
     public static String mjUnit() {
-        return BCEnergyConfig.useFullEnergyNames == null || BCEnergyConfig.useFullEnergyNames.get()
-                ? "Minecraft Joules"
-                : "MJ";
+        return shouldUseFullNames() ? "Minecraft Joules" : "MJ";
     }
 
-    /** Format fluid flow for display (e.g. "40 mB/t"), matching 1.12.2's tooltip format. */
+    /** Reads {@link BCEnergyConfig#useFullUnitNames}, defaulting to {@code true} when the config
+     *  hasn't been loaded yet (e.g. unit tests). When on, unit names spell out as
+     *  "Minecraft Joules"/"Forge Energy"/"Redstone Flux"/"millibuckets" AND time suffixes spell
+     *  out as " per second"/" per tick" instead of "/s"/"/t". */
+    private static boolean shouldUseFullNames() {
+        return BCEnergyConfig.useFullUnitNames == null || BCEnergyConfig.useFullUnitNames.get();
+    }
+
+    /** Format fluid flow for display, picking PER_SECOND ("800 mB/s"), PER_TICK ("40 mB/t"), or
+     *  BOTH ("800 mB/s (40 mB/t)") per {@link BCLibConfig#flowDisplay}. Unit and time suffix
+     *  follow {@link BCEnergyConfig#useFullUnitNames} (full names also spell out " per second" /
+     *  " per tick" instead of "/s" / "/t"); thousands separator follows
+     *  {@link BCLibConfig#thousandsSeparator}. When {@link BCLibConfig#abbreviateLargeNumbers} is
+     *  on AND the value ≥ 1000 mB, the unit shifts from millibuckets to buckets (e.g.
+     *  "1.6 buckets per second" instead of "1.6k millibuckets per second") since whole-bucket
+     *  rates are the more natural reading once values cross that threshold. The fluid pipe
+     *  tooltip is the only consumer. */
     public static String localizeFluidFlow(int mbPerTick) {
-        return mbPerTick + " mB/t";
+        return formatFluidFlow(mbPerTick, currentFlowDisplay(), shouldUseFullNames(), shouldAbbreviate());
+    }
+
+    /** Package-visible — fixed-style variant for unit tests. The {@code mbPerTick * 20L} widening
+     *  matches the RF formatter's overflow-safe widening (a pipe transferring near {@code
+     *  Integer.MAX_VALUE/20} mB/tick would otherwise wrap to negative on the multiplication). */
+    static String formatFluidFlow(int mbPerTick, BCLibConfig.FlowDisplay mode, boolean fullSuffix, boolean abbreviate) {
+        String perSec = formatFluidAmount(mbPerTick * 20L, fullSuffix, abbreviate) + perSecondSuffix(fullSuffix);
+        String perTick = formatFluidAmount(mbPerTick, fullSuffix, abbreviate) + perTickSuffix(fullSuffix);
+        return switch (mode) {
+            case PER_SECOND -> perSec;
+            case PER_TICK -> perTick;
+            case BOTH -> perSec + " (" + perTick + ")";
+        };
+    }
+
+    /** {@code "<value> <unit>"} — under abbreviation switches the unit from mB to B (1000 mB = 1 B)
+     *  and applies k/M/G/T on top of buckets only if it crosses the next tier (a 50,000 mB/s pipe
+     *  would read as "50.0 buckets per second", not "50.0k mB" or "5.0E1 buckets"). The
+     *  formatAbbreviated helper handles values < 1000 by returning the raw 1-decimal form. */
+    private static String formatFluidAmount(long mb, boolean fullSuffix, boolean abbreviate) {
+        if (abbreviate && Math.abs(mb) >= 1000L) {
+            double buckets = mb / 1000.0;
+            return formatAbbreviated(buckets, currentThousandsSep(), currentDecimalSep())
+                    + " " + bucketsUnit(fullSuffix);
+        }
+        return formatLong(mb, currentThousandsSep(), currentDecimalSep(), false)
+                + " " + fluidUnit(fullSuffix);
+    }
+
+    private static String fluidUnit(boolean fullSuffix) {
+        return fullSuffix ? "millibuckets" : "mB";
+    }
+
+    private static String bucketsUnit(boolean fullSuffix) {
+        return fullSuffix ? "buckets" : "B";
     }
 
     /** Format a long with the configured thousands grouping separator. When
@@ -99,8 +151,10 @@ public class LocaleUtil {
 
     /** Format a double with the configured thousands grouping and decimal separators,
      *  rounded to {@code decimals} fractional digits. Always returns the raw expanded form —
-     *  the abbreviation toggle does not apply, so MJ/heat readouts and JEI recipe-cost labels
-     *  keep their full precision. */
+     *  the abbreviation toggle does not apply at this level, so JEI recipe-cost labels (the
+     *  remaining direct caller) keep their full precision. MJ readouts now route through
+     *  {@link #formatMjAmount(double, int, boolean)} which adds an abbreviation branch on top
+     *  of this formatter. */
     public static String formatDouble(double value, int decimals) {
         return formatDouble(value, decimals, currentThousandsSep(), currentDecimalSep());
     }
@@ -134,11 +188,13 @@ public class LocaleUtil {
         return BCLibConfig.flowDisplay != null ? BCLibConfig.flowDisplay.get() : BCLibConfig.FlowDisplay.PER_SECOND;
     }
 
-    /** Package-visible — takes the unit string explicitly so unit tests can exercise every
-     *  {@link BCLibConfig.FlowDisplay} mode without depending on the {@code mjUnit()} default. */
-    static String formatMjFlow(double mjPerTick, BCLibConfig.FlowDisplay mode, String unit) {
-        String perSec = formatDouble(mjPerTick * 20.0, 2) + " " + unit + "/s";
-        String perTick = formatDouble(mjPerTick, 2) + " " + unit + "/t";
+    /** Package-visible — takes the unit string, suffix style, and abbreviation flag explicitly so
+     *  unit tests can exercise every {@link BCLibConfig.FlowDisplay} × suffix × abbreviation combo
+     *  without depending on the {@code mjUnit()} / {@code useFullUnitNames} /
+     *  {@code abbreviateLargeNumbers} defaults. */
+    static String formatMjFlow(double mjPerTick, BCLibConfig.FlowDisplay mode, String unit, boolean fullSuffix, boolean abbreviate) {
+        String perSec = formatMjAmount(mjPerTick * 20.0, 2, abbreviate) + " " + unit + perSecondSuffix(fullSuffix);
+        String perTick = formatMjAmount(mjPerTick, 2, abbreviate) + " " + unit + perTickSuffix(fullSuffix);
         return switch (mode) {
             case PER_SECOND -> perSec;
             case PER_TICK -> perTick;
@@ -146,16 +202,35 @@ public class LocaleUtil {
         };
     }
 
+    /** Format an MJ scalar: when abbreviation is on AND |value| ≥ 1000, collapses to the k/M/G/T
+     *  one-decimal form ("10,000 → 10.0k"); otherwise returns the raw {@link #formatDouble(double,
+     *  int)} output. Centralises the MJ-side abbreviation branching so {@link #localizeMj},
+     *  {@link #localizeMjFlow}, and the package-visible {@link #formatMjFlow} agree. */
+    static String formatMjAmount(double mj, int decimals, boolean abbreviate) {
+        if (abbreviate && Math.abs(mj) >= 1000.0) {
+            return formatAbbreviated(mj, currentThousandsSep(), currentDecimalSep());
+        }
+        return formatDouble(mj, decimals);
+    }
+
     /** Package-visible test variant. The {@code rfPerTick * 20L} widening matches
      *  {@link #localizeRfFlow(int)}'s overflow-safe widening. */
-    static String formatRfFlow(int rfPerTick, BCLibConfig.FlowDisplay mode, String unit) {
-        String perSec = formatLong(rfPerTick * 20L) + " " + unit + "/s";
-        String perTick = formatLong(rfPerTick) + " " + unit + "/t";
+    static String formatRfFlow(int rfPerTick, BCLibConfig.FlowDisplay mode, String unit, boolean fullSuffix) {
+        String perSec = formatLong(rfPerTick * 20L) + " " + unit + perSecondSuffix(fullSuffix);
+        String perTick = formatLong(rfPerTick) + " " + unit + perTickSuffix(fullSuffix);
         return switch (mode) {
             case PER_SECOND -> perSec;
             case PER_TICK -> perTick;
             case BOTH -> perSec + " (" + perTick + ")";
         };
+    }
+
+    private static String perSecondSuffix(boolean fullSuffix) {
+        return fullSuffix ? " per second" : "/s";
+    }
+
+    private static String perTickSuffix(boolean fullSuffix) {
+        return fullSuffix ? " per tick" : "/t";
     }
 
     /** Walks {@code value} down through powers of 1000 and renders the result with one decimal

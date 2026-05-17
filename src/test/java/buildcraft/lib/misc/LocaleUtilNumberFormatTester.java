@@ -151,50 +151,183 @@ public class LocaleUtilNumberFormatTester {
     public void mjFlow_perSecond_multipliesByTwentyTicks() {
         // 5 mj/tick * 20 = 100 mj/sec
         Assertions.assertEquals("100.00 MJ/s",
-                LocaleUtil.formatMjFlow(5.0, FlowDisplay.PER_SECOND, "MJ"));
+                LocaleUtil.formatMjFlow(5.0, FlowDisplay.PER_SECOND, "MJ", false, false));
     }
 
     @Test
     public void mjFlow_perTick_passesThroughRaw() {
         Assertions.assertEquals("5.00 MJ/t",
-                LocaleUtil.formatMjFlow(5.0, FlowDisplay.PER_TICK, "MJ"));
+                LocaleUtil.formatMjFlow(5.0, FlowDisplay.PER_TICK, "MJ", false, false));
     }
 
     @Test
     public void mjFlow_both_rendersBothInParens() {
         Assertions.assertEquals("100.00 MJ/s (5.00 MJ/t)",
-                LocaleUtil.formatMjFlow(5.0, FlowDisplay.BOTH, "MJ"));
+                LocaleUtil.formatMjFlow(5.0, FlowDisplay.BOTH, "MJ", false, false));
     }
 
     @Test
     public void mjFlow_acceptsAnyUnitString() {
-        // Long-form unit name plumbs through unchanged.
+        // Long-form unit name plumbs through unchanged when fullSuffix is off — the suffix
+        // remains "/s"/"/t" regardless of how verbose the unit string itself is.
         Assertions.assertEquals("100.00 Minecraft Joules/s (5.00 Minecraft Joules/t)",
-                LocaleUtil.formatMjFlow(5.0, FlowDisplay.BOTH, "Minecraft Joules"));
+                LocaleUtil.formatMjFlow(5.0, FlowDisplay.BOTH, "Minecraft Joules", false, false));
+    }
+
+    @Test
+    public void mjFlow_fullSuffix_spellsOutPerSecondAndPerTick() {
+        // When the "Spell Units In Full" config is on, "/s"/"/t" become " per second"/" per tick"
+        // — matches 1.12.2's wording. Pairs with the long-form unit name in practice.
+        Assertions.assertEquals("100.00 Minecraft Joules per second",
+                LocaleUtil.formatMjFlow(5.0, FlowDisplay.PER_SECOND, "Minecraft Joules", true, false));
+        Assertions.assertEquals("5.00 Minecraft Joules per tick",
+                LocaleUtil.formatMjFlow(5.0, FlowDisplay.PER_TICK, "Minecraft Joules", true, false));
+        Assertions.assertEquals("100.00 Minecraft Joules per second (5.00 Minecraft Joules per tick)",
+                LocaleUtil.formatMjFlow(5.0, FlowDisplay.BOTH, "Minecraft Joules", true, false));
+    }
+
+    @Test
+    public void mjFlow_abbreviate_collapsesAtThreeFigures() {
+        // 500 mj/tick * 20 = 10,000 mj/sec → abbreviated to "10.0k MJ/s". Per-tick value (500) is
+        // under the abbreviation threshold so it stays raw inside the BOTH-form parens.
+        Assertions.assertEquals("10.0k MJ/s",
+                LocaleUtil.formatMjFlow(500.0, FlowDisplay.PER_SECOND, "MJ", false, true));
+        Assertions.assertEquals("500.00 MJ/t",
+                LocaleUtil.formatMjFlow(500.0, FlowDisplay.PER_TICK, "MJ", false, true));
+        Assertions.assertEquals("10.0k MJ/s (500.00 MJ/t)",
+                LocaleUtil.formatMjFlow(500.0, FlowDisplay.BOTH, "MJ", false, true));
+    }
+
+    @Test
+    public void mjAmount_abbreviate_collapsesScalar() {
+        // Backs the assembly-table power ledger ("Required: 10,000 MJ" → "10.0k MJ").
+        Assertions.assertEquals("10.0k", LocaleUtil.formatMjAmount(10_000.0, 2, true));
+        Assertions.assertEquals("2.2k", LocaleUtil.formatMjAmount(2_158.09, 2, true));
+        // Under threshold: raw form with the requested decimal precision.
+        Assertions.assertEquals("500.00", LocaleUtil.formatMjAmount(500.0, 2, true));
+        // Abbreviation off: raw form regardless of magnitude.
+        Assertions.assertEquals("10,000.00", LocaleUtil.formatMjAmount(10_000.0, 2, false));
     }
 
     @Test
     public void rfFlow_perSecond_multipliesByTwentyTicks() {
         // 100 fe/tick * 20 = 2000 fe/sec, formatted with default COMMA grouping (config null).
         Assertions.assertEquals("2,000 FE/s",
-                LocaleUtil.formatRfFlow(100, FlowDisplay.PER_SECOND, "FE"));
+                LocaleUtil.formatRfFlow(100, FlowDisplay.PER_SECOND, "FE", false));
     }
 
     @Test
     public void rfFlow_perTick_passesThroughRaw() {
         Assertions.assertEquals("100 FE/t",
-                LocaleUtil.formatRfFlow(100, FlowDisplay.PER_TICK, "FE"));
+                LocaleUtil.formatRfFlow(100, FlowDisplay.PER_TICK, "FE", false));
     }
 
     @Test
     public void rfFlow_both_rendersBothInParens() {
         Assertions.assertEquals("2,000 FE/s (100 FE/t)",
-                LocaleUtil.formatRfFlow(100, FlowDisplay.BOTH, "FE"));
+                LocaleUtil.formatRfFlow(100, FlowDisplay.BOTH, "FE", false));
     }
 
     @Test
     public void rfFlow_zeroValueRendersZeroOnBothSides() {
         Assertions.assertEquals("0 FE/s (0 FE/t)",
-                LocaleUtil.formatRfFlow(0, FlowDisplay.BOTH, "FE"));
+                LocaleUtil.formatRfFlow(0, FlowDisplay.BOTH, "FE", false));
+    }
+
+    @Test
+    public void rfFlow_fullSuffix_spellsOutPerSecondAndPerTick() {
+        // Long-form unit + spelled-out time suffix combination — the configuration the "Spell
+        // Units In Full" toggle enables in practice.
+        Assertions.assertEquals("2,000 Forge Energy per second",
+                LocaleUtil.formatRfFlow(100, FlowDisplay.PER_SECOND, "Forge Energy", true));
+        Assertions.assertEquals("100 Forge Energy per tick",
+                LocaleUtil.formatRfFlow(100, FlowDisplay.PER_TICK, "Forge Energy", true));
+        Assertions.assertEquals("2,000 Redstone Flux per second (100 Redstone Flux per tick)",
+                LocaleUtil.formatRfFlow(100, FlowDisplay.BOTH, "Redstone Flux", true));
+    }
+
+    // -- Fluid flow ----------------------------------------------------------
+
+    @Test
+    public void fluidFlow_perTick_abbreviated_keepsMillibucketsPerTickCompact() {
+        // PER_TICK + toggle off: matches the historical "40 mB/t" pipe-tooltip format.
+        Assertions.assertEquals("40 mB/t", LocaleUtil.formatFluidFlow(40, FlowDisplay.PER_TICK, false, false));
+        Assertions.assertEquals("0 mB/t", LocaleUtil.formatFluidFlow(0, FlowDisplay.PER_TICK, false, false));
+    }
+
+    @Test
+    public void fluidFlow_perTick_fullSuffix_spellsOutMillibucketsPerTick() {
+        // PER_TICK + toggle on (default): spells out the unit and the time suffix the same way
+        // the MJ/RF flow readouts do.
+        Assertions.assertEquals("40 millibuckets per tick",
+                LocaleUtil.formatFluidFlow(40, FlowDisplay.PER_TICK, true, false));
+        Assertions.assertEquals("1 millibuckets per tick",
+                LocaleUtil.formatFluidFlow(1, FlowDisplay.PER_TICK, true, false));
+    }
+
+    @Test
+    public void fluidFlow_perSecond_multipliesByTwentyTicks() {
+        // 40 mB/tick * 20 = 800 mB/sec. Default COMMA grouping (config null under JUnit) applies
+        // once the value crosses 1000.
+        Assertions.assertEquals("800 mB/s",
+                LocaleUtil.formatFluidFlow(40, FlowDisplay.PER_SECOND, false, false));
+        Assertions.assertEquals("800 millibuckets per second",
+                LocaleUtil.formatFluidFlow(40, FlowDisplay.PER_SECOND, true, false));
+        Assertions.assertEquals("2,000 mB/s",
+                LocaleUtil.formatFluidFlow(100, FlowDisplay.PER_SECOND, false, false));
+    }
+
+    @Test
+    public void fluidFlow_both_rendersBothInParens() {
+        // The BOTH mode is what the user reported as broken — only the per-tick figure was showing.
+        Assertions.assertEquals("800 mB/s (40 mB/t)",
+                LocaleUtil.formatFluidFlow(40, FlowDisplay.BOTH, false, false));
+        Assertions.assertEquals("800 millibuckets per second (40 millibuckets per tick)",
+                LocaleUtil.formatFluidFlow(40, FlowDisplay.BOTH, true, false));
+    }
+
+    @Test
+    public void fluidFlow_zeroValueRendersZeroOnBothSides() {
+        Assertions.assertEquals("0 mB/s (0 mB/t)",
+                LocaleUtil.formatFluidFlow(0, FlowDisplay.BOTH, false, false));
+    }
+
+    @Test
+    public void fluidFlow_abbreviate_shiftsToBucketsAtThousandMb() {
+        // Once mb ≥ 1000 the unit shifts from millibuckets to buckets — the user's golden-pipe
+        // example: 80 mB/tick * 20 = 1600 mB/s → "1.6 buckets per second" (or "1.6 B/s").
+        Assertions.assertEquals("1.6 B/s",
+                LocaleUtil.formatFluidFlow(80, FlowDisplay.PER_SECOND, false, true));
+        Assertions.assertEquals("1.6 buckets per second",
+                LocaleUtil.formatFluidFlow(80, FlowDisplay.PER_SECOND, true, true));
+    }
+
+    @Test
+    public void fluidFlow_abbreviate_keepsMillibucketsBelowThreshold() {
+        // Per-tick value of a golden-pipe-rate pipe (80 mB/tick) stays in mB — only above 1000 mB
+        // does the unit shift. In BOTH mode the per-sec side abbreviates while per-tick doesn't.
+        Assertions.assertEquals("80 mB/t",
+                LocaleUtil.formatFluidFlow(80, FlowDisplay.PER_TICK, false, true));
+        Assertions.assertEquals("1.6 B/s (80 mB/t)",
+                LocaleUtil.formatFluidFlow(80, FlowDisplay.BOTH, false, true));
+    }
+
+    @Test
+    public void fluidFlow_abbreviate_offFallsBackToRawMb() {
+        // Abbreviation OFF: even at 1.6 buckets/sec, render the integer mB count with thousands sep.
+        Assertions.assertEquals("1,600 mB/s",
+                LocaleUtil.formatFluidFlow(80, FlowDisplay.PER_SECOND, false, false));
+    }
+
+    @Test
+    public void fluidFlow_abbreviate_largeBucketRatesApplyKMG() {
+        // 10,000 mB/tick * 20 = 200,000 mB/sec = 200 buckets/sec — should render as "200.0 B/s",
+        // not as some hybrid "200.0k mB/s". k/M/G/T applies on top of buckets once the bucket
+        // count itself crosses 1000.
+        Assertions.assertEquals("200.0 B/s",
+                LocaleUtil.formatFluidFlow(10_000, FlowDisplay.PER_SECOND, false, true));
+        // 100,000 mB/tick * 20 = 2,000,000 mB/sec = 2000 buckets/sec → "2.0k B/s".
+        Assertions.assertEquals("2.0k B/s",
+                LocaleUtil.formatFluidFlow(100_000, FlowDisplay.PER_SECOND, false, true));
     }
 }

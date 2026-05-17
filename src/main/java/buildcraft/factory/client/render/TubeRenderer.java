@@ -70,13 +70,20 @@ public class TubeRenderer {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
+        // Prune stale entries — client-side level teardown (logout, dimension change)
+        // doesn't reliably call setRemoved() on every BE, so TileMiners from a previous
+        // world can linger in this WeakHashMap-backed set until GC. Without this, a
+        // world reload can produce two render submissions per miner per frame at
+        // slightly-different currentLength values (stale vs fresh smoothing state),
+        // which the depth test then alternates between, producing visible per-frame
+        // flicker at the segmentation boundaries.
+        ACTIVE_MINERS.removeIf(miner -> miner.isRemoved() || miner.getLevel() != mc.level);
+
         PoseStack poseStack = event.getPoseStack();
         Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
         float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
         for (TileMiner miner : ACTIVE_MINERS) {
-            if (miner.isRemoved()) continue;
-
             double length = miner.getLength(partialTicks);
             if (length <= 0) continue;
 

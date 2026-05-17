@@ -85,7 +85,15 @@ public class TubeRenderer {
             Vec3 end = new Vec3(pos.getX() + 0.5, pos.getY() - length, pos.getZ() + 0.5);
 
             LaserType type = (miner instanceof TilePump) ? PUMP_TUBE : MINING_WELL_TUBE;
-            LaserData_BC8 data = new LaserData_BC8(type, start, end, 1 / 16.0);
+            // Tubes use world block-light per vertex (smooth gradient along the column
+            // as it descends into darker rock) but NO per-face diffuse — the 4-arg
+            // default's enableDiffuse=true gives top/bottom/sides each their own flat
+            // brightness (1.0/0.5/0.8), which produces a visible discontinuity at face
+            // edges that shifts with the camera angle and looks like "two systems
+            // competing" against the per-vertex gradient. Explicit (false, false, 0)
+            // = uniform face brightness, world-lit per vertex.
+            LaserData_BC8 data = new LaserData_BC8(type, start, end, 1 / 16.0,
+                false, false, 0);
             LaserRenderer_BC8.renderLaserStatic(poseStack, data, cameraPos);
         }
     }

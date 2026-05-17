@@ -88,8 +88,13 @@ public class RenderLaser {
             int index = (int) (avg * MAX_POWER / laser.getMaxPowerPerTick());
             if (index > MAX_POWER) index = MAX_POWER;
 
+            // Lasers are self-illuminating — fullbright + no face shading, like the
+            // pre-port look (and unlike the 1.12.2 FastTESR default which used the
+            // shared 4-arg form). Explicit args bypass the diffuse/world-light defaults
+            // that the tube/quarry/etc. inherit from the 4-arg form.
             LaserData_BC8 data = new LaserData_BC8(
-                BuildCraftLaserManager.POWERS[index], start, target, 1.0 / 16.0);
+                BuildCraftLaserManager.POWERS[index], start, target, 1.0 / 16.0,
+                false, false, 15);
 
             LaserRenderer_BC8.renderLaserStatic(poseStack, data, cameraPos);
         }

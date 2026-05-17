@@ -18,6 +18,7 @@ public class BCLibConfig {
 
     public static ModConfigSpec.EnumValue<PowerMode> powerMode;
     public static ModConfigSpec.DoubleValue mjRfConversionAmount;
+    public static ModConfigSpec.BooleanValue canEnginesExplode;
 
     public static ModConfigSpec.EnumValue<ThousandsSeparator> thousandsSeparator;
     public static ModConfigSpec.EnumValue<DecimalSeparator> decimalSeparator;
@@ -33,6 +34,14 @@ public class BCLibConfig {
         mjRfConversionAmount = builder
                 .comment("Conversion ratio for MJ <-> RF if autoconvert is enabled (MJ per RF)")
                 .defineInRange("mjRfConversionAmount", 0.1, 0.0001, 0.2);
+
+        canEnginesExplode = builder
+                .comment(
+                        "If true, engines violently explode when overheated. If false (default),",
+                        "they sit in the OVERHEAT stage producing no power until cooled (passively",
+                        "or via coolant on combustion engines) or cleared by hitting them with a wrench."
+                )
+                .define("canEnginesExplode", false);
     }
 
     public static void buildDisplay(ModConfigSpec.Builder builder) {

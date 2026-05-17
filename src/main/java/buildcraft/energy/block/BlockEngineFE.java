@@ -9,6 +9,8 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -23,6 +25,7 @@ import buildcraft.api.transport.pipe.IItemPipe;
 import buildcraft.energy.BCEnergyConfig;
 import buildcraft.energy.tile.TileEngineFE;
 import buildcraft.lib.engine.BlockEngineBase_BC8;
+import buildcraft.lib.engine.TileEngineBase_BC8;
 
 public class BlockEngineFE extends BlockEngineBase_BC8 {
     public BlockEngineFE(Properties properties) {
@@ -35,15 +38,37 @@ public class BlockEngineFE extends BlockEngineBase_BC8 {
         return new TileEngineFE(pos, state);
     }
 
+    /**
+     * FE engine never overheats (heat is capped). Wrench priority:
+     *   1. Pipe in hand → PASS for placement.
+     *   2. Crouch → open GUI (overrides wrench; unified with Stone/Iron/Dynamo).
+     *   3. Wrench (non-crouch) → PASS if there's an alternate receiver (rotate + sound +
+     *      `wrenched` advancement); otherwise tripwire-armed sound + CONSUME.
+     *   4. Default → open GUI.
+     */
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (stack.getItem() instanceof IToolWrench && player.isShiftKeyDown()) {
-            return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
-        }
         if (stack.getItem() instanceof IItemPipe) {
             return InteractionResult.PASS;
         }
+
+        if (player.isShiftKeyDown()) {
+            return openGui(state, level, pos, player);
+        }
+
+        if (stack.getItem() instanceof IToolWrench) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileEngineBase_BC8 engine && engine.hasAlternateReceiver()) {
+                return InteractionResult.PASS;
+            }
+            if (!level.isClientSide()) {
+                level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 1.3f);
+            }
+            player.swing(hand);
+            return InteractionResult.CONSUME;
+        }
+
         return openGui(state, level, pos, player);
     }
 

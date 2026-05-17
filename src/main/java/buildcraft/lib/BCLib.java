@@ -18,6 +18,17 @@ import buildcraft.lib.recipe.RefineryRecipeRegistry;
  */
 public class BCLib {
 
+    /**
+     * Developer-mode toggle. When true, developer-facing affordances are enabled
+     * (e.g. the {@code /bcsoundtest} command, optional fallback rules in
+     * {@code RulesLoader}). When false (default), those features are inert as if
+     * they didn't exist.
+     *
+     * <p>Enable by launching with {@code -Dbuildcraft.dev=true}. Intentionally a
+     * {@code static final} so the JIT can elide gated code paths in production.
+     */
+    public static final boolean DEV = Boolean.getBoolean("buildcraft.dev");
+
     public static void init(IEventBus modEventBus) {
         // Wire fuel/coolant registries
         BuildcraftFuelRegistry.fuel = FuelRegistry.INSTANCE;

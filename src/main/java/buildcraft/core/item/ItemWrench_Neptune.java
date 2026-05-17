@@ -44,7 +44,10 @@ public class ItemWrench_Neptune extends Item implements IToolWrench {
     @Override
     public boolean doesSneakBypassUse(ItemStack stack, net.minecraft.world.level.LevelReader level,
             net.minecraft.core.BlockPos pos, Player player) {
-        return false;
+        // true = sneak-clicks pass through to the block's useItemOn. Required so
+        // engine/dynamo blocks can intercept crouch+wrench and open the GUI instead
+        // of being short-circuited to the wrench's own rotation path.
+        return true;
     }
 
     @Override

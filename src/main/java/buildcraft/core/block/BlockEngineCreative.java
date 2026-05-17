@@ -7,6 +7,8 @@ package buildcraft.core.block;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -19,6 +21,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.core.tile.TileEngineCreative;
 import buildcraft.lib.engine.BlockEngineBase_BC8;
+import buildcraft.lib.engine.TileEngineBase_BC8;
 
 public class BlockEngineCreative extends BlockEngineBase_BC8 {
     public BlockEngineCreative(Properties properties) {
@@ -32,27 +35,44 @@ public class BlockEngineCreative extends BlockEngineBase_BC8 {
     }
 
     /**
-     * 1.12.2 parity:
-     * - Crouch + wrench: rotate to next valid receiver (delegate to base class)
-     * - Normal wrench: cycle output power (creative engine specific)
+     * Creative engine has no GUI and never overheats. Wrench priority:
+     *   1. Non-wrench → PASS.
+     *   2. Crouch + wrench → rotate to next valid receiver (PASS so wrench.useOn handles
+     *      rotation + slide sound + `wrenched`); tripwire-armed sound + CONSUME if no
+     *      alternate receiver.
+     *   3. Non-crouch + wrench → cycle output power, manually grant `wrenched`. Plays the
+     *      tripwire sound (not the slide/piston sound, which is reserved for rotation).
      */
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (stack.getItem() instanceof IToolWrench) {
-            if (player.isShiftKeyDown()) {
-                // Crouch + wrench = rotate to next valid receiver (base class handles this)
-                return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
-            }
-            // Normal wrench = cycle output power
-            if (!level.isClientSide()) {
-                BlockEntity be = level.getBlockEntity(pos);
-                if (be instanceof TileEngineCreative creative) {
-                    creative.onWrenchInteract(player);
-                }
-            }
-            return InteractionResult.SUCCESS;
+        if (!(stack.getItem() instanceof IToolWrench wrench)) {
+            return InteractionResult.PASS;
         }
-        return InteractionResult.PASS;
+        BlockEntity be = level.getBlockEntity(pos);
+
+        if (player.isShiftKeyDown()) {
+            if (be instanceof TileEngineBase_BC8 engine && engine.hasAlternateReceiver()) {
+                return InteractionResult.PASS;
+            }
+            if (!level.isClientSide()) {
+                // Crouch-with-nothing-to-rotate-to: same soft-fail sound as the other engines.
+                level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 1.3f);
+            }
+            player.swing(hand);
+            return InteractionResult.CONSUME;
+        }
+
+        if (be instanceof TileEngineCreative creative) {
+            creative.onWrenchInteract(player);
+        }
+        // wrenchUsed on both sides: server side awards `wrenched` (guarded internally by
+        // ServerPlayer instanceof), both sides swing the arm. Matches ItemWrench_Neptune.useOn.
+        wrench.wrenchUsed(player, hand, stack, hitResult);
+        if (!level.isClientSide()) {
+            // Cycle-power confirmation: lower-pitched lever click, distinct from the soft-fail.
+            level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 0.7f);
+        }
+        return InteractionResult.CONSUME;
     }
 }

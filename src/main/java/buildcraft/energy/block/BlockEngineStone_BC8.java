@@ -8,6 +8,8 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -17,10 +19,13 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
+import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.api.transport.pipe.IItemPipe;
 import buildcraft.energy.tile.TileEngineStone_BC8;
 import buildcraft.lib.engine.BlockEngineBase_BC8;
+import buildcraft.lib.engine.TileEngineBase_BC8;
+import buildcraft.lib.misc.SoundUtil;
 
 public class BlockEngineStone_BC8 extends BlockEngineBase_BC8 {
     public BlockEngineStone_BC8(Properties properties) {
@@ -34,24 +39,50 @@ public class BlockEngineStone_BC8 extends BlockEngineBase_BC8 {
     }
 
     /**
-     * Handle items: non-wrench items or non-crouching wrench = open GUI.
-     * Crouch+wrench is handled by base class (rotation).
-     * 
-     * In 1.12.2, the stirling engine had no tile onActivated override,
-     * so non-wrench interaction always opened the GUI via the block class.
+     * Wrench priority on the Stirling engine:
+     *   1. Wrench + OVERHEAT → clear overheat, grant `to_much_power`, play slide sound, CONSUME.
+     *   2. Pipe in hand → PASS so the pipe can be placed (1.12.2 parity).
+     *   3. Crouch → open GUI (overrides wrench).
+     *   4. Wrench (non-crouch) → PASS if there's an alternate receiver (wrench.useOn will rotate,
+     *      play the slide sound, and grant `wrenched`); otherwise play the tripwire-armed sound
+     *      and CONSUME so the player knows the wrench fired but had nothing to rotate to.
+     *   5. Default → open GUI.
      */
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        // Let base class handle crouch+wrench for rotation
-        if (stack.getItem() instanceof IToolWrench && player.isShiftKeyDown()) {
-            return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
+        boolean isWrench = stack.getItem() instanceof IToolWrench;
+        BlockEntity be = level.getBlockEntity(pos);
+        TileEngineBase_BC8 engine = (be instanceof TileEngineBase_BC8 e) ? e : null;
+
+        if (isWrench && engine != null && engine.getPowerStage() == EnumPowerStage.OVERHEAT) {
+            if (!level.isClientSide()) {
+                engine.clearOverheat(player);
+                SoundUtil.playSlideSound(level, pos, state, InteractionResult.SUCCESS);
+            }
+            player.swing(hand);
+            return InteractionResult.CONSUME;
         }
-        // Do not open GUI when holding a pipe — let the pipe be placed (1.12.2 parity)
+
         if (stack.getItem() instanceof IItemPipe) {
             return InteractionResult.PASS;
         }
-        // Everything else (including non-crouching wrench) opens GUI
+
+        if (player.isShiftKeyDown()) {
+            return openGui(state, level, pos, player);
+        }
+
+        if (isWrench) {
+            if (engine != null && engine.hasAlternateReceiver()) {
+                return InteractionResult.PASS;
+            }
+            if (!level.isClientSide()) {
+                level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 1.3f);
+            }
+            player.swing(hand);
+            return InteractionResult.CONSUME;
+        }
+
         return openGui(state, level, pos, player);
     }
 

@@ -6,10 +6,10 @@ package buildcraft.energy.block;
 
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.core.Direction;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -20,13 +20,13 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
-import buildcraft.api.properties.BuildCraftProperties;
-
+import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.api.transport.pipe.IItemPipe;
 import buildcraft.energy.tile.TileEngineIron_BC8;
 import buildcraft.lib.engine.BlockEngineBase_BC8;
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.lib.misc.SoundUtil;
 
 public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
     public BlockEngineIron_BC8(Properties properties) {
@@ -40,58 +40,54 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
     }
 
     /**
-     * Called when the player right-clicks with an item in hand.
-     * Handles fluid container fill/drain before falling through to GUI opening.
-     * Uses FluidUtilBC.onTankActivated which handles ALL fluid container types
-     * (buckets, tanks, etc.) via NeoForge's FluidUtil.getFluidHandler — matching
-     * the 1.12.2 behavior where super.onActivated() used FluidUtil.interactWithFluidHandler.
+     * Wrench priority on the Combustion engine:
+     *   1. Wrench + OVERHEAT → clear overheat, grant `to_much_power`, play slide sound, CONSUME.
+     *   2. Pipe in hand → PASS so the pipe can be placed (1.12.2 parity).
+     *   3. Crouch → open GUI (overrides wrench).
+     *   4. Wrench (non-crouch) → PASS if there's an alternate receiver (wrench.useOn rotates,
+     *      plays slide sound, grants `wrenched`); otherwise tripwire-armed sound + CONSUME.
+     *   5. Non-wrench fluid container → fill/drain via FluidUtilBC (buckets, tanks).
+     *   6. Default → open GUI.
      */
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        // Wrenches: in 1.12.2, right-clicking with a wrench rotates the engine.
-        // Crouch+wrench also rotates (falls through to PASS -> Item.useOn() -> ICustomRotationHandler).
-        // The GUI is opened by right-clicking with anything OTHER than a wrench/pipe.
-        if (!stack.isEmpty() && stack.getItem() instanceof IToolWrench) {
-            if (!player.isShiftKeyDown()) {
-                // Try to rotate; if successful, return SUCCESS.
-                // If no valid rotation target, fall through to open the GUI (matching 1.12.2).
-                if (!level.isClientSide()) {
-                    BlockEntity be = level.getBlockEntity(pos);
-                    if (be instanceof TileEngineIron_BC8 engine) {
-                        if (engine.attemptRotation()) {
-                            level.setBlock(pos, state.setValue(
-                                    BuildCraftProperties.BLOCK_FACING_6, engine.getOrientation()), 3);
-                            return InteractionResult.SUCCESS;
-                        }
-                    }
-                } else {
-                    // Client side: optimistically return success for the swing animation.
-                    // If server finds no valid target, the GUI will open server-side.
-                    return InteractionResult.SUCCESS;
-                }
-                // No valid rotation target — open the GUI
-                return openGui(state, level, pos, player);
-            }
-            return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
-        }
-
-        // Try fluid container interaction (buckets, tanks, etc.)
+        boolean isWrench = !stack.isEmpty() && stack.getItem() instanceof IToolWrench;
         BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof TileEngineIron_BC8 engine) {
-            if (FluidUtilBC.onTankActivated(player, pos, hand, engine.combinedFluidHandler)) {
-                return InteractionResult.SUCCESS;
+        TileEngineIron_BC8 engine = (be instanceof TileEngineIron_BC8 e) ? e : null;
+
+        if (isWrench && engine != null && engine.getPowerStage() == EnumPowerStage.OVERHEAT) {
+            if (!level.isClientSide()) {
+                engine.clearOverheat(player);
+                SoundUtil.playSlideSound(level, pos, state, InteractionResult.SUCCESS);
             }
+            player.swing(hand);
+            return InteractionResult.CONSUME;
         }
 
-        // Do not open GUI when holding a pipe — let the pipe be placed (1.12.2 parity)
         if (stack.getItem() instanceof IItemPipe) {
             return InteractionResult.PASS;
         }
 
-        // Not a fluid container — open GUI (same as useWithoutItem)
-        // We can't return PASS here because that invokes the item's useOn,
-        // not useWithoutItem, so the GUI would never open when holding items.
+        if (player.isShiftKeyDown()) {
+            return openGui(state, level, pos, player);
+        }
+
+        if (isWrench) {
+            if (engine != null && engine.hasAlternateReceiver()) {
+                return InteractionResult.PASS;
+            }
+            if (!level.isClientSide()) {
+                level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 1.3f);
+            }
+            player.swing(hand);
+            return InteractionResult.CONSUME;
+        }
+
+        if (engine != null && FluidUtilBC.onTankActivated(player, pos, hand, engine.combinedFluidHandler)) {
+            return InteractionResult.SUCCESS;
+        }
+
         return openGui(state, level, pos, player);
     }
 

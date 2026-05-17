@@ -107,6 +107,10 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
 
     /** Core burn logic — ported from 1.12.2 TileEngineIron_BC8.burn() */
     protected void burn() {
+        // Overheated engines stop consuming fuel and producing power/heat until cooled.
+        // Coolant is still extracted via updateHeatLevel(), so combustion engines can
+        // self-recover from overheat if coolant is available.
+        if (getPowerStage() == EnumPowerStage.OVERHEAT) return;
         final FluidResource fuelRes = tankFuel.getResource(0);
         final FluidStack fuel = fuelRes.toStack((int) tankFuel.getAmountAsLong(0));
         if (currentFuel == null || currentFuel.getFluid().getFluid() != fuel.getFluid()) {

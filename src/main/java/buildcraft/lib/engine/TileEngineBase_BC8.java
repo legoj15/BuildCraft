@@ -16,7 +16,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -37,6 +39,8 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjToRfAutoConvertor;
 import buildcraft.api.tiles.IDebuggable;
 
+import buildcraft.lib.BCLibConfig;
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.LocaleUtil;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -48,6 +52,9 @@ import net.neoforged.neoforge.transfer.energy.EnergyHandler;
  * piston animation state, redstone sensitivity, and NBT persistence.
  */
 public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebuggable {
+
+    public static final Identifier ADVANCEMENT_TO_MUCH_POWER =
+        Identifier.parse("buildcraftunofficial:to_much_power");
 
     public static final float MIN_HEAT = 20f;
     public static final float MAX_HEAT = 250f;
@@ -220,12 +227,48 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
 
     protected void overheat() {
         isPumping = false;
+        if (!BCLibConfig.canEnginesExplode.get()) return;
         float range = explosionRange();
         if (range > 0 && level != null) {
             level.explode(null, getBlockPos().getX() + 0.5, getBlockPos().getY() + 0.5,
                 getBlockPos().getZ() + 0.5, range, Level.ExplosionInteraction.BLOCK);
             level.removeBlock(getBlockPos(), false);
         }
+    }
+
+    /**
+     * Wrench-clear path: drop heat back to MIN_HEAT and recompute the power stage.
+     * Awards the {@code to_much_power} advancement to the player if non-null and
+     * the engine was actually overheated.
+     * @return true iff the engine was overheated and got cleared.
+     */
+    public boolean clearOverheat(@Nullable Player player) {
+        if (powerStage != EnumPowerStage.OVERHEAT) return false;
+        heat = MIN_HEAT;
+        powerStage = computePowerStage();
+        isPumping = false;
+        setChanged();
+        if (level != null && !level.isClientSide()) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+            if (player != null) {
+                AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_TO_MUCH_POWER);
+            }
+        }
+        return true;
+    }
+
+    /**
+     * True iff at least one direction OTHER than the current orientation has a valid MJ
+     * receiver. Used by block-side wrench handling to detect the "nothing to rotate to" UX
+     * case: either zero receivers exist, or the only valid receiver is the current
+     * orientation (and rotating would just land back on it).
+     */
+    public boolean hasAlternateReceiver() {
+        for (Direction d : Direction.values()) {
+            if (d == orientation) continue;
+            if (getReceiverToPower(d) != null) return true;
+        }
+        return false;
     }
 
     // --- Connector ---

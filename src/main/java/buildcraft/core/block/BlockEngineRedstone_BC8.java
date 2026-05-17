@@ -7,6 +7,8 @@ package buildcraft.core.block;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -16,7 +18,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
-import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.core.tile.TileEngineRedstone_BC8;
 import buildcraft.lib.engine.BlockEngineBase_BC8;
@@ -34,27 +35,31 @@ public class BlockEngineRedstone_BC8 extends BlockEngineBase_BC8 {
     }
 
     /**
-     * Redstone engine: normal wrench click rotates to next valid receiver.
-     * In 1.12.2, redstone engine had no onActivated override, so wrench
-     * interaction was handled entirely by ICustomRotationHandler.attemptRotation().
-     * Both normal and crouch+wrench rotate (crouch handled by base class).
+     * Redstone engine has no GUI and never overheats. Wrench is the only meaningful
+     * interaction:
+     *   - rotate to next valid receiver if one exists (delegated to wrench.useOn via PASS,
+     *     which grants the `wrenched` advancement and plays the slide sound)
+     *   - if no alternate receiver, play the tripwire-armed sound and CONSUME, so the
+     *     player gets audio feedback that the wrench fired but had nothing to do.
+     * Crouch is irrelevant.
      */
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (stack.getItem() instanceof IToolWrench) {
-            // Both normal and crouch wrench rotate to next valid receiver
-            if (!level.isClientSide()) {
-                BlockEntity be = level.getBlockEntity(pos);
-                if (be instanceof TileEngineBase_BC8 engine) {
-                    if (engine.attemptRotation()) {
-                        level.setBlock(pos, state.setValue(
-                                BuildCraftProperties.BLOCK_FACING_6, engine.getOrientation()), 3);
-                    }
-                }
-            }
-            return InteractionResult.SUCCESS;
+        if (!(stack.getItem() instanceof IToolWrench)) {
+            return InteractionResult.PASS;
         }
-        return InteractionResult.PASS;
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TileEngineBase_BC8 engine && engine.hasAlternateReceiver()) {
+            return InteractionResult.PASS;
+        }
+        if (!level.isClientSide()) {
+            level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 1.3f);
+        }
+        // swing on both sides: client side animates the swinger immediately, server side
+        // broadcasts to observers. Server-only swing doesn't reliably animate the swinger's
+        // own first-person hand — same reason ItemWrench_Neptune.wrenchUsed swings unconditionally.
+        player.swing(hand);
+        return InteractionResult.CONSUME;
     }
 }

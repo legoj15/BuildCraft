@@ -5,6 +5,8 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -30,6 +32,7 @@ import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.api.transport.pipe.IItemPipe;
 import buildcraft.energy.tile.TileDynamoMJ;
+import buildcraft.lib.engine.TileEngineBase_BC8;
 
 public class BlockDynamoMJ extends Block implements EntityBlock, ICustomRotationHandler {
 
@@ -127,15 +130,38 @@ public class BlockDynamoMJ extends Block implements EntityBlock, ICustomRotation
         return InteractionResult.FAIL;
     }
 
+    /**
+     * Dynamo never overheats (heat capped at 200). Wrench priority:
+     *   1. Pipe in hand → PASS for placement.
+     *   2. Crouch → open GUI (overrides wrench; unified with Stone/Iron/FE).
+     *   3. Wrench (non-crouch) → PASS if there's an alternate receiver (wrench.useOn dispatches
+     *      to this block's ICustomRotationHandler, plays slide sound, grants `wrenched`);
+     *      otherwise tripwire-armed sound + CONSUME.
+     *   4. Default → open GUI.
+     */
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (stack.getItem() instanceof IToolWrench && player.isShiftKeyDown()) {
-            return attemptRotation(level, pos, state, hitResult.getDirection()); // Fallback wrench handling
-        }
         if (stack.getItem() instanceof IItemPipe) {
             return InteractionResult.PASS;
         }
+
+        if (player.isShiftKeyDown()) {
+            return openGui(state, level, pos, player);
+        }
+
+        if (stack.getItem() instanceof IToolWrench) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileEngineBase_BC8 engine && engine.hasAlternateReceiver()) {
+                return InteractionResult.PASS;
+            }
+            if (!level.isClientSide()) {
+                level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 1.3f);
+            }
+            player.swing(hand);
+            return InteractionResult.CONSUME;
+        }
+
         return openGui(state, level, pos, player);
     }
 

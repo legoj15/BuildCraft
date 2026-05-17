@@ -95,9 +95,21 @@ public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHa
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        // Wrenches handle rotation via ICustomRotationHandler — fall through to
-        // ItemWrench_Neptune.useOn() so the slide sound and advancement still fire.
+        // Wrench priority (unified with engine/dynamo blocks):
+        //   - crouch + wrench → open GUI (overrides rotation, so the player can sneak-tweak
+        //     a working distiller without spinning it)
+        //   - non-crouch + wrench → PASS so ItemWrench_Neptune.useOn dispatches rotation
+        //     through ICustomRotationHandler + plays the slide sound + grants `wrenched`
         if (stack.getItem() instanceof IToolWrench) {
+            if (player.isShiftKeyDown()) {
+                if (!level.isClientSide()) {
+                    BlockEntity be = level.getBlockEntity(pos);
+                    if (be instanceof TileDistiller_BC8 distiller) {
+                        player.openMenu(distiller, pos);
+                    }
+                }
+                return InteractionResult.SUCCESS;
+            }
             return InteractionResult.PASS;
         }
         BlockEntity be = level.getBlockEntity(pos);

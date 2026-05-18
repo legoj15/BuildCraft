@@ -2,18 +2,16 @@
   "parent": "minecraft:recipes/root",
   "rewards": {
     "recipes": [
-      "buildcraftunofficial:engine_redstone",
-      "buildcraftunofficial:paintbrush",
-      "buildcraftunofficial:guide_book"
+      "buildcraftunofficial:replacer"
     ]
   },
   "criteria": {
-    "has_gear_wood": {
+    "has_architect": {
       "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [
           {
-            "items": "buildcraftunofficial:gear_wood"
+            "items": "buildcraftunofficial:architect"
           }
         ]
       }
@@ -21,7 +19,7 @@
   },
   "requirements": [
     [
-      "has_gear_wood"
+      "has_architect"
     ]
   ]
 }

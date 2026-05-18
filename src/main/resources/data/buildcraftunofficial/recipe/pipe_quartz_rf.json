@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "buildcraftunofficial:pipe_quartz_power",
+    "#c:dusts/redstone"
+  ],
+  "result": {
+    "id": "buildcraftunofficial:pipe_quartz_rf"
+  }
+}

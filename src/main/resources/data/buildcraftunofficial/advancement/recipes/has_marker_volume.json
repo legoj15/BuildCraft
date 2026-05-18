@@ -2,20 +2,18 @@
   "parent": "minecraft:recipes/root",
   "rewards": {
     "recipes": [
-      "buildcraftunofficial:integration_table",
       "buildcraftunofficial:architect",
       "buildcraftunofficial:builder",
-      "buildcraftunofficial:quarry",
-      "buildcraftunofficial:distiller"
+      "buildcraftunofficial:filler"
     ]
   },
   "criteria": {
-    "has_gear_diamond": {
+    "has_marker_volume": {
       "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [
           {
-            "items": "buildcraftunofficial:gear_diamond"
+            "items": "buildcraftunofficial:marker_volume"
           }
         ]
       }
@@ -23,7 +21,7 @@
   },
   "requirements": [
     [
-      "has_gear_diamond"
+      "has_marker_volume"
     ]
   ]
 }

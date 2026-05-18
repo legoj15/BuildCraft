@@ -2,18 +2,16 @@
   "parent": "minecraft:recipes/root",
   "rewards": {
     "recipes": [
-      "buildcraftunofficial:engine_redstone",
-      "buildcraftunofficial:paintbrush",
-      "buildcraftunofficial:guide_book"
+      "buildcraftunofficial:tank"
     ]
   },
   "criteria": {
-    "has_gear_wood": {
+    "has_glass_cheap": {
       "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [
           {
-            "items": "buildcraftunofficial:gear_wood"
+            "items": "#c:glass_blocks/cheap"
           }
         ]
       }
@@ -21,7 +19,7 @@
   },
   "requirements": [
     [
-      "has_gear_wood"
+      "has_glass_cheap"
     ]
   ]
 }

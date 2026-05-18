@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "igi",
+    "bBb",
+    "iri"
+  ],
+  "key": {
+    "i": "#c:ingots/iron",
+    "g": "buildcraftunofficial:gear_iron",
+    "b": "minecraft:bookshelf",
+    "B": "buildcraftunofficial:blueprint_clean",
+    "r": "minecraft:redstone"
+  },
+  "result": {
+    "id": "buildcraftunofficial:library"
+  }
+}

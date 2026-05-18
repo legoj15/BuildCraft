@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "buildcraftunofficial:pipe_stone_power",
+    "#c:dusts/redstone"
+  ],
+  "result": {
+    "id": "buildcraftunofficial:pipe_stone_rf"
+  }
+}

@@ -5,7 +5,10 @@
       "buildcraftunofficial:pump",
       "buildcraftunofficial:flood_gate",
       "buildcraftunofficial:mining_well",
-      "buildcraftunofficial:heat_exchange"
+      "buildcraftunofficial:heat_exchange",
+      "buildcraftunofficial:engine_iron",
+      "buildcraftunofficial:engine_rf",
+      "buildcraftunofficial:mj_dynamo"
     ]
   },
   "criteria": {

@@ -2,18 +2,16 @@
   "parent": "minecraft:recipes/root",
   "rewards": {
     "recipes": [
-      "buildcraftunofficial:engine_redstone",
-      "buildcraftunofficial:paintbrush",
-      "buildcraftunofficial:guide_book"
+      "buildcraftunofficial:quarry"
     ]
   },
   "criteria": {
-    "has_gear_wood": {
+    "has_diamond_pickaxe": {
       "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [
           {
-            "items": "buildcraftunofficial:gear_wood"
+            "items": "minecraft:diamond_pickaxe"
           }
         ]
       }
@@ -21,7 +19,7 @@
   },
   "requirements": [
     [
-      "has_gear_wood"
+      "has_diamond_pickaxe"
     ]
   ]
 }

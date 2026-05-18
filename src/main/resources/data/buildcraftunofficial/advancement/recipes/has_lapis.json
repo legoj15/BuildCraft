@@ -2,20 +2,17 @@
   "parent": "minecraft:recipes/root",
   "rewards": {
     "recipes": [
-      "buildcraftunofficial:list",
-      "buildcraftunofficial:guide_book",
       "buildcraftunofficial:blueprint_clean",
-      "buildcraftunofficial:template_clean",
       "buildcraftunofficial:schematic_single_clean"
     ]
   },
   "criteria": {
-    "has_paper": {
+    "has_lapis": {
       "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [
           {
-            "items": "minecraft:paper"
+            "items": "#c:gems/lapis"
           }
         ]
       }
@@ -23,7 +20,7 @@
   },
   "requirements": [
     [
-      "has_paper"
+      "has_lapis"
     ]
   ]
 }

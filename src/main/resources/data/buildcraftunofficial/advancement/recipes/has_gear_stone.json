@@ -3,7 +3,8 @@
   "rewards": {
     "recipes": [
       "buildcraftunofficial:autoworkbench_item",
-      "buildcraftunofficial:chute"
+      "buildcraftunofficial:chute",
+      "buildcraftunofficial:engine_stone"
     ]
   },
   "criteria": {

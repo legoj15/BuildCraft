@@ -39,7 +39,7 @@ block_auto "filler"
 place "advanced_crafting_table" "block" "automation"
 place "architect"               "block" "automation"
 place "assembly_table"          "block" "automation"
-place "debugger"                "block" "automation"
+place_creative "debugger"       "block" "automation"
 place "filler_planner"          "block" "automation"
 place "filtered_buffer"         "block" "automation"
 place "integration_table"       "block" "automation"
@@ -53,7 +53,7 @@ block_engine "engine_stone"    "buildcraftunofficial:engine_stone"
 block_engine "engine_iron"     "buildcraftunofficial:engine_iron"
 place "engine_rf"         "block" "engine"          // FE Engine
 place "mj_dynamo"         "block" "engine"          // MJ Dynamo
-place "engine_creative"   "block" "engine"
+place_creative "engine_creative"   "block" "engine"
 
 // ---- Blocks / Fluid ------------------------------------------------------
 block_fluid "flood_gate"
@@ -139,7 +139,7 @@ place "plug_timer"        "item" "pipe_plug"
 tool "wrench"
 tool "paintbrush"
 // Tool items with writeups but file names that don't match the stack id.
-item_stack "item" "tool" "box_volume"        "buildcraftunofficial:volume_box"
+item_stack_creative "item" "tool" "box_volume" "buildcraftunofficial:volume_box"
 item_stack "item" "tool" "marker_connector"  "buildcraftunofficial:marker_connector"
 item_stack "item" "tool" "list"              "buildcraftunofficial:list"
 place "gate_copier"     "item" "tool"

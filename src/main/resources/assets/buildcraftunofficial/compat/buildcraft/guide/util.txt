@@ -47,6 +47,27 @@ alias place 3 `add "placeholder/%0" \`{
     "tag_subtype": "%2",
     "stack": "buildcraftunofficial:%0"
 }\``
+
+// Creative-only variants of `place` and `item_stack`. Flag the entry with
+// `creative_only: true` so PageLink hides it from the TOC (and from search
+// results) unless the local player can spawn the item — creative mode, OP
+// level 2+, or singleplayer/LAN host with cheats on. Use for entries that
+// document items with no survival recipe (creative engine, debugger,
+// volume box) so survival players aren't shown things they can't obtain.
+// Args mirror the non-creative aliases.
+alias place_creative 3 `add "placeholder/%0" \`{
+    "type": "item_stack",
+    "book": "${0}",
+    "tag_type": "%1",
+    "tag_subtype": "%2",
+    "stack": "buildcraftunofficial:%0",
+    "creative_only": true
+}\``
+
+alias item_stack_creative 4 `add_basic "%2" "item_stack" "%0" "%1" \`,
+    "stack": "%3",
+    "creative_only": true
+\``
 // 3-arg form used transitively by item_tool/item_gear/item_plug aliases
 alias item_typed 3 `item_stack "item" "%0" "%1" "%2"`
 alias block_full 3 `item_stack "block" "%0" "%1" "%2"`

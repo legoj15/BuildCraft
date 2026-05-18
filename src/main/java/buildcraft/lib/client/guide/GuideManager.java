@@ -404,7 +404,8 @@ public enum GuideManager {
 
             if (entryFactory != null) {
                 objectsAdded.add(basicValue);
-                PageLinkNormal pageLink = new PageLinkNormal(line, !hidden, entry.getTooltip(), entryFactory);
+                PageLinkNormal pageLink = new PageLinkNormal(line, !hidden, entry.getTooltip(), entryFactory,
+                    entry.creativeOnly);
                 addChild(entry.book, entry.typeTags, pageLink);
             }
             // entryFactory == null path intentionally falls through without

@@ -13,7 +13,12 @@ public class PageLinkNormal extends PageLink {
     public final List<String> tooltip;
 
     public PageLinkNormal(PageLine text, boolean startVisible, List<String> tooltip, GuidePageFactory factory) {
-        super(text, startVisible);
+        this(text, startVisible, tooltip, factory, false);
+    }
+
+    public PageLinkNormal(PageLine text, boolean startVisible, List<String> tooltip, GuidePageFactory factory,
+                          boolean creativeOnly) {
+        super(text, startVisible, creativeOnly);
         this.factory = factory;
         this.tooltip =
             (tooltip == null || tooltip.size() != 1 || strip(tooltip.get(0)).equals(strip(text.text))) ? null : tooltip;

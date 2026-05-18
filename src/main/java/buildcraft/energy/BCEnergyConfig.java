@@ -16,12 +16,11 @@ public class BCEnergyConfig {
     public static ModConfigSpec.DoubleValue oilWellGenerationRate;
 
     public static ModConfigSpec.BooleanValue enableOilSpouts;
-    public static ModConfigSpec.IntValue smallSpoutMinHeight;
-    public static ModConfigSpec.IntValue smallSpoutMaxHeight;
+    public static ModConfigSpec.IntValue finiteSpoutMinHeight;
+    public static ModConfigSpec.IntValue finiteSpoutMaxHeight;
     public static ModConfigSpec.IntValue largeSpoutMinHeight;
     public static ModConfigSpec.IntValue largeSpoutMaxHeight;
 
-    public static ModConfigSpec.DoubleValue smallOilGenProb;
     public static ModConfigSpec.DoubleValue mediumOilGenProb;
     public static ModConfigSpec.DoubleValue largeOilGenProb;
 
@@ -30,6 +29,8 @@ public class BCEnergyConfig {
     public static ModConfigSpec.ConfigValue<List<? extends String>> forceExcessiveOilBiomes;
     public static ModConfigSpec.ConfigValue<List<? extends String>> richSurfaceDepositBiomes;
     public static ModConfigSpec.ConfigValue<List<? extends String>> surfaceDepositBiomes;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> standardSurfaceDepositBiomes;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> mountainousSurfaceDepositBiomes;
     public static ModConfigSpec.ConfigValue<List<? extends String>> excludedBiomes;
     public static ModConfigSpec.EnumValue<ListMode> biomeListMode;
     public static ModConfigSpec.ConfigValue<List<? extends String>> excludedDimensions;
@@ -64,30 +65,38 @@ public class BCEnergyConfig {
                 .comment("Set true to enable oil spouts generating")
                 .define("enableOilSpouts", true);
 
-        smallSpoutMinHeight = builder
-                .comment("Minimum height (in blocks) for small oil spouts")
-                .defineInRange("smallSpoutMinHeight", 6, -64, 320);
-        smallSpoutMaxHeight = builder
-                .comment("Maximum height (in blocks) for small oil spouts")
-                .defineInRange("smallSpoutMaxHeight", 12, -64, 320);
+        finiteSpoutMinHeight = builder
+                .comment("Minimum height (in blocks above ground) for finite-deposit oil spouts.",
+                         "Finite spouts are the surface signature of non-rich-tier formations — a small",
+                         "1x1 bump that lets oil overflow naturally. Kept shorter than the rich-tier 3x3",
+                         "tower so the two formations are easy to tell apart at a glance.")
+                .defineInRange("finiteSpoutMinHeight", 7, -64, 320);
+        finiteSpoutMaxHeight = builder
+                .comment("Maximum height (in blocks above ground) for finite-deposit oil spouts.")
+                .defineInRange("finiteSpoutMaxHeight", 10, -64, 320);
         largeSpoutMinHeight = builder
-                .comment("Minimum height (in blocks) for large oil spouts")
-                .defineInRange("largeSpoutMinHeight", 10, -64, 320);
+                .comment("Minimum height (in blocks above ground) for rich-tier infinite-spring spouts.",
+                         "These are the tall 3x3 towers that mark a rich-tier LARGE formation (deep ocean,",
+                         "desert, mesa by default) with its bedrock-level oil spring. Heights here apply",
+                         "ONLY to that case; finite deposits use the finiteSpout range above.")
+                .defineInRange("largeSpoutMinHeight", 13, -64, 320);
         largeSpoutMaxHeight = builder
-                .comment("Maximum height (in blocks) for large oil spouts")
+                .comment("Maximum height (in blocks above ground) for rich-tier infinite-spring spouts.")
                 .defineInRange("largeSpoutMaxHeight", 20, -64, 320);
 
         builder.pop();
         builder.push("spawnProbability");
 
-        smallOilGenProb = builder
-                .comment("Per-chunk probability (0..1) of rolling a small oil deposit. Default 0.005 = 0.5%.")
-                .defineInRange("smallOilGenProb", 0.5 / 100, 0.0, 1.0);
         mediumOilGenProb = builder
-                .comment("Per-chunk probability (0..1) of rolling a medium oil deposit. Default 0.001 = 0.1%.")
+                .comment("Per-chunk probability (0..1) of rolling a medium oil deposit in non-rich-land biomes.",
+                         "Default 0.001 = 0.1%. Scaled by the tier bonus (1.25x for light ocean, 1.0x for",
+                         "standard, 0.5x for the unlisted-biome default, 0.1x for mountainous). Rich-land",
+                         "biomes (desert/mesa) use a dedicated rate structure in OilGenerator and ignore",
+                         "this value.")
                 .defineInRange("mediumOilGenProb", 0.1 / 100, 0.0, 1.0);
         largeOilGenProb = builder
-                .comment("Per-chunk probability (0..1) of rolling a large oil deposit. Default 0.0004 = 0.04%.")
+                .comment("Per-chunk probability (0..1) of rolling a large oil deposit in non-rich-land biomes.",
+                         "Default 0.0004 = 0.04%. Same scaling and rich-land carve-out as mediumOilGenProb.")
                 .defineInRange("largeOilGenProb", 0.04 / 100, 0.0, 1.0);
 
         builder.pop();
@@ -105,22 +114,26 @@ public class BCEnergyConfig {
                         s -> s instanceof String
                 );
 
-        // Richest oil tier: largest LAKE-style surface tendrils are gated to these biomes,
-        // and they receive the highest bonus multiplier. By default this is deep oceans plus
-        // the existing land oil biomes (deserts, badlands).
+        // Richest oil tier: 1.5x bonus and the standalone LAKE-style surface roll is gated
+        // to these biomes. Land biomes in this tier (desert, badlands) get the new clean
+        // surface-pool visual treatment instead of tendrils — LARGE's surface becomes a
+        // medium pool, MEDIUM becomes a small pool with no underground or spout (so the
+        // tall spout of a LARGE infinite spring is unambiguous), and the LAKE roll
+        // produces a large pool. Ocean biomes in this tier keep the existing tendril
+        // aesthetic. Defaults: deep oceans + deserts + badlands variants.
         richSurfaceDepositBiomes = builder.defineListAllowEmpty(
                 "richSurfaceDepositBiomes",
                 List.of(
                         "minecraft:deep_ocean", "minecraft:deep_lukewarm_ocean",
                         "minecraft:deep_cold_ocean", "minecraft:deep_frozen_ocean",
                         "minecraft:desert",
-                        "minecraft:badlands", "minecraft:eroded_badlands", "minecraft:wooded_badlands"
+                        "minecraft:badlands", "minecraft:wooded_badlands"
                 ),
                 () -> "",
                 s -> s instanceof String
         );
 
-        // Lighter oil tier: a small bonus multiplier, but no LAKE-style surface tendrils.
+        // Lighter oil tier: a 1.25x bonus multiplier, but no LAKE-style surface tendrils.
         // By default this contains shallow ocean variants only.
         surfaceDepositBiomes = builder.defineListAllowEmpty(
                 "surfaceDepositBiomes",
@@ -132,11 +145,50 @@ public class BCEnergyConfig {
                 s -> s instanceof String
         );
 
+        // Standard oil tier: 1.0x rate (unchanged from the historical default for these
+        // biomes). Defaults to biomes that are otherwise low-value to the player —
+        // jungles (lots of biomass but mostly hostile/dense), ice_spikes (flat snowy
+        // with only polar bears), snowy_beach (a thin frozen transition strip), and
+        // frozen_river (a thin iced-over transit biome — distinct enough from vanilla
+        // rivers, which are excluded, to support oil here). Biomes not in this list
+        // and not in any richer/lighter tier drop to the 0.5x reduced base rate.
+        standardSurfaceDepositBiomes = builder.defineListAllowEmpty(
+                "standardSurfaceDepositBiomes",
+                List.of(
+                        "minecraft:jungle", "minecraft:sparse_jungle", "minecraft:bamboo_jungle",
+                        "minecraft:ice_spikes", "minecraft:snowy_beach", "minecraft:frozen_river"
+                ),
+                () -> "",
+                s -> s instanceof String
+        );
+
+        // Mountainous oil tier: 0.1x (10x reduced) rate. Rationale: surface oil seeping
+        // through bedrock-grade rock is unrealistic. Includes alpine valley biomes
+        // (meadow, grove, cherry_grove) by default; move them out if you'd like more
+        // oil there.
+        mountainousSurfaceDepositBiomes = builder.defineListAllowEmpty(
+                "mountainousSurfaceDepositBiomes",
+                List.of(
+                        "minecraft:windswept_hills", "minecraft:windswept_gravelly_hills",
+                        "minecraft:windswept_forest", "minecraft:jagged_peaks",
+                        "minecraft:frozen_peaks", "minecraft:stony_peaks",
+                        "minecraft:snowy_slopes", "minecraft:meadow", "minecraft:grove",
+                        "minecraft:cherry_grove"
+                ),
+                () -> "",
+                s -> s instanceof String
+        );
+
         excludedBiomes = builder
-                .comment("Biome IDs that participate in the include/exclude check below. See biomeListMode.")
+                .comment("Biome IDs that participate in the include/exclude check below. See biomeListMode.",
+                         "Vanilla rivers are excluded by default — they're thin transit biomes where an oil",
+                         "deposit would just look like a polluted creek, and the spout's column of source",
+                         "blocks tends to surface awkwardly across the narrow river bed. (Frozen rivers are",
+                         "left in, classified as standard tier — they're functionally the same shape but",
+                         "their iced-over surface gives them a more isolated, frontier-like feel.)")
                 .defineListAllowEmpty(
                         "excludedBiomes",
-                        List.of("minecraft:the_void"),
+                        List.of("minecraft:the_void", "minecraft:river"),
                         () -> "",
                         s -> s instanceof String
                 );
@@ -210,6 +262,14 @@ public class BCEnergyConfig {
 
     public static Set<Identifier> getRichSurfaceDepositBiomes() {
         return richSurfaceDepositBiomes.get().stream().map(Identifier::parse).collect(Collectors.toSet());
+    }
+
+    public static Set<Identifier> getStandardSurfaceDepositBiomes() {
+        return standardSurfaceDepositBiomes.get().stream().map(Identifier::parse).collect(Collectors.toSet());
+    }
+
+    public static Set<Identifier> getMountainousSurfaceDepositBiomes() {
+        return mountainousSurfaceDepositBiomes.get().stream().map(Identifier::parse).collect(Collectors.toSet());
     }
 
     public static Set<Identifier> getExcludedBiomes() {

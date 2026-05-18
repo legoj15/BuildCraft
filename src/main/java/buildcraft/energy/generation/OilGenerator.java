@@ -15,6 +15,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BiomeTags;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 
@@ -82,27 +83,34 @@ public class OilGenerator {
     /**
      * Whether the given biome ID is one the player can reasonably call an
      * "oil biome" for the {@code fine_riches} advancement: the rich tier or
-     * the (debug) excessive tier. <b>Excludes the light tier on purpose.</b>
+     * the (debug) excessive tier. <b>Excludes the light tier on purpose, and
+     * intentionally excludes the new standard / reduced / mountainous land
+     * tiers</b> — those biomes still produce ambient oil deposits but aren't
+     * the headline "infinite-spring" story the advancement is gating on.
      * <p>
-     * Why excluded: light tier (shallow ocean variants by default) gets a 1.25×
-     * bonus on the chunk roll, but a MEDIUM roll there produces (a) a 4-block
-     * surface tendril at y=62 — inside the water column for an ocean, easy to
-     * swim past unnoticed — plus (b) an underground sphere at y=minY+25..34
-     * and (c) a small spout that extends only 6-12 blocks up from there, ending
-     * around y=-33..-18 in a modern overworld. None of those reach the seafloor,
-     * let alone the surface, so the player rolls "oil found" without anything
-     * visible. A small patch of light-tier biome inside a non-oil region (e.g.
-     * 2-3 chunks of cold_ocean inside a taiga) then false-fires the advancement.
+     * Why light tier is excluded: light tier (shallow ocean variants by
+     * default) gets a 1.25× bonus on the chunk roll, but a MEDIUM roll there
+     * produces (a) a 4-block surface tendril at y=62 — inside the water column
+     * for an ocean, easy to swim past unnoticed — plus (b) an underground
+     * sphere at y=minY+25..34 and (c) a small spout that extends only 6-12
+     * blocks up from there, ending around y=-33..-18 in a modern overworld.
+     * None of those reach the seafloor, let alone the surface, so the player
+     * rolls "oil found" without anything visible. A small patch of light-tier
+     * biome inside a non-oil region (e.g. 2-3 chunks of cold_ocean inside a
+     * taiga) then false-fires the advancement.
      * <p>
-     * Rich-tier biomes (deep oceans, deserts, badlands by default) avoid this
+     * Why standard / reduced / mountainous land are excluded: those tiers do
+     * produce a visible tree-cleared tendril on the surface for LARGE/MEDIUM
+     * rolls, so they're not invisible like light-tier oceans. They're excluded
+     * because the advancement's design intent (per user direction) is to
+     * recognise only the desert / mesa / deep-ocean "infinite spring" biomes —
+     * the ones where a LARGE roll's bedrock spring is the headline payoff.
+     * Ambient oil in a jungle is intentionally less prestigious.
+     * <p>
+     * Rich-tier biomes (deep oceans, deserts, badlands by default) qualify
      * because they're either deeper-water (so the surface pool is reachable by
-     * swimming) or terrestrial (oil clearly visible on land). Excessive tier is
-     * an explicit admin opt-in so we honour it regardless.
-     * <p>
-     * Also excludes the implicit 1.0× base tier (any other biome), which was
-     * the previous bug — getStructures rolls LARGE/MEDIUM in any biome at the
-     * base rate, so without any tier gate the advancement fires anywhere at
-     * large render distances.
+     * swimming) or terrestrial with a clean visible surface pool. Excessive
+     * tier is an explicit admin opt-in so we honour it regardless.
      */
     public static boolean isOilDesignBiome(Identifier biomeId) {
         return BCEnergyConfig.getRichSurfaceDepositBiomes().contains(biomeId)
@@ -228,34 +236,91 @@ public class OilGenerator {
             return ImmutableList.of();
         }
 
-        // Two-tier surface-deposit classification:
-        //   richBiome  → 1.5x bonus, eligible for the LAKE-style surface tendril roll
-        //   oilBiome   → 1.25x bonus, NOT eligible for LAKE (smaller wells only)
-        //   otherwise  → 1.0x bonus, NOT eligible for LAKE
-        // Defaults put deep oceans + deserts + badlands in the rich tier and shallow
-        // ocean variants in the light tier; see BCEnergyConfig.
+        // Five-tier surface-deposit classification (config-driven):
+        //   richBiome       → eligible for the dedicated rich-tier rate structure
+        //                     below. Defaults to deep oceans + desert + badlands.
+        //   lightOceanBiome → 1.25x bonus on the base rates. Shallow oceans by default;
+        //                     MEDIUM rolls here split 50/50 with the small-lake variant.
+        //   mountainousBiome → 0.1x  bonus. Mountain/peak biomes; checked before
+        //                     standard so a biome listed in both gets the safer rate.
+        //   standardBiome   → 1.0x  bonus. Defaults to jungles + ice_spikes + frozen
+        //                     beach/river.
+        //   (default)       → 0.5x  bonus. Anything else — reduced base rate.
+        // See BCEnergyConfig for the per-tier biome lists.
         boolean richBiome = BCEnergyConfig.getRichSurfaceDepositBiomes().contains(biomeId);
-        boolean oilBiome = richBiome || BCEnergyConfig.getSurfaceDepositBiomes().contains(biomeId);
+        boolean lightOceanBiome = !richBiome && BCEnergyConfig.getSurfaceDepositBiomes().contains(biomeId);
+        boolean mountainousBiome = !richBiome && !lightOceanBiome
+                && BCEnergyConfig.getMountainousSurfaceDepositBiomes().contains(biomeId);
+        boolean standardBiome = !richBiome && !lightOceanBiome && !mountainousBiome
+                && BCEnergyConfig.getStandardSurfaceDepositBiomes().contains(biomeId);
+        boolean isOcean = biomeHolder.is(BiomeTags.IS_OCEAN);
+        boolean richLand = richBiome && !isOcean; // desert / mesa get the SurfacePool treatment
+        boolean richOcean = richBiome && isOcean; // deep ocean — LAKE roll is excluded here
 
-        double bonus = richBiome ? 1.5 : (oilBiome ? 1.25 : 1.0);
-        bonus *= BCEnergyConfig.oilWellGenerationRate.get();
+        // Global multipliers applied across every roll path (rich land's own rates or
+        // the base-rate-times-tier-bonus path used by every other biome category).
+        double globalMul = BCEnergyConfig.oilWellGenerationRate.get();
         if (BCEnergyConfig.getForceExcessiveOilBiomes().contains(biomeId)) {
-            bonus *= 30.0;
+            globalMul *= 30.0;
         }
-        final GenType type;
 
-        if (rand.nextDouble() <= BCEnergyConfig.largeOilGenProb.get() * bonus) {
-            type = GenType.LARGE;
-        } else if (rand.nextDouble() <= BCEnergyConfig.mediumOilGenProb.get() * bonus) {
-            type = GenType.MEDIUM;
-        } else if (richBiome && rand.nextDouble() <= BCEnergyConfig.smallOilGenProb.get() * bonus) {
-            type = GenType.LAKE;
-        } else {
-            if (DEBUG_OILGEN_ALL & log) {
-                BCLog.logger.info("[energy.oilgen] Not generating oil in chunk " + cx + ", " + cz
-                    + " because none of the random numbers were above the thresholds.");
+        final GenType type;
+        if (richLand) {
+            // Rich land has its own dedicated rate structure (not driven by base configs
+            // or tier bonus). Two formation slots, both with a spring:
+            //   LARGE roll (0.06%) → POOL_LARGE + sphere + spout (tall) + tube + spring
+            //   MEDIUM roll (0.25%) → POOL_MEDIUM + sphere + spout (tall) + tube + spring
+            // The no-spring "small pool alone" formation is intentionally absent so that
+            // every oil deposit in a rich-land biome IS an infinite spring — the
+            // fine_riches advancement (which gates on rich-design biomes) then carries
+            // the promise that earning it means the player has actually struck infinite
+            // oil, not just an ambient finite puddle.
+            if (rand.nextDouble() <= RICH_LAND_LARGE_SPRING_PROB * globalMul) {
+                type = GenType.LARGE;
+            } else if (rand.nextDouble() <= RICH_LAND_MEDIUM_SPRING_PROB * globalMul) {
+                type = GenType.MEDIUM;
+            } else {
+                if (DEBUG_OILGEN_ALL & log) {
+                    BCLog.logger.info("[energy.oilgen] Not generating oil in chunk " + cx + ", " + cz
+                        + " because none of the random numbers were above the thresholds.");
+                }
+                return ImmutableList.of();
             }
-            return ImmutableList.of();
+        } else {
+            // All other biomes use the base configs scaled by their tier bonus.
+            double bonus;
+            if (richOcean) {
+                bonus = 1.5;
+            } else if (lightOceanBiome) {
+                bonus = 1.25;
+            } else if (mountainousBiome) {
+                bonus = 0.1;
+            } else if (standardBiome) {
+                bonus = 1.0;
+            } else {
+                bonus = 0.5;
+            }
+            double effectiveRate = bonus * globalMul;
+
+            if (rand.nextDouble() <= BCEnergyConfig.largeOilGenProb.get() * effectiveRate) {
+                type = GenType.LARGE;
+            } else if (rand.nextDouble() <= BCEnergyConfig.mediumOilGenProb.get() * effectiveRate) {
+                // In light ocean, half of MEDIUM rolls become the "small lake" variant
+                // (tendril only, no spout / sphere) — replaces some of the existing
+                // small-spout-with-lake formations to add variety while keeping the
+                // total per-chunk formation rate unchanged.
+                if (lightOceanBiome && rand.nextDouble() < 0.5) {
+                    type = GenType.LAKE;
+                } else {
+                    type = GenType.MEDIUM;
+                }
+            } else {
+                if (DEBUG_OILGEN_ALL & log) {
+                    BCLog.logger.info("[energy.oilgen] Not generating oil in chunk " + cx + ", " + cz
+                        + " because none of the random numbers were above the thresholds.");
+                }
+                return ImmutableList.of();
+            }
         }
         if (DEBUG_OILGEN_BASIC & log) {
             BCLog.logger.info("[energy.oilgen] Generating an oil well (" + type.name().toLowerCase(Locale.ROOT)
@@ -263,21 +328,37 @@ public class OilGenerator {
         }
 
         List<OilGenStructure> structures = new ArrayList<>();
-        int lakeRadius;
-        int tendrilRadius;
-        if (type == GenType.LARGE) {
-            lakeRadius = 4;
-            tendrilRadius = 25 + rand.nextInt(20);
-        } else if (type == GenType.LAKE) {
-            lakeRadius = 6;
-            tendrilRadius = 25 + rand.nextInt(20);
-        } else {
-            lakeRadius = 2;
-            tendrilRadius = 5 + rand.nextInt(10);
-        }
-        structures.add(createTendril(new BlockPos(x, 62, z), lakeRadius, tendrilRadius, rand));
 
-        if (type != GenType.LAKE) {
+        // Standalone LAKE roll: only fires in light ocean as the small-lake variant
+        // (the 50/50 sub-roll inside MEDIUM picks it). Surface-only — small tendril,
+        // no spout, no sphere, no spring. Same tendril shape as a MEDIUM but without
+        // the underground spout column.
+        if (type == GenType.LAKE) {
+            structures.add(createTendril(new BlockPos(x, 62, z), 2, 5 + rand.nextInt(10), rand));
+            return structures;
+        }
+
+        // Surface component for MEDIUM/LARGE rolls:
+        //   - Rich land LARGE: clean large SurfacePool (POOL_LARGE).
+        //   - Rich land MEDIUM: clean medium SurfacePool (POOL_MEDIUM).
+        //   Both rich-land cases also emit sphere + spout (tall) + tube + spring below.
+        //   - Ocean (deep or light): historical tendril; only deep-ocean LARGE keeps a
+        //     spring underneath.
+        //   - Other land (jungle / regular / mountainous): NO pre-placed surface.
+        //     The spout's natural overflow (oil sources at the top of the cylinder +
+        //     vanilla fluid flow) creates the flowing mess.
+        if (richLand && type == GenType.LARGE) {
+            structures.add(createSurfacePoolLarge(new BlockPos(x, 62, z), rand));
+        } else if (richLand && type == GenType.MEDIUM) {
+            structures.add(createSurfacePoolMedium(new BlockPos(x, 62, z), rand));
+        } else if (isOcean) {
+            int lakeRadius = (type == GenType.LARGE) ? 4 : 2;
+            int tendrilRadius = (type == GenType.LARGE) ? 25 + rand.nextInt(20) : 5 + rand.nextInt(10);
+            structures.add(createTendril(new BlockPos(x, 62, z), lakeRadius, tendrilRadius, rand));
+        }
+        // Non-rich land: deliberately no surface structure — spout overflow does the work.
+
+        {
             // Generate a spherical cave deposit.
             // In 1.12.2 bedrock was a single flat layer at Y=0, so wellY=20..29 placed
             // the cavity 20-29 blocks above bedrock. Modern worlds have a 5-block bedrock
@@ -295,17 +376,27 @@ public class OilGenerator {
 
             structures.add(createSphere(new BlockPos(x, wellY, z), radius));
 
-            // Generate a spout
+            // Spring formations get the tall 3x3 spout (largeSpout heights, radius 1).
+            // Everything else gets the short 1x1 surface bump (finiteSpout heights,
+            // radius 0). The tall tower is the visual signature of an infinite spring.
+            // Every MEDIUM and LARGE roll in a rich biome (rich land OR deep ocean)
+            // produces a spring — combined with the deliberate absence of a no-spring
+            // roll type in rich biomes, this means any oil deposit in a rich-design
+            // biome is guaranteed to be an infinite spring, so the fine_riches
+            // advancement (which gates on rich-design biomes) becomes a reliable
+            // "you've struck infinite oil" signal.
+            boolean hasSpring = richBiome && (type == GenType.LARGE || type == GenType.MEDIUM);
+
             if (BCEnergyConfig.enableOilSpouts.get()) {
                 int maxHeight, minHeight;
 
-                if (type == GenType.LARGE) {
+                if (hasSpring) {
                     minHeight = BCEnergyConfig.largeSpoutMinHeight.get();
                     maxHeight = BCEnergyConfig.largeSpoutMaxHeight.get();
                     radius = 1;
                 } else {
-                    minHeight = BCEnergyConfig.smallSpoutMinHeight.get();
-                    maxHeight = BCEnergyConfig.smallSpoutMaxHeight.get();
+                    minHeight = BCEnergyConfig.finiteSpoutMinHeight.get();
+                    maxHeight = BCEnergyConfig.finiteSpoutMaxHeight.get();
                     radius = 0;
                 }
                 final int height;
@@ -322,14 +413,12 @@ public class OilGenerator {
                 structures.add(createSpout(new BlockPos(x, wellY, z), height, radius));
             }
 
-            // Generate a spring at the very bottom, with a + shaped tube
-            // connecting the cavity down through the bedrock gradient.
-            //   minY:   solid bedrock floor (always 100%, prevents void access)
-            //   minY+1: spring block (sits on bedrock; any air neighbors are safe)
-            //   minY+2: single oil block above spring (force-placed by Spring.generate)
-            //   minY+3 → wellY: + shaped oil tube, ALWAYS replaces everything
-            //           (including bedrock) to create clear line-of-sight
-            if (type == GenType.LARGE) {
+            // Bedrock spring + connecting tube. Emitted only for spring formations
+            // (see hasSpring above). The tube is a + shape running from bedrock+3 up
+            // to wellY, ALWAYS-replacing everything (incl. bedrock gradient) for
+            // line-of-sight; the spring tile entity sits at bedrock+1 and force-
+            // places oil at bedrock+2 to keep the column primed.
+            if (hasSpring) {
                 int tubeStart = level.getMinY() + 3;
                 int tubeLength = wellY - tubeStart;
                 structures.add(createTube(new BlockPos(x, tubeStart, z), tubeLength, radius, Axis.Y));
@@ -340,6 +429,11 @@ public class OilGenerator {
         }
         return structures;
     }
+
+    /** Per-chunk probability of a rich-land LARGE roll (large pool + spring). */
+    private static final double RICH_LAND_LARGE_SPRING_PROB = 0.0006;
+    /** Per-chunk probability of a rich-land MEDIUM roll (medium pool + spring). */
+    private static final double RICH_LAND_MEDIUM_SPRING_PROB = 0.0025;
 
     private static OilGenStructure createSpout(BlockPos start, int height, int radius) {
         return new OilGenStructure.Spout(start, ReplaceType.ALWAYS, radius, height);
@@ -374,6 +468,13 @@ public class OilGenerator {
         return new GenByPredicate(box, ReplaceType.ALWAYS, tester);
     }
 
+    /**
+     * Builds the classic "lake with tendril arms" surface pattern used for ocean oil
+     * deposits. The tendril shape looks organic underwater (which is the only place
+     * it's emitted in the current pipeline — land formations use either
+     * {@link OilGenStructure.SurfacePool} for rich land or nothing for common land,
+     * letting the spout's natural overflow be the visual).
+     */
     public static OilGenStructure createTendril(BlockPos center, int lakeRadius, int radius, Random rand) {
         BlockPos start = center.offset(-radius, 0, -radius);
         int diameter = radius * 2 + 1;
@@ -410,6 +511,39 @@ public class OilGenerator {
 
         int depth = rand.nextDouble() < 0.5 ? 1 : 2;
         return OilGenStructure.PatternTerrainHeight.create(start, ReplaceType.IS_FOR_LAKE, pattern, depth);
+    }
+
+    public static OilGenStructure createSurfacePoolMedium(BlockPos center, Random rand) {
+        return createSurfacePool(center, 5 + rand.nextInt(3), rand);
+    }
+
+    public static OilGenStructure createSurfacePoolLarge(BlockPos center, Random rand) {
+        return createSurfacePool(center, 8 + rand.nextInt(5), rand);
+    }
+
+    /**
+     * Filled disc with ±1 block radial noise — a clean alternative to the tendril
+     * shape used in rich-land biomes (desert/mesa). Consumes one random draw per
+     * cell within the diameter, so the call count is deterministic given the base
+     * radius (which itself comes from the caller's one-draw {@code nextInt}).
+     */
+    private static OilGenStructure createSurfacePool(BlockPos center, int baseRadius, Random rand) {
+        int maxRadius = baseRadius + 1;
+        int diameter = maxRadius * 2 + 1;
+        boolean[][] pattern = new boolean[diameter][diameter];
+        int centerIdx = maxRadius;
+        for (int dx = -maxRadius; dx <= maxRadius; dx++) {
+            for (int dz = -maxRadius; dz <= maxRadius; dz++) {
+                // Noise ∈ {-1, 0, 1} — gentle perturbation, never enough to break the disc.
+                int noise = rand.nextInt(3) - 1;
+                int effectiveR = Math.max(0, baseRadius + noise);
+                int distSq = dx * dx + dz * dz;
+                pattern[centerIdx + dx][centerIdx + dz] = distSq <= effectiveR * effectiveR;
+            }
+        }
+        int depth = rand.nextDouble() < 0.5 ? 1 : 2;
+        BlockPos start = center.offset(-maxRadius, 0, -maxRadius);
+        return OilGenStructure.SurfacePool.create(start, ReplaceType.IS_FOR_LAKE, pattern, depth);
     }
 
     private static void fillPatternIfProba(Random rand, float proba, int x, int z, boolean[][] pattern) {

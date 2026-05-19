@@ -32,7 +32,7 @@ public class LedgerEngine extends Ledger_Neptune {
     private static final int TEXT_COLOUR = 0x000000;
 
     // Engine status icon sprites — stitched into the blocks atlas via
-    // assets/buildcraftunofficial/atlases/blocks.json's "icons/" source. Routing
+    // assets/minecraft/atlases/blocks.json's "icons/" source. Routing
     // through TextureAtlasSprite means Minecraft's atlas animation system honours
     // the engine_{active,warm}.png.mcmeta sidecars, so resource packs can override
     // frametime / frame order / interpolation without touching code.

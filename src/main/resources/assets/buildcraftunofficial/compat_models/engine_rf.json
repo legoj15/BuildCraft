@@ -1,7 +1,7 @@
 {
     "textures": {
-        "#back":"buildcraftunofficial:block/engine/fe/back",
-        "#side":"buildcraftunofficial:block/engine/fe/side"
+        "#back":"buildcraftunofficial:block/engine/fe_back",
+        "#side":"buildcraftunofficial:block/engine/fe_side"
     },
     "parent":"buildcraftunofficial:compat_models/engine_base"
 }

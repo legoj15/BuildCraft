@@ -9,29 +9,25 @@
     },
     "elements": [
         {
-            "comment": "Inner Pipe",
+            "comment": "Inner Pipe — no east/west cap faces. sprite_b at uv [0,0,12,12] on the Outer Pipe already encodes the full cap pattern (including the inner-mouth area); a second inner cap layered on top would show a mis-aligned slice of sprite_b at the same world position.",
             "from": [0, 4, 4],
             "to": [16, 12, 12],
             "faces": {
                 "up":    { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
                 "down":  { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
                 "north": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "south": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "east":  { "uv": [ 4, 4, 12, 12 ], "texture": "#sprite_b" },
-                "west":  { "uv": [ 4, 4, 12, 12 ], "texture": "#sprite_b" }
+                "south": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" }
             }
         },
         {
-            "comment": "Inner Pipe - inverted",
+            "comment": "Inner Pipe - inverted (back-face pass for the inner tube walls; matching no-cap shape)",
             "from": [16, 12, 12],
             "to": [0, 4, 4],
             "faces": {
                 "up":    { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
                 "down":  { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
                 "north": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "south": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "east":  { "uv": [ 4, 4, 12, 12 ], "texture": "#sprite_b" },
-                "west":  { "uv": [ 4, 4, 12, 12 ], "texture": "#sprite_b" }
+                "south": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" }
             }
         },
         {
@@ -48,7 +44,7 @@
             }
         },
         {
-            "comment": "Outer Pipe - inverted",
+            "comment": "Outer Pipe - inverted (back-face pass for translucent rendering)",
             "from": [ 16, 14, 14 ],
             "to": [ 0, 2, 2 ],
             "faces": {

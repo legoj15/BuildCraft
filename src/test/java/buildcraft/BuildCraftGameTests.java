@@ -169,6 +169,23 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_wrench_rotates_clockwise"), () -> buildcraft.factory.DistillerTester::testWrenchRotatesClockwise);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_wrench_passes_through_use_item_on"), () -> buildcraft.factory.DistillerTester::testWrenchPassesThroughUseItemOn);
 
+            // Wrench rotation of vanilla blocks (1.12.2 parity — see VanillaRotationHandlers)
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:vanilla_rotation_furnace"), () -> buildcraft.lib.block.VanillaRotationTester::testFurnaceCyclesHorizontally);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:vanilla_rotation_dispenser"), () -> buildcraft.lib.block.VanillaRotationTester::testDispenserCyclesAllSix);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:vanilla_rotation_hopper"), () -> buildcraft.lib.block.VanillaRotationTester::testHopperCyclesFiveFaces);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:vanilla_rotation_piston_extended_refuses"), () -> buildcraft.lib.block.VanillaRotationTester::testExtendedPistonRefuses);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:vanilla_rotation_banner_16"), () -> buildcraft.lib.block.VanillaRotationTester::testStandingBannerSpins16);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:vanilla_rotation_skull_16"), () -> buildcraft.lib.block.VanillaRotationTester::testFloorSkullSpins16);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:vanilla_rotation_trapdoor_half_flip"), () -> buildcraft.lib.block.VanillaRotationTester::testTrapDoorHalfFlipOnWrap);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:vanilla_rotation_door_both_halves_and_hinge"), () -> buildcraft.lib.block.VanillaRotationTester::testDoorRotatesBothHalvesAndFlipsHingeOnWrap);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:vanilla_rotation_wall_torch_attach_check"), () -> buildcraft.lib.block.VanillaRotationTester::testWallTorchSkipsUnsupportedFace);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:vanilla_rotation_trapdoor_freestanding"), () -> buildcraft.lib.block.VanillaRotationTester::testTrapDoorRotatesFreestanding);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:vanilla_rotation_button_twelve_orientations"), () -> buildcraft.lib.block.VanillaRotationTester::testButtonCyclesThroughAllTwelveOrientations);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:vanilla_rotation_button_attach_to_air"), () -> buildcraft.lib.block.VanillaRotationTester::testButtonSkipsAttachToAir);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:vanilla_rotation_double_chest"), () -> buildcraft.lib.block.VanillaRotationTester::testDoubleChestRotatesBothHalves);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:vanilla_rotation_wrench_useon_furnace"), () -> buildcraft.lib.block.VanillaRotationTester::testWrenchUseOnRotatesFurnace);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:vanilla_rotation_wrench_crouch_gate"), () -> buildcraft.lib.block.VanillaRotationTester::testWrenchOnItemUseFirstCrouchGate);
+
             // Flood gate wrench toggle (advancement-granting useItemOn path)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:flood_gate_wrench_toggles_side"), () -> buildcraft.factory.FloodGateTester::testWrenchTogglesSide);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:flood_gate_wrench_on_top_face_falls_through"), () -> buildcraft.factory.FloodGateTester::testWrenchOnTopFaceFallsThrough);

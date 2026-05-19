@@ -6,6 +6,7 @@ import java.util.Map;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.InteractionResult;
@@ -26,7 +27,10 @@ public enum CustomRotationHelper {
     private final Map<Block, List<ICustomRotationHandler>> handlers = Maps.newIdentityHashMap();
 
     public void registerHandlerForAll(Class<? extends Block> blockClass, ICustomRotationHandler handler) {
-        for (Block block : new Block[0]) {
+        // Must be called after the block registry has been populated (e.g. from
+        // FMLCommonSetupEvent). The 1.12.2 version walked Block.REGISTRY; modern
+        // equivalent is BuiltInRegistries.BLOCK.
+        for (Block block : BuiltInRegistries.BLOCK) {
             Class<? extends Block> foundClass = block.getClass();
             if (blockClass.isAssignableFrom(foundClass)) {
                 if (DEBUG) {

@@ -9,6 +9,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.core.BCCore;
 import buildcraft.core.BCCoreBlocks;
+import buildcraft.core.block.BlockSpring;
 import buildcraft.energy.tile.TileSpringOil;
 import buildcraft.energy.tile.TileEngineStone_BC8;
 import buildcraft.energy.tile.TileEngineIron_BC8;
@@ -42,5 +43,7 @@ public class BCEnergyBlockEntities {
 
     public static void init(IEventBus modEventBus) {
         BLOCK_ENTITIES.register(modEventBus);
+        // Wire the core-side spring block to construct our energy-side oil tile.
+        BlockSpring.oilTileFactory = TileSpringOil::new;
     }
 }

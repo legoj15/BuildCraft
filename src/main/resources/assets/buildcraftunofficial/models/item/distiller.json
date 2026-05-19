@@ -68,6 +68,7 @@
         }
     ],
     "textures": {
+        "particle": "buildcraftunofficial:block/distiller/tank_sprite_a",
         "sprite_a": "buildcraftunofficial:block/distiller/tank_sprite_a",
         "sprite_b": "buildcraftunofficial:block/distiller/tank_sprite_b",
         "power": "buildcraftunofficial:block/distiller/power_sprite_a"

@@ -1,6 +1,7 @@
 {
     "render_type": "minecraft:cutout",
     "textures": {
+        "particle": "buildcraftunofficial:block/builder/slot_template",
         "template": "buildcraftunofficial:block/builder/slot_template"
     },
     "elements": [

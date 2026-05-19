@@ -414,16 +414,17 @@ public class OilGenerator {
             }
 
             // Bedrock spring + connecting tube. Emitted only for spring formations
-            // (see hasSpring above). The tube is a + shape running from bedrock+3 up
-            // to wellY, ALWAYS-replacing everything (incl. bedrock gradient) for
-            // line-of-sight; the spring tile entity sits at bedrock+1 and force-
-            // places oil at bedrock+2 to keep the column primed.
+            // (see hasSpring above). The spring tile sits at the absolute world
+            // floor (minY, replacing the 100%-bedrock layer), force-places oil at
+            // minY+1, and the tube — a + shape — connects from minY+2 up to wellY,
+            // ALWAYS-replacing everything (incl. the bedrock gradient) for line-of-
+            // sight.
             if (hasSpring) {
-                int tubeStart = level.getMinY() + 3;
+                int tubeStart = level.getMinY() + 2;
                 int tubeLength = wellY - tubeStart;
                 structures.add(createTube(new BlockPos(x, tubeStart, z), tubeLength, radius, Axis.Y));
                 if (BCCoreBlocks.SPRING_OIL != null) {
-                    structures.add(createSpring(new BlockPos(x, level.getMinY() + 1, z)));
+                    structures.add(createSpring(new BlockPos(x, level.getMinY(), z)));
                 }
             }
         }

@@ -1,5 +1,6 @@
 {
     "textures": {
+        "particle": "buildcraftunofficial:block/flood_gate/open",
         "face": "buildcraftunofficial:block/flood_gate/open"
     },
     "elements": [

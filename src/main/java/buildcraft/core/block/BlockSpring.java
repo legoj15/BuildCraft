@@ -1,18 +1,28 @@
 package buildcraft.core.block;
 
+import org.jetbrains.annotations.Nullable;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.enums.EnumSpring;
 import buildcraft.lib.misc.data.XorShift128Random;
 
-public class BlockSpring extends Block {
+public class BlockSpring extends Block implements EntityBlock {
     public static final XorShift128Random rand = new XorShift128Random();
+
+    /** Late-bound factory for the oil-spring BlockEntity. The block lives in
+     *  core but its BE is defined in energy; the energy module wires this on
+     *  init so core doesn't need to import energy. */
+    public static @Nullable BlockEntityType.BlockEntitySupplier<? extends BlockEntity> oilTileFactory;
 
     private final EnumSpring springType;
 
@@ -65,5 +75,14 @@ public class BlockSpring extends Block {
         }
 
         level.setBlock(upPos, springType.liquidBlock, 3);
+    }
+
+    @Override
+    @Nullable
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        if (springType == EnumSpring.OIL && oilTileFactory != null) {
+            return oilTileFactory.create(pos, state);
+        }
+        return null;
     }
 }

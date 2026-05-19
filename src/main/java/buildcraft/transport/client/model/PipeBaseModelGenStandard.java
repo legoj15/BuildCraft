@@ -176,9 +176,6 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
         MASK_MAP.put("diamond_item_itemstack", "mask_diamond_item_itemstack");
         MASK_MAP.put("iron_rf_clear", "mask_iron_rf_clear");
         MASK_MAP.put("lapis_item_base", "mask_lapis_item_base");
-        MASK_MAP.put("pipePowerAdapterBottom", "mask_pipePowerAdapterBottom");
-        MASK_MAP.put("pipePowerAdapterSide", "mask_pipePowerAdapterSide");
-        MASK_MAP.put("pipePowerAdapterTop", "mask_pipePowerAdapterTop");
         MASK_MAP.put("power_adapter", "mask_power_adapter");
         MASK_MAP.put("transparent_facade", "mask_transparent_facade");
         MASK_MAP.put("void_item", "mask_void_item");

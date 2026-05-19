@@ -5,10 +5,12 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.enums.EnumSpring;
 import buildcraft.core.BCCoreBlocks;
+import buildcraft.core.tile.ITileOilSpring;
 
 public class SpringTester {
 
@@ -70,5 +72,28 @@ public class SpringTester {
                 throw new IllegalStateException("Generated fluid does not match expected oil fluid!");
             }
         });
+    }
+
+    /**
+     * Verifies that placing an oil spring block also attaches a TileSpringOil
+     * (via {@code ITileOilSpring}). Regression test for the bug where
+     * {@link BlockSpring} didn't implement {@code EntityBlock}, so the BE was
+     * never created and worldgen logged
+     * "[energy.gen.oil] Setting the blockstate didn't also set the tile".
+     */
+    public static void testOilSpringAttachesTile(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 1, 1);
+        helper.setBlock(pos, BCCoreBlocks.SPRING_OIL.get());
+
+        BlockEntity tile = helper.getBlockEntity(pos, BlockEntity.class);
+        if (tile == null) {
+            throw new IllegalStateException(
+                "Oil spring did not attach a BlockEntity (BlockSpring is missing EntityBlock support).");
+        }
+        if (!(tile instanceof ITileOilSpring)) {
+            throw new IllegalStateException(
+                "Oil spring attached the wrong BlockEntity type: " + tile.getClass().getName());
+        }
+        helper.succeed();
     }
 }

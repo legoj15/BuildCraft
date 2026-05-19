@@ -918,5 +918,10 @@
     "gui.jei.category.buildcraftunofficial.distiller": "Distiller",
     "gui.jei.category.buildcraftunofficial.distiller.power": "%s %s",
     "gui.jei.category.buildcraftunofficial.assembly_table": "Assembly Table",
-    "gui.jei.category.buildcraftunofficial.assembly_table.power": "%s %s"
+    "gui.jei.category.buildcraftunofficial.assembly_table.power": "%s %s",
+    "tag.item.c.gears.wooden": "Wooden Gears",
+    "tag.item.c.gears.stone": "Stone Gears",
+    "tag.item.c.gears.iron": "Iron Gears",
+    "tag.item.c.gears.gold": "Gold Gears",
+    "tag.item.c.gears.diamond": "Diamond Gears"
 }

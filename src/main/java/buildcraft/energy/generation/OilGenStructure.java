@@ -62,6 +62,46 @@ public abstract class OilGenStructure {
         level.setBlock(pos, BCEnergyFluids.OIL_COOL.source().get().defaultFluidState().createLegacyBlock(), 2);
     }
 
+    /**
+     * Finds the topmost non-air block in the column at (x, z). Mirrors what
+     * {@link net.minecraft.world.level.levelgen.Heightmap.Types#WORLD_SURFACE}
+     * would return — but by direct downward scan, so it works when the heightmap
+     * hasn't been primed yet (which is the case for neighbour chunks scanned by
+     * the 5-chunk-radius oil generator firing on ChunkEvent.Load).
+     */
+    protected static BlockPos findWorldSurfaceTop(LevelAccessor level, int x, int z) {
+        int maxY = level.getMaxY();
+        int minY = level.getMinY();
+        for (int y = maxY; y > minY; y--) {
+            BlockPos p = new BlockPos(x, y, z);
+            if (!level.getBlockState(p).isAir()) {
+                return p;
+            }
+        }
+        return new BlockPos(x, minY, z);
+    }
+
+    /**
+     * Finds the topmost block that blocks motion (skipping air, water, lava,
+     * foliage, etc.) in the column at (x, z). Mirrors
+     * {@link net.minecraft.world.level.levelgen.Heightmap.Types#OCEAN_FLOOR_WG}
+     * — but by direct downward scan, avoiding the "Unprimed heightmap" error
+     * spam when the generator runs on ChunkEvent.Load and probes neighbour
+     * chunks whose heightmaps aren't yet built.
+     */
+    protected static BlockPos findSolidSurfaceTop(LevelAccessor level, int x, int z) {
+        int maxY = level.getMaxY();
+        int minY = level.getMinY();
+        for (int y = maxY; y > minY; y--) {
+            BlockPos p = new BlockPos(x, y, z);
+            BlockState state = level.getBlockState(p);
+            if (!state.isAir() && !state.canBeReplaced()) {
+                return p;
+            }
+        }
+        return new BlockPos(x, minY, z);
+    }
+
     /** Maximum vertical scan distance (blocks) when looking for a tree above a surface
      *  cell. Tall jungle canopies peak ~25 blocks above ground; 32 gives slack for
      *  modded variants without paying for unbounded scans. */
@@ -298,10 +338,7 @@ public abstract class OilGenStructure {
                     int pz = z - box.min().getZ();
 
                     if (pattern[px][pz]) {
-                        BlockPos upper = level.getHeightmapPos(
-                            net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE,
-                            new BlockPos(x, 0, z)
-                        ).below();
+                        BlockPos upper = findWorldSurfaceTop(level, x, z);
                         if (canReplaceForOil(level, upper)) {
                             for (int y = 0; y < 5; y++) {
                                 level.setBlock(upper.above(y), Blocks.AIR.defaultBlockState(), 2);
@@ -362,10 +399,7 @@ public abstract class OilGenStructure {
                     int pz = z - box.min().getZ();
 
                     if (pattern[px][pz]) {
-                        BlockPos baseTop = level.getHeightmapPos(
-                            net.minecraft.world.level.levelgen.Heightmap.Types.OCEAN_FLOOR_WG,
-                            new BlockPos(x, 0, z)
-                        ).below();
+                        BlockPos baseTop = findSolidSurfaceTop(level, x, z);
                         BlockPos upper = clearTreesAndFindGround(level, baseTop, intersect);
                         if (canReplaceForOil(level, upper)) {
                             for (int y = 0; y < 5; y++) {
@@ -473,9 +507,10 @@ public abstract class OilGenStructure {
             BlockState state = BCCoreBlocks.SPRING_OIL.get().defaultBlockState();
             level.setBlock(pos, state, 2);
             // Force-place oil directly above the spring so it can function.
-            // In 1.12.2, Y=1 was always stone/oil above the flat bedrock at Y=0.
-            // In modern MC, the bedrock gradient means pos.above() is often bedrock,
-            // which would block the spring's oil regeneration (it checks for empty/air above).
+            // Spring sits at level.getMinY() (replacing the 100%-bedrock floor),
+            // so pos.above() is at minY+1 — well within the bedrock gradient.
+            // Without ALWAYS-replace we'd land on bedrock and the spring would
+            // never regenerate (its tick checks isEmptyBlock above).
             setOil(level, pos.above());
             BlockEntity tile = level.getBlockEntity(pos);
             TileSpringOil spring;

@@ -2,15 +2,10 @@ package buildcraft.lib.guide;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nullable;
-
-import buildcraft.api.BCModules;
-
-import buildcraft.lib.misc.LocaleUtil;
 
 public class GuideContentsData {
 
@@ -28,49 +23,17 @@ public class GuideContentsData {
     public void generate(Set<String> domains) {
         loadedMods.clear();
         loadedOther.clear();
-        Set<BCModules> bcmods = EnumSet.noneOf(BCModules.class);
         for (String domain : domains) {
             if (domain == null) {
                 throw new IllegalArgumentException("Was given a null domain!");
             }
-            BCModules bcMod = BCModules.getBcMod(domain);
-            if (bcMod != null) {
-                bcmods.add(bcMod);
+            if ("buildcraftunofficial".equals(domain)) {
+                loadedMods.add("BuildCraft");
             } else {
-                // ModUtil.getNameOfMod not yet ported — use domain as fallback
                 loadedMods.add(domain);
             }
         }
         Collections.sort(loadedMods);
         Collections.sort(loadedOther);
-        switch (bcmods.size()) {
-            case 0:
-                return;
-            case 6: {
-                if (!loadedMods.contains(BCModules.COMPAT.getModId())) {
-                    loadedMods.add(0, "BuildCraft (main)");
-                    return;
-                }
-                break;
-            }
-            case 7: {
-                loadedMods.add(0, "BuildCraft (all)");
-                return;
-            }
-            default: {
-                break;
-            }
-        }
-        List<String> bcModNames = new ArrayList<>(6);
-        if (bcmods.remove(BCModules.LIB)) {
-            bcModNames.add("BuildCraft Lib");
-        }
-        if (bcmods.remove(BCModules.CORE)) {
-            bcModNames.add("BuildCraft Core");
-        }
-        for (BCModules mod : bcmods) {
-            bcModNames.add("BuildCraft " + mod.camelCaseName);
-        }
-        loadedMods.addAll(0, bcModNames);
     }
 }

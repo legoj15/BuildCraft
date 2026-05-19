@@ -243,6 +243,12 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_pickaxe_break_drops_everything"), () -> buildcraft.transport.PipeDropsTester::testPipePickaxeBreakDropsEverything);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_hand_break_drops_everything"), () -> buildcraft.transport.PipeDropsTester::testPipeHandBreakDropsEverything);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_fluid_break_drops_shards"), () -> buildcraft.transport.PipeDropsTester::testFluidPipeBreakDropsFluidShards);
+
+            // Wire system signaling — pins out the gatesChanged reset behavior so the
+            // "recompute every tick" bodge can't slip back in.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_steady_state_leaves_flag_false"), () -> buildcraft.transport.WireSystemTester::testSteadyStateLeavesGatesChangedFalse);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_gate_emit_propagates_and_resets"), () -> buildcraft.transport.WireSystemTester::testGateEmitPropagatesAndFlagResets);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_resolve_actions_clearing_marks_dirty"), () -> buildcraft.transport.WireSystemTester::testGateResolveActionsClearingMarksGatesChanged);
         }
     }
 }

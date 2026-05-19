@@ -157,12 +157,24 @@ public class SavedDataWireSystems extends SavedData {
     }
 
     public void tick() {
-        // gatesChanged is intentionally NOT reset here. Resetting it after the recalc broke the
-        // client<->server sync of wire powered state in subtle steady-state cases (the user could
-        // see wires never glowing and receive-gates never firing until the world was closed and
-        // reopened). The wasted CPU of running this every tick is small compared to the value of
-        // robust sync, so we recalculate every tick and rely on changedSystems being empty in
-        // steady state to avoid sending payloads when nothing actually changed.
+        // Wakeup matrix (all paths confirmed by audit 2026-05-19):
+        //   • Wire add/remove        → WireManager.addPart/removePart → buildAndAddWireSystem
+        //                              / removeWireSystem → markStructureChanged
+        //   • Pipe BE load / unload  → WireManager.tick (first call) / WireManager.invalidate
+        //                              → markStructureChanged
+        //   • Pluggable add/remove   → TilePipeHolder.replacePluggable → rebuildWireSystemsAround
+        //                              → markStructureChanged (only when old or new pluggable
+        //                              is an IWireEmitter)
+        //   • Gate emit state change → GateLogic.resolveActions sets gatesChanged = true directly
+        //                              whenever the resolved wireBroadcasts set differs from
+        //                              the previous one. (GateLogic is the sole IWireEmitter
+        //                              implementation; PluggableGate just delegates.)
+        // With every wakeup point in place we can correctly reset gatesChanged after the recalc.
+        // An earlier port revision left this reset out as a workaround for a then-broken gate→wire
+        // signal path (BCModules.TRANSPORT.isLoaded() always returned false, so the reflective
+        // notification in GateLogic was dead code). That workaround caused every steady-state tick
+        // to needlessly recompute every wire system on the level; with the direct signal restored,
+        // we recompute only when something actually changed.
         if (gatesChanged) {
             wireSystems.replaceAll((wireSystem, oldPowered) -> {
                 boolean newPowered = wireSystem.update(this);
@@ -204,6 +216,7 @@ public class SavedDataWireSystems extends SavedData {
         if (structureChanged || !changedSystems.isEmpty()) {
             setDirty();
         }
+        gatesChanged = false;
         structureChanged = false;
         changedSystems.clear();
         changedPlayers.clear();

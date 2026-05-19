@@ -2,11 +2,13 @@
 
 Last audited: 2026-05-07. The changelog block in `changelog.md` titled "Changes since 26.1.x Beta release 6" is authoritative for what has shipped since the previous audit; consult it before re-auditing this file.
 
-## Module Status Overview
+## Subsystem Status Overview
 
-| Module | Active `.java` | `.java.disabled` | Status |
+Pre-1.13 BuildCraft was 8 separate mods fatjarred together; the modern port is a single mod with one ID (`buildcraftunofficial`). Java packages still mirror those old boundaries — they're just packages now, not sub-mods. The table below tracks porting progress per package.
+
+| Subsystem (package) | Active `.java` | `.java.disabled` | Status |
 |:---|:---:|:---:|:---|
-| **API** | 231 | 0 | ✅ Complete |
+| **API** | 229 | 0 | ✅ Complete |
 | **Lib** | 606 | 0 | ✅ Complete |
 | **Core** | 88 | 0 | ✅ Complete |
 | **Transport** | 122 | 0 | ✅ Complete |
@@ -73,6 +75,7 @@ The `minecraft:impossible` trigger is intentional in this codebase: it's the "do
 - [ ] Updated Filler mode icons
 - [ ] Abandoned quarry frames with pre-excavated hole down to deepslate
 - [ ] Flesh out wrench as a tool; add a small damage value, quick attack speed, durability, make it the ideal tool for harvesting BuildCraft blocks, enchantable, perhaps add to loot table/chance of spawning with a zombie
+- [ ] **Unify plug in-world geometry under vanilla `models/block/plug_*.json`.** Today the plug rendering pipeline has three flavours: (a) blocker / power_adapter load BC-dialect JSON from `models/plugs/` via `ModelHolderStatic`, (b) timer / light_sensor / pulsar-base bake from hardcoded UVs in [PlugBakerSimpleItems.java:70-94](src/main/java/buildcraft/silicon/client/model/plug/PlugBakerSimpleItems.java#L70-L94) (translated from the 1.12.2 JSONs at port time), and (c) lens / facade / gate are genuinely parametric and stay in Java. Migrate (a) and (b) to standard vanilla block-model JSONs loaded through the normal resource manager, with one generic rotating baker that pulls BakedQuads off a face and rotates them per `KeyPlug*.side`. Wins: resourcepacks can reshape *and* retexture any static plug with stock Minecraft JSON (no BC dialect to learn), the `models/plugs/` directory and `ModelHolderStatic` go away (verify nothing else uses the latter first), and the surviving Java bakers become the clearly-exceptional parametric cases instead of the default. Tradeoff: non-trivial refactor across transport + silicon; per-element `shade` / extended UV tricks in the BC dialect need a NeoForge model-extension equivalent or to be dropped.
 
 ---
 
@@ -96,4 +99,4 @@ The `minecraft:impossible` trigger is intentional in this codebase: it's the "do
 
 ### Other finalization
 - [ ] Deprecation and warning fixes (both on compile and during runtime)
-- [ ] Final code review across all modules
+- [ ] Final code review across all subsystems

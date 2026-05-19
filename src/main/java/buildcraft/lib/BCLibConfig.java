@@ -8,9 +8,6 @@ package buildcraft.lib;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
-import buildcraft.api.mj.IMjToRfStatus;
-import buildcraft.api.mj.MjRfConversion;
-
 /**
  * Configuration file for lib. Uses NeoForge ModConfigSpec.
  */
@@ -157,16 +154,4 @@ public class BCLibConfig {
         }
     }
 
-    public static final class MjToRfStatus implements IMjToRfStatus {
-
-        @Override
-        public MjRfConversion getConversion() {
-            return MjRfConversion.createParsed(BCLibConfig.mjRfConversionAmount.get());
-        }
-
-        @Override
-        public boolean isAutoconvertEnabled() {
-            return powerMode.get().autoconvert;
-        }
-    }
 }

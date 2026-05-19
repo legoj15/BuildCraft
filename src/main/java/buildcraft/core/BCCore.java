@@ -61,8 +61,8 @@ public class BCCore {
     public BCCore(IEventBus modEventBus, ModContainer modContainer) {
         INSTANCE = this;
 
-        // ─── Initialize all modules ─────────────────────────────────────────
-        // Lib (must be first — other modules depend on it)
+        // ─── Initialize each subsystem ──────────────────────────────────────
+        // Lib must be first — other subsystems depend on its shared utilities.
         buildcraft.lib.BCLib.init(modEventBus);
 
         // Core registries
@@ -74,7 +74,7 @@ public class BCCore {
         BCCoreCreativeTabs.init(modEventBus);
         BCCoreMenuTypes.init(modEventBus);
 
-        // Module initializers (order matches 1.12.2 load order)
+        // Per-subsystem registration helpers (order matches 1.12.2 load order)
         buildcraft.transport.BCTransport.init(modEventBus);
         buildcraft.factory.BCFactory.init(modEventBus);
         buildcraft.energy.BCEnergy.init(modEventBus);
@@ -173,7 +173,7 @@ public class BCCore {
     }
 
     private void preInit(FMLCommonSetupEvent event) {
-        // Initialize the fake player provider for modules that need FakePlayer instances
+        // Initialize the fake player provider for subsystems that need FakePlayer instances
         buildcraft.api.core.BuildCraftAPI.fakePlayerProvider = new buildcraft.api.core.IFakePlayerProvider() {
             private static final com.mojang.authlib.GameProfile BC_PROFILE =
                 new com.mojang.authlib.GameProfile(

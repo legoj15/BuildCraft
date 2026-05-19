@@ -14,6 +14,7 @@ import net.neoforged.neoforge.capabilities.BlockCapability;
 import org.jspecify.annotations.Nullable;
 
 import buildcraft.api.core.CapabilitiesHelper;
+import buildcraft.lib.BCLibConfig;
 
 public class MjAPI {
 
@@ -49,11 +50,11 @@ public class MjAPI {
     }
 
     public static MjRfConversion getRfConversion() {
-        return IMjToRfStatus.get().getConversion();
+        return MjRfConversion.createParsed(BCLibConfig.mjRfConversionAmount.get());
     }
 
     public static boolean isRfAutoConversionEnabled() {
-        return IMjToRfStatus.get().isAutoconvertEnabled();
+        return BCLibConfig.powerMode.get().autoconvert;
     }
 
     // ########################################

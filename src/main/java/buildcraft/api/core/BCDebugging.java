@@ -10,12 +10,6 @@ import java.util.Locale;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.fml.ModList;
-
-import net.neoforged.fml.ModContainer;
-
-import buildcraft.api.BCModules;
-
 /** Provides a way to quickly enable or disable certain debug conditions via VM arguments or whether the client/server
  * is in a dev environment */
 public class BCDebugging {

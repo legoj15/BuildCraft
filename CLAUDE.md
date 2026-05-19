@@ -32,13 +32,17 @@ Java 25 is the project toolchain — used for compile, test, and the actual game
 
 ## Architecture
 
-### Module Layout
+### History — this is one mod, not eight
 
-All code lives under `src/main/java/buildcraft/` in a single source set. Modules are separated by package:
+Pre-1.13 BuildCraft was 8 separate mods (`buildcraft-core`, `buildcraft-transport`, `buildcraft-energy`, `buildcraft-builders`, `buildcraft-silicon`, `buildcraft-factory`, `buildcraft-robotics`, `buildcraft-lib`) fatjarred together at release time. Since the 1.21.11 port it is a **single mod with one mod ID** (`buildcraftunofficial`). The Java package layout still mirrors the old submod boundaries because renaming packages would be churn without benefit — but the packages are **just packages**. There is no `ModList.isLoaded` cross-mod check, no inter-mod IPC, no class-loading ordering problem to solve, no fatjar discovery, no separate API artifact. Treat package boundaries as code organisation only. If you find yourself reaching for reflection or `ModList`-style guards to call between packages, you are inventing a problem that does not exist — just call directly.
+
+### Package Layout
+
+All code lives under `src/main/java/buildcraft/` in a single source set. Packages are organised by subsystem (this layout matches the historical 1.12.2 submod boundaries):
 
 | Package | Contents |
 |---|---|
-| `api` | Public-facing interfaces and registries (no mod dependency required) |
+| `api` | Public-facing interfaces and registries other mods integrate against |
 | `lib` | Shared utilities: tile base classes, GUI framework, networking, config |
 | `core` | Main `@Mod` entry point, markers, springs, world gen |
 | `transport` | Pipes, pipe flows, pipe behaviors, plugs |
@@ -50,9 +54,9 @@ All code lives under `src/main/java/buildcraft/` in a single source set. Modules
 
 ### Initialization Pattern
 
-`BCCore` is the single `@Mod` entry point. It constructs each module class (`BCTransport`, `BCEnergy`, `BCBuilders`, etc.) which registers their `DeferredRegister<T>` instances onto the mod event bus. Client-only code lives in `BC{Module}Client` classes, instantiated only on `Dist.CLIENT`.
+`BCCore` is the single `@Mod` entry point. It calls a per-subsystem `BC{Name}.init(modEventBus)` (e.g. `BCTransport.init`, `BCEnergy.init`) which registers that subsystem's `DeferredRegister<T>` instances onto the mod event bus. These `BC{Name}` classes are registration helpers grouped by topic — they are *not* sub-mods. Client-only code lives in `BC{Name}Client` classes, instantiated only on `Dist.CLIENT`.
 
-Initialization order: `BCLib` → registries (blocks/items/BEs) → `FMLCommonSetupEvent` → `FMLLoadCompleteEvent`.
+Initialization order: `BCLib` → core registries → per-subsystem registries → `FMLCommonSetupEvent` → `FMLLoadCompleteEvent`.
 
 ### Key Subsystems
 
@@ -66,14 +70,14 @@ Initialization order: `BCLib` → registries (blocks/items/BEs) → `FMLCommonSe
 
 **Networking**: Custom payloads using NeoForge's `RegisterPayloadHandlersEvent`. Payloads use `StreamCodec<RegistryFriendlyByteBuf, T>` for serialization. Handlers call `ctx.enqueueWork()` to execute on the logical thread.
 
-**Config**: Single `BCUnifiedConfig` wraps all module configs into one `ModConfigSpec` using `.push()/.pop()` sections per module.
+**Config**: Single `BCUnifiedConfig` wraps all per-subsystem configs into one `ModConfigSpec` using `.push()/.pop()` sections.
 
 **Recipes**: `BuildcraftRecipeRegistry` for refinery recipes; JEI integration for display.
 
 ### Conventions
 
 - Deferred registries: use `DeferredRegister<T>` and `DeferredHolder<R,T>` — never direct registry access.
-- Blocks/items/BEs for each module live in `BC{Module}Blocks`, `BC{Module}Items`, `BC{Module}BlockEntities`.
+- Blocks/items/BEs for each subsystem live in `BC{Name}Blocks`, `BC{Name}Items`, `BC{Name}BlockEntities`.
 - Event listeners use `@SubscribeEvent` on `@EventBusSubscriber`-annotated classes, or `modEventBus.addListener()` in constructors.
 - Files with a `.disabled` extension were created from the initial forking of 1.12.2 to the first modern port on version 1.21.11. They exist as references to how the 1.12.2 version functioned, but can be safely deleted once their functionality has been either 1:1 ported or recreated in a new, updated, and/or improved way.
 - Commit successful transactions to git. Always squash or append commits that are related. Cleanup temporary files, even ones that were already (accidentally) commited.
@@ -88,7 +92,7 @@ Unit tests use JUnit 5 and live under `src/test/`. NeoForge game tests are regis
 
 Adding a game test in MC 26.1+ takes **three** things, not two. If you do only the first two it silently skips — there is no error, no warning, and `runGameTestServer` keeps reporting "N GAME TESTS COMPLETE" without your test included in N. This is the same footgun called out in the `blueprint_replace` comment in [BuildCraftGameTests](src/test/java/buildcraft/BuildCraftGameTests.java) ("37→34 even before these additions") — most of those skipped tests are missing the third piece.
 
-1. **Java method** — static, signature `void name(GameTestHelper helper)`, throws on failure, calls `helper.succeed()` (or one of the async `succeedWhen*` variants) on pass. Put it in a `*Tester.java` class under the right module subpackage of `src/test/java/buildcraft/`.
+1. **Java method** — static, signature `void name(GameTestHelper helper)`, throws on failure, calls `helper.succeed()` (or one of the async `succeedWhen*` variants) on pass. Put it in a `*Tester.java` class under the right subsystem subpackage of `src/test/java/buildcraft/`.
 
 2. **Registration in [BuildCraftGameTests.onRegister](src/test/java/buildcraft/BuildCraftGameTests.java)** — one line like `event.register(Registries.TEST_FUNCTION, Identifier.parse("buildcraftunofficial:your_test_id"), () -> YourTester::yourMethod);`
 

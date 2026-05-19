@@ -14,7 +14,6 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-import buildcraft.api.BCModules;
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.gates.IGate;
@@ -524,16 +523,9 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
             turnedOn.removeAll(previousBroadcasts);
             // FIXME: add call to "wires.emittingColour(turnedOff)"
 
-            if (BCModules.TRANSPORT.isLoaded() && !getPipeHolder().getPipeWorld().isClientSide()) {
-                try {
-                    Class<?> clazz = Class.forName("buildcraft.transport.wire.SavedDataWireSystems");
-                    java.lang.reflect.Method getMethod = clazz.getMethod("get", net.minecraft.world.level.Level.class);
-                    Object wireSystems = getMethod.invoke(null, getPipeHolder().getPipeWorld());
-                    java.lang.reflect.Field field = clazz.getField("gatesChanged");
-                    field.setBoolean(wireSystems, true);
-                } catch (Exception e) {
-                    // Transport module wire systems not available
-                }
+            if (!getPipeHolder().getPipeWorld().isClientSide()) {
+                buildcraft.transport.wire.SavedDataWireSystems
+                    .get(getPipeHolder().getPipeWorld()).gatesChanged = true;
             }
         }
 

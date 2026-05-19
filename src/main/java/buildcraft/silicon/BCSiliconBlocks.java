@@ -17,27 +17,29 @@ import buildcraft.silicon.tile.TileIntegrationTable;
 public class BCSiliconBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCSilicon.MODID);
 
+    // 1.12.2 Material.IRON → pickaxe required for drops (parity restored via
+    // requiresCorrectToolForDrops + minecraft:mineable/pickaxe tag).
     public static final DeferredBlock<BlockLaser> LASER = BLOCKS.registerBlock(
             "laser",
-            BlockLaser::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL));
+            BlockLaser::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockLaserTable> ASSEMBLY_TABLE = BLOCKS.registerBlock(
             "assembly_table",
             props -> new BlockLaserTable(props,
                 BCSiliconBlockEntities.ASSEMBLY_TABLE,
-                (id, inv, tile) -> new ContainerAssemblyTable(id, inv.player, (TileAssemblyTable) tile)), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL));
+                (id, inv, tile) -> new ContainerAssemblyTable(id, inv.player, (TileAssemblyTable) tile)), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockLaserTable> ADVANCED_CRAFTING_TABLE = BLOCKS.registerBlock(
             "advanced_crafting_table",
             props -> new BlockLaserTable(props,
                 BCSiliconBlockEntities.ADVANCED_CRAFTING_TABLE,
-                (id, inv, tile) -> new ContainerAdvancedCraftingTable(id, inv.player, (TileAdvancedCraftingTable) tile)), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL));
+                (id, inv, tile) -> new ContainerAdvancedCraftingTable(id, inv.player, (TileAdvancedCraftingTable) tile)), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockLaserTable> INTEGRATION_TABLE = BLOCKS.registerBlock(
             "integration_table",
             props -> new BlockLaserTable(props,
                 BCSiliconBlockEntities.INTEGRATION_TABLE,
-                (id, inv, tile) -> new ContainerIntegrationTable(id, inv.player, (TileIntegrationTable) tile)), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL));
+                (id, inv, tile) -> new ContainerIntegrationTable(id, inv.player, (TileIntegrationTable) tile)), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

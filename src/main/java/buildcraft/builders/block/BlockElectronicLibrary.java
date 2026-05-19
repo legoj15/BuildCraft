@@ -95,4 +95,16 @@ public class BlockElectronicLibrary extends HorizontalDirectionalBlock implement
             }
         }
     }
+
+    /** Drops the download in/out and upload in/out slots — 4 real inventories registered
+     *  with ItemHandlerManager. The selected snapshot key lives in level data, not in any
+     *  slot, so there's nothing else to recover. */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TileElectronicLibrary library) {
+            buildcraft.lib.misc.BlockDropsUtil.dropTileContents(level, pos, library);
+        }
+        return super.playerWillDestroy(level, pos, state, player);
+    }
 }

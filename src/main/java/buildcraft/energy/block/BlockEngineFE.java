@@ -94,4 +94,15 @@ public class BlockEngineFE extends BlockEngineBase_BC8 {
         }
         return InteractionResult.SUCCESS;
     }
+
+    /** Drops the upgrade slots regardless of the tool used to break the block. The upgrades
+     *  inventory is a raw ItemHandlerSimple, not registered with ItemHandlerManager. */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TileEngineFE engine) {
+            buildcraft.lib.misc.BlockDropsUtil.dropItems(level, pos, engine.upgrades);
+        }
+        return super.playerWillDestroy(level, pos, state, player);
+    }
 }

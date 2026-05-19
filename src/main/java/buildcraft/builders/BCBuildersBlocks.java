@@ -20,40 +20,39 @@ import buildcraft.builders.block.BlockReplacer;
 public class BCBuildersBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCBuilders.MODID);
 
+    // 1.12.2 Material.IRON → pickaxe required for drops (parity restored via
+    // requiresCorrectToolForDrops + minecraft:mineable/pickaxe tag).
     public static final DeferredBlock<BlockFrame> FRAME = BLOCKS.registerBlock(
             "frame",
-            BlockFrame::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL));
+            BlockFrame::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockFiller> FILLER = BLOCKS.registerBlock(
             "filler",
-            BlockFiller::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockFiller::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockBuilder> BUILDER = BLOCKS.registerBlock(
             "builder",
             BlockBuilder::new, () -> BlockBehaviour.Properties.of()
                 .strength(5.0f, 10.0f).sound(SoundType.METAL)
-                // 1.12.2 used Material.IRON which gates drops behind "correct tool" (a pickaxe).
-                // Without this, a bare hand still breaks the block and players lose it.
                 .requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockArchitectTable> ARCHITECT = BLOCKS.registerBlock(
             "architect",
             BlockArchitectTable::new, () -> BlockBehaviour.Properties.of()
                 .strength(5.0f, 10.0f).sound(SoundType.METAL)
-                // Same Material.IRON-style tool gate as the Builder (1.12.2 parity).
                 .requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockElectronicLibrary> LIBRARY = BLOCKS.registerBlock(
             "library",
-            BlockElectronicLibrary::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockElectronicLibrary::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockReplacer> REPLACER = BLOCKS.registerBlock(
             "replacer",
-            BlockReplacer::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockReplacer::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockQuarry> QUARRY = BLOCKS.registerBlock(
             "quarry",
-            BlockQuarry::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockQuarry::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

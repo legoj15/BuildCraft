@@ -324,6 +324,17 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     // --- Drops ---
 
+    /**
+     * Drops the pipe and everything attached to it: the pipe item itself (with paint colour
+     * preserved), all behaviour/flow drops (traversing items via {@link buildcraft.transport.pipe.flow.PipeFlowItems#addDrops},
+     * traversing fluid contents as fragile fluid-shard items via {@link buildcraft.transport.pipe.flow.PipeFlowFluids#addDrops},
+     * plus per-behaviour drops like the Emzuli pipe's filter slots), every pluggable on all
+     * 6 sides, and every wire on the pipe. Pipes are hand-breakable by design — there's no
+     * tool gate here, a bare-hand break returns everything just like a pickaxe break does
+     * (pickaxes are still faster thanks to the mineable/pickaxe tag). Don't call this from
+     * a creative-mode break; the caller in {@link buildcraft.transport.block.BlockPipeHolder#playerWillDestroy}
+     * already gates on {@code !player.isCreative()}.
+     */
     public void dropPipeItems(Level lvl, BlockPos pos) {
         if (pipe != null) {
             // Drop the pipe item itself
@@ -337,7 +348,9 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
                 }
                 Block.popResource(lvl, pos, pipeStack);
             }
-            // Drop flow/behaviour items
+            // Drop flow/behaviour items — includes traversing items (PipeFlowItems.addDrops),
+            // traversing fluids as fragile fluid-shard items (PipeFlowFluids.addDrops), and
+            // behaviour items like the Emzuli pipe's filter slots.
             NonNullList<ItemStack> drops = NonNullList.create();
             pipe.addDrops(drops, 0);
             for (ItemStack drop : drops) {

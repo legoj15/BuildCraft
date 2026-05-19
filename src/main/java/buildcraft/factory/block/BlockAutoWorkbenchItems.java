@@ -96,4 +96,16 @@ public class BlockAutoWorkbenchItems extends BaseEntityBlock {
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
+
+    /** Drops the materials grid and the result slot. The blueprint and material-filter slots
+     *  are registered as PHANTOM in TileAutoWorkbenchBase — they never held real items, so
+     *  ItemHandlerManager.addDrops correctly skips them. */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TileAutoWorkbenchItems workbench) {
+            buildcraft.lib.misc.BlockDropsUtil.dropTileContents(level, pos, workbench);
+        }
+        return super.playerWillDestroy(level, pos, state, player);
+    }
 }

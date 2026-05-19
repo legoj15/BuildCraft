@@ -176,4 +176,17 @@ public class BlockChute extends BaseEntityBlock {
         }
         return InteractionResult.SUCCESS;
     }
+
+    /** Drops the 4-slot internal inventory regardless of the tool used to break the
+     *  block. The block-self drop is gated by the loot table + requiresCorrectToolForDrops,
+     *  so an empty hand still returns the items the player had stored without giving back
+     *  the machine. */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TileChute chute) {
+            buildcraft.lib.misc.BlockDropsUtil.dropTileContents(level, pos, chute);
+        }
+        return super.playerWillDestroy(level, pos, state, player);
+    }
 }

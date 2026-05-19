@@ -134,4 +134,15 @@ public class BlockFloodGate extends BaseEntityBlock {
         }
         return super.useWithoutItem(state, level, pos, player, hitResult);
     }
+
+    /** Drops the internal 2-bucket tank as fragile fluid-shard items. The flood gate has no
+     *  item inventory. */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TileFloodGate floodGate) {
+            buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos, floodGate.getTank());
+        }
+        return super.playerWillDestroy(level, pos, state, player);
+    }
 }

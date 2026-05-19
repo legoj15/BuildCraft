@@ -81,10 +81,15 @@ public class BlockPump extends BaseEntityBlock {
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state,
             net.minecraft.world.entity.player.Player player) {
-        // Clean up tubes below when the pump is explicitly broken
+        // Clean up tubes below when the pump is explicitly broken, then drop the
+        // pump's internal fluid tank as fragile fluid-shard items so accumulated
+        // pumped fluid isn't lost on break.
         if (!level.isClientSide()) {
             BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TileMiner miner) {
+            if (be instanceof TilePump pump) {
+                pump.onRemove();
+                buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos, pump.getTank());
+            } else if (be instanceof TileMiner miner) {
                 miner.onRemove();
             }
         }

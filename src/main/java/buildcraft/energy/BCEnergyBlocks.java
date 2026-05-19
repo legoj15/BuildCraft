@@ -13,21 +13,23 @@ import buildcraft.energy.block.BlockDynamoMJ;
 public class BCEnergyBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCEnergy.MODID);
 
+    // 1.12.2 Material.IRON → pickaxe required for drops (parity restored via
+    // requiresCorrectToolForDrops + minecraft:mineable/pickaxe tag).
     public static final DeferredBlock<BlockEngineStone_BC8> ENGINE_STONE = BLOCKS.registerBlock(
             "engine_stone",
-            BlockEngineStone_BC8::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL));
+            BlockEngineStone_BC8::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockEngineIron_BC8> ENGINE_IRON = BLOCKS.registerBlock(
             "engine_iron",
-            BlockEngineIron_BC8::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL));
+            BlockEngineIron_BC8::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockEngineFE> ENGINE_FE = BLOCKS.registerBlock(
             "engine_rf",
-            BlockEngineFE::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL));
+            BlockEngineFE::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockDynamoMJ> DYNAMO_MJ = BLOCKS.registerBlock(
             "mj_dynamo",
-            BlockDynamoMJ::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL));
+            BlockDynamoMJ::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

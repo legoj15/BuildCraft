@@ -93,4 +93,19 @@ public class BlockZonePlanner extends BaseEntityBlock {
         }
         return InteractionResult.SUCCESS;
     }
+
+    /** Drops the 16-slot paintbrush bank and the 6 in/out slots. All hold real items —
+     *  the planner has no ghost/template slots; zone data is stored in level data, not on
+     *  the items in these slots. */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TileZonePlanner planner) {
+            buildcraft.lib.misc.BlockDropsUtil.dropItems(level, pos,
+                planner.invPaintbrushes,
+                planner.invInputPaintbrush, planner.invInputMapLocation, planner.invInputResult,
+                planner.invOutputPaintbrush, planner.invOutputMapLocation, planner.invOutputResult);
+        }
+        return super.playerWillDestroy(level, pos, state, player);
+    }
 }

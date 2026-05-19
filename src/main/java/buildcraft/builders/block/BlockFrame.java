@@ -6,8 +6,6 @@
 
 package buildcraft.builders.block;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
 import com.mojang.serialization.MapCodec;
@@ -15,7 +13,6 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
@@ -26,7 +23,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.pathfinder.PathComputationType;
-import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -141,10 +137,8 @@ public class BlockFrame extends Block {
         return RenderShape.MODEL;
     }
 
-    // --- Drops ---
-
-    @Override
-    protected List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
-        return Collections.emptyList();
-    }
+    // Drops: handled by the standard loot table at loot_table/blocks/frame.json and
+    // requiresCorrectToolForDrops in BCBuildersBlocks. A player breaking a frame with a
+    // pickaxe gets the frame item back; a hand-break (or quarry cleanup via
+    // level.removeBlock(pos, false) in BlockQuarry.playerWillDestroy) yields nothing.
 }

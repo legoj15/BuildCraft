@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:pipe_fluid_break_drops_shards",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 40,
+    "setup_ticks": 0,
+    "required": true
+}

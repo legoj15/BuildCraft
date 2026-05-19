@@ -100,4 +100,14 @@ public class BlockFiller extends HorizontalDirectionalBlock implements EntityBlo
             filler.onPlacedBy(placer, stack);
         }
     }
+
+    /** Drops the resource grid contents regardless of the tool used to break the block. */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        BlockEntity tile = level.getBlockEntity(pos);
+        if (tile instanceof TileFiller filler) {
+            buildcraft.lib.misc.BlockDropsUtil.dropTileContents(level, pos, filler);
+        }
+        return super.playerWillDestroy(level, pos, state, player);
+    }
 }

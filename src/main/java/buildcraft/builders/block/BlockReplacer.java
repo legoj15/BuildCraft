@@ -83,4 +83,17 @@ public class BlockReplacer extends HorizontalDirectionalBlock implements EntityB
         }
         return InteractionResult.SUCCESS;
     }
+
+    /** Drops the snapshot in/out and the two schematic match-pattern slots. None of the
+     *  three are PHANTOM — the replacer consumes the input snapshot to produce the output
+     *  one, and the schematics persist between sessions, so all should return to the player. */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        BlockEntity tile = level.getBlockEntity(pos);
+        if (tile instanceof TileReplacer replacer) {
+            buildcraft.lib.misc.BlockDropsUtil.dropItems(level, pos,
+                replacer.invSnapshot, replacer.invSchematicFrom, replacer.invSchematicTo);
+        }
+        return super.playerWillDestroy(level, pos, state, player);
+    }
 }

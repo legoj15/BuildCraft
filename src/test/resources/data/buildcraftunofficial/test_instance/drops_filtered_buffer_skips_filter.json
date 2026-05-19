@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:drops_filtered_buffer_skips_filter",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 40,
+    "setup_ticks": 0,
+    "required": true
+}

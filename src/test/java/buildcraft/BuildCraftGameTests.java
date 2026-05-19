@@ -51,6 +51,7 @@ public class BuildCraftGameTests {
             // Core Blocks
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:core_spring_water"), () -> buildcraft.core.block.SpringTester::testWaterSpring);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:core_spring_oil"), () -> buildcraft.core.block.SpringTester::testOilSpring);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:core_spring_oil_attaches_tile"), () -> buildcraft.core.block.SpringTester::testOilSpringAttachesTile);
 
             // Core Markers
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:marker_orientation"), () -> buildcraft.core.marker.MarkerTester::testMarkerOrientation);
@@ -197,6 +198,29 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:library_download_cycle"), () -> buildcraft.builders.ElectronicLibraryTester::testDownloadCycle);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:library_upload_progress"), () -> buildcraft.builders.ElectronicLibraryTester::testUploadProgressIncrements);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:library_download_idle"), () -> buildcraft.builders.ElectronicLibraryTester::testDownloadIdleWhenEmpty);
+
+            // Block drops — every BuildCraft block should drop itself + its real inventory
+            // when broken with the correct tool, drop only its inventory when broken by
+            // hand, and never drop PHANTOM (template/filter) slot contents.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:drops_decorated_pickaxe"), () -> BlockDropsTester::testDecoratedPickaxeDropsSelf);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:drops_decorated_hand"), () -> BlockDropsTester::testDecoratedHandBreakDropsNothing);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:drops_chute_pickaxe"), () -> BlockDropsTester::testChutePickaxeDropsContentsAndSelf);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:drops_chute_hand"), () -> BlockDropsTester::testChuteHandBreakDropsContentsOnly);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:drops_autoworkbench_skips_phantom"), () -> BlockDropsTester::testAutoWorkbenchSkipsPhantomSlots);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:drops_tank_pickaxe"), () -> BlockDropsTester::testTankPickaxeDropsFluidShardAndSelf);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:drops_tank_hand"), () -> BlockDropsTester::testTankHandBreakDropsFluidShardOnly);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:drops_stirling_hand"), () -> BlockDropsTester::testStirlingEngineHandBreakDropsFuel);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:drops_stirling_pickaxe"), () -> BlockDropsTester::testStirlingEnginePickaxeDropsFuelAndSelf);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:drops_filtered_buffer_skips_filter"), () -> BlockDropsTester::testFilteredBufferSkipsFilterSlots);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:drops_marker_hand"), () -> BlockDropsTester::testMarkerHandBreakDropsSelf);
+
+            // Pipe-specific drops — pluggable / wire click-break, pipe + cargo full break,
+            // hand-break with cargo retention but no pipe item.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_pluggable_break"), () -> buildcraft.transport.PipeDropsTester::testPluggableBreakDropsItemAndKeepsPipe);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_wire_break"), () -> buildcraft.transport.PipeDropsTester::testWireBreakDropsItemAndKeepsPipe);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_pickaxe_break_drops_everything"), () -> buildcraft.transport.PipeDropsTester::testPipePickaxeBreakDropsEverything);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_hand_break_drops_everything"), () -> buildcraft.transport.PipeDropsTester::testPipeHandBreakDropsEverything);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_fluid_break_drops_shards"), () -> buildcraft.transport.PipeDropsTester::testFluidPipeBreakDropsFluidShards);
         }
     }
 }

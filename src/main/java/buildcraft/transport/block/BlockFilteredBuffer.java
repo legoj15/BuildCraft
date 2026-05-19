@@ -62,21 +62,18 @@ public class BlockFilteredBuffer extends BaseEntityBlock {
         return InteractionResult.SUCCESS;
     }
 
+    /** Drops the 9-slot main inventory regardless of the tool used to break the block.
+     *  ItemHandlerManager.addDrops skips the 9-slot filter (registered as PHANTOM), so the
+     *  template/filter items are not duplicated — they were never consumed and shouldn't
+     *  drop. The block-self drop is handled by loot_table/blocks/filtered_buffer.json
+     *  gated by requiresCorrectToolForDrops. */
     @Override
-    protected java.util.List<net.minecraft.world.item.ItemStack> getDrops(BlockState state, net.minecraft.world.level.storage.loot.LootParams.Builder builder) {
-        java.util.List<net.minecraft.world.item.ItemStack> drops = new java.util.ArrayList<>();
-        drops.add(new net.minecraft.world.item.ItemStack(this));
-        
-        BlockEntity be = builder.getOptionalParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_ENTITY);
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TileFilteredBuffer buffer) {
-            for (int i = 0; i < buffer.invMain.getSlots(); i++) {
-                net.minecraft.world.item.ItemStack stack = buffer.invMain.getStackInSlot(i);
-                if (!stack.isEmpty()) {
-                    drops.add(stack.copy());
-                }
-            }
+            buildcraft.lib.misc.BlockDropsUtil.dropTileContents(level, pos, buffer);
         }
-        return drops;
+        return super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override

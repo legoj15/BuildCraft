@@ -111,4 +111,15 @@ public class BlockEngineStone_BC8 extends BlockEngineBase_BC8 {
         }
         return InteractionResult.SUCCESS;
     }
+
+    /** Drops the fuel slot contents regardless of the tool used to break the block.
+     *  fuelStack is a loose ItemStack, not held by ItemHandlerManager. */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TileEngineStone_BC8 engine) {
+            buildcraft.lib.misc.BlockDropsUtil.dropStack(level, pos, engine.getFuelStack());
+        }
+        return super.playerWillDestroy(level, pos, state, player);
+    }
 }

@@ -19,42 +19,48 @@ import buildcraft.factory.block.BlockWaterGel;
 public class BCFactoryBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCFactory.MODID);
 
+    // 1.12.2 Material.ROCK → pickaxe required.
     public static final DeferredBlock<BlockAutoWorkbenchItems> AUTOWORKBENCH_ITEM = BLOCKS.registerBlock(
             "autoworkbench_item",
-            BlockAutoWorkbenchItems::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL));
+            BlockAutoWorkbenchItems::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
+    // 1.12.2 Material.IRON → pickaxe required (parity restored via
+    // requiresCorrectToolForDrops + minecraft:mineable/pickaxe tag).
     public static final DeferredBlock<BlockMiningWell> MINING_WELL = BLOCKS.registerBlock(
             "mining_well",
-            BlockMiningWell::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockMiningWell::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockPump> PUMP = BLOCKS.registerBlock(
             "pump",
-            BlockPump::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockPump::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockFloodGate> FLOOD_GATE = BLOCKS.registerBlock(
             "flood_gate",
-            BlockFloodGate::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL));
+            BlockFloodGate::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockTank> TANK = BLOCKS.registerBlock(
             "tank",
-            BlockTank::new, () -> BlockBehaviour.Properties.of().strength(0.3f).noOcclusion().sound(SoundType.GLASS));
+            BlockTank::new, () -> BlockBehaviour.Properties.of().strength(0.3f).noOcclusion().sound(SoundType.GLASS).requiresCorrectToolForDrops());
 
+    // Tube is owned by the mining well / pump and stays unbreakable in survival
+    // (destroyTime(-1.0f)); no tool gate needed.
     public static final DeferredBlock<BlockTube> TUBE = BLOCKS.registerBlock(
             "tube",
             BlockTube::new, () -> BlockBehaviour.Properties.of().destroyTime(-1.0f).noOcclusion().sound(SoundType.METAL));
 
     public static final DeferredBlock<BlockChute> CHUTE = BLOCKS.registerBlock(
             "chute",
-            BlockChute::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL));
+            BlockChute::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockDistiller> DISTILLER = BLOCKS.registerBlock(
             "distiller",
-            BlockDistiller::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL));
+            BlockDistiller::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockHeatExchange> HEAT_EXCHANGE = BLOCKS.registerBlock(
             "heat_exchange",
-            BlockHeatExchange::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL));
+            BlockHeatExchange::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
+    // 1.12.2 Material.CLAY → hand-breakable; getDrops returns the gelled_water item.
     public static final DeferredBlock<BlockWaterGel> WATER_GEL = BLOCKS.registerBlock(
             "water_gel",
             BlockWaterGel::new, () -> BlockBehaviour.Properties.of()

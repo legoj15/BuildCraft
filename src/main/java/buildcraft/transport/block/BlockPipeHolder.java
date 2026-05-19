@@ -553,6 +553,10 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                 return super.playerWillDestroy(level, pos, state, player);
             }
             if (!level.isClientSide() && !player.isCreative()) {
+                // Pipes are hand-breakable by design — bare-hand drops the pipe item plus
+                // cargo / pluggables / wires (a pickaxe just speeds up the break, it doesn't
+                // unlock the drop). pipe_holder deliberately omits requiresCorrectToolForDrops
+                // for this reason; the call is unconditional.
                 tile.dropPipeItems(level, pos);
             }
             // Proactively disconnect this pipe from any wire systems it participates in,

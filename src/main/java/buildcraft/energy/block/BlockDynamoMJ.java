@@ -190,4 +190,15 @@ public class BlockDynamoMJ extends Block implements EntityBlock, ICustomRotation
             dynamo.onNeighborUpdate();
         }
     }
+
+    /** Drops the upgrade slots regardless of the tool used to break the block. The upgrades
+     *  inventory is a raw ItemHandlerSimple, not registered with ItemHandlerManager. */
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TileDynamoMJ dynamo) {
+            buildcraft.lib.misc.BlockDropsUtil.dropItems(level, pos, dynamo.upgrades);
+        }
+        return super.playerWillDestroy(level, pos, state, player);
+    }
 }

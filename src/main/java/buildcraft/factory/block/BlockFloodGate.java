@@ -15,6 +15,9 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -95,44 +98,63 @@ public class BlockFloodGate extends BaseEntityBlock {
         return RenderShape.MODEL;
     }
 
+    // Wrench handling lives in useItemOn (not useWithoutItem) so we can manually fire
+    // wrench.wrenchUsed(...) — the `wrenched` advancement entry point. The floodgate
+    // isn't an ICustomRotationHandler (its toggle uses UPDATE_CLIENTS rather than the
+    // rotation path's UPDATE_ALL, to avoid retriggering neighborChanged on attached
+    // pipes), so the wrench item's own useOn falls through with PASS and never grants
+    // the advancement. Same workaround as BlockEngineCreative's power-cycle path.
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
-            Player player, BlockHitResult hitResult) {
-        ItemStack heldItem = player.getMainHandItem();
-        if (heldItem.getItem() instanceof IToolWrench) {
-            Direction side = hitResult.getDirection();
-            if (side != Direction.UP && CONNECTED_MAP.containsKey(side)) {
-                if (!level.isClientSide()) {
-                    BlockEntity be = level.getBlockEntity(pos);
-                    if (be instanceof TileFloodGate floodGate) {
-                        // Toggle the side
-                        if (!floodGate.openSides.remove(side)) {
-                            floodGate.openSides.add(side);
-                        }
-                        // Reset BFS queue + adaptive rebuild delay so the gate
-                        // re-plans from the new side configuration immediately.
-                        floodGate.onSidesToggled();
-                        // Update the blockstate to reflect the new open/closed sides
-                        BlockState newState = state;
-                        for (Map.Entry<Direction, Property<Boolean>> entry : CONNECTED_MAP.entrySet()) {
-                            newState = newState.setValue(entry.getValue(),
-                                    floodGate.openSides.contains(entry.getKey()));
-                        }
-                        // Use UPDATE_CLIENTS (not UPDATE_ALL) so we don't fire
-                        // neighborChanged on the attached pipe. The flood gate's
-                        // open/closed state is purely cosmetic — pipes connect by
-                        // fluid capability, which is registered on all sides
-                        // unconditionally — so no neighbour needs to react. Firing
-                        // neighborChanged would cause TilePipeHolder to rebake its
-                        // model, briefly dropping plug renderers (e.g. the pulsar).
-                        level.setBlock(pos, newState, Block.UPDATE_CLIENTS);
-                        floodGate.setChanged();
-                    }
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+            Player player, InteractionHand hand, BlockHitResult hitResult) {
+        if (!(stack.getItem() instanceof IToolWrench wrench)) {
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
+        }
+        Direction side = hitResult.getDirection();
+        if (side == Direction.UP || !CONNECTED_MAP.containsKey(side)) {
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
+        }
+        if (!level.isClientSide()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileFloodGate floodGate) {
+                // Toggle the side
+                boolean nowOpen;
+                if (!floodGate.openSides.remove(side)) {
+                    floodGate.openSides.add(side);
+                    nowOpen = true;
+                } else {
+                    nowOpen = false;
                 }
-                return InteractionResult.SUCCESS;
+                // Reset BFS queue + adaptive rebuild delay so the gate
+                // re-plans from the new side configuration immediately.
+                floodGate.onSidesToggled();
+                // Update the blockstate to reflect the new open/closed sides
+                BlockState newState = state;
+                for (Map.Entry<Direction, Property<Boolean>> entry : CONNECTED_MAP.entrySet()) {
+                    newState = newState.setValue(entry.getValue(),
+                            floodGate.openSides.contains(entry.getKey()));
+                }
+                // Use UPDATE_CLIENTS (not UPDATE_ALL) so we don't fire
+                // neighborChanged on the attached pipe. The flood gate's
+                // open/closed state is purely cosmetic — pipes connect by
+                // fluid capability, which is registered on all sides
+                // unconditionally — so no neighbour needs to react. Firing
+                // neighborChanged would cause TilePipeHolder to rebake its
+                // model, briefly dropping plug renderers (e.g. the pulsar).
+                level.setBlock(pos, newState, Block.UPDATE_CLIENTS);
+                floodGate.setChanged();
+                // Vanilla iron-trapdoor audio (TrapDoorBlock.playSound): volume 1.0,
+                // pitch random in [0.9, 1.0]. The two events resolve to different
+                // .ogg variant pools, so opening vs closing genuinely sound distinct.
+                level.playSound(null, pos,
+                        nowOpen ? SoundEvents.IRON_TRAPDOOR_OPEN : SoundEvents.IRON_TRAPDOOR_CLOSE,
+                        SoundSource.BLOCKS, 1.0F, level.getRandom().nextFloat() * 0.1F + 0.9F);
             }
         }
-        return super.useWithoutItem(state, level, pos, player, hitResult);
+        // Award `wrenched` advancement + swing arm. Server-side guard inside
+        // AdvancementUtil; both sides swing.
+        wrench.wrenchUsed(player, hand, stack, hitResult);
+        return InteractionResult.SUCCESS;
     }
 
     /** Drops the internal 2-bucket tank as fragile fluid-shard items. The flood gate has no

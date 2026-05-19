@@ -169,6 +169,11 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_wrench_rotates_clockwise"), () -> buildcraft.factory.DistillerTester::testWrenchRotatesClockwise);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_wrench_passes_through_use_item_on"), () -> buildcraft.factory.DistillerTester::testWrenchPassesThroughUseItemOn);
 
+            // Flood gate wrench toggle (advancement-granting useItemOn path)
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:flood_gate_wrench_toggles_side"), () -> buildcraft.factory.FloodGateTester::testWrenchTogglesSide);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:flood_gate_wrench_on_top_face_falls_through"), () -> buildcraft.factory.FloodGateTester::testWrenchOnTopFaceFallsThrough);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:flood_gate_non_wrench_falls_through"), () -> buildcraft.factory.FloodGateTester::testNonWrenchItemFallsThrough);
+
             // Pump infinite-source detection (vanilla regen-rule parity per anchor block)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_strip_1x3_centre_vs_edges"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testStrip1x3CentreInfiniteEdgesFinite);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_isolated_source_finite"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testIsolatedSourceFinite);

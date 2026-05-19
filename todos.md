@@ -76,7 +76,7 @@ The `minecraft:impossible` trigger is intentional in this codebase: it's the "do
 
 ---
 
-## 🚫 Blocked Optimizations
+## 🚫 Blocked Features/Optimizations
 
 ### Awaiting upstream (Minecraft / NeoForge) infrastructure
 - [ ] **Split pipe textures onto a dedicated `buildcraftunofficial:pipes` atlas.** Would shrink the vanilla blocks atlas from its current 8192×4096 back to ~1024×1024 by moving the 400 `dye_replace`-generated dyed fluid-pipe variants (plus the 25 base fluid pipe sprites and the rest of `textures/pipes/`) off the vanilla atlas onto a dedicated one. Worth doing *eventually* — atlas size at 8192×4096 is fine on any GPU made in the last decade but is a real concern for older Intel integrated graphics that cap at 8192×8192 or below. **Blocked by three independent vanilla-level constraints**, any one of which is a blocker on its own (all empirically verified 2026-05-15 via a one-pipe-family spike on cobblestone fluid pipes):
@@ -89,7 +89,7 @@ The `minecraft:impossible` trigger is intentional in this codebase: it's the "do
   **Reopen trigger:** Mojang exposes an extensibility hook for chunk render layers, per-quad atlas binding, or otherwise opens the third-atlas case. The renderer has been rewritten across each of 1.19 → 1.20 → 1.21 → 26.1, so this is plausibly on the table eventually — but not now.
   
   **Cheap escape hatch on file if a low-spec-GPU compat report ever comes in:** ~1 hour revert of commit `5a6cdb5ac` — remove the 25 `dye_replace` entries from `assets/minecraft/atlases/blocks.json`, flip `PipeBaseModelGenStandard.ensureDyedSprites` to return null instead of throwing, restore the three fallback branches (chunk-cutout path L411, chunk-overlay path L547, item-form rendering in `PipeItemModel`). Painted fluid pipes drop from 1-layer dyed-sprite rendering to 2-layer base+mask-overlay rendering (the path item/power pipes still use today); atlas shrinks back to ~1024×1024. Visual fidelity is *slightly* less crisp on fluid pipes (tinted overlay vs pixel-replaced band) but functionally indistinguishable for gameplay.
-
+- [ ] **Fluid viscosity** currently isn't really a thing, flow speed can be modified, but negative density (floating gasses) are not native, and traversal speed and swimming modifications are currently not possible.
 ---
 
 ## 🧹 Finalization

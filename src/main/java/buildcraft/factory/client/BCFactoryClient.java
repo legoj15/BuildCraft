@@ -3,8 +3,10 @@ package buildcraft.factory.client;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 
 import buildcraft.factory.BCFactoryBlockEntities;
+import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.client.gui.GuiAutoCraftItems;
 import buildcraft.factory.client.gui.GuiChute;
@@ -32,6 +34,14 @@ public class BCFactoryClient {
         event.register(BCFactoryMenuTypes.CHUTE.get(), GuiChute::new);
         event.register(BCFactoryMenuTypes.DISTILLER.get(), GuiDistiller::new);
         event.register(BCFactoryMenuTypes.HEAT_EXCHANGE.get(), GuiHeatExchange::new);
+    }
+
+    // Tube blocks are RenderShape.INVISIBLE; their visuals come from TubeRenderer's
+    // laser system, not a block model. Without this, vanilla would still spawn
+    // particles from the tube model's particle texture on break/hit/run/land.
+    @SubscribeEvent
+    public static void registerClientExtensions(RegisterClientExtensionsEvent event) {
+        event.registerBlock(buildcraft.lib.client.NoParticleClientExtensions.INSTANCE, BCFactoryBlocks.TUBE.get());
     }
 
     @SubscribeEvent

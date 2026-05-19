@@ -72,6 +72,7 @@ The `minecraft:impossible` trigger is intentional in this codebase: it's the "do
 - [ ] Fix texture filtering bug and crash *(needs description / repro to be actionable)*
 - [ ] Updated Filler mode icons
 - [ ] Abandoned quarry frames with pre-excavated hole down to deepslate
+- [ ] Flesh out wrench as a tool; add a small damage value, quick attack speed, durability, make it the ideal tool for harvesting BuildCraft blocks, enchantable, perhaps add to loot table/chance of spawning with a zombie
 
 ---
 

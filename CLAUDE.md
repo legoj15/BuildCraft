@@ -84,6 +84,16 @@ Initialization order: `BCLib` → core registries → per-subsystem registries �
 - Write additions, fixes, and end-user facing changes to `changelog.md`. Combine related items concisely.
 - Mojang changed the Minecraft versioning scheme; The version immediately after 1.21.11 is 26.1, using a *year.major.hotfix* nomenclature now. 26.1.2 is the latest version at the time of writing.
 
+### Using `todos.md`
+
+`todos.md` is the live punch list for the port. The porting work itself is essentially done — what remains is polish, bug fixes, and new-feature design. Read it at the start of any session and treat it as load-bearing context, not just a wish list:
+
+- **Skim it before starting work.** If the task you're about to do covers a bullet on that list (in whole or in part), recognise it without the user having to point at the line number, and remove or trim the bullet as part of the same change. e.g. "we just wired the `goggles` advancement" → strike `goggles` from the advancement orphan list in the same commit.
+- **Only track what's planned, not what's done.** Finished items are removed entirely, not crossed out or kept as historical record. The changelog already serves as the historical record (see [changelog.md](changelog.md)). If a bullet is partially done, edit it down to the remaining sub-scope rather than leaving stale "✅ done" subtree noise behind.
+- **Add follow-ups you discover.** If implementing one item surfaces a related gap that's clearly out of scope for the current change (a bug spotted in passing, a feature the user hand-waved at, a finalization sweep), add a new bullet under the appropriate section. Keep new entries terse — one line is usually enough; expand only when the *why* or a non-obvious constraint isn't recoverable from the bullet text itself.
+- **Keep it readable.** Sections are: Subsystem Status table → 🔧 Outstanding work → 🆕 New Features → 🚫 Blocked → 🧹 Finalization. Bullets are checkboxes (`- [ ]`). Don't reorganise without reason; the user edits this file by hand and stable structure matters.
+- **Update the "Last audited" date** at the top whenever you make a substantive sweep (not for a single bullet edit).
+
 ## Testing
 
 Unit tests use JUnit 5 and live under `src/test/`. NeoForge game tests are registered dynamically via `RegisterEvent` on `Registries.TEST_FUNCTION` and cover pipes, transport, fluids, inventory, shapes, markers, and engines.

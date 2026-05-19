@@ -244,6 +244,14 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_hand_break_drops_everything"), () -> buildcraft.transport.PipeDropsTester::testPipeHandBreakDropsEverything);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_fluid_break_drops_shards"), () -> buildcraft.transport.PipeDropsTester::testFluidPipeBreakDropsFluidShards);
 
+            // Tank bookkeeping — composite ResourceHandler<FluidResource> capacity-respect
+            // and cross-slot spillover (modelled on TileBuilder.tankManager's per-slot delegate).
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:tank_single_capacity"), () -> buildcraft.lib.fluid.TankManagerTester::testSingleTankCapacityRespect);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:tank_single_extract_returns_only_held"), () -> buildcraft.lib.fluid.TankManagerTester::testSingleTankExtractReturnsOnlyWhatExists);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:tank_composite_insert_spillover"), () -> buildcraft.lib.fluid.TankManagerTester::testCompositeInsertSpillsAcrossSlots);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:tank_composite_extract_spillover"), () -> buildcraft.lib.fluid.TankManagerTester::testCompositeExtractDrainsAcrossSlots);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:tank_composite_insert_rolls_back"), () -> buildcraft.lib.fluid.TankManagerTester::testCompositeInsertRollsBackOnAbort);
+
             // Wire system signaling — pins out the gatesChanged reset behavior so the
             // "recompute every tick" bodge can't slip back in.
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_steady_state_leaves_flag_false"), () -> buildcraft.transport.WireSystemTester::testSteadyStateLeavesGatesChangedFalse);

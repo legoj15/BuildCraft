@@ -182,7 +182,8 @@ public class ItemMapLocation extends Item implements IMapLocation {
                 break;
         }
         if (type != MapLocationType.CLEAN) {
-            tooltip.accept(Component.translatable("buildcraft.item.nonclean.usage"));
+            tooltip.accept(Component.translatable("buildcraft.item.nonclean.usage",
+                Component.keybind("key.sneak"), Component.keybind("key.use")));
         }
     }
 

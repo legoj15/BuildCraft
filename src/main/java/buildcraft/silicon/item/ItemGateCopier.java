@@ -28,7 +28,11 @@ public class ItemGateCopier extends Item {
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, display, tooltip, flag);
         if (getCopiedGateData(stack) != null) {
-            tooltip.accept(Component.translatable("buildcraft.item.nonclean.usage"));
+            // Keybind components render the player's *actual* bound keys (so a player who
+            // rebound sneak to Right Ctrl, or "use item" off the right mouse button, sees
+            // their own controls rather than a hard-coded "Shift + right-click").
+            tooltip.accept(Component.translatable("buildcraft.item.nonclean.usage",
+                Component.keybind("key.sneak"), Component.keybind("key.use")));
         }
     }
 
@@ -39,12 +43,12 @@ public class ItemGateCopier extends Item {
             return InteractionResult.PASS;
         }
         if (player.isShiftKeyDown()) {
-            return clearData(stack);
+            return clearData(player, stack);
         }
         return InteractionResult.PASS;
     }
 
-    private InteractionResult clearData(ItemStack stack) {
+    private InteractionResult clearData(Player player, ItemStack stack) {
         if (getCopiedGateData(stack) == null) {
             return InteractionResult.PASS;
         }
@@ -55,6 +59,7 @@ public class ItemGateCopier extends Item {
         } else {
             NBTUtilBC.setItemData(stack, data);
         }
+        player.sendOverlayMessage(Component.translatable("chat.gateCopier.dataCleared"));
         return InteractionResult.SUCCESS;
     }
 

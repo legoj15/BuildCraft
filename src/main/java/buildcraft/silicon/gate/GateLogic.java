@@ -179,6 +179,26 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
         }
     }
 
+    /**
+     * @return {@code true} if this gate carries player-set configuration worth copying with a
+     *         Gate Copier — at least one inter-statement connection enabled, or at least one
+     *         trigger/action statement assigned. Runtime-only state (wire emission, on/off
+     *         glow) is not configuration and is deliberately ignored.
+     */
+    public boolean hasConfiguration() {
+        for (boolean connected : connections) {
+            if (connected) {
+                return true;
+            }
+        }
+        for (StatementPair pair : statements) {
+            if (pair.trigger.get() != null || pair.action.get() != null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public CompoundTag writeToNbt() {
         CompoundTag nbt = new CompoundTag();
         nbt.put("variant", variant.writeToNBT());

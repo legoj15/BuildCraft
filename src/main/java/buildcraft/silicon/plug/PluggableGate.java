@@ -274,30 +274,34 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
             return false;
         }
 
-        // TODO: ItemGateCopier interactions
-        /*
         CompoundTag stored = ItemGateCopier.getCopiedGateData(stack);
-
         if (stored != null) {
-
+            // Copier holds data → paste it onto this gate. readConfigData applies connections
+            // and the trigger/action statements; it deliberately does not touch the gate's
+            // variant, so the copier can only transfer configuration, never change gate type.
             logic.readConfigData(stored);
-
-            player.displayClientMessage(Component.translatable("chat.gateCopier.gatePasted"), true);
-
+            if (holder instanceof net.minecraft.world.level.block.entity.BlockEntity be) {
+                be.setChanged();
+            }
+            holder.scheduleRenderUpdate();
+            // Pushes connection/trigger/action display state to any player with this gate's
+            // GUI open; the on/off glow re-syncs naturally on the next logic tick.
+            logic.sendResolveData();
+            player.sendSystemMessage(Component.translatable("chat.gateCopier.gatePasted"));
         } else {
-            stored = logic.writeToNbt();
-            stored.remove("wireBroadcasts");
-
-            if (stored.size() == 1) {
-                player.displayClientMessage(Component.translatable("chat.gateCopier.noInformation"), true);
+            // Copier is empty → copy this gate's configuration onto it.
+            if (!logic.hasConfiguration()) {
+                player.sendSystemMessage(Component.translatable("chat.gateCopier.noInformation"));
                 return false;
             }
-
-            ItemGateCopier.setCopiedGateData(stack, stored);
-            player.displayClientMessage(Component.translatable("chat.gateCopier.gateCopied"), true);
+            CompoundTag data = logic.writeToNbt();
+            // Wire emission is recomputed every tick from the live statements — runtime state,
+            // not configuration — so it is not carried by the copier. (readConfigData ignores
+            // it on paste anyway; removing it here just keeps the stored item tag clean.)
+            data.remove("wireBroadcasts");
+            ItemGateCopier.setCopiedGateData(stack, data);
+            player.sendSystemMessage(Component.translatable("chat.gateCopier.gateCopied"));
         }
-        */
-
         return true;
     }
 

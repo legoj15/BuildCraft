@@ -20,7 +20,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
-import buildcraft.api.BCItems;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.recipes.AssemblyRecipe;
 import buildcraft.api.recipes.IngredientStack;

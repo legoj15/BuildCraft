@@ -19,6 +19,7 @@ import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 import buildcraft.api.core.BCLog;
+import buildcraft.core.BCCoreConfig;
 import buildcraft.energy.generation.OilGenerator;
 import buildcraft.lib.misc.AdvancementUtil;
 
@@ -32,7 +33,7 @@ public class BCEnergyWorldGen {
         = Identifier.parse("buildcraftunofficial:fine_riches");
 
     public static void init() {
-        if (!BCEnergyConfig.enableOilGeneration.get()) {
+        if (!BCCoreConfig.worldGen.get() || !BCEnergyConfig.enableOilGeneration.get()) {
             BCLog.logger.info("[energy.oilgen] Oil generation is disabled by config.");
             return;
         }

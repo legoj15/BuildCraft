@@ -94,6 +94,7 @@ public class BCCore {
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::buildCreativeTabContents);
         modEventBus.addListener(this::registerPayloads);
+        modEventBus.addListener(this::onConfigChanged);
 
 
 
@@ -170,6 +171,18 @@ public class BCCore {
                 }
             }
         );
+    }
+
+    /**
+     * Re-applies config-derived static state whenever the BuildCraft config is loaded or
+     * reloaded. Currently threads {@link BCCoreConfig#miningMultiplier} into
+     * {@link buildcraft.lib.misc.BlockUtil#miningMultiplier}, which drives the MJ-per-block
+     * cost math for every mining machine (Quarry, Mining Well, Builder/Filler clear-mode).
+     */
+    private void onConfigChanged(net.neoforged.fml.event.config.ModConfigEvent event) {
+        if (event.getConfig().getSpec() == BCUnifiedConfig.SPEC) {
+            buildcraft.lib.misc.BlockUtil.miningMultiplier = BCCoreConfig.miningMultiplier.get();
+        }
     }
 
     private void preInit(FMLCommonSetupEvent event) {

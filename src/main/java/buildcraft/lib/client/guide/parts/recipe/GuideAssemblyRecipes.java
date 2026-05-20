@@ -12,7 +12,7 @@ import net.minecraft.world.item.ItemStack;
 import buildcraft.lib.client.guide.parts.GuidePartFactory;
 
 /** Assembly recipe guide integration.
- * Currently stubbed — requires AssemblyRecipeRegistry and BCBlocks.Silicon which are not yet ported. */
+ * Currently stubbed — requires AssemblyRecipeRegistry which is not yet ported. */
 public enum GuideAssemblyRecipes implements IStackRecipes {
     INSTANCE;
 

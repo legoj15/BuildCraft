@@ -10,19 +10,22 @@ import java.util.Date;
 import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.enums.EnumSnapshotType;
 import buildcraft.api.schematics.ISchematicBlock;
 
 import buildcraft.lib.tile.TileBC_Neptune;
+import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 import buildcraft.builders.BCBuildersBlockEntities;
@@ -37,24 +40,27 @@ import buildcraft.builders.snapshot.Snapshot;
 public class TileReplacer extends TileBC_Neptune implements MenuProvider {
 
     /** Accepts a used blueprint item. */
-    public final ItemHandlerSimple invSnapshot;
+    public final ItemHandlerSimple invSnapshot = itemManager.addInvHandler(
+        "snapshot", 1,
+        (slot, stack) -> stack.getItem() instanceof ItemSnapshot snap && snap.isUsed()
+            && snap.getSnapshotType() == EnumSnapshotType.BLUEPRINT,
+        EnumAccess.NONE
+    );
     /** Accepts a used schematic-single item (the "from" pattern). */
-    public final ItemHandlerSimple invSchematicFrom;
+    public final ItemHandlerSimple invSchematicFrom = itemManager.addInvHandler(
+        "schematicFrom", 1,
+        (slot, stack) -> stack.getItem() instanceof ItemSchematicSingle s && s.isUsed(),
+        EnumAccess.NONE
+    );
     /** Accepts a used schematic-single item (the "to" pattern). */
-    public final ItemHandlerSimple invSchematicTo;
+    public final ItemHandlerSimple invSchematicTo = itemManager.addInvHandler(
+        "schematicTo", 1,
+        (slot, stack) -> stack.getItem() instanceof ItemSchematicSingle s && s.isUsed(),
+        EnumAccess.NONE
+    );
 
     public TileReplacer(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.REPLACER.get(), pos, state);
-        invSnapshot = new ItemHandlerSimple(1);
-        invSnapshot.setChecker((slot, stack) ->
-                stack.getItem() instanceof ItemSnapshot snap && snap.isUsed()
-                && snap.getSnapshotType() == EnumSnapshotType.BLUEPRINT);
-        invSchematicFrom = new ItemHandlerSimple(1);
-        invSchematicFrom.setChecker((slot, stack) ->
-                stack.getItem() instanceof ItemSchematicSingle s && s.isUsed());
-        invSchematicTo = new ItemHandlerSimple(1);
-        invSchematicTo.setChecker((slot, stack) ->
-                stack.getItem() instanceof ItemSchematicSingle s && s.isUsed());
     }
 
     /**
@@ -112,6 +118,20 @@ public class TileReplacer extends TileBC_Neptune implements MenuProvider {
         } catch (InvalidInputDataException e) {
             e.printStackTrace();
         }
+    }
+
+    // --- NBT persistence ---
+
+    @Override
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
+    }
+
+    @Override
+    public void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
     }
 
     // --- MenuProvider ---

@@ -42,7 +42,15 @@ public final class DebugRenderHelper {
         cube.sizeX = box.getXsize();
         cube.sizeY = box.getYsize();
         cube.sizeZ = box.getZsize();
-        cube.center.colouri(argb);
+        // MutableVertex.colouri(int) unpacks ABGR (red in the low byte), so split the standard
+        // 0xAARRGGBB argument into explicit channels — otherwise red and blue swap (e.g. the
+        // laser's "blocked" red would render blue).
+        cube.center.colouri(
+            (argb >> 16) & 0xFF,
+            (argb >> 8) & 0xFF,
+            argb & 0xFF,
+            (argb >>> 24) & 0xFF
+        );
         cube.render(poseStack.last(), consumer);
     }
 }

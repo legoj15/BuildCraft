@@ -14,6 +14,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -34,6 +35,7 @@ import buildcraft.api.mj.MjBattery;
 
 import buildcraft.lib.block.ILocalBlockUpdateSubscriber;
 import buildcraft.lib.block.LocalBlockUpdateNotifier;
+import buildcraft.lib.debug.IAdvDebugTarget;
 import buildcraft.lib.misc.VolumeUtil;
 import buildcraft.lib.misc.data.AverageLong;
 import buildcraft.lib.mj.MjBatteryReceiver;
@@ -43,7 +45,7 @@ import buildcraft.silicon.BCSiliconBlockEntities;
 import buildcraft.silicon.BCSiliconBlocks;
 import buildcraft.silicon.block.BlockLaser;
 
-public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscriber, IDebuggable {
+public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscriber, IDebuggable, IAdvDebugTarget {
     private static final int TARGETING_RANGE = 6;
 
     private final SafeTimeTracker clientLaserMoveInterval = new SafeTimeTracker(5, 10);
@@ -321,5 +323,10 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
         if (level != null && level.isClientSide()) {
             left.add("active_lasers = " + buildcraft.silicon.client.RenderLaser.getActiveCount());
         }
+    }
+
+    @Override
+    public Component getAdvDebugMessage() {
+        return Component.translatable("chat.debugger.laser");
     }
 }

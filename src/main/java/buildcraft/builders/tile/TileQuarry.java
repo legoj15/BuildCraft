@@ -31,6 +31,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -57,6 +58,7 @@ import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.lib.chunkload.ChunkLoaderManager;
 import buildcraft.lib.chunkload.IChunkLoadingTile;
+import buildcraft.lib.debug.IAdvDebugTarget;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.BoundingBoxUtil;
@@ -87,7 +89,7 @@ import buildcraft.core.marker.VolumeConnection;
 import buildcraft.core.marker.VolumeSubCache;
 import buildcraft.core.tile.TileMarkerVolume;
 
-public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoadingTile {
+public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoadingTile, IAdvDebugTarget {
     public static final boolean DEBUG_QUARRY = BCDebugging.shouldDebugLog("builders.quarry");
     private static final long MAX_POWER_PER_TICK = 512 * MjAPI.MJ;
     private static final Identifier DIGGY_DIGGY_HOLE = Identifier.parse("buildcraftunofficial:diggy_diggy_hole");
@@ -436,6 +438,11 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             }
         }
         return chunkPoses;
+    }
+
+    @Override
+    public Component getAdvDebugMessage() {
+        return Component.translatable("chat.debugger.quarry");
     }
 
     private void updatePoses() {

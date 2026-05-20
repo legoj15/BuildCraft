@@ -5,21 +5,15 @@
  */
 package buildcraft.lib.debug;
 
+import net.minecraft.network.chat.Component;
+
 /**
- * Something that can be put into an "advanced debug" state — every tick {@link #sendDebugState()} will be called on
- * the server, allowing the client to render details normally hidden on the server.
+ * A block entity that can be inspected with the Debugger item. Right-clicking such a tile with the
+ * Debugger records it (client-side) as the current advanced-debug target and renders an in-world
+ * overlay of its internal state; the server side shows the player {@link #getAdvDebugMessage()} in
+ * the action bar so they know what is being highlighted.
  */
 public interface IAdvDebugTarget {
-    /** Called when the current debug target changes from this to something else (or to nothing). */
-    void disableDebugging();
-
-    /**
-     * Called every tick on the server to see if this still exists in the world.
-     * If this returns false then {@link #disableDebugging()} will be called and the current debug target will be
-     * removed.
-     */
-    boolean doesExistInWorld();
-
-    /** Called every tick on the server to send all the debug information to the client. */
-    void sendDebugState();
+    /** The action-bar popup explaining what the debug overlay is showing for this tile. */
+    Component getAdvDebugMessage();
 }

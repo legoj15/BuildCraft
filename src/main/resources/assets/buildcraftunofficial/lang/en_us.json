@@ -137,6 +137,8 @@
     "chat.gateCopier.gatePasted": "Pasted gate configuration",
     "chat.gateCopier.noInformation": "This gate has no configuration to copy",
     "chat.gateCopier.dataCleared": "Cleared copied configuration",
+    "chat.debugger.quarry": "Debug: highlighting the chunks this quarry keeps loaded",
+    "chat.debugger.laser": "Debug: highlighting the laser's cone (green = reachable, red = blocked)",
     "item.buildcraftunofficial.gear_wood": "Wood Gear",
     "item.buildcraftunofficial.gear_stone": "Stone Gear",
     "item.buildcraftunofficial.gear_iron": "Iron Gear",

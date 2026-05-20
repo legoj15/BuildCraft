@@ -21,18 +21,19 @@ public class ItemDebugger extends Item {
 
     @Override
     public InteractionResult useOn(UseOnContext context) {
-        if (context.getLevel().isClientSide()) {
+        // Runs on both sides — the overlay is client-authoritative (no networking). The client
+        // records which tile to draw; the server side just shows the explanatory action-bar text.
+        BlockEntity blockEntity = context.getLevel().getBlockEntity(context.getClickedPos());
+        if (!(blockEntity instanceof IAdvDebugTarget target)) {
+            // Not a debug target — don't swallow the interaction, let other handlers run.
             return InteractionResult.PASS;
         }
-        BlockEntity blockEntity = context.getLevel().getBlockEntity(context.getClickedPos());
-        if (blockEntity == null) {
-            return InteractionResult.FAIL;
+        if (context.getLevel().isClientSide()) {
+            BCAdvDebugging.INSTANCE.setClientTarget(context.getClickedPos());
+        } else if (context.getPlayer() != null) {
+            context.getPlayer().sendOverlayMessage(target.getAdvDebugMessage());
         }
-        if (blockEntity instanceof IAdvDebugTarget target) {
-            BCAdvDebugging.setCurrentDebugTarget(target);
-            return InteractionResult.SUCCESS;
-        }
-        return InteractionResult.FAIL;
+        return InteractionResult.SUCCESS;
     }
 
     /** Returns true if the given player is in creative mode or is holding a debugger in either hand. */

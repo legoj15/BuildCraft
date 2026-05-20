@@ -5,35 +5,35 @@
  */
 package buildcraft.lib.debug;
 
+import javax.annotation.Nullable;
+
+import net.minecraft.core.BlockPos;
+
 /**
- * Holds the current {@link IAdvDebugTarget}. In 1.12 this was ticked via a server-tick event; that hookup is not yet
- * wired in 1.21.11 but the core logic is ready for when tile entities start implementing IAdvDebugTarget.
+ * Client-side holder for the current advanced-debug target. The whole overlay is client-authoritative:
+ * everything the overlay needs is already client-synced or client-computable, so there is no packet
+ * traffic — {@link buildcraft.lib.item.ItemDebugger} records the clicked position here on the client
+ * and {@link AdvDebugRenderer} reads it back during world rendering.
  */
 public enum BCAdvDebugging {
     INSTANCE;
 
-    private IAdvDebugTarget target = null;
+    @Nullable
+    private BlockPos clientTarget = null;
 
-    public static boolean isBeingDebugged(IAdvDebugTarget target) {
-        return INSTANCE.target == target;
+    /** Records (client-side) the position of the tile the player just debugged with the Debugger. */
+    public void setClientTarget(BlockPos pos) {
+        clientTarget = pos == null ? null : pos.immutable();
     }
 
-    public static void setCurrentDebugTarget(IAdvDebugTarget target) {
-        if (INSTANCE.target != null) {
-            INSTANCE.target.disableDebugging();
-        }
-        INSTANCE.target = target;
+    /** The position of the current debug target, or {@code null} if nothing is being debugged. */
+    @Nullable
+    public BlockPos getClientTarget() {
+        return clientTarget;
     }
 
-    /** Called every server tick (not yet wired). */
-    public void onServerPostTick() {
-        if (target != null) {
-            if (!target.doesExistInWorld()) {
-                target.disableDebugging();
-                target = null;
-            } else {
-                target.sendDebugState();
-            }
-        }
+    /** Clears the current debug target (e.g. once the tile no longer exists). */
+    public void clear() {
+        clientTarget = null;
     }
 }

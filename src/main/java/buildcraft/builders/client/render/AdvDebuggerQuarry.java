@@ -6,39 +6,47 @@
 
 package buildcraft.builders.client.render;
 
-import java.util.List;
 import java.util.Set;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-import buildcraft.lib.client.render.laser.LaserBoxRenderer;
-import buildcraft.lib.misc.data.Box;
+import buildcraft.lib.debug.DebugRenderHelper;
 
 import buildcraft.builders.tile.TileQuarry;
-import buildcraft.core.client.BuildCraftLaserManager;
 
-public class AdvDebuggerQuarry {
-    public final TileQuarry tile;
+/**
+ * Advanced-debug overlay for the Quarry: draws a translucent green wireframe box around every
+ * chunk the quarry keeps force-loaded. Faithful port of the 1.12.2 {@code AdvDebuggerQuarry} —
+ * one box per {@link TileQuarry#getChunksToLoad()} entry, spanning the whole chunk in X/Z and the
+ * frame box's Y range.
+ */
+public final class AdvDebuggerQuarry {
+    /** Green, matching the 1.12.2 chunk-highlight colour (0x55_99_FF_99 ARGB). */
+    private static final int COLOUR_CHUNK = 0x55_99FF99;
 
-    public AdvDebuggerQuarry(TileQuarry tile) {
-        this.tile = tile;
-    }
+    private AdvDebuggerQuarry() {}
 
-    public void getDebugInfo(List<String> left, List<String> right) {
-        // Display chunk loading info
+    public static void render(TileQuarry tile, PoseStack poseStack, MultiBufferSource bufferSource, Vec3 cameraPos) {
+        if (!tile.frameBox.isInitialized()) {
+            return;
+        }
         Set<ChunkPos> chunks = tile.getChunksToLoad();
-        left.add("Chunks to load: " + (chunks != null ? chunks.size() : 0));
-    }
-
-    public void renderDebugDynamic(PoseStack poseStack, MultiBufferSource bufferSource,
-                                    float partialTicks, Vec3 cameraPos) {
-        if (tile.frameBox.isInitialized()) {
-            LaserBoxRenderer.renderLaserBoxStatic(poseStack, tile.frameBox,
-                BuildCraftLaserManager.MARKER_VOLUME_CONNECTED, true, cameraPos);
+        if (chunks == null || chunks.isEmpty()) {
+            return;
+        }
+        double minY = tile.frameBox.min().getY();
+        double maxY = tile.frameBox.max().getY() + 1;
+        for (ChunkPos chunkPos : chunks) {
+            AABB box = new AABB(
+                chunkPos.getMinBlockX(), minY, chunkPos.getMinBlockZ(),
+                chunkPos.getMaxBlockX() + 1, maxY, chunkPos.getMaxBlockZ() + 1
+            );
+            DebugRenderHelper.renderBox(poseStack, bufferSource, box, cameraPos, COLOUR_CHUNK);
         }
     }
 }

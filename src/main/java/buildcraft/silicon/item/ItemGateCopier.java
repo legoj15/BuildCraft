@@ -3,6 +3,7 @@ package buildcraft.silicon.item;
 import java.util.List;
 import javax.annotation.Nonnull;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
@@ -11,6 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 import java.util.function.Consumer;
@@ -55,12 +57,26 @@ public class ItemGateCopier extends Item {
         CompoundTag data = NBTUtilBC.getItemData(stack);
         data.remove(NBT_DATA);
         if (data.isEmpty()) {
-            stack.remove(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+            stack.remove(DataComponents.CUSTOM_DATA);
         } else {
             NBTUtilBC.setItemData(stack, data);
         }
+        updateModelData(stack);
         player.sendOverlayMessage(Component.translatable("chat.gateCopier.dataCleared"));
         return InteractionResult.SUCCESS;
+    }
+
+    /** Updates CustomModelData so the {@code items/gate_copier.json} range-dispatch selector
+     * shows the "full" texture while the copier holds gate settings and the "empty" texture
+     * while it doesn't — the modern equivalent of 1.12.2's metadata-driven model switch.
+     * Mirrors {@link buildcraft.core.item.ItemList_BC8}'s {@code updateModelData}. */
+    private static void updateModelData(ItemStack stack) {
+        if (getCopiedGateData(stack) != null) {
+            stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(
+                List.of(1.0f), List.of(), List.of(), List.of()));
+        } else {
+            stack.remove(DataComponents.CUSTOM_MODEL_DATA);
+        }
     }
 
     public static CompoundTag getCopiedGateData(ItemStack stack) {
@@ -75,5 +91,6 @@ public class ItemGateCopier extends Item {
         CompoundTag data = NBTUtilBC.getItemData(stack);
         data.put(NBT_DATA, nbt);
         NBTUtilBC.setItemData(stack, data);
+        updateModelData(stack);
     }
 }

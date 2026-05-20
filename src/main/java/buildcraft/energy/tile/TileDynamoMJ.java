@@ -186,15 +186,27 @@ public class TileDynamoMJ extends TileEngineBase_BC8 implements MenuProvider {
     @Nullable
     public EnergyHandler getFeReceiver(Direction side) {
         if (level == null) return null;
-        BlockPos targetPos = getBlockPos().relative(side);
-        BlockEntity tile = level.getBlockEntity(targetPos);
-        if (tile == null) return null;
-
-        if (tile.getClass() == getClass() && ((TileDynamoMJ) tile).orientation != orientation) {
-             return null;
+        // Engine chaining (1.12.2 parity): hop through up to getMaxChainLength() further Dynamos
+        // facing this same way to reach the FE receiver at the end of the line.
+        BlockPos pos = getBlockPos();
+        for (int len = 0; len <= getMaxChainLength(); len++) {
+            BlockPos targetPos = pos.relative(side);
+            BlockEntity tile = level.getBlockEntity(targetPos);
+            if (tile == null) {
+                return null;
+            }
+            if (tile.getClass() == getClass()) {
+                // A chained Dynamo must face the same direction; step through it.
+                if (((TileDynamoMJ) tile).orientation != side) {
+                    return null;
+                }
+                pos = targetPos;
+                continue;
+            }
+            // Any other tile — the FE receiver at the end of the chain.
+            return level.getCapability(Capabilities.Energy.BLOCK, targetPos, side.getOpposite());
         }
-
-        return level.getCapability(Capabilities.Energy.BLOCK, targetPos, side.getOpposite());
+        return null;
     }
 
     @Nullable

@@ -156,9 +156,15 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
 
     // --- Overridable methods ---
 
-    /** @return The maximum chain length for engine chaining, 0 to disable */
+    /**
+     * @return how many further engines of the <em>same type</em> this engine may send power
+     *         through to reach a receiver — see {@link #getReceiverToPower}. The base default is 2
+     *         (1.12.2 parity); subclasses override (Combustion/FE 4, MJ Dynamo 3), and {@code 0}
+     *         disables chaining entirely — the Redstone Engine returns 0 so its free trickle of
+     *         power can't be stacked into a single machine.
+     */
     protected int getMaxChainLength() {
-        return 0;
+        return 2;
     }
 
     /** @return The piston animation speed, in progress-per-tick.
@@ -301,36 +307,55 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
     }
 
     /**
-     * Look up the MJ receiver on the adjacent block in the given direction.
-     * Uses NeoForge BlockCapability lookup, with FE/RF fallback for cross-mod compatibility.
+     * Finds the MJ receiver this engine should power, in the given direction.
+     * <p>
+     * Implements 1.12.2 engine chaining: the search steps through up to {@link #getMaxChainLength()}
+     * further engines of the <em>same type</em>, all facing this same direction, so a row of
+     * engines can all feed a single machine at the end of the line. Anything that is not a
+     * same-type engine — a different engine, a machine, a pipe — is treated as the receiver
+     * candidate and looked up through the NeoForge MJ capability, with an FE/RF auto-convert
+     * fallback for cross-mod compatibility.
      */
     @Nullable
     public IMjReceiver getReceiverToPower(Direction side) {
         if (level == null) return null;
-        BlockPos targetPos = getBlockPos().relative(side);
-        BlockEntity tile = level.getBlockEntity(targetPos);
-        if (tile == null) return null;
 
-        // Engine chaining: if the adjacent tile is the same engine type facing the same way, skip
-        if (tile.getClass() == getClass()) {
+        // Walk the chain: hop through same-type engines facing `side` until some other tile (the
+        // receiver) is reached. Each engine costs one hop, so up to getMaxChainLength() engines
+        // may sit between this engine and the receiver.
+        BlockPos pos = getBlockPos();
+        for (int len = 0; len <= getMaxChainLength(); len++) {
+            BlockPos targetPos = pos.relative(side);
+            BlockEntity tile = level.getBlockEntity(targetPos);
+            if (tile == null) {
+                return null;
+            }
+            if (tile.getClass() == getClass()) {
+                // Same engine type — only chains through it if it faces the same way.
+                if (((TileEngineBase_BC8) tile).orientation != side) {
+                    return null;
+                }
+                pos = targetPos;
+                continue;
+            }
+
+            // Any other tile is the receiver at the end of the chain.
+            // 1. Try the native MJ capability.
+            IMjReceiver receiver = level.getCapability(MjAPI.CAP_RECEIVER, targetPos, side.getOpposite());
+            if (receiver != null && receiver.canConnect(getMjConnector()) && getMjConnector().canConnect(receiver)) {
+                return receiver;
+            }
+            // 2. Fallback: NeoForge FE/RF energy, auto-converted.
+            EnergyHandler feHandler = level.getCapability(Capabilities.Energy.BLOCK, targetPos, side.getOpposite());
+            if (feHandler != null) {
+                IMjReceiver feReceiver = MjToRfAutoConvertor.createReceiver(feHandler);
+                if (feReceiver != null && feReceiver.canConnect(getMjConnector())) {
+                    return feReceiver;
+                }
+            }
             return null;
         }
-
-        // 1. Try native MJ capability
-        IMjReceiver receiver = level.getCapability(MjAPI.CAP_RECEIVER, targetPos, side.getOpposite());
-        if (receiver != null && receiver.canConnect(getMjConnector()) && getMjConnector().canConnect(receiver)) {
-            return receiver;
-        }
-
-        // 2. Fallback: try NeoForge FE/RF energy and auto-convert
-        EnergyHandler feHandler = level.getCapability(Capabilities.Energy.BLOCK, targetPos, side.getOpposite());
-        if (feHandler != null) {
-            IMjReceiver feReceiver = MjToRfAutoConvertor.createReceiver(feHandler);
-            if (feReceiver != null && feReceiver.canConnect(getMjConnector())) {
-                return feReceiver;
-            }
-        }
-
+        // Ran out of chain length while still on engines — no receiver within reach.
         return null;
     }
 

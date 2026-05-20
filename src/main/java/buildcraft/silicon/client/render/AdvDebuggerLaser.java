@@ -53,7 +53,7 @@ public final class AdvDebuggerLaser {
                 p.getX() + 0.5 - CUBE_RADIUS, p.getY() + 0.5 - CUBE_RADIUS, p.getZ() + 0.5 - CUBE_RADIUS,
                 p.getX() + 0.5 + CUBE_RADIUS, p.getY() + 0.5 + CUBE_RADIUS, p.getZ() + 0.5 + CUBE_RADIUS
             );
-            DebugRenderHelper.renderBox(poseStack, bufferSource, box, cameraPos,
+            DebugRenderHelper.renderFilledBox(poseStack, bufferSource, box, cameraPos,
                 visible ? COLOUR_VISIBLE : COLOUR_BLOCKED);
         });
     }

@@ -9,37 +9,40 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.ShapeRenderer;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.shapes.Shapes;
-import net.minecraft.world.phys.shapes.VoxelShape;
+
+import buildcraft.lib.client.render.BCLibRenderTypes;
+import buildcraft.lib.client.render.tile.RenderPartCube;
 
 /**
- * Client-side helpers for the advanced-debug overlay. Draws wireframe boxes — perfectly readable
- * for a debug overlay and robust against the 26.1 render-pipeline changes (vanilla's old
- * {@code LevelRenderer.renderLineBox} no longer exists; {@link ShapeRenderer} with the
- * {@code lines()} render type is the modern equivalent).
+ * Client-side helper for the advanced-debug overlay. Draws solid, vertex-coloured boxes through
+ * vanilla's translucent debug filled-box render type ({@link BCLibRenderTypes#debugFilled()}). A
+ * box's per-vertex alpha decides how it reads: a low alpha gives a see-through volume (the Quarry's
+ * chunk highlights), full alpha gives a solid marker (the Laser's cone cubes).
  */
 public final class DebugRenderHelper {
-    private static final float LINE_WIDTH = 2.5F;
-
     private DebugRenderHelper() {}
 
     /**
-     * Draws a wireframe box at the given world-space {@link AABB}. {@code cameraPos} is the camera's
-     * world position — the box is translated into camera space so it renders in the right place
-     * regardless of where the player is.
+     * Draws a filled box at the given world-space {@link AABB}, coloured by {@code argb} (the alpha
+     * byte is honoured — use a low alpha for a translucent volume, full alpha for a solid box).
+     * {@code cameraPos} is the camera's world position; the box is translated into camera space so
+     * it renders in the right place regardless of where the player is.
      */
-    public static void renderBox(PoseStack poseStack, MultiBufferSource bufferSource, AABB box, Vec3 cameraPos,
-                                 int argb) {
-        VertexConsumer buffer = bufferSource.getBuffer(RenderTypes.lines());
-        VoxelShape shape = Shapes.create(box);
-        ShapeRenderer.renderShape(
-            poseStack, buffer, shape,
-            -cameraPos.x, -cameraPos.y, -cameraPos.z,
-            argb, LINE_WIDTH
+    public static void renderFilledBox(PoseStack poseStack, MultiBufferSource bufferSource, AABB box,
+                                       Vec3 cameraPos, int argb) {
+        VertexConsumer consumer = bufferSource.getBuffer(BCLibRenderTypes.debugFilled());
+        RenderPartCube cube = new RenderPartCube();
+        cube.center.positiond(
+            (box.minX + box.maxX) / 2.0 - cameraPos.x,
+            (box.minY + box.maxY) / 2.0 - cameraPos.y,
+            (box.minZ + box.maxZ) / 2.0 - cameraPos.z
         );
+        cube.sizeX = box.getXsize();
+        cube.sizeY = box.getYsize();
+        cube.sizeZ = box.getZsize();
+        cube.center.colouri(argb);
+        cube.render(poseStack.last(), consumer);
     }
 }

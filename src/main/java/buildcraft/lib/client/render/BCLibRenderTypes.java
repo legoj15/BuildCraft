@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.LayeringTransform;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.resources.Identifier;
 
 /**
@@ -54,6 +55,15 @@ public final class BCLibRenderTypes {
 
     public static RenderType led() {
         return LED;
+    }
+
+    /**
+     * Vanilla's translucent, vertex-coloured filled-box render type. Used by the advanced-debug
+     * overlay ({@link buildcraft.lib.debug.DebugRenderHelper}) — a box's per-vertex alpha controls
+     * whether it reads as a translucent volume or a solid marker.
+     */
+    public static RenderType debugFilled() {
+        return RenderTypes.debugFilledBox();
     }
 
     private BCLibRenderTypes() {}

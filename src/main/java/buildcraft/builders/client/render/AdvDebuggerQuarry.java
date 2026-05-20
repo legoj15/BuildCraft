@@ -20,9 +20,9 @@ import buildcraft.lib.debug.DebugRenderHelper;
 import buildcraft.builders.tile.TileQuarry;
 
 /**
- * Advanced-debug overlay for the Quarry: draws a translucent green wireframe box around every
- * chunk the quarry keeps force-loaded. Faithful port of the 1.12.2 {@code AdvDebuggerQuarry} —
- * one box per {@link TileQuarry#getChunksToLoad()} entry, spanning the whole chunk in X/Z and the
+ * Advanced-debug overlay for the Quarry: draws a translucent green volume over every chunk the
+ * quarry keeps force-loaded. Faithful port of the 1.12.2 {@code AdvDebuggerQuarry} — one box per
+ * {@link TileQuarry#getChunksToLoad()} entry, inset 0.5 from each chunk edge and spanning the
  * frame box's Y range.
  */
 public final class AdvDebuggerQuarry {
@@ -42,11 +42,13 @@ public final class AdvDebuggerQuarry {
         double minY = tile.frameBox.min().getY();
         double maxY = tile.frameBox.max().getY() + 1;
         for (ChunkPos chunkPos : chunks) {
+            // Inset 0.5 from each chunk edge so neighbouring highlighted chunks show a clean gap
+            // at their shared border instead of merging into one indistinct volume.
             AABB box = new AABB(
-                chunkPos.getMinBlockX(), minY, chunkPos.getMinBlockZ(),
-                chunkPos.getMaxBlockX() + 1, maxY, chunkPos.getMaxBlockZ() + 1
+                chunkPos.getMinBlockX() + 0.5, minY, chunkPos.getMinBlockZ() + 0.5,
+                chunkPos.getMaxBlockX() + 0.5, maxY, chunkPos.getMaxBlockZ() + 0.5
             );
-            DebugRenderHelper.renderBox(poseStack, bufferSource, box, cameraPos, COLOUR_CHUNK);
+            DebugRenderHelper.renderFilledBox(poseStack, bufferSource, box, cameraPos, COLOUR_CHUNK);
         }
     }
 }

@@ -9,7 +9,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
@@ -58,6 +57,6 @@ public final class AdvDebugRenderer {
             AdvDebuggerLaser.render(laser, poseStack, bufferSource, cameraPos);
         }
 
-        bufferSource.endBatch(RenderTypes.lines());
+        bufferSource.endBatch();
     }
 }

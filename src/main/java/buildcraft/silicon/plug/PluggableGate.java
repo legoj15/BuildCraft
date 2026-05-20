@@ -1,9 +1,6 @@
 package buildcraft.silicon.plug;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -34,26 +31,14 @@ import buildcraft.lib.misc.data.ModelVariableData;
 import buildcraft.lib.net.IPayloadWriter;
 import buildcraft.lib.net.PacketBufferBC;
 
-// import buildcraft.silicon.BCSiliconGuis; // TODO: port GUI
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.client.model.key.KeyPlugGate;
-import buildcraft.silicon.gate.EnumGateLogic;
-import buildcraft.silicon.gate.EnumGateMaterial;
-import buildcraft.silicon.gate.EnumGateModifier;
 import buildcraft.silicon.gate.GateLogic;
 import buildcraft.silicon.gate.GateVariant;
 
 public class PluggableGate extends PipePluggable implements IWireEmitter {
     // PluggableHolder.ID_UPDATE_PLUG (was 1 locally in BuildCraft)
     private static final byte ID_UPDATE_PLUG = 1;
-
-    // public static final FunctionContext MODEL_FUNC_CTX_STATIC, MODEL_FUNC_CTX_DYNAMIC;
-    // private static final NodeVariableObject<String> MODEL_MATERIAL;
-    // private static final NodeVariableObject<String> MODEL_MODIFIER;
-    // private static final NodeVariableObject<String> MODEL_LOGIC;
-    // private static final NodeVariableObject<Direction> MODEL_SIDE;
-    // private static final NodeVariableBoolean MODEL_IS_ON;
-    // public static final ContextInfo MODEL_VAR_INFO;
 
     private static final AABB[] BOXES = new AABB[6];
 
@@ -82,46 +67,6 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
         BOXES[Direction.SOUTH.get3DDataValue()] = new AABB(min, min, ul, max, max, uu);
         BOXES[Direction.WEST.get3DDataValue()] = new AABB(ll, min, min, lu, max, max);
         BOXES[Direction.EAST.get3DDataValue()] = new AABB(ul, min, min, uu, max, max);
-
-        /* TODO: Port expression subsystem
-        MODEL_FUNC_CTX_STATIC = DefaultContexts.createWithAll();
-        MODEL_MATERIAL = MODEL_FUNC_CTX_STATIC.putVariableString("material");
-        MODEL_MODIFIER = MODEL_FUNC_CTX_STATIC.putVariableString("modifier");
-        MODEL_LOGIC = MODEL_FUNC_CTX_STATIC.putVariableString("logic");
-        MODEL_SIDE = MODEL_FUNC_CTX_STATIC.putVariableObject("side", Direction.class);
-
-        MODEL_FUNC_CTX_DYNAMIC = new FunctionContext(MODEL_FUNC_CTX_STATIC);
-        MODEL_IS_ON = MODEL_FUNC_CTX_DYNAMIC.putVariableBoolean("on");
-
-        MODEL_VAR_INFO = new ContextInfo(MODEL_FUNC_CTX_DYNAMIC);
-        VariableInfoObject<String> infoMaterial = MODEL_VAR_INFO.createInfoObject(MODEL_MATERIAL);
-        infoMaterial.cacheType = CacheType.ALWAYS;
-        infoMaterial.setIsComplete = true;
-        infoMaterial.possibleValues
-            .addAll(Arrays.stream(EnumGateMaterial.VALUES).map(m -> m.tag).collect(Collectors.toList()));
-
-        VariableInfoObject<String> infoModifier = MODEL_VAR_INFO.createInfoObject(MODEL_MODIFIER);
-        infoModifier.cacheType = CacheType.ALWAYS;
-        infoModifier.setIsComplete = true;
-        infoModifier.possibleValues
-            .addAll(Arrays.stream(EnumGateModifier.VALUES).map(m -> m.tag).collect(Collectors.toList()));
-
-        VariableInfoObject<String> infoLogic = MODEL_VAR_INFO.createInfoObject(MODEL_LOGIC);
-        infoLogic.cacheType = CacheType.ALWAYS;
-        infoLogic.setIsComplete = true;
-        infoLogic.possibleValues
-            .addAll(Arrays.stream(EnumGateLogic.VALUES).map(m -> m.tag).collect(Collectors.toList()));
-
-        VariableInfoObject<Direction> infoSide = MODEL_VAR_INFO.createInfoObject(MODEL_SIDE);
-        infoSide.cacheType = CacheType.ALWAYS;
-        infoSide.setIsComplete = true;
-        Collections.addAll(infoSide.possibleValues, Direction.values());
-
-        VariableInfoBoolean infoIsOn = MODEL_VAR_INFO.createInfoBoolean(MODEL_IS_ON);
-        infoIsOn.cacheType = CacheType.ALWAYS;
-        infoIsOn.setIsComplete = true;
-        infoIsOn.possibleValues = BooleanPossibilities.FALSE_TRUE;
-        */
     }
 
     // Manual constructor (called by the specific item pluggable gate code)
@@ -328,22 +273,5 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
     @Override
     public boolean canConnectToRedstone(@Nullable Direction to) {
         return true;
-    }
-
-    // Model
-
-    public static void setClientModelVariables(Direction side, GateVariant variant) {
-        /*
-        MODEL_SIDE.value = side;
-        MODEL_MATERIAL.value = variant.material.tag;
-        MODEL_MODIFIER.value = variant.modifier.tag;
-        MODEL_LOGIC.value = variant.logic.tag;
-        MODEL_IS_ON.value = false;// Used by the item
-        */
-    }
-
-    public void setClientModelVariables() {
-        // setClientModelVariables(side, logic.variant);
-        // MODEL_IS_ON.value = logic.isOn;
     }
 }

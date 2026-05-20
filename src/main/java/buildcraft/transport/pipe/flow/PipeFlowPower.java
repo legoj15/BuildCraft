@@ -246,9 +246,7 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
             "internalPower = " + arrayToString(s -> s.internalPower) + " <- " + arrayToString(s -> s.internalNextPower)
         );
         left.add("- powerQuery: " + arrayToString(s -> s.powerQuery) + " <- " + arrayToString(s -> s.nextPowerQuery));
-        left.add(
-            "- power: IN " + arrayToString(s -> s.debugPowerInput) + ", OUT " + arrayToString(s -> s.debugPowerOutput)
-        );
+        left.add("- power: OUT " + arrayToString(s -> s.debugPowerOutput));
         left.add("- power: OFFERED " + arrayToString(s -> s.debugPowerOffered));
     }
 
@@ -462,20 +460,9 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
         return req;
     }
 
-    public double getMaxTransferForRender(float partialTicks) {
-        if (true) return maxPower / (double) MjAPI.MJ;
-        double max = 0;
-        for (Section s : sections.values()) {
-            double value = s.displayPower / (double) MjAPI.MJ;
-            max = Math.max(max, value);
-        }
-        return max;
-    }
-
     public class Section implements IMjReceiver {
         public final Direction side;
 
-        public final AverageInt clientDisplayAverage = new AverageInt(10);
         public double clientDisplayFlow, clientDisplayFlowLast;
 
         /** Range: 0 to {@link MjAPI#MJ} */
@@ -489,7 +476,7 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
         long internalPower;
 
         /** Debugging fields */
-        long debugPowerInput, debugPowerOutput, debugPowerOffered;
+        long debugPowerOutput, debugPowerOffered;
 
         public Section(Direction side) {
             this.side = side;

@@ -493,8 +493,6 @@ public class TileHeatExchange extends BlockEntity implements MenuProvider, IDebu
                 output.putInt("middleCount", s.middleCount);
                 output.putInt("progress", s.progress);
                 output.putInt("progressState", s.progressState.ordinal());
-                output.putInt("coolantCharge", s.inputCoolantAmountCharge);
-                output.putInt("heatantCharge", s.inputHeatantAmountCharge);
             }
         } else {
             output.putBoolean("hasSection", false);
@@ -525,8 +523,6 @@ public class TileHeatExchange extends BlockEntity implements MenuProvider, IDebu
                 // progress value would cause jitter due to network latency.
                 int stateOrd = input.getIntOr("progressState", 0);
                 s.progressState = EnumProgressState.values()[Math.min(stateOrd, EnumProgressState.values().length - 1)];
-                s.inputCoolantAmountCharge = input.getIntOr("coolantCharge", 0);
-                s.inputHeatantAmountCharge = input.getIntOr("heatantCharge", 0);
                 section = s;
             } else {
                 // Reuse existing section to preserve FluidSmoother state
@@ -681,8 +677,6 @@ public class TileHeatExchange extends BlockEntity implements MenuProvider, IDebu
         int progress = 0;
         int progressLast = 0;
         EnumProgressState progressState = EnumProgressState.OFF;
-        int inputCoolantAmountCharge = 0;
-        int inputHeatantAmountCharge = 0;
 
         ExchangeSectionStart(TileHeatExchange tile) {
             super(tile, ExchangeSectionStart::isHeatant);

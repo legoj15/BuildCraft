@@ -144,12 +144,18 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         if (!isReceiver || disabled) {
             return 0;
         }
-        BlockEntity tile = pipe.getConnectedTile(from);
-        if (tile == null) {
+        EnergyHandler source = pipe.getHolder().getCapabilityFromPipe(
+            from, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK
+        );
+        if (source == null) {
             return 0;
         }
-        // TODO: capability lookup for IEnergyStorage
-        return 0;
+        try (net.neoforged.neoforge.transfer.transaction.Transaction transaction =
+                net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+            int extracted = source.extract(maxExtracted, transaction);
+            transaction.commit();
+            return extracted;
+        }
     }
 
     @Override
@@ -182,9 +188,7 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
             "internalPower = " + arrayToString(s -> s.internalPower) + " <- " + arrayToString(s -> s.internalNextPower)
         );
         left.add("- powerQuery: " + arrayToString(s -> s.powerQuery) + " <- " + arrayToString(s -> s.nextPowerQuery));
-        left.add(
-            "- power: IN " + arrayToString(s -> s.debugPowerInput) + ", OUT " + arrayToString(s -> s.debugPowerOutput)
-        );
+        left.add("- power: OUT " + arrayToString(s -> s.debugPowerOutput));
         left.add("- power: OFFERED " + arrayToString(s -> s.debugPowerOffered));
     }
 
@@ -403,20 +407,9 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         return req;
     }
 
-    public double getMaxTransferForRender(float partialTicks) {
-        if (true) return maxPower / (double) MjAPI.MJ;
-        double max = 0;
-        for (Section s : sections.values()) {
-            double value = s.displayPower / (double) MjAPI.MJ;
-            max = Math.max(max, value);
-        }
-        return max;
-    }
-
     public class Section implements EnergyHandler {
         public final Direction side;
 
-        public final AverageInt clientDisplayAverage = new AverageInt(10);
         public double clientDisplayFlow, clientDisplayFlowLast;
 
         /** Range: 0 to {@link MjAPI#MJ} */
@@ -430,7 +423,7 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         int internalPower;
 
         /** Debugging fields */
-        int debugPowerInput, debugPowerOutput, debugPowerOffered;
+        int debugPowerOutput, debugPowerOffered;
 
         public Section(Direction side) {
             this.side = side;

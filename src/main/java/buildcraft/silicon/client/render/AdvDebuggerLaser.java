@@ -32,7 +32,9 @@ public final class AdvDebuggerLaser {
     /** Cone scan distance — matches {@link TileLaser}'s targeting range. */
     private static final int DISTANCE = 6;
     private static final int COLOUR_VISIBLE = 0xFF_99FF99;
-    private static final int COLOUR_BLOCKED = 0xFF_FF5555;
+    /** Dark red — the shipping 1.12.2 blocked-marker colour (its {@code 0xFF111199} read as
+     *  ABGR; {@code 0xFF991111} is the same colour written in this codebase's ARGB convention). */
+    private static final int COLOUR_BLOCKED = 0xFF_991111;
     /** Half-extent of the marker cube drawn at each cone position. */
     private static final double CUBE_RADIUS = 0.15;
 

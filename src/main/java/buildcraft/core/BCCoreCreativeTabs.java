@@ -103,7 +103,6 @@ public class BCCoreCreativeTabs {
                                 output.accept(BCBuildersBlocks.REPLACER.get());
                                 output.accept(BCBuildersBlocks.FRAME.get());
                                 output.accept(BCBuildersBlocks.QUARRY.get());
-                                // MJ Dynamo placeholder - not implemented yet in 26.1
                                 // Oil Glob
                                 output.accept(BCEnergyItems.GLOB_OF_OIL.get());
                                 // Factory Blocks

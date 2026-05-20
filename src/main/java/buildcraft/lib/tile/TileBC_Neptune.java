@@ -116,13 +116,6 @@ public abstract class TileBC_Neptune extends BlockEntity {
         }
     }
 
-    // --- GUI tick stub (networking deferred) ---
-
-    /** Called by ContainerBCTile.broadcastChanges() — stub until networking is ported. */
-    public void sendNetworkGuiTick(Player player) {
-        // No-op until full networking is ported
-    }
-
     // --- Item drops ---
 
     public void addDrops(NonNullList<ItemStack> toDrop, int fortune) {

@@ -32,10 +32,4 @@ public abstract class ContainerBCTile<T extends TileBC_Neptune> extends Containe
     public final boolean stillValid(Player player) {
         return tile.canInteractWith(player);
     }
-
-    @Override
-    public void broadcastChanges() {
-        super.broadcastChanges();
-        tile.sendNetworkGuiTick(this.player);
-    }
 }

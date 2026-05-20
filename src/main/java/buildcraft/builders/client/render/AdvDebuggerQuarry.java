@@ -48,7 +48,7 @@ public final class AdvDebuggerQuarry {
                 chunkPos.getMinBlockX() + 0.5, minY, chunkPos.getMinBlockZ() + 0.5,
                 chunkPos.getMaxBlockX() + 0.5, maxY, chunkPos.getMaxBlockZ() + 0.5
             );
-            DebugRenderHelper.renderFilledBox(poseStack, bufferSource, box, cameraPos, COLOUR_CHUNK);
+            DebugRenderHelper.renderTranslucentBox(poseStack, bufferSource, box, cameraPos, COLOUR_CHUNK);
         }
     }
 }

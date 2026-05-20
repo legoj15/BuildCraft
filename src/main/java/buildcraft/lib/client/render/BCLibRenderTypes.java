@@ -53,6 +53,16 @@ public final class BCLibRenderTypes {
                     .createRenderSetup()
     );
 
+    /**
+     * Opaque sibling of {@link #LED}: the same depth-writing {@link #LED_PIPELINE}, minus the LED's
+     * view-offset Z layering (which only matters for quads mounted flush on a block face). For
+     * free-standing solid debug geometry — see {@link buildcraft.lib.debug.DebugRenderHelper}.
+     */
+    private static final RenderType DEBUG_SOLID = RenderType.create(
+            "buildcraft:debug_solid",
+            RenderSetup.builder(LED_PIPELINE).createRenderSetup()
+    );
+
     public static RenderType led() {
         return LED;
     }
@@ -64,6 +74,16 @@ public final class BCLibRenderTypes {
      */
     public static RenderType debugFilled() {
         return RenderTypes.debugFilledBox();
+    }
+
+    /**
+     * Opaque, depth-writing vertex-coloured QUADs — for solid debug geometry that must sort
+     * correctly against the world. Unlike {@link #debugFilled()} (vanilla's debug filled-box type,
+     * which disables depth writes for see-through translucent overlays), boxes drawn through this
+     * write depth, so opaque markers occlude and are occluded by world geometry correctly.
+     */
+    public static RenderType debugSolid() {
+        return DEBUG_SOLID;
     }
 
     private BCLibRenderTypes() {}

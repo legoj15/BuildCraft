@@ -175,6 +175,167 @@
             "type": "buildcraftunofficial:dye_replace",
             "source": "buildcraftunofficial:pipes/wood_fluid_filled",
             "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
+        },
+
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_still",
+            "output": "buildcraftunofficial:block/fluids/oil",
+            "frame": "still",
+            "light": 5263440,
+            "dark": 328965
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_flow",
+            "output": "buildcraftunofficial:block/fluids/oil",
+            "frame": "flow",
+            "light": 5263440,
+            "dark": 328965
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_still",
+            "output": "buildcraftunofficial:block/fluids/oil_residue",
+            "frame": "still",
+            "light": 1052432,
+            "dark": 4329538
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_flow",
+            "output": "buildcraftunofficial:block/fluids/oil_residue",
+            "frame": "flow",
+            "light": 1052432,
+            "dark": 4329538
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_still",
+            "output": "buildcraftunofficial:block/fluids/oil_heavy",
+            "frame": "still",
+            "light": 10522399,
+            "dark": 4338976
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_flow",
+            "output": "buildcraftunofficial:block/fluids/oil_heavy",
+            "frame": "flow",
+            "light": 10522399,
+            "dark": 4338976
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_still",
+            "output": "buildcraftunofficial:block/fluids/oil_dense",
+            "frame": "still",
+            "light": 8875639,
+            "dark": 4334628
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_flow",
+            "output": "buildcraftunofficial:block/fluids/oil_dense",
+            "frame": "flow",
+            "light": 8875639,
+            "dark": 4334628
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_still",
+            "output": "buildcraftunofficial:block/fluids/oil_distilled",
+            "frame": "still",
+            "light": 14987128,
+            "dark": 11828992
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_flow",
+            "output": "buildcraftunofficial:block/fluids/oil_distilled",
+            "frame": "flow",
+            "light": 14987128,
+            "dark": 11828992
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_still",
+            "output": "buildcraftunofficial:block/fluids/fuel_dense",
+            "frame": "still",
+            "light": 16756543,
+            "dark": 14712576
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_flow",
+            "output": "buildcraftunofficial:block/fluids/fuel_dense",
+            "frame": "flow",
+            "light": 16756543,
+            "dark": 14712576
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_still",
+            "output": "buildcraftunofficial:block/fluids/fuel_mixed_heavy",
+            "frame": "still",
+            "light": 15902464,
+            "dark": 12879616
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_flow",
+            "output": "buildcraftunofficial:block/fluids/fuel_mixed_heavy",
+            "frame": "flow",
+            "light": 15902464,
+            "dark": 12879616
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_still",
+            "output": "buildcraftunofficial:block/fluids/fuel_light",
+            "frame": "still",
+            "light": 16777008,
+            "dark": 14995200
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_flow",
+            "output": "buildcraftunofficial:block/fluids/fuel_light",
+            "frame": "flow",
+            "light": 16777008,
+            "dark": 14995200
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_still",
+            "output": "buildcraftunofficial:block/fluids/fuel_mixed_light",
+            "frame": "still",
+            "light": 16176896,
+            "dark": 12891904
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_flow",
+            "output": "buildcraftunofficial:block/fluids/fuel_mixed_light",
+            "frame": "flow",
+            "light": 16176896,
+            "dark": 12891904
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_still",
+            "output": "buildcraftunofficial:block/fluids/fuel_gaseous",
+            "frame": "still",
+            "light": 16447024,
+            "dark": 14735616
+        },
+        {
+            "type": "buildcraftunofficial:fluid_lerp",
+            "source": "buildcraftunofficial:block/fluids/heat_flow",
+            "output": "buildcraftunofficial:block/fluids/fuel_gaseous",
+            "frame": "flow",
+            "light": 16447024,
+            "dark": 14735616
         }
     ]
 }

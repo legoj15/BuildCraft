@@ -15,6 +15,7 @@ import buildcraft.lib.client.guide.GuideManager;
 import buildcraft.lib.client.model.ModelHolderRegistry;
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.lib.client.sprite.DyeReplaceSpriteSource;
+import buildcraft.lib.client.sprite.FluidLerpSpriteSource;
 import buildcraft.lib.misc.data.ModelVariableData;
 
 public class BCLibClient {
@@ -35,12 +36,14 @@ public class BCLibClient {
             event.registerPipeline(BCLibRenderTypes.LED_PIPELINE)
         );
 
-        // Register custom SpriteSource types. dye_replace synthesises the 16 dyed
-        // variants of each fluid-pipe base sprite at atlas stitch time, replacing
-        // the on-disk *_dyed_<colour>.png files that used to ship with the mod.
-        modEventBus.addListener(RegisterSpriteSourcesEvent.class, event ->
-            event.register(DyeReplaceSpriteSource.ID, DyeReplaceSpriteSource.MAP_CODEC)
-        );
+        // Register custom SpriteSource types, both replacing on-disk PNGs with
+        // stitch-time synthesis: dye_replace synthesises the 16 dyed variants of
+        // each fluid-pipe base sprite; fluid_lerp recolors the grayscale heat
+        // base into every energy-fluid sprite.
+        modEventBus.addListener(RegisterSpriteSourcesEvent.class, event -> {
+            event.register(DyeReplaceSpriteSource.ID, DyeReplaceSpriteSource.MAP_CODEC);
+            event.register(FluidLerpSpriteSource.ID, FluidLerpSpriteSource.MAP_CODEC);
+        });
 
         modEventBus.addListener(ModelEvent.BakingCompleted.class, event -> {
             java.util.HashSet<Identifier> sprites = new java.util.HashSet<>();

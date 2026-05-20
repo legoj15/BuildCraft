@@ -12,8 +12,8 @@ Some loric information that is totally not just a lot of really long filler text
 <no_lore>
 This should NOT appear in-game, unless lore has been turned off.
 </no_lore>
-<image src="buildcraftunofficial:textures/items/marker_path.png" width="64" height="64"/>
-<image src="buildcraftunofficial:textures/items/guide_book.png" width="64" height="64"/>
+<image src="buildcraftunofficial:textures/item/marker_path.png" width="64" height="64"/>
+<image src="buildcraftunofficial:textures/item/guide.png" width="64" height="64"/>
 <image src="buildcraftunofficial:textures/gui/combustion_engine_gui.png"/>
 
 <hint>

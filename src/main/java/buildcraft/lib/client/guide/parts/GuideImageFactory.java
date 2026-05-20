@@ -23,8 +23,8 @@ public class GuideImageFactory implements GuidePartFactory {
         // 1.12 went through TextureAtlas/TextureAtlasSprite which knew the
         // `assets/<ns>/textures/<path>.png` mapping. In 1.21 GUI rendering
         // blits straight from a resource Identifier, so we need to resolve
-        // the user-facing form (`buildcraftunofficial:items/wrench`) to the
-        // actual texture path (`buildcraftunofficial:textures/items/wrench.png`)
+        // the user-facing form (`buildcraftunofficial:item/wrench`) to the
+        // actual texture path (`buildcraftunofficial:textures/item/wrench.png`)
         // ourselves. Defensive: skip the rewrite if the caller already has
         // the modern form (path starts with `textures/` or already ends in `.png`).
         ISprite s;

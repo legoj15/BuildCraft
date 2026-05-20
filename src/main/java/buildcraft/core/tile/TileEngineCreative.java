@@ -104,7 +104,7 @@ public class TileEngineCreative extends TileEngineBase_BC8 {
     public boolean onWrenchInteract(Player player) {
         if (level == null || level.isClientSide()) return false;
         currentOutputIndex = (currentOutputIndex + 1) % OUTPUTS.length;
-        player.sendSystemMessage(
+        player.sendOverlayMessage(
             Component.translatable("chat.pipe.power.iron.mode", OUTPUTS[currentOutputIndex]));
         setChanged();
         // Sync to client so animation speed updates immediately

@@ -162,7 +162,7 @@ public class ItemSchematicSingle extends Item {
                                     return InteractionResult.SUCCESS;
                                 }
                             } else {
-                                player.sendSystemMessage(
+                                player.sendOverlayMessage(
                                     Component.literal(
                                         "Not enough items. Total needed: " +
                                             StackUtil.mergeSameItems(requiredItems).stream()
@@ -172,14 +172,14 @@ public class ItemSchematicSingle extends Item {
                                 );
                             }
                         } else {
-                            player.sendSystemMessage(
+                            player.sendOverlayMessage(
                                 Component.literal("Schematic requires fluids")
                             );
                         }
                     }
                 }
             } catch (InvalidInputDataException e) {
-                player.sendSystemMessage(
+                player.sendOverlayMessage(
                     Component.literal("Invalid schematic: " + e.getMessage())
                 );
                 e.printStackTrace();

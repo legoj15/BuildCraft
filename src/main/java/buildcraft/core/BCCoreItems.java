@@ -14,6 +14,7 @@ import buildcraft.core.item.ItemMapLocation;
 import buildcraft.core.item.ItemPaintbrush_BC8;
 import buildcraft.core.item.ItemList_BC8;
 import buildcraft.api.items.FluidItemDrops;
+import buildcraft.lib.BCLib;
 
 public class BCCoreItems {
         public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCCore.MODID);
@@ -91,6 +92,15 @@ public class BCCoreItems {
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> SPRING_OIL = ITEMS
                         .registerSimpleBlockItem("spring_oil", BCCoreBlocks.SPRING_OIL);
+
+        // Dev-only — mirrors BCCoreBlocks.POWER_TESTER. Null when -Dbuildcraft.dev is unset.
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> POWER_TESTER;
+
+        static {
+                POWER_TESTER = (BCLib.DEV && BCCoreBlocks.POWER_TESTER != null)
+                                ? ITEMS.registerSimpleBlockItem("power_tester", BCCoreBlocks.POWER_TESTER)
+                                : null;
+        }
 
         public static void init(IEventBus modEventBus) {
                 ITEMS.register(modEventBus);

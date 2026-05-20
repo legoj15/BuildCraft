@@ -95,38 +95,50 @@ public enum PipeFlowRendererPower implements IPipeFlowRenderer<PipeFlowPower> {
         if (power < 0) {
             return;
         }
-        double radius = 0.248 * power;
-        if (radius >= 0.248) {
-            radius = 0.248;
-        }
 
         TextureAtlasSprite sprite = BCTransportSprites.POWER_FLOW.getSprite();
         if (sprite == null) return;
 
-        double centreRadius = 0.252 - (0.248 * centrePower);
-
-        Vec3 centre = VecUtil.offset(VecUtil.VEC_HALF, side, 0.25 + 0.125 - centreRadius / 2);
-        Vec3 radiusV = new Vec3(radius, radius, radius);
-        radiusV = VecUtil.replaceValue(radiusV, side.getAxis(), 0.125 + centreRadius / 2);
-
-        Vector3f centreF = new Vector3f((float) centre.x, (float) centre.y, (float) centre.z);
-        Vector3f radiusF = new Vector3f((float) radiusV.x, (float) radiusV.y, (float) radiusV.z);
+        AABB box = sideFlowBox(side, power, centrePower);
+        Vec3 offsetVec = VecUtil.offset(Vec3.ZERO, side,
+            offset * side.getAxisDirection().getStep() / 32.0);
 
         UvFaceData uvs = new UvFaceData();
         for (Direction face : Direction.values()) {
             if (face == side.getOpposite()) {
                 continue;
             }
-
-            AABB box = new AABB(
-                centre.x - radiusV.x, centre.y - radiusV.y, centre.z - radiusV.z,
-                centre.x + radiusV.x, centre.y + radiusV.y, centre.z + radiusV.z
-            );
-            Vec3 offsetVec = VecUtil.offset(Vec3.ZERO, side,
-                offset * side.getAxisDirection().getStep() / 32.0);
-            
             renderScrollingBox(box, offsetVec, face, uvs, sprite, bb, pose);
         }
+    }
+
+    /** Builds the AABB for a single side's flow stem — the cuboid that extends from
+     *  the centre cube out to the connected neighbour. Package-private for
+     *  {@code PipeFlowRendererPowerGeometryTester}.
+     *
+     *  <p>{@code power} and {@code centrePower} are both displayPower / MJ ratios.
+     *  They MUST be clamped to {@code [0, 1]} before computing the box: an overload
+     *  (more power flowing than the pipe's maxPower per tick — e.g. five creative
+     *  engines at 256 MJ each pushing through a 256 MJ/t diamond pipe) drives
+     *  displayPower above MJ, which makes {@code centreRadius = 0.252 - 0.248 * centrePower}
+     *  negative, which inverts the box (min &gt; max along the side axis), which makes
+     *  {@link #renderScrollingBox}'s {@code pMinX >= pMaxX} guard skip every cell —
+     *  leaving the connecting stems invisible while the centre cube still renders,
+     *  i.e. visible gaps between adjacent pipes. */
+    static AABB sideFlowBox(Direction side, double power, double centrePower) {
+        double p = Math.min(Math.max(power, 0), 1);
+        double c = Math.min(Math.max(centrePower, 0), 1);
+        double radius = 0.248 * p;
+        double centreRadius = 0.252 - 0.248 * c;
+
+        Vec3 centre = VecUtil.offset(VecUtil.VEC_HALF, side, 0.25 + 0.125 - centreRadius / 2);
+        Vec3 radiusV = new Vec3(radius, radius, radius);
+        radiusV = VecUtil.replaceValue(radiusV, side.getAxis(), 0.125 + centreRadius / 2);
+
+        return new AABB(
+            centre.x - radiusV.x, centre.y - radiusV.y, centre.z - radiusV.z,
+            centre.x + radiusV.x, centre.y + radiusV.y, centre.z + radiusV.z
+        );
     }
 
     private static void renderCentrePower(double power, double offsetX, double offsetY, double offsetZ,

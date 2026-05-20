@@ -7,10 +7,12 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.function.Supplier;
 
+import buildcraft.lib.BCLib;
 import buildcraft.core.tile.TileMarkerPath;
 import buildcraft.core.tile.TileMarkerVolume;
 import buildcraft.core.tile.TileEngineRedstone_BC8;
 import buildcraft.core.tile.TileEngineCreative;
+import buildcraft.core.tile.TilePowerConsumerTester;
 
 public class BCCoreBlockEntities {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
@@ -31,6 +33,16 @@ public class BCCoreBlockEntities {
     public static final Supplier<BlockEntityType<TileEngineCreative>> ENGINE_CREATIVE = BLOCK_ENTITIES.register(
             "engine_creative",
             () -> new BlockEntityType<>(TileEngineCreative::new, BCCoreBlocks.ENGINE_CREATIVE.get()));
+
+    // Dev-only — mirrors BCCoreBlocks.POWER_TESTER. Null when -Dbuildcraft.dev is unset.
+    public static final Supplier<BlockEntityType<TilePowerConsumerTester>> POWER_TESTER;
+
+    static {
+        POWER_TESTER = (BCLib.DEV && BCCoreBlocks.POWER_TESTER != null)
+                ? BLOCK_ENTITIES.register("power_tester",
+                        () -> new BlockEntityType<>(TilePowerConsumerTester::new, BCCoreBlocks.POWER_TESTER.get()))
+                : null;
+    }
 
     public static void init(IEventBus modEventBus) {
         BLOCK_ENTITIES.register(modEventBus);

@@ -22,6 +22,11 @@ public class BuildCraftGameTests {
             // Pipes
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_routing_test_simple"), () -> PipeRoutingTest::testSimplePipeExtraction);
 
+            // Power pipe flow chain — engine→wood diamond→diamond→tester end-to-end.
+            // The renderer-side regression (visible gaps) is geometry math, pinned
+            // directly by PipeFlowRendererPowerGeometryTester.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:power_pipe_engine_to_tester"), () -> buildcraft.transport.pipe.flow.PipeFlowPowerTester::testEngineThroughDiamondPipesPowersTester);
+
             // Transport Storage
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:filtered_buffer_drops"), () -> buildcraft.transport.FilteredBufferTester::testFilteredBufferDrops);
             

@@ -7,7 +7,9 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import buildcraft.api.enums.EnumSpring;
+import buildcraft.lib.BCLib;
 import buildcraft.core.block.BlockMarkerPath;
+import buildcraft.core.block.BlockPowerConsumerTester;
 import buildcraft.core.block.BlockSpring;
 import buildcraft.core.block.BlockEngineRedstone_BC8;
 import buildcraft.core.block.BlockEngineCreative;
@@ -58,6 +60,18 @@ public class BCCoreBlocks {
     public static final DeferredBlock<BlockEngineCreative> ENGINE_CREATIVE = BLOCKS.registerBlock(
             "engine_creative",
             BlockEngineCreative::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
+
+    // Dev-only debug block — registered only when launched with -Dbuildcraft.dev=true.
+    // 1.12.2 Material.IRON → pickaxe-required, metal sounds.
+    public static final DeferredBlock<BlockPowerConsumerTester> POWER_TESTER;
+
+    static {
+        POWER_TESTER = BCLib.DEV
+                ? BLOCKS.registerBlock("power_tester",
+                        BlockPowerConsumerTester::new,
+                        () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops())
+                : null;
+    }
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

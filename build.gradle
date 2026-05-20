@@ -28,6 +28,9 @@ neoForge {
     runs {
         client {
             client()
+            // Mirrors 1.12.2's VERSION.startsWith("$") fallback: any dev workspace is "DEV".
+            // Enables BCLib.DEV-gated affordances (Power Tester block, /bcsoundtest command, ...).
+            systemProperty 'buildcraft.dev', 'true'
             // Profiling diagnostics (drop spark NeoForge jar into run/mods/ for /spark profiler).
             // Remove these args once perf investigation is done — they write a continuous GC log.
             jvmArguments.addAll(
@@ -37,10 +40,15 @@ neoForge {
         }
         server {
             server()
+            systemProperty 'buildcraft.dev', 'true'
         }
         gameTestServer {
             type = "gameTestServer"
             systemProperty 'neoforge.enableGameTest', 'true'
+            // Power Tester block (BCLib.DEV-gated) is used as the sink in
+            // PipeFlowPowerTester — it accepts unlimited MJ so the test isn't
+            // race-sensitive to a bounded battery filling up between ticks.
+            systemProperty 'buildcraft.dev', 'true'
             gameDirectory = project.file('run-gameTestServer')
         }
     }

@@ -81,14 +81,21 @@ public class ItemPipeHolder extends BlockItem implements IItemPipe {
             tooltip.accept(Component.literal(I18n.get(tipKey)).withStyle(ChatFormatting.GRAY));
         }
 
-        // Flow rate tooltip for fluid and power pipes
+        // Flow rate tooltip. Fluid pipes have a true per-segment cap (center-section
+        // bottleneck), so no qualifier; power/RF pipes cap per-face per-tick on the pull
+        // side and can carry multi-face convergence above the listed number, so we suffix
+        // " per face" to set the right expectation.
         if (definition.flowType == PipeApi.flowFluids) {
             PipeApi.FluidTransferInfo fti = PipeApi.getFluidTransferInfo(definition);
             tooltip.accept(Component.literal(LocaleUtil.localizeFluidFlow(fti.transferPerTick))
                     .withStyle(ChatFormatting.GRAY));
         } else if (definition.flowType == PipeApi.flowPower) {
             PipeApi.PowerTransferInfo pti = PipeApi.getPowerTransferInfo(definition);
-            tooltip.accept(Component.literal(LocaleUtil.localizeMjFlow(pti.transferPerTick))
+            tooltip.accept(Component.literal(LocaleUtil.localizeMjFlow(pti.transferPerTick) + " per face")
+                    .withStyle(ChatFormatting.GRAY));
+        } else if (definition.flowType == PipeApi.flowRf) {
+            PipeApi.RedstoneFluxTransferInfo rti = PipeApi.getRfTransferInfo(definition);
+            tooltip.accept(Component.literal(LocaleUtil.localizeRfFlow(rti.transferPerTick) + " per face")
                     .withStyle(ChatFormatting.GRAY));
         }
     }

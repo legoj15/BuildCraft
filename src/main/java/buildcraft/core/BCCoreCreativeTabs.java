@@ -46,6 +46,10 @@ public class BCCoreCreativeTabs {
                                 output.accept(BCLibItems.GUIDE_NOTE.get());
                                 // Debugger
                                 output.accept(BCLibItems.DEBUGGER.get());
+                                // Dev-only Power Tester (only when launched with -Dbuildcraft.dev=true)
+                                if (BCCoreItems.POWER_TESTER != null) {
+                                    output.accept(BCCoreItems.POWER_TESTER.get());
+                                }
                                 // Water Spring
                                 output.accept(BCCoreItems.SPRING_WATER.get());
                                 // Oil Spring

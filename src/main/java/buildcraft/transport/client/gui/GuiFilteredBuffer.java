@@ -23,6 +23,10 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
             Identifier.parse("buildcraftunofficial:textures/gui/filtered_buffer.png");
     private static final int SIZE_X = 176, SIZE_Y = 169;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
+    private static final GuiIcon ICON_EMPTY_SLOT = new GuiIcon(
+            Identifier.parse("buildcraftunofficial:textures/gui/empty_filtered_buffer_slot.png"), 0, 0, 16, 16, 16);
+    private static final GuiIcon ICON_NOTHING_SLOT = new GuiIcon(
+            Identifier.parse("buildcraftunofficial:textures/gui/nothing_filtered_buffer_slot.png"), 0, 0, 16, 16, 16);
 
     public GuiFilteredBuffer(ContainerFilteredBuffer menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title, SIZE_X, SIZE_Y);
@@ -44,7 +48,7 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
             int mainY = rootY + 61;
 
             if (stackFilter.isEmpty()) {
-                buildcraft.lib.gui.GuiIcon.drawAt(buildcraft.transport.BCTransportSprites.EMPTY_FILTERED_BUFFER_SLOT, x, filterY, 16);
+                ICON_EMPTY_SLOT.drawAt(x, filterY);
             }
 
             if (stackMain.isEmpty()) {
@@ -52,7 +56,7 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
                     graphics.item(stackFilter, x, mainY);
                     graphics.fill(x, mainY, x + 16, mainY + 16, 0xB28B8B8B); // 70% opacity grey veil
                 } else {
-                    buildcraft.lib.gui.GuiIcon.drawAt(buildcraft.transport.BCTransportSprites.NOTHING_FILTERED_BUFFER_SLOT, x, mainY, 16);
+                    ICON_NOTHING_SLOT.drawAt(x, mainY);
                 }
             }
         }

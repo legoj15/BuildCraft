@@ -21,8 +21,6 @@ import buildcraft.transport.pipe.behaviour.PipeBehaviourEmzuli.SlotIndex;
 
 /** Sprite holders for all transport-module statement icons and pipe overlay sprites. */
 public class BCTransportSprites {
-    public static final SpriteHolder EMPTY_FILTERED_BUFFER_SLOT;
-    public static final SpriteHolder NOTHING_FILTERED_BUFFER_SLOT;
     public static final SpriteHolder PIPE_COLOUR, COLOUR_ITEM_BOX;
     public static final SpriteHolder PIPE_COLOUR_BORDER_OUTER;
     public static final SpriteHolder PIPE_COLOUR_BORDER_INNER;
@@ -44,8 +42,6 @@ public class BCTransportSprites {
     public static final SpriteHolder POWER_FLOW_OVERLOAD;
 
     static {
-        EMPTY_FILTERED_BUFFER_SLOT = getHolder("gui/empty_filtered_buffer_slot");
-        NOTHING_FILTERED_BUFFER_SLOT = getHolder("gui/nothing_filtered_buffer_slot");
         PIPE_COLOUR = getHolder("pipes/overlay_stained");
         COLOUR_ITEM_BOX = getHolder("pipes/colour_item_box");
         PIPE_COLOUR_BORDER_OUTER = getHolder("pipes/colour_border_outer");

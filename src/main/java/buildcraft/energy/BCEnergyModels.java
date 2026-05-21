@@ -73,14 +73,17 @@ public class BCEnergyModels {
     // pure from the bake. We cache the result keyed by the only inputs the
     // model expressions look at — power stage, animation progress, and facing.
     //
-    // Progress is quantised to 1/16 because the engine_base.json
-    // `progress_size = progress * 15.99` expression has 1-pixel resolution at
-    // 1/16 steps, so the quantised animation is visually identical to the
-    // unquantised one. Bounded by 5 (stage) × 17 (progress 0..16) × 6 (facing)
-    // = 510 entries per engine type; each entry holds the bake's MutableQuad[]
-    // reference, so the steady-state memory cost is one MutableQuad[] per
-    // distinct (stage, progress, facing) combination that has actually been
-    // seen, not the worst case.
+    // Progress is quantised to 1/64 to bound the cache key's domain. The
+    // piston is driven by the engine_base.json `progress_size = progress *
+    // 15.99` expression, whose vertices bake to sub-pixel float coordinates;
+    // 1/64 steps move the piston ~0.25 px each, which is smooth in motion.
+    // (1/16 was too coarse at ~1 px per step — the piston visibly stair-
+    // stepped, while the un-quantised core-engine path stayed smooth.)
+    // Bounded by 6 (stage) × 65 (progress 0..64) × 6 (facing) = 2340 entries
+    // per engine type; each entry holds the bake's MutableQuad[] reference, so
+    // the steady-state memory cost is one MutableQuad[] per distinct (stage,
+    // progress, facing) combination that has actually been seen, not the worst
+    // case.
     //
     // The cached MutableQuad instances are shared across all engines of the
     // same type and state. RenderEngine_BC8 mutates `colour` (via
@@ -95,7 +98,7 @@ public class BCEnergyModels {
     // instance, so a resource pack swap or atlas restitch produces a new
     // reference and the cache wipes itself on the next lookup.
 
-    private static final int PROGRESS_QUANTIZATION = 16;
+    private static final int PROGRESS_QUANTIZATION = 64;
     private static final int FACING_COUNT = 6;
     private static final int PROGRESS_VALUES = PROGRESS_QUANTIZATION + 1;
     private static final int CACHE_SIZE =

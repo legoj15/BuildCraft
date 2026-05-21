@@ -4,11 +4,7 @@
  * should be located as "LICENSE.API" in the BuildCraft source code distribution. */
 package buildcraft.api.core;
 
-import java.lang.reflect.Method;
 import java.util.Locale;
-
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
 
 /** Provides a way to quickly enable or disable certain debug conditions via VM arguments or whether the client/server
  * is in a dev environment */
@@ -40,16 +36,12 @@ public class BCDebugging {
         // - "all" All possible debug options are turned on. Lots of spam. Not recommended.
         // In addition logging is force-enabled for prereleases as that makes testing much easier
 
-        boolean isDev;
-        try {
-            Method getTileEntity = Level.class.getDeclaredMethod("getTileEntity", BlockPos.class);
-            BCLog.logger.info("[debugger] Method found: Level.getTileEntity = " + getTileEntity);
-            isDev = true;
-        } catch (Throwable ignored) {
-            // If it didn't find it then we aren't in a dev environment
-            isDev = false;
-            BCLog.logger.info("[debugger] Not a dev environment!");
-        }
+        // A dev workspace launches with -Dbuildcraft.dev=true (set by every run config in
+        // build.gradle); a packaged jar does not. This is the same flag BCLib.DEV reads — the
+        // property is read directly here so the API package keeps no buildcraft.lib dependency.
+        // (The old check probed reflectively for Level.getTileEntity, a method renamed to
+        // getBlockEntity in the 1.13 flattening, so it always threw and isDev was always false.)
+        boolean isDev = Boolean.getBoolean("buildcraft.dev");
 
         String value = System.getProperty("buildcraft.debug");
         if ("enable".equals(value)) DEBUG_STATUS = DebugStatus.ENABLE;

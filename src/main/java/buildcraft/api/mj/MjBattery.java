@@ -55,11 +55,23 @@ public class MjBattery  {
         }
     }
 
+    /** Adds power to the battery, capped at {@link #getCapacity()}.
+     *
+     * @param microJoulesToAdd The power to add. A negative value removes power — sync paths use that, so negative
+     *            amounts pass straight through and are never treated as overflow.
+     * @param simulate If true, report the result without modifying the battery.
+     * @return The excess power that did not fit: {@code 0} when all of it was accepted (and {@code 0} when removing
+     *         power), otherwise the amount over capacity. */
     public long addPower(long microJoulesToAdd, boolean simulate) {
-        if (!simulate) {
-            this.microJoules += microJoulesToAdd;
+        long accepted = microJoulesToAdd;
+        if (microJoulesToAdd > 0) {
+            long room = Math.max(0L, capacity - microJoules);
+            accepted = Math.min(microJoulesToAdd, room);
         }
-        return 0;
+        if (!simulate) {
+            this.microJoules += accepted;
+        }
+        return microJoulesToAdd - accepted;
     }
 
     /** Attempts to add power, but only if this is not already full.

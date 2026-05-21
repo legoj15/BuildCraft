@@ -40,10 +40,6 @@ public class ModelHolderVariable extends ModelHolder {
     private JsonVariableModel rawModel;
     private boolean unseen = true;
     private boolean loadAttempted = false;
-    /** Bumped every time {@link #onTextureStitchPre} reloads {@link #rawModel}. Callers that cache baked quads keyed
-     * off this model store the generation they baked at and treat a mismatch as a forced re-bake, because a resource
-     * reload re-creates the sprites the cached quads' UVs were bound to. */
-    private int reloadGeneration = 0;
 
     public ModelHolderVariable(String modelLocation, FunctionContext context) {
         super(modelLocation);
@@ -60,18 +56,11 @@ public class ModelHolderVariable extends ModelHolder {
         rawModel = null;
         failReason = null;
         loadAttempted = false;
-        reloadGeneration++;
 
         loadModelFromDisk();
         if (rawModel != null) {
             rawModel.onTextureStitchPre(modelLocation, toRegisterSprites);
         }
-    }
-
-    /** @return A counter incremented on every resource reload (atlas restitch). Used to invalidate quad caches that
-     *          hold sprites/UVs bound to a now-discarded atlas. */
-    public int getReloadGeneration() {
-        return reloadGeneration;
     }
 
     /** Lazily loads the model from disk if it hasn't been loaded yet. */
@@ -169,23 +158,6 @@ public class ModelHolderVariable extends ModelHolder {
             return MutableQuad.EMPTY_ARRAY;
         }
         return rawModel.bakePart(rawModel.cutoutElements, this::lookupTexture);
-    }
-
-    /** Bakes a name-selected subset of the cutout elements. Used to split a variable model into independently-cached
-     * groups (e.g. animated vs static engine elements) so that an unchanged group can skip its bake.
-     *
-     * @param names The element {@code name}s to include (or exclude — see {@code complement}).
-     * @param complement {@code false} bakes only elements whose name is in {@code names}; {@code true} bakes only
-     *            elements whose name is <em>not</em> in {@code names}. The two together over the same name set partition
-     *            the cutout elements with no overlap and no omission.
-     * @see #getCutoutQuads() */
-    public MutableQuad[] getCutoutQuads(Set<String> names, boolean complement) {
-        ensureLoaded();
-        if (rawModel == null) {
-            printNoModelWarning();
-            return MutableQuad.EMPTY_ARRAY;
-        }
-        return rawModel.bakePart(rawModel.cutoutElements, this::lookupTexture, names, complement);
     }
 
     public MutableQuad[] getTranslucentQuads() {

@@ -226,28 +226,8 @@ public class JsonVariableModel extends JsonVariableObject {
     }
 
     public MutableQuad[] bakePart(JsonVariableModelPart[] a, ITextureGetter spriteLookup) {
-        return bakePart(a, spriteLookup, null, false);
-    }
-
-    /** Bakes a subset of the given parts, selected by element {@code name}.
-     *
-     * @param a The full element array (e.g. {@link #cutoutElements}).
-     * @param includeNames The set of element names to consider. If {@code null} every element is considered (the same
-     *            as the two-argument {@link #bakePart(JsonVariableModelPart[], ITextureGetter)}).
-     * @param complement When {@code false}, only elements whose {@code name} is in {@code includeNames} are baked. When
-     *            {@code true}, only elements whose {@code name} is <em>not</em> in {@code includeNames} are baked. The
-     *            model {@code rules} are applied to the resulting quad list either way, exactly as in the wholesale
-     *            bake. */
-    public MutableQuad[] bakePart(JsonVariableModelPart[] a, ITextureGetter spriteLookup,
-        Set<String> includeNames, boolean complement) {
         List<MutableQuad> list = new ArrayList<>();
         for (JsonVariableModelPart part : a) {
-            if (includeNames != null) {
-                boolean contained = includeNames.contains(part.name);
-                if (contained == complement) {
-                    continue;
-                }
-            }
             part.addQuads(list, spriteLookup);
         }
         for (JsonModelRule rule : rules) {

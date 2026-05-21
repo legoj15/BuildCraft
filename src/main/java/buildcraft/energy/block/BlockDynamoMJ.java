@@ -31,6 +31,7 @@ import buildcraft.api.blocks.ICustomRotationHandler;
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.api.transport.pipe.IItemPipe;
+import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.energy.tile.TileDynamoMJ;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 
@@ -132,7 +133,8 @@ public class BlockDynamoMJ extends Block implements EntityBlock, ICustomRotation
 
     /**
      * Dynamo never overheats (heat capped at 200). Wrench priority:
-     *   1. Pipe in hand → PASS for placement.
+     *   1. Pipe in hand → place it if it's a kinesis pipe or a wooden FE pipe (the pipe types
+     *      that connect to an MJ dynamo); otherwise — or if placement is obstructed — open GUI.
      *   2. Crouch → open GUI (overrides wrench; unified with Stone/Iron/FE).
      *   3. Wrench (non-crouch) → PASS if there's an alternate receiver (wrench.useOn dispatches
      *      to this block's ICustomRotationHandler, plays slide sound, grants `wrenched`);
@@ -142,8 +144,10 @@ public class BlockDynamoMJ extends Block implements EntityBlock, ICustomRotation
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (stack.getItem() instanceof IItemPipe) {
-            return InteractionResult.PASS;
+        if (stack.getItem() instanceof IItemPipe pipe) {
+            InteractionResult placed = EnginePipeInteraction.tryPlacePipe(
+                    pipe, stack, level, player, hand, hitResult, PipeApi.flowPower, PipeApi.flowRf);
+            return placed != null ? placed : openGui(state, level, pos, player);
         }
 
         if (player.isShiftKeyDown()) {

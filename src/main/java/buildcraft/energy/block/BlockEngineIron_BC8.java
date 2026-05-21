@@ -23,6 +23,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.api.transport.pipe.IItemPipe;
+import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.energy.tile.TileEngineIron_BC8;
 import buildcraft.lib.engine.BlockEngineBase_BC8;
 import buildcraft.lib.misc.FluidUtilBC;
@@ -42,7 +43,8 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
     /**
      * Wrench priority on the Combustion engine:
      *   1. Wrench + OVERHEAT → clear overheat, grant `to_much_power`, play slide sound, CONSUME.
-     *   2. Pipe in hand → PASS so the pipe can be placed (1.12.2 parity).
+     *   2. Pipe in hand → place it if it's a fluid pipe or a wooden kinesis pipe (the pipe types
+     *      that connect to a combustion engine); otherwise — or if placement is obstructed — open GUI.
      *   3. Crouch → open GUI (overrides wrench).
      *   4. Wrench (non-crouch) → PASS if there's an alternate receiver (wrench.useOn rotates,
      *      plays slide sound, grants `wrenched`); otherwise tripwire-armed sound + CONSUME.
@@ -65,8 +67,10 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
             return InteractionResult.CONSUME;
         }
 
-        if (stack.getItem() instanceof IItemPipe) {
-            return InteractionResult.PASS;
+        if (stack.getItem() instanceof IItemPipe pipe) {
+            InteractionResult placed = EnginePipeInteraction.tryPlacePipe(
+                    pipe, stack, level, player, hand, hitResult, PipeApi.flowFluids, PipeApi.flowPower);
+            return placed != null ? placed : openGui(state, level, pos, player);
         }
 
         if (player.isShiftKeyDown()) {

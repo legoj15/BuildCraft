@@ -11,6 +11,8 @@ import java.util.TreeSet;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
@@ -451,6 +453,9 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
     }
 
     public void resolveActions() {
+        ProfilerFiller _profiler = Profiler.get();
+        _profiler.push("buildcraft:gate_resolveActions");
+        try {
         int groupCount = 0;
         int groupActive = 0;
 
@@ -555,6 +560,9 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
 
         if (!Arrays.equals(prevTriggers, triggerOn) || !Arrays.equals(prevActions, actionOn)) {
             sendResolveData();
+        }
+        } finally {
+            _profiler.pop();
         }
     }
 

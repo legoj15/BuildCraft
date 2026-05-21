@@ -26,6 +26,8 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
@@ -279,6 +281,9 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     // --- Tick ---
 
     public void tick() {
+        ProfilerFiller _profiler = Profiler.get();
+        _profiler.push("buildcraft:pipe_tick");
+        try {
         // Prepare redstone outputs for this tick
         java.util.Arrays.fill(redstoneOutputsThisTick, 0);
 
@@ -319,6 +324,9 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
         if (level != null && !level.isClientSide()) {
             setChanged();
+        }
+        } finally {
+            _profiler.pop();
         }
     }
 

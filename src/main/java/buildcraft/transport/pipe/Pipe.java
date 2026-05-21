@@ -15,6 +15,8 @@ import javax.annotation.Nullable;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -235,11 +237,22 @@ public final class Pipe implements IPipe, IDebuggable {
     }
 
     public void onTick() {
+        ProfilerFiller _profiler = Profiler.get();
         if (updateMarked) {
             updateConnections();
         }
-        behaviour.onTick();
-        flow.onTick();
+        _profiler.push("buildcraft:pipe_behaviour");
+        try {
+            behaviour.onTick();
+        } finally {
+            _profiler.pop();
+        }
+        _profiler.push("buildcraft:pipe_flow");
+        try {
+            flow.onTick();
+        } finally {
+            _profiler.pop();
+        }
         if (updateMarked) {
             updateConnections();
         }
@@ -250,6 +263,9 @@ public final class Pipe implements IPipe, IDebuggable {
     }
 
     private void updateConnections() {
+        ProfilerFiller _profiler = Profiler.get();
+        _profiler.push("buildcraft:pipe_connections");
+        try {
         if (holder.getPipeWorld().isClientSide()) {
             return;
         }
@@ -327,6 +343,9 @@ public final class Pipe implements IPipe, IDebuggable {
             // → full BE sync → client re-parses all 6 pluggables NBT and 27 chunk sections re-mesh.
             // That feedback loop is what caused the 80–95 ms FPS spikes on every gate ON/OFF.
             getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
+        }
+        } finally {
+            _profiler.pop();
         }
     }
 

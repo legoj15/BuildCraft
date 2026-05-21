@@ -136,9 +136,8 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
                 "stone_power","stone_power_old","stone_rf",
                 "wood_power_clear","wood_power_old_clear","wood_rf_clear"})
             MASK_MAP.put(s, "mask_shared_power");
-        // Power/RF limiters (mN variants) — 57 textures share 1 mask
-        for (String prefix : new String[]{"diamnd_power_m","diamnd_power_old_m","diamnd_rf_m",
-                "diamond_power_m","diamond_power_old_m","diamond_rf_m",
+        // Power/RF limiters (mN variants) share 1 mask
+        for (String prefix : new String[]{"diamond_power_m","diamond_power_old_m","diamond_rf_m",
                 "iron_power_m","iron_power_old_m","iron_rf_m"})
             for (String suffix : new String[]{"0","1","2","4","8","16","32","64","128"})
                 MASK_MAP.put(prefix + suffix, "mask_shared_power_limiter");

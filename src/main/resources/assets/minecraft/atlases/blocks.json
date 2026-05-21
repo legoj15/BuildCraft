@@ -48,11 +48,6 @@
 
         {
             "type": "buildcraftunofficial:dye_replace",
-            "source": "buildcraftunofficial:pipes/andesite_fluid",
-            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
-        },
-        {
-            "type": "buildcraftunofficial:dye_replace",
             "source": "buildcraftunofficial:pipes/clay_fluid",
             "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
         },
@@ -118,17 +113,7 @@
         },
         {
             "type": "buildcraftunofficial:dye_replace",
-            "source": "buildcraftunofficial:pipes/diorite_fluid",
-            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
-        },
-        {
-            "type": "buildcraftunofficial:dye_replace",
             "source": "buildcraftunofficial:pipes/gold_fluid",
-            "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
-        },
-        {
-            "type": "buildcraftunofficial:dye_replace",
-            "source": "buildcraftunofficial:pipes/granite_fluid",
             "mask": "buildcraftunofficial:pipes/mask_shared_fluid"
         },
         {

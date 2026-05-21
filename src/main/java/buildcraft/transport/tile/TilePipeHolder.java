@@ -208,12 +208,28 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     @Override
     public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
-        return this.saveCustomOnly(registries);
+        CompoundTag tag = this.saveCustomOnly(registries);
+        // Pluggable runtime state (e.g. a gate's on/off glow) rides the client update tag — recomputed server-side each tick, never persisted to disk by saveAdditional.
+        CompoundTag plugsClient = new CompoundTag();
+        for (Direction face : Direction.values()) {
+            PipePluggable plug = pluggables[face.ordinal()];
+            if (plug != null) {
+                CompoundTag data = plug.writeClientUpdateData();
+                if (!data.isEmpty()) {
+                    plugsClient.put(face.getName(), data);
+                }
+            }
+        }
+        if (!plugsClient.isEmpty()) {
+            tag.put("plugsClient", plugsClient);
+        }
+        return tag;
     }
 
     @Override
     public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
         super.handleUpdateTag(input);
+        applyClientUpdateData(input);
         // Schedule client-side render refresh after receiving updated state.
         // UPDATE_CLIENTS (not UPDATE_ALL): client doesn't need the UPDATE_NEIGHBORS bit, and on
         // the server side it would re-fire updateNeighborsAt redundantly with tick()'s explicit one.
@@ -226,10 +242,24 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
         super.onDataPacket(net, input);
+        applyClientUpdateData(input);
         requestModelDataUpdate();
         if (level != null && level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
         }
+    }
+
+    /** Applies the per-pluggable runtime state from getUpdateTag's "plugsClient" sub-tag onto the already-rebuilt pluggables (client side). */
+    private void applyClientUpdateData(net.minecraft.world.level.storage.ValueInput input) {
+        input.read("plugsClient", CompoundTag.CODEC).ifPresent(plugsClient -> {
+            for (Direction face : Direction.values()) {
+                PipePluggable plug = pluggables[face.ordinal()];
+                if (plug != null && plugsClient.contains(face.getName())) {
+                    plug.readClientUpdateData(
+                        plugsClient.getCompound(face.getName()).orElse(new CompoundTag()));
+                }
+            }
+        });
     }
 
     @Nullable

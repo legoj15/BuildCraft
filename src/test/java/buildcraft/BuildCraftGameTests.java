@@ -266,6 +266,13 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_steady_state_leaves_flag_false"), () -> buildcraft.transport.WireSystemTester::testSteadyStateLeavesGatesChangedFalse);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_gate_emit_propagates_and_resets"), () -> buildcraft.transport.WireSystemTester::testGateEmitPropagatesAndFlagResets);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_resolve_actions_clearing_marks_dirty"), () -> buildcraft.transport.WireSystemTester::testGateResolveActionsClearingMarksGatesChanged);
+
+            // Silicon — Gates: redstone-trigger sync. Pins that runtime display state
+            // (isOn/triggerOn/actionOn) is recomputed every tick and never resurrected by an
+            // inbound NBT data sync — the client desync this guards against.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_redstone_trigger_tracks_signal"), () -> buildcraft.silicon.gate.GateRedstoneSyncTester::testTriggerTracksRedstoneSignal);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_redstone_nbt_sync_no_clobber"), () -> buildcraft.silicon.gate.GateRedstoneSyncTester::testNbtSyncDoesNotClobberLiveState);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_redstone_client_update_carries_state"), () -> buildcraft.silicon.gate.GateRedstoneSyncTester::testClientUpdateCarriesDisplayState);
         }
     }
 }

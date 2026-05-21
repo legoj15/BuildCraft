@@ -97,6 +97,16 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
         return true;
     }
 
+    @Override
+    public CompoundTag writeClientUpdateData() {
+        return logic.writeClientState();
+    }
+
+    @Override
+    public void readClientUpdateData(CompoundTag nbt) {
+        logic.readClientState(nbt);
+    }
+
     // Networking
 
     public PluggableGate(PluggableDefinition def, IPipeHolder holder, Direction side, net.minecraft.network.FriendlyByteBuf buffer) {

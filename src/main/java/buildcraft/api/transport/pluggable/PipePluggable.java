@@ -56,6 +56,15 @@ public abstract class PipePluggable {
         return false;
     }
 
+    /** Runtime state sent to clients in the block-entity update tag but never written to disk —
+     * for state the server recomputes every tick and the client cannot derive itself. */
+    public CompoundTag writeClientUpdateData() {
+        return new CompoundTag();
+    }
+
+    /** Receives, on the client, the tag produced by {@link #writeClientUpdateData()}. */
+    public void readClientUpdateData(CompoundTag nbt) {}
+
     /** Writes the payload that will be passed into
      * {@link PluggableDefinition#loadFromBuffer(IPipeHolder, Direction, FriendlyByteBuf)} on the client. (This is called
      * on the server and sent to the client). Note that this will be called *instead* of write and read payload. */

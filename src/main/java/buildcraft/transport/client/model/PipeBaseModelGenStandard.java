@@ -118,47 +118,42 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
      *  Covers both RGBA and palette-mode (indexed) textures with transparency. */
     private static final Map<String, String> MASK_MAP = new java.util.HashMap<>();
     static {
-        // Item pipes — 16 textures share 1 mask
-        for (String s : new String[]{"andesite_item","clay_item","cobblestone_item","diamond_item",
-                "diamond_wood_item_clear","diorite_item","emzuli_item_clear","gold_item",
-                "granite_item","iron_item_clear","obsidian_item","quartz_item",
+        // Item pipes — 13 textures share 1 mask
+        for (String s : new String[]{"clay_item","cobblestone_item","diamond_item",
+                "diamond_wood_item_clear","emzuli_item_clear","gold_item",
+                "iron_item_clear","obsidian_item","quartz_item",
                 "sandstone_item","stone_item","stripes_item","wood_item_clear"})
             MASK_MAP.put(s, "mask_shared_item");
-        // Power/RF base — 29 textures share 1 mask
-        for (String s : new String[]{"cobblestone_power","cobblestone_power_old","cobblestone_rf",
-                "diamond_power","diamond_power_old","diamond_rf",
-                "diamond_wood_power_clear","diamond_wood_power_old_clear","diamond_wood_rf_clear",
-                "diorite_power","diorite_power_old","diorite_rf",
-                "gold_power","gold_power_old","gold_rf",
-                "iron_power_clear","iron_power_old_clear",
-                "quartz_power","quartz_power_old","quartz_rf",
-                "sandstone_power","sandstone_power_old","sandstone_rf",
-                "stone_power","stone_power_old","stone_rf",
-                "wood_power_clear","wood_power_old_clear","wood_rf_clear"})
+        // Power/RF base — 14 textures share 1 mask
+        for (String s : new String[]{"cobblestone_power","cobblestone_rf",
+                "diamond_wood_power_clear","diamond_wood_rf_clear",
+                "gold_power","gold_rf",
+                "quartz_power","quartz_rf",
+                "sandstone_power","sandstone_rf",
+                "stone_power","stone_rf",
+                "wood_power_clear","wood_rf_clear"})
             MASK_MAP.put(s, "mask_shared_power");
-        // Power/RF limiters (mN variants) share 1 mask
-        for (String prefix : new String[]{"diamond_power_m","diamond_power_old_m","diamond_rf_m",
-                "iron_power_m","iron_power_old_m","iron_rf_m"})
-            for (String suffix : new String[]{"0","1","2","4","8","16","32","64","128"})
+        // Power/RF limiters (mN variants) — 28 textures share 1 mask
+        for (String prefix : new String[]{"diamond_power_m","diamond_rf_m",
+                "iron_power_m","iron_rf_m"})
+            for (String suffix : new String[]{"0","4","8","16","32","64","128"})
                 MASK_MAP.put(prefix + suffix, "mask_shared_power_limiter");
-        // Power/RF filled — 9 textures share 1 mask
-        for (String s : new String[]{"diamond_wood_power_filled","diamond_wood_power_old_filled",
-                "diamond_wood_rf_filled","iron_power_filled","iron_power_old_filled",
-                "iron_rf_filled","wood_power_filled","wood_power_old_filled","wood_rf_filled"})
+        // Power/RF filled — 4 textures share 1 mask
+        for (String s : new String[]{"diamond_wood_power_filled","diamond_wood_rf_filled",
+                "wood_power_filled","wood_rf_filled"})
             MASK_MAP.put(s, "mask_shared_power_filled");
         // Fluid pipes — all use the same waterproofing border mask (fully opaque dye colour)
-        for (String s : new String[]{"andesite_fluid","clay_fluid","cobblestone_fluid",
+        for (String s : new String[]{"clay_fluid","cobblestone_fluid",
                 "diamond_fluid","diamond_fluid_down","diamond_fluid_east","diamond_fluid_north",
                 "diamond_fluid_south","diamond_fluid_up","diamond_fluid_west",
                 "diamond_fluid_west_cb","diamond_wood_fluid_clear","diamond_wood_fluid_filled",
-                "diorite_fluid","gold_fluid","granite_fluid",
-                "iron_fluid_clear","iron_fluid_filled","quartz_fluid","sandstone_fluid",
-                "stone_fluid","test_fluid","void_fluid","wood_fluid_clear","wood_fluid_filled"})
+                "gold_fluid","iron_fluid_clear","iron_fluid_filled","quartz_fluid",
+                "sandstone_fluid","stone_fluid","void_fluid","wood_fluid_clear","wood_fluid_filled"})
             MASK_MAP.put(s, "mask_shared_fluid");
         // Daizuli/lapis colour variants — 32 textures share 1 mask
         for (String prefix : new String[]{"daizuli_item_","lapis_item_"})
             for (String colour : new String[]{"black","blue","brown","cyan","gray","green",
-                    "light_blue","lime","magenta","orange","pink","purple","red","silver",
+                    "light_blue","light_gray","lime","magenta","orange","pink","purple","red",
                     "white","yellow"})
                 MASK_MAP.put(prefix + colour, "mask_shared_daizuli");
         // Diamond/iron/wood filled + daizuli filled — 12 textures share 1 mask
@@ -167,16 +162,9 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
                 "diamond_item_west_cb","diamond_wood_item_filled","emzuli_item_filled",
                 "iron_item_filled","wood_item_filled"})
             MASK_MAP.put(s, "mask_shared_diamond_filled");
-        // Power/RF top — 2 textures share 1 mask
-        MASK_MAP.put("power_top", "mask_shared_power_top");
-        MASK_MAP.put("rf_top", "mask_shared_power_top");
         // Unique masks (1 texture each)
         MASK_MAP.put("diamond_fluid_itemstack", "mask_shared_fluid");
         MASK_MAP.put("diamond_item_itemstack", "mask_diamond_item_itemstack");
-        MASK_MAP.put("iron_rf_clear", "mask_iron_rf_clear");
-        MASK_MAP.put("lapis_item_base", "mask_lapis_item_base");
-        MASK_MAP.put("power_adapter", "mask_power_adapter");
-        MASK_MAP.put("transparent_facade", "mask_transparent_facade");
         MASK_MAP.put("void_item", "mask_void_item");
     }
 

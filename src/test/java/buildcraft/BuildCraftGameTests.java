@@ -265,6 +265,7 @@ public class BuildCraftGameTests {
             // inbound NBT data sync — the client desync this guards against.
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_redstone_trigger_tracks_signal"), () -> buildcraft.silicon.gate.GateRedstoneSyncTester::testTriggerTracksRedstoneSignal);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_redstone_nbt_sync_no_clobber"), () -> buildcraft.silicon.gate.GateRedstoneSyncTester::testNbtSyncDoesNotClobberLiveState);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_redstone_client_update_carries_state"), () -> buildcraft.silicon.gate.GateRedstoneSyncTester::testClientUpdateCarriesDisplayState);
         }
     }
 }

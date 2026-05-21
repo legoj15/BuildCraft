@@ -130,4 +130,46 @@ public class GateRedstoneSyncTester {
             "An NBT data sync clobbered the recomputed action state");
         helper.succeed();
     }
+
+    /**
+     * Reproduces the world-load desync. A client rebuilds a gate from the block-entity update
+     * tag on chunk load; that tag must carry the gate's runtime display state, or the client
+     * gate comes up inactive while the server (and the unchanged redstone source) say active —
+     * and the edge-triggered glow packet never corrects it until the next state change.
+     */
+    public static void testClientUpdateCarriesDisplayState(GameTestHelper helper) {
+        BlockPos pipePos = new BlockPos(1, 2, 1);
+        BlockPos signalPos = new BlockPos(2, 2, 1);
+        PluggableGate serverGate = placePipeWithRedstoneGate(helper, pipePos);
+
+        // Server side: a redstone source is present, so the gate resolves to active.
+        helper.setBlock(signalPos, Blocks.REDSTONE_BLOCK);
+        serverGate.logic.resolveActions();
+        serverGate.logic.isOn = true; // no action configured — set the glow flag directly
+        helper.assertTrue(serverGate.logic.triggerOn[0], "precondition: server gate is active");
+
+        // The block-entity update tag a client builds the gate from must carry the runtime
+        // state under "plugsClient"...
+        TilePipeHolder tile = helper.getBlockEntity(pipePos, TilePipeHolder.class);
+        CompoundTag updateTag = tile.getUpdateTag(helper.getLevel().registryAccess());
+        helper.assertTrue(updateTag.contains("plugsClient"),
+            "block-entity update tag must carry pluggable runtime state");
+
+        // ...while the disk save must not — a stale on-disk copy would survive a reload.
+        helper.assertFalse(serverGate.logic.writeToNbt().contains("isOn"),
+            "disk save must not persist runtime display state");
+
+        // A fresh gate, as the client reconstructs one on chunk load: default, inactive.
+        PluggableGate clientGate = new PluggableGate(BCSiliconPlugs.gate,
+            serverGate.logic.getPipeHolder(), Direction.DOWN,
+            new GateVariant(EnumGateLogic.AND, EnumGateMaterial.CLAY_BRICK, EnumGateModifier.NO_MODIFIER));
+        helper.assertFalse(clientGate.logic.triggerOn[0], "fresh client gate starts inactive");
+
+        clientGate.readClientUpdateData(serverGate.writeClientUpdateData());
+
+        helper.assertTrue(clientGate.logic.triggerOn[0],
+            "client gate must read as active after the update sync — the world-load desync");
+        helper.assertTrue(clientGate.logic.isOn, "client gate glow must sync on");
+        helper.succeed();
+    }
 }

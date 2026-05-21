@@ -95,6 +95,11 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
     /** Client-side model variable data for animated model rendering. */
     public final buildcraft.lib.misc.data.ModelVariableData clientModelData = new buildcraft.lib.misc.data.ModelVariableData();
 
+    /** Client-side per-tile cache of this engine's baked model quads. Splits the cutout elements into an animated
+     * group (re-baked when {@code progress}/facing changes) and a static group (re-baked when {@code stage}/facing
+     * changes) so an idle engine skips the bake entirely. Behaviour-preserving — see {@link buildcraft.lib.client.render.EngineModelCache}. */
+    public final buildcraft.lib.client.render.EngineModelCache clientModelCache = new buildcraft.lib.client.render.EngineModelCache();
+
     // Lazy-initialized connector
     private IMjConnector mjConnector;
 

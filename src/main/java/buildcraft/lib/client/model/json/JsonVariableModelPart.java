@@ -31,6 +31,12 @@ import buildcraft.lib.misc.JsonUtil;
 /** {@link JsonModelPart} but with can be animated */
 public abstract class JsonVariableModelPart {
 
+    /** The element's {@code "name"} from JSON, or {@code ""} if it had none. Used purely as an identifier so that
+     * callers can bake a named subset of a model's elements (see
+     * {@link buildcraft.lib.client.model.ModelHolderVariable#getCutoutQuads(java.util.Set, boolean)}). It never affects
+     * geometry. */
+    public String name = "";
+
     public abstract void addQuads(List<MutableQuad> to, ITextureGetter spriteLookup);
 
     public static JsonVariableModelPart deserializeModelPart(JsonElement json, FunctionContext fnCtx, ResourceLoaderContext ctx) {
@@ -48,20 +54,30 @@ public abstract class JsonVariableModelPart {
                 throw new JsonSyntaxException("Expected a string, got " + jType);
             }
         }
+        JsonVariableModelPart part;
         if ("face".equals(type)) {
             throw new AbstractMethodError("// TODO: Implement face type!");
         } else if ("led".equals(type)) {
-            return new VariablePartLed(obj, fnCtx);
+            part = new VariablePartLed(obj, fnCtx);
         } else if ("texture_expand".equals(type)) {
-            return new VariablePartTextureExpand(obj, fnCtx);
+            part = new VariablePartTextureExpand(obj, fnCtx);
         } else if ("cuboid".equals(type)) {
-            return new VariablePartCuboid(obj, fnCtx);
+            part = new VariablePartCuboid(obj, fnCtx);
         } else if ("container".equals(type)) {
-            return new VariablePartContainer(obj, fnCtx, ctx);
+            part = new VariablePartContainer(obj, fnCtx, ctx);
         } else {
             throw new JsonSyntaxException(
                 "Unknown type '" + type + "' -- known types are [ face, led, texture_expand, cuboid, container ]");
         }
+        if (obj.has("name")) {
+            JsonElement jName = obj.get("name");
+            if (jName.isJsonPrimitive() && jName.getAsJsonPrimitive().isString()) {
+                part.name = jName.getAsString();
+            } else {
+                throw new JsonSyntaxException("Expected a string for 'name', got " + jName);
+            }
+        }
+        return part;
     }
 
     public static INodeDouble convertStringToDoubleNode(String expression, FunctionContext context) {

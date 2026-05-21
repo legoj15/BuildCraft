@@ -6,6 +6,8 @@
 
 package buildcraft.core;
 
+import java.util.Set;
+
 import net.minecraft.core.Direction;
 
 import buildcraft.api.enums.EnumPowerStage;
@@ -29,6 +31,11 @@ public class BCCoreModels {
     private static final ModelHolderVariable ENGINE_WOOD;
     private static final ModelHolderVariable ENGINE_CREATIVE;
 
+    /** The cutout elements of {@code engine_base.json} whose geometry references the {@code progress} variable, i.e.
+     * the animated piston parts. Everything else (the static base + heat trunk) is the complement. See
+     * {@link buildcraft.lib.client.render.EngineModelCache} for why the bake is split this way. */
+    static final Set<String> ANIMATED_ELEMENTS = Set.of("base_moving", "chamber");
+
     static {
         FunctionContext fnCtx = new FunctionContext(ExpressionCompat.ENUM_POWER_STAGE, DefaultContexts.createWithAll());
         ENGINE_PROGRESS = fnCtx.putVariableDouble("progress");
@@ -44,25 +51,22 @@ public class BCCoreModels {
         );
     }
 
+    /** Writes the three engine expression variables. Shared by the two engine quad methods below. */
+    private static void applyVariables(double progress, EnumPowerStage stage, Direction facing) {
+        ENGINE_PROGRESS.value = progress;
+        ENGINE_STAGE.value = stage;
+        ENGINE_FACING.value = facing;
+    }
+
     public static MutableQuad[] getWoodEngineQuads(TileEngineBase_BC8 tile, float partialTicks) {
-        ENGINE_PROGRESS.value = tile.getProgressClient(partialTicks);
-        ENGINE_STAGE.value = tile.getPowerStage();
-        ENGINE_FACING.value = tile.getOrientation();
-        if (tile.clientModelData.hasNoNodes()) {
-            tile.clientModelData.setNodes(ENGINE_WOOD.createTickableNodes());
-        }
-        tile.clientModelData.refresh();
-        return ENGINE_WOOD.getCutoutQuads();
+        return tile.clientModelCache.getQuads(ENGINE_WOOD, tile.clientModelData,
+            BCCoreModels::applyVariables, ANIMATED_ELEMENTS,
+            tile.getProgressClient(partialTicks), tile.getPowerStage(), tile.getOrientation());
     }
 
     public static MutableQuad[] getCreativeEngineQuads(TileEngineBase_BC8 tile, float partialTicks) {
-        ENGINE_PROGRESS.value = tile.getProgressClient(partialTicks);
-        ENGINE_STAGE.value = tile.getPowerStage();
-        ENGINE_FACING.value = tile.getOrientation();
-        if (tile.clientModelData.hasNoNodes()) {
-            tile.clientModelData.setNodes(ENGINE_CREATIVE.createTickableNodes());
-        }
-        tile.clientModelData.refresh();
-        return ENGINE_CREATIVE.getCutoutQuads();
+        return tile.clientModelCache.getQuads(ENGINE_CREATIVE, tile.clientModelData,
+            BCCoreModels::applyVariables, ANIMATED_ELEMENTS,
+            tile.getProgressClient(partialTicks), tile.getPowerStage(), tile.getOrientation());
     }
 }

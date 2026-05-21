@@ -65,6 +65,7 @@ import buildcraft.lib.misc.BoundingBoxUtil;
 import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.MathUtil;
+import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.misc.data.AxisOrder;
@@ -638,7 +639,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         if (sendUpdate) {
             setChanged();
             if (level != null && !level.isClientSide()) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+                MessageUtil.sendUpdateToTrackingPlayers(this);
             }
         }
 

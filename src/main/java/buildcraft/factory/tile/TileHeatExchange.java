@@ -56,6 +56,7 @@ import buildcraft.factory.block.BlockHeatExchange.EnumExchangePart;
 import buildcraft.factory.container.ContainerHeatExchange;
 import buildcraft.lib.fluid.FluidSmoother;
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 /**
@@ -414,7 +415,7 @@ public class TileHeatExchange extends BlockEntity implements MenuProvider, IDebu
     private void syncToClient() {
         if (level != null && !level.isClientSide()) {
             setChanged();
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+            MessageUtil.sendUpdateToTrackingPlayers(this);
         }
     }
 

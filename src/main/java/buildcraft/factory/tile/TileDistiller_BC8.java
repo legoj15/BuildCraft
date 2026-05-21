@@ -43,6 +43,7 @@ import buildcraft.lib.fluid.FluidSmoother;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.container.ContainerDistiller;
 import buildcraft.lib.mj.MjBatteryReceiver;
+import buildcraft.lib.misc.MessageUtil;
 
 /**
  * Distiller tile entity. Takes fluid input, consumes MJ power, and produces
@@ -335,7 +336,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
             lastSyncedStuck = isStuck;
             lastSyncedPower = powerAvgClient;
             setChanged();
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+            MessageUtil.sendUpdateToTrackingPlayers(this);
         }
     }
 

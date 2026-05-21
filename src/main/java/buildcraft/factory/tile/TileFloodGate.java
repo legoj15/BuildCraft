@@ -45,6 +45,7 @@ import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.block.BlockFloodGate;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.lib.misc.MessageUtil;
 
 /**
  * Flood Gate tile entity. Receives fluid via pipes and uses BFS flood-fill to
@@ -190,7 +191,7 @@ public class TileFloodGate extends BlockEntity implements IDebuggable {
         int currentAmount = tank.getAmountAsInt(0);
         if (currentAmount != lastSyncedAmount) {
             lastSyncedAmount = currentAmount;
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+            MessageUtil.sendUpdateToTrackingPlayers(this);
         }
 
         if (tank.getAmountAsInt(0) < 1000) {

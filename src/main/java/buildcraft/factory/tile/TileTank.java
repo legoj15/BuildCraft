@@ -39,6 +39,7 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.container.ContainerTank;
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.fluid.FluidSmoother;
 import buildcraft.api.tiles.IDebuggable;
 
@@ -82,7 +83,7 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
         if (currentAmount != lastSyncedAmount) {
             lastSyncedAmount = currentAmount;
             setChanged();
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+            MessageUtil.sendUpdateToTrackingPlayers(this);
         }
 
         int compLevel = getComparatorLevel();

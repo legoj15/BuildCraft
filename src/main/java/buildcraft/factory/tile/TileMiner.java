@@ -26,6 +26,7 @@ import buildcraft.api.tiles.IHasWork;
 
 import buildcraft.core.BCCoreConfig;
 import buildcraft.factory.BCFactoryBlocks;
+import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.tile.TileBC_Neptune;
 
 /**
@@ -61,7 +62,7 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
 
         if (getLevel().getGameTime() % 10 == offset) {
             setChanged();
-            getLevel().sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+            MessageUtil.sendUpdateToTrackingPlayers(this);
         }
 
         mine();
@@ -124,7 +125,7 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
             }
             currentLength = wantedLength = newLength;
             setChanged();
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+            MessageUtil.sendUpdateToTrackingPlayers(this);
         }
     }
 

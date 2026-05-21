@@ -234,8 +234,6 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
 
         step();
 
-        init();
-
         for (Direction face : Direction.values()) {
             Section s = sections.get(face);
             if (s.internalPower > 0) {
@@ -379,10 +377,6 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
             currentWorldTime = now;
             sections.values().forEach(Section::step);
         }
-    }
-
-    private void init() {
-        // TODO: use this for initialising the tile cache
     }
 
     private void requestPower(Direction from, int amount) {

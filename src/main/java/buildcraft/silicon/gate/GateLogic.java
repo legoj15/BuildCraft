@@ -31,7 +31,6 @@ import buildcraft.api.statements.StatementManager;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.api.statements.containers.IRedstoneStatementContainer;
 import buildcraft.api.transport.IWireEmitter;
-import buildcraft.api.transport.IWireManager;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.PipeEvent;
 import buildcraft.api.transport.pipe.PipeEventActionActivate;
@@ -541,15 +540,8 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
         }
 
         if (!previousBroadcasts.equals(wireBroadcasts)) {
-            IWireManager wires = getPipeHolder().getWireManager();
-            EnumSet<DyeColor> turnedOff = EnumSet.copyOf(previousBroadcasts);
-            turnedOff.removeAll(wireBroadcasts);
-            // FIXME: add call to "wires.stopEmittingColour(turnedOff)"
-
-            EnumSet<DyeColor> turnedOn = EnumSet.copyOf(wireBroadcasts);
-            turnedOn.removeAll(previousBroadcasts);
-            // FIXME: add call to "wires.emittingColour(turnedOff)"
-
+            // Wire systems re-read each gate's emitted colours when gatesChanged is set
+            // (SavedDataWireSystems polls IWireEmitter.isEmitting), so no push call is needed.
             if (!getPipeHolder().getPipeWorld().isClientSide()) {
                 buildcraft.transport.wire.SavedDataWireSystems
                     .get(getPipeHolder().getPipeWorld()).gatesChanged = true;

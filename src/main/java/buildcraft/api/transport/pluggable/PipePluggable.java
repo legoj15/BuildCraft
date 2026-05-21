@@ -137,15 +137,6 @@ public abstract class PipePluggable {
         return null;
     }
 
-    /** Called if the {@link IPluggableStaticBaker} returns quads with tint indexes set to
-     * <code>data * 6 + key.side.ordinal()</code>. <code>"data"</code> is passed in here as <code>"tintIndex"</code>.
-     * 
-     * @return The tint index to render the quad with, or -1 for default. */
-    
-    public int getBlockColor(int tintIndex) {
-        return -1;
-    }
-
     /** PipePluggable version of
      * {@link Block#canBeConnectedTo(net.minecraft.world.level.BlockGetter, net.minecraft.core.BlockPos, Direction)}. */
     public boolean canBeConnected() {

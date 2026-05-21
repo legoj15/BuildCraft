@@ -24,6 +24,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
@@ -35,6 +36,7 @@ import buildcraft.api.schematics.ISchematicEntity;
 import buildcraft.api.schematics.SchematicEntityContext;
 
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.net.PacketBufferBC;
 
@@ -541,7 +543,15 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         super.writeToByteBuf(buffer);
         buffer.writeInt(remainingDisplayRequired.size());
         remainingDisplayRequired.forEach(stack -> {
-            buffer.writeNbt(new CompoundTag()); // Stub: ItemStack save needs RegistryAccess
+            CompoundTag tag = new CompoundTag();
+            if (!stack.isEmpty()) {
+                // ItemStack.CODEC clamps count to 1-99; display totals can exceed that, so the
+                // item (with components) goes through the codec and the real count is separate.
+                ItemStack.CODEC.encodeStart(NBTUtilBC.registryAwareOps(), stack.copyWithCount(1))
+                        .resultOrPartial()
+                        .ifPresent(payload -> tag.put("stack", payload));
+            }
+            buffer.writeNbt(tag);
             buffer.writeInt(stack.getCount());
         });
     }
@@ -552,9 +562,14 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         remainingDisplayRequired.clear();
         IntStream.range(0, buffer.readInt()).mapToObj(i -> {
             CompoundTag tag = buffer.readNbt();
-            ItemStack stack = ItemStack.EMPTY; // Stub: ItemStack parse needs RegistryAccess
-            stack.setCount(buffer.readInt());
-            return stack;
+            Tag payload = tag == null ? null : tag.get("stack");
+            ItemStack stack = payload == null
+                    ? ItemStack.EMPTY
+                    : ItemStack.CODEC.parse(NBTUtilBC.registryAwareOps(), payload)
+                            .resultOrPartial()
+                            .orElse(ItemStack.EMPTY);
+            int count = buffer.readInt();
+            return stack.isEmpty() ? ItemStack.EMPTY : stack.copyWithCount(count);
         }).forEach(remainingDisplayRequired::add);
     }
 }

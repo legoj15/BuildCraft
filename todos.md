@@ -52,6 +52,9 @@ Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains
 ### Help Ledger — content coverage
 - [ ] The `LedgerHelp` framework is active and interactive slot/tank highlighting works (confirmed in `ScreenEngineIron`, etc.). Per-block content is the gap: each block needs to register `ElementHelpInfo`s via `addHelpElements()`. Coverage is uneven; sweep needed.
 
+### Facade rendering
+- [ ] Facades of biome/state-tinted blocks (grass, leaves, redstone, water) render without their tint colour. MC 26.1's `BlockTintSource` system bypasses the old per-pluggable `getBlockColor` path (now removed), and the facade tint-index space (`PlugBakerFacade` emits `data*6+side`) collides with `pipe_holder`'s own indices. Needs a facade-tint rendering rework: register `BlockTintSource`s across the facade index range and resolve the wrapped block's colour. Untinted-block facades (most blocks) are unaffected.
+
 ### Robotics
 - [ ] No robots, robot AI, robot stations, or robot items ported. **Low priority** — robots were not actively maintained in 1.12.2.
 - [ ] `GuiZonePlanner` references `textures/gui/zone_planner.png`, but that file lives in `misc/unused_textures/` — the Zone Planner GUI renders a missing texture until it's restored.

@@ -23,6 +23,7 @@ import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.misc.SoundUtil;
 import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.gate.GateVariant;
 import buildcraft.silicon.plug.PluggableGate;
@@ -51,7 +52,7 @@ public class ItemPluggableGate extends Item implements IItemPluggable {
     public PipePluggable onPlace(ItemStack stack, IPipeHolder holder, Direction side, Player player, InteractionHand hand) {
         GateVariant variant = getVariant(stack);
         BlockState renderState = variant.material.block.defaultBlockState();
-        // SoundUtil.playBlockPlace(holder.getPipeWorld(), holder.getPipePos(), renderState);
+        SoundUtil.playBlockPlace(holder.getPipeWorld(), holder.getPipePos(), renderState);
         PluggableDefinition def = BCSiliconPlugs.gate;
         return new PluggableGate(def, holder, side, variant);
     }

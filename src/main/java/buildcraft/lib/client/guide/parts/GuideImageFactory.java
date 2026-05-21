@@ -8,8 +8,9 @@ import buildcraft.api.core.render.ISprite;
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.sprite.SpriteRaw;
 
-/** Factory for creating GuideImage instances.
- * Image loading from texture atlas is stubbed — uses placeholder 16x16 sprite. */
+/** Factory for creating {@link GuideImage} instances. Resolves a user-facing texture
+ *  reference (e.g. {@code buildcraftunofficial:item/wrench}) to its real texture path;
+ *  source dimensions default to 16x16. */
 public class GuideImageFactory implements GuidePartFactory {
     private final ISprite sprite;
     private final int srcWidth, srcHeight;

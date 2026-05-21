@@ -4,14 +4,12 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class BCCoreConfig {
 
-    // TODO: wire as global worldgen kill switch over BCCoreWorldGen / BCEnergyWorldGen
     public static ModConfigSpec.BooleanValue worldGen;
     public static ModConfigSpec.BooleanValue minePlayerProtected;
     public static ModConfigSpec.BooleanValue pumpsConsumeWater;
     public static ModConfigSpec.IntValue markerMaxDistance;
     public static ModConfigSpec.IntValue pumpMaxDistance;
     public static ModConfigSpec.IntValue networkUpdateRate;
-    // TODO: thread into mining-tile MJ-per-block math (TileQuarry, TileMiner, TileMiningWell)
     public static ModConfigSpec.DoubleValue miningMultiplier;
     public static ModConfigSpec.IntValue miningMaxDepth;
 

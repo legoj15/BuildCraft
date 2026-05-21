@@ -273,6 +273,12 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_redstone_trigger_tracks_signal"), () -> buildcraft.silicon.gate.GateRedstoneSyncTester::testTriggerTracksRedstoneSignal);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_redstone_nbt_sync_no_clobber"), () -> buildcraft.silicon.gate.GateRedstoneSyncTester::testNbtSyncDoesNotClobberLiveState);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_redstone_client_update_carries_state"), () -> buildcraft.silicon.gate.GateRedstoneSyncTester::testClientUpdateCarriesDisplayState);
+
+            // Statement-parameter ItemStack serialization — pins the gate item-filter NBT
+            // round-trip (writeToNbt <-> constructor) that the 26.1 port had stubbed out.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:statement_item_param_round_trip"), () -> buildcraft.core.statements.StatementSerializationTester::testItemStackParamRoundTrip);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:statement_item_param_empty_round_trip"), () -> buildcraft.core.statements.StatementSerializationTester::testEmptyItemStackParamRoundTrip);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:statement_item_exact_param_round_trip"), () -> buildcraft.core.statements.StatementSerializationTester::testItemStackExactParamRoundTrip);
         }
     }
 }

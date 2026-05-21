@@ -9,10 +9,6 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class BCBuildersConfig {
 
-    /** Blueprints that save larger than this are stored externally, smaller ones are stored directly in the item. */
-    // TODO: wire into Blueprint.serializeNBT path to actually route oversized payloads to external storage
-    public static ModConfigSpec.IntValue bptStoreExternalThreshold;
-
     /** The minimum height that all quarry frames must be. */
     public static ModConfigSpec.IntValue quarryFrameMinHeight;
 
@@ -30,10 +26,6 @@ public class BCBuildersConfig {
 
     public static void buildGeneral(ModConfigSpec.Builder builder) {
         builder.push("builders");
-
-        bptStoreExternalThreshold = builder
-                .comment("Blueprints larger than this (in bytes) are stored externally rather than in the item NBT.")
-                .defineInRange("bptStoreExternalThreshold", 20_000, 0, Integer.MAX_VALUE);
 
         builder.push("quarry");
 

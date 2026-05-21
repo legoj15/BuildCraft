@@ -36,16 +36,5 @@ public interface IContainerFilling {
 
     void valuesChanged();
 
-    default void init() {
-        // TODO: implement server->client sync for pattern state
-    }
-
-    default void onStatementChange() {
-        // TODO: implement client->server sync
-    }
-
-    default void sendInverted(boolean value) {
-        setInverted(value);
-        // TODO: sync to server
-    }
+    default void onStatementChange() {}
 }

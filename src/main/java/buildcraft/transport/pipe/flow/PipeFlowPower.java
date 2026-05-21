@@ -208,11 +208,15 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
             return 0;
         }
         BlockEntity tile = pipe.getConnectedTile(from);
-        if (tile == null) {
+        if (tile == null || tile.getLevel() == null) {
             return 0;
         }
-        // TODO: capability lookup for IMjPassiveProvider
-        return 0;
+        IMjPassiveProvider provider = tile.getLevel().getCapability(
+            MjAPI.CAP_PASSIVE_PROVIDER, tile.getBlockPos(), from.getOpposite());
+        if (provider == null) {
+            return 0;
+        }
+        return provider.extractPower(0, maxExtracted, false);
     }
 
     @Override
@@ -291,8 +295,6 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
         }
 
         step();
-
-        init();
 
         for (Direction face : Direction.values()) {
             Section s = sections.get(face);
@@ -432,10 +434,6 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
             currentWorldTime = now;
             sections.values().forEach(Section::step);
         }
-    }
-
-    private void init() {
-        // TODO: use this for initialising the tile cache
     }
 
     private void requestPower(Direction from, long amount) {

@@ -11,6 +11,7 @@ import javax.annotation.Nonnull;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 
 import buildcraft.api.core.render.ISprite;
 import buildcraft.api.statements.IStatement;
@@ -59,18 +60,20 @@ public class StatementParameterItemStackExact implements IStatementParameter {
 
     @Override
     public void writeToNbt(CompoundTag compound) {
-        // TODO: Full ItemStack serialization requires a HolderLookup.Provider
-        // For now, we store a simplified form.
         if (!stack.isEmpty()) {
-            compound.putBoolean("hasStack", true);
+            ItemStack.CODEC.encodeStart(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), stack)
+                    .resultOrPartial()
+                    .ifPresent(payload -> compound.put("stack", payload));
         }
     }
 
     public static StatementParameterItemStackExact readFromNbt(CompoundTag nbt) {
         StatementParameterItemStackExact param = new StatementParameterItemStackExact();
-        if (nbt.contains("hasStack")) {
-            // Reading serialised stacks requires a registry — stub for now
-            param.stack = ItemStack.EMPTY;
+        Tag stackPayload = nbt.get("stack");
+        if (stackPayload != null) {
+            param.stack = ItemStack.CODEC.parse(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), stackPayload)
+                    .resultOrPartial()
+                    .orElse(ItemStack.EMPTY);
         }
         return param;
     }

@@ -10,17 +10,31 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
-import buildcraft.api.core.BCLog;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.common.world.chunk.RegisterTicketControllersEvent;
+import net.neoforged.neoforge.common.world.chunk.TicketController;
 
 /**
- * Chunk loading manager stub for NeoForge 1.21.
- * The old ForgeChunkManager TicketHelper API was removed.
- * TODO: Re-implement using NeoForge forced chunk loading API.
+ * Keeps chunks force-loaded for tiles implementing {@link IChunkLoadingTile} (e.g. the Quarry),
+ * using NeoForge's {@link TicketController} API. Tickets are owned by the tile's {@link BlockPos}
+ * and persist across save/load; {@link #releaseChunksFor} drops them when the tile is removed.
  */
 public class ChunkLoaderManager {
+
+    /** Ticket controller for all BuildCraft chunk-loading tiles. Must be registered on the mod
+     *  event bus (see {@link #registerTicketController}) or NeoForge discards its tickets on load. */
+    public static final TicketController CONTROLLER =
+        new TicketController(Identifier.fromNamespaceAndPath("buildcraftunofficial", "chunkloader"));
+
+    public static void registerTicketController(IEventBus modEventBus) {
+        modEventBus.addListener((RegisterTicketControllersEvent event) -> event.register(CONTROLLER));
+    }
 
     public static <T extends BlockEntity & IChunkLoadingTile> void loadChunksForTile(T tile) {
         if (!canLoadFor(tile)) {
@@ -31,13 +45,21 @@ public class ChunkLoaderManager {
     }
 
     public static <T extends BlockEntity & IChunkLoadingTile> void releaseChunksFor(T tile) {
-        // TODO: Re-implement chunk release with NeoForge 1.21 forced chunk API
-        BCLog.logger.debug("[lib.chunkloading] releaseChunksFor called (stub) for {}", tile.getClass().getName());
+        forceChunks(tile, false);
     }
 
     private static <T extends BlockEntity & IChunkLoadingTile> void updateChunksFor(T tile) {
-        // TODO: Re-implement chunk forcing with NeoForge 1.21 forced chunk API
-        BCLog.logger.debug("[lib.chunkloading] updateChunksFor called (stub) for {}", tile.getClass().getName());
+        forceChunks(tile, true);
+    }
+
+    private static <T extends BlockEntity & IChunkLoadingTile> void forceChunks(T tile, boolean add) {
+        if (!(tile.getLevel() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        BlockPos owner = tile.getBlockPos();
+        for (ChunkPos chunk : getChunksToLoad(tile)) {
+            CONTROLLER.forceChunk(serverLevel, owner, chunk.x(), chunk.z(), add, false);
+        }
     }
 
     public static <T extends BlockEntity & IChunkLoadingTile> Set<ChunkPos> getChunksToLoad(T tile) {
@@ -49,7 +71,6 @@ public class ChunkLoaderManager {
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private static boolean canLoadFor(IChunkLoadingTile tile) {
-        // BCLibConfig is not ported yet — always allow chunk loading for now
         return tile.getLoadType() != null;
     }
 }

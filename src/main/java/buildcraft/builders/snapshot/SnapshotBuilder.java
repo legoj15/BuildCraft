@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.FluidState;
@@ -934,9 +935,14 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             items = IntStream.range(0, buffer.readInt())
                 .mapToObj(j -> {
                     CompoundTag itemTag = buffer.readNbt();
-                    if (itemTag == null) return ItemStack.EMPTY;
-                    // Stub: without RegistryAccess, we return empty
-                    return ItemStack.EMPTY;
+                    Tag payload = itemTag == null ? null : itemTag.get("stack");
+                    ItemStack stack = payload == null
+                        ? ItemStack.EMPTY
+                        : ItemStack.CODEC.parse(NBTUtilBC.registryAwareOps(), payload)
+                            .resultOrPartial()
+                            .orElse(ItemStack.EMPTY);
+                    int count = buffer.readInt();
+                    return stack.isEmpty() ? ItemStack.EMPTY : stack.copyWithCount(count);
                 })
                 .collect(Collectors.toList());
             power = buffer.readLong();
@@ -979,8 +985,13 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             buffer.writeInt(items.size());
             items.forEach(item -> {
                 CompoundTag tag = new CompoundTag();
-                // Stub: ItemStack save requires RegistryAccess in 1.21.11
+                if (!item.isEmpty()) {
+                    ItemStack.CODEC.encodeStart(NBTUtilBC.registryAwareOps(), item.copyWithCount(1))
+                            .resultOrPartial()
+                            .ifPresent(payload -> tag.put("stack", payload));
+                }
                 buffer.writeNbt(tag);
+                buffer.writeInt(item.getCount());
             });
             buffer.writeLong(power);
         }

@@ -148,14 +148,6 @@ public class PluggableFacade extends PipePluggable implements IFacade {
         return new KeyPlugFacade(layer, side, state.stateInfo.state, states.isHollow());
     }
 
-    @Override
-    public int getBlockColor(int tintIndex) {
-        // MC 26.1: BlockColors class has been removed entirely.
-        // Block tinting is now done inline in the BlockStateModel rendering pipeline.
-        // TODO: Implement proper facade tinting using MC 26.1's tint system.
-        return -1; // White/untinted fallback
-    }
-
     // IFacade
 
     @Override

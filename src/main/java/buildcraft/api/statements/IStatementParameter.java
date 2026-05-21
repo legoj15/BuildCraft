@@ -44,7 +44,7 @@ public interface IStatementParameter extends IGuiSlot {
     default void writeToBuf(FriendlyByteBuf buffer) {
         CompoundTag nbt = new CompoundTag();
         writeToNbt(nbt);
-        buffer.writeNbt(nbt) /* broken stub */;
+        buffer.writeNbt(nbt);
     }
 
     /** This returns the parameter after a left rotation. Used in particular in blueprints orientation. */

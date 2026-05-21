@@ -48,13 +48,15 @@ public enum PipeRegistry implements IPipeRegistry {
 
     @Override
     public IItemPipe createItemForPipe(PipeDefinition definition) {
-        // Stub — ItemPipeHolder not yet ported
+        // Not supported on NeoForge: items must be registered through a DeferredRegister during
+        // the registry event, so a pipe item cannot be created on demand at runtime. Register an
+        // ItemPipeHolder via your own DeferredRegister and associate it with setItemForPipe(...).
         return null;
     }
 
     @Override
     public IItemPipe createUnnamedItemForPipe(PipeDefinition definition, Consumer<Item> postCreate) {
-        // Stub — ItemPipeHolder not yet ported
+        // Not supported — see createItemForPipe. Register your own item and call setItemForPipe(...).
         return null;
     }
 

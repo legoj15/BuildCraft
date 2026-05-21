@@ -39,6 +39,10 @@ public class BCLib {
 
         BCLibItems.ITEMS.register(modEventBus);
 
+        // Register the chunk-loading ticket controller (used by the Quarry and other
+        // IChunkLoadingTile machines). Must happen on the mod event bus.
+        buildcraft.lib.chunkload.ChunkLoaderManager.registerTicketController(modEventBus);
+
         // Wire ModelHolderRegistry into NeoForge model baking lifecycle
         if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
             buildcraft.lib.client.BCLibClient.initClient(modEventBus);

@@ -34,6 +34,7 @@ import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.misc.SoundUtil;
 
 import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
@@ -98,7 +99,7 @@ public class ItemPluggableFacade extends Item implements IItemPluggable, IFacade
     public PipePluggable onPlace(@Nonnull ItemStack stack, IPipeHolder holder, Direction side, Player player,
         InteractionHand hand) {
         FacadeInstance fullState = getStates(stack);
-        // TODO: SoundUtil.playBlockPlace when ported
+        SoundUtil.playBlockPlace(holder.getPipeWorld(), holder.getPipePos());
         return new PluggableFacade(BCSiliconPlugs.facade, holder, side, fullState);
     }
 

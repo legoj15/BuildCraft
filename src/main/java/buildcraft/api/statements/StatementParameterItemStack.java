@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 import com.google.common.collect.ImmutableList;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.ChatFormatting;
 
@@ -42,18 +43,23 @@ public class StatementParameterItemStack implements IStatementParameter {
     }
 
     public StatementParameterItemStack(CompoundTag nbt) {
-        // NBT deserialization stub – full implementation requires registered access
         ItemStack read = ItemStack.EMPTY;
-        if (read.isEmpty()) {
-            stack = EMPTY_STACK;
-        } else {
-            stack = read;
+        Tag stackPayload = nbt.get("stack");
+        if (stackPayload != null) {
+            read = ItemStack.CODEC.parse(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), stackPayload)
+                    .resultOrPartial()
+                    .orElse(ItemStack.EMPTY);
         }
+        stack = read.isEmpty() ? EMPTY_STACK : read;
     }
 
     @Override
     public void writeToNbt(CompoundTag compound) {
-        // write stub
+        if (!stack.isEmpty()) {
+            ItemStack.CODEC.encodeStart(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), stack)
+                    .resultOrPartial()
+                    .ifPresent(payload -> compound.put("stack", payload));
+        }
     }
 
     @Override

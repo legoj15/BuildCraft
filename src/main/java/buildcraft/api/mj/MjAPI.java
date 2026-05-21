@@ -13,7 +13,6 @@ import net.neoforged.neoforge.capabilities.BlockCapability;
 
 import org.jspecify.annotations.Nullable;
 
-import buildcraft.api.core.CapabilitiesHelper;
 import buildcraft.lib.BCLibConfig;
 
 public class MjAPI {
@@ -97,16 +96,15 @@ public class MjAPI {
     public static final BlockCapability<IMjRedstoneReceiver, @Nullable Direction> CAP_REDSTONE_RECEIVER =
         BlockCapability.createSided(Identifier.fromNamespaceAndPath("buildcraftunofficial", "mj_redstone_receiver"), IMjRedstoneReceiver.class);
 
-    // Legacy stubs for capabilities not yet migrated to BlockCapability
+    /** MJ readable capability — exposes stored/capacity power (used by the Power gate trigger). */
     @Nonnull
-    public static final Object CAP_READABLE;
-    @Nonnull
-    public static final Object CAP_PASSIVE_PROVIDER;
+    public static final BlockCapability<IMjReadable, @Nullable Direction> CAP_READABLE =
+        BlockCapability.createSided(Identifier.fromNamespaceAndPath("buildcraftunofficial", "mj_readable"), IMjReadable.class);
 
-    static {
-        CAP_READABLE = CapabilitiesHelper.registerCapability(IMjReadable.class);
-        CAP_PASSIVE_PROVIDER = CapabilitiesHelper.registerCapability(IMjPassiveProvider.class);
-    }
+    /** MJ passive provider capability — power sources that powered wooden kinesis pipes pull from. */
+    @Nonnull
+    public static final BlockCapability<IMjPassiveProvider, @Nullable Direction> CAP_PASSIVE_PROVIDER =
+        BlockCapability.createSided(Identifier.fromNamespaceAndPath("buildcraftunofficial", "mj_passive_provider"), IMjPassiveProvider.class);
 
     private static long getMjValue() {
         return 1_000_000L;

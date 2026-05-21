@@ -54,6 +54,7 @@ Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains
 
 ### Robotics
 - [ ] No robots, robot AI, robot stations, or robot items ported. **Low priority** — robots were not actively maintained in 1.12.2.
+- [ ] `GuiZonePlanner` references `textures/gui/zone_planner.png`, but that file lives in `misc/unused_textures/` — the Zone Planner GUI renders a missing texture until it's restored.
 
 ---
 

@@ -62,6 +62,16 @@ public class SpriteHolderRegistry {
             return cachedSprite;
         }
 
+        /** The atlas page this sprite was stitched onto, resolved the same way as
+         *  {@link #getSprite()}. Bind this — not a hard-coded atlas constant — when building
+         *  a {@code RenderType}, so the bound page always matches the page whose UV space
+         *  {@link #getInterpU}/{@link #getInterpV} map into. Falls back to the blocks atlas
+         *  when the sprite can't be resolved yet (early init / dedicated server). */
+        public Identifier getAtlasLocation() {
+            TextureAtlasSprite sprite = getSprite();
+            return sprite != null ? sprite.atlasLocation() : TextureAtlas.LOCATION_BLOCKS;
+        }
+
         /** Walk {@link #ATLAS_LOOKUP_ORDER} and return the first atlas that has this
          *  sprite as a real entry (i.e. {@code getSprite()} did not fall through to
          *  the missing-texture sprite). If every atlas misses, return the missing

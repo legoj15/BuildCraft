@@ -436,7 +436,7 @@ public enum BCBuildersEventDist {
                     mc.renderBuffers().bufferSource();
                 com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(
                     net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(
-                        net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+                        buildcraft.builders.BCBuildersSprites.ROBOT.getAtlasLocation()));
 
                 poseStack.pushPose();
                 poseStack.translate(robotPos.x - cameraPos.x, robotPos.y - cameraPos.y, robotPos.z - cameraPos.z);
@@ -596,7 +596,7 @@ public enum BCBuildersEventDist {
                     // Only render robot cube if we are breaking (1.12.2 parity: Filler shouldn't use robot for placing)
                     if (!filler.builder.clientBreakTasks.isEmpty()) {
                         net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
-                        com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+                        com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(buildcraft.builders.BCBuildersSprites.ROBOT.getAtlasLocation()));
 
                         poseStack.pushPose();
                         poseStack.translate(robotPos.x - cameraPos.x, robotPos.y - cameraPos.y, robotPos.z - cameraPos.z);

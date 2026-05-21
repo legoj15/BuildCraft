@@ -132,21 +132,6 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
             connections[i] = ((c >>> i) & 1) == 1;
         }
 
-        // Read runtime display state (triggerOn, actionOn, isOn)
-        if (nbt.contains("triggerOn")) {
-            short tOn = nbt.getShort("triggerOn").orElse((short) 0);
-            for (int i = 0; i < triggerOn.length; i++) {
-                triggerOn[i] = ((tOn >>> i) & 1) == 1;
-            }
-        }
-        if (nbt.contains("actionOn")) {
-            short aOn = nbt.getShort("actionOn").orElse((short) 0);
-            for (int i = 0; i < actionOn.length; i++) {
-                actionOn[i] = ((aOn >>> i) & 1) == 1;
-            }
-        }
-        isOn = nbt.getBoolean("isOn").orElse(false);
-
         for (int i = 0; i < statements.length; i++) {
             String tName = "trigger[" + i + "]";
             String aName = "action[" + i + "]";
@@ -228,19 +213,7 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
         }
         nbt.putIntArray("wireBroadcasts", arr);
 
-        // Write runtime display state so clients get correct visuals on initial sync
-        short tOn = 0;
-        for (int i = 0; i < triggerOn.length; i++) {
-            if (triggerOn[i]) tOn |= 1 << i;
-        }
-        nbt.putShort("triggerOn", tOn);
-        short aOn = 0;
-        for (int i = 0; i < actionOn.length; i++) {
-            if (actionOn[i]) aOn |= 1 << i;
-        }
-        nbt.putShort("actionOn", aOn);
-        nbt.putBoolean("isOn", isOn);
-
+        // Runtime state (isOn/triggerOn/actionOn) is recomputed each tick and synced separately — persisting it here caused a client-desync race.
         return nbt;
     }
 

@@ -9,10 +9,12 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.ExtractBlockOutlineRenderStateEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
+import net.neoforged.neoforge.common.NeoForge;
 
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeApiClient;
@@ -36,6 +38,7 @@ import buildcraft.transport.client.render.PipeFlowRendererFluids;
 import buildcraft.transport.client.render.PipeFlowRendererItems;
 import buildcraft.transport.client.render.PipeFlowRendererPower;
 import buildcraft.transport.client.render.PipeFlowRendererFE;
+import buildcraft.transport.client.render.PipePlacementHighlight;
 import buildcraft.transport.client.render.RenderPipeHolder;
 import buildcraft.transport.client.render.PipeBehaviourRendererStripes;
 import buildcraft.transport.client.model.key.KeyPlugBlocker;
@@ -64,6 +67,9 @@ public class BCTransportClient {
         modEventBus.register(BCTransportClient.class);
         init();
         modEventBus.register(PipeBlockColourHandler.class);
+        // Face/corner-accurate placement-preview outline shown while holding a pluggable or wire.
+        NeoForge.EVENT_BUS.addListener(ExtractBlockOutlineRenderStateEvent.class,
+                PipePlacementHighlight::onExtractBlockOutline);
     }
 
     @SubscribeEvent

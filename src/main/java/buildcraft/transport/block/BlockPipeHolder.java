@@ -67,8 +67,9 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
      *  1/32 wide, sitting at the corners of the center box. The ray trace hit point
      *  from the merged VoxelShape lands on the center surface, barely touching the
      *  wire boundary. Inflating the detection box by 1/16 makes wires much easier
-     *  to target without conflicting with other elements. */
-    private static final double WIRE_HIT_INFLATE = 1.0 / 16.0;
+     *  to target without conflicting with other elements. Public so the placement-preview
+     *  outline can size the wire highlight to match. */
+    public static final double WIRE_HIT_INFLATE = 1.0 / 16.0;
 
     public BlockPipeHolder(Properties props) {
         super(props);
@@ -277,11 +278,8 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
             return InteractionResult.PASS;
         }
 
-        // Determine which face was clicked
-        Direction realSide = getHitFace(tile, hitResult);
-        if (realSide == null) {
-            realSide = hitResult.getDirection();
-        }
+        // Determine which face was clicked (shared with the placement-preview outline)
+        Direction realSide = resolveTargetFace(tile, hitResult);
 
         // Try to place a pluggable
         if (stack.getItem() instanceof buildcraft.api.transport.IItemPluggable itemPlug) {
@@ -304,12 +302,7 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
 
         // Try to place a pipe wire
         if (stack.getItem() instanceof buildcraft.transport.item.ItemWire itemWire) {
-            double lx = hitResult.getLocation().x - pos.getX();
-            double ly = hitResult.getLocation().y - pos.getY();
-            double lz = hitResult.getLocation().z - pos.getZ();
-            buildcraft.api.transport.EnumWirePart wirePart = 
-                buildcraft.api.transport.EnumWirePart.get(lx > 0.5, ly > 0.5, lz > 0.5);
-            
+            buildcraft.api.transport.EnumWirePart wirePart = resolveTargetWirePart(hitResult);
             if (tile.getWireManager().addPart(wirePart, itemWire.getColor())) {
                 if (!level.isClientSide()) {
                     if (!player.getAbilities().instabuild) {
@@ -351,6 +344,30 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
             return InteractionResult.SUCCESS;
         }
         return InteractionResult.TRY_WITH_EMPTY_HAND;
+    }
+
+    /**
+     * Resolves the face a pluggable would be placed on for the given hit: an arm direction when
+     * the hit lands on a connection arm, otherwise the cube face the ray struck. Shared by
+     * {@link #useItemOn} and the placement-preview outline ({@code PluggablePlacementHighlight})
+     * so the highlight and the placement can never disagree.
+     */
+    public static Direction resolveTargetFace(TilePipeHolder tile, BlockHitResult hitResult) {
+        Direction armFace = getHitFace(tile, hitResult);
+        return armFace != null ? armFace : hitResult.getDirection();
+    }
+
+    /**
+     * Resolves the wire corner a wire item would be placed at for the given hit — the
+     * {@link buildcraft.api.transport.EnumWirePart} of the block octant the ray struck. Shared by
+     * {@link #useItemOn} and the placement-preview outline so the two can never disagree.
+     */
+    public static buildcraft.api.transport.EnumWirePart resolveTargetWirePart(BlockHitResult hitResult) {
+        BlockPos pos = hitResult.getBlockPos();
+        double lx = hitResult.getLocation().x - pos.getX();
+        double ly = hitResult.getLocation().y - pos.getY();
+        double lz = hitResult.getLocation().z - pos.getZ();
+        return buildcraft.api.transport.EnumWirePart.get(lx > 0.5, ly > 0.5, lz > 0.5);
     }
 
     /**

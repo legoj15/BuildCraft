@@ -19,7 +19,6 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -36,6 +35,7 @@ import buildcraft.api.mj.MjBattery;
 import buildcraft.lib.block.ILocalBlockUpdateSubscriber;
 import buildcraft.lib.block.LocalBlockUpdateNotifier;
 import buildcraft.lib.debug.IAdvDebugTarget;
+import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.VolumeUtil;
 import buildcraft.lib.misc.data.AverageLong;
 import buildcraft.lib.mj.MjBatteryReceiver;
@@ -219,7 +219,7 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
         if (!Objects.equals(previousTargetPos, targetPos) || true) {
             // Always sync for now — matches 1.12.2 behaviour
             setChanged();
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+            MessageUtil.sendUpdateToTrackingPlayers(this);
         }
     }
 

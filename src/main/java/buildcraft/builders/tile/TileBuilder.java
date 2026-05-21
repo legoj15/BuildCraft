@@ -54,6 +54,7 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
 import buildcraft.api.tiles.IDebuggable;
 
+import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.PositionUtil;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.mj.MjBatteryReceiver;
@@ -401,7 +402,7 @@ public class TileBuilder extends TileBC_Neptune
         if (level.isClientSide()) {
             // Client: run the visual interpolation for the robot cube + break/place lasers so
             // the robot flies between positions smoothly. The task lists themselves are pushed
-            // from the server every 5 ticks via level.sendBlockUpdated → getUpdateTag.
+            // from the server every 5 ticks via the block-entity update packet → getUpdateTag.
             SnapshotBuilder<?> b = getBuilder();
             if (b != null) {
                 b.clientTick();
@@ -458,7 +459,7 @@ public class TileBuilder extends TileBC_Neptune
             // update packet only goes to players with the chunk loaded, so the network cost is
             // bounded by player proximity.
             if (level.getGameTime() % 5 == 0) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+                MessageUtil.sendUpdateToTrackingPlayers(this);
             }
         }
     }

@@ -52,6 +52,7 @@ import buildcraft.api.statements.containers.IFillerStatementContainer;
 import buildcraft.api.tiles.IControllable;
 import buildcraft.api.tiles.IDebuggable;
 
+import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.statement.FullStatement;
@@ -277,7 +278,7 @@ public class TileFiller extends TileBC_Neptune
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
             }
             if (level.getGameTime() % 5 == 0) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+                MessageUtil.sendUpdateToTrackingPlayers(this);
             }
         }
     }

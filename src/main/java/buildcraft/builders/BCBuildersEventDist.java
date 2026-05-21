@@ -417,7 +417,7 @@ public enum BCBuildersEventDist {
 
             // Robot + break lasers. The active SnapshotBuilder (template or blueprint) exposes
             // clientBreakTasks / visualRobotPos that were synced from the server via
-            // level.sendBlockUpdated + getUpdateTag every 5 ticks and interpolated by
+            // the block-entity update packet + getUpdateTag every 5 ticks and interpolated by
             // SnapshotBuilder.clientTick().
             buildcraft.builders.snapshot.SnapshotBuilder<?> active = builder.getBuilder();
             if (active == null) continue;

@@ -18,7 +18,6 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -29,6 +28,7 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.recipes.IngredientStack;
 import buildcraft.api.tiles.IDebuggable;
 
+import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.data.AverageLong;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -80,7 +80,7 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
             lastSyncedPower = power;
             setChanged();
             if (getLevel() != null) {
-                getLevel().sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+                MessageUtil.sendUpdateToTrackingPlayers(this);
             }
         }
     }

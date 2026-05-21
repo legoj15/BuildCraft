@@ -119,6 +119,11 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         return mjReceiver;
     }
 
+    /** @return The internal MJ battery, for Forge-Energy capability registration. */
+    public MjBattery getBattery() {
+        return mjBattery;
+    }
+
     /**
      * Returns the appropriate tank for the given direction.
      * Horizontal sides → input tank, UP → gas output, DOWN → liquid output.

@@ -252,6 +252,8 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:autoworkbench_cobblestone_pipe_connects"), () -> buildcraft.factory.MachinePipeConnectivityTester::testCobblestonePipeConnectsToAutoWorkbench);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:autoworkbench_clay_pipe_inserts"), () -> buildcraft.factory.MachinePipeConnectivityTester::testClayPipeInsertsIntoAutoWorkbench);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:item_machines_expose_item_capability"), () -> buildcraft.factory.MachinePipeConnectivityTester::testItemMachinesExposeItemHandlerCapability);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:mj_battery_machines_expose_fe_autoconvert"), () -> buildcraft.factory.MachinePipeConnectivityTester::testMjBatteryMachinesExposeFeWhenAutoconvertEnabled);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:mj_battery_machines_hide_fe_mj_only"), () -> buildcraft.factory.MachinePipeConnectivityTester::testMjBatteryMachinesHideFeUnderMjOnly);
 
             // Tank bookkeeping — composite ResourceHandler<FluidResource> capacity-respect
             // and cross-slot spillover (modelled on TileBuilder.tankManager's per-slot delegate).

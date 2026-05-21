@@ -172,6 +172,11 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
         return createMjReceiver();
     }
 
+    /** @return The internal MJ battery, for Forge-Energy capability registration. */
+    public MjBattery getBattery() {
+        return battery;
+    }
+
     // --- Client Sync ---
 
     @Override

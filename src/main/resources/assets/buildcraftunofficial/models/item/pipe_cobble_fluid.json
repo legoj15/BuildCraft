@@ -1,8 +1,8 @@
 {
     "parent": "buildcraftunofficial:item/pipe_item",
     "textures": {
-        "top": "buildcraftunofficial:item/pipe_cobble_fluid",
-        "center": "buildcraftunofficial:item/pipe_cobble_fluid",
-        "bottom": "buildcraftunofficial:item/pipe_cobble_fluid"
+        "top": "buildcraftunofficial:pipes/cobblestone_fluid",
+        "center": "buildcraftunofficial:pipes/cobblestone_fluid",
+        "bottom": "buildcraftunofficial:pipes/cobblestone_fluid"
     }
 }

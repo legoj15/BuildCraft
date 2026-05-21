@@ -1,8 +1,8 @@
 {
     "parent": "buildcraftunofficial:item/pipe_item",
     "textures": {
-        "top": "buildcraftunofficial:item/pipe_sandstone_item",
-        "center": "buildcraftunofficial:item/pipe_sandstone_item",
-        "bottom": "buildcraftunofficial:item/pipe_sandstone_item"
+        "top": "buildcraftunofficial:pipes/sandstone_item",
+        "center": "buildcraftunofficial:pipes/sandstone_item",
+        "bottom": "buildcraftunofficial:pipes/sandstone_item"
     }
 }

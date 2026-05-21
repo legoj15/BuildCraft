@@ -96,4 +96,5 @@ Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains
 ## 🧹 Finalization
 
 - [ ] Deprecation and warning fixes (both compile-time and runtime).
+- [ ] **Goggles texture.** `item/goggles.png` is a verbatim copy of the vanilla paper texture used as a placeholder — the dev-gated Goggles headpiece needs real art before it could be un-gated.
 - [ ] Final code review across all subsystems.

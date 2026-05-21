@@ -1,8 +1,8 @@
 {
     "parent": "buildcraftunofficial:item/pipe_item",
     "textures": {
-        "top": "buildcraftunofficial:item/pipe_clay_fluid",
-        "center": "buildcraftunofficial:item/pipe_clay_fluid",
-        "bottom": "buildcraftunofficial:item/pipe_clay_fluid"
+        "top": "buildcraftunofficial:pipes/clay_fluid",
+        "center": "buildcraftunofficial:pipes/clay_fluid",
+        "bottom": "buildcraftunofficial:pipes/clay_fluid"
     }
 }

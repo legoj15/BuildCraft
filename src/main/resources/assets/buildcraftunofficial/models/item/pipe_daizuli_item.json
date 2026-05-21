@@ -1,8 +1,8 @@
 {
     "parent": "buildcraftunofficial:item/pipe_item",
     "textures": {
-        "top": "buildcraftunofficial:item/pipe_daizuli_item",
-        "center": "buildcraftunofficial:item/pipe_daizuli_item",
-        "bottom": "buildcraftunofficial:item/pipe_daizuli_item_filled"
+        "top": "buildcraftunofficial:pipes/daizuli_item_white",
+        "center": "buildcraftunofficial:pipes/daizuli_item_white",
+        "bottom": "buildcraftunofficial:pipes/daizuli_item_filled"
     }
 }

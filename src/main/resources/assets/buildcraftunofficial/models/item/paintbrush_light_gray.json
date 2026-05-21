@@ -1,6 +1,6 @@
 {
     "parent": "minecraft:item/handheld",
     "textures": {
-        "layer0": "buildcraftunofficial:item/paintbrush/silver"
+        "layer0": "buildcraftunofficial:item/paintbrush/light_gray"
     }
 }

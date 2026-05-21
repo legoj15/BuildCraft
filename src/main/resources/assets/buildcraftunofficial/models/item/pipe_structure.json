@@ -1,8 +1,8 @@
 {
     "parent": "buildcraftunofficial:item/pipe_item",
     "textures": {
-        "top": "buildcraftunofficial:item/pipe_structure",
-        "center": "buildcraftunofficial:item/pipe_structure",
-        "bottom": "buildcraftunofficial:item/pipe_structure"
+        "top": "buildcraftunofficial:pipes/structure",
+        "center": "buildcraftunofficial:pipes/structure",
+        "bottom": "buildcraftunofficial:pipes/structure"
     }
 }

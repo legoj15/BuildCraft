@@ -1,8 +1,8 @@
 {
     "parent": "buildcraftunofficial:item/pipe_item",
     "textures": {
-        "top": "buildcraftunofficial:item/pipe_lapis_item",
-        "center": "buildcraftunofficial:item/pipe_lapis_item",
-        "bottom": "buildcraftunofficial:item/pipe_lapis_item"
+        "top": "buildcraftunofficial:pipes/lapis_item_white",
+        "center": "buildcraftunofficial:pipes/lapis_item_white",
+        "bottom": "buildcraftunofficial:pipes/lapis_item_white"
     }
 }

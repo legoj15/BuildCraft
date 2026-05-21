@@ -1,8 +1,8 @@
 {
     "parent": "buildcraftunofficial:item/pipe_item",
     "textures": {
-        "top": "buildcraftunofficial:item/pipe_diamond_item",
-        "center": "buildcraftunofficial:item/pipe_diamond_item",
-        "bottom": "buildcraftunofficial:item/pipe_diamond_item"
+        "top": "buildcraftunofficial:pipes/diamond_item_itemstack",
+        "center": "buildcraftunofficial:pipes/diamond_item_itemstack",
+        "bottom": "buildcraftunofficial:pipes/diamond_item_itemstack"
     }
 }

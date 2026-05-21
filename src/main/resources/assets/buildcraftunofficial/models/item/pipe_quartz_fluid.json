@@ -1,8 +1,8 @@
 {
     "parent": "buildcraftunofficial:item/pipe_item",
     "textures": {
-        "top": "buildcraftunofficial:item/pipe_quartz_fluid",
-        "center": "buildcraftunofficial:item/pipe_quartz_fluid",
-        "bottom": "buildcraftunofficial:item/pipe_quartz_fluid"
+        "top": "buildcraftunofficial:pipes/quartz_fluid",
+        "center": "buildcraftunofficial:pipes/quartz_fluid",
+        "bottom": "buildcraftunofficial:pipes/quartz_fluid"
     }
 }

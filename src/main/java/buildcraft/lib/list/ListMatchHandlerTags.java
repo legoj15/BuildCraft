@@ -7,6 +7,7 @@
 package buildcraft.lib.list;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -47,7 +48,8 @@ public class ListMatchHandlerTags extends ListMatchHandler {
         if (type != Type.TYPE && type != Type.MATERIAL) return false;
         Set<String> sourceParts = collectParts(source, type);
         if (sourceParts.isEmpty()) return false;
-        return tagsOf(target).anyMatch(t -> sourceParts.contains(partOf(t, type)));
+        Set<String> targetParts = collectParts(target, type);
+        return !Collections.disjoint(sourceParts, targetParts);
     }
 
     @Nullable
@@ -95,11 +97,27 @@ public class ListMatchHandlerTags extends ListMatchHandler {
         return stack.typeHolder().tags();
     }
 
+    /** Type-parts or material-parts of every tag on {@code stack}. For MATERIAL, single-segment
+     * tags (no slash) are a fallback only — {@code c:ingots} is a type umbrella, not a material,
+     * and counting it would make every ingot share material "ingots". A stack with any slashed
+     * tag ({@code c:ingots/iron}) is pinned by those alone; single-segment tags feed MATERIAL
+     * only when no slashed tag exists (e.g. planks, sole tag {@code minecraft:planks}). */
     private static Set<String> collectParts(ItemStack stack, Type type) {
-        Set<String> parts = new HashSet<>();
         List<TagKey<Item>> tags = tagsOf(stack).toList();
-        for (TagKey<Item> tag : tags) {
-            parts.add(partOf(tag, type));
+        Set<String> parts = new HashSet<>();
+        if (type == Type.MATERIAL) {
+            boolean hasSlashed = tags.stream().anyMatch(t -> t.location().getPath().indexOf('/') >= 0);
+            for (TagKey<Item> tag : tags) {
+                boolean slashed = tag.location().getPath().indexOf('/') >= 0;
+                if (hasSlashed && !slashed) {
+                    continue;
+                }
+                parts.add(partOf(tag, type));
+            }
+        } else {
+            for (TagKey<Item> tag : tags) {
+                parts.add(partOf(tag, type));
+            }
         }
         return parts;
     }

@@ -157,7 +157,7 @@ Unit tests use JUnit 5 and live under `src/test/`. NeoForge game tests are regis
 
 ### Adding a new game test (read this — past agents kept getting it wrong)
 
-Adding a game test in MC 26.1+ takes **three** things, not two. If you do only the first two it silently skips — there is no error, no warning, and `runGameTestServer` keeps reporting "N GAME TESTS COMPLETE" without your test included in N. This is the same footgun called out in the `blueprint_replace` comment in [BuildCraftGameTests](src/test/java/buildcraft/BuildCraftGameTests.java) ("37→34 even before these additions") — most of those skipped tests are missing the third piece.
+Adding a game test in MC 26.1+ takes **three** things, not two. If you do only the first two it silently skips — there is no error, no warning, and `runGameTestServer` keeps reporting "N GAME TESTS COMPLETE" without your test included in N. This footgun had silently disabled 34 registered tests until a manifest sweep caught them — it's easy to miss, so verify the count (below).
 
 1. **Java method** — static, signature `void name(GameTestHelper helper)`, throws on failure, calls `helper.succeed()` (or one of the async `succeedWhen*` variants) on pass. Put it in a `*Tester.java` class under the right subsystem subpackage of `src/test/java/buildcraft/`.
 

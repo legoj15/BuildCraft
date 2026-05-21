@@ -1,8 +1,8 @@
 {
     "parent": "buildcraftunofficial:item/pipe_item",
     "textures": {
-        "top": "buildcraftunofficial:pipes/iron_rf_clear",
-        "center": "buildcraftunofficial:pipes/iron_rf_clear",
-        "bottom": "buildcraftunofficial:pipes/iron_rf_filled"
+        "top": "buildcraftunofficial:pipes/iron_rf_m128",
+        "center": "buildcraftunofficial:pipes/iron_rf_m128",
+        "bottom": "buildcraftunofficial:pipes/iron_rf_m128"
     }
 }

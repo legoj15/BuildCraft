@@ -34,6 +34,6 @@
     "buildcraftunofficial:integration_table",
     "buildcraftunofficial:filtered_buffer",
     "buildcraftunofficial:pipe_holder",
-    "buildcraftunofficial:zone_planner"
+    { "id": "buildcraftunofficial:zone_planner", "required": false }
   ]
 }

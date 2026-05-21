@@ -50,6 +50,10 @@ public class BCCoreCreativeTabs {
                                 if (BCCoreItems.POWER_TESTER != null) {
                                     output.accept(BCCoreItems.POWER_TESTER.get());
                                 }
+                                // Dev-only Goggles (only when launched with -Dbuildcraft.dev=true)
+                                if (BCCoreItems.GOGGLES != null) {
+                                    output.accept(BCCoreItems.GOGGLES.get());
+                                }
                                 // Water Spring
                                 output.accept(BCCoreItems.SPRING_WATER.get());
                                 // Oil Spring
@@ -116,8 +120,10 @@ public class BCCoreCreativeTabs {
                                 output.accept(BCFactoryBlocks.HEAT_EXCHANGE.get());
                                 output.accept(BCFactoryItems.WATER_GEL_SPAWN.get());
                                 output.accept(BCFactoryItems.GELLED_WATER.get());
-                                // Robotics
-                                output.accept(BCRoboticsItems.ZONE_PLANNER.get());
+                                // Robotics (Zone Planner is dev-only)
+                                if (BCRoboticsItems.ZONE_PLANNER != null) {
+                                    output.accept(BCRoboticsItems.ZONE_PLANNER.get());
+                                }
                                 // Transport
                                 output.accept(BCTransportItems.FILTERED_BUFFER.get());
                                 output.accept(BCTransportItems.WATERPROOF.get());

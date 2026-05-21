@@ -22,9 +22,6 @@ public class BCCoreItems {
         public static final DeferredItem<ItemWrench_Neptune> WRENCH = ITEMS.registerItem("wrench",
                         ItemWrench_Neptune::new, props -> props.stacksTo(1));
 
-        public static final DeferredItem<ItemGoggles> GOGGLES = ITEMS.registerItem("goggles",
-                        ItemGoggles::new, props -> props.stacksTo(1).durability(0).equippable(EquipmentSlot.HEAD));
-
         public static final DeferredItem<ItemFragileFluidContainer> FRAGILE_FLUID_CONTAINER = ITEMS.registerItem(
                         "fragile_fluid_container",
                         ItemFragileFluidContainer::new, props -> props);
@@ -93,10 +90,22 @@ public class BCCoreItems {
         public static final DeferredItem<net.minecraft.world.item.BlockItem> SPRING_OIL = ITEMS
                         .registerSimpleBlockItem("spring_oil", BCCoreBlocks.SPRING_OIL);
 
-        // Dev-only — mirrors BCCoreBlocks.POWER_TESTER. Null when -Dbuildcraft.dev is unset.
+        // ─── Dev-only items — gated behind -Dbuildcraft.dev=true ─────────────
+        // Registered only in a dev workspace so unfinished/experimental content isn't lost,
+        // but kept out of public releases. BCCoreClient tags them with a red "Dev only"
+        // tooltip via BCTooltips.markDevOnly.
+
+        // The 1.12.2 goggles headpiece was never finished.
+        public static final DeferredItem<ItemGoggles> GOGGLES;
+
+        // Debug block that sinks MJ power — mirrors BCCoreBlocks.POWER_TESTER.
         public static final DeferredItem<net.minecraft.world.item.BlockItem> POWER_TESTER;
 
         static {
+                GOGGLES = BCLib.DEV
+                                ? ITEMS.registerItem("goggles", ItemGoggles::new,
+                                                props -> props.stacksTo(1).durability(0).equippable(EquipmentSlot.HEAD))
+                                : null;
                 POWER_TESTER = (BCLib.DEV && BCCoreBlocks.POWER_TESTER != null)
                                 ? ITEMS.registerSimpleBlockItem("power_tester", BCCoreBlocks.POWER_TESTER)
                                 : null;

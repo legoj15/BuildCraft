@@ -16,7 +16,7 @@ The 1.12.2 → modern port is effectively done. Java packages still mirror the o
 | **Factory** | 51 | ✅ Complete |
 | **Energy** | 31 | ✅ Complete |
 | **Builders** | 127 | ✅ Complete |
-| **Robotics** | 12 | ⚠️ Only Zone Planner ported (low priority — robots were not actively maintained in 1.12.2) |
+| **Robotics** | 12 | ⚠️ Only Zone Planner ported, now dev-mode-gated (unfinished); robots not ported (low priority — not actively maintained in 1.12.2) |
 
 Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains accessible via the `8.0.x-1.12.2` branch if reference is ever needed.
 

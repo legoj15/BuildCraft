@@ -246,6 +246,13 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_hand_break_drops_everything"), () -> buildcraft.transport.PipeDropsTester::testPipeHandBreakDropsEverything);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_fluid_break_drops_shards"), () -> buildcraft.transport.PipeDropsTester::testFluidPipeBreakDropsFluidShards);
 
+            // Machine ↔ pipe connectivity — item pipes must see machine inventories exposed as
+            // Capabilities.Item.BLOCK (Auto Workbench, laser tables, Electronic Library).
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:autoworkbench_wood_pipe_extracts"), () -> buildcraft.factory.MachinePipeConnectivityTester::testWoodPipeExtractsFromAutoWorkbench);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:autoworkbench_cobblestone_pipe_connects"), () -> buildcraft.factory.MachinePipeConnectivityTester::testCobblestonePipeConnectsToAutoWorkbench);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:autoworkbench_clay_pipe_inserts"), () -> buildcraft.factory.MachinePipeConnectivityTester::testClayPipeInsertsIntoAutoWorkbench);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:item_machines_expose_item_capability"), () -> buildcraft.factory.MachinePipeConnectivityTester::testItemMachinesExposeItemHandlerCapability);
+
             // Tank bookkeeping — composite ResourceHandler<FluidResource> capacity-respect
             // and cross-slot spillover (modelled on TileBuilder.tankManager's per-slot delegate).
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:tank_single_capacity"), () -> buildcraft.lib.fluid.TankManagerTester::testSingleTankCapacityRespect);

@@ -4,6 +4,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
@@ -70,6 +71,14 @@ public class BCSilicon {
             (laser, direction) -> laser.getMjReceiver());
         event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCSiliconBlockEntities.LASER.get(),
             (laser, direction) -> laser.getMjReceiver());
+
+        // Item handlers — lets item pipes connect to and exchange items with the laser tables.
+        event.registerBlockEntity(Capabilities.Item.BLOCK, BCSiliconBlockEntities.ASSEMBLY_TABLE.get(),
+            (table, direction) -> table.getItemHandler(direction));
+        event.registerBlockEntity(Capabilities.Item.BLOCK, BCSiliconBlockEntities.INTEGRATION_TABLE.get(),
+            (table, direction) -> table.getItemHandler(direction));
+        event.registerBlockEntity(Capabilities.Item.BLOCK, BCSiliconBlockEntities.ADVANCED_CRAFTING_TABLE.get(),
+            (table, direction) -> table.getItemHandler(direction));
     }
 
     private static void commonSetup(FMLCommonSetupEvent event) {

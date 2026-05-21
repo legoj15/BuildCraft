@@ -60,6 +60,8 @@ public class BCFactory {
             (workbench, direction) -> workbench.getMjReceiver());
         event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
             (workbench, direction) -> workbench.getMjReceiver());
+        event.registerBlockEntity(Capabilities.Item.BLOCK, BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
+            (workbench, direction) -> workbench.getItemHandler(direction));
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCFactoryBlockEntities.MINING_WELL.get(),
             (miner, direction) -> miner.getMjReceiver());
         event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCFactoryBlockEntities.MINING_WELL.get(),

@@ -106,6 +106,10 @@ public class BCBuilders {
             (builder, direction) -> builder.getItemHandler(direction));
         event.registerBlockEntity(Capabilities.Fluid.BLOCK, BCBuildersBlockEntities.BUILDER.get(),
             (builder, direction) -> builder.getTankManager());
+
+        // Electronic Library — exposes its snapshot up/download slots to item pipes.
+        event.registerBlockEntity(Capabilities.Item.BLOCK, BCBuildersBlockEntities.LIBRARY.get(),
+            (library, direction) -> library.getItemHandler(direction));
     }
 
     private static void buildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {

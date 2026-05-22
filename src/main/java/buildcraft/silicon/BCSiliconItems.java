@@ -6,6 +6,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 
+import buildcraft.lib.BCLib;
 import buildcraft.silicon.item.ItemGateCopier;
 import buildcraft.silicon.item.ItemPluggableFacade;
 import buildcraft.silicon.item.ItemPluggableGate;
@@ -25,8 +26,14 @@ public class BCSiliconItems {
     public static final DeferredItem<BlockItem> ADVANCED_CRAFTING_TABLE =
             ITEMS.registerSimpleBlockItem(BCSiliconBlocks.ADVANCED_CRAFTING_TABLE);
 
-    public static final DeferredItem<BlockItem> INTEGRATION_TABLE =
-            ITEMS.registerSimpleBlockItem(BCSiliconBlocks.INTEGRATION_TABLE);
+    // Dev-only — mirrors BCSiliconBlocks.INTEGRATION_TABLE. Null in public releases.
+    public static final DeferredItem<BlockItem> INTEGRATION_TABLE;
+
+    static {
+        INTEGRATION_TABLE = (BCLib.DEV && BCSiliconBlocks.INTEGRATION_TABLE != null)
+                ? ITEMS.registerSimpleBlockItem(BCSiliconBlocks.INTEGRATION_TABLE)
+                : null;
+    }
 
     // Chipsets — each variant is a separate item (replacing 1.12.2 metadata sub-items)
     public static final DeferredItem<Item> REDSTONE_RED_CHIPSET =

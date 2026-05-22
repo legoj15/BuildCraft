@@ -175,7 +175,9 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
             if (available <= 0) continue;
             ItemStack slotStack = res.toStack(Math.min(available, count));
             if (filter.matches(slotStack)) {
-                // Simulate extraction to verify
+                // Simulate extraction to confirm the slot actually yields items. A slot can match
+                // the filter yet refuse extraction (e.g. an insert-only inventory like the Auto
+                // Workbench's materials grid) — keep scanning later slots when that happens.
                 try (Transaction tx = Transaction.openRoot()) {
                     int extracted = handler.extract(i, res, Math.min(available, count), tx);
                     if (extracted > 0) {
@@ -184,7 +186,9 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
                         // tx auto-aborts on close (no commit)
                     }
                 }
-                break;
+                if (sourceSlot >= 0) {
+                    break;
+                }
             }
         }
 

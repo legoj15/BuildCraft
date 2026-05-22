@@ -34,9 +34,21 @@ public class BCSiliconClient {
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(BCSiliconMenuTypes.ASSEMBLY_TABLE.get(), GuiAssemblyTable::new);
-        event.register(BCSiliconMenuTypes.INTEGRATION_TABLE.get(), GuiIntegrationTable::new);
+        // Integration Table is dev-only — absent from public builds.
+        if (BCSiliconMenuTypes.INTEGRATION_TABLE != null) {
+            event.register(BCSiliconMenuTypes.INTEGRATION_TABLE.get(), GuiIntegrationTable::new);
+        }
         event.register(BCSiliconMenuTypes.ADVANCED_CRAFTING_TABLE.get(), GuiAdvancedCraftingTable::new);
         event.register(BCSiliconMenuTypes.GATE.get(), buildcraft.silicon.gui.GuiGate::new);
+    }
+
+    @SubscribeEvent
+    public static void onClientSetup(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
+        // Dev-only Integration Table gets a red "Dev only" tooltip marker.
+        if (buildcraft.lib.BCLib.DEV && BCSiliconItems.INTEGRATION_TABLE != null) {
+            event.enqueueWork(() ->
+                buildcraft.lib.client.BCTooltips.markDevOnly(BCSiliconItems.INTEGRATION_TABLE.get()));
+        }
     }
 
 

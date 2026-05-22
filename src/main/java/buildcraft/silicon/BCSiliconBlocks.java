@@ -5,6 +5,7 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import buildcraft.lib.BCLib;
 import buildcraft.silicon.block.BlockLaser;
 import buildcraft.silicon.block.BlockLaserTable;
 import buildcraft.silicon.container.ContainerAssemblyTable;
@@ -35,11 +36,21 @@ public class BCSiliconBlocks {
                 BCSiliconBlockEntities.ADVANCED_CRAFTING_TABLE,
                 (id, inv, tile) -> new ContainerAdvancedCraftingTable(id, inv.player, (TileAdvancedCraftingTable) tile)), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockLaserTable> INTEGRATION_TABLE = BLOCKS.registerBlock(
-            "integration_table",
-            props -> new BlockLaserTable(props,
-                BCSiliconBlockEntities.INTEGRATION_TABLE,
-                (id, inv, tile) -> new ContainerIntegrationTable(id, inv.player, (TileIntegrationTable) tile)), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
+    // Dev-only — the Integration Table has no registered integration recipes, so it is
+    // non-functional in survival and should not ship in public builds. Gated behind
+    // -Dbuildcraft.dev=true; null in public releases.
+    public static final DeferredBlock<BlockLaserTable> INTEGRATION_TABLE;
+
+    static {
+        INTEGRATION_TABLE = BCLib.DEV
+                ? BLOCKS.registerBlock(
+                    "integration_table",
+                    props -> new BlockLaserTable(props,
+                        BCSiliconBlockEntities.INTEGRATION_TABLE,
+                        (id, inv, tile) -> new ContainerIntegrationTable(id, inv.player, (TileIntegrationTable) tile)),
+                    () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops())
+                : null;
+    }
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

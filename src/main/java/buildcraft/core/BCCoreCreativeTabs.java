@@ -131,7 +131,10 @@ public class BCCoreCreativeTabs {
                                 output.accept(BCSiliconBlocks.LASER.get());
                                 output.accept(BCSiliconBlocks.ASSEMBLY_TABLE.get());
                                 output.accept(BCSiliconBlocks.ADVANCED_CRAFTING_TABLE.get());
-                                output.accept(BCSiliconBlocks.INTEGRATION_TABLE.get());
+                                // Integration Table is dev-only.
+                                if (BCSiliconBlocks.INTEGRATION_TABLE != null) {
+                                    output.accept(BCSiliconBlocks.INTEGRATION_TABLE.get());
+                                }
                                 output.accept(BCSiliconItems.REDSTONE_RED_CHIPSET.get());
                                 output.accept(BCSiliconItems.REDSTONE_IRON_CHIPSET.get());
                                 output.accept(BCSiliconItems.REDSTONE_GOLD_CHIPSET.get());

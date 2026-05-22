@@ -250,6 +250,7 @@ public class BuildCraftGameTests {
             // Machine ↔ pipe connectivity — item pipes must see machine inventories exposed as
             // Capabilities.Item.BLOCK (Auto Workbench, laser tables, Electronic Library).
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:autoworkbench_wood_pipe_extracts"), () -> buildcraft.factory.MachinePipeConnectivityTester::testWoodPipeExtractsFromAutoWorkbench);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:assemblytable_wood_pipe_skips_resources"), () -> buildcraft.factory.MachinePipeConnectivityTester::testWoodPipeSkipsAssemblyTableResources);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:autoworkbench_cobblestone_pipe_connects"), () -> buildcraft.factory.MachinePipeConnectivityTester::testCobblestonePipeConnectsToAutoWorkbench);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:autoworkbench_clay_pipe_inserts"), () -> buildcraft.factory.MachinePipeConnectivityTester::testClayPipeInsertsIntoAutoWorkbench);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:item_machines_expose_item_capability"), () -> buildcraft.factory.MachinePipeConnectivityTester::testItemMachinesExposeItemHandlerCapability);

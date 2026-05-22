@@ -44,7 +44,7 @@ public class TileAssemblyTable extends TileLaserTableBase {
     public final ItemHandlerSimple inv = itemManager.addInvHandler(
         "inv",
         3 * 4,
-        ItemHandlerManager.EnumAccess.BOTH,
+        ItemHandlerManager.EnumAccess.INSERT,
         EnumPipePart.VALUES
     );
     public SortedMap<AssemblyInstruction, EnumAssemblyRecipeState> recipesStates = new TreeMap<>();

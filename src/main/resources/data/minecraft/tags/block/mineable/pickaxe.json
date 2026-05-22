@@ -31,7 +31,7 @@
     "buildcraftunofficial:laser",
     "buildcraftunofficial:assembly_table",
     "buildcraftunofficial:advanced_crafting_table",
-    "buildcraftunofficial:integration_table",
+    { "id": "buildcraftunofficial:integration_table", "required": false },
     "buildcraftunofficial:filtered_buffer",
     "buildcraftunofficial:pipe_holder",
     { "id": "buildcraftunofficial:zone_planner", "required": false }

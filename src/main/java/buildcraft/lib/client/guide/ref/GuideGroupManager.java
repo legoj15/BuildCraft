@@ -225,8 +225,12 @@ public class GuideGroupManager {
             buildcraft.silicon.BCSiliconItems.LASER.get());
         addKeys("buildcraft", "laser_power_providers",
             buildcraft.silicon.BCSiliconItems.ADVANCED_CRAFTING_TABLE.get(),
-            buildcraft.silicon.BCSiliconItems.ASSEMBLY_TABLE.get(),
-            buildcraft.silicon.BCSiliconItems.INTEGRATION_TABLE.get());
+            buildcraft.silicon.BCSiliconItems.ASSEMBLY_TABLE.get());
+        // Integration Table is dev-only — absent from public builds.
+        if (buildcraft.silicon.BCSiliconItems.INTEGRATION_TABLE != null) {
+            addKeys("buildcraft", "laser_power_providers",
+                buildcraft.silicon.BCSiliconItems.INTEGRATION_TABLE.get());
+        }
 
         // Area markers: the quarry/architect/filler area-of-effect machines depend on these.
         addEntries("buildcraft", "area_markers",

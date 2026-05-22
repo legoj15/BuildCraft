@@ -7,6 +7,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import buildcraft.lib.BCLib;
 import buildcraft.silicon.tile.TileAdvancedCraftingTable;
 import buildcraft.silicon.tile.TileAssemblyTable;
 import buildcraft.silicon.tile.TileIntegrationTable;
@@ -31,10 +32,16 @@ public class BCSiliconBlockEntities {
                     () -> new BlockEntityType<>(TileAdvancedCraftingTable::new,
                             BCSiliconBlocks.ADVANCED_CRAFTING_TABLE.get()));
 
-    public static final Supplier<BlockEntityType<TileIntegrationTable>> INTEGRATION_TABLE =
-            BLOCK_ENTITIES.register("integration_table",
-                    () -> new BlockEntityType<>(TileIntegrationTable::new,
-                            BCSiliconBlocks.INTEGRATION_TABLE.get()));
+    // Dev-only — mirrors BCSiliconBlocks.INTEGRATION_TABLE. Null in public releases.
+    public static final Supplier<BlockEntityType<TileIntegrationTable>> INTEGRATION_TABLE;
+
+    static {
+        INTEGRATION_TABLE = (BCLib.DEV && BCSiliconBlocks.INTEGRATION_TABLE != null)
+                ? BLOCK_ENTITIES.register("integration_table",
+                        () -> new BlockEntityType<>(TileIntegrationTable::new,
+                                BCSiliconBlocks.INTEGRATION_TABLE.get()))
+                : null;
+    }
 
     public static void init(IEventBus modEventBus) {
         BLOCK_ENTITIES.register(modEventBus);

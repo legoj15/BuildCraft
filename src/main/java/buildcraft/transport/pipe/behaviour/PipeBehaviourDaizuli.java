@@ -17,6 +17,7 @@ import buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver;
 import buildcraft.api.transport.pipe.PipeEventActionActivate;
 import buildcraft.api.transport.pipe.PipeEventHandler;
 import buildcraft.api.transport.pipe.PipeEventItem;
+import buildcraft.api.transport.pipe.PipeEventPlaced;
 import buildcraft.api.transport.pipe.PipeEventStatement;
 import buildcraft.api.transport.pipe.PipeFaceTex;
 
@@ -99,7 +100,6 @@ public class PipeBehaviourDaizuli extends PipeBehaviourDirectional {
             int n = colour.getId() + (player.isShiftKeyDown() ? 15 : 1);
             colour = DyeColor.byId(n & 15);
             pipe.getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
-            AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);
             return true;
         }
         return false;
@@ -126,6 +126,13 @@ public class PipeBehaviourDaizuli extends PipeBehaviourDirectional {
                 this.colour = action.color;
                 pipe.getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
             }
+        }
+    }
+
+    @PipeEventHandler
+    public void onPlaced(PipeEventPlaced event) {
+        if (event.placer instanceof Player player) {
+            AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);
         }
     }
 }

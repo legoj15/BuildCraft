@@ -35,14 +35,9 @@ import buildcraft.transport.BCTransportStatements;
 import buildcraft.transport.container.ContainerEmzuliPipe;
 import buildcraft.transport.statements.ActionExtractionPreset;
 
-import buildcraft.api.transport.pipe.PipeEventPlaced;
-import buildcraft.lib.misc.AdvancementUtil;
-
 /** Emzuli pipe — filtered extraction with round-robin across 4 preset slots, each with a colour assignment.
  * Activated via gate Extraction Preset actions. */
 public class PipeBehaviourEmzuli extends PipeBehaviourWood {
-
-    private static final net.minecraft.resources.Identifier ADVANCEMENT = net.minecraft.resources.Identifier.parse("buildcraftunofficial:categorizing_with_colors");
 
     public enum SlotIndex {
         SQUARE(DyeColor.RED),
@@ -258,13 +253,6 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
             ActionExtractionPreset preset = (ActionExtractionPreset) event.action;
             activeSlots.add(preset.index);
             activatedTtl[preset.index.ordinal()] = 2;
-        }
-    }
-
-    @PipeEventHandler
-    public void onPlaced(PipeEventPlaced event) {
-        if (event.placer instanceof Player player) {
-            AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);
         }
     }
 }

@@ -52,6 +52,7 @@ import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeDefinition;
 import buildcraft.api.transport.pipe.PipeEvent;
+import buildcraft.api.transport.pipe.PipeEventPlaced;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
 import buildcraft.api.transport.pipe.PipeApi;
@@ -281,6 +282,9 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
             DyeColor col = stack.get(BCTransportItems.PIPE_COLOUR.get());
             if (col != null) {
                 pipe.setColour(col);
+            }
+            if (level != null && !level.isClientSide()) {
+                fireEvent(new PipeEventPlaced(this, placer, stack));
             }
         }
         if (placer instanceof Player player && level != null && !level.isClientSide()) {

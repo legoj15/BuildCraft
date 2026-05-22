@@ -1,6 +1,6 @@
 {
   "display": {
-    "icon": { "id": "buildcraftunofficial:pipe_emzuli_item" },
+    "icon": { "id": "buildcraftunofficial:pipe_daizuli_item" },
     "title": { "translate": "advancements.buildcraftunofficial.categorizing_with_colors.title" },
     "description": { "translate": "advancements.buildcraftunofficial.categorizing_with_colors.description" },
     "frame": "goal"

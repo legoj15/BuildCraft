@@ -78,6 +78,11 @@ public class TileChute extends TileBC_Neptune implements MenuProvider {
         return mjReceiver;
     }
 
+    /** @return The internal MJ battery, for Forge-Energy capability registration. */
+    public MjBattery getBattery() {
+        return battery;
+    }
+
     public ItemHandlerSimple getInv() {
         return inv;
     }

@@ -30,6 +30,16 @@ public class MjBatteryEnergyHandler extends SnapshotJournal<Long> implements Ene
         this.battery = battery;
     }
 
+    /**
+     * Capability-registration factory that respects the {@code powerMode} config. Returns a
+     * handler only when MJ&lt;-&gt;RF autoconversion is enabled; under {@code PowerMode.MJ_ONLY}
+     * it returns {@code null}, so the machine exposes no Forge Energy capability and FE cables
+     * won't connect — matching that mode's "machines require MJ exclusively" contract.
+     */
+    public static MjBatteryEnergyHandler createIfRfEnabled(MjBattery battery) {
+        return MjAPI.isRfAutoConversionEnabled() ? new MjBatteryEnergyHandler(battery) : null;
+    }
+
     private long mjPerRf() {
         return MjAPI.getRfConversion().mjPerRf;
     }

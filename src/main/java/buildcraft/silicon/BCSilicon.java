@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import buildcraft.api.facades.FacadeAPI;
 import buildcraft.api.mj.MjAPI;
+import buildcraft.lib.mj.MjBatteryEnergyHandler;
 
 import buildcraft.core.BCCore;
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
@@ -71,6 +72,8 @@ public class BCSilicon {
             (laser, direction) -> laser.getMjReceiver());
         event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCSiliconBlockEntities.LASER.get(),
             (laser, direction) -> laser.getMjReceiver());
+        event.registerBlockEntity(Capabilities.Energy.BLOCK, BCSiliconBlockEntities.LASER.get(),
+            (laser, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(laser.getBattery()));
 
         // Item handlers — lets item pipes connect to and exchange items with the laser tables.
         event.registerBlockEntity(Capabilities.Item.BLOCK, BCSiliconBlockEntities.ASSEMBLY_TABLE.get(),

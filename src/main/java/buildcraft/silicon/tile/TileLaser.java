@@ -72,6 +72,11 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
         return mjReceiver;
     }
 
+    /** @return The internal MJ battery, for Forge-Energy capability registration. */
+    public MjBattery getBattery() {
+        return battery;
+    }
+
     // --- ILocalBlockUpdateSubscriber ---
 
     @Override

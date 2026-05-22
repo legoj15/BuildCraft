@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.core.BCCore;
+import buildcraft.lib.mj.MjBatteryEnergyHandler;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
@@ -66,10 +67,14 @@ public class BCFactory {
             (miner, direction) -> miner.getMjReceiver());
         event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCFactoryBlockEntities.MINING_WELL.get(),
             (miner, direction) -> miner.getMjReceiver());
+        event.registerBlockEntity(Capabilities.Energy.BLOCK, BCFactoryBlockEntities.MINING_WELL.get(),
+            (miner, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(miner.getBattery()));
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCFactoryBlockEntities.PUMP.get(),
             (pump, direction) -> pump.getMjReceiver());
         event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCFactoryBlockEntities.PUMP.get(),
             (pump, direction) -> pump.getMjReceiver());
+        event.registerBlockEntity(Capabilities.Energy.BLOCK, BCFactoryBlockEntities.PUMP.get(),
+            (pump, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(pump.getBattery()));
         event.registerBlockEntity(Capabilities.Fluid.BLOCK, BCFactoryBlockEntities.TANK.get(),
             (tank, direction) -> new buildcraft.factory.tile.TankColumnResourceHandler(tank));
         event.registerBlockEntity(Capabilities.Fluid.BLOCK, BCFactoryBlockEntities.PUMP.get(),
@@ -89,12 +94,16 @@ public class BCFactory {
             (chute, direction) -> chute.getMjReceiver());
         event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCFactoryBlockEntities.CHUTE.get(),
             (chute, direction) -> chute.getMjReceiver());
+        event.registerBlockEntity(Capabilities.Energy.BLOCK, BCFactoryBlockEntities.CHUTE.get(),
+            (chute, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(chute.getBattery()));
         event.registerBlockEntity(Capabilities.Item.BLOCK, BCFactoryBlockEntities.CHUTE.get(),
             (chute, direction) -> chute.getItemHandler(direction));
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCFactoryBlockEntities.DISTILLER.get(),
             (distiller, direction) -> distiller.getMjReceiver());
         event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCFactoryBlockEntities.DISTILLER.get(),
             (distiller, direction) -> distiller.getMjReceiver());
+        event.registerBlockEntity(Capabilities.Energy.BLOCK, BCFactoryBlockEntities.DISTILLER.get(),
+            (distiller, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(distiller.getBattery()));
         event.registerBlockEntity(Capabilities.Fluid.BLOCK, BCFactoryBlockEntities.DISTILLER.get(),
             (distiller, direction) -> {
                 ResourceHandler<FluidResource> tank = distiller.getTankForSide(direction);

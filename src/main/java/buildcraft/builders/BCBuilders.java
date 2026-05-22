@@ -83,7 +83,7 @@ public class BCBuilders {
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCBuildersBlockEntities.QUARRY.get(),
             (quarry, direction) -> quarry.getMjReceiver());
         event.registerBlockEntity(Capabilities.Energy.BLOCK, BCBuildersBlockEntities.QUARRY.get(),
-            (quarry, direction) -> new MjBatteryEnergyHandler(quarry.getBattery()));
+            (quarry, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(quarry.getBattery()));
         event.registerBlockEntity(Capabilities.Item.BLOCK, BCBuildersBlockEntities.QUARRY.get(),
             (quarry, direction) -> net.neoforged.neoforge.transfer.EmptyResourceHandler.instance());
 
@@ -91,7 +91,7 @@ public class BCBuilders {
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCBuildersBlockEntities.FILLER.get(),
             (filler, direction) -> filler.getMjReceiver());
         event.registerBlockEntity(Capabilities.Energy.BLOCK, BCBuildersBlockEntities.FILLER.get(),
-            (filler, direction) -> new MjBatteryEnergyHandler(filler.getBattery()));
+            (filler, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(filler.getBattery()));
         event.registerBlockEntity(Capabilities.Item.BLOCK, BCBuildersBlockEntities.FILLER.get(),
             (filler, direction) -> filler.getItemHandler(direction));
 
@@ -101,7 +101,7 @@ public class BCBuilders {
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCBuildersBlockEntities.BUILDER.get(),
             (builder, direction) -> builder.getMjReceiver());
         event.registerBlockEntity(Capabilities.Energy.BLOCK, BCBuildersBlockEntities.BUILDER.get(),
-            (builder, direction) -> new MjBatteryEnergyHandler(builder.getBattery()));
+            (builder, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(builder.getBattery()));
         event.registerBlockEntity(Capabilities.Item.BLOCK, BCBuildersBlockEntities.BUILDER.get(),
             (builder, direction) -> builder.getItemHandler(direction));
         event.registerBlockEntity(Capabilities.Fluid.BLOCK, BCBuildersBlockEntities.BUILDER.get(),

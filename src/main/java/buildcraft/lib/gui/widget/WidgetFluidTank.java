@@ -162,8 +162,10 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
                         }
                     }
                 }
+                return;
             }
-            return;
+            // A non-fluid-container item (e.g. an ice block) — fall through to the
+            // solid-coolant conversion below, exactly as the survival branch does.
         } else {
             ItemStack original = carried.copy();
             net.neoforged.neoforge.transfer.access.ItemAccess access = net.neoforged.neoforge.transfer.access.ItemAccess.forPlayerCursor(player, player.containerMenu).oneByOne();

@@ -79,6 +79,7 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_overheat_explodes_when_configured"), () -> buildcraft.energy.EngineTester::testStirlingEngineExplodesWhenConfigured);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_clear_overheat_api"), () -> buildcraft.energy.EngineTester::testEngineClearOverheatApi);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_has_alternate_receiver_isolated"), () -> buildcraft.energy.EngineTester::testEngineHasAlternateReceiverIsolated);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:combustion_engine_coolant_accepts_ice"), () -> buildcraft.energy.EngineTester::testCombustionEngineCoolantTankAcceptsIce);
 
             // Energy Converter (Dynamo MJ + FE Engine)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:dynamo_upgrade_slot_filtering"), () -> buildcraft.energy.EnergyConverterTester::testDynamoUpgradeSlotFiltering);

@@ -1,22 +1,31 @@
 package buildcraft.energy;
 
+import io.netty.buffer.Unpooled;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
+
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.energy.BCEnergyBlocks;
-import buildcraft.lib.BCLibConfig;
-import buildcraft.lib.engine.TileEngineBase_BC8;
+import buildcraft.energy.container.ContainerEngineIron;
 import buildcraft.energy.tile.TileEngineIron_BC8;
 import buildcraft.energy.tile.TileEngineStone_BC8;
+import buildcraft.lib.BCLibConfig;
+import buildcraft.lib.engine.TileEngineBase_BC8;
+import buildcraft.lib.net.PacketBufferBC;
 
 public class EngineTester {
 
@@ -168,6 +177,75 @@ public class EngineTester {
             helper.succeed();
             // TODO: Combustion Engine tests assert dual fluids when fluids are fully linked via NeoForge Capabilities
         });
+    }
+
+    /**
+     * Vanilla ice, packed ice and blue ice are registered as solid coolants (BCEnergyRecipes):
+     * clicking a Combustion Engine's coolant tank with one on the cursor converts it to water in
+     * the tank. WidgetFluidTank's creative branch regressed — an unconditional return after the
+     * fluid-container check skipped the solid-coolant conversion for any non-container item, so a
+     * creative player could no longer feed ice to the tank. Survival was unaffected; this pins both.
+     */
+    public static void testCombustionEngineCoolantTankAcceptsIce(GameTestHelper helper) {
+        BlockPos enginePos = new BlockPos(2, 2, 2);
+        helper.setBlock(enginePos, BCEnergyBlocks.ENGINE_IRON.get());
+
+        helper.runAfterDelay(2, () -> {
+            TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos, TileEngineIron_BC8.class);
+            if (engine == null) {
+                throw new IllegalStateException("Failed to place Combustion Engine!");
+            }
+
+            // Survival: ice converts to water and the block is consumed.
+            clickCoolantTankWithIce(helper, engine, false);
+            engine.tankCoolant.set(0, FluidResource.EMPTY, 0);
+            // Creative: ice converts to water and the block is NOT consumed (the regressed path).
+            clickCoolantTankWithIce(helper, engine, true);
+
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Opens a Combustion Engine GUI for a mock player of the given mode, puts an ice block on the
+     * cursor, replays the coolant-tank click packet, and asserts the ice converted to 1500 mB of
+     * water (and was consumed iff the player is in survival).
+     */
+    private static void clickCoolantTankWithIce(GameTestHelper helper, TileEngineIron_BC8 engine,
+            boolean creative) {
+        String who = creative ? "Creative" : "Survival";
+        Player player = helper.makeMockPlayer(creative ? GameType.CREATIVE : GameType.SURVIVAL);
+        player.getAbilities().instabuild = creative;
+
+        ContainerEngineIron container = new ContainerEngineIron(0, player.getInventory(), engine);
+        player.containerMenu = container;
+        container.setCarried(new ItemStack(Blocks.ICE));
+
+        // Replay the client -> server tank-click payload (WidgetFluidTank.NET_CLICK == 0).
+        PacketBufferBC buffer = new PacketBufferBC(Unpooled.buffer());
+        buffer.writeByte(0);
+        container.widgetCoolant.handleWidgetDataServer(null, buffer);
+        buffer.release();
+
+        long amount = engine.tankCoolant.getAmountAsLong(0);
+        if (amount != 1500) {
+            throw new IllegalStateException(who + " player: clicking the coolant tank with an ice "
+                    + "block should fill it with 1500 mB of water, got " + amount + " mB");
+        }
+        if (!engine.tankCoolant.getResource(0).is(Fluids.WATER)) {
+            throw new IllegalStateException(who + " player: coolant tank should hold water after "
+                    + "ice conversion, got " + engine.tankCoolant.getResource(0));
+        }
+
+        ItemStack cursor = container.getCarried();
+        if (creative && (cursor.isEmpty() || cursor.getCount() != 1)) {
+            throw new IllegalStateException("Creative player: the ice block should not be consumed, "
+                    + "cursor now holds " + cursor);
+        }
+        if (!creative && !cursor.isEmpty()) {
+            throw new IllegalStateException("Survival player: the ice block should be consumed, "
+                    + "cursor still holds " + cursor);
+        }
     }
 
     /**

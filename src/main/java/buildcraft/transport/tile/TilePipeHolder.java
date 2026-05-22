@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import javax.annotation.Nonnull;
 
@@ -52,7 +53,6 @@ import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeDefinition;
 import buildcraft.api.transport.pipe.PipeEvent;
-import buildcraft.api.transport.pipe.PipeEventPlaced;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
 import buildcraft.api.transport.pipe.PipeApi;
@@ -62,6 +62,7 @@ import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.net.MessagePipePayload;
 import buildcraft.transport.pipe.Pipe;
+import buildcraft.transport.pipe.behaviour.PipeBehaviourDaizuli;
 import buildcraft.transport.wire.WireManager;
 import buildcraft.transport.pipe.PipeEventBus;
 
@@ -72,6 +73,8 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_diversification");
     private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_FANATIC
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_fanatic");
+    private static final net.minecraft.resources.Identifier ADVANCEMENT_CATEGORIZING_WITH_COLORS
+        = net.minecraft.resources.Identifier.parse("buildcraftunofficial:categorizing_with_colors");
 
     /** ModelData property that passes this tile reference to ModelPipe for baked model generation. */
     public static final net.neoforged.neoforge.model.data.ModelProperty<TilePipeHolder> PIPE_MODEL_DATA =
@@ -79,6 +82,7 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     public final PipeEventBus eventBus = new PipeEventBus();
     private Pipe pipe;
+    private GameProfile owner;
     public final WireManager wireManager = new WireManager(this);
     private final PipePluggable[] pluggables = new PipePluggable[6];
     private boolean scheduleRenderUpdate = true;
@@ -98,6 +102,12 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     @Override
     protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
         super.saveAdditional(output);
+        if (owner != null && owner.id() != null) {
+            output.putString("ownerUUID", owner.id().toString());
+            if (owner.name() != null) {
+                output.putString("ownerName", owner.name());
+            }
+        }
         if (pipe != null) {
             output.store("pipe", CompoundTag.CODEC, pipe.writeToNbt());
         }
@@ -124,6 +134,14 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     @Override
     public void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
         super.loadAdditional(input);
+        String ownerUuid = input.getStringOr("ownerUUID", "");
+        if (!ownerUuid.isEmpty()) {
+            try {
+                owner = new GameProfile(UUID.fromString(ownerUuid), input.getStringOr("ownerName", "Unknown"));
+            } catch (IllegalArgumentException e) {
+                owner = null;
+            }
+        }
         input.read("pipe", CompoundTag.CODEC).ifPresent(pipeTag -> {
             try {
                 if (pipe != null) {
@@ -283,11 +301,9 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
             if (col != null) {
                 pipe.setColour(col);
             }
-            if (level != null && !level.isClientSide()) {
-                fireEvent(new PipeEventPlaced(this, placer, stack));
-            }
         }
         if (placer instanceof Player player && level != null && !level.isClientSide()) {
+            owner = player.getGameProfile();
             AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PIPE_DREAM);
             if (pipe != null) {
                 PipeDefinition def = pipe.getDefinition();
@@ -298,6 +314,10 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
                 }
                 // Pipe fanatic: award criterion by pipe identifier
                 AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PIPE_FANATIC, def.identifier);
+                // Categorizing with colors: the Daizuli pipe is the one that sorts items by colour
+                if (pipe.behaviour instanceof PipeBehaviourDaizuli) {
+                    AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_CATEGORIZING_WITH_COLORS);
+                }
             }
         }
         scheduleRenderUpdate();
@@ -584,7 +604,7 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     @Override
     public GameProfile getOwner() {
-        return null; // Owner tracking not yet ported
+        return owner;
     }
 
     @Override

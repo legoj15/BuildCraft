@@ -21,7 +21,7 @@ public class BuildCraftGameTests {
         if (event.getRegistryKey().equals(Registries.TEST_FUNCTION)) {
             // Pipes
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_routing_test_simple"), () -> PipeRoutingTest::testSimplePipeExtraction);
-            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_placement_fires_placed_event"), () -> buildcraft.transport.PipeEventTester::testPlacingPipeFiresPlacedEvent);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_records_owner_on_placement"), () -> buildcraft.transport.PipeOwnerTester::testPipeRecordsOwnerOnPlacement);
 
             // Power pipe flow chain — engine→wood diamond→diamond→tester end-to-end.
             // The renderer-side regression (visible gaps) is geometry math, pinned

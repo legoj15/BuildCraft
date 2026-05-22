@@ -17,11 +17,9 @@ import buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver;
 import buildcraft.api.transport.pipe.PipeEventActionActivate;
 import buildcraft.api.transport.pipe.PipeEventHandler;
 import buildcraft.api.transport.pipe.PipeEventItem;
-import buildcraft.api.transport.pipe.PipeEventPlaced;
 import buildcraft.api.transport.pipe.PipeEventStatement;
 import buildcraft.api.transport.pipe.PipeFaceTex;
 
-import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 
@@ -29,9 +27,6 @@ import buildcraft.transport.BCTransportStatements;
 import buildcraft.transport.statements.ActionPipeColor;
 
 public class PipeBehaviourDaizuli extends PipeBehaviourDirectional {
-    private static final net.minecraft.resources.Identifier ADVANCEMENT
-        = net.minecraft.resources.Identifier.parse("buildcraftunofficial:categorizing_with_colors");
-
     private DyeColor colour = DyeColor.WHITE;
 
     public PipeBehaviourDaizuli(IPipe pipe) {
@@ -126,13 +121,6 @@ public class PipeBehaviourDaizuli extends PipeBehaviourDirectional {
                 this.colour = action.color;
                 pipe.getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
             }
-        }
-    }
-
-    @PipeEventHandler
-    public void onPlaced(PipeEventPlaced event) {
-        if (event.placer instanceof Player player) {
-            AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);
         }
     }
 }

@@ -1,6 +1,6 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:pipe_placement_fires_placed_event",
+    "function": "buildcraftunofficial:pipe_records_owner_on_placement",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
     "max_ticks": 20,

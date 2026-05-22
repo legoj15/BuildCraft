@@ -12,6 +12,7 @@ import buildcraft.api.enums.EnumPowerStage;
 
 import buildcraft.lib.client.model.ModelHolderVariable;
 import buildcraft.lib.client.model.MutableQuad;
+import buildcraft.lib.client.render.tile.EngineModelCache;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.expression.DefaultContexts;
 import buildcraft.lib.expression.FunctionContext;
@@ -19,50 +20,35 @@ import buildcraft.lib.expression.node.value.NodeVariableDouble;
 import buildcraft.lib.expression.node.value.NodeVariableObject;
 import buildcraft.lib.misc.ExpressionCompat;
 
-/** Defines the variable model holders and expression variables for core engine types
- * (redstone/wood engine and creative engine). */
+/** Defines the variable model holders and expression variables for the core-subsystem engine
+ * types (Redstone/wood engine and Creative engine). Each engine renders through a shared
+ * {@link EngineModelCache}; see that class for the bake-cache and quantisation rationale. */
 public class BCCoreModels {
     private static final NodeVariableDouble ENGINE_PROGRESS;
     private static final NodeVariableObject<EnumPowerStage> ENGINE_STAGE;
     private static final NodeVariableObject<Direction> ENGINE_FACING;
 
-    private static final ModelHolderVariable ENGINE_WOOD;
-    private static final ModelHolderVariable ENGINE_CREATIVE;
+    private static final EngineModelCache ENGINE_WOOD;
+    private static final EngineModelCache ENGINE_CREATIVE;
 
     static {
         FunctionContext fnCtx = new FunctionContext(ExpressionCompat.ENUM_POWER_STAGE, DefaultContexts.createWithAll());
         ENGINE_PROGRESS = fnCtx.putVariableDouble("progress");
         ENGINE_STAGE = fnCtx.putVariableObject("stage", EnumPowerStage.class);
         ENGINE_FACING = fnCtx.putVariableObject("direction", Direction.class);
-        ENGINE_WOOD = new ModelHolderVariable(
-            "buildcraftunofficial:compat_models/engine_wood.json",
-            fnCtx
-        );
-        ENGINE_CREATIVE = new ModelHolderVariable(
-            "buildcraftunofficial:compat_models/engine_creative.json",
-            fnCtx
-        );
+        ENGINE_WOOD = new EngineModelCache(
+            new ModelHolderVariable("buildcraftunofficial:compat_models/engine_wood.json", fnCtx),
+            ENGINE_PROGRESS, ENGINE_STAGE, ENGINE_FACING);
+        ENGINE_CREATIVE = new EngineModelCache(
+            new ModelHolderVariable("buildcraftunofficial:compat_models/engine_creative.json", fnCtx),
+            ENGINE_PROGRESS, ENGINE_STAGE, ENGINE_FACING);
     }
 
     public static MutableQuad[] getWoodEngineQuads(TileEngineBase_BC8 tile, float partialTicks) {
-        ENGINE_PROGRESS.value = tile.getProgressClient(partialTicks);
-        ENGINE_STAGE.value = tile.getPowerStage();
-        ENGINE_FACING.value = tile.getOrientation();
-        if (tile.clientModelData.hasNoNodes()) {
-            tile.clientModelData.setNodes(ENGINE_WOOD.createTickableNodes());
-        }
-        tile.clientModelData.refresh();
-        return ENGINE_WOOD.getCutoutQuads();
+        return ENGINE_WOOD.getQuads(tile, partialTicks);
     }
 
     public static MutableQuad[] getCreativeEngineQuads(TileEngineBase_BC8 tile, float partialTicks) {
-        ENGINE_PROGRESS.value = tile.getProgressClient(partialTicks);
-        ENGINE_STAGE.value = tile.getPowerStage();
-        ENGINE_FACING.value = tile.getOrientation();
-        if (tile.clientModelData.hasNoNodes()) {
-            tile.clientModelData.setNodes(ENGINE_CREATIVE.createTickableNodes());
-        }
-        tile.clientModelData.refresh();
-        return ENGINE_CREATIVE.getCutoutQuads();
+        return ENGINE_CREATIVE.getQuads(tile, partialTicks);
     }
 }

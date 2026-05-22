@@ -20,14 +20,17 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
-
 
 import buildcraft.api.items.IList;
 
 import buildcraft.lib.list.ListHandler;
+import buildcraft.lib.misc.AdvancementUtil;
 
 public class ItemList_BC8 extends Item implements IList {
+
+    private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:list");
 
     public ItemList_BC8(Item.Properties properties) {
         super(properties);
@@ -69,6 +72,7 @@ public class ItemList_BC8 extends Item implements IList {
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide()) {
+            AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);
             if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
                 serverPlayer.openMenu(new net.minecraft.world.MenuProvider() {
                     @Override

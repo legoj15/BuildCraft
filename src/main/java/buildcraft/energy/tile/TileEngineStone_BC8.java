@@ -26,6 +26,8 @@ import buildcraft.lib.misc.AdvancementUtil;
 public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
     private static final net.minecraft.resources.Identifier ADVANCEMENT_POWERING_UP
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:powering_up");
+    private static final net.minecraft.resources.Identifier ADVANCEMENT_LAVA_POWER
+        = net.minecraft.resources.Identifier.parse("buildcraftunofficial:lava_power");
 
     private static final long MAX_OUTPUT = MjAPI.MJ;
     private static final long MIN_OUTPUT = MAX_OUTPUT / 3;
@@ -126,6 +128,9 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
                 totalBurnTime = newBurn;
                 if (getOwner() != null && level != null) {
                     AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT_POWERING_UP);
+                    if (fuelStack.getItem() == net.minecraft.world.item.Items.LAVA_BUCKET) {
+                        AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT_LAVA_POWER);
+                    }
                 }
 
                 // Consume one fuel item

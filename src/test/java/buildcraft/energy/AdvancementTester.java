@@ -77,6 +77,27 @@ public class AdvancementTester {
         helper.succeed();
     }
 
+    public static void testLavaPowerAdvancementLoaded(GameTestHelper helper) {
+        Identifier id = Identifier.parse("buildcraftunofficial:lava_power");
+        AdvancementHolder holder = assertAdvancementLoaded(helper, id);
+        boolean hasImpossibleTrigger = holder.value().criteria().values().stream()
+                .anyMatch(AdvancementTester::isImpossibleTrigger);
+        if (!hasImpossibleTrigger) {
+            throw new AssertionError("lava_power no longer has a minecraft:impossible criterion. "
+                    + "TileEngineStone_BC8 awards this via AdvancementUtil.unlockAdvancement, which writes "
+                    + "to the default 'code_trigger' criterion. Either restore the JSON criterion or "
+                    + "update the handler call to match the new criterion name/type.");
+        }
+        boolean hasCodeTriggerCriterion = holder.value().criteria().containsKey("code_trigger");
+        if (!hasCodeTriggerCriterion) {
+            throw new AssertionError("lava_power's impossible criterion is not named 'code_trigger' "
+                    + "(found: " + holder.value().criteria().keySet() + "). "
+                    + "AdvancementUtil.unlockAdvancement's default criterionName is 'code_trigger', so "
+                    + "the handler call will silently fail to grant the advancement.");
+        }
+        helper.succeed();
+    }
+
     public static void testPrecisionCraftingAdvancementLoaded(GameTestHelper helper) {
         AdvancementHolder holder = assertAdvancementLoaded(helper, PRECISION_CRAFTING_ID);
         // Precision crafting is code-driven (TileAssemblyTable.serverTick calls

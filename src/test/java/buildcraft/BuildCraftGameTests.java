@@ -213,6 +213,7 @@ public class BuildCraftGameTests {
             // Advancements (fine_riches + sticky_dipping JSON shape, oil_fluids tag content, predicate sanity)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:advancement_fine_riches_loaded"), () -> buildcraft.energy.AdvancementTester::testFineRichesAdvancementLoaded);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:advancement_sticky_dipping_loaded"), () -> buildcraft.energy.AdvancementTester::testStickyDippingAdvancementLoaded);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:advancement_lava_power_loaded"), () -> buildcraft.energy.AdvancementTester::testLavaPowerAdvancementLoaded);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:advancement_precision_crafting_loaded"), () -> buildcraft.energy.AdvancementTester::testPrecisionCraftingAdvancementLoaded);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:advancement_oil_fluids_tag_contents"), () -> buildcraft.energy.AdvancementTester::testOilFluidsTagContainsAllOilSourceBlocks);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:advancement_oil_fluids_tag_exclusivity"), () -> buildcraft.energy.AdvancementTester::testOilFluidsTagExcludesNonOilFluids);

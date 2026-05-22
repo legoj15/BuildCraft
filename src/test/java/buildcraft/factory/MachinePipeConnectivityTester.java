@@ -55,9 +55,10 @@ public class MachinePipeConnectivityTester {
 
     // ---------- Wood pipe — extraction source ----------
 
-    /** A wood pipe must see the workbench as a source it can pull from: it connects as a TILE,
-     *  reports a non-zero power request (meaning it found extractable contents), and on receiving
-     *  power actually drains the workbench's result slot. */
+    /** A wood pipe must pull crafted output from the workbench's result slot, never crafting
+     *  ingredients from its materials inventory: it connects as a TILE, reports a non-zero power
+     *  request, and on receiving power drains the result slot while leaving the insert-only
+     *  materials inventory untouched. */
     public static void testWoodPipeExtractsFromAutoWorkbench(GameTestHelper helper) {
         BlockPos workbenchPos = new BlockPos(1, 2, 1);
         BlockPos pipePos = new BlockPos(1, 2, 2);
@@ -66,6 +67,10 @@ public class MachinePipeConnectivityTester {
         TileAutoWorkbenchItems workbench = helper.getBlockEntity(workbenchPos, TileAutoWorkbenchItems.class);
         // The result slot is extract-access — the natural place a wood pipe pulls crafted output from.
         workbench.invResult.setStackInSlot(0, new ItemStack(Items.DIAMOND));
+        // The materials inventory is insert-only: a wood pipe must not extract ingredients from it.
+        // ItemHandlerManager lists materials before result in the combined handler, so a pipe that
+        // *can* drain materials hits these slots first and never reaches the diamond.
+        workbench.invMaterials.setStackInSlot(0, new ItemStack(Items.IRON_INGOT));
 
         TilePipeHolder pipeTile = placeItemPipe(helper, pipePos, BCTransportItems.PIPE_WOOD_ITEM.get());
         Pipe pipe = pipeTile.getPipe();
@@ -87,6 +92,8 @@ public class MachinePipeConnectivityTester {
         wood.receivePower(512 * MjAPI.MJ, false);
         helper.assertTrue(workbench.invResult.getStackInSlot(0).isEmpty(),
             "Wood pipe should have pulled the diamond out of the workbench result slot");
+        helper.assertTrue(countItem(workbench.invMaterials, Items.IRON_INGOT) == 1,
+            "Wood pipe must not extract crafting ingredients from the materials inventory");
 
         helper.succeed();
     }

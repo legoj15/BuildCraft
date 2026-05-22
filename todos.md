@@ -24,8 +24,8 @@ Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains
 
 ## 🔧 Outstanding work
 
-### Advancements — 15 orphaned triggers
-`minecraft:impossible` is the placeholder used for advancements granted from Java via `AdvancementUtil.unlockAdvancement(...)`. The following 15 advancements still have only an impossible-trigger JSON with no matching Java grant — pick a thematic in-code event for each and wire it up:
+### Advancements — 12 orphaned triggers
+`minecraft:impossible` is the placeholder used for advancements granted from Java via `AdvancementUtil.unlockAdvancement(...)`. The following 12 advancements still have only an impossible-trigger JSON with no matching Java grant — pick a thematic in-code event for each and wire it up:
 
 - [ ] `all_plugged_up`
 - [ ] `building_for_the_future`
@@ -33,9 +33,6 @@ Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains
 - [ ] `destroying_the_world`
 - [ ] `flooding_the_world`
 - [ ] `goggles`
-- [ ] `heating_and_distilling`
-- [ ] `lava_power`
-- [ ] `list`
 - [ ] `logic_transportation`
 - [ ] `paper`
 - [ ] `paving_the_way`
@@ -74,6 +71,8 @@ Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains
 - [ ] **Unify plug in-world geometry under vanilla `models/block/plug_*.json`.** Today the plug rendering pipeline has three flavours: (a) blocker / power_adapter load BC-dialect JSON from `models/plugs/` via `ModelHolderStatic`, (b) timer / light_sensor / pulsar-base bake from hardcoded UVs in [PlugBakerSimpleItems.java:70-94](src/main/java/buildcraft/silicon/client/model/plug/PlugBakerSimpleItems.java#L70-L94) (translated from the 1.12.2 JSONs at port time), and (c) lens / facade / gate are genuinely parametric and stay in Java. Migrate (a) and (b) to standard vanilla block-model JSONs loaded through the normal resource manager, with one generic rotating baker that pulls BakedQuads off a face and rotates them per `KeyPlug*.side`. Wins: resourcepacks can reshape *and* retexture any static plug with stock Minecraft JSON, the `models/plugs/` directory and `ModelHolderStatic` go away (verify nothing else uses the latter first), and surviving Java bakers become clearly-exceptional parametric cases. Tradeoff: non-trivial refactor across transport + silicon; per-element `shade` / extended UV tricks in the BC dialect need a NeoForge model-extension equivalent or to be dropped.
 - [ ] **Fluid atlas de-duplication.** The on-disk fluid textures are de-duped (one `heat_still`/`heat_flow` base, recolored at stitch time by [FluidLerpSpriteSource](src/main/java/buildcraft/lib/client/sprite/FluidLerpSpriteSource.java)), but the stitched atlas still holds 60 fluid sprites in 20 pixel-identical triplets — the 3 heat tiers of each fluid+frame are separate sprites only because MC ties animation `frametime` (3/2/1, the hot-vs-cool speed cue) to the `SpriteContents` itself, so identical pixels at different speeds must be different sprites. True dedup needs a custom fluid renderer that frame-steps a single shared sprite per fluid+frame at a heat-dependent rate, replacing the vanilla `FluidModel`/sprite-animation path; collapsing to one shared sprite without that would lose the per-heat speed difference. Low value — the redundancy is ~0.08% of the blocks atlas and ~3 MB RAM — so this is cleanup, not a fix.
 - [ ] **Exploding and flammable fluids** such as gaseous fuel and oils.
+- [ ] **Nether oil spawns.** Generate oil in the Nether (lakes/spouts) for Nether-start challenge runs. Nether oil always spawns *searing* (heat 2), never cool — the inverse of Overworld oil. The `heating_and_distilling` advancement already accounts for this: its Nether branch treats searing as the natural (non-qualifying) heat, so the advancement still demands Heat-Exchanger work there. See `TileDistiller_BC8.qualifiesForHeatingAdvancement`.
+- [ ] **Cauldron as a fluid container.** Fluid pipes (and pumps) should treat the vanilla cauldron as a fluid tank — draining water/lava/powder-snow out of it and filling it up to the appropriate level. NeoForge exposes `IFluidHandler` capabilities for the cauldron via its capability system; wire the cauldron into BC's fluid pipe connection logic.
 
 ---
 

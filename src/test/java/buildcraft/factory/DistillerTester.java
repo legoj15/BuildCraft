@@ -231,4 +231,43 @@ public class DistillerTester {
         }
         helper.succeed();
     }
+
+    /**
+     * Pins the "Heating and Distilling" advancement wiring.
+     * <p>
+     * (a) The advancement is granted from {@link TileDistiller_BC8#serverTick} via
+     * {@link buildcraft.lib.misc.AdvancementUtil}, which awards the {@code code_trigger}
+     * criterion — so the JSON must keep a criterion under exactly that name, or the grant
+     * silently no-ops.
+     * <p>
+     * (b) {@link TileDistiller_BC8#qualifiesForHeatingAdvancement} must follow the per-dimension
+     * truth table: oil spawns cool everywhere except the Nether (where it spawns searing — a
+     * planned feature), so the advancement fires when the distilled input's heat differs from
+     * that dimension's natural spawn heat. A non-oil input (heat -1) never qualifies.
+     */
+    public static void testHeatingAndDistillingAdvancement(GameTestHelper helper) {
+        // (a) JSON contract — advancement loaded with a 'code_trigger' criterion.
+        net.minecraft.advancements.AdvancementHolder holder =
+                helper.getLevel().getServer().getAdvancements().get(
+                        net.minecraft.resources.Identifier.parse("buildcraftunofficial:heating_and_distilling"));
+        assertTrue(holder != null, "heating_and_distilling advancement is not loaded");
+        assertTrue(holder.value().criteria().containsKey("code_trigger"),
+                "heating_and_distilling must keep a 'code_trigger' criterion — "
+                        + "AdvancementUtil.unlockAdvancement awards that criterion name");
+
+        // (b) Grant predicate truth table.
+        // Non-Nether: oil spawns cool, so cool is the no-op; hot and searing qualify.
+        assertTrue(!TileDistiller_BC8.qualifiesForHeatingAdvancement(0, false), "Overworld cool must not qualify");
+        assertTrue(TileDistiller_BC8.qualifiesForHeatingAdvancement(1, false), "Overworld hot must qualify");
+        assertTrue(TileDistiller_BC8.qualifiesForHeatingAdvancement(2, false), "Overworld searing must qualify");
+        // Nether: oil spawns searing, so searing is the no-op; cool and hot qualify.
+        assertTrue(TileDistiller_BC8.qualifiesForHeatingAdvancement(0, true), "Nether cool must qualify");
+        assertTrue(TileDistiller_BC8.qualifiesForHeatingAdvancement(1, true), "Nether hot must qualify");
+        assertTrue(!TileDistiller_BC8.qualifiesForHeatingAdvancement(2, true), "Nether searing must not qualify");
+        // A non-oil input (no heat tier) never qualifies, in any dimension.
+        assertTrue(!TileDistiller_BC8.qualifiesForHeatingAdvancement(-1, false), "non-oil input must not qualify (Overworld)");
+        assertTrue(!TileDistiller_BC8.qualifiesForHeatingAdvancement(-1, true), "non-oil input must not qualify (Nether)");
+
+        helper.succeed();
+    }
 }

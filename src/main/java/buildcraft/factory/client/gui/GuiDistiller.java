@@ -24,6 +24,7 @@ import buildcraft.factory.container.ContainerDistiller;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.elem.GuiElementFluidTank;
+import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
 public class GuiDistiller extends GuiBC8<ContainerDistiller> {
@@ -65,6 +66,11 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     @Override
     protected void initGuiElements() {
         if (menu.tile != null) {
+            mainGui.shownElements.add(new LedgerOwnership(
+                mainGui,
+                () -> menu.tile != null ? menu.tile.getOwner() : null,
+                true
+            ));
             mainGui.shownElements.add(new GuiElementFluidTank(
                 mainGui,
                 new GuiRectangle(TANK_IN_X, TANK_IN_Y, TANK_IN_W, TANK_IN_H).offset(mainGui.rootElement),

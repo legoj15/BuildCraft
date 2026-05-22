@@ -133,6 +133,26 @@ public class BCEnergyFluids {
         }
     }
 
+    // ─── Heat tier lookup ─────────────────────────────────────────────
+
+    /**
+     * Returns the heat tier of a BuildCraft energy fluid: 0 = cool, 1 = hot, 2 = searing.
+     * Recognises both the source and flowing form of every registered variant.
+     *
+     * @return the heat tier, or {@code -1} if {@code fluid} is not a BuildCraft energy fluid.
+     */
+    public static int getHeat(Fluid fluid) {
+        if (fluid == null) {
+            return -1;
+        }
+        for (FluidEntry entry : ALL_ENTRIES) {
+            if (entry.source().get() == fluid || entry.flowing().get() == fluid) {
+                return entry.heat();
+            }
+        }
+        return -1;
+    }
+
     // ─── Factory method ───────────────────────────────────────────────
 
     private static FluidEntry registerFluidVariant(

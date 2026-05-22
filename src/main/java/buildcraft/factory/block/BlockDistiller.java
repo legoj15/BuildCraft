@@ -14,6 +14,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -67,6 +68,21 @@ public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHa
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+    }
+
+    /**
+     * Record the placing player as the owner so the GUI ownership ledger has a profile to show
+     * and the Heating and Distilling advancement has someone to grant. Forwards to
+     * {@link TileDistiller_BC8#onPlacedBy}, which handles the {@code Player} → {@code GameProfile}
+     * conversion and syncs the change to tracking clients.
+     */
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
+            @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (level.getBlockEntity(pos) instanceof TileDistiller_BC8 distiller) {
+            distiller.onPlacedBy(placer);
+        }
     }
 
     @Nullable

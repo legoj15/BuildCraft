@@ -209,6 +209,7 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_input_rejects_non_distillable"), () -> buildcraft.factory.DistillerTester::testInputTankRejectsNonDistillableInsert);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_input_blocks_external_extract"), () -> buildcraft.factory.DistillerTester::testInputTankBlocksExternalExtract);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_output_rejects_external_insert"), () -> buildcraft.factory.DistillerTester::testOutputTanksRejectExternalInsertButAcceptInternal);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_heating_and_distilling_advancement"), () -> buildcraft.factory.DistillerTester::testHeatingAndDistillingAdvancement);
 
             // Advancements (fine_riches + sticky_dipping JSON shape, oil_fluids tag content, predicate sanity)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:advancement_fine_riches_loaded"), () -> buildcraft.energy.AdvancementTester::testFineRichesAdvancementLoaded);

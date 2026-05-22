@@ -6,7 +6,11 @@
 
 package buildcraft.factory.tile;
 
+import java.util.UUID;
+
 import javax.annotation.Nullable;
+
+import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -15,10 +19,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -40,9 +47,11 @@ import buildcraft.api.recipes.IRefineryRecipeManager.IDistillationRecipe;
 import buildcraft.api.tiles.IDebuggable;
 import buildcraft.lib.fluid.FluidSmoother;
 
+import buildcraft.energy.BCEnergyFluids;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.container.ContainerDistiller;
 import buildcraft.lib.mj.MjBatteryReceiver;
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.MessageUtil;
 
 /**
@@ -53,6 +62,9 @@ import buildcraft.lib.misc.MessageUtil;
 public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDebuggable {
 
     public static final long MAX_MJ_PER_TICK = 6 * MjAPI.MJ;
+
+    private static final Identifier ADVANCEMENT_HEATING_AND_DISTILLING =
+        Identifier.parse("buildcraftunofficial:heating_and_distilling");
 
     private final InputTank tankIn = new InputTank();
     private final OutputTank tankGasOut = new OutputTank();
@@ -78,6 +90,14 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
     private boolean isActive = false;
     /** True when a recipe exists for the input fluid but at least one output tank can't accept the recipe's output. */
     private boolean isStuck = false;
+
+    /** Player who placed this distiller — shown in the GUI ownership ledger and granted the
+     *  Heating and Distilling advancement. Persisted to NBT; null until {@link #onPlacedBy} runs. */
+    private GameProfile owner;
+
+    /** Edge-detect latch for the Heating and Distilling advancement: true while the distiller was
+     *  actively working a recipe last tick, so the grant check fires only on the rising edge. */
+    private boolean wasDistillingForAdvancement = false;
 
     // Power average: exponential moving average in micro-MJ,
     // approximating 1.12.2's AverageLong(100) rolling average.
@@ -122,6 +142,26 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
     /** @return The internal MJ battery, for Forge-Energy capability registration. */
     public MjBattery getBattery() {
         return mjBattery;
+    }
+
+    /** @return the profile of the player who placed this distiller, or {@code null} if unknown. */
+    @Nullable
+    public GameProfile getOwner() {
+        return owner;
+    }
+
+    /**
+     * Records the placing player as the owner and syncs it to tracking clients so the GUI
+     * ownership ledger renders. Called from {@link buildcraft.factory.block.BlockDistiller#setPlacedBy}.
+     */
+    public void onPlacedBy(@Nullable LivingEntity placer) {
+        if (placer instanceof Player player) {
+            owner = player.getGameProfile();
+            setChanged();
+            if (level != null && !level.isClientSide()) {
+                MessageUtil.sendUpdateToTrackingPlayers(this);
+            }
+        }
     }
 
     /**
@@ -208,6 +248,28 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         if (manager == null) return false;
         IDistillationRecipe recipe = manager.getDistillationRegistry().getRecipeForInput(fluid);
         return recipe != null;
+    }
+
+    /**
+     * Heating and Distilling advancement predicate. The advancement marks that the player ran oil
+     * through a Heat Exchanger before distilling it — i.e. distilled oil at a heat tier that does
+     * not occur naturally in the current dimension.
+     *
+     * <p>Oil spawns <em>cool</em> in the Overworld (and everywhere else), but <em>searing</em> in
+     * the Nether (a planned feature — see {@code todos.md}). So the grant fires whenever the input
+     * heat differs from the dimension's natural spawn heat.
+     *
+     * @param inputHeat the heat tier of the recipe input (0 cool, 1 hot, 2 searing; -1 if the
+     *                  input is not a BuildCraft oil fluid).
+     * @param isNether  whether the distiller is in the Nether.
+     * @return {@code true} if distilling this input should grant the advancement.
+     */
+    public static boolean qualifiesForHeatingAdvancement(int inputHeat, boolean isNether) {
+        if (inputHeat < 0) {
+            return false;
+        }
+        int naturalHeat = isNether ? 2 : 0;
+        return inputHeat != naturalHeat;
     }
 
     // --- Ticking ---
@@ -316,6 +378,19 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
             }
         }
 
+        // Heating and Distilling advancement — granted to the owner on the rising edge of the
+        // distiller actually working a recipe whose input oil sits at a heat tier this dimension
+        // does not spawn naturally (Nether oil spawns searing; everywhere else, cool). A non-natural
+        // heat means the player ran the oil through a Heat Exchanger first.
+        boolean distilling = isActive && currentRecipe != null;
+        if (distilling && !wasDistillingForAdvancement && owner != null) {
+            int inputHeat = BCEnergyFluids.getHeat(currentRecipe.in().getFluid());
+            if (qualifiesForHeatingAdvancement(inputHeat, level.dimension() == Level.NETHER)) {
+                AdvancementUtil.unlockAdvancement(owner.id(), level, ADVANCEMENT_HEATING_AND_DISTILLING);
+            }
+        }
+        wasDistillingForAdvancement = distilling;
+
         // When idle, decay the EWMA toward zero
         if (currentRecipe == null || !isActive) {
             powerAvgSmoothed += (long) ((0 - powerAvgSmoothed) * 0.05);
@@ -400,6 +475,12 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
+        if (owner != null && owner.id() != null) {
+            output.putString("ownerUUID", owner.id().toString());
+            if (owner.name() != null) {
+                output.putString("ownerName", owner.name());
+            }
+        }
         // Save each tank's fluid contents directly
         if (!tankIn.getResource(0).isEmpty()) {
             output.store("fluidIn", FluidStack.CODEC, tankIn.getResource(0).toStack(tankIn.getAmountAsInt(0)));
@@ -421,6 +502,14 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
     @Override
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
+        String ownerUuid = input.getStringOr("ownerUUID", "");
+        if (!ownerUuid.isEmpty()) {
+            try {
+                owner = new GameProfile(UUID.fromString(ownerUuid), input.getStringOr("ownerName", "Unknown"));
+            } catch (IllegalArgumentException e) {
+                owner = null;
+            }
+        }
         loadTank(tankIn, input, "fluidIn");
         loadTank(tankGasOut, input, "fluidGasOut");
         loadTank(tankLiquidOut, input, "fluidLiquidOut");

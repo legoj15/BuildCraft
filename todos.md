@@ -29,7 +29,7 @@ Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains
 
 - [ ] `all_plugged_up`
 - [ ] `building_for_the_future`
-- [ ] `colorful_electricial`
+- [ ] `colorful_electrician`
 - [ ] `destroying_the_world`
 - [ ] `flooding_the_world`
 - [ ] `goggles`

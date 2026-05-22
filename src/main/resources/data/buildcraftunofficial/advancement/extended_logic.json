@@ -1,11 +1,9 @@
 {
   "display": {
-    "icon": { 
+    "icon": {
       "id": "buildcraftunofficial:plug_gate",
       "components": {
-        "minecraft:custom_model_data": {
-          "strings": ["gold_or_diamond"]
-        }
+        "minecraft:custom_data": "{gate:{material:3b,modifier:3b,logic:1b}}"
       }
     },
     "title": { "translate": "advancements.buildcraftunofficial.extended_logic.title" },

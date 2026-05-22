@@ -100,4 +100,5 @@ Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains
 
 - [ ] Deprecation and warning fixes (both compile-time and runtime).
 - [ ] **Goggles texture.** `item/goggles.png` is a verbatim copy of the vanilla paper texture used as a placeholder — the dev-gated Goggles headpiece needs real art before it could be un-gated.
+- [ ] **Dead gate item-model assets.** `GateItemModel` (swapped in via `BCSiliconClient.onModifyBakingResult`) renders gate items programmatically, so the `minecraft:select` model in `items/plug_gate.json`, its 25 `models/item/gates/variants/*.json` files, and the 9 `textures/item/gates/*.png` layer textures are all dead — never consulted at runtime. `items/plug_gate.json` must stay (it is baked before the swap) but can collapse to a trivial stub; the variant models and `item/gates/` textures can be deleted.
 - [ ] Final code review across all subsystems.

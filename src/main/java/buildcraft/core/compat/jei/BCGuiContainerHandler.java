@@ -6,19 +6,29 @@ package buildcraft.core.compat.jei;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import net.minecraft.client.renderer.Rect2i;
 
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.IGuiElement;
+import buildcraft.lib.gui.elem.GuiElementFluidTank;
 import buildcraft.lib.gui.ledger.Ledger_Neptune;
 
+import mezz.jei.api.gui.builder.IClickableIngredientFactory;
 import mezz.jei.api.gui.handlers.IGuiContainerHandler;
+import mezz.jei.api.neoforge.NeoForgeTypes;
+import mezz.jei.api.runtime.IClickableIngredient;
 
 /**
- * Tells JEI about the bounding rectangles of any open BuildCraft ledgers
- * so that JEI's ingredient list is pushed out of the way instead of
- * overlapping with them.
+ * Tells JEI about BuildCraft GUIs: the bounding rectangles of open ledgers
+ * (so the ingredient list is pushed out of the way) and the fluid currently
+ * shown in any {@link GuiElementFluidTank} (so JEI's R/U recipe lookup keys
+ * accept hover-over-a-tank as a fluid focus).
  */
 public class BCGuiContainerHandler implements IGuiContainerHandler<GuiBC8<?>> {
 
@@ -37,5 +47,35 @@ public class BCGuiContainerHandler implements IGuiContainerHandler<GuiBC8<?>> {
             }
         }
         return areas;
+    }
+
+    @Override
+    public Optional<? extends IClickableIngredient<?>> getClickableIngredientUnderMouse(
+            IClickableIngredientFactory builder,
+            GuiBC8<?> screen,
+            double mouseX,
+            double mouseY
+    ) {
+        for (IGuiElement element : screen.mainGui.shownElements) {
+            if (!(element instanceof GuiElementFluidTank tankElem)) continue;
+
+            double x = tankElem.getX();
+            double y = tankElem.getY();
+            double w = tankElem.getWidth();
+            double h = tankElem.getHeight();
+            if (mouseX < x || mouseY < y || mouseX >= x + w || mouseY >= y + h) continue;
+
+            FluidStacksResourceHandler tank = tankElem.getTank();
+            if (tank == null || tank.size() == 0) continue;
+
+            FluidResource fluid = tank.getResource(0);
+            long amount = tank.getAmountAsLong(0);
+            if (fluid.isEmpty() || amount <= 0) continue;
+
+            FluidStack stack = fluid.toStack((int) Math.min(amount, Integer.MAX_VALUE));
+            return builder.createBuilder(NeoForgeTypes.FLUID_STACK, stack)
+                    .buildWithArea((int) x, (int) y, (int) Math.ceil(w), (int) Math.ceil(h));
+        }
+        return Optional.empty();
     }
 }

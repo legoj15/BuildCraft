@@ -51,6 +51,8 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
 
     private static final net.minecraft.resources.Identifier ADVANCEMENT_LOGIC_TRANSPORTATION
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:logic_transportation");
+    private static final net.minecraft.resources.Identifier ADVANCEMENT_COLORFUL_ELECTRICIAN
+        = net.minecraft.resources.Identifier.parse("buildcraftunofficial:colorful_electrician");
 
     // Center box: 4/16 → 12/16 (i.e. 0.25→0.75)
     private static final VoxelShape CENTER = Block.box(4, 4, 4, 12, 12, 12);
@@ -315,6 +317,14 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                     if (isWireConnected(level, pos, tile, wirePart, wireColour)) {
                         buildcraft.lib.misc.AdvancementUtil.unlockAdvancement(
                             player, ADVANCEMENT_LOGIC_TRANSPORTATION);
+                    }
+                    buildcraft.transport.BCTransportAttachments.WireColoursPlaced placed =
+                        player.getData(buildcraft.transport.BCTransportAttachments.WIRE_COLOURS_PLACED.get());
+                    if (placed.markPlaced(wireColour)) {
+                        // One criterion per dye colour — awarding the matching name lets the
+                        // advancement screen display "x/16" progress automatically.
+                        buildcraft.lib.misc.AdvancementUtil.unlockAdvancement(
+                            player, ADVANCEMENT_COLORFUL_ELECTRICIAN, wireColour.getName());
                     }
                     level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
                 }

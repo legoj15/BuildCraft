@@ -24,12 +24,11 @@ Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains
 
 ## 🔧 Outstanding work
 
-### Advancements — 10 orphaned triggers
-`minecraft:impossible` is the placeholder used for advancements granted from Java via `AdvancementUtil.unlockAdvancement(...)`. The following 10 advancements still have only an impossible-trigger JSON with no matching Java grant — pick a thematic in-code event for each and wire it up:
+### Advancements — 9 orphaned triggers
+`minecraft:impossible` is the placeholder used for advancements granted from Java via `AdvancementUtil.unlockAdvancement(...)`. The following 9 advancements still have only an impossible-trigger JSON with no matching Java grant — pick a thematic in-code event for each and wire it up:
 
 - [ ] `all_plugged_up`
 - [ ] `building_for_the_future`
-- [ ] `colorful_electrician`
 - [ ] `destroying_the_world`
 - [ ] `goggles`
 - [ ] `paper`

@@ -29,6 +29,11 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_connectivity_in_cube_different_colour"), () -> buildcraft.transport.block.PipeWireConnectivityTester::testInCubeDifferentColourNotConnected);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_connectivity_cross_tile_same_colour"), () -> buildcraft.transport.block.PipeWireConnectivityTester::testCrossTileSameColourConnected);
 
+            // Per-player wire-colour tracking gating the colorful_electrician advancement
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_colours_fresh_attachment_empty"), () -> buildcraft.transport.WireColoursPlacedTester::testFreshAttachmentEmpty);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_colours_mark_placed_first_sighting_only"), () -> buildcraft.transport.WireColoursPlacedTester::testMarkPlacedReturnsTrueOnlyOnFirstSighting);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_colours_complete_only_after_all_sixteen"), () -> buildcraft.transport.WireColoursPlacedTester::testCompleteOnlyAfterAllSixteenColours);
+
             // Power pipe flow chain — engine→wood diamond→diamond→tester end-to-end.
             // The renderer-side regression (visible gaps) is geometry math, pinned
             // directly by PipeFlowRendererPowerGeometryTester.

@@ -50,6 +50,7 @@ public class BCTransport {
         BCTransportBlockEntities.init(modEventBus);
         BCTransportMenuTypes.init(modEventBus);
         BCTransportCreativeTabs.init(modEventBus);
+        BCTransportAttachments.init(modEventBus);
 
         // Register client-side extensions on the mod event bus
         if (FMLEnvironment.getDist() == Dist.CLIENT) {

@@ -24,6 +24,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
@@ -52,6 +53,7 @@ import buildcraft.api.statements.containers.IFillerStatementContainer;
 import buildcraft.api.tiles.IControllable;
 import buildcraft.api.tiles.IDebuggable;
 
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.mj.MjBatteryReceiver;
@@ -80,6 +82,9 @@ public class TileFiller extends TileBC_Neptune
         implements IDebuggable, IFillerStatementContainer, IControllable, ITileForTemplateBuilder, MenuProvider {
 
     public static final int INV_SIZE = 27;
+
+    public static final Identifier ADVANCEMENT_BUILDING_FOR_THE_FUTURE =
+        Identifier.parse("buildcraftunofficial:building_for_the_future");
 
     private final MjBattery battery = new MjBattery(16000 * MjAPI.MJ);
     private final MjBatteryReceiver mjReceiver = new MjBatteryReceiver(battery);
@@ -270,6 +275,12 @@ public class TileFiller extends TileBC_Neptune
             }
             boolean done = b.tick();
             if (done) {
+                // Gated on !finished so the LOOP-completion advancement fires only on the
+                // false→true transition — in LOOP mode this branch re-enters every tick once
+                // the builder has nothing left to do.
+                if (!finished && mode == Mode.LOOP && owner != null) {
+                    AdvancementUtil.unlockAdvancement(owner.id(), level, ADVANCEMENT_BUILDING_FOR_THE_FUTURE);
+                }
                 finished = true;
                 // Clear stale render cache so the client receives empty task lists
                 b.onNetworkSync();
@@ -665,6 +676,11 @@ public class TileFiller extends TileBC_Neptune
     @Override
     public void setControlMode(Mode mode) {
         if (this.mode == Mode.OFF && mode != Mode.OFF) {
+            finished = false;
+        }
+        // Entering LOOP from a non-LOOP state re-arms the builder so a Filler that finished
+        // in ON mode kicks off another cycle when the player flips it to LOOP.
+        if (mode == Mode.LOOP && this.mode != Mode.LOOP) {
             finished = false;
         }
         this.mode = mode;

@@ -47,6 +47,11 @@ public class GuiElementFluidTank implements IInteractionElement {
         this.overlay = overlay;
     }
 
+    /** Exposed so the JEI handler can read the current contents for U/R recipe lookups. */
+    public net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler getTank() {
+        return tank;
+    }
+
     // --- IGuiArea delegation ---
 
     @Override

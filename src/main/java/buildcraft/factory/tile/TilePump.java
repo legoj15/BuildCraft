@@ -139,32 +139,46 @@ public class TilePump extends TileMiner implements IDebuggable {
         builtAtRevision = CONFIG_REVISION.get();
         queue.clear();
         paths.clear();
-        Fluid queueFluid = null;
         isInfiniteWaterSource = false;
+        oilSpringPos = null;
+        targetPos = worldPosition.below();
+
+        ColumnProbe probe = probeDown(level, worldPosition, BCCoreConfig.miningMaxDepth.get());
+        BlockPos oilPos = probe.firstOil();
+        BlockPos springPos = probe.spring();
+
+        // Decide what to drain. Oil anywhere in the column wins — the tube drills
+        // straight past any water sitting on top of it. A spring with no oil yet
+        // means "idle until it regenerates" rather than locking onto (and bricking
+        // on) the surrounding ocean water. Otherwise fall back to the first fluid
+        // found, which is the historical first-fluid-down behaviour.
+        BlockPos seed;
+        if (oilPos != null) {
+            seed = oilPos;
+            oilSpringPos = springPos;
+        } else if (springPos != null) {
+            oilSpringPos = springPos;
+            return;
+        } else if (probe.firstFluid() != null) {
+            seed = probe.firstFluid();
+        } else {
+            return;
+        }
+
+        Fluid queueFluid = BlockUtil.getFluidWithFlowing(level, seed);
+        if (queueFluid == null) {
+            return;
+        }
+
+        targetPos = seed;
+        fluidConnection = seed;
         LongSet checked = new LongOpenHashSet();
         List<BlockPos> nextPosesToCheck = new ArrayList<>();
-
-        for (targetPos = worldPosition.below(); !level.isOutsideBuildHeight(targetPos); targetPos = targetPos.below()) {
-            if (worldPosition.getY() - targetPos.getY() > BCCoreConfig.miningMaxDepth.get()) {
-                break;
-            }
-            if (BlockUtil.getFluidWithFlowing(level, targetPos) != null) {
-                queueFluid = BlockUtil.getFluidWithFlowing(level, targetPos);
-                nextPosesToCheck.add(targetPos);
-                paths.put(targetPos, new FluidPath(targetPos, null));
-                checked.add(targetPos.asLong());
-                if (BlockUtil.getFluid(level, targetPos) != null) {
-                    queue.add(targetPos);
-                }
-                fluidConnection = targetPos;
-                break;
-            }
-            if (!level.isEmptyBlock(targetPos) && !level.getBlockState(targetPos).is(BCFactoryBlocks.TUBE.get())) {
-                break;
-            }
-        }
-        if (nextPosesToCheck.isEmpty() || queueFluid == null) {
-            return;
+        nextPosesToCheck.add(seed);
+        paths.put(seed, new FluidPath(seed, null));
+        checked.add(seed.asLong());
+        if (BlockUtil.getFluid(level, seed) != null) {
+            queue.add(seed);
         }
 
         buildQueue0(queueFluid, nextPosesToCheck, checked);
@@ -176,6 +190,56 @@ public class TilePump extends TileMiner implements IDebuggable {
         // Covers "buildcraftunofficial:oil", "buildcraftunofficial:oil_heat_1", "buildcraftunofficial:oil_heat_2"
         return id.getNamespace().equals("buildcraftunofficial")
             && (id.getPath().equals("oil") || id.getPath().startsWith("oil_heat_"));
+    }
+
+    /**
+     * The result of probing straight down from a pump. Any field may be {@code null}.
+     *
+     * @param firstFluid the topmost fluid block in the column
+     * @param firstOil   the topmost BuildCraft-oil block in the column
+     * @param spring     an oil spring block standing in the column
+     */
+    public record ColumnProbe(BlockPos firstFluid, BlockPos firstOil, BlockPos spring) {
+    }
+
+    /**
+     * Probes straight down from {@code pumpPos} for what a pump there should drain.
+     * Walks through air, pump tubes and fluid alike, stopping at the first solid
+     * obstruction, an oil spring block, the build-height floor, or {@code maxDepth}
+     * blocks below the pump.
+     *
+     * <p>Unlike a plain first-fluid scan this keeps descending <em>through</em>
+     * fluid, so BuildCraft oil sitting beneath ocean water — and the spring block
+     * beneath that — are still found. The caller uses that to drill past water to
+     * the oil, and to idle on a dry spring rather than locking onto the water.
+     */
+    public static ColumnProbe probeDown(Level level, BlockPos pumpPos, int maxDepth) {
+        BlockPos firstFluid = null;
+        BlockPos firstOil = null;
+        for (BlockPos pos = pumpPos.below(); !level.isOutsideBuildHeight(pos); pos = pos.below()) {
+            if (pumpPos.getY() - pos.getY() > maxDepth) {
+                break;
+            }
+            Fluid fluid = BlockUtil.getFluidWithFlowing(level, pos);
+            if (fluid != null) {
+                if (firstFluid == null) {
+                    firstFluid = pos;
+                }
+                if (firstOil == null && isOil(fluid)) {
+                    firstOil = pos;
+                }
+                continue;
+            }
+            BlockState state = level.getBlockState(pos);
+            if (state.is(BCCoreBlocks.SPRING_OIL.get())) {
+                return new ColumnProbe(firstFluid, firstOil, pos);
+            }
+            if (level.isEmptyBlock(pos) || state.is(BCFactoryBlocks.TUBE.get())) {
+                continue;
+            }
+            break;
+        }
+        return new ColumnProbe(firstFluid, firstOil, null);
     }
 
     private void buildQueue0(Fluid queueFluid, List<BlockPos> nextPosesToCheck, LongSet checked) {
@@ -225,10 +289,14 @@ public class TilePump extends TileMiner implements IDebuggable {
             }
         }
 
-        // Oil spring search — matches 1.12.2 logic
-        if (isOil(queueFluid)) {
+        // Oil spring search — matches 1.12.2 logic. Fallback only: runs when the
+        // downward probe did not already find a spring directly under the tube,
+        // sweeping a 21×21 area so a pump offset from the spring still credits
+        // pumped oil toward its advancement tracking. The spring block sits at the
+        // world floor (minY) — one below the oil source it force-places.
+        if (isOil(queueFluid) && oilSpringPos == null) {
             List<BlockPos> springPositions = new ArrayList<>();
-            BlockPos center = VecUtil.replaceValue(worldPosition, Axis.Y, level.getMinY() + 1);
+            BlockPos center = VecUtil.replaceValue(worldPosition, Axis.Y, level.getMinY());
             for (BlockPos spring : BlockPos.betweenClosed(center.offset(-10, 0, -10), center.offset(10, 0, 10))) {
                 if (level.getBlockState(spring).is(BCCoreBlocks.SPRING_OIL.get())) {
                     BlockEntity tile = level.getBlockEntity(spring);

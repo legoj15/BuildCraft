@@ -19,6 +19,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -80,6 +81,19 @@ public class BlockFloodGate extends BaseEntityBlock {
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new TileFloodGate(pos, state);
+    }
+
+    /**
+     * Record the placing player as the owner so the flood gate can grant them the
+     * "Flooding the world" advancement. Forwards to {@link TileFloodGate#onPlacedBy}.
+     */
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
+            @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (level.getBlockEntity(pos) instanceof TileFloodGate floodGate) {
+            floodGate.onPlacedBy(placer);
+        }
     }
 
     @Nullable

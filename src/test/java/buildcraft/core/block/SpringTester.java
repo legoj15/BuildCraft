@@ -96,4 +96,68 @@ public class SpringTester {
         }
         helper.succeed();
     }
+
+    /**
+     * An oil spring must replace water that occupies the block above it — otherwise
+     * an ocean-borne spring goes permanently sterile once water seeps in. Mirrors
+     * {@link #testOilSpring} but pre-fills the block above with a water source.
+     */
+    public static void testOilSpringRegeneratesThroughWater(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 1, 1);
+        BlockPos up = new BlockPos(1, 2, 1);
+        helper.setBlock(pos, BCCoreBlocks.SPRING_OIL.get());
+        helper.setBlock(up, Blocks.WATER);
+
+        BlockState state = helper.getBlockState(pos);
+        ServerLevel level = helper.getLevel();
+        RandomSource rand = level.getRandom();
+        BlockPos absoluteUpPos = helper.absolutePos(up);
+        BlockState oil = BCCoreBlocks.SPRING_OIL.get().getSpringType().liquidBlock;
+
+        if (state.getBlock() instanceof BlockSpring spring) {
+            for (int i = 0; i < 10000; i++) {
+                spring.randomTick(state, level, helper.absolutePos(pos), rand);
+                if (level.getBlockState(absoluteUpPos).getBlock() == oil.getBlock()) {
+                    break;
+                }
+            }
+        }
+
+        helper.succeedIf(() -> {
+            BlockState actual = helper.getBlockState(up);
+            if (actual.getBlock() != oil.getBlock()) {
+                throw new IllegalStateException(
+                    "Oil spring failed to regenerate through water — block above is " + actual.getBlock());
+            }
+        });
+    }
+
+    /**
+     * The spring must not overwrite a solid block above it — only air and fluids
+     * are valid placement targets.
+     */
+    public static void testOilSpringKeepsSolidBlockAbove(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 1, 1);
+        BlockPos up = new BlockPos(1, 2, 1);
+        helper.setBlock(pos, BCCoreBlocks.SPRING_OIL.get());
+        helper.setBlock(up, Blocks.STONE);
+
+        BlockState state = helper.getBlockState(pos);
+        ServerLevel level = helper.getLevel();
+        RandomSource rand = level.getRandom();
+
+        if (state.getBlock() instanceof BlockSpring spring) {
+            for (int i = 0; i < 2000; i++) {
+                spring.randomTick(state, level, helper.absolutePos(pos), rand);
+            }
+        }
+
+        helper.succeedIf(() -> {
+            BlockState actual = helper.getBlockState(up);
+            if (!actual.is(Blocks.STONE)) {
+                throw new IllegalStateException(
+                    "Oil spring overwrote a solid block above it — block above is now " + actual.getBlock());
+            }
+        });
+    }
 }

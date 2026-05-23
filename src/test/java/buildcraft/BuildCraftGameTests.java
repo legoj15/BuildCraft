@@ -58,6 +58,8 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:core_spring_water"), () -> buildcraft.core.block.SpringTester::testWaterSpring);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:core_spring_oil"), () -> buildcraft.core.block.SpringTester::testOilSpring);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:core_spring_oil_attaches_tile"), () -> buildcraft.core.block.SpringTester::testOilSpringAttachesTile);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:core_spring_oil_regenerates_through_water"), () -> buildcraft.core.block.SpringTester::testOilSpringRegeneratesThroughWater);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:core_spring_oil_keeps_solid_above"), () -> buildcraft.core.block.SpringTester::testOilSpringKeepsSolidBlockAbove);
 
             // Core Markers
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:marker_orientation"), () -> buildcraft.core.marker.MarkerTester::testMarkerOrientation);
@@ -194,6 +196,7 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:flood_gate_wrench_toggles_side"), () -> buildcraft.factory.FloodGateTester::testWrenchTogglesSide);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:flood_gate_wrench_on_top_face_falls_through"), () -> buildcraft.factory.FloodGateTester::testWrenchOnTopFaceFallsThrough);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:flood_gate_non_wrench_falls_through"), () -> buildcraft.factory.FloodGateTester::testNonWrenchItemFallsThrough);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:flood_gate_flooding_the_world_advancement"), () -> buildcraft.factory.FloodGateTester::testFloodingTheWorldAdvancement);
 
             // Pump infinite-source detection (vanilla regen-rule parity per anchor block)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_strip_1x3_centre_vs_edges"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testStrip1x3CentreInfiniteEdgesFinite);
@@ -204,6 +207,12 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_diagonals_dont_count"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testDiagonalNeighboursDoNotCount);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_water_below_supports"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testWaterBelowProvidesSupport);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_null_safety"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testNullSafetyShortCircuits);
+
+            // Pump spring-aware probe — drilling past water to a submerged oil spring
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_probe_oil_beneath_water"), () -> buildcraft.factory.PumpSpringProbeTester::testOilBeneathWaterIsFound);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_probe_dry_spring_under_water"), () -> buildcraft.factory.PumpSpringProbeTester::testDrySpringUnderWaterReportsNoOil);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_probe_plain_water_unaffected"), () -> buildcraft.factory.PumpSpringProbeTester::testPlainWaterColumnUnaffected);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_probe_solid_obstruction"), () -> buildcraft.factory.PumpSpringProbeTester::testSolidObstructionStopsProbe);
 
             // Distiller tank gating (1.12.2 setFilter / setCanDrain / setCanFill parity)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:distiller_input_rejects_non_distillable"), () -> buildcraft.factory.DistillerTester::testInputTankRejectsNonDistillableInsert);

@@ -24,14 +24,13 @@ Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains
 
 ## 🔧 Outstanding work
 
-### Advancements — 12 orphaned triggers
-`minecraft:impossible` is the placeholder used for advancements granted from Java via `AdvancementUtil.unlockAdvancement(...)`. The following 12 advancements still have only an impossible-trigger JSON with no matching Java grant — pick a thematic in-code event for each and wire it up:
+### Advancements — 11 orphaned triggers
+`minecraft:impossible` is the placeholder used for advancements granted from Java via `AdvancementUtil.unlockAdvancement(...)`. The following 11 advancements still have only an impossible-trigger JSON with no matching Java grant — pick a thematic in-code event for each and wire it up:
 
 - [ ] `all_plugged_up`
 - [ ] `building_for_the_future`
 - [ ] `colorful_electrician`
 - [ ] `destroying_the_world`
-- [ ] `flooding_the_world`
 - [ ] `goggles`
 - [ ] `logic_transportation`
 - [ ] `paper`
@@ -72,7 +71,9 @@ Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains
 - [ ] **Fluid atlas de-duplication.** The on-disk fluid textures are de-duped (one `heat_still`/`heat_flow` base, recolored at stitch time by [FluidLerpSpriteSource](src/main/java/buildcraft/lib/client/sprite/FluidLerpSpriteSource.java)), but the stitched atlas still holds 60 fluid sprites in 20 pixel-identical triplets — the 3 heat tiers of each fluid+frame are separate sprites only because MC ties animation `frametime` (3/2/1, the hot-vs-cool speed cue) to the `SpriteContents` itself, so identical pixels at different speeds must be different sprites. True dedup needs a custom fluid renderer that frame-steps a single shared sprite per fluid+frame at a heat-dependent rate, replacing the vanilla `FluidModel`/sprite-animation path; collapsing to one shared sprite without that would lose the per-heat speed difference. Low value — the redundancy is ~0.08% of the blocks atlas and ~3 MB RAM — so this is cleanup, not a fix.
 - [ ] **Exploding and flammable fluids** such as gaseous fuel and oils.
 - [ ] **Nether oil spawns.** Generate oil in the Nether (lakes/spouts) for Nether-start challenge runs. Nether oil always spawns *searing* (heat 2), never cool — the inverse of Overworld oil. The `heating_and_distilling` advancement already accounts for this: its Nether branch treats searing as the natural (non-qualifying) heat, so the advancement still demands Heat-Exchanger work there. See `TileDistiller_BC8.qualifiesForHeatingAdvancement`.
+- [ ] **Pipe painting via crafting.** In the old pre-license-migration code (`src_old_license/buildcraft/transport/PipeColoringRecipe.java`) a shapeless recipe let players combine any number of the same pipe type with a dye to recolor them, or with a water bucket to bleach them back to unpainted. The `RecipePipeColour.java` replacement in the shipped 1.12.2 `common/` was left incomplete (never registered). Implement this as a `RecipeType`-based custom recipe: accept 1–8 pipes of the same type plus one dye item (color) or water bucket (bleach), output the same pipes with `PIPE_COLOUR` DataComponent set/cleared accordingly.
 - [ ] **Cauldron as a fluid container.** Fluid pipes (and pumps) should treat the vanilla cauldron as a fluid tank — draining water/lava/powder-snow out of it and filling it up to the appropriate level. NeoForge exposes `IFluidHandler` capabilities for the cauldron via its capability system; wire the cauldron into BC's fluid pipe connection logic.
+- [ ] **Waterlog non-cube-collision blocks.** Pipes, facades, and other BC blocks with non-full collision shapes are destroyed by flowing fluids (water, lava, oil) because they don't implement `LiquidBlockContainer`. This matches 1.12.2 behavior but is worth revisiting: implement waterlogging for at least pipe holders so players can route pipes through flooded areas. Requires adding a waterlogged block state, implementing `LiquidBlockContainer`, and scheduling fluid ticks on neighbor changes.
 
 ---
 

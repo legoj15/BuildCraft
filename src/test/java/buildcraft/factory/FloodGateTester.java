@@ -152,4 +152,44 @@ public class FloodGateTester {
             throw new RuntimeException("Failed to invoke useItemOn reflectively", e);
         }
     }
+
+    /**
+     * Pins the "Flooding the world" advancement wiring.
+     * <p>
+     * (a) The advancement is granted from {@link TileFloodGate#serverTick} via
+     * {@link buildcraft.lib.misc.AdvancementUtil}, which awards the {@code code_trigger}
+     * criterion — so the JSON must keep a criterion under exactly that name.
+     * <p>
+     * (b) {@link TileFloodGate#onPlacedBy} must record the placing player as the owner and
+     * {@code saveAdditional} must persist it, so the grant has a recipient that survives a
+     * chunk reload.
+     */
+    public static void testFloodingTheWorldAdvancement(GameTestHelper helper) {
+        // (a) JSON contract — advancement loaded with a 'code_trigger' criterion.
+        net.minecraft.advancements.AdvancementHolder holder =
+                helper.getLevel().getServer().getAdvancements().get(
+                        net.minecraft.resources.Identifier.parse("buildcraftunofficial:flooding_the_world"));
+        assertTrue(holder != null, "flooding_the_world advancement is not loaded");
+        assertTrue(holder.value().criteria().containsKey("code_trigger"),
+                "flooding_the_world must keep a 'code_trigger' criterion — "
+                        + "AdvancementUtil.unlockAdvancement awards that criterion name");
+
+        // (b) Owner tracking — onPlacedBy records the placer, saveAdditional persists it.
+        BlockPos pos = new BlockPos(2, 2, 2);
+        helper.setBlock(pos, BCFactoryBlocks.FLOOD_GATE.get());
+        TileFloodGate gate = helper.getBlockEntity(pos, TileFloodGate.class);
+        net.minecraft.world.entity.player.Player placer =
+                helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+
+        gate.onPlacedBy(placer);
+        assertTrue(gate.getOwner() != null, "onPlacedBy must record the placer as owner");
+        assertTrue(gate.getOwner().id().equals(placer.getGameProfile().id()),
+                "recorded owner UUID must match the placing player");
+
+        net.minecraft.nbt.CompoundTag saved = gate.saveCustomOnly(helper.getLevel().registryAccess());
+        assertTrue(saved.getString("ownerUUID").orElse("").equals(placer.getGameProfile().id().toString()),
+                "owner UUID must be persisted to NBT by saveAdditional");
+
+        helper.succeed();
+    }
 }

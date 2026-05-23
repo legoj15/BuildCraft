@@ -14,6 +14,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.enums.EnumSpring;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.data.XorShift128Random;
 
 public class BlockSpring extends Block implements EntityBlock {
@@ -66,7 +67,14 @@ public class BlockSpring extends Block implements EntityBlock {
         }
 
         BlockPos upPos = pos.above();
-        if (!level.isEmptyBlock(upPos)) {
+        BlockState upState = level.getBlockState(upPos);
+        // Place into air, or displace a fluid that isn't already our own output
+        // (water that flowed in, or our own flowing variant). Without the fluid
+        // case an ocean-borne spring goes permanently sterile once water occupies
+        // the block above it — that block is then never empty again.
+        boolean canPlace = upState.isAir()
+            || (!upState.equals(springType.liquidBlock) && BlockUtil.getFluidWithFlowing(level, upPos) != null);
+        if (!canPlace) {
             return;
         }
 

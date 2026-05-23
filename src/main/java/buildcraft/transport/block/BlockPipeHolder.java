@@ -49,6 +49,9 @@ import buildcraft.transport.tile.TilePipeHolder;
 
 public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintHandler {
 
+    private static final net.minecraft.resources.Identifier ADVANCEMENT_LOGIC_TRANSPORTATION
+        = net.minecraft.resources.Identifier.parse("buildcraftunofficial:logic_transportation");
+
     // Center box: 4/16 → 12/16 (i.e. 0.25→0.75)
     private static final VoxelShape CENTER = Block.box(4, 4, 4, 12, 12, 12);
     // Connection arms for each direction.
@@ -303,10 +306,15 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         // Try to place a pipe wire
         if (stack.getItem() instanceof buildcraft.transport.item.ItemWire itemWire) {
             buildcraft.api.transport.EnumWirePart wirePart = resolveTargetWirePart(hitResult);
-            if (tile.getWireManager().addPart(wirePart, itemWire.getColor())) {
+            DyeColor wireColour = itemWire.getColor();
+            if (tile.getWireManager().addPart(wirePart, wireColour)) {
                 if (!level.isClientSide()) {
                     if (!player.getAbilities().instabuild) {
                         stack.shrink(1);
+                    }
+                    if (isWireConnected(level, pos, tile, wirePart, wireColour)) {
+                        buildcraft.lib.misc.AdvancementUtil.unlockAdvancement(
+                            player, ADVANCEMENT_LOGIC_TRANSPORTATION);
                     }
                     level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
                 }
@@ -355,6 +363,34 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     public static Direction resolveTargetFace(TilePipeHolder tile, BlockHitResult hitResult) {
         Direction armFace = getHitFace(tile, hitResult);
         return armFace != null ? armFace : hitResult.getDirection();
+    }
+
+    /**
+     * Whether the wire just placed at {@code wirePart} on {@code tile} now shares a connection
+     * with a same-colour wire — either an in-cube neighbour part on the same tile, or a wire on
+     * an adjacent {@link TilePipeHolder} reached through one of the six face offsets. Used to
+     * gate the {@code logic_transportation} advancement: laying down an isolated wire segment
+     * does not unlock it; completing a connection does.
+     */
+    static boolean isWireConnected(Level level, BlockPos pos, TilePipeHolder tile,
+                                   buildcraft.api.transport.EnumWirePart wirePart,
+                                   DyeColor colour) {
+        buildcraft.api.transport.WireNode from = new buildcraft.api.transport.WireNode(pos, wirePart);
+        for (Direction dir : Direction.values()) {
+            buildcraft.api.transport.WireNode to = from.offset(dir);
+            if (to.pos == from.pos) {
+                if (tile.getWireManager().getColorOfPart(to.part) == colour) {
+                    return true;
+                }
+            } else {
+                BlockEntity neighbour = level.getBlockEntity(to.pos);
+                if (neighbour instanceof TilePipeHolder other
+                    && other.getWireManager().getColorOfPart(to.part) == colour) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

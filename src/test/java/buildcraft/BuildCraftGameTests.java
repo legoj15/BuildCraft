@@ -23,6 +23,12 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_routing_test_simple"), () -> PipeRoutingTest::testSimplePipeExtraction);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_records_owner_on_placement"), () -> buildcraft.transport.PipeOwnerTester::testPipeRecordsOwnerOnPlacement);
 
+            // Wire connectivity predicate gating the logic_transportation advancement
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_connectivity_isolated"), () -> buildcraft.transport.block.PipeWireConnectivityTester::testIsolatedWireNotConnected);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_connectivity_in_cube_same_colour"), () -> buildcraft.transport.block.PipeWireConnectivityTester::testInCubeSameColourConnected);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_connectivity_in_cube_different_colour"), () -> buildcraft.transport.block.PipeWireConnectivityTester::testInCubeDifferentColourNotConnected);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_connectivity_cross_tile_same_colour"), () -> buildcraft.transport.block.PipeWireConnectivityTester::testCrossTileSameColourConnected);
+
             // Power pipe flow chain — engine→wood diamond→diamond→tester end-to-end.
             // The renderer-side regression (visible gaps) is geometry math, pinned
             // directly by PipeFlowRendererPowerGeometryTester.

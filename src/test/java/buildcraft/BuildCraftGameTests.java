@@ -209,6 +209,9 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:flood_gate_non_wrench_falls_through"), () -> buildcraft.factory.FloodGateTester::testNonWrenchItemFallsThrough);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:flood_gate_flooding_the_world_advancement"), () -> buildcraft.factory.FloodGateTester::testFloodingTheWorldAdvancement);
 
+            // Filler building_for_the_future advancement (LOOP-mode completion + setControlMode re-arm)
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:filler_building_for_the_future_advancement"), () -> buildcraft.builders.FillerAdvancementTester::testBuildingForTheFutureAdvancement);
+
             // Pump infinite-source detection (vanilla regen-rule parity per anchor block)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_strip_1x3_centre_vs_edges"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testStrip1x3CentreInfiniteEdgesFinite);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_isolated_source_finite"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testIsolatedSourceFinite);

@@ -13,6 +13,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.template.TemplateApi;
@@ -39,7 +41,27 @@ public class TemplateBuilder extends SnapshotBuilder<ITileForTemplateBuilder> {
 
     @Override
     protected boolean canPlace(BlockPos blockPos) {
-        return tile.getWorldBC().isEmptyBlock(blockPos);
+        return isFillableSlot(tile.getWorldBC(), blockPos);
+    }
+
+    /**
+     * "This world position can be filled by the Filler/Builder template path." Air counts
+     * (nothing in the way) and so do non-fluid {@code canBeReplaced} blocks — tall grass,
+     * short grass, ferns, snow_layer, vines, dead bushes, fire, … vanilla treats these as
+     * replaceable for any block placement, so {@code stack.useOn} (the path
+     * {@link TemplateHandlerDefault} drives) will overwrite them naturally; flagging them as
+     * already-filled here would leave grass tufts sitting inside a freshly Filled box (the
+     * user-reported symptom: enabling excavate doesn't help, because the check classifies
+     * the position as CORRECT and never queues a break OR place task).
+     * <p>
+     * Fluids are excluded so the existing fluid-mode logic ({@code shouldBreakQueueAcceptFluid}
+     * + {@code getFluidMode}) keeps owning fluid handling — without the exclusion, NO_REPLACE
+     * Fillers would start filling over water sources instead of leaving them alone.
+     */
+    static boolean isFillableSlot(Level level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        if (state.isAir()) return true;
+        return state.canBeReplaced() && state.getFluidState().isEmpty();
     }
 
     @Override
@@ -92,6 +114,6 @@ public class TemplateBuilder extends SnapshotBuilder<ITileForTemplateBuilder> {
 
     @Override
     protected boolean isBlockCorrect(BlockPos blockPos) {
-        return !isAir(blockPos) && !tile.getWorldBC().isEmptyBlock(blockPos);
+        return !isAir(blockPos) && !isFillableSlot(tile.getWorldBC(), blockPos);
     }
 }

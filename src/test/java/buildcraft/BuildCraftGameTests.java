@@ -118,6 +118,20 @@ public class BuildCraftGameTests {
             // Filler Inventory Filtering
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:filler_block_item_filter"), () -> buildcraft.builders.FillerInventoryTester::testFillerBlockItemFilter);
 
+            // Template Builder — fillable-slot classification (grass tufts / snow / fluids).
+            // Regression guard for the user-reported "Filler with Excavate doesn't clear grass
+            // tufts" bug: TemplateBuilder.isBlockCorrect used to flag any non-air block as
+            // CORRECT, so replaceable blocks (tall_grass, snow_layer, …) sat unfilled in the
+            // box. Fluids stay excluded so the fluid-mode logic keeps owning that path.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:template_fillable_air"), () -> buildcraft.builders.snapshot.TemplateBuilderFillableSlotTester::testAirIsFillable);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:template_fillable_tall_grass"), () -> buildcraft.builders.snapshot.TemplateBuilderFillableSlotTester::testTallGrassIsFillable);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:template_fillable_short_grass"), () -> buildcraft.builders.snapshot.TemplateBuilderFillableSlotTester::testShortGrassIsFillable);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:template_fillable_snow_layer"), () -> buildcraft.builders.snapshot.TemplateBuilderFillableSlotTester::testSnowLayerIsFillable);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:template_fillable_water_source_excluded"), () -> buildcraft.builders.snapshot.TemplateBuilderFillableSlotTester::testWaterSourceIsNotFillable);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:template_fillable_lava_source_excluded"), () -> buildcraft.builders.snapshot.TemplateBuilderFillableSlotTester::testLavaSourceIsNotFillable);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:template_fillable_solid_not"), () -> buildcraft.builders.snapshot.TemplateBuilderFillableSlotTester::testSolidBlockIsNotFillable);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:template_fillable_waterlogged_fence_not"), () -> buildcraft.builders.snapshot.TemplateBuilderFillableSlotTester::testWaterloggedFenceIsNotFillable);
+
             // Builder Drops (self + inventory contents)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_drops_contents_and_self"), () -> buildcraft.builders.BuilderDropsTester::testBuilderDropsContentsAndSelf);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:architect_drops_contents_and_self"), () -> buildcraft.builders.BuilderDropsTester::testArchitectDropsContentsAndSelf);

@@ -7,6 +7,15 @@
   },
   "parent": "buildcraftunofficial:sticky_dipping",
   "criteria": {
-    "code_trigger": { "trigger": "minecraft:impossible" }
+    "oil":              { "trigger": "minecraft:impossible" },
+    "oil_residue":      { "trigger": "minecraft:impossible" },
+    "oil_heavy":        { "trigger": "minecraft:impossible" },
+    "oil_dense":        { "trigger": "minecraft:impossible" },
+    "oil_distilled":    { "trigger": "minecraft:impossible" },
+    "fuel_dense":       { "trigger": "minecraft:impossible" },
+    "fuel_mixed_heavy": { "trigger": "minecraft:impossible" },
+    "fuel_light":       { "trigger": "minecraft:impossible" },
+    "fuel_mixed_light": { "trigger": "minecraft:impossible" },
+    "fuel_gaseous":     { "trigger": "minecraft:impossible" }
   }
 }

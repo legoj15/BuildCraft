@@ -48,6 +48,7 @@ import buildcraft.api.tiles.IDebuggable;
 import buildcraft.lib.fluid.FluidSmoother;
 
 import buildcraft.energy.BCEnergyFluids;
+import buildcraft.factory.BCFactoryAttachments;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.container.ContainerDistiller;
 import buildcraft.lib.mj.MjBatteryReceiver;
@@ -65,6 +66,8 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
 
     private static final Identifier ADVANCEMENT_HEATING_AND_DISTILLING =
         Identifier.parse("buildcraftunofficial:heating_and_distilling");
+    private static final Identifier ADVANCEMENT_REFINE_AND_REDEFINE =
+        Identifier.parse("buildcraftunofficial:refine_and_redefine");
 
     private final InputTank tankIn = new InputTank();
     private final OutputTank tankGasOut = new OutputTank();
@@ -272,6 +275,42 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         return inputHeat != naturalHeat;
     }
 
+    /**
+     * Credits the owner's {@code refine_and_redefine} tracker with the two output fluids
+     * of a just-committed distillation step, and fires the advancement on the rising
+     * completion edge. Crude {@code oil} is intentionally not produced by the Distiller
+     * (it is only an input) — that base name is fed by {@link buildcraft.factory.tile.TilePump}
+     * instead.
+     *
+     * <p>No-ops if no owner is set (pre-{@code track Distiller owner} placements) or if
+     * the owner is currently offline — {@link buildcraft.lib.misc.AdvancementUtil#unlockAdvancement
+     * (java.util.UUID, net.minecraft.world.level.Level, Identifier)} matches the
+     * Heating-and-Distilling pattern here. Progress accrues on the attachment regardless,
+     * so it lands when the player next logs in.
+     */
+    private void creditRefineAndRedefine(FluidStack outGas, FluidStack outLiquid) {
+        if (owner == null || level == null || level.isClientSide()) return;
+        net.minecraft.server.MinecraftServer server = level.getServer();
+        if (server == null) return;
+        net.minecraft.server.level.ServerPlayer player = server.getPlayerList().getPlayer(owner.id());
+        if (player == null) return;
+        var tracker = player.getData(BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get());
+        String gasBase = BCEnergyFluids.getBaseName(outGas.getFluid());
+        if (gasBase != null) {
+            String justSaturated = tracker.recordProduction(gasBase, outGas.getAmount());
+            if (justSaturated != null) {
+                AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_REFINE_AND_REDEFINE, justSaturated);
+            }
+        }
+        String liquidBase = BCEnergyFluids.getBaseName(outLiquid.getFluid());
+        if (liquidBase != null) {
+            String justSaturated = tracker.recordProduction(liquidBase, outLiquid.getAmount());
+            if (justSaturated != null) {
+                AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_REFINE_AND_REDEFINE, justSaturated);
+            }
+        }
+    }
+
     // --- Ticking ---
 
     public void serverTick() {
@@ -370,6 +409,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
                         tankLiquidOut.insertInternal(0, FluidResource.of(outLiquid), outLiquid.getAmount(), tx);
                         tx.commit();
                     }
+                    creditRefineAndRedefine(outGas, outLiquid);
                 }
             } else {
                 mjBattery.addPowerChecking(distillPower, false);

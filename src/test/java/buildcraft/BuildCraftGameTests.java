@@ -34,6 +34,12 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_colours_mark_placed_first_sighting_only"), () -> buildcraft.transport.WireColoursPlacedTester::testMarkPlacedReturnsTrueOnlyOnFirstSighting);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_colours_complete_only_after_all_sixteen"), () -> buildcraft.transport.WireColoursPlacedTester::testCompleteOnlyAfterAllSixteenColours);
 
+            // Per-player oil/fuel production tracking gating the refine_and_redefine advancement
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:refine_and_redefine_fresh_attachment_empty"), () -> buildcraft.factory.OilAndFuelProductionTester::testFreshAttachmentEmpty);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:refine_and_redefine_clamps_at_target"), () -> buildcraft.factory.OilAndFuelProductionTester::testRecordProductionClampsAtTarget);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:refine_and_redefine_ignores_unknown_and_non_positive"), () -> buildcraft.factory.OilAndFuelProductionTester::testRecordProductionIgnoresUnknownAndNonPositive);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:refine_and_redefine_completion_edge_once"), () -> buildcraft.factory.OilAndFuelProductionTester::testCompletionEdgeFiresExactlyOnce);
+
             // Power pipe flow chain — engine→wood diamond→diamond→tester end-to-end.
             // The renderer-side regression (visible gaps) is geometry math, pinned
             // directly by PipeFlowRendererPowerGeometryTester.

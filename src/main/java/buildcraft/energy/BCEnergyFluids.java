@@ -97,6 +97,14 @@ public class BCEnergyFluids {
         "fuel_dense", "fuel_mixed_heavy", "fuel_light", "fuel_mixed_light", "fuel_gaseous"
     };
 
+    /**
+     * Canonical ordering of the ten oil/fuel base names. Used as the index space for
+     * per-player production tracking (refine_and_redefine advancement) so a fixed-size
+     * {@code int[10]} matches the array order. Each entry has three heat-tier variants
+     * registered under {@link #ALL}; this list collapses those to the base name.
+     */
+    public static final List<String> BASE_NAMES = List.of(FLUID_NAMES);
+
     // ─── All registered fluid entries ─────────────────────────────────
 
     private static final List<FluidEntry> ALL_ENTRIES = new ArrayList<>();
@@ -151,6 +159,24 @@ public class BCEnergyFluids {
             }
         }
         return -1;
+    }
+
+    /**
+     * Returns the base name (heat-agnostic) of a BuildCraft energy fluid — one of
+     * the ten entries in {@link #BASE_NAMES}. Source and flowing forms both resolve
+     * to the same base name. Returns {@code null} for fluids that are not BuildCraft
+     * energy fluids (water, lava, any other mod's fluids).
+     */
+    public static String getBaseName(Fluid fluid) {
+        if (fluid == null) {
+            return null;
+        }
+        for (FluidEntry entry : ALL_ENTRIES) {
+            if (entry.source().get() == fluid || entry.flowing().get() == fluid) {
+                return entry.baseName();
+            }
+        }
+        return null;
     }
 
     // ─── Factory method ───────────────────────────────────────────────

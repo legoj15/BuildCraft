@@ -45,6 +45,8 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.BCCoreConfig;
 import buildcraft.core.tile.ITileOilSpring;
+import buildcraft.energy.BCEnergyFluids;
+import buildcraft.factory.BCFactoryAttachments;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.lib.misc.AdvancementUtil;
@@ -65,6 +67,8 @@ public class TilePump extends TileMiner implements IDebuggable {
         = Identifier.parse("buildcraftunofficial:draining_the_world");
     private static final Identifier ADVANCEMENT_DRAIN_OIL
         = Identifier.parse("buildcraftunofficial:oil_platform");
+    private static final Identifier ADVANCEMENT_REFINE_AND_REDEFINE
+        = Identifier.parse("buildcraftunofficial:refine_and_redefine");
 
     private static final Direction[] SEARCH_NORMAL = new Direction[] {
         Direction.UP, Direction.NORTH, Direction.SOUTH,
@@ -182,6 +186,30 @@ public class TilePump extends TileMiner implements IDebuggable {
         }
 
         buildQueue0(queueFluid, nextPosesToCheck, checked);
+    }
+
+    /**
+     * Credits the owner's {@code refine_and_redefine} tracker with the pumped crude
+     * oil and fires the advancement on the rising completion edge. Crude oil is the
+     * only one of the ten {@link BCEnergyFluids#BASE_NAMES} the Distiller never
+     * produces (it is the recipe input), so the Pump is the sole way to fill that
+     * counter — without this hook the advancement would be unreachable.
+     *
+     * <p>No-ops if no owner, no server (client-side or non-logical), or owner offline.
+     */
+    private void creditRefineAndRedefineFromPumpedOil(FluidStack drain) {
+        if (getOwner() == null || level == null || level.isClientSide()) return;
+        net.minecraft.server.MinecraftServer server = level.getServer();
+        if (server == null) return;
+        net.minecraft.server.level.ServerPlayer player = server.getPlayerList().getPlayer(getOwner().id());
+        if (player == null) return;
+        String baseName = BCEnergyFluids.getBaseName(drain.getFluid());
+        if (baseName == null) return;
+        var tracker = player.getData(BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get());
+        String justSaturated = tracker.recordProduction(baseName, drain.getAmount());
+        if (justSaturated != null) {
+            AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_REFINE_AND_REDEFINE, justSaturated);
+        }
     }
 
     /** Returns true if the fluid is crude oil (any heat variant). */
@@ -450,6 +478,7 @@ public class TilePump extends TileMiner implements IDebuggable {
                         if (getOwner() != null) {
                             AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT_DRAIN_OIL);
                         }
+                        creditRefineAndRedefineFromPumpedOil(drain);
                         if (oilSpringPos != null) {
                             BlockEntity tile = level.getBlockEntity(oilSpringPos);
                             if (tile instanceof ITileOilSpring oilSpring) {

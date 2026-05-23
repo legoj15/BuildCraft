@@ -30,6 +30,7 @@ public class BCFactory {
         BCFactoryItems.init(modEventBus);
         BCFactoryBlockEntities.init(modEventBus);
         BCFactoryMenuTypes.init(modEventBus);
+        BCFactoryAttachments.init(modEventBus);
 
         // Register client-side extensions on the mod event bus
         if (FMLEnvironment.getDist() == Dist.CLIENT) {

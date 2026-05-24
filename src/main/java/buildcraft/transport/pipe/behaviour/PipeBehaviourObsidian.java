@@ -64,11 +64,6 @@ public class PipeBehaviourObsidian extends PipeBehaviour implements IMjRedstoneR
     }
 
     @Override
-    public CompoundTag writeToNbt() {
-        return super.writeToNbt();
-    }
-
-    @Override
     public void onTick() {
         if (pipe.getHolder().getPipeWorld().isClientSide()) {
             return;

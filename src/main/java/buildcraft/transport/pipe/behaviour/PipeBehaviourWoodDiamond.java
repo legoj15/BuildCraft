@@ -69,6 +69,15 @@ public class PipeBehaviourWoodDiamond extends PipeBehaviourWood {
     }
 
     @Override
+    public void readFromNbt(CompoundTag nbt) {
+        super.readFromNbt(nbt);
+        filters.deserializeNBT(nbt.getCompoundOrEmpty("filters"));
+        filterMode = FilterMode.get(nbt.getByteOr("mode", (byte) 0));
+        currentFilter = nbt.getByteOr("currentFilter", (byte) 0) % filters.getSlots();
+        filterValid = hasAnyFilter();
+    }
+
+    @Override
     public void writePayload(FriendlyByteBuf buffer) {
         super.writePayload(buffer);
         buffer.writeByte(filterMode.ordinal());

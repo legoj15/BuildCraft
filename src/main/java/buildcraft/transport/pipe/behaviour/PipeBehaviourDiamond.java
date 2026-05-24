@@ -54,6 +54,12 @@ public abstract class PipeBehaviourDiamond extends PipeBehaviour {
     }
 
     @Override
+    public void readFromNbt(CompoundTag nbt) {
+        super.readFromNbt(nbt);
+        filters.deserializeNBT(nbt.getCompoundOrEmpty("filters"));
+    }
+
+    @Override
     public PipeFaceTex getTextureData(@Nullable Direction face) {
         return PipeFaceTex.get(face == null ? 0 : face.ordinal() + 1);
     }

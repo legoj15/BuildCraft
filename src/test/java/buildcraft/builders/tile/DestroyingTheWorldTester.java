@@ -113,6 +113,31 @@ public class DestroyingTheWorldTester {
         }
     }
 
+    /** Two 64×64 quarries placed by the same owner but never powered (lastFullSpeedTick is
+     *  still at the {@code Long.MIN_VALUE} default). Regression for the overflow where
+     *  {@code currentTick - Long.MIN_VALUE} wraps to a large negative and falsely passed the
+     *  freshness gate, causing the advancement to fire on placement of two unpowered quarries. */
+    public static void neverStampedDoesNotGrant(GameTestHelper helper) {
+        try {
+            ServerLevel level = helper.getLevel();
+            UUID owner = UUID.randomUUID();
+            TileQuarry q1 = placeQuarry(helper, new BlockPos(1, 2, 1));
+            TileQuarry q2 = placeQuarry(helper, new BlockPos(5, 2, 1));
+            setSize64(q1);
+            setSize64(q2);
+            q1.setOwner(new GameProfile(owner, "test"));
+            q2.setOwner(new GameProfile(owner, "test"));
+            // Deliberately do NOT touch lastFullSpeedTick — both stay at Long.MIN_VALUE.
+
+            Set<UUID> winners = BCBuildersEventDist.INSTANCE.findOwnersToAward(level, level.getGameTime());
+            assertTrue(!winners.contains(owner),
+                    "owner with two never-powered quarries must not be in the award set");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
     /** Both 64×64 with the same owner, but one's stamp is older than the window. Predicate
      *  drops the stale quarry, leaving the owner short of the 2-pair threshold. */
     public static void outsideWindowDoesNotGrant(GameTestHelper helper) {

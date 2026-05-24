@@ -190,7 +190,12 @@ public enum BCBuildersEventDist {
             int sizeX = q.frameBox.max().getX() - q.frameBox.min().getX() + 1;
             int sizeZ = q.frameBox.max().getZ() - q.frameBox.min().getZ() + 1;
             if (sizeX < 64 || sizeZ < 64) continue;
-            if (currentTick - q.getLastFullSpeedTick() > FULL_SPEED_WINDOW_TICKS) continue;
+            // Skip never-stamped quarries explicitly — otherwise `currentTick - Long.MIN_VALUE`
+            // overflows into a large negative, which fails the `> WINDOW` test and lets an
+            // unpowered freshly-placed quarry look "currently at full speed."
+            long lastFullSpeed = q.getLastFullSpeedTick();
+            if (lastFullSpeed == Long.MIN_VALUE) continue;
+            if (currentTick - lastFullSpeed > FULL_SPEED_WINDOW_TICKS) continue;
             GameProfile owner = q.getOwner();
             if (owner == null || owner.id() == null) continue;
             int next = countByOwner.getOrDefault(owner.id(), 0) + 1;

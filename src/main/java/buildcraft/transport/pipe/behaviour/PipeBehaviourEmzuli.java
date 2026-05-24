@@ -108,6 +108,21 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
     }
 
     @Override
+    public void readFromNbt(CompoundTag nbt) {
+        super.readFromNbt(nbt);
+        invFilters.deserializeNBT(nbt.getCompoundOrEmpty("Filters"));
+        currentSlot = NBTUtilBC.readEnum(nbt.get("currentSlot"), SlotIndex.class);
+        for (SlotIndex index : SlotIndex.VALUES) {
+            byte c = nbt.getByteOr("slotColors[" + index.ordinal() + "]", (byte) 0);
+            if (c > 0 && c <= 16) {
+                slotColours.put(index, DyeColor.byId(c - 1));
+            } else {
+                slotColours.remove(index);
+            }
+        }
+    }
+
+    @Override
     public void writePayload(FriendlyByteBuf buffer) {
         super.writePayload(buffer);
         for (SlotIndex index : SlotIndex.VALUES) {

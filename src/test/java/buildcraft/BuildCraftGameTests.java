@@ -23,6 +23,15 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_routing_test_simple"), () -> PipeRoutingTest::testSimplePipeExtraction);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_records_owner_on_placement"), () -> buildcraft.transport.PipeOwnerTester::testPipeRecordsOwnerOnPlacement);
 
+            // Painted pipe connectivity — pins canColoursConnect's null/equal-colour rules
+            // across the full paint pipeline (direct setColour, paintbrush event, NBT round-trip).
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:painted_pipe_unpainted_void_fluid_connects"), () -> buildcraft.transport.pipe.PaintedPipeConnectionTester::testUnpaintedVoidFluidPipeConnects);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:painted_pipe_pink_void_connects_to_unpainted"), () -> buildcraft.transport.pipe.PaintedPipeConnectionTester::testPinkPaintedVoidFluidPipeStillConnectsToUnpaintedNeighbour);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:painted_pipe_paintbrush_pink_void_connects"), () -> buildcraft.transport.pipe.PaintedPipeConnectionTester::testPaintbrushPaintedVoidFluidPipeStillConnects);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:painted_pipe_nbt_roundtrip_preserves"), () -> buildcraft.transport.pipe.PaintedPipeConnectionTester::testNbtRoundTripPreservesColourAndConnections);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:painted_pipe_two_pink_connect"), () -> buildcraft.transport.pipe.PaintedPipeConnectionTester::testTwoPinkFluidPipesConnect);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:painted_pipe_different_colours_do_not_connect"), () -> buildcraft.transport.pipe.PaintedPipeConnectionTester::testDifferentColouredFluidPipesDoNotConnect);
+
             // Wire connectivity predicate gating the logic_transportation advancement
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_connectivity_isolated"), () -> buildcraft.transport.block.PipeWireConnectivityTester::testIsolatedWireNotConnected);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_connectivity_in_cube_same_colour"), () -> buildcraft.transport.block.PipeWireConnectivityTester::testInCubeSameColourConnected);

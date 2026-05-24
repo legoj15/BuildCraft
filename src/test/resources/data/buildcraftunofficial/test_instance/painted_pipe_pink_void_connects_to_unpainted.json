@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:painted_pipe_pink_void_connects_to_unpainted",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 20,
+    "setup_ticks": 0,
+    "required": true
+}

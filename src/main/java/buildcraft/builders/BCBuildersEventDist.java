@@ -8,16 +8,22 @@ package buildcraft.builders;
 
 import java.lang.ref.WeakReference;
 import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.WeakHashMap;
 
+import com.mojang.authlib.GameProfile;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
@@ -30,6 +36,7 @@ import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
 import buildcraft.lib.client.render.laser.LaserRenderer_BC8;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.VecUtil;
 
 import buildcraft.builders.tile.TileArchitectTable;
@@ -137,6 +144,76 @@ public enum BCBuildersEventDist {
             TileQuarry pos = ref.get();
             if (pos == null || pos == quarry) {
                 iter.remove();
+            }
+        }
+    }
+
+    // --- "Destroying the world" advancement scan ---------------------------------------
+    // Granted when one owner has ≥2 quarries simultaneously running on 64×64+ frames at
+    // full power. The signal is sampled from TileQuarry.lastFullSpeedTick (stamped each
+    // tick the quarry is in unrestricted-power mode while actively mining), with a tick
+    // window to absorb engine sputter, drill-move ticks, and the scan throttle interval.
+    public static final Identifier DESTROYING_THE_WORLD =
+        Identifier.parse("buildcraftunofficial:destroying_the_world");
+
+    /** Window inside which a quarry counts as "currently running at full speed." Two
+     * scan-intervals wide so two consecutive scans cover any tick at which a quarry
+     * was eligible — without this, the throttle could miss a transient pair. Public
+     * so game tests can stamp {@link TileQuarry#lastFullSpeedTick} relative to it. */
+    public static final long FULL_SPEED_WINDOW_TICKS = 40;
+    /** Throttle: scan all worlds once per second. Must be < FULL_SPEED_WINDOW_TICKS / 2
+     * so back-to-back scans see overlapping eligibility windows. */
+    static final int SCAN_INTERVAL_TICKS = 20;
+
+    private long serverTickCounter = 0L;
+
+    /** Pure predicate exposed for unit/game-test coverage: snapshot the registered
+     * quarries on {@code level}, group them by owner UUID, and return the set of
+     * owners with ≥2 quarries that all satisfy the 64×64+ frame + full-speed-within-
+     * window condition at {@code currentTick}. Skips client-side levels and quarries
+     * with no owner. Does not award anything. */
+    public synchronized Set<UUID> findOwnersToAward(Level level, long currentTick) {
+        Set<UUID> winners = new HashSet<>();
+        if (level == null || level.isClientSide()) return winners;
+        Deque<WeakReference<TileQuarry>> quarries = allQuarries.get(level);
+        if (quarries == null || quarries.size() < 2) return winners;
+
+        Map<UUID, Integer> countByOwner = new HashMap<>();
+        Iterator<WeakReference<TileQuarry>> iter = quarries.iterator();
+        while (iter.hasNext()) {
+            TileQuarry q = iter.next().get();
+            if (q == null || q.isRemoved()) {
+                iter.remove();
+                continue;
+            }
+            if (!q.frameBox.isInitialized()) continue;
+            int sizeX = q.frameBox.max().getX() - q.frameBox.min().getX() + 1;
+            int sizeZ = q.frameBox.max().getZ() - q.frameBox.min().getZ() + 1;
+            if (sizeX < 64 || sizeZ < 64) continue;
+            if (currentTick - q.getLastFullSpeedTick() > FULL_SPEED_WINDOW_TICKS) continue;
+            GameProfile owner = q.getOwner();
+            if (owner == null || owner.id() == null) continue;
+            int next = countByOwner.getOrDefault(owner.id(), 0) + 1;
+            countByOwner.put(owner.id(), next);
+            if (next >= 2) winners.add(owner.id());
+        }
+        return winners;
+    }
+
+    /** Called once per server tick. Throttled internally to SCAN_INTERVAL_TICKS to keep
+     * server load near zero; bails immediately if no level has ≥2 quarries (the common
+     * case). Owners that have already earned the advancement are no-op'd inside
+     * {@link AdvancementUtil#unlockAdvancement} (PlayerAdvancements.award returns false). */
+    public synchronized void onServerTick() {
+        serverTickCounter++;
+        if (serverTickCounter % SCAN_INTERVAL_TICKS != 0) return;
+        for (Map.Entry<Level, Deque<WeakReference<TileQuarry>>> entry : allQuarries.entrySet()) {
+            Level level = entry.getKey();
+            Deque<WeakReference<TileQuarry>> quarries = entry.getValue();
+            if (quarries == null || quarries.size() < 2) continue;
+            long now = level.getGameTime();
+            for (UUID winner : findOwnersToAward(level, now)) {
+                AdvancementUtil.unlockAdvancement(winner, level, DESTROYING_THE_WORLD);
             }
         }
     }

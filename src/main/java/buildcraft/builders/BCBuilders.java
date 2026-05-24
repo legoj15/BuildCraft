@@ -13,6 +13,7 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import buildcraft.api.filler.FillerManager;
 import buildcraft.api.mj.MjAPI;
@@ -72,6 +73,11 @@ public class BCBuilders {
             buildCreativeTabContents(event);
         });
 
+        // Per-server-tick driver for BCBuildersEventDist.onServerTick, which throttles
+        // the destroying_the_world per-owner pairing scan to SCAN_INTERVAL_TICKS and
+        // short-circuits when no level has ≥2 tracked quarries.
+        NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class,
+                event -> BCBuildersEventDist.INSTANCE.onServerTick());
 
         if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
             buildcraft.builders.client.BCBuildersClient.initClient(modEventBus);

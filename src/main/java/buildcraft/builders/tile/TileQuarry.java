@@ -117,6 +117,12 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     private double blockPercentSoFar;
     private double moveDistanceSoFar;
     private boolean advancementGranted = false;
+    // Last game-time tick on which this quarry was running in unrestricted-power mode
+    // (battery > capacity/2, unlocking MAX_POWER_PER_TICK) AND actively mining (a non-
+    // frame-placement task was queued). Read by BCBuildersEventDist.findOwnersToAward
+    // to pair same-owner quarries for the destroying_the_world advancement. Package-
+    // private so tests in this package can stamp it directly without an accessor.
+    long lastFullSpeedTick = Long.MIN_VALUE;
 
     private List<AABB> collisionBoxes = ImmutableList.of();
     private Vec3 collisionDrillPos;
@@ -130,6 +136,12 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     /** Returns the MjBatteryReceiver for capability registration. */
     public MjBatteryReceiver getMjReceiver() {
         return mjReceiver;
+    }
+
+    /** Last game-time tick on which this quarry was at full power and actively mining.
+     *  See {@link #lastFullSpeedTick} for the exact stamp condition. */
+    public long getLastFullSpeedTick() {
+        return lastFullSpeedTick;
     }
 
     /** Returns the internal MjBattery for capability registration. */
@@ -507,8 +519,12 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             return;
         }
 
+        // Capture the unrestricted-power gate at tick start — the power_loop below drains
+        // up to MAX_POWER_PER_TICK from the battery, which can cross the half-capacity
+        // threshold downward and falsely look "not at full speed" by the time we stamp.
+        boolean atFullSpeedThisTick = battery.getStored() > battery.getCapacity() / 2;
         long max;
-        if (battery.getStored() > battery.getCapacity() / 2) {
+        if (atFullSpeedThisTick) {
             max = MAX_POWER_PER_TICK;
         } else {
             long roundedUp = battery.getStored() + MjAPI.MJ / 2;
@@ -622,6 +638,12 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             }
         }
         debugPowerRate -= max;
+
+        // Stamp for the destroying_the_world per-owner pairing scan. Frame placement isn't
+        // "destroying"; everything else (TaskBreakBlock, TaskMoveDrill toward a target) is.
+        if (atFullSpeedThisTick && currentTask != null && !(currentTask instanceof TaskAddFrame)) {
+            lastFullSpeedTick = level.getGameTime();
+        }
 
         // Grant "Diggy diggy hole" advancement when quarry finishes mining with frame >= 64x64
         if (!advancementGranted && boxIterator != null && !boxIterator.hasNext()

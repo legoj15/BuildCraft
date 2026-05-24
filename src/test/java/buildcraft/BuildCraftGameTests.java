@@ -149,6 +149,12 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:quarry_frame_clearing_routes_drops"), () -> buildcraft.builders.tile.TileQuarryDropsTester::testFrameClearingRoutesDropsToAdjacentChest);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:quarry_mining_routes_drops"), () -> buildcraft.builders.tile.TileQuarryDropsTester::testMiningRoutesDropsToAdjacentChest);
 
+            // Per-owner pairing predicate gating the destroying_the_world advancement
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:destroying_the_world_same_player_grants"), () -> buildcraft.builders.tile.DestroyingTheWorldTester::samePlayerTwoFullQuarriesGrants);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:destroying_the_world_different_owners_no_grant"), () -> buildcraft.builders.tile.DestroyingTheWorldTester::differentOwnersDoNotGrant);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:destroying_the_world_undersized_no_grant"), () -> buildcraft.builders.tile.DestroyingTheWorldTester::undersizedFrameDoesNotGrant);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:destroying_the_world_outside_window_no_grant"), () -> buildcraft.builders.tile.DestroyingTheWorldTester::outsideWindowDoesNotGrant);
+
             // Blueprint palette replacement (used by the Replacer block).
             // Logic also verified end-to-end in-client via the Replacer GUI.
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:blueprint_replace_scan_context"), () -> buildcraft.builders.snapshot.BlueprintReplaceTester::testScanContextDifferenceDoesNotBlockMatch);

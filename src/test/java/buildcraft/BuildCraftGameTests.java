@@ -271,6 +271,10 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:drops_filtered_buffer_skips_filter"), () -> BlockDropsTester::testFilteredBufferSkipsFilterSlots);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:drops_marker_hand"), () -> BlockDropsTester::testMarkerHandBreakDropsSelf);
 
+            // Stripes pipe direction NBT sync — covered by JUnit unit tests rather than game tests
+            // (the regression is in PipeBehaviour.readFromNbt's no-op default; PipeBehaviourStripesSyncTester
+            // exercises writeToNbt/readFromNbt round-trip directly with a null IPipe).
+
             // Pipe-specific drops — pluggable / wire click-break, pipe + cargo full break,
             // hand-break with cargo retention but no pipe item.
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_pluggable_break"), () -> buildcraft.transport.PipeDropsTester::testPluggableBreakDropsItemAndKeepsPipe);

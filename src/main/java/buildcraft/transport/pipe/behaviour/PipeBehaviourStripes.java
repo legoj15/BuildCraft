@@ -67,6 +67,13 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
     }
 
     @Override
+    public void readFromNbt(CompoundTag nbt) {
+        super.readFromNbt(nbt);
+        battery.deserializeNBT(nbt.getCompoundOrEmpty("battery"));
+        direction = NBTUtilBC.readEnum(nbt.get("direction"), Direction.class);
+    }
+
+    @Override
     public void readPayload(FriendlyByteBuf buffer, Object ctx) throws java.io.IOException {
         super.readPayload(buffer, ctx);
         int dirOrd = buffer.readByte();

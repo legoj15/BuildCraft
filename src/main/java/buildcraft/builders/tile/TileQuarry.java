@@ -1088,10 +1088,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                     serverLevel, breakPos, new ItemStack(Items.DIAMOND_PICKAXE), getOwner()
                 );
                 if (result.isPresent()) {
-                    if (drillPos != null) {
-                        result.get().drops().forEach(stack ->
-                            InventoryUtil.addToBestAcceptor(level, worldPosition, null, stack));
-                    }
+                    result.get().drops().forEach(stack ->
+                        InventoryUtil.addToBestAcceptor(level, worldPosition, null, stack));
                     // XP at the Quarry block itself rather than the broken position — matches
                     // the Mining Well / Builder / Filler convention so players collect XP at the
                     // machine they placed. Block.popExperience splits the integer into multiple

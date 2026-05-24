@@ -148,6 +148,7 @@ public class BuildCraftGameTests {
             // Quarry TaskBreakBlock drop routing in both phases (frame-clearing drillPos=null, mining drillPos!=null)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:quarry_frame_clearing_routes_drops"), () -> buildcraft.builders.tile.TileQuarryDropsTester::testFrameClearingRoutesDropsToAdjacentChest);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:quarry_mining_routes_drops"), () -> buildcraft.builders.tile.TileQuarryDropsTester::testMiningRoutesDropsToAdjacentChest);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:quarry_tick_reconciles_stale_mining_floor"), () -> buildcraft.builders.tile.TileQuarryMiningDepthTester::testTickReconcilesStaleMiningFloor);
 
             // Per-owner pairing predicate gating the destroying_the_world advancement
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:destroying_the_world_same_player_grants"), () -> buildcraft.builders.tile.DestroyingTheWorldTester::samePlayerTwoFullQuarriesGrants);

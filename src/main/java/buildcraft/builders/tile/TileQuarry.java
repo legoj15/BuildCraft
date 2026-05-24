@@ -98,7 +98,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     private final MjBattery battery = new MjBattery(24000 * MjAPI.MJ);
     private final MjBatteryReceiver mjReceiver = new MjBatteryReceiver(battery);
     public final Box frameBox = new Box();
-    private final Box miningBox = new Box();
+    final Box miningBox = new Box();
     private BoxIterator boxIterator;
     public final List<BlockPos> framePoses = new ArrayList<>();
     private int frameBoxPosesCount = 0;
@@ -328,10 +328,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         frameBox.setMin(min);
         frameBox.setMax(max);
         miningBox.reset();
-        int minY = max.getY() - 1 - BCCoreConfig.miningMaxDepth.get();
-        if (level.isOutsideBuildHeight(new BlockPos(min.getX(), minY, min.getZ()))) {
-            minY = level.getMinY();
-        }
+        int minY = computeMiningMinY();
         miningBox.setMin(new BlockPos(min.getX() + 1, minY, min.getZ() + 1));
         miningBox.setMax(new BlockPos(max.getX() - 1, max.getY() - 1, max.getZ() - 1));
         updatePoses();
@@ -340,6 +337,19 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
+    }
+
+    /**
+     * The mining box's floor Y, derived from {@link BCCoreConfig#miningMaxDepth}: dig at most
+     * {@code miningMaxDepth} blocks below the quarry block (matching the mining well / pump).
+     * Clamped to world floor when build height is shallower than the config allows.
+     */
+    private int computeMiningMinY() {
+        int minY = worldPosition.getY() - BCCoreConfig.miningMaxDepth.get();
+        if (level != null && level.isOutsideBuildHeight(minY)) {
+            minY = level.getMinY();
+        }
+        return minY;
     }
 
     private boolean canMine(BlockPos blockPos) {
@@ -505,6 +515,17 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
 
         if (!frameBox.isInitialized() || !miningBox.isInitialized()) {
             return;
+        }
+
+        // Re-apply miningMaxDepth so config changes take effect on already-placed quarries
+        // (saved mining box was sized under whatever config was in effect when it was placed).
+        // Mining-box top stays anchored to the frame interior; only the floor depends on the
+        // config, so reshape just the min Y and reset the iterator if it shifted.
+        int desiredMinY = computeMiningMinY();
+        if (miningBox.min().getY() != desiredMinY) {
+            BlockPos oldMin = miningBox.min();
+            miningBox.setMin(new BlockPos(oldMin.getX(), desiredMinY, oldMin.getZ()));
+            boxIterator = null;
         }
 
         if (!toCheck.isEmpty()) {

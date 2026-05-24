@@ -34,10 +34,6 @@ public class BCCoreItems {
                         "volume_box",
                         ItemVolumeBox::new, props -> props.stacksTo(16));
 
-        public static final DeferredItem<ItemMapLocation> MAP_LOCATION = ITEMS.registerItem(
-                        "map_location",
-                        ItemMapLocation::new, props -> props.stacksTo(16));
-
         public static final DeferredItem<ItemPaintbrush_BC8> PAINTBRUSH = ITEMS.registerItem(
                         "paintbrush",
                         ItemPaintbrush_BC8::new, props -> props.stacksTo(1));
@@ -101,6 +97,12 @@ public class BCCoreItems {
         // Debug block that sinks MJ power — mirrors BCCoreBlocks.POWER_TESTER.
         public static final DeferredItem<net.minecraft.world.item.BlockItem> POWER_TESTER;
 
+        // The only downstream consumer of Map Location was the Zone Planner (still stubbed) and
+        // the Robotics waypoint system (not ported). Until a non-robotics consumer exists, keep
+        // this out of public builds — the in-world overlay never made the 1.21 port either, so
+        // a survival player would see a tooltip-only item with no functional effect.
+        public static final DeferredItem<ItemMapLocation> MAP_LOCATION;
+
         static {
                 GOGGLES = BCLib.DEV
                                 ? ITEMS.registerItem("goggles", ItemGoggles::new,
@@ -108,6 +110,10 @@ public class BCCoreItems {
                                 : null;
                 POWER_TESTER = (BCLib.DEV && BCCoreBlocks.POWER_TESTER != null)
                                 ? ITEMS.registerSimpleBlockItem("power_tester", BCCoreBlocks.POWER_TESTER)
+                                : null;
+                MAP_LOCATION = BCLib.DEV
+                                ? ITEMS.registerItem("map_location", ItemMapLocation::new,
+                                                props -> props.stacksTo(16))
                                 : null;
         }
 

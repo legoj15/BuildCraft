@@ -91,7 +91,10 @@ public class BCCoreCreativeTabs {
                                 }
                                 // List, Map, Connector, Volume Box
                                 output.accept(BCCoreItems.LIST.get());
-                                output.accept(BCCoreItems.MAP_LOCATION.get());
+                                // Dev-only Map Location (only when launched with -Dbuildcraft.dev=true)
+                                if (BCCoreItems.MAP_LOCATION != null) {
+                                    output.accept(BCCoreItems.MAP_LOCATION.get());
+                                }
                                 output.accept(BCCoreItems.MARKER_CONNECTOR.get());
                                 output.accept(BCCoreItems.VOLUME_BOX.get());
                                 // Snapshots

@@ -88,6 +88,7 @@ public class BCCoreClient {
                         if (buildcraft.lib.BCLib.DEV) {
                                 buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.POWER_TESTER.get());
                                 buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.GOGGLES.get());
+                                buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.MAP_LOCATION.get());
                         }
                 })
         );

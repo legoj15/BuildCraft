@@ -24,8 +24,11 @@ import buildcraft.lib.list.ListHandler;
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
+import buildcraft.lib.misc.AdvancementUtil;
+
 import buildcraft.core.BCCoreItems;
 import buildcraft.core.BCCoreMenuTypes;
+import buildcraft.core.PaperAdvancement;
 import buildcraft.core.item.ItemList_BC8;
 
 public class ContainerList extends ContainerBC_Neptune {
@@ -99,6 +102,7 @@ public class ContainerList extends ContainerBC_Neptune {
             ItemStack listStack = getListItemStack();
             ListHandler.saveLines(listStack, lines);
             ItemList_BC8.updateModelData(listStack);
+            AdvancementUtil.unlockAdvancement(player, PaperAdvancement.ID, PaperAdvancement.WRITE_TO_LIST);
         }
     }
 

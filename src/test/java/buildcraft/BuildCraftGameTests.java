@@ -150,6 +150,9 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:quarry_mining_routes_drops"), () -> buildcraft.builders.tile.TileQuarryDropsTester::testMiningRoutesDropsToAdjacentChest);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:quarry_tick_reconciles_stale_mining_floor"), () -> buildcraft.builders.tile.TileQuarryMiningDepthTester::testTickReconcilesStaleMiningFloor);
 
+            // Owner-on-placement contract — load-bearing for both quarry advancements
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:quarry_on_placed_by_records_owner"), () -> buildcraft.builders.tile.TileQuarryOwnerTester::onPlacedByRecordsOwner);
+
             // Per-owner pairing predicate gating the destroying_the_world advancement
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:destroying_the_world_same_player_grants"), () -> buildcraft.builders.tile.DestroyingTheWorldTester::samePlayerTwoFullQuarriesGrants);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:destroying_the_world_different_owners_no_grant"), () -> buildcraft.builders.tile.DestroyingTheWorldTester::differentOwnersDoNotGrant);
@@ -251,6 +254,9 @@ public class BuildCraftGameTests {
 
             // Filler building_for_the_future advancement (LOOP-mode completion + setControlMode re-arm)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:filler_building_for_the_future_advancement"), () -> buildcraft.builders.FillerAdvancementTester::testBuildingForTheFutureAdvancement);
+
+            // Paper advancement contract (4 criteria, all required, names matching PaperAdvancement constants)
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:paper_advancement_contract"), () -> buildcraft.core.PaperAdvancementTester::testPaperAdvancementContract);
 
             // Pump infinite-source detection (vanilla regen-rule parity per anchor block)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pump_infinite_strip_1x3_centre_vs_edges"), () -> buildcraft.factory.PumpInfiniteDetectionTester::testStrip1x3CentreInfiniteEdgesFinite);

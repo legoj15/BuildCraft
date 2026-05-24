@@ -40,6 +40,10 @@ public class AdvancementUtil {
     }
 
     public static boolean unlockAdvancement(UUID playerId, Level level, Identifier advancementName) {
+        return unlockAdvancement(playerId, level, advancementName, "code_trigger");
+    }
+
+    public static boolean unlockAdvancement(UUID playerId, Level level, Identifier advancementName, String criterionName) {
         if (level.isClientSide()) {
             return false;
         }
@@ -49,7 +53,7 @@ public class AdvancementUtil {
         }
         ServerPlayer player = server.getPlayerList().getPlayer(playerId);
         if (player != null) {
-            unlockAdvancement(player, advancementName);
+            unlockAdvancement(player, advancementName, criterionName);
             return true;
         }
         return false;

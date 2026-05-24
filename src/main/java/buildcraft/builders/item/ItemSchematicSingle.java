@@ -34,12 +34,14 @@ import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
 
 import buildcraft.lib.inventory.InventoryWrapper;
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.SoundUtil;
 import buildcraft.lib.misc.StackUtil;
 
 import buildcraft.builders.BCBuildersItems;
 import buildcraft.builders.snapshot.SchematicBlockManager;
+import buildcraft.core.PaperAdvancement;
 
 /**
  * Single Block Schematic item — captures a single block's schematic data (right-click)
@@ -116,6 +118,8 @@ public class ItemSchematicSingle extends Item {
             itemData.put(NBT_KEY, SchematicBlockManager.writeToNBT(schematicBlock));
             NBTUtilBC.setItemData(usedStack, itemData);
             player.setItemInHand(hand, usedStack);
+            AdvancementUtil.unlockAdvancement(player, PaperAdvancement.ID,
+                PaperAdvancement.CAPTURE_WITH_SCHEMATIC);
             return InteractionResult.SUCCESS;
         } else {
             // === PLACE MODE (used schematic) ===

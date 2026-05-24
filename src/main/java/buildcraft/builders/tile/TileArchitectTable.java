@@ -439,6 +439,11 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
         blueprintScannedEntities.clear();
         if (getOwner() != null) {
             AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT);
+            String paperCriterion = (snapshotType == EnumSnapshotType.BLUEPRINT)
+                ? buildcraft.core.PaperAdvancement.WRITE_TO_BLUEPRINT
+                : buildcraft.core.PaperAdvancement.WRITE_TO_TEMPLATE;
+            AdvancementUtil.unlockAdvancement(getOwner().id(), level,
+                buildcraft.core.PaperAdvancement.ID, paperCriterion);
         }
         setChanged();
         // Push the slot-state change to clients so the architect BER picks up the

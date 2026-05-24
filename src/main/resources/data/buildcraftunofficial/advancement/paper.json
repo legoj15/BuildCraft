@@ -12,8 +12,23 @@
   },
   "parent": "buildcraftunofficial:list",
   "criteria": {
-    "code_trigger": {
+    "write_to_list": {
+      "trigger": "minecraft:impossible"
+    },
+    "write_to_blueprint": {
+      "trigger": "minecraft:impossible"
+    },
+    "write_to_template": {
+      "trigger": "minecraft:impossible"
+    },
+    "capture_with_schematic": {
       "trigger": "minecraft:impossible"
     }
-  }
+  },
+  "requirements": [
+    ["write_to_list"],
+    ["write_to_blueprint"],
+    ["write_to_template"],
+    ["capture_with_schematic"]
+  ]
 }

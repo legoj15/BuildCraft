@@ -234,6 +234,10 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         if (level == null || level.isClientSide()) {
             return;
         }
+        // Records the placer as owner — load-bearing for both quarry advancements:
+        // "Diggy diggy hole" gates on getOwner() != null, and "Destroying the world"
+        // can't pair quarries without an owner UUID.
+        super.onPlacedBy(placer, stack);
         Direction facing = level.getBlockState(worldPosition).getValue(HorizontalDirectionalBlock.FACING);
         BlockPos areaPos = worldPosition.relative(facing.getOpposite());
         BlockEntity tile = level.getBlockEntity(areaPos);
@@ -673,9 +677,13 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             int sizeX = frameBox.max().getX() - frameBox.min().getX() + 1;
             int sizeZ = frameBox.max().getZ() - frameBox.min().getZ() + 1;
             if (sizeX >= 64 && sizeZ >= 64 && getOwner() != null) {
-                AdvancementUtil.unlockAdvancement(getOwner().id(), level, DIGGY_DIGGY_HOLE);
-                advancementGranted = true;
-                setChanged();
+                // Only latch advancementGranted when the award actually reached the player.
+                // unlockAdvancement returns false if the owner is offline; latching anyway
+                // would silently drop the award and never retry on subsequent ticks.
+                if (AdvancementUtil.unlockAdvancement(getOwner().id(), level, DIGGY_DIGGY_HOLE)) {
+                    advancementGranted = true;
+                    setChanged();
+                }
             }
         }
 

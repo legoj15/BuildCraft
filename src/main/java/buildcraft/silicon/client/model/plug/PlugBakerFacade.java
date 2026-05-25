@@ -38,6 +38,21 @@ import buildcraft.silicon.plug.PluggableFacade;
 public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
     INSTANCE;
 
+    /** Reserved tint indices on pipe_holder that facade quads must not collide with
+     *  (currently NO_TINT=0 and PIPE_COLOUR_TINT=1, see PipeBlockColourHandler). */
+    public static final int FACADE_TINT_BASE = 2;
+
+    /** Max wrapped-block tintindex covered by facade tint sources. Vanilla blocks max
+     *  out at tintindex 1; 4 gives modded-block headroom. Anything higher renders
+     *  untinted (the wrapped block has more colour layers than we registered slots
+     *  for — safe to drop rather than alias to a wrong slot). */
+    public static final int FACADE_TINT_MAX_DATA = 4;
+
+    /** Total size of the BlockTintSource list pipe_holder registers:
+     *  reserved-pipe-slots + (one entry per (wrapped-tintindex, side) pair). */
+    public static final int FACADE_TINT_LIST_SIZE =
+        FACADE_TINT_BASE + FACADE_TINT_MAX_DATA * Direction.values().length;
+
     /** Rotation values matching the old net.minecraft.util.Rotation enum. */
     private static final int ROT_NONE = 0;
     private static final int ROT_CW90 = 1;
@@ -297,8 +312,11 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
         }
         for (MutableQuad quad : quads) {
             int tint = quad.getTint();
-            if (tint != -1) {
-                quad.setTint(tint * Direction.values().length + key.side.ordinal());
+            if (tint < 0) continue;
+            if (tint < FACADE_TINT_MAX_DATA) {
+                quad.setTint(FACADE_TINT_BASE + tint * Direction.values().length + key.side.ordinal());
+            } else {
+                quad.setTint(-1);
             }
         }
         return quads;

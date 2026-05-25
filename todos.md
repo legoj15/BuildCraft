@@ -2,13 +2,6 @@
 
 Last audited: 2026-05-25
 
-## 🔧 Outstanding work
-
-### Facade rendering
-- [ ] Facades of biome/state-tinted blocks (grass, leaves, redstone, water) render without their tint colour. MC 26.1's `BlockTintSource` system bypasses the old per-pluggable `getBlockColor` path (now removed), and the facade tint-index space (`PlugBakerFacade` emits `data*6+side`) collides with `pipe_holder`'s own indices. Needs a facade-tint rendering rework: register `BlockTintSource`s across the facade index range and resolve the wrapped block's colour. Untinted-block facades (most blocks) are unaffected.
-
----
-
 ## 🧹 Finalization
 
 - [ ] Deprecation and warning fixes (both compile-time and runtime).

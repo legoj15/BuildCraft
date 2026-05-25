@@ -2,6 +2,7 @@ package buildcraft.lib.misc;
 
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
@@ -10,6 +11,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 
+import net.neoforged.neoforge.common.SoundActions;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 public class SoundUtil {
@@ -52,10 +54,12 @@ public class SoundUtil {
     }
 
     public static void playBucketEmpty(Level world, BlockPos pos, FluidStack fluid) {
-        world.playSound(null, pos, SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 1.0F, 1.0F);
+        SoundEvent sound = fluid.getFluid().getFluidType().getSound(fluid, SoundActions.BUCKET_EMPTY);
+        world.playSound(null, pos, sound != null ? sound : SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 1.0F, 1.0F);
     }
 
     public static void playBucketFill(Level world, BlockPos pos, FluidStack fluid) {
-        world.playSound(null, pos, SoundEvents.BUCKET_FILL, SoundSource.BLOCKS, 1.0F, 1.0F);
+        SoundEvent sound = fluid.getFluid().getFluidType().getSound(fluid, SoundActions.BUCKET_FILL);
+        world.playSound(null, pos, sound != null ? sound : SoundEvents.BUCKET_FILL, SoundSource.BLOCKS, 1.0F, 1.0F);
     }
 }

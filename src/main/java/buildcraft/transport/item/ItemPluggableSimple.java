@@ -21,6 +21,7 @@ import buildcraft.api.transport.IItemPluggable;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
+import buildcraft.lib.misc.SoundUtil;
 
 /**
  * A simple item that creates a pluggable from a {@link PluggableDefinition} when placed on a pipe.
@@ -56,6 +57,7 @@ public class ItemPluggableSimple extends Item implements IItemPluggable {
             return null;
         }
         if (definition.creator != null) {
+            SoundUtil.playBlockPlace(holder.getPipeWorld(), holder.getPipePos());
             return definition.creator.createSimplePluggable(definition, holder, side);
         }
         return null;

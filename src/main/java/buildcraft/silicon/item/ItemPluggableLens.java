@@ -17,6 +17,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
 
 import buildcraft.api.transport.IItemPluggable;
 import buildcraft.api.transport.pipe.IFlowItems;
@@ -82,7 +83,7 @@ public class ItemPluggableLens extends Item implements IItemPluggable {
         }
         DyeColor colour = getColour(stack);
         boolean filter = isFilter(stack);
-        SoundUtil.playBlockPlace(holder.getPipeWorld(), holder.getPipePos());
+        SoundUtil.playBlockPlace(holder.getPipeWorld(), holder.getPipePos(), Blocks.GLASS.defaultBlockState());
         return new PluggableLens(BCSiliconPlugs.lens, holder, side, colour, filter);
     }
 }

@@ -99,7 +99,7 @@ public class ItemPluggableFacade extends Item implements IItemPluggable, IFacade
     public PipePluggable onPlace(@Nonnull ItemStack stack, IPipeHolder holder, Direction side, Player player,
         InteractionHand hand) {
         FacadeInstance fullState = getStates(stack);
-        SoundUtil.playBlockPlace(holder.getPipeWorld(), holder.getPipePos());
+        SoundUtil.playBlockPlace(holder.getPipeWorld(), holder.getPipePos(), fullState.phasedStates[0].stateInfo.state);
         return new PluggableFacade(BCSiliconPlugs.facade, holder, side, fullState);
     }
 

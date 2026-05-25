@@ -52,7 +52,7 @@ public class BCBuildersBlocks {
 
     public static final DeferredBlock<BlockQuarry> QUARRY = BLOCKS.registerBlock(
             "quarry",
-            BlockQuarry::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
+            BlockQuarry::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.ANVIL).requiresCorrectToolForDrops());
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

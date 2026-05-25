@@ -39,7 +39,9 @@ import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.redstone.Orientation;
 import net.minecraft.world.phys.BlockHitResult;
 
+import buildcraft.api.blocks.ICustomRotationHandler;
 import buildcraft.api.items.FluidItemDrops;
+import buildcraft.api.tools.IToolWrench;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.tile.TileHeatExchange;
@@ -50,7 +52,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  * that transfer heat between two fluid streams.
  * Ported from 1.12.2 BlockHeatExchange.
  */
-public class BlockHeatExchange extends BaseEntityBlock {
+public class BlockHeatExchange extends BaseEntityBlock implements ICustomRotationHandler {
     public static final MapCodec<BlockHeatExchange> CODEC = simpleCodec(BlockHeatExchange::new);
 
     public enum EnumExchangePart implements StringRepresentable {
@@ -152,6 +154,23 @@ public class BlockHeatExchange extends BaseEntityBlock {
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
+        // Wrench priority (unified with engine/distiller/dynamo blocks):
+        //   - crouch + wrench → open GUI (so the player can sneak-tweak a running
+        //     chain without rotating it)
+        //   - non-crouch + wrench → PASS so ItemWrench_Neptune.useOn dispatches
+        //     rotation through ICustomRotationHandler#attemptRotation, which
+        //     calls TileHeatExchange.rotate() (single block: 90°; chain: 180°
+        //     swap of start/end). Matches 1.12.2's Block#rotateBlock wiring.
+        if (stack.getItem() instanceof IToolWrench) {
+            if (player.isShiftKeyDown()) {
+                BlockEntity be = level.getBlockEntity(pos);
+                if (be instanceof TileHeatExchange exchange) {
+                    return openExchangeMenu(level, exchange, player);
+                }
+                return InteractionResult.PASS;
+            }
+            return InteractionResult.PASS;
+        }
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TileHeatExchange exchange)) {
             return InteractionResult.PASS;
@@ -181,6 +200,23 @@ public class BlockHeatExchange extends BaseEntityBlock {
             return InteractionResult.PASS;
         }
         return openExchangeMenu(level, exchange, player);
+    }
+
+    // --- ICustomRotationHandler ---
+
+    /**
+     * Wrench rotation entry point. Delegates to {@link TileHeatExchange#rotate()},
+     * which rotates a single exchanger 90° or swaps the start/end of a multi-block
+     * chain 180° (the chain-rotation case also plays the slide sound at the
+     * wrenched position).
+     */
+    @Override
+    public InteractionResult attemptRotation(Level level, BlockPos pos, BlockState state, Direction sideWrenched) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TileHeatExchange exchange && exchange.rotate()) {
+            return InteractionResult.SUCCESS;
+        }
+        return InteractionResult.PASS;
     }
 
     private static InteractionResult openExchangeMenu(Level level, TileHeatExchange exchange, Player player) {

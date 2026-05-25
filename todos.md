@@ -1,31 +1,8 @@
 # BuildCraft 1.12.2 → 26.1.x Port Status
 
-Last audited: 2026-05-25. The changelog block in `changelog.md` titled "Changes since 26.1.x Beta release 6" is authoritative for what has shipped since the previous audit; consult it before re-auditing this file.
-
-## Subsystem Status Overview
-
-The 1.12.2 → modern port is effectively done. Java packages still mirror the old submod boundaries (`transport`, `energy`, `factory`, …) but they're just packages now — see `CLAUDE.md` for why. The table below tracks remaining gaps per package.
-
-| Subsystem (package) | Active `.java` | Status |
-|:---|:---:|:---|
-| **API** | 229 | ✅ Complete |
-| **Lib** | 606 | ✅ Complete |
-| **Core** | 88 | ✅ Complete |
-| **Transport** | 122 | ✅ Complete |
-| **Silicon** | 75 | ✅ Complete |
-| **Factory** | 51 | ✅ Complete |
-| **Energy** | 31 | ✅ Complete |
-| **Builders** | 127 | ✅ Complete |
-| **Robotics** | 12 | ⚠️ Only Zone Planner ported, now dev-mode-gated (unfinished); robots not ported (low priority — not actively maintained in 1.12.2) |
-
-Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains accessible via the `8.0.x-1.12.2` branch if reference is ever needed.
-
----
+Last audited: 2026-05-25
 
 ## 🔧 Outstanding work
-
-### Block Sounds
-- [ ] Most blocks use the default `SoundType` — only 43 explicit declarations exist across the codebase (mostly `METAL`, three `STONE`, three `SLIME_BLOCK`). A deliberate sound pass is still needed (engines, pipes, facades, tanks, machines).
 
 ### Guidebook
 - [ ] Fill the last 2 stubs: `engine_basics.md` (1-line title only) and `registry_overview.md` (empty).
@@ -36,13 +13,11 @@ Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains
 ### Facade rendering
 - [ ] Facades of biome/state-tinted blocks (grass, leaves, redstone, water) render without their tint colour. MC 26.1's `BlockTintSource` system bypasses the old per-pluggable `getBlockColor` path (now removed), and the facade tint-index space (`PlugBakerFacade` emits `data*6+side`) collides with `pipe_holder`'s own indices. Needs a facade-tint rendering rework: register `BlockTintSource`s across the facade index range and resolve the wrapped block's colour. Untinted-block facades (most blocks) are unaffected.
 
-### Robotics
-- [ ] No robots, robot AI, robot stations, or robot items ported. **Low priority** — robots were not actively maintained in 1.12.2.
-- [ ] `GuiZonePlanner` references `textures/gui/zone_planner.png`, but that file lives in `misc/unused_textures/` — the Zone Planner GUI renders a missing texture until it's restored.
-
 ---
 
 ## 🆕 New Features (version 1.1)
+
+- [ ] **Robotics resurrection.** Port robots, robot AI, robot stations, and robot items from the 1.12.2 line (low priority — robots were not actively maintained even in 1.12.2). Tied in: `GuiZonePlanner` references `textures/gui/zone_planner.png`, currently archived under `misc/unused_textures/`; restoring the Zone Planner GUI is the prerequisite for the robot-zone workflow.
 
 - [ ] **Pump-on-top fluid extraction for Mining Well & Quarry.** Both miners stop or skip when they hit blocking fluids today (Mining Well halts on lava/oil, Quarry skips fluid columns). Adding a Pump on top of either should consume fluid from the same blocking column, draining it into a buffer / adjacent tank or pipe so the miner can resume. Power for the on-top Pump comes out of the host miner's internal MJ battery rather than requiring a separate engine hookup. Mining Well top texture should swap to the open Flood Gate sprite when a Pump is mounted. Open: shared-battery priority/throttling, where the drained fluid goes, whether the Quarry's larger column needs a different sweep pattern than the Well's single-block-below path.
 - [ ] **Marker connector connection length HUD.** Display the measured distance (in blocks or appropriate unit) of a marker connection the player is currently looking at.
@@ -60,6 +35,7 @@ Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains
 - [ ] **Cauldron as a fluid container.** Fluid pipes (and pumps) should treat the vanilla cauldron as a fluid tank — draining water/lava/powder-snow out of it and filling it up to the appropriate level. NeoForge exposes `IFluidHandler` capabilities for the cauldron via its capability system; wire the cauldron into BC's fluid pipe connection logic.
 - [ ] **Waterlog non-cube-collision blocks.** Pipes, facades, and other BC blocks with non-full collision shapes are destroyed by flowing fluids (water, lava, oil) because they don't implement `LiquidBlockContainer`. This matches 1.12.2 behavior but is worth revisiting: implement waterlogging for at least pipe holders so players can route pipes through flooded areas. Requires adding a waterlogged block state, implementing `LiquidBlockContainer`, and scheduling fluid ticks on neighbor changes.
 - [ ] Putting nothing in the second/"to" replacer slot changes the button to "Remove" (usefull for removing grass tufts)
+- [ ] Utilize modern Minecraft sounds (copper grates for pipes, etc)
 
 ---
 

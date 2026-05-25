@@ -16,7 +16,6 @@ import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
-import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
 public class GuiChute extends GuiBC8<ContainerChute> {
@@ -39,7 +38,6 @@ public class GuiChute extends GuiBC8<ContainerChute> {
 
     @Override
     protected void initGuiElements() {
-        mainGui.shownElements.add(new LedgerHelp(mainGui, false));
         mainGui.shownElements.add(new DummyHelpElement(
                 new GuiRectangle(SLOTS_X, SLOTS_Y, SLOTS_W, SLOTS_H).offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.chute.slots.title", 0xFF_88_CC_88,

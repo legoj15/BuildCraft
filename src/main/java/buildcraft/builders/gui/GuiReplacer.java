@@ -24,7 +24,6 @@ import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
-import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
@@ -106,11 +105,9 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
                 true // right side
             ));
         }
-        mainGui.shownElements.add(new LedgerHelp(mainGui, false)); // left side
-
         // Help-ledger entries — non-drawing IGuiElements that register an ElementHelpInfo at a
-        // screen rect. LedgerHelp discovers them by iterating gui.shownElements and calling
-        // addHelpElements. Coordinates mirror the constants at the top of this class.
+        // screen rect. The auto-attached LedgerHelp discovers them by iterating gui.shownElements
+        // and calling addHelpElements. Coordinates mirror the constants at the top of this class.
         mainGui.shownElements.add(new DummyHelpElement(
                 new GuiRectangle(PREVIEW_X, PREVIEW_Y, PREVIEW_W, PREVIEW_H).offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.replacer.preview.title", 0xFF_88_CC_FF,

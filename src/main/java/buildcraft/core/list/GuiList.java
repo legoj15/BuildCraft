@@ -25,7 +25,6 @@ import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
-import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
 public class GuiList extends GuiBC8<ContainerList> {
@@ -78,8 +77,6 @@ public class GuiList extends GuiBC8<ContainerList> {
 
     @Override
     protected void initGuiElements() {
-        // Help ledger on the left side (matching 1.12.2)
-        mainGui.shownElements.add(new LedgerHelp(mainGui, false));
         // Match-info ledger — when expanded and the player hovers over slot 0 of a By-Type or
         // By-Material line, displays which tags / capabilities the registered handlers use to
         // match items against the exemplar.
@@ -87,7 +84,7 @@ public class GuiList extends GuiBC8<ContainerList> {
 
         // Help-ledger wrappers — one DummyHelpElement per addressable region. These are non-
         // drawing IGuiElements that simply register an ElementHelpInfo at a screen rect; the
-        // LedgerHelp widget discovers them by iterating gui.shownElements and calling
+        // auto-attached LedgerHelp discovers them by iterating gui.shownElements and calling
         // addHelpElements. Highlight colours are picked to read distinctly when the help ledger
         // is expanded — yellow for the label, green for the slot rows, and three different
         // hues for the per-mode buttons.

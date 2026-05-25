@@ -46,9 +46,13 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
         super(menu, playerInv, title, SIZE_X, SIZE_Y);
     }
 
-    // No LedgerHelp here: the screen hosts vanilla's recipe book on the left, which slides out
-    // from the GUI edge and would overlap a left-side ledger. 1.12.2 opted out of the help
-    // ledger on this screen for the same reason via shouldAddHelpLedger() returning false.
+    // Vanilla's recipe book slides out from the left edge and would overlap a left-side
+    // LedgerHelp, so we opt out via shouldAddHelpLedger() — matching 1.12.2.
+    @Override
+    protected boolean shouldAddHelpLedger() {
+        return false;
+    }
+
     @Override
     protected void initGuiElements() {
         if (menu.tile != null) {

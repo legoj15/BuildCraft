@@ -16,7 +16,6 @@ import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
-import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
 public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
@@ -40,8 +39,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     @Override
     protected void initGuiElements() {
         // Map viewport rendering is deferred — requires porting ZonePlannerMapRenderer.
-        // Help ledger still works so the player can read what the screen is meant to do.
-        mainGui.shownElements.add(new LedgerHelp(mainGui, false));
+        // The auto-attached help ledger still works so the player can read what the screen is meant to do.
         mainGui.shownElements.add(new DummyHelpElement(
                 new GuiRectangle(MAP_X, MAP_Y, MAP_W, MAP_H).offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.zone_planner.map.title", 0xFF_88_CC_88,

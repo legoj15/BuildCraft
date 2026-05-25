@@ -70,8 +70,6 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
                 true
             ));
         }
-        mainGui.shownElements.add(new buildcraft.lib.gui.ledger.LedgerHelp(mainGui, false));
-
         // Filter Slots Help Element (y=27)
         mainGui.shownElements.add(new DummyHelpElement(
             new GuiRectangle(8, 27, 160, 16).offset(mainGui.rootElement),

@@ -21,7 +21,6 @@ import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.elem.GuiElementFluidTank;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
-import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
 import buildcraft.builders.container.ContainerBuilder;
@@ -106,12 +105,9 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
             ));
         }
 
-        // Help ledger — pinned to the left edge so it doesn't fight the blueprint side-panel
-        // for screen space. LedgerHelp walks gui.shownElements and collects every element's
-        // ElementHelpInfo, so the DummyHelpElements below light up under the cursor whether the
-        // ledger is open or closed.
-        mainGui.shownElements.add(new LedgerHelp(mainGui, false)); // left side
-
+        // The auto-attached LedgerHelp on the left walks gui.shownElements and collects each
+        // element's ElementHelpInfo, so the DummyHelpElements below light up under the cursor
+        // whether the ledger is open or closed.
         mainGui.shownElements.add(new DummyHelpElement(
                 new GuiRectangle(SNAPSHOT_X, SNAPSHOT_Y, 16, 16).offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.builder.snapshot.title", 0xFF_88_CC_88,

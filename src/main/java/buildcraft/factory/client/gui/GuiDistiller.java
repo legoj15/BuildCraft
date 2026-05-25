@@ -24,6 +24,8 @@ import buildcraft.factory.container.ContainerDistiller;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.elem.GuiElementFluidTank;
+import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
@@ -92,6 +94,25 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
                 menu.widgetTankLiquidOut,
                 OVERLAY_HORIZONTAL
             ));
+            // Help entries — tank rectangles match the fluid-tank widgets above; the centre
+            // overlay matches the running/stuck pipe schematic drawn in drawCenterStateOverlay().
+            mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(TANK_IN_X, TANK_IN_Y, TANK_IN_W, TANK_IN_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.distiller.input.title", 0xFF_FF_CC_88,
+                    "buildcraft.help.distiller.input.desc")));
+            mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(TANK_GAS_X, TANK_GAS_Y, TANK_GAS_W, TANK_GAS_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.distiller.gas_out.title", 0xFF_AA_DD_FF,
+                    "buildcraft.help.distiller.gas_out.desc")));
+            mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(TANK_LIQ_X, TANK_LIQ_Y, TANK_LIQ_W, TANK_LIQ_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.distiller.liquid_out.title", 0xFF_AA_33_AA,
+                    "buildcraft.help.distiller.liquid_out.desc")));
+            mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(CENTER_DST_X, CENTER_DST_Y, CENTER_W, CENTER_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.distiller.process.title", 0xFF_88_CC_88,
+                    "buildcraft.help.distiller.process.desc1",
+                    "buildcraft.help.distiller.process.desc2")));
         }
     }
 

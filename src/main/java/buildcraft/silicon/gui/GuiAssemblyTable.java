@@ -18,7 +18,6 @@ import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
-import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.gui.pos.IGuiArea;
@@ -53,7 +52,6 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
         }
         mainGui.shownElements.add(new LedgerTablePower(mainGui, menu.tile, true));
 
-        mainGui.shownElements.add(new LedgerHelp(mainGui, false));
         mainGui.shownElements.add(new DummyHelpElement(
                 new GuiRectangle(INPUT_X, INPUT_Y, INPUT_W, INPUT_H).offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.assembly_table.input.title", 0xFF_FF_CC_88,

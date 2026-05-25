@@ -48,9 +48,6 @@ public class GuiGate extends GuiBC8<ContainerGate> {
         // Drag handler must be added before sources so they can inject events into it
         mainGui.shownElements.add(new buildcraft.lib.gui.statement.GuiElementStatementDrag(mainGui));
 
-        // Help ledger — left side, matching 1.12.2
-        mainGui.shownElements.add(new buildcraft.lib.gui.ledger.LedgerHelp(mainGui, false));
-
         // Help regions — one column-wide rect per role per pair, covering all rows in that pair.
         int totalHeight = verticalSlotCount * 18;
         int rowBaseY = 16;

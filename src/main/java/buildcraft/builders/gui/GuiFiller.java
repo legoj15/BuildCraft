@@ -23,7 +23,6 @@ import buildcraft.lib.gui.statement.GuiElementStatement;
 import buildcraft.lib.gui.statement.GuiElementStatementParam;
 import buildcraft.lib.gui.statement.GuiElementStatementSource;
 import buildcraft.lib.gui.statement.GuiElementStatementDrag;
-import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.help.ElementHelpInfo.HelpPosition;
 import buildcraft.lib.misc.LocaleUtil;
@@ -47,8 +46,6 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
                 true
             ));
         }
-
-        mainGui.shownElements.add(new LedgerHelp(mainGui, false));
 
         mainGui.shownElements.add(new LedgerFillerProgress(mainGui, menu));
 

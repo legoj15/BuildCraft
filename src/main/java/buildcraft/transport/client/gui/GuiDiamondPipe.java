@@ -14,7 +14,6 @@ import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
-import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.transport.container.ContainerDiamondPipe;
 
@@ -43,7 +42,6 @@ public class GuiDiamondPipe extends GuiBC8<ContainerDiamondPipe> {
 
     @Override
     protected void initGuiElements() {
-        mainGui.shownElements.add(new LedgerHelp(mainGui, false));
         mainGui.shownElements.add(new DummyHelpElement(
                 new GuiRectangle(FILTER_X, FILTER_Y, FILTER_W, FILTER_H).offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.diamond_pipe.filter.title", 0xFF_88_CC_FF,

@@ -11,7 +11,6 @@ import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.ledger.LedgerEngine;
-import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.misc.LocaleUtil;
 
@@ -45,8 +44,6 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
                 true
             ));
 
-            mainGui.shownElements.add(new LedgerHelp(mainGui, false));
-            
             mainGui.shownElements.add(new DummyHelpElement(
                 RECT_UPGRADE_HELP.offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.rf_engine.upgrades.title", 0xFF_66_99_FF,

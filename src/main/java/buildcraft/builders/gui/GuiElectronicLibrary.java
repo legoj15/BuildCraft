@@ -18,7 +18,6 @@ import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
-import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
@@ -102,11 +101,9 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
                 true
             ));
         }
-        // Help ledger on the left side. LedgerHelp pulls ElementHelpInfo from every element in
+        // The auto-attached LedgerHelp on the left pulls ElementHelpInfo from every element in
         // mainGui.shownElements at expand-time, so the DummyHelpElements below light up under the
         // cursor whether the ledger is open or closed.
-        mainGui.shownElements.add(new LedgerHelp(mainGui, false));
-
         mainGui.shownElements.add(new DummyHelpElement(
                 new GuiRectangle(LIST_HELP_X, LIST_Y, LIST_HELP_W, LIST_HELP_H).offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.library.list.title", 0xFF_FF_FA_A0,

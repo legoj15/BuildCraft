@@ -26,6 +26,8 @@ import buildcraft.factory.tile.TileHeatExchange.ExchangeSectionStart;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.elem.GuiElementFluidTank;
+import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
 public class GuiHeatExchange extends GuiBC8<ContainerHeatExchange> {
@@ -90,6 +92,17 @@ public class GuiHeatExchange extends GuiBC8<ContainerHeatExchange> {
                 menu.widgetTankStartOutput,
                 OVERLAY_VERTICAL
             ));
+            // START section: cold-in (heatable loop entry) and cooled-out (coolable loop exit).
+            mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(TANK_START_IN_X, TANK_START_IN_Y, TANK_START_IN_W, TANK_START_IN_H)
+                        .offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.heat_exchange.cold_in.title", 0xFF_55_AA_FF,
+                    "buildcraft.help.heat_exchange.cold_in.desc")));
+            mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(TANK_START_OUT_X, TANK_START_OUT_Y, TANK_START_OUT_W, TANK_START_OUT_H)
+                        .offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.heat_exchange.cooled_out.title", 0xFF_AA_CC_FF,
+                    "buildcraft.help.heat_exchange.cooled_out.desc")));
         }
         if (end != null) {
             mainGui.shownElements.add(new GuiElementFluidTank(
@@ -108,7 +121,27 @@ public class GuiHeatExchange extends GuiBC8<ContainerHeatExchange> {
                 menu.widgetTankEndOutput,
                 OVERLAY_HORIZONTAL
             ));
+            // END section: hot-in (coolable loop entry) and heated-out (heatable loop exit).
+            mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(TANK_END_IN_X, TANK_END_IN_Y, TANK_END_IN_W, TANK_END_IN_H)
+                        .offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.heat_exchange.hot_in.title", 0xFF_FF_55_55,
+                    "buildcraft.help.heat_exchange.hot_in.desc")));
+            mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(TANK_END_OUT_X, TANK_END_OUT_Y, TANK_END_OUT_W, TANK_END_OUT_H)
+                        .offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.heat_exchange.heated_out.title", 0xFF_FF_AA_55,
+                    "buildcraft.help.heat_exchange.heated_out.desc")));
         }
+        // Centre wipe overlay — visualises the multi-block's PREPARING/RUNNING/STOPPING state.
+        // The wipe pixels themselves draw at the full WIPE_W × WIPE_H rectangle above; the
+        // help-hover rect is hand-tuned to hug the visible pipe junction in the middle of
+        // the schematic, clear of every surrounding tank highlight.
+        mainGui.shownElements.add(new DummyHelpElement(
+            new GuiRectangle(73, 36, 30, 21).offset(mainGui.rootElement),
+            new ElementHelpInfo("buildcraft.help.heat_exchange.progress.title", 0xFF_88_CC_88,
+                "buildcraft.help.heat_exchange.progress.desc1",
+                "buildcraft.help.heat_exchange.progress.desc2")));
     }
 
     @Override

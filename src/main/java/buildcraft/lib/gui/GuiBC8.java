@@ -12,6 +12,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
+import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.pos.IGuiArea;
 
 /**
@@ -40,6 +41,13 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
     /** Subclasses should add their elements to mainGui.shownElements here. Called from init(). */
     protected abstract void initGuiElements();
 
+    /** Whether to auto-attach the left-side {@link LedgerHelp} after {@link #initGuiElements()} runs.
+     *  Override and return false on screens that host a UI element (e.g. vanilla's recipe book)
+     *  that would overlap the left-side ledger. Matches 1.12.2's {@code shouldAddHelpLedger()}. */
+    protected boolean shouldAddHelpLedger() {
+        return true;
+    }
+
     @Override
     protected void init() {
         super.init();
@@ -57,6 +65,9 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
         mainGui.lowerRightLedgerPos = rootArea.getPosition(1, -1).offset(0, 5);
         mainGui.shownElements.clear();
         initGuiElements();
+        if (shouldAddHelpLedger()) {
+            mainGui.shownElements.add(new LedgerHelp(mainGui, false));
+        }
 
         // Restore full animation state from old ledgers to new ones
         if (!oldLedgers.isEmpty()) {

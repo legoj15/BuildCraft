@@ -53,12 +53,10 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
             ));
         }
 
-        mainGui.shownElements.add(new buildcraft.lib.gui.ledger.LedgerHelp(mainGui, false));
-
-        // Help-ledger entries — see GuiReplacer / GuiBuilder for the same pattern. LedgerHelp
-        // iterates mainGui.shownElements at expand-time and pulls each element's ElementHelpInfo
-        // via addHelpElements, so hovering any of the five regions below highlights the matching
-        // entry in the ledger panel and vice versa.
+        // Help-ledger entries — see GuiReplacer / GuiBuilder for the same pattern. The auto-attached
+        // LedgerHelp iterates mainGui.shownElements at expand-time and pulls each element's
+        // ElementHelpInfo via addHelpElements, so hovering any of the five regions below highlights
+        // the matching entry in the ledger panel and vice versa.
         mainGui.shownElements.add(new DummyHelpElement(
                 new GuiRectangle(PREVIEW_X, PREVIEW_Y, PREVIEW_W, PREVIEW_H).offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.architect.preview.title", 0xFF_88_CC_FF,

@@ -22,7 +22,6 @@ import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.elem.ToolTip;
 import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.help.ElementHelpInfo.HelpPosition;
-import buildcraft.lib.gui.ledger.LedgerHelp;
 import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.gui.pos.IGuiArea;
 import buildcraft.lib.gui.statement.GuiElementStatement;
@@ -43,7 +42,6 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
     @Override
     protected void initGuiElements() {
         mainGui.shownElements.add(new GuiElementStatementDrag(mainGui));
-        mainGui.shownElements.add(new LedgerHelp(mainGui, false));
         mainGui.shownElements.add(new GuiElementStatementSource<>(mainGui, true, menu.possiblePatternsContext));
 
         // Pattern slot — uses patternStatementClient so onStatementChange fires NET_STATEMENT.

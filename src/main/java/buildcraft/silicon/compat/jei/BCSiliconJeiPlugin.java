@@ -15,14 +15,19 @@ import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
+import mezz.jei.api.registration.ISubtypeRegistration;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.DyeColor;
 
 import buildcraft.lib.compat.jei.BCGhostIngredientHandler;
 import buildcraft.lib.compat.jei.BlueprintTransferHandler;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.BCSiliconMenuTypes;
 import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
 import buildcraft.silicon.gui.GuiAdvancedCraftingTable;
+import buildcraft.silicon.item.ItemPluggableGate;
+import buildcraft.silicon.item.ItemPluggableLens;
 
 /**
  * JEI integration plugin for BuildCraft Silicon.
@@ -38,6 +43,46 @@ public class BCSiliconJeiPlugin implements IModPlugin {
     @Override
     public Identifier getPluginUid() {
         return UID;
+    }
+
+    @Override
+    public void registerItemSubtypes(ISubtypeRegistration registration) {
+        // Without subtype interpreters JEI collapses every variant of these items into a single
+        // entry, so pressing R/U on any lens/filter/gate/facade in-world shows recipes for ALL of
+        // them at once (see the runtime warning "N duplicate items were found in 'BuildCraft
+        // Pluggables/Facades' creative tab's: displayItems"). Each interpreter returns the
+        // smallest key that uniquely identifies a *visual* variant — two stacks with the same
+        // key are merged in JEI, two with different keys get their own entry and their own
+        // recipe lookup.
+
+        // Lens / Filter: colour × mode (lens or filter). "clear" stands in for the no-colour case.
+        registration.registerSubtypeInterpreter(
+                BCSiliconItems.PLUG_LENS.get(),
+                (stack, context) -> {
+                    DyeColor colour = ItemPluggableLens.getColour(stack);
+                    boolean isFilter = ItemPluggableLens.isFilter(stack);
+                    return (colour == null ? "clear" : colour.getName()) + ":" + isFilter;
+                }
+        );
+
+        // Gate: material + logic + modifier as already encoded by GateVariant.getVariantName()
+        // (the same key the item model dispatch uses, so two gates with the same key render
+        // identically and should share a JEI entry).
+        registration.registerSubtypeInterpreter(
+                BCSiliconItems.PLUG_GATE.get(),
+                (stack, context) -> ItemPluggableGate.getVariant(stack).getVariantName()
+        );
+
+        // Facade: the entire "facade" NBT compound — encodes the wrapped block state(s), phased
+        // colour mappings, and the hollow flag. CompoundTag has structural equals/hashCode in
+        // 26.1, so two facades wrapping the same state(s) collapse to one JEI entry while two
+        // wrapping different states get separate entries (and therefore separate recipe lookups).
+        // For the bulk Basic-facade case there's a single state, so the compound is small and
+        // comparisons are cheap; the Phased case keys on the multi-state list and isHollow bit.
+        registration.registerSubtypeInterpreter(
+                BCSiliconItems.PLUG_FACADE.get(),
+                (stack, context) -> NBTUtilBC.getItemData(stack).getCompoundOrEmpty("facade")
+        );
     }
 
     @Override

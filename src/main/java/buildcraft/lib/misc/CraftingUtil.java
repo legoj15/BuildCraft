@@ -25,28 +25,11 @@ import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.minecraft.world.level.Level;
 
 import buildcraft.lib.tile.item.ItemHandlerSimple;
-import net.minecraft.resources.Identifier;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.server.ServerStartedEvent;
 
-@EventBusSubscriber(modid = "buildcraftunofficial")
 @SuppressWarnings("deprecation")
 public final class CraftingUtil {
 
     private CraftingUtil() {
-    }
-
-    @SubscribeEvent
-    public static void onServerStarted(ServerStartedEvent event) {
-        event.getServer().getRecipeManager().byKey(
-            net.minecraft.resources.ResourceKey.create(
-                net.minecraft.core.registries.Registries.RECIPE,
-                Identifier.parse("minecraft:white_bundle")
-            )
-        ).ifPresent(recipe -> {
-            buildcraft.api.core.BCLog.logger.info("[CraftingUtil] DUMPING BUNDLE RECIPE: " + recipe.value().getClass().getName());
-        });
     }
 
     @Nullable

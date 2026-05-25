@@ -43,6 +43,7 @@ public abstract class TileBC_Neptune extends BlockEntity {
     @Nullable
     private GameProfile owner;
 
+    @SuppressWarnings("this-escape")
     public TileBC_Neptune(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
     }

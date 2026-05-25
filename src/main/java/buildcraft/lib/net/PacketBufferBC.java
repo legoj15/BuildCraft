@@ -6,7 +6,7 @@
 
 package buildcraft.lib.net;
 
-import com.google.common.base.Charsets;
+import java.nio.charset.StandardCharsets;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -255,7 +255,7 @@ public class PacketBufferBC extends FriendlyByteBuf {
         for (int i = 0; i < length; i++) {
             array[i] = readByte();
         }
-        return new String(array, Charsets.UTF_8);
+        return new String(array, StandardCharsets.UTF_8);
     }
 }
 

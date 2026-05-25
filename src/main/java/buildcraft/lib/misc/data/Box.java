@@ -63,7 +63,7 @@ public class Box implements IBox {
         this(e.getBlockPos(), e.getBlockPos());
     }
 
-    public void reset() {
+    public final void reset() {
         min = null;
         max = null;
     }

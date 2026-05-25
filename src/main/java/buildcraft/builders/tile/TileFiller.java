@@ -116,6 +116,7 @@ public class TileFiller extends TileBC_Neptune
     @Nullable
     private GameProfile owner;
 
+    @SuppressWarnings("this-escape")
     public TileFiller(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.FILLER.get(), pos, state);
         invResources = itemManager.addInvHandler(

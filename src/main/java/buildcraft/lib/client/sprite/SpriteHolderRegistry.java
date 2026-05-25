@@ -10,6 +10,11 @@ import net.minecraft.resources.Identifier;
 
 import buildcraft.api.core.render.ISprite;
 
+// TextureAtlas.LOCATION_BLOCKS / LOCATION_ITEMS are @Deprecated in 26.1 but vanilla has not
+// shipped a non-deprecated replacement Identifier — Sheets.java only exposes GUI_SHEET as a
+// public Identifier; the block/item-atlas SpriteMappers there wrap the same deprecated
+// constants. Suppress here; revisit once NeoForge surfaces a stable replacement.
+@SuppressWarnings("deprecation")
 public class SpriteHolderRegistry {
     public void registerInitialSprites() {}
 

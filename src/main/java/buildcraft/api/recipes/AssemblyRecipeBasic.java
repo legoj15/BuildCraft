@@ -27,6 +27,7 @@ public class AssemblyRecipeBasic extends AssemblyRecipe {
     private final ImmutableSet<IngredientStack> requiredStacks;
     private final ImmutableSet<ItemStack> output;
 
+    @SuppressWarnings("this-escape")
     public AssemblyRecipeBasic(String name, long requiredMicroJoules, ImmutableSet<IngredientStack> requiredStacks,
             @Nonnull ItemStack output) {
         this.requiredMicroJoules = requiredMicroJoules;

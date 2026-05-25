@@ -65,14 +65,14 @@ public final class StatementManager {
     public static void registerParameter(IParameterReader reader, IParamReaderBuf bufReader) {
         String name = reader.readFromNbt(new CompoundTag()).getUniqueTag();
         registerParameter(name, reader);
-        registerParameter(name, bufReader);
+        registerParameterBuf(name, bufReader);
     }
 
     public static void registerParameter(String name, IParameterReader reader) {
         parameters.put(name, reader);
     }
 
-    public static void registerParameter(String name, IParamReaderBuf reader) {
+    public static void registerParameterBuf(String name, IParamReaderBuf reader) {
         paramsBuf.put(name, reader);
     }
 

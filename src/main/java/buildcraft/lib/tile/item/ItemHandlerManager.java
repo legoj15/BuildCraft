@@ -150,7 +150,7 @@ public class ItemHandlerManager implements INBTSerializable<CompoundTag> {
                 combined = handlers.get(0);
                 return;
             }
-            @SuppressWarnings("unchecked")
+            @SuppressWarnings({"unchecked", "rawtypes"})
             ResourceHandler<ItemResource>[] arr = new ResourceHandler[handlers.size()];
             arr = handlers.toArray(arr);
             combined = new CombinedItemHandlerWrapper(arr);

@@ -39,7 +39,7 @@ public interface IStatementParameter extends IGuiSlot {
      * <p>
      * It is likely that implementors can write a more compact form of themselves, so they are encouraged to override
      * this and also register an {@link IParamReaderBuf} in
-     * {@link StatementManager#registerParameter(String, IParamReaderBuf)} or
+     * {@link StatementManager#registerParameterBuf(String, IParamReaderBuf)} or
      * {@link StatementManager#registerParameter(IParameterReader, IParamReaderBuf)} */
     default void writeToBuf(FriendlyByteBuf buffer) {
         CompoundTag nbt = new CompoundTag();

@@ -30,7 +30,8 @@ public class SchematicEntityFactory<S extends ISchematicEntity> implements Compa
         clazz = (Class<S>) supplier.get().getClass();
     }
 
-    public int compareTo(@Nonnull SchematicEntityFactory o) {
+    @Override
+    public int compareTo(@Nonnull SchematicEntityFactory<?> o) {
         return priority != o.priority
                 ? Integer.compare(priority, o.priority)
                 : name.toString().compareTo(o.name.toString());

@@ -26,7 +26,7 @@ public abstract class ResourceId {
                 cls = RobotManager.getResourceIdByName(nbt.getString("resourceName").orElse(""));
             }
 
-            ResourceId id = (ResourceId) cls.newInstance();
+            ResourceId id = (ResourceId) cls.getDeclaredConstructor().newInstance();
             id.readFromNBT(nbt);
 
             return id;

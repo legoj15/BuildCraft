@@ -30,7 +30,8 @@ public class SchematicBlockFactory<S extends ISchematicBlock> implements Compara
         clazz = (Class<S>) supplier.get().getClass();
     }
 
-    public int compareTo(@Nonnull SchematicBlockFactory o) {
+    @Override
+    public int compareTo(@Nonnull SchematicBlockFactory<?> o) {
         return priority != o.priority
                 ? Integer.compare(priority, o.priority)
                 : name.toString().compareTo(o.name.toString());

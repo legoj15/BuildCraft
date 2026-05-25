@@ -1155,14 +1155,6 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             }
             return false;
         }
-
-        @Override
-        public boolean equals(Object o) {
-            if (o == this) return true;
-            if (o == null) return false;
-            if (getClass() != o.getClass()) return false;
-            return breakPos.equals(((TaskBreakBlock) o).breakPos);
-        }
     }
 
     public class TaskAddFrame extends Task {
@@ -1191,14 +1183,6 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             }
             level.setBlockAndUpdate(framePos, BCBuildersBlocks.FRAME.get().defaultBlockState());
             return true;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (o == this) return true;
-            if (o == null) return false;
-            if (getClass() != o.getClass()) return false;
-            return framePos.equals(((TaskAddFrame) o).framePos);
         }
     }
 
@@ -1246,15 +1230,6 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             moveDistanceSoFar += added / (double) MjAPI.MJ;
             drillPos = to;
             return true;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (o == this) return true;
-            if (o == null) return false;
-            if (getClass() != o.getClass()) return false;
-            TaskMoveDrill other = (TaskMoveDrill) o;
-            return from.equals(other.from) && to.equals(other.to);
         }
     }
 }

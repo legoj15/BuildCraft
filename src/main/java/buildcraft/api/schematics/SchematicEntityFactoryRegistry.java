@@ -47,8 +47,8 @@ public class SchematicEntityFactoryRegistry {
     }
 
     @Nonnull
+    @SuppressWarnings("unchecked")
     public static <S extends ISchematicEntity> SchematicEntityFactory<S> getFactoryByInstance(S instance) {
-        // noinspection unchecked
         return (SchematicEntityFactory<S>) FACTORIES.stream()
             .filter(schematicEntityFactory -> schematicEntityFactory.clazz == instance.getClass())
             .findFirst()

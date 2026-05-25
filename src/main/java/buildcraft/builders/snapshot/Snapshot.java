@@ -331,6 +331,7 @@ public abstract class Snapshot {
         public final Rotation rotation;
         public final Box box = new Box();
 
+        @SuppressWarnings("this-escape")
         protected BuildingInfo(BlockPos basePos, Rotation rotation) {
             this.basePos = basePos;
             this.offsetPos = basePos.offset(offset.rotate(rotation));

@@ -376,6 +376,7 @@ public class TileBuilder extends TileBC_Neptune
         }
     };
 
+    @SuppressWarnings("this-escape")
     public TileBuilder(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.BUILDER.get(), pos, state);
     }

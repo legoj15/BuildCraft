@@ -34,6 +34,17 @@ public interface ITileForSnapshotBuilder extends IPlayerOwned {
     }
 
     /**
+     * Whether the placed container blocks (chests, hoppers, barrels, shulkers, the furnace
+     * family, dispensers/droppers, brewing stands, …) keep their captured inventory contents or
+     * are placed empty. Default is {@link EnumContainerContentsMode#INCLUDE} so non-builder tiles
+     * implementing this interface (filler, template builder) keep their current behaviour
+     * unchanged.
+     */
+    default EnumContainerContentsMode getContainerContentsMode() {
+        return EnumContainerContentsMode.INCLUDE;
+    }
+
+    /**
      * Tool wielded by the snapshot break-laser for {@link BlockUtil#breakBlockAndGetDropsWithXp}.
      * Determines which blocks yield drops and how much XP: an iron pickaxe lets stone/iron-tier
      * ores drop while {@code NEEDS_DIAMOND_TOOL} blocks still destroy but produce nothing

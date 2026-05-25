@@ -52,4 +52,10 @@ public class RequiredExtractorItemsList extends RequiredExtractor {
             .filter(stack -> !stack.isEmpty())
             .collect(Collectors.toList());
     }
+
+    @Override
+    public void clearItemsFromBlock(@Nonnull CompoundTag tileNbt) {
+        if (path == null) return;
+        path.remove(tileNbt);
+    }
 }

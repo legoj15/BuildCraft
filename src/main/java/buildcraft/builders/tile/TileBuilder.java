@@ -67,6 +67,7 @@ import buildcraft.builders.container.ContainerBuilder;
 import buildcraft.builders.item.ItemSnapshot;
 import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.BlueprintBuilder;
+import buildcraft.builders.snapshot.EnumContainerContentsMode;
 import buildcraft.builders.snapshot.EnumFluidHandlingMode;
 import buildcraft.builders.snapshot.GlobalSavedDataSnapshots;
 import buildcraft.builders.snapshot.ITileForBlueprintBuilder;
@@ -97,6 +98,7 @@ public class TileBuilder extends TileBC_Neptune
     private final MjBatteryReceiver mjReceiver = new MjBatteryReceiver(battery);
     private boolean canExcavate = true;
     private EnumFluidHandlingMode fluidMode = EnumFluidHandlingMode.NO_REPLACE;
+    private EnumContainerContentsMode containerContentsMode = EnumContainerContentsMode.INCLUDE;
 
     /** Stores the real path - just a few block positions. */
     public List<BlockPos> path = null;
@@ -556,6 +558,13 @@ public class TileBuilder extends TileBC_Neptune
             }
             if (snapshot.getType() == EnumSnapshotType.BLUEPRINT) {
                 blueprintBuildingInfo = ((Blueprint) snapshot).new BuildingInfo(getCurrentBasePos(), rotation);
+                // The BuildingInfo constructor bakes required items with includeContents=true.
+                // If this builder was saved/loaded with IGNORE, re-bake now so the resource panel
+                // matches mode immediately — without it, the panel would show the chest-contents
+                // cost until the player clicked the contents-mode button.
+                if (containerContentsMode == EnumContainerContentsMode.IGNORE) {
+                    blueprintBuildingInfo.refreshRequiredItemsForContentsMode(containerContentsMode);
+                }
             }
             currentBox = Optional.ofNullable(getBuildingInfo()).map(buildingInfo -> buildingInfo.box).orElse(null);
             Optional.ofNullable(getBuilder()).ifPresent(SnapshotBuilder::updateSnapshot);
@@ -678,6 +687,7 @@ public class TileBuilder extends TileBC_Neptune
         output.putLong("battery_mj", battery.getStored());
         output.putBoolean("canExcavate", canExcavate);
         output.putInt("fluidMode", fluidMode.ordinal());
+        output.putInt("containerContentsMode", containerContentsMode.ordinal());
         output.putInt("currentBasePosIndex", currentBasePosIndex);
         if (rotation != null) {
             output.putInt("rotation", rotation.ordinal());
@@ -766,6 +776,7 @@ public class TileBuilder extends TileBC_Neptune
         battery.setStored(stored);
         canExcavate = input.getBooleanOr("canExcavate", true);
         fluidMode = EnumFluidHandlingMode.fromOrdinal(input.getIntOr("fluidMode", 0));
+        containerContentsMode = EnumContainerContentsMode.fromOrdinal(input.getIntOr("containerContentsMode", 0));
         currentBasePosIndex = input.getIntOr("currentBasePosIndex", 0);
         int rotOrdinal = input.getIntOr("rotation", -1);
         if (rotOrdinal >= 0 && rotOrdinal < Rotation.values().length) {
@@ -957,6 +968,38 @@ public class TileBuilder extends TileBC_Neptune
         SnapshotBuilder<?> b = getBuilder();
         if (b != null) {
             b.invalidateChecksForFluidPositions();
+        }
+    }
+
+    @Override
+    public EnumContainerContentsMode getContainerContentsMode() {
+        return containerContentsMode;
+    }
+
+    /**
+     * Advance {@link #containerContentsMode} one step. Called from the Container on
+     * NET_CONTENTS_MODE_CLICK. Toggling between INCLUDE and IGNORE changes both the required-items
+     * list (so the resource panel reflects the new cost) and the placed-block NBT (filled vs.
+     * stripped), so we re-bake the active {@link Blueprint.BuildingInfo}'s per-position required
+     * items in-place rather than tearing the snapshot down and re-loading it from disk. Without
+     * the re-bake the resource panel would keep showing the old mode's contents list until the
+     * blueprint was reloaded.
+     */
+    public void cycleContainerContentsMode() {
+        containerContentsMode = containerContentsMode.next();
+        setChanged();
+        if (blueprintBuildingInfo != null) {
+            blueprintBuildingInfo.refreshRequiredItemsForContentsMode(containerContentsMode);
+        }
+        SnapshotBuilder<?> b = getBuilder();
+        if (b != null) {
+            b.resourcesChanged();
+            // BlueprintBuilder has an extra side-array (remainingDisplayRequiredBlocks) feeding the
+            // GUI resource panel that won't refresh until check() naturally wraps around to each
+            // position — re-bake it here so the panel snaps to the new mode immediately.
+            if (b instanceof BlueprintBuilder bb) {
+                bb.refreshDisplayForContentsMode();
+            }
         }
     }
 

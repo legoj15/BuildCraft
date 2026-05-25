@@ -44,6 +44,17 @@ public abstract class RequiredExtractor {
         return Collections.emptyList();
     }
 
+    /**
+     * In-place strip the items this extractor would surface from {@code tileNbt}. Used by the
+     * Builder's IGNORE container-contents mode: every extractor that declares an item-bearing
+     * NBT path also knows where it lives, so callers can route a single
+     * {@code rules → extractors → clearItemsFromBlock} pass over the tileNbt copy and have all
+     * items_list paths stripped uniformly. Default is a no-op so non-list extractors
+     * (item_from_block, constant, …) don't accidentally mutate the tag.
+     */
+    public void clearItemsFromBlock(@Nonnull CompoundTag tileNbt) {
+    }
+
     public enum EnumType {
         CONSTANT(RequiredExtractorConstant.class),
         ITEM_FROM_BLOCK(RequiredExtractorItemFromBlock.class),

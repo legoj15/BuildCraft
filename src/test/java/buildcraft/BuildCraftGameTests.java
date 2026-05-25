@@ -249,6 +249,16 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_deserialize_migrates_wall_ignored_properties"), () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testDeserializeMigratesIgnoredPropertiesFromCurrentRules);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_deserialize_migrates_leaves_ignored_properties"), () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testDeserializeMigratesLeavesIgnoredProperties);
 
+            // Container-contents capture — INCLUDE-mode invariants: the items_list extractor
+            // surfaces chest contents into computeRequiredItems(), AND the build() path restores
+            // those items into the placed chest. Both sides of the player-pays-and-receives flow.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:container_contents_listed_as_required"), () -> buildcraft.builders.snapshot.ContainerContentsScanTester::testChestContentsListedAsRequiredItems);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:container_contents_restored_on_build"), () -> buildcraft.builders.snapshot.ContainerContentsScanTester::testChestBuiltWithContentsFromSchematic);
+            // IGNORE-mode contract: computeRequiredItems(false) drops items_list contributions
+            // and build(..., includeContents=false) places the chest with an empty inventory.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:container_contents_ignore_omits_required"), () -> buildcraft.builders.snapshot.ContainerContentsScanTester::testIgnoreModeOmitsContentsFromRequiredItems);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:container_contents_ignore_builds_empty"), () -> buildcraft.builders.snapshot.ContainerContentsScanTester::testIgnoreModeBuildsEmptyChest);
+
             // Heat Exchanger fluid filtering (heatant on START, coolant on END; output drain-only)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:heat_exchanger_output_rejects_external_insert"), () -> buildcraft.factory.HeatExchangerTester::testOutputTankRejectsExternalInsert);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:heat_exchanger_output_accepts_internal_insert"), () -> buildcraft.factory.HeatExchangerTester::testOutputTankAcceptsInternalInsert);

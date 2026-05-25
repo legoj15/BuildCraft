@@ -2,6 +2,7 @@ package buildcraft.lib.expression.api;
 
 import buildcraft.lib.expression.NodeTypeBase;
 
+@SuppressWarnings("unchecked")
 public final class NodeType<T> extends NodeTypeBase<T> {
     public final Class<T> type;
     public final T defaultValue;

@@ -27,6 +27,7 @@ import buildcraft.energy.tile.TileDynamoMJ;
 /** Defines the variable model holders and expression variables for the energy-subsystem engine
  * types (Stirling, Combustion, FE, MJ Dynamo). Each engine renders through a shared
  * {@link EngineModelCache}; see that class for the bake-cache and quantisation rationale. */
+@SuppressWarnings("deprecation")
 public class BCEnergyModels {
     private static final NodeVariableDouble ENGINE_PROGRESS;
     private static final NodeVariableObject<EnumPowerStage> ENGINE_STAGE;

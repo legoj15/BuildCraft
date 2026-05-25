@@ -36,6 +36,7 @@ import buildcraft.silicon.client.model.key.KeyPlugGate;
 import buildcraft.silicon.gate.GateLogic;
 import buildcraft.silicon.gate.GateVariant;
 
+@SuppressWarnings("this-escape")
 public class PluggableGate extends PipePluggable implements IWireEmitter {
     // PluggableHolder.ID_UPDATE_PLUG (was 1 locally in BuildCraft)
     private static final byte ID_UPDATE_PLUG = 1;

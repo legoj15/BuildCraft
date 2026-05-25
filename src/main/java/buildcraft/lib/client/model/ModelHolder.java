@@ -14,6 +14,7 @@ import java.util.Set;
 
 /** Defines an object that will hold a model, and is automatically refreshed from the filesystem when the client reloads
  * all of its resources. */
+@SuppressWarnings("this-escape")
 public abstract class ModelHolder {
     public final Identifier modelLocation;
     protected String failReason = "";

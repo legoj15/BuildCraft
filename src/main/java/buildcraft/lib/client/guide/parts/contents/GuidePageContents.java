@@ -38,6 +38,7 @@ import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.search.ISuffixArray.SearchResult;
 
 /** The base menu for showing all the locations. Controls the guide book table of contents. */
+@SuppressWarnings("this-escape")
 public class GuidePageContents extends GuidePageBase {
     private static final int ORDER_OFFSET_X = -10;
     private static final int ORDER_OFFSET_Y = -10;

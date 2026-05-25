@@ -47,6 +47,7 @@ import buildcraft.lib.misc.LocaleUtil;
 
 /** Main guide book screen. Implements the cover display, flip-open animation,
  * two-page layout with text/chapter rendering, page turning, and back navigation. */
+@SuppressWarnings("this-escape")
 public class GuiGuide extends Screen {
 
     // --- Texture identifiers ---

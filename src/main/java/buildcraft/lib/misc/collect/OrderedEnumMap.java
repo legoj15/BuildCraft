@@ -13,6 +13,7 @@ import javax.annotation.Nullable;
 /** An indexed map that stores enum values.
  *
  * @param <E> The key of the map. */
+@SuppressWarnings("unchecked")
 public class OrderedEnumMap<E extends Enum<E>> {
     private final byte[] indexes;
     private final E[] order;

@@ -25,6 +25,7 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
 
+@SuppressWarnings("this-escape")
 public class ItemHandlerSimple extends AbstractInvItemTransactor
     implements IItemHandlerAdv, INBTSerializable<CompoundTag> {
 

@@ -11,6 +11,7 @@ import javax.annotation.Nullable;
 import buildcraft.lib.expression.api.IExpressionNode;
 import buildcraft.lib.expression.api.NodeTypes;
 
+@SuppressWarnings("this-escape")
 public class NodeUpdatable implements ITickableNode, ITickableNode.Source {
     public final String name;
     public final NodeVariable variable;

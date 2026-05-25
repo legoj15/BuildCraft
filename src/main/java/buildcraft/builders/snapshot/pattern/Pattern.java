@@ -15,6 +15,7 @@ import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.builders.BCBuildersStatements;
 import buildcraft.core.statements.BCStatement;
 
+@SuppressWarnings("this-escape")
 public abstract class Pattern extends BCStatement implements IFillerPattern, IActionExternal {
     private final String desc;
 

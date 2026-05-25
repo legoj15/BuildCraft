@@ -25,6 +25,7 @@ import buildcraft.lib.expression.node.func.NodeFuncBase.IFunctionNode;
 import buildcraft.lib.expression.node.value.NodeConstantLong;
 
 // AUTO_GENERATED FILE, DO NOT EDIT MANUALLY!
+@SuppressWarnings("unchecked")
 public class NodeFuncObjectLongLongToLong<A> extends NodeFuncBase implements INodeFuncLong {
 
     public final IFuncObjectLongLongToLong<A> function;

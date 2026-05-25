@@ -29,6 +29,7 @@ import buildcraft.lib.tile.TileBC_Neptune;
 
 import buildcraft.builders.tile.TileReplacer;
 
+@SuppressWarnings("this-escape")
 public class BlockReplacer extends HorizontalDirectionalBlock implements EntityBlock {
     public static final MapCodec<BlockReplacer> CODEC = simpleCodec(BlockReplacer::new);
 

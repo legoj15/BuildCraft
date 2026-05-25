@@ -24,6 +24,7 @@ import buildcraft.transport.tile.TilePipeHolder;
 
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
+@SuppressWarnings("this-escape")
 public class ContainerEmzuliPipe extends ContainerBC_Neptune {
     public final PipeBehaviourEmzuli behaviour;
     public final EnumMap<SlotIndex, PaintWidget> paintWidgets = new EnumMap<>(SlotIndex.class);

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2011-2015, SpaceToad and the BuildCraft Team http://www.mod-buildcraft.com
  * <p>
  * The BuildCraft API is distributed under the terms of the MIT License. Please check the contents of the license, which
@@ -15,10 +15,10 @@ import net.neoforged.neoforge.common.util.FakePlayer;
 
 public interface IFakePlayerProvider {
     /**
-     * Returns the generic buildcraft fake player. Note that you shouldn't use this anymore, as you should store the
-     * UUID of the real player who created the block or entity that calls this.
+     * Returns the generic buildcraft fake player. Prefer the owner-aware {@link #getFakePlayer(ServerLevel, GameProfile)}
+     * variants when a real player's UUID is available — this generic player is used as a fallback for code paths
+     * (worldgen, springs) that legitimately have no associated user.
      */
-    @Deprecated
     FakePlayer getBuildCraftPlayer(ServerLevel world);
 
     /**

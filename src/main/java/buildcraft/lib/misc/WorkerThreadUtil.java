@@ -32,6 +32,7 @@ import buildcraft.api.core.BCLog;
 /** Provides a pool of worker threads that can execute tasks. Each task should take no longer than (ideally) 20ms or at
  * a push 100ms. Each task is watched to make sure that it takes less time to complete that that, and if it takes longer
  * then a warning is logged. */
+@SuppressWarnings("deprecation")
 public class WorkerThreadUtil {
     private static final ExecutorService WORKING_POOL, DEPENDANT_WORKING_POOL, MONITORING_POOL;
     private static final boolean DEBUG = BCDebugging.shouldDebugLog("lib.threads");

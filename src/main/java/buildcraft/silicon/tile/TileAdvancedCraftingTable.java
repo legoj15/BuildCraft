@@ -27,6 +27,7 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 import buildcraft.silicon.BCSiliconBlockEntities;
 
+@SuppressWarnings("this-escape")
 public class TileAdvancedCraftingTable extends TileLaserTableBase {
     private static final long POWER_REQ = 500 * MjAPI.MJ;
 

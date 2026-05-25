@@ -36,6 +36,7 @@ import buildcraft.lib.BCLibItems;
 import buildcraft.lib.item.ItemGuide;
 
 @Mod(BCCore.MODID)
+@SuppressWarnings({"this-escape", "deprecation"})
 public class BCCore {
     public static final String MODID = "buildcraftunofficial";
     public static BCCore INSTANCE = null;

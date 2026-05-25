@@ -17,6 +17,7 @@ import java.util.function.Consumer;
 import buildcraft.api.items.IItemFluidShard;
 import buildcraft.core.BCCore;
 
+@SuppressWarnings("deprecation")
 public class ItemFragileFluidContainer extends Item implements IItemFluidShard {
 
     public static final int MAX_FLUID_HELD = 500;

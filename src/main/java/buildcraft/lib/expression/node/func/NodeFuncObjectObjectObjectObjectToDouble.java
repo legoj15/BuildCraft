@@ -25,6 +25,7 @@ import buildcraft.lib.expression.node.func.NodeFuncBase.IFunctionNode;
 import buildcraft.lib.expression.node.value.NodeConstantDouble;
 
 // AUTO_GENERATED FILE, DO NOT EDIT MANUALLY!
+@SuppressWarnings("unchecked")
 public class NodeFuncObjectObjectObjectObjectToDouble<A, B, C, D> extends NodeFuncBase implements INodeFuncDouble {
 
     public final IFuncObjectObjectObjectObjectToDouble<A, B, C, D> function;

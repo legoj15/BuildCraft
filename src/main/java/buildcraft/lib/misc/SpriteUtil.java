@@ -6,6 +6,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.Identifier;
 
 /** Sprite utility stubs. */
+@SuppressWarnings("deprecation")
 public class SpriteUtil {
     private static final Identifier MISSING = Identifier.withDefaultNamespace("missingno");
 

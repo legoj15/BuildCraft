@@ -17,6 +17,7 @@ import net.minecraft.resources.Identifier;
 import buildcraft.lib.client.model.json.JsonVariableModel.ITextureGetter;
 import buildcraft.lib.expression.FunctionContext;
 
+@SuppressWarnings("deprecation")
 public class VariablePartLed extends VariablePartCuboidBase {
     private static final VariableFaceData FACE_DATA = new VariableFaceData();
 

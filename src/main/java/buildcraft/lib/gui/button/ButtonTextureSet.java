@@ -10,6 +10,7 @@ import net.minecraft.resources.Identifier;
 
 import net.minecraft.world.InteractionResult;
 
+@SuppressWarnings("deprecation")
 public class ButtonTextureSet implements IButtonTextureSet {
     private final Identifier texture;
     private final int x, y, height, width;

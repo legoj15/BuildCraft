@@ -33,6 +33,7 @@ import buildcraft.silicon.tile.TileLaser;
  * to ILaserTarget blocks (e.g. assembly tables) by projecting a visible beam.
  * Ported from 1.12.2 BlockLaser.
  */
+@SuppressWarnings("this-escape")
 public class BlockLaser extends BaseEntityBlock {
     public static final MapCodec<BlockLaser> CODEC = simpleCodec(BlockLaser::new);
     public static final EnumProperty<Direction> FACING = BlockStateProperties.FACING;

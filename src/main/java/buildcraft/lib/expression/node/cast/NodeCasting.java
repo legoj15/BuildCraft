@@ -20,6 +20,7 @@ import buildcraft.lib.expression.api.INodeStack;
 import buildcraft.lib.expression.api.InvalidExpressionException;
 import buildcraft.lib.expression.api.NodeTypes;
 
+@SuppressWarnings({"deprecation", "unchecked"})
 public class NodeCasting {
     public static INodeObject<String> castToString(IExpressionNode node) {
         if (node instanceof INodeObject) {

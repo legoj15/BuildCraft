@@ -90,6 +90,7 @@ import buildcraft.core.marker.VolumeConnection;
 import buildcraft.core.marker.VolumeSubCache;
 import buildcraft.core.tile.TileMarkerVolume;
 
+@SuppressWarnings("this-escape")
 public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoadingTile, IAdvDebugTarget {
     public static final boolean DEBUG_QUARRY = BCDebugging.shouldDebugLog("builders.quarry");
     private static final long MAX_POWER_PER_TICK = 512 * MjAPI.MJ;

@@ -158,8 +158,7 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
         IPipeHolder holder = pipe.getHolder();
         Level level = holder.getPipeWorld();
         BlockPos neighborPos = holder.getPipePos().relative(from);
-        @SuppressWarnings("unchecked")
-        ResourceHandler<ItemResource> handler = (ResourceHandler<ItemResource>) level.getCapability(
+        ResourceHandler<ItemResource> handler = level.getCapability(
             Capabilities.Item.BLOCK, neighborPos, from.getOpposite());
         if (handler == null) {
             return 0;
@@ -459,8 +458,7 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
                     if (tile != null) {
                         Level level = holder.getPipeWorld();
                         BlockPos neighborPos = holder.getPipePos().relative(item.side);
-                        @SuppressWarnings("unchecked")
-                        ResourceHandler<ItemResource> tileHandler = (ResourceHandler<ItemResource>) level.getCapability(
+                        ResourceHandler<ItemResource> tileHandler = level.getCapability(
                             Capabilities.Item.BLOCK, neighborPos, oppositeSide);
                         if (tileHandler != null) {
                             ItemResource resource = ItemResource.of(excess);

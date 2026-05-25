@@ -15,6 +15,7 @@ import buildcraft.factory.tile.TileChute;
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotBase;
 
+@SuppressWarnings("this-escape")
 public class ContainerChute extends ContainerBCTile<TileChute> {
 
     // Client-side constructor (from network)

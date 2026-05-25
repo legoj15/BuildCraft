@@ -16,6 +16,7 @@ import buildcraft.lib.expression.api.IVariableNode;
 import buildcraft.lib.expression.api.InvalidExpressionException;
 import buildcraft.lib.expression.api.NodeTypes;
 
+@SuppressWarnings("deprecation")
 public class NodeStateful implements ITickableNode.Source {
     public final String name;
     public final IVariableNode getter, variable, last, rounderValue;

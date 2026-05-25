@@ -27,6 +27,7 @@ import buildcraft.lib.misc.NBTUtilBC;
 
 import buildcraft.transport.BCTransportStatements;
 
+@SuppressWarnings("this-escape")
 public abstract class PipeBehaviourDirectional extends PipeBehaviour {
 
     protected EnumPipePart currentDir = EnumPipePart.CENTER;

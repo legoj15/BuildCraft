@@ -42,6 +42,7 @@ import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.misc.data.AverageInt;
 
+@SuppressWarnings("this-escape")
 public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux, IDebuggable {
     private static final int DEFAULT_MAX_POWER = 100;
     public static final int NET_POWER_AMOUNTS = 2;

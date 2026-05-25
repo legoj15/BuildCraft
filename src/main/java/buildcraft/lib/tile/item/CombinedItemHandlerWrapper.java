@@ -15,6 +15,7 @@ public class CombinedItemHandlerWrapper implements ResourceHandler<ItemResource>
     private final int slotCount;
 
     @SafeVarargs
+    @SuppressWarnings("varargs")
     public CombinedItemHandlerWrapper(ResourceHandler<ItemResource>... itemHandler) {
         this.itemHandler = itemHandler;
         this.baseIndex = new int[itemHandler.length];

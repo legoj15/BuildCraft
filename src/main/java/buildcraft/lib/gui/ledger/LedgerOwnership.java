@@ -20,6 +20,7 @@ import buildcraft.lib.gui.BuildCraftGui;
 
 /** Ledger that shows the owner (player who placed the block).
  *  Renders the owner's actual skin face, matching 1.12.2's SpriteUtil.getFaceSprite(). */
+@SuppressWarnings("this-escape")
 public class LedgerOwnership extends Ledger_Neptune {
     private static final int COLOUR = 0xE0F0FF;
     /** Fallback skin for when no owner profile is available. */

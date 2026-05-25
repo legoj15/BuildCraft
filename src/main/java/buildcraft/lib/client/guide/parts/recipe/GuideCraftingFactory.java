@@ -30,6 +30,7 @@ import buildcraft.lib.recipe.IRecipeViewable;
  *
  * Uses Access Transformer-opened fields: ShapedRecipe.result, ShapedRecipe.pattern,
  * ShapelessRecipe.result, ShapelessRecipe.ingredients. */
+@SuppressWarnings("deprecation")
 public class GuideCraftingFactory implements GuidePartFactory {
 
     private final ChangingItemStack[][] input;

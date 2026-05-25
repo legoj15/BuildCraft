@@ -40,6 +40,7 @@ import buildcraft.api.items.IMapLocation;
 
 import buildcraft.lib.misc.data.Box;
 
+@SuppressWarnings("deprecation")
 public class ItemMapLocation extends Item implements IMapLocation {
     private static final String[] STORAGE_TAGS = "x,y,z,side,xMin,xMax,yMin,yMax,zMin,zMax,path,chunkMapping,name".split(",");
     private static final String TAG_MAP_TYPE = "mapType";

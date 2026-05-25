@@ -35,6 +35,7 @@ import buildcraft.lib.misc.VecUtil;
 import buildcraft.silicon.client.model.key.KeyPlugFacade;
 import buildcraft.silicon.plug.PluggableFacade;
 
+@SuppressWarnings("deprecation")
 public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
     INSTANCE;
 

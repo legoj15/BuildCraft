@@ -18,6 +18,7 @@ import net.minecraft.core.NonNullList;
 
 import buildcraft.api.recipes.AssemblyRecipe;
 
+@SuppressWarnings("deprecation")
 public class AssemblyRecipeRegistry {
     public static final Map<String, AssemblyRecipe> REGISTRY = new HashMap<>();
 

@@ -329,7 +329,7 @@ public abstract class NodeTypeBase<T> extends FunctionContext {
         return put_oo_l(fname, getType(), getType(), func, stringFunction);
     }
 
-    /////////////////////////
+    //-----------------------
     //
     // put_ooo_l
     //
@@ -391,7 +391,7 @@ public abstract class NodeTypeBase<T> extends FunctionContext {
         return put_ooo_l(fname, getType(), getType(), getType(), func, stringFunction);
     }
 
-    /////////////////////////
+    //-----------------------
     //
     // put_oooo_l
     //
@@ -517,7 +517,7 @@ public abstract class NodeTypeBase<T> extends FunctionContext {
         return put_oooo_l(fname, getType(), getType(), getType(), getType(), func, stringFunction);
     }
 
-    /////////////////////////
+    //-----------------------
     //
     // put_olo_o
     //
@@ -753,7 +753,7 @@ public abstract class NodeTypeBase<T> extends FunctionContext {
         return put_oo_d(fname, getType(), getType(), func, stringFunction);
     }
 
-    /////////////////////////
+    //-----------------------
     //
     // put_ooo_d
     //
@@ -815,7 +815,7 @@ public abstract class NodeTypeBase<T> extends FunctionContext {
         return put_ooo_d(fname, getType(), getType(), getType(), func, stringFunction);
     }
 
-    /////////////////////////
+    //-----------------------
     //
     // put_oooo_d
     //
@@ -941,7 +941,7 @@ public abstract class NodeTypeBase<T> extends FunctionContext {
         return put_oooo_d(fname, getType(), getType(), getType(), getType(), func, stringFunction);
     }
 
-    /////////////////////////
+    //-----------------------
     //
     // put_odo_o
     //
@@ -1177,7 +1177,7 @@ public abstract class NodeTypeBase<T> extends FunctionContext {
         return put_oo_b(fname, getType(), getType(), func, stringFunction);
     }
 
-    /////////////////////////
+    //-----------------------
     //
     // put_ooo_b
     //
@@ -1239,7 +1239,7 @@ public abstract class NodeTypeBase<T> extends FunctionContext {
         return put_ooo_b(fname, getType(), getType(), getType(), func, stringFunction);
     }
 
-    /////////////////////////
+    //-----------------------
     //
     // put_oooo_b
     //
@@ -1365,7 +1365,7 @@ public abstract class NodeTypeBase<T> extends FunctionContext {
         return put_oooo_b(fname, getType(), getType(), getType(), getType(), func, stringFunction);
     }
 
-    /////////////////////////
+    //-----------------------
     //
     // put_obo_o
     //
@@ -1493,7 +1493,7 @@ public abstract class NodeTypeBase<T> extends FunctionContext {
         return put_ol_o(fname, getType(), getType(), func, stringFunction);
     }
 
-    /////////////////////////
+    //-----------------------
     //
     // put_ool_o
     //
@@ -1621,7 +1621,7 @@ public abstract class NodeTypeBase<T> extends FunctionContext {
         return put_od_o(fname, getType(), getType(), func, stringFunction);
     }
 
-    /////////////////////////
+    //-----------------------
     //
     // put_ood_o
     //
@@ -1749,7 +1749,7 @@ public abstract class NodeTypeBase<T> extends FunctionContext {
         return put_ob_o(fname, getType(), getType(), func, stringFunction);
     }
 
-    /////////////////////////
+    //-----------------------
     //
     // put_oob_o
     //
@@ -1837,7 +1837,7 @@ public abstract class NodeTypeBase<T> extends FunctionContext {
         return put_o_o(fname, getType(), getType(), func, stringFunction);
     }
 
-    /////////////////////////
+    //-----------------------
     //
     // put_oo_o
     //
@@ -1899,7 +1899,7 @@ public abstract class NodeTypeBase<T> extends FunctionContext {
         return put_oo_o(fname, getType(), getType(), getType(), func, stringFunction);
     }
 
-    /////////////////////////
+    //-----------------------
     //
     // put_ooo_o
     //
@@ -2025,7 +2025,7 @@ public abstract class NodeTypeBase<T> extends FunctionContext {
         return put_ooo_o(fname, getType(), getType(), getType(), getType(), func, stringFunction);
     }
 
-    /////////////////////////
+    //-----------------------
     //
     // put_oooo_o
     //

@@ -52,6 +52,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  * end output top) and animated flow between start and end sections.
  * Ported from 1.12.2 RenderHeatExchange.
  */
+@SuppressWarnings("deprecation")
 public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange, HeatExchangeRenderState> {
 
     private static final Map<Direction, TankSideData> TANK_SIDES = new EnumMap<>(Direction.class);

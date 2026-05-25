@@ -25,6 +25,7 @@ import buildcraft.lib.gui.widget.WidgetFluidTank;
  * Container (menu) for the combustion engine GUI.
  * Syncs engine state + fluid tank levels to the client via ContainerData.
  */
+@SuppressWarnings("this-escape")
 public class ContainerEngineIron extends ContainerBC_Neptune {
     public final TileEngineIron_BC8 engine;
     private final ContainerData data;

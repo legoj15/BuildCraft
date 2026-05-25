@@ -64,6 +64,7 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
  * fluid exchange between heatable and coolable fluids, and client-side
  * rendering state. Ported from 1.12.2 TileHeatExchange.
  */
+@SuppressWarnings("this-escape")
 public class TileHeatExchange extends BlockEntity implements MenuProvider, IDebuggable {
 
     /** Maximum fluid transfer per tick for each number of middle sections (1-3 middles).

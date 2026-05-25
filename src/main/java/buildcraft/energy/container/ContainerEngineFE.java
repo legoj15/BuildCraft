@@ -14,6 +14,7 @@ import buildcraft.energy.tile.TileEngineFE;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 
+@SuppressWarnings("this-escape")
 public class ContainerEngineFE extends ContainerBC_Neptune {
     public final TileEngineFE engine;
     private final ContainerData data;

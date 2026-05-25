@@ -34,6 +34,7 @@ import buildcraft.lib.expression.node.value.ITickableNode;
  * that you define all models inside of static initializer block. <br>
  * The json model definition of a variable model matches the vanilla format, except that any of the static numbers may
  * be replaced with an expression, that may use any of the variables you have defined. */
+@SuppressWarnings("deprecation")
 public class ModelHolderVariable extends ModelHolder {
     public final Map<String, TextureAtlasSprite> customSprites = new HashMap<>();
     private final FunctionContext context;

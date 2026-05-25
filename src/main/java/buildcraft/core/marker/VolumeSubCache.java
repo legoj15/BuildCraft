@@ -25,6 +25,7 @@ import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
 import buildcraft.core.BCCoreConfig;
 import buildcraft.core.client.BuildCraftLaserManager;
 
+@SuppressWarnings("this-escape")
 public class VolumeSubCache extends MarkerSubCache<VolumeConnection> {
     private VolumeSavedData savedData;
 

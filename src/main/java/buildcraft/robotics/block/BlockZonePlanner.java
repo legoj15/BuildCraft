@@ -36,6 +36,7 @@ import buildcraft.robotics.tile.TileZonePlanner;
  * and write them to Map Location items using paintbrushes.
  * Ported from 1.12.2 BlockZonePlanner.
  */
+@SuppressWarnings("this-escape")
 public class BlockZonePlanner extends BaseEntityBlock {
     public static final MapCodec<BlockZonePlanner> CODEC = simpleCodec(BlockZonePlanner::new);
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;

@@ -28,6 +28,7 @@ import buildcraft.lib.misc.ParticleUtil;
 import buildcraft.lib.misc.SoundUtil;
 import buildcraft.lib.misc.VecUtil;
 
+@SuppressWarnings("deprecation")
 public class ItemPaintbrush_BC8 extends Item {
     private static final int MAX_USES = 64;
 

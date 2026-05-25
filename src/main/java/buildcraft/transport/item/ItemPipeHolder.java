@@ -29,6 +29,7 @@ import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.transport.BCTransportItems;
 
 /** An item that, when placed, creates a pipe block with the associated {@link PipeDefinition}. */
+@SuppressWarnings("deprecation")
 public class ItemPipeHolder extends BlockItem implements IItemPipe {
     public final PipeDefinition definition;
 

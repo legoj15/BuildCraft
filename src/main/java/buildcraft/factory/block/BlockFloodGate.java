@@ -45,6 +45,7 @@ import buildcraft.factory.tile.TileFloodGate;
  * toggled open/closed with a wrench.
  * Ported from 1.12.2 BlockFloodGate.
  */
+@SuppressWarnings("this-escape")
 public class BlockFloodGate extends BaseEntityBlock {
     public static final MapCodec<BlockFloodGate> CODEC =
             simpleCodec(BlockFloodGate::new);

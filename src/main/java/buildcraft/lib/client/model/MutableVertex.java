@@ -34,6 +34,7 @@ import buildcraft.api.core.render.ISprite;
  * will take in 3 doubles and set them to the position element, and {@link #colouri(int, int, int, int)} will take in 4
  * int's and set them to the colour elements.
  */
+@SuppressWarnings("this-escape")
 public class MutableVertex {
     /** The position of this vertex. */
     public float position_x, position_y, position_z;
@@ -442,9 +443,9 @@ public class MutableVertex {
     }
 
     public MutableVertex translated(double x, double y, double z) {
-        position_x += x;
-        position_y += y;
-        position_z += z;
+        position_x += (float) x;
+        position_y += (float) y;
+        position_z += (float) z;
         return this;
     }
 

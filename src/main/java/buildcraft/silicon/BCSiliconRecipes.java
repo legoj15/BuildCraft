@@ -35,6 +35,7 @@ import buildcraft.silicon.recipe.FacadeAssemblyRecipes;
 
 import buildcraft.transport.BCTransportItems;
 
+@SuppressWarnings("deprecation")
 public class BCSiliconRecipes {
 
     public static void init() {

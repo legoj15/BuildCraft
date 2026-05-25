@@ -33,6 +33,7 @@ import buildcraft.builders.snapshot.GlobalSavedDataSnapshots;
 import buildcraft.builders.snapshot.Snapshot;
 import buildcraft.builders.tile.TileElectronicLibrary;
 
+@SuppressWarnings("this-escape")
 public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLibrary> {
 
     // Message IDs

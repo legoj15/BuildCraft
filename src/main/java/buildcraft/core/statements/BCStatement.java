@@ -12,6 +12,7 @@ import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementManager;
 
+@SuppressWarnings({"this-escape", "unchecked"})
 public abstract class BCStatement implements IStatement {
 
     protected final String uniqueTag;

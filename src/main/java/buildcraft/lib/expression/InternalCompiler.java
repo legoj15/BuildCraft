@@ -52,6 +52,7 @@ import buildcraft.lib.expression.node.value.NodeConstantDouble;
 import buildcraft.lib.expression.node.value.NodeConstantLong;
 import buildcraft.lib.expression.node.value.NodeConstantObject;
 
+@SuppressWarnings({"deprecation", "unchecked", "rawtypes"})
 public class InternalCompiler {
     private static final String UNARY_NEGATION = "¬";
     private static final String FUNCTION_START = "@";
@@ -94,6 +95,7 @@ public class InternalCompiler {
         FunctionContext ctxReal = new FunctionContext(context);
 
         IVariableNode[] nodes = new IVariableNode[args.length];
+        @SuppressWarnings("rawtypes")
         Class<?>[] types = new Class[args.length];
         for (int i = 0; i < nodes.length; i++) {
             types[i] = args[i].type;
@@ -462,7 +464,9 @@ public class InternalCompiler {
             } else if (right instanceof INodeDouble) {
                 stack.push(new NodeConditionalDouble(condition, (INodeDouble) left, (INodeDouble) right));
             } else if (right instanceof INodeObject) {
-                stack.push(new NodeConditionalObject(condition, (INodeObject) left, (INodeObject) right));
+                @SuppressWarnings({"unchecked", "rawtypes"})
+                NodeConditionalObject<?> conditionalObject = new NodeConditionalObject(condition, (INodeObject) left, (INodeObject) right);
+                stack.push(conditionalObject);
             } else if (right instanceof INodeLong) {
                 stack.push(new NodeConditionalLong(condition, (INodeLong) left, (INodeLong) right));
             } else {
@@ -604,7 +608,9 @@ public class InternalCompiler {
                 Class<?> cls = functionOrder.get(0);
                 NodeFuncObjectObjectToBoolean.IFuncObjectObjectToBoolean<?, ?> func =
                     isEq ? Objects::equals : (a, b) -> !Objects.equals(a, b);
-                bestFunction = new NodeFuncObjectObjectToBoolean(name, cls, cls, func);
+                @SuppressWarnings({"unchecked", "rawtypes"})
+                NodeFuncObjectObjectToBoolean<?, ?> funcNode = new NodeFuncObjectObjectToBoolean(name, cls, cls, func);
+                bestFunction = funcNode;
                 bestCastCount = 0;
                 bestCasters = Collections.emptyList();
                 bestClassesTo = new ArrayList<>(functionOrder);

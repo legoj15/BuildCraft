@@ -34,6 +34,7 @@ import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.client.model.key.KeyPlugFacade;
 
+@SuppressWarnings("deprecation")
 public class PluggableFacade extends PipePluggable implements IFacade {
 
     private static final AABB[] BOXES = new AABB[6];

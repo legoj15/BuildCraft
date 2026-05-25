@@ -18,6 +18,7 @@ import buildcraft.lib.misc.LocaleUtil;
 
 import buildcraft.silicon.tile.TileLaserTableBase;
 
+@SuppressWarnings("this-escape")
 public class LedgerTablePower extends Ledger_Neptune {
     private static final int OVERLAY_COLOUR = 0xFF_D4_6C_1F;
     private static final int SUB_HEADER_COLOUR = 0xFF_AA_AF_b8;

@@ -52,6 +52,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  * that transfer heat between two fluid streams.
  * Ported from 1.12.2 BlockHeatExchange.
  */
+@SuppressWarnings("this-escape")
 public class BlockHeatExchange extends BaseEntityBlock implements ICustomRotationHandler {
     public static final MapCodec<BlockHeatExchange> CODEC = simpleCodec(BlockHeatExchange::new);
 

@@ -31,6 +31,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.tile.TileFiller;
 
+@SuppressWarnings("this-escape")
 public class BlockFiller extends HorizontalDirectionalBlock implements EntityBlock {
     public static final MapCodec<BlockFiller> CODEC = simpleCodec(BlockFiller::new);
 

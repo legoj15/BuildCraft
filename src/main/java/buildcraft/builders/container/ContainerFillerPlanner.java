@@ -26,6 +26,7 @@ import buildcraft.core.marker.volume.EnumAddonSlot;
 import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
 import buildcraft.core.marker.volume.VolumeBox;
 
+@SuppressWarnings("this-escape")
 public class ContainerFillerPlanner extends ContainerBC_Neptune implements IContainerFilling {
     public static final int NET_STATEMENT = 11;
     public static final int NET_INVERT = 12;

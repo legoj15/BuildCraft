@@ -44,6 +44,7 @@ import buildcraft.lib.net.PacketBufferBC;
  * Provides shift-click logic, phantom slot handling, and widget sync via
  * {@link MessageContainerPayload}.
  */
+@SuppressWarnings("unchecked")
 public abstract class ContainerBC_Neptune extends RecipeBookMenu {
 
     public static final int NET_WIDGET = 0;

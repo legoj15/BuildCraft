@@ -42,6 +42,7 @@ import buildcraft.builders.snapshot.EnumContainerContentsMode;
 import buildcraft.builders.snapshot.EnumFluidHandlingMode;
 import buildcraft.builders.tile.TileBuilder;
 
+@SuppressWarnings("this-escape")
 public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
 
     private static final int DATA_CAN_EXCAVATE = 0;

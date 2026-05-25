@@ -33,6 +33,7 @@ import buildcraft.api.schematics.ISchematicEntity;
 
 import buildcraft.lib.misc.NBTUtilBC;
 
+@SuppressWarnings("this-escape")
 public class Blueprint extends Snapshot {
     public final List<ISchematicBlock> palette = new ArrayList<>();
     public int[] data;

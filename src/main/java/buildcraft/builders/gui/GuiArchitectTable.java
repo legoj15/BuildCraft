@@ -160,8 +160,8 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
         if (snapshotStack.isEmpty()) {
             snapshotStack = menu.getSlot(0).getItem();
         }
-        if (!snapshotStack.isEmpty() && snapshotStack.getItem() instanceof buildcraft.builders.item.ItemSnapshot snapshotItem) {
-            buildcraft.builders.snapshot.Snapshot.Header header = snapshotItem.getHeader(snapshotStack);
+        if (!snapshotStack.isEmpty() && snapshotStack.getItem() instanceof buildcraft.builders.item.ItemSnapshot) {
+            buildcraft.builders.snapshot.Snapshot.Header header = buildcraft.builders.item.ItemSnapshot.getHeader(snapshotStack);
             if (header != null) {
                 snapshot = buildcraft.builders.snapshot.ClientSnapshots.INSTANCE.getSnapshot(header.key);
             }

@@ -27,6 +27,7 @@ import buildcraft.builders.BCBuildersMenuTypes;
 import buildcraft.builders.filler.FillerType;
 import buildcraft.builders.tile.TileFiller;
 
+@SuppressWarnings("this-escape")
 public class ContainerFiller extends ContainerBCTile<TileFiller> implements IContainerFilling {
 
     // ContainerData indices

@@ -17,6 +17,7 @@ import buildcraft.factory.tile.TileTank;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
 
+@SuppressWarnings("this-escape")
 public class ContainerTank extends ContainerBC_Neptune {
     public final TileTank tile;
     public final WidgetFluidTank widgetTank;

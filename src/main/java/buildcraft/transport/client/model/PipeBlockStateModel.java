@@ -39,6 +39,7 @@ import buildcraft.transport.tile.TilePipeHolder;
  * populated by TilePipeHolder.getModelData() and refreshed whenever
  * pipe connections or paint change.
  */
+@SuppressWarnings("deprecation")
 public class PipeBlockStateModel implements DynamicBlockStateModel {
     private final BlockStateModel vanillaDelegate;
 

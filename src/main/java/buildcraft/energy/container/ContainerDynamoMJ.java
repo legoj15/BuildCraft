@@ -14,6 +14,7 @@ import buildcraft.energy.tile.TileDynamoMJ;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 
+@SuppressWarnings("this-escape")
 public class ContainerDynamoMJ extends ContainerBC_Neptune {
     public final TileDynamoMJ dynamo;
     private final ContainerData data;

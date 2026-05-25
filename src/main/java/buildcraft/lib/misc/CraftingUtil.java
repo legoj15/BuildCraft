@@ -31,6 +31,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 
 @EventBusSubscriber(modid = "buildcraftunofficial")
+@SuppressWarnings("deprecation")
 public final class CraftingUtil {
 
     private CraftingUtil() {

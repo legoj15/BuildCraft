@@ -24,6 +24,7 @@ public final class FunctionSignature {
         this.func = func;
     }
 
+    @SuppressWarnings("fallthrough")
     public static FunctionSignature parse(String desc) throws InvalidExpressionException {
         try {
             return parse0(desc);
@@ -34,6 +35,7 @@ public final class FunctionSignature {
         }
     }
 
+    @SuppressWarnings("fallthrough")
     private static FunctionSignature parse0(String desc) throws InvalidExpressionException {
         Tokenizer t = FUNCTION_TOKENIZER;
 
@@ -81,7 +83,6 @@ public final class FunctionSignature {
                         state = 2;
                     }
                 }
-                //$FALL-THROUGH$
                 case 2: {
                     argType = NodeTypes.parseType(token.text);
                     state = 3;

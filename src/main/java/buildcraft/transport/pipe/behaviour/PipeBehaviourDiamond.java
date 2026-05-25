@@ -32,6 +32,7 @@ import buildcraft.transport.container.ContainerDiamondPipe;
 
 /** Base class for diamond (sorting) and diamond-wood (emerald/filtered extraction) pipes.
  * Provides a filter inventory per direction. */
+@SuppressWarnings("this-escape")
 public abstract class PipeBehaviourDiamond extends PipeBehaviour {
 
     public static final int FILTERS_PER_SIDE = 9;

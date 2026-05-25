@@ -60,6 +60,7 @@ import buildcraft.lib.misc.MessageUtil;
  * two fluid outputs (gas + liquid) via distillation recipes.
  * Ported from 1.12.2 TileDistiller_BC8.
  */
+@SuppressWarnings("this-escape")
 public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDebuggable {
 
     public static final long MAX_MJ_PER_TICK = 6 * MjAPI.MJ;

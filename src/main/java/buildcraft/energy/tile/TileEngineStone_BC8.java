@@ -23,6 +23,7 @@ import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.AdvancementUtil;
 
+@SuppressWarnings("deprecation")
 public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
     private static final net.minecraft.resources.Identifier ADVANCEMENT_POWERING_UP
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:powering_up");

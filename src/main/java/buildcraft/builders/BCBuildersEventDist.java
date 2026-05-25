@@ -46,6 +46,7 @@ import buildcraft.builders.tile.TileQuarry;
 import buildcraft.core.client.BuildCraftLaserManager;
 
 /** Event distribution for BCBuilders. Handles quarry tracking and rendering. */
+@SuppressWarnings({"rawtypes", "unchecked"})  // SnapshotBuilder<T>'s BreakTask/PlaceTask inner classes
 public enum BCBuildersEventDist {
     INSTANCE;
 

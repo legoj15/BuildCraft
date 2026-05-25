@@ -41,6 +41,7 @@ import buildcraft.silicon.gate.GateLogic;
 import buildcraft.silicon.plug.PluggableGate;
 import buildcraft.silicon.BCSiliconMenuTypes;
 
+@SuppressWarnings("this-escape")
 public class ContainerGate extends ContainerBC_Neptune {
     public static final int ID_CONNECTION = 1;
     public static final int ID_VALID_STATEMENTS = 2;

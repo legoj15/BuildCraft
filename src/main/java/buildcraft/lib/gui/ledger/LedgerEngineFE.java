@@ -25,6 +25,7 @@ import buildcraft.lib.misc.LocaleUtil;
  * Displays current output and stored energy in Redstone Flux (FE) units
  * instead of MJ, matching the 1.12.2 behaviour for these converter machines.
  */
+@SuppressWarnings("this-escape")
 public class LedgerEngineFE extends Ledger_Neptune {
     // Same colours as LedgerEngine
     private static final int OVERLAY_COLOUR = 0xD46C1F;

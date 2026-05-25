@@ -46,6 +46,7 @@ import buildcraft.silicon.plug.PluggableFacade;
 
 import net.minecraft.nbt.CompoundTag;
 
+@SuppressWarnings("deprecation")
 public class ItemPluggableFacade extends Item implements IItemPluggable, IFacadeItem {
     public ItemPluggableFacade(Item.Properties properties) {
         super(properties);

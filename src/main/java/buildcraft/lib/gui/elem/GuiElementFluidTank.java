@@ -28,6 +28,7 @@ import buildcraft.lib.gui.widget.WidgetFluidTank;
  * A GUI element that renders a fluid tank (fill level + overlay) and handles
  * click interaction via the associated {@link WidgetFluidTank} widget.
  */
+@SuppressWarnings("deprecation")
 public class GuiElementFluidTank implements IInteractionElement {
 
     private final BuildCraftGui gui;

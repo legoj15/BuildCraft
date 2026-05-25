@@ -29,6 +29,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.tile.TileArchitectTable;
 
+@SuppressWarnings("this-escape")
 public class BlockArchitectTable extends HorizontalDirectionalBlock implements EntityBlock {
     public static final MapCodec<BlockArchitectTable> CODEC = simpleCodec(BlockArchitectTable::new);
 

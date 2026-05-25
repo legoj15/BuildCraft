@@ -22,6 +22,7 @@ import buildcraft.transport.pipe.behaviour.PipeBehaviourStripes;
 /** Renders the stripes pipe's small directional "laser" beam protruding from
  *  the pipe end in the direction it is pointing. The beam is a gold-colored
  *  4×1×1 pixel box, matching the 1.12.2 model pipes/stripes.json. */
+@SuppressWarnings("deprecation")
 public enum PipeBehaviourRendererStripes implements IPipeBehaviourRenderer<PipeBehaviourStripes> {
     INSTANCE;
 

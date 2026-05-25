@@ -27,6 +27,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  * this draws via a static {@link GuiGraphicsExtractor} context that the surrounding
  * Screen pushes once per frame.
  */
+@SuppressWarnings("deprecation")
 public class GuiFluid implements ISimpleDrawable {
     private final FluidStack stack;
 

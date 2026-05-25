@@ -39,6 +39,7 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import buildcraft.lib.misc.SoundUtil;
 import buildcraft.factory.BCFactoryItems;
 
+@SuppressWarnings({"this-escape", "deprecation"})
 public class BlockWaterGel extends Block {
     public static final MapCodec<BlockWaterGel> CODEC = simpleCodec(BlockWaterGel::new);
 

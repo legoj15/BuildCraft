@@ -332,7 +332,7 @@ public abstract class GuideChapter extends GuidePart {
             int x;
             if (isCentral) {
                 x = (int) GuiGuide.FLOATING_CHAPTER_MENU.getX() + 4 + (int) hoverWidth;
-                width -= hoverWidth;
+                width -= (int) hoverWidth;
                 hoverWidth = 0;
             } else {
                 x = gui.minX + GuiGuide.PAGE_LEFT.width + GuiGuide.PAGE_RIGHT.width - 11;
@@ -340,7 +340,7 @@ public abstract class GuideChapter extends GuidePart {
             x += level * 14;
             p = parent;
             while (p != null) {
-                x += p.getHoverWidth(0);
+                x += (int) p.getHoverWidth(0);
                 p = p.parent;
             }
 

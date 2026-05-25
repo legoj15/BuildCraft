@@ -42,6 +42,7 @@ import net.minecraft.util.RandomSource;
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.lib.tile.TileMarker;
 
+@SuppressWarnings("this-escape")
 public abstract class BlockMarkerBase extends Block implements EntityBlock {
     private static final Map<Direction, VoxelShape> BOUNDING_BOXES = new EnumMap<>(Direction.class);
 

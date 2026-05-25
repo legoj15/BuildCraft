@@ -13,6 +13,7 @@ import buildcraft.lib.expression.api.IVariableNode.IVariableNodeObject;
 import buildcraft.lib.expression.api.NodeType;
 import buildcraft.lib.expression.api.NodeTypes;
 
+@SuppressWarnings("unchecked")
 public class NodeVariableObject<T> extends NodeVariable implements IVariableNodeObject<T>, IDependantNode {
     public final Class<T> type;
     public T value;

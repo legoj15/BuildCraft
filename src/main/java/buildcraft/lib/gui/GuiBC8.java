@@ -22,6 +22,7 @@ import buildcraft.lib.gui.pos.IGuiArea;
  * MC 26.1: render → extractRenderState, renderBg → extractBackground, renderLabels → extractLabels.
  * imageWidth/imageHeight are now final — pass through super constructor.
  */
+@SuppressWarnings("this-escape")
 public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractContainerScreen<C> {
 
     public final BuildCraftGui mainGui;

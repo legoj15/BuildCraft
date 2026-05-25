@@ -35,6 +35,7 @@ import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.energy.tile.TileDynamoMJ;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 
+@SuppressWarnings("this-escape")
 public class BlockDynamoMJ extends Block implements EntityBlock, ICustomRotationHandler {
 
     public BlockDynamoMJ(Properties properties) {

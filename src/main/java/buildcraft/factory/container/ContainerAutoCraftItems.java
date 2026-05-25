@@ -30,6 +30,7 @@ import buildcraft.lib.gui.slot.SlotOutput;
 import buildcraft.lib.gui.slot.SlotPhantom;
 import buildcraft.lib.misc.CraftingUtil;
 
+@SuppressWarnings("this-escape")
 public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchItems> {
 
     private final List<Slot> blueprintSlots = new ArrayList<>();

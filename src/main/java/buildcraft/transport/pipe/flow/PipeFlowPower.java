@@ -44,6 +44,7 @@ import buildcraft.lib.misc.MathUtil;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.misc.data.AverageInt;
 
+@SuppressWarnings({"this-escape", "unchecked"})
 public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
     private static final long DEFAULT_MAX_POWER = MjAPI.MJ * 10;
     public static final int NET_POWER_AMOUNTS = 2;

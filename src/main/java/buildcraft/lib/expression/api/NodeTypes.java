@@ -37,6 +37,7 @@ import buildcraft.lib.expression.node.value.NodeVariableDouble;
 import buildcraft.lib.expression.node.value.NodeVariableLong;
 import buildcraft.lib.expression.node.value.NodeVariableObject;
 
+@SuppressWarnings("unchecked")
 public class NodeTypes {
 
     public static final FunctionContext LONG = LongFunctions.LONG;

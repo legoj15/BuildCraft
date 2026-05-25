@@ -28,6 +28,7 @@ import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.gate.GateVariant;
 import buildcraft.silicon.plug.PluggableGate;
 
+@SuppressWarnings("deprecation")
 public class ItemPluggableGate extends Item implements IItemPluggable {
     public ItemPluggableGate(Item.Properties properties) {
         super(properties);

@@ -36,6 +36,7 @@ import buildcraft.silicon.plug.FacadeStateManager;
  *
  * <p>Must be called after model baking is complete.
  */
+@SuppressWarnings("deprecation")
 public class FacadeDeduplicator {
     private static final boolean DEBUG = BCDebugging.shouldDebugLog("silicon.facade");
     private static final RandomSource RANDOM = RandomSource.create(42L);

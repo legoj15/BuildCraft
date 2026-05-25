@@ -2,10 +2,6 @@ package buildcraft.api.recipes;
 
 import buildcraft.api.core.IStackFilter;
 
-/**
- * @deprecated TEMPORARY CLASS DO NOT USE!
- */
-@Deprecated
 public final class StackDefinition {
     public final IStackFilter filter;
     public final int count;

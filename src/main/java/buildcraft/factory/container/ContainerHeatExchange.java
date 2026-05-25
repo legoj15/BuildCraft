@@ -24,6 +24,7 @@ import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
 
+@SuppressWarnings("this-escape")
 public class ContainerHeatExchange extends ContainerBC_Neptune {
     /** The START tile of the heat exchanger multi-block, or {@code null} if the
      * structure is missing/incomplete. The end tanks are reached via this. */

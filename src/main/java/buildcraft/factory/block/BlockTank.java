@@ -53,6 +53,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  * uses cutout rendering for the glass-like appearance.
  * Ported from 1.12.2 BlockTank.
  */
+@SuppressWarnings("this-escape")
 public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
     public static final MapCodec<BlockTank> CODEC = simpleCodec(BlockTank::new);
     public static final BooleanProperty JOINED_BELOW = BooleanProperty.create("joined_below");

@@ -30,6 +30,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import buildcraft.api.properties.BuildCraftProperties;
 
+@SuppressWarnings("this-escape")
 public class BlockFrame extends Block {
     public static final MapCodec<BlockFrame> CODEC = simpleCodec(BlockFrame::new);
 

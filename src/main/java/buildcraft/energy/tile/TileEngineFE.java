@@ -30,6 +30,7 @@ import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 
+@SuppressWarnings("this-escape")
 public class TileEngineFE extends TileEngineBase_BC8 {
     public static final int MAX_FE = 10_000;
     public static final float HEAT_RATE = 0.06f;

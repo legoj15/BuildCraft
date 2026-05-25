@@ -33,6 +33,7 @@ import buildcraft.lib.tile.TileBC_Neptune;
  * Abstract base class for mining machines (mining well, quarry).
  * Ported from 1.12.2 TileMiner.
  */
+@SuppressWarnings("this-escape")
 public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
 
     protected int progress = 0;

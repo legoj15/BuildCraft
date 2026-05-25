@@ -18,10 +18,6 @@ import net.minecraft.core.NonNullList;
 
 import buildcraft.api.core.BuildCraftAPI;
 
-/**
- * @deprecated TEMPORARY CLASS DO NOT USE!
- */
-@Deprecated
 public class AssemblyRecipeBasic extends AssemblyRecipe {
     private final long requiredMicroJoules;
     private final ImmutableSet<IngredientStack> requiredStacks;

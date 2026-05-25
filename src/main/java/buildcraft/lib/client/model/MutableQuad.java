@@ -23,6 +23,7 @@ import net.minecraft.world.phys.Vec3;
 
 /** Holds all of the information necessary to make a {@link BakedQuad}. This provides a variety of methods to quickly
  * set or get different elements. This currently holds 4 {@link MutableVertex}. */
+@SuppressWarnings({"this-escape", "deprecation"})
 public class MutableQuad {
     public static final MutableQuad[] EMPTY_ARRAY = new MutableQuad[0];
 
@@ -290,7 +291,7 @@ public class MutableQuad {
         float light = (xx * 0.6f + zz * 0.8f) / t;
 
         float yyt = yy / t;
-        if (!up) yyt *= 0.5;
+        if (!up) yyt *= 0.5f;
         light += yyt;
 
         return light;

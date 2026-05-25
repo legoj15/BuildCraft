@@ -19,6 +19,7 @@ import java.util.function.Consumer;
 
 import buildcraft.lib.misc.NBTUtilBC;
 
+@SuppressWarnings("deprecation")
 public class ItemGateCopier extends Item {
     private static final String NBT_DATA = "gate_data";
 

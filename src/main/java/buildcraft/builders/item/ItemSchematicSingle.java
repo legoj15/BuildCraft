@@ -50,6 +50,7 @@ import buildcraft.core.PaperAdvancement;
  * In 1.12.2 this used damage values (0=clean, 1=used). In 1.21.11 there are two
  * separate registered items: schematic_single_clean and schematic_single_used.
  */
+@SuppressWarnings("deprecation")
 public class ItemSchematicSingle extends Item {
     public static final String NBT_KEY = "schematic";
 

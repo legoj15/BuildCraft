@@ -30,6 +30,7 @@ import buildcraft.lib.gui.pos.IGuiPosition;
 
 /** Base class for collapsible side panels (ledgers) in the GUI.
  *  Closely mirrors the 1.12.2 Ledger_Neptune rendering and animation behavior. */
+@SuppressWarnings("this-escape")
 public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     public static final int LEDGER_GAP = 4;
     public static final int CLOSED_WIDTH = 2 + 16 + LEDGER_GAP;   // 22

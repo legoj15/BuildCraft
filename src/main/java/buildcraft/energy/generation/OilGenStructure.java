@@ -25,6 +25,7 @@ import buildcraft.core.BCCoreBlocks;
 import buildcraft.energy.BCEnergyFluids;
 import buildcraft.energy.tile.TileSpringOil;
 
+@SuppressWarnings("deprecation")
 public abstract class OilGenStructure {
     public final Box box;
     public final ReplaceType replaceType;

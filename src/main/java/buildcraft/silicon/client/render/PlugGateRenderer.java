@@ -57,6 +57,7 @@ import buildcraft.silicon.plug.PluggableGate;
  * Static-parts geometry is cached per {@link GateVariant}; the dynamic overlay is cached
  * once for ON and once for OFF. Both caches are populated lazily on first render.
  */
+@SuppressWarnings("deprecation")
 public enum PlugGateRenderer implements IPlugDynamicRenderer<PluggableGate> {
     INSTANCE;
 

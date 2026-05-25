@@ -31,6 +31,7 @@ import buildcraft.lib.list.ListHandler;
  * {@code lib.gui.ledger} because it's specific to the list item's GUI layout — it knows about the
  * slot grid coordinates and the {@link ListHandler.Line} model directly.
  */
+@SuppressWarnings("this-escape")
 public class LedgerListMatch extends Ledger_Neptune {
     private static final Identifier ICON = Identifier.parse("buildcraftunofficial:textures/icons/help.png");
 

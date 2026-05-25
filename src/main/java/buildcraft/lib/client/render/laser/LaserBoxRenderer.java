@@ -27,6 +27,7 @@ import buildcraft.lib.misc.data.Box;
 /**
  * Renders a laser box — 12 edges of a bounding box drawn as laser beams.
  */
+@SuppressWarnings("deprecation")
 public class LaserBoxRenderer {
     private static final double RENDER_SCALE = 1 / 16.05;
 

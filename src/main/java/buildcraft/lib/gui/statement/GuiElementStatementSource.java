@@ -22,6 +22,7 @@ import buildcraft.lib.statement.StatementContext;
 import buildcraft.lib.statement.StatementContext.StatementGroup;
 import buildcraft.lib.statement.StatementWrapper;
 
+@SuppressWarnings("this-escape")
 public class GuiElementStatementSource<S extends IGuiSlot> implements IInteractionElement {
     public final BuildCraftGui gui;
     public final IGuiPosition position;

@@ -22,6 +22,7 @@ import buildcraft.builders.item.ItemSnapshot;
 import buildcraft.builders.snapshot.Snapshot;
 import buildcraft.builders.tile.TileReplacer;
 
+@SuppressWarnings("this-escape")
 public class ContainerReplacer extends ContainerBCTile<TileReplacer> {
 
     /** Client→Server: perform the replacement. Payload = UTF string (new name, may be blank). */

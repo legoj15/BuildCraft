@@ -23,6 +23,7 @@ import buildcraft.lib.misc.ExpressionCompat;
 /** Defines the variable model holders and expression variables for the core-subsystem engine
  * types (Redstone/wood engine and Creative engine). Each engine renders through a shared
  * {@link EngineModelCache}; see that class for the bake-cache and quantisation rationale. */
+@SuppressWarnings("deprecation")
 public class BCCoreModels {
     private static final NodeVariableDouble ENGINE_PROGRESS;
     private static final NodeVariableObject<EnumPowerStage> ENGINE_STAGE;

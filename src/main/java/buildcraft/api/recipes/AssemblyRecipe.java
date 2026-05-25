@@ -14,10 +14,6 @@ import net.minecraft.world.item.ItemStack;
 
 import buildcraft.api.recipes.IngredientStack;
 
-/**
- * @deprecated TEMPORARY CLASS DO NOT USE!
- */
-@Deprecated
 public abstract class AssemblyRecipe implements Comparable<AssemblyRecipe> {
     private String registryName;
 
@@ -30,12 +26,12 @@ public abstract class AssemblyRecipe implements Comparable<AssemblyRecipe> {
     public abstract long getRequiredMicroJoulesFor(@Nonnull ItemStack output);
 
     // Registry name helpers (simplified replacement for IForgeRegistryEntry)
-    public AssemblyRecipe setRegistryName(String name) {
+    public final AssemblyRecipe setRegistryName(String name) {
         this.registryName = name;
         return this;
     }
 
-    public AssemblyRecipe setRegistryName(Object name) {
+    public final AssemblyRecipe setRegistryName(Object name) {
         // no-op stub
         return this;
     }

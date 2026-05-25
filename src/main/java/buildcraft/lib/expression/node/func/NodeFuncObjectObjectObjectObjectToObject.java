@@ -25,6 +25,7 @@ import buildcraft.lib.expression.node.func.NodeFuncBase.IFunctionNode;
 import buildcraft.lib.expression.node.value.NodeConstantObject;
 
 // AUTO_GENERATED FILE, DO NOT EDIT MANUALLY!
+@SuppressWarnings("unchecked")
 public class NodeFuncObjectObjectObjectObjectToObject<A, B, C, D, R> extends NodeFuncBase implements INodeFuncObject<R> {
 
     public final IFuncObjectObjectObjectObjectToObject<A, B, C, D, R> function;

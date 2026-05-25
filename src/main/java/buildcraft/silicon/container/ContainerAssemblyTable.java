@@ -22,6 +22,7 @@ import buildcraft.silicon.BCSiliconMenuTypes;
 import buildcraft.silicon.EnumAssemblyRecipeState;
 import buildcraft.silicon.tile.TileAssemblyTable;
 
+@SuppressWarnings("this-escape")
 public class ContainerAssemblyTable extends ContainerBCTile<TileAssemblyTable> {
 
     // Client-side constructor (from network)

@@ -42,6 +42,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  * volume (2/16 to 14/16 on X/Z), with height proportional to the fill level.
  * Ported from 1.12.2 RenderTank.
  */
+@SuppressWarnings("deprecation")
 public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState> {
 
     private static final float MIN_XZ = 2.0f / 16.0f + 0.01f;

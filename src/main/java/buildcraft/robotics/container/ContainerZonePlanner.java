@@ -18,6 +18,7 @@ import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.slot.SlotOutput;
 
+@SuppressWarnings("this-escape")
 public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
 
     // Client-side constructor (from network)

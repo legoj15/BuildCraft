@@ -52,6 +52,7 @@ import buildcraft.lib.statement.TriggerWrapper.TriggerWrapperInternalSided;
 
 import buildcraft.silicon.plug.PluggableGate;
 
+@SuppressWarnings("this-escape")
 public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContainer {
 
     protected static final IdAllocator ID_ALLOC = new IdAllocator("GateLogic");
@@ -192,7 +193,7 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
         short c = 0;
         for (int i = 0; i < connections.length; i++) {
             if (connections[i]) {
-                c |= 1 << i;
+                c |= (short) (1 << i);
             }
         }
         nbt.putShort("connections", c);
@@ -221,12 +222,12 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
         CompoundTag nbt = new CompoundTag();
         short tOn = 0;
         for (int i = 0; i < triggerOn.length; i++) {
-            if (triggerOn[i]) tOn |= 1 << i;
+            if (triggerOn[i]) tOn |= (short) (1 << i);
         }
         nbt.putShort("triggerOn", tOn);
         short aOn = 0;
         for (int i = 0; i < actionOn.length; i++) {
-            if (actionOn[i]) aOn |= 1 << i;
+            if (actionOn[i]) aOn |= (short) (1 << i);
         }
         nbt.putShort("actionOn", aOn);
         nbt.putBoolean("isOn", isOn);

@@ -42,6 +42,7 @@ import buildcraft.api.tools.IToolWrench;
  * rotation via CustomRotationHelper.attemptRotateBlock(). This is the 1.12.2
  * mechanism for wrench rotation — it fires for ALL wrench clicks (normal and crouch).
  */
+@SuppressWarnings("this-escape")
 public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock, ICustomRotationHandler {
 
     public BlockEngineBase_BC8(Properties properties) {

@@ -29,6 +29,7 @@ import buildcraft.lib.misc.ExpressionCompat;
 
 /** A rule for changing a model's elements. The most basic example is rotating an entire model based of a single
  * property. */
+@SuppressWarnings("deprecation")
 public abstract class JsonModelRule {
 
     public final INodeBoolean when;

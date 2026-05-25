@@ -59,8 +59,8 @@ public class GuideAssembly extends GuidePartItem {
         if (current.pixel + PIXEL_HEIGHT > height) {
             current = current.newPage();
         }
-        x += OFFSET.x;
-        y += OFFSET.y + current.pixel;
+        x += (int) OFFSET.x;
+        y += (int) OFFSET.y + current.pixel;
         if (current.page == index) {
             INPUT_LIST.drawAt(x, y);
             for (int i = 0; i < input.length; i++) {
@@ -84,8 +84,8 @@ public class GuideAssembly extends GuidePartItem {
         if (current.pixel + PIXEL_HEIGHT > height) {
             current = current.newPage();
         }
-        x += OFFSET.x;
-        y += OFFSET.y + current.pixel;
+        x += (int) OFFSET.x;
+        y += (int) OFFSET.y + current.pixel;
         if (current.page == index) {
             for (int i = 0; i < input.length; i++) {
                 GuiRectangle rect = ITEM_POSITION[i];

@@ -19,6 +19,7 @@ import buildcraft.lib.gui.slot.SlotOutput;
 import buildcraft.silicon.BCSiliconMenuTypes;
 import buildcraft.silicon.tile.TileIntegrationTable;
 
+@SuppressWarnings("this-escape")
 public class ContainerIntegrationTable extends ContainerBCTile<TileIntegrationTable> {
 
     // Client-side constructor (from network)

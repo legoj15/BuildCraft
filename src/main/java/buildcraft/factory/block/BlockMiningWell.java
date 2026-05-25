@@ -31,6 +31,7 @@ import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileMiner;
 import buildcraft.factory.tile.TileMiningWell;
 
+@SuppressWarnings("this-escape")
 public class BlockMiningWell extends BaseEntityBlock {
     public static final Property<Direction> FACING = BuildCraftProperties.BLOCK_FACING;
 

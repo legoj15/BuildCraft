@@ -20,6 +20,7 @@ import buildcraft.transport.BCTransportMenuTypes;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourDiamond;
 import buildcraft.transport.tile.TilePipeHolder;
 
+@SuppressWarnings("this-escape")
 public class ContainerDiamondPipe extends ContainerBC_Neptune {
     private final IPipeHolder pipeHolder;
     private final PipeBehaviourDiamond behaviour;

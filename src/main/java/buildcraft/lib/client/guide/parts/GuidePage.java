@@ -15,6 +15,7 @@ import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.entry.PageValue;
 import buildcraft.lib.client.guide.font.IFontRenderer;
 
+@SuppressWarnings("this-escape")
 public class GuidePage extends GuidePageBase {
     public final ImmutableList<GuidePart> parts;
     public final String title;

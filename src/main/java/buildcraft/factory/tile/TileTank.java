@@ -49,6 +49,7 @@ import buildcraft.api.tiles.IDebuggable;
  * Each individual tank holds 16 buckets (16,000 mB).
  * Ported from 1.12.2 TileTank.
  */
+@SuppressWarnings("deprecation")
 public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
 
     public final FluidStacksResourceHandler tank = new FluidStacksResourceHandler(1, 16_000); // 16 buckets

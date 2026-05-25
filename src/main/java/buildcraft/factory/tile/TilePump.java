@@ -61,6 +61,7 @@ import buildcraft.api.tiles.IDebuggable;
  * find connected source blocks and drains them using MJ power.
  * Ported from 1.12.2 TilePump.
  */
+@SuppressWarnings("deprecation")
 public class TilePump extends TileMiner implements IDebuggable {
 
     private static final Identifier ADVANCEMENT_DRAIN_ANY
@@ -435,7 +436,7 @@ public class TilePump extends TileMiner implements IDebuggable {
 
         long target = 10 * MjAPI.MJ;
         if (currentPos != null && paths.containsKey(currentPos)) {
-            progress += battery.extractPower(0, target - progress);
+            progress += (int) battery.extractPower(0, target - progress);
             if (progress < target) {
                 return;
             }

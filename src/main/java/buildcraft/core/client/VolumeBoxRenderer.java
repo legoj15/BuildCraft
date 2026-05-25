@@ -31,6 +31,7 @@ import buildcraft.core.marker.volume.VolumeBox;
  * corner, the locking machine's stripes (STRIPES_WRITE for Filler, STRIPES_READ for Architect)
  * when locked, otherwise CONNECTED.
  */
+@SuppressWarnings("deprecation")
 public class VolumeBoxRenderer {
 
     public static void renderAll() {

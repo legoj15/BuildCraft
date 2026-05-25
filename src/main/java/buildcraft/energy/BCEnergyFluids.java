@@ -40,6 +40,7 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
  *   <li>gaseous   = density &lt; 0 (lighter than air → upside-down bucket)</li>
  * </ul>
  */
+@SuppressWarnings({"deprecation", "unchecked", "rawtypes"})
 public class BCEnergyFluids {
 
     // ─── Deferred Registers ───────────────────────────────────────────
@@ -181,6 +182,7 @@ public class BCEnergyFluids {
 
     // ─── Factory method ───────────────────────────────────────────────
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private static FluidEntry registerFluidVariant(
             String baseName, int heat,
             int baseDensity, int baseViscosity, int boilPoint,

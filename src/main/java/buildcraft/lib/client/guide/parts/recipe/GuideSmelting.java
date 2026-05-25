@@ -54,8 +54,8 @@ public class GuideSmelting extends GuidePartItem {
         if (current.pixel + PIXEL_HEIGHT > height) {
             current = current.newPage();
         }
-        x += OFFSET.x;
-        y += OFFSET.y + current.pixel;
+        x += (int) OFFSET.x;
+        y += (int) OFFSET.y + current.pixel;
         if (current.page == index) {
             SMELTING_ICON.drawAt(x, y);
             drawItemStack(input.get(), x + (int) IN_POS.x, y + (int) IN_POS.y);
@@ -72,8 +72,8 @@ public class GuideSmelting extends GuidePartItem {
         if (current.pixel + PIXEL_HEIGHT > height) {
             current = current.newPage();
         }
-        x += OFFSET.x;
-        y += OFFSET.y + current.pixel;
+        x += (int) OFFSET.x;
+        y += (int) OFFSET.y + current.pixel;
         if (current.page == index) {
             testClickItemStack(input.get(), x + (int) IN_POS.x, y + (int) IN_POS.y);
             testClickItemStack(output.get(), x + (int) OUT_POS.x, y + (int) OUT_POS.y);

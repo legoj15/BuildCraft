@@ -35,6 +35,7 @@ import buildcraft.transport.pipe.flow.PipeFlowRedstoneFlux.Section;
 
 /** Renders FE/RF power flowing through pipes. Nearly identical to
  *  PipeFlowRendererPower but always uses the POWER_FLOW sprite (no normal/overload). */
+@SuppressWarnings("deprecation")
 public enum PipeFlowRendererFE implements IPipeFlowRenderer<PipeFlowRedstoneFlux> {
     INSTANCE;
 

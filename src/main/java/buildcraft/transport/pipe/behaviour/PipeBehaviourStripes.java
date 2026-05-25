@@ -39,6 +39,7 @@ import buildcraft.lib.misc.NBTUtilBC;
 
 import buildcraft.transport.BCTransportStatements;
 
+@SuppressWarnings("deprecation")
 public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActivator, IMjRedstoneReceiver {
     private final MjBattery battery = new MjBattery(256 * MjAPI.MJ);
 

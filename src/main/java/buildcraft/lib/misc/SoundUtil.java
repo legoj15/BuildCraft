@@ -14,6 +14,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.common.SoundActions;
 import net.neoforged.neoforge.fluids.FluidStack;
 
+@SuppressWarnings("deprecation")
 public class SoundUtil {
     public static void playBlockPlace(Level world, BlockPos pos) {
         playBlockPlace(world, pos, world.getBlockState(pos));

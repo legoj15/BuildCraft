@@ -20,6 +20,7 @@ import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.silicon.client.model.key.KeyPlugGate;
 
+@SuppressWarnings("deprecation")
 public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
     public static final PlugGateBaker INSTANCE = new PlugGateBaker();
 

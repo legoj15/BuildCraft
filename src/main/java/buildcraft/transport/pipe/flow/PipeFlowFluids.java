@@ -58,6 +58,7 @@ import buildcraft.lib.misc.MathUtil;
 import buildcraft.core.BCCoreConfig;
 import buildcraft.transport.BCTransportStatements;
 
+@SuppressWarnings("unchecked")
 public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable {
 
     private static final int DIRECTION_COOLDOWN = 60;

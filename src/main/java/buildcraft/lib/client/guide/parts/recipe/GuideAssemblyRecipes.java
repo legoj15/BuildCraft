@@ -13,6 +13,7 @@ import buildcraft.lib.client.guide.parts.GuidePartFactory;
 
 /** Assembly recipe guide integration.
  * Currently stubbed — requires AssemblyRecipeRegistry which is not yet ported. */
+@SuppressWarnings("deprecation")
 public enum GuideAssemblyRecipes implements IStackRecipes {
     INSTANCE;
 

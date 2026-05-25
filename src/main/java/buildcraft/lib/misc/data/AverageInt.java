@@ -8,6 +8,7 @@ package buildcraft.lib.misc.data;
 
 import net.minecraft.resources.Identifier;
 
+@SuppressWarnings("this-escape")
 public class AverageInt {
     private int[] data;
     private int pos, precise;

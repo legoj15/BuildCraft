@@ -40,6 +40,7 @@ import buildcraft.lib.tile.item.ItemHandlerFiltered;
 import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
+@SuppressWarnings("this-escape")
 public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IHasWork, IAutoCraft {
 
     private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:lazy_crafting");

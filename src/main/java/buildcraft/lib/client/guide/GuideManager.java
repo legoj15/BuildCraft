@@ -76,6 +76,7 @@ import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.search.ISuffixArray;
 import buildcraft.lib.misc.search.SimpleSuffixArray;
 
+@SuppressWarnings("deprecation")
 public enum GuideManager {
     INSTANCE;
 

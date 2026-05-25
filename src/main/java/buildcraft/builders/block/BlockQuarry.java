@@ -32,6 +32,7 @@ import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.tile.TileQuarry;
 import buildcraft.lib.misc.AdvancementUtil;
 
+@SuppressWarnings("this-escape")
 public class BlockQuarry extends HorizontalDirectionalBlock implements EntityBlock {
     public static final MapCodec<BlockQuarry> CODEC = simpleCodec(BlockQuarry::new);
     private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:shaping_the_world");

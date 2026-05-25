@@ -25,6 +25,7 @@ import buildcraft.lib.expression.node.func.NodeFuncBase.IFunctionNode;
 import buildcraft.lib.expression.node.value.NodeConstantBoolean;
 
 // AUTO_GENERATED FILE, DO NOT EDIT MANUALLY!
+@SuppressWarnings("unchecked")
 public class NodeFuncObjectObjectObjectObjectToBoolean<A, B, C, D> extends NodeFuncBase implements INodeFuncBoolean {
 
     public final IFuncObjectObjectObjectObjectToBoolean<A, B, C, D> function;

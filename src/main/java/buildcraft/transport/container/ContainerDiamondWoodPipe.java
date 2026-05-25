@@ -22,6 +22,7 @@ import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond.FilterMode;
 import buildcraft.transport.tile.TilePipeHolder;
 
+@SuppressWarnings("this-escape")
 public class ContainerDiamondWoodPipe extends ContainerBC_Neptune {
     private static final int NET_FILTER_MODE = 1;
 

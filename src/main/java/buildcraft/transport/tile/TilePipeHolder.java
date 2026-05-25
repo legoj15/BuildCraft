@@ -66,6 +66,7 @@ import buildcraft.transport.pipe.behaviour.PipeBehaviourDaizuli;
 import buildcraft.transport.wire.WireManager;
 import buildcraft.transport.pipe.PipeEventBus;
 
+@SuppressWarnings("this-escape")
 public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebuggable {
     private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_DREAM
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_dream");

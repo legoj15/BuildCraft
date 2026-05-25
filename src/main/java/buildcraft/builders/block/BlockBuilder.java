@@ -32,6 +32,7 @@ import buildcraft.api.enums.EnumOptionalSnapshotType;
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.tile.TileBuilder;
 
+@SuppressWarnings("this-escape")
 public class BlockBuilder extends HorizontalDirectionalBlock implements EntityBlock {
     public static final MapCodec<BlockBuilder> CODEC = simpleCodec(BlockBuilder::new);
     /** Drives the front-face "door" submodel: NONE = closed empty door, TEMPLATE / BLUEPRINT =

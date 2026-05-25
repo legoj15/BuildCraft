@@ -24,6 +24,7 @@ import buildcraft.lib.misc.LocaleUtil;
  * Uses supplier functions so data can come from synced ContainerData (client)
  * or directly from the tile entity (server/single-player).
  */
+@SuppressWarnings("this-escape")
 public class LedgerEngine extends Ledger_Neptune {
     // 1.12.2 overlay colour: 0xFF_D4_6C_1F (brownish-red)
     private static final int OVERLAY_COLOUR = 0xD46C1F;

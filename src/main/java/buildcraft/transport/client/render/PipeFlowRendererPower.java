@@ -33,6 +33,7 @@ import buildcraft.transport.BCTransportSprites;
 import buildcraft.transport.pipe.flow.PipeFlowPower;
 import buildcraft.transport.pipe.flow.PipeFlowPower.Section;
 
+@SuppressWarnings("deprecation")
 public enum PipeFlowRendererPower implements IPipeFlowRenderer<PipeFlowPower> {
     INSTANCE;
 

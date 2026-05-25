@@ -47,7 +47,7 @@ public class TileMiningWell extends TileMiner {
         if (currentPos != null && canBreak()) {
             shouldCheck = true;
             long target = BlockUtil.computeBlockBreakPower(level, currentPos);
-            progress += battery.extractPower(0, target - progress);
+            progress += (int) battery.extractPower(0, target - progress);
             if (progress >= target) {
                 progress = 0;
                 level.destroyBlockProgress(currentPos.hashCode(), currentPos, -1);

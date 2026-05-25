@@ -53,6 +53,7 @@ import buildcraft.factory.tile.TileChute;
  * into adjacent inventories. Can face all 6 directions.
  * Ported from 1.12.2 BlockChute.
  */
+@SuppressWarnings("this-escape")
 public class BlockChute extends BaseEntityBlock {
     public static final MapCodec<BlockChute> CODEC = simpleCodec(BlockChute::new);
     public static final EnumProperty<Direction> FACING = BlockStateProperties.FACING;

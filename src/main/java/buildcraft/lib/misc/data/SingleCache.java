@@ -13,6 +13,7 @@ import java.util.function.Supplier;
 
 import com.google.common.base.Suppliers;
 
+@SuppressWarnings("this-escape")
 public class SingleCache<T> implements Supplier<T> {
     private final Supplier<T> delegate;
     private final long duration;

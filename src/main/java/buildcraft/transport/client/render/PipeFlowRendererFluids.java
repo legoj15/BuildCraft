@@ -61,6 +61,7 @@ import buildcraft.transport.pipe.flow.PipeFlowFluids;
  * mirror {@link buildcraft.lib.client.model.ModelUtil#createFace} after
  * inlining {@code getPointsForFace} + {@code addOrNegate}, and the per-face
  * UV mapping mirrors {@code ModelUtil.mapBoxToUvs}). */
+@SuppressWarnings("deprecation")
 public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> {
     INSTANCE;
 

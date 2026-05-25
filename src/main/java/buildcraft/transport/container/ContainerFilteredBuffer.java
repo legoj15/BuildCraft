@@ -18,6 +18,7 @@ import buildcraft.lib.gui.slot.SlotPhantom;
 import buildcraft.transport.BCTransportMenuTypes;
 import buildcraft.transport.tile.TileFilteredBuffer;
 
+@SuppressWarnings("this-escape")
 public class ContainerFilteredBuffer extends ContainerBCTile<TileFilteredBuffer> {
 
     // Client-side constructor (from network)

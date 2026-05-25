@@ -53,6 +53,7 @@ import buildcraft.api.schematics.SchematicBlockContext;
 
 import buildcraft.lib.misc.NBTUtilBC;
 
+@SuppressWarnings("deprecation")
 public class SchematicBlockDefault implements ISchematicBlock {
     /** Directions a fluid can flow from to reach this position: the four horizontals plus the
      *  block above (water at the same Y level flows horizontally, water above flows down). The

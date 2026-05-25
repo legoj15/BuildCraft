@@ -56,8 +56,8 @@ public class GuideCrafting extends GuidePartItem {
         if (current.pixel + PIXEL_HEIGHT > height) {
             current = current.newPage();
         }
-        x += OFFSET.x;
-        y += OFFSET.y + current.pixel;
+        x += (int) OFFSET.x;
+        y += (int) OFFSET.y + current.pixel;
         if (current.page == index) {
             CRAFTING_GRID.drawAt(x, y);
             for (int itemX = 0; itemX < input.length; itemX++) {
@@ -78,8 +78,8 @@ public class GuideCrafting extends GuidePartItem {
         if (current.pixel + PIXEL_HEIGHT > height) {
             current = current.newPage();
         }
-        x += OFFSET.x;
-        y += OFFSET.y + current.pixel;
+        x += (int) OFFSET.x;
+        y += (int) OFFSET.y + current.pixel;
         if (current.page == index) {
             for (int itemX = 0; itemX < input.length; itemX++) {
                 for (int itemY = 0; itemY < input[itemX].length; itemY++) {

@@ -22,6 +22,7 @@ import buildcraft.builders.BCBuildersMenuTypes;
 import buildcraft.builders.item.ItemSnapshot;
 import buildcraft.builders.tile.TileArchitectTable;
 
+@SuppressWarnings("this-escape")
 public class ContainerArchitectTable extends ContainerBCTile<TileArchitectTable> {
     public static final int NET_SET_NAME = 10;
 

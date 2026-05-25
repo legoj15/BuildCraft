@@ -84,6 +84,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  *       {@code scale(1, -1, -1)} pattern for the same reason.</li>
  * </ul>
  */
+@SuppressWarnings("deprecation")
 public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipRenderState> {
 
     private static final Logger LOGGER = LogManager.getLogger("BCBlueprintPipRenderer");

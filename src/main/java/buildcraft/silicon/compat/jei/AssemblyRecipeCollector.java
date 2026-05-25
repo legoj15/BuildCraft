@@ -53,6 +53,7 @@ import buildcraft.silicon.recipe.FacadeAssemblyRecipes;
  * <p>Sorted by the synthetic {@link AssemblyRecipeJei#id() id} so JEI's
  * recipe order is deterministic between runs.
  */
+@SuppressWarnings("deprecation")
 public final class AssemblyRecipeCollector {
     private AssemblyRecipeCollector() {}
 

@@ -12,9 +12,10 @@ import net.minecraft.world.item.ItemStack;
 
 import buildcraft.api.lists.ListMatchHandler;
 
+@SuppressWarnings("rawtypes")
 public class ListMatchHandlerTools extends ListMatchHandler {
     
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private static final TagKey<Item>[] TOOL_TAGS = new TagKey[]{
         ItemTags.AXES, ItemTags.PICKAXES, ItemTags.SHOVELS, ItemTags.HOES, ItemTags.SWORDS
     };

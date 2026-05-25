@@ -13,6 +13,7 @@ import java.util.List;
 
 import net.minecraft.world.item.ItemStack;
 
+@SuppressWarnings("this-escape")
 public class ChangingObject<T> {
     protected final T[] options;
     private final int hash;

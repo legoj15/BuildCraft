@@ -47,6 +47,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  * power indicator cubes that bob up/down when the distiller is active.
  * Ported from 1.12.2 RenderDistiller.
  */
+@SuppressWarnings("deprecation")
 public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, DistillerRenderState> {
 
     /** Tank render sizes for each facing direction, in pixel coordinates (1/16 scale). */

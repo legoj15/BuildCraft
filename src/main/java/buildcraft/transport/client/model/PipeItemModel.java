@@ -51,6 +51,7 @@ import buildcraft.transport.BCTransportItems;
  * <p>Uses reflection to extract internal fields from CuboidItemModelWrapper
  * (the 26.1 equivalent of 1.21.11's BlockModelWrapper).
  */
+@SuppressWarnings("deprecation")
 public class PipeItemModel implements ItemModel {
 
     // Reflection fields cached at class-load time

@@ -10,6 +10,7 @@ import buildcraft.lib.misc.StackUtil;
 /** A type of {@link ItemHandlerSimple} that gets it's {@link IItemHandlerFiltered#getFilter(int)} from a given
  * {@link ItemHandlerSimple} instance. This currently instantiates to having the same {@link ItemHandlerSimple#size() slot
  * count} as the filter. */
+@SuppressWarnings("this-escape")
 public class ItemHandlerFiltered extends ItemHandlerSimple implements IItemHandlerFiltered {
     private final ItemHandlerSimple filter;
     private final boolean emptyIsAnything;

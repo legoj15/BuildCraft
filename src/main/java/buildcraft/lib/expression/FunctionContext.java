@@ -60,17 +60,14 @@ public class FunctionContext extends FunctionContextBase {
     private final Map<String, IExpressionNode> variables = new HashMap<>();
     private final Map<String, Map<List<Class<?>>, INodeFunc>> functions = new HashMap<>();
 
-    @Deprecated
     public FunctionContext() {
         this("");
     }
 
-    @Deprecated
     public FunctionContext(FunctionContext parent) {
         this("", parent);
     }
 
-    @Deprecated
     public FunctionContext(FunctionContext... parents) {
         this("", parents);
     }

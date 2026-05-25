@@ -40,6 +40,7 @@ import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.net.PacketBufferBC;
 
+@SuppressWarnings("unchecked")
 public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> {
     private static final double MAX_ENTITY_DISTANCE = 0.1D;
     private static final String FLUID_STACK_KEY = "BuilderFluidStack";

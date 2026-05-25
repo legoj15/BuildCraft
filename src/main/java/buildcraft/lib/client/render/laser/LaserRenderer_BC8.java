@@ -29,6 +29,7 @@ import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
  * Renders textured laser beams between two points using quads.
  * Restores the 1.12.2 3D beam appearance with tiled texture patterns.
  */
+@SuppressWarnings("deprecation")
 public class LaserRenderer_BC8 {
     private static final Map<LaserType, CompiledLaserType> COMPILED_LASER_TYPES = new HashMap<>();
 

@@ -31,6 +31,7 @@ import buildcraft.core.BCCoreMenuTypes;
 import buildcraft.core.PaperAdvancement;
 import buildcraft.core.item.ItemList_BC8;
 
+@SuppressWarnings("this-escape")
 public class ContainerList extends ContainerBC_Neptune {
 
     private static final int NET_LABEL = 1;

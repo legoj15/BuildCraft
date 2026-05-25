@@ -29,6 +29,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.tile.TileElectronicLibrary;
 
+@SuppressWarnings("this-escape")
 public class BlockElectronicLibrary extends HorizontalDirectionalBlock implements EntityBlock {
     public static final MapCodec<BlockElectronicLibrary> CODEC = simpleCodec(BlockElectronicLibrary::new);
 

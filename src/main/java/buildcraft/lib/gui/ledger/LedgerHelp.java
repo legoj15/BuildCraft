@@ -25,6 +25,7 @@ import buildcraft.lib.misc.LocaleUtil;
  *  When open, highlights all GUI elements that provide help info (tanks, slots, etc.)
  *  with colored overlays. Hovering over a highlighted element updates the ledger text.
  *  Positioned on the LEFT side, matching 1.12.2 behavior. */
+@SuppressWarnings("this-escape")
 public class LedgerHelp extends Ledger_Neptune {
     private static final Identifier ICON_HELP = Identifier.parse("buildcraftunofficial:textures/icons/help.png");
 

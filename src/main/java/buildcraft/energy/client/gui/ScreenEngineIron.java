@@ -32,6 +32,7 @@ import buildcraft.lib.misc.LocaleUtil;
  * Screen (GUI) for the combustion engine. Displays 3 fluid tanks
  * (fuel, coolant, residue) with actual fluid textures, glass overlays, and tooltips.
  */
+@SuppressWarnings("deprecation")
 public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
     private static final Identifier TEXTURE = Identifier.parse("buildcraftunofficial:textures/gui/combustion_engine_gui.png");
     private static final int SIZE_X = 176, SIZE_Y = 177;

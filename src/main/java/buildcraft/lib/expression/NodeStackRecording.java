@@ -24,10 +24,12 @@ import buildcraft.lib.expression.node.value.NodeConstantObject;
 
 /** A node stack that returns immutable values containing either 0, false or the empty string. Used to count the number
  * of nodes that a particular function requires. */
+@SuppressWarnings("rawtypes")
 public class NodeStackRecording implements INodeStack {
 
     public final List<Class<?>> types = new ArrayList<>();
 
+    @SuppressWarnings("rawtypes")
     public Class<?>[] toArray() {
         return types.toArray(new Class[0]);
     }

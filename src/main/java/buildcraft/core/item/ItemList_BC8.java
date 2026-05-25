@@ -28,6 +28,7 @@ import buildcraft.api.items.IList;
 import buildcraft.lib.list.ListHandler;
 import buildcraft.lib.misc.AdvancementUtil;
 
+@SuppressWarnings("deprecation")
 public class ItemList_BC8 extends Item implements IList {
 
     private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:list");

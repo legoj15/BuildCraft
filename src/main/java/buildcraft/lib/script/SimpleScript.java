@@ -34,6 +34,7 @@ import buildcraft.api.core.BCLog;
 
 import buildcraft.lib.script.ScriptAliasFunction.AliasBuilder;
 
+@SuppressWarnings("this-escape")
 public class SimpleScript {
 
     public static final boolean DEBUG = BCDebugging.shouldDebugLog("lib.script");

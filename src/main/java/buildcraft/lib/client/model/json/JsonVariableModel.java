@@ -43,6 +43,7 @@ import buildcraft.lib.json.JsonVariableObject;
 import buildcraft.lib.misc.JsonUtil;
 
 /** {@link JsonModel} but any element can change depending on variables. */
+@SuppressWarnings({"this-escape", "deprecation"})
 public class JsonVariableModel extends JsonVariableObject {
     // Never allow ao or textures to be variable - they need to be hardcoded so that we can stitch them
     public final boolean ambientOcclusion;

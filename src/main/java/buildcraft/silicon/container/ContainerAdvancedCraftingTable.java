@@ -29,6 +29,7 @@ import buildcraft.lib.misc.CraftingUtil;
 import buildcraft.silicon.BCSiliconMenuTypes;
 import buildcraft.silicon.tile.TileAdvancedCraftingTable;
 
+@SuppressWarnings("this-escape")
 public class ContainerAdvancedCraftingTable extends ContainerBCTile<TileAdvancedCraftingTable> {
 
     private final List<Slot> blueprintSlots = new ArrayList<>();

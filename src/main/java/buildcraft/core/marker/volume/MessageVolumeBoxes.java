@@ -44,7 +44,7 @@ public record MessageVolumeBoxes(List<CompoundTag> tags) implements CustomPacket
         int count = buf.readShort();
         List<CompoundTag> tags = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            tags.add((CompoundTag) buf.readNbt());
+            tags.add(buf.readNbt());
         }
         return new MessageVolumeBoxes(tags);
     }

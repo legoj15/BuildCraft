@@ -378,6 +378,28 @@ public class BuildCraftGameTests {
             // Capabilities.Item.BLOCK (Auto Workbench, laser tables, Electronic Library).
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:autoworkbench_wood_pipe_extracts"), () -> buildcraft.factory.MachinePipeConnectivityTester::testWoodPipeExtractsFromAutoWorkbench);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:assemblytable_wood_pipe_skips_resources"), () -> buildcraft.factory.MachinePipeConnectivityTester::testWoodPipeSkipsAssemblyTableResources);
+
+            // Gate modifier recipes must match the input gate by data-component variant, not just the
+            // PLUG_GATE Item — see GateRecipeVariantTester for the regression context.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_modifier_recipe_accepts_correct_variant"), () -> buildcraft.silicon.GateRecipeVariantTester::testGoldLapisRecipeAcceptsGoldPlainGate);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_modifier_recipe_rejects_wrong_material"), () -> buildcraft.silicon.GateRecipeVariantTester::testGoldLapisRecipeRejectsIronPlainGate);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_modifier_recipe_rejects_already_modified"), () -> buildcraft.silicon.GateRecipeVariantTester::testGoldLapisRecipeRejectsAlreadyModifiedGate);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_modifier_recipe_rejects_wrong_logic"), () -> buildcraft.silicon.GateRecipeVariantTester::testOrLogicRecipeRejectsAndLogicGate);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_modifier_recipe_display_preserves_variant"), () -> buildcraft.silicon.GateRecipeVariantTester::testGoldLapisRecipeDisplayPreservesGoldVariant);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:basic_gate_recipe_emitted_by_collector"), () -> buildcraft.silicon.GateRecipeVariantTester::testBasicGateRecipeExistsAndCollectorEmitsIt);
+
+            // Crafting-table gate recipes restored from 1.12.2 — Basic Gate (clay brick), Iron
+            // and Nether Brick basic-gate alternatives, Iron modifier upgrades (lapis/quartz),
+            // and the AND<->OR shapeless swap for every non-clay-brick (material, modifier).
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:basic_gate_crafting_recipe"), () -> buildcraft.silicon.GateCraftingRecipeTester::testBasicGateRecipe);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:iron_and_basic_crafting_recipe"), () -> buildcraft.silicon.GateCraftingRecipeTester::testIronAndBasicCraftRecipe);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:nether_brick_and_basic_crafting_recipe"), () -> buildcraft.silicon.GateCraftingRecipeTester::testNetherBrickAndBasicCraftRecipe);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:iron_and_lapis_crafting_recipe"), () -> buildcraft.silicon.GateCraftingRecipeTester::testIronAndLapisCraftRecipe);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:iron_and_quartz_crafting_recipe"), () -> buildcraft.silicon.GateCraftingRecipeTester::testIronAndQuartzCraftRecipe);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_swap_iron_and_to_or"), () -> buildcraft.silicon.GateCraftingRecipeTester::testIronAndToOrSwap);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_swap_iron_or_to_and"), () -> buildcraft.silicon.GateCraftingRecipeTester::testIronOrToAndSwap);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_swap_gold_diamond_and_to_or"), () -> buildcraft.silicon.GateCraftingRecipeTester::testGoldDiamondAndToOrSwap);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_swap_clay_brick_excluded"), () -> buildcraft.silicon.GateCraftingRecipeTester::testClayBrickSwapNotAvailable);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:autoworkbench_cobblestone_pipe_connects"), () -> buildcraft.factory.MachinePipeConnectivityTester::testCobblestonePipeConnectsToAutoWorkbench);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:autoworkbench_clay_pipe_inserts"), () -> buildcraft.factory.MachinePipeConnectivityTester::testClayPipeInsertsIntoAutoWorkbench);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:item_machines_expose_item_capability"), () -> buildcraft.factory.MachinePipeConnectivityTester::testItemMachinesExposeItemHandlerCapability);

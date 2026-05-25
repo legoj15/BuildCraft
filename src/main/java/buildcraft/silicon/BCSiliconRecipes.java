@@ -18,6 +18,8 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
+import net.neoforged.neoforge.common.crafting.DataComponentIngredient;
+
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.recipes.AssemblyRecipeBasic;
 import buildcraft.api.recipes.IngredientStack;
@@ -279,7 +281,21 @@ public class BCSiliconRecipes {
             ItemStack output = BCSiliconItems.PLUG_GATE.get()
                 .getStack(new GateVariant(logic, material, modifier));
             ImmutableSet.Builder<IngredientStack> inputBuilder = ImmutableSet.builder();
-            inputBuilder.add(new IngredientStack(Ingredient.of(toUpgrade.getItem())));
+            // Match by data components, not just the Item: every gate variant shares the same
+            // PLUG_GATE item and is disambiguated by CUSTOM_DATA's "gate" CompoundTag plus the
+            // CUSTOM_MODEL_DATA variant key. Without this, Ingredient.of(Item) accepts any gate
+            // variant, so the iron AND + lapis recipe would also consume a gold AND gate.
+            //
+            // Pass the stack's *patch* (just the two real overrides) rather than the
+            // ItemStack-shaped overload. DataComponentIngredient.of(boolean, ItemStack) internally
+            // calls asPatch(stack.getComponents()) — i.e. it serialises every default component
+            // too. When JEI's display path later rebuilds the stack via ItemStackTemplate.create(),
+            // those default-equal entries end up in the rebuilt PatchedDataComponentMap's internal
+            // patch, and PatchedDataComponentMap.equals compares patches structurally — so the
+            // rebuilt stack is !equals to the canonical gate stack JEI keeps in its ingredient
+            // list, and R/U lookup on the basic-gate variants stops finding the recipe.
+            inputBuilder.add(new IngredientStack(DataComponentIngredient.of(false,
+                toUpgrade.getComponentsPatch(), toUpgrade.getItem())));
             for (IngredientStack mod : mods) {
                 inputBuilder.add(mod);
             }

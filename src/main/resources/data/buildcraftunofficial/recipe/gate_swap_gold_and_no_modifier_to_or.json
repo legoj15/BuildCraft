@@ -1,0 +1,31 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "buildcraft_gate_swap",
+  "ingredients": [
+    {
+      "neoforge:ingredient_type": "neoforge:components",
+      "items": "buildcraftunofficial:plug_gate",
+      "components": {
+        "minecraft:custom_data": "{gate:{logic:0b,material:3b,modifier:0b}}",
+        "minecraft:custom_model_data": {
+          "strings": [
+            "gold_and_no_modifier"
+          ]
+        }
+      }
+    }
+  ],
+  "result": {
+    "id": "buildcraftunofficial:plug_gate",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": "{gate:{logic:1b,material:3b,modifier:0b}}",
+      "minecraft:custom_model_data": {
+        "strings": [
+          "gold_or_no_modifier"
+        ]
+      }
+    }
+  }
+}

@@ -11,12 +11,12 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.Item;
+import net.minecraft.util.context.ContextMap;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.display.SlotDisplayContext;
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.recipes.AssemblyRecipe;
@@ -73,19 +73,27 @@ public final class AssemblyRecipeCollector {
     }
 
     private static void collectStandard(AssemblyRecipe recipe, List<AssemblyRecipeJei> out) {
+        // Empty context: the SlotDisplay flavors we hit here — Composite,
+        // ItemSlotDisplay, ItemStackSlotDisplay (the DataComponentIngredient one)
+        // — don't read REGISTRIES or FUEL_VALUES from it, so no Level handle is
+        // needed at JEI plugin-init time. Tag-based ingredients would; we don't
+        // use any in this registry.
+        ContextMap displayCtx = new ContextMap.Builder().create(SlotDisplayContext.CONTEXT);
         for (ItemStack output : recipe.getOutputPreviews()) {
             if (output.isEmpty()) continue;
 
             List<List<ItemStack>> inputSlots = new ArrayList<>();
             for (IngredientStack ing : recipe.getInputsFor(output)) {
                 List<ItemStack> slot = new ArrayList<>();
-                // Ingredient.items() is deprecated but is still the supported way
-                // to enumerate matching items for display — getValues() throws on
-                // custom ingredients (e.g. NeoForge CompoundIngredient).
-                for (Holder<Item> holder : (Iterable<Holder<Item>>) ing.ingredient.items()::iterator) {
-                    Item item = holder.value();
-                    if (item == Items.AIR) continue;
-                    slot.add(new ItemStack(item, ing.count));
+                // Ingredient.display() preserves data-component patches on custom
+                // ingredients (e.g. DataComponentIngredient for gate variants), so
+                // an Iron AND Gate input stays Iron AND Gate in the JEI slot rather
+                // than collapsing to a bare PLUG_GATE with default GateVariant.
+                for (ItemStack template : ing.ingredient.display().resolveForStacks(displayCtx)) {
+                    if (template.isEmpty() || template.getItem() == Items.AIR) continue;
+                    ItemStack stack = template.copy();
+                    stack.setCount(ing.count);
+                    slot.add(stack);
                 }
                 if (!slot.isEmpty()) {
                     inputSlots.add(slot);

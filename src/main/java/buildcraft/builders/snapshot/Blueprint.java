@@ -210,6 +210,33 @@ public class Blueprint extends Snapshot {
         return EnumSnapshotType.BLUEPRINT;
     }
 
+    /** Walks {@code data[]}, counting cells whose palette entry isn't {@link SchematicBlockAir}.
+     *  Precomputes an "is air?" bitset over the palette so each cell is a single bitset lookup
+     *  instead of a virtual call — relevant for large blueprints with small palettes. */
+    @Override
+    public int countNonAirCells() {
+        if (data == null || palette.isEmpty()) {
+            return 0;
+        }
+        java.util.BitSet airPaletteIndices = new java.util.BitSet(palette.size());
+        for (int i = 0; i < palette.size(); i++) {
+            ISchematicBlock entry = palette.get(i);
+            if (entry != null && entry.isAir()) {
+                airPaletteIndices.set(i);
+            }
+        }
+        int n = 0;
+        for (int cell : data) {
+            if (cell < 0 || cell >= palette.size()) {
+                continue;
+            }
+            if (!airPaletteIndices.get(cell)) {
+                n++;
+            }
+        }
+        return n;
+    }
+
     @SuppressWarnings("WeakerAccess")
     public class BuildingInfo extends Snapshot.BuildingInfo {
         public final List<ItemStack>[] toPlaceRequiredItems;

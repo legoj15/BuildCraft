@@ -1,8 +1,12 @@
 package buildcraft.builders;
 
+import com.google.common.collect.ImmutableList;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -11,6 +15,7 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.TagValueInput;
 
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.BCBuildersItems;
@@ -112,5 +117,49 @@ public class BuilderDropsTester {
             helper.assertItemEntityPresent(BCBuildersItems.BLUEPRINT_USED.get(), architectPos, 2.0);
             helper.succeed();
         });
+    }
+
+    /**
+     * Pins the Builder's consumed path-marker chain through the NBT round-trip the periodic BE
+     * update packet uses ({@code saveCustomOnly → loadCustomOnly}). Without the path being
+     * serialized, two things break silently: the client never sees the route and the path-laser
+     * render is dead code; and the server itself loses the route on chunk reload, collapsing
+     * {@link TileBuilder#updateBasePoses()} to the single-position fallback.
+     */
+    public static void testBuilderPathSurvivesNbtRoundTrip(GameTestHelper helper) {
+        BlockPos builderPos = new BlockPos(1, 2, 1);
+        helper.setBlock(builderPos, BCBuildersBlocks.BUILDER.get());
+        TileBuilder tile = helper.getBlockEntity(builderPos, TileBuilder.class);
+
+        helper.assertTrue(tile.path == null, "fresh builder must have null path");
+
+        // Inject a synthetic 3-point path (same shape onPlacedBy stamps after consuming a
+        // path-marker chain). Absolute world positions so we don't accidentally depend on the
+        // structure-relative offset getting applied.
+        BlockPos p1 = new BlockPos(10, 64, 20);
+        BlockPos p2 = new BlockPos(15, 64, 20);
+        BlockPos p3 = new BlockPos(20, 64, 25);
+        tile.path = ImmutableList.of(p1, p2, p3);
+
+        ServerLevel level = helper.getLevel();
+        CompoundTag tag = tile.saveCustomOnly(level.registryAccess());
+        tile.path = null;  // clear to prove load is what restores it
+        tile.loadCustomOnly(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), tag));
+
+        helper.assertTrue(tile.path != null, "path must survive the NBT round-trip");
+        helper.assertTrue(tile.path.size() == 3,
+                "path must keep all 3 positions — got " + (tile.path == null ? "null" : tile.path.size()));
+        helper.assertTrue(tile.path.get(0).equals(p1), "path[0] must equal " + p1 + " — got " + tile.path.get(0));
+        helper.assertTrue(tile.path.get(1).equals(p2), "path[1] must equal " + p2 + " — got " + tile.path.get(1));
+        helper.assertTrue(tile.path.get(2).equals(p3), "path[2] must equal " + p3 + " — got " + tile.path.get(2));
+
+        // Round-trip with no path must leave path null (not coerce to an empty list — that would
+        // make updateBasePoses() crash on path.get(0) the next time it runs).
+        tile.path = null;
+        CompoundTag emptyTag = tile.saveCustomOnly(level.registryAccess());
+        tile.loadCustomOnly(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), emptyTag));
+        helper.assertTrue(tile.path == null, "round-tripping with no path must leave path null");
+
+        helper.succeed();
     }
 }

@@ -54,6 +54,7 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
 import buildcraft.api.tiles.IDebuggable;
 
+import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.PositionUtil;
 import buildcraft.lib.misc.data.Box;
@@ -82,6 +83,16 @@ public class TileBuilder extends TileBC_Neptune
     public static final int TANK_COUNT = 4;
     public static final int TANK_CAPACITY = 8 * 1000; // 8 buckets per tank
 
+    private static final Identifier ADVANCEMENT_PAVING_THE_WAY =
+        Identifier.parse("buildcraftunofficial:paving_the_way");
+    private static final Identifier ADVANCEMENT_START_OF_SOMETHING_BIG =
+        Identifier.parse("buildcraftunofficial:start_of_something_big");
+    /** Cumulative non-air cell count (summed across every base-pos completion) at which
+     *  {@code start_of_something_big} fires. The advancement description calls this
+     *  "an extra-large structure"; 1024 is a 32×32 floor or a 16×4×16 wall — comfortably
+     *  above small-test builds (a 5×5×5 cube is 125) but reachable in normal play. */
+    public static final long BIG_STRUCTURE_THRESHOLD = 1024L;
+
     private final MjBattery battery = new MjBattery(16000 * MjAPI.MJ);
     private final MjBatteryReceiver mjReceiver = new MjBatteryReceiver(battery);
     private boolean canExcavate = true;
@@ -104,6 +115,20 @@ public class TileBuilder extends TileBC_Neptune
     private Rotation rotation = null;
 
     private boolean isDone = false;
+    /** Mirrors {@link #isDone} from the previous tick so a false→true transition is detectable
+     *  exactly once per base-pos completion — without it, the advancement and counter logic
+     *  would re-fire every tick the builder sits idle at the end of its work. */
+    private boolean wasDoneLastTick = false;
+    /** Running total of non-air cells the Builder has placed across every base-pos completion
+     *  since it was placed. Persisted to NBT so a path-marker-fed Builder can accumulate the
+     *  threshold across chunk reloads (or server restarts) mid-build. */
+    private long bigStructureCellsBuilt = 0L;
+    /** One-shot latches for the two advancements. Persisted to NBT so re-loading the chunk
+     *  doesn't re-fire on every subsequent isDone tick. Each only flips to true once the
+     *  grant call actually reaches a {@code ServerPlayer} — owner-offline calls return
+     *  {@code false} and the latch stays armed for the next tick. */
+    private boolean pavingTheWayGranted = false;
+    private boolean startOfSomethingBigGranted = false;
 
     // Inventory. invSnapshot is the blueprint/template slot (used snapshots only).
     // invResources is a 27-slot grid (matches 1.12.2) that BlueprintBuilder pulls from via
@@ -443,10 +468,18 @@ public class TileBuilder extends TileBC_Neptune
                 builder.onNetworkSync();
             }
             isDone = builder.tick();
+            boolean justCompletedBasePos = isDone && !wasDoneLastTick;
+            wasDoneLastTick = isDone;
             if (isDone) {
                 // Push one immediate sync so the client sees the completion and stops the robot.
                 builder.onNetworkSync();
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+                // Advancement grants run on the false→true completion edge — i.e. exactly once
+                // per base-pos finish, BEFORE we advance currentBasePosIndex (the paving check
+                // needs to see the still-current index pointing at the just-finished position).
+                if (justCompletedBasePos) {
+                    tryGrantBuilderAdvancements();
+                }
                 if (currentBasePosIndex < basePoses.size() - 1) {
                     currentBasePosIndex++;
                     if (currentBasePosIndex >= basePoses.size()) {
@@ -460,6 +493,51 @@ public class TileBuilder extends TileBC_Neptune
             // bounded by player proximity.
             if (level.getGameTime() % 5 == 0) {
                 MessageUtil.sendUpdateToTrackingPlayers(this);
+            }
+        }
+    }
+
+    /**
+     * Predicate for {@code paving_the_way}: we just finished the LAST base position of a
+     * multi-segment path. {@code currentBasePosIndex == basePoses.size() - 1} is the "this was
+     * the final stamp" check; {@code path != null && path.size() >= 2} excludes Builders that
+     * were placed without a path-marker chain (single-position builders shouldn't grant a
+     * path-themed advancement).
+     */
+    boolean shouldGrantPavingTheWay() {
+        return path != null
+            && path.size() >= 2
+            && !basePoses.isEmpty()
+            && currentBasePosIndex == basePoses.size() - 1;
+    }
+
+    /**
+     * Grant hook called on the false→true edge of {@link #isDone} for each base-pos completion.
+     * Folds in two independent latches:
+     *   - {@code paving_the_way}: gated on {@link #shouldGrantPavingTheWay()}.
+     *   - {@code start_of_something_big}: accumulates {@code snapshot.countNonAirCells()} into
+     *     {@link #bigStructureCellsBuilt}, fires when the running total crosses
+     *     {@link #BIG_STRUCTURE_THRESHOLD}.
+     * Each latch only flips to true once the grant call actually reaches a {@code ServerPlayer}.
+     * Owner-offline calls return false and leave the latch armed, so the next online tick can
+     * re-fire — matches the pattern used by {@code TileQuarry}'s diggy_diggy_hole grant.
+     */
+    private void tryGrantBuilderAdvancements() {
+        if (level == null || level.isClientSide() || getOwner() == null) {
+            return;
+        }
+        java.util.UUID ownerId = getOwner().id();
+        if (!startOfSomethingBigGranted && snapshot != null) {
+            bigStructureCellsBuilt += snapshot.countNonAirCells();
+            if (bigStructureCellsBuilt >= BIG_STRUCTURE_THRESHOLD) {
+                if (AdvancementUtil.unlockAdvancement(ownerId, level, ADVANCEMENT_START_OF_SOMETHING_BIG)) {
+                    startOfSomethingBigGranted = true;
+                }
+            }
+        }
+        if (!pavingTheWayGranted && shouldGrantPavingTheWay()) {
+            if (AdvancementUtil.unlockAdvancement(ownerId, level, ADVANCEMENT_PAVING_THE_WAY)) {
+                pavingTheWayGranted = true;
             }
         }
     }
@@ -645,6 +723,29 @@ public class TileBuilder extends TileBC_Neptune
         if (snapshotType != null) {
             output.putInt("snapshotType", snapshotType.ordinal());
         }
+        // Persist the path-marker chain consumed at placement. Two reasons:
+        //   1. Server-side chunk reload: without this, updateBasePoses() collapses to the single-
+        //      position fallback and the Builder forgets its multi-segment route.
+        //   2. Client-side rendering: BCBuildersEventDist#renderAllBuilders draws yellow stripes
+        //      between consecutive path positions, but only sees the field via the periodic BE
+        //      update packet — which goes through saveAdditional. Without serialization, path is
+        //      null on the client and the laser render is dead code.
+        if (path != null) {
+            output.putInt("path_count", path.size());
+            for (int i = 0; i < path.size(); i++) {
+                BlockPos p = path.get(i);
+                output.putInt("path_" + i + "_x", p.getX());
+                output.putInt("path_" + i + "_y", p.getY());
+                output.putInt("path_" + i + "_z", p.getZ());
+            }
+        }
+        // Builder advancement state: progress toward start_of_something_big plus both latches.
+        // wasDoneLastTick rides along so a reload mid-completion-edge doesn't re-fire grants
+        // by treating the next sticky isDone tick as a fresh edge.
+        output.putLong("bigStructureCellsBuilt", bigStructureCellsBuilt);
+        output.putBoolean("pavingTheWayGranted", pavingTheWayGranted);
+        output.putBoolean("startOfSomethingBigGranted", startOfSomethingBigGranted);
+        output.putBoolean("wasDoneLastTick", wasDoneLastTick);
         // Builder progress: serialize the active builder's server-side state (for disk reload)
         // AND a client-facing snapshot of the current break/place queues (for BE update packets
         // driving the robot + throwing-animation render). Same shape as TileFiller.
@@ -711,6 +812,28 @@ public class TileBuilder extends TileBC_Neptune
                 }
                 tx.commit();
             }
+        }
+        // Restore advancement state — defaults preserve a fresh-builder zero/false posture for
+        // pre-fix saves that never had these keys, so existing worlds don't spuriously grant.
+        bigStructureCellsBuilt = input.getLongOr("bigStructureCellsBuilt", 0L);
+        pavingTheWayGranted = input.getBooleanOr("pavingTheWayGranted", false);
+        startOfSomethingBigGranted = input.getBooleanOr("startOfSomethingBigGranted", false);
+        wasDoneLastTick = input.getBooleanOr("wasDoneLastTick", false);
+        // Restore the consumed path-marker chain. Counterpart to the writer above — required for
+        // both server-side chunk-reload persistence and client-side path-laser rendering.
+        int pathCount = input.getIntOr("path_count", 0);
+        if (pathCount >= 2) {
+            ImmutableList.Builder<BlockPos> rebuilt = ImmutableList.builder();
+            for (int i = 0; i < pathCount; i++) {
+                rebuilt.add(new BlockPos(
+                    input.getIntOr("path_" + i + "_x", 0),
+                    input.getIntOr("path_" + i + "_y", 0),
+                    input.getIntOr("path_" + i + "_z", 0)
+                ));
+            }
+            path = rebuilt.build();
+        } else {
+            path = null;
         }
         // Pull snapshotType from NBT on the CLIENT only. On client the full snapshot never
         // loads (GlobalSavedDataSnapshots is empty), so NBT is the only path to knowing which

@@ -32,11 +32,11 @@ import "buildcraftunofficial:util" "buildcraftunofficial:main"
 // ===========================================================================
 
 // ---- Blocks / Automation -------------------------------------------------
+block_auto "advanced_crafting_table"
 block_auto "autoworkbench_item"
 block_auto "builder"
 block_auto "chute"
 block_auto "filler"
-place "advanced_crafting_table" "block" "automation"
 place "architect"               "block" "automation"
 place "assembly_table"          "block" "automation"
 place_creative "debugger"       "block" "automation"

@@ -11,6 +11,7 @@ import javax.annotation.Nullable;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
@@ -120,6 +121,13 @@ public class PluggableLens extends PipePluggable {
     @Override
     public boolean isBlocking() {
         return false;
+    }
+
+    @Override
+    public void onPlacedBy(Player player) {
+        super.onPlacedBy(player);
+        buildcraft.transport.BCTransportAttachments.recordPluggablePlacement(
+            player, buildcraft.transport.BCTransportAttachments.PluggablesPlaced.Kind.LENS);
     }
 
     @PipeEventHandler

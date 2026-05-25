@@ -326,6 +326,8 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                         buildcraft.lib.misc.AdvancementUtil.unlockAdvancement(
                             player, ADVANCEMENT_COLORFUL_ELECTRICIAN, wireColour.getName());
                     }
+                    buildcraft.transport.BCTransportAttachments.recordPluggablePlacement(
+                        player, buildcraft.transport.BCTransportAttachments.PluggablesPlaced.Kind.WIRE);
                     level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
                 }
                 return InteractionResult.SUCCESS;

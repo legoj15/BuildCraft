@@ -191,6 +191,8 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
                 AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PLACE_ADV_GATE);
             }
         }
+        buildcraft.transport.BCTransportAttachments.recordPluggablePlacement(
+            player, buildcraft.transport.BCTransportAttachments.PluggablesPlaced.Kind.GATE);
     }
 
     @Override

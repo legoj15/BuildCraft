@@ -7,6 +7,7 @@
 package buildcraft.silicon.plug;
 
 import net.minecraft.core.Direction;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 
@@ -59,6 +60,13 @@ public class PluggableTimer extends PipePluggable {
     @Override
     public ItemStack getPickStack() {
         return new ItemStack(BCSiliconItems.PLUG_TIMER.get());
+    }
+
+    @Override
+    public void onPlacedBy(Player player) {
+        super.onPlacedBy(player);
+        buildcraft.transport.BCTransportAttachments.recordPluggablePlacement(
+            player, buildcraft.transport.BCTransportAttachments.PluggablesPlaced.Kind.TIMER);
     }
 
     @PipeEventHandler

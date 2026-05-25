@@ -71,6 +71,8 @@ public class PluggableBlocker extends PipePluggable {
         if (!holder.getPipeWorld().isClientSide() && holder.getPipe().isConnected(side)) {
             AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PLACE_PLUG);
         }
+        buildcraft.transport.BCTransportAttachments.recordPluggablePlacement(
+            player, buildcraft.transport.BCTransportAttachments.PluggablesPlaced.Kind.BLOCKER);
     }
 
     @Override

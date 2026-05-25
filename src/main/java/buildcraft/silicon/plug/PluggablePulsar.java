@@ -159,6 +159,13 @@ public class PluggablePulsar extends PipePluggable {
     }
 
     @Override
+    public void onPlacedBy(Player player) {
+        super.onPlacedBy(player);
+        buildcraft.transport.BCTransportAttachments.recordPluggablePlacement(
+            player, buildcraft.transport.BCTransportAttachments.PluggablesPlaced.Kind.PULSAR);
+    }
+
+    @Override
     public void onTick() {
         if (holder.getPipeWorld().isClientSide()) {
             isPulsing = isPulsing(); // UPDATE STATE ON CLIENT TOO!

@@ -43,6 +43,11 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_colours_mark_placed_first_sighting_only"), () -> buildcraft.transport.WireColoursPlacedTester::testMarkPlacedReturnsTrueOnlyOnFirstSighting);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:wire_colours_complete_only_after_all_sixteen"), () -> buildcraft.transport.WireColoursPlacedTester::testCompleteOnlyAfterAllSixteenColours);
 
+            // Per-player pluggable-kind tracking gating the all_plugged_up advancement
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pluggables_placed_fresh_attachment_empty"), () -> buildcraft.transport.PluggablesPlacedTester::testFreshAttachmentEmpty);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pluggables_placed_mark_placed_first_sighting_only"), () -> buildcraft.transport.PluggablesPlacedTester::testMarkPlacedReturnsTrueOnlyOnFirstSighting);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pluggables_placed_complete_only_after_all_eight"), () -> buildcraft.transport.PluggablesPlacedTester::testCompleteOnlyAfterAllEightKinds);
+
             // Per-player oil/fuel production tracking gating the refine_and_redefine advancement
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:refine_and_redefine_fresh_attachment_empty"), () -> buildcraft.factory.OilAndFuelProductionTester::testFreshAttachmentEmpty);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:refine_and_redefine_clamps_at_target"), () -> buildcraft.factory.OilAndFuelProductionTester::testRecordProductionClampsAtTarget);

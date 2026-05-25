@@ -1,6 +1,6 @@
 # BuildCraft 1.12.2 → 26.1.x Port Status
 
-Last audited: 2026-05-24. The changelog block in `changelog.md` titled "Changes since 26.1.x Beta release 6" is authoritative for what has shipped since the previous audit; consult it before re-auditing this file.
+Last audited: 2026-05-25. The changelog block in `changelog.md` titled "Changes since 26.1.x Beta release 6" is authoritative for what has shipped since the previous audit; consult it before re-auditing this file.
 
 ## Subsystem Status Overview
 
@@ -24,12 +24,10 @@ Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains
 
 ## 🔧 Outstanding work
 
-### Advancements — 4 orphaned triggers
+### Advancements — 2 orphaned triggers
 `minecraft:impossible` is the placeholder used for advancements granted from Java via `AdvancementUtil.unlockAdvancement(...)`. The following advancements still have only an impossible-trigger JSON with no matching Java grant — pick a thematic in-code event for each and wire it up:
 
 - [ ] `all_plugged_up`
-- [ ] `paving_the_way`
-- [ ] `start_of_something_big`
 - [ ] `too_many_pipe_filters`
 
 ### Block Sounds

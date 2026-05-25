@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:snapshot_response_payload_roundtrip_medium",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 60,
+    "setup_ticks": 0,
+    "required": true
+}

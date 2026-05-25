@@ -148,6 +148,18 @@ public abstract class Snapshot {
 
     abstract public EnumSnapshotType getType();
 
+    /**
+     * Count of cells in this snapshot that represent something other than empty air.
+     * Templates count every fillable cell (a Template doesn't know what gets placed —
+     * the Builder pulls from inventory); Blueprints count cells whose palette entry is not
+     * the {@link SchematicBlockAir} placeholder. Fluid sources go through
+     * {@link SchematicBlockFluid} which doesn't override {@code isAir()}, so they count.
+     * <p>
+     * Drives the {@code start_of_something_big} advancement threshold in TileBuilder, but
+     * kept generic in case anything else wants a "non-trivial structure" gate.
+     */
+    abstract public int countNonAirCells();
+
     public void computeKey() {
         CompoundTag nbt = writeToNBT(this);
         if (nbt.contains("key")) {

@@ -165,6 +165,11 @@ public enum BCBuildersEventDist {
      * so back-to-back scans see overlapping eligibility windows. */
     static final int SCAN_INTERVAL_TICKS = 20;
 
+    /** How far (in blocks) each path-segment laser is shortened at both ends, so consecutive
+     * segments leave a small visual gap at each waypoint instead of overlapping at the centers.
+     * Matches 1.12.2 RenderBuilder.OFFSET. */
+    private static final double PATH_LASER_INSET = 0.1;
+
     private long serverTickCounter = 0L;
 
     /** Pure predicate exposed for unit/game-test coverage: snapshot the registered
@@ -478,19 +483,23 @@ public enum BCBuildersEventDist {
                     true, false, cameraPos
                 );
             }
-            // Path-based builders (fed by Landmarks) show yellow laser lines connecting the
-            // waypoints so the player can see the full route the Builder will traverse.
+            // Path-based builders (fed by a path-marker chain consumed at placement) show
+            // directional-striped laser lines connecting the waypoints so the player can see the
+            // full route the Builder will traverse and which direction it's heading. Endpoints
+            // are inset 0.1 blocks so consecutive segments leave a small visual gap at each
+            // waypoint instead of overlapping at the centers. Matches 1.12.2 RenderBuilder.
             List<BlockPos> path = builder.path;
             if (path != null && path.size() >= 2) {
                 for (int i = 1; i < path.size(); i++) {
-                    BlockPos from = path.get(i - 1);
-                    BlockPos to = path.get(i);
+                    Vec3 from = Vec3.atCenterOf(path.get(i - 1));
+                    Vec3 to = Vec3.atCenterOf(path.get(i));
+                    Vec3 dir = to.subtract(from).normalize().scale(PATH_LASER_INSET);
                     LaserRenderer_BC8.renderLaserStatic(poseStack,
                         new LaserData_BC8(
-                            BuildCraftLaserManager.STRIPES_WRITE,
-                            Vec3.atCenterOf(from),
-                            Vec3.atCenterOf(to),
-                            1 / 16D
+                            BuildCraftLaserManager.STRIPES_WRITE_DIRECTION,
+                            from.add(dir),
+                            to.subtract(dir),
+                            1 / 16.1
                         ),
                         cameraPos
                     );

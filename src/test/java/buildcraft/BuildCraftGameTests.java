@@ -144,6 +144,33 @@ public class BuildCraftGameTests {
             // Builder Drops (self + inventory contents)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_drops_contents_and_self"), () -> buildcraft.builders.BuilderDropsTester::testBuilderDropsContentsAndSelf);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:architect_drops_contents_and_self"), () -> buildcraft.builders.BuilderDropsTester::testArchitectDropsContentsAndSelf);
+            // Builder consumed-path NBT round-trip — gates both the client-side path-laser
+            // render and the server-side chunk-reload persistence of the route.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_path_survives_nbt_roundtrip"), () -> buildcraft.builders.BuilderDropsTester::testBuilderPathSurvivesNbtRoundTrip);
+
+            // Snapshot.countNonAirCells — drives start_of_something_big's 1024 threshold.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:snapshot_template_counts_set_bits"), () -> buildcraft.builders.snapshot.SnapshotCountNonAirCellsTester::testTemplateCountsSetBits);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:snapshot_blueprint_excludes_air"), () -> buildcraft.builders.snapshot.SnapshotCountNonAirCellsTester::testBlueprintExcludesAirEntries);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:snapshot_blueprint_fluid_source_counts"), () -> buildcraft.builders.snapshot.SnapshotCountNonAirCellsTester::testBlueprintFluidSourceCountsAsNonAir);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:snapshot_blueprint_empty_null_safety"), () -> buildcraft.builders.snapshot.SnapshotCountNonAirCellsTester::testBlueprintEmptyAndNullSafety);
+
+            // Compressed-NBT payload framing — encoder/decoder must agree on the exact byte
+            // length, otherwise netty drops the custom_payload packet with "found N bytes extra".
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:architect_preview_payload_roundtrip_small"), () -> buildcraft.builders.snapshot.CompressedNbtPayloadFramingTester::testArchitectPreviewPayloadRoundTripSmall);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:architect_preview_payload_roundtrip_medium"), () -> buildcraft.builders.snapshot.CompressedNbtPayloadFramingTester::testArchitectPreviewPayloadRoundTripMedium);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:architect_preview_payload_roundtrip_large"), () -> buildcraft.builders.snapshot.CompressedNbtPayloadFramingTester::testArchitectPreviewPayloadRoundTripLarge);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:architect_preview_payload_roundtrip_huge"), () -> buildcraft.builders.snapshot.CompressedNbtPayloadFramingTester::testArchitectPreviewPayloadRoundTripHuge);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:architect_preview_payload_roundtrip_boundary_sweep"), () -> buildcraft.builders.snapshot.CompressedNbtPayloadFramingTester::testArchitectPreviewPayloadRoundTripBoundarySweep);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:snapshot_response_payload_roundtrip_medium"), () -> buildcraft.builders.snapshot.CompressedNbtPayloadFramingTester::testSnapshotResponsePayloadRoundTripMedium);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:snapshot_response_payload_roundtrip_large"), () -> buildcraft.builders.snapshot.CompressedNbtPayloadFramingTester::testSnapshotResponsePayloadRoundTripLarge);
+
+            // Builder paving_the_way + start_of_something_big — predicates and NBT shape.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_paving_rejects_no_path"), () -> buildcraft.builders.tile.BuilderAdvancementsTester::testPavingTheWayRejectsSinglePositionBuilder);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_paving_rejects_mid_path"), () -> buildcraft.builders.tile.BuilderAdvancementsTester::testPavingTheWayRejectsMidPath);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_paving_accepts_at_last_position"), () -> buildcraft.builders.tile.BuilderAdvancementsTester::testPavingTheWayAcceptsAtLastPosition);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_big_structure_threshold_matches_spec"), () -> buildcraft.builders.tile.BuilderAdvancementsTester::testBigStructureThresholdMatchesSpec);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_advancement_state_survives_nbt_roundtrip"), () -> buildcraft.builders.tile.BuilderAdvancementsTester::testNbtRoundTripPreservesAdvancementState);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_fresh_advancement_state_zero"), () -> buildcraft.builders.tile.BuilderAdvancementsTester::testFreshBuilderAdvancementStateIsZero);
 
             // Quarry TaskBreakBlock drop routing in both phases (frame-clearing drillPos=null, mining drillPos!=null)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:quarry_frame_clearing_routes_drops"), () -> buildcraft.builders.tile.TileQuarryDropsTester::testFrameClearingRoutesDropsToAdjacentChest);

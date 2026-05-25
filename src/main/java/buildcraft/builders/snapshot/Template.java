@@ -68,6 +68,13 @@ public class Template extends Snapshot {
         return EnumSnapshotType.TEMPLATE;
     }
 
+    /** Templates store one bit per cell; every set bit is a "fill this from inventory" instruction.
+     *  BitSet.cardinality is O(n/64) over the underlying long array — fast even for large templates. */
+    @Override
+    public int countNonAirCells() {
+        return data == null ? 0 : data.cardinality();
+    }
+
     public class BuildingInfo extends Snapshot.BuildingInfo {
         public BuildingInfo(BlockPos basePos, Rotation rotation) {
             super(basePos, rotation);

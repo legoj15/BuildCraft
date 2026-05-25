@@ -154,6 +154,25 @@ public class NbtPath {
         };
     }
 
+    /**
+     * Remove the leaf identified by this path from {@code root}. Walks each intermediate element
+     * as a {@link CompoundTag} (the only structure we declare items-list paths over in the JSON
+     * rules) and removes the final key from its parent compound. No-op if the path is empty, or
+     * if any intermediate element is missing or isn't a compound — leaves the tag untouched
+     * rather than throwing, so callers can stage this against arbitrary tileNbt without first
+     * checking the path matches.
+     */
+    public void remove(CompoundTag root) {
+        if (elements.isEmpty()) return;
+        CompoundTag current = root;
+        for (int i = 0; i < elements.size() - 1; i++) {
+            Tag next = current.get(elements.get(i));
+            if (!(next instanceof CompoundTag c)) return;
+            current = c;
+        }
+        current.remove(elements.get(elements.size() - 1));
+    }
+
     @Override
     public String toString() {
         return "NbtPath{" + elements + "}";

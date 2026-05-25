@@ -298,6 +298,19 @@ public class SchematicBlockDefault implements ISchematicBlock {
     @Nonnull
     @Override
     public List<ItemStack> computeRequiredItems() {
+        return computeRequiredItems(true);
+    }
+
+    /**
+     * Mode-aware variant used by the Builder. When {@code includeContainerContents} is false the
+     * Builder is in {@link EnumContainerContentsMode#IGNORE IGNORE} mode, so the chest will be
+     * placed empty and the player shouldn't have to source its captured inventory — filter out
+     * every {@link RequiredExtractorItemsList} contribution (chest contents, hopper contents,
+     * etc.) while keeping {@link RequiredExtractorItemFromBlock} (the chest item itself) and any
+     * constant/tank extractors.
+     */
+    @Nonnull
+    public List<ItemStack> computeRequiredItems(boolean includeContainerContents) {
         // Bed HEAD positions don't require items: the FOOT half places both halves in one
         // shot (see build() bed special-case). Listing items here would double-count beds in
         // the resource panel and try to extract twice. The HEAD position never queues an
@@ -325,6 +338,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 ? Stream.of(new RequiredExtractorItemFromBlock())
                 : extractorLists.stream().flatMap(Collection::stream)
         )
+            .filter(extractor -> includeContainerContents || !(extractor instanceof RequiredExtractorItemsList))
             .flatMap(extractor -> extractor.extractItemsFromBlock(blockState, tileNbt).stream())
             .filter(stack -> !stack.isEmpty())
             .collect(Collectors.toList());
@@ -373,7 +387,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
 
     @Override
     public boolean build(Level level, BlockPos blockPos) {
-        return build(level, blockPos, EnumFluidHandlingMode.NO_REPLACE);
+        return build(level, blockPos, EnumFluidHandlingMode.NO_REPLACE, true);
     }
 
     /**
@@ -384,8 +398,23 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * destroyed before placing. Lava and non-source fluids always fall through to
      * destroy-then-place.
      */
-    @SuppressWarnings("Duplicates")
     public boolean build(Level level, BlockPos blockPos, EnumFluidHandlingMode fluidMode) {
+        return build(level, blockPos, fluidMode, true);
+    }
+
+    /**
+     * Mode-aware variant of {@link #build(Level, BlockPos, EnumFluidHandlingMode)}. When
+     * {@code includeContainerContents} is false (Builder in
+     * {@link EnumContainerContentsMode#IGNORE IGNORE} mode), any items-list NBT paths declared
+     * by the matching JSON rules (the {@code Items} tag for vanilla chests/hoppers/etc.) are
+     * stripped from the tileNbt copy before {@code loadWithComponents} runs — the placed
+     * container appears empty even though the architect captured its contents. Cosmetic and
+     * structural tags (custom name, lock string, loot table seed, brewing fuel level, …) are
+     * preserved.
+     */
+    @SuppressWarnings("Duplicates")
+    public boolean build(Level level, BlockPos blockPos, EnumFluidHandlingMode fluidMode,
+                         boolean includeContainerContents) {
         if (placeBlock == Blocks.AIR) {
             return true;
         }
@@ -576,6 +605,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 BlockEntity tileEntity = level.getBlockEntity(blockPos);
                 if (tileEntity != null) {
                     CompoundTag newTileNbt = tileNbt.copy();
+                    if (!includeContainerContents) {
+                        stripContainerContentsFromNbt(newTileNbt);
+                    }
                     newTileNbt.putInt("x", blockPos.getX());
                     newTileNbt.putInt("y", blockPos.getY());
                     newTileNbt.putInt("z", blockPos.getZ());
@@ -591,6 +623,21 @@ public class SchematicBlockDefault implements ISchematicBlock {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Walk the JSON rules for this schematic and strip every items_list path from the supplied
+     * tileNbt. Mutates {@code tileNbt} in place — callers pass a copy, never the canonical
+     * {@link #tileNbt} field (which is shared across rebuilds and rotations).
+     */
+    private void stripContainerContentsFromNbt(CompoundTag tileNbt) {
+        Set<JsonRule> rules = RulesLoader.getRules(blockState, tileNbt);
+        for (JsonRule rule : rules) {
+            if (rule.requiredExtractors == null) continue;
+            for (RequiredExtractor extractor : rule.requiredExtractors) {
+                extractor.clearItemsFromBlock(tileNbt);
+            }
+        }
     }
 
     @Override

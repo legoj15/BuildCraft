@@ -260,5 +260,32 @@ public class Blueprint extends Snapshot {
         public Blueprint getSnapshot() {
             return Blueprint.this;
         }
+
+        /**
+         * Re-bake {@link #toPlaceRequiredItems} under the new container-contents mode. Called from
+         * {@link buildcraft.builders.tile.TileBuilder#cycleContainerContentsMode} whenever the
+         * player toggles the button, so the Builder's resource panel and place-task extraction
+         * reflect the new cost immediately rather than waiting for a snapshot reload. Fluids are
+         * unaffected, so only the items array is rewritten. Non-{@link SchematicBlockDefault}
+         * schematics fall through to the parameterless {@code computeRequiredItems()} — their
+         * required-items contract doesn't expose the contents-mode hook.
+         */
+        public void refreshRequiredItemsForContentsMode(EnumContainerContentsMode mode) {
+            boolean include = mode != EnumContainerContentsMode.IGNORE;
+            for (int z = 0; z < getSnapshot().size.getZ(); z++) {
+                for (int y = 0; y < getSnapshot().size.getY(); y++) {
+                    for (int x = 0; x < getSnapshot().size.getX(); x++) {
+                        int idx = posToIndex(x, y, z);
+                        ISchematicBlock schematicBlock = rotatedPalette.get(data[idx]);
+                        if (schematicBlock.isAir()) continue;
+                        if (schematicBlock instanceof SchematicBlockDefault def) {
+                            toPlaceRequiredItems[idx] = def.computeRequiredItems(include);
+                        } else {
+                            toPlaceRequiredItems[idx] = schematicBlock.computeRequiredItems();
+                        }
+                    }
+                }
+            }
+        }
     }
 }

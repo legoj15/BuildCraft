@@ -105,6 +105,35 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         extractRequiredCache.clear();
     }
 
+    /**
+     * Re-bake {@link #remainingDisplayRequiredBlocks} for every TO_PLACE position from the now-
+     * current {@code toPlaceRequiredItems}/{@code toPlaceRequiredFluids} arrays. Called from
+     * {@link buildcraft.builders.tile.TileBuilder#cycleContainerContentsMode} after the
+     * BuildingInfo's required-items arrays have been swapped. Without this, the resource panel
+     * keeps showing the pre-toggle cost until the SnapshotBuilder's lazy {@code check()} pass
+     * eventually wraps around to each position — many ticks for a large blueprint.
+     * <p>
+     * Doesn't touch positions classified CORRECT (display empty) or TO_BREAK (display empty); the
+     * mode toggle doesn't change their classification or their displayed cost.
+     */
+    public void refreshDisplayForContentsMode() {
+        if (remainingDisplayRequiredBlocks == null) return;
+        // checkResults is allocated by super.updateSnapshot — same lifecycle.
+        if (checkResults == null) return;
+        if (getBuildingInfo() == null) return;
+        for (int i = 0; i < remainingDisplayRequiredBlocks.length; i++) {
+            if (checkResults[i] == CHECK_RESULT_TO_PLACE) {
+                remainingDisplayRequiredBlocks[i] = getDisplayRequired(
+                        getBuildingInfo().toPlaceRequiredItems[i],
+                        getBuildingInfo().toPlaceRequiredFluids[i]
+                ).collect(Collectors.toList());
+            } else {
+                remainingDisplayRequiredBlocks[i] = Collections.emptyList();
+            }
+        }
+        afterChecks();
+    }
+
     @Override
     public void cancel() {
         super.cancel();
@@ -398,9 +427,11 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         // or destroys a fluid source at the target position under REPLACE/CLEAR. Third-party
         // ISchematicBlock implementations fall back to the plain build(level, pos), which just
         // won't handle fluids — acceptable because fluid-at-placement is mostly a vanilla
-        // blockstate concern.
+        // blockstate concern. Same overload also takes the container-contents mode so chests/
+        // hoppers/etc. place either filled (INCLUDE — current behaviour) or empty (IGNORE).
         if (schematic instanceof SchematicBlockDefault def) {
-            return def.build(tile.getWorldBC(), placeTask.pos, tile.getFluidMode());
+            boolean includeContents = tile.getContainerContentsMode() != EnumContainerContentsMode.IGNORE;
+            return def.build(tile.getWorldBC(), placeTask.pos, tile.getFluidMode(), includeContents);
         }
         return schematic.build(tile.getWorldBC(), placeTask.pos);
     }

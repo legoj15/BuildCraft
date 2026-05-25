@@ -39,8 +39,10 @@ import buildcraft.transport.tile.TileFilteredBuffer;
  * Each test below stands in for a category of blocks rather than asserting every block
  * one-by-one:
  * <ul>
- *   <li><b>Decorated block</b> — no-inventory baseline that exercises just the loot
- *       table + {@code requiresCorrectToolForDrops} pair.</li>
+ *   <li><b>Decorated Laser block</b> — no-inventory baseline that exercises just the
+ *       loot table + {@code requiresCorrectToolForDrops} pair. The laser variant is the
+ *       only decorated block in public builds; the other five are gated behind
+ *       {@code -Dbuildcraft.dev=true} and would resolve to {@code null} in this test.</li>
  *   <li><b>Chute</b> — itemManager-backed real inventory, the path most machines use.</li>
  *   <li><b>Autoworkbench</b> — itemManager with a mix of real and PHANTOM slots; verifies
  *       template/filter items are <em>not</em> duplicated on break.</li>
@@ -88,26 +90,26 @@ public class BlockDropsTester {
 
     public static void testDecoratedPickaxeDropsSelf(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCCoreBlocks.DECORATED_DESTROY.get());
+        helper.setBlock(pos, BCCoreBlocks.DECORATED_LASER.get());
 
         breakAs(helper, pos, survivalPlayerWith(helper, new ItemStack(Items.WOODEN_PICKAXE)));
         helper.assertBlockPresent(Blocks.AIR, pos);
 
         helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(BCCoreBlocks.DECORATED_DESTROY.get().asItem(), pos, 2.0);
+            helper.assertItemEntityPresent(BCCoreBlocks.DECORATED_LASER.get().asItem(), pos, 2.0);
             helper.succeed();
         });
     }
 
     public static void testDecoratedHandBreakDropsNothing(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCCoreBlocks.DECORATED_DESTROY.get());
+        helper.setBlock(pos, BCCoreBlocks.DECORATED_LASER.get());
 
         breakAs(helper, pos, survivalPlayerWith(helper, ItemStack.EMPTY));
         helper.assertBlockPresent(Blocks.AIR, pos);
 
         helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityNotPresent(BCCoreBlocks.DECORATED_DESTROY.get().asItem(), pos, 2.0);
+            helper.assertItemEntityNotPresent(BCCoreBlocks.DECORATED_LASER.get().asItem(), pos, 2.0);
             helper.succeed();
         });
     }

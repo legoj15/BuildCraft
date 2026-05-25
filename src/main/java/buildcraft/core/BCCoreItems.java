@@ -61,24 +61,17 @@ public class BCCoreItems {
         public static final DeferredItem<net.minecraft.world.item.BlockItem> MARKER_PATH = ITEMS
                         .registerSimpleBlockItem("marker_path", BCCoreBlocks.MARKER_PATH);
 
-        // Decorated block items
-        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_DESTROY = ITEMS
-                        .registerSimpleBlockItem("decorated_destroy", BCCoreBlocks.DECORATED_DESTROY);
-
-        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_BLUEPRINT = ITEMS
-                        .registerSimpleBlockItem("decorated_blueprint", BCCoreBlocks.DECORATED_BLUEPRINT);
-
-        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_TEMPLATE = ITEMS
-                        .registerSimpleBlockItem("decorated_template", BCCoreBlocks.DECORATED_TEMPLATE);
-
-        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_PAPER = ITEMS
-                        .registerSimpleBlockItem("decorated_paper", BCCoreBlocks.DECORATED_PAPER);
-
-        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_LEATHER = ITEMS
-                        .registerSimpleBlockItem("decorated_leather", BCCoreBlocks.DECORATED_LEATHER);
-
+        // Decorated block items — only LASER ships in public builds; the other five are
+        // dev-gated mirrors of BCCoreBlocks.DECORATED_* and are wired up in the static {}
+        // initializer below.
         public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_LASER = ITEMS
                         .registerSimpleBlockItem("decorated_laser", BCCoreBlocks.DECORATED_LASER);
+
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_DESTROY;
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_BLUEPRINT;
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_TEMPLATE;
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_PAPER;
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_LEATHER;
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> SPRING_WATER = ITEMS
                         .registerSimpleBlockItem("spring_water", BCCoreBlocks.SPRING_WATER);
@@ -114,6 +107,21 @@ public class BCCoreItems {
                 MAP_LOCATION = BCLib.DEV
                                 ? ITEMS.registerItem("map_location", ItemMapLocation::new,
                                                 props -> props.stacksTo(16))
+                                : null;
+                DECORATED_DESTROY = (BCLib.DEV && BCCoreBlocks.DECORATED_DESTROY != null)
+                                ? ITEMS.registerSimpleBlockItem("decorated_destroy", BCCoreBlocks.DECORATED_DESTROY)
+                                : null;
+                DECORATED_BLUEPRINT = (BCLib.DEV && BCCoreBlocks.DECORATED_BLUEPRINT != null)
+                                ? ITEMS.registerSimpleBlockItem("decorated_blueprint", BCCoreBlocks.DECORATED_BLUEPRINT)
+                                : null;
+                DECORATED_TEMPLATE = (BCLib.DEV && BCCoreBlocks.DECORATED_TEMPLATE != null)
+                                ? ITEMS.registerSimpleBlockItem("decorated_template", BCCoreBlocks.DECORATED_TEMPLATE)
+                                : null;
+                DECORATED_PAPER = (BCLib.DEV && BCCoreBlocks.DECORATED_PAPER != null)
+                                ? ITEMS.registerSimpleBlockItem("decorated_paper", BCCoreBlocks.DECORATED_PAPER)
+                                : null;
+                DECORATED_LEATHER = (BCLib.DEV && BCCoreBlocks.DECORATED_LEATHER != null)
+                                ? ITEMS.registerSimpleBlockItem("decorated_leather", BCCoreBlocks.DECORATED_LEATHER)
                                 : null;
         }
 

@@ -26,23 +26,18 @@ public class BCCoreBlocks {
     // Decorated blocks — mirrors 1.12.2's buildcraftcore:decorated meta variants.
     // 1.12.2 Material.IRON → pickaxe required for drops (parity restored via
     // requiresCorrectToolForDrops + minecraft:mineable/pickaxe tag).
-    public static final DeferredBlock<Block> DECORATED_DESTROY = BLOCKS.registerSimpleBlock(
-            "decorated_destroy", () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
-
-    public static final DeferredBlock<Block> DECORATED_BLUEPRINT = BLOCKS.registerSimpleBlock(
-            "decorated_blueprint", () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops());
-
-    public static final DeferredBlock<Block> DECORATED_TEMPLATE = BLOCKS.registerSimpleBlock(
-            "decorated_template", () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops());
-
-    public static final DeferredBlock<Block> DECORATED_PAPER = BLOCKS.registerSimpleBlock(
-            "decorated_paper", () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops());
-
-    public static final DeferredBlock<Block> DECORATED_LEATHER = BLOCKS.registerSimpleBlock(
-            "decorated_leather", () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops());
-
+    //
+    // Only the LASER variant ever had a survival recipe in 1.12.2 (8 obsidian + redstone
+    // block → 16). The other five were creative-tab only; they remain dev-gated until a
+    // distinct, intentional recipe/use is designed for each.
     public static final DeferredBlock<Block> DECORATED_LASER = BLOCKS.registerSimpleBlock(
             "decorated_laser", () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
+
+    public static final DeferredBlock<Block> DECORATED_DESTROY;
+    public static final DeferredBlock<Block> DECORATED_BLUEPRINT;
+    public static final DeferredBlock<Block> DECORATED_TEMPLATE;
+    public static final DeferredBlock<Block> DECORATED_PAPER;
+    public static final DeferredBlock<Block> DECORATED_LEATHER;
 
     // Markers were Material.CIRCUITS in 1.12.2 → hand-breakable (no tool gate).
     public static final DeferredBlock<buildcraft.core.block.BlockMarkerVolume> MARKER_VOLUME = BLOCKS.registerBlock(
@@ -70,6 +65,27 @@ public class BCCoreBlocks {
                 ? BLOCKS.registerBlock("power_tester",
                         BlockPowerConsumerTester::new,
                         () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops())
+                : null;
+
+        DECORATED_DESTROY = BCLib.DEV
+                ? BLOCKS.registerSimpleBlock("decorated_destroy",
+                        () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops())
+                : null;
+        DECORATED_BLUEPRINT = BCLib.DEV
+                ? BLOCKS.registerSimpleBlock("decorated_blueprint",
+                        () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops())
+                : null;
+        DECORATED_TEMPLATE = BCLib.DEV
+                ? BLOCKS.registerSimpleBlock("decorated_template",
+                        () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops())
+                : null;
+        DECORATED_PAPER = BCLib.DEV
+                ? BLOCKS.registerSimpleBlock("decorated_paper",
+                        () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops())
+                : null;
+        DECORATED_LEATHER = BCLib.DEV
+                ? BLOCKS.registerSimpleBlock("decorated_leather",
+                        () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops())
                 : null;
     }
 

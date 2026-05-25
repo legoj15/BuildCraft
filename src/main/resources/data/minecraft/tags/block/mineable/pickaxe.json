@@ -1,12 +1,12 @@
 {
   "replace": false,
   "values": [
-    "buildcraftunofficial:decorated_destroy",
-    "buildcraftunofficial:decorated_blueprint",
-    "buildcraftunofficial:decorated_template",
-    "buildcraftunofficial:decorated_paper",
-    "buildcraftunofficial:decorated_leather",
     "buildcraftunofficial:decorated_laser",
+    { "id": "buildcraftunofficial:decorated_destroy", "required": false },
+    { "id": "buildcraftunofficial:decorated_blueprint", "required": false },
+    { "id": "buildcraftunofficial:decorated_template", "required": false },
+    { "id": "buildcraftunofficial:decorated_paper", "required": false },
+    { "id": "buildcraftunofficial:decorated_leather", "required": false },
     "buildcraftunofficial:engine_redstone",
     "buildcraftunofficial:engine_creative",
     "buildcraftunofficial:engine_stone",

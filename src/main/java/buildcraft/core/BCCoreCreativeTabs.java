@@ -58,13 +58,24 @@ public class BCCoreCreativeTabs {
                                 output.accept(BCCoreItems.SPRING_WATER.get());
                                 // Oil Spring
                                 output.accept(BCCoreItems.SPRING_OIL.get());
-                                // Decoratives
-                                output.accept(BCCoreItems.DECORATED_DESTROY.get());
-                                output.accept(BCCoreItems.DECORATED_BLUEPRINT.get());
-                                output.accept(BCCoreItems.DECORATED_TEMPLATE.get());
-                                output.accept(BCCoreItems.DECORATED_PAPER.get());
-                                output.accept(BCCoreItems.DECORATED_LEATHER.get());
+                                // Decoratives — only the laser variant ships in public
+                                // builds; the other five are dev-gated.
                                 output.accept(BCCoreItems.DECORATED_LASER.get());
+                                if (BCCoreItems.DECORATED_DESTROY != null) {
+                                    output.accept(BCCoreItems.DECORATED_DESTROY.get());
+                                }
+                                if (BCCoreItems.DECORATED_BLUEPRINT != null) {
+                                    output.accept(BCCoreItems.DECORATED_BLUEPRINT.get());
+                                }
+                                if (BCCoreItems.DECORATED_TEMPLATE != null) {
+                                    output.accept(BCCoreItems.DECORATED_TEMPLATE.get());
+                                }
+                                if (BCCoreItems.DECORATED_PAPER != null) {
+                                    output.accept(BCCoreItems.DECORATED_PAPER.get());
+                                }
+                                if (BCCoreItems.DECORATED_LEATHER != null) {
+                                    output.accept(BCCoreItems.DECORATED_LEATHER.get());
+                                }
                                 // Land Mark
                                 output.accept(BCCoreItems.MARKER_VOLUME.get());
                                 // Path Mark

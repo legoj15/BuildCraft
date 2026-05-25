@@ -13,6 +13,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.transport.item.ItemPluggableSimple;
 import buildcraft.transport.item.ItemWire;
+import buildcraft.transport.plug.PluggableBlocker;
+import buildcraft.transport.plug.PluggablePowerAdaptor;
 
 import buildcraft.transport.item.ItemPipeHolder;
 
@@ -39,12 +41,14 @@ public class BCTransportItems {
 
     /** Plug — blocks a pipe face, preventing connections. */
     public static final DeferredItem<ItemPluggableSimple> PLUG_BLOCKER = ITEMS.registerItem("plug_blocker",
-            props -> new ItemPluggableSimple(props, BCTransportPlugs.blocker));
+            props -> new ItemPluggableSimple(props, BCTransportPlugs.blocker, null,
+                    PluggableBlocker::boundingBoxFor));
 
     /** Power Adaptor Plug — allows MJ to pass into a pipe from adjacents. Only placeable on kinesis pipes. */
     public static final DeferredItem<ItemPluggableSimple> PLUG_POWER_ADAPTOR = ITEMS.registerItem("plug_power_adaptor",
             props -> new ItemPluggableSimple(props, BCTransportPlugs.powerAdaptor,
-                    ItemPluggableSimple.PIPE_BEHAVIOUR_ACCEPTS_RS_POWER));
+                    ItemPluggableSimple.PIPE_BEHAVIOUR_ACCEPTS_RS_POWER,
+                    PluggablePowerAdaptor::boundingBoxFor));
 
     // -- Wire Items (one per DyeColor) --
     public static final java.util.Map<DyeColor, DeferredItem<ItemWire>> WIRE_ITEMS;

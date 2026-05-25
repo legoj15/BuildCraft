@@ -24,11 +24,6 @@ Zero `.java.disabled` files remain anywhere in the project; 1.12.2 logic remains
 
 ## 🔧 Outstanding work
 
-### Advancements — 1 orphaned trigger
-`minecraft:impossible` is the placeholder used for advancements granted from Java via `AdvancementUtil.unlockAdvancement(...)`. The following advancements still have only an impossible-trigger JSON with no matching Java grant — pick a thematic in-code event for each and wire it up:
-
-- [ ] `too_many_pipe_filters`
-
 ### Block Sounds
 - [ ] Most blocks use the default `SoundType` — only 43 explicit declarations exist across the codebase (mostly `METAL`, three `STONE`, three `SLIME_BLOCK`). A deliberate sound pass is still needed (engines, pipes, facades, tanks, machines).
 

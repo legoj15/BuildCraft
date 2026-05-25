@@ -2,7 +2,6 @@
   "parent": "minecraft:recipes/root",
   "rewards": {
     "recipes": [
-      "buildcraftunofficial:list",
       "buildcraftunofficial:guide_book",
       "buildcraftunofficial:blueprint_clean",
       "buildcraftunofficial:template_clean",

@@ -40,12 +40,11 @@ block_auto "filler"
 place "architect"               "block" "automation"
 place "assembly_table"          "block" "automation"
 place_creative "debugger"       "block" "automation"
-place "filler_planner"          "block" "automation"
+place_creative "filler_planner" "block" "automation"
 place "filtered_buffer"         "block" "automation"
 place "integration_table"       "block" "automation"
 place "library"                 "block" "automation"
 place "replacer"                "block" "automation"
-place "zone_planner"            "block" "automation"
 
 // ---- Blocks / Engines ----------------------------------------------------
 block_engine "engine_redstone" "buildcraftunofficial:engine_redstone"
@@ -59,8 +58,6 @@ place_creative "engine_creative"   "block" "engine"
 block_fluid "flood_gate"
 block_fluid "pump"
 block_fluid "tank"
-place "spring_oil"      "block" "fluid"
-place "spring_water"    "block" "fluid"
 
 // ---- Blocks / Laser Power ------------------------------------------------
 place "laser"           "block" "laser"
@@ -74,15 +71,11 @@ block_refining "distiller"
 block_refining "heat_exchange"
 
 // ---- Blocks / Specialized ------------------------------------------------
-// Single-purpose blocks that don't fit a specific mechanic category. Path
-// Mark and Land Mark are the entries with real writeups (block/marker_path.md
-// and block/marker_volume.md); the rest auto-stub via their placeholder/<name>.md
-// content (or the runtime WIP stub when no .md exists).
+// Single-purpose blocks that don't fit a specific mechanic category. Path Mark
+// and Land Mark are the only entries here; writeups live at block/marker_path.md
+// and block/marker_volume.md.
 block "specialized" "marker_path"
 block "specialized" "marker_volume"
-place "special_rock"     "block" "specialized"
-place "tube"             "block" "specialized"
-place "water_gel_spawn"  "block" "specialized"
 
 // ===========================================================================
 // ITEMS
@@ -101,7 +94,6 @@ place "redstone_quartz_chipset"  "item" "chipset"
 // ---- Items / Fluid -------------------------------------------------------
 place "fragile_fluid_container" "item" "fluid"
 place "gelled_water"            "item" "fluid"
-place "glob_of_oil"             "item" "fluid"
 place "water_gel"               "item" "fluid"
 
 // ---- Items / Gears -------------------------------------------------------
@@ -113,17 +105,10 @@ gear "gear_diamond"
 
 // ---- Items / Paperwork ---------------------------------------------------
 place "blueprint_clean"        "item" "paperwork"
-place "blueprint_used"         "item" "paperwork"
-place "decorated_blueprint"    "item" "paperwork"
-place "decorated_destroy"      "item" "paperwork"
 place "decorated_laser"        "item" "paperwork"
-place "decorated_leather"      "item" "paperwork"
-place "decorated_paper"        "item" "paperwork"
-place "decorated_template"     "item" "paperwork"
 place "schematic_single_clean" "item" "paperwork"
 place "schematic_single_used"  "item" "paperwork"
 place "template_clean"         "item" "paperwork"
-place "template_used"          "item" "paperwork"
 
 // ---- Items / Pluggables --------------------------------------------------
 plug "plug_blocker"
@@ -143,9 +128,6 @@ item_stack_creative "item" "tool" "box_volume" "buildcraftunofficial:volume_box"
 item_stack "item" "tool" "marker_connector"  "buildcraftunofficial:marker_connector"
 item_stack "item" "tool" "list"              "buildcraftunofficial:list"
 place "gate_copier"     "item" "tool"
-place "goggles"         "item" "tool"
-place "guide_note"      "item" "tool"
-place "map_location"    "item" "tool"
 
 // ---- Items / Wires -------------------------------------------------------
 // Single shared wire page (file at item/wire.md). The page is the general

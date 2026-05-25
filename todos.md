@@ -5,6 +5,22 @@ Last audited: 2026-05-25
 ## 🧹 Finalization
 
 - [ ] Final code review across all subsystems.
+
+### Guide Book pages awaiting writeups
+
+Stub entries at [guide/en_us/placeholder/](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/en_us/placeholder/), wired through [guide.txt](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide.txt). Each appears as a "(WIP)" entry until a real writeup is added at `block/<name>.md`, `item/<name>.md`, or `pipe/<name>.md` and the manifest registration is switched from `place` to the matching alias.
+
+- [ ] **Blocks / Automation:** architect, assembly_table, debugger (creative), filler_planner (creative), filtered_buffer, integration_table, library, replacer
+- [ ] **Blocks / Engine:** engine_creative (creative)
+- [ ] **Blocks / Laser:** laser
+- [ ] **Items / Basic:** waterproof
+- [ ] **Items / Chipsets:** redstone_red_chipset, redstone_iron_chipset, redstone_gold_chipset, redstone_diamond_chipset, redstone_quartz_chipset
+- [ ] **Items / Fluid:** fragile_fluid_container, gelled_water, water_gel (also fold water_gel_spawn into this writeup)
+- [ ] **Items / Paperwork:** blueprint_clean, decorated_laser, schematic_single_clean, schematic_single_used, template_clean
+- [ ] **Items / Pluggables:** plug_timer
+- [ ] **Items / Tools:** gate_copier
+- [ ] **Pipes / Power:** pipe_cobble_power, pipe_diamond_power, pipe_diamond_wood_power, pipe_gold_power, pipe_iron_power, pipe_quartz_power, pipe_sandstone_power, pipe_stone_power, pipe_wood_power — likely skip, [util.txt:84](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/util.txt#L84) flags them for eventual removal
+
 - [ ] Tidy up Guide Book pages
 
 ---

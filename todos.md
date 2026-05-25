@@ -4,14 +4,21 @@ Last audited: 2026-05-25
 
 ## 🔧 Outstanding work
 
-### Guidebook
-- [ ] Fill the last 2 stubs: `engine_basics.md` (1-line title only) and `registry_overview.md` (empty).
-
 ### Help Ledger — content coverage
 - [ ] The `LedgerHelp` framework is active and interactive slot/tank highlighting works (confirmed in `ScreenEngineIron`, etc.). Per-block content is the gap: each block needs to register `ElementHelpInfo`s via `addHelpElements()`. Coverage is uneven; sweep needed.
 
 ### Facade rendering
 - [ ] Facades of biome/state-tinted blocks (grass, leaves, redstone, water) render without their tint colour. MC 26.1's `BlockTintSource` system bypasses the old per-pluggable `getBlockColor` path (now removed), and the facade tint-index space (`PlugBakerFacade` emits `data*6+side`) collides with `pipe_holder`'s own indices. Needs a facade-tint rendering rework: register `BlockTintSource`s across the facade index range and resolve the wrapped block's colour. Untinted-block facades (most blocks) are unaffected.
+
+---
+
+## 🧹 Finalization
+
+- [ ] Deprecation and warning fixes (both compile-time and runtime).
+- [ ] **Goggles texture.** `item/goggles.png` is a verbatim copy of the vanilla paper texture used as a placeholder — the dev-gated Goggles headpiece needs real art before it could be un-gated.
+- [ ] **Dead gate item-model assets.** `GateItemModel` (swapped in via `BCSiliconClient.onModifyBakingResult`) renders gate items programmatically, so the `minecraft:select` model in `items/plug_gate.json`, its 25 `models/item/gates/variants/*.json` files, and the 9 `textures/item/gates/*.png` layer textures are all dead — never consulted at runtime. `items/plug_gate.json` must stay (it is baked before the swap) but can collapse to a trivial stub; the variant models and `item/gates/` textures can be deleted.
+- [ ] Final code review across all subsystems.
+- [ ] Tidy up Guide Book pages
 
 ---
 
@@ -55,12 +62,3 @@ Last audited: 2026-05-25
   **Cheap escape hatch if a low-spec-GPU compat report comes in:** ~1 hour revert of commit `5a6cdb5ac` — remove the 25 `dye_replace` entries from `assets/minecraft/atlases/blocks.json`, flip `PipeBaseModelGenStandard.ensureDyedSprites` to return null, restore the three fallback branches. Painted fluid pipes drop from 1-layer dyed-sprite rendering to 2-layer base+mask-overlay; atlas shrinks back to ~1024×1024.
 
 - [ ] **Fluid viscosity** currently isn't really a thing. Flow speed can be modified, but negative density (floating gases) is not native, and traversal speed / swimming modifications aren't possible.
-
----
-
-## 🧹 Finalization
-
-- [ ] Deprecation and warning fixes (both compile-time and runtime).
-- [ ] **Goggles texture.** `item/goggles.png` is a verbatim copy of the vanilla paper texture used as a placeholder — the dev-gated Goggles headpiece needs real art before it could be un-gated.
-- [ ] **Dead gate item-model assets.** `GateItemModel` (swapped in via `BCSiliconClient.onModifyBakingResult`) renders gate items programmatically, so the `minecraft:select` model in `items/plug_gate.json`, its 25 `models/item/gates/variants/*.json` files, and the 9 `textures/item/gates/*.png` layer textures are all dead — never consulted at runtime. `items/plug_gate.json` must stay (it is baked before the swap) but can collapse to a trivial stub; the variant models and `item/gates/` textures can be deleted.
-- [ ] Final code review across all subsystems.

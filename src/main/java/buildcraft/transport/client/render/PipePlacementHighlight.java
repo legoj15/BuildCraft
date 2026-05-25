@@ -19,7 +19,7 @@ import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.ARGB;
-import net.minecraft.world.level.block.Block;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -47,26 +47,15 @@ import buildcraft.transport.tile.TilePipeHolder;
  *
  * <p>While the player holds a placeable item, this replaces the segment outline with an outline of
  * exactly what would be placed — using the same resolver {@code useItemOn} uses, so the highlight
- * and the placement always agree.
+ * and the placement always agree. Pluggables size their own outline via
+ * {@link IItemPluggable#getPlacementBoundingBox}, so a facade traces the full block face, a power
+ * adaptor traces its 10×10×4 box, and a gate keeps the 6×6 panel — instead of one fixed slab that
+ * larger pluggables would visually swallow.
  *
  * <p>Registered on the game event bus by {@code BCTransportClient.initClient}.
  */
 public final class PipePlacementHighlight {
     private PipePlacementHighlight() {}
-
-    /** Per-face pluggable preview slabs, indexed by {@link Direction#get3DDataValue()}: a 6×6
-     *  panel two pixels deep, mounted just outside the 4–12 pipe core — matching where a gate sits. */
-    private static final VoxelShape[] PLUGGABLE_SLABS = new VoxelShape[6];
-    static {
-        double a = 5, b = 11;                                 // face-plane extent
-        double near = 2, nearEnd = 4, far = 12, farEnd = 14;  // depth, just outside the core
-        PLUGGABLE_SLABS[Direction.DOWN.get3DDataValue()]  = Block.box(a, near, a, b, nearEnd, b);
-        PLUGGABLE_SLABS[Direction.UP.get3DDataValue()]    = Block.box(a, far, a, b, farEnd, b);
-        PLUGGABLE_SLABS[Direction.NORTH.get3DDataValue()] = Block.box(a, a, near, b, b, nearEnd);
-        PLUGGABLE_SLABS[Direction.SOUTH.get3DDataValue()] = Block.box(a, a, far, b, b, farEnd);
-        PLUGGABLE_SLABS[Direction.WEST.get3DDataValue()]  = Block.box(near, a, a, nearEnd, b, b);
-        PLUGGABLE_SLABS[Direction.EAST.get3DDataValue()]  = Block.box(far, a, a, farEnd, b, b);
-    }
 
     /** {@link ExtractBlockOutlineRenderStateEvent} listener (game event bus, client only). */
     public static void onExtractBlockOutline(ExtractBlockOutlineRenderStateEvent event) {
@@ -92,13 +81,18 @@ public final class PipePlacementHighlight {
      *  is already occupied so placement would no-op). */
     @Nullable
     private static VoxelShape previewShape(TilePipeHolder tile, BlockHitResult hit, LocalPlayer player) {
-        if (isHolding(player, IItemPluggable.class)) {
+        ItemStack pluggableStack = heldStackOf(player, IItemPluggable.class);
+        if (pluggableStack != null) {
             Direction face = BlockPipeHolder.resolveTargetFace(tile, hit);
             // An occupied face means placement would no-op; the default outline already
             // highlights the existing pluggable there, so leave it.
-            return tile.getPluggable(face) == null ? PLUGGABLE_SLABS[face.get3DDataValue()] : null;
+            if (tile.getPluggable(face) != null) {
+                return null;
+            }
+            IItemPluggable item = (IItemPluggable) pluggableStack.getItem();
+            return Shapes.create(item.getPlacementBoundingBox(pluggableStack, face));
         }
-        if (isHolding(player, ItemWire.class)) {
+        if (heldStackOf(player, ItemWire.class) != null) {
             EnumWirePart part = BlockPipeHolder.resolveTargetWirePart(hit);
             if (tile.getWireManager().parts.containsKey(part)) {
                 return null;
@@ -109,9 +103,20 @@ public final class PipePlacementHighlight {
         return null;
     }
 
-    private static boolean isHolding(LocalPlayer player, Class<?> itemType) {
-        return itemType.isInstance(player.getMainHandItem().getItem())
-            || itemType.isInstance(player.getOffhandItem().getItem());
+    /** First held stack whose item is an instance of {@code itemType}, checking main hand before
+     *  offhand — matches the order vanilla picks for {@code useItemOn}. Returns {@code null} when
+     *  neither hand qualifies, so the caller can branch without re-checking the item type. */
+    @Nullable
+    private static ItemStack heldStackOf(LocalPlayer player, Class<?> itemType) {
+        ItemStack main = player.getMainHandItem();
+        if (itemType.isInstance(main.getItem())) {
+            return main;
+        }
+        ItemStack off = player.getOffhandItem();
+        if (itemType.isInstance(off.getItem())) {
+            return off;
+        }
+        return null;
     }
 
     /** Draws the preview outline in place of the vanilla outline. Captures only the immutable

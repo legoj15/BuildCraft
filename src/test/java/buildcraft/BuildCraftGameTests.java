@@ -48,6 +48,14 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pluggables_placed_mark_placed_first_sighting_only"), () -> buildcraft.transport.PluggablesPlacedTester::testMarkPlacedReturnsTrueOnlyOnFirstSighting);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pluggables_placed_complete_only_after_all_eight"), () -> buildcraft.transport.PluggablesPlacedTester::testCompleteOnlyAfterAllEightKinds);
 
+            // Placement-preview AABB contract — IItemPluggable.getPlacementBoundingBox(side) must
+            // match the pluggable's actual getBoundingBox(side) for every non-default-sized item,
+            // otherwise the outline lies about where the pluggable will land.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:placement_preview_blocker_matches"), () -> buildcraft.transport.client.render.PipePlacementHighlightTester::testBlockerPreviewMatchesPlacedBox);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:placement_preview_power_adaptor_matches"), () -> buildcraft.transport.client.render.PipePlacementHighlightTester::testPowerAdaptorPreviewMatchesPlacedBox);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:placement_preview_lens_matches"), () -> buildcraft.transport.client.render.PipePlacementHighlightTester::testLensPreviewMatchesPlacedBox);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:placement_preview_facade_matches"), () -> buildcraft.transport.client.render.PipePlacementHighlightTester::testFacadePreviewMatchesPlacedBox);
+
             // Per-player oil/fuel production tracking gating the refine_and_redefine advancement
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:refine_and_redefine_fresh_attachment_empty"), () -> buildcraft.factory.OilAndFuelProductionTester::testFreshAttachmentEmpty);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:refine_and_redefine_clamps_at_target"), () -> buildcraft.factory.OilAndFuelProductionTester::testRecordProductionClampsAtTarget);

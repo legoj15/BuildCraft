@@ -112,9 +112,15 @@ public class PluggableFacade extends PipePluggable implements IFacade {
 
     // Pluggable methods
 
+    /** Static lookup for the per-side {@linkplain #getBoundingBox() bounding box} — used by
+     *  the placement-preview outline to size the highlight correctly without instantiating. */
+    public static AABB boundingBoxFor(Direction side) {
+        return BOXES[side.ordinal()];
+    }
+
     @Override
     public AABB getBoundingBox() {
-        return BOXES[side.ordinal()];
+        return boundingBoxFor(side);
     }
 
     @Override

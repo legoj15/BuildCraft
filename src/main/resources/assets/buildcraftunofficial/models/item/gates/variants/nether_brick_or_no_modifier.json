@@ -1,7 +1,0 @@
-{
-    "parent": "minecraft:item/generated",
-    "textures": {
-        "layer0": "buildcraftunofficial:item/gates/material_nether_brick",
-        "layer1": "buildcraftunofficial:item/gates/logic_or"
-    }
-}

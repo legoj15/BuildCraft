@@ -4,9 +4,6 @@ Last audited: 2026-05-25
 
 ## 🧹 Finalization
 
-- [ ] Test source set: one `[deprecation]` warning in [AdvancementTester](src/test/java/buildcraft/energy/AdvancementTester.java) — `./gradlew test` is otherwise clean. Main source set is at zero javac warnings with `-Xlint:all -Xmaxwarns 9999`.
-- [ ] **Goggles texture.** `item/goggles.png` is a verbatim copy of the vanilla paper texture used as a placeholder — the dev-gated Goggles headpiece needs real art before it could be un-gated.
-- [ ] **Dead gate item-model assets.** `GateItemModel` (swapped in via `BCSiliconClient.onModifyBakingResult`) renders gate items programmatically, so the `minecraft:select` model in `items/plug_gate.json`, its 25 `models/item/gates/variants/*.json` files, and the 9 `textures/item/gates/*.png` layer textures are all dead — never consulted at runtime. `items/plug_gate.json` must stay (it is baked before the swap) but can collapse to a trivial stub; the variant models and `item/gates/` textures can be deleted.
 - [ ] Final code review across all subsystems.
 - [ ] Tidy up Guide Book pages
 
@@ -33,6 +30,7 @@ Last audited: 2026-05-25
 - [ ] **Waterlog non-cube-collision blocks.** Pipes, facades, and other BC blocks with non-full collision shapes are destroyed by flowing fluids (water, lava, oil) because they don't implement `LiquidBlockContainer`. This matches 1.12.2 behavior but is worth revisiting: implement waterlogging for at least pipe holders so players can route pipes through flooded areas. Requires adding a waterlogged block state, implementing `LiquidBlockContainer`, and scheduling fluid ticks on neighbor changes.
 - [ ] Putting nothing in the second/"to" replacer slot changes the button to "Remove" (usefull for removing grass tufts)
 - [ ] Utilize modern Minecraft sounds (copper grates for pipes, etc)
+- [ ] **Goggles texture.** `item/goggles.png` is a verbatim copy of the vanilla paper texture used as a placeholder — the dev-gated Goggles headpiece needs real art before it could be un-gated.
 
 ---
 

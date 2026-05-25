@@ -317,7 +317,7 @@ public class AdvancementTester {
     }
 
     private static void assertNotInTag(GameTestHelper helper, Block block, String description) {
-        if (block.builtInRegistryHolder().is(OIL_FLUIDS_TAG)) {
+        if (block.defaultBlockState().is(OIL_FLUIDS_TAG)) {
             throw new AssertionError(description + " (id="
                     + BuiltInRegistries.BLOCK.getKey(block)
                     + ") is in oil_fluids tag, but should not be.");

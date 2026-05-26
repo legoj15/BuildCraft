@@ -11,6 +11,7 @@
     "b": "#c:gems/lapis"
   },
   "result": {
-    "id": "buildcraftunofficial:blueprint_clean"
+    "id": "buildcraftunofficial:blueprint_clean",
+    "count": 2
   }
 }

@@ -92,6 +92,7 @@ alias block_engine 2 `block_full "engine" "%0" "%1"`
 alias tool 1 `item_tool "%0" "buildcraftunofficial:%0"`
 alias gear 1 `item_gear "%0" "buildcraftunofficial:%0"`
 alias plug 1 `item_plug "%0" "buildcraftunofficial:%0"`
+alias paper 1 `item_typed "paperwork" "%0" "buildcraftunofficial:%0"`
 
 alias block_refining 1 `block "refining" "%0"`
 alias block_fluid 1 `block "fluid" "%0"`

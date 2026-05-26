@@ -23,6 +23,7 @@ import "buildcraftunofficial:util" "buildcraftunofficial:main"
 //   gear           "<name>"             -> item/<name>.md        tag=gear       (auto-stack)
 //   tool           "<name>"             -> item/<name>.md        tag=tool
 //   plug           "<name>"             -> item/<name>.md        tag=pipe_plug
+//   paper          "<name>"             -> item/<name>.md        tag=paperwork  (auto-stack)
 //   place          "<name>" "<type>" "<sub>" -> placeholder/<name>.md tag=<type>:<sub>
 //                  (used for stub entries — auto-stubs at runtime when no .md exists)
 // ---------------------------------------------------------------------------
@@ -33,11 +34,11 @@ import "buildcraftunofficial:util" "buildcraftunofficial:main"
 
 // ---- Blocks / Automation -------------------------------------------------
 block_auto "advanced_crafting_table"
+block_auto "architect"
 block_auto "autoworkbench_item"
 block_auto "builder"
 block_auto "chute"
 block_auto "filler"
-place "architect"               "block" "automation"
 place "assembly_table"          "block" "automation"
 place_creative "debugger"       "block" "automation"
 place_creative "filler_planner" "block" "automation"
@@ -104,11 +105,11 @@ gear "gear_gold"
 gear "gear_diamond"
 
 // ---- Items / Paperwork ---------------------------------------------------
-place "blueprint_clean"        "item" "paperwork"
+paper "blueprint_clean"
 place "decorated_laser"        "item" "paperwork"
 place "schematic_single_clean" "item" "paperwork"
 place "schematic_single_used"  "item" "paperwork"
-place "template_clean"         "item" "paperwork"
+paper "template_clean"
 
 // ---- Items / Pluggables --------------------------------------------------
 plug "plug_blocker"

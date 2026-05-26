@@ -1,12 +1,12 @@
 # BuildCraft 1.12.2 → 26.1.x Port Status
 
-Last audited: 2026-05-25
+Last audited: 2026-05-26
 
 ### Guide Book pages awaiting writeups
 
 Stub entries at [guide/en_us/placeholder/](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/en_us/placeholder/), wired through [guide.txt](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide.txt). Each appears as a "(WIP)" entry until a real writeup is added at `block/<name>.md`, `item/<name>.md`, or `pipe/<name>.md` and the manifest registration is switched from `place` to the matching alias.
 
-- [ ] **Blocks / Automation:** debugger (creative), filler_planner (creative), filtered_buffer, integration_table, library, replacer
+- [ ] **Blocks / Automation:** filler_planner (creative), filtered_buffer, integration_table, library, replacer
 - [ ] **Blocks / Engine:** engine_creative (creative)
 - [ ] **Blocks / Laser:** laser
 - [ ] **Items / Basic:** waterproof

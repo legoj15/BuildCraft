@@ -40,7 +40,6 @@ block_auto "autoworkbench_item"
 block_auto "builder"
 block_auto "chute"
 block_auto "filler"
-place_creative "debugger"       "block" "automation"
 place_creative "filler_planner" "block" "automation"
 place "filtered_buffer"         "block" "automation"
 place "integration_table"       "block" "automation"
@@ -124,8 +123,9 @@ place "plug_timer"        "item" "pipe_plug"
 // ---- Items / Tools -------------------------------------------------------
 tool "wrench"
 tool "paintbrush"
-// Tool items with writeups but file names that don't match the stack id.
+// Tool items with writeups but file names that don't match the stack id, or that are creative-only.
 item_stack_creative "item" "tool" "box_volume" "buildcraftunofficial:volume_box"
+item_stack_creative "item" "tool" "debugger"   "buildcraftunofficial:debugger"
 item_stack "item" "tool" "marker_connector"  "buildcraftunofficial:marker_connector"
 item_stack "item" "tool" "list"              "buildcraftunofficial:list"
 place "gate_copier"     "item" "tool"

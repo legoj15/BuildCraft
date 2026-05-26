@@ -120,8 +120,14 @@ public class BCSiliconClient {
 
     /**
      * Runs visual facade deduplication using the cached blockstate models from the
-     * last bake. Should be called after FacadeStateManager has been initialized
-     * (i.e. after registry components are bound).
+     * last bake. Idempotent — clears the cache reference so subsequent calls no-op.
+     *
+     * <p>Triggered primarily from {@link #onClientLoggingIn} (deterministic, once per world
+     * join, on render thread, after both model bake and {@link FacadeStateManager#init()}).
+     * The {@code addCreativeTabItems → FACADE_TAB_KEY} call site still invokes this as a
+     * safety net for the rare F3+T (resource reload) case — after a re-bake the cache is
+     * non-null again, and the next time the tab is rebuilt this re-runs dedup against the
+     * new textures. In the steady state this is a no-op.
      */
     public static void runDeferredDedup() {
         if (cachedBlockStateModels != null) {
@@ -130,8 +136,33 @@ public class BCSiliconClient {
         }
     }
 
+    /**
+     * Game-bus (NeoForge.EVENT_BUS) listeners for the silicon client. Kept in a separate
+     * inner class so the mod-event-bus and game-event-bus listener sets don't share a
+     * @SubscribeEvent surface — each registration goes to exactly the right bus.
+     */
+    public static final class GameBus {
+        /**
+         * Run facade dedup at world-join time so it doesn't happen lazily inside JEI's
+         * first-screen-open ingredient scan (which used to land it on the same render-thread
+         * critical path as the player opening a GUI). At LoggingIn:
+         * <ul>
+         *   <li>Models are baked (ModifyBakingResult fired during the launch reload).</li>
+         *   <li>For an integrated server, {@link FacadeStateManager#init()} has run via
+         *       {@code ServerAboutToStartEvent}; for a multiplayer client we kick it here
+         *       as a safety net (the scan only touches BlockState registry — no server context).</li>
+         * </ul>
+         */
+        @SubscribeEvent
+        public static void onClientLoggingIn(net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingIn event) {
+            FacadeStateManager.ensureInitialized();
+            runDeferredDedup();
+        }
+    }
+
     public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
         modEventBus.register(BCSiliconClient.class);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(buildcraft.silicon.client.RenderLaser.class);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(GameBus.class);
     }
 }

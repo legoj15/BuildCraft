@@ -7,11 +7,15 @@
 package buildcraft.silicon.client;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.Comparator;
 
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
@@ -46,20 +50,28 @@ public class FacadeDeduplicator {
      * {@link FacadeStateManager#stackFacades} that are visually identical to an
      * earlier-registered state. Only the first (by blockstate ID order) survives.
      *
+     * <p><b>Thread-safety:</b> builds entirely new map snapshots off the side, then publishes
+     * them via volatile reference reassignment. Readers (server tick, recipe lookup) see either
+     * the pre-dedup or post-dedup snapshot — never a partially-mutated map — so this is safe to
+     * run on the render thread while the server thread is iterating these maps.
+     *
      * @param blockStateModels the baked blockstate-to-model map from the BakingResult
      */
     public static void deduplicateVisuallyIdentical(Map<BlockState, BlockStateModel> blockStateModels) {
+        // Snapshot the current maps once at the top — we operate on copies for the entire pass.
+        SortedMap<BlockState, FacadeBlockStateInfo> currentValid = FacadeStateManager.validFacadeStates;
+        Map<ItemStackKey, List<FacadeBlockStateInfo>> currentStackFacades = FacadeStateManager.stackFacades;
+
         BCLog.logger.info("[silicon.facade] Starting visual deduplication of "
-            + FacadeStateManager.validFacadeStates.size() + " facade states...");
-        if (FacadeStateManager.validFacadeStates.isEmpty()) return;
+            + currentValid.size() + " facade states...");
+        if (currentValid.isEmpty()) return;
 
         Map<String, FacadeBlockStateInfo> seen = new HashMap<>();
         Map<BlockState, FacadeBlockStateInfo> toRemove = new HashMap<>();
         int dupCount = 0;
         int nullFingerprints = 0;
 
-        for (Map.Entry<BlockState, FacadeBlockStateInfo> entry
-                : FacadeStateManager.validFacadeStates.entrySet()) {
+        for (Map.Entry<BlockState, FacadeBlockStateInfo> entry : currentValid.entrySet()) {
             FacadeBlockStateInfo info = entry.getValue();
             if (!info.isVisible) continue;
 
@@ -91,26 +103,39 @@ public class FacadeDeduplicator {
         BCLog.logger.info("[silicon.facade] Dedup scan complete: " + seen.size() + " unique, "
             + dupCount + " duplicates, " + nullFingerprints + " null fingerprints");
 
-        // Remove duplicates from validFacadeStates and stackFacades,
-        // and populate stackRedirects so recipes can still accept the removed blocks as inputs
-        FacadeStateManager.stackRedirects.clear();
+        // Build the new snapshots off-side. We start from the current published maps and apply
+        // removals/insertions to local copies; the live volatile fields stay untouched until publish.
+        Comparator<? super BlockState> validComparator = currentValid.comparator();
+        SortedMap<BlockState, FacadeBlockStateInfo> nextValid =
+            validComparator != null ? new TreeMap<>(validComparator) : new TreeMap<>();
+        nextValid.putAll(currentValid);
+
+        // For stackFacades we copy each List too so we can mutate it without touching the
+        // published immutable Lists. The dedup-pass's "remove this info from this key's list"
+        // operation only touches keys we then re-wrap as immutable below.
+        Map<ItemStackKey, List<FacadeBlockStateInfo>> nextStackFacades = new HashMap<>(currentStackFacades.size());
+        for (Map.Entry<ItemStackKey, List<FacadeBlockStateInfo>> e : currentStackFacades.entrySet()) {
+            nextStackFacades.put(e.getKey(), new ArrayList<>(e.getValue()));
+        }
+
+        Map<ItemStackKey, List<FacadeBlockStateInfo>> nextStackRedirects = new HashMap<>();
         int redirectCount = 0;
 
         for (Map.Entry<BlockState, FacadeBlockStateInfo> removal : toRemove.entrySet()) {
             BlockState state = removal.getKey();
             FacadeBlockStateInfo surviving = removal.getValue();
-            FacadeBlockStateInfo removed = FacadeStateManager.validFacadeStates.remove(state);
+            FacadeBlockStateInfo removed = nextValid.remove(state);
             if (removed != null && !removed.requiredStack.isEmpty()) {
                 ItemStackKey stackKey = new ItemStackKey(removed.requiredStack);
-                List<FacadeBlockStateInfo> list = FacadeStateManager.stackFacades.get(stackKey);
+                List<FacadeBlockStateInfo> list = nextStackFacades.get(stackKey);
                 if (list != null) {
                     list.remove(removed);
                     if (list.isEmpty()) {
-                        FacadeStateManager.stackFacades.remove(stackKey);
+                        nextStackFacades.remove(stackKey);
                     }
                 }
                 // Redirect: removed block's item → surviving facade info(s)
-                FacadeStateManager.stackRedirects.computeIfAbsent(stackKey, k -> new java.util.ArrayList<>()).add(surviving);
+                nextStackRedirects.computeIfAbsent(stackKey, k -> new ArrayList<>()).add(surviving);
                 redirectCount++;
             }
         }
@@ -118,7 +143,7 @@ public class FacadeDeduplicator {
         if (dupCount > 0) {
             BCLog.logger.info("[silicon.facade] Removed " + dupCount
                 + " visually identical facade duplicates. Remaining: "
-                + FacadeStateManager.validFacadeStates.size()
+                + nextValid.size()
                 + " (" + redirectCount + " recipe redirects registered)");
         } else {
             BCLog.logger.info("[silicon.facade] No visual duplicates found.");
@@ -131,7 +156,7 @@ public class FacadeDeduplicator {
         for (Map.Entry<BlockState, BlockStateModel> modelEntry : blockStateModels.entrySet()) {
             BlockState state = modelEntry.getKey();
             // Skip blocks that are already valid facades — they're handled above
-            if (FacadeStateManager.validFacadeStates.containsKey(state)) continue;
+            if (nextValid.containsKey(state)) continue;
 
             net.minecraft.world.item.Item blockItem = state.getBlock().asItem();
             if (blockItem == net.minecraft.world.item.Items.AIR) continue;
@@ -142,8 +167,8 @@ public class FacadeDeduplicator {
             net.minecraft.world.item.ItemStack requiredStack = new net.minecraft.world.item.ItemStack(blockItem);
             ItemStackKey stackKey = new ItemStackKey(requiredStack);
             // Skip if this item already has a facade or a redirect
-            if (FacadeStateManager.stackFacades.containsKey(stackKey)) continue;
-            if (FacadeStateManager.stackRedirects.containsKey(stackKey)) continue;
+            if (nextStackFacades.containsKey(stackKey)) continue;
+            if (nextStackRedirects.containsKey(stackKey)) continue;
 
             BlockStateModel model = modelEntry.getValue();
             if (model == null) continue;
@@ -153,7 +178,7 @@ public class FacadeDeduplicator {
 
             FacadeBlockStateInfo match = seen.get(fingerprint);
             if (match != null) {
-                FacadeStateManager.stackRedirects.computeIfAbsent(stackKey, k -> new java.util.ArrayList<>()).add(match);
+                nextStackRedirects.computeIfAbsent(stackKey, k -> new ArrayList<>()).add(match);
                 extraRedirects++;
                 if (DEBUG) {
                     BCLog.logger.info("[silicon.facade] Extra redirect: "
@@ -166,8 +191,25 @@ public class FacadeDeduplicator {
         if (extraRedirects > 0) {
             BCLog.logger.info("[silicon.facade] Added " + extraRedirects
                 + " extra recipe redirects from non-facade blocks (total redirects: "
-                + FacadeStateManager.stackRedirects.size() + ")");
+                + nextStackRedirects.size() + ")");
         }
+
+        // Freeze the inner Lists and publish all three snapshots atomically (volatile writes).
+        // Publish order: validFacadeStates → stackFacades → stackRedirects. A reader that grabs
+        // each field via separate volatile reads might see a mid-publish state across two fields;
+        // we accept that brief inconsistency (a worst-case Assembly Table tick gets one stale read
+        // out of three). The fields are never *individually* mid-mutation, so no CME can occur.
+        Map<ItemStackKey, List<FacadeBlockStateInfo>> publishedStackFacades = new HashMap<>(nextStackFacades.size());
+        for (Map.Entry<ItemStackKey, List<FacadeBlockStateInfo>> e : nextStackFacades.entrySet()) {
+            publishedStackFacades.put(e.getKey(), List.copyOf(e.getValue()));
+        }
+        Map<ItemStackKey, List<FacadeBlockStateInfo>> publishedStackRedirects = new HashMap<>(nextStackRedirects.size());
+        for (Map.Entry<ItemStackKey, List<FacadeBlockStateInfo>> e : nextStackRedirects.entrySet()) {
+            publishedStackRedirects.put(e.getKey(), List.copyOf(e.getValue()));
+        }
+        FacadeStateManager.validFacadeStates = Collections.unmodifiableSortedMap(nextValid);
+        FacadeStateManager.stackFacades = Map.copyOf(publishedStackFacades);
+        FacadeStateManager.stackRedirects = Map.copyOf(publishedStackRedirects);
     }
 
     /**

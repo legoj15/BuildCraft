@@ -8,6 +8,7 @@ package buildcraft.silicon.plug;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -54,12 +55,18 @@ public enum FacadeStateManager implements IFacadeRegistry {
     INSTANCE;
 
     public static final boolean DEBUG = BCDebugging.shouldDebugLog("silicon.facade");
-    public static final SortedMap<BlockState, FacadeBlockStateInfo> validFacadeStates;
-    public static final Map<ItemStackKey, List<FacadeBlockStateInfo>> stackFacades;
+    /** All three maps below are <b>read-only snapshots</b> published by {@link #init()} and
+     *  later atomically replaced by {@link buildcraft.silicon.client.FacadeDeduplicator}.
+     *  Readers must never mutate them — they are wrapped immutable / built via {@link Map#copyOf}.
+     *  The {@code volatile} reference gives readers a consistent snapshot per field access; the
+     *  three fields can briefly diverge across a swap (see FacadeDeduplicator for ordering),
+     *  but that's tolerable because no read path requires cross-map consistency in a single tick. */
+    public static volatile SortedMap<BlockState, FacadeBlockStateInfo> validFacadeStates;
+    public static volatile Map<ItemStackKey, List<FacadeBlockStateInfo>> stackFacades;
     /** Maps item inputs of deduplicated (removed) facades to the surviving facade info(s).
      *  Populated client-side by FacadeDeduplicator after visual dedup.
      *  A single item may redirect to multiple facade infos (e.g. waxed copper bulb → 4 copper_bulb states). */
-    public static final Map<ItemStackKey, List<FacadeBlockStateInfo>> stackRedirects;
+    public static volatile Map<ItemStackKey, List<FacadeBlockStateInfo>> stackRedirects;
     public static FacadeBlockStateInfo defaultState, previewState;
 
     private static volatile boolean initialized = false;
@@ -68,9 +75,9 @@ public enum FacadeStateManager implements IFacadeRegistry {
     private static final Map<BlockState, ItemStack> customBlocks = new HashMap<>();
 
     static {
-        validFacadeStates = new TreeMap<>(blockStateComparator());
-        stackFacades = new HashMap<>();
-        stackRedirects = new HashMap<>();
+        validFacadeStates = Collections.unmodifiableSortedMap(new TreeMap<>(blockStateComparator()));
+        stackFacades = Map.of();
+        stackRedirects = Map.of();
     }
 
     /** Returns true if {@link #init()} has been called successfully at least once. */
@@ -155,20 +162,36 @@ public enum FacadeStateManager implements IFacadeRegistry {
             return;
         }
 
+        // Build into local mutable maps, then publish snapshots atomically. Readers see either
+        // the empty seed maps or the fully-populated post-init snapshot — never a half-built map.
+        SortedMap<BlockState, FacadeBlockStateInfo> nextValid = new TreeMap<>(blockStateComparator());
+        Map<ItemStackKey, List<FacadeBlockStateInfo>> nextStackFacades = new HashMap<>();
+
         for (Block block : BuiltInRegistries.BLOCK) {
-            scanBlock(block);
+            scanBlock(block, nextValid, nextStackFacades);
         }
 
-        previewState = validFacadeStates.get(Blocks.BRICKS.defaultBlockState());
+        previewState = nextValid.get(Blocks.BRICKS.defaultBlockState());
         if (previewState == null) {
             previewState = defaultState;
         }
+
+        // Publish (immutable views — Lists copied so the entire snapshot is read-only).
+        // stackRedirects stays Map.of() — only the dedup pass populates it.
+        Map<ItemStackKey, List<FacadeBlockStateInfo>> publishedStackFacades = new HashMap<>(nextStackFacades.size());
+        for (Map.Entry<ItemStackKey, List<FacadeBlockStateInfo>> e : nextStackFacades.entrySet()) {
+            publishedStackFacades.put(e.getKey(), List.copyOf(e.getValue()));
+        }
+        validFacadeStates = Collections.unmodifiableSortedMap(nextValid);
+        stackFacades = Map.copyOf(publishedStackFacades);
 
         initialized = true;
         BCLog.logger.info("[silicon.facade] Total valid facade states: " + validFacadeStates.size());
     }
 
-    private static void scanBlock(Block block) {
+    private static void scanBlock(Block block,
+                                  SortedMap<BlockState, FacadeBlockStateInfo> outValidStates,
+                                  Map<ItemStackKey, List<FacadeBlockStateInfo>> outStackFacades) {
         try {
             String blockResult = isValidFacadeBlock(block);
             if (!"ok".equals(blockResult) && !"pass".equals(blockResult)) {
@@ -244,10 +267,10 @@ public enum FacadeStateManager implements IFacadeRegistry {
                 try {
                     ImmutableSet<Property<?>> varSet = ImmutableSet.copyOf(vars.keySet());
                     FacadeBlockStateInfo info = new FacadeBlockStateInfo(state, stack, varSet);
-                    validFacadeStates.put(state, info);
+                    outValidStates.put(state, info);
                     if (!info.requiredStack.isEmpty()) {
                         ItemStackKey stackKey = new ItemStackKey(info.requiredStack);
-                        stackFacades.computeIfAbsent(stackKey, k -> new ArrayList<>()).add(info);
+                        outStackFacades.computeIfAbsent(stackKey, k -> new ArrayList<>()).add(info);
                     }
 
                     // Test to make sure that we can read + write it

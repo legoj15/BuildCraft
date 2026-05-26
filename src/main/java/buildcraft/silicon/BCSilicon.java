@@ -157,8 +157,14 @@ public class BCSilicon {
         }
 
         if (event.getTabKey() == BCSiliconCreativeTabs.FACADE_TAB_KEY) {
+            // ensureInitialized is needed for the multiplayer-client case (ServerAboutToStartEvent
+            // only fires on the integrated server; a connected client gets no other init trigger).
             FacadeStateManager.ensureInitialized();
             if (FMLEnvironment.getDist() == Dist.CLIENT) {
+                // Primary dedup trigger is BCSiliconClient.GameBus.onClientLoggingIn (deterministic,
+                // off the JEI first-screen-open critical path). This call is the F3+T safety net:
+                // after a resource reload the model cache refills and the next tab rebuild re-dedups
+                // against the new textures. In steady state this is a no-op.
                 buildcraft.silicon.client.BCSiliconClient.runDeferredDedup();
             }
             for (FacadeBlockStateInfo info : FacadeStateManager.validFacadeStates.values()) {

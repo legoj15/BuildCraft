@@ -6,7 +6,7 @@ Last audited: 2026-05-26 (added facade dedup follow-ups)
 
 Stub entries at [guide/en_us/placeholder/](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/en_us/placeholder/), wired through [guide.txt](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide.txt). Each appears as a "(WIP)" entry until a real writeup is added at `block/<name>.md`, `item/<name>.md`, or `pipe/<name>.md` and the manifest registration is switched from `place` to the matching alias.
 
-- [ ] **Blocks / Automation:** integration_table, library, replacer
+- [ ] **Blocks / Automation:** integration_table, replacer
 - [ ] **Blocks / Engine:** engine_creative (creative)
 - [ ] **Blocks / Laser:** laser
 - [ ] **Items / Basic:** waterproof
@@ -49,6 +49,7 @@ Stub entries at [guide/en_us/placeholder/](src/main/resources/assets/buildcraftu
 - [ ] **Cauldron as a fluid container.** Fluid pipes (and pumps) should treat the vanilla cauldron as a fluid tank — draining water/lava/powder-snow out of it and filling it up to the appropriate level. NeoForge exposes `IFluidHandler` capabilities for the cauldron via its capability system; wire the cauldron into BC's fluid pipe connection logic.
 - [ ] **Waterlog non-cube-collision blocks.** Pipes, facades, and other BC blocks with non-full collision shapes are destroyed by flowing fluids (water, lava, oil) because they don't implement `LiquidBlockContainer`. This matches 1.12.2 behavior but is worth revisiting: implement waterlogging for at least pipe holders so players can route pipes through flooded areas. Requires adding a waterlogged block state, implementing `LiquidBlockContainer`, and scheduling fluid ticks on neighbor changes.
 - [ ] Putting nothing in the second/"to" replacer slot changes the button to "Remove" (usefull for removing grass tufts)
+- [ ] **Electronic Library snapshot-list scrolling.** Neither 1.12.2 nor the modern port wires up scrolling on the [GuiElectronicLibrary](src/main/java/buildcraft/builders/gui/GuiElectronicLibrary.java) list panel. 1.12.2 lets the list overflow past the panel (drawing over the slots and player inventory); the port silently truncates at `LIST_MAX_ROWS = 13` and the texture has the arrows already in it. Add up/down arrow buttons (or scroll-wheel handling on the list rect) that page or pixel-scroll the visible window into the full snapshot list, persist the scroll offset across `containerTick` while the GUI stays open, and disable each arrow when there's nothing to scroll to in that direction. Worth sourcing the arrow sprites from the existing GUI texture sheet rather than spawning a second resource.
 - [ ] Utilize modern Minecraft sounds (copper grates for pipes, etc)
 - [ ] **Goggles texture.** `item/goggles.png` is a verbatim copy of the vanilla paper texture used as a placeholder — the dev-gated Goggles headpiece needs real art before it could be un-gated.
 

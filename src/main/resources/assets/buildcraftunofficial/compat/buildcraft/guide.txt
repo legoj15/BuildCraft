@@ -42,7 +42,7 @@ block_auto "chute"
 block_auto "filler"
 block_auto "filtered_buffer"
 place "integration_table"       "block" "automation"
-place "library"                 "block" "automation"
+block_auto "library"
 place "replacer"                "block" "automation"
 
 // ---- Blocks / Engines ----------------------------------------------------

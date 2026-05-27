@@ -10,12 +10,16 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import org.joml.Matrix4f;
 
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 
 import buildcraft.api.core.render.ISprite;
 
+@SuppressWarnings("deprecation") // TextureAtlas.LOCATION_BLOCKS — same pattern used across BC renderers
 public class AddonDefaultRenderer<T extends Addon> implements IFastAddonRenderer<T> {
     private ISprite sprite;
 
@@ -27,7 +31,8 @@ public class AddonDefaultRenderer<T extends Addon> implements IFastAddonRenderer
     }
 
     @Override
-    public void renderAddonFast(T addon, Player player, float partialTicks, PoseStack poseStack, VertexConsumer builder) {
+    public void renderAddonFast(T addon, Player player, float partialTicks, PoseStack poseStack, MultiBufferSource bufferSource) {
+        VertexConsumer builder = bufferSource.getBuffer(RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
         AABB bb = addon.getBoundingBox();
         Matrix4f pose = poseStack.last().pose();
         // Map raw 0-1 UV to atlas-relative UV via the sprite. Without this, vertices use the entire

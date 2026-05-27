@@ -6,12 +6,9 @@
 package buildcraft.core.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
@@ -31,7 +28,6 @@ import buildcraft.core.marker.volume.VolumeBox;
  * corner, the locking machine's stripes (STRIPES_WRITE for Filler, STRIPES_READ for Architect)
  * when locked, otherwise CONNECTED.
  */
-@SuppressWarnings("deprecation")
 public class VolumeBoxRenderer {
 
     public static void renderAll() {
@@ -58,16 +54,17 @@ public class VolumeBoxRenderer {
         poseStack.pushPose();
         poseStack.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
 
+        // Each addon picks its own RenderType off the bufferSource — corner icons go through
+        // entityTranslucent on the block atlas; the filler planner's preview goes through an
+        // untextured debug-filled type. endBatch() flushes all of them together.
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer consumer = bufferSource.getBuffer(
-                RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
 
         for (VolumeBox volumeBox : ClientVolumeBoxes.INSTANCE.volumeBoxes) {
             for (Addon addon : volumeBox.addons.values()) {
                 if (addon == null) continue;
                 @SuppressWarnings("unchecked")
                 IFastAddonRenderer<Addon> renderer = (IFastAddonRenderer<Addon>) addon.getRenderer();
-                renderer.renderAddonFast(addon, player, 1.0f, poseStack, consumer);
+                renderer.renderAddonFast(addon, player, 1.0f, poseStack, bufferSource);
             }
         }
 

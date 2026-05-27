@@ -16,21 +16,29 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import org.joml.Matrix4f;
 
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import buildcraft.lib.client.render.BCLibRenderTypes;
+
 import buildcraft.core.marker.volume.IFastAddonRenderer;
 
 public class AddonRendererFillerPlanner implements IFastAddonRenderer<AddonFillerPlanner> {
     @Override
     public void renderAddonFast(AddonFillerPlanner addon, Player player, float partialTicks,
-                                 PoseStack poseStack, VertexConsumer vb) {
+                                 PoseStack poseStack, MultiBufferSource bufferSource) {
         if (addon.buildingInfo == null) {
             return;
         }
+
+        // Untextured, vertex-coloured translucent QUADs — equivalent to 1.12.2's ModelLoader.White.INSTANCE
+        // sprite usage. Sampling the block atlas (as the default addon render type does) would map our
+        // 0/1 UVs to the atlas corners and show random block textures instead of plain colour.
+        VertexConsumer vb = bufferSource.getBuffer(BCLibRenderTypes.debugFilled());
 
         Matrix4f pose = poseStack.last().pose();
 

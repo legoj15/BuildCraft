@@ -17,6 +17,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemUtils;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.context.UseOnContext;
@@ -68,14 +69,14 @@ public class ItemSchematicSingle extends Item {
     // region Right-click in air — sneak to clear
     @Override
     public InteractionResult use(Level world, Player player, InteractionHand hand) {
-        ItemStack stack = player.getItemInHand(hand);
         if (world.isClientSide()) {
             return InteractionResult.PASS;
         }
-        if (player.isShiftKeyDown()) {
-            // Clear the schematic → swap to clean variant
+        if (used && player.isShiftKeyDown()) {
+            // Clear the schematic → consume one used, give one clean.
+            ItemStack stack = player.getItemInHand(hand);
             ItemStack clean = new ItemStack(BCBuildersItems.SCHEMATIC_SINGLE_CLEAN.get(), 1);
-            player.setItemInHand(hand, clean);
+            player.setItemInHand(hand, ItemUtils.createFilledResult(stack, player, clean));
             return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;
@@ -97,10 +98,10 @@ public class ItemSchematicSingle extends Item {
         BlockPos pos = context.getClickedPos();
         Direction side = context.getClickedFace();
 
-        // Sneak+use → clear schematic
-        if (player.isShiftKeyDown()) {
+        // Sneak+use on a used schematic → consume one used, give one clean.
+        if (used && player.isShiftKeyDown()) {
             ItemStack clean = new ItemStack(BCBuildersItems.SCHEMATIC_SINGLE_CLEAN.get(), 1);
-            player.setItemInHand(hand, clean);
+            player.setItemInHand(hand, ItemUtils.createFilledResult(stack, player, clean));
             return InteractionResult.SUCCESS;
         }
 
@@ -113,12 +114,14 @@ public class ItemSchematicSingle extends Item {
             if (schematicBlock.isAir()) {
                 return InteractionResult.FAIL;
             }
-            // Create a "used" schematic with the captured data
+            // Build the captured "used" schematic, then consume one clean from the held
+            // stack and deliver the used one — without ItemUtils this would void the rest
+            // of the stack.
             ItemStack usedStack = new ItemStack(BCBuildersItems.SCHEMATIC_SINGLE_USED.get(), 1);
             CompoundTag itemData = new CompoundTag();
             itemData.put(NBT_KEY, SchematicBlockManager.writeToNBT(schematicBlock));
             NBTUtilBC.setItemData(usedStack, itemData);
-            player.setItemInHand(hand, usedStack);
+            player.setItemInHand(hand, ItemUtils.createFilledResult(stack, player, usedStack));
             AdvancementUtil.unlockAdvancement(player, PaperAdvancement.ID,
                 PaperAdvancement.CAPTURE_WITH_SCHEMATIC);
             return InteractionResult.SUCCESS;

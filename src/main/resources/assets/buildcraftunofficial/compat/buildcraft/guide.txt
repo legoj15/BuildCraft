@@ -43,7 +43,7 @@ block_auto "filler"
 block_auto "filtered_buffer"
 place "integration_table"       "block" "automation"
 block_auto "library"
-place "replacer"                "block" "automation"
+block_auto "replacer"
 
 // ---- Blocks / Engines ----------------------------------------------------
 block_engine "engine_redstone" "buildcraftunofficial:engine_redstone"

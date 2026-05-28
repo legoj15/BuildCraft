@@ -81,7 +81,7 @@ block "specialized" "marker_volume"
 // ===========================================================================
 
 // ---- Items / Basic -------------------------------------------------------
-place "waterproof"             "item" "basic"
+item_typed "basic" "waterproof" "buildcraftunofficial:waterproof"
 
 // ---- Items / Chipsets ----------------------------------------------------
 place "redstone_red_chipset"     "item" "chipset"

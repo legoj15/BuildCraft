@@ -18,6 +18,7 @@ Stub entries at [guide/en_us/placeholder/](src/main/resources/assets/buildcraftu
 
 ## 🧹 Finalization
 
+- [ ] Backwards compatibility with older block and item IDs
 - [ ] Investigate how templates render in 3D
 - [ ] Final code review across all subsystems.
 - [ ] **Facade redirects are client-only on dedicated servers.** `FacadeStateManager.stackRedirects` and the visual-dedup pass that builds it (`FacadeDeduplicator`) only run on the client (the dedup inspects baked block models). But `FacadeAssemblyRecipes.getInputsFor` reads `stackRedirects` server-side. On a dedicated server the map is permanently empty → the brick_slab→bricks-style "blocks that share a facade's textures can be used as inputs" redirects silently don't apply. In single-player it works because both threads share a JVM. Decide: build a server-side equivalent of the redirect table (without needing baked models — e.g. hash block model JSON at data-load time), or accept the limitation and drop the redirect feature on dedicated.

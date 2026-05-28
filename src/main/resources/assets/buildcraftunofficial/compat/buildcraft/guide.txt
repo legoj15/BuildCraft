@@ -84,11 +84,11 @@ block "specialized" "marker_volume"
 item_typed "basic" "waterproof" "buildcraftunofficial:waterproof"
 
 // ---- Items / Chipsets ----------------------------------------------------
-chipset "redstone_red_chipset"
-chipset "redstone_iron_chipset"
-chipset "redstone_gold_chipset"
-chipset "redstone_diamond_chipset"
-chipset "redstone_quartz_chipset"
+chipset "chipset_redstone"
+chipset "chipset_iron"
+chipset "chipset_gold"
+chipset "chipset_diamond"
+chipset "chipset_quartz"
 
 // ---- Items / Fluid -------------------------------------------------------
 place "fragile_fluid_container" "item" "fluid"

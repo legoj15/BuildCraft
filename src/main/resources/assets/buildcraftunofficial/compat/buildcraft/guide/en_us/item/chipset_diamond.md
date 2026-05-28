@@ -4,4 +4,4 @@ The most refined and physically complex chipset. The density allows for gates to
 <no_lore>
 A chipset that upgrades existing gates to gain three slot parameters.
 </no_lore>
-<recipes_usages stack="buildcraftunofficial:redstone_diamond_chipset"/>
+<recipes_usages stack="buildcraftunofficial:chipset_diamond"/>

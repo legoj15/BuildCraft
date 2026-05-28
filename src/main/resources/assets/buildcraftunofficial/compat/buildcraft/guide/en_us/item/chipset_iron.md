@@ -4,4 +4,4 @@ Turns out that metal makes for a better conductor compared to magic dust, you ca
 <no_lore>
 Used to assemble Iron and Nether Brick Gates, and every colour of Pipe Wire.
 </no_lore>
-<recipes_usages stack="buildcraftunofficial:redstone_iron_chipset"/>
+<recipes_usages stack="buildcraftunofficial:chipset_iron"/>

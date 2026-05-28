@@ -87,34 +87,34 @@ public class BCSiliconRecipes {
     private static void registerGateAssemblyRecipes() {
         // Base gates from chipsets
         makeGateAssembly(20_000, EnumGateMaterial.IRON, EnumGateModifier.NO_MODIFIER,
-            BCSiliconItems.REDSTONE_IRON_CHIPSET.get());
+            BCSiliconItems.CHIPSET_IRON.get());
         makeGateAssembly(40_000, EnumGateMaterial.NETHER_BRICK, EnumGateModifier.NO_MODIFIER,
-            BCSiliconItems.REDSTONE_IRON_CHIPSET.get(),
+            BCSiliconItems.CHIPSET_IRON.get(),
             new IngredientStack(Ingredient.of(Blocks.NETHER_BRICKS)));
         makeGateAssembly(80_000, EnumGateMaterial.GOLD, EnumGateModifier.NO_MODIFIER,
-            BCSiliconItems.REDSTONE_GOLD_CHIPSET.get());
+            BCSiliconItems.CHIPSET_GOLD.get());
 
         // Iron modifier upgrades
         IngredientStack lapis = new IngredientStack(Ingredient.of(Items.LAPIS_LAZULI));
         makeGateModifierAssembly(40_000, EnumGateMaterial.IRON, EnumGateModifier.LAPIS, lapis);
         makeGateModifierAssembly(60_000, EnumGateMaterial.IRON, EnumGateModifier.QUARTZ,
-            new IngredientStack(Ingredient.of(BCSiliconItems.REDSTONE_QUARTZ_CHIPSET.get())));
+            new IngredientStack(Ingredient.of(BCSiliconItems.CHIPSET_QUARTZ.get())));
         makeGateModifierAssembly(80_000, EnumGateMaterial.IRON, EnumGateModifier.DIAMOND,
-            new IngredientStack(Ingredient.of(BCSiliconItems.REDSTONE_DIAMOND_CHIPSET.get())));
+            new IngredientStack(Ingredient.of(BCSiliconItems.CHIPSET_DIAMOND.get())));
 
         // Nether Brick modifier upgrades
         makeGateModifierAssembly(80_000, EnumGateMaterial.NETHER_BRICK, EnumGateModifier.LAPIS, lapis);
         makeGateModifierAssembly(100_000, EnumGateMaterial.NETHER_BRICK, EnumGateModifier.QUARTZ,
-            new IngredientStack(Ingredient.of(BCSiliconItems.REDSTONE_QUARTZ_CHIPSET.get())));
+            new IngredientStack(Ingredient.of(BCSiliconItems.CHIPSET_QUARTZ.get())));
         makeGateModifierAssembly(120_000, EnumGateMaterial.NETHER_BRICK, EnumGateModifier.DIAMOND,
-            new IngredientStack(Ingredient.of(BCSiliconItems.REDSTONE_DIAMOND_CHIPSET.get())));
+            new IngredientStack(Ingredient.of(BCSiliconItems.CHIPSET_DIAMOND.get())));
 
         // Gold modifier upgrades
         makeGateModifierAssembly(100_000, EnumGateMaterial.GOLD, EnumGateModifier.LAPIS, lapis);
         makeGateModifierAssembly(140_000, EnumGateMaterial.GOLD, EnumGateModifier.QUARTZ,
-            new IngredientStack(Ingredient.of(BCSiliconItems.REDSTONE_QUARTZ_CHIPSET.get())));
+            new IngredientStack(Ingredient.of(BCSiliconItems.CHIPSET_QUARTZ.get())));
         makeGateModifierAssembly(180_000, EnumGateMaterial.GOLD, EnumGateModifier.DIAMOND,
-            new IngredientStack(Ingredient.of(BCSiliconItems.REDSTONE_DIAMOND_CHIPSET.get())));
+            new IngredientStack(Ingredient.of(BCSiliconItems.CHIPSET_DIAMOND.get())));
     }
 
     // --- Chipset Recipes ---
@@ -123,32 +123,32 @@ public class BCSiliconRecipes {
         ImmutableSet<IngredientStack> input;
 
         input = ImmutableSet.of(new IngredientStack(Ingredient.of(Items.REDSTONE)));
-        AssemblyRecipeRegistry.register(new AssemblyRecipeBasic("redstone_chipset",
-            10_000 * MjAPI.MJ, input, new ItemStack(BCSiliconItems.REDSTONE_RED_CHIPSET.get())));
+        AssemblyRecipeRegistry.register(new AssemblyRecipeBasic("chipset_redstone",
+            10_000 * MjAPI.MJ, input, new ItemStack(BCSiliconItems.CHIPSET_REDSTONE.get())));
 
         input = ImmutableSet.of(
             new IngredientStack(Ingredient.of(Items.REDSTONE)),
             new IngredientStack(Ingredient.of(Items.IRON_INGOT)));
-        AssemblyRecipeRegistry.register(new AssemblyRecipeBasic("iron_chipset",
-            20_000 * MjAPI.MJ, input, new ItemStack(BCSiliconItems.REDSTONE_IRON_CHIPSET.get())));
+        AssemblyRecipeRegistry.register(new AssemblyRecipeBasic("chipset_iron",
+            20_000 * MjAPI.MJ, input, new ItemStack(BCSiliconItems.CHIPSET_IRON.get())));
 
         input = ImmutableSet.of(
             new IngredientStack(Ingredient.of(Items.REDSTONE)),
             new IngredientStack(Ingredient.of(Items.GOLD_INGOT)));
-        AssemblyRecipeRegistry.register(new AssemblyRecipeBasic("gold_chipset",
-            40_000 * MjAPI.MJ, input, new ItemStack(BCSiliconItems.REDSTONE_GOLD_CHIPSET.get())));
+        AssemblyRecipeRegistry.register(new AssemblyRecipeBasic("chipset_gold",
+            40_000 * MjAPI.MJ, input, new ItemStack(BCSiliconItems.CHIPSET_GOLD.get())));
 
         input = ImmutableSet.of(
             new IngredientStack(Ingredient.of(Items.REDSTONE)),
             new IngredientStack(Ingredient.of(Items.QUARTZ)));
-        AssemblyRecipeRegistry.register(new AssemblyRecipeBasic("quartz_chipset",
-            60_000 * MjAPI.MJ, input, new ItemStack(BCSiliconItems.REDSTONE_QUARTZ_CHIPSET.get())));
+        AssemblyRecipeRegistry.register(new AssemblyRecipeBasic("chipset_quartz",
+            60_000 * MjAPI.MJ, input, new ItemStack(BCSiliconItems.CHIPSET_QUARTZ.get())));
 
         input = ImmutableSet.of(
             new IngredientStack(Ingredient.of(Items.REDSTONE)),
             new IngredientStack(Ingredient.of(Items.DIAMOND)));
-        AssemblyRecipeRegistry.register(new AssemblyRecipeBasic("diamond_chipset",
-            80_000 * MjAPI.MJ, input, new ItemStack(BCSiliconItems.REDSTONE_DIAMOND_CHIPSET.get())));
+        AssemblyRecipeRegistry.register(new AssemblyRecipeBasic("chipset_diamond",
+            80_000 * MjAPI.MJ, input, new ItemStack(BCSiliconItems.CHIPSET_DIAMOND.get())));
     }
 
     // --- Lens Recipes ---

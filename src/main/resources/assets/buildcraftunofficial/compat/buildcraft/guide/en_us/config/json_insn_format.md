@@ -24,7 +24,7 @@ buildcraftunofficial:oil
 This function will remove the entry with the given name. This takes 1 argument, the name.
 For example:
 <json_insn>
-remove "buildcraftunofficial:redstone_diamond_chipset"
+remove "buildcraftunofficial:chipset_diamond"
 </json_insn>
 It is probably easiest to find out the name of entries by turning on debugging with debug "all".
 

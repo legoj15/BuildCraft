@@ -4,4 +4,4 @@ The fine resonances of this quartz allows for gates to gain the ability to slot 
 <no_lore>
 A chipset that upgrades existing gates to gain a slot parameter.
 </no_lore>
-<recipes_usages stack="buildcraftunofficial:redstone_quartz_chipset"/>
+<recipes_usages stack="buildcraftunofficial:chipset_quartz"/>

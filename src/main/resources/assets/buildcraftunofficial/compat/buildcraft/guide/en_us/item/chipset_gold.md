@@ -4,4 +4,4 @@ Gold conducts cleaner than iron, letting a single chipset carry more signals at 
 <no_lore>
 Used to assemble Gold Gates, the highest-capacity gate material.
 </no_lore>
-<recipes_usages stack="buildcraftunofficial:redstone_gold_chipset"/>
+<recipes_usages stack="buildcraftunofficial:chipset_gold"/>

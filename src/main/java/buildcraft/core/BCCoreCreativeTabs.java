@@ -149,11 +149,11 @@ public class BCCoreCreativeTabs {
                                 if (BCSiliconBlocks.INTEGRATION_TABLE != null) {
                                     output.accept(BCSiliconBlocks.INTEGRATION_TABLE.get());
                                 }
-                                output.accept(BCSiliconItems.REDSTONE_RED_CHIPSET.get());
-                                output.accept(BCSiliconItems.REDSTONE_IRON_CHIPSET.get());
-                                output.accept(BCSiliconItems.REDSTONE_GOLD_CHIPSET.get());
-                                output.accept(BCSiliconItems.REDSTONE_QUARTZ_CHIPSET.get());
-                                output.accept(BCSiliconItems.REDSTONE_DIAMOND_CHIPSET.get());
+                                output.accept(BCSiliconItems.CHIPSET_REDSTONE.get());
+                                output.accept(BCSiliconItems.CHIPSET_IRON.get());
+                                output.accept(BCSiliconItems.CHIPSET_GOLD.get());
+                                output.accept(BCSiliconItems.CHIPSET_QUARTZ.get());
+                                output.accept(BCSiliconItems.CHIPSET_DIAMOND.get());
                                 output.accept(BCSiliconItems.GATE_COPIER.get());
                                 // Fluids
                                 for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {

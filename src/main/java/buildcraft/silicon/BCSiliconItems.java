@@ -35,21 +35,22 @@ public class BCSiliconItems {
                 : null;
     }
 
-    // Chipsets — each variant is a separate item (replacing 1.12.2 metadata sub-items)
-    public static final DeferredItem<Item> REDSTONE_RED_CHIPSET =
-            ITEMS.registerSimpleItem("redstone_red_chipset");
+    // Chipsets — each variant is a separate item (replacing 1.12.2 metadata sub-items).
+    // Naming: chipset_<material>, matching the pipe_<material>_<flow> role-prefix scheme.
+    public static final DeferredItem<Item> CHIPSET_REDSTONE =
+            ITEMS.registerSimpleItem("chipset_redstone");
 
-    public static final DeferredItem<Item> REDSTONE_IRON_CHIPSET =
-            ITEMS.registerSimpleItem("redstone_iron_chipset");
+    public static final DeferredItem<Item> CHIPSET_IRON =
+            ITEMS.registerSimpleItem("chipset_iron");
 
-    public static final DeferredItem<Item> REDSTONE_GOLD_CHIPSET =
-            ITEMS.registerSimpleItem("redstone_gold_chipset");
+    public static final DeferredItem<Item> CHIPSET_GOLD =
+            ITEMS.registerSimpleItem("chipset_gold");
 
-    public static final DeferredItem<Item> REDSTONE_QUARTZ_CHIPSET =
-            ITEMS.registerSimpleItem("redstone_quartz_chipset");
+    public static final DeferredItem<Item> CHIPSET_QUARTZ =
+            ITEMS.registerSimpleItem("chipset_quartz");
 
-    public static final DeferredItem<Item> REDSTONE_DIAMOND_CHIPSET =
-            ITEMS.registerSimpleItem("redstone_diamond_chipset");
+    public static final DeferredItem<Item> CHIPSET_DIAMOND =
+            ITEMS.registerSimpleItem("chipset_diamond");
 
     // Gate Copier
     public static final DeferredItem<ItemGateCopier> GATE_COPIER =

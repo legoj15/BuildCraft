@@ -7,6 +7,4 @@ The tank is a way to directly store fluids without the need for buckets and ches
 <chapter name="Information"/>
 Tanks can be used to store up to 16 buckets of one fluid per tank block and the tanks can be stacked vertically indefinitely to form one large tank.
 <recipes_usages stack="buildcraftunofficial:tank"/>
-Similar to chests, Tanks do not retain their contents when broken but do not drop the fluids.
-
-Do not break them once they have fluids in as you wont get the fluids back.
+Similar to chests, Tanks do not retain their contents when broken and will drop their fluids as single use shards.

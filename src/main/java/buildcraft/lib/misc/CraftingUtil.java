@@ -11,9 +11,7 @@ import java.util.Optional;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
@@ -124,12 +122,23 @@ public final class CraftingUtil {
         }
     }
 
-    /** Convert an Ingredient to the first matching ItemStack. */
+    /** Convert an Ingredient to the first matching ItemStack.
+     * Uses {@code Ingredient.display().resolveForStacks(ctx)} (not {@code Ingredient.items()})
+     * so DataComponentIngredient patches survive into the phantom blueprint slot. JEI's "+"
+     * button copies a recipe layout into the Advanced Crafting Table's blueprint grid via
+     * this path, and recipes that match on data components (e.g. the gate-modifier-upgrade
+     * crafting recipes that need a specific gate variant as input) would otherwise drop the
+     * variant patch and pre-fill the slot with a default-variant stack — clicking "+" on the
+     * Iron+Lapis recipe would populate the gate slot with a bare CLAY_BRICK "Basic Gate"
+     * instead of the Iron AND Gate the recipe actually requires. */
     private static ItemStack ingredientToStack(Ingredient ingredient) {
-        List<Holder<Item>> holders = ingredient.items().toList();
-        if (holders.isEmpty()) {
-            return ItemStack.EMPTY;
+        net.minecraft.util.context.ContextMap ctx = new net.minecraft.util.context.ContextMap.Builder()
+            .create(net.minecraft.world.item.crafting.display.SlotDisplayContext.CONTEXT);
+        for (ItemStack candidate : ingredient.display().resolveForStacks(ctx)) {
+            if (!candidate.isEmpty() && candidate.getItem() != net.minecraft.world.item.Items.AIR) {
+                return candidate.copy();
+            }
         }
-        return new ItemStack(holders.get(0).value());
+        return ItemStack.EMPTY;
     }
 }

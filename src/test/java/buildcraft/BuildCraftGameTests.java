@@ -387,6 +387,17 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_modifier_recipe_rejects_wrong_logic"), () -> buildcraft.silicon.GateRecipeVariantTester::testOrLogicRecipeRejectsAndLogicGate);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_modifier_recipe_display_preserves_variant"), () -> buildcraft.silicon.GateRecipeVariantTester::testGoldLapisRecipeDisplayPreservesGoldVariant);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:basic_gate_recipe_emitted_by_collector"), () -> buildcraft.silicon.GateRecipeVariantTester::testBasicGateRecipeExistsAndCollectorEmitsIt);
+            // JEI U/R lookup simulation — walks the collected entries with the same subtype key
+            // (GateVariant.getVariantName) the JEI subtype interpreter uses. If U on a Basic Gate
+            // or R on a higher-level gate shows nothing in-game, one of these two will fail.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:basic_gate_appears_as_input_in_modifier_recipes"), () -> buildcraft.silicon.GateRecipeVariantTester::testBasicGateAppearsAsInputInModifierRecipes);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:higher_level_gate_appears_as_output_in_modifier_recipes"), () -> buildcraft.silicon.GateRecipeVariantTester::testHigherLevelGateAppearsAsOutputInModifierRecipes);
+            // Guide-book recipe rendering — pins that modifier-upgrade recipes render the gate
+            // input with the correct variant (was rendering as default CLAY_BRICK "Basic Gate"
+            // because `Ingredient.items()` drops data-component patches) and that CLAY_BRICK
+            // Basic Gate has no assembly usages.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:guide_modifier_recipe_renders_correct_input_variant"), () -> buildcraft.silicon.GateRecipeVariantTester::testGuideBookModifierRecipeRendersCorrectInputVariant);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:basic_clay_brick_gate_has_no_assembly_usages"), () -> buildcraft.silicon.GateRecipeVariantTester::testBasicClayBrickGateHasNoAssemblyUsages);
 
             // Crafting-table gate recipes restored from 1.12.2 — Basic Gate (clay brick), Iron
             // and Nether Brick basic-gate alternatives, Iron modifier upgrades (lapis/quartz),

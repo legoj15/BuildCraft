@@ -12,8 +12,6 @@ import java.util.Optional;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.core.Holder;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -155,15 +153,24 @@ public class GuideCraftingFactory implements GuidePartFactory {
     }
 
     /** Convert an Ingredient to a ChangingItemStack for display.
-     * In 1.21, Ingredient.items() returns Stream&lt;Holder&lt;Item&gt;&gt;. */
+     * Uses {@code Ingredient.display().resolveForStacks(ctx)} (not {@code Ingredient.items()})
+     * so DataComponentIngredient patches survive into the rendered slot. {@code items()}
+     * returns only the {@code Holder<Item>} stream, dropping the component patches — the
+     * user-visible regression was guide-book modifier-upgrade recipes (e.g. Iron AND + Lapis
+     * → Iron+Lapis Gate) rendering the gate input as a bare {@code new ItemStack(PLUG_GATE)},
+     * which displays as the default GateVariant (CLAY_BRICK "Basic Gate") and led players to
+     * conclude the Basic Gate was an ingredient in higher-tier gates. */
     static ChangingItemStack ingredientToChanging(Ingredient ingredient) {
-        List<Holder<Item>> holders = ingredient.items().toList();
-        if (holders.isEmpty()) {
-            return new ChangingItemStack(ItemStack.EMPTY);
-        }
+        net.minecraft.util.context.ContextMap ctx = new net.minecraft.util.context.ContextMap.Builder()
+            .create(net.minecraft.world.item.crafting.display.SlotDisplayContext.CONTEXT);
         List<ItemStack> stacks = new ArrayList<>();
-        for (Holder<Item> holder : holders) {
-            stacks.add(new ItemStack(holder.value()));
+        for (ItemStack stack : ingredient.display().resolveForStacks(ctx)) {
+            if (!stack.isEmpty() && stack.getItem() != net.minecraft.world.item.Items.AIR) {
+                stacks.add(stack);
+            }
+        }
+        if (stacks.isEmpty()) {
+            return new ChangingItemStack(ItemStack.EMPTY);
         }
         return new ChangingItemStack(stacks);
     }

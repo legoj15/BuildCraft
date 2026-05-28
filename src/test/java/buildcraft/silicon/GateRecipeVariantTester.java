@@ -142,6 +142,100 @@ public final class GateRecipeVariantTester {
     }
 
     /**
+     * Mirrors JEI's U-lookup: build the canonical basic gate stack a player would have in their
+     * inventory (creative tab, /give, or crafted), key it the same way JEI's subtype interpreter
+     * does ({@link GateVariant#getVariantName()}), then scan every JEI entry the collector emits
+     * and assert that the basic gate appears as an *input* in at least three entries — one for
+     * each modifier upgrade recipe (lapis, quartz, diamond). The user-visible symptom of this
+     * test failing is "pressing U on a Basic Gate does nothing" — JEI walks the same input slots
+     * and finds no recipes that consume the held stack.
+     *
+     * <p>{@link #testGoldLapisRecipeDisplayPreservesGoldVariant} pins the lower-level contract
+     * for one specific recipe; this pins the higher-level "all three modifier upgrades for the
+     * iron AND gate are discoverable from the basic gate" contract that's what the player
+     * actually experiences in JEI.
+     */
+    public static void testBasicGateAppearsAsInputInModifierRecipes(GameTestHelper helper) {
+        java.util.List<buildcraft.silicon.compat.jei.AssemblyRecipeJei> entries =
+            buildcraft.silicon.compat.jei.AssemblyRecipeCollector.collect();
+
+        for (EnumGateMaterial mat : new EnumGateMaterial[] {
+                EnumGateMaterial.IRON, EnumGateMaterial.NETHER_BRICK, EnumGateMaterial.GOLD }) {
+            for (EnumGateLogic logic : EnumGateLogic.VALUES) {
+                ItemStack basic = gate(logic, mat, EnumGateModifier.NO_MODIFIER);
+                String basicKey = buildcraft.silicon.item.ItemPluggableGate.getVariant(basic)
+                    .getVariantName();
+                int matchingEntries = 0;
+                for (buildcraft.silicon.compat.jei.AssemblyRecipeJei entry : entries) {
+                    boolean inputMatches = false;
+                    for (java.util.List<ItemStack> slot : entry.inputSlots()) {
+                        for (ItemStack candidate : slot) {
+                            if (candidate.getItem() != BCSiliconItems.PLUG_GATE.get()) continue;
+                            String candidateKey = buildcraft.silicon.item.ItemPluggableGate
+                                .getVariant(candidate).getVariantName();
+                            if (basicKey.equals(candidateKey)) {
+                                inputMatches = true;
+                                break;
+                            }
+                        }
+                        if (inputMatches) break;
+                    }
+                    if (inputMatches) matchingEntries++;
+                }
+                if (matchingEntries < 3) {
+                    helper.fail("Basic gate " + basicKey + " should be an input in >= 3 JEI "
+                        + "entries (lapis/quartz/diamond modifier upgrades). Found "
+                        + matchingEntries + " entries. JEI U-lookup on this gate will be empty.");
+                }
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Mirrors JEI's R-lookup: build a canonical higher-level (modifier) gate stack and assert
+     * that at least one JEI entry's output is keyed the same way under
+     * {@link GateVariant#getVariantName()}. Covers all 12 modifier variants (3 materials × 2
+     * logics × {lapis, quartz, diamond}; the four "modifier upgrade" recipes per material/logic
+     * each produce one of these). The user-visible symptom of this test failing is "pressing R
+     * on a higher-level gate doesn't show its assembly table recipe."
+     */
+    public static void testHigherLevelGateAppearsAsOutputInModifierRecipes(GameTestHelper helper) {
+        java.util.List<buildcraft.silicon.compat.jei.AssemblyRecipeJei> entries =
+            buildcraft.silicon.compat.jei.AssemblyRecipeCollector.collect();
+
+        for (EnumGateMaterial mat : new EnumGateMaterial[] {
+                EnumGateMaterial.IRON, EnumGateMaterial.NETHER_BRICK, EnumGateMaterial.GOLD }) {
+            for (EnumGateLogic logic : EnumGateLogic.VALUES) {
+                for (EnumGateModifier modifier : new EnumGateModifier[] {
+                        EnumGateModifier.LAPIS, EnumGateModifier.QUARTZ, EnumGateModifier.DIAMOND }) {
+                    ItemStack canonical = gate(logic, mat, modifier);
+                    String canonicalKey = buildcraft.silicon.item.ItemPluggableGate
+                        .getVariant(canonical).getVariantName();
+                    boolean found = false;
+                    for (buildcraft.silicon.compat.jei.AssemblyRecipeJei entry : entries) {
+                        for (ItemStack out : entry.outputs()) {
+                            if (out.getItem() != BCSiliconItems.PLUG_GATE.get()) continue;
+                            String outKey = buildcraft.silicon.item.ItemPluggableGate
+                                .getVariant(out).getVariantName();
+                            if (canonicalKey.equals(outKey)) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found) break;
+                    }
+                    if (!found) {
+                        helper.fail("Higher-level gate " + canonicalKey + " should be an output "
+                            + "in at least one JEI entry; not found. JEI R-lookup will be empty.");
+                    }
+                }
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
      * Pins that all six base (no-modifier) gate recipes — the chipset → basic gate ones, which
      * the user reported can't be found via JEI R/U — are actually present in the assembly
      * registry with the correct variant-bearing output, and that the JEI collector emits a
@@ -194,6 +288,79 @@ public final class GateRecipeVariantTester {
                         + "gate-output entries in collector: " + totalGateOutputs);
                 }
             }
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Pins the guide-book recipe-display contract for modifier-upgrade recipes. Before this
+     * fix, {@link buildcraft.lib.client.guide.parts.recipe.GuideAssemblyRecipes#createFactory}
+     * used {@code Ingredient.items()} to build the input slots, which strips data-component
+     * patches — so the Iron AND + Lapis recipe's gate input rendered as a bare
+     * {@code new ItemStack(PLUG_GATE)}, displayed by {@link ItemPluggableGate#getName} as the
+     * default GateVariant (CLAY_BRICK, the in-game "Basic Gate"). The Basic Gate's guide page
+     * then showed a Basic-Gate-as-input row for every modifier-upgrade recipe — the source of
+     * the user-reported "Basic Gate is shown as a key component in higher-tier gates."
+     *
+     * <p>The fix routes through {@code Ingredient.display().resolveForStacks(ctx)} which
+     * preserves the patch. This test pins that the rendered gate-input stack now reports the
+     * correct variant (Iron AND, not CLAY_BRICK AND default).
+     */
+    public static void testGuideBookModifierRecipeRendersCorrectInputVariant(GameTestHelper helper) {
+        AssemblyRecipe recipe = recipe("gate-modifier-AND-IRON-LAPIS");
+        java.util.List<buildcraft.lib.client.guide.parts.GuidePartFactory> factories =
+            buildcraft.lib.client.guide.parts.recipe.GuideAssemblyRecipes.INSTANCE.getRecipes(
+                gate(EnumGateLogic.AND, EnumGateMaterial.IRON, EnumGateModifier.LAPIS));
+        boolean foundExpected = false;
+        for (buildcraft.lib.client.guide.parts.GuidePartFactory factory : factories) {
+            if (!(factory instanceof buildcraft.lib.client.guide.parts.recipe.GuideAssemblyFactory)) continue;
+            try {
+                java.lang.reflect.Field f = factory.getClass().getDeclaredField("input");
+                f.setAccessible(true);
+                buildcraft.lib.recipe.ChangingItemStack[] input =
+                    (buildcraft.lib.recipe.ChangingItemStack[]) f.get(factory);
+                for (buildcraft.lib.recipe.ChangingItemStack slot : input) {
+                    ItemStack rep = slot.get().baseStack;
+                    if (rep.getItem() != BCSiliconItems.PLUG_GATE.get()) continue;
+                    GateVariant displayed = buildcraft.silicon.item.ItemPluggableGate.getVariant(rep);
+                    if (displayed.material == EnumGateMaterial.IRON
+                        && displayed.logic == EnumGateLogic.AND
+                        && displayed.modifier == EnumGateModifier.NO_MODIFIER) {
+                        foundExpected = true;
+                    } else if (displayed.material == EnumGateMaterial.CLAY_BRICK) {
+                        helper.fail("Guide-book Iron+Lapis modifier-upgrade recipe rendered "
+                            + "the gate input as the default CLAY_BRICK 'Basic Gate' variant — "
+                            + "DataComponentIngredient patch was dropped on the display path. "
+                            + "Players see this and conclude the Basic Gate is an ingredient.");
+                    }
+                }
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                helper.fail("Could not reflect on GuideAssemblyFactory.input: " + e);
+            }
+        }
+        if (!foundExpected) {
+            helper.fail("Guide-book Iron+Lapis modifier-upgrade recipe did not render an Iron "
+                + "AND (plain) input — no input slot resolved to the expected variant.");
+        }
+        helper.succeed();
+    }
+
+    /**
+     * The CLAY_BRICK "Basic Gate" is never an output of any assembly recipe (only crafted via
+     * the {@code gate_basic.json} crafting recipe). Pin that {@link GuideAssemblyRecipes#getUsages}
+     * also returns empty for it (no assembly recipe consumes the Basic Gate either). The
+     * combined effect of {@link #testGuideBookModifierRecipeRendersCorrectInputVariant} plus
+     * this test is that the guide-book entry for the Basic Gate never shows it as an
+     * ingredient in any assembly recipe — which is the design.
+     */
+    public static void testBasicClayBrickGateHasNoAssemblyUsages(GameTestHelper helper) {
+        ItemStack clayBasic = gate(EnumGateLogic.AND, EnumGateMaterial.CLAY_BRICK, EnumGateModifier.NO_MODIFIER);
+        java.util.List<buildcraft.lib.client.guide.parts.GuidePartFactory> usages =
+            buildcraft.lib.client.guide.parts.recipe.GuideAssemblyRecipes.INSTANCE.getUsages(clayBasic);
+        if (!usages.isEmpty()) {
+            helper.fail("CLAY_BRICK Basic Gate should not be an input in any assembly recipe; "
+                + "guide book reports " + usages.size() + " usages. This is the bug that "
+                + "led the user to expect U-on-Basic-Gate to find higher-tier gate recipes.");
         }
         helper.succeed();
     }

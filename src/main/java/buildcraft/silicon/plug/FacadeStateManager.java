@@ -26,6 +26,7 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -273,24 +274,25 @@ public enum FacadeStateManager implements IFacadeRegistry {
                         outStackFacades.computeIfAbsent(stackKey, k -> new ArrayList<>()).add(info);
                     }
 
-                    // Test to make sure that we can read + write it
+                    // Test that the BlockState round-trips through NBT and the packet buffer.
+                    // We compare raw BlockStates instead of routing reads through
+                    // FacadePhasedState.read*, because those call FacadeStateManager.validFacadeStates.get(...)
+                    // — which is still the empty seed map mid-scan (init() only publishes the populated
+                    // map after this whole loop finishes). That made the test always fall back to
+                    // defaultState (air) and throw for every valid facade.
                     FacadePhasedState phasedState = info.createPhased(null);
                     CompoundTag nbt = phasedState.writeToNbt();
-                    FacadePhasedState read = FacadePhasedState.readFromNbt(nbt);
-                    if (read.stateInfo != info) {
-                        // In 1.21.11, state identity may differ after round-trip; check state equality instead
-                        if (read.stateInfo.state != info.state) {
-                            throw new IllegalStateException("Read (from NBT) state was different! (\n\t"
-                                + read.stateInfo + "\n !=\n\t" + info + "\n\tNBT = " + nbt + "\n)");
-                        }
+                    BlockState nbtReadState = NbtUtils.readBlockState(
+                        BuiltInRegistries.BLOCK, nbt.getCompoundOrEmpty("state"));
+                    if (nbtReadState != info.state) {
+                        throw new IllegalStateException("Read (from NBT) state was different! (\n\t"
+                            + nbtReadState + "\n !=\n\t" + info.state + "\n\tNBT = " + nbt + "\n)");
                     }
                     phasedState.writeToBuffer(testingBuffer);
-                    read = FacadePhasedState.readFromBuffer(testingBuffer);
-                    if (read.stateInfo != info) {
-                        if (read.stateInfo.state != info.state) {
-                            throw new IllegalStateException("Read (from buffer) state was different! (\n\t"
-                                + read.stateInfo + "\n !=\n\t" + info + "\n)");
-                        }
+                    BlockState bufReadState = Block.BLOCK_STATE_REGISTRY.byId(testingBuffer.readVarInt());
+                    if (bufReadState != info.state) {
+                        throw new IllegalStateException("Read (from buffer) state was different! (\n\t"
+                            + bufReadState + "\n !=\n\t" + info.state + "\n)");
                     }
                     testingBuffer.clear();
                     if (DEBUG) {

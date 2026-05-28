@@ -59,7 +59,7 @@ block_fluid "pump"
 block_fluid "tank"
 
 // ---- Blocks / Laser Power ------------------------------------------------
-place "laser"           "block" "laser"
+block "laser" "laser"
 
 // ---- Blocks / Mining -----------------------------------------------------
 block_mining "mining_well"

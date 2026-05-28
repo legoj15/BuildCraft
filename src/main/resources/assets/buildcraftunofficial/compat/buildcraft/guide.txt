@@ -49,9 +49,9 @@ block_auto "replacer"
 block_engine "engine_redstone" "buildcraftunofficial:engine_redstone"
 block_engine "engine_stone"    "buildcraftunofficial:engine_stone"
 block_engine "engine_iron"     "buildcraftunofficial:engine_iron"
-place "engine_rf"         "block" "engine"          // FE Engine
-place "mj_dynamo"         "block" "engine"          // MJ Dynamo
-place_creative "engine_creative"   "block" "engine"
+block_engine "engine_rf"       "buildcraftunofficial:engine_rf"
+block_engine "mj_dynamo"       "buildcraftunofficial:mj_dynamo"
+item_stack_creative "block" "engine" "engine_creative" "buildcraftunofficial:engine_creative"
 
 // ---- Blocks / Fluid ------------------------------------------------------
 block_fluid "flood_gate"

@@ -1,12 +1,11 @@
 # BuildCraft 1.12.2 → 26.1.x Port Status
 
-Last audited: 2026-05-26 (added facade dedup follow-ups)
+Last audited: 2026-05-27 (cleared the chipset bullet)
 
 ### Guide Book pages awaiting writeups
 
 Stub entries at [guide/en_us/placeholder/](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/en_us/placeholder/), wired through [guide.txt](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide.txt). Each appears as a "(WIP)" entry until a real writeup is added at `block/<name>.md`, `item/<name>.md`, or `pipe/<name>.md` and the manifest registration is switched from `place` to the matching alias.
 
-- [ ] **Items / Chipsets:** redstone_red_chipset, redstone_iron_chipset, redstone_gold_chipset, redstone_diamond_chipset, redstone_quartz_chipset
 - [ ] **Items / Fluid:** fragile_fluid_container, gelled_water, water_gel (also fold water_gel_spawn into this writeup)
 - [ ] **Items / Paperwork:** decorated_laser, schematic_single_clean, schematic_single_used
 - [ ] **Items / Pluggables:** plug_timer

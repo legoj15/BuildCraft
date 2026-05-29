@@ -162,9 +162,12 @@ public class GuideCraftingFactory implements GuidePartFactory {
      * resolves tags through its own registry-aware path, displayed them correctly. The registry
      * access comes from the client level, where the server's tags are synced and bound; the guide
      * book only opens in-world, so the level is non-null in practice. The registry-less fallback
-     * still resolves item/component ingredients (tags stay blank) if no level is loaded. */
+     * still resolves item/component ingredients (tags stay blank) when there is no client level —
+     * either before a world loads or off-client entirely (e.g. {@code Minecraft.getInstance()} is
+     * null on a dedicated/game-test server that exercises this rendering path). */
     static net.minecraft.util.context.ContextMap displayContext() {
-        net.minecraft.client.multiplayer.ClientLevel level = net.minecraft.client.Minecraft.getInstance().level;
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        net.minecraft.client.multiplayer.ClientLevel level = mc == null ? null : mc.level;
         if (level != null) {
             return net.minecraft.world.item.crafting.display.SlotDisplayContext.fromLevel(level);
         }

@@ -12,6 +12,7 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.context.ContextMap;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
@@ -20,6 +21,7 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.item.crafting.ShapelessRecipe;
+import net.minecraft.world.item.crafting.display.SlotDisplayContext;
 import net.minecraft.world.level.Level;
 
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -47,12 +49,20 @@ public final class CraftingUtil {
      *
      * @param recipe The crafting recipe to place
      * @param blueprint A 9-slot (3x3) phantom inventory to populate
+     * @param level The (server) level whose registry access resolves tag-based ingredients
      */
-    public static void placeRecipeInBlueprint(CraftingRecipe recipe, ItemHandlerSimple blueprint) {
+    public static void placeRecipeInBlueprint(CraftingRecipe recipe, ItemHandlerSimple blueprint, Level level) {
         // Clear blueprint
         for (int i = 0; i < blueprint.getSlots(); i++) {
             blueprint.setStackInSlot(i, ItemStack.EMPTY);
         }
+
+        // Context for resolving ingredient SlotDisplays. fromLevel() supplies
+        // SlotDisplayContext.REGISTRIES (+ FUEL_VALUES); without REGISTRIES a TagSlotDisplay —
+        // i.e. every tag-based ingredient like #c:ingots/iron or #c:gears/stone — resolves to an
+        // empty stream and the phantom slot stays blank. Runs server-side, so the registry source
+        // is the Level, not Minecraft.getInstance().
+        ContextMap ctx = SlotDisplayContext.fromLevel(level);
 
         if (recipe instanceof ShapedRecipe shaped) {
             // For shaped recipes, respect the pattern width/height
@@ -67,7 +77,7 @@ public final class CraftingUtil {
                     if (ingredientIdx < ingredients.size()) {
                         Optional<Ingredient> optIngredient = ingredients.get(ingredientIdx);
                         optIngredient.ifPresent(ingredient -> {
-                            ItemStack stack = ingredientToStack(ingredient);
+                            ItemStack stack = ingredientToStack(ingredient, ctx);
                             if (!stack.isEmpty()) {
                                 blueprint.setStackInSlot(blueprintIdx, stack);
                             }
@@ -79,7 +89,7 @@ public final class CraftingUtil {
             // Shapeless — AT-opened field
             List<Ingredient> ingredients = shapeless.ingredients;
             for (int i = 0; i < ingredients.size() && i < 9; i++) {
-                ItemStack stack = ingredientToStack(ingredients.get(i));
+                ItemStack stack = ingredientToStack(ingredients.get(i), ctx);
                 if (!stack.isEmpty()) {
                     blueprint.setStackInSlot(i, stack);
                 }
@@ -94,7 +104,7 @@ public final class CraftingUtil {
                     if (d instanceof net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay shapelessDisplay) {
                         for (int i = 0; i < shapelessDisplay.ingredients().size() && i < 9; ++i) {
                             net.minecraft.world.item.crafting.display.SlotDisplay slotDisplay = shapelessDisplay.ingredients().get(i);
-                            List<ItemStack> stacks = slotDisplay.resolveForStacks(net.minecraft.util.context.ContextMap.EMPTY);
+                            List<ItemStack> stacks = slotDisplay.resolveForStacks(ctx);
                             if (!stacks.isEmpty()) {
                                 blueprint.setStackInSlot(i, stacks.get(0).copy());
                             }
@@ -107,7 +117,7 @@ public final class CraftingUtil {
                                 int idx = c + r * w;
                                 if (idx < shapedDisplay.ingredients().size()) {
                                     net.minecraft.world.item.crafting.display.SlotDisplay slotDisplay = shapedDisplay.ingredients().get(idx);
-                                    List<ItemStack> stacks = slotDisplay.resolveForStacks(net.minecraft.util.context.ContextMap.EMPTY);
+                                    List<ItemStack> stacks = slotDisplay.resolveForStacks(ctx);
                                     if (!stacks.isEmpty()) {
                                         blueprint.setStackInSlot(c + r * 3, stacks.get(0).copy());
                                     }
@@ -131,9 +141,7 @@ public final class CraftingUtil {
      * variant patch and pre-fill the slot with a default-variant stack — clicking "+" on the
      * Iron+Lapis recipe would populate the gate slot with a bare CLAY_BRICK "Basic Gate"
      * instead of the Iron AND Gate the recipe actually requires. */
-    private static ItemStack ingredientToStack(Ingredient ingredient) {
-        net.minecraft.util.context.ContextMap ctx = new net.minecraft.util.context.ContextMap.Builder()
-            .create(net.minecraft.world.item.crafting.display.SlotDisplayContext.CONTEXT);
+    private static ItemStack ingredientToStack(Ingredient ingredient, ContextMap ctx) {
         for (ItemStack candidate : ingredient.display().resolveForStacks(ctx)) {
             if (!candidate.isEmpty() && candidate.getItem() != net.minecraft.world.item.Items.AIR) {
                 return candidate.copy();

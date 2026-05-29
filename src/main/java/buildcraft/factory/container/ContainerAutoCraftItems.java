@@ -121,7 +121,7 @@ public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchIt
         if (!(recipe.value() instanceof CraftingRecipe craftingRecipe)) {
             return PostPlaceAction.NOTHING;
         }
-        CraftingUtil.placeRecipeInBlueprint(craftingRecipe, tile.invBlueprint);
+        CraftingUtil.placeRecipeInBlueprint(craftingRecipe, tile.invBlueprint, level);
         return PostPlaceAction.PLACE_GHOST_RECIPE;
     }
 

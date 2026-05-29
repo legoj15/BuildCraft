@@ -103,7 +103,7 @@ public class ContainerAdvancedCraftingTable extends ContainerBCTile<TileAdvanced
         }
 
         // Delegate to CraftingUtil (in lib where AT is applied)
-        CraftingUtil.placeRecipeInBlueprint(craftingRecipe, tile.invBlueprint);
+        CraftingUtil.placeRecipeInBlueprint(craftingRecipe, tile.invBlueprint, level);
 
         return PostPlaceAction.PLACE_GHOST_RECIPE;
     }

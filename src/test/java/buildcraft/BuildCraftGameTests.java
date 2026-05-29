@@ -448,6 +448,12 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:statement_item_param_round_trip"), () -> buildcraft.core.statements.StatementSerializationTester::testItemStackParamRoundTrip);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:statement_item_param_empty_round_trip"), () -> buildcraft.core.statements.StatementSerializationTester::testEmptyItemStackParamRoundTrip);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:statement_item_exact_param_round_trip"), () -> buildcraft.core.statements.StatementSerializationTester::testItemStackExactParamRoundTrip);
+
+            // Blueprint placement (JEI "+" / recipe book) must resolve TAG-based ingredients —
+            // a TagSlotDisplay needs SlotDisplayContext.REGISTRIES in the context or it resolves to
+            // an empty stream, leaving phantom slots blank for the gears (and most recipes). See
+            // CraftingUtilBlueprintTester.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:blueprint_place_resolves_tag_ingredients"), () -> buildcraft.lib.misc.CraftingUtilBlueprintTester::testTagIngredientsResolveIntoBlueprint);
         }
     }
 }

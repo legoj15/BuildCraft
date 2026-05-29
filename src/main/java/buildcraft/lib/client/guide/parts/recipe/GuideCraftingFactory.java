@@ -152,6 +152,26 @@ public class GuideCraftingFactory implements GuidePartFactory {
         return new GuideCraftingFactory(matrix, outputs);
     }
 
+    /** Build the {@link net.minecraft.util.context.ContextMap} used to resolve ingredient
+     * {@link net.minecraft.world.item.crafting.display.SlotDisplay}s for the guide book.
+     *
+     * <p>This MUST carry {@link net.minecraft.world.item.crafting.display.SlotDisplayContext#REGISTRIES}:
+     * a {@code TagSlotDisplay} — i.e. every tag-based ingredient, such as {@code #c:gears/wooden}
+     * or {@code #c:rods/wooden} — resolves to an empty stream without it. An all-tag recipe (the
+     * gear crafting recipes) therefore rendered as a blank input grid even though JEI, which
+     * resolves tags through its own registry-aware path, displayed them correctly. The registry
+     * access comes from the client level, where the server's tags are synced and bound; the guide
+     * book only opens in-world, so the level is non-null in practice. The registry-less fallback
+     * still resolves item/component ingredients (tags stay blank) if no level is loaded. */
+    static net.minecraft.util.context.ContextMap displayContext() {
+        net.minecraft.client.multiplayer.ClientLevel level = net.minecraft.client.Minecraft.getInstance().level;
+        if (level != null) {
+            return net.minecraft.world.item.crafting.display.SlotDisplayContext.fromLevel(level);
+        }
+        return new net.minecraft.util.context.ContextMap.Builder()
+            .create(net.minecraft.world.item.crafting.display.SlotDisplayContext.CONTEXT);
+    }
+
     /** Convert an Ingredient to a ChangingItemStack for display.
      * Uses {@code Ingredient.display().resolveForStacks(ctx)} (not {@code Ingredient.items()})
      * so DataComponentIngredient patches survive into the rendered slot. {@code items()}
@@ -161,8 +181,7 @@ public class GuideCraftingFactory implements GuidePartFactory {
      * which displays as the default GateVariant (CLAY_BRICK "Basic Gate") and led players to
      * conclude the Basic Gate was an ingredient in higher-tier gates. */
     static ChangingItemStack ingredientToChanging(Ingredient ingredient) {
-        net.minecraft.util.context.ContextMap ctx = new net.minecraft.util.context.ContextMap.Builder()
-            .create(net.minecraft.world.item.crafting.display.SlotDisplayContext.CONTEXT);
+        net.minecraft.util.context.ContextMap ctx = displayContext();
         List<ItemStack> stacks = new ArrayList<>();
         for (ItemStack stack : ingredient.display().resolveForStacks(ctx)) {
             if (!stack.isEmpty() && stack.getItem() != net.minecraft.world.item.Items.AIR) {

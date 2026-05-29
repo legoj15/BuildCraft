@@ -59,8 +59,9 @@ public enum GuideAssemblyRecipes implements IStackRecipes {
         // whose default GateVariant renders as the CLAY_BRICK "Basic Gate." Players reading the
         // guide-book entry then concluded the Basic Gate was an ingredient in higher-tier gates,
         // even though it isn't a recipe input anywhere.
-        net.minecraft.util.context.ContextMap ctx = new net.minecraft.util.context.ContextMap.Builder()
-            .create(net.minecraft.world.item.crafting.display.SlotDisplayContext.CONTEXT);
+        // Shared context carries SlotDisplayContext.REGISTRIES so tag-based ingredients resolve
+        // (see GuideCraftingFactory.displayContext) rather than rendering as an empty slot.
+        net.minecraft.util.context.ContextMap ctx = GuideCraftingFactory.displayContext();
         ItemStack[] inStacks = new ItemStack[inputs.size()];
         int i = 0;
         for (buildcraft.api.recipes.IngredientStack ing : inputs) {

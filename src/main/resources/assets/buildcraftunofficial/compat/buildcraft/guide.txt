@@ -91,7 +91,7 @@ chipset "chipset_diamond"
 chipset "chipset_quartz"
 
 // ---- Items / Fluid -------------------------------------------------------
-place "fragile_fluid_container" "item" "fluid"
+item_typed "fluid" "fragile_fluid_container" "buildcraftunofficial:fragile_fluid_container"
 place "gelled_water"            "item" "fluid"
 place "water_gel"               "item" "fluid"
 

@@ -241,6 +241,26 @@ public class GuideGroupManager {
             buildcraft.builders.BCBuildersItems.ARCHITECT.get(),
             buildcraft.builders.BCBuildersItems.FILLER.get());
 
+        // Fragile Fluid Shards: every block that stores fluid hands its contents back as
+        // fragile fluid shards when broken (the FluidItemDrops / BlockDropsUtil.dropFluidShards
+        // call sites: BlockTank, BlockPump, BlockFloodGate, BlockDistiller, BlockHeatExchange,
+        // BlockEngineIron_BC8, BlockBuilder). The shard is the entry and each storage block is a
+        // source/key, so the shard's page auto-emits a "Dropped by" listing of those blocks and
+        // each block's page auto-emits a "Fluid Shards" link back to the shard. Fluid pipes also
+        // shed their in-transit contents as shards, but they're transport rather than storage and
+        // are covered in the shard page's prose instead of padding the list with eleven
+        // near-identical pipe entries. Wiring a new fluid-holding block to drop shards? Add it here.
+        addEntry("buildcraft", "fluid_shards",
+            buildcraft.core.BCCoreItems.FRAGILE_FLUID_CONTAINER.get());
+        addKeys("buildcraft", "fluid_shards",
+            buildcraft.factory.BCFactoryItems.TANK.get(),
+            buildcraft.factory.BCFactoryItems.PUMP.get(),
+            buildcraft.factory.BCFactoryItems.FLOOD_GATE.get(),
+            buildcraft.factory.BCFactoryItems.DISTILLER.get(),
+            buildcraft.factory.BCFactoryItems.HEAT_EXCHANGE.get(),
+            buildcraft.energy.BCEnergyItems.ENGINE_IRON.get(),
+            buildcraft.builders.BCBuildersItems.BUILDER.get());
+
         // ---- Auto-derived groups from registries ----
 
         // Combustion fuels: every registered IFuel becomes an entry, the iron (combustion)

@@ -30,7 +30,10 @@ public class ItemFragileFluidContainer extends Item implements IItemFluidShard {
     public Component getName(ItemStack stack) {
         FluidStack fluid = getFluid(stack);
         if (fluid.isEmpty()) {
-            return Component.translatable(getDescriptionId() + ".name", "ERROR! EMPTY FLUID!");
+            // No fluid stored — e.g. the bare item shown in the guide book or the
+            // creative/JEI search. Use a generic name rather than substituting a
+            // placeholder string into the "Fragile %s Shard" format.
+            return Component.translatable(getDescriptionId() + ".name.empty");
         } else {
             return Component.translatable(getDescriptionId() + ".name", fluid.getHoverName().getString());
         }

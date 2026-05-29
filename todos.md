@@ -6,7 +6,7 @@ Last audited: 2026-05-27 (cleared the chipset bullet)
 
 Stub entries at [guide/en_us/placeholder/](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/en_us/placeholder/), wired through [guide.txt](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide.txt). Each appears as a "(WIP)" entry until a real writeup is added at `block/<name>.md`, `item/<name>.md`, or `pipe/<name>.md` and the manifest registration is switched from `place` to the matching alias.
 
-- [ ] **Items / Fluid:** gelled_water, water_gel (also fold water_gel_spawn into this writeup)
+- [ ] **Items / Fluid:** water_gel, water_gel_spawn (can cross-link the new [gelled_water](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/en_us/item/gelled_water.md) page)
 - [ ] **Items / Paperwork:** decorated_laser, schematic_single_clean, schematic_single_used
 - [ ] **Items / Pluggables:** plug_timer
 - [ ] **Items / Tools:** gate_copier

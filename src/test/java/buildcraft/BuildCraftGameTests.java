@@ -411,6 +411,11 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_swap_iron_or_to_and"), () -> buildcraft.silicon.GateCraftingRecipeTester::testIronOrToAndSwap);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_swap_gold_diamond_and_to_or"), () -> buildcraft.silicon.GateCraftingRecipeTester::testGoldDiamondAndToOrSwap);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:gate_swap_clay_brick_excluded"), () -> buildcraft.silicon.GateCraftingRecipeTester::testClayBrickSwapNotAvailable);
+
+            // Factory recipe parity — restored Gelled Water -> Water Bucket (1.12.2's water_gel_to_bucket;
+            // the only consumer of Gelled Water, silently lost during the modern port then re-added).
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:water_gel_to_bucket_recipe"), () -> buildcraft.factory.WaterGelRecipeTester::water_gel_to_bucket_recipe);
+
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:autoworkbench_cobblestone_pipe_connects"), () -> buildcraft.factory.MachinePipeConnectivityTester::testCobblestonePipeConnectsToAutoWorkbench);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:autoworkbench_clay_pipe_inserts"), () -> buildcraft.factory.MachinePipeConnectivityTester::testClayPipeInsertsIntoAutoWorkbench);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:item_machines_expose_item_capability"), () -> buildcraft.factory.MachinePipeConnectivityTester::testItemMachinesExposeItemHandlerCapability);

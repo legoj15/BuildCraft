@@ -158,6 +158,19 @@ public class LensItemModel implements ItemModel {
             return;
         }
 
+        // If any quad uses an animated sprite (the clear lens's water_flow overlay), flag the
+        // render state as animated. Modern MC renders each GUI item once into GuiItemAtlas — a
+        // cache keyed by model identity — and reuses that frozen frame; only render states flagged
+        // animated get re-drawn each frame, re-sampling the live block atlas so the animation
+        // advances. Vanilla's CuboidItemModelWrapper sets this automatically from FLAG_ANIMATED;
+        // this custom ItemModel bypasses that wrapper, so it must propagate the flag itself.
+        for (BakedQuad quad : quads) {
+            if ((quad.materialInfo().flags() & BakedQuad.FLAG_ANIMATED) != 0) {
+                renderState.setAnimated();
+                break;
+            }
+        }
+
         renderState.appendModelIdentityElement(this);
         renderState.appendModelIdentityElement(key.lensKey());
         renderState.appendModelIdentityElement(displayContext);

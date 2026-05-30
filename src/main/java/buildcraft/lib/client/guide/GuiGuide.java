@@ -175,6 +175,9 @@ public class GuiGuide extends Screen {
     public TypeOrder sortingOrder = SORTING_TYPES[0];
     private boolean isOpen = false;
     private boolean isOpening = false;
+    /** Small-screen only: when the window is too narrow for side tabs, a "Chapters" tab at the
+     *  top of the right page toggles this centered overlay menu (restores 1.12.2 behavior). */
+    private boolean showingContentsMenu = false;
 
     /** Float between -90 and 90 */
     private float openingAngleLast = -90, openingAngleNext = -90;
@@ -529,12 +532,36 @@ public class GuiGuide extends Screen {
             );
         }
 
-        // Draw chapter sidebar
+        // Draw chapter sidebar. When the book is too narrow for side tabs, fall back to a
+        // "Chapters" tab at the top of the right page that toggles a centered overlay menu
+        // (1.12.2 behavior). secondPageX was computed above for renderSecondPage.
         boolean drawContents = true;
         boolean smallScreen = isSmallScreen();
         if (smallScreen) {
-            // Simplified for small screens — chapter list not shown by default
-            drawContents = false;
+            drawContents = showingContentsMenu;
+            String str = LocaleUtil.localize("buildcraft.guide.chapter_list");
+            if (showingContentsMenu) {
+                CHAPTER_MARKER_9.draw(FLOATING_CHAPTER_MENU);
+                currentFont.drawString(str, (int) FLOATING_CHAPTER_MENU.getX() + 7,
+                    (int) FLOATING_CHAPTER_MENU.getY() + 7, 0);
+            } else {
+                boolean isHovered = new GuiRectangle(secondPageX, minY, 80, 10).contains(mouse);
+                int tabY = minY + (isHovered ? -5 : 0);
+                int strWidth = currentFont.getStringWidth(str);
+                GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
+                if (graphics != null) {
+                    // Clip so the tab only peeks from the top edge rather than drawing its full
+                    // height down over the page.
+                    try (GuiUtil.AutoGlScissor scissor =
+                        GuiUtil.scissor(graphics, secondPageX, 0, strWidth + 20, minY + 10)) {
+                        CHAPTER_MARKER_9.draw(secondPageX, tabY, strWidth + 20, 100);
+                        currentFont.drawString(str, secondPageX + 10, tabY + 3, 0);
+                    }
+                } else {
+                    CHAPTER_MARKER_9.draw(secondPageX, tabY, strWidth + 20, 100);
+                    currentFont.drawString(str, secondPageX + 10, tabY + 3, 0);
+                }
+            }
         }
 
         if (drawContents) {
@@ -636,10 +663,36 @@ public class GuiGuide extends Screen {
                 GuidePageBase current = currentPage;
                 current.setFontRenderer(currentFont);
 
-                // Check chapter clicks
-                for (GuideChapter chapter : chapters) {
-                    int clickResult = chapter.handleClick();
-                    if (clickResult > 0) {
+                // Check chapter clicks. On a small screen the side tabs are hidden, so only
+                // hit-test chapters when the centered menu is actually open — otherwise a click
+                // in the middle of the page could trigger an invisible central tab.
+                boolean chaptersInteractive = !isSmallScreen() || showingContentsMenu;
+                if (chaptersInteractive) {
+                    for (GuideChapter chapter : chapters) {
+                        int clickResult = chapter.handleClick();
+                        if (clickResult > 0) {
+                            // Selecting a chapter (result 1, not an expand-arrow toggle 2)
+                            // closes the overlay menu.
+                            if (showingContentsMenu && clickResult == 1) {
+                                showingContentsMenu = false;
+                            }
+                            return true;
+                        }
+                    }
+                }
+
+                // Small-screen "Chapters" tab / overlay menu toggle (1.12.2 behavior).
+                if (isSmallScreen()) {
+                    if (showingContentsMenu) {
+                        // A click outside the menu closes it; clicks inside are swallowed so
+                        // they don't fall through to the page content beneath.
+                        if (!FLOATING_CHAPTER_MENU.contains(mouse)) {
+                            showingContentsMenu = false;
+                        }
+                        return true;
+                    } else if (new GuiRectangle(
+                        minX + PAGE_LEFT.width + (int) PAGE_RIGHT_TEXT.getX(), minY, 80, 10).contains(mouse)) {
+                        showingContentsMenu = true;
                         return true;
                     }
                 }

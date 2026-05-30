@@ -415,34 +415,14 @@ public enum GuideManager {
             // visibility flag baked into iterateAllDefault) so the leaf still exists.
         }
 
-        // Dynamically-iterated categories (Triggers, Actions, ...) become
-        // top-level chapters under each opted-in book root, parallel to the
-        // JSON-defined chapters (Blocks/Items/Pipes). 1.12.2 wrapped these in
-        // a single "Others" chapter, which collapsed Triggers and Actions into
-        // sub-items and lost the side-tab dividers users expected.
-        final IEntryLinkConsumer adder = (tags, page) -> {
-            if (pageLinksAdded.add(page)) {
-                quickSearcher.add(page, page.getSearchName());
-            }
-            String title = LocaleUtil.localize(tags.type);
-            for (Entry<GuideBook, Map<TypeOrder, ContentsNode>> bookEntry : contents.entrySet()) {
-                @Nullable GuideBook book = bookEntry.getKey();
-                if (book != null && !book.appendAllEntries) continue;
-                for (ContentsNode root : bookEntry.getValue().values()) {
-                    IContentsNode subNode = root.getChild(title);
-                    ContentsNode chapter;
-                    if (subNode instanceof ContentsNode) {
-                        chapter = (ContentsNode) subNode;
-                    } else if (subNode == null) {
-                        chapter = new ContentsNode(title, 0);
-                        root.addChild(chapter);
-                    } else {
-                        throw new IllegalStateException("Unknown node type " + subNode.getClass());
-                    }
-                    chapter.addChild(page);
-                }
-            }
-        };
+        // Auto-iterated categories (Triggers, Actions, ...) are filed per sort order by
+        // fileExtraEntry: their own top-level chapter under Sort By Type, nested under the
+        // single "BuildCraft" mod chapter under Sort By Mod, and flat under Alphabetical —
+        // mirroring how regular entries (Blocks/Items/Pipes) place themselves via getOrdered.
+        // The previous version filed them as a top-level chapter in *every* order, which
+        // leaked "Triggers"/"Actions" chapters into Mod and Alphabetical sorts. Statements
+        // carry no subtype.
+        final IEntryLinkConsumer adder = (tags, page) -> fileExtraEntry(tags.type, null, page);
 
         for (PageValueType<?> type : GuidePageRegistry.INSTANCE.types.values()) {
             type.iterateAllDefault(adder, net.minecraft.util.profiling.InactiveProfiler.INSTANCE);
@@ -566,39 +546,78 @@ public enum GuideManager {
         addSetPowerLimitCategory(adder);
     }
 
-    /** File {@code page} under {@code chapterKey > subtypeKey} in every per-book contents
-     *  tree that opts into receiving all entries (mirroring the {@link IEntryLinkConsumer}
-     *  adder lambda's book filter). When {@code subtypeKey} is {@code null} or empty the
-     *  page lands at {@code chapterKey} only — same shape as the lambda. The two-level walk
-     *  is what lets a category entry land at e.g. {@code Actions > Item Transport} rather
-     *  than as a peer of the subtype headers under {@code Actions} (which sorts
-     *  alphabetically among them and reads as "tucked under Basic").
-     *
-     *  <p>Both keys are full localization keys — same convention {@link IEntryLinkConsumer}
-     *  uses for {@code tags.type} (e.g. {@code "buildcraft.guide.contents.actions"} and
-     *  {@code "buildcraft.guide.chapter.subtype.pipe_item"}). Idempotent on
-     *  {@link #pageLinksAdded} / {@link #quickSearcher}, so calling it multiple times for
-     *  the same page (e.g. Pipe Signals filed under both Triggers and Actions) is safe. */
-    private void addToChapterSubtype(String chapterKey, @Nullable String subtypeKey, PageLink page) {
+    /** File an auto-iterated leaf — a statement Trigger/Action, or a consolidated "category"
+     *  entry — into every opted-in book's contents tree, placed correctly <i>per sort order</i>
+     *  (the previous version filed it as a top-level chapter in <em>every</em> order, which
+     *  leaked "Triggers"/"Actions" chapters into Sort By Mod and Alphabetical where the regular
+     *  entries collapse under "BuildCraft" / go flat):
+     *  <ul>
+     *  <li><b>Alphabetical</b> (no tags) — flat under the root, no chapter grouping, a pure
+     *      A–Z list.</li>
+     *  <li><b>Mod-first</b> (Sort By Mod) — under the single "BuildCraft" mod chapter, with
+     *      {@code chapterKey} as a sub-header beneath it, so the order shows exactly one
+     *      top-level chapter (mirrors how regular entries nest their type under the mod).</li>
+     *  <li><b>Type-first</b> (Sort By Type) — as its own top-level chapter named by
+     *      {@code chapterKey} (e.g. "Triggers"/"Actions"), parallel to Blocks/Items/Pipes.</li>
+     *  </ul>
+     *  When {@code subtypeKey} is non-null/non-empty <em>and the order groups by subtype</em>
+     *  (Sort By Type), the leaf lands one level deeper under the category chapter (e.g.
+     *  {@code Actions > Item Transport}); orders without a subtype level (Sort By Mod) drop it,
+     *  so a pipe-item category action sits directly under {@code Actions} alongside the plain
+     *  actions instead of inside an Item Transport sub-group. Both keys are full localization
+     *  keys. Idempotent on {@link #pageLinksAdded} / {@link #quickSearcher}, so filing the same
+     *  page under several chapters (e.g. Pipe Signals under both Triggers and Actions) is safe. */
+    private void fileExtraEntry(String chapterKey, @Nullable String subtypeKey, PageLink page) {
         if (pageLinksAdded.add(page)) {
             quickSearcher.add(page, page.getSearchName());
         }
         String chapterTitle = LocaleUtil.localize(chapterKey);
         String subtypeTitle = (subtypeKey == null || subtypeKey.isEmpty())
             ? null : LocaleUtil.localize(subtypeKey);
+        // Every auto-iterated entry is BuildCraft's (this is a single mod); regular entries
+        // build the same "BuildCraft" node via getOrdered(mod_type)[0], so the get-or-create
+        // inside placeExtraEntryInOrder reuses it rather than making a second mod tab.
+        String modTitle = LocaleUtil.localize(ETypeTag.MOD.preText + "buildcraft");
         for (Entry<GuideBook, Map<TypeOrder, ContentsNode>> bookEntry : contents.entrySet()) {
             @Nullable GuideBook book = bookEntry.getKey();
             if (book != null && !book.appendAllEntries) continue;
-            for (ContentsNode root : bookEntry.getValue().values()) {
-                ContentsNode chapter = getOrCreateChapter(root, chapterTitle, 0);
-                if (subtypeTitle == null) {
-                    chapter.addChild(page);
-                } else {
-                    ContentsNode sub = getOrCreateChapter(chapter, subtypeTitle, 1);
-                    sub.addChild(page);
-                }
+            for (Entry<TypeOrder, ContentsNode> orderEntry : bookEntry.getValue().entrySet()) {
+                placeExtraEntryInOrder(orderEntry.getKey(), orderEntry.getValue(),
+                    modTitle, chapterTitle, subtypeTitle, page);
             }
         }
+    }
+
+    /** Pure placement of one already-deduped {@code leaf} into a single sort {@code order}'s
+     *  contents {@code root}. Walks the order's own tag sequence and emits one chapter level per
+     *  tag the entry has a value for — exactly mirroring {@link JsonTypeTags#getOrdered} for
+     *  regular entries — so the depth always matches the order: flat under Alphabetical
+     *  (no tags), {@code BuildCraft > Actions} under Sort By Mod ({@code [MOD, TYPE]}, no
+     *  subtype level), {@code Actions > Item Transport} under Sort By Type
+     *  ({@code [TYPE, SUB_TYPE]}). Static and registry-free so it can be unit-tested directly. */
+    static void placeExtraEntryInOrder(TypeOrder order, ContentsNode root, String modTitle,
+        String chapterTitle, @Nullable String subtypeTitle, IContentsNode leaf) {
+        ContentsNode node = root;
+        int indent = 0;
+        for (ETypeTag tag : order.tags) {
+            String title = switch (tag) {
+                case MOD -> modTitle;
+                case TYPE -> chapterTitle;
+                case SUB_TYPE -> subtypeTitle;
+                case SUB_MOD -> null; // auto-iterated entries carry no submod
+            };
+            if (title == null || title.isEmpty()) {
+                continue; // skip tags this entry has no value for (mirrors getOrdered)
+            }
+            node = getOrCreateChapter(node, title, indent++);
+        }
+        node.addChild(leaf);
+    }
+
+    /** Thin wrapper over {@link #fileExtraEntry} kept for the {@link #registerCategory} call
+     *  site (category entries that specify an explicit subtype). */
+    private void addToChapterSubtype(String chapterKey, @Nullable String subtypeKey, PageLink page) {
+        fileExtraEntry(chapterKey, subtypeKey, page);
     }
 
     /** Locate or create a child {@link ContentsNode} of {@code parent} with the given

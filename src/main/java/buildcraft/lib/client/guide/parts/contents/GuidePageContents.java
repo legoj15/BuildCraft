@@ -303,6 +303,19 @@ public class GuidePageContents extends GuidePageBase {
              return true;
         }
 
+        // A click on a sort-order icon must re-sort, not focus search. The search tab's
+        // generous hitbox (the 40x34 rect below, carried over verbatim from 1.12.2) overlaps
+        // the top-right corner of the first ("Sort By Type") icon. 1.12.2 hit-tested the order
+        // icons first within a single handler and returned early; the modern port runs this
+        // search-focus pass (GuiGuide.mouseClicked -> currentPage.mouseClicked) *before* the
+        // order handler in handleMouseClick, so the search tab would otherwise swallow that
+        // click. Returning false lets GuiGuide fall through to handleMouseClick, which performs
+        // the re-sort. The icons only render on the left content page (index != 0), so the
+        // title spread's search tab is left untouched.
+        if (getIndex() != 0 && isOverOrderIcon(mouseX, mouseY)) {
+            return false;
+        }
+
         // The click region needs to cover the magnifying-glass icon (drawn at
         // pageX + 8, pageY - 19, 12x12) and the closed-tab handle. 1.12.2 used
         // `new GuiRectangle(x - 2, y - 34, 40, 34)` where (x, y) was the page
@@ -324,6 +337,25 @@ public class GuidePageContents extends GuidePageBase {
         }
         
         return super.mouseClicked(event, doubleClick);
+    }
+
+    /** True iff (mouseX, mouseY) is over one of the three sort-order icons. Reconstructs the
+     *  left content page's origin from the search box, which {@link #renderPage} positions each
+     *  frame at {@code (pageX + 23, pageY - 16)}; the icons render at
+     *  {@code (pageX + ORDER_OFFSET_X, pageY + ORDER_OFFSET_Y + 14*i)}, 14x14 — the exact rects
+     *  {@link #handleMouseClick} tests, so the skip region tracks them as the book is resized. */
+    private boolean isOverOrderIcon(double mouseX, double mouseY) {
+        int pageX = searchText.getX() - 23;
+        int pageY = searchText.getY() + 16;
+        int oX = pageX + ORDER_OFFSET_X;
+        int oY = pageY + ORDER_OFFSET_Y;
+        for (int i = 0; i < GuiGuide.SORTING_TYPES.length; i++) {
+            if (new GuiRectangle(oX, oY, 14, 14).contains(mouseX, mouseY)) {
+                return true;
+            }
+            oY += 14;
+        }
+        return false;
     }
 
     @Override

@@ -1,18 +1,18 @@
 <lore>
-Did you know items can be painted? Piping them through a coloured Lens will do just that.
+Did you know items can be painted and sorted without needing a special pipe? Place Lenses and Filters on your existing pipes.
 </lore>
 <no_lore>
-The Lens is a pluggable used to paint any item that travels through it the same colour as the lens itself.
+Lenses and Filters are pipe plugs used to paint and filter any item that travels through it.
 </no_lore>
-
+<chapter name="Lenses"/>
+Place a lens on the connecting face between two item transport pipes and it will paint it that color. The Clear Lens will wash the paint off any item that travels through it. Painted items are not permanently altered; the paint is only used for the duration of its travel throughout the pipe system.
+<chapter name="Filters"/>
+Place a filter on the connecting face between two item transport pipes and it will only allow items that are painted the same color as itself through. The Clear Filter will only allow unpainted items.
 <recipes stack="buildcraftunofficial:plug_lens"/>
-
-<chapter name="Plug Mechanics"/>
-The painting of items allows you extra filtering options for your pipe system but does not actually affect their in-world colour.
-Lenses can only be placed on item Transport pipes as only items can be painted.
-
-<chapter name="Pipe Connections"/>
-Pluggables can only be placed on pipes and can be placed on any side of a pipe.
-It will not stop any other pipe and pipe wire connection between two pipes when placed in between.
-
 <usages stack="buildcraftunofficial:plug_lens"/>
+
+<chapter name="Alternatives"/>
+If you wish for a gate controllable version of this system, these pipes can achieve the same functionality as lenses and filters when used in conjunction:
+<link to="buildcraftunofficial:pipe/emzuli_item"/>
+<link to="buildcraftunofficial:pipe/lapis_item"/>
+<link to="buildcraftunofficial:pipe/daizuli_item"/>

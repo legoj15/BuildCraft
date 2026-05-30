@@ -140,7 +140,7 @@ item_stack_creative "item" "tool" "debugger"       "buildcraftunofficial:debugge
 item_stack_creative "item" "tool" "filler_planner" "buildcraftunofficial:filler_planner"
 item_stack "item" "tool" "marker_connector"  "buildcraftunofficial:marker_connector"
 item_stack "item" "tool" "list"              "buildcraftunofficial:list"
-place "gate_copier"     "item" "tool"
+tool "gate_copier"
 
 // ---- Items / Wires -------------------------------------------------------
 // Single shared wire page (file at item/wire.md). The page is the general

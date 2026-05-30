@@ -70,9 +70,11 @@ block_refining "distiller"
 block_refining "heat_exchange"
 
 // ---- Blocks / Specialized ------------------------------------------------
-// Single-purpose blocks that don't fit a specific mechanic category. Path Mark
-// and Land Mark are the only entries here; writeups live at block/marker_path.md
-// and block/marker_volume.md.
+// Single-purpose blocks that don't fit a specific mechanic category: the
+// decorative Laser (purely cosmetic — no power function), Path Mark, and Land
+// Mark. Writeups live at block/decorated_laser.md, block/marker_path.md, and
+// block/marker_volume.md.
+block "specialized" "decorated_laser"
 block "specialized" "marker_path"
 block "specialized" "marker_volume"
 
@@ -103,7 +105,6 @@ gear "gear_diamond"
 
 // ---- Items / Paperwork ---------------------------------------------------
 paper "blueprint_clean"
-place "decorated_laser"        "item" "paperwork"
 paper "schematic_single_used"
 paper "template_clean"
 

@@ -165,15 +165,15 @@ add "item/wire" `{
 // ===========================================================================
 
 // ---- Pipes / FE Transport ------------------------------------------------
-place "pipe_wood_rf"            "pipe" "pipe_rf"
-place "pipe_cobble_rf"          "pipe" "pipe_rf"
-place "pipe_stone_rf"           "pipe" "pipe_rf"
-place "pipe_quartz_rf"          "pipe" "pipe_rf"
-place "pipe_iron_rf"            "pipe" "pipe_rf"
-place "pipe_gold_rf"            "pipe" "pipe_rf"
-place "pipe_sandstone_rf"       "pipe" "pipe_rf"
-place "pipe_diamond_rf"         "pipe" "pipe_rf"
-place "pipe_diamond_wood_rf"    "pipe" "pipe_rf"
+pipe_rf "wood_rf"            "buildcraftunofficial:pipe_wood_rf"
+pipe_rf "cobble_rf"          "buildcraftunofficial:pipe_cobble_rf"
+pipe_rf "stone_rf"           "buildcraftunofficial:pipe_stone_rf"
+pipe_rf "quartz_rf"          "buildcraftunofficial:pipe_quartz_rf"
+pipe_rf "iron_rf"            "buildcraftunofficial:pipe_iron_rf"
+pipe_rf "gold_rf"            "buildcraftunofficial:pipe_gold_rf"
+pipe_rf "sandstone_rf"       "buildcraftunofficial:pipe_sandstone_rf"
+pipe_rf "diamond_rf"         "buildcraftunofficial:pipe_diamond_rf"
+pipe_rf "diamond_wood_rf"    "buildcraftunofficial:pipe_diamond_wood_rf"
 
 // ---- Pipes / Fluid Transport ---------------------------------------------
 pipe_fluid "wood_fluid"         "buildcraftunofficial:pipe_wood_fluid"

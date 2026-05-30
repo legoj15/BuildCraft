@@ -54,7 +54,7 @@ public class ParameterRenderer {
             if (!stack.isEmpty()) {
                 GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
                 if (graphics != null) {
-                    graphics.item(stack, (int) x + 1, (int) y + 1);
+                    graphics.fakeItem(stack, (int) x + 1, (int) y + 1); // null holder → clock/compass stay static
                 }
             } else if (orQuestionMark) {
                 GuiElementStatement.ICON_SLOT_NOT_SET.drawAt(x + 1, y + 1);

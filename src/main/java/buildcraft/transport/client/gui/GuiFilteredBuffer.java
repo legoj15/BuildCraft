@@ -53,7 +53,7 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
 
             if (stackMain.isEmpty()) {
                 if (!stackFilter.isEmpty()) {
-                    graphics.item(stackFilter, x, mainY);
+                    graphics.fakeItem(stackFilter, x, mainY); // null holder → clock/compass stay static
                     graphics.fill(x, mainY, x + 16, mainY + 16, 0xB28B8B8B); // 70% opacity grey veil
                 } else {
                     ICON_NOTHING_SLOT.drawAt(x, mainY);

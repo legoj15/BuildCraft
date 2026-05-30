@@ -131,7 +131,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
                     SlotBase slot = menu.materialSlots[s];
                     int x = slot.x + (int) mainGui.rootElement.getX();
                     int y = slot.y + (int) mainGui.rootElement.getY();
-                    graphics.item(filterStack, x, y);
+                    graphics.fakeItem(filterStack, x, y); // null holder → clock/compass stay static
                     graphics.itemDecorations(this.font, filterStack, x, y, null);
                 }
             }

@@ -26,7 +26,9 @@ public abstract class GuidePartItem extends GuidePart {
 
         GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
         if (graphics != null) {
-            graphics.item(stack, x, y);
+            // fakeItem (null holder) renders dynamic models — clock/compass — at their static
+            // "up" frame (noon / north) instead of leaking the live world time, matching vanilla GUIs.
+            graphics.fakeItem(stack, x, y);
             graphics.itemDecorations(Minecraft.getInstance().font, stack, x, y);
         }
 

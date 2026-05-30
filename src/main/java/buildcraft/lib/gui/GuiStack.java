@@ -41,6 +41,7 @@ public class GuiStack implements ISimpleDrawable {
         if (currentGraphics == null || stack == null || stack.isEmpty()) {
             return;
         }
-        currentGraphics.item(stack, (int) x, (int) y);
+        // fakeItem (null holder) keeps dynamic models (clock/compass) at their static frame.
+        currentGraphics.fakeItem(stack, (int) x, (int) y);
     }
 }

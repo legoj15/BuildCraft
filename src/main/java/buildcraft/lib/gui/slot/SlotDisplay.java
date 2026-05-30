@@ -64,4 +64,12 @@ public class SlotDisplay extends Slot {
     public int getMaxStackSize() {
         return 0;
     }
+
+    /** Display slots are read-only result previews, not tangible inventory. Reporting them as fake
+     *  routes vanilla's slot renderer through {@code fakeItem} (null holder), so dynamic models
+     *  (clock/compass) draw their static frame instead of the live world time/heading. */
+    @Override
+    public boolean isFake() {
+        return true;
+    }
 }

@@ -276,7 +276,7 @@ public class GuiList extends GuiBC8<ContainerList> {
                 if (exampleIdx < examples.size()) {
                     net.minecraft.world.item.ItemStack ex = examples.get(exampleIdx);
                     if (!ex.isEmpty()) {
-                        graphics.item(ex, x, y);
+                        graphics.fakeItem(ex, x, y); // null holder → clock/compass stay static
                     }
                 }
             }

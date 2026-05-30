@@ -69,6 +69,50 @@ public class GuideCraftingFactory implements GuidePartFactory {
         return null;
     }
 
+    /** Fold several crafting recipes into one display panel whose input cells and output cycle, in
+     *  lock-step, through each recipe in turn — recipe N's inputs and output share animation frame N
+     *  (see {@link buildcraft.lib.recipe.ChangingObject}'s time-based, length-relative index: equal-length stacks stay in
+     *  sync). Backs the guide's {@code <recipe_cycle>} tag, which collapses a family of near-identical
+     *  recipes — e.g. the 12 AND→OR gate swaps — into a single compact entry instead of 12 panels.
+     *  Each cell takes the first resolved stack of each recipe's ingredient at that position, so every
+     *  cycling stack has the recipe count as its length and therefore advances together. Returns the
+     *  lone factory unchanged when only one recipe matched, or null when none did. */
+    @Nullable
+    public static GuidePartFactory getCyclingFactory(List<CraftingRecipe> recipes) {
+        List<GuideCraftingFactory> singles = new ArrayList<>();
+        for (CraftingRecipe recipe : recipes) {
+            if (getFactory(recipe) instanceof GuideCraftingFactory gcf) {
+                singles.add(gcf);
+            }
+        }
+        if (singles.isEmpty()) {
+            return null;
+        }
+        if (singles.size() == 1) {
+            return singles.get(0);
+        }
+        ChangingItemStack[][] input = new ChangingItemStack[3][3];
+        for (int x = 0; x < 3; x++) {
+            for (int y = 0; y < 3; y++) {
+                List<ItemStack> options = new ArrayList<>(singles.size());
+                for (GuideCraftingFactory single : singles) {
+                    options.add(firstOption(single.input[x][y]));
+                }
+                input[x][y] = new ChangingItemStack(options);
+            }
+        }
+        List<ItemStack> outputs = new ArrayList<>(singles.size());
+        for (GuideCraftingFactory single : singles) {
+            outputs.add(firstOption(single.output));
+        }
+        return new GuideCraftingFactory(input, new ChangingItemStack(outputs));
+    }
+
+    private static ItemStack firstOption(ChangingItemStack stack) {
+        List<buildcraft.lib.misc.ItemStackKey> options = stack.getOptions();
+        return options.isEmpty() ? ItemStack.EMPTY : options.get(0).baseStack;
+    }
+
     private static GuidePartFactory getFactoryFromShaped(ShapedRecipe recipe) {
         // AT-opened: ShapedRecipe.pattern (by NeoForge), ShapedRecipe.result (by us)
         ItemStack output = recipe.result.create();

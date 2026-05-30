@@ -398,6 +398,9 @@ public class BuildCraftGameTests {
             // Basic Gate has no assembly usages.
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:guide_modifier_recipe_renders_correct_input_variant"), () -> buildcraft.silicon.GateRecipeVariantTester::testGuideBookModifierRecipeRendersCorrectInputVariant);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:basic_clay_brick_gate_has_no_assembly_usages"), () -> buildcraft.silicon.GateRecipeVariantTester::testBasicClayBrickGateHasNoAssemblyUsages);
+            // Pins the Logic Gates guide page's <recipe_cycle match="..."/> selectors: each assembly
+            // match picks one variant's AND+OR pair, and each swap direction has its 12 crafting recipes.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:guide_gate_recipe_cycle_selectors"), () -> buildcraft.silicon.GateRecipeVariantTester::testGuideGateRecipeCycleSelectors);
 
             // Crafting-table gate recipes restored from 1.12.2 — Basic Gate (clay brick), Iron
             // and Nether Brick basic-gate alternatives, Iron modifier upgrades (lapis/quartz),

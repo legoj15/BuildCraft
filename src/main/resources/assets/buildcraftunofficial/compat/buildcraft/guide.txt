@@ -112,7 +112,20 @@ paper "template_clean"
 plug "plug_blocker"
 plug "plug_power_adaptor"
 plug "plug_facade"
-plug "plug_gate"
+// Gate page title overridden to "Logic Gates" so the TOC (and the opened page's
+// header) read as the family entry rather than "Basic Gate" — the default gate
+// variant's localized item name, which ItemPluggableGate#getName returns for a
+// stack with no `gate` NBT. Same pattern as the Pipe Wires entry below; `book`
+// is hard-coded because guide.txt has no `~args`, so a templated ${0} would be
+// left as a literal (only imported files like util.txt see the import arg as ${0}).
+add "item/plug_gate" `{
+    "type": "item_stack",
+    "book": "buildcraftunofficial:main",
+    "tag_type": "item",
+    "tag_subtype": "pipe_plug",
+    "stack": "buildcraftunofficial:plug_gate",
+    "title": "logic_gates"
+}`
 plug "plug_lens"
 plug "plug_light_sensor"
 plug "plug_pulsar"

@@ -1,11 +1,49 @@
 <lore>
-Redstone takes up a lot of space nowadays. Why not have finer control over your system in a more compact space using pipes — just place a Gate on a pipe and start thinking.
+Redstone takes up a lot of space nowadays. Why not have finer control over your system in a more compact space using pipes; just place a Gate on a pipe and start thinking.
 </lore>
 <no_lore>
 The Gate is an upgradeable pluggable used to provide a logistical framework to help manage your pipe system.
 </no_lore>
 
-<recipes stack="buildcraftunofficial:plug_gate"/>
+// Each gate lists its crafting-table recipe (the slow, no-machine-needed way) immediately
+// followed by its Assembly Table recipe, so the player sees both routes together. Crafting
+// recipes are pinned by JSON id; the assembly entries use <recipe_cycle> to cycle the AND and
+// OR variants through ONE panel rather than showing two near-identical ones. Crafting recipes
+// exist only for the AND variants — to get an OR gate by hand you craft the AND gate then flip
+// it with a swap recipe, and those swaps are the two cycling panels at the end. Each assembly
+// match substring uniquely selects one gate's AND+OR pair (e.g. "-IRON-LAPIS" → the Iron+Lapis
+// AND and OR recipes); "-<MAT>-NO_MODIFIER" selects the base (unmodified) gate of that material.
+//
+// Basic (clay brick) — crafting only; it has no Assembly Table recipe (terminal item).
+<recipe id="buildcraftunofficial:gate_basic"/>
+// Iron
+<recipe id="buildcraftunofficial:gate_iron_and"/>
+<recipe_cycle type="assembling" match="-IRON-NO_MODIFIER"/>
+// Nether Brick
+<recipe id="buildcraftunofficial:gate_nether_brick_and"/>
+<recipe_cycle type="assembling" match="-NETHER_BRICK-NO_MODIFIER"/>
+// Gold — Assembly Table only (no crafting recipe)
+<recipe_cycle type="assembling" match="-GOLD-NO_MODIFIER"/>
+// Iron + Lapis
+<recipe id="buildcraftunofficial:gate_iron_and_lapis"/>
+<recipe_cycle type="assembling" match="-IRON-LAPIS"/>
+// Iron + Quartz
+<recipe id="buildcraftunofficial:gate_iron_and_quartz"/>
+<recipe_cycle type="assembling" match="-IRON-QUARTZ"/>
+// Iron + Diamond — Assembly Table only
+<recipe_cycle type="assembling" match="-IRON-DIAMOND"/>
+// Nether Brick modifiers — Assembly Table only
+<recipe_cycle type="assembling" match="-NETHER_BRICK-LAPIS"/>
+<recipe_cycle type="assembling" match="-NETHER_BRICK-QUARTZ"/>
+<recipe_cycle type="assembling" match="-NETHER_BRICK-DIAMOND"/>
+// Gold modifiers — Assembly Table only
+<recipe_cycle type="assembling" match="-GOLD-LAPIS"/>
+<recipe_cycle type="assembling" match="-GOLD-QUARTZ"/>
+<recipe_cycle type="assembling" match="-GOLD-DIAMOND"/>
+// AND<->OR swaps — one shapeless craft flips a gate's logic. Each panel cycles through all 12
+// material/modifier variants in that direction (craft an AND gate, then swap it to OR, or back).
+<recipe_cycle match="_to_or"/>
+<recipe_cycle match="_to_and"/>
 
 <chapter name="Gate Placement"/>
 A Gate is a pluggable so it can only be placed on pipes and can be placed on any side of a pipe.
@@ -46,5 +84,3 @@ The lines down the middle are used to connect the Triggers to the Actions, so th
 They can be clicked to be connected/disconnected to require multiple triggers/actions.
 When a trigger is met, the line in the middle will light up (only partially if there are multiple triggers required).
 When a line is lit up, then the actions they are connected to will be undertaken.
-
-<usages stack="buildcraftunofficial:plug_gate"/>

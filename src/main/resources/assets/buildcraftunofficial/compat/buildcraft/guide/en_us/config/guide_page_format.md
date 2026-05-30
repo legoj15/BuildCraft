@@ -91,9 +91,28 @@ This is disabled by default, but toggle-able in-game and planned to be toggle-ab
 ## Recipe (singular)
 This tag shows the first recipe found for the given item stack. For example:
 <guide_md>
-&lt;recipes stack="buildcraftunofficial:gear_stone"&gt;
+&lt;recipe stack="buildcraftunofficial:gear_stone"/&gt;
 </guide_md>
 <recipe stack="buildcraftunofficial:gear_stone"/>
+
+You can also pin one specific recipe by its registry id with the `id` attribute. Use this when matching by item stack can't single out the recipe you want — for example a crafting recipe whose output carries data components (a specific gate variant), which the component-aware output match won't surface from a bare item stack:
+<guide_md>
+&lt;recipe id="buildcraftunofficial:gate_basic"/&gt;
+</guide_md>
+<recipe id="buildcraftunofficial:gate_basic"/>
+
+Add `type="assembling"` to pin an Assembly Table recipe instead, looked up by its registry name (rather than a crafting recipe's ResourceLocation). This lets a page interleave a gate's crafting and assembly recipes in a deliberate order:
+<guide_md>
+&lt;recipe id="gate-and-IRON-NO_MODIFIER" type="assembling"/&gt;
+</guide_md>
+<recipe id="gate-and-IRON-NO_MODIFIER" type="assembling"/>
+
+## Recipe cycle
+`recipe_cycle` folds a family of near-identical recipes into a single panel that cycles through them in lock-step — the inputs, output and (for assembly) the MJ cost all advance to the next recipe together. Use it to collapse, say, a gate's AND and OR variants, or a whole set of swap recipes, into one compact animated entry instead of many. Select the recipes with `match` — a substring tested against each recipe's id (or, with `type="assembling"`, its registry name). Below, one panel cycles the Iron Gate's AND and OR assembly recipes (`match="-IRON-NO_MODIFIER"` selects both):
+<guide_md>
+&lt;recipe_cycle type="assembling" match="-IRON-NO_MODIFIER"/&gt;
+</guide_md>
+<recipe_cycle type="assembling" match="-IRON-NO_MODIFIER"/>
 
 ## Recipes
 This tag shows all recipes for the given item stack. For example:

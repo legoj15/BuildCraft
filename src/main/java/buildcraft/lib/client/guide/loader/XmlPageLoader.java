@@ -26,6 +26,9 @@ import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.nbt.TagParser;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.util.profiling.ProfilerFiller;
@@ -57,6 +60,9 @@ import buildcraft.lib.client.guide.parts.GuidePartNewPage;
 import buildcraft.lib.client.guide.parts.GuideText;
 import buildcraft.lib.client.guide.parts.contents.PageLink;
 import buildcraft.lib.client.guide.parts.contents.PageLinkNormal;
+import buildcraft.lib.client.guide.parts.recipe.GuideAssemblyRecipes;
+import buildcraft.lib.client.guide.parts.recipe.GuideCraftingFactory;
+import buildcraft.lib.client.guide.parts.recipe.GuideCraftingRecipes;
 import buildcraft.lib.client.guide.parts.recipe.IStackRecipes;
 import buildcraft.lib.client.guide.parts.recipe.RecipeLookupHelper;
 import buildcraft.lib.client.guide.ref.GuideGroupManager;
@@ -129,6 +135,7 @@ public enum XmlPageLoader implements IPageLoaderText {
         putSingle("new_page", (attr, prof) -> GuidePartNewPage::new);
         putSingle("chapter", XmlPageLoader::loadChapter);
         putSingle("recipe", XmlPageLoader::loadRecipe);
+        putSingle("recipe_cycle", XmlPageLoader::loadRecipeCycle);
         putSingle("group", XmlPageLoader::loadGroup);
         putSingle("link", XmlPageLoader::loadLink);
         putMulti("recipes", XmlPageLoader::loadAllRecipes);
@@ -412,6 +419,20 @@ public enum XmlPageLoader implements IPageLoaderText {
         List<GuidePartFactory> factories = nestedParts.pop();
         if (nestedParts.size() != 0) {
             throw new InvalidInputDataException("We haven't closed " + nestedTags);
+        }
+        // Drop any trailing blank-line text parts. Every empty source line becomes a
+        // GuideTextFactory(" ") (see the `line = " "` fallback above) that renders as an
+        // invisible full-height line; a trailing run of them advances the layout cursor onto
+        // a fresh page with nothing visible on it, leaving a phantom blank final page (and an
+        // odd page count) in long entries. Interior blank lines are kept — they are real
+        // paragraph spacing; only the trailing run is removed.
+        while (!factories.isEmpty()) {
+            GuidePartFactory last = factories.get(factories.size() - 1);
+            if (last instanceof GuideTextFactory text && text.text.isBlank()) {
+                factories.remove(factories.size() - 1);
+            } else {
+                break;
+            }
         }
         return factories;
     }
@@ -732,6 +753,20 @@ public enum XmlPageLoader implements IPageLoaderText {
     }
 
     private static GuidePartFactory loadRecipe(XmlTag tag, ProfilerFiller prof) {
+        // `id` attribute: display one specific recipe looked up by its registry id. With
+        // type="assembling" the id is an Assembly Table recipe's registry name (e.g.
+        // "gate-and-IRON-NO_MODIFIER"); otherwise it's a crafting recipe's ResourceLocation
+        // (e.g. "buildcraftunofficial:gate_basic"). Needed for outputs whose data components
+        // the stack-based lookup can't address — every gate crafting recipe outputs a
+        // component-bearing PLUG_GATE, so the bare <recipes stack="…:plug_gate"/> query never
+        // matches them (ChangingItemStack compares outputs with isSameItemSameComponents and
+        // the page stack carries no `gate` components); and the assembly stack lookup matches
+        // by item only, so it can't single out one variant's recipe. Pinning by id sidesteps
+        // both, and lets a page hand-author the crafting→assembly order per gate.
+        String recipeId = tag.get("id");
+        if (recipeId != null) {
+            return loadRecipeById(recipeId, tag.get("type"));
+        }
         ItemStack stack = loadItemStack(tag);
         if (stack == null) {
             return null;
@@ -757,6 +792,65 @@ public enum XmlPageLoader implements IPageLoaderText {
         } else {
             return list.get(0);
         }
+    }
+
+    /** Look up a single crafting recipe by its registry id and build a display factory for it.
+     *  Returns null (→ the tag renders as red error text) if the id is malformed, the recipe
+     *  manager isn't available yet (no integrated server — e.g. outside a world), no recipe has
+     *  that id, or the recipe isn't a crafting recipe. */
+    @Nullable
+    private static GuidePartFactory loadRecipeById(String id, @Nullable String type) {
+        // type="assembling" → resolve the id as an Assembly Table recipe by its registry name;
+        // any other type (or none) treats the id as a crafting recipe's ResourceLocation.
+        if ("assembling".equals(type)) {
+            GuidePartFactory factory = GuideAssemblyRecipes.getFactoryByName(id.trim());
+            if (factory == null) {
+                BCLog.logger.warn("[lib.guide.loader.xml] No assembly recipe found with name " + id);
+            }
+            return factory;
+        }
+        Identifier rl = Identifier.tryParse(id.trim());
+        if (rl == null) {
+            BCLog.logger.warn("[lib.guide.loader.xml] " + id + " is not a valid recipe id!");
+            return null;
+        }
+        RecipeManager manager = GuideCraftingRecipes.getRecipeManager();
+        if (manager == null) {
+            return null;
+        }
+        for (RecipeHolder<?> holder : manager.getRecipes()) {
+            if (holder.id().identifier().equals(rl)) {
+                if (holder.value() instanceof CraftingRecipe crafting) {
+                    return GuideCraftingFactory.getFactory(crafting);
+                }
+                BCLog.logger.warn("[lib.guide.loader.xml] Recipe " + id + " is not a crafting recipe!");
+                return null;
+            }
+        }
+        BCLog.logger.warn("[lib.guide.loader.xml] No recipe found with id " + id);
+        return null;
+    }
+
+    /** {@code <recipe_cycle match="substr" [type="assembling"]/>} — fold every recipe whose id (or, with
+     *  {@code type="assembling"}, registry name) contains {@code match} into a single panel that cycles
+     *  through them in lock-step. Collapses a family of near-identical recipes — a gate's AND/OR variants,
+     *  or the 12 swap recipes in one direction — into one compact, animated entry instead of many panels. */
+    private static GuidePartFactory loadRecipeCycle(XmlTag tag, ProfilerFiller prof) {
+        String match = tag.get("match");
+        if (match == null || match.isEmpty()) {
+            BCLog.logger.warn("[lib.guide.loader.xml] <recipe_cycle> needs a non-empty `match`"
+                + " (a recipe id/name substring): " + tag);
+            return null;
+        }
+        boolean assembling = "assembling".equals(tag.get("type"));
+        GuidePartFactory factory = assembling
+            ? GuideAssemblyRecipes.getCyclingFactoryByNameMatch(match)
+            : GuideCraftingRecipes.getCyclingFactoryByIdMatch(match);
+        if (factory == null) {
+            BCLog.logger.warn("[lib.guide.loader.xml] <recipe_cycle> matched no "
+                + (assembling ? "assembly" : "crafting") + " recipes for match=\"" + match + "\"");
+        }
+        return factory;
     }
 
     private static List<GuidePartFactory> loadAllRecipes(XmlTag tag, ProfilerFiller prof) {

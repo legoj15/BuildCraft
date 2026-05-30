@@ -365,6 +365,61 @@ public final class GateRecipeVariantTester {
         helper.succeed();
     }
 
+    /**
+     * The Logic Gates guide page surfaces each gate's Assembly recipes through
+     * {@code <recipe_cycle match="..."/>}, and the AND↔OR swaps through two more. Each {@code match}
+     * substring must select exactly the intended recipe set; a rename in {@link BCSiliconRecipes} or a
+     * missing swap JSON would otherwise silently mis-cycle or red-text the panel — visible only by
+     * opening the book in-client. This pins those selectors: every assembly match picks one variant's
+     * AND+OR pair (2 recipes), and each swap direction has its full 12 crafting recipes.
+     */
+    public static void testGuideGateRecipeCycleSelectors(GameTestHelper helper) {
+        // Assembly: each match selects exactly one variant's AND+OR pair (2 recipes). These are the
+        // assembly match substrings used in plug_gate.md.
+        String[] assemblyMatches = {
+            "-IRON-NO_MODIFIER", "-NETHER_BRICK-NO_MODIFIER", "-GOLD-NO_MODIFIER",
+            "-IRON-LAPIS", "-IRON-QUARTZ", "-IRON-DIAMOND",
+            "-NETHER_BRICK-LAPIS", "-NETHER_BRICK-QUARTZ", "-NETHER_BRICK-DIAMOND",
+            "-GOLD-LAPIS", "-GOLD-QUARTZ", "-GOLD-DIAMOND",
+        };
+        for (String match : assemblyMatches) {
+            java.util.List<AssemblyRecipe> matched =
+                buildcraft.lib.client.guide.parts.recipe.GuideAssemblyRecipes.gatherByNameMatch(match);
+            if (matched.size() != 2) {
+                helper.fail("Assembly <recipe_cycle match=\"" + match + "\"> should select exactly the"
+                    + " AND+OR pair (2 recipes) but matched " + matched.size() + ": "
+                    + matched.stream().map(AssemblyRecipe::getRegistryName).toList()
+                    + " — check BCSiliconRecipes naming vs plug_gate.md.");
+                return;
+            }
+        }
+
+        // Swaps: each direction must have its full 12 crafting recipes (3 materials x 4 modifiers).
+        // GuideCraftingRecipes.gatherByIdMatch can't run here (its recipe manager is client-only), so
+        // count off the server's recipe manager directly.
+        net.minecraft.world.item.crafting.RecipeManager recipeManager =
+            helper.getLevel().getServer().getRecipeManager();
+        int toOr = 0;
+        int toAnd = 0;
+        for (net.minecraft.world.item.crafting.RecipeHolder<?> holder : recipeManager.getRecipes()) {
+            if (!(holder.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe)) {
+                continue;
+            }
+            String id = holder.id().identifier().toString();
+            if (id.contains("_to_or")) {
+                toOr++;
+            } else if (id.contains("_to_and")) {
+                toAnd++;
+            }
+        }
+        if (toOr != 12 || toAnd != 12) {
+            helper.fail("AND↔OR swap <recipe_cycle> selectors expect 12 recipes each but found "
+                + toOr + " *_to_or and " + toAnd + " *_to_and crafting recipes.");
+            return;
+        }
+        helper.succeed();
+    }
+
     private static AssemblyRecipe recipe(String name) {
         AssemblyRecipe r = AssemblyRecipeRegistry.REGISTRY.get(name);
         if (r == null) {

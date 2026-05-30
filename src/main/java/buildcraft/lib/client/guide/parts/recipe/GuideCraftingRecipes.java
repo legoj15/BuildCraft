@@ -65,6 +65,32 @@ public enum GuideCraftingRecipes implements IStackRecipes {
         return list;
     }
 
+    /** Gather every crafting recipe whose id (ResourceLocation, stringified) contains {@code substring},
+     *  in id order. Public so the {@code <recipe_cycle>} tag and a game test can both rely on which
+     *  recipes a given match selects. Returns an empty list when no recipe manager is available (outside
+     *  a world / off-client — crafting recipes live on the integrated server). */
+    public static List<CraftingRecipe> gatherByIdMatch(String substring) {
+        RecipeManager manager = getRecipeManager();
+        if (manager == null) {
+            return new ArrayList<>();
+        }
+        java.util.TreeMap<String, CraftingRecipe> matched = new java.util.TreeMap<>();
+        for (RecipeHolder<?> holder : manager.getRecipes()) {
+            if (holder.value() instanceof CraftingRecipe crafting
+                && holder.id().identifier().toString().contains(substring)) {
+                matched.put(holder.id().identifier().toString(), crafting);
+            }
+        }
+        return new ArrayList<>(matched.values());
+    }
+
+    /** Fold the {@code substring}-matched crafting recipes into one cycling panel via
+     *  {@link GuideCraftingFactory#getCyclingFactory}. Backs {@code <recipe_cycle match="…"/>}. */
+    @Nullable
+    public static GuidePartFactory getCyclingFactoryByIdMatch(String substring) {
+        return GuideCraftingFactory.getCyclingFactory(gatherByIdMatch(substring));
+    }
+
     public void generateIndices() {
         // No explicit indexing needed — 1.21 RecipeManager handles its own internal indexing.
     }
@@ -93,7 +119,7 @@ public enum GuideCraftingRecipes implements IStackRecipes {
     }
 
     @Nullable
-    static RecipeManager getRecipeManager() {
+    public static RecipeManager getRecipeManager() {
         Minecraft mc = Minecraft.getInstance();
         net.minecraft.server.MinecraftServer server = mc.getSingleplayerServer();
         if (server != null) {

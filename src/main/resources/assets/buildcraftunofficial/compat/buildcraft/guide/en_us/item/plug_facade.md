@@ -11,5 +11,3 @@ A Facade is a pluggable which is used to cover your pipes to match your build.
 Almost any block in the game can be made into a facade and placed on to the side of a pipe.
 A solid Facade will stop any pipe connections if placed in between.
 A Hollow Facade will allow pipe connections to connect through it.
-
-<usages stack="buildcraftunofficial:plug_facade"/>

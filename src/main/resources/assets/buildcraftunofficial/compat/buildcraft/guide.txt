@@ -129,7 +129,7 @@ add "item/plug_gate" `{
 plug "plug_lens"
 plug "plug_light_sensor"
 plug "plug_pulsar"
-place "plug_timer"        "item" "pipe_plug"
+plug "plug_timer"
 
 // ---- Items / Tools -------------------------------------------------------
 tool "wrench"

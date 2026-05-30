@@ -1,5 +1,5 @@
 <lore>
-You need some water gone? Make it a solid; also doubles as a more efficient way of keeping water in an inventory.
+You need some water gone? It's easier to handle when it's a solid.
 </lore>
 <no_lore>
 Gelled Water is an itemized form of water that is easier to store and makes clearing out small volumes of water trivial.

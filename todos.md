@@ -1,13 +1,11 @@
 # BuildCraft 1.12.2 → 26.1.x Port Status
 
-Last audited: 2026-05-27 (cleared the chipset bullet)
+Last audited: 2026-05-29 (cleared the Items / Paperwork bullet)
 
 ### Guide Book pages awaiting writeups
 
 Stub entries at [guide/en_us/placeholder/](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/en_us/placeholder/), wired through [guide.txt](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide.txt). Each appears as a "(WIP)" entry until a real writeup is added at `block/<name>.md`, `item/<name>.md`, or `pipe/<name>.md` and the manifest registration is switched from `place` to the matching alias.
 
-- [ ] **Items / Fluid:** water_gel, water_gel_spawn (can cross-link the new [gelled_water](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/en_us/item/gelled_water.md) page)
-- [ ] **Items / Paperwork:** decorated_laser, schematic_single_clean, schematic_single_used
 - [ ] **Items / Pluggables:** plug_timer
 - [ ] **Items / Tools:** gate_copier
 - [ ] **Pipes / Power:** pipe_cobble_power, pipe_diamond_power, pipe_diamond_wood_power, pipe_gold_power, pipe_iron_power, pipe_quartz_power, pipe_sandstone_power, pipe_stone_power, pipe_wood_power — likely skip, [util.txt:84](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/util.txt#L84) flags them for eventual removal
@@ -19,6 +17,7 @@ Stub entries at [guide/en_us/placeholder/](src/main/resources/assets/buildcraftu
 ## 🧹 Finalization
 
 - [ ] Backwards compatibility with older block and item IDs
+- [ ] **Remove `decorated_laser` before release** — not shipping. Sweep block + item + blockstate, [recipe](src/main/resources/data/buildcraftunofficial/recipe/decorated_laser.json), [loot table](src/main/resources/data/buildcraftunofficial/loot_table/blocks/decorated_laser.json), the `BCCoreCreativeTabs` entry, and the leftover `place "decorated_laser" "item" "paperwork"` guide stub in [guide.txt](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide.txt) + [placeholder/decorated_laser.md](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/en_us/placeholder/decorated_laser.md).
 - [ ] Investigate how templates render in 3D
 - [ ] Final code review across all subsystems.
 - [ ] **Facade redirects are client-only on dedicated servers.** `FacadeStateManager.stackRedirects` and the visual-dedup pass that builds it (`FacadeDeduplicator`) only run on the client (the dedup inspects baked block models). But `FacadeAssemblyRecipes.getInputsFor` reads `stackRedirects` server-side. On a dedicated server the map is permanently empty → the brick_slab→bricks-style "blocks that share a facade's textures can be used as inputs" redirects silently don't apply. In single-player it works because both threads share a JVM. Decide: build a server-side equivalent of the redirect table (without needing baked models — e.g. hash block model JSON at data-load time), or accept the limitation and drop the redirect feature on dedicated.

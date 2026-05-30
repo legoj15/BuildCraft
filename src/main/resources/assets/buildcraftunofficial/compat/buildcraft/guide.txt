@@ -93,7 +93,6 @@ chipset "chipset_quartz"
 // ---- Items / Fluid -------------------------------------------------------
 item_typed "fluid" "fragile_fluid_container" "buildcraftunofficial:fragile_fluid_container"
 item_typed "fluid" "gelled_water" "buildcraftunofficial:gelled_water"
-place "water_gel"               "item" "fluid"
 
 // ---- Items / Gears -------------------------------------------------------
 gear "gear_wood"

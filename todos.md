@@ -1,12 +1,10 @@
 # BuildCraft 1.12.2 → 26.1.x Port Status
 
-Last audited: 2026-05-30 (cleared the Items / Tools bullet)
+Last audited: 2026-05-30 (wrote the nine Pipes / Power kinesis pages)
 
 ### Guide Book pages awaiting writeups
 
 Stub entries at [guide/en_us/placeholder/](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/en_us/placeholder/), wired through [guide.txt](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide.txt). Each appears as a "(WIP)" entry until a real writeup is added at `block/<name>.md`, `item/<name>.md`, or `pipe/<name>.md` and the manifest registration is switched from `place` to the matching alias.
-
-- [ ] **Pipes / Power:** pipe_cobble_power, pipe_diamond_power, pipe_diamond_wood_power, pipe_gold_power, pipe_iron_power, pipe_quartz_power, pipe_sandstone_power, pipe_stone_power, pipe_wood_power — likely skip, [util.txt:84](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/util.txt#L84) flags them for eventual removal
 
 - [ ] Tidy up Guide Book pages
 

@@ -839,9 +839,11 @@ public enum GuideManager {
      *  Actions. The icon is the iron-MJ limiter at limitShift=3 (the {@code m16}
      *  partially-filled bar sprite), a mid-range limit that reads as "throttling"
      *  rather than "fully open" or "blocked". The body comes from
-     *  {@code concept/set_power_limit.md}. The four limiter-pipe entries (Iron/Diamond
-     *  Kinesis and Iron/Diamond FE pipes) are registered as keys in the group, so
-     *  each pipe page auto-emits a "Linked To: Set Power Limit" chapter. */
+     *  {@code concept/set_power_limit.md}. This umbrella group is key-less and feeds only
+     *  this category page; each limiter pipe (Iron/Diamond Kinesis and Iron/Diamond FE)
+     *  instead keys its own single-pipe {@code set_power_limit_*} group in
+     *  GuideGroupManager, so a pipe page's "Linked To: Set Power Limit" chapter lists only
+     *  that pipe's own seven levels. */
     private void addSetPowerLimitCategory(IEntryLinkConsumer adder) {
         // ACTION_IRON_POWER_LIMIT[3] is the limitShift=3 entry — sprite m16. See
         // BCTransportStatements (i = numLevels-1-shift); i=3 ⇒ shift=3 ⇒ index 3 of

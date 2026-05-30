@@ -371,8 +371,9 @@ public class GuideGroupManager {
         // actions. Surfaced via a single "Set Power Limit" category entry in the TOC. The
         // entries are listed pipe-by-pipe in the same order ActionProviderPipes offers them
         // to gates (Iron MJ → Diamond MJ → Iron RF → Diamond RF; within each, max-throughput
-        // first stepping down to 0). The keys are the four limiter pipes, so each pipe page
-        // auto-emits a "Linked To: Set Power Limit" chapter.
+        // first stepping down to 0). This aggregate group has NO pipe keys — it backs only the
+        // umbrella "Set Power Limit" category entry (GuideManager#addSetPowerLimitCategory). The
+        // per-pipe "Linked To" lists come from the four single-pipe groups registered below.
         Object[] powerLimits = new Object[
             buildcraft.transport.BCTransportStatements.ACTION_IRON_POWER_LIMIT.length
                 + buildcraft.transport.BCTransportStatements.ACTION_DIAMOND_POWER_LIMIT.length
@@ -384,10 +385,25 @@ public class GuideGroupManager {
         for (var a : buildcraft.transport.BCTransportStatements.ACTION_IRON_RF_LIMIT)       powerLimits[plIdx++] = a;
         for (var a : buildcraft.transport.BCTransportStatements.ACTION_DIAMOND_RF_LIMIT)    powerLimits[plIdx++] = a;
         addEntries("buildcraft", "set_power_limit", powerLimits);
-        addKeys("buildcraft", "set_power_limit",
-            buildcraft.transport.BCTransportItems.PIPE_IRON_POWER.get(),
-            buildcraft.transport.BCTransportItems.PIPE_DIAMOND_POWER.get(),
-            buildcraft.transport.BCTransportItems.PIPE_IRON_RF.get(),
+        // Per-pipe limit groups: each limiter pipe keys ONLY its own seven actions, so its page's
+        // "Linked To: Set Power Limit" chapter lists just the levels that pipe offers — not the
+        // other tier's, nor the FE/RF variants'. The limit actions are partitioned per pipe,
+        // unlike paint_pipe_colour / set_pipe_direction whose actions are shared by every key.
+        addEntries("buildcraft", "set_power_limit_iron",
+            (Object[]) buildcraft.transport.BCTransportStatements.ACTION_IRON_POWER_LIMIT);
+        addKeys("buildcraft", "set_power_limit_iron",
+            buildcraft.transport.BCTransportItems.PIPE_IRON_POWER.get());
+        addEntries("buildcraft", "set_power_limit_diamond",
+            (Object[]) buildcraft.transport.BCTransportStatements.ACTION_DIAMOND_POWER_LIMIT);
+        addKeys("buildcraft", "set_power_limit_diamond",
+            buildcraft.transport.BCTransportItems.PIPE_DIAMOND_POWER.get());
+        addEntries("buildcraft", "set_power_limit_iron_rf",
+            (Object[]) buildcraft.transport.BCTransportStatements.ACTION_IRON_RF_LIMIT);
+        addKeys("buildcraft", "set_power_limit_iron_rf",
+            buildcraft.transport.BCTransportItems.PIPE_IRON_RF.get());
+        addEntries("buildcraft", "set_power_limit_diamond_rf",
+            (Object[]) buildcraft.transport.BCTransportStatements.ACTION_DIAMOND_RF_LIMIT);
+        addKeys("buildcraft", "set_power_limit_diamond_rf",
             buildcraft.transport.BCTransportItems.PIPE_DIAMOND_RF.get());
 
         // Set Pipe Direction: the six "Face the X side" actions, one per Direction (in

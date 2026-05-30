@@ -15,6 +15,11 @@ public final class PageEntry<T> extends PageValue<T> {
      *  {@link buildcraft.lib.client.guide.parts.contents.PageLink#creativeOnly}
      *  so the entry is hidden from survival players without cheats access. */
     public final boolean creativeOnly;
+    /** TOC sort weight (lower sorts earlier; ties fall back to alphabetical). Defaults to 0,
+     *  so unweighted entries keep the historical pure-alphabetical order. A group/chapter
+     *  inherits the lowest weight among its members (see
+     *  {@link buildcraft.lib.client.guide.parts.contents.ContentsNode#getSortIndex}). */
+    public final int sortIndex;
 
     public PageEntry(PageValueType<T> type, JsonTypeTags typeTags, Identifier book, T value) {
         this(type, typeTags, book, value, false);
@@ -25,6 +30,7 @@ public final class PageEntry<T> extends PageValue<T> {
         this.typeTags = typeTags;
         this.book = book;
         this.creativeOnly = creativeOnly;
+        this.sortIndex = 0;
     }
 
     public PageEntry(PageValueType<T> type, Identifier name, JsonObject json, T value) {
@@ -37,6 +43,7 @@ public final class PageEntry<T> extends PageValue<T> {
         String subType = json.has("tag_subtype") ? json.get("tag_subtype").getAsString() : "";
         this.typeTags = new JsonTypeTags(name.getNamespace(), tagType, subType);
         this.creativeOnly = json.has("creative_only") && json.get("creative_only").getAsBoolean();
+        this.sortIndex = json.has("sort") ? json.get("sort").getAsInt() : 0;
     }
 
     public PageValue<T> toPageValue() {

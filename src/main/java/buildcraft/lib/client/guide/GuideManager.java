@@ -407,6 +407,7 @@ public enum GuideManager {
                 objectsAdded.add(basicValue);
                 PageLinkNormal pageLink = new PageLinkNormal(line, !hidden, entry.getTooltip(), entryFactory,
                     entry.creativeOnly);
+                pageLink.setSortIndex(entry.sortIndex);
                 addChild(entry.book, entry.typeTags, pageLink);
             }
             // entryFactory == null path intentionally falls through without
@@ -881,7 +882,9 @@ public enum GuideManager {
         Map<TypeOrder, ContentsNode> map = new HashMap<>();
         contents.put(book, map);
         for (TypeOrder order : GuiGuide.SORTING_TYPES) {
-            map.put(order, new ContentsNode("root", -1));
+            // The Alphabetical order (no tags) keeps a strict A–Z list, ignoring sort weights
+            // that reorder the Type / Mod views.
+            map.put(order, new ContentsNode("root", -1, order.tags.isEmpty()));
         }
     }
 

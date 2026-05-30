@@ -7,6 +7,12 @@ import buildcraft.lib.client.guide.parts.GuidePart;
 
 public interface IContentsNode {
     String getSearchName();
+
+    /** TOC sort weight (lower sorts earlier; ties fall back to alphabetical by search name).
+     *  Leaves return their own weight; a {@link ContentsNode} returns the lowest weight among
+     *  its members, so a chapter floats to where its earliest-weighted entry would sit. */
+    int getSortIndex();
+
     boolean isVisible();
     void calcVisibility();
     void resetVisibility();

@@ -83,6 +83,21 @@ alias pipe_item 2 `pipe "pipe_item" "%0" "%1"`
 alias pipe_fluid 2 `pipe "pipe_fluid" "%0" "%1"`
 alias pipe_power 2 `pipe "pipe_power" "%0" "%1"`
 alias pipe_rf 2 `pipe "pipe_rf" "%0" "%1"`
+
+// Sorted variants: identical to the aliases above but with a trailing TOC sort weight.
+// Lower weights sort earlier; equal weights fall back to alphabetical; a chapter inherits
+// the lowest weight among its members (so weighting a subtype's pages also orders the
+// subtype itself). Weight 0 == the historical alphabetical order. Reuses add_basic's
+// extra-JSON slot to append "sort".
+alias item_stack_s 5 `add_basic "%2" "item_stack" "%0" "%1" \`,
+    "stack": "%3",
+    "sort": %4
+\``
+alias pipe_s 4 `item_stack_s "pipe" "%0" "%1" "%2" "%3"`
+alias pipe_item_s 3 `pipe_s "pipe_item" "%0" "%1" "%2"`
+alias pipe_fluid_s 3 `pipe_s "pipe_fluid" "%0" "%1" "%2"`
+alias pipe_power_s 3 `pipe_s "pipe_power" "%0" "%1" "%2"`
+alias pipe_rf_s 3 `pipe_s "pipe_rf" "%0" "%1" "%2"`
 alias block_engine 2 `block "engine" "%0" "%1"`
 alias block_refining 1 `block "refining" "%0"`
 alias block_fluid 1 `block "fluid" "%0"`

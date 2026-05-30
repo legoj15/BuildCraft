@@ -4,8 +4,10 @@ import "buildcraftunofficial:util" "buildcraftunofficial:main"
 
 // ---------------------------------------------------------------------------
 // Sections below mirror the in-game TOC order: Blocks → Items → Pipes →
-// Triggers → Actions, with subchapters listed alphabetically by their localized
-// title (the same order ContentsNode.sort produces in-game). Entries with a
+// Triggers → Actions. Subchapters and entries sort alphabetically by their localized
+// title by default, except where an entry carries an explicit TOC sort weight (the
+// `_s` aliases, e.g. the Pipes section below) — lower weights sort earlier and a chapter
+// inherits its lowest member's weight. Entries with a
 // real `block/`, `item/`, or `pipe/` writeup and `place`-style stub entries
 // (whose .md content lives at `placeholder/<name>.md`, or auto-stubs at runtime
 // when missing) sit side-by-side in their natural section so the file reads
@@ -164,61 +166,69 @@ add "item/wire" `{
 // PIPES
 // ===========================================================================
 
-// ---- Pipes / FE Transport ------------------------------------------------
-pipe_rf "wood_rf"            "buildcraftunofficial:pipe_wood_rf"
-pipe_rf "cobble_rf"          "buildcraftunofficial:pipe_cobble_rf"
-pipe_rf "stone_rf"           "buildcraftunofficial:pipe_stone_rf"
-pipe_rf "quartz_rf"          "buildcraftunofficial:pipe_quartz_rf"
-pipe_rf "iron_rf"            "buildcraftunofficial:pipe_iron_rf"
-pipe_rf "gold_rf"            "buildcraftunofficial:pipe_gold_rf"
-pipe_rf "sandstone_rf"       "buildcraftunofficial:pipe_sandstone_rf"
-pipe_rf "diamond_rf"         "buildcraftunofficial:pipe_diamond_rf"
-pipe_rf "diamond_wood_rf"    "buildcraftunofficial:pipe_diamond_wood_rf"
-
-// ---- Pipes / Fluid Transport ---------------------------------------------
-pipe_fluid "wood_fluid"         "buildcraftunofficial:pipe_wood_fluid"
-pipe_fluid "cobble_fluid"       "buildcraftunofficial:pipe_cobble_fluid"
-pipe_fluid "stone_fluid"        "buildcraftunofficial:pipe_stone_fluid"
-pipe_fluid "quartz_fluid"       "buildcraftunofficial:pipe_quartz_fluid"
-pipe_fluid "iron_fluid"         "buildcraftunofficial:pipe_iron_fluid"
-pipe_fluid "gold_fluid"         "buildcraftunofficial:pipe_gold_fluid"
-pipe_fluid "clay_fluid"         "buildcraftunofficial:pipe_clay_fluid"
-pipe_fluid "sandstone_fluid"    "buildcraftunofficial:pipe_sandstone_fluid"
-pipe_fluid "void_fluid"         "buildcraftunofficial:pipe_void_fluid"
-pipe_fluid "diamond_fluid"      "buildcraftunofficial:pipe_diamond_fluid"
-pipe_fluid "diamond_wood_fluid" "buildcraftunofficial:pipe_diamond_wood_fluid"
+// Pipe subtype ordering (3rd arg = TOC sort weight; lower sorts earlier). Subtypes are
+// banded — Item 0+, Fluid 1000+, Power 2000+, Structure 3000, FE 9000+ — so the Pipes
+// chapter lists Item Transport first and FE Transport last, with the Wooden pipe first in
+// each group. A chapter inherits its lowest member's weight; Item's lowest is 0 (the
+// default), so the Pipes chapter itself keeps its alphabetical place among Blocks/Items.
+// Weights are ignored in the Alphabetical sort (it stays strict A–Z). Renumber to taste;
+// gaps of 10 leave room to insert.
 
 // ---- Pipes / Item Transport ----------------------------------------------
-pipe_item "wood_item"          "buildcraftunofficial:pipe_wood_item"
-pipe_item "cobble_item"        "buildcraftunofficial:pipe_cobble_item"
-pipe_item "stone_item"         "buildcraftunofficial:pipe_stone_item"
-pipe_item "quartz_item"        "buildcraftunofficial:pipe_quartz_item"
-pipe_item "iron_item"          "buildcraftunofficial:pipe_iron_item"
-pipe_item "gold_item"          "buildcraftunofficial:pipe_gold_item"
-pipe_item "clay_item"          "buildcraftunofficial:pipe_clay_item"
-pipe_item "sandstone_item"     "buildcraftunofficial:pipe_sandstone_item"
-pipe_item "void_item"          "buildcraftunofficial:pipe_void_item"
-pipe_item "obsidian_item"      "buildcraftunofficial:pipe_obsidian_item"
-pipe_item "diamond_item"       "buildcraftunofficial:pipe_diamond_item"
-pipe_item "diamond_wood_item"  "buildcraftunofficial:pipe_diamond_wood_item"
-pipe_item "lapis_item"         "buildcraftunofficial:pipe_lapis_item"
-pipe_item "daizuli_item"       "buildcraftunofficial:pipe_daizuli_item"
-pipe_item "emzuli_item"        "buildcraftunofficial:pipe_emzuli_item"
-pipe_item "stripes_item"       "buildcraftunofficial:pipe_stripes_item"
+pipe_item_s "wood_item"          "buildcraftunofficial:pipe_wood_item"            "0"
+pipe_item_s "cobble_item"        "buildcraftunofficial:pipe_cobble_item"         "10"
+pipe_item_s "stone_item"         "buildcraftunofficial:pipe_stone_item"          "20"
+pipe_item_s "quartz_item"        "buildcraftunofficial:pipe_quartz_item"         "30"
+pipe_item_s "iron_item"          "buildcraftunofficial:pipe_iron_item"           "40"
+pipe_item_s "gold_item"          "buildcraftunofficial:pipe_gold_item"           "50"
+pipe_item_s "clay_item"          "buildcraftunofficial:pipe_clay_item"           "21"
+pipe_item_s "sandstone_item"     "buildcraftunofficial:pipe_sandstone_item"      "22"
+pipe_item_s "void_item"          "buildcraftunofficial:pipe_void_item"           "145"
+pipe_item_s "obsidian_item"      "buildcraftunofficial:pipe_obsidian_item"       "90"
+pipe_item_s "diamond_item"       "buildcraftunofficial:pipe_diamond_item"       "100"
+pipe_item_s "diamond_wood_item"  "buildcraftunofficial:pipe_diamond_wood_item"  "110"
+pipe_item_s "lapis_item"         "buildcraftunofficial:pipe_lapis_item"         "120"
+pipe_item_s "daizuli_item"       "buildcraftunofficial:pipe_daizuli_item"       "130"
+pipe_item_s "emzuli_item"        "buildcraftunofficial:pipe_emzuli_item"        "125"
+pipe_item_s "stripes_item"       "buildcraftunofficial:pipe_stripes_item"       "150"
+
+// ---- Pipes / Fluid Transport ---------------------------------------------
+pipe_fluid_s "wood_fluid"         "buildcraftunofficial:pipe_wood_fluid"         "1000"
+pipe_fluid_s "cobble_fluid"       "buildcraftunofficial:pipe_cobble_fluid"       "1010"
+pipe_fluid_s "stone_fluid"        "buildcraftunofficial:pipe_stone_fluid"        "1020"
+pipe_fluid_s "quartz_fluid"       "buildcraftunofficial:pipe_quartz_fluid"       "1030"
+pipe_fluid_s "iron_fluid"         "buildcraftunofficial:pipe_iron_fluid"         "1040"
+pipe_fluid_s "gold_fluid"         "buildcraftunofficial:pipe_gold_fluid"         "1050"
+pipe_fluid_s "clay_fluid"         "buildcraftunofficial:pipe_clay_fluid"         "1021"
+pipe_fluid_s "sandstone_fluid"    "buildcraftunofficial:pipe_sandstone_fluid"    "1022"
+pipe_fluid_s "void_fluid"         "buildcraftunofficial:pipe_void_fluid"         "1101"
+pipe_fluid_s "diamond_fluid"      "buildcraftunofficial:pipe_diamond_fluid"      "1090"
+pipe_fluid_s "diamond_wood_fluid" "buildcraftunofficial:pipe_diamond_wood_fluid" "1100"
 
 // ---- Pipes / Power Transport (MJ kinesis) --------------------------------
-pipe_power "wood_power"         "buildcraftunofficial:pipe_wood_power"
-pipe_power "cobble_power"       "buildcraftunofficial:pipe_cobble_power"
-pipe_power "stone_power"        "buildcraftunofficial:pipe_stone_power"
-pipe_power "quartz_power"       "buildcraftunofficial:pipe_quartz_power"
-pipe_power "iron_power"         "buildcraftunofficial:pipe_iron_power"
-pipe_power "gold_power"         "buildcraftunofficial:pipe_gold_power"
-pipe_power "sandstone_power"    "buildcraftunofficial:pipe_sandstone_power"
-pipe_power "diamond_power"      "buildcraftunofficial:pipe_diamond_power"
-pipe_power "diamond_wood_power" "buildcraftunofficial:pipe_diamond_wood_power"
+pipe_power_s "wood_power"         "buildcraftunofficial:pipe_wood_power"         "2000"
+pipe_power_s "cobble_power"       "buildcraftunofficial:pipe_cobble_power"       "2010"
+pipe_power_s "stone_power"        "buildcraftunofficial:pipe_stone_power"        "2020"
+pipe_power_s "quartz_power"       "buildcraftunofficial:pipe_quartz_power"       "2030"
+pipe_power_s "iron_power"         "buildcraftunofficial:pipe_iron_power"         "2040"
+pipe_power_s "gold_power"         "buildcraftunofficial:pipe_gold_power"         "2050"
+pipe_power_s "sandstone_power"    "buildcraftunofficial:pipe_sandstone_power"    "2060"
+pipe_power_s "diamond_power"      "buildcraftunofficial:pipe_diamond_power"      "2070"
+pipe_power_s "diamond_wood_power" "buildcraftunofficial:pipe_diamond_wood_power" "2080"
 
 // ---- Pipes / Structure ---------------------------------------------------
-pipe "pipe_structure" "structure" "buildcraftunofficial:pipe_structure"
+pipe_s "pipe_structure" "structure" "buildcraftunofficial:pipe_structure" "3000"
+
+// ---- Pipes / FE Transport ------------------------------------------------
+pipe_rf_s "wood_rf"            "buildcraftunofficial:pipe_wood_rf"            "9000"
+pipe_rf_s "cobble_rf"          "buildcraftunofficial:pipe_cobble_rf"          "9010"
+pipe_rf_s "stone_rf"           "buildcraftunofficial:pipe_stone_rf"           "9020"
+pipe_rf_s "quartz_rf"          "buildcraftunofficial:pipe_quartz_rf"          "9030"
+pipe_rf_s "iron_rf"            "buildcraftunofficial:pipe_iron_rf"            "9040"
+pipe_rf_s "gold_rf"            "buildcraftunofficial:pipe_gold_rf"            "9050"
+pipe_rf_s "sandstone_rf"       "buildcraftunofficial:pipe_sandstone_rf"       "9060"
+pipe_rf_s "diamond_rf"         "buildcraftunofficial:pipe_diamond_rf"         "9070"
+pipe_rf_s "diamond_wood_rf"    "buildcraftunofficial:pipe_diamond_wood_rf"    "9080"
 
 // ===========================================================================
 // STATEMENTS (Triggers + Actions)

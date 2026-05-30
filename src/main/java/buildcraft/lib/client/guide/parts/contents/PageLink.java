@@ -29,6 +29,9 @@ public abstract class PageLink implements IContentsLeaf {
     public final boolean creativeOnly;
     private final String lowerCaseName;
     private boolean visible;
+    /** TOC sort weight, set from the page entry's {@code sort} field after construction
+     *  (defaults to 0 — pure alphabetical). See {@link IContentsNode#getSortIndex}. */
+    private int sortIndex = 0;
 
     public PageLink(PageLine text, boolean startVisible) {
         this(text, startVisible, false);
@@ -69,6 +72,16 @@ public abstract class PageLink implements IContentsLeaf {
     @Override
     public String getSearchName() {
         return lowerCaseName;
+    }
+
+    @Override
+    public int getSortIndex() {
+        return sortIndex;
+    }
+
+    /** Set once during contents generation from the backing entry's {@code sort} weight. */
+    public void setSortIndex(int sortIndex) {
+        this.sortIndex = sortIndex;
     }
 
     @Nullable

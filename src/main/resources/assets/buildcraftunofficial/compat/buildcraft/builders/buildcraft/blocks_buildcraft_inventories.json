@@ -163,25 +163,6 @@
     },
     {
         "selectors": [
-            "buildcraftunofficial:integration_table"
-        ],
-        "requiredExtractors": [
-            {
-                "type": "item_from_block"
-            }, {
-                "type": "items_list",
-                "path": ["items", "target", "items"]
-            }, {
-                "type": "items_list",
-                "path": ["items", "toIntegrate", "items"]
-            }, {
-                "type": "items_list",
-                "path": ["items", "result", "items"]
-            }
-        ]
-    },
-    {
-        "selectors": [
             "buildcraftunofficial:engine_stone"
         ],
         "requiredExtractors": [

@@ -4,7 +4,7 @@ Last audited: 2026-05-30 (wrote the nine Pipes / Power kinesis pages)
 
 ### Guide Book pages awaiting writeups
 
-Stub entries at [guide/en_us/placeholder/](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/en_us/placeholder/), wired through [guide.txt](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide.txt). Each appears as a "(WIP)" entry until a real writeup is added at `block/<name>.md`, `item/<name>.md`, or `pipe/<name>.md` and the manifest registration is switched from `place` to the matching alias.
+All placeholder stubs have now been written up or dropped — [guide/en_us/placeholder/](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/en_us/placeholder/) is empty. Any new WIP entry lives there, wired through [guide.txt](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide.txt), and appears as a "(WIP)" entry until a real writeup is added at `block/<name>.md`, `item/<name>.md`, or `pipe/<name>.md` and the manifest registration is switched from `place` to the matching alias.
 
 - [ ] Tidy up Guide Book pages
 

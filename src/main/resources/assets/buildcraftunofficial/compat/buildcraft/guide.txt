@@ -43,7 +43,6 @@ block_auto "builder"
 block_auto "chute"
 block_auto "filler"
 block_auto "filtered_buffer"
-place "integration_table"       "block" "automation"
 block_auto "library"
 block_auto "replacer"
 

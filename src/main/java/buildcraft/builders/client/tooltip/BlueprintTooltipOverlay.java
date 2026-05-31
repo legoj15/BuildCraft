@@ -165,9 +165,10 @@ public final class BlueprintTooltipOverlay {
         TooltipRenderUtil.extractTooltipBackground(
                 event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);
 
-        // Hand the 3D rendering off to the PiP pipeline. The renderer's internal Blueprint
-        // type-check silently skips templates, matching the 1.12.2 behavior where templates
-        // rendered empty (they have a BitSet, no palette — nothing to paint).
+        // Hand the 3D rendering off to the PiP pipeline. Both snapshot kinds render: Blueprints as
+        // 3D block-item cubes, Templates as a translucent green ghost shell (BlueprintPipRenderer
+        // branches per cell). A null snapshot means the payload hasn't arrived from the server yet
+        // — the frame was already drawn above, so the panel pops in now and fills once data lands.
         if (snapshot != null) {
             BlueprintRenderer.renderSnapshot(
                     event.getGraphics(), snapshot, pX, pY, PREVIEW_SIZE, PREVIEW_SIZE);

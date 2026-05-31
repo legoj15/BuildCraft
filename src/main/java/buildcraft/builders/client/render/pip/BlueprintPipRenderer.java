@@ -7,6 +7,7 @@ package buildcraft.builders.client.render.pip;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -38,6 +39,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -51,13 +53,21 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.Snapshot;
+import buildcraft.builders.snapshot.Template;
+import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 
 /**
- * PiP renderer that paints a {@link Blueprint} into an offscreen texture as a real 3D scene of
- * block-item models, then the base class blits the texture into the GUI. This is the 1.21 port
- * of the cohesive rotating-blueprint preview used in 1.12.2, replacing the old 2D sprite-stack
- * which sheared axis-aligned sprites around without actually rotating them.
+ * PiP renderer that paints a {@link Snapshot} into an offscreen texture, then the base class blits
+ * the texture into the GUI. This is the 1.21 port of the cohesive rotating preview used in 1.12.2,
+ * replacing the old 2D sprite-stack which sheared axis-aligned sprites around without actually
+ * rotating them.
+ * <p>
+ * <b>Two snapshot kinds, two cell-render paths:</b> a {@link Blueprint} draws each palette block as
+ * a real 3D block-item model (plus a dedicated cube path for fluid cells). A {@link Template} has
+ * no block palette — only a fill bit per cell — so it instead draws a translucent green ghost shell
+ * styled like the Architect Table's scan cubes (see {@link #submitTemplateGhostCube}). 1.12.2
+ * rendered template cells as solid quartz blocks; the translucent shell is the modern replacement.
  * <p>
  * <b>Why item-model rendering and not the block-model path:</b> 1.21's block-model API
  * ({@link net.minecraft.client.renderer.block.ModelBlockRenderer#tesselateBlock}) requires a
@@ -120,6 +130,23 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
      *  renderers use (e.g. {@code GuiBookModelRenderer}). Avoids an import on the LightTexture
      *  class, which has moved between 1.21 subversions. */
     private static final int FULL_BRIGHT = 15728880;
+
+    /** Texture for the {@link Template} ghost preview — the same "digitizing" sprite the Architect
+     *  Table paints onto in-world scan cubes (see {@code BCBuildersEventDist#renderDigitizingCubes}).
+     *  Bound directly through the render type rather than via the block atlas. */
+    private static final Identifier SCAN_TEXTURE =
+            Identifier.parse("buildcraftunofficial:textures/block/scan.png");
+
+    /** Per-vertex alpha for the {@link Template} ghost cubes: 50% opacity (128/255). The scan
+     *  texture supplies the green tint; the white vertex colour leaves it unmodified. */
+    private static final int TEMPLATE_GHOST_ALPHA = 128;
+
+    /** Unit-cube face geometry reused for every {@link Template} ghost cell. {@link ModelUtil#createFace}
+     *  reads these without mutating them, so sharing single instances across all cells is safe. */
+    private static final Vector3f GHOST_CENTER = new Vector3f(0.5f, 0.5f, 0.5f);
+    private static final Vector3f GHOST_RADIUS = new Vector3f(0.5f, 0.5f, 0.5f);
+    private static final ModelUtil.UvFaceData GHOST_UVS =
+            new ModelUtil.UvFaceData(0f, 0f, 1f, 1f);
 
     /**
      * Model-space light directions. Chosen such that:
@@ -207,8 +234,8 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
 
     @Override
     protected void renderToTexture(BlueprintPipRenderState renderState, PoseStack poseStack) {
-        Blueprint blueprint = renderState.blueprint();
-        BlockPos size = blueprint.size;
+        Snapshot snapshot = renderState.snapshot();
+        BlockPos size = snapshot.size;
         int sizeX = Math.max(1, size.getX());
         int sizeY = Math.max(1, size.getY());
         int sizeZ = Math.max(1, size.getZ());
@@ -282,16 +309,46 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
 
         int submitted = 0;
         int submittedFluid = 0;
+        int submittedTemplate = 0;
         int skippedNoItem = 0;
         int skippedAirOrEmpty = 0;
         String sampleClassName = "n/a";
+
+        // Exactly one of these is non-null — Blueprint and Template are the only two Snapshot
+        // subclasses. The Template path draws a translucent ghost shell; the Blueprint path draws
+        // 3D item-model cubes plus the dedicated fluid-cube path.
+        Blueprint blueprint = snapshot instanceof Blueprint bp ? bp : null;
+        Template template = snapshot instanceof Template tp ? tp : null;
 
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         for (int z = 0; z < sizeZ; z++) {
             for (int y = 0; y < sizeY; y++) {
                 for (int x = 0; x < sizeX; x++) {
                     pos.set(x, y, z);
-                    int index = blueprint.data[Snapshot.posToIndex(size, pos)];
+                    int dataIndex = Snapshot.posToIndex(size, pos);
+
+                    if (template != null) {
+                        // Templates store one fill bit per cell — no block identity. 1.12.2 painted
+                        // each set bit as a solid quartz cube; here we draw a translucent green ghost
+                        // cube matching the Architect Table's scan cubes. Faces shared with another
+                        // filled cell are culled inside the helper, so a solid template reads as a
+                        // clean outer shell rather than a haze of stacked translucent quads.
+                        if (template.data != null && template.data.get(dataIndex)) {
+                            submitTemplateGhostCube(poseStack, template, size, x, y, z);
+                            submittedTemplate++;
+                        } else {
+                            skippedAirOrEmpty++;
+                        }
+                        continue;
+                    }
+
+                    if (blueprint == null) {
+                        // Unknown snapshot type (neither Blueprint nor Template); nothing to draw.
+                        skippedAirOrEmpty++;
+                        continue;
+                    }
+
+                    int index = blueprint.data[dataIndex];
                     if (index < 0 || index >= blueprint.palette.size()) {
                         skippedAirOrEmpty++;
                         continue;
@@ -382,10 +439,10 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         // using our custom UBO have been submitted to the GPU.
         RenderSystem.setShaderLights(savedShaderLights);
 
-        if (LOGGED_SNAPSHOTS.add(System.identityHashCode(blueprint))) {
-            LOGGER.info("renderToTexture: size={}x{}x{} submitted={} submittedFluid={} skippedNoItem={} skippedAirOrEmpty={} sampleSchBlock={} distinctStates={}",
-                    sizeX, sizeY, sizeZ, submitted, submittedFluid, skippedNoItem, skippedAirOrEmpty,
-                    sampleClassName, stateCache.size());
+        if (LOGGED_SNAPSHOTS.add(System.identityHashCode(snapshot))) {
+            LOGGER.info("renderToTexture: type={} size={}x{}x{} submitted={} submittedFluid={} submittedTemplate={} skippedNoItem={} skippedAirOrEmpty={} sampleSchBlock={} distinctStates={}",
+                    snapshot.getClass().getSimpleName(), sizeX, sizeY, sizeZ, submitted, submittedFluid,
+                    submittedTemplate, skippedNoItem, skippedAirOrEmpty, sampleClassName, stateCache.size());
         }
     }
 
@@ -547,6 +604,41 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                 .setOverlay(overlay)
                 .setLight(light)
                 .setNormal(pose, nx, ny, nz);
+    }
+
+    /**
+     * Emits a translucent green ghost cube for one filled {@link Template} cell into the shared
+     * buffer source, styled like the Architect Table's scan cubes ({@code scan.png}, drawn through
+     * {@link RenderTypes#entityTranslucent}). A face is drawn only when the neighbouring cell in
+     * that direction is <i>not</i> also filled, so a solid template collapses to its outer shell —
+     * no interior overdraw, no muddy stacks of blended quads.
+     * <p>
+     * Geometry comes from {@link ModelUtil#createFace}, authored CCW-from-outside with an outward
+     * face normal. The renderer's {@code scale(1, -1, -1)} yields the same {@code -s³} determinant
+     * the fluid path relies on, so this standard block winding renders right-side-out without
+     * inversion, and the outward normals pick up the same model-space diffuse lighting as the rest
+     * of the preview. Cube vertices live in cell-local {@code [0, 1]^3} after the per-cell translate.
+     */
+    private void submitTemplateGhostCube(PoseStack poseStack, Template template, BlockPos size,
+                                         int xCell, int yCell, int zCell) {
+        // Cull faces shared with an adjacent filled cell up front — see TemplateGhostGeometry.
+        EnumSet<Direction> faces = TemplateGhostGeometry.visibleFaces(template, size, xCell, yCell, zCell);
+        if (faces.isEmpty()) {
+            // Fully-enclosed interior cell: nothing exposed, so skip the buffer churn entirely.
+            return;
+        }
+        VertexConsumer vc = this.bufferSource.getBuffer(RenderTypes.entityTranslucent(SCAN_TEXTURE));
+
+        poseStack.pushPose();
+        poseStack.translate(xCell, yCell, zCell);
+        PoseStack.Pose pose = poseStack.last();
+        for (Direction face : faces) {
+            ModelUtil.createFace(face, GHOST_CENTER, GHOST_RADIUS, GHOST_UVS)
+                    .lighti(15, 15)
+                    .colouri(255, 255, 255, TEMPLATE_GHOST_ALPHA)
+                    .render(pose, vc);
+        }
+        poseStack.popPose();
     }
 
     /**

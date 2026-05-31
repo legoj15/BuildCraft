@@ -2,18 +2,9 @@
 
 Last audited: 2026-05-30 (wrote the nine Pipes / Power kinesis pages)
 
-### Guide Book pages awaiting writeups
-
-All placeholder stubs have now been written up or dropped — [guide/en_us/placeholder/](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/en_us/placeholder/) is empty. Any new WIP entry lives there, wired through [guide.txt](src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide.txt), and appears as a "(WIP)" entry until a real writeup is added at `block/<name>.md`, `item/<name>.md`, or `pipe/<name>.md` and the manifest registration is switched from `place` to the matching alias.
-
-- [ ] Tidy up Guide Book pages
-
-
-
 ## 🧹 Finalization
 
 - [ ] Backwards compatibility with older block and item IDs
-- [ ] Investigate how templates render in 3D
 - [ ] Final code review across all subsystems.
 - [ ] **Facade redirects are client-only on dedicated servers.** `FacadeStateManager.stackRedirects` and the visual-dedup pass that builds it (`FacadeDeduplicator`) only run on the client (the dedup inspects baked block models). But `FacadeAssemblyRecipes.getInputsFor` reads `stackRedirects` server-side. On a dedicated server the map is permanently empty → the brick_slab→bricks-style "blocks that share a facade's textures can be used as inputs" redirects silently don't apply. In single-player it works because both threads share a JVM. Decide: build a server-side equivalent of the redirect table (without needing baked models — e.g. hash block model JSON at data-load time), or accept the limitation and drop the redirect feature on dedicated.
 - [ ] **JEI `onRuntimeAvailable` costs ~1.2s on first GUI open.** `BCSiliconJeiPlugin.onRuntimeAvailable` calls `mgr.removeIngredientsAtRuntime` on ~1357 facade variants — JEI then rebuilds its ingredient/search/bookmark indexes (1.2s on a modern desktop, scales with mod-pack ingredient count). Cause: the facade subtype interpreter returns a unique NBT key per visual variant, so JEI indexes every variant from the FACADE_TAB_KEY creative tab before we ask it to remove all but one. JEI 29.5 has no "skip these during initial harvest" hook (checked the API). Options: (a) coarsen the subtype interpreter to return a constant for all single-state Basic facades so JEI auto-collapses them at harvest — risk: in-world R/U on a held facade might lose its narrow-recipe focus (verify against `AssemblyTableCategory#setRecipe`'s focus link); (b) emit only a representative facade to FACADE_TAB_KEY, sacrificing per-variant creative-tab pickup; (c) live with the current cost. Most likely path is (a) with careful manual verification.

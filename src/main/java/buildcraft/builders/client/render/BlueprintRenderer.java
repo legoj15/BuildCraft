@@ -5,17 +5,9 @@
  */
 package buildcraft.builders.client.render;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import buildcraft.builders.client.render.pip.BlueprintPipRenderState;
-import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.Snapshot;
 
 /**
@@ -32,16 +24,6 @@ import buildcraft.builders.snapshot.Snapshot;
  */
 public class BlueprintRenderer {
 
-    private static final Logger LOGGER = LogManager.getLogger("BCBlueprintRenderer");
-
-    /**
-     * Snapshots whose rejection (not a Blueprint) has already been logged, to prevent the
-     * re-render-every-frame tooltip from spamming the log. Identity-hashed because Snapshot is
-     * a mutable record-ish struct, not a value-equality type.
-     */
-    private static final Set<Integer> LOGGED_REJECTIONS =
-            Collections.synchronizedSet(new HashSet<>());
-
     /**
      * Safety margin on top of the structure's 3D diagonal. The diagonal already captures the
      * worst-case projected extent for any combination of pitch and yaw (a structure rotated so
@@ -57,15 +39,11 @@ public class BlueprintRenderer {
     public static void renderSnapshot(GuiGraphicsExtractor graphics, Snapshot snapshot,
                                       int viewportX, int viewportY,
                                       int viewportWidth, int viewportHeight) {
-        if (!(snapshot instanceof Blueprint blueprint)) {
-            if (LOGGED_REJECTIONS.add(System.identityHashCode(snapshot))) {
-                // Templates (BitSet-only, no palette) go through here too; they have no
-                // per-block model to render, so the preview is empty — matches the 1.12.2
-                // behavior. If we add a template preview later, broaden the PiP state rather
-                // than branching here.
-                LOGGER.info("renderSnapshot skipped: not a Blueprint (class={}) size={}",
-                        snapshot.getClass().getSimpleName(), snapshot.size);
-            }
+        // Both snapshot kinds render here. Blueprints draw their palette blocks as 3D item-model
+        // cubes; Templates (BitSet-only, no palette) draw a translucent ghost shell — the
+        // per-cell branching lives in BlueprintPipRenderer.renderToTexture. The fit/scale math
+        // below only depends on snapshot.size, so it's identical for both.
+        if (snapshot == null) {
             return;
         }
 
@@ -91,7 +69,7 @@ public class BlueprintRenderer {
         float scale = viewportSpan / (diagonal * FIT_ENVELOPE);
 
         BlueprintPipRenderState state = new BlueprintPipRenderState(
-                blueprint,
+                snapshot,
                 viewportX,
                 viewportY,
                 viewportX + viewportWidth,

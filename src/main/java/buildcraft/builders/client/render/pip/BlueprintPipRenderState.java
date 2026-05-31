@@ -10,10 +10,11 @@ import javax.annotation.Nullable;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
 
-import buildcraft.builders.snapshot.Blueprint;
+import buildcraft.builders.snapshot.Snapshot;
 
 /**
- * PiP state carrying a {@link Blueprint} snapshot to be rendered into an offscreen texture by
+ * PiP state carrying a {@link Snapshot} (a {@link buildcraft.builders.snapshot.Blueprint} or a
+ * {@link buildcraft.builders.snapshot.Template}) to be rendered into an offscreen texture by
  * {@link BlueprintPipRenderer}. Deliberately mirrors the shape of vanilla's
  * {@code GuiBookModelRenderState} / {@code GuiEntityRenderState}: a record whose fields pin down
  * the viewport rectangle and scale, with a convenience constructor that computes the clipped
@@ -26,7 +27,7 @@ import buildcraft.builders.snapshot.Blueprint;
  * mouse-hover frame just because the blueprint is "animating".
  */
 public record BlueprintPipRenderState(
-    Blueprint blueprint,
+    Snapshot snapshot,
     int x0,
     int y0,
     int x1,
@@ -42,11 +43,11 @@ public record BlueprintPipRenderState(
      * base class needs a valid bounds so blit-skipping works when the preview is clipped entirely
      * out of the screen.
      */
-    public BlueprintPipRenderState(Blueprint blueprint,
+    public BlueprintPipRenderState(Snapshot snapshot,
                                    int x0, int y0, int x1, int y1,
                                    float scale,
                                    @Nullable ScreenRectangle scissorArea) {
-        this(blueprint, x0, y0, x1, y1, scale, scissorArea,
+        this(snapshot, x0, y0, x1, y1, scale, scissorArea,
              PictureInPictureRenderState.getBounds(x0, y0, x1, y1, scissorArea));
     }
 }

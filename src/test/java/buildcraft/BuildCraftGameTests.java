@@ -167,6 +167,14 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:snapshot_blueprint_fluid_source_counts"), () -> buildcraft.builders.snapshot.SnapshotCountNonAirCellsTester::testBlueprintFluidSourceCountsAsNonAir);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:snapshot_blueprint_empty_null_safety"), () -> buildcraft.builders.snapshot.SnapshotCountNonAirCellsTester::testBlueprintEmptyAndNullSafety);
 
+            // Offline pipe-model reconstruction for the blueprint 3D preview (PipePreviewModel).
+            // Pipes share one block, so the preview must rebuild each pipe's real model from its
+            // captured NBT instead of new ItemStack(block) (which resolves every pipe to the Wooden
+            // Diamond FE Pipe, standing up). The model KEY needs only the pipe registry, not GL.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_preview_all_definitions_reconstruct"), () -> buildcraft.builders.client.render.pip.PipePreviewModelTester::testAllPipeDefinitionsReconstruct);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_preview_connection_bits_decode"), () -> buildcraft.builders.client.render.pip.PipePreviewModelTester::testConnectionBitsDecodeIntoModelKey);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_preview_bad_nbt_yields_null"), () -> buildcraft.builders.client.render.pip.PipePreviewModelTester::testBadNbtYieldsNull);
+
             // Compressed-NBT payload framing — encoder/decoder must agree on the exact byte
             // length, otherwise netty drops the custom_payload packet with "found N bytes extra".
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:architect_preview_payload_roundtrip_small"), () -> buildcraft.builders.snapshot.CompressedNbtPayloadFramingTester::testArchitectPreviewPayloadRoundTripSmall);

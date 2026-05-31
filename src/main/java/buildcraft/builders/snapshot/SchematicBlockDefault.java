@@ -364,6 +364,11 @@ public class SchematicBlockDefault implements ISchematicBlock {
     }
 
     @Override
+    public CompoundTag getTileNbtForRender() {
+        return tileNbt;
+    }
+
+    @Override
     public SchematicBlockDefault getRotated(Rotation rotation) {
         SchematicBlockDefault schematicBlock = SchematicBlockManager.createCleanCopy(this);
         requiredBlockOffsets.stream()

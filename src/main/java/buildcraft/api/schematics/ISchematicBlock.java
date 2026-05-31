@@ -56,6 +56,16 @@ public interface ISchematicBlock {
         return null;
     }
 
+    /**
+     * Returns the captured block-entity NBT for this schematic, purely for rendering — e.g. the
+     * blueprint preview reconstructing a pipe's connection-aware model from its stored pipe data.
+     * Returns {@code null} when there is no tile data, or the implementation doesn't expose it.
+     */
+    @Nullable
+    default CompoundTag getTileNbtForRender() {
+        return null;
+    }
+
     ISchematicBlock getRotated(Rotation rotation);
 
     boolean canBuild(Level world, BlockPos blockPos);

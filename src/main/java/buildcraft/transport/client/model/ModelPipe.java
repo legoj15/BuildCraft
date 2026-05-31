@@ -47,14 +47,7 @@ public class ModelPipe {
      *  For coloured pipes, call renderMaskOverlay() separately with a translucent buffer. */
     public static void renderDirect(TilePipeHolder tile, PoseStack.Pose pose, VertexConsumer buffer, int light) {
         if (tile == null || tile.getPipe() == null) return;
-        PipeModelKey modelKey = tile.getPipe().getModel();
-        if (modelKey == null) return;
-        PipeBaseCutoutKey key = new PipeBaseCutoutKey(modelKey);
-        List<MutableQuad> quads = PipeModelCacheBase.generator.generateCutoutMutable(key);
-        for (MutableQuad q : quads) {
-            q.lighti(light);
-            q.render(pose, buffer);
-        }
+        renderDirect(tile.getPipe().getModel(), pose, buffer, light);
     }
 
     /** Renders the colour mask overlay for painted pipes into a TRANSLUCENT buffer.
@@ -66,7 +59,26 @@ public class ModelPipe {
     public static void renderMaskOverlay(TilePipeHolder tile, PoseStack.Pose pose,
             VertexConsumer buffer, int light, int alpha) {
         if (tile == null || tile.getPipe() == null) return;
-        PipeModelKey modelKey = tile.getPipe().getModel();
+        renderMaskOverlay(tile.getPipe().getModel(), pose, buffer, light, alpha);
+    }
+
+    /** Cutout-layer overload taking a pre-built {@link PipeModelKey} rather than a live tile, so
+     *  callers without a {@link TilePipeHolder} — e.g. the blueprint/snapshot preview, which
+     *  reconstructs the key offline from captured NBT — can render the pipe body. */
+    public static void renderDirect(PipeModelKey modelKey, PoseStack.Pose pose, VertexConsumer buffer, int light) {
+        if (modelKey == null) return;
+        PipeBaseCutoutKey key = new PipeBaseCutoutKey(modelKey);
+        List<MutableQuad> quads = PipeModelCacheBase.generator.generateCutoutMutable(key);
+        for (MutableQuad q : quads) {
+            q.lighti(light);
+            q.render(pose, buffer);
+        }
+    }
+
+    /** Mask-overlay overload taking a pre-built {@link PipeModelKey}. See
+     *  {@link #renderMaskOverlay(TilePipeHolder, PoseStack.Pose, VertexConsumer, int, int)}. */
+    public static void renderMaskOverlay(PipeModelKey modelKey, PoseStack.Pose pose,
+            VertexConsumer buffer, int light, int alpha) {
         if (modelKey == null) return;
         PipeBaseCutoutKey key = new PipeBaseCutoutKey(modelKey);
         List<MutableQuad> quads = PipeBaseModelGenStandard.INSTANCE.generateMaskMutable(key, alpha);

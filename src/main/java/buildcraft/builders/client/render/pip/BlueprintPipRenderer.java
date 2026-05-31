@@ -55,7 +55,10 @@ import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.Snapshot;
 import buildcraft.builders.snapshot.Template;
 import buildcraft.lib.client.model.ModelUtil;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.transport.client.model.ModelPipe;
+import buildcraft.transport.client.model.key.PipeModelKey;
 
 /**
  * PiP renderer that paints a {@link Snapshot} into an offscreen texture, then the base class blits
@@ -140,6 +143,10 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
     /** Per-vertex alpha for the {@link Template} ghost cubes: 50% opacity (128/255). The scan
      *  texture supplies the green tint; the white vertex colour leaves it unmodified. */
     private static final int TEMPLATE_GHOST_ALPHA = 128;
+
+    /** Tint intensity for the painted-pipe colour overlay in the preview, matching the in-world
+     *  pipe renderer's 30% stained-glass tint (overlay_stained.png — see {@code ModelPipe}). */
+    private static final int PIPE_PAINT_ALPHA = 76;
 
     /** Unit-cube face geometry reused for every {@link Template} ghost cell. {@link ModelUtil#createFace}
      *  reads these without mutating them, so sharing single instances across all cells is safe. */
@@ -310,6 +317,7 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         int submitted = 0;
         int submittedFluid = 0;
         int submittedTemplate = 0;
+        int submittedPipe = 0;
         int skippedNoItem = 0;
         int skippedAirOrEmpty = 0;
         String sampleClassName = "n/a";
@@ -365,6 +373,40 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                     }
                     if (sampleClassName.equals("n/a")) {
                         sampleClassName = schBlock.getClass().getSimpleName();
+                    }
+
+                    // Pipes all share one block (pipe_holder) with their type/colour/connections
+                    // living in the block entity, so the generic new ItemStack(state.getBlock())
+                    // path below resolves EVERY pipe to the last-registered pipe item (the Wooden
+                    // Diamond FE Pipe) and draws its connectionless vertical item model. Instead,
+                    // rebuild the pipe's real model from its captured tile NBT and emit the same
+                    // connection-aware block-model quads it shows in-world. Falls through to the
+                    // generic path if the capture has no usable pipe data.
+                    if (PipePreviewModel.isPipe(state)) {
+                        PipeModelKey pipeKey = PipePreviewModel.modelKey(schBlock.getTileNbtForRender());
+                        if (pipeKey != null) {
+                            poseStack.pushPose();
+                            poseStack.translate(x, y, z);
+                            PoseStack.Pose pipePose = poseStack.last();
+                            // Back-face CULLING render types are essential here: the pipe model
+                            // emits front + inverted-"inside" coplanar quad pairs (the dupDarker
+                            // pass in PipeBaseModelGenStandard) and relies on culling to drop the
+                            // inside quad. Vanilla's entityCutout/entityTranslucent are NO_CULL, so
+                            // both quads rendered coplanar and the cutout pair z-fought (flickering
+                            // bright/dark as the preview spins). The in-world pipe avoids this by
+                            // rendering through the culling block sheet.
+                            ModelPipe.renderDirect(pipeKey, pipePose,
+                                    this.bufferSource.getBuffer(
+                                            RenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS)),
+                                    FULL_BRIGHT);
+                            ModelPipe.renderMaskOverlay(pipeKey, pipePose,
+                                    this.bufferSource.getBuffer(
+                                            BCLibRenderTypes.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS)),
+                                    FULL_BRIGHT, PIPE_PAINT_ALPHA);
+                            poseStack.popPose();
+                            submittedPipe++;
+                            continue;
+                        }
                     }
 
                     // Fluid cells need a dedicated textured-cube path: LiquidBlock has no item
@@ -440,9 +482,9 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         RenderSystem.setShaderLights(savedShaderLights);
 
         if (LOGGED_SNAPSHOTS.add(System.identityHashCode(snapshot))) {
-            LOGGER.info("renderToTexture: type={} size={}x{}x{} submitted={} submittedFluid={} submittedTemplate={} skippedNoItem={} skippedAirOrEmpty={} sampleSchBlock={} distinctStates={}",
+            LOGGER.info("renderToTexture: type={} size={}x{}x{} submitted={} submittedFluid={} submittedTemplate={} submittedPipe={} skippedNoItem={} skippedAirOrEmpty={} sampleSchBlock={} distinctStates={}",
                     snapshot.getClass().getSimpleName(), sizeX, sizeY, sizeZ, submitted, submittedFluid,
-                    submittedTemplate, skippedNoItem, skippedAirOrEmpty, sampleClassName, stateCache.size());
+                    submittedTemplate, submittedPipe, skippedNoItem, skippedAirOrEmpty, sampleClassName, stateCache.size());
         }
     }
 

@@ -5,9 +5,12 @@
  */
 package buildcraft.lib.client.render;
 
+import java.util.function.Function;
+
 import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 
+import net.minecraft.util.Util;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.LayeringTransform;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
@@ -84,6 +87,33 @@ public final class BCLibRenderTypes {
      */
     public static RenderType debugSolid() {
         return DEBUG_SOLID;
+    }
+
+    /**
+     * Back-face-culling sibling of vanilla's {@link RenderTypes#entityTranslucent} (which is
+     * {@code NO_CULL}). Same {@code ENTITY_TRANSLUCENT_CULL} pipeline vanilla reserves for its
+     * item-target translucent type, but built with the standard setup so it renders to the active
+     * output target — usable in the picture-in-picture pass.
+     * <p>
+     * Needed by the blueprint pipe preview: pipe models emit front + inverted-"inside" coplanar
+     * quad pairs (the {@code dupDarker} pass in {@code PipeBaseModelGenStandard}) and rely on
+     * culling to drop the inside quad. The no-cull translucent type let both render, double-blending
+     * the paint overlay. Memoised per texture, matching vanilla's render-type factories.
+     */
+    private static final Function<Identifier, RenderType> ENTITY_TRANSLUCENT_CULL = Util.memoize(
+            texture -> RenderType.create(
+                    "buildcraft:entity_translucent_cull",
+                    RenderSetup.builder(RenderPipelines.ENTITY_TRANSLUCENT_CULL)
+                            .withTexture("Sampler0", texture)
+                            .useLightmap()
+                            .useOverlay()
+                            .affectsCrumbling()
+                            .sortOnUpload()
+                            .setOutline(RenderSetup.OutlineProperty.NONE)
+                            .createRenderSetup()));
+
+    public static RenderType entityTranslucentCull(Identifier texture) {
+        return ENTITY_TRANSLUCENT_CULL.apply(texture);
     }
 
     private BCLibRenderTypes() {}

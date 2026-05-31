@@ -106,7 +106,10 @@ tasks.named('processResources') {
 // ─── Distribution JAR ────────────────────────────────────────────────────────
 tasks.named('jar') {
     archiveBaseName = 'BCunofficial'
-    archiveVersion = project.mod_version
+    // Axis A (mod_version, CalVer) + Axis B (minecraft_version) as a SemVer build-metadata tag.
+    // The +mc<mc> coordinate lives ONLY in the jar filename — never in the mods.toml version —
+    // because NeoForge orders versions Maven-style, where '+...' would corrupt update ordering.
+    archiveVersion = "${project.mod_version}+mc${project.minecraft_version}"
 
 }
 

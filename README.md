@@ -26,7 +26,7 @@ If you wish to submit a pull request to fix bugs or broken behaviour feel free t
 ### Compiling and packaging BuildCraft
 1. Install `Java 25` (Microsoft OpenJDK, recommended by the NeoForge team, available [here](https://learn.microsoft.com/en-us/java/openjdk/download#openjdk-25)) and optionally `Git` (found [here](http://git-scm.com/)). Note: NeoForge's moddev tooling also uses Java 21 internally for its NFRT tasks (asset download, run preparation), but you don't need to install it yourself — the build is configured with the [Foojay toolchain resolver](https://github.com/gradle/foojay-toolchains), so Gradle auto-downloads JDK 21 into its user home on first build. Java 25 is the only JDK you need to install manually.
  * Optional: Install `Gradle` (found [here](http://www.gradle.org/downloads)).
-2. Clone the BuildCraft repository: `git clone https://github.com/legoj15/BuildCraft.git` or [download the latest zip](https://github.com/legoj15/BuildCraft/archive/refs/heads/8.0.x-26.1.1.zip)
+2. Clone the BuildCraft repository: `git clone https://github.com/legoj15/BuildCraft.git` or [download the latest zip](https://github.com/legoj15/BuildCraft/archive/refs/heads/26.1.x.zip)
 3. Navigate to the cloned repository in a shell: `cd BuildCraft`
 4. Run the Gradle build command:
     * On Linux/Unix/Mac: `./gradlew build`

@@ -70,6 +70,12 @@ public class BCFactory {
             (miner, direction) -> miner.getMjReceiver());
         event.registerBlockEntity(Capabilities.Energy.BLOCK, BCFactoryBlockEntities.MINING_WELL.get(),
             (miner, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(miner.getBattery()));
+        // Mining Well has no internal item buffer — it pushes mined drops straight into adjacent
+        // pipes via InventoryUtil.addToBestAcceptor. Expose an empty item handler (like the Quarry)
+        // purely so item pipes render a connection to it; in 1.12.2 the AutomaticProvidingTransactor
+        // capability served that role.
+        event.registerBlockEntity(Capabilities.Item.BLOCK, BCFactoryBlockEntities.MINING_WELL.get(),
+            (miner, direction) -> net.neoforged.neoforge.transfer.EmptyResourceHandler.instance());
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCFactoryBlockEntities.PUMP.get(),
             (pump, direction) -> pump.getMjReceiver());
         event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCFactoryBlockEntities.PUMP.get(),

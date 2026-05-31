@@ -16,6 +16,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.Entity;
@@ -31,6 +32,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 
+import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.core.IAreaProvider;
 import buildcraft.api.enums.EnumSnapshotType;
 import buildcraft.api.schematics.ISchematicBlock;
@@ -42,6 +44,8 @@ import buildcraft.api.tiles.IDebuggable;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.tile.TileBC_Neptune;
+import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
+import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.BCBuildersBlocks;
@@ -79,9 +83,18 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
     private int scanX, scanY, scanZ;
     private boolean scanInitialized = false;
 
-    // Simple 2-slot inventory (slot 0 = input, slot 1 = output)
-    private ItemStack invSnapshotIn = ItemStack.EMPTY;
-    private ItemStack invSnapshotOut = ItemStack.EMPTY;
+    // Pipe-facing snapshot slots (slot 0 = input, slot 1 = output). Restored to the 1.12.2
+    // ItemHandlerManager form so item pipes can feed a blank Blueprint/Template into the input
+    // (INSERT) and pull the finished snapshot out of the output (EXTRACT); BCBuilders registers
+    // ARCHITECT for Capabilities.Item.BLOCK so these surfaces are visible to adjacent pipes. The
+    // input checker mirrors 1.12.2 (any ItemSnapshot), matching ContainerArchitectTable's GUI slot.
+    public final ItemHandlerSimple invSnapshotIn = itemManager.addInvHandler(
+        "in", 1,
+        (slot, stack) -> stack.getItem() instanceof ItemSnapshot,
+        EnumAccess.INSERT, EnumPipePart.VALUES);
+    public final ItemHandlerSimple invSnapshotOut = itemManager.addInvHandler(
+        "out", 1,
+        EnumAccess.EXTRACT, EnumPipePart.VALUES);
 
     // Scanning progress for GUI
     private int scanProgress = 0;
@@ -175,9 +188,10 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
         if (level == null) return;
         if (level.isClientSide()) return;
 
-        if (!invSnapshotIn.isEmpty() && invSnapshotOut.isEmpty() && isValid) {
+        ItemStack stackIn = invSnapshotIn.getStackInSlot(0);
+        if (!stackIn.isEmpty() && invSnapshotOut.getStackInSlot(0).isEmpty() && isValid) {
             if (!scanning) {
-                if (invSnapshotIn.getItem() instanceof ItemSnapshot snapshotItem) {
+                if (stackIn.getItem() instanceof ItemSnapshot snapshotItem) {
                     snapshotType = snapshotItem.getSnapshotType();
                 } else {
                     snapshotType = EnumSnapshotType.BLUEPRINT;
@@ -414,23 +428,22 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
         GlobalSavedDataSnapshots.get(level).addSnapshot(snapshot);
 
         // Consume one input item
-        invSnapshotIn.shrink(1);
-        if (invSnapshotIn.isEmpty()) {
-            invSnapshotIn = ItemStack.EMPTY;
-        }
+        ItemStack stackIn = invSnapshotIn.getStackInSlot(0);
+        stackIn.shrink(1);
+        invSnapshotIn.setStackInSlot(0, stackIn.isEmpty() ? ItemStack.EMPTY : stackIn);
 
         // Produce output item
         ItemSnapshot usedItem = (snapshotType == EnumSnapshotType.BLUEPRINT)
             ? BCBuildersItems.BLUEPRINT_USED.get()
             : BCBuildersItems.TEMPLATE_USED.get();
-        invSnapshotOut = usedItem.createUsedStack(
+        invSnapshotOut.setStackInSlot(0, usedItem.createUsedStack(
             new Header(
                 snapshot.key,
                 getOwner() != null ? getOwner().id() : new java.util.UUID(0, 0),
                 new Date(),
                 name
             )
-        );
+        ));
 
         // Reset scan state (scanProgress / scanTotal are kept intact so tick()'s drop animation
         // can drain them smoothly over DROP_TICKS ticks before zeroing).
@@ -477,16 +490,10 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
         output.putInt("snapshotType", snapshotType.ordinal());
         output.putBoolean("isValid", isValid);
         output.putString("name", name);
-        // Persist slot contents. In 1.12.2 these were ItemHandlerSimple instances auto-saved
-        // by the lib's item-handler manager; after the 26.1 port they're plain ItemStack
-        // fields, so without this they evaporate on chunk unload and the used blueprint the
-        // player "forgot" in the output slot disappears.
-        if (!invSnapshotIn.isEmpty()) {
-            output.store("invSnapshotIn", ItemStack.CODEC, invSnapshotIn);
-        }
-        if (!invSnapshotOut.isEmpty()) {
-            output.store("invSnapshotOut", ItemStack.CODEC, invSnapshotOut);
-        }
+        // Persist slot contents via the shared ItemHandlerManager (same path as the Filler /
+        // Library / Replacer). Both snapshot slots round-trip under the "items" tag so a used
+        // blueprint left in the output survives chunk unload.
+        output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
     }
 
     @Override
@@ -510,8 +517,18 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
         snapshotType = (stOrd >= 0 && stOrd < stValues.length) ? stValues[stOrd] : EnumSnapshotType.BLUEPRINT;
         isValid = input.getBooleanOr("isValid", false);
         name = input.getStringOr("name", "<unnamed>");
-        invSnapshotIn = input.read("invSnapshotIn", ItemStack.CODEC).orElse(ItemStack.EMPTY);
-        invSnapshotOut = input.read("invSnapshotOut", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+        input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
+        // Migrate the transient pre-fix plain-ItemStack format: earlier in the 26.1 port the two
+        // snapshot slots were stored under top-level "invSnapshotIn" / "invSnapshotOut" keys. If a
+        // world was saved in that window, fold those into the handlers so the blueprint isn't lost.
+        if (invSnapshotIn.getStackInSlot(0).isEmpty()) {
+            input.read("invSnapshotIn", ItemStack.CODEC)
+                .ifPresent(s -> invSnapshotIn.setStackInSlot(0, s));
+        }
+        if (invSnapshotOut.getStackInSlot(0).isEmpty()) {
+            input.read("invSnapshotOut", ItemStack.CODEC)
+                .ifPresent(s -> invSnapshotOut.setStackInSlot(0, s));
+        }
     }
 
     // IDebuggable
@@ -542,21 +559,20 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
     // Inventory access for the container
 
     public ItemStack getSnapshotIn() {
-        return invSnapshotIn;
+        return invSnapshotIn.getStackInSlot(0);
     }
 
     public void setSnapshotIn(ItemStack stack) {
-        invSnapshotIn = stack;
-        setChanged();
+        // setStackInSlot fires itemManager's callback -> setChanged(), so the write persists.
+        invSnapshotIn.setStackInSlot(0, stack);
     }
 
     public ItemStack getSnapshotOut() {
-        return invSnapshotOut;
+        return invSnapshotOut.getStackInSlot(0);
     }
 
     public void setSnapshotOut(ItemStack stack) {
-        invSnapshotOut = stack;
-        setChanged();
+        invSnapshotOut.setStackInSlot(0, stack);
     }
 
     public boolean isScanning() {

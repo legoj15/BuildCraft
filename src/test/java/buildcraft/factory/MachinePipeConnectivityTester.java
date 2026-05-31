@@ -20,6 +20,8 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.pipe.IPipe.ConnectedType;
 
 import buildcraft.builders.BCBuildersBlocks;
+import buildcraft.builders.BCBuildersItems;
+import buildcraft.builders.tile.TileArchitectTable;
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
 import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.BCLibConfig.PowerMode;
@@ -180,10 +182,78 @@ public class MachinePipeConnectivityTester {
         });
     }
 
+    // ---------- Architect Table — snapshot in/out slots ----------
+
+    /** A wood pipe must pull a finished (used) snapshot out of the Architect's EXTRACT-access
+     *  output slot. This is the regression that prompted the fix: after the 26.1 port the
+     *  Architect's slots were plain ItemStack fields exposing no item handler, so pipes neither
+     *  connected to nor extracted from it (1.12.2 exposed both slots via ItemHandlerManager). */
+    public static void testWoodPipeExtractsFinishedBlueprintFromArchitect(GameTestHelper helper) {
+        BlockPos architectPos = new BlockPos(1, 2, 1);
+        BlockPos pipePos = new BlockPos(1, 2, 2);
+
+        helper.setBlock(architectPos, BCBuildersBlocks.ARCHITECT.get());
+        TileArchitectTable architect = helper.getBlockEntity(architectPos, TileArchitectTable.class);
+        // Drop a finished blueprint into the output slot a wood pipe pulls from. The box is invalid
+        // (placed via setBlock, no land marks), so the Architect never scans or touches this slot.
+        architect.invSnapshotOut.setStackInSlot(0, new ItemStack(BCBuildersItems.BLUEPRINT_USED.get()));
+
+        TilePipeHolder pipeTile = placeItemPipe(helper, pipePos, BCTransportItems.PIPE_WOOD_ITEM.get());
+        Pipe pipe = pipeTile.getPipe();
+        pipe.markForUpdate();
+        pipe.onTick();
+
+        helper.assertTrue(
+            pipe.isConnected(TO_WORKBENCH) && pipe.getConnectedType(TO_WORKBENCH) == ConnectedType.TILE,
+            "Wood pipe should connect to the architect table as a TILE neighbour");
+
+        PipeBehaviourWood wood = (PipeBehaviourWood) pipe.getBehaviour();
+        helper.assertTrue(wood.getPowerRequested() > 0,
+            "Wood pipe should recognise the architect's output slot as an extractable source");
+
+        wood.receivePower(512 * MjAPI.MJ, false);
+        helper.assertTrue(architect.invSnapshotOut.getStackInSlot(0).isEmpty(),
+            "Wood pipe should have pulled the finished blueprint out of the architect output slot");
+
+        helper.succeed();
+    }
+
+    /** A clay pipe must deliver a blank snapshot into the Architect's INSERT-access input slot.
+     *  Item transit is multi-tick, so this polls until the blueprint arrives. */
+    public static void testClayPipeInsertsBlankBlueprintIntoArchitect(GameTestHelper helper) {
+        BlockPos architectPos = new BlockPos(1, 2, 1);
+        BlockPos pipePos = new BlockPos(1, 2, 2);
+
+        helper.setBlock(architectPos, BCBuildersBlocks.ARCHITECT.get());
+        TileArchitectTable architect = helper.getBlockEntity(architectPos, TileArchitectTable.class);
+
+        TilePipeHolder pipeTile = placeItemPipe(helper, pipePos, BCTransportItems.PIPE_CLAY_ITEM.get());
+        Pipe pipe = pipeTile.getPipe();
+        pipe.markForUpdate();
+
+        // The Architect is the only TILE the clay pipe can route to; force a blank blueprint in
+        // from an unconnected face. The input slot's checker accepts any ItemSnapshot, and the
+        // EXTRACT-wrapped output slot refuses insertion, so it lands in the input.
+        PipeFlowItems flow = (PipeFlowItems) pipe.getFlow();
+        flow.insertItemsForce(new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()), Direction.UP, null, 0.08);
+
+        helper.succeedWhen(() -> {
+            helper.assertTrue(pipe.isConnected(TO_WORKBENCH),
+                "Clay pipe should connect to the architect table");
+            helper.assertTrue(
+                architect.getSnapshotIn().getItem() == BCBuildersItems.BLUEPRINT_CLEAN.get(),
+                "Clay pipe should have delivered the blank blueprint into the architect input slot");
+        });
+    }
+
     // ---------- Capability sweep — every machine fixed by this change ----------
 
     /** Regression net for the whole bug class: each machine whose RegisterCapabilitiesEvent
-     *  registration was missing must now expose Capabilities.Item.BLOCK. */
+     *  registration was missing must now expose Capabilities.Item.BLOCK. The Architect Table
+     *  joined this list after the same omission was found for its snapshot in/out slots. The
+     *  Mining Well exposes an <em>empty</em> handler purely so item pipes render a connection to
+     *  it — it has no internal buffer and pushes mined drops out itself — matching the Quarry and
+     *  the role 1.12.2's AutomaticProvidingTransactor capability played. */
     public static void testItemMachinesExposeItemHandlerCapability(GameTestHelper helper) {
         assertExposesItemHandler(helper, new BlockPos(1, 2, 1),
             BCFactoryBlocks.AUTOWORKBENCH_ITEM.get(), "Auto Workbench");
@@ -195,6 +265,10 @@ public class MachinePipeConnectivityTester {
             BCSiliconBlocks.ADVANCED_CRAFTING_TABLE.get(), "Advanced Crafting Table");
         assertExposesItemHandler(helper, new BlockPos(1, 3, 1),
             BCBuildersBlocks.LIBRARY.get(), "Electronic Library");
+        assertExposesItemHandler(helper, new BlockPos(2, 3, 1),
+            BCBuildersBlocks.ARCHITECT.get(), "Architect Table");
+        assertExposesItemHandler(helper, new BlockPos(1, 3, 2),
+            BCFactoryBlocks.MINING_WELL.get(), "Mining Well");
         helper.succeed();
     }
 

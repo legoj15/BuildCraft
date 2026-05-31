@@ -116,6 +116,12 @@ public class BCBuilders {
         // Electronic Library — exposes its snapshot up/download slots to item pipes.
         event.registerBlockEntity(Capabilities.Item.BLOCK, BCBuildersBlockEntities.LIBRARY.get(),
             (library, direction) -> library.getItemHandler(direction));
+
+        // Architect Table — exposes the INSERT input slot (blank Blueprint/Template) and the
+        // EXTRACT output slot (finished snapshot) so item pipes can connect and exchange snapshots,
+        // matching 1.12.2. Without this the slots are invisible to PipeFlowItems.canConnect.
+        event.registerBlockEntity(Capabilities.Item.BLOCK, BCBuildersBlockEntities.ARCHITECT.get(),
+            (architect, direction) -> architect.getItemHandler(direction));
     }
 
     private static void buildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {

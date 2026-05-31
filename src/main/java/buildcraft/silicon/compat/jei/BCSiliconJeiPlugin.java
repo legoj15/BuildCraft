@@ -6,13 +6,9 @@
 
 package buildcraft.silicon.compat.jei;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.constants.RecipeTypes;
-import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
@@ -20,14 +16,8 @@ import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
-import mezz.jei.api.runtime.IIngredientManager;
-import mezz.jei.api.runtime.IJeiRuntime;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Blocks;
 
 import buildcraft.lib.compat.jei.BCGhostIngredientHandler;
 import buildcraft.lib.compat.jei.BlueprintTransferHandler;
@@ -38,16 +28,24 @@ import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
 import buildcraft.silicon.gui.GuiAdvancedCraftingTable;
 import buildcraft.silicon.item.ItemPluggableGate;
 import buildcraft.silicon.item.ItemPluggableLens;
-import buildcraft.silicon.plug.FacadeBlockStateInfo;
-import buildcraft.silicon.plug.FacadeStateManager;
-import buildcraft.silicon.recipe.FacadeAssemblyRecipes;
 
 /**
  * JEI integration plugin for BuildCraft Silicon.
  * Registers the Advanced Crafting Table as a crafting station with recipe
  * transfer support and a clickable progress bar, and surfaces every Assembly
- * Table recipe via a custom category — facades collapse into a single cycling
- * entry so JEI's index doesn't explode with thousands of variants.
+ * Table recipe via a custom category.
+ *
+ * <p>The ~1357 facade variants ({@code plug_facade} × every wrappable block ×
+ * basic/hollow) are kept out of JEI's ingredient panel by tagging the item with
+ * {@code c:hidden_from_recipe_viewers} (see
+ * {@code data/c/tags/item/hidden_from_recipe_viewers.json}). This replaces an
+ * older {@code onRuntimeAvailable} pass that added all variants via the creative
+ * tab and then stripped them with {@code removeIngredientsAtRuntime} — that
+ * removal rebuilt JEI's search structures and cost ~1.5s on the first GUI open
+ * of every session (JEI starts its runtime lazily on first screen open). Tagging
+ * is free: JEI just marks them invisible. Facades stay fully browseable through
+ * the Assembly Table catalyst, resolvable by pressing U on any wrappable block,
+ * and present in the survival/creative menu (the tag is recipe-viewer-only).
  */
 @JeiPlugin
 public class BCSiliconJeiPlugin implements IModPlugin {
@@ -159,58 +157,5 @@ public class BCSiliconJeiPlugin implements IModPlugin {
         registration.addCraftingStation(RecipeTypes.CRAFTING, BCSiliconItems.ADVANCED_CRAFTING_TABLE.get());
         // Assembly Table: catalyst for the assembly category.
         registration.addCraftingStation(AssemblyRecipeJeiTypes.ASSEMBLY, BCSiliconItems.ASSEMBLY_TABLE.get());
-    }
-
-    /** Collapse the 1357-entry facade variant explosion in JEI's ingredient panel down to a
-     *  single representative entry. The subtype interpreter registered in
-     *  {@link #registerItemSubtypes(ISubtypeRegistration)} is still active, so:
-     *  <ul>
-     *    <li>Pressing R on a facade held in the player's inventory still finds the right
-     *        recipe (the cycling Assembly Table recipe focus-narrows to that variant — see
-     *        {@link AssemblyTableCategory#setRecipe} for the createFocusLink rationale).</li>
-     *    <li>Browsing every facade variant still works via the Assembly Table catalyst
-     *        (the cycling recipe lists all variants as outputs).</li>
-     *  </ul>
-     *  Removal happens here in {@code onRuntimeAvailable} rather than at registration time
-     *  because JEI builds its ingredient list from creative-tab contents after all plugins
-     *  have registered subtypes — there's no earlier hook to subtract from. */
-    @Override
-    public void onRuntimeAvailable(IJeiRuntime runtime) {
-        Item facadeItem = BCSiliconItems.PLUG_FACADE.get();
-        IIngredientManager mgr = runtime.getIngredientManager();
-
-        // Pick the stone-wrapped basic facade as the representative when available — stone is
-        // universally recognised and the resulting JEI entry is named "Plug Facade: Stone".
-        // Fall back to the first facade JEI gives us if stone isn't a registered facade source
-        // (e.g. a future config disables it).
-        CompoundTag representativeSubtype = null;
-        FacadeBlockStateInfo stoneInfo = FacadeStateManager.validFacadeStates.get(Blocks.STONE.defaultBlockState());
-        if (stoneInfo != null && stoneInfo.isVisible) {
-            ItemStack stoneFacade = FacadeAssemblyRecipes.createFacadeStack(stoneInfo, false);
-            representativeSubtype = NBTUtilBC.getItemData(stoneFacade).getCompoundOrEmpty("facade");
-        }
-
-        List<ItemStack> toRemove = new ArrayList<>();
-        boolean keptRepresentative = false;
-        ItemStack fallbackRepresentative = null;
-        for (ItemStack stack : mgr.getAllItemStacks()) {
-            if (stack.getItem() != facadeItem) continue;
-            CompoundTag subtype = NBTUtilBC.getItemData(stack).getCompoundOrEmpty("facade");
-            if (representativeSubtype != null && !keptRepresentative && subtype.equals(representativeSubtype)) {
-                keptRepresentative = true;
-                continue;
-            }
-            if (fallbackRepresentative == null) fallbackRepresentative = stack;
-            toRemove.add(stack);
-        }
-
-        // Stone wasn't in JEI's list — promote the first facade we saw back to representative.
-        if (!keptRepresentative && fallbackRepresentative != null) {
-            toRemove.remove(fallbackRepresentative);
-        }
-
-        if (!toRemove.isEmpty()) {
-            mgr.removeIngredientsAtRuntime(VanillaTypes.ITEM_STACK, toRemove);
-        }
     }
 }

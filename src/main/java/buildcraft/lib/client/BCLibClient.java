@@ -4,6 +4,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 import net.neoforged.neoforge.client.event.RegisterSpriteSourcesEvent;
@@ -94,6 +95,21 @@ public class BCLibClient {
         NeoForge.EVENT_BUS.addListener(
             EventBuildCraftReload.FinishLoad.class,
             GuideManager.INSTANCE::onRegistryReload
+        );
+
+        // Warm the guide-book content cache at first world-join, so the ~750ms parse/index
+        // pass (markdown for every page + group population + suffix-array search index, see
+        // GuideManager#reload0) lands inside the "Loading world" screen instead of hitching
+        // the render thread the first time the player opens the book. ensureLoaded() no-ops
+        // once contents is populated, so the heavy work runs exactly once per session (the
+        // first LoggingIn) and is free on every later join; the synchronous ensureLoaded() in
+        // openGuideScreen() stays as a fallback for any path that opens the book first. Same
+        // render thread and same code path as the lazy load — just triggered earlier, where
+        // the cost is hidden by the loading screen. (Mirrors how the facade scan/dedup was
+        // moved off the JEI first-screen-open path onto LoggingIn.)
+        NeoForge.EVENT_BUS.addListener(
+            ClientPlayerNetworkEvent.LoggingIn.class,
+            event -> GuideManager.INSTANCE.ensureLoaded()
         );
 
         NeoForge.EVENT_BUS.register(BCDebugOverlay.class);

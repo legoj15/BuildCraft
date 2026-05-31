@@ -152,11 +152,21 @@ public class BCSiliconClient {
          *       {@code ServerAboutToStartEvent}; for a multiplayer client we kick it here
          *       as a safety net (the scan only touches BlockState registry — no server context).</li>
          * </ul>
+         *
+         * <p>{@link FacadeDeduplicator#applyRedirectAuthority()} is called unconditionally <em>after</em>
+         * {@code runDeferredDedup()} because the dedup pass only re-runs when a re-bake refilled the model
+         * cache — after the first pass {@code runDeferredDedup()} is a no-op. The redirect-authority
+         * decision (is this client's JVM running the server?), by contrast, can change every join: a
+         * player can leave a single-player world (redirects valid) and join a dedicated server (redirects
+         * must be withheld) without any model re-bake. Re-evaluating here keeps
+         * {@link FacadeStateManager#stackRedirects} honest across that transition. (On the very first join
+         * the dedup pass calls it too; calling twice is idempotent.)
          */
         @SubscribeEvent
         public static void onClientLoggingIn(net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingIn event) {
             FacadeStateManager.ensureInitialized();
             runDeferredDedup();
+            FacadeDeduplicator.applyRedirectAuthority();
         }
     }
 

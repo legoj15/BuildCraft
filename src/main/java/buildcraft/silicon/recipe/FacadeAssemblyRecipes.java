@@ -114,7 +114,11 @@ public class FacadeAssemblyRecipes extends AssemblyRecipe implements IRecipeView
                 continue;
             }
 
-            // Redirect match: this block was deduplicated, redirect to the surviving facade(s)
+            // Redirect match: this block shares a surviving facade's textures (it was either a visual
+            // duplicate that got removed, or a non-facade block like brick_slab). stackRedirects is empty
+            // unless an integrated server computed it (see its field doc) — so on a dedicated server this
+            // branch is simply never taken and only direct block→facade crafting works. That's the
+            // accepted limitation: the redirect table can't be derived server-side without baked models.
             List<FacadeBlockStateInfo> redirects = FacadeStateManager.stackRedirects.get(key);
             if (redirects != null) {
                 for (FacadeBlockStateInfo redirect : redirects) {

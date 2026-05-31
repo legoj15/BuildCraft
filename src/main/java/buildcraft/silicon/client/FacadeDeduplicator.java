@@ -39,11 +39,47 @@ import buildcraft.silicon.plug.FacadeStateManager;
  * to an earlier one (e.g. bricks vs double brick_slab, waterlogged vs non-waterlogged).
  *
  * <p>Must be called after model baking is complete.
+ *
+ * <p><b>Why this is client-only, and what that means for the server.</b> The dedup
+ * compares <em>baked block-model textures</em>, which only exist on the client — a
+ * dedicated server's {@code ResourceManager} exposes {@code data/} only (never
+ * {@code assets/}), and the Mojang server jar ships zero block models. So the redirect
+ * table this class produces ({@link FacadeStateManager#stackRedirects}) can only ever
+ * be computed client-side.
+ *
+ * <p>But {@link FacadeStateManager#stackRedirects} is read by
+ * {@link buildcraft.silicon.recipe.FacadeAssemblyRecipes} during the
+ * <em>server-authoritative</em> assembly-table tick. The two only line up when the
+ * logical server runs in the same JVM as the client that computed the table — i.e.
+ * single-player or a LAN host. On a dedicated server (or for a LAN guest) the server's
+ * copy of the field is whatever <em>that</em> process computed, which for a model-less
+ * dedicated server is always empty.
+ *
+ * <p>To keep that honest, redirect <em>computation</em> (here, needs models) is split
+ * from redirect <em>publication</em> ({@link #applyRedirectAuthority()}, gated on
+ * {@link net.minecraft.client.Minecraft#hasSingleplayerServer()}). The invariant both
+ * sides rely on is: <b>{@code stackRedirects} is non-empty only when the server reading
+ * it will actually honor it.</b> A client connected to a dedicated server computes its
+ * redirects (for its own deduped list) but does <em>not</em> publish them into
+ * {@code stackRedirects}, so no client surface can advertise a redirect the server will
+ * reject. See the {@code todos.md} "Facade redirects are client-only" entry for the
+ * full rationale and the rejected alternatives (server-side JSON resolution, shipped
+ * data table).
  */
 @SuppressWarnings("deprecation")
 public class FacadeDeduplicator {
     private static final boolean DEBUG = BCDebugging.shouldDebugLog("silicon.facade");
     private static final RandomSource RANDOM = RandomSource.create(42L);
+
+    /**
+     * The redirect table computed by the last {@link #deduplicateVisuallyIdentical} pass,
+     * held separately from the published {@link FacadeStateManager#stackRedirects} so that
+     * the authority decision ({@link #applyRedirectAuthority()}) can be re-evaluated at every
+     * world join without recomputing (models don't change between an SP disconnect and a
+     * dedicated-server join in the same client process, but the authority does). Empty until
+     * the first dedup pass; never null.
+     */
+    private static volatile Map<ItemStackKey, List<FacadeBlockStateInfo>> computedRedirects = Map.of();
 
     /**
      * Removes facade states from {@link FacadeStateManager#validFacadeStates} and
@@ -194,22 +230,68 @@ public class FacadeDeduplicator {
                 + nextStackRedirects.size() + ")");
         }
 
-        // Freeze the inner Lists and publish all three snapshots atomically (volatile writes).
-        // Publish order: validFacadeStates → stackFacades → stackRedirects. A reader that grabs
-        // each field via separate volatile reads might see a mid-publish state across two fields;
-        // we accept that brief inconsistency (a worst-case Assembly Table tick gets one stale read
-        // out of three). The fields are never *individually* mid-mutation, so no CME can occur.
+        // Freeze the inner Lists and publish the visual-dedup snapshots atomically (volatile writes).
+        // Publish order: validFacadeStates → stackFacades. A reader that grabs each field via separate
+        // volatile reads might see a mid-publish state across the two fields; we accept that brief
+        // inconsistency (a worst-case Assembly Table tick gets one stale read). The fields are never
+        // *individually* mid-mutation, so no CME can occur.
+        //
+        // validFacadeStates + stackFacades are the visual-dedup result — the de-duplicated facade list
+        // that is BuildCraft's core facade feature, and they publish unconditionally (every client,
+        // single-player or connected to a dedicated server, dedups its own displayed list).
+        //
+        // stackRedirects is held back: redirects are only *valid to publish* when this client's JVM is
+        // also running the logical server (see applyRedirectAuthority). We stash the computed table in
+        // computedRedirects and let the authority gate decide whether it reaches the live field. Calling
+        // applyRedirectAuthority() here covers the in-game F3+T re-bake case (already logged in, authority
+        // known); the login path calls it again after ensureInitialized() for the fresh-join case.
         Map<ItemStackKey, List<FacadeBlockStateInfo>> publishedStackFacades = new HashMap<>(nextStackFacades.size());
         for (Map.Entry<ItemStackKey, List<FacadeBlockStateInfo>> e : nextStackFacades.entrySet()) {
             publishedStackFacades.put(e.getKey(), List.copyOf(e.getValue()));
         }
-        Map<ItemStackKey, List<FacadeBlockStateInfo>> publishedStackRedirects = new HashMap<>(nextStackRedirects.size());
+        Map<ItemStackKey, List<FacadeBlockStateInfo>> frozenRedirects = new HashMap<>(nextStackRedirects.size());
         for (Map.Entry<ItemStackKey, List<FacadeBlockStateInfo>> e : nextStackRedirects.entrySet()) {
-            publishedStackRedirects.put(e.getKey(), List.copyOf(e.getValue()));
+            frozenRedirects.put(e.getKey(), List.copyOf(e.getValue()));
         }
         FacadeStateManager.validFacadeStates = Collections.unmodifiableSortedMap(nextValid);
         FacadeStateManager.stackFacades = Map.copyOf(publishedStackFacades);
-        FacadeStateManager.stackRedirects = Map.copyOf(publishedStackRedirects);
+        computedRedirects = Map.copyOf(frozenRedirects);
+        applyRedirectAuthority();
+    }
+
+    /**
+     * Publishes the computed redirect table into the live, server-read
+     * {@link FacadeStateManager#stackRedirects} field <em>iff</em> this client's JVM is also running the
+     * logical server it's connected to ({@link net.minecraft.client.Minecraft#hasSingleplayerServer()} —
+     * true for single-player and for the host of an "Open to LAN" world). Otherwise it clears the field.
+     *
+     * <p>This is the enforcement point for the invariant documented on the class: {@code stackRedirects}
+     * is non-empty only when the server that reads it shares this JVM and therefore honors it. On a
+     * dedicated server the server process computes no redirects (no models) and its field stays empty;
+     * a client connected to that server still computes its own redirects for its deduped display list,
+     * but this method keeps them out of the field so nothing can offer a craft the server will reject.
+     *
+     * <p>Must run on the client thread. Safe to call repeatedly — it's a pure function of
+     * {@code computedRedirects} and the current connection state, so it's the right thing to re-run at
+     * every world join (the authority can flip between an SP session and a later dedicated-server join in
+     * the same client process, with no model re-bake in between).
+     */
+    public static void applyRedirectAuthority() {
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        boolean authoritative = mc != null && mc.hasSingleplayerServer();
+        if (authoritative) {
+            FacadeStateManager.stackRedirects = computedRedirects;
+            if (DEBUG) {
+                BCLog.logger.info("[silicon.facade] Integrated server present — published "
+                    + computedRedirects.size() + " facade recipe redirects.");
+            }
+        } else {
+            FacadeStateManager.stackRedirects = Map.of();
+            if (DEBUG) {
+                BCLog.logger.info("[silicon.facade] No integrated server (dedicated/LAN-guest) — "
+                    + "facade recipe redirects withheld; the server owns its own (empty) table.");
+            }
+        }
     }
 
     /**

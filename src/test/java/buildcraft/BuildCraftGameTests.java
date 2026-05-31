@@ -406,6 +406,12 @@ public class BuildCraftGameTests {
             // Basic Gate has no assembly usages.
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:guide_modifier_recipe_renders_correct_input_variant"), () -> buildcraft.silicon.GateRecipeVariantTester::testGuideBookModifierRecipeRendersCorrectInputVariant);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:basic_clay_brick_gate_has_no_assembly_usages"), () -> buildcraft.silicon.GateRecipeVariantTester::testBasicClayBrickGateHasNoAssemblyUsages);
+            // Facade recipe redirects are server-authoritative: stackRedirects is published only when an
+            // integrated server shares the client JVM, and empty on a dedicated server. Pin both halves —
+            // empty map yields no facade for a redirect-only item, populated map yields the facade. See
+            // FacadeRedirectTester and the todos.md "Facade redirects are client-only" entry.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:facade_empty_redirects_produce_no_facade"), () -> buildcraft.silicon.FacadeRedirectTester::testEmptyRedirectsProduceNoFacadeForMappedItem);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:facade_populated_redirects_make_facade"), () -> buildcraft.silicon.FacadeRedirectTester::testPopulatedRedirectsMakeFacadeForMappedItem);
             // Pins the Logic Gates guide page's <recipe_cycle match="..."/> selectors: each assembly
             // match picks one variant's AND+OR pair, and each swap direction has its 12 crafting recipes.
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:guide_gate_recipe_cycle_selectors"), () -> buildcraft.silicon.GateRecipeVariantTester::testGuideGateRecipeCycleSelectors);

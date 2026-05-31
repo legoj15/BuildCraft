@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:facade_populated_redirects_make_facade",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 20,
+    "setup_ticks": 0,
+    "required": true
+}

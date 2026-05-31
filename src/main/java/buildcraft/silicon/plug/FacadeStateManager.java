@@ -64,9 +64,21 @@ public enum FacadeStateManager implements IFacadeRegistry {
      *  but that's tolerable because no read path requires cross-map consistency in a single tick. */
     public static volatile SortedMap<BlockState, FacadeBlockStateInfo> validFacadeStates;
     public static volatile Map<ItemStackKey, List<FacadeBlockStateInfo>> stackFacades;
-    /** Maps item inputs of deduplicated (removed) facades to the surviving facade info(s).
-     *  Populated client-side by FacadeDeduplicator after visual dedup.
-     *  A single item may redirect to multiple facade infos (e.g. waxed copper bulb → 4 copper_bulb states). */
+    /** Maps item inputs of deduplicated (removed) facades — and of non-facade blocks that share a
+     *  surviving facade's textures, e.g. brick_slab → bricks — to the surviving facade info(s).
+     *  A single item may redirect to multiple facade infos (e.g. waxed copper bulb → 4 copper_bulb states).
+     *
+     *  <p><b>Invariant: non-empty only when the server reading it will honor it.</b> This table is
+     *  derived from baked block-model textures, which exist only on the client (a dedicated server has
+     *  no {@code assets/} and no block models). It is read, however, by
+     *  {@link buildcraft.silicon.recipe.FacadeAssemblyRecipes} during the server-authoritative
+     *  assembly-table tick. Those line up only when the client that computed the table and the logical
+     *  server share one JVM (single-player / LAN host). So
+     *  {@link buildcraft.silicon.client.FacadeDeduplicator#applyRedirectAuthority()} publishes the
+     *  computed table here only when {@code Minecraft.hasSingleplayerServer()}; otherwise it stays
+     *  {@link Map#of() empty}. On a dedicated server this field is therefore always empty (the server
+     *  computes nothing, and a connected client withholds its own copy) — redirects simply don't apply
+     *  there, by design. See the {@code todos.md} "Facade redirects are client-only" entry. */
     public static volatile Map<ItemStackKey, List<FacadeBlockStateInfo>> stackRedirects;
     public static FacadeBlockStateInfo defaultState, previewState;
 

@@ -77,3 +77,6 @@ gametest_output*.log
 
 # NeoForge / Minecraft reference sources (scripts/neoforge-sources-sync.sh)
 /.neoforge-ref/
+
+# Generated GitHub-wiki export (scripts/guide-to-wiki.py)
+/wiki-export/

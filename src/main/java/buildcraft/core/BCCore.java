@@ -83,6 +83,11 @@ public class BCCore {
         buildcraft.builders.BCBuilders.init(modEventBus);
         buildcraft.robotics.BCRobotics.init(modEventBus);
 
+        // ─── Backwards-compat aliases for older world / inventory IDs ────────
+        // Must run after every subsystem register is populated (LegacyAliases reads them) and
+        // before RegisterEvent fires (constructor time qualifies).
+        buildcraft.lib.registry.LegacyAliases.init(modEventBus);
+
         // ─── Single unified config ──────────────────────────────────────────
         modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, BCUnifiedConfig.SPEC);
         if (FMLEnvironment.getDist() == Dist.CLIENT) {

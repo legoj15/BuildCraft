@@ -473,6 +473,10 @@ public class BuildCraftGameTests {
             // an empty stream, leaving phantom slots blank for the gears (and most recipes). See
             // CraftingUtilBlueprintTester.
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:blueprint_place_resolves_tag_ingredients"), () -> buildcraft.lib.misc.CraftingUtilBlueprintTester::testTagIngredientsResolveIntoBlueprint);
+
+            // Backwards-compat registry aliases (LegacyAliases) — every legacy block/item/BE/fluid ID
+            // must resolve to a live current entry, so old worlds and inventories keep their content.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:legacy_aliases_resolve"), () -> buildcraft.lib.registry.LegacyAliasTester::testAliasesResolve);
         }
     }
 }

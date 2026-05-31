@@ -1,10 +1,9 @@
 # BuildCraft 1.12.2 → 26.1.x Port Status
 
-Last audited: 2026-05-31 (JEI facade hidden-tag — killed the ~1.5s first-GUI-open hitch)
+Last audited: 2026-05-31 (LegacyAliases — old-world/inventory ID translation wired)
 
 ## 🧹 Finalization
 
-- [ ] Backwards compatibility with older block and item IDs
 - [ ] Final code review across all subsystems.
 ---
 

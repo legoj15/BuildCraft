@@ -245,10 +245,8 @@ public class GuiGate extends GuiBC8<ContainerGate> {
     }
 
     @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        // Run the standard foreground + tooltip pipeline from GuiBC8.
-        // This also draws the dark overlay + variant popup when currentMenu is set.
-        super.extractLabels(graphics, mouseX, mouseY);
+    protected void drawForegroundLayer() {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
 
         // Suppress text labels only when a full-override popup is active (the variant picker).
         // During drag, currentMenu is set but shouldFullyOverride()=false — text should still

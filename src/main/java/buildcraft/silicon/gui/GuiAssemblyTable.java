@@ -109,7 +109,8 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
     }
 
     @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
+    protected void drawForegroundLayer() {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         String title = I18n.get("block.buildcraftunofficial.assembly_table");
         graphics.text(font, title, (imageWidth - font.width(title)) / 2, 15, 0xFF404040, false);
     }

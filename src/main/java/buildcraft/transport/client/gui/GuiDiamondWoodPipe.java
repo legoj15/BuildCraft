@@ -90,9 +90,6 @@ public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
         menu.sendNewFilterMode(mode);
     }
 
-    @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-    }
 
     private class FilterButton extends AbstractButton {
         private final FilterMode mode;

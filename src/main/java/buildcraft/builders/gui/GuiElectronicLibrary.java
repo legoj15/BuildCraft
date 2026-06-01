@@ -212,18 +212,6 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
     }
 
     @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        // Let GuiBC8 draw element foregrounds (ledgers, tooltips) in translated space first.
-        super.extractLabels(graphics, mouseX, mouseY);
-
-        // After super the pose is in GUI-local coordinates (0,0 = GUI top-left).
-        if (mainGui.currentMenu == null || !mainGui.currentMenu.shouldFullyOverride()) {
-            String titleStr = Component.translatable("tile.buildcraftunofficial.library.name").getString();
-            graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
-        }
-    }
-
-    @Override
     protected void drawForegroundLayer() {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
         if (graphics == null) return;
@@ -244,6 +232,12 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
             String text = key.header == null ? key.toString() : key.header.name;
             graphics.text(font, text, leftPos + LIST_X, rowY, colour, false);
             rowY += LIST_ROW_H;
+        }
+
+        // Centered title, unless a full-override popup (variant picker) is active.
+        if (mainGui.currentMenu == null || !mainGui.currentMenu.shouldFullyOverride()) {
+            String titleStr = Component.translatable("tile.buildcraftunofficial.library.name").getString();
+            graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
         }
     }
 

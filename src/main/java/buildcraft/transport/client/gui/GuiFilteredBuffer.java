@@ -86,7 +86,8 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
     }
 
     @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
+    protected void drawForegroundLayer() {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         String titleStr = title.getString();
         int titleWidth = font.width(titleStr);
         int titleX = (imageWidth - titleWidth) / 2;

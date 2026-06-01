@@ -49,8 +49,4 @@ public class GuiDiamondPipe extends GuiBC8<ContainerDiamondPipe> {
                         "buildcraft.help.diamond_pipe.filter.desc2")));
     }
 
-    @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        // Title drawn as part of the background texture in 1.12.2
-    }
 }

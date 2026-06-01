@@ -73,7 +73,8 @@ public class GuiIntegrationTable extends GuiBC8<ContainerIntegrationTable> {
     }
 
     @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
+    protected void drawForegroundLayer() {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         String title = I18n.get("block.buildcraftunofficial.integration_table");
         graphics.text(font, title, (imageWidth - font.width(title)) / 2, 10, 0xFF404040, false);
     }

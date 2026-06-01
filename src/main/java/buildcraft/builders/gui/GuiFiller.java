@@ -196,9 +196,8 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
     }
 
     @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        // Let GuiBC8 handle element foregrounds (tooltips, ledgers, menus)
-        super.extractLabels(graphics, mouseX, mouseY);
+    protected void drawForegroundLayer() {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         // After super, the pose is back to ACS-translated space (0,0 = GUI top-left)
         if (mainGui.currentMenu == null || !mainGui.currentMenu.shouldFullyOverride()) {
             String titleStr = Component.translatable("block.buildcraftunofficial.filler").getString();

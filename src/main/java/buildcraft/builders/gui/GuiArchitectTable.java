@@ -5,6 +5,7 @@
 package buildcraft.builders.gui;
 
 import buildcraft.lib.gui.BCGraphics;
+import buildcraft.lib.gui.GuiIcon;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
@@ -209,8 +210,8 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
     }
 
     @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        super.extractLabels(graphics, mouseX, mouseY);
+    protected void drawForegroundLayer() {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         // Draw the custom titles if needed
         String titleStr = this.title.getString();
         graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 111, 0xFF404040, false);

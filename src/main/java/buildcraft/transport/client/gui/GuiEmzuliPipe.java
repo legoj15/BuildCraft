@@ -184,8 +184,8 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
     }
 
     @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        super.extractLabels(graphics, mouseX, mouseY);
+    protected void drawForegroundLayer() {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
 
         String titleStr = Component.translatable("gui.pipes.emzuli.title").getString();
         int titleX = (imageWidth - font.width(titleStr)) / 2;

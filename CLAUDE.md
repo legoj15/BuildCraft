@@ -11,37 +11,35 @@ Java 25 is the project toolchain — used for compile, test, and the actual game
 ## Build Commands
 
 ```bash
-# BuildCraft builds with Stonecutter: ONE source tree, one node per MC version
-# (versions/26.1.1, versions/26.1.2). Most tasks are per-node — qualify with :<node>:.
-# Unqualified tasks run across ALL nodes.
+# BuildCraft builds with Stonecutter: ONE source tree, one node per MC LINE.
+# Today there's a single node (26.1.2) that ships as the universal 26.1.x jar.
+# Tasks are per-node — qualify with :26.1.2:. Unqualified tasks run across all nodes.
 
-# Compile the active node (fast feedback)
+# Compile the node (fast feedback)
 ./gradlew :26.1.2:compileJava
 
-# Build EVERY node's jar and collect them into build/libs/<mod_version>/
+# Build the jar(s) and collect into build/libs/<mod_version>/ (currently one jar, +mc26.1)
 ./gradlew buildAndCollect
 
-# Run client / server for a specific node (both nodes' runClient verified working)
+# Run the client / server
 ./gradlew :26.1.2:runClient
-./gradlew :26.1.1:runClient
 ./gradlew :26.1.2:runServer
 
-# Switch which node is "active" (what the IDE resolves; rewrites stonecutter.gradle.kts)
-./gradlew "Set active project to 26.1.1"
-
-# Unit tests / headless game tests (per node)
+# Unit tests / headless game tests
 ./gradlew :26.1.2:test
 ./gradlew :26.1.2:runGameTestServer
 ```
 
 ## Multi-version builds (Stonecutter)
 
-BuildCraft targets multiple MC versions from ONE source tree via the [Stonecutter](https://stonecutter.kikugie.dev) Gradle plugin (Kotlin DSL). Each MC line is a **node** under `versions/<mcver>/` whose `gradle.properties` carries that node's `minecraft_version`, `neo_version`, `jei_version`, and the `neoforge.mods.toml` dependency ranges (`neo_dep_range`/`mc_dep_range`). Current nodes: **`26.1.1`** (legacy `BlockEvent.BreakEvent` + old GUI getters) and **`26.1.2`** (`BreakBlockEvent` + new getters). The old branch-per-MC-line model is retired — these are nodes, not branches.
+BuildCraft targets multiple MC versions from ONE source tree via the [Stonecutter](https://stonecutter.kikugie.dev) Gradle plugin (Kotlin DSL). The unit is an MC **line** (a real Java/mapping cliff), not a patch — each line is a **node** under `versions/<id>/` whose `gradle.properties` carries its `minecraft_version`, `neo_version`, `jei_version`, and `neoforge.mods.toml` ranges. **Today there is one node, `26.1.2`, and it ships as a single jar covering all of 26.1 / 26.1.1 / 26.1.2.** The old branch-per-MC-line model is retired — these are nodes, not branches.
 
-- **Build scripts (all Kotlin):** `settings.gradle.kts` declares the nodes; `stonecutter.gradle.kts` is the controller (active node + moddev `apply false`); `build.gradle.kts` is the shared per-node build ("centralScript"). `src/` lives at the tree root, shared by every node.
-- **Divergent code** is gated inline with Stonecutter directives in the normal `.java` files — `//? if >=26.1.2 { … } //?} else { … }` — NOT separate files or branches. The active node's branch is live code; the other rides along as a `/* */` comment. Switching the active node rewrites those comments in place. (These Stitcher directives are independent of the Kotlin build DSL.)
-- **Add an MC version:** add a `versions(...)` entry in `settings.gradle.kts`, create `versions/<mcver>/gradle.properties`, and wrap any newly-divergent call sites in `//? if` directives. No new branch.
-- `./gradlew buildAndCollect` builds every node and gathers the `+mc<mcver>` jars into `build/libs/<mod_version>/`.
+Two mechanisms handle version differences, chosen by *kind*:
+- **Within a line (patch deltas, e.g. 26.1.1 vs 26.1.2) → runtime, NOT directives.** The handful of diverged APIs are absorbed at load so one compiled jar runs on every patch: GUI getters use the old names 26.1.2 still keeps, and the block-break event is resolved reflectively (`lib.misc.BreakEventCompat`) because `BreakBlockEvent` (26.1.2) replaced `BlockEvent.BreakEvent` (26.1.1). Prefer this for small within-line deltas — it keeps the jar count at one.
+- **Across a cliff (a new line, e.g. a future 1.21.11 on Java 21) → a new node + `//? if` directives.** Add a `versions(...)` entry in `settings.gradle.kts`, a `versions/<id>/gradle.properties`, and wrap the genuinely cross-cliff call sites in Stonecutter directives (`//? if >=… { … } //?} else { … }`). That line then builds its own jar, and per-node/active-switching tasks (`:<id>:runClient`, `Set active project to <id>`) come into play.
+
+- **Build scripts (all Kotlin):** `settings.gradle.kts` declares the nodes; `stonecutter.gradle.kts` is the controller (active node + moddev `apply false`); `build.gradle.kts` is the shared per-node build. `src/` lives at the tree root.
+- `./gradlew buildAndCollect` builds each node and collects the `+mc<tag>` jars into `build/libs/<mod_version>/`. The 26.1.x jar is tagged `+mc26.1` (it covers the line); `mc_jar_tag` in the node's `gradle.properties` sets that tag.
 - **Kotlin DSL gotcha:** inside a `tasks.xxx { }` block, `property("p")` resolves against the *task*, not the project — read gradle.properties values into top-level `val`s (see [build.gradle.kts](build.gradle.kts)).
 
 ## Architecture

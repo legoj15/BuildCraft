@@ -16,9 +16,12 @@ plugins {
 
 stonecutter {
     create(rootProject) {
-        // One node per MC line that shares this source tree. Node name == MC version,
-        // which is what the //? if >=26.1.2 directives in src/ compare against.
-        versions("26.1.1", "26.1.2")
+        // One node per MC LINE (a real Java/mapping cliff). The 26.1.x line is a single node
+        // compiled against 26.1.2; within-line patch differences (26.1 / 26.1.1 / 26.1.2) are
+        // absorbed at runtime — reflection + common APIs (see lib.misc.BreakEventCompat) — so ONE
+        // jar covers all of 26.1.x. A future line like 1.21.11 (Java 21) would be a second node
+        // using //? if directives for the cross-cliff differences.
+        versions("26.1.2")
         vcsVersion = "26.1.2"
     }
 }

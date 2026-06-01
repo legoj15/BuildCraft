@@ -9,6 +9,7 @@ val minecraftVersion = property("minecraft_version") as String
 val neoVersion = property("neo_version") as String
 val jeiVersion = property("jei_version") as String
 val modVersion = property("mod_version") as String
+val mcJarTag = property("mc_jar_tag") as String
 // Resolved at project scope (NOT inside tasks.processResources {}, where `property()` would
 // resolve against the task, not the project). update_branch is root-only (inherited by nodes).
 val updateBranch = property("update_branch") as String
@@ -130,7 +131,7 @@ tasks.jar {
     // Axis A (mod_version, CalVer) + Axis B (minecraft_version) as a SemVer build-metadata tag.
     // The +mc<mc> coordinate lives ONLY in the jar filename — never in the mods.toml version —
     // because NeoForge orders versions Maven-style, where '+...' would corrupt update ordering.
-    archiveVersion = "$modVersion+mc$minecraftVersion"
+    archiveVersion = "$modVersion+mc$mcJarTag"
 }
 
 tasks.register<JavaExec>("dumpMethods") {

@@ -22,18 +22,16 @@ Please mention if you are using any other mods, especially mods which optimize o
  * Optional: Install `Gradle` (found [here](http://www.gradle.org/downloads)).
 2. Clone the BuildCraft repository: `git clone https://github.com/legoj15/BuildCraft.git` or [download the latest zip](https://github.com/legoj15/BuildCraft/archive/refs/heads/main.zip)
 3. Navigate to the cloned repository in a shell: `cd BuildCraft`
-4. Build the mod. BuildCraft uses [Stonecutter](https://stonecutter.kikugie.dev) to target several Minecraft versions from one source tree — each is a *node* (`26.1.1`, `26.1.2`). Build every node's jar at once with the `buildAndCollect` task:
+4. Build the mod. BuildCraft uses [Stonecutter](https://stonecutter.kikugie.dev) to target Minecraft from one source tree, one *node* per MC line. The 26.1.x line is a single node (compiled against 26.1.2) that ships as **one jar covering 26.1, 26.1.1 and 26.1.2**. Build with the `buildAndCollect` task:
     * On Linux/Unix/Mac: `./gradlew buildAndCollect`
     * On Windows: `.\gradlew.bat buildAndCollect`
-    * To build just one Minecraft version, prefix the task with its node: `./gradlew :26.1.2:build`
     * The Gradle wrapper pins the required Gradle version (9.x); you do **not** need Gradle installed.
-5. Once the build finishes, the per-version jars — named `BCunofficial-<version>+mc<mcversion>.jar` — are collected in `build/libs/<version>/`.
+5. Once the build finishes, the jar — `BCunofficial-<version>+mc26.1.jar`, compatible with all of 26.1.x — is in `build/libs/<version>/`.
 
 ### Running in a Development Environment
 To test the mod locally, use the NeoForge run tasks. These are **per-node**, so prefix them with the Minecraft version you want (e.g. `:26.1.2:`):
 * Run the Client: `./gradlew :26.1.2:runClient` (or `.\gradlew.bat :26.1.2:runClient` on Windows)
 * Run the Server: `./gradlew :26.1.2:runServer` (or `.\gradlew.bat :26.1.2:runServer` on Windows)
-* Swap `:26.1.2:` for `:26.1.1:` to run against that Minecraft version instead.
 
 On Windows 11, `runClientAndServer.ps1` will launch both at the same time (against the `:26.1.2` node) to reduce the amount of steps.
 
@@ -43,10 +41,9 @@ Your directory structure will look like a standard monolithic Java project:
     BuildCraft
      |- build            (Generated after compiling)
      |- run              (Generated when running the client/server)
-     |- versions         (One Stonecutter node per MC version, each with its gradle.properties)
-     |   |- 26.1.1
+     |- versions         (Stonecutter nodes, one per MC line; today just 26.1.2)
      |   \- 26.1.2
-     \- src              (Shared source; version differences are //? if directives, not forks)
+     \- src              (Shared source; one jar covers all of 26.1.x)
       |- main            (Mod source code and resources)
       \- test            (Test source code)
 

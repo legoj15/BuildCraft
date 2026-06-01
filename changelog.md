@@ -3,3 +3,4 @@
 - **Fixed multiplayer clients being unable to join dedicated servers.** Logging into a server warms the guide book's item index, which could name a facade before its block data finished initializing on the client — throwing an error that dropped the connection right after login. Facade naming and the guide indexer are now both hardened against it, and the load order is fixed.
 - Stopped the five dev-only "decorated" blocks from spamming the server log with missing-item loot-table errors at every world load.
 - **Fixed the in-game update notification.** The version manifest it reads was malformed, so the check silently failed for everyone; it now parses, and each supported Minecraft version reports the updates published for its own line.
+- **One download now covers Minecraft 26.1, 26.1.1, and 26.1.2.** Instead of a separate jar per version, BuildCraft ships a single jar compatible with the whole 26.1 line.

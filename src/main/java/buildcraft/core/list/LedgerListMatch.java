@@ -9,7 +9,7 @@ package buildcraft.core.list;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
@@ -61,7 +61,7 @@ public class LedgerListMatch extends Ledger_Neptune {
     }
 
     @Override
-    protected void drawIcon(double x, double y, GuiGraphicsExtractor graphics) {
+    protected void drawIcon(double x, double y, BCGraphics graphics) {
         graphics.blit(RenderPipelines.GUI_TEXTURED, ICON,
                 (int) x, (int) y, 0f, 0f, 16, 16, 16, 16);
     }

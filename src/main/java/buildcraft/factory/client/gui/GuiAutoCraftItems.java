@@ -6,7 +6,7 @@
 
 package buildcraft.factory.client.gui;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
@@ -102,7 +102,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
 
         // Draw crafting progress bar (arrow fill)
@@ -166,7 +166,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
         // Let the base class render the slots and background
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         
@@ -178,7 +178,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         // No labels — matches 1.12.2 which only has the GUI texture
     }
 

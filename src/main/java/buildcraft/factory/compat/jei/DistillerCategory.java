@@ -15,7 +15,7 @@ import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.category.AbstractRecipeCategory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -82,7 +82,7 @@ public class DistillerCategory extends AbstractRecipeCategory<IDistillationRecip
     }
 
     @Override
-    public void draw(IDistillationRecipe recipe, IRecipeSlotsView slots, GuiGraphicsExtractor graphics,
+    public void draw(IDistillationRecipe recipe, IRecipeSlotsView slots, BCGraphics graphics,
                      double mouseX, double mouseY) {
         background.draw(graphics);
         // Cast through double so sub-MJ recipes don't render as "0 MJ".

@@ -9,7 +9,7 @@ package buildcraft.lib.gui.ledger;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 
@@ -56,7 +56,7 @@ public class LedgerHelp extends Ledger_Neptune {
     }
 
     @Override
-    protected void drawIcon(double x, double y, GuiGraphicsExtractor graphics) {
+    protected void drawIcon(double x, double y, BCGraphics graphics) {
         if (!init) {
             init = true;
             List<HelpPosition> elements = new ArrayList<>();
@@ -80,7 +80,7 @@ public class LedgerHelp extends Ledger_Neptune {
             return;
         }
 
-        GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         if (graphics == null) return;
 
         boolean set = false;
@@ -109,7 +109,7 @@ public class LedgerHelp extends Ledger_Neptune {
 
     /** Draw a colored border rectangle around the given area.
      *  Matches the visual effect of 1.12.2's help_split.png 9-slice overlay. */
-    private void drawHighlightBorder(GuiGraphicsExtractor graphics, IGuiArea rect, int colour,
+    private void drawHighlightBorder(BCGraphics graphics, IGuiArea rect, int colour,
                                       boolean isHovered, boolean isSelected) {
         int x = (int) rect.getX();
         int y = (int) rect.getY();

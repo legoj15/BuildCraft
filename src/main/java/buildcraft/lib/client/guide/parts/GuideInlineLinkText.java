@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.font.IFontRenderer;
@@ -204,7 +204,7 @@ public class GuideInlineLinkText extends GuidePart {
         // every hovered span, not just rects under the mouse), then the row text.
         boolean drewAny = false;
         if (draw) {
-            GuiGraphicsExtractor g = GuiIcon.getGuiGraphics();
+            BCGraphics g = GuiIcon.getGuiGraphics();
             for (RowLayout row : rows) {
                 if (!row.rendered) {
                     continue;

@@ -192,7 +192,7 @@ public abstract class GuidePart {
         // share the unified entryHovered state.
         boolean drewAny = false;
         if (entryHovered && line.link) {
-            net.minecraft.client.gui.GuiGraphicsExtractor g = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
+            net.minecraft.client.gui.BCGraphics g = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
             if (g != null) {
                 boolean isFirstRendered = true;
                 for (WrapSegment seg : segments) {

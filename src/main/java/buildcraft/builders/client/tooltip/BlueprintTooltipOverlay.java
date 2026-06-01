@@ -39,7 +39,7 @@ import buildcraft.builders.snapshot.Snapshot;
  * modern equivalent is {@link RenderTooltipEvent.Pre}, at which point we can:
  * <ul>
  *   <li>Reach the raw component list, the font, and the screen dimensions.</li>
- *   <li>Re-run the same layout math {@code GuiGraphicsExtractor#tooltip} does to compute the
+ *   <li>Re-run the same layout math {@code BCGraphics#tooltip} does to compute the
  *       content width and height.</li>
  *   <li>Invoke the positioner ourselves to resolve the final on-screen tooltip position (which
  *       is what {@code event.getX()/getY()} <i>would</i> return — except at Pre time those are
@@ -120,7 +120,7 @@ public final class BlueprintTooltipOverlay {
             return;
         }
 
-        // Reproduce the vanilla tooltip-layout math from GuiGraphicsExtractor#tooltip
+        // Reproduce the vanilla tooltip-layout math from BCGraphics#tooltip
         // (lines ~1155–1168 of the deobfuscated source). Single-component tooltips start
         // tempHeight at -2 because no inter-line gap is needed; multi-component tooltips
         // start at 0 and accumulate the full getHeight of each component.

@@ -9,7 +9,7 @@ package buildcraft.lib.gui.elem;
 import java.util.List;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -77,7 +77,7 @@ public class GuiElementFluidTank implements IInteractionElement {
         long capacity = tank.getCapacityAsLong(0, net.neoforged.neoforge.transfer.fluid.FluidResource.EMPTY);
         long amount = tank.getAmountAsLong(0);
         if (!fluid.isEmpty() && capacity > 0 && amount > 0) {
-            GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
+            BCGraphics graphics = GuiIcon.getGuiGraphics();
             if (graphics != null) {
                 drawFluid(graphics, fluid.toStack((int) amount), (int) amount, (int) capacity);
             }
@@ -89,7 +89,7 @@ public class GuiElementFluidTank implements IInteractionElement {
         }
     }
 
-    private void drawFluid(GuiGraphicsExtractor graphics, FluidStack fluid, int amount, int capacity) {
+    private void drawFluid(BCGraphics graphics, FluidStack fluid, int amount, int capacity) {
         Identifier stillTexture = buildcraft.lib.misc.FluidUtilBC.getFluidTexture(fluid);
         if (stillTexture == null) return;
 

@@ -1,7 +1,7 @@
 package buildcraft.builders.gui;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.Font;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Items;
@@ -40,7 +40,7 @@ public class LedgerFillerProgress extends Ledger_Neptune {
     }
 
     @Override
-    protected void drawIcon(double x, double y, GuiGraphicsExtractor graphics) {
+    protected void drawIcon(double x, double y, BCGraphics graphics) {
         graphics.fakeItem(new ItemStack(Items.IRON_INGOT), (int) x, (int) y);
     }
 
@@ -48,7 +48,7 @@ public class LedgerFillerProgress extends Ledger_Neptune {
     public void drawBackground(float partialTicks) {
         super.drawBackground(partialTicks);
 
-        GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         if (graphics == null) return;
 
         if (interpWidth > CLOSED_WIDTH + 10) {

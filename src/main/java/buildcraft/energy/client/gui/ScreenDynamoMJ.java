@@ -1,6 +1,6 @@
 package buildcraft.energy.client.gui;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -102,7 +102,7 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
         
         int x = (int) mainGui.rootElement.getX();
@@ -131,7 +131,7 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         super.extractLabels(graphics, mouseX, mouseY);
         String str = title.getString();
         int strWidth = font.width(str);

@@ -15,7 +15,7 @@ import javax.annotation.Nullable;
 import com.google.common.collect.Queues;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -355,7 +355,7 @@ public class GuiGuide extends Screen {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    public void extractRenderState(BCGraphics graphics, int mouseX, int mouseY, float partialTicks) {
         // Set the graphics context for font rendering and other sub-renderers
         MinecraftFont.setGuiGraphics(graphics);
         GuiIcon.setGuiGraphics(graphics);
@@ -550,7 +550,7 @@ public class GuiGuide extends Screen {
                 boolean isHovered = new GuiRectangle(secondPageX, minY, 80, 10).contains(mouse);
                 int tabY = minY + (isHovered ? -5 : 0);
                 int strWidth = currentFont.getStringWidth(str);
-                GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
+                BCGraphics graphics = GuiIcon.getGuiGraphics();
                 if (graphics != null) {
                     // Clip so the tab only peeks from the top edge rather than drawing its full
                     // height down over the page.
@@ -594,7 +594,7 @@ public class GuiGuide extends Screen {
         // win over text tooltips, matching 1.12.2's `if (tooltipStack != null) ... else ...`.
         // Without this pass `tooltipStack` and `tooltips` were assigned every frame
         // but never consumed — hovering over an item or a link did nothing visible.
-        net.minecraft.client.gui.GuiGraphicsExtractor graphics = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
+        net.minecraft.client.gui.BCGraphics graphics = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
         if (graphics != null) {
             int mx = (int) mouse.getX();
             int my = (int) mouse.getY();

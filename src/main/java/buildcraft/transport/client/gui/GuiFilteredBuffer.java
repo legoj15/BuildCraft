@@ -6,7 +6,7 @@
  */
 package buildcraft.transport.client.gui;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -33,7 +33,7 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
 
         int rootX = (int) mainGui.rootElement.getX();
@@ -86,7 +86,7 @@ public class GuiFilteredBuffer extends GuiBC8<ContainerFilteredBuffer> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         String titleStr = title.getString();
         int titleWidth = font.width(titleStr);
         int titleX = (imageWidth - titleWidth) / 2;

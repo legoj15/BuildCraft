@@ -4,7 +4,7 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.energy.client.gui;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -67,7 +67,7 @@ public class ScreenEngineStone extends GuiBC8<ContainerEngineStone> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
 
         // Draw flame animation
@@ -88,7 +88,7 @@ public class ScreenEngineStone extends GuiBC8<ContainerEngineStone> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         super.extractLabels(graphics, mouseX, mouseY);
         String str = LocaleUtil.localize("tile.engineStone.name");
         int strWidth = font.width(str);

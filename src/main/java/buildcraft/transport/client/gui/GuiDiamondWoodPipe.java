@@ -5,7 +5,7 @@
  */
 package buildcraft.transport.client.gui;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -46,7 +46,7 @@ public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
 
         if (menu.behaviour.pipe.getFlow() instanceof buildcraft.api.transport.pipe.IFlowItems) {
@@ -91,7 +91,7 @@ public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
     }
 
     private class FilterButton extends AbstractButton {
@@ -112,7 +112,7 @@ public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
         }
 
         @Override
-        protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
             int state;
             boolean selected = menu.behaviour.filterMode == mode;
             if (!this.active) {

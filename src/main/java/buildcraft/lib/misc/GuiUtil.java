@@ -9,7 +9,7 @@ package buildcraft.lib.misc;
 import java.util.function.DoubleSupplier;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 
 import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.gui.pos.IGuiArea;
@@ -60,7 +60,7 @@ public class GuiUtil {
     }
 
     /** Enables GL scissoring for a region. Returns an AutoCloseable that disables it. */
-    public static AutoGlScissor scissor(GuiGraphicsExtractor graphics, double x, double y, double w, double h) {
+    public static AutoGlScissor scissor(BCGraphics graphics, double x, double y, double w, double h) {
         graphics.enableScissor((int) x, (int) y, (int) (x + w), (int) (y + h));
         return new AutoGlScissor() {
             @Override

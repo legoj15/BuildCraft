@@ -6,7 +6,7 @@
 
 package buildcraft.factory.client.gui;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -32,7 +32,7 @@ public class GuiChute extends GuiBC8<ContainerChute> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
     }
 
@@ -46,7 +46,7 @@ public class GuiChute extends GuiBC8<ContainerChute> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         // No labels — matches 1.12.2 which only has the GUI texture
     }
 }

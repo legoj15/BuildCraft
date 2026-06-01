@@ -107,6 +107,8 @@ dependencies {
 // Exclude REI compat modules from compilation — no MC 26.1 versions available
 tasks.withType<JavaCompile>().configureEach {
     exclude("**/compat/rei/**")
+    // Surface the full cross-cliff error set during the 1.21.11 port (javac caps at 100 by default).
+    options.compilerArgs.addAll(listOf("-Xmaxerrs", "2000", "-Xmaxwarns", "200"))
 }
 
 tasks.test {

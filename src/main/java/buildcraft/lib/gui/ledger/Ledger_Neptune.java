@@ -13,7 +13,7 @@ import java.util.function.Supplier;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
@@ -270,7 +270,7 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
 
     @Override
     public void drawBackground(float partialTicks) {
-        GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         if (graphics == null) return;
 
         // First-frame snap from persisted state. Done here (rather than in the constructor)
@@ -380,7 +380,7 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
 
 
     /** Override in subclasses to draw a 16x16 icon. */
-    protected void drawIcon(double x, double y, GuiGraphicsExtractor graphics) {
+    protected void drawIcon(double x, double y, BCGraphics graphics) {
         // Default: nothing
     }
 

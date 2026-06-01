@@ -7,7 +7,7 @@
 package buildcraft.builders.gui;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -168,7 +168,7 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         // Base GUI spans the left 176px; the blueprint overlay fills the right 87px. We always
         // draw both — the overlay carries the tank gauge art and display-slot frames, which
         // should be visible even before a blueprint is loaded so the player can see where
@@ -178,7 +178,7 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         super.extractLabels(graphics, mouseX, mouseY);
 
         // Title — centered over the main section.
@@ -204,7 +204,7 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    public void extractRenderState(BCGraphics graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
         super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
     }
@@ -229,7 +229,7 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
         }
 
         @Override
-        protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY,
+        protected void extractContents(BCGraphics graphics, int mouseX, int mouseY,
                                        float partialTick) {
             // Vanilla widget/button sprite — 9-sliced, hover-aware via SPRITES.get(active, hovered).
             // Matches the Replacer's Replace button and any other vanilla Button in the mod, so
@@ -278,7 +278,7 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
         }
 
         @Override
-        protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY,
+        protected void extractContents(BCGraphics graphics, int mouseX, int mouseY,
                                        float partialTick) {
             extractDefaultSprite(graphics);
             graphics.item(CHEST_ICON, getX() + 2, getY() + 2);

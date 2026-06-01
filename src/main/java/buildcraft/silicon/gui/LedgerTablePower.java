@@ -6,7 +6,7 @@
 
 package buildcraft.silicon.gui;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
@@ -47,7 +47,7 @@ public class LedgerTablePower extends Ledger_Neptune {
     }
 
     @Override
-    protected void drawIcon(double x, double y, GuiGraphicsExtractor graphics) {
+    protected void drawIcon(double x, double y, BCGraphics graphics) {
         SpriteHolder holder = tile.avgPowerClient > 0 ? ICON_ACTIVE : ICON_INACTIVE;
         TextureAtlasSprite sprite = holder.getSprite();
         if (sprite != null) {

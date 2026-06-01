@@ -8,7 +8,7 @@ package buildcraft.silicon.gui;
 
 import java.util.ArrayList;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -68,7 +68,7 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
 
         long target = menu.tile.getTarget();
@@ -109,7 +109,7 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         String title = I18n.get("block.buildcraftunofficial.assembly_table");
         graphics.text(font, title, (imageWidth - font.width(title)) / 2, 15, 0xFF404040, false);
     }

@@ -7,7 +7,7 @@ package buildcraft.energy.client.gui;
 import java.util.List;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Component;
@@ -88,7 +88,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
 
         // Draw fluid tank textures with glass overlay
@@ -104,7 +104,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
      * Draw a fluid tank with the actual fluid texture, filled proportionally,
      * then draw the glass overlay on top.
      */
-    private void drawFluidTank(GuiGraphicsExtractor graphics, int x, int y, Fluid fluid, int amount, int maxAmount) {
+    private void drawFluidTank(BCGraphics graphics, int x, int y, Fluid fluid, int amount, int maxAmount) {
         int drawX = (int) mainGui.rootElement.getX() + x;
         int drawY = (int) mainGui.rootElement.getY() + y;
 
@@ -126,7 +126,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
      * Uses NeoForge's IClientFluidTypeExtensions for the texture location
      * and tint color (fluid textures are grayscale; color comes from tinting).
      */
-    private void drawFluidTexture(GuiGraphicsExtractor graphics, int x, int y, int width, int height, Fluid fluid) {
+    private void drawFluidTexture(BCGraphics graphics, int x, int y, int width, int height, Fluid fluid) {
         net.neoforged.neoforge.fluids.FluidStack stack = new net.neoforged.neoforge.fluids.FluidStack(fluid.builtInRegistryHolder(), 1);
         Identifier stillTexture = buildcraft.lib.misc.FluidUtilBC.getFluidTexture(stack);
         if (stillTexture == null) {
@@ -172,7 +172,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         super.extractLabels(graphics, mouseX, mouseY);
         String str = LocaleUtil.localize("tile.engineIron.name");
         int strWidth = font.width(str);
@@ -182,7 +182,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    public void extractRenderState(BCGraphics graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
         super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
 
@@ -200,7 +200,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
      * Line 1: Fluid name (if tank has fluid)
      * Line 2: "X / Y mB" in gray
      */
-    private void renderTankTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY,
+    private void renderTankTooltip(BCGraphics graphics, int mouseX, int mouseY,
                                     int tankX, int tankY, Fluid fluid, int amount, int maxAmount) {
         int absX = leftPos + tankX;
         int absY = topPos + tankY;

@@ -6,7 +6,7 @@ import java.util.List;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.font.IFontRenderer;
@@ -69,7 +69,7 @@ public class GuidePartCodeBlock extends GuidePart {
                 // `darken` which flips on each new source line (number != -1) above.
                 // 1.12.2 used Gui.drawRect(...0xFF_F0_F0_F0); fill() is the modern equivalent.
                 if (darken) {
-                    GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
+                    BCGraphics graphics = GuiIcon.getGuiGraphics();
                     if (graphics != null) {
                         graphics.fill(_x - 2, _y - 1, _x + innerMaxWidth + 4, _y + font.getMaxFontHeight() + 1,
                             0xFF_F0_F0_F0);

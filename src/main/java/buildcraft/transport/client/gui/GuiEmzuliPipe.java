@@ -1,6 +1,6 @@
 package buildcraft.transport.client.gui;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -30,7 +30,7 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
     }
 
@@ -145,7 +145,7 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
         }
 
         @Override
-        protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
             // Show indent while this button is the actively pressed one
             int v = (activePressedButton == this) ? 20 : 0;
             GuiIcon bgIcon = new GuiIcon(TEXTURE, 176, v, 20, 20, 256);
@@ -184,7 +184,7 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         super.extractLabels(graphics, mouseX, mouseY);
 
         String titleStr = Component.translatable("gui.pipes.emzuli.title").getString();

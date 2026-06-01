@@ -5,7 +5,7 @@
  */
 package buildcraft.transport.client.gui;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -35,7 +35,7 @@ public class GuiDiamondPipe extends GuiBC8<ContainerDiamondPipe> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         GuiIcon icon = buildcraft.lib.client.ColorBlindUtil.isActive() ? ICON_GUI_CB : ICON_GUI;
         icon.drawAt(mainGui.rootElement);
     }
@@ -50,7 +50,7 @@ public class GuiDiamondPipe extends GuiBC8<ContainerDiamondPipe> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         // Title drawn as part of the background texture in 1.12.2
     }
 }

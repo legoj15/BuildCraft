@@ -6,7 +6,7 @@
 package buildcraft.builders.gui;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.input.KeyEvent;
@@ -226,7 +226,7 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         // Base texture
         graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE,
                 leftPos, topPos,
@@ -285,7 +285,7 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
         // cheap because blueprints are typically small. Skips cleanly when any piece is missing.
         String summary = buildSummaryText();
         if (summary != null) {
-            GuiGraphicsExtractor graphics = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
+            BCGraphics graphics = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
             if (graphics != null) {
                 int color = 0xFF_40_40_40;
                 graphics.text(font, summary, SUMMARY_X, SUMMARY_Y, color, false);
@@ -359,7 +359,7 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         super.extractLabels(graphics, mouseX, mouseY);
     }
 

@@ -1,6 +1,6 @@
 package buildcraft.silicon.gui;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -168,7 +168,7 @@ public class GuiGate extends GuiBC8<ContainerGate> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         // Draw top header
         BACKGROUND_TOP.drawAt(leftPos, topPos);
 
@@ -245,7 +245,7 @@ public class GuiGate extends GuiBC8<ContainerGate> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         // Run the standard foreground + tooltip pipeline from GuiBC8.
         // This also draws the dark overlay + variant popup when currentMenu is set.
         super.extractLabels(graphics, mouseX, mouseY);

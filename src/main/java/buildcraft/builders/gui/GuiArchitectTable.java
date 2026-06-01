@@ -4,7 +4,7 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.builders.gui;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
@@ -127,7 +127,7 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         // Draw main GUI background
         graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_BASE,
                 leftPos, topPos,
@@ -209,7 +209,7 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         super.extractLabels(graphics, mouseX, mouseY);
         // Draw the custom titles if needed
         String titleStr = this.title.getString();

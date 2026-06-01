@@ -13,7 +13,7 @@ import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.category.AbstractRecipeCategory;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -73,7 +73,7 @@ public class HeatExchangerCategory extends AbstractRecipeCategory<HeatExchangerR
     }
 
     @Override
-    public void draw(HeatExchangerRecipePair pair, IRecipeSlotsView slots, GuiGraphicsExtractor graphics,
+    public void draw(HeatExchangerRecipePair pair, IRecipeSlotsView slots, BCGraphics graphics,
                      double mouseX, double mouseY) {
         background.draw(graphics);
     }

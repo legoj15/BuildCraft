@@ -7,24 +7,24 @@
 
 package buildcraft.lib.gui;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.world.item.ItemStack;
 
 /**
  * An {@link ISimpleDrawable} that renders an {@link ItemStack} at a given position.
  * <p>
- * In 1.21, item rendering requires a {@link GuiGraphicsExtractor}; this class threads it
+ * In 1.21, item rendering requires a {@link BCGraphics}; this class threads it
  * in via a static field set by the surrounding screen (same pattern as
  * {@link buildcraft.lib.client.guide.font.MinecraftFont} and {@link GuiIcon}).
  */
 public class GuiStack implements ISimpleDrawable {
     private final ItemStack stack;
 
-    /** The GuiGraphicsExtractor context — set by the surrounding Screen each frame. */
-    private static GuiGraphicsExtractor currentGraphics;
+    /** The BCGraphics context — set by the surrounding Screen each frame. */
+    private static BCGraphics currentGraphics;
 
-    /** Set the GuiGraphicsExtractor context for all GuiStack rendering. */
-    public static void setGuiGraphics(GuiGraphicsExtractor graphics) {
+    /** Set the BCGraphics context for all GuiStack rendering. */
+    public static void setGuiGraphics(BCGraphics graphics) {
         currentGraphics = graphics;
     }
 

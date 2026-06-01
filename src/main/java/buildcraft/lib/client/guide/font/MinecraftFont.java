@@ -13,23 +13,23 @@ import java.util.Objects;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.util.FormattedCharSequence;
 
 /** Implements a font that delegates to Minecraft's own {@link Font}.
- * Requires a {@link GuiGraphicsExtractor} context to be set via {@link #setGuiGraphics} before
+ * Requires a {@link BCGraphics} context to be set via {@link #setGuiGraphics} before
  * any draw calls can render visually. */
 public enum MinecraftFont implements IFontRenderer {
     INSTANCE;
 
-    /** The current GuiGraphicsExtractor context — set by GuiGuide during rendering. */
-    private static GuiGraphicsExtractor currentGraphics;
+    /** The current BCGraphics context — set by GuiGuide during rendering. */
+    private static BCGraphics currentGraphics;
 
-    /** Set the GuiGraphicsExtractor context for all font rendering. Must be called each frame. */
-    public static void setGuiGraphics(GuiGraphicsExtractor graphics) {
+    /** Set the BCGraphics context for all font rendering. Must be called each frame. */
+    public static void setGuiGraphics(BCGraphics graphics) {
         currentGraphics = graphics;
     }
 
@@ -71,7 +71,7 @@ public enum MinecraftFont implements IFontRenderer {
             colour |= 0xFF000000;
         }
 
-        // Note: in NeoForge 1.21.11, GuiGraphicsExtractor.pose() returns Matrix3x2fStack
+        // Note: in NeoForge 1.21.11, BCGraphics.pose() returns Matrix3x2fStack
         // which does not have pushPose/popPose. For scaled text we skip the transform
         // and just draw at the given position for now.
         currentGraphics.text(font, text, drawX, y, colour, shadow);

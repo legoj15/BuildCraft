@@ -1,7 +1,7 @@
 package buildcraft.lib.client.guide.parts;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.lib.client.guide.GuiGuide;
@@ -24,7 +24,7 @@ public abstract class GuidePartItem extends GuidePart {
     protected void drawItemStack(ItemStack stack, int x, int y) {
         if (stack == null || stack.isEmpty()) return;
 
-        GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         if (graphics != null) {
             // fakeItem (null holder) renders dynamic models — clock/compass — at their static
             // "up" frame (noon / north) instead of leaking the live world time, matching vanilla GUIs.

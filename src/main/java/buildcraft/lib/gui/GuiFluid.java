@@ -8,7 +8,7 @@
 package buildcraft.lib.gui;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -24,18 +24,18 @@ import buildcraft.lib.misc.FluidUtilBC;
  * dynamic colour, mirroring how {@link GuiStack} renders an item icon.
  *
  * <p>Like {@link GuiStack}/{@link GuiIcon}/{@link buildcraft.lib.client.guide.font.MinecraftFont},
- * this draws via a static {@link GuiGraphicsExtractor} context that the surrounding
+ * this draws via a static {@link BCGraphics} context that the surrounding
  * Screen pushes once per frame.
  */
 @SuppressWarnings("deprecation")
 public class GuiFluid implements ISimpleDrawable {
     private final FluidStack stack;
 
-    /** The GuiGraphicsExtractor context — set by the surrounding Screen each frame. */
-    private static GuiGraphicsExtractor currentGraphics;
+    /** The BCGraphics context — set by the surrounding Screen each frame. */
+    private static BCGraphics currentGraphics;
 
-    /** Set the GuiGraphicsExtractor context for all GuiFluid rendering. */
-    public static void setGuiGraphics(GuiGraphicsExtractor graphics) {
+    /** Set the BCGraphics context for all GuiFluid rendering. */
+    public static void setGuiGraphics(BCGraphics graphics) {
         currentGraphics = graphics;
     }
 

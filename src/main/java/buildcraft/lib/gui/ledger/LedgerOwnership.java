@@ -11,7 +11,7 @@ import java.util.function.Supplier;
 import com.mojang.authlib.GameProfile;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
@@ -43,7 +43,7 @@ public class LedgerOwnership extends Ledger_Neptune {
     }
 
     @Override
-    protected void drawIcon(double x, double y, GuiGraphicsExtractor graphics) {
+    protected void drawIcon(double x, double y, BCGraphics graphics) {
         Identifier skinTexture = getSkinTexture(ownerSupplier.get());
 
         // Draw the 8x8 face region from the 64x64 skin texture, scaled to 16x16.

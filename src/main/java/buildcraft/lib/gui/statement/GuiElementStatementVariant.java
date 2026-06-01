@@ -77,7 +77,7 @@ public class GuiElementStatementVariant extends GuiElementSimple implements IMen
 
     @Override
     public void drawBackground(float partialTicks) {
-        net.minecraft.client.gui.GuiGraphicsExtractor graphics = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
+        net.minecraft.client.gui.BCGraphics graphics = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
         SELECTION_HOVER.draw(this);
         iteratePossible((pos, slot) -> {
             double x = pos.getX();

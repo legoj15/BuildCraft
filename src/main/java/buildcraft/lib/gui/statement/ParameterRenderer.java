@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 
 import buildcraft.api.core.render.ISprite;
 import buildcraft.api.statements.IStatementParameter;
@@ -52,7 +52,7 @@ public class ParameterRenderer {
         return (x, y) -> {
             ItemStack stack = param.getItemStack();
             if (!stack.isEmpty()) {
-                GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
+                BCGraphics graphics = GuiIcon.getGuiGraphics();
                 if (graphics != null) {
                     graphics.fakeItem(stack, (int) x + 1, (int) y + 1); // null holder → clock/compass stay static
                 }

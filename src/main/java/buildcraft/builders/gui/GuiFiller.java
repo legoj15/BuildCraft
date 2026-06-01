@@ -1,6 +1,6 @@
 package buildcraft.builders.gui;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
@@ -171,7 +171,7 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
 
         int mx = (int) this.mainGui.mouse.getX() - leftPos;
@@ -196,7 +196,7 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         // Let GuiBC8 handle element foregrounds (tooltips, ledgers, menus)
         super.extractLabels(graphics, mouseX, mouseY);
         // After super, the pose is back to ACS-translated space (0,0 = GUI top-left)

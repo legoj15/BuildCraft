@@ -6,7 +6,7 @@ package buildcraft.builders.gui;
 
 import java.util.List;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -180,7 +180,7 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE,
                 leftPos, topPos,
                 0f, 0f,
@@ -212,7 +212,7 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         // Let GuiBC8 draw element foregrounds (ledgers, tooltips) in translated space first.
         super.extractLabels(graphics, mouseX, mouseY);
 
@@ -225,7 +225,7 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
 
     @Override
     protected void drawForegroundLayer() {
-        GuiGraphicsExtractor graphics = GuiIcon.getGuiGraphics();
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         if (graphics == null) return;
 
         GlobalSavedDataSnapshots snapshots = GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT);

@@ -5,7 +5,7 @@
  */
 package buildcraft.builders.client.render;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 
 import buildcraft.builders.client.render.pip.BlueprintPipRenderState;
 import buildcraft.builders.snapshot.Snapshot;
@@ -14,7 +14,7 @@ import buildcraft.builders.snapshot.Snapshot;
  * Thin adapter from the {@link buildcraft.builders.client.tooltip.BlueprintTooltipOverlay
  * BlueprintTooltipOverlay} call-site to the PiP pipeline. Builds a
  * {@link BlueprintPipRenderState} sized to the requested viewport and hands it off to
- * {@link GuiGraphicsExtractor#submitPictureInPictureRenderState}. The actual 3D rendering,
+ * {@link BCGraphics#submitPictureInPictureRenderState}. The actual 3D rendering,
  * including rotation animation and depth-buffer occlusion, happens in
  * {@link buildcraft.builders.client.render.pip.BlueprintPipRenderer}.
  * <p>
@@ -36,7 +36,7 @@ public class BlueprintRenderer {
      */
     private static final float FIT_ENVELOPE = 1.05f;
 
-    public static void renderSnapshot(GuiGraphicsExtractor graphics, Snapshot snapshot,
+    public static void renderSnapshot(BCGraphics graphics, Snapshot snapshot,
                                       int viewportX, int viewportY,
                                       int viewportWidth, int viewportHeight) {
         // Both snapshot kinds render here. Blueprints draw their palette blocks as 3D item-model

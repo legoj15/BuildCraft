@@ -7,7 +7,7 @@ package buildcraft.builders.gui;
 
 import java.util.List;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
@@ -106,7 +106,7 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
 
         int mx = (int) this.mainGui.mouse.getX() - leftPos;
@@ -120,7 +120,7 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         super.extractLabels(graphics, mouseX, mouseY);
         if (mainGui.currentMenu == null || !mainGui.currentMenu.shouldFullyOverride()) {
             String titleStr = Component.translatable("item.buildcraftunofficial.filler_planner").getString();

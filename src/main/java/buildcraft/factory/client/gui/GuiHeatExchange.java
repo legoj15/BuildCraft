@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
@@ -145,19 +145,19 @@ public class GuiHeatExchange extends GuiBC8<ContainerHeatExchange> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         // Intentionally no title or inventory label — the layout is too cramped
         // to fit either without overlapping the pipe schematic or the slots.
         super.extractLabels(graphics, mouseX, mouseY);
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    public void extractRenderState(BCGraphics graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
         super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
 
@@ -212,7 +212,7 @@ public class GuiHeatExchange extends GuiBC8<ContainerHeatExchange> {
                 .drawAt(absX, absY);
     }
 
-    private void renderTankTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY,
+    private void renderTankTooltip(BCGraphics graphics, int mouseX, int mouseY,
             FluidStacksResourceHandler tank, int relX, int relY, int w, int h) {
         if (tank == null) return;
         int absX = leftPos + relX;

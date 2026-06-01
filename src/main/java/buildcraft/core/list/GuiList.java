@@ -8,7 +8,7 @@ package buildcraft.core.list;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ActiveTextCollector;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
@@ -210,7 +210,7 @@ public class GuiList extends GuiBC8<ContainerList> {
         }
 
         @Override
-        protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
             // Sprite selection driven by toggled state, NOT active state — keeps the text at
             // full color (active stays true) while still showing the disabled-look background
             // for the toggled-on visual.
@@ -229,7 +229,7 @@ public class GuiList extends GuiBC8<ContainerList> {
             // Text rendering reuses the vanilla helper — same path as Button.Plain, so the
             // letter is drawn centered at full white.
             ActiveTextCollector renderer = graphics.textRendererForWidget(this,
-                    GuiGraphicsExtractor.HoveredTextEffects.NONE);
+                    BCGraphics.HoveredTextEffects.NONE);
             extractDefaultLabel(renderer);
         }
 
@@ -251,7 +251,7 @@ public class GuiList extends GuiBC8<ContainerList> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
 
         for (int i = 0; i < menu.lines.length; i++) {
@@ -284,7 +284,7 @@ public class GuiList extends GuiBC8<ContainerList> {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    public void extractRenderState(BCGraphics graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
         super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
 

@@ -6,7 +6,7 @@
 
 package buildcraft.lib.gui;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
@@ -34,7 +34,13 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
     }
 
     protected GuiBC8(C container, Inventory playerInventory, Component title, int xSize, int ySize) {
+        //? if >=26.1 {
         super(container, playerInventory, title, xSize, ySize);
+        //?} else {
+        /*super(container, playerInventory, title);
+        this.imageWidth = xSize;
+        this.imageHeight = ySize;*/
+        //?}
         IGuiArea rootArea = BuildCraftGui.createWindowedArea(this);
         this.mainGui = new BuildCraftGui(this, rootArea);
     }
@@ -89,26 +95,40 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
         mainGui.tick();
     }
 
-    /** MC 26.1: extractBackground replaces renderBg. */
+    /** Background layer. 26.1: extractBackground(GuiGraphicsExtractor); 1.21.11: renderBg(GuiGraphics) — abstract, no super. */
     @Override
-    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    //? if >=26.1 {
+    public void extractBackground(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
         super.extractBackground(graphics, mouseX, mouseY, partialTicks);
-        GuiIcon.setGuiGraphics(graphics);
+    //?} else {
+    /*public void renderBg(net.minecraft.client.gui.GuiGraphics graphics, float partialTicks, int mouseX, int mouseY) {*/
+    //?}
+        BCGraphics bcg = new BCGraphics(graphics);
+        GuiIcon.setGuiGraphics(bcg);
         mainGui.drawBackgroundLayer(partialTicks, mouseX, mouseY, () -> {
-            drawBackgroundTexture(graphics);
+            drawBackgroundTexture(bcg);
         });
         mainGui.drawElementBackgrounds();
     }
 
-    /** MC 26.1: extractRenderState replaces render. */
+    /** Top-level render. 26.1: extractRenderState(GuiGraphicsExtractor); 1.21.11: render(GuiGraphics). */
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
-        GuiIcon.setGuiGraphics(graphics);
+    //? if >=26.1 {
+    public void extractRenderState(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    //?} else {
+    /*public void render(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {*/
+    //?}
+        BCGraphics bcg = new BCGraphics(graphics);
+        GuiIcon.setGuiGraphics(bcg);
+        //? if >=26.1 {
         super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
+        //?} else {
+        /*super.render(graphics, mouseX, mouseY, partialTicks);*/
+        //?}
         // Draw the drag icon AFTER super (which draws slots/items/highlights) using nextStratum()
         // so the drag icon always sorts on top, matching MC's own carried-item rendering.
         graphics.nextStratum();
-        mainGui.drawDragLayer(graphics);
+        mainGui.drawDragLayer(bcg);
     }
 
     @Override
@@ -140,13 +160,17 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
         return super.mouseDragged(event, dragX, dragY);
     }
 
-    /** MC 26.1: extractLabels replaces renderLabels. */
+    /** Foreground labels. 26.1: extractLabels(GuiGraphicsExtractor); 1.21.11: renderLabels(GuiGraphics). */
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        // Do not call super.extractLabels(graphics, mouseX, mouseY);
-        // AbstractContainerScreen automatically renders this.title and this.playerInventoryTitle left-aligned,
-        // which duplicates BuildCraft's traditional centered titles drawn in drawForegroundLayer().
-        GuiIcon.setGuiGraphics(graphics);
+    //? if >=26.1 {
+    protected void extractLabels(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    //?} else {
+    /*protected void renderLabels(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY) {*/
+    //?}
+        // Intentionally no super call: AbstractContainerScreen draws this.title / this.playerInventoryTitle
+        // left-aligned, duplicating BuildCraft's centered titles drawn in drawForegroundLayer().
+        BCGraphics bcg = new BCGraphics(graphics);
+        GuiIcon.setGuiGraphics(bcg);
         mainGui.preDrawForeground();
         drawForegroundLayer();
         mainGui.drawElementForegrounds(null);
@@ -158,7 +182,7 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
     }
 
     /** Draw the background texture. Override this to blit your GUI background. */
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         // Default: do nothing. Subclasses blit their texture.
     }
 }

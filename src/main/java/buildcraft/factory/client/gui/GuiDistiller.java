@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -117,12 +117,12 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     }
 
     @Override
-    protected void drawBackgroundTexture(GuiGraphicsExtractor graphics) {
+    protected void drawBackgroundTexture(BCGraphics graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
         super.extractLabels(graphics, mouseX, mouseY);
         String titleStr = title.getString();
         graphics.text(font, titleStr, 8, 6, 0xFF404040, false);
@@ -130,7 +130,7 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    public void extractRenderState(BCGraphics graphics, int mouseX, int mouseY, float partialTicks) {
         GuiIcon.setGuiGraphics(graphics);
         super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
         drawCenterStateOverlay();
@@ -160,7 +160,7 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
         }
     }
 
-    private void renderTankTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY,
+    private void renderTankTooltip(BCGraphics graphics, int mouseX, int mouseY,
             net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler tank, int relX, int relY, int w, int h) {
         if (tank == null) return;
         int absX = leftPos + relX;

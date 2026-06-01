@@ -134,7 +134,7 @@ Then offer the bump.
 
 ### `.neoforge-ref/` — decompiled API reference
 
-`.neoforge-ref/` (gitignored; populated by `scripts/neoforge-sources-sync.sh`) holds reference sources for the **pinned** versions. **It is the first place to look when you need to know how to call a NeoForge or vanilla API** — grep it rather than recalling signatures from memory; the 26.1 API line is new and churns constantly.
+`.neoforge-ref/` (gitignored; populated by `scripts/neoforge-sources-sync.sh`) holds reference sources for **every active Stonecutter node's** pinned versions — **one dir-set per MC line, kept side by side** (so a future 1.21.11 node's sources sit next to 26.1.x's, with no re-checkout on node switch). **It is the first place to look when you need to know how to call a NeoForge or vanilla API** — grep it rather than recalling signatures from memory; the 26.1 API line is new and churns constantly. **Grep the dir-set for the line you're working on — never across versions** (the APIs differ by line, which is the whole point of the split); `.neoforge-ref/INDEX.txt` maps each node to its dirs.
 
 - `.neoforge-ref/sources-<neo_version>/` — decompiled `.java`, one Grep/Read root:
   - `net/minecraft/**` — patched Minecraft (vanilla + NeoForge's patches to it)
@@ -142,7 +142,7 @@ Then offer the bump.
   - `com/mojang/**` — Mojang libraries (blaze3d, datafixers, …)
 - `.neoforge-ref/vanilla-<minecraft_version>/<minecraft_version>.jar` — the pure, unpatched, deobfuscated vanilla client jar. Bytecode, not source — inspect with `javap` (e.g. `javap -p -cp .neoforge-ref/vanilla-26.1.2/26.1.2.jar net.minecraft.client.Camera`). Authoritative ground truth for unpatched vanilla.
 
-Dir names are version-stamped. If they don't match `gradle.properties` — or `.neoforge-ref/` is absent — run `scripts/neoforge-sources-sync.sh` (~1 min; stale version dirs are pruned automatically).
+Dir names are version-stamped (`sources-<neo>`, `vanilla-<mc>`). The sync reads each `versions/<node>/gradle.properties`, keeps one dir-set per active node, and prunes only versions no node pins anymore — so adding a node *adds* its dirs without disturbing the others. If the dirs don't match the current nodes — or `.neoforge-ref/` is absent — run `scripts/neoforge-sources-sync.sh` (~1 min per new version; present dirs are reused). A node whose Gradle artifacts aren't built yet is skipped with a note, not an error.
 
 ### Hook wiring on a fresh clone
 

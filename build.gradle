@@ -92,7 +92,8 @@ tasks.named('test', Test) {
 
 tasks.named('processResources') {
     var replaceProperties = [
-            mod_version: project.mod_version
+            mod_version  : project.mod_version,
+            update_branch: project.update_branch
     ]
     inputs.properties replaceProperties
 

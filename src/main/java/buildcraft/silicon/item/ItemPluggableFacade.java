@@ -116,14 +116,32 @@ public class ItemPluggableFacade extends Item implements IItemPluggable, IFacade
         FacadeInstance fullState = getStates(stack);
         if (fullState.type == FacadeType.Basic) {
             String displayName = getFacadeStateDisplayName(fullState.phasedStates[0]);
+            // Empty when the facade state hasn't resolved to a real block — a bare/default facade
+            // stack, or one named before FacadeStateManager.init() has populated defaultState on a
+            // multiplayer client (the guide/JEI indexing every item on login). Drop the ": <block>"
+            // suffix rather than appending ": Air" or dereferencing a null stateInfo.
+            if (displayName.isEmpty()) {
+                return super.getName(stack);
+            }
             return super.getName(stack).copy().append(": " + displayName);
         } else {
             return Component.translatable("item.buildcraftunofficial.plug_facade_phased");
         }
     }
 
+    /** Display name of the block this facade mimics, or {@code ""} when the facade state hasn't
+     *  resolved to a real block: a null {@link FacadePhasedState#stateInfo} (e.g. a bare facade
+     *  named before {@link FacadeStateManager#init()} runs on a multiplayer client, where
+     *  {@code defaultState} is still null) or the empty/AIR default state. Callers treat an empty
+     *  result as "no block suffix" instead of dereferencing null. */
     public static String getFacadeStateDisplayName(FacadePhasedState state) {
+        if (state == null || state.stateInfo == null) {
+            return "";
+        }
         ItemStack assumedStack = state.stateInfo.requiredStack;
+        if (assumedStack == null || assumedStack.isEmpty()) {
+            return "";
+        }
         return assumedStack.getHoverName().getString();
     }
 

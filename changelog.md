@@ -1,3 +1,4 @@
 ###### Changes since 2026.1.0-rc1:
 - **Fixed a crash that stopped dedicated servers from starting.** A client-only texture lookup was being reached on the server thread moments after "Done", hard-crashing any real (non-dev) dedicated server. Servers now boot normally. A development `runServer` never hit this because it bundles the client classes a true server lacks.
+- **Fixed multiplayer clients being unable to join dedicated servers.** Logging into a server warms the guide book's item index, which could name a facade before its block data finished initializing on the client — throwing an error that dropped the connection right after login. Facade naming and the guide indexer are now both hardened against it, and the load order is fixed.
 - Stopped the five dev-only "decorated" blocks from spamming the server log with missing-item loot-table errors at every world load.

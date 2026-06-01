@@ -69,8 +69,9 @@ public class GuiTank extends GuiBC8<ContainerTank> {
     }
 
     @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        super.extractLabels(graphics, mouseX, mouseY);        // Draw "Tank" title centered at the top
+    protected void drawForegroundLayer() {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
+        // Draw "Tank" title centered at the top
         String titleStr = title.getString();
         int titleWidth = font.width(titleStr);
         int titleX = (imageWidth - titleWidth) / 2;
@@ -81,12 +82,9 @@ public class GuiTank extends GuiBC8<ContainerTank> {
     }
 
     @Override
-    public void extractRenderState(BCGraphics graphics, int mouseX, int mouseY, float partialTicks) {
-        GuiIcon.setGuiGraphics(graphics);
-        super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
-
+    protected void drawTooltipLayer(int mouseX, int mouseY) {
         // Draw tank tooltip when hovering over the tank area
-        renderTankTooltip(graphics, mouseX, mouseY);
+        renderTankTooltip(GuiIcon.getGuiGraphics(), mouseX, mouseY);
     }
 
     private void renderTankTooltip(BCGraphics graphics, int mouseX, int mouseY) {

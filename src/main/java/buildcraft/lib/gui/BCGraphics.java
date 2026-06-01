@@ -180,6 +180,11 @@ public final class BCGraphics {
     }
 
     public void blit(RenderPipeline pipeline, Identifier texture, int x, int y, float u, float v,
+            int width, int height, int regionWidth, int regionHeight, int textureSize) {
+        raw.blit(pipeline, texture, x, y, u, v, width, height, regionWidth, regionHeight, textureSize);
+    }
+
+    public void blit(RenderPipeline pipeline, Identifier texture, int x, int y, float u, float v,
             int width, int height, int regionWidth, int regionHeight, int textureWidth, int textureHeight) {
         raw.blit(pipeline, texture, x, y, u, v, width, height, regionWidth, regionHeight, textureWidth, textureHeight);
     }
@@ -203,5 +208,9 @@ public final class BCGraphics {
 
     public void setTooltipForNextFrame(List<FormattedCharSequence> lines, int x, int y) {
         raw.setTooltipForNextFrame(lines, x, y);
+    }
+
+    public void setTooltipForNextFrame(Font font, List<FormattedCharSequence> lines, int x, int y) {
+        raw.setTooltipForNextFrame(font, lines, x, y);
     }
 }

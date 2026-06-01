@@ -172,8 +172,8 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
     }
 
     @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        super.extractLabels(graphics, mouseX, mouseY);
+    protected void drawForegroundLayer() {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         String str = LocaleUtil.localize("tile.engineIron.name");
         int strWidth = font.width(str);
         int titleX = (imageWidth - strWidth) / 2;
@@ -182,10 +182,8 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
     }
 
     @Override
-    public void extractRenderState(BCGraphics graphics, int mouseX, int mouseY, float partialTicks) {
-        GuiIcon.setGuiGraphics(graphics);
-        super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
-
+    protected void drawTooltipLayer(int mouseX, int mouseY) {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         // Draw tank tooltips
         renderTankTooltip(graphics, mouseX, mouseY, TANK_FUEL_X, TANK_FUEL_Y,
             menu.getSyncedFuelFluid(), menu.getSyncedFuelAmount(), TileEngineIron_BC8.MAX_FLUID);

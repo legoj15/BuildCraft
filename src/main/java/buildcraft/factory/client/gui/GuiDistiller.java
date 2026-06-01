@@ -122,17 +122,16 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     }
 
     @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        super.extractLabels(graphics, mouseX, mouseY);
+    protected void drawForegroundLayer() {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         String titleStr = title.getString();
         graphics.text(font, titleStr, 8, 6, 0xFF404040, false);
         graphics.text(font, playerInventoryTitle, 8, imageHeight - 96 + 2, 0xFF404040, false);
     }
 
     @Override
-    public void extractRenderState(BCGraphics graphics, int mouseX, int mouseY, float partialTicks) {
-        GuiIcon.setGuiGraphics(graphics);
-        super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
+    protected void drawTooltipLayer(int mouseX, int mouseY) {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         drawCenterStateOverlay();
         renderTankTooltip(graphics, mouseX, mouseY, menu.tile != null ? menu.tile.getTankIn() : null,
                 TANK_IN_X, TANK_IN_Y, TANK_IN_W, TANK_IN_H);

@@ -131,8 +131,8 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
     }
 
     @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        super.extractLabels(graphics, mouseX, mouseY);
+    protected void drawForegroundLayer() {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         String str = title.getString();
         int strWidth = font.width(str);
         int titleX = (imageWidth - strWidth) / 2;

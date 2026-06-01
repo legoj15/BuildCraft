@@ -45,8 +45,4 @@ public class GuiChute extends GuiBC8<ContainerChute> {
                         "buildcraft.help.chute.slots.desc2")));
     }
 
-    @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        // No labels — matches 1.12.2 which only has the GUI texture
-    }
 }

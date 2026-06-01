@@ -1,6 +1,7 @@
 ###### 2026.1.0-rc1 — first release under the new CalVer scheme (changes since 26.1.x Beta release 6):
-- New versioning scheme hopefully to prevent future confusion
-- **Old BuildCraft saves keep their machines and items.** Worlds and inventories from 1.21.11 restore their placed pipes, engines, and tanks (with fluid contents) and full inventories despite two rounds of block/item ID changes; 1.12.2 worlds can reclaim some items that were in inventories, for what that's worth (the flattening was brutal). Migration is automatic. **Backup your worlds anyways!!!**
+- New versioning scheme hopefully to prevent confusion with the true BuildCraft project since its still in active development
+- **Old BuildCraft saves keep their machines and items.** Worlds and inventories from the 1.21.11 builds restore their placed pipes, engines, and tanks (with fluid contents) and full inventories despite two rounds of block/item ID changes; 1.12.2 worlds can reclaim some items that were in inventories, for what that's worth (the flattening was brutal). Migration is automatic. **Backup your worlds anyways!!!**
+- The jar is now built against NeoForge 26.1.2.70-beta. The minimum required NeoForge version for the 26.1.2 build is now 26.1.2.21-beta
 - Finalized the Guide Book (the GitHub Wiki is also now live)
 - Made every advancement and recipe-book unlock obtainable
 - Overhauled oil worldgen hopefully for the last time
@@ -17,4 +18,3 @@
 
 The following changes are not user facing:
 - For people trying to compile locally, you only need JDK 25 now, as JDK 21 should automatically resolve itself as a dependency for the NeoForge build system
-- The jar is built against NeoForge 26.1.2.70-beta, but the minimum required is still 26.1.0.0-beta

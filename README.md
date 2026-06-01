@@ -1,5 +1,5 @@
 ## BuildCraft **UNOFFICIAL**
-#### For Minecraft 26.1/26.1.1 on NeoForge
+#### For Minecraft 26.1/26.1.1/26.1.2 on NeoForge
 
 ### Reporting an issue
 
@@ -17,14 +17,8 @@ Please check if the bug has been reported beforehand. Also, provide the version 
 
 Please mention if you are using any other mods, especially mods which optimize or otherwise severely modify the functioning of the Minecraft engine like MCPC+, Cauldron, OptiFine, FastCraft, Sodium, etc. That is very helpful when trying to reproduce a bug.
 
-BuildCraft, being an open-source project, gives you the right to submit a pull request if a particular fix or feature is important to you. However, if the change in question is major, please contact the team beforehand - we wish to prevent wasted effort.
-
-### Contributing
-
-If you wish to submit a pull request to fix bugs or broken behaviour feel free to do so. 
-
 ### Compiling and packaging BuildCraft
-1. Install `Java 25` (Microsoft OpenJDK, recommended by the NeoForge team, available [here](https://learn.microsoft.com/en-us/java/openjdk/download#openjdk-25)) and optionally `Git` (found [here](http://git-scm.com/)). Note: NeoForge's moddev tooling also uses Java 21 internally for its NFRT tasks (asset download, run preparation), but you don't need to install it yourself — the build is configured with the [Foojay toolchain resolver](https://github.com/gradle/foojay-toolchains), so Gradle auto-downloads JDK 21 into its user home on first build. Java 25 is the only JDK you need to install manually.
+1. Install `Java 25` (Microsoft OpenJDK, recommended by the NeoForge team, available [here](https://learn.microsoft.com/en-us/java/openjdk/download#openjdk-25)) and optionally `Git` (found [here](http://git-scm.com/)). Note: NeoForge's moddev tooling also uses Java 21 internally for its NFRT tasks (asset download, run preparation), but you don't need to install it yourself since the build is configured with the [Foojay toolchain resolver](https://github.com/gradle/foojay-toolchains), so Gradle auto-downloads JDK 21 into its user home on first build. Java 25 is the only JDK you need to install manually.
  * Optional: Install `Gradle` (found [here](http://www.gradle.org/downloads)).
 2. Clone the BuildCraft repository: `git clone https://github.com/legoj15/BuildCraft.git` or [download the latest zip](https://github.com/legoj15/BuildCraft/archive/refs/heads/26.1.x.zip)
 3. Navigate to the cloned repository in a shell: `cd BuildCraft`
@@ -51,30 +45,3 @@ Your directory structure will look like a standard monolithic Java project:
       \- test            (Test source code)
 
 ***
-
-### Localizations
-
-Localizations can be submitted [here](https://github.com/BuildCraft/BuildCraft-Localization).
-
-### Depending on BuildCraft
-
-As this is an unofficial port, it is not currently hosted on the official BuildCraft Maven repository.
-
-To depend on BuildCraft in your own mod, you will first need to compile it locally and publish it to your local Maven repository:
-1. Clone this repository locally.
-2. Run `./gradlew publishToMavenLocal` (or `.\gradlew.bat publishToMavenLocal` on Windows).
-
-Then, add `mavenLocal()` to your repositories block in your `build.gradle`:
-```gradle
-repositories {
-    mavenLocal()
-}
-```
-
-Since the 26.1.1 port uses a monolithic project structure, you will depend on the entire BuildCraft artifact rather than separate API or lib modules:
-```gradle
-dependencies {
-    implementation "com.mod-buildcraft:buildcraft:8.0.+"
-}
-```
-Where `8.0.+` is the desired version of BuildCraft.

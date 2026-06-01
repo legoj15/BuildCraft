@@ -20,13 +20,15 @@ updateJSONURL="https://raw.githubusercontent.com/legoj15/BuildCraft/26.1.x/Build
 [[dependencies.buildcraftunofficial]]
     modId="neoforge"
     type="required"
-    versionRange="[26.1.0,)"
+    # BreakBlockEvent (used by BlockUtil/LocalBlockUpdateNotifier) was added in
+    # 26.1.2.21-beta, and is in use.
+    versionRange="[26.1.2.21-beta,)"
     ordering="NONE"
     side="BOTH"
 
 [[dependencies.buildcraftunofficial]]
     modId="minecraft"
     type="required"
-    versionRange="[26.1.0,26.2)"
+    versionRange="[26.1.2,26.2)"
     ordering="NONE"
     side="BOTH"

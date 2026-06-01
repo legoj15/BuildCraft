@@ -1,13 +1,13 @@
 {
   "homepage": "https://github.com/legoj15/BuildCraft",
   "26.1": {
-    "2026.1.0-rc1": "First release candidate under with new versioning See changelog.md."
+    "2026.1.0-rc1": "First CalVer release candidate. Built for the Minecraft 26.1 / 26.1.1 line (the 26.1.x branch jar, +mc26.1.1). See changelog.md."
   },
   "26.1.1": {
-    "2026.1.0-rc1": "First release candidate under with new versioning See changelog.md."
+    "2026.1.0-rc1": "First CalVer release candidate. Built for the Minecraft 26.1 / 26.1.1 line (the 26.1.x branch jar, +mc26.1.1). See changelog.md."
   },
   "26.1.2": {
-    "2026.1.0-rc1": "First release candidate under with new versioning See changelog.md."
+    "2026.1.0-rc1": "First CalVer release candidate. Built for the Minecraft 26.1.2 line (the 26.1.2 branch jar, +mc26.1.2). See changelog.md."
   },
   "promos": {
     "26.1-recommended": "2026.1.0-rc1",

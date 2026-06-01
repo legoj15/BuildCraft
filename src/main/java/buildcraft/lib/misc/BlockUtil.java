@@ -35,7 +35,7 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.core.BuildCraftAPI;
@@ -58,7 +58,7 @@ public class BlockUtil {
      * Returns true if a BuildCraft mining machine is permitted to break the block at {@code pos}.
      * <p>
      * If {@link BCCoreConfig#minePlayerProtected} is true, always returns true (the option is
-     * an "override protection" toggle). Otherwise, posts a {@link BreakBlockEvent} with an
+     * an "override protection" toggle). Otherwise, posts a {@link BlockEvent.BreakEvent} with an
      * owner-bound FakePlayer positioned at {@code pos} and returns {@code !event.isCanceled()},
      * so third-party protection mods (FTB Chunks, GriefPrevention, OpenPartiesAndClaims, server
      * protection plugins) can gate the break by cancelling the event.
@@ -70,7 +70,7 @@ public class BlockUtil {
         GameProfile profile = (owner != null && owner.name() != null) ? owner : MACHINE_FAKE_PROFILE;
         Player fp = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, profile, pos);
         BlockState state = level.getBlockState(pos);
-        BreakBlockEvent event = new BreakBlockEvent(level, pos, state, fp);
+        BlockEvent.BreakEvent event = new BlockEvent.BreakEvent(level, pos, state, fp);
         NeoForge.EVENT_BUS.post(event);
         return !event.isCanceled();
     }

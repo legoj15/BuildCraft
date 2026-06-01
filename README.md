@@ -1,5 +1,7 @@
 ## BuildCraft **UNOFFICIAL**
-#### For Minecraft 26.1/26.1.1/26.1.2 on NeoForge
+#### For Minecraft 26.1 / 26.1.1 on NeoForge
+
+> **Running Minecraft 26.1.2?** This branch (`26.1.x`) builds the jar for the **26.1 / 26.1.1** line. A NeoForge API the mod uses (the block-break event) was renamed in 26.1.2.21-beta, so 26.1.2 needs its own jar — grab the **26.1.2** build from the [`26.1.2` branch](https://github.com/legoj15/BuildCraft/tree/26.1.2) / release instead.
 
 ### Reporting an issue
 

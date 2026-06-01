@@ -18,7 +18,7 @@ public class BCCoreConfig {
                 .comment(
                         "If true, mining machines (Quarry, Mining Well, Builder/Filler clear-mode) " +
                                 "ignore third-party protection mods and break player-protected blocks. " +
-                                "Default false respects BreakBlockEvent cancellation from mods like " +
+                                "Default false respects block-break protection from mods like " +
                                 "FTB Chunks or GriefPrevention. Does not affect Pumps."
                 )
                 .define("minePlayerProtected", false);

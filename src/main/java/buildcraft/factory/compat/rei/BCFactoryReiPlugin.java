@@ -80,8 +80,8 @@ public class BCFactoryReiPlugin implements REIClientPlugin {
         // Click the progress arrow to view crafting recipes
         registry.registerClickArea(
                 screen -> new Rectangle(
-                        screen.getLeftPos() + 90,
-                        screen.getTopPos() + 47,
+                        screen.getGuiLeft() + 90,
+                        screen.getGuiTop() + 47,
                         23, 10),
                 GuiAutoCraftItems.class,
                 CRAFTING);
@@ -114,8 +114,8 @@ public class BCFactoryReiPlugin implements REIClientPlugin {
             for (int i = 0; i < container.slots.size(); i++) {
                 Slot slot = container.slots.get(i);
                 if (slot instanceof IPhantomSlot) {
-                    int x = gui.getLeftPos() + slot.x;
-                    int y = gui.getTopPos() + slot.y;
+                    int x = gui.getGuiLeft() + slot.x;
+                    int y = gui.getGuiTop() + slot.y;
                     targets.add(BoundsProvider.ofRectangle(new Rectangle(x, y, 16, 16)));
                 }
             }
@@ -139,8 +139,8 @@ public class BCFactoryReiPlugin implements REIClientPlugin {
             for (int i = 0; i < container.slots.size(); i++) {
                 Slot slot = container.slots.get(i);
                 if (slot instanceof IPhantomSlot) {
-                    int x = gui.getLeftPos() + slot.x;
-                    int y = gui.getTopPos() + slot.y;
+                    int x = gui.getGuiLeft() + slot.x;
+                    int y = gui.getGuiTop() + slot.y;
                     if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
                         String itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM
                                 .getKey(itemStack.getItem()).toString();

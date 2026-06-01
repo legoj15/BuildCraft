@@ -13,7 +13,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.level.BlockEvent;
-import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 
 /**
  * Listens for block updates in a given level and notifies all registered
@@ -23,7 +22,7 @@ import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
  * The 1.12.2 version hooked {@code IWorldEventListener.notifyBlockUpdate} for
  * a single catch-all signal. That API was removed in MC 1.21+, so this version
  * hooks NeoForge's {@link BlockEvent.EntityPlaceEvent},
- * {@link BreakBlockEvent}, and {@link BlockEvent.NeighborNotifyEvent}. Together
+ * {@link BlockEvent.BreakEvent}, and {@link BlockEvent.NeighborNotifyEvent}. Together
  * those cover player placements/breaks and any {@code setBlock} call that
  * propagates neighbor updates. Consumers (e.g. {@link buildcraft.silicon.tile.TileLaser})
  * should still maintain a periodic rescan as a safety net for sources that
@@ -70,7 +69,7 @@ public class LocalBlockUpdateNotifier {
     }
 
     @SubscribeEvent
-    public static void onBlockBroken(BreakBlockEvent event) {
+    public static void onBlockBroken(BlockEvent.BreakEvent event) {
         LevelAccessor accessor = event.getLevel();
         if (accessor instanceof Level level && !level.isClientSide()) {
             dispatch(level, event.getPos(), event.getState(), level.getBlockState(event.getPos()));

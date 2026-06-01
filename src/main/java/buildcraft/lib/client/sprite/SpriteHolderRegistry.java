@@ -18,19 +18,30 @@ import buildcraft.api.core.render.ISprite;
 public class SpriteHolderRegistry {
     public void registerInitialSprites() {}
 
-    /** Atlas lookup order. Blocks atlas first since the bulk of mod statement icons
-     *  live in directories declared under {@code assets/minecraft/atlases/blocks.json}
-     *  ({@code triggers/}, {@code pipes/}, {@code wires/}, …). Items atlas second so
-     *  that sprites which are also referenced by item models — e.g. paintbrush colour
-     *  textures at {@code item/paintbrush/<colour>} — resolve without having to be
-     *  declared a second time on the blocks atlas. GUI atlas last for the handful of
-     *  sprites that live there. The fall-back lets each PNG live on exactly one atlas
-     *  page (no GPU duplication) while still being reachable from {@link SpriteHolder}. */
-    private static final Identifier[] ATLAS_LOOKUP_ORDER = {
-        TextureAtlas.LOCATION_BLOCKS,
-        TextureAtlas.LOCATION_ITEMS,
-        Sheets.GUI_SHEET,
-    };
+    /** Initialization-on-demand holder for the atlas lookup order. Kept out of
+     *  {@code SpriteHolderRegistry}'s own static init so the class is safe to <em>load</em> on a
+     *  dedicated server: the {@link TextureAtlas}/{@link Sheets} constants below are
+     *  {@code net.minecraft.client.*} classes that don't exist server-side, yet the registry is
+     *  reached from server code — e.g. {@code BCBuildersEventDist}'s laser-type static
+     *  initialiser and the quarry/filler/builder/architect {@code validate}/{@code invalidate}
+     *  tile hooks. Touching the constants at class-init crashed dedicated servers with
+     *  {@code NoClassDefFoundError: …/TextureAtlas}. This holder defers that resolution to first
+     *  use; its sole consumer, {@link SpriteHolder#resolveSprite()}, is a client-only render path.
+     *
+     *  <p>Lookup order: blocks atlas first since the bulk of mod statement icons live in
+     *  directories declared under {@code assets/minecraft/atlases/blocks.json} ({@code triggers/},
+     *  {@code pipes/}, {@code wires/}, …). Items atlas second so that sprites also referenced by
+     *  item models — e.g. paintbrush colour textures at {@code item/paintbrush/<colour>} — resolve
+     *  without being declared a second time on the blocks atlas. GUI atlas last for the handful of
+     *  sprites that live there. The fall-back lets each PNG live on exactly one atlas page (no GPU
+     *  duplication) while still being reachable from {@link SpriteHolder}. */
+    private static final class AtlasLookup {
+        static final Identifier[] ORDER = {
+            TextureAtlas.LOCATION_BLOCKS,
+            TextureAtlas.LOCATION_ITEMS,
+            Sheets.GUI_SHEET,
+        };
+    }
 
     /**
      * Wraps a texture location and provides UV lookups against the texture atlases.
@@ -77,7 +88,7 @@ public class SpriteHolderRegistry {
             return sprite != null ? sprite.atlasLocation() : TextureAtlas.LOCATION_BLOCKS;
         }
 
-        /** Walk {@link #ATLAS_LOOKUP_ORDER} and return the first atlas that has this
+        /** Walk {@link AtlasLookup#ORDER} and return the first atlas that has this
          *  sprite as a real entry (i.e. {@code getSprite()} did not fall through to
          *  the missing-texture sprite). If every atlas misses, return the missing
          *  sprite from the first atlas we successfully queried so callers still get
@@ -86,7 +97,7 @@ public class SpriteHolderRegistry {
             TextureManager tm = Minecraft.getInstance().getTextureManager();
             Identifier missingId = MissingTextureAtlasSprite.getLocation();
             TextureAtlasSprite firstMissing = null;
-            for (Identifier atlasId : ATLAS_LOOKUP_ORDER) {
+            for (Identifier atlasId : AtlasLookup.ORDER) {
                 if (!(tm.getTexture(atlasId) instanceof TextureAtlas atlas)) continue;
                 TextureAtlasSprite sprite = atlas.getSprite(resourceLocation);
                 if (!sprite.contents().name().equals(missingId)) {

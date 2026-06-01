@@ -17,6 +17,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.core.registries.BuiltInRegistries;
 
+import buildcraft.api.core.BCLog;
 import buildcraft.api.registry.IScriptableRegistry.OptionallyDisabled;
 
 import buildcraft.lib.client.guide.GuiGuide;
@@ -68,9 +69,19 @@ public class PageEntryItemStack extends PageValueType<ItemStackValueFilter> {
             // Dedup against guide-defined entries (matched JSON loop adds the Item
             // instance) so BC items keep their authored chapter placement.
             if (!GuideManager.INSTANCE.objectsAdded.add(item)) continue;
-            String displayName = stack.getHoverName().getString();
-            if (displayName == null || displayName.trim().isEmpty()) continue;
-            consumer.addChild(OTHER_ITEMS_TAGS, PageLinkItemStack.create(false, stack, prof));
+            // This whole index runs on the login packet handler (GuideManager.ensureLoaded fires on
+            // ClientPlayerNetworkEvent.LoggingIn), so an uncaught throw from any single item's name
+            // or link resolution disconnects the player. Items from this or any other mod can throw
+            // in getName()/getHoverName() (BC facades did, before init, on multiplayer join). Log
+            // and skip the offender so one bad item can't take down the join.
+            try {
+                String displayName = stack.getHoverName().getString();
+                if (displayName == null || displayName.trim().isEmpty()) continue;
+                consumer.addChild(OTHER_ITEMS_TAGS, PageLinkItemStack.create(false, stack, prof));
+            } catch (Exception e) {
+                BCLog.logger.warn("[lib.guide] Skipping item " + BuiltInRegistries.ITEM.getKey(item)
+                    + " in the guide index — resolving its name/link threw.", e);
+            }
         }
         prof.pop();
     }

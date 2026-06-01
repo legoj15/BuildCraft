@@ -7,6 +7,7 @@ import net.minecraft.client.renderer.block.model.BlockStateModelWrapper;
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
@@ -162,7 +163,14 @@ public class BCSiliconClient {
          * {@link FacadeStateManager#stackRedirects} honest across that transition. (On the very first join
          * the dedup pass calls it too; calling twice is idempotent.)
          */
-        @SubscribeEvent
+        // HIGH priority so facade state init runs before other LoggingIn listeners that may name
+        // facades — notably the guide-book content warm in BCLibClient (default/NORMAL priority,
+        // and registered first since BCLib inits before BCSilicon). On a multiplayer client this is
+        // the only place facade init happens before the guide indexes every item, so without the
+        // ordering the guide would see a null FacadeStateManager.defaultState. (Naming is also
+        // null-guarded in ItemPluggableFacade as a backstop; this keeps the names correct, not just
+        // crash-free.)
+        @SubscribeEvent(priority = EventPriority.HIGH)
         public static void onClientLoggingIn(net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingIn event) {
             FacadeStateManager.ensureInitialized();
             runDeferredDedup();

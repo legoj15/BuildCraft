@@ -84,7 +84,7 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
     }
 
     void loadScripts(Gson gson) {
-        try (AutoCloseable _ = SimpleScript.createLogFile(entryPath)) {
+        try (AutoCloseable logFile = SimpleScript.createLogFile(entryPath)) {
             long start = System.currentTimeMillis();
             SimpleScript.logForAll("Started at: " + TimeUtil.formatNow());
 

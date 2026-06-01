@@ -19,9 +19,9 @@ stonecutter {
         // One node per MC LINE (a real Java/mapping cliff). The 26.1.x line is a single node
         // compiled against 26.1.2; within-line patch differences (26.1 / 26.1.1 / 26.1.2) are
         // absorbed at runtime — reflection + common APIs (see lib.misc.BreakEventCompat) — so ONE
-        // jar covers all of 26.1.x. A future line like 1.21.11 (Java 21) would be a second node
-        // using //? if directives for the cross-cliff differences.
-        versions("26.1.2")
+        // jar covers all of 26.1.x. The 1.21.11 line (Java 21, pre-CalVer) is a second node;
+        // cross-cliff differences (chiefly the 26.1 GUI-render refactor) use //? if directives.
+        versions("26.1.2", "1.21.11")
         vcsVersion = "26.1.2"
     }
 }

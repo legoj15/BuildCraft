@@ -10,6 +10,8 @@ val neoVersion = property("neo_version") as String
 val jeiVersion = property("jei_version") as String
 val modVersion = property("mod_version") as String
 val mcJarTag = property("mc_jar_tag") as String
+// Per-node Java toolchain: 26.1+ needs Java 25; the 1.21.11 node (pre-CalVer) overrides to 21.
+val javaVersion = property("java_version") as String
 // Resolved at project scope (NOT inside tasks.processResources {}, where `property()` would
 // resolve against the task, not the project). update_branch is root-only (inherited by nodes).
 val updateBranch = property("update_branch") as String
@@ -18,7 +20,7 @@ val mcDepRange = property("mc_dep_range") as String
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(javaVersion.toInt())
     }
 }
 

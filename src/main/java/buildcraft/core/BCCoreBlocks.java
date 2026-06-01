@@ -29,7 +29,11 @@ public class BCCoreBlocks {
     //
     // Only the LASER variant ever had a survival recipe in 1.12.2 (8 obsidian + redstone
     // block → 16). The other five were creative-tab only; they remain dev-gated until a
-    // distinct, intentional recipe/use is designed for each.
+    // distinct, intentional recipe/use is designed for each — and so carry .noLootTable()
+    // (no shipped loot JSON) since a survival drop only makes sense once a survival path
+    // exists. A production build (no -Dbuildcraft.dev=true) never registers them, so shipping
+    // their loot tables would just orphan the item references and spam the server log; when a
+    // variant is promoted, give it a loot table + recipe and drop the .noLootTable() like LASER.
     public static final DeferredBlock<Block> DECORATED_LASER = BLOCKS.registerSimpleBlock(
             "decorated_laser", () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
@@ -69,23 +73,23 @@ public class BCCoreBlocks {
 
         DECORATED_DESTROY = BCLib.DEV
                 ? BLOCKS.registerSimpleBlock("decorated_destroy",
-                        () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops())
+                        () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())
                 : null;
         DECORATED_BLUEPRINT = BCLib.DEV
                 ? BLOCKS.registerSimpleBlock("decorated_blueprint",
-                        () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops())
+                        () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())
                 : null;
         DECORATED_TEMPLATE = BCLib.DEV
                 ? BLOCKS.registerSimpleBlock("decorated_template",
-                        () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops())
+                        () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())
                 : null;
         DECORATED_PAPER = BCLib.DEV
                 ? BLOCKS.registerSimpleBlock("decorated_paper",
-                        () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops())
+                        () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())
                 : null;
         DECORATED_LEATHER = BCLib.DEV
                 ? BLOCKS.registerSimpleBlock("decorated_leather",
-                        () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops())
+                        () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())
                 : null;
     }
 

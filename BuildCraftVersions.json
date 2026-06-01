@@ -2,19 +2,22 @@
   "homepage": "https://github.com/legoj15/BuildCraft",
   "26.1": {
     "2026.1.0-rc1": "First release candidate under with new versioning See changelog.md."
+    "2026.1.0-rc2": "Fixed critical server crash oversight"
   },
   "26.1.1": {
     "2026.1.0-rc1": "First release candidate under with new versioning See changelog.md."
+    "2026.1.0-rc2": "Fixed critical server crash oversight"
   },
   "26.1.2": {
     "2026.1.0-rc1": "First release candidate under with new versioning See changelog.md."
+    "2026.1.0-rc2": "Fixed critical server crash oversight"
   },
   "promos": {
-    "26.1-recommended": "2026.1.0-rc1",
-    "26.1-latest": "2026.1.0-rc1",
-    "26.1.1-recommended": "2026.1.0-rc1",
-    "26.1.1-latest": "2026.1.0-rc1",
-    "26.1.2-recommended": "2026.1.0-rc1",
-    "26.1.2-latest": "2026.1.0-rc1"
+    "26.1-recommended": "2026.1.0-rc2",
+    "26.1-latest": "2026.1.0-rc2",
+    "26.1.1-recommended": "2026.1.0-rc2",
+    "26.1.1-latest": "2026.1.0-rc2",
+    "26.1.2-recommended": "2026.1.0-rc2",
+    "26.1.2-latest": "2026.1.0-rc2"
   }
 }

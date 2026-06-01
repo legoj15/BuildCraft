@@ -11,24 +11,38 @@ Java 25 is the project toolchain — used for compile, test, and the actual game
 ## Build Commands
 
 ```bash
-# Compile only (fast feedback)
-./gradlew compileJava
+# BuildCraft builds with Stonecutter: ONE source tree, one node per MC version
+# (versions/26.1.1, versions/26.1.2). Most tasks are per-node — qualify with :<node>:.
+# Unqualified tasks run across ALL nodes.
 
-# Full build (produces .jar in build/libs/)
-./gradlew build
+# Compile the active node (fast feedback)
+./gradlew :26.1.2:compileJava
 
-# Run Minecraft client with mod loaded
-./gradlew runClient
+# Build EVERY node's jar and collect them into build/libs/<mod_version>/
+./gradlew buildAndCollect
 
-# Run dedicated server
-./gradlew runServer
+# Run client / server for a specific node (both nodes' runClient verified working)
+./gradlew :26.1.2:runClient
+./gradlew :26.1.1:runClient
+./gradlew :26.1.2:runServer
 
-# Run unit tests
-./gradlew test
+# Switch which node is "active" (what the IDE resolves; rewrites stonecutter.gradle.kts)
+./gradlew "Set active project to 26.1.1"
 
-# Run NeoForge game tests (headless quick in-game integration tests)
-./gradlew runGameTestServer
+# Unit tests / headless game tests (per node)
+./gradlew :26.1.2:test
+./gradlew :26.1.2:runGameTestServer
 ```
+
+## Multi-version builds (Stonecutter)
+
+BuildCraft targets multiple MC versions from ONE source tree via the [Stonecutter](https://stonecutter.kikugie.dev) Gradle plugin (Kotlin DSL). Each MC line is a **node** under `versions/<mcver>/` whose `gradle.properties` carries that node's `minecraft_version`, `neo_version`, `jei_version`, and the `neoforge.mods.toml` dependency ranges (`neo_dep_range`/`mc_dep_range`). Current nodes: **`26.1.1`** (legacy `BlockEvent.BreakEvent` + old GUI getters) and **`26.1.2`** (`BreakBlockEvent` + new getters). The old branch-per-MC-line model is retired — these are nodes, not branches.
+
+- **Build scripts (all Kotlin):** `settings.gradle.kts` declares the nodes; `stonecutter.gradle.kts` is the controller (active node + moddev `apply false`); `build.gradle.kts` is the shared per-node build ("centralScript"). `src/` lives at the tree root, shared by every node.
+- **Divergent code** is gated inline with Stonecutter directives in the normal `.java` files — `//? if >=26.1.2 { … } //?} else { … }` — NOT separate files or branches. The active node's branch is live code; the other rides along as a `/* */` comment. Switching the active node rewrites those comments in place. (These Stitcher directives are independent of the Kotlin build DSL.)
+- **Add an MC version:** add a `versions(...)` entry in `settings.gradle.kts`, create `versions/<mcver>/gradle.properties`, and wrap any newly-divergent call sites in `//? if` directives. No new branch.
+- `./gradlew buildAndCollect` builds every node and gathers the `+mc<mcver>` jars into `build/libs/<mod_version>/`.
+- **Kotlin DSL gotcha:** inside a `tasks.xxx { }` block, `property("p")` resolves against the *task*, not the project — read gradle.properties values into top-level `val`s (see [build.gradle.kts](build.gradle.kts)).
 
 ## Architecture
 
@@ -96,7 +110,7 @@ Initialization order: `BCLib` → core registries → per-subsystem registries �
 
 ## NeoForge Version Tracking
 
-NeoForge for Minecraft 26.1 is pre-release — new beta builds land daily, sometimes hourly. `neo_version` in [gradle.properties](gradle.properties) is the pin. Two scripts under `scripts/` keep the project aware of upstream and able to cross-reference the right sources.
+NeoForge for Minecraft 26.1 is pre-release — new beta builds land daily, sometimes hourly. `neo_version` is the pin — now **per-node** (`versions/<node>/gradle.properties`); root [gradle.properties](gradle.properties) keeps the active-node (26.1.2) value, which is what the version-check hook below reads. Two scripts under `scripts/` keep the project aware of upstream and able to cross-reference the right sources.
 
 ### Awareness — the SessionStart hook
 

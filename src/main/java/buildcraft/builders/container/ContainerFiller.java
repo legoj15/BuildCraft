@@ -170,8 +170,8 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
             }
         }
 
-        // Player inventory at y=152 (matches 1.12.2)
-        addFullPlayerInventory(8, 152, playerInv);
+        // Player inventory at y=153 (aligned to the GUI texture's slot pockets)
+        addFullPlayerInventory(8, 153, playerInv);
     }
 
     private static TileFiller getTile(Inventory playerInv, FriendlyByteBuf buf) {

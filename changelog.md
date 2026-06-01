@@ -1,19 +1,20 @@
 ###### 2026.1.0-rc1 — first release under the new CalVer scheme (changes since 26.1.x Beta release 6):
-- **Old BuildCraft saves keep their machines and items.** Worlds and inventories from 1.21.11 and early-26.1 restore their placed pipes, engines, and tanks (with fluid contents) and full inventories despite two rounds of block/item ID changes; 1.12.2 saves recover their inventory items. Migration is automatic.
-- **Finalized the Guide Book.** Wrote or ported every missing page (engines, pipes, machines, chipsets, gates, tools…), restored full item/fluid search, fixed table-of-contents ordering and category collapsing, eliminated the first-open hitch, and polished navigation, hovering, and page rendering throughout.
-- **Made every advancement and recipe-book unlock obtainable.** Dozens of advancements shipped as unreachable data only — all are now wired up with visible progress, correct icons, and owner tracking; the oil/quarry/flood/distill/sorting triggers were fixed, the unfinished "goggles" advancement removed, and every BuildCraft recipe now surfaces its recipe-book unlock when relevant.
-- **Overhauled oil worldgen.** Restructured per-biome oil formations with distinct silhouettes for finite spouts vs. infinite springs, rich-tier-only springs, and vanilla rivers excluded by default.
-- **Restored pipes & transport.** FE and MJ power pipes, tiered fluid transfer rates, runtime pipe dyeing (replacing 400 baked textures), correct drops across every break path, machine connections, placement previews, place sounds, mob pathfinding, and clarified flow tooltips/rendering.
-- **Restored engines & energy.** Engine chaining, overheating, the wrench UX, smooth piston animation, direct Forge-Energy intake under autoconversion, and the MJ provider capabilities.
-- **Restored logic gates & silicon.** Crafting recipes for every gate, data-component variant matching, the paint-items and face-direction gate actions, a working Gate Copier, redstone-trigger sync, and live per-frame gate-body rendering.
-- **Restored fluid machines.** The Distiller, Heat Exchanger, Tank, Pump, and Flood Gate get their GUIs, recipes, fluid restrictions, wrench rotation, and client/server sync back.
-- **Restored quarries, builders, blueprints & filler.** Quarry chunk-loading and depth config, path-marker route previews, destruction-laser drop collection, snapshot 3D previews, the Builder's Container Contents toggle, the Filler's plant clearing, and missing crafting recipes.
-- **Improved JEI integration.** New Assembly Table / Distiller / Heat Exchanger recipe categories, fluid-tank lookup, collapsed the 1,357-entry facade explosion to one entry, and per-variant lens/gate/facade display.
-- **Audited the config and added display options.** Fixed or removed every dead, mis-scoped, or mislabeled option and added client-side display toggles for number formatting, energy-unit names, and colour-blind mode.
-- **Restored machine GUI ledgers.** Owner and Help ledgers are back on every machine screen that had them in 1.12.2, with persistent open/closed state.
-- **Rendering & visual polish.** Status LEDs, laser and mining-tube beams, and logic-gate bodies now render live — with correct lighting, depth, and animation — instead of as baked textures.
-- **Performance.** Eliminated the guide/GUI first-open hitches, chunk re-mesh stutter near working machines, and the fluid-pipe lag spikes and per-frame allocation storms.
-- **Repository cleanup & optimization.** Palettized every PNG, pruned and de-duplicated thousands of dead textures and assets, removed dead Java and submod-era leftovers, reached zero compiler lint, corrected every block's drops and tool-gating, and gated unfinished content (Zone Planner, Integration Table) behind dev mode.
-- **Build & dependencies.** Tracked NeoForge betas up to 26.1.2.67 and fixed `runClient`'s JDK-21 toolchain download.
+- New versioning scheme hopefully to prevent future confusion
+- **Old BuildCraft saves keep their machines and items.** Worlds and inventories from 1.21.11 restore their placed pipes, engines, and tanks (with fluid contents) and full inventories despite two rounds of block/item ID changes; 1.12.2 worlds can reclaim some items that were in inventories, for what that's worth (the flattening was brutal). Migration is automatic. **Backup your worlds anyways!!!**
+- Finalized the Guide Book (the GitHub Wiki is also now live)
+- Made every advancement and recipe-book unlock obtainable
+- Overhauled oil worldgen hopefully for the last time
+- Mobs can now navigate pipes and pipes now have their correct maximum speeds/capacities. Pipes also drop when broken in scenarios where they didn't before.
+- Restored Engine chaining, non-explosive overheating is default again, direct Forge-Energy intake under autoconversion
+- Pipe Logic Gate pluggables now have their crafting recipes, and the Gate Copier now functions, with some added UX additions
+- Quarries now chunk load again
+- Finalized JEI integration
+- Made sure all config options that are present actually do something
+- The side-ledger things in GUIs now remember their last state kinda like they did in 1.12.2
+- Added status LEDs to more blocks that had spots for them on their textures
+- Rectified some major performance issues
+- De-duplicated and removed unused assets to make the .jar as small as possible
 
-⚠️ **Breaking:** the five chipset items were renamed to `chipset_<material>`; old saves auto-migrate via the compatibility system above.
+The following changes are not user facing:
+- For people trying to compile locally, you only need JDK 25 now, as JDK 21 should automatically resolve itself as a dependency for the NeoForge build system
+- The jar is built against NeoForge 26.1.2.70-beta, but the minimum required is still 26.1.0.0-beta

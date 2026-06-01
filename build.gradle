@@ -1,5 +1,7 @@
+// Central (per-node) build script. Runs once per Stonecutter version node.
+// moddev's version is declared with `apply false` in stonecutter.gradle (the controller).
 plugins {
-    id 'net.neoforged.moddev' version '2.0.141'
+    id 'net.neoforged.moddev'
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)
@@ -23,7 +25,8 @@ sourceSets {
 neoForge {
     version = project.neo_version
 
-    accessTransformers.from(file('src/main/resources/META-INF/accesstransformer.cfg'))
+    // src/ lives at the Tree root, not in versions/<node>/, so resolve from rootProject.
+    accessTransformers.from(rootProject.file('src/main/resources/META-INF/accesstransformer.cfg'))
 
     runs {
         client {
@@ -93,7 +96,9 @@ tasks.named('test', Test) {
 tasks.named('processResources') {
     var replaceProperties = [
             mod_version  : project.mod_version,
-            update_branch: project.update_branch
+            update_branch: project.update_branch,
+            neo_dep_range: project.neo_dep_range,
+            mc_dep_range : project.mc_dep_range
     ]
     inputs.properties replaceProperties
 
@@ -117,4 +122,20 @@ tasks.named('jar') {
 task dumpMethods(type: JavaExec) {
     mainClass = 'buildcraft.TestDump'
     classpath = sourceSets.main.runtimeClasspath
+}
+
+// ─── Stonecutter wiring ──────────────────────────────────────────────────────
+// ModDevGradle must wait for Stonecutter to emit this node's preprocessed sources
+// before it resolves/compiles them, or compileJava races stonecutterGenerate.
+tasks.named('createMinecraftArtifacts') {
+    dependsOn 'stonecutterGenerate'
+}
+
+// `./gradlew buildAndCollect` at the Tree root cascades to every version node and
+// gathers each node's jar into build/libs/<mod_version>/ (the +mc<mc> names keep them distinct).
+tasks.register('buildAndCollect', Copy) {
+    group = 'build'
+    from tasks.named('jar').map { it.archiveFile }
+    into rootProject.layout.buildDirectory.dir("libs/${project.mod_version}")
+    dependsOn 'assemble'
 }

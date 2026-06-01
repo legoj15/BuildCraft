@@ -35,7 +35,11 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 
 import net.neoforged.neoforge.common.NeoForge;
+//? if >=26.1.2 {
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
+//?} else {
+/*import net.neoforged.neoforge.event.level.BlockEvent;*/
+//?}
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.core.BuildCraftAPI;
@@ -70,7 +74,11 @@ public class BlockUtil {
         GameProfile profile = (owner != null && owner.name() != null) ? owner : MACHINE_FAKE_PROFILE;
         Player fp = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, profile, pos);
         BlockState state = level.getBlockState(pos);
+        //? if >=26.1.2 {
         BreakBlockEvent event = new BreakBlockEvent(level, pos, state, fp);
+        //?} else {
+        /*BlockEvent.BreakEvent event = new BlockEvent.BreakEvent(level, pos, state, fp);*/
+        //?}
         NeoForge.EVENT_BUS.post(event);
         return !event.isCanceled();
     }

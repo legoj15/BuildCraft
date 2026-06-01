@@ -54,7 +54,11 @@ public class BuildCraftGui {
     }
 
     public static IGuiArea createWindowedArea(AbstractContainerScreen<?> gui) {
+        //? if >=26.1.2 {
         return IGuiArea.create(gui::getLeftPos, gui::getTopPos, gui::getImageWidth, gui::getImageHeight);
+        //?} else {
+        /*return IGuiArea.create(gui::getGuiLeft, gui::getGuiTop, gui::getXSize, gui::getYSize);*/
+        //?}
     }
 
     public final float getLastPartialTicks() {

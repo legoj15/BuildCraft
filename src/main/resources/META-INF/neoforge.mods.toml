@@ -20,15 +20,17 @@ updateJSONURL="https://raw.githubusercontent.com/legoj15/BuildCraft/${update_bra
 [[dependencies.buildcraftunofficial]]
     modId="neoforge"
     type="required"
-    # BreakBlockEvent (used by BlockUtil/LocalBlockUpdateNotifier) was added in
-    # 26.1.2.21-beta, and is in use.
-    versionRange="[26.1.2.21-beta,)"
+    # Range is per Stonecutter node (see gradle.properties / versions/<node>/gradle.properties).
+    # On the 26.1.2 node the floor is 26.1.2.21-beta, where BreakBlockEvent (used by
+    # BlockUtil/LocalBlockUpdateNotifier) was added; the 26.1.x node uses BlockEvent.BreakEvent
+    # and a [26.1.0,26.1.2) range instead.
+    versionRange="${neo_dep_range}"
     ordering="NONE"
     side="BOTH"
 
 [[dependencies.buildcraftunofficial]]
     modId="minecraft"
     type="required"
-    versionRange="[26.1.2,26.2)"
+    versionRange="${mc_dep_range}"
     ordering="NONE"
     side="BOTH"

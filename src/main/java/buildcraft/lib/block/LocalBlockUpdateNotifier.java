@@ -13,7 +13,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.level.BlockEvent;
+//? if >=26.1.2 {
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
+//?}
 
 /**
  * Listens for block updates in a given level and notifies all registered
@@ -70,7 +72,11 @@ public class LocalBlockUpdateNotifier {
     }
 
     @SubscribeEvent
+    //? if >=26.1.2 {
     public static void onBlockBroken(BreakBlockEvent event) {
+    //?} else {
+    /*public static void onBlockBroken(BlockEvent.BreakEvent event) {*/
+    //?}
         LevelAccessor accessor = event.getLevel();
         if (accessor instanceof Level level && !level.isClientSide()) {
             dispatch(level, event.getPos(), event.getState(), level.getBlockState(event.getPos()));

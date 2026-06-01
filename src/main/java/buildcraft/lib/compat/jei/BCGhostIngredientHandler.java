@@ -48,8 +48,13 @@ public class BCGhostIngredientHandler<T extends GuiBC8<?>> implements IGhostIngr
             Slot slot = container.slots.get(i);
             if (slot instanceof IPhantomSlot) {
                 final int slotIndex = i;
+                //? if >=26.1.2 {
                 int x = gui.getLeftPos() + slot.x;
                 int y = gui.getTopPos() + slot.y;
+                //?} else {
+                /*int x = gui.getGuiLeft() + slot.x;
+                int y = gui.getGuiTop() + slot.y;*/
+                //?}
                 targets.add(new PhantomSlotTarget<>(container, slotIndex, x, y));
             }
         }

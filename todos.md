@@ -2,11 +2,6 @@
 
 Last audited: 2026-05-31 (final pre-rc review — removed dev scaffolding, swept logging to BCLog, wired recipe-book tooltips, hardened mod metadata)
 
-## 🧹 Finalization
-
-- [ ] **Stale `engine_wood` guide links.** Six guide pages (`pipe/{wood_item,obsidian_item,diamond_wood_item,stripes_item,wood_fluid,diamond_wood_fluid}.md`) carry `<link to="buildcraftunofficial:block/engine_wood"/>`, but no Wooden Engine exists (engines are redstone/stone/iron/rf/creative). In-game `XmlPageLoader.loadLink` logs a warning and renders nothing; the wiki export omits them too. Repoint at the Redstone Engine (the basic-tier engine) or drop the links.
----
-
 ## 🆕 New Features (version 2026.2)
 
 - [ ] **Robotics resurrection.** Port robots, robot AI, robot stations, and robot items from the 1.12.2 line (low priority — robots were not actively maintained even in 1.12.2). Tied in: `GuiZonePlanner` references `textures/gui/zone_planner.png`, currently archived under `misc/unused_textures/`; restoring the Zone Planner GUI is the prerequisite for the robot-zone workflow.

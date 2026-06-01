@@ -24,7 +24,7 @@ Blacklist: Any fluid other than the fluid selected will be extracted.
 
 <chapter name="Powering"/>
 It can receive power from any MJ power source such as: an engine, a power adaptor, or a pipe pulsar.
-<link to="buildcraftunofficial:block/engine_wood"/>
+<link to="buildcraftunofficial:block/engine_redstone"/>
 <link to="buildcraftunofficial:item/plug_power_adaptor"/>
 <link to="buildcraftunofficial:item/plug_pulsar"/> 
 For each pulse of  power it receives, it will extract from the adjacent tank.

@@ -190,7 +190,7 @@ public class ItemSchematicSingle extends Item {
                 player.sendOverlayMessage(
                     Component.literal("Invalid schematic: " + e.getMessage())
                 );
-                e.printStackTrace();
+                BCLog.logger.warn("[builders.schematic] Player tried to use an invalid schematic", e);
             }
             return InteractionResult.FAIL;
         }

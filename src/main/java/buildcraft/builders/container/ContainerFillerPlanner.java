@@ -11,6 +11,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 
+import buildcraft.api.core.BCLog;
 import buildcraft.api.filler.IFillerPattern;
 
 import buildcraft.lib.gui.ContainerBC_Neptune;
@@ -186,7 +187,7 @@ public class ContainerFillerPlanner extends ContainerBC_Neptune implements ICont
                     valuesChanged();
                 }
             } catch (java.io.IOException e) {
-                e.printStackTrace();
+                BCLog.logger.warn("[builders.filler] Failed to read filler planner data from the network buffer", e);
             }
             return;
         }

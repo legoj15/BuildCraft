@@ -7,6 +7,7 @@ package buildcraft.api.robots;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.nbt.CompoundTag;
 
+import buildcraft.api.core.BCLog;
 import buildcraft.api.mj.MjAPI;
 
 public class AIRobot {
@@ -105,7 +106,7 @@ public class AIRobot {
                 parentAI.delegateAIAborted(this);
             }
         } catch (Throwable e) {
-            e.printStackTrace();
+            BCLog.logger.warn("[robots] Robot delegate AI threw; aborting it", e);
             delegateAI = null;
 
             if (parentAI != null) {
@@ -125,7 +126,7 @@ public class AIRobot {
                 update();
             }
         } catch (Throwable e) {
-            e.printStackTrace();
+            BCLog.logger.warn("[robots] Robot AI update threw; aborting", e);
             abort();
         }
     }
@@ -193,7 +194,7 @@ public class AIRobot {
                     }
                 }
             } catch (Throwable e) {
-                e.printStackTrace();
+                BCLog.logger.warn("[robots] Failed to load robot delegate AI from NBT", e);
             }
         }
     }
@@ -214,7 +215,7 @@ public class AIRobot {
                 ai.loadFromNBT(nbt);
             }
         } catch (Throwable e) {
-            e.printStackTrace();
+            BCLog.logger.warn("[robots] Failed to instantiate robot AI from NBT", e);
         }
 
         return ai;

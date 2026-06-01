@@ -1,6 +1,7 @@
 modLoader="javafml"
 loaderVersion="[2,]"
 license="MPL-2.0"
+issueTrackerURL="https://github.com/legoj15/BuildCraft/issues"
 
 [[mods]]
 modId="buildcraftunofficial"
@@ -13,11 +14,19 @@ description='''
 Extending Minecraft with pipes, auto-crafting, quarries, engines and much more!
 Unofficial port to NeoForge.
 '''
-updateJSONURL="https://raw.githubusercontent.com/legoj15/BuildCraft/8.0.x-26.1.1/BuildCraftVersions.json"
+displayURL="https://github.com/legoj15/BuildCraft"
+updateJSONURL="https://raw.githubusercontent.com/legoj15/BuildCraft/26.1.x/BuildCraftVersions.json"
 
 [[dependencies.buildcraftunofficial]]
     modId="neoforge"
     type="required"
     versionRange="[26.1.0,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.buildcraftunofficial]]
+    modId="minecraft"
+    type="required"
+    versionRange="[26.1.0,26.2)"
     ordering="NONE"
     side="BOTH"

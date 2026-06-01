@@ -6,6 +6,8 @@ package buildcraft.api.robots;
 
 import net.minecraft.nbt.CompoundTag;
 
+import buildcraft.api.core.BCLog;
+
 public abstract class ResourceId {
 
     protected ResourceId() {}
@@ -31,7 +33,7 @@ public abstract class ResourceId {
 
             return id;
         } catch (Throwable e) {
-            e.printStackTrace();
+            BCLog.logger.warn("[robots] Failed to load a ResourceId from NBT", e);
         }
 
         return null;

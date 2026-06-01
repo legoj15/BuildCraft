@@ -93,7 +93,7 @@ public class ScriptableRegistry<E> extends SimpleReloadableRegistry<E> implement
             long end = System.currentTimeMillis();
             SimpleScript.logForAll("Finished at: " + TimeUtil.formatNow() + ", took " + (end - start) + "ms");
         } catch (Exception e) {
-            e.printStackTrace();
+            BCLog.logger.warn("[lib.script] Failed to reload scripts", e);
         }
     }
 

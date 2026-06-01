@@ -323,7 +323,7 @@ public enum GuideManager {
                         }
                     }
                 } catch (IOException io) {
-                    io.printStackTrace();
+                    BCLog.logger.warn("[lib.guide.loader] Failed to load guide page '" + entryKey + "'", io);
                 }
             }
 
@@ -350,7 +350,6 @@ public enum GuideManager {
                     BCLog.logger.info("[lib.guide.loader] Generated stub page for '" + entryKey + "'.");
                 }
             } catch (IOException io) {
-                io.printStackTrace();
                 String endings;
                 if (PAGE_LOADERS.size() == 1) {
                     endings = PAGE_LOADERS.keySet().iterator().next();
@@ -359,7 +358,8 @@ public enum GuideManager {
                 }
                 BCLog.logger.warn(
                     "[lib.guide.loader] Unable to load guide page '" + entryKey + "' (full path = '" + domain + ":"
-                        + path + "." + endings + "') and stub synthesis failed!"
+                        + path + "." + endings + "') and stub synthesis failed!",
+                    io
                 );
             }
         }

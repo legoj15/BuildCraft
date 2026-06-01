@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
+import buildcraft.api.core.BCLog;
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.enums.EnumSnapshotType;
 import buildcraft.api.schematics.ISchematicBlock;
@@ -116,7 +117,7 @@ public class TileReplacer extends TileBC_Neptune implements MenuProvider {
             // reuse the same from/to pair on the next blueprint they drop in.
             setChanged();
         } catch (InvalidInputDataException e) {
-            e.printStackTrace();
+            BCLog.logger.warn("[builders.replacer] Invalid replacer blueprint data", e);
         }
     }
 

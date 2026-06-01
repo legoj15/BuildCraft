@@ -22,6 +22,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
+import buildcraft.api.core.BCLog;
+
 import buildcraft.lib.misc.data.Box;
 
 public class VolumeBox {
@@ -90,7 +92,7 @@ public class VolumeBox {
                     addons.put(slot, addon);
                     addon.postReadFromNbt();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    BCLog.logger.warn("[core.volume] Failed to load a volume box addon from NBT", e);
                 }
             }
         }

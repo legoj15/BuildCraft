@@ -16,8 +16,6 @@ import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.ClickAction;
-import net.minecraft.world.inventory.Slot;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
@@ -122,12 +120,11 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         
-        if (this.recipeBookComponent != null && this.recipeBookComponent.isVisible() && this.widthTooNarrow) {
-            // MC 26.1: RecipeBookComponent rendering APIs changed significantly
-            // TODO: Implement proper recipe book rendering with new MC 26.1 API
+        // The panel itself renders via addRenderableWidget(recipeBookComponent) in init();
+        // draw its tooltips on top here (mirrors vanilla AbstractRecipeBookScreen).
+        if (this.recipeBookComponent != null && this.recipeBookComponent.isVisible()) {
+            this.recipeBookComponent.extractTooltip(graphics, mouseX, mouseY, this.hoveredSlot);
         }
-        // MC 26.1: Tooltip APIs changed significantly
-        // TODO: Implement proper recipe book tooltip rendering with new MC 26.1 API
     }
 
     @Override
@@ -153,11 +150,6 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
             : outside;
     }
 
-    // MC 26.1: slotClicked signature changed (ClickAction→ContainerInput)
-    // Recipe book slot tracking is non-critical — stubbed for now.
-    // TODO: Implement proper recipe book integration with new MC 26.1 API.
-
-
     public void recipesUpdated() {
         if (this.recipeBookComponent != null) {
             this.recipeBookComponent.recipesUpdated();
@@ -176,6 +168,7 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     }
 
 
-    // MC 26.1: renderGhostRecipe removed from RecipeBookComponent API.
-    // TODO: Implement proper ghost recipe rendering with new MC 26.1 API.
+    // No extractGhostRecipe() call: this machine fills real designated-material ghost
+    // slots via ACTRecipeBookComponent.fillGhostRecipe when a recipe is picked, so the
+    // vanilla transient grid overlay does not apply.
 }

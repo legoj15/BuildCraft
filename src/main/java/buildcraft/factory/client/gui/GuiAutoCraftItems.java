@@ -15,8 +15,6 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.ClickAction;
-import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.factory.container.ContainerAutoCraftItems;
@@ -172,12 +170,11 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
         // Let the base class render the slots and background
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         
-        if (this.recipeBookComponent != null && this.recipeBookComponent.isVisible() && this.widthTooNarrow) {
-            // MC 26.1: RecipeBookComponent rendering APIs changed significantly
-            // TODO: Implement proper recipe book rendering with new MC 26.1 API
+        // The panel itself renders via addRenderableWidget(recipeBookComponent) in init();
+        // draw its tooltips on top here (mirrors vanilla AbstractRecipeBookScreen).
+        if (this.recipeBookComponent != null && this.recipeBookComponent.isVisible()) {
+            this.recipeBookComponent.extractTooltip(graphics, mouseX, mouseY, this.hoveredSlot);
         }
-        // MC 26.1: Tooltip APIs changed significantly
-        // TODO: Implement proper recipe book tooltip rendering with new MC 26.1 API
     }
 
     @Override
@@ -202,10 +199,6 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
             : outside;
     }
 
-    // MC 26.1: slotClicked signature changed (ClickAction→ContainerInput)
-    // Recipe book slot tracking is non-critical — stubbed for now.
-    // TODO: Implement proper recipe book integration with new MC 26.1 API.
-
     public void recipesUpdated() {
         if (this.recipeBookComponent != null) {
             this.recipeBookComponent.recipesUpdated();
@@ -223,7 +216,8 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
         return super.isHovering(x, y, width, height, mouseX, mouseY);
     }
 
-    // MC 26.1: renderGhostRecipe removed from RecipeBookComponent API.
-    // TODO: Implement proper ghost recipe rendering with new MC 26.1 API.
+    // No extractGhostRecipe() call: this machine fills real designated-material ghost
+    // slots via AWRecipeBookComponent.fillGhostRecipe when a recipe is picked, so the
+    // vanilla transient grid overlay does not apply.
 }
 

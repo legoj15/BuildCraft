@@ -17,6 +17,7 @@ import net.minecraft.world.item.ItemStack;
 
 import buildcraft.lib.gui.slot.SlotBase;
 
+import buildcraft.api.core.BCLog;
 import buildcraft.api.filler.IFillerPattern;
 import buildcraft.api.tiles.IControllable;
 
@@ -238,7 +239,7 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
                     }
                 }
             } catch (java.io.IOException e) {
-                e.printStackTrace();
+                BCLog.logger.warn("[builders.filler] Failed to read filler data from the network buffer", e);
             }
             return;
         }

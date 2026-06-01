@@ -25,6 +25,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 
+import buildcraft.api.core.BCLog;
+
 import buildcraft.lib.BCLibItems;
 import buildcraft.lib.client.guide.font.FontManager;
 import buildcraft.lib.client.guide.font.IFontRenderer;
@@ -387,7 +389,7 @@ public class GuiGuide extends Screen {
                 drawCover();
             }
         } catch (Throwable t) {
-            t.printStackTrace();
+            BCLog.logger.error("[lib.guide] Failed to render the guide GUI", t);
             throw new RuntimeException(t);
         }
 

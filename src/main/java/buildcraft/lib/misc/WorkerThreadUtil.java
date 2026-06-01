@@ -47,7 +47,7 @@ public class WorkerThreadUtil {
         ThreadFactory factory = new BasicThreadFactory.Builder().daemon(false)//
                 .namingPattern("BuildCraft Worker Thread %d")//
                 .uncaughtExceptionHandler((thread, e) -> {
-                    e.printStackTrace();
+                    BCLog.logger.error("Uncaught exception in BuildCraft worker thread", e);
                     throw new IllegalStateException(e);
                 })//
                 .build();

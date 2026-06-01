@@ -1,5 +1,5 @@
 ## BuildCraft **UNOFFICIAL**
-#### For Minecraft 26.1/26.1.1/26.1.2 on NeoForge
+#### For Minecraft 26.1.2 on NeoForge
 
 ### Reporting an issue
 

@@ -1,5 +1,5 @@
 ## BuildCraft **UNOFFICIAL**
-#### For Minecraft 26.1.2 on NeoForge
+#### For Minecraft 26.1, 26.1.1, and 26.1.2 on NeoForge
 
 ### Reporting an issue
 
@@ -20,19 +20,22 @@ Please mention if you are using any other mods, especially mods which optimize o
 ### Compiling and packaging BuildCraft
 1. Install `Java 25` (Microsoft OpenJDK, recommended by the NeoForge team, available [here](https://learn.microsoft.com/en-us/java/openjdk/download#openjdk-25)) and optionally `Git` (found [here](http://git-scm.com/)). Note: NeoForge's moddev tooling also uses Java 21 internally for its NFRT tasks (asset download, run preparation), but you don't need to install it yourself since the build is configured with the [Foojay toolchain resolver](https://github.com/gradle/foojay-toolchains), so Gradle auto-downloads JDK 21 into its user home on first build. Java 25 is the only JDK you need to install manually.
  * Optional: Install `Gradle` (found [here](http://www.gradle.org/downloads)).
-2. Clone the BuildCraft repository: `git clone https://github.com/legoj15/BuildCraft.git` or [download the latest zip](https://github.com/legoj15/BuildCraft/archive/refs/heads/26.1.x.zip)
+2. Clone the BuildCraft repository: `git clone https://github.com/legoj15/BuildCraft.git` or [download the latest zip](https://github.com/legoj15/BuildCraft/archive/refs/heads/main.zip)
 3. Navigate to the cloned repository in a shell: `cd BuildCraft`
-4. Run the Gradle build command:
-    * On Linux/Unix/Mac: `./gradlew build`
-    * On Windows: `.\gradlew.bat build`
-    * With `Gradle` installed: use `gradle` instead of the wrapper.
-5. Once the build finishes, the compiled mod jar will be in `build/libs/`.
+4. Build the mod. BuildCraft uses [Stonecutter](https://stonecutter.kikugie.dev) to target several Minecraft versions from one source tree — each is a *node* (`26.1.1`, `26.1.2`). Build every node's jar at once with the `buildAndCollect` task:
+    * On Linux/Unix/Mac: `./gradlew buildAndCollect`
+    * On Windows: `.\gradlew.bat buildAndCollect`
+    * To build just one Minecraft version, prefix the task with its node: `./gradlew :26.1.2:build`
+    * The Gradle wrapper pins the required Gradle version (9.x); you do **not** need Gradle installed.
+5. Once the build finishes, the per-version jars — named `BCunofficial-<version>+mc<mcversion>.jar` — are collected in `build/libs/<version>/`.
 
 ### Running in a Development Environment
-To test the mod locally, use the NeoForge run tasks:
-* Run the Client: `./gradlew runClient` (or `.\gradlew.bat runClient` on Windows)
-* Run the Server: `./gradlew runServer` (or `.\gradlew.bat runServer` on Windows)
-On Windows 11, `runClientAndServer.ps1` will launch both at the same time to reduce the amount of steps.
+To test the mod locally, use the NeoForge run tasks. These are **per-node**, so prefix them with the Minecraft version you want (e.g. `:26.1.2:`):
+* Run the Client: `./gradlew :26.1.2:runClient` (or `.\gradlew.bat :26.1.2:runClient` on Windows)
+* Run the Server: `./gradlew :26.1.2:runServer` (or `.\gradlew.bat :26.1.2:runServer` on Windows)
+* Swap `:26.1.2:` for `:26.1.1:` to run against that Minecraft version instead.
+
+On Windows 11, `runClientAndServer.ps1` will launch both at the same time (against the `:26.1.2` node) to reduce the amount of steps.
 
 Your directory structure will look like a standard monolithic Java project:
 ***
@@ -40,7 +43,10 @@ Your directory structure will look like a standard monolithic Java project:
     BuildCraft
      |- build            (Generated after compiling)
      |- run              (Generated when running the client/server)
-     \- src
+     |- versions         (One Stonecutter node per MC version, each with its gradle.properties)
+     |   |- 26.1.1
+     |   \- 26.1.2
+     \- src              (Shared source; version differences are //? if directives, not forks)
       |- main            (Mod source code and resources)
       \- test            (Test source code)
 

@@ -54,11 +54,8 @@ public class BuildCraftGui {
     }
 
     public static IGuiArea createWindowedArea(AbstractContainerScreen<?> gui) {
-        //? if >=26.1.2 {
-        return IGuiArea.create(gui::getLeftPos, gui::getTopPos, gui::getImageWidth, gui::getImageHeight);
-        //?} else {
-        /*return IGuiArea.create(gui::getGuiLeft, gui::getGuiTop, gui::getXSize, gui::getYSize);*/
-        //?}
+        // Old getter names (present on every 26.1.x; 26.1.2 keeps them alongside getLeftPos/...) so one jar runs on all.
+        return IGuiArea.create(gui::getGuiLeft, gui::getGuiTop, gui::getXSize, gui::getYSize);
     }
 
     public final float getLastPartialTicks() {

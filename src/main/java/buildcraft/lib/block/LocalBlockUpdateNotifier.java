@@ -13,9 +13,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.level.BlockEvent;
-//? if >=26.1.2 {
-import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
-//?}
 
 /**
  * Listens for block updates in a given level and notifies all registered
@@ -24,8 +21,8 @@ import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
  *
  * The 1.12.2 version hooked {@code IWorldEventListener.notifyBlockUpdate} for
  * a single catch-all signal. That API was removed in MC 1.21+, so this version
- * hooks NeoForge's {@link BlockEvent.EntityPlaceEvent},
- * {@link BreakBlockEvent}, and {@link BlockEvent.NeighborNotifyEvent}. Together
+ * hooks NeoForge's {@link BlockEvent.EntityPlaceEvent}, the block-break event
+ * (via {@link buildcraft.lib.misc.BreakEventCompat}), and {@link BlockEvent.NeighborNotifyEvent}. Together
  * those cover player placements/breaks and any {@code setBlock} call that
  * propagates neighbor updates. Consumers (e.g. {@link buildcraft.silicon.tile.TileLaser})
  * should still maintain a periodic rescan as a safety net for sources that
@@ -71,16 +68,18 @@ public class LocalBlockUpdateNotifier {
         }
     }
 
-    @SubscribeEvent
-    //? if >=26.1.2 {
-    public static void onBlockBroken(BreakBlockEvent event) {
-    //?} else {
-    /*public static void onBlockBroken(BlockEvent.BreakEvent event) {*/
-    //?}
+    // NOT @SubscribeEvent: the break-event class differs across 26.1.x, so this is registered
+    // reflectively via BreakEventCompat (see registerBreakListener) against the common BlockEvent base.
+    public static void onBlockBroken(BlockEvent event) {
         LevelAccessor accessor = event.getLevel();
         if (accessor instanceof Level level && !level.isClientSide()) {
             dispatch(level, event.getPos(), event.getState(), level.getBlockState(event.getPos()));
         }
+    }
+
+    /** Registers {@link #onBlockBroken} for the running version's break event. Called once from BCCore. */
+    public static void registerBreakListener() {
+        buildcraft.lib.misc.BreakEventCompat.onBreak(LocalBlockUpdateNotifier::onBlockBroken);
     }
 
     @SubscribeEvent

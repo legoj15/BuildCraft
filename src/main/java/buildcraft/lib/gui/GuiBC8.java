@@ -123,7 +123,11 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
         //? if >=26.1 {
         super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
         //?} else {
-        /*super.render(graphics, mouseX, mouseY, partialTicks);*/
+        /*super.render(graphics, mouseX, mouseY, partialTicks);
+        // 1.21.11: AbstractContainerScreen.render() does NOT set the hovered-slot tooltip — every
+        // concrete vanilla container screen calls renderTooltip() itself after super.render(). 26.1
+        // sets it inside extractRenderState, so this call is 1.21.11-only.
+        renderTooltip(graphics, mouseX, mouseY);*/
         //?}
         // Draw the drag icon AFTER super (which draws slots/items/highlights) using nextStratum()
         // so the drag icon always sorts on top, matching MC's own carried-item rendering.

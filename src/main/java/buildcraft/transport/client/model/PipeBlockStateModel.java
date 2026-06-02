@@ -83,7 +83,7 @@ public class PipeBlockStateModel implements DynamicBlockStateModel {
         // Cutout pass — pipe body geometry with pipe-specific textures
         List<BakedQuad> cutoutQuads = PipeModelCacheAll.getCutoutModel(tile);
         if (!cutoutQuads.isEmpty()) {
-            addQuadsAsPart(parts, cutoutQuads, particle);
+            addQuadsAsPart(parts, cutoutQuads, particle, net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT);
         }
 
         // Translucent pass — colour overlay for painted pipes. On 26.1 the quad's MaterialInfo
@@ -91,25 +91,26 @@ public class PipeBlockStateModel implements DynamicBlockStateModel {
         // MutableQuad.toBakedTranslucent TODO), so this currently shares the cutout buffer there.
         List<BakedQuad> translucentQuads = PipeModelCacheAll.getTranslucentModel(tile);
         if (!translucentQuads.isEmpty()) {
-            addQuadsAsPart(parts, translucentQuads, particle);
+            addQuadsAsPart(parts, translucentQuads, particle, net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT);
         }
     }
 
     /** Convert a list of BakedQuads into a cutout model part and add to the parts list.
      *  All pipe quads are unculled (sub-block sized, shouldn't be face-culled). */
     //? if >=26.1 {
-    private static void addQuadsAsPart(List<BlockStateModelPart> parts, List<BakedQuad> quads, Material.Baked particle) {
+    private static void addQuadsAsPart(List<BlockStateModelPart> parts, List<BakedQuad> quads, Material.Baked particle, net.minecraft.client.renderer.chunk.ChunkSectionLayer layer) {
     //?} else {
-    /*private static void addQuadsAsPart(List<BlockModelPart> parts, List<BakedQuad> quads, TextureAtlasSprite particle) {*/
+    /*private static void addQuadsAsPart(List<BlockModelPart> parts, List<BakedQuad> quads, TextureAtlasSprite particle, net.minecraft.client.renderer.chunk.ChunkSectionLayer layer) {*/
     //?}
         QuadCollection.Builder builder = new QuadCollection.Builder();
         for (BakedQuad quad : quads) {
             builder.addUnculledFace(quad);
         }
         //? if >=26.1 {
+        // layer unused here: 26.1 routes via the quad's BakedQuad.MaterialInfo layer.
         parts.add(new net.minecraft.client.resources.model.SimpleModelWrapper(builder.build(), true, particle));
         //?} else {
-        /*parts.add(new net.minecraft.client.renderer.block.model.SimpleModelWrapper(builder.build(), true, particle));*/
+        /*parts.add(new net.minecraft.client.renderer.block.model.SimpleModelWrapper(builder.build(), true, particle, layer));*/
         //?}
     }
 

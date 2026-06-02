@@ -8,7 +8,11 @@ package buildcraft.builders.client.render.pip;
 import javax.annotation.Nullable;
 
 import net.minecraft.client.gui.navigation.ScreenRectangle;
+//? if >=26.1 {
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
+//?} else {
+/*import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState;*/
+//?}
 
 import buildcraft.builders.snapshot.Snapshot;
 

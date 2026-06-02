@@ -36,7 +36,7 @@ public enum PipeBehaviourRendererStripes implements IPipeBehaviourRenderer<PipeB
         if (dir == null) return;
 
         MutableQuad[] quads = getQuads(dir);
-        int light = LevelRenderer.getLightCoords(
+        int light = buildcraft.lib.client.render.LightUtil.getLightCoords(
             stripes.pipe.getHolder().getPipeWorld(),
             stripes.pipe.getHolder().getPipePos()
         );

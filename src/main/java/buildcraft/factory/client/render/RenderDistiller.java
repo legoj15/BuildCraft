@@ -19,7 +19,11 @@ import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+//? if >=26.1 {
 import net.minecraft.client.renderer.state.level.CameraRenderState;
+//?} else {
+/*import net.minecraft.client.renderer.state.CameraRenderState;*/
+//?}
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -130,7 +134,7 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
         TankSizes sizes = TANK_SIZES.get(facing);
         if (sizes == null) return;
 
-        int light = LevelRenderer.getLightCoords(level, pos);
+        int light = buildcraft.lib.client.render.LightUtil.getLightCoords(level, pos);
 
         poseStack.pushPose();
 

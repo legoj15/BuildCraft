@@ -14,8 +14,16 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.ShapeRenderer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+//? if >=26.1 {
 import net.minecraft.client.renderer.state.level.BlockOutlineRenderState;
+//?} else {
+/*import net.minecraft.client.renderer.state.BlockOutlineRenderState;*/
+//?}
+//? if >=26.1 {
 import net.minecraft.client.renderer.state.level.LevelRenderState;
+//?} else {
+/*import net.minecraft.client.renderer.state.LevelRenderState;*/
+//?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.ARGB;

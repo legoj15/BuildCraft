@@ -25,7 +25,11 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
+//? if >=26.1 {
 import net.minecraft.client.renderer.state.level.CameraRenderState;
+//?} else {
+/*import net.minecraft.client.renderer.state.CameraRenderState;*/
+//?}
 import net.minecraft.client.renderer.texture.OverlayTexture;
 
 import net.minecraft.core.BlockPos;
@@ -133,7 +137,7 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         Level level = pipe.getLevel();
         if (level == null) return;
 
-        int light = LevelRenderer.getLightCoords(level, pipe.getBlockPos());
+        int light = buildcraft.lib.client.render.LightUtil.getLightCoords(level, pipe.getBlockPos());
 
         poseStack.pushPose();
 

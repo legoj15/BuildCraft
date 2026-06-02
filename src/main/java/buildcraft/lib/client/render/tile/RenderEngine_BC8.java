@@ -16,7 +16,11 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+//? if >=26.1 {
 import net.minecraft.client.renderer.state.level.CameraRenderState;
+//?} else {
+/*import net.minecraft.client.renderer.state.CameraRenderState;*/
+//?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
@@ -83,7 +87,7 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
 
         poseStack.pushPose();
 
-        int light = LevelRenderer.getLightCoords(level, pos);
+        int light = buildcraft.lib.client.render.LightUtil.getLightCoords(level, pos);
 
         MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();

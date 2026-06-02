@@ -14,7 +14,11 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+//? if >=26.1 {
 import net.minecraft.client.renderer.state.level.CameraRenderState;
+//?} else {
+/*import net.minecraft.client.renderer.state.CameraRenderState;*/
+//?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;

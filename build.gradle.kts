@@ -167,9 +167,12 @@ tasks.register<Copy>("buildAndCollect") {
 tasks.register("fullTestSuite") {
     group = "verification"
     description = "Unit tests + headless game tests + production boot/connect matrix (matrix auto-skips if the testing/ harness is absent)."
-    dependsOn("test", "runGameTestServer", rootProject.tasks.named("runReleaseMatrix"))
-    // Run the long production matrix last, after the cheap in-dev checks.
+    // buildAndCollect produces the fresh +mc jars the matrix stages onto the server/client. It's listed
+    // here (not left to the script) so the OUTER Gradle builds them — the matrix runs with -SkipBuild so it
+    // never starts a nested `gradlew buildAndCollect`, which would deadlock on this build's project lock.
+    dependsOn("test", "runGameTestServer", "buildAndCollect", rootProject.tasks.named("runReleaseMatrix"))
+    // Build fresh jars + run cheap in-dev checks first; the long production matrix runs last.
     rootProject.tasks.named("runReleaseMatrix").configure {
-        mustRunAfter(tasks.named("test"), tasks.named("runGameTestServer"))
+        mustRunAfter(tasks.named("test"), tasks.named("runGameTestServer"), tasks.named("buildAndCollect"))
     }
 }

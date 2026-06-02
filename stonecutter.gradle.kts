@@ -22,7 +22,11 @@ tasks.register<Exec>("runReleaseMatrix") {
     group = "verification"
     description = "Production boot+connect matrix (testing/Invoke-ReleaseTests.ps1, PowerShell 7). Skipped if the harness isn't checked out."
     workingDir = rootProject.projectDir
-    commandLine("pwsh", "-NoProfile", "-File", releaseMatrixScript.absolutePath)
+    // -SkipBuild: fullTestSuite already ran buildAndCollect (fresh +mc jars), so the harness must NOT
+    // start a nested `gradlew buildAndCollect` inside this running build (it would deadlock on the
+    // project lock). The harness still wipes each server's mods/ and copies the fresh jar every run.
+    // (Run the script directly — `Invoke-ReleaseTests.ps1` without -SkipBuild — for a standalone rebuild.)
+    commandLine("pwsh", "-NoProfile", "-File", releaseMatrixScript.absolutePath, "-SkipBuild")
     onlyIf {
         val present = releaseMatrixScript.exists()
         if (!present) logger.lifecycle("runReleaseMatrix: testing/Invoke-ReleaseTests.ps1 not present — skipping the production boot+connect stage.")

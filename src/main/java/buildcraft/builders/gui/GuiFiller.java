@@ -198,13 +198,13 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
     @Override
     protected void drawForegroundLayer() {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
-        // After super, the pose is back to ACS-translated space (0,0 = GUI top-left)
-        if (mainGui.currentMenu == null || !mainGui.currentMenu.shouldFullyOverride()) {
-            String titleStr = Component.translatable("block.buildcraftunofficial.filler").getString();
-            graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 10, 0xFF404040, false);
-            graphics.text(font, Component.translatable("gui.filling.resources").getString(), 7, 74, 0xFF404040, false);
-            graphics.text(font, Component.translatable("container.inventory").getString(), 7, 141, 0xFF404040, false);
-        }
+        // After super, the pose is back to ACS-translated space (0,0 = GUI top-left).
+        // Always draw the labels: the full-override pattern popup renders at a higher stratum
+        // (drawMenuOverlayLayer) and dims this text on top, matching 1.12.2's layered look.
+        String titleStr = Component.translatable("block.buildcraftunofficial.filler").getString();
+        graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 10, 0xFF404040, false);
+        graphics.text(font, Component.translatable("gui.filling.resources").getString(), 7, 74, 0xFF404040, false);
+        graphics.text(font, Component.translatable("container.inventory").getString(), 7, 141, 0xFF404040, false);
     }
 
     @Override

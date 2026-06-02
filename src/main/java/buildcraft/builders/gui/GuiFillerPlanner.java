@@ -122,11 +122,11 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
     @Override
     protected void drawForegroundLayer() {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
-        if (mainGui.currentMenu == null || !mainGui.currentMenu.shouldFullyOverride()) {
-            String titleStr = Component.translatable("item.buildcraftunofficial.filler_planner").getString();
-            graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 10, 0xFF404040, false);
-            graphics.text(font, Component.translatable("container.inventory").getString(), 8, 73, 0xFF404040, false);
-        }
+        // Always draw the labels: the full-override pattern popup renders at a higher stratum
+        // (drawMenuOverlayLayer) and dims this text on top, matching 1.12.2's layered look.
+        String titleStr = Component.translatable("item.buildcraftunofficial.filler_planner").getString();
+        graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 10, 0xFF404040, false);
+        graphics.text(font, Component.translatable("container.inventory").getString(), 8, 73, 0xFF404040, false);
     }
 
     @Override

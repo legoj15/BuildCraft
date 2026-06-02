@@ -248,18 +248,18 @@ public class GuiGate extends GuiBC8<ContainerGate> {
     protected void drawForegroundLayer() {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
 
-        // Suppress text labels only when a full-override popup is active (the variant picker).
-        // During drag, currentMenu is set but shouldFullyOverride()=false — text should still
-        // render. The drag icon now renders at a higher stratum in extractRenderState so it
-        // sorts on top of the text without needing to hide it.
-        if (mainGui.currentMenu == null || !mainGui.currentMenu.shouldFullyOverride()) {
-            // Center the gate name at the top
-            String titleStr = menu.gate.variant.getLocalizedName().getString();
-            graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
+        // Always draw the labels — even when the full-override variant-picker popup is open. The
+        // popup and its dimming overlay render at a higher stratum (drawMenuOverlayLayer, after
+        // nextStratum() in extractRenderState), so they sort on top of this text and dim it,
+        // exactly like 1.12.2 drew the underlying GUI behind the popup instead of hiding it.
+        // (Same stratum mechanism the drag icon already relies on.)
 
-            // Offset the 'Inventory' label down into the correct place
-            String invStr = Component.translatable("container.inventory").getString();
-            graphics.text(font, invStr, 8, 16 + numRows * 18 + 4, 0xFF404040, false);
-        }
+        // Center the gate name at the top
+        String titleStr = menu.gate.variant.getLocalizedName().getString();
+        graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
+
+        // Offset the 'Inventory' label down into the correct place
+        String invStr = Component.translatable("container.inventory").getString();
+        graphics.text(font, invStr, 8, 16 + numRows * 18 + 4, 0xFF404040, false);
     }
 }

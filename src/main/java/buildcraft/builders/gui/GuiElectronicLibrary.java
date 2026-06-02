@@ -236,11 +236,11 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
             rowY += LIST_ROW_H;
         }
 
-        // Centered title, unless a full-override popup (variant picker) is active.
-        if (mainGui.currentMenu == null || !mainGui.currentMenu.shouldFullyOverride()) {
-            String titleStr = Component.translatable("tile.buildcraftunofficial.library.name").getString();
-            graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
-        }
+        // Centered title — drawn even under a full-override popup (which sorts on top at a higher
+        // stratum via drawMenuOverlayLayer), consistent with the snapshot list above that already
+        // draws unconditionally.
+        String titleStr = Component.translatable("tile.buildcraftunofficial.library.name").getString();
+        graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
     }
 
     @Override

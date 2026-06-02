@@ -12,26 +12,47 @@ import buildcraft.energy.BCEnergyFluids;
 public class FluidPhysicsTest {
 
     public static void testOilBobbing(GameTestHelper helper) {
-        // Create a 3-block deep pool of crude oil
+        // Crude oil's buoyancy is resolved DIFFERENTLY across the two MC lines, so this test asserts the
+        // correct (and genuinely different) outcome on each:
+        //   * 26.1.x  — isInWater() is purely tag-based. Crude oil joins the minecraft:water fluid tag, so
+        //               the FloatGoal sees water and bobs the pig UP to the surface.
+        //   * 1.21.11 — NeoForge 21.11 gates isInWater() on FluidType.getIsWaterLike(), NOT the tag. Crude
+        //               oil is built isWaterLike(false)/canSwim(false) on purpose (turnOffSplashes in
+        //               BCEnergyFluids — thick crude shouldn't be swimmable), so the pig never counts as in
+        //               water, FloatGoal never engages, and it does NOT bob. That non-float is the correct
+        //               behaviour here, and is what we assert.
+        // Crude oil (not a water-like sibling) is used deliberately: its canSwim(false) keeps the pig out of
+        // swim navigation, so the 26.1.x bob is reliable rather than flaky. The deterministic companion
+        // crudeOilIsNotWaterLike pins the underlying FluidType flags.
+
+        // Stone floor so the non-floating (1.21.11) case rests cleanly at the bottom instead of falling into
+        // the void arena, keeping the negative assertion stable.
+        helper.setBlock(new BlockPos(1, 0, 1), Blocks.STONE);
+
+        // 3-block deep pool of crude oil
         for (int y = 1; y <= 3; y++) {
             helper.setBlock(new BlockPos(1, y, 1), BCEnergyFluids.OIL_COOL.block().get());
         }
 
-        // Spawn a pig at the bottom with AI intact: NeoForge 26.1.x exposes no
-        // per-fluid entity-physics hook, so oil falls back to vanilla water physics
-        // (oil is in FluidTags.WATER). The pig's FloatGoal — which only triggers
-        // while AI is enabled — drives the bob to the surface.
+        // Spawn a pig at the bottom with AI intact (FloatGoal only drives the bob while AI is enabled).
         helper.spawn(EntityType.PIG, 1, 1, 1);
 
-        // Succeed once the pig has floated UP into the surface region of the oil column (the upper
-        // blocks, relative y 2..4) rather than sinking/staying at the spawn block (1,1,1). A
-        // surface-region AABB — not the single block (1,3,1) — keeps this robust: a mob bobbing on
-        // fluid often settles with its body in block (1,2,1) and never reliably touches block 3, and
-        // succeedWhen samples the position at an arbitrary tick. We only need to prove buoyancy: the
-        // pig left the bottom and rose toward the surface (water-like physics), not its exact block.
-        helper.succeedWhen(() -> {
-            helper.assertEntityPresent(EntityType.PIG, new AABB(0.5, 2.0, 0.5, 2.5, 4.5, 2.5));
+        // Surface region of the oil column (upper blocks, relative y 2..4). A region — not the single block
+        // (1,3,1) — keeps the positive case robust: a bobbing mob often settles with its body in block
+        // (1,2,1) and never reliably touches block 3, and the position is sampled at an arbitrary tick.
+        AABB surface = new AABB(0.5, 2.0, 0.5, 2.5, 4.5, 2.5);
+
+        //? if >=26.1 {
+        // Tag-based water physics: prove buoyancy — the pig left the bottom and rose into the surface region.
+        helper.succeedWhen(() -> helper.assertEntityPresent(EntityType.PIG, surface));
+        //?} else {
+        /*// FluidType-gated water physics: crude oil isn't water-like, so prove the pig did NOT float — after
+        // a settle window it remains out of the surface region (resting on the floor at the bottom).
+        helper.runAtTickTime(100, () -> {
+            helper.assertEntityNotPresent(EntityType.PIG, surface);
+            helper.succeed();
         });
+        *///?}
     }
 
     public static void testDenseOilSinking(GameTestHelper helper) {
@@ -67,6 +88,31 @@ public class FluidPhysicsTest {
             // Assert that the Purgatory Escape Hatch successfully cascaded the oil onto the side water blocks!
             helper.assertBlockPresent(BCEnergyFluids.ALL.get(7).block().get(), sidePos);
         });
+    }
+
+    /**
+     * Pins crude oil's deliberate non-water-like configuration (the {@code turnOffSplashes} branch in
+     * {@link BCEnergyFluids}). Crude oil ("oil") is built with {@code isWaterLike(false)/canSwim(false)}
+     * so thick crude doesn't behave like swimmable water, while every refined fluid (heavy/dense/distilled
+     * oil, fuels) stays water-like. This matters on the 1.21.11 line, where NeoForge 21.11 resolves
+     * {@code isInWater()} from {@code FluidType.getIsWaterLike()} rather than the minecraft:water tag — so
+     * this flag, not tag membership, decides whether mobs bob/swim. Deterministic; no entity physics.
+     */
+    public static void crudeOilIsNotWaterLike(GameTestHelper helper) {
+        net.neoforged.neoforge.fluids.FluidType crude = BCEnergyFluids.OIL_COOL.fluidType().get();
+        if (crude.getIsWaterLike() || crude.canSwim(null)) {
+            helper.fail("crude oil must be non-water-like and non-swimmable (turnOffSplashes): isWaterLike="
+                + crude.getIsWaterLike() + " canSwim=" + crude.canSwim(null));
+            return;
+        }
+        net.neoforged.neoforge.fluids.FluidType heavy = BCEnergyFluids.ALL.stream()
+            .filter(e -> e.baseName().equals("oil_heavy")).findFirst().orElseThrow().fluidType().get();
+        if (!heavy.getIsWaterLike() || !heavy.canSwim(null)) {
+            helper.fail("refined oils must stay water-like/swimmable: heavy oil isWaterLike="
+                + heavy.getIsWaterLike() + " canSwim=" + heavy.canSwim(null));
+            return;
+        }
+        helper.succeed();
     }
 
     public static void testCrudeOilSelfCollision(GameTestHelper helper) {

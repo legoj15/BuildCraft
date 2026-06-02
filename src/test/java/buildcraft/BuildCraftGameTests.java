@@ -74,6 +74,7 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:oil_water_interaction"), () -> buildcraft.energy.OilWaterInteractionTest::testOilOverWater);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:oil_bobbing_physics"), () -> buildcraft.energy.FluidPhysicsTest::testOilBobbing);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:energy_fluid_motion_scale_water_like"), () -> buildcraft.energy.FluidPhysicsTest::energyFluidsMotionScaleIsWaterLike);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:crude_oil_is_not_water_like"), () -> buildcraft.energy.FluidPhysicsTest::crudeOilIsNotWaterLike);
 
             // Inventory Transactors
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:item_transactor_simple_moving"), () -> buildcraft.lib.inventory.ItemTransactorTester::testSimpleMoving);

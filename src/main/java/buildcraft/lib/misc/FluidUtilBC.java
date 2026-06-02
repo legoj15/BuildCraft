@@ -114,6 +114,7 @@ public class FluidUtilBC {
             return 0xFFFFFFFF;
         }
 
+        //? if >=26.1 {
         try {
             net.minecraft.client.renderer.block.FluidModel model = net.minecraft.client.Minecraft.getInstance()
                     .getModelManager().getFluidStateModelSet().get(fluid.defaultFluidState());
@@ -123,6 +124,10 @@ public class FluidUtilBC {
         } catch (Exception e) {}
 
         return 0xFFFFFFFF;
+        //?} else {
+        /*// 1.21.11 has no FluidModel/getFluidStateModelSet; tint comes from the client fluid extension.
+        return net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions.of(fluid.defaultFluidState()).getTintColor();*/
+        //?}
     }
 
     /**

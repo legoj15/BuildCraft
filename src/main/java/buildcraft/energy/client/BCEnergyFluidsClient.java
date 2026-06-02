@@ -49,12 +49,20 @@ public class BCEnergyFluidsClient {
                 }
 
                 @Override
+                //? if >=26.1 {
                 public void modifyFogColor(net.minecraft.client.Camera camera, float partialTick, net.minecraft.client.multiplayer.ClientLevel level, int renderDistance, float darkenWorldAmount, org.joml.Vector4f fluidFogColor) {
+                //?} else {
+                /*public org.joml.Vector4f modifyFogColor(net.minecraft.client.Camera camera, float partialTick, net.minecraft.client.multiplayer.ClientLevel level, int renderDistance, float darkenWorldAmount, org.joml.Vector4f fluidFogColor) {*/
+                //?}
                     int color = entry.tintColor();
                     float r = ((color >> 16) & 0xFF) / 255.0F;
                     float g = ((color >> 8) & 0xFF) / 255.0F;
                     float b = (color & 0xFF) / 255.0F;
+                    //? if >=26.1 {
                     fluidFogColor.set(r, g, b, 1.0F);
+                    //?} else {
+                    /*return fluidFogColor.set(r, g, b, 1.0F);*/
+                    //?}
                 }
 
                 @Override
@@ -69,6 +77,9 @@ public class BCEnergyFluidsClient {
         }
     }
 
+    // 1.21.11 TODO: RegisterFluidModelsEvent is 26.1-only. On 1.21.11 fluids render from the
+    // IClientFluidTypeExtensions still/flow textures registered above — no separate model reg.
+    //? if >=26.1 {
     @SubscribeEvent
     public static void onRegisterFluidModels(net.neoforged.neoforge.client.event.RegisterFluidModelsEvent event) {
         LOGGER.info("[BCEnergyFluidsClient] RegisterFluidModelsEvent fired! Registering {} fluid entries.", BCEnergyFluids.ALL.size());
@@ -94,4 +105,5 @@ public class BCEnergyFluidsClient {
         }
         LOGGER.info("[BCEnergyFluidsClient] All fluid models registered successfully.");
     }
+    //?}
 }

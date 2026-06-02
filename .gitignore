@@ -80,3 +80,7 @@ gametest_output*.log
 
 # Generated GitHub-wiki export (scripts/guide-to-wiki.py)
 /wiki-export/
+
+# Bespoke local pre-release test harness — maintainer's two-machine setup (Server1 + Prism);
+# not for VCS. The fullTestSuite Gradle task references it but self-skips when it's absent.
+/testing/

@@ -34,11 +34,13 @@ public class BCBuildersClient {
         NeoForge.EVENT_BUS.addListener(
                 net.neoforged.neoforge.client.event.ClientTickEvent.Post.class,
                 event -> buildcraft.builders.snapshot.ClientArchitectScans.INSTANCE.tick());
+        //? if >=26.1 {
         NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent.class,
                 event -> {
                     BCBuildersEventDist.INSTANCE.renderAllFillersCustomGeometry(event);
                     BCBuildersEventDist.INSTANCE.renderAllBuildersCustomGeometry(event);
                 });
+        //?}
         // Draws a second tooltip-shaped panel below Blueprint/Template tooltips with a rotating
         // 3D preview. Mirrors the 1.12.2 BCBuildersEventDist#onPostText pattern; the 1.12.2
         // PostText event was removed in modern NeoForge, so we hook Pre and run the layout

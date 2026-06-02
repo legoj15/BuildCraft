@@ -578,6 +578,9 @@ public enum BCBuildersEventDist {
 
     /** Called from SubmitCustomGeometryEvent to render the block-throwing animation for each
      *  active place task — items travel from the Builder toward their destination block. */
+    // 1.21.11 TODO: SubmitCustomGeometryEvent (per-frame custom geometry) is absent; the builder
+    // block-throwing animation is stubbed here. Port via RenderLevelStageEvent for visual parity.
+    //? if >=26.1 {
     public void renderAllBuildersCustomGeometry(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
@@ -604,6 +607,7 @@ public enum BCBuildersEventDist {
             renderPlaceTasks(active, cameraPos, poseStack, collector, partialTicks);
         }
     }
+    //?}
 
     /** Extracted so the wildcard on {@code active} gets captured into {@code T}, which lets the
      *  {@code prevClientPlaceTasks} stream reference the same instance's {@code PlaceTask} type
@@ -737,6 +741,8 @@ public enum BCBuildersEventDist {
     }
 
     /** Called from SubmitCustomGeometryEvent to render items smoothly in world space using SubmitNodeCollector. */
+    // 1.21.11 TODO: stubbed (SubmitCustomGeometryEvent absent) — port via RenderLevelStageEvent.
+    //? if >=26.1 {
     public void renderAllFillersCustomGeometry(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
@@ -788,4 +794,5 @@ public enum BCBuildersEventDist {
             }
         }
     }
+    //?}
 }

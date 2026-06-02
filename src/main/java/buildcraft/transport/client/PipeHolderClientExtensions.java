@@ -77,7 +77,11 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
                 BlockState state = states[0].getState().getBlockState();
                 if (state != null) {
                     Minecraft mc = Minecraft.getInstance();
+                    //? if >=26.1 {
                     var model = mc.getModelManager().getBlockStateModelSet().get(state);
+                    //?} else {
+                    /*var model = mc.getModelManager().getBlockModelShaper().getBlockModel(state);*/
+                    //?}
                     if (model != null) {
                         for (java.lang.reflect.Method m : model.getClass().getMethods()) {
                             String name = m.getName().toLowerCase();

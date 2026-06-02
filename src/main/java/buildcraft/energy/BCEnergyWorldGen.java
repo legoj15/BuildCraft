@@ -59,7 +59,7 @@ public class BCEnergyWorldGen {
         data.markGenerated(chunkPos);
 
         // Generate oil structures that overlap with this chunk
-        OilGenerator.generateForChunk(serverLevel, chunkPos.x(), chunkPos.z());
+        OilGenerator.generateForChunk(serverLevel, buildcraft.lib.misc.PositionUtil.chunkX(chunkPos), buildcraft.lib.misc.PositionUtil.chunkZ(chunkPos));
     }
 
     /** Once-per-second check stride for {@link #onPlayerTick}. The advancement is
@@ -122,8 +122,8 @@ public class BCEnergyWorldGen {
         if (!OilGenerator.canGenerateOilIn(level)) return;
 
         ChunkPos current = player.chunkPosition();
-        int cx = current.x();
-        int cz = current.z();
+        int cx = buildcraft.lib.misc.PositionUtil.chunkX(current);
+        int cz = buildcraft.lib.misc.PositionUtil.chunkZ(current);
 
         // Player must currently BE in an oil-design biome chunk.
         if (!OilGenerator.isOilDesignBiomeAt(level, cx, cz)) return;

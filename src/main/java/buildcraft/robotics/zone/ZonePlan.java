@@ -107,8 +107,8 @@ public class ZonePlan implements IZone {
         for (Map.Entry<ChunkPos, ZoneChunk> entry : chunkMapping.entrySet()) {
             CompoundTag zoneChunkTag = new CompoundTag();
             entry.getValue().writeToNBT(zoneChunkTag);
-            zoneChunkTag.putInt("chunkX", entry.getKey().x());
-            zoneChunkTag.putInt("chunkZ", entry.getKey().z());
+            zoneChunkTag.putInt("chunkX", buildcraft.lib.misc.PositionUtil.chunkX(entry.getKey()));
+            zoneChunkTag.putInt("chunkZ", buildcraft.lib.misc.PositionUtil.chunkZ(entry.getKey()));
             list.add(zoneChunkTag);
         }
         nbt.put("chunkMapping", list);
@@ -142,8 +142,8 @@ public class ZonePlan implements IZone {
         double maxSqrDistance = Double.MAX_VALUE;
 
         for (Map.Entry<ChunkPos, ZoneChunk> e : chunkMapping.entrySet()) {
-            double dx = (e.getKey().x() << 4) + 8 - pos.getX();
-            double dz = (e.getKey().z() << 4) + 8 - pos.getZ();
+            double dx = (buildcraft.lib.misc.PositionUtil.chunkX(e.getKey()) << 4) + 8 - pos.getX();
+            double dz = (buildcraft.lib.misc.PositionUtil.chunkZ(e.getKey()) << 4) + 8 - pos.getZ();
 
             double sqrDistance = dx * dx + dz * dz;
 
@@ -174,8 +174,8 @@ public class ZonePlan implements IZone {
         for (Map.Entry<ChunkPos, ZoneChunk> e : chunkMapping.entrySet()) {
             if (chunkId == 0) {
                 BlockPos i = e.getValue().getRandomBlockPos(rand);
-                int x = (e.getKey().x() << 4) + i.getX();
-                int z = (e.getKey().z() << 4) + i.getZ();
+                int x = (buildcraft.lib.misc.PositionUtil.chunkX(e.getKey()) << 4) + i.getX();
+                int z = (buildcraft.lib.misc.PositionUtil.chunkZ(e.getKey()) << 4) + i.getZ();
 
                 return new BlockPos(x, i.getY(), z);
             }
@@ -201,8 +201,8 @@ public class ZonePlan implements IZone {
     public void writeToByteBuf(FriendlyByteBuf buf) {
         buf.writeInt(chunkMapping.size());
         for (Map.Entry<ChunkPos, ZoneChunk> e : chunkMapping.entrySet()) {
-            buf.writeInt(e.getKey().x());
-            buf.writeInt(e.getKey().z());
+            buf.writeInt(buildcraft.lib.misc.PositionUtil.chunkX(e.getKey()));
+            buf.writeInt(buildcraft.lib.misc.PositionUtil.chunkZ(e.getKey()));
             e.getValue().writeToByteBuf(buf);
         }
     }

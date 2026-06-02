@@ -58,14 +58,14 @@ public class ChunkLoaderManager {
         }
         BlockPos owner = tile.getBlockPos();
         for (ChunkPos chunk : getChunksToLoad(tile)) {
-            CONTROLLER.forceChunk(serverLevel, owner, chunk.x(), chunk.z(), add, false);
+            CONTROLLER.forceChunk(serverLevel, owner, buildcraft.lib.misc.PositionUtil.chunkX(chunk), buildcraft.lib.misc.PositionUtil.chunkZ(chunk), add, false);
         }
     }
 
     public static <T extends BlockEntity & IChunkLoadingTile> Set<ChunkPos> getChunksToLoad(T tile) {
         Set<ChunkPos> chunksToLoad = tile.getChunksToLoad();
         Set<ChunkPos> chunkPoses = new HashSet<>(chunksToLoad != null ? chunksToLoad : Collections.emptyList());
-        chunkPoses.add(ChunkPos.containing(tile.getBlockPos()));
+        chunkPoses.add(buildcraft.lib.misc.PositionUtil.chunkContaining(tile.getBlockPos()));
         return chunkPoses;
     }
 

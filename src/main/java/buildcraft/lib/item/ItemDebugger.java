@@ -31,7 +31,7 @@ public class ItemDebugger extends Item {
         if (context.getLevel().isClientSide()) {
             BCAdvDebugging.INSTANCE.setClientTarget(context.getClickedPos());
         } else if (context.getPlayer() != null) {
-            context.getPlayer().sendOverlayMessage(target.getAdvDebugMessage());
+            buildcraft.lib.misc.MessageUtil.sendOverlayMessage(context.getPlayer(), target.getAdvDebugMessage());
         }
         return InteractionResult.SUCCESS;
     }

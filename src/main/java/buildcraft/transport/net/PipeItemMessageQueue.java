@@ -59,7 +59,7 @@ public class PipeItemMessageQueue {
         }
 
         // Find all players tracking this chunk
-        ChunkPos chunkPos = ChunkPos.containing(pos);
+        ChunkPos chunkPos = buildcraft.lib.misc.PositionUtil.chunkContaining(pos);
         var chunkMap = server.getChunkSource().chunkMap;
         var players = chunkMap.getPlayers(chunkPos, false);
 

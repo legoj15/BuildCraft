@@ -170,7 +170,7 @@ public class ItemSchematicSingle extends Item {
                                     return InteractionResult.SUCCESS;
                                 }
                             } else {
-                                player.sendOverlayMessage(
+                                buildcraft.lib.misc.MessageUtil.sendOverlayMessage(player,
                                     Component.literal(
                                         "Not enough items. Total needed: " +
                                             StackUtil.mergeSameItems(requiredItems).stream()
@@ -180,14 +180,14 @@ public class ItemSchematicSingle extends Item {
                                 );
                             }
                         } else {
-                            player.sendOverlayMessage(
+                            buildcraft.lib.misc.MessageUtil.sendOverlayMessage(player,
                                 Component.literal("Schematic requires fluids")
                             );
                         }
                     }
                 }
             } catch (InvalidInputDataException e) {
-                player.sendOverlayMessage(
+                buildcraft.lib.misc.MessageUtil.sendOverlayMessage(player,
                     Component.literal("Invalid schematic: " + e.getMessage())
                 );
                 BCLog.logger.warn("[builders.schematic] Player tried to use an invalid schematic", e);

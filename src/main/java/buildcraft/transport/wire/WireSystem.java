@@ -184,7 +184,7 @@ public final class WireSystem {
     }
 
     public Stream<ChunkPos> getChunkPosesAsStream() {
-        return elements.stream().map(element -> ChunkPos.containing(element.blockPos));
+        return elements.stream().map(element -> buildcraft.lib.misc.PositionUtil.chunkContaining(element.blockPos));
     }
 
     public boolean isPlayerWatching(ServerPlayer player) {

@@ -24,10 +24,38 @@ import net.minecraft.world.level.block.Rotation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.Vec3i;
+import net.minecraft.world.level.ChunkPos;
 
 import buildcraft.lib.misc.data.FaceDistance;
 
 public class PositionUtil {
+    // ── ChunkPos cliff: 26.1 is a record (x()/z() accessors + static containing(BlockPos)
+    //    factory); pre-CalVer it's a plain class (public x/z fields + new ChunkPos(BlockPos)).
+    //    Isolated here so future nodes (1.21.1, 26.2) touch only these three methods. ──────────
+    public static ChunkPos chunkContaining(BlockPos pos) {
+        //? if >=26.1 {
+        return ChunkPos.containing(pos);
+        //?} else {
+        /*return new ChunkPos(pos);*/
+        //?}
+    }
+
+    public static int chunkX(ChunkPos cp) {
+        //? if >=26.1 {
+        return cp.x();
+        //?} else {
+        /*return cp.x;*/
+        //?}
+    }
+
+    public static int chunkZ(ChunkPos cp) {
+        //? if >=26.1 {
+        return cp.z();
+        //?} else {
+        /*return cp.z;*/
+        //?}
+    }
+
     /** @return The exact direction from the first position to the second. Returns null if more than one axis value is
      *         different, or they are the same position. */
     @Nullable

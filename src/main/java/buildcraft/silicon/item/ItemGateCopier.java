@@ -63,7 +63,7 @@ public class ItemGateCopier extends Item {
             NBTUtilBC.setItemData(stack, data);
         }
         updateModelData(stack);
-        player.sendOverlayMessage(Component.translatable("chat.gateCopier.dataCleared"));
+        buildcraft.lib.misc.MessageUtil.sendOverlayMessage(player,Component.translatable("chat.gateCopier.dataCleared"));
         return InteractionResult.SUCCESS;
     }
 

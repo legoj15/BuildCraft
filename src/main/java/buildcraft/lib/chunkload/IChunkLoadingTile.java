@@ -37,7 +37,7 @@ public interface IChunkLoadingTile {
         BlockPos pos = ((BlockEntity) this).getBlockPos();
         Set<ChunkPos> chunkPoses = new HashSet<>(4);
         for (Direction face : new Direction[] { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST }) {
-            chunkPoses.add(ChunkPos.containing(pos.relative(face)));
+            chunkPoses.add(buildcraft.lib.misc.PositionUtil.chunkContaining(pos.relative(face)));
         }
         return chunkPoses;
     }

@@ -1,8 +1,10 @@
 package buildcraft.lib.misc;
 
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
@@ -27,10 +29,23 @@ public class MessageUtil {
             if (packet == null) {
                 return;
             }
-            ChunkPos chunkPos = ChunkPos.containing(be.getBlockPos());
+            ChunkPos chunkPos = PositionUtil.chunkContaining(be.getBlockPos());
             for (ServerPlayer player : level.getChunkSource().chunkMap.getPlayers(chunkPos, false)) {
                 player.connection.send(packet);
             }
         }
+    }
+
+    /**
+     * Show a transient action-bar (overlay) message to a player. 26.1 renamed the base
+     * {@code displayClientMessage(msg, true)} to {@code sendOverlayMessage(msg)}; this isolates
+     * that cliff so call sites stay version-agnostic.
+     */
+    public static void sendOverlayMessage(Player player, Component message) {
+        //? if >=26.1 {
+        player.sendOverlayMessage(message);
+        //?} else {
+        /*player.displayClientMessage(message, true);*/
+        //?}
     }
 }

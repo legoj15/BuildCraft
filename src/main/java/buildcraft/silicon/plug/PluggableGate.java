@@ -245,11 +245,11 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
             // Pushes connection/trigger/action display state to any player with this gate's
             // GUI open; the on/off glow re-syncs naturally on the next logic tick.
             logic.sendResolveData();
-            player.sendOverlayMessage(Component.translatable("chat.gateCopier.gatePasted"));
+            buildcraft.lib.misc.MessageUtil.sendOverlayMessage(player,Component.translatable("chat.gateCopier.gatePasted"));
         } else {
             // Copier is empty → copy this gate's configuration onto it.
             if (!logic.hasConfiguration()) {
-                player.sendOverlayMessage(Component.translatable("chat.gateCopier.noInformation"));
+                buildcraft.lib.misc.MessageUtil.sendOverlayMessage(player,Component.translatable("chat.gateCopier.noInformation"));
                 return false;
             }
             CompoundTag data = logic.writeToNbt();
@@ -258,7 +258,7 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
             // it on paste anyway; removing it here just keeps the stored item tag clean.)
             data.remove("wireBroadcasts");
             ItemGateCopier.setCopiedGateData(stack, data);
-            player.sendOverlayMessage(Component.translatable("chat.gateCopier.gateCopied"));
+            buildcraft.lib.misc.MessageUtil.sendOverlayMessage(player,Component.translatable("chat.gateCopier.gateCopied"));
         }
         return true;
     }

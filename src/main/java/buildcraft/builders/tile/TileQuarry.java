@@ -458,10 +458,14 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             return null;
         }
         Set<ChunkPos> chunkPoses = new HashSet<>();
-        ChunkPos minChunkPos = ChunkPos.containing(frameBox.min());
-        ChunkPos maxChunkPos = ChunkPos.containing(frameBox.max());
-        for (int x = minChunkPos.x(); x <= maxChunkPos.x(); x++) {
-            for (int z = minChunkPos.z(); z <= maxChunkPos.z(); z++) {
+        ChunkPos minChunkPos = buildcraft.lib.misc.PositionUtil.chunkContaining(frameBox.min());
+        ChunkPos maxChunkPos = buildcraft.lib.misc.PositionUtil.chunkContaining(frameBox.max());
+        int minX = buildcraft.lib.misc.PositionUtil.chunkX(minChunkPos);
+        int maxX = buildcraft.lib.misc.PositionUtil.chunkX(maxChunkPos);
+        int minZ = buildcraft.lib.misc.PositionUtil.chunkZ(minChunkPos);
+        int maxZ = buildcraft.lib.misc.PositionUtil.chunkZ(maxChunkPos);
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
                 chunkPoses.add(new ChunkPos(x, z));
             }
         }

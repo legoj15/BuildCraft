@@ -829,48 +829,13 @@ public enum BCBuildersEventDist {
             Vec3 pos = prevPos.add(
                 active.getPlaceTaskItemPos(placeTask).subtract(prevPos).scale(partialTicks));
             for (Object itemObj : placeTask.items) {
-                renderThrownItemCube((net.minecraft.world.item.ItemStack) itemObj, pos, cameraPos, poseStack);
+                // Render via a separate client-only class — keeps the ClientLevel-loading item
+                // rendering OUT of BCBuildersEventDist, which is loaded on the dedicated server (its
+                // per-server-tick advancement scan) and would otherwise crash there on first tick.
+                buildcraft.builders.client.render.PlaceTaskCubeRenderer.renderItemCube(
+                    (net.minecraft.world.item.ItemStack) itemObj, pos, cameraPos, poseStack);
             }
         }
-    }
-
-    private static void renderThrownItemCube(net.minecraft.world.item.ItemStack item, Vec3 pos,
-            Vec3 cameraPos, PoseStack poseStack) {
-        if (item.isEmpty()) return;
-        Minecraft mc = Minecraft.getInstance();
-        // Resolve the item model just to pick a representative particle sprite (block items → the
-        // block's particle texture). Cheap for the handful of in-flight place-task items per frame.
-        net.minecraft.client.renderer.item.ItemStackRenderState rs =
-            new net.minecraft.client.renderer.item.ItemStackRenderState();
-        mc.getItemModelResolver().updateForTopItem(rs, item,
-            net.minecraft.world.item.ItemDisplayContext.FIXED, mc.level, null, 0);
-        if (rs.isEmpty()) return;
-        net.minecraft.client.renderer.texture.TextureAtlasSprite sprite =
-            rs.pickParticleIcon(net.minecraft.util.RandomSource.create());
-        if (sprite == null) return;
-
-        net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource =
-            mc.renderBuffers().bufferSource();
-        com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(
-            net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(sprite.atlasLocation()));
-        int light = buildcraft.lib.client.render.laser.LaserRenderer_BC8.computeLightmap(pos.x, pos.y, pos.z, 0);
-
-        poseStack.pushPose();
-        poseStack.translate(pos.x - cameraPos.x, pos.y - cameraPos.y, pos.z - cameraPos.z);
-        // ~0.30-block cube, matching the ~0.30 scale the 26.1 item animation renders at.
-        float r = 0.15F;
-        buildcraft.lib.client.model.ModelUtil.UvFaceData uv =
-            new buildcraft.lib.client.model.ModelUtil.UvFaceData(
-                sprite.getU0(), sprite.getV0(), sprite.getU1(), sprite.getV1());
-        for (net.minecraft.core.Direction face : net.minecraft.core.Direction.values()) {
-            buildcraft.lib.client.model.ModelUtil.createFace(
-                face, new org.joml.Vector3f(0F, 0F, 0F), new org.joml.Vector3f(r, r, r), uv)
-                .lighti(light)
-                .colouri(255, 255, 255, 255)
-                .render(poseStack.last(), buffer);
-        }
-        poseStack.popPose();
-        bufferSource.endBatch();
     }*/
     //?}
 }

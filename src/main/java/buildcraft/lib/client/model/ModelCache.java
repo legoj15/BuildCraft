@@ -15,7 +15,11 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
+//? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.BakedQuad;
+//?} else {
+/*import net.minecraft.client.renderer.block.model.BakedQuad;*/
+//?}
 
 /** Implements a caching system for models with potentially infinite variants. Automatically expires entries after a
  * configurable time period, and up to a maximum number. */

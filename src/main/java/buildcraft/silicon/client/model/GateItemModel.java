@@ -18,7 +18,11 @@ import com.google.common.cache.LoadingCache;
 import org.jspecify.annotations.Nullable;
 
 import net.minecraft.client.multiplayer.ClientLevel;
+//? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.BakedQuad;
+//?} else {
+/*import net.minecraft.client.renderer.block.model.BakedQuad;*/
+//?}
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;

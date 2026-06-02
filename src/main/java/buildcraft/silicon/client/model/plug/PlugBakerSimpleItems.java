@@ -8,7 +8,11 @@ import java.util.Map;
 import org.joml.Vector3f;
 
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+//? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.BakedQuad;
+//?} else {
+/*import net.minecraft.client.renderer.block.model.BakedQuad;*/
+//?}
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.AABB;

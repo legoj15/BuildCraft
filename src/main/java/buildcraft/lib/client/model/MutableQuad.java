@@ -143,6 +143,8 @@ public class MutableQuad {
 
     /** Converts this MutableQuad into a MC 26.1 BakedQuad, preserving per-vertex colours. */
     public BakedQuad toBakedBlock() {
+        //? if >=26.1 {
+        // 26.1 bundles sprite/layer/sheet/tint/shade/emission into a BakedQuad.MaterialInfo record.
         BakedQuad.MaterialInfo matInfo = new BakedQuad.MaterialInfo(
             sprite, net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT,
             net.minecraft.client.renderer.Sheets.cutoutBlockItemSheet(),
@@ -159,6 +161,22 @@ public class MutableQuad {
             net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
             buildBakedColors()
         );
+        //?} else {
+        /*// 1.21.11 carries tintIndex/sprite/shade/lightEmission as separate record components and
+        // has no per-quad chunk layer (the block's RenderType decides cutout vs translucent), so the
+        // CUTOUT/TRANSLUCENT split below collapses here. hasAmbientOcclusion=true matches vanilla.
+        return new BakedQuad(
+            vertex_0.positionvf(), vertex_1.positionvf(),
+            vertex_2.positionvf(), vertex_3.positionvf(),
+            UVPair.pack(vertex_0.tex_u, vertex_0.tex_v),
+            UVPair.pack(vertex_1.tex_u, vertex_1.tex_v),
+            UVPair.pack(vertex_2.tex_u, vertex_2.tex_v),
+            UVPair.pack(vertex_3.tex_u, vertex_3.tex_v),
+            tintIndex, face, sprite, shade, lightEmission,
+            net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
+            buildBakedColors(), true
+        );*/
+        //?}
     }
 
     /** Converts this MutableQuad into a BakedQuad routed to the TRANSLUCENT chunk section layer,
@@ -166,6 +184,7 @@ public class MutableQuad {
      *  The chunk compiler uses MaterialInfo.layer() to route each quad to the correct buffer,
      *  enabling alpha-blended rendering for colour overlays in the chunk mesh. */
     public BakedQuad toBakedTranslucent() {
+        //? if >=26.1 {
         BakedQuad.MaterialInfo matInfo = new BakedQuad.MaterialInfo(
             sprite, net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT,
             net.minecraft.client.renderer.Sheets.translucentBlockItemSheet(),
@@ -182,6 +201,21 @@ public class MutableQuad {
             net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
             buildBakedColors()
         );
+        //?} else {
+        /*// 1.21.11 BakedQuad has no per-quad layer; translucent routing is a TODO for 1.21.11 visual
+        // parity (needs a TRANSLUCENT block RenderType). Produces the same quad as toBakedBlock().
+        return new BakedQuad(
+            vertex_0.positionvf(), vertex_1.positionvf(),
+            vertex_2.positionvf(), vertex_3.positionvf(),
+            UVPair.pack(vertex_0.tex_u, vertex_0.tex_v),
+            UVPair.pack(vertex_1.tex_u, vertex_1.tex_v),
+            UVPair.pack(vertex_2.tex_u, vertex_2.tex_v),
+            UVPair.pack(vertex_3.tex_u, vertex_3.tex_v),
+            tintIndex, face, sprite, shade, lightEmission,
+            net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
+            buildBakedColors(), true
+        );*/
+        //?}
     }
 
     /** In 26.1, block and item use the same vertex format. Alias for {@link #toBakedBlock()}. */

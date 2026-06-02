@@ -17,7 +17,11 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Comparator;
 
+//? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.BakedQuad;
+//?} else {
+/*import net.minecraft.client.renderer.block.model.BakedQuad;*/
+//?}
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.resources.model.geometry.QuadCollection;

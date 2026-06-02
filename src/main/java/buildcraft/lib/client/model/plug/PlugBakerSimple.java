@@ -13,7 +13,11 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
+//? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.BakedQuad;
+//?} else {
+/*import net.minecraft.client.renderer.block.model.BakedQuad;*/
+//?}
 import net.minecraft.core.Direction;
 
 import buildcraft.api.transport.pluggable.IPluggableStaticBaker;

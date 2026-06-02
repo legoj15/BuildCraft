@@ -18,7 +18,11 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.AABB;
 import buildcraft.transport.pipe.Pipe;
+//? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.BakedQuad;
+//?} else {
+/*import net.minecraft.client.renderer.block.model.BakedQuad;*/
+//?}
 import net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions;
 
 import org.jspecify.annotations.Nullable;

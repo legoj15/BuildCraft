@@ -10,7 +10,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+//? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.BakedQuad;
+//?} else {
+/*import net.minecraft.client.renderer.block.model.BakedQuad;*/
+//?}
 
 import buildcraft.lib.client.model.IModelCache;
 import buildcraft.lib.client.model.ModelCacheJoiner;

@@ -9,7 +9,11 @@ package buildcraft.transport.client.model;
 import java.util.ArrayList;
 import java.util.List;
 
+//? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.BakedQuad;
+//?} else {
+/*import net.minecraft.client.renderer.block.model.BakedQuad;*/
+//?}
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 import buildcraft.api.transport.pipe.PipeDefinition;

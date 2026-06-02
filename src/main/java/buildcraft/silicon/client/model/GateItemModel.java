@@ -133,5 +133,10 @@ public class GateItemModel implements ItemModel {
 
         var layer = renderState.newLayer();
         layer.prepareQuadList().addAll(quads);
+        //? if <26.1 {
+        /*// 1.21.11: the item layer needs an explicit render type (26.1 infers it from the quad's
+        // MaterialInfo). Block-textured cutout → cutoutBlockSheet, matching vanilla BlockModelWrapper.
+        layer.setRenderType(net.minecraft.client.renderer.Sheets.cutoutBlockSheet());*/
+        //?}
     }
 }

@@ -169,7 +169,11 @@ public class LensItemModel implements ItemModel {
         // advances. Vanilla's CuboidItemModelWrapper sets this automatically from FLAG_ANIMATED;
         // this custom ItemModel bypasses that wrapper, so it must propagate the flag itself.
         for (BakedQuad quad : quads) {
+            //? if >=26.1 {
             if ((quad.materialInfo().flags() & BakedQuad.FLAG_ANIMATED) != 0) {
+            //?} else {
+            /*if (quad.sprite().contents().isAnimated()) {*/
+            //?}
                 renderState.setAnimated();
                 break;
             }

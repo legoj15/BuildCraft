@@ -260,11 +260,19 @@ public class MutableQuad {
     /** Reads a BakedQuad's data into this MutableQuad. */
     public MutableQuad fromBakedBlock(BakedQuad quad) {
         face = quad.direction();
+        //? if >=26.1 {
         BakedQuad.MaterialInfo mat = quad.materialInfo();
         tintIndex = mat.tintIndex();
         sprite = mat.sprite();
         shade = mat.shade();
         lightEmission = mat.lightEmission();
+        //?} else {
+        /*// 1.21.11 BakedQuad carries these directly (no MaterialInfo record).
+        tintIndex = quad.tintIndex();
+        sprite = quad.sprite();
+        shade = quad.shade();
+        lightEmission = quad.lightEmission();*/
+        //?}
 
         readVertexFromBaked(vertex_0, quad.position0(), quad.packedUV0());
         readVertexFromBaked(vertex_1, quad.position1(), quad.packedUV1());

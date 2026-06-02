@@ -486,10 +486,14 @@ public class BCEnergyFluids {
 
         @Override
         public double motionScale(net.minecraft.world.entity.Entity entity) {
+            // motionScale is the per-tick scalar applied to the fluid FLOW velocity that carries
+            // entities along a current — NOT friction. Vanilla water is 0.014; the old 0.8/0.5 here
+            // were ~40-57x too strong and launched entities downstream in flowing fluid. Keep oil a
+            // touch weaker than water (denser/sluggish) but in the correct range.
             if (BCEnergyConfig.oilIsSticky != null && BCEnergyConfig.oilIsSticky.get()) {
-                return 0.5D; // Sluggish
+                return 0.007D; // sticky: sluggish, ~half of water's current
             }
-            return 0.8D; // Dense liquid (water is typically friction ~0.8)
+            return 0.012D; // dense oil: a slightly weaker current than water (0.014)
         }
     }
 }

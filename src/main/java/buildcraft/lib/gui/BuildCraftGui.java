@@ -119,6 +119,32 @@ public class BuildCraftGui {
         }
     }
 
+    /**
+     * Renders the fully-override menu (the dark darken overlay + variant popup) at the highest stratum.
+     * Like {@link #drawDragLayer}, MUST be called from extractRenderState AFTER super.extractRenderState()
+     * + graphics.nextStratum(), so it sorts above the inventory slot items / highlights (which
+     * AbstractContainerScreen renders in a final pass after the foreground-label stage). nextStratum()
+     * reset the pose, so re-apply the same translate {@link #preDrawForeground} uses to keep the overlay
+     * and popup positioned over the GUI rather than at the screen origin.
+     */
+    public void drawMenuOverlayLayer(buildcraft.lib.gui.BCGraphics graphics) {
+        IMenuElement m = currentMenu;
+        if (m != null && m.shouldFullyOverride() && graphics != null) {
+            // No translate: we're in the post-nextStratum screen-space pose, exactly like
+            // drawDragLayer. (In the old label-pass spot, vanilla's translate to (leftPos, topPos)
+            // and preDrawForeground's inverse translate cancelled to screen space, so the overlay
+            // and popup were effectively screen-positioned there too.)
+            // Dark overlay over the whole GUI to match 1.12.2's darkening when the popup is open.
+            int sx = (int) screenElement.getX();
+            int sy = (int) screenElement.getY();
+            int sw = (int) screenElement.getWidth();
+            int sh = (int) screenElement.getHeight();
+            graphics.fill(sx, sy, sx + sw, sy + sh, 0xC0101010);
+            m.drawBackground(lastPartialTicks);
+            m.drawForeground(lastPartialTicks);
+        }
+    }
+
     public void preDrawForeground() {
         buildcraft.lib.gui.BCGraphics graphics = GuiIcon.getGuiGraphics();
         if (graphics != null) {
@@ -142,21 +168,10 @@ public class BuildCraftGui {
         }
 
         IMenuElement m = currentMenu;
-        if (m != null && m.shouldFullyOverride()) {
-            // Draw a dark overlay over the whole GUI to match 1.12.2's darkening effect
-            // when the quick-switch variant popup is open.
-            buildcraft.lib.gui.BCGraphics graphics = GuiIcon.getGuiGraphics();
-            if (graphics != null) {
-                int sx = (int) screenElement.getX();
-                int sy = (int) screenElement.getY();
-                int sw = (int) screenElement.getWidth();
-                int sh = (int) screenElement.getHeight();
-                graphics.fill(sx, sy, sx + sw, sy + sh, 0xC0101010);
-            }
-            m.drawBackground(lastPartialTicks);
-            m.drawForeground(lastPartialTicks);
-        }
-        // Non-override menus (e.g. drag) are rendered via drawDragLayer() in extractRenderState instead.
+        // The fully-override menu (dark overlay + variant popup) is now rendered via
+        // drawMenuOverlayLayer(), and non-override menus (drag) via drawDragLayer() — BOTH from
+        // extractRenderState, AFTER super + nextStratum(), so they sort above the slot items that
+        // AbstractContainerScreen renders in a final pass after this foreground-label stage.
 
         java.util.List<ToolTip> tooltips = new java.util.ArrayList<>();
         if (m != null && m.shouldFullyOverride()) {

@@ -129,6 +129,7 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
         // so the drag icon always sorts on top, matching MC's own carried-item rendering.
         graphics.nextStratum();
         mainGui.drawDragLayer(bcg);
+        mainGui.drawMenuOverlayLayer(bcg);
         drawTooltipLayer(mouseX, mouseY, partialTicks);
     }
 
@@ -173,9 +174,14 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
         BCGraphics bcg = new BCGraphics(graphics);
         GuiIcon.setGuiGraphics(bcg);
         mainGui.preDrawForeground();
-        drawForegroundLayer();
         mainGui.drawElementForegrounds(null);
         mainGui.postDrawForeground();
+        // drawForegroundLayer() draws titles/labels at GUI-local coords (e.g. (imageWidth - w)/2, 6),
+        // so it MUST run in vanilla's GUI-local pose (origin = GUI top-left). preDrawForeground shifts
+        // the origin to the SCREEN top-left for BuildCraft's element coordinate system, which would push
+        // those title coords into the screen corner — so draw it AFTER postDrawForeground restores the
+        // GUI-local pose (matching the pre-refactor "drawn after super.extractLabels" behaviour).
+        drawForegroundLayer();
     }
 
     /** Draw custom foreground labels. Subclasses should override this. */

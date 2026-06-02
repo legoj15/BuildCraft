@@ -220,17 +220,19 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
         List<Snapshot.Key> list = snapshots.getList();
         Snapshot.Key selected = menu.tile != null ? menu.tile.selected : null;
 
-        int rowY = topPos + LIST_Y;
+        // drawForegroundLayer now runs in GUI-local pose (origin = GUI top-left), so use GUI-local
+        // coords here (no leftPos/topPos) — consistent with the centered title below.
+        int rowY = LIST_Y;
         for (int i = 0; i < list.size() && i < LIST_MAX_ROWS; i++) {
             Snapshot.Key key = list.get(i);
             boolean isSelected = key.equals(selected);
             if (isSelected) {
-                graphics.fill(leftPos + LIST_X, rowY,
-                        leftPos + LIST_X + LIST_W, rowY + LIST_ROW_H, 0x80_55_55_55);
+                graphics.fill(LIST_X, rowY,
+                        LIST_X + LIST_W, rowY + LIST_ROW_H, 0x80_55_55_55);
             }
             int colour = isSelected ? 0xFF_FF_FA_A0 : 0xFF_E0_E0_E0;
             String text = key.header == null ? key.toString() : key.header.name;
-            graphics.text(font, text, leftPos + LIST_X, rowY, colour, false);
+            graphics.text(font, text, LIST_X, rowY, colour, false);
             rowY += LIST_ROW_H;
         }
 

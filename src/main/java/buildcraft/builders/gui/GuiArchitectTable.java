@@ -112,8 +112,18 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
                 this.setFocused(null);
                 return true;
             }
-            if (this.minecraft.options.keyInventory.matches(event)) {
-                return true; // Consume the inventory key so the screen doesn't close
+            if (event.key() == 256) { // ESC: let the screen close as usual, even mid-rename
+                return super.keyPressed(event);
+            }
+            // While the field is focused & editable, forward the key to it (so backspace / arrows /
+            // ctrl-edits act) and otherwise SWALLOW it via canConsumeInput(). This stops
+            // AbstractContainerScreen.keyPressed from reaching checkHotbarKeyPressed (the 1-9
+            // quick-swap), onClose() (inventory key), or the drop/clone handlers while the player is
+            // typing a name — those number/letter keys never consume in EditBox.keyPressed (they
+            // insert via the separate charTyped callback), so without this they fall straight through
+            // to the hotbar logic. Mirrors vanilla's ItemCombinerScreen name-field handling.
+            if (this.nameField.keyPressed(event) || this.nameField.canConsumeInput()) {
+                return true;
             }
         }
         return super.keyPressed(event);

@@ -4,3 +4,4 @@
 - Stopped the five dev-only "decorated" blocks from spamming the server log with missing-item loot-table errors at every world load.
 - **Fixed the in-game update notification.** The version manifest it reads was malformed, so the check silently failed for everyone; it now parses, and each supported Minecraft version reports the updates published for its own line.
 - **One download now covers Minecraft 26.1, 26.1.1, and 26.1.2.** Instead of a separate jar per version, BuildCraft ships a single jar compatible with the whole 26.1 line.
+- **Fixed typing numbers into the Architect Table and blueprint-library name boxes.** Pressing 1–9 while naming a blueprint triggered the inventory hotbar-swap instead of typing the digit; the focused name field now captures all keystrokes.

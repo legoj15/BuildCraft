@@ -340,9 +340,15 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
                 this.setFocused(null);
                 return true;
             }
-            // Swallow the inventory key (usually 'e') while the field is focused, or the screen
-            // would close mid-rename.
-            if (this.minecraft.options.keyInventory.matches(event)) {
+            if (event.key() == 256) { // ESC: let the screen close as usual, even mid-rename
+                return super.keyPressed(event);
+            }
+            // Forward editing keys to the field, then swallow everything else via canConsumeInput()
+            // so AbstractContainerScreen.keyPressed never reaches checkHotbarKeyPressed (1-9
+            // quick-swap), onClose() (inventory key), or the drop/clone handlers while typing — the
+            // character still inserts through the separate charTyped callback. See GuiArchitectTable
+            // for the full rationale.
+            if (this.nameField.keyPressed(event) || this.nameField.canConsumeInput()) {
                 return true;
             }
         }

@@ -87,8 +87,13 @@ sync_one() {  # sync_one <neo_version> <mc_version>
     else
         local patched_jar nf_jar gradle_home nf_base
         # moddev drops the patched-MC sources jar under the node's build dir AND/OR root
-        # build/moddev; search both, version-keyed by filename.
-        patched_jar="$(find "$project_dir" -path '*moddev/artifacts*' -name "minecraft-patched-$neo_version-sources.jar" 2>/dev/null | head -n1)"
+        # build/moddev; search both, version-keyed by filename. The jar is named differently
+        # across NeoForge lines:
+        #   26.1.x -> minecraft-patched-<neo>-sources.jar   (patched MC only; NF framework
+        #                                                     sources come separately from the cache)
+        #   1.21.x -> neoforge-<neo>-sources.jar            (a COMBINED MC + NF sources jar)
+        # Match either, preferring the explicit patched-MC name when both are present.
+        patched_jar="$(find "$project_dir" -path '*moddev/artifacts*' \( -name "minecraft-patched-$neo_version-sources.jar" -o -name "neoforge-$neo_version-sources.jar" \) 2>/dev/null | head -n1)"
         gradle_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
         nf_base="$gradle_home/caches/modules-2/files-2.1/net.neoforged/neoforge/$neo_version"
         nf_jar="$(find "$nf_base" -name "neoforge-$neo_version-sources.jar" 2>/dev/null | head -n1)"

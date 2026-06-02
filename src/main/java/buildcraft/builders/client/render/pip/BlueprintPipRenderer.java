@@ -397,7 +397,11 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                             // rendering through the culling block sheet.
                             ModelPipe.renderDirect(pipeKey, pipePose,
                                     this.bufferSource.getBuffer(
+                                            //? if >=26.1 {
                                             RenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS)),
+                                            //?} else {
+                                            /*RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS)),*/
+                                            //?}
                                     FULL_BRIGHT);
                             ModelPipe.renderMaskOverlay(pipeKey, pipePose,
                                     this.bufferSource.getBuffer(

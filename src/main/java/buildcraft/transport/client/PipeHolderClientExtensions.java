@@ -139,8 +139,12 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
                 renderState.clear();
                 ItemModelResolver resolver = mc.getItemModelResolver();
                 resolver.appendItemLayers(renderState, stack, net.minecraft.world.item.ItemDisplayContext.GUI, mc.level, null, 0);
+                //? if >=26.1 {
                 var particleMat = renderState.pickParticleMaterial(mc.level.getRandom());
                 TextureAtlasSprite sprite = particleMat != null ? particleMat.sprite() : null;
+                //?} else {
+                /*TextureAtlasSprite sprite = renderState.pickParticleIcon(mc.level.getRandom());*/
+                //?}
                 if (sprite != null && sprite != SpriteUtil.missingSprite()) {
                     return sprite;
                 }
@@ -385,7 +389,11 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
 
         @Override
         protected Layer getLayer() {
+            //? if >=26.1 {
             return Layer.OPAQUE_TERRAIN;
+            //?} else {
+            /*return Layer.TERRAIN;*/
+            //?}
         }
     }
 }

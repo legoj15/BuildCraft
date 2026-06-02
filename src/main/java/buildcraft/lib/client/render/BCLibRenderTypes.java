@@ -7,7 +7,9 @@ package buildcraft.lib.client.render;
 
 import java.util.function.Function;
 
+//? if >=26.1 {
 import com.mojang.blaze3d.pipeline.DepthStencilState;
+//?}
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 
 import net.minecraft.util.Util;
@@ -46,7 +48,11 @@ public final class BCLibRenderTypes {
      */
     public static final RenderPipeline LED_PIPELINE = RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
             .withLocation(Identifier.fromNamespaceAndPath("buildcraftunofficial", "pipeline/led"))
+            //? if >=26.1 {
             .withDepthStencilState(DepthStencilState.DEFAULT)
+            //?} else {
+            /*.withDepthWrite(true)*/
+            //?}
             .build();
 
     private static final RenderType LED = RenderType.create(
@@ -103,7 +109,11 @@ public final class BCLibRenderTypes {
     private static final Function<Identifier, RenderType> ENTITY_TRANSLUCENT_CULL = Util.memoize(
             texture -> RenderType.create(
                     "buildcraft:entity_translucent_cull",
+                    //? if >=26.1 {
                     RenderSetup.builder(RenderPipelines.ENTITY_TRANSLUCENT_CULL)
+                    //?} else {
+                    /*RenderSetup.builder(RenderPipelines.ITEM_ENTITY_TRANSLUCENT_CULL)*/
+                    //?}
                             .withTexture("Sampler0", texture)
                             .useLightmap()
                             .useOverlay()

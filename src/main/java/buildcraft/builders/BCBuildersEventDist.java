@@ -573,13 +573,18 @@ public enum BCBuildersEventDist {
                     cameraPos
                 );
             }
+            // 1.21.11 has no SubmitCustomGeometryEvent, so the place-task throwing animation runs
+            // here (on RenderLevelStageEvent) instead of in renderAllBuildersCustomGeometry.
+            //? if <26.1 {
+            /*renderPlaceTaskCubes(active, cameraPos, poseStack, partialTicks);*/
+            //?}
         }
     }
 
-    /** Called from SubmitCustomGeometryEvent to render the block-throwing animation for each
-     *  active place task — items travel from the Builder toward their destination block. */
-    // 1.21.11 TODO: SubmitCustomGeometryEvent (per-frame custom geometry) is absent; the builder
-    // block-throwing animation is stubbed here. Port via RenderLevelStageEvent for visual parity.
+    /** Called from SubmitCustomGeometryEvent (26.1) to render the block-throwing animation for each
+     *  active place task — items travel from the Builder toward their destination block. On 1.21.11
+     *  this event is absent; the animation runs from {@link #renderAllBuilders} via
+     *  {@code renderPlaceTaskCubes} (sprite cubes) instead. */
     //? if >=26.1 {
     public void renderAllBuildersCustomGeometry(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent event) {
         Minecraft mc = Minecraft.getInstance();
@@ -736,12 +741,18 @@ public enum BCBuildersEventDist {
                         );
                     }
                 }
+                // 1.21.11 place-task throwing animation (no SubmitCustomGeometryEvent here). Outside
+                // the robotPos/break-task guards above because placing is independent of breaking.
+                //? if <26.1 {
+                /*renderPlaceTaskCubes(filler.builder, cameraPos, poseStack, partialTicks);*/
+                //?}
             }
         }
     }
 
-    /** Called from SubmitCustomGeometryEvent to render items smoothly in world space using SubmitNodeCollector. */
-    // 1.21.11 TODO: stubbed (SubmitCustomGeometryEvent absent) — port via RenderLevelStageEvent.
+    /** Called from SubmitCustomGeometryEvent (26.1) to render place-task items in world space via
+     *  SubmitNodeCollector. On 1.21.11 the animation runs from {@link #renderAllFillers} via
+     *  {@code renderPlaceTaskCubes} (sprite cubes) instead. */
     //? if >=26.1 {
     public void renderAllFillersCustomGeometry(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent event) {
         Minecraft mc = Minecraft.getInstance();
@@ -794,5 +805,72 @@ public enum BCBuildersEventDist {
             }
         }
     }
+    //?}
+
+    // ── 1.21.11 place-task throwing animation ────────────────────────────────────────────────
+    // SubmitCustomGeometryEvent (the 26.1 per-frame custom-geometry submit that hands you a
+    // SubmitNodeCollector) doesn't exist on 1.21.11, and its 1.21.5+ item render-state pipeline
+    // only draws items through a collector driven by the level/entity render pass — there's no
+    // MultiBufferSource entry point for a full item model at RenderLevelStageEvent. So the flying
+    // place-task items are drawn as small cubes textured with the item's particle sprite, via the
+    // same MultiBufferSource machinery as the robot doodad. For block items — the overwhelmingly
+    // common builder/filler case — this reads as a small flying block. Called from
+    // renderAllBuilders / renderAllFillers (both already on RenderLevelStageEvent).
+    //? if <26.1 {
+    /*private static <T extends buildcraft.builders.snapshot.ITileForSnapshotBuilder> void renderPlaceTaskCubes(
+            buildcraft.builders.snapshot.SnapshotBuilder<T> active, Vec3 cameraPos,
+            PoseStack poseStack, float partialTicks) {
+        for (buildcraft.builders.snapshot.SnapshotBuilder<T>.PlaceTask placeTask : active.clientPlaceTasks) {
+            Vec3 prevPos = active.prevClientPlaceTasks.stream()
+                .filter(task -> task.pos.equals(placeTask.pos))
+                .map(active::getPlaceTaskItemPos)
+                .findFirst()
+                .orElse(active.getPlaceTaskItemPos(placeTask));
+            Vec3 pos = prevPos.add(
+                active.getPlaceTaskItemPos(placeTask).subtract(prevPos).scale(partialTicks));
+            for (Object itemObj : placeTask.items) {
+                renderThrownItemCube((net.minecraft.world.item.ItemStack) itemObj, pos, cameraPos, poseStack);
+            }
+        }
+    }
+
+    private static void renderThrownItemCube(net.minecraft.world.item.ItemStack item, Vec3 pos,
+            Vec3 cameraPos, PoseStack poseStack) {
+        if (item.isEmpty()) return;
+        Minecraft mc = Minecraft.getInstance();
+        // Resolve the item model just to pick a representative particle sprite (block items → the
+        // block's particle texture). Cheap for the handful of in-flight place-task items per frame.
+        net.minecraft.client.renderer.item.ItemStackRenderState rs =
+            new net.minecraft.client.renderer.item.ItemStackRenderState();
+        mc.getItemModelResolver().updateForTopItem(rs, item,
+            net.minecraft.world.item.ItemDisplayContext.FIXED, mc.level, null, 0);
+        if (rs.isEmpty()) return;
+        net.minecraft.client.renderer.texture.TextureAtlasSprite sprite =
+            rs.pickParticleIcon(net.minecraft.util.RandomSource.create());
+        if (sprite == null) return;
+
+        net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource =
+            mc.renderBuffers().bufferSource();
+        com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(
+            net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(sprite.atlasLocation()));
+        int light = buildcraft.lib.client.render.laser.LaserRenderer_BC8.computeLightmap(pos.x, pos.y, pos.z, 0);
+
+        poseStack.pushPose();
+        poseStack.translate(pos.x - cameraPos.x, pos.y - cameraPos.y, pos.z - cameraPos.z);
+        // ~0.30-block cube, matching the ~0.30 scale the 26.1 item animation renders at.
+        float r = 0.15F;
+        buildcraft.lib.client.model.ModelUtil.UvFaceData uv =
+            new buildcraft.lib.client.model.ModelUtil.UvFaceData(
+                sprite.getU0(), sprite.getV0(), sprite.getU1(), sprite.getV1());
+        for (net.minecraft.core.Direction face : net.minecraft.core.Direction.values()) {
+            buildcraft.lib.client.model.ModelUtil.createFace(
+                face, new org.joml.Vector3f(0F, 0F, 0F), new org.joml.Vector3f(r, r, r), uv)
+                .lighti(light)
+                .colouri(255, 255, 255, 255)
+                .render(poseStack.last(), buffer);
+        }
+        poseStack.popPose();
+        bufferSource.endBatch();
+    }*/
     //?}
 }

@@ -20,12 +20,16 @@ import buildcraft.api.schematics.SchematicEntityFactoryRegistry;
 import buildcraft.builders.snapshot.SchematicBlockAir;
 import buildcraft.builders.snapshot.SchematicBlockDefault;
 import buildcraft.builders.snapshot.SchematicBlockFluid;
+import buildcraft.builders.snapshot.SchematicBlockPipe;
 import buildcraft.builders.snapshot.SchematicEntityDefault;
 
 public class BCBuildersSchematics {
     public static void preInit() {
         registerSchematicFactory("buildcraftunofficial:air", 0, SchematicBlockAir::predicate, SchematicBlockAir::new);
         registerSchematicFactory("buildcraftunofficial:default", 100, SchematicBlockDefault::predicate, SchematicBlockDefault::new);
+        // Pipes are all one block with the type in BE NBT — sits just above default so its
+        // computeRequiredItems resolves the correct pipe item per definition (see SchematicBlockPipe).
+        registerSchematicFactory("buildcraftunofficial:pipe", 150, SchematicBlockPipe::predicate, SchematicBlockPipe::new);
         registerSchematicFactory("buildcraftunofficial:fluid", 200, SchematicBlockFluid::predicate, SchematicBlockFluid::new);
 
         // Removed vine and banner special handling

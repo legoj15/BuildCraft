@@ -85,4 +85,24 @@ public class FluidPhysicsTest {
             helper.succeed();
         });
     }
+
+    /**
+     * Anchors the flowing-fluid push fix: {@code motionScale} is the per-tick scalar applied to a
+     * fluid's FLOW velocity to carry entities along a current (vanilla water = 0.014), NOT friction.
+     * A value near the old 0.8 launched entities downstream. Guards every BC energy fluid against
+     * that regression — deterministic, so no flaky entity physics involved.
+     */
+    public static void energyFluidsMotionScaleIsWaterLike(GameTestHelper helper) {
+        for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
+            net.neoforged.neoforge.fluids.FluidType type = entry.fluidType().get();
+            double scale = type.motionScale(null);
+            if (!(scale > 0.0 && scale <= 0.1)) {
+                helper.fail(entry.name() + " motionScale=" + scale
+                    + " — expected a water-like flow-push in (0, 0.1] (water is 0.014); a value near"
+                    + " 0.8 launches entities downstream in flowing fluid.");
+                return;
+            }
+        }
+        helper.succeed();
+    }
 }

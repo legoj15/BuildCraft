@@ -73,7 +73,8 @@ public class BuildCraftGameTests {
             // Fluids
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:oil_water_interaction"), () -> buildcraft.energy.OilWaterInteractionTest::testOilOverWater);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:oil_bobbing_physics"), () -> buildcraft.energy.FluidPhysicsTest::testOilBobbing);
-            
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:energy_fluid_motion_scale_water_like"), () -> buildcraft.energy.FluidPhysicsTest::energyFluidsMotionScaleIsWaterLike);
+
             // Inventory Transactors
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:item_transactor_simple_moving"), () -> buildcraft.lib.inventory.ItemTransactorTester::testSimpleMoving);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:item_transactor_limited_inventory"), () -> buildcraft.lib.inventory.ItemTransactorTester::testLimitedInventory);
@@ -274,6 +275,9 @@ public class BuildCraftGameTests {
             // and build(..., includeContents=false) places the chest with an empty inventory.
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:container_contents_ignore_omits_required"), () -> buildcraft.builders.snapshot.ContainerContentsScanTester::testIgnoreModeOmitsContentsFromRequiredItems);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:container_contents_ignore_builds_empty"), () -> buildcraft.builders.snapshot.ContainerContentsScanTester::testIgnoreModeBuildsEmptyChest);
+            // Pipe required-item resolution: each captured pipe schematic must resolve its own pipe
+            // item (type lives in BE NBT, not the shared holder block) — distinct types stay distinct.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_schematic_resolves_per_type_item"), () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicResolvesPerTypeItem);
 
             // Heat Exchanger fluid filtering (heatant on START, coolant on END; output drain-only)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:heat_exchanger_output_rejects_external_insert"), () -> buildcraft.factory.HeatExchangerTester::testOutputTankRejectsExternalInsert);

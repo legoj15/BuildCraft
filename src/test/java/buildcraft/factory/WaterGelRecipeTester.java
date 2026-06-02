@@ -46,7 +46,11 @@ public final class WaterGelRecipeTester {
                 + "regressing means it is a dead-end drop again.");
             return;
         }
+        //? if >=26.1 {
         ItemStack out = match.get().value().assemble(input);
+        //?} else {
+        /*ItemStack out = match.get().value().assemble(input, level.registryAccess());*/
+        //?}
         if (!out.is(Items.WATER_BUCKET)) {
             helper.fail("water_gel_to_bucket produced " + out + " instead of a Water Bucket.");
             return;

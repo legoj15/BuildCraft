@@ -141,7 +141,11 @@ public final class GateCraftingRecipeTester {
         if (match.isEmpty()) {
             helper.fail("Recipe didn't match: " + label);
         }
+        //? if >=26.1 {
         ItemStack out = match.get().value().assemble(input);
+        //?} else {
+        /*ItemStack out = match.get().value().assemble(input, level.registryAccess());*/
+        //?}
         if (!ItemStack.matches(expected, out)) {
             helper.fail("Crafting output mismatch for " + label
                 + ": expected " + expected.getComponentsPatch()

@@ -8,11 +8,14 @@ package buildcraft.builders.snapshot;
 import java.util.List;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.schematics.ISchematicBlock;
@@ -20,6 +23,8 @@ import buildcraft.api.schematics.SchematicBlockContext;
 
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
+import buildcraft.transport.BCTransportPlugs;
+import buildcraft.transport.plug.PluggableBlocker;
 import buildcraft.transport.tile.TilePipeHolder;
 
 /**
@@ -87,5 +92,92 @@ public class SchematicBlockPipeTester {
                         || goldReq.getItem() == diamondReq.getItem(),
                 "Distinct pipe types must resolve to distinct required items (the reported 'all pipes are one' bug)");
         helper.succeed();
+    }
+
+    /**
+     * A pluggable captured on a pipe (here a blocker) must be costed in the required items.
+     * {@code build()} restores pluggables from the captured NBT, so the Builder must charge for them
+     * rather than placing them for free — the regression this guards.
+     */
+    public static void pipeSchematicCostsPluggables(GameTestHelper helper) {
+        BlockPos relPos = new BlockPos(1, 2, 1);
+        helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
+        TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        Item pipeItem = BCTransportItems.PIPE_COBBLE_ITEM.get();
+        tile.onPlacedBy(null, new ItemStack(pipeItem));
+        // Attach a blocker pluggable (fixed item, holder-free getPickStack) on one face.
+        tile.replacePluggable(Direction.UP, new PluggableBlocker(BCTransportPlugs.blocker, tile, Direction.UP));
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(relPos);
+        BlockState state = level.getBlockState(abs);
+        ISchematicBlock schematic = SchematicBlockManager.getSchematicBlock(
+                new SchematicBlockContext(level, BlockPos.ZERO, abs, state, state.getBlock()));
+        helper.assertTrue(schematic instanceof SchematicBlockPipe,
+                "Pipe holder should route to SchematicBlockPipe, got " + schematic.getClass().getSimpleName());
+
+        List<ItemStack> required = schematic.computeRequiredItems();
+        Item blockerItem = BCTransportItems.PLUG_BLOCKER.get();
+        boolean hasPipe = required.stream().anyMatch(s -> s.is(pipeItem));
+        boolean hasBlocker = required.stream().anyMatch(s -> s.is(blockerItem));
+        helper.assertTrue(hasPipe,
+                "Required items must include the cobble item pipe, got " + itemNames(required));
+        helper.assertTrue(hasBlocker,
+                "Required items must include the blocker plug — pluggables must be costed, not placed for free. Got "
+                        + itemNames(required));
+        helper.succeed();
+    }
+
+    /**
+     * Pluggables must rotate with the blueprint. A blocker captured on NORTH must move to EAST under
+     * a 90° clockwise rotation (otherwise a facade would stay on its captured face after a rotated
+     * build and block the wrong pipe connection). getRotated must also leave the original untouched.
+     */
+    public static void pipeSchematicRotatesPluggableFaces(GameTestHelper helper) {
+        BlockPos relPos = new BlockPos(1, 2, 1);
+        helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
+        TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        tile.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get()));
+        tile.replacePluggable(Direction.NORTH, new PluggableBlocker(BCTransportPlugs.blocker, tile, Direction.NORTH));
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(relPos);
+        BlockState state = level.getBlockState(abs);
+        ISchematicBlock schematic = SchematicBlockManager.getSchematicBlock(
+                new SchematicBlockContext(level, BlockPos.ZERO, abs, state, state.getBlock()));
+        helper.assertTrue(schematic instanceof SchematicBlockPipe,
+                "Pipe holder should route to SchematicBlockPipe, got " + schematic.getClass().getSimpleName());
+
+        // Sanity: captured on NORTH.
+        helper.assertFalse(plugsOf(schematic).getCompoundOrEmpty("north").isEmpty(),
+                "Captured pluggable should be on NORTH before rotation");
+
+        // 90° clockwise: NORTH → EAST.
+        ISchematicBlock rotated = schematic.getRotated(Rotation.CLOCKWISE_90);
+        CompoundTag rotatedPlugs = plugsOf(rotated);
+        helper.assertFalse(rotatedPlugs.getCompoundOrEmpty("east").isEmpty(),
+                "After CLOCKWISE_90 the pluggable must move to EAST");
+        helper.assertTrue(rotatedPlugs.getCompoundOrEmpty("north").isEmpty(),
+                "After CLOCKWISE_90 the pluggable must no longer be on NORTH");
+        helper.assertTrue(rotatedPlugs.getCompoundOrEmpty("east").getStringOr("id", "").contains("blocker"),
+                "The rotated EAST entry must still carry the blocker pluggable");
+
+        // getRotated returns a copy — the original schematic's NBT must be untouched.
+        helper.assertFalse(plugsOf(schematic).getCompoundOrEmpty("north").isEmpty(),
+                "getRotated must not mutate the original schematic (its pluggable should still be on NORTH)");
+        helper.succeed();
+    }
+
+    private static CompoundTag plugsOf(ISchematicBlock schematic) {
+        return schematic.getTileNbtForRender().getCompoundOrEmpty("plugs");
+    }
+
+    private static String itemNames(List<ItemStack> stacks) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < stacks.size(); i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(BuiltInRegistries.ITEM.getKey(stacks.get(i).getItem()));
+        }
+        return sb.append("]").toString();
     }
 }

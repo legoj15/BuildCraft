@@ -278,6 +278,12 @@ public class BuildCraftGameTests {
             // Pipe required-item resolution: each captured pipe schematic must resolve its own pipe
             // item (type lives in BE NBT, not the shared holder block) — distinct types stay distinct.
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_schematic_resolves_per_type_item"), () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicResolvesPerTypeItem);
+            // Pluggables (gates/facades/plugs/lenses) captured on a pipe must be costed too — build()
+            // restores them from NBT, so the Builder must charge for them rather than place them free.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_schematic_costs_pluggables"), () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicCostsPluggables);
+            // Pluggables must rotate with the blueprint: a plug on NORTH moves to EAST under a 90° CW
+            // rotation, otherwise facades stay on captured faces after a rotated build and block flow.
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_schematic_rotates_pluggable_faces"), () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesPluggableFaces);
 
             // Heat Exchanger fluid filtering (heatant on START, coolant on END; output drain-only)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:heat_exchanger_output_rejects_external_insert"), () -> buildcraft.factory.HeatExchangerTester::testOutputTankRejectsExternalInsert);

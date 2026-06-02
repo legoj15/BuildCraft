@@ -12,6 +12,7 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
@@ -19,7 +20,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
@@ -212,12 +212,16 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
         for (ItemStack s : current) snap.add(s.copy());
         lastBroadcastDisplay = snap;
 
+        // Serialize the FULL stacks (DataComponents included), not just item + count: facade / gate
+        // / lens / painted-pipe requirements carry their identity in components, and stripping them
+        // made the resource panel show a bare "Facade" instead of "Facade: <block>". OPTIONAL_STREAM_CODEC
+        // needs a registry-aware buffer, so wrap the plain payload buffer with the level's RegistryAccess.
+        var registries = tile.getLevel().registryAccess();
         sendMessage(NET_DISPLAY_LIST, buf -> {
-            buf.writeVarInt(snap.size());
+            RegistryFriendlyByteBuf rbuf = new RegistryFriendlyByteBuf(buf, registries);
+            rbuf.writeVarInt(snap.size());
             for (ItemStack stack : snap) {
-                Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
-                buf.writeUtf(id == null ? "minecraft:air" : id.toString());
-                buf.writeVarInt(stack.getCount());
+                ItemStack.OPTIONAL_STREAM_CODEC.encode(rbuf, stack);
             }
         });
     }
@@ -278,18 +282,12 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
             return;
         }
         if (id == NET_DISPLAY_LIST && isClient) {
-            int count = buffer.readVarInt();
+            RegistryFriendlyByteBuf rbuf = new RegistryFriendlyByteBuf(buffer, ctx.player().level().registryAccess());
+            int count = rbuf.readVarInt();
             List<ItemStack> newList = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
-                String itemId = buffer.readUtf();
-                int c = buffer.readVarInt();
-                Identifier resloc = Identifier.tryParse(itemId);
-                if (resloc == null) continue;
-                Item item = BuiltInRegistries.ITEM.getValue(resloc);
-                if (item == null) continue;
-                ItemStack stack = new ItemStack(item);
-                stack.setCount(c);
-                newList.add(stack);
+                ItemStack stack = ItemStack.OPTIONAL_STREAM_CODEC.decode(rbuf);
+                if (!stack.isEmpty()) newList.add(stack);
             }
             syncedDisplay.clear();
             syncedDisplay.addAll(newList);

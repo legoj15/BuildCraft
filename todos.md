@@ -2,6 +2,14 @@
 
 Last audited: 2026-05-31 (final pre-rc review — removed dev scaffolding, swept logging to BCLog, wired recipe-book tooltips, hardened mod metadata)
 
+- [ ] Give a direct path to recipe usage in the GUI for non-crafting table blocks for JEI (clicking on the progress bar/texture)
+- [ ] Allow moving resources for assembly table crafting whilst in the JEI menu when the block is active (assuming the player has the correct materials)
+- [ ] **Filler Planner GUI shows the player inventory + help ledger** — both should be hidden (it's a pattern-planning screen with no inventory interaction). Confirmed on both 26.1.2 and 1.21.11, so it's shared GUI code, not node-specific.
+- [ ] Investigate builder placement deadlocks with the grass/tall grass/flowers.
+	- [ ] Perhaps new ux (red box overlay on the resources?) to signify which blocks cannot be placed (i.e. floating torches, flowers on stone, etc.)
+
+
+
 ## 🆕 New Features (version 2026.2)
 
 - [ ] **Robotics resurrection.** Port robots, robot AI, robot stations, and robot items from the 1.12.2 line (low priority — robots were not actively maintained even in 1.12.2). Tied in: `GuiZonePlanner` references `textures/gui/zone_planner.png`, currently archived under `misc/unused_textures/`; restoring the Zone Planner GUI is the prerequisite for the robot-zone workflow.

@@ -10,8 +10,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.client.Minecraft;
+//? if >=26.1 {
 import net.minecraft.client.color.block.BlockTintSource;
 import net.minecraft.client.renderer.block.BlockAndTintGetter;
+//?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.DyeColor;
@@ -53,20 +55,13 @@ import buildcraft.transport.tile.TilePipeHolder;
  */
 public class PipeBlockColourHandler {
 
-    /** No-op tint: full-alpha white = no colour modification. */
+    //? if >=26.1 {
+    // No-op tint: full-alpha white = no colour modification.
     private static final BlockTintSource NO_TINT = state -> 0xFFFFFFFF;
 
-    /** BlockTintSource for tintIndex=1 (translucent colour overlay quads).
-     *
-     *  <p>Returns ARGB with alpha=255 (full opacity) — the actual stained-glass
-     *  transparency lives in the geometry layer below: either the alpha-multiply
-     *  the model gen applies to mask-sprite quads ({@code multColouri(0xFF,0xFF,0xFF,76)}
-     *  in {@code generateTranslucentMutable}), or the 76-alpha pixels baked into
-     *  {@code overlay_stained.png} on the fallback path. Returning alpha=76 here as
-     *  well stacks a second multiplication on top of those, producing ~22 final alpha
-     *  (≈9%) — basically invisible, which matched the regression we just hit. The
-     *  1.12.2 path used a texture-alpha-only model; mirroring that here means the
-     *  tint contributes colour, not transparency. */
+    // tintIndex=1 (colour overlay): returns full-alpha ARGB. The stained-glass transparency lives
+    // in the geometry layer (mask-sprite alpha), not here — low alpha here would stack a second
+    // multiply and make it ~invisible. So the tint contributes colour, not transparency.
     private static final BlockTintSource PIPE_COLOUR_TINT = new BlockTintSource() {
         @Override
         public int color(BlockState state) {
@@ -84,16 +79,12 @@ public class PipeBlockColourHandler {
         }
     };
 
-    /**
-     * Tint source for one (wrappedTintIndex, side) slot in the facade index
-     * range. Resolves the wrapped block's BlockTintSource at the pipe's
-     * position so biome/state-tinted facades render with the right colour.
-     */
+    // Tint source for one (wrappedTintIndex, side) facade slot: resolves the wrapped block's tint
+    // at the pipe position so biome/state-tinted facades render with the right colour.
     private record FacadeTintSource(int wrappedTintIndex, Direction side) implements BlockTintSource {
         @Override
         public int color(BlockState state) {
-            // Item / no-context: facade items render via their own model path,
-            // not through this tint source — so a plain "no tint" is correct.
+            // Item / no-context: facade items render via their own model path — "no tint".
             return -1;
         }
 
@@ -107,10 +98,6 @@ public class PipeBlockColourHandler {
             BlockTintSource wrappedSource =
                 Minecraft.getInstance().getBlockColors().getTintSource(wrappedState, wrappedTintIndex);
             if (wrappedSource == null) return -1;
-            // Defensive 0xFF alpha — vanilla sources should already return ARGB with
-            // alpha=0xFF (texture pixels load full-alpha by default), but the chunk
-            // pipeline multiplies tint into quad alpha so a stray 0-alpha return would
-            // make the facade invisible.
             return 0xFF000000 | wrappedSource.colorInWorld(wrappedState, level, pos);
         }
     }
@@ -127,4 +114,36 @@ public class PipeBlockColourHandler {
         }
         event.register(sources, BCTransportBlocks.PIPE_HOLDER.get());
     }
+    //?} else {
+    /*// 1.21.11 uses the old single BlockColor callback keyed by tintIndex (no per-index
+    // BlockTintSource objects). One lambda replicates: idx 0 = no tint, idx 1 = pipe colour,
+    // idx>=FACADE_TINT_BASE = facade slot decoded as (wrappedTintIndex, side).
+    @SubscribeEvent
+    public static void onRegisterBlockColors(RegisterColorHandlersEvent.Block event) {
+        event.register((state, level, pos, tintIndex) -> {
+            if (tintIndex <= 0) {
+                return 0xFFFFFFFF;
+            }
+            if (tintIndex == 1) {
+                if (level == null || pos == null) return 0xFFFFFFFF;
+                BlockEntity be = level.getBlockEntity(pos);
+                if (!(be instanceof TilePipeHolder tile) || tile.getPipe() == null) return 0xFFFFFFFF;
+                DyeColor colour = tile.getPipe().getModel().colour;
+                if (colour == null) return 0xFFFFFFFF;
+                return 0xFF000000 | ColourUtil.getLightHex(colour);
+            }
+            int facadeIdx = tintIndex - PlugBakerFacade.FACADE_TINT_BASE;
+            int dirCount = Direction.values().length;
+            int wrappedTintIndex = facadeIdx / dirCount;
+            Direction side = Direction.values()[facadeIdx % dirCount];
+            if (level == null || pos == null) return -1;
+            BlockEntity be = level.getBlockEntity(pos);
+            if (!(be instanceof TilePipeHolder tile)) return -1;
+            PipePluggable plug = tile.getPluggable(side);
+            if (!(plug instanceof PluggableFacade facade)) return -1;
+            BlockState wrappedState = facade.states.phasedStates[facade.activeState].stateInfo.state;
+            return 0xFF000000 | Minecraft.getInstance().getBlockColors().getColor(wrappedState, level, pos, wrappedTintIndex);
+        }, BCTransportBlocks.PIPE_HOLDER.get());
+    }*/
+    //?}
 }

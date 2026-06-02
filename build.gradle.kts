@@ -158,3 +158,18 @@ tasks.register<Copy>("buildAndCollect") {
     into(rootProject.layout.buildDirectory.dir("libs/$modVersion"))
     dependsOn("assemble")
 }
+
+// ─── Full pre-release verification ───────────────────────────────────────────
+// One command for the lot: JUnit unit tests + headless NeoForge game tests (this node) + the production
+// boot+connect matrix. The matrix is the single root task `runReleaseMatrix`, so it runs ONCE even when
+// `gradlew fullTestSuite` cascades across nodes — and it auto-skips when the (gitignored, machine-specific)
+// testing/ harness isn't present, so third-party clones just run test + game tests.
+tasks.register("fullTestSuite") {
+    group = "verification"
+    description = "Unit tests + headless game tests + production boot/connect matrix (matrix auto-skips if the testing/ harness is absent)."
+    dependsOn("test", "runGameTestServer", rootProject.tasks.named("runReleaseMatrix"))
+    // Run the long production matrix last, after the cheap in-dev checks.
+    rootProject.tasks.named("runReleaseMatrix").configure {
+        mustRunAfter(tasks.named("test"), tasks.named("runGameTestServer"))
+    }
+}

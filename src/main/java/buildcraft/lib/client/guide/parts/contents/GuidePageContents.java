@@ -197,7 +197,12 @@ public class GuidePageContents extends GuidePageBase {
             // which could silently bind to the wrong method (e.g. extractWidgetRenderState)
             // since Class.getMethods() ordering isn't stable.
             if (GuiIcon.getGuiGraphics() != null) {
+                // 26.1 renamed the widget render entry point render → extractRenderState.
+                //? if >=26.1 {
                 searchText.extractRenderState(
+                //?} else {
+                /*searchText.render(*/
+                //?}
                     GuiIcon.getGuiGraphics().raw,
                     (int) gui.mouse.getX(),
                     (int) gui.mouse.getY(),

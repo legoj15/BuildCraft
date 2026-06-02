@@ -26,10 +26,11 @@ public class DebugOverlayRenderer {
      * below the vanilla debug text.
      */
     //? if >=26.1 {
-    public static void render(net.minecraft.client.gui.GuiGraphicsExtractor BCGraphics, DeltaTracker deltaTracker) {
+    public static void render(net.minecraft.client.gui.GuiGraphicsExtractor vanillaGraphics, DeltaTracker deltaTracker) {
     //?} else {
-    /*public static void render(net.minecraft.client.gui.GuiGraphics BCGraphics, DeltaTracker deltaTracker) {*/
+    /*public static void render(net.minecraft.client.gui.GuiGraphics vanillaGraphics, DeltaTracker deltaTracker) {*/
     //?}
+        BCGraphics graphics = new BCGraphics(vanillaGraphics);
         Minecraft mc = Minecraft.getInstance();
 
         if (mc.debugEntries == null || !mc.debugEntries.isOverlayVisible()) {
@@ -61,8 +62,8 @@ public class DebugOverlayRenderer {
             }
             // Background
             int width = font.width(line);
-            BCGraphics.fill(1, leftY - 1, 2 + width + 1, leftY + font.lineHeight, 0x90505050);
-            BCGraphics.text(font, line, 2, leftY, 0xFFE0E0E0, false);
+            graphics.fill(1, leftY - 1, 2 + width + 1, leftY + font.lineHeight, 0x90505050);
+            graphics.text(font, line, 2, leftY, 0xFFE0E0E0, false);
             leftY += lineHeight;
         }
 
@@ -80,8 +81,8 @@ public class DebugOverlayRenderer {
             }
             int width = font.width(line);
             int x = screenWidth - 2 - width;
-            BCGraphics.fill(x - 1, rightY - 1, x + width + 1, rightY + font.lineHeight, 0x90505050);
-            BCGraphics.text(font, line, x, rightY, 0xFFE0E0E0, false);
+            graphics.fill(x - 1, rightY - 1, x + width + 1, rightY + font.lineHeight, 0x90505050);
+            graphics.text(font, line, x, rightY, 0xFFE0E0E0, false);
             rightY += lineHeight;
         }
     }

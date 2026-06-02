@@ -228,15 +228,19 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
         protected void extractContents(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY,
                                        float partialTick) {
         //?} else {
-        /*protected void renderWidget(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY,
+        /*protected void renderContents(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY,
                                        float partialTick) {*/
         //?}
             // Vanilla widget/button sprite — 9-sliced, hover-aware via SPRITES.get(active, hovered).
             // Matches the Replacer's Replace button and any other vanilla Button in the mod, so
             // the BC GUI stays visually consistent with stock Minecraft + resource pack overrides.
+            //? if >=26.1 {
             extractDefaultSprite(graphics);
+            //?} else {
+            /*renderDefaultSprite(graphics);*/
+            //?}
             EnumFluidHandlingMode mode = menu.getSyncedFluidMode();
-            graphics.item(mode.icon(), getX() + 2, getY() + 2);
+            new BCGraphics(graphics).item(mode.icon(), getX() + 2, getY() + 2);
         }
 
         @Override
@@ -282,15 +286,20 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
         protected void extractContents(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY,
                                        float partialTick) {
         //?} else {
-        /*protected void renderWidget(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY,
+        /*protected void renderContents(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY,
                                        float partialTick) {*/
         //?}
+            //? if >=26.1 {
             extractDefaultSprite(graphics);
-            graphics.item(CHEST_ICON, getX() + 2, getY() + 2);
+            //?} else {
+            /*renderDefaultSprite(graphics);*/
+            //?}
+            BCGraphics bcg = new BCGraphics(graphics);
+            bcg.item(CHEST_ICON, getX() + 2, getY() + 2);
             if (menu.getSyncedContentsMode() == EnumContainerContentsMode.IGNORE) {
                 // Both items render at the same slot-relative origin; the barrier's transparent
                 // pixels let the chest show through, producing a chest-with-no overlay.
-                graphics.item(BARRIER_OVERLAY, getX() + 2, getY() + 2);
+                bcg.item(BARRIER_OVERLAY, getX() + 2, getY() + 2);
             }
         }
 

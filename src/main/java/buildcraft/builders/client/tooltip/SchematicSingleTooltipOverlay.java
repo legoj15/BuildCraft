@@ -105,8 +105,13 @@ public final class SchematicSingleTooltipOverlay {
         int pY = finalY + contentHeight + FRAME_PADDING + VISIBLE_GAP + FRAME_PADDING;
 
         // Draw the frame first so the PiP draws over it.
+        //? if >=26.1 {
         TooltipRenderUtil.extractTooltipBackground(
                 event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);
+        //?} else {
+        /*TooltipRenderUtil.renderTooltipBackground(
+                event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);*/
+        //?}
 
         // Synthesize a 1×1×1 blueprint so BlueprintRenderer's existing pipeline just works.
         // Cached across frames — see cachedSynthetic javadoc. ISchematicBlock value-equality on

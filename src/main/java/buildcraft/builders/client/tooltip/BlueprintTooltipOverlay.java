@@ -162,8 +162,13 @@ public final class BlueprintTooltipOverlay {
         // Paint the tooltip-style frame around the preview area so it reads as a second
         // tooltip. Passing null for the style matches the default vanilla background sprite
         // and honors the user's resource-pack tooltip theme, if any.
+        //? if >=26.1 {
         TooltipRenderUtil.extractTooltipBackground(
                 event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);
+        //?} else {
+        /*TooltipRenderUtil.renderTooltipBackground(
+                event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);*/
+        //?}
 
         // Hand the 3D rendering off to the PiP pipeline. Both snapshot kinds render: Blueprints as
         // 3D block-item cubes, Templates as a translucent green ghost shell (BlueprintPipRenderer

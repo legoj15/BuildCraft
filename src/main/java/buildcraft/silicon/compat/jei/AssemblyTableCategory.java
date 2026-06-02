@@ -98,7 +98,7 @@ public class AssemblyTableCategory extends AbstractRecipeCategory<AssemblyRecipe
                 buildcraft.lib.misc.LocaleUtil.formatDouble(mj, 1),
                 buildcraft.lib.misc.LocaleUtil.mjUnit()).getString();
         Font font = Minecraft.getInstance().font;
-        graphics.text(font, powerStr, POWER_X, POWER_Y, POWER_COLOR, false);
+        new buildcraft.lib.gui.BCGraphics(graphics).text(font, powerStr, POWER_X, POWER_Y, POWER_COLOR, false);
     }
 
     @Override

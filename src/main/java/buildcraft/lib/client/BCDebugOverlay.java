@@ -64,7 +64,7 @@ public class BCDebugOverlay {
 
     private static void renderDebugText(RenderGuiLayerEvent.Post event, List<String> left, List<String> right) {
         Minecraft mc = Minecraft.getInstance();
-        var graphics = event.getGuiGraphics();
+        buildcraft.lib.gui.BCGraphics graphics = new buildcraft.lib.gui.BCGraphics(event.getGuiGraphics());
         int screenWidth = mc.getWindow().getGuiScaledWidth();
         int screenHeight = mc.getWindow().getGuiScaledHeight();
         int fontHeight = mc.font.lineHeight;

@@ -17,6 +17,9 @@ import net.minecraft.client.color.item.ItemTintSource;
 import net.minecraft.client.multiplayer.ClientLevel;
 //? if >=26.1 {
 import net.minecraft.client.renderer.item.CuboidItemModelWrapper;
+//?} else {
+/*import net.minecraft.client.renderer.Sheets;
+import net.minecraft.client.renderer.item.BlockModelWrapper;*/
 //?}
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModelResolver;
@@ -56,17 +59,16 @@ import buildcraft.transport.BCTransportItems;
  * translucent overlay layer. Both layers share transforms via
  * {@link ModelRenderProperties#applyToLayer}.
  *
- * <p>Uses reflection to extract internal fields from CuboidItemModelWrapper
- * (the 26.1 equivalent of 1.21.11's BlockModelWrapper).
+ * <p>On 26.1 this reflects internal fields out of CuboidItemModelWrapper; on 1.21.11 the sibling
+ * BlockModelWrapper exposes {@code properties} publicly, so its branch needs no reflection.
  */
 @SuppressWarnings("deprecation")
 public class PipeItemModel implements ItemModel {
 
-    // Reflection fields cached at class-load time.
-    // 1.21.11 TODO: CuboidItemModelWrapper is absent; its 1.21.11 sibling is BlockModelWrapper, whose
-    // `quads` is a List<BakedQuad> (not QuadCollection) and whose layer tint API is int[] (not a List).
-    // The painted-pipe item rendering below is stubbed on 1.21.11 (delegates to vanilla — pipes show
-    // their base item without the paint tint in the GUI). Port faithfully against BlockModelWrapper later.
+    // Reflection fields cached at class-load time. 26.1 only: CuboidItemModelWrapper hides quads/
+    // properties/tints/extents behind private fields. 1.21.11's sibling BlockModelWrapper exposes
+    // `properties` publicly and offers a public static computeExtents, so its branch in update()
+    // needs no reflection (see the //?} else { branch there).
     //? if >=26.1 {
     private static final Field QUADS_FIELD;
     private static final Field PROPERTIES_FIELD;
@@ -183,7 +185,53 @@ public class PipeItemModel implements ItemModel {
             }
         }
         //?} else {
-        /*vanillaDelegate.update(renderState, stack, modelResolver, displayContext, level, owner, seed);*/
+        /*DyeColor colour = stack.get(BCTransportItems.PIPE_COLOUR.get());
+        // Unpainted, or the baked delegate isn't the wrapper we expect → vanilla rendering.
+        if (colour == null || !(vanillaDelegate instanceof BlockModelWrapper wrapper)) {
+            vanillaDelegate.update(renderState, stack, modelResolver, displayContext, level, owner, seed);
+            return;
+        }
+        // BlockModelWrapper.properties is public on 1.21.11 (no reflection needed). applyToLayer sets
+        // transform/light/particle but NOT the render type, so each custom layer sets its own
+        // (mirroring BlockModelWrapper.update). Extents come from the public static computeExtents.
+        ModelRenderProperties props = wrapper.properties;
+
+        renderState.appendModelIdentityElement(this);
+        renderState.appendModelIdentityElement(colour);
+
+        if (definition.flowType == PipeApi.flowFluids) {
+            // Fluid pipes: replace the base with the dye_replace-generated sprite variant.
+            TextureAtlasSprite[] dyedSprites = PipeBaseModelGenStandard.ensureDyedSprites(definition, colour);
+            int itemTexIndex = definition.itemTextureTop;
+            TextureAtlasSprite dyedSprite = itemTexIndex < dyedSprites.length
+                    ? dyedSprites[itemTexIndex] : dyedSprites[0];
+            List<BakedQuad> quads = generatePipeQuads(dyedSprite);
+            var layer = renderState.newLayer();
+            layer.prepareQuadList().addAll(quads);
+            layer.setExtents(() -> BlockModelWrapper.computeExtents(quads));
+            layer.setRenderType(Sheets.cutoutBlockSheet());
+            props.applyToLayer(layer, displayContext);
+            return;
+        }
+
+        // Transport/kinesis: let vanilla draw the base pipe, then add a tinted overlay layer.
+        vanillaDelegate.update(renderState, stack, modelResolver, displayContext, level, owner, seed);
+        TextureAtlasSprite[] maskArray = PipeBaseModelGenStandard.ensureMaskSprites(definition);
+        TextureAtlasSprite maskSprite = maskArray != null && maskArray.length > 0 ? maskArray[0] : null;
+        if (maskSprite != null && maskSprite != SpriteUtil.missingSprite()) {
+            List<BakedQuad> overlayQuads = generateOverlayQuads(maskSprite);
+            if (!overlayQuads.isEmpty()) {
+                var overlayLayer = renderState.newLayer();
+                overlayLayer.prepareQuadList().addAll(overlayQuads);
+                overlayLayer.setExtents(() -> BlockModelWrapper.computeExtents(overlayQuads));
+                overlayLayer.setRenderType(Sheets.translucentBlockItemSheet());
+                props.applyToLayer(overlayLayer, displayContext);
+                // Semi-transparent dye colour at tintIndex 0 (alpha 76 ~= 30% glaze).
+                int tintColour = (76 << 24) | buildcraft.lib.misc.ColourUtil.getLightHex(colour);
+                int[] tints = overlayLayer.prepareTintLayers(1);
+                tints[0] = tintColour;
+            }
+        }*/
         //?}
     }
 

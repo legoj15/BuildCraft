@@ -1,7 +1,10 @@
 package buildcraft.transport.client;
 
+//? if >=26.1 {
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
-import net.minecraft.client.renderer.block.model.BlockStateModelWrapper;
+//?} else {
+/*import net.minecraft.client.renderer.block.model.BlockStateModel;*/
+//?}
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;

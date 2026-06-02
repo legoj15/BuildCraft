@@ -253,10 +253,16 @@ public enum FacadeStateManager implements IFacadeRegistry {
                 Map<Property<?>, Comparable<?>> vars = varyingProperties.get(stackKey);
                 if (vars == null) {
                     Map<Property<?>, Comparable<?>> newVars = new HashMap<>();
+                    //? if >=26.1 {
                     state.getValues().forEach(pv -> newVars.put(pv.property(), pv.value()));
+                    //?} else {
+                    /*// 1.21.11 StateHolder.getValues() returns a Map (BiConsumer), not a Stream<Property.Value>.
+                    state.getValues().forEach((prop, value) -> newVars.put(prop, value));*/
+                    //?}
                     varyingProperties.put(stackKey, newVars);
                 } else {
                     final Map<Property<?>, Comparable<?>> finalVars = vars;
+                    //? if >=26.1 {
                     state.getValues().forEach(pv -> {
                         Property<?> prop = pv.property();
                         Comparable<?> value = pv.value();
@@ -264,6 +270,13 @@ public enum FacadeStateManager implements IFacadeRegistry {
                             finalVars.put(prop, null);
                         }
                     });
+                    //?} else {
+                    /*state.getValues().forEach((prop, value) -> {
+                        if (finalVars.get(prop) != value) {
+                            finalVars.put(prop, null);
+                        }
+                    });*/
+                    //?}
                 }
             }
 

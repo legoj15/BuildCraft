@@ -3,7 +3,6 @@ package buildcraft.silicon.client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import net.minecraft.client.renderer.block.model.BlockStateModelWrapper;
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -30,7 +29,11 @@ public class BCSiliconClient {
 
     /** Cached blockstate model map from the last bake, used for deferred facade dedup. */
     private static java.util.Map<net.minecraft.world.level.block.state.BlockState,
+            //? if >=26.1 {
             net.minecraft.client.renderer.block.dispatch.BlockStateModel> cachedBlockStateModels;
+            //?} else {
+            /*net.minecraft.client.renderer.block.model.BlockStateModel> cachedBlockStateModels;*/
+            //?}
 
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {

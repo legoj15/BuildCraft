@@ -74,7 +74,11 @@ public class PathSavedData extends SavedData {
     }));
 
     public static final SavedDataType<PathSavedData> TYPE = new SavedDataType<>(
+            //? if >=26.1 {
             Identifier.withDefaultNamespace(ID),
+            //?} else {
+            /*ID,*/
+            //?}
             PathSavedData::new,
             CODEC,
             net.minecraft.util.datafix.DataFixTypes.LEVEL

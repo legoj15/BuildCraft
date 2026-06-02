@@ -39,7 +39,11 @@ public enum GuideSmeltingRecipes implements IStackRecipes {
             List<GuidePartFactory> list = new ArrayList<>();
             for (RecipeHolder<?> holder : manager.getRecipes()) {
                 if (holder.value() instanceof SmeltingRecipe smelt) {
+                    //? if >=26.1 {
                     ItemStack output = smelt.result.create();
+                    //?} else {
+                    /*ItemStack output = smelt.result().copy();*/
+                    //?}
                     if (!output.isEmpty()) {
                         list.add(new GuideSmeltingFactory(getIngredientStack(smelt), output));
                     }
@@ -53,7 +57,11 @@ public enum GuideSmeltingRecipes implements IStackRecipes {
         for (RecipeHolder<?> holder : manager.getRecipes()) {
             if (holder.value() instanceof SmeltingRecipe smelt) {
                 if (smelt.input.test(stack)) {
+                    //? if >=26.1 {
                     ItemStack output = smelt.result.create();
+                    //?} else {
+                    /*ItemStack output = smelt.result().copy();*/
+                    //?}
                     if (!output.isEmpty()) {
                         list.add(new GuideSmeltingFactory(stack, output));
                     }
@@ -71,7 +79,11 @@ public enum GuideSmeltingRecipes implements IStackRecipes {
         List<GuidePartFactory> list = new ArrayList<>();
         for (RecipeHolder<?> holder : manager.getRecipes()) {
             if (holder.value() instanceof SmeltingRecipe smelt) {
+                //? if >=26.1 {
                 ItemStack output = smelt.result.create();
+                //?} else {
+                /*ItemStack output = smelt.result().copy();*/
+                //?}
                 if (!output.isEmpty() && ItemStack.isSameItem(stack, output)) {
                     list.add(new GuideSmeltingFactory(getIngredientStack(smelt), output));
                 }

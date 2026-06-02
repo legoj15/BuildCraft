@@ -162,18 +162,22 @@ public class BCEnergyWorldGen {
         ).apply(instance, OilGenSavedData::new));
 
         public static final SavedDataType<OilGenSavedData> TYPE = new SavedDataType<>(
+                //? if >=26.1 {
                 Identifier.withDefaultNamespace(DATA_NAME),
+                //?} else {
+                /*DATA_NAME,*/
+                //?}
                 OilGenSavedData::new,
                 CODEC,
                 net.minecraft.util.datafix.DataFixTypes.LEVEL
         );
 
         public boolean hasGenerated(ChunkPos pos) {
-            return generatedChunks.contains(pos.pack());
+            return generatedChunks.contains(buildcraft.lib.misc.PositionUtil.chunkPack(pos));
         }
 
         public void markGenerated(ChunkPos pos) {
-            generatedChunks.add(pos.pack());
+            generatedChunks.add(buildcraft.lib.misc.PositionUtil.chunkPack(pos));
             setDirty();
         }
 

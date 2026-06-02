@@ -96,7 +96,11 @@ public class WorkbenchCrafting {
             if (currentRecipe == null) {
                 assumedResult = ItemStack.EMPTY;
             } else {
+                //? if >=26.1 {
                 assumedResult = currentRecipe.value().assemble(input);
+                //?} else {
+                /*assumedResult = currentRecipe.value().assemble(input, tile.getLevel().registryAccess());*/
+                //?}
             }
             isBlueprintDirty = false;
             areMaterialsDirty = true; // re-check materials against new recipe
@@ -177,7 +181,11 @@ public class WorkbenchCrafting {
         }
 
         // Step 3: Assemble result
+        //? if >=26.1 {
         ItemStack result = currentRecipe.value().assemble(craftInput);
+        //?} else {
+        /*ItemStack result = currentRecipe.value().assemble(craftInput, tile.getLevel().registryAccess());*/
+        //?}
         if (result.isEmpty()) {
             returnItemsToMaterials(gridContents);
             return false;

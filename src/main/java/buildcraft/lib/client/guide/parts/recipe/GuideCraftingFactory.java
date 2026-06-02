@@ -115,7 +115,11 @@ public class GuideCraftingFactory implements GuidePartFactory {
 
     private static GuidePartFactory getFactoryFromShaped(ShapedRecipe recipe) {
         // AT-opened: ShapedRecipe.pattern (by NeoForge), ShapedRecipe.result (by us)
+        //? if >=26.1 {
         ItemStack output = recipe.result.create();
+        //?} else {
+        /*ItemStack output = recipe.result.copy();*/
+        //?}
         if (output.isEmpty()) return null;
 
         int width = recipe.getWidth();
@@ -146,7 +150,11 @@ public class GuideCraftingFactory implements GuidePartFactory {
 
     private static GuidePartFactory getFactoryFromShapeless(ShapelessRecipe recipe) {
         // AT-opened: ShapelessRecipe.result & ShapelessRecipe.ingredients (by us)
+        //? if >=26.1 {
         ItemStack output = recipe.result.create();
+        //?} else {
+        /*ItemStack output = recipe.result.copy();*/
+        //?}
         List<Ingredient> ingredients = recipe.ingredients;
         if (ingredients.isEmpty() || output.isEmpty()) return null;
 

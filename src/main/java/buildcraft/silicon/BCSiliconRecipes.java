@@ -295,7 +295,11 @@ public class BCSiliconRecipes {
             // rebuilt stack is !equals to the canonical gate stack JEI keeps in its ingredient
             // list, and R/U lookup on the basic-gate variants stops finding the recipe.
             inputBuilder.add(new IngredientStack(DataComponentIngredient.of(false,
+                //? if >=26.1 {
                 toUpgrade.getComponentsPatch(), toUpgrade.getItem())));
+                //?} else {
+                /*toUpgrade.getComponents(), toUpgrade.getItem())));*/
+                //?}
             for (IngredientStack mod : mods) {
                 inputBuilder.add(mod);
             }

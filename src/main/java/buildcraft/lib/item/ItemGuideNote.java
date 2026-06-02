@@ -26,7 +26,7 @@ public class ItemGuideNote extends Item {
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide()) {
-            player.sendSystemMessage(
+            buildcraft.lib.misc.MessageUtil.sendSystemMessage(player,
                     Component.translatable("buildcraft.guide.not_available"));
         }
         return InteractionResult.SUCCESS;

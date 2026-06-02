@@ -48,4 +48,16 @@ public class MessageUtil {
         /*player.displayClientMessage(message, true);*/
         //?}
     }
+
+    /**
+     * Send a system (chat) message to a player. 26.1 {@code sendSystemMessage(msg)} ⇄ 1.21.11
+     * {@code displayClientMessage(msg, false)} (false = chat line, not the action-bar overlay).
+     */
+    public static void sendSystemMessage(Player player, Component message) {
+        //? if >=26.1 {
+        player.sendSystemMessage(message);
+        //?} else {
+        /*player.displayClientMessage(message, false);*/
+        //?}
+    }
 }

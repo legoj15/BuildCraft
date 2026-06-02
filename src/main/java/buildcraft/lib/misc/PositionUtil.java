@@ -56,6 +56,15 @@ public class PositionUtil {
         //?}
     }
 
+    /** Pack a ChunkPos to its long key (26.1 {@code cp.pack()} ⇄ 1.21.11 {@code cp.toLong()}). */
+    public static long chunkPack(ChunkPos cp) {
+        //? if >=26.1 {
+        return cp.pack();
+        //?} else {
+        /*return cp.toLong();*/
+        //?}
+    }
+
     /** @return The exact direction from the first position to the second. Returns null if more than one axis value is
      *         different, or they are the same position. */
     @Nullable

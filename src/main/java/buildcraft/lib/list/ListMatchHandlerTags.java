@@ -94,7 +94,11 @@ public class ListMatchHandlerTags extends ListMatchHandler {
     }
 
     private static java.util.stream.Stream<TagKey<Item>> tagsOf(ItemStack stack) {
+        //? if >=26.1 {
         return stack.typeHolder().tags();
+        //?} else {
+        /*return stack.getItemHolder().tags();*/
+        //?}
     }
 
     /** Type-parts or material-parts of every tag on {@code stack}. For MATERIAL, single-segment

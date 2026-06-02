@@ -74,7 +74,11 @@ public class VolumeSavedData extends SavedData {
     }));
 
     public static final SavedDataType<VolumeSavedData> TYPE = new SavedDataType<>(
+            //? if >=26.1 {
             Identifier.withDefaultNamespace(ID),
+            //?} else {
+            /*ID,*/
+            //?}
             VolumeSavedData::new,
             CODEC,
             net.minecraft.util.datafix.DataFixTypes.LEVEL

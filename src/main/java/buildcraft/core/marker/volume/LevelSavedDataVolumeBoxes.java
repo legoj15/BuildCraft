@@ -44,7 +44,11 @@ public class LevelSavedDataVolumeBoxes extends SavedData {
     // decode it manually because VolumeBox needs a Level reference.
     public static SavedDataType<LevelSavedDataVolumeBoxes> createType(Level world) {
         return new SavedDataType<>(
+                //? if >=26.1 {
                 Identifier.withDefaultNamespace(DATA_NAME),
+                //?} else {
+                /*DATA_NAME,*/
+                //?}
                 () -> new LevelSavedDataVolumeBoxes(world),
                 buildCodec(world),
                 net.minecraft.util.datafix.DataFixTypes.LEVEL

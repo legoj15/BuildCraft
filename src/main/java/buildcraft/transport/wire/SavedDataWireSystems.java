@@ -42,7 +42,11 @@ import org.jspecify.annotations.Nullable;
 
 public class SavedDataWireSystems extends SavedData {
     public static final SavedDataType<SavedDataWireSystems> TYPE = new SavedDataType<>(
+        //? if >=26.1 {
         Identifier.withDefaultNamespace("buildcraft_wire_systems"),
+        //?} else {
+        /*"buildcraft_wire_systems",*/
+        //?}
         () -> new SavedDataWireSystems(null),
         makeCodec(null),
         DataFixTypes.SAVED_DATA_MAP_DATA

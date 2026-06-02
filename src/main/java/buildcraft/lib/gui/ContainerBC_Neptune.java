@@ -25,7 +25,11 @@ import net.minecraft.world.inventory.RecipeBookType;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
+//? if >=26.1 {
 import net.minecraft.world.inventory.ContainerInput;
+//?} else {
+/*import net.minecraft.world.inventory.ClickType;*/
+//?}
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -183,7 +187,11 @@ public abstract class ContainerBC_Neptune extends RecipeBookMenu {
     // --- Slot handling ---
 
     @Override
+    //? if >=26.1 {
     public void clicked(int slotId, int dragType, ContainerInput containerInput, Player player) {
+    //?} else {
+    /*public void clicked(int slotId, int dragType, ClickType containerInput, Player player) {*/
+    //?}
         Slot slot = slotId < 0 ? null : this.slots.get(slotId);
         if (slot instanceof SlotPhantom) {
             SlotPhantom phantom = (SlotPhantom) slot;

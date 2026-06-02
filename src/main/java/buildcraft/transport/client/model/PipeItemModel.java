@@ -15,7 +15,9 @@ import org.joml.Vector3f;
 
 import net.minecraft.client.color.item.ItemTintSource;
 import net.minecraft.client.multiplayer.ClientLevel;
+//? if >=26.1 {
 import net.minecraft.client.renderer.item.CuboidItemModelWrapper;
+//?}
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
@@ -26,7 +28,9 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 //?} else {
 /*import net.minecraft.client.renderer.block.model.BakedQuad;*/
 //?}
+//? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.QuadCollection;
+//?}
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.DyeColor;
@@ -58,7 +62,12 @@ import buildcraft.transport.BCTransportItems;
 @SuppressWarnings("deprecation")
 public class PipeItemModel implements ItemModel {
 
-    // Reflection fields cached at class-load time
+    // Reflection fields cached at class-load time.
+    // 1.21.11 TODO: CuboidItemModelWrapper is absent; its 1.21.11 sibling is BlockModelWrapper, whose
+    // `quads` is a List<BakedQuad> (not QuadCollection) and whose layer tint API is int[] (not a List).
+    // The painted-pipe item rendering below is stubbed on 1.21.11 (delegates to vanilla — pipes show
+    // their base item without the paint tint in the GUI). Port faithfully against BlockModelWrapper later.
+    //? if >=26.1 {
     private static final Field QUADS_FIELD;
     private static final Field PROPERTIES_FIELD;
     private static final Field TINTS_FIELD;
@@ -77,21 +86,25 @@ public class PipeItemModel implements ItemModel {
             throw new RuntimeException("Failed to access CuboidItemModelWrapper fields", e);
         }
     }
+    //?}
 
     private final ItemModel vanillaDelegate;
     private final PipeDefinition definition;
 
     // Extracted from vanilla model at construction time (null if delegate isn't CuboidItemModelWrapper)
+    //? if >=26.1 {
     private final @Nullable QuadCollection vanillaQuads;
     private final @Nullable ModelRenderProperties renderProperties;
     @SuppressWarnings("unchecked")
     private final java.util.function.Supplier<org.joml.Vector3fc[]> extents;
+    //?}
 
     @SuppressWarnings("unchecked")
     public PipeItemModel(ItemModel vanillaDelegate, PipeDefinition definition) {
         this.vanillaDelegate = vanillaDelegate;
         this.definition = definition;
 
+        //? if >=26.1 {
         if (vanillaDelegate instanceof CuboidItemModelWrapper wrapper) {
             try {
                 this.vanillaQuads = (QuadCollection) QUADS_FIELD.get(wrapper);
@@ -105,12 +118,14 @@ public class PipeItemModel implements ItemModel {
             this.renderProperties = null;
             this.extents = null;
         }
+        //?}
     }
 
     @Override
     public void update(ItemStackRenderState renderState, ItemStack stack, ItemModelResolver modelResolver,
                        ItemDisplayContext displayContext, @Nullable ClientLevel level,
                        @Nullable ItemOwner owner, int seed) {
+        //? if >=26.1 {
         DyeColor colour = stack.get(BCTransportItems.PIPE_COLOUR.get());
 
         // If we can't reflect (non-CuboidItemModelWrapper), fall back to delegate
@@ -167,6 +182,9 @@ public class PipeItemModel implements ItemModel {
                 overlayLayer.tintLayers().add(tintColour);
             }
         }
+        //?} else {
+        /*vanillaDelegate.update(renderState, stack, modelResolver, displayContext, level, owner, seed);*/
+        //?}
     }
 
     /**

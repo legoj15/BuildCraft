@@ -73,8 +73,13 @@ public class HeatExchangerCategory extends AbstractRecipeCategory<HeatExchangerR
     }
 
     @Override
-    public void draw(HeatExchangerRecipePair pair, IRecipeSlotsView slots, BCGraphics graphics,
+    //? if >=26.1 {
+    public void draw(HeatExchangerRecipePair pair, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphicsExtractor graphics,
                      double mouseX, double mouseY) {
+    //?} else {
+    /*public void draw(HeatExchangerRecipePair pair, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphics graphics,
+                     double mouseX, double mouseY) {*/
+    //?}
         background.draw(graphics);
     }
 

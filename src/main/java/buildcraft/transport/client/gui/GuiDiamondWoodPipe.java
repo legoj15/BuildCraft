@@ -109,7 +109,11 @@ public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
         }
 
         @Override
-        protected void extractContents(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        //? if >=26.1 {
+        protected void extractContents(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        //?} else {
+        /*protected void renderWidget(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {*/
+        //?}
             int state;
             boolean selected = menu.behaviour.filterMode == mode;
             if (!this.active) {

@@ -224,8 +224,13 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
         }
 
         @Override
-        protected void extractContents(BCGraphics graphics, int mouseX, int mouseY,
+        //? if >=26.1 {
+        protected void extractContents(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY,
                                        float partialTick) {
+        //?} else {
+        /*protected void renderWidget(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY,
+                                       float partialTick) {*/
+        //?}
             // Vanilla widget/button sprite — 9-sliced, hover-aware via SPRITES.get(active, hovered).
             // Matches the Replacer's Replace button and any other vanilla Button in the mod, so
             // the BC GUI stays visually consistent with stock Minecraft + resource pack overrides.
@@ -273,8 +278,13 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
         }
 
         @Override
-        protected void extractContents(BCGraphics graphics, int mouseX, int mouseY,
+        //? if >=26.1 {
+        protected void extractContents(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY,
                                        float partialTick) {
+        //?} else {
+        /*protected void renderWidget(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY,
+                                       float partialTick) {*/
+        //?}
             extractDefaultSprite(graphics);
             graphics.item(CHEST_ICON, getX() + 2, getY() + 2);
             if (menu.getSyncedContentsMode() == EnumContainerContentsMode.IGNORE) {

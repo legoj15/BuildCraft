@@ -174,6 +174,10 @@ public final class BCGraphics {
         raw.nextStratum();
     }
 
+    public org.joml.Matrix3x2fStack pose() {
+        return raw.pose();
+    }
+
     public void blitSprite(RenderPipeline pipeline, TextureAtlasSprite sprite, int x, int y, int width, int height) {
         raw.blitSprite(pipeline, sprite, x, y, width, height);
     }
@@ -224,5 +228,10 @@ public final class BCGraphics {
 
     public void setTooltipForNextFrame(Font font, List<FormattedCharSequence> lines, int x, int y) {
         raw.setTooltipForNextFrame(font, lines, x, y);
+    }
+
+    public void setTooltipForNextFrame(Font font, List<net.minecraft.network.chat.Component> textComponents,
+            java.util.Optional<net.minecraft.world.inventory.tooltip.TooltipComponent> tooltipComponent, int x, int y) {
+        raw.setTooltipForNextFrame(font, textComponents, tooltipComponent, x, y);
     }
 }

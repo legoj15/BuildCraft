@@ -25,7 +25,11 @@ public class DebugOverlayRenderer {
      * Renders debug info lines on the left and right sides of the screen,
      * below the vanilla debug text.
      */
-    public static void render(BCGraphics BCGraphics, DeltaTracker deltaTracker) {
+    //? if >=26.1 {
+    public static void render(net.minecraft.client.gui.GuiGraphicsExtractor BCGraphics, DeltaTracker deltaTracker) {
+    //?} else {
+    /*public static void render(net.minecraft.client.gui.GuiGraphics BCGraphics, DeltaTracker deltaTracker) {*/
+    //?}
         Minecraft mc = Minecraft.getInstance();
 
         if (mc.debugEntries == null || !mc.debugEntries.isOverlayVisible()) {

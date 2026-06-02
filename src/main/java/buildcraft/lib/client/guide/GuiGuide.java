@@ -355,12 +355,17 @@ public class GuiGuide extends Screen {
     }
 
     @Override
-    public void extractRenderState(BCGraphics graphics, int mouseX, int mouseY, float partialTicks) {
+    //? if >=26.1 {
+    public void extractRenderState(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    //?} else {
+    /*public void render(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {*/
+    //?}
         // Set the graphics context for font rendering and other sub-renderers
-        MinecraftFont.setGuiGraphics(graphics);
-        GuiIcon.setGuiGraphics(graphics);
-        buildcraft.lib.gui.GuiStack.setGuiGraphics(graphics);
-        buildcraft.lib.gui.GuiFluid.setGuiGraphics(graphics);
+        BCGraphics bcg = new BCGraphics(graphics);
+        MinecraftFont.setGuiGraphics(bcg);
+        GuiIcon.setGuiGraphics(bcg);
+        buildcraft.lib.gui.GuiStack.setGuiGraphics(bcg);
+        buildcraft.lib.gui.GuiFluid.setGuiGraphics(bcg);
 
         // In 1.21+, Screen.extractRenderState receives getGameTimeDeltaTicks() — the
         // PER-FRAME delta in tick units (e.g., ~0.33 at 60 fps), NOT the 0-1 fraction

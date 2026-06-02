@@ -171,7 +171,7 @@ public final class BlueprintTooltipOverlay {
         // — the frame was already drawn above, so the panel pops in now and fills once data lands.
         if (snapshot != null) {
             BlueprintRenderer.renderSnapshot(
-                    event.getGraphics(), snapshot, pX, pY, PREVIEW_SIZE, PREVIEW_SIZE);
+                    new buildcraft.lib.gui.BCGraphics(event.getGraphics()), snapshot, pX, pY, PREVIEW_SIZE, PREVIEW_SIZE);
         }
 
         logOnce(header.key, snapshot, pX, pY);

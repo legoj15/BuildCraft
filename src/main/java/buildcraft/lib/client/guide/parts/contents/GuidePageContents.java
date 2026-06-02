@@ -198,7 +198,7 @@ public class GuidePageContents extends GuidePageBase {
             // since Class.getMethods() ordering isn't stable.
             if (GuiIcon.getGuiGraphics() != null) {
                 searchText.extractRenderState(
-                    GuiIcon.getGuiGraphics(),
+                    GuiIcon.getGuiGraphics().raw,
                     (int) gui.mouse.getX(),
                     (int) gui.mouse.getY(),
                     gui.getLastPartialTicks()

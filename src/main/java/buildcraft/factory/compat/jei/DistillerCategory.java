@@ -82,8 +82,13 @@ public class DistillerCategory extends AbstractRecipeCategory<IDistillationRecip
     }
 
     @Override
-    public void draw(IDistillationRecipe recipe, IRecipeSlotsView slots, BCGraphics graphics,
+    //? if >=26.1 {
+    public void draw(IDistillationRecipe recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphicsExtractor graphics,
                      double mouseX, double mouseY) {
+    //?} else {
+    /*public void draw(IDistillationRecipe recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphics graphics,
+                     double mouseX, double mouseY) {*/
+    //?}
         background.draw(graphics);
         // Cast through double so sub-MJ recipes don't render as "0 MJ".
         double mj = recipe.powerRequired() / (double) MjAPI.MJ;

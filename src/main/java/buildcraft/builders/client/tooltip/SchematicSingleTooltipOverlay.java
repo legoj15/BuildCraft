@@ -115,7 +115,7 @@ public final class SchematicSingleTooltipOverlay {
         Blueprint synthetic = getOrBuildSynthetic(schematic);
 
         BlueprintRenderer.renderSnapshot(
-                event.getGraphics(), synthetic, pX, pY, PREVIEW_SIZE, PREVIEW_SIZE);
+                new buildcraft.lib.gui.BCGraphics(event.getGraphics()), synthetic, pX, pY, PREVIEW_SIZE, PREVIEW_SIZE);
     }
 
     private static Blueprint getOrBuildSynthetic(ISchematicBlock schematic) {

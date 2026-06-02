@@ -77,7 +77,7 @@ public class BlueprintRenderer {
                 scale,
                 // Pass the current scissor rectangle so the blit respects tooltip clipping. The
                 // PiP base class intersects this with the full bounds internally.
-                graphics.peekScissorStack());
-        graphics.submitPictureInPictureRenderState(state);
+                graphics.raw.peekScissorStack());
+        graphics.raw.submitPictureInPictureRenderState(state);
     }
 }

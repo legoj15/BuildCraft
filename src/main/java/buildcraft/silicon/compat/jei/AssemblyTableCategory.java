@@ -83,8 +83,13 @@ public class AssemblyTableCategory extends AbstractRecipeCategory<AssemblyRecipe
     }
 
     @Override
-    public void draw(AssemblyRecipeJei recipe, IRecipeSlotsView slots, BCGraphics graphics,
+    //? if >=26.1 {
+    public void draw(AssemblyRecipeJei recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphicsExtractor graphics,
                      double mouseX, double mouseY) {
+    //?} else {
+    /*public void draw(AssemblyRecipeJei recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphics graphics,
+                     double mouseX, double mouseY) {*/
+    //?}
         background.draw(graphics);
         // Cast through double so sub-MJ recipes don't render as "0 MJ".
         double mj = recipe.microJoules() / (double) MjAPI.MJ;

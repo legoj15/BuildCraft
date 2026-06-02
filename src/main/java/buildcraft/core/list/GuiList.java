@@ -210,7 +210,11 @@ public class GuiList extends GuiBC8<ContainerList> {
         }
 
         @Override
-        protected void extractContents(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        //? if >=26.1 {
+        protected void extractContents(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        //?} else {
+        /*protected void renderWidget(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {*/
+        //?}
             // Sprite selection driven by toggled state, NOT active state — keeps the text at
             // full color (active stays true) while still showing the disabled-look background
             // for the toggled-on visual.
@@ -229,7 +233,7 @@ public class GuiList extends GuiBC8<ContainerList> {
             // Text rendering reuses the vanilla helper — same path as Button.Plain, so the
             // letter is drawn centered at full white.
             ActiveTextCollector renderer = graphics.textRendererForWidget(this,
-                    BCGraphics.HoveredTextEffects.NONE);
+                    net.minecraft.client.gui.GuiGraphicsExtractor.HoveredTextEffects.NONE);
             extractDefaultLabel(renderer);
         }
 

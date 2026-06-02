@@ -145,7 +145,11 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
         }
 
         @Override
-        protected void extractContents(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        //? if >=26.1 {
+        protected void extractContents(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        //?} else {
+        /*protected void renderWidget(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {*/
+        //?}
             // Show indent while this button is the actively pressed one
             int v = (activePressedButton == this) ? 20 : 0;
             GuiIcon bgIcon = new GuiIcon(TEXTURE, 176, v, 20, 20, 256);

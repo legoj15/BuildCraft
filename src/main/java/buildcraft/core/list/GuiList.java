@@ -284,9 +284,8 @@ public class GuiList extends GuiBC8<ContainerList> {
     }
 
     @Override
-    public void extractRenderState(BCGraphics graphics, int mouseX, int mouseY, float partialTicks) {
-        GuiIcon.setGuiGraphics(graphics);
-        super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
+    protected void drawTooltipLayer(int mouseX, int mouseY, float partialTick) {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
 
         // Ghost-slot tooltip: when the player hovers a populated slot 1-8 of a one-stack-mode
         // line, surface the example item's vanilla tooltip (name + components). The slot itself

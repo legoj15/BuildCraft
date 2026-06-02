@@ -117,18 +117,22 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     }
 
     @Override
-    public void extractRenderState(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
-        
+    protected void drawTooltipLayer(int mouseX, int mouseY, float partialTick) {
         // The panel itself renders via addRenderableWidget(recipeBookComponent) in init();
         // draw its tooltips on top here (mirrors vanilla AbstractRecipeBookScreen).
         if (this.recipeBookComponent != null && this.recipeBookComponent.isVisible()) {
-            this.recipeBookComponent.extractTooltip(graphics, mouseX, mouseY, this.hoveredSlot);
+            BCGraphics graphics = GuiIcon.getGuiGraphics();
+            //? if >=26.1 {
+            this.recipeBookComponent.extractTooltip(graphics.raw, mouseX, mouseY, this.hoveredSlot);
+            //?} else {
+            /*this.recipeBookComponent.renderTooltip(graphics.raw, mouseX, mouseY, this.hoveredSlot);*/
+            //?}
         }
     }
 
     @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
+    protected void drawForegroundLayer() {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         String title = I18n.get("block.buildcraftunofficial.advanced_crafting_table");
         graphics.text(font, title, (imageWidth - font.width(title)) / 2, 5, 0xFF404040, false);
     }

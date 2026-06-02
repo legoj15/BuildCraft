@@ -150,18 +150,10 @@ public class GuiHeatExchange extends GuiBC8<ContainerHeatExchange> {
     }
 
     @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        // Intentionally no title or inventory label — the layout is too cramped
-        // to fit either without overlapping the pipe schematic or the slots.
-        super.extractLabels(graphics, mouseX, mouseY);
-    }
+    protected void drawTooltipLayer(int mouseX, int mouseY, float partialTick) {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
 
-    @Override
-    public void extractRenderState(BCGraphics graphics, int mouseX, int mouseY, float partialTicks) {
-        GuiIcon.setGuiGraphics(graphics);
-        super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
-
-        drawCenterWipeOverlay(partialTicks);
+        drawCenterWipeOverlay(partialTick);
 
         ExchangeSectionStart start = menu.startSection();
         ExchangeSectionEnd end = menu.endSection();

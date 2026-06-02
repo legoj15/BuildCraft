@@ -129,7 +129,7 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
         // so the drag icon always sorts on top, matching MC's own carried-item rendering.
         graphics.nextStratum();
         mainGui.drawDragLayer(bcg);
-        drawTooltipLayer(mouseX, mouseY);
+        drawTooltipLayer(mouseX, mouseY, partialTicks);
     }
 
     @Override
@@ -190,7 +190,7 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
     /** Draw hover tooltips, after the slots/items/drag layer. Subclasses override this instead of
      * the vanilla render method; obtain the graphics via {@link GuiIcon#getGuiGraphics()}. This is
      * the single cross-cliff seam for post-render GUI work — subclasses stay version-agnostic. */
-    protected void drawTooltipLayer(int mouseX, int mouseY) {
-        // Default: do nothing. Subclasses draw their tank/slot tooltips.
+    protected void drawTooltipLayer(int mouseX, int mouseY, float partialTick) {
+        // Default: do nothing. Subclasses draw their tank/slot tooltips (and animated overlays).
     }
 }

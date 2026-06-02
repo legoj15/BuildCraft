@@ -111,7 +111,7 @@ public class BuildCraftGui {
      * so the drag icon sorts on top of inventory items and slot highlights.
      * Call graphics.nextStratum() before invoking this to guarantee correct z-ordering.
      */
-    public void drawDragLayer(net.minecraft.client.gui.BCGraphics graphics) {
+    public void drawDragLayer(buildcraft.lib.gui.BCGraphics graphics) {
         IMenuElement m = currentMenu;
         if (m != null && !m.shouldFullyOverride()) {
             m.drawBackground(lastPartialTicks);
@@ -120,7 +120,7 @@ public class BuildCraftGui {
     }
 
     public void preDrawForeground() {
-        net.minecraft.client.gui.BCGraphics graphics = GuiIcon.getGuiGraphics();
+        buildcraft.lib.gui.BCGraphics graphics = GuiIcon.getGuiGraphics();
         if (graphics != null) {
             graphics.pose().pushMatrix();
             graphics.pose().translate((float) -rootElement.getX(), (float) -rootElement.getY());
@@ -128,7 +128,7 @@ public class BuildCraftGui {
     }
 
     public void postDrawForeground() {
-        net.minecraft.client.gui.BCGraphics graphics = GuiIcon.getGuiGraphics();
+        buildcraft.lib.gui.BCGraphics graphics = GuiIcon.getGuiGraphics();
         if (graphics != null) {
             graphics.pose().popMatrix();
         }
@@ -145,7 +145,7 @@ public class BuildCraftGui {
         if (m != null && m.shouldFullyOverride()) {
             // Draw a dark overlay over the whole GUI to match 1.12.2's darkening effect
             // when the quick-switch variant popup is open.
-            net.minecraft.client.gui.BCGraphics graphics = GuiIcon.getGuiGraphics();
+            buildcraft.lib.gui.BCGraphics graphics = GuiIcon.getGuiGraphics();
             if (graphics != null) {
                 int sx = (int) screenElement.getX();
                 int sy = (int) screenElement.getY();
@@ -175,7 +175,7 @@ public class BuildCraftGui {
         }
 
         if (!tooltips.isEmpty()) {
-            net.minecraft.client.gui.BCGraphics graphics = GuiIcon.getGuiGraphics();
+            buildcraft.lib.gui.BCGraphics graphics = GuiIcon.getGuiGraphics();
             if (graphics != null) {
                 java.util.List<net.minecraft.util.FormattedCharSequence> comps = new java.util.ArrayList<>();
                 for (ToolTip tip : tooltips) {

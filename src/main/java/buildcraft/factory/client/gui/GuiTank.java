@@ -82,7 +82,7 @@ public class GuiTank extends GuiBC8<ContainerTank> {
     }
 
     @Override
-    protected void drawTooltipLayer(int mouseX, int mouseY) {
+    protected void drawTooltipLayer(int mouseX, int mouseY, float partialTick) {
         // Draw tank tooltip when hovering over the tank area
         renderTankTooltip(GuiIcon.getGuiGraphics(), mouseX, mouseY);
     }

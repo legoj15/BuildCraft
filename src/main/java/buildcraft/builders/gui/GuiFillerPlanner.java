@@ -120,8 +120,8 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
     }
 
     @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        super.extractLabels(graphics, mouseX, mouseY);
+    protected void drawForegroundLayer() {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
         if (mainGui.currentMenu == null || !mainGui.currentMenu.shouldFullyOverride()) {
             String titleStr = Component.translatable("item.buildcraftunofficial.filler_planner").getString();
             graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 10, 0xFF404040, false);

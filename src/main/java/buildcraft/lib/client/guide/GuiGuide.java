@@ -594,7 +594,7 @@ public class GuiGuide extends Screen {
         // win over text tooltips, matching 1.12.2's `if (tooltipStack != null) ... else ...`.
         // Without this pass `tooltipStack` and `tooltips` were assigned every frame
         // but never consumed — hovering over an item or a link did nothing visible.
-        net.minecraft.client.gui.BCGraphics graphics = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
+        buildcraft.lib.gui.BCGraphics graphics = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
         if (graphics != null) {
             int mx = (int) mouse.getX();
             int my = (int) mouse.getY();

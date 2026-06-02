@@ -94,6 +94,14 @@ public final class BCGraphics {
         //?}
     }
 
+    public void text(Font font, FormattedCharSequence text, int x, int y, int color, boolean dropShadow) {
+        //? if >=26.1 {
+        raw.text(font, text, x, y, color, dropShadow);
+        //?} else {
+        /*raw.drawString(font, text, x, y, color, dropShadow);*/
+        //?}
+    }
+
     // ── item: 26.1 item(...) ⇄ 1.21.11 renderItem(...) ──────────────────────────
     public void item(ItemStack stack, int x, int y) {
         //? if >=26.1 {
@@ -172,6 +180,10 @@ public final class BCGraphics {
 
     public void blitSprite(RenderPipeline pipeline, Identifier texture, int x, int y, int width, int height) {
         raw.blitSprite(pipeline, texture, x, y, width, height);
+    }
+
+    public void blitSprite(RenderPipeline pipeline, TextureAtlasSprite sprite, int x, int y, int width, int height, int color) {
+        raw.blitSprite(pipeline, sprite, x, y, width, height, color);
     }
 
     public void blit(RenderPipeline pipeline, Identifier texture, int x, int y, float u, float v,

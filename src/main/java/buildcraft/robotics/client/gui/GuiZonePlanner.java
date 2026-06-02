@@ -47,8 +47,4 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
                         "buildcraft.help.zone_planner.map.desc2")));
     }
 
-    @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        // No labels — matches 1.12.2 which only has the GUI texture
-    }
 }

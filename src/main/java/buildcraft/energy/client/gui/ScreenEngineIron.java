@@ -182,7 +182,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
     }
 
     @Override
-    protected void drawTooltipLayer(int mouseX, int mouseY) {
+    protected void drawTooltipLayer(int mouseX, int mouseY, float partialTick) {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
         // Draw tank tooltips
         renderTankTooltip(graphics, mouseX, mouseY, TANK_FUEL_X, TANK_FUEL_Y,

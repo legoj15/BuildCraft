@@ -130,7 +130,7 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     }
 
     @Override
-    protected void drawTooltipLayer(int mouseX, int mouseY) {
+    protected void drawTooltipLayer(int mouseX, int mouseY, float partialTick) {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
         drawCenterStateOverlay();
         renderTankTooltip(graphics, mouseX, mouseY, menu.tile != null ? menu.tile.getTankIn() : null,

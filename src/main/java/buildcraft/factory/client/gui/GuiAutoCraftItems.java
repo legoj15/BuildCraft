@@ -166,21 +166,19 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     }
 
     @Override
-    public void extractRenderState(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        // Let the base class render the slots and background
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
-        
+    protected void drawTooltipLayer(int mouseX, int mouseY, float partialTick) {
         // The panel itself renders via addRenderableWidget(recipeBookComponent) in init();
         // draw its tooltips on top here (mirrors vanilla AbstractRecipeBookScreen).
         if (this.recipeBookComponent != null && this.recipeBookComponent.isVisible()) {
-            this.recipeBookComponent.extractTooltip(graphics, mouseX, mouseY, this.hoveredSlot);
+            BCGraphics graphics = GuiIcon.getGuiGraphics();
+            //? if >=26.1 {
+            this.recipeBookComponent.extractTooltip(graphics.raw, mouseX, mouseY, this.hoveredSlot);
+            //?} else {
+            /*this.recipeBookComponent.renderTooltip(graphics.raw, mouseX, mouseY, this.hoveredSlot);*/
+            //?}
         }
     }
 
-    @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        // No labels — matches 1.12.2 which only has the GUI texture
-    }
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean entered) {

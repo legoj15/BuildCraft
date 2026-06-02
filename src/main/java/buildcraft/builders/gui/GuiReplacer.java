@@ -358,10 +358,6 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
         return super.mouseClicked(event, doubleClick);
     }
 
-    @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        super.extractLabels(graphics, mouseX, mouseY);
-    }
 
     /**
      * Placeholder used by {@link #schematicDisplayName} when we can't coerce a schematic into

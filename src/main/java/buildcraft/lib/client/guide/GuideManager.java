@@ -820,7 +820,7 @@ public enum GuideManager {
         buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder compassFrame =
             buildcraft.lib.client.sprite.SpriteHolderRegistry.getHolder("minecraft:item/compass_16");
         ISimpleDrawable icon = (x, y) -> {
-            net.minecraft.client.gui.BCGraphics graphics =
+            buildcraft.lib.gui.BCGraphics graphics =
                 buildcraft.lib.gui.GuiIcon.getGuiGraphics();
             if (graphics == null) return;
             net.minecraft.client.renderer.texture.TextureAtlasSprite sprite = compassFrame.getSprite();

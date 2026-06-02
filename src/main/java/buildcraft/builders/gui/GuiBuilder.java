@@ -178,8 +178,8 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
     }
 
     @Override
-    protected void extractLabels(BCGraphics graphics, int mouseX, int mouseY) {
-        super.extractLabels(graphics, mouseX, mouseY);
+    protected void drawForegroundLayer() {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
 
         // Title — centered over the main section.
         String titleStr = title.getString();
@@ -203,11 +203,6 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
         }
     }
 
-    @Override
-    public void extractRenderState(BCGraphics graphics, int mouseX, int mouseY, float partialTicks) {
-        GuiIcon.setGuiGraphics(graphics);
-        super.extractRenderState(graphics, mouseX, mouseY, partialTicks);
-    }
 
     /**
      * 20×20 button that cycles the Builder's {@link EnumFluidHandlingMode} each click. The icon

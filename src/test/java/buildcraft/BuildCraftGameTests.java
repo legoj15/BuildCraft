@@ -150,6 +150,9 @@ public class BuildCraftGameTests {
             // Filler Inventory Filtering
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:filler_block_item_filter"), () -> buildcraft.builders.FillerInventoryTester::testFillerBlockItemFilter);
 
+            // Filler Planner is a pattern-only screen — its container must expose no slots (no player inventory).
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:filler_planner_has_no_slots"), () -> buildcraft.builders.FillerPlannerContainerTester::testFillerPlannerHasNoSlots);
+
             // Template Builder — fillable-slot classification (grass tufts / snow / fluids).
             // Regression guard for the user-reported "Filler with Excavate doesn't clear grass
             // tufts" bug: TemplateBuilder.isBlockCorrect used to flag any non-air block as

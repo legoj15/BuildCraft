@@ -107,7 +107,7 @@ public class ContainerFillerPlanner extends ContainerBC_Neptune implements ICont
     public ContainerFillerPlanner(int containerId, Inventory playerInv, AddonFillerPlanner addon) {
         super(BCBuildersMenuTypes.FILLER_PLANNER.get(), containerId, playerInv.player);
         this.addon = addon;
-        addFullPlayerInventory(8, 84, playerInv);
+        // No player inventory: this is a pattern-planning screen with no item slots.
     }
 
     /** Client-side: read box UUID + slot from buf, look up addon in {@link ClientVolumeBoxes}. */
@@ -126,7 +126,7 @@ public class ContainerFillerPlanner extends ContainerBC_Neptune implements ICont
             }
         }
         this.addon = found;
-        addFullPlayerInventory(8, 84, playerInv);
+        // No player inventory: this is a pattern-planning screen with no item slots.
     }
 
     public void onStatementChange() {

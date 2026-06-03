@@ -36,7 +36,15 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
     private static final Identifier TEXTURE = Identifier.parse("buildcraftunofficial:textures/gui/filler_planner.png");
 
     public GuiFillerPlanner(ContainerFillerPlanner container, Inventory playerInv, Component title) {
-        super(container, playerInv, Component.translatable("item.buildcraftunofficial.filler_planner"), 176, 166);
+        // Height 81 = the texture's opaque planning panel only; there is no player-inventory region.
+        super(container, playerInv, Component.translatable("item.buildcraftunofficial.filler_planner"), 176, 81);
+    }
+
+    /** The planner has no player inventory and no machine slots, so the left-side help ledger has
+     *  nothing meaningful to frame — opt out, matching GuiAdvancedCraftingTable / GuiAutoCraftItems. */
+    @Override
+    protected boolean shouldAddHelpLedger() {
+        return false;
     }
 
     @Override
@@ -92,17 +100,6 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
                         "buildcraft.help.filler.invert.desc").target(this));
             }
         });
-
-        // Pattern slot help (32×32 at 12,32) and 4 param slots (18×18 at 53+18i, 39) — same geometry as GuiFiller.
-        mainGui.shownElements.add(new buildcraft.lib.gui.help.DummyHelpElement(
-                new GuiRectangle(12, 32, 32, 32).offset(mainGui.rootElement),
-                new ElementHelpInfo("buildcraft.help.filler.pattern.title", 0xFF_88_CC_88,
-                        "buildcraft.help.filler.pattern.desc1",
-                        "buildcraft.help.filler.pattern.desc2")));
-        mainGui.shownElements.add(new buildcraft.lib.gui.help.DummyHelpElement(
-                new GuiRectangle(53, 39, 4 * 18, 18).offset(mainGui.rootElement),
-                new ElementHelpInfo("buildcraft.help.filler.params.title", 0xFF_DD_AA_FF,
-                        "buildcraft.help.filler.params.desc")));
     }
 
     @Override
@@ -126,7 +123,6 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
         // (drawMenuOverlayLayer) and dims this text on top, matching 1.12.2's layered look.
         String titleStr = Component.translatable("item.buildcraftunofficial.filler_planner").getString();
         graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 10, 0xFF404040, false);
-        graphics.text(font, Component.translatable("container.inventory").getString(), 8, 73, 0xFF404040, false);
     }
 
     @Override

@@ -2,9 +2,6 @@
 
 Last audited: 2026-05-31 (final pre-rc review — removed dev scaffolding, swept logging to BCLog, wired recipe-book tooltips, hardened mod metadata)
 
-- [ ] Builder UX: flag blocks that can't be placed yet (floating torches, flowers on stone, etc.) — e.g. a red box overlay on the resource list or the build area — so a stalled build is legible to the player.
-
-
 
 ## 🆕 New Features (version 2026.2)
 
@@ -29,6 +26,7 @@ Last audited: 2026-05-31 (final pre-rc review — removed dev scaffolding, swept
 - [ ] **Electronic Library snapshot-list scrolling.** Neither 1.12.2 nor the modern port wires up scrolling on the [GuiElectronicLibrary](src/main/java/buildcraft/builders/gui/GuiElectronicLibrary.java) list panel. 1.12.2 lets the list overflow past the panel (drawing over the slots and player inventory); the port silently truncates at `LIST_MAX_ROWS = 13` and the texture has the arrows already in it. Add up/down arrow buttons (or scroll-wheel handling on the list rect) that page or pixel-scroll the visible window into the full snapshot list, persist the scroll offset across `containerTick` while the GUI stays open, and disable each arrow when there's nothing to scroll to in that direction. Worth sourcing the arrow sprites from the existing GUI texture sheet rather than spawning a second resource.
 - [ ] Utilize modern Minecraft sounds (copper grates for pipes, etc)
 - [ ] **Goggles texture.** `item/goggles.png` is a verbatim copy of the vanilla paper texture used as a placeholder — the dev-gated Goggles headpiece needs real art before it could be un-gated.
+- [ ] Builder UX: flag blocks that can't be placed yet (floating torches, flowers on stone, etc.) — e.g. a red box overlay on the resource list or the build area — so a stalled build is legible to the player.
 
 ---
 

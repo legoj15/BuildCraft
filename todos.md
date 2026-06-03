@@ -2,7 +2,7 @@
 
 Last audited: 2026-05-31 (final pre-rc review — removed dev scaffolding, swept logging to BCLog, wired recipe-book tooltips, hardened mod metadata)
 
-- [ ] Give a direct path to recipe usage in the GUI for non-crafting table blocks for JEI (clicking on the progress bar/texture)
+- [ ] Make combustion engine and stirling engines show up in JEI as recipe holders (so that users can see how much MJ a bucket of lava grants, or what the MJ/t rate is for liquid fuels and if they create residue or not.
 - [ ] Allow moving resources for assembly table crafting whilst in the JEI menu when the block is active (assuming the player has the correct materials)
 - [ ] **Filler Planner GUI shows the player inventory + help ledger** — both should be hidden (it's a pattern-planning screen with no inventory interaction). Confirmed on both 26.1.2 and 1.21.11, so it's shared GUI code, not node-specific.
 - [ ] Investigate builder placement deadlocks with the grass/tall grass/flowers.

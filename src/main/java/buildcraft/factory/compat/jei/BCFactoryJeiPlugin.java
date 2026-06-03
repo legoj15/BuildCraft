@@ -27,6 +27,8 @@ import buildcraft.api.recipes.IRefineryRecipeManager.IHeatableRecipe;
 import buildcraft.factory.BCFactoryItems;
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.client.gui.GuiAutoCraftItems;
+import buildcraft.factory.client.gui.GuiDistiller;
+import buildcraft.factory.client.gui.GuiHeatExchange;
 import buildcraft.factory.container.ContainerAutoCraftItems;
 import buildcraft.lib.compat.jei.BCGhostIngredientHandler;
 import buildcraft.lib.compat.jei.BlueprintTransferHandler;
@@ -121,6 +123,23 @@ public class BCFactoryJeiPlugin implements IModPlugin {
         );
         // Allow dragging ingredients from JEI onto phantom blueprint slots
         registration.addGhostIngredientHandler(GuiAutoCraftItems.class, new BCGhostIngredientHandler<>());
+
+        // Clicking the centre process schematic in the Distiller opens its JEI recipe view.
+        // Region matches the running/stuck pipe overlay drawn at (61, 12) size 36x57, between
+        // the input tank (ends x=60) and the output tanks (start x=98).
+        registration.addRecipeClickArea(
+                GuiDistiller.class,
+                61, 12, 36, 57,
+                DistillerRecipeTypes.DISTILLER
+        );
+        // Clicking the centre progress region in the Heat Exchanger opens its JEI recipe view.
+        // Region matches the progress help rect at (73, 36) size 30x21, hand-tuned clear of all
+        // four tank gauges.
+        registration.addRecipeClickArea(
+                GuiHeatExchange.class,
+                73, 36, 30, 21,
+                HeatExchangerRecipeTypes.PAIR
+        );
     }
 
     @Override

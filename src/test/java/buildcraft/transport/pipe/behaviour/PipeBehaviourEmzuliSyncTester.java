@@ -26,8 +26,9 @@ import buildcraft.transport.pipe.behaviour.PipeBehaviourEmzuli.SlotIndex;
  * because populating a slot needs {@link net.minecraft.world.item.ItemStack} support that the
  * JUnit classpath cannot bootstrap.
  */
-public class PipeBehaviourEmzuliSyncTester {
+public class PipeBehaviourEmzuliSyncTester  {
 
+    //? if >=26.1 {
     @Test
     public void readFromNbtRestoresCurrentSlot() {
         CompoundTag nbt = new CompoundTag();
@@ -91,4 +92,5 @@ public class PipeBehaviourEmzuliSyncTester {
                 "the (IPipe, CompoundTag) constructor must read currentSlot on cold load");
         Assertions.assertEquals(DyeColor.YELLOW, target.slotColours.get(SlotIndex.CROSS));
     }
+    //? }
 }

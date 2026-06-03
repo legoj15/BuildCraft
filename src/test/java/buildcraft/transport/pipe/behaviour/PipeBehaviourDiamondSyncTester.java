@@ -29,6 +29,7 @@ import buildcraft.api.transport.pipe.PipeBehaviour;
  */
 public class PipeBehaviourDiamondSyncTester {
 
+    //? if >=26.1 {
     @Test
     public void diamondDeclaresReadFromNbtOverride() throws NoSuchMethodException {
         // Pins the exact regression shape from the stripes bug: the base PipeBehaviour.readFromNbt
@@ -72,4 +73,5 @@ public class PipeBehaviourDiamondSyncTester {
         Assertions.assertEquals(source.filters.getSlots(), target.filters.getSlots(),
                 "the (IPipe, CompoundTag) constructor must accept a writeToNbt-produced tag without crashing");
     }
+    //? }
 }

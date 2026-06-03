@@ -14,7 +14,9 @@ public class VanillaSetupBaseTester {
         PrintStream sysOut = System.out;
         InputStream sysIn = System.in;
 
+        //? if >=26.1 {
         Bootstrap.bootStrap();
+        //? }
 
         System.setIn(sysIn);
         System.setOut(sysOut);

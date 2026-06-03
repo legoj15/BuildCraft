@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond.FilterMode;
+import buildcraft.VanillaSetupBaseTester;
 
 /**
  * Regression guard for emerald (wood-diamond) pipe state reaching the client via the BE update tag.
@@ -25,8 +26,9 @@ import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond.FilterMode;
  * because populating a slot needs {@link net.minecraft.world.item.ItemStack} support that the
  * JUnit classpath cannot bootstrap.
  */
-public class PipeBehaviourWoodDiamondSyncTester {
+public class PipeBehaviourWoodDiamondSyncTester  {
 
+    //? if >=26.1 {
     @Test
     public void readFromNbtRestoresFilterMode() {
         PipeBehaviourWoodDiamond source = new PipeBehaviourWoodDiamond(null);
@@ -88,4 +90,5 @@ public class PipeBehaviourWoodDiamondSyncTester {
                 "the (IPipe, CompoundTag) constructor must read filterMode on cold load");
         Assertions.assertEquals(3, target.currentFilter);
     }
+    //? }
 }

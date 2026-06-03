@@ -1,5 +1,5 @@
 ## BuildCraft **UNOFFICIAL**
-#### For Minecraft 26.1, 26.1.1, and 26.1.2 on NeoForge
+#### For Minecraft 1.21.11, 26.1, 26.1.1, and 26.1.2 on NeoForge
 
 ### Reporting an issue
 
@@ -32,6 +32,7 @@ Please mention if you are using any other mods, especially mods which optimize o
 To test the mod locally, use the NeoForge run tasks. These are **per-node**, so prefix them with the Minecraft version you want (e.g. `:26.1.2:`):
 * Run the Client: `./gradlew :26.1.2:runClient` (or `.\gradlew.bat :26.1.2:runClient` on Windows)
 * Run the Server: `./gradlew :26.1.2:runServer` (or `.\gradlew.bat :26.1.2:runServer` on Windows)
+Valid versions are `:1.21.11:` and `:26.1.2:`.
 
 On Windows 11, `runClientAndServer.ps1` will launch both at the same time (against the `:26.1.2` node) to reduce the amount of steps.
 

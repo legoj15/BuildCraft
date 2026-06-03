@@ -277,6 +277,8 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_fence_isbuilt_ignores_connections"), () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testFenceIsBuiltIgnoresConnections);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_deserialize_migrates_wall_ignored_properties"), () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testDeserializeMigratesIgnoredPropertiesFromCurrentRules);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_deserialize_migrates_leaves_ignored_properties"), () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testDeserializeMigratesLeavesIgnoredProperties);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_tall_grass_places_both_halves"), () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testTallGrassLowerPlacesBothHalves);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:builder_tall_grass_upper_linked_to_lower"), () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testTallGrassUpperHalfLinkedToLower);
 
             // Container-contents capture — INCLUDE-mode invariants: the items_list extractor
             // surfaces chest contents into computeRequiredItems(), AND the build() path restores

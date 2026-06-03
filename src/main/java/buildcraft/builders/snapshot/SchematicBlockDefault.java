@@ -31,6 +31,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.DoublePlantBlock;
 import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.Rotation;
@@ -166,6 +167,32 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 // is at (0, +1, 0) — but we don't require it as a precondition: the build()
                 // path for LOWER atomically places UPPER too, so blocking on it would
                 // deadlock.
+                requiredBlockOffsets.add(new BlockPos(0, -1, 0));
+            }
+        }
+        // Double-plant blocks (tall grass, large fern, sunflower, lilac, rose bush, peony,
+        // pitcher plant, tall seagrass) are the same two-stacked-half shape as a door: LOWER on
+        // the ground, UPPER directly above, sharing one item. Vanilla updateShape turns a lone
+        // half into air the moment its partner is missing, so the Builder must place both halves
+        // at once. The linkage mirrors the door case exactly. (TallDryGrass is a single block and
+        // is correctly skipped — it isn't a DoublePlantBlock.)
+        if (block instanceof DoublePlantBlock && state != null
+                && state.hasProperty(DoublePlantBlock.HALF)) {
+            DoubleBlockHalf half = state.getValue(DoublePlantBlock.HALF);
+            if (half == DoubleBlockHalf.UPPER) {
+                // LOWER is directly below. Deferring UPPER on it is what stops the UPPER half
+                // from ever queuing its own place task: LOWER's build() places both halves
+                // atomically, so by the time LOWER is CORRECT the UPPER is already in the world
+                // and the next check pass classifies it CORRECT too. Without this the UPPER
+                // setBlocks alone and vanilla updateShape destroys it (no LOWER beneath), looping
+                // forever — the symptom the user saw ("throws the tall grass out on repeat").
+                requiredBlockOffsets.add(new BlockPos(0, -1, 0));
+            } else if (half == DoubleBlockHalf.LOWER) {
+                // The dirt/grass the plant grows on. Gates placement so a plant isn't queued
+                // before its ground is built; harmless on existing terrain, where the offset
+                // resolves to a CORRECT (or null/out-of-blueprint) neighbour and is treated as
+                // satisfied. UPPER (0, +1, 0) is deliberately NOT required — LOWER's build()
+                // places it, so requiring it would deadlock.
                 requiredBlockOffsets.add(new BlockPos(0, -1, 0));
             }
         }
@@ -327,6 +354,15 @@ public class SchematicBlockDefault implements ISchematicBlock {
         if (placeBlock instanceof DoorBlock && blockState != null
                 && blockState.hasProperty(DoorBlock.HALF)
                 && blockState.getValue(DoorBlock.HALF) == DoubleBlockHalf.UPPER) {
+            return java.util.Collections.emptyList();
+        }
+        // Same again for double-plant blocks: the UPPER half of a tall grass / fern / two-tall
+        // flower is placed atomically by LOWER's build, so it must not list a plant item (else
+        // the Builder consumes two per plant). The JSON already declares empty requiredExtractors
+        // for these UPPER halves; guarding here keeps it robust and parallel to bed/door.
+        if (placeBlock instanceof DoublePlantBlock && blockState != null
+                && blockState.hasProperty(DoublePlantBlock.HALF)
+                && blockState.getValue(DoublePlantBlock.HALF) == DoubleBlockHalf.UPPER) {
             return java.util.Collections.emptyList();
         }
         Set<JsonRule> rules = RulesLoader.getRules(blockState, tileNbt);
@@ -529,6 +565,17 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 return false;
             }
         }
+        // Same shape for double-plant blocks: LOWER's build atomically sets the UPPER half above
+        // it, so defer (refunding the item) if the UPPER position is blocked.
+        if (newBlockState.getBlock() instanceof DoublePlantBlock
+                && newBlockState.hasProperty(DoublePlantBlock.HALF)
+                && newBlockState.getValue(DoublePlantBlock.HALF) == DoubleBlockHalf.LOWER) {
+            BlockPos upperPos = blockPos.above();
+            BlockState atUpper = level.getBlockState(upperPos);
+            if (!atUpper.isAir() && !atUpper.canBeReplaced(Fluids.WATER)) {
+                return false;
+            }
+        }
         // All checks passed; commit the deferred fluid-destroy now.
         if (willDestroyFluidAtPos) {
             level.destroyBlock(blockPos, false);
@@ -567,6 +614,17 @@ public class SchematicBlockDefault implements ISchematicBlock {
                     && newBlockState.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
                 secondHalfPos = blockPos.above();
                 BlockState upperState = newBlockState.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER);
+                level.setBlock(secondHalfPos, upperState, 3);
+            } else if (newBlockState.getBlock() instanceof DoublePlantBlock
+                    && newBlockState.hasProperty(DoublePlantBlock.HALF)
+                    && newBlockState.getValue(DoublePlantBlock.HALF) == DoubleBlockHalf.LOWER) {
+                // Place the UPPER half before the updateShape sweep below runs, so the LOWER
+                // half's UP-direction updateShape sees its partner and returns the synced state
+                // instead of AIR. One plant item per two-tall plant total — the UPPER position's
+                // schematic returns empty required items and a linkage offset, so it never queues
+                // an independent place task.
+                secondHalfPos = blockPos.above();
+                BlockState upperState = newBlockState.setValue(DoublePlantBlock.HALF, DoubleBlockHalf.UPPER);
                 level.setBlock(secondHalfPos, upperState, 3);
             }
             // Force the placed block to recompute neighbour-aware properties (glass-pane /

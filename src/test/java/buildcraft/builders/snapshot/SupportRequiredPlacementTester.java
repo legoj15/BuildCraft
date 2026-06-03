@@ -10,11 +10,13 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CrossCollisionBlock;
+import net.minecraft.world.level.block.DoublePlantBlock;
 import net.minecraft.world.level.block.LadderBlock;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.WallBlock;
 import net.minecraft.world.level.block.WallTorchBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.WallSide;
 
 /**
@@ -332,6 +334,67 @@ public class SupportRequiredPlacementTester {
                 .anyMatch(p -> p.getName().equals("distance"));
             assertTrue(hasPersistent, "deserialize must re-derive 'persistent' from current rules so isBuilt stops triggering decay→re-place loops");
             assertTrue(hasDistance, "deserialize must re-derive 'distance' from current rules");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * The tall-grass regression. A {@link DoublePlantBlock} is two stacked half-blocks; vanilla
+     * {@code DoublePlantBlock.updateShape} turns a lone half into air the moment its partner is
+     * missing. Building the LOWER half must place the UPPER half in the same {@code build()} call
+     * (before the post-place updateShape sweep), exactly like the bed FOOT/door LOWER cases —
+     * otherwise the lone LOWER self-destructs, {@code build()} rolls it back and refunds the item,
+     * the position re-queues, and the Builder loops forever ("keeps throwing the tall grass out").
+     */
+    public static void testTallGrassLowerPlacesBothHalves(GameTestHelper helper) {
+        try {
+            BlockPos local = new BlockPos(1, 2, 1);
+            BlockPos abs = helper.absolutePos(local);
+            // Ground for the plant to grow on (grass block is in SUPPORTS_VEGETATION).
+            helper.getLevel().setBlock(abs.below(), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+
+            BlockState lower = Blocks.TALL_GRASS.defaultBlockState()
+                    .setValue(DoublePlantBlock.HALF, DoubleBlockHalf.LOWER);
+            SchematicBlockDefault s = schem(lower);
+            boolean placed = s.build(helper.getLevel(), abs, EnumFluidHandlingMode.NO_REPLACE);
+            assertTrue(placed, "build() must succeed for a tall grass lower half on a grass block");
+
+            BlockState atLower = helper.getLevel().getBlockState(abs);
+            BlockState atUpper = helper.getLevel().getBlockState(abs.above());
+            assertTrue(atLower.getBlock() == Blocks.TALL_GRASS
+                            && atLower.getValue(DoublePlantBlock.HALF) == DoubleBlockHalf.LOWER,
+                    "lower half must be present at the build position");
+            assertTrue(atUpper.getBlock() == Blocks.TALL_GRASS
+                            && atUpper.getValue(DoublePlantBlock.HALF) == DoubleBlockHalf.UPPER,
+                    "upper half must be placed atomically by the lower half's build — without it both halves self-destruct via updateShape and the Builder loops");
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * Guards the anti-loop linkage on the UPPER half. The UPPER schematic must (a) require the
+     * position directly below it (the LOWER half) so it never queues an independent place task,
+     * and (b) list no required items — the LOWER half's build places both halves with one item.
+     * Without (a) the UPPER queues on its own, sets a lone half, and updateShape destroys it on
+     * loop; without (b) the Builder consumes two plant items per plant.
+     */
+    public static void testTallGrassUpperHalfLinkedToLower(GameTestHelper helper) {
+        try {
+            BlockState upper = Blocks.TALL_GRASS.defaultBlockState()
+                    .setValue(DoublePlantBlock.HALF, DoubleBlockHalf.UPPER);
+            SchematicBlockDefault s = schem(upper);
+            // Mirror what init() does for a freshly scanned schematic (the schem() helper sets
+            // only blockState/placeBlock).
+            s.addClassBasedRequiredBlockOffsets(upper.getBlock(), upper);
+
+            assertTrue(s.getRequiredBlockOffsets().contains(new BlockPos(0, -1, 0)),
+                    "upper half must require the lower position so it never queues its own place task (the loop)");
+            assertTrue(s.computeRequiredItems().isEmpty(),
+                    "upper half must list no items — the lower half's build places both halves with one item");
             helper.succeed();
         } catch (Throwable t) {
             helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());

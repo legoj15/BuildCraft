@@ -2,8 +2,7 @@
 
 Last audited: 2026-05-31 (final pre-rc review — removed dev scaffolding, swept logging to BCLog, wired recipe-book tooltips, hardened mod metadata)
 
-- [ ] Investigate builder placement deadlocks with the grass/tall grass/flowers.
-	- [ ] Perhaps new ux (red box overlay on the resources?) to signify which blocks cannot be placed (i.e. floating torches, flowers on stone, etc.)
+- [ ] Builder UX: flag blocks that can't be placed yet (floating torches, flowers on stone, etc.) — e.g. a red box overlay on the resource list or the build area — so a stalled build is legible to the player.
 
 
 

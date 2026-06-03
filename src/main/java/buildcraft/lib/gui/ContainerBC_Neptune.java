@@ -56,6 +56,13 @@ public abstract class ContainerBC_Neptune extends RecipeBookMenu {
     public static final int NET_JEI_RECIPE_TRANSFER = 100;
     /** Container message ID used by JEI's BCGhostIngredientHandler. */
     public static final int NET_GHOST_SLOT_SET = 101;
+    /** Container message ID: JEI "+" transfer of real items into a machine's input inventory
+     *  (Assembly Table). Payload: boolean maxTransfer, varInt count, then each chosen stack as NBT.
+     *  Handled by the container subclass; see {@link buildcraft.lib.compat.jei.JeiTransferUtil}. */
+    public static final int NET_JEI_TRANSFER_ITEMS = 102;
+    /** Container message ID: JEI "+" transfer of filled fluid buckets into a machine's container
+     *  slots (Distiller, Heat Exchanger). Payload: varInt count, then (varInt slotIndex, utf bucketItemId) pairs. */
+    public static final int NET_JEI_TRANSFER_BUCKETS = 103;
 
     public final Player player;
     private final List<Widget_Neptune<?>> widgets = new ArrayList<>();

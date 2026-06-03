@@ -128,6 +128,11 @@ public class BuildCraftGameTests {
             // Engine fuel registry — data source for the JEI combustion-fuel/coolant categories
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:fuel_registry_populated_for_jei"), () -> buildcraft.energy.FuelRegistryTester::testFuelRegistryPopulatedForJei);
 
+            // JEI "+" recipe-transfer move logic (Assembly Table / Distiller / Heat Exchanger)
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:jei_transfer_moves_items"), () -> buildcraft.lib.compat.jei.JeiTransferTester::testTransferMovesItems);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:jei_transfer_moves_bucket"), () -> buildcraft.lib.compat.jei.JeiTransferTester::testTransferMovesBucket);
+            event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:jei_transfer_skips_missing"), () -> buildcraft.lib.compat.jei.JeiTransferTester::testTransferSkipsMissing);
+
             // Energy Converter (Dynamo MJ + FE Engine)
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:dynamo_upgrade_slot_filtering"), () -> buildcraft.energy.EnergyConverterTester::testDynamoUpgradeSlotFiltering);
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:engine_fe_upgrade_slot_filtering"), () -> buildcraft.energy.EnergyConverterTester::testEngineFeUpgradeSlotFiltering);

@@ -110,6 +110,16 @@ public class BCFactoryJeiPlugin implements IModPlugin {
                 ),
                 RecipeTypes.CRAFTING
         );
+        // Distiller: move a bucket of the input fluid into its input container slot.
+        registration.addRecipeTransferHandler(
+                new DistillerTransferHandler(registration.getTransferHelper()),
+                DistillerRecipeTypes.DISTILLER
+        );
+        // Heat Exchanger: move the hot + cold input buckets into its input container slots.
+        registration.addRecipeTransferHandler(
+                new HeatExchangerTransferHandler(registration.getTransferHelper()),
+                HeatExchangerRecipeTypes.PAIR
+        );
     }
 
     @Override

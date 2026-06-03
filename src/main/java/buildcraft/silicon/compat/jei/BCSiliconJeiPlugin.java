@@ -119,6 +119,12 @@ public class BCSiliconJeiPlugin implements IModPlugin {
                 ),
                 RecipeTypes.CRAFTING
         );
+        // Assembly Table: move the recipe's real ingredients from the player inventory into the
+        // table's input slots (it uses real slots, not phantom ones).
+        registration.addRecipeTransferHandler(
+                new AssemblyTableTransferHandler(registration.getTransferHelper()),
+                AssemblyRecipeJeiTypes.ASSEMBLY
+        );
     }
 
     @Override

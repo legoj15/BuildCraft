@@ -1,0 +1,10 @@
+{
+    "type":  "minecraft:function",
+    "function":  "buildcraftunofficial:jei_transfer_skips_missing",
+    "environment":  "minecraft:default",
+    "structure":  "minecraft:empty",
+    "max_ticks":  20,
+    "setup_ticks":  0,
+    "required":  true,
+    "batch":  "jei_transfer_skips_missing"
+}

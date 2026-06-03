@@ -960,6 +960,7 @@
     "gui.jei.category.buildcraftunofficial.stirling_engine_fuel": "Stirling Engine Fuel",
     "gui.jei.category.buildcraftunofficial.stirling_engine_fuel.rate": "≤ %s",
     "gui.jei.category.buildcraftunofficial.stirling_engine_fuel.burn": "Burn: %s t",
+    "gui.jei.transfer.buildcraftunofficial.missing": "You don't have the required materials",
     "tag.item.c.gears.wooden": "Wooden Gears",
     "tag.item.c.gears.stone": "Stone Gears",
     "tag.item.c.gears.iron": "Iron Gears",

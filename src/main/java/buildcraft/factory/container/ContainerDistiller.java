@@ -7,15 +7,22 @@
 package buildcraft.factory.container;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.tile.TileDistiller_BC8;
+import buildcraft.lib.compat.jei.JeiTransferUtil;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
+import buildcraft.lib.net.PacketBufferBC;
 
 @SuppressWarnings("this-escape")
 public class ContainerDistiller extends ContainerBC_Neptune {
@@ -45,6 +52,22 @@ public class ContainerDistiller extends ContainerBC_Neptune {
         widgetTankIn = addWidget(new WidgetFluidTank(this, tile != null ? tile.getTankIn() : null));
         widgetTankGasOut = addWidget(new WidgetFluidTank(this, tile != null ? tile.getTankGasOut() : null));
         widgetTankLiquidOut = addWidget(new WidgetFluidTank(this, tile != null ? tile.getTankLiquidOut() : null));
+    }
+
+    @Override
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+        if (id == NET_JEI_TRANSFER_BUCKETS && !isClient && tile != null) {
+            // JEI "+" pressed on a distillation recipe: move a bucket of the input fluid into the
+            // input container slot; the tile drains it into the input tank.
+            int count = buffer.readVarInt();
+            for (int i = 0; i < count; i++) {
+                int slot = buffer.readVarInt();
+                Item bucket = BuiltInRegistries.ITEM.getValue(Identifier.parse(buffer.readUtf()));
+                JeiTransferUtil.moveBucketToSlot(player.getInventory(), bucket, tile.containerSlots, slot);
+            }
+            return;
+        }
+        super.readMessage(id, buffer, isClient, ctx);
     }
 
     private static TileDistiller_BC8 getTile(Inventory playerInv, FriendlyByteBuf buf) {

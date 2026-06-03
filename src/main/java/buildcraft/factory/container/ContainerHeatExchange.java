@@ -9,20 +9,27 @@ package buildcraft.factory.container;
 import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
+
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.tile.TileHeatExchange;
 import buildcraft.factory.tile.TileHeatExchange.ExchangeSection;
 import buildcraft.factory.tile.TileHeatExchange.ExchangeSectionEnd;
 import buildcraft.factory.tile.TileHeatExchange.ExchangeSectionStart;
+import buildcraft.lib.compat.jei.JeiTransferUtil;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
+import buildcraft.lib.net.PacketBufferBC;
 
 @SuppressWarnings("this-escape")
 public class ContainerHeatExchange extends ContainerBC_Neptune {
@@ -65,6 +72,22 @@ public class ContainerHeatExchange extends ContainerBC_Neptune {
         widgetTankStartOutput = addWidget(new WidgetFluidTank(this, start != null ? start.tankOutput : null));
         widgetTankEndInput = addWidget(new WidgetFluidTank(this, end != null ? end.tankInput : null));
         widgetTankEndOutput = addWidget(new WidgetFluidTank(this, end != null ? end.tankOutput : null));
+    }
+
+    @Override
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+        if (id == NET_JEI_TRANSFER_BUCKETS && !isClient && tile != null) {
+            // JEI "+" pressed on a heat-exchanger pair: move hot/cold input buckets into the
+            // container slots; the tile drains them into the section tanks.
+            int count = buffer.readVarInt();
+            for (int i = 0; i < count; i++) {
+                int slot = buffer.readVarInt();
+                Item bucket = BuiltInRegistries.ITEM.getValue(Identifier.parse(buffer.readUtf()));
+                JeiTransferUtil.moveBucketToSlot(player.getInventory(), bucket, tile.containerSlots, slot);
+            }
+            return;
+        }
+        super.readMessage(id, buffer, isClient, ctx);
     }
 
     @Nullable

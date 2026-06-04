@@ -12,12 +12,20 @@ import com.mojang.blaze3d.pipeline.DepthStencilState;
 //?}
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 
+//? if >=1.21.11 {
 import net.minecraft.util.Util;
+//?}
 import net.minecraft.client.renderer.RenderPipelines;
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.rendertype.LayeringTransform;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
+//?}
+// RenderType: `rendertype.` subpackage on 1.21.11+, moved by the build-script regex
+// replacement to `net.minecraft.client.renderer.RenderType` on the 1.21.10 node.
 import net.minecraft.client.renderer.rendertype.RenderType;
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+//?}
 import net.minecraft.resources.Identifier;
 
 /**
@@ -55,22 +63,38 @@ public final class BCLibRenderTypes {
             //?}
             .build();
 
+    //? if >=1.21.11 {
     private static final RenderType LED = RenderType.create(
             "buildcraft:led",
             RenderSetup.builder(LED_PIPELINE)
                     .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
                     .createRenderSetup()
     );
+    //?} else {
+    /*private static final RenderType LED = RenderType.create(
+            "buildcraft:led", 1536, false, false, LED_PIPELINE,
+            RenderType.CompositeState.builder()
+                    .setLayeringState(RenderType.VIEW_OFFSET_Z_LAYERING)
+                    .createCompositeState(false)
+    );*/
+    //?}
 
     /**
      * Opaque sibling of {@link #LED}: the same depth-writing {@link #LED_PIPELINE}, minus the LED's
      * view-offset Z layering (which only matters for quads mounted flush on a block face). For
      * free-standing solid debug geometry — see {@link buildcraft.lib.debug.DebugRenderHelper}.
      */
+    //? if >=1.21.11 {
     private static final RenderType DEBUG_SOLID = RenderType.create(
             "buildcraft:debug_solid",
             RenderSetup.builder(LED_PIPELINE).createRenderSetup()
     );
+    //?} else {
+    /*private static final RenderType DEBUG_SOLID = RenderType.create(
+            "buildcraft:debug_solid", 1536, false, false, LED_PIPELINE,
+            RenderType.CompositeState.builder().createCompositeState(false)
+    );*/
+    //?}
 
     public static RenderType led() {
         return LED;
@@ -82,7 +106,11 @@ public final class BCLibRenderTypes {
      * whether it reads as a translucent volume or a solid marker.
      */
     public static RenderType debugFilled() {
+        //? if >=1.21.11 {
         return RenderTypes.debugFilledBox();
+        //?} else {
+        /*return RenderType.debugFilledBox();*/
+        //?}
     }
 
     /**
@@ -106,14 +134,11 @@ public final class BCLibRenderTypes {
      * culling to drop the inside quad. The no-cull translucent type let both render, double-blending
      * the paint overlay. Memoised per texture, matching vanilla's render-type factories.
      */
+    //? if >=26.1 {
     private static final Function<Identifier, RenderType> ENTITY_TRANSLUCENT_CULL = Util.memoize(
             texture -> RenderType.create(
                     "buildcraft:entity_translucent_cull",
-                    //? if >=26.1 {
                     RenderSetup.builder(RenderPipelines.ENTITY_TRANSLUCENT_CULL)
-                    //?} else {
-                    /*RenderSetup.builder(RenderPipelines.ITEM_ENTITY_TRANSLUCENT_CULL)*/
-                    //?}
                             .withTexture("Sampler0", texture)
                             .useLightmap()
                             .useOverlay()
@@ -121,9 +146,84 @@ public final class BCLibRenderTypes {
                             .sortOnUpload()
                             .setOutline(RenderSetup.OutlineProperty.NONE)
                             .createRenderSetup()));
+    //?} elif >=1.21.11 {
+    /*private static final Function<Identifier, RenderType> ENTITY_TRANSLUCENT_CULL = Util.memoize(
+            texture -> RenderType.create(
+                    "buildcraft:entity_translucent_cull",
+                    RenderSetup.builder(RenderPipelines.ITEM_ENTITY_TRANSLUCENT_CULL)
+                            .withTexture("Sampler0", texture)
+                            .useLightmap()
+                            .useOverlay()
+                            .affectsCrumbling()
+                            .sortOnUpload()
+                            .setOutline(RenderSetup.OutlineProperty.NONE)
+                            .createRenderSetup()));*/
+    //?} else {
+    /*// 1.21.10: no RenderSetup; the vanilla itemEntityTranslucentCull factory (memoised
+    // internally) IS the ITEM_ENTITY_TRANSLUCENT_CULL-based culling translucent type.
+    private static final Function<Identifier, RenderType> ENTITY_TRANSLUCENT_CULL = RenderType::itemEntityTranslucentCull;*/
+    //?}
 
     public static RenderType entityTranslucentCull(Identifier texture) {
         return ENTITY_TRANSLUCENT_CULL.apply(texture);
+    }
+
+    // ─── Vanilla render-type accessors ──────────────────────────────────────────
+    // The stored render types live on RenderTypes (26.1 / 1.21.11) vs back on RenderType
+    // (1.21.10). Routing the whole codebase through these wrappers keeps that single cross-line
+    // divergence here instead of scattered across ~13 renderers (the class's stated purpose).
+
+    public static RenderType entityCutout(Identifier texture) {
+        //? if >=1.21.11 {
+        return RenderTypes.entityCutout(texture);
+        //?} else {
+        /*return RenderType.entityCutout(texture);*/
+        //?}
+    }
+
+    public static RenderType entityTranslucent(Identifier texture) {
+        //? if >=1.21.11 {
+        return RenderTypes.entityTranslucent(texture);
+        //?} else {
+        /*return RenderType.entityTranslucent(texture);*/
+        //?}
+    }
+
+    public static RenderType entitySolid(Identifier texture) {
+        //? if >=1.21.11 {
+        return RenderTypes.entitySolid(texture);
+        //?} else {
+        /*return RenderType.entitySolid(texture);*/
+        //?}
+    }
+
+    public static RenderType lines() {
+        //? if >=1.21.11 {
+        return RenderTypes.lines();
+        //?} else {
+        /*return RenderType.lines();*/
+        //?}
+    }
+
+    /** Cull-back-face cutout for the given texture. 26.1 has a dedicated {@code entityCutoutCull};
+     * 1.21.11 / 1.21.10 fold it into {@code entityCutout}. */
+    public static RenderType entityCutoutCull(Identifier texture) {
+        //? if >=26.1 {
+        return RenderTypes.entityCutoutCull(texture);
+        //?} elif >=1.21.11 {
+        /*return RenderTypes.entityCutout(texture);*/
+        //?} else {
+        /*return RenderType.entityCutout(texture);*/
+        //?}
+    }
+
+    /** Translucent sheet for item-layer overlays: 1.21.11+ has a block-item variant; 1.21.10 the plain item sheet. */
+    public static RenderType translucentItemSheet() {
+        //? if >=1.21.11 {
+        return net.minecraft.client.renderer.Sheets.translucentBlockItemSheet();
+        //?} else {
+        /*return net.minecraft.client.renderer.Sheets.translucentItemSheet();*/
+        //?}
     }
 
     private BCLibRenderTypes() {}

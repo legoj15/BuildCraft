@@ -115,10 +115,18 @@ public record DyeReplaceSpriteSource(Identifier source, Identifier mask) impleme
     }
 
     private record Loader(LazyLoadedImage base, LazyLoadedImage mask, int dyeRgb, Identifier outputId)
+            //? if >=1.21.11 {
             implements DiscardableLoader {
+            //?} else {
+            /*implements net.minecraft.client.renderer.texture.atlas.SpriteSource.SpriteSupplier {*/
+            //?}
 
         @Override
+        //? if >=1.21.11 {
         public @Nullable SpriteContents get(SpriteResourceLoader loader) {
+        //?} else {
+        /*public @Nullable SpriteContents apply(SpriteResourceLoader loader) {*/
+        //?}
             NativeImage out = null;
             try {
                 NativeImage baseImg = base.get();

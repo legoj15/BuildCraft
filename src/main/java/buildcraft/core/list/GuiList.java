@@ -7,8 +7,9 @@
 package buildcraft.core.list;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.ActiveTextCollector;
 import buildcraft.lib.gui.BCGraphics;
+import buildcraft.lib.gui.button.BCButton;
+import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
@@ -158,7 +159,7 @@ public class GuiList extends GuiBC8<ContainerList> {
                 ToggleButton button = new ToggleButton(
                         bOffX + btn * BTN_W, bOffY, BTN_W, BTN_H,
                         Component.literal(letter),
-                        b -> {
+                        () -> {
                             menu.switchButton(lineIdx, btnIdx);
                             // Mutual exclusion (Precise vs By-Type/By-Material) may have
                             // toggled OTHER buttons in this row off — refresh all 3 visuals.
@@ -194,15 +195,22 @@ public class GuiList extends GuiBC8<ContainerList> {
      * {@code onClick}, so any subclass that takes over the input path needs to play it
      * itself). The override also gives us audio feedback that wasn't present in earlier
      * iterations of this widget. */
-    private static class ToggleButton extends Button.Plain {
+    private static class ToggleButton extends BCButton {
         private static final Identifier SPRITE_NORMAL = Identifier.withDefaultNamespace("widget/button");
         private static final Identifier SPRITE_DISABLED = Identifier.withDefaultNamespace("widget/button_disabled");
         private static final Identifier SPRITE_HIGHLIGHTED = Identifier.withDefaultNamespace("widget/button_highlighted");
 
+        private final Runnable onPressAction;
         private boolean toggled;
 
-        ToggleButton(int x, int y, int width, int height, Component message, OnPress onPress) {
-            super(x, y, width, height, message, onPress, DEFAULT_NARRATION);
+        ToggleButton(int x, int y, int width, int height, Component message, Runnable onPressAction) {
+            super(x, y, width, height, message);
+            this.onPressAction = onPressAction;
+        }
+
+        @Override
+        public void onPress(InputWithModifiers modifiers) {
+            onPressAction.run();
         }
 
         void setToggled(boolean toggled) {
@@ -210,14 +218,9 @@ public class GuiList extends GuiBC8<ContainerList> {
         }
 
         @Override
-        //? if >=26.1 {
-        protected void extractContents(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        //?} else {
-        /*protected void renderContents(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {*/
-        //?}
-            // Sprite selection driven by toggled state, NOT active state — keeps the text at
-            // full color (active stays true) while still showing the disabled-look background
-            // for the toggled-on visual.
+        protected void drawButtonContent(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            // Sprite selection driven by toggled state, NOT active state — keeps the label at full
+            // colour (active stays true) while showing the disabled-look background when toggled on.
             Identifier sprite;
             if (toggled) {
                 sprite = SPRITE_DISABLED;
@@ -226,23 +229,11 @@ public class GuiList extends GuiBC8<ContainerList> {
             } else {
                 sprite = SPRITE_NORMAL;
             }
-            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite,
+            graphics.raw.blitSprite(RenderPipelines.GUI_TEXTURED, sprite,
                     getX(), getY(), getWidth(), getHeight(),
                     ARGB.white(this.alpha));
-
-            // Text rendering reuses the vanilla helper — same path as Button.Plain, so the
-            // letter is drawn centered at full white. 26.1 renamed render→extract and
-            // GuiGraphics→GuiGraphicsExtractor (the enum's outer class); the collector type
-            // (ActiveTextCollector) and method name (textRendererForWidget) are identical.
-            //? if >=26.1 {
-            ActiveTextCollector renderer = graphics.textRendererForWidget(this,
-                    net.minecraft.client.gui.GuiGraphicsExtractor.HoveredTextEffects.NONE);
-            extractDefaultLabel(renderer);
-            //?} else {
-            /*ActiveTextCollector renderer = graphics.textRendererForWidget(this,
-                    net.minecraft.client.gui.GuiGraphics.HoveredTextEffects.NONE);
-            renderDefaultLabel(renderer);*/
-            //?}
+            // Centred letter label via the BCButton helper (the version-specific text path lives there).
+            drawDefaultButtonLabel(graphics);
         }
 
         @Override

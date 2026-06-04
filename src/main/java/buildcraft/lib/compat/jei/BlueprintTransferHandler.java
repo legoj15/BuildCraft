@@ -24,6 +24,7 @@ import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 import mezz.jei.api.recipe.types.IRecipeType;
 
 import buildcraft.lib.gui.ContainerBC_Neptune;
+import buildcraft.lib.misc.RegistryKeyUtil;
 
 /**
  * A reusable JEI recipe transfer handler for BuildCraft machines that use
@@ -86,7 +87,7 @@ public class BlueprintTransferHandler<C extends AbstractContainerMenu>
             // Send a custom container message with the recipe's resource location.
             // The server-side handler in ContainerBC_Neptune will look up the recipe
             // and call CraftingUtil.placeRecipeInBlueprint().
-            String recipeIdStr = recipe.id().identifier().toString();
+            String recipeIdStr = RegistryKeyUtil.id(recipe.id()).toString();
             bcContainer.sendMessage(NET_JEI_RECIPE_TRANSFER, buf -> {
                 buf.writeUtf(recipeIdStr);
             });

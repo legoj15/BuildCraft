@@ -98,10 +98,17 @@ public class AWRecipeBookComponent extends RecipeBookComponent<ContainerAutoCraf
         }
     }
 
+    //? if >=1.21.11 {
     @Override
     protected WidgetSprites getFilterButtonTextures() {
         return FILTER_BUTTON_SPRITES;
     }
+    //?} else {
+    /*@Override
+    protected void initFilterButtonTextures() {
+        this.filterButton.initTextureValues(FILTER_BUTTON_SPRITES);
+    }*/
+    //?}
 
     @Override
     protected Component getRecipeFilterName() {

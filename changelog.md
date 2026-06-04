@@ -5,3 +5,6 @@
 - Fixed flowing fluids pushing entities with way too much force
 - Fixed the Builder listing every pipe as the same type
 - Fixed the Builder placing pipe add-ons for free
+- Added support for Minecraft 1.21.10
+- Fixed gates appearing too dark and lenses/filters being invisible in the inventory
+- Fixed the Builder and Filler showing the wrong block textures during their throwing animation

@@ -8,6 +8,7 @@ package buildcraft.builders.gui;
 
 import net.minecraft.ChatFormatting;
 import buildcraft.lib.gui.BCGraphics;
+import buildcraft.lib.gui.button.BCButton;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -210,7 +211,7 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
      * local optimistic state to reconcile — the button redraws whenever
      * {@code ContainerBuilder}'s ContainerData pushes a new ordinal.
      */
-    private class FluidModeButton extends AbstractButton {
+    private class FluidModeButton extends BCButton {
         private EnumFluidHandlingMode lastKnown;
 
         FluidModeButton(int x, int y) {
@@ -224,23 +225,11 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
         }
 
         @Override
-        //? if >=26.1 {
-        protected void extractContents(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY,
-                                       float partialTick) {
-        //?} else {
-        /*protected void renderContents(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY,
-                                       float partialTick) {*/
-        //?}
-            // Vanilla widget/button sprite — 9-sliced, hover-aware via SPRITES.get(active, hovered).
-            // Matches the Replacer's Replace button and any other vanilla Button in the mod, so
-            // the BC GUI stays visually consistent with stock Minecraft + resource pack overrides.
-            //? if >=26.1 {
-            extractDefaultSprite(graphics);
-            //?} else {
-            /*renderDefaultSprite(graphics);*/
-            //?}
+        protected void drawButtonContent(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            // Vanilla 9-sliced, hover-aware button sprite — consistent with stock Button + resource packs.
+            drawDefaultButtonSprite(graphics);
             EnumFluidHandlingMode mode = menu.getSyncedFluidMode();
-            new BCGraphics(graphics).item(mode.icon(), getX() + 2, getY() + 2);
+            graphics.item(mode.icon(), getX() + 2, getY() + 2);
         }
 
         @Override
@@ -263,7 +252,7 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
      * resource packs; under {@link EnumContainerContentsMode#IGNORE} also overlays the vanilla
      * barrier item (the universal "no" sprite) so the state reads at a glance.
      */
-    private class ContentsModeButton extends AbstractButton {
+    private class ContentsModeButton extends BCButton {
         private static final net.minecraft.world.item.ItemStack CHEST_ICON =
                 new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CHEST);
         private static final net.minecraft.world.item.ItemStack BARRIER_OVERLAY =
@@ -282,24 +271,12 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
         }
 
         @Override
-        //? if >=26.1 {
-        protected void extractContents(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY,
-                                       float partialTick) {
-        //?} else {
-        /*protected void renderContents(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY,
-                                       float partialTick) {*/
-        //?}
-            //? if >=26.1 {
-            extractDefaultSprite(graphics);
-            //?} else {
-            /*renderDefaultSprite(graphics);*/
-            //?}
-            BCGraphics bcg = new BCGraphics(graphics);
-            bcg.item(CHEST_ICON, getX() + 2, getY() + 2);
+        protected void drawButtonContent(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            drawDefaultButtonSprite(graphics);
+            graphics.item(CHEST_ICON, getX() + 2, getY() + 2);
             if (menu.getSyncedContentsMode() == EnumContainerContentsMode.IGNORE) {
-                // Both items render at the same slot-relative origin; the barrier's transparent
-                // pixels let the chest show through, producing a chest-with-no overlay.
-                bcg.item(BARRIER_OVERLAY, getX() + 2, getY() + 2);
+                // Both items at the same origin; the barrier's transparent pixels let the chest show through.
+                graphics.item(BARRIER_OVERLAY, getX() + 2, getY() + 2);
             }
         }
 

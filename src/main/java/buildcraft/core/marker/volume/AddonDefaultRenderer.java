@@ -11,7 +11,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import org.joml.Matrix4f;
 
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.world.entity.player.Player;
@@ -32,7 +32,7 @@ public class AddonDefaultRenderer<T extends Addon> implements IFastAddonRenderer
 
     @Override
     public void renderAddonFast(T addon, Player player, float partialTicks, PoseStack poseStack, MultiBufferSource bufferSource) {
-        VertexConsumer builder = bufferSource.getBuffer(RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
+        VertexConsumer builder = bufferSource.getBuffer(BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
         AABB bb = addon.getBoundingBox();
         Matrix4f pose = poseStack.last().pose();
         // Map raw 0-1 UV to atlas-relative UV via the sprite. Without this, vertices use the entire

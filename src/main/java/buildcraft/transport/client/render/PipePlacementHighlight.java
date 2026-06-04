@@ -13,7 +13,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.ShapeRenderer;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 //? if >=26.1 {
 import net.minecraft.client.renderer.state.level.BlockOutlineRenderState;
 //?} else {
@@ -140,10 +140,14 @@ public final class PipePlacementHighlight {
             }
             Vec3 cam = levelRenderState.cameraRenderState.pos;
             BlockPos pos = renderState.pos();
-            VertexConsumer lines = buffer.getBuffer(RenderTypes.lines());
+            VertexConsumer lines = buffer.getBuffer(BCLibRenderTypes.lines());
             ShapeRenderer.renderShape(poseStack, lines, shape,
                     pos.getX() - cam.x, pos.getY() - cam.y, pos.getZ() - cam.z,
+                    //? if >=1.21.11 {
                     ARGB.black(102), 2.5F);
+                    //?} else {
+                    /*0x66000000);*/
+                    //?}
             buffer.endLastBatch();
             return true;
         }

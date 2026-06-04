@@ -8,7 +8,9 @@ import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
+//? if >=1.21.11 {
 import net.minecraft.server.permissions.Permissions;
+//?}
 import net.minecraft.world.entity.player.Player;
 
 import buildcraft.lib.client.guide.GuiGuide;
@@ -64,7 +66,11 @@ public abstract class PageLink implements IContentsLeaf {
         // PermissionLevel.GAMEMASTERS == id 2. The client-side LocalPlayer's permission
         // set is populated from the server's OP level via ClientboundEntityEventPacket
         // events 24-28, so this check works in both SP and MP.
+        //? if >=1.21.11 {
         if (p.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) return true;
+        //?} else {
+        /*if (p.hasPermissions(2)) return true;*/
+        //?}
         MinecraftServer sp = mc.getSingleplayerServer();
         return sp != null && sp.getWorldData().isAllowCommands();
     }

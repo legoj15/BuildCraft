@@ -33,7 +33,11 @@ public class DebugOverlayRenderer {
         BCGraphics graphics = new BCGraphics(vanillaGraphics);
         Minecraft mc = Minecraft.getInstance();
 
+        //? if >=1.21.11 {
         if (mc.debugEntries == null || !mc.debugEntries.isOverlayVisible()) {
+        //?} else {
+        /*if (mc.debugEntries == null || !mc.debugEntries.isF3Visible()) {*/
+        //?}
             return;
         }
 

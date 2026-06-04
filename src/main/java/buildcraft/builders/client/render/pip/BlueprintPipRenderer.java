@@ -34,7 +34,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -185,7 +184,9 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
      * context is fully wired up). Once created, the buffer is reused for the life of the game.
      */
     private GpuBuffer lightingBuffer;
-    private long lightingBufferPaddedSize;
+    // int (not long): MC 1.21.10's GpuDevice.createBuffer/GpuBuffer.slice take int sizes; 1.21.11+ take
+    // long (an int widens fine). UBO sizes are well within int range, so one field type serves all nodes.
+    private int lightingBufferPaddedSize;
 
     public BlueprintPipRenderer(MultiBufferSource.BufferSource bufferSource) {
         super(bufferSource);
@@ -397,11 +398,7 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                             // rendering through the culling block sheet.
                             ModelPipe.renderDirect(pipeKey, pipePose,
                                     this.bufferSource.getBuffer(
-                                            //? if >=26.1 {
-                                            RenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS)),
-                                            //?} else {
-                                            /*RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS)),*/
-                                            //?}
+                                            BCLibRenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS)),
                                     FULL_BRIGHT);
                             ModelPipe.renderMaskOverlay(pipeKey, pipePose,
                                     this.bufferSource.getBuffer(
@@ -558,8 +555,8 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         // so the alpha is clamped to binary and doesn't bleed the background through.
         VertexConsumer vc = this.bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
-                        ? RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS)
-                        : RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
+                        ? BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS)
+                        : BCLibRenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
 
         poseStack.pushPose();
         poseStack.translate(xCell, yCell, zCell);
@@ -673,7 +670,7 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
             // Fully-enclosed interior cell: nothing exposed, so skip the buffer churn entirely.
             return;
         }
-        VertexConsumer vc = this.bufferSource.getBuffer(RenderTypes.entityTranslucent(SCAN_TEXTURE));
+        VertexConsumer vc = this.bufferSource.getBuffer(BCLibRenderTypes.entityTranslucent(SCAN_TEXTURE));
 
         poseStack.pushPose();
         poseStack.translate(xCell, yCell, zCell);

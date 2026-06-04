@@ -185,5 +185,11 @@ public class LensItemModel implements ItemModel {
 
         var layer = renderState.newLayer();
         layer.prepareQuadList().addAll(quads);
+        //? if <26.1 {
+        /*// Pre-26.1 doesn't infer a layer's render type from its quads, so set one explicitly —
+        // without it the lens layer draws nothing (invisible in the inventory). A translucent sheet
+        // covers both the opaque cutout frame (alpha 255 stays opaque) and the coloured glass overlay.
+        layer.setRenderType(buildcraft.lib.client.render.BCLibRenderTypes.translucentItemSheet());*/
+        //?}
     }
 }

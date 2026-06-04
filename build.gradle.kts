@@ -17,6 +17,71 @@ val javaVersion = property("java_version") as String
 val updateBranch = property("update_branch") as String
 val neoDepRange = property("neo_dep_range") as String
 val mcDepRange = property("mc_dep_range") as String
+// True only on MC lines below 1.21.11 (i.e. the 1.21.10 node). Gates the back-compat source
+// replacements + the extra deps that the 26.1.2 / 1.21.11 nodes already get transitively.
+val isPre1_21_11 = stonecutter.eval(stonecutter.current.version, "<1.21.11")
+
+// ─── Stonecutter source replacements ─────────────────────────────────────────
+// The 1.21.10 node (ONLY) reverses Mojang's 1.21.11 ResourceLocation->Identifier rename
+// tree-wide, so the shared source — written in the canonical `Identifier` form used by the
+// 26.1.2 + 1.21.11 nodes — compiles against 1.21.10's older `ResourceLocation`. Word-boundary
+// regex (\b) avoids clobbering substrings like Character.isJavaIdentifierStart, IdentifierException,
+// or REI's CategoryIdentifier. `direction` gates it: false on 26.1.2/1.21.11 => no-op (those nodes
+// are untouched); true only on 1.21.10. Applied during each node's stonecutterGenerate, so it works
+// under per-node `:1.21.10:compileJava` without switching the active node.
+stonecutter {
+    replacements {
+        regex {
+            direction.set(isPre1_21_11)
+            replace("\\bIdentifier\\b", "ResourceLocation", "\\bResourceLocation\\b", "Identifier")
+        }
+        regex {
+            direction.set(isPre1_21_11)
+            replace("\\bIdentifierArgument\\b", "ResourceLocationArgument", "\\bResourceLocationArgument\\b", "IdentifierArgument")
+        }
+        // RenderType moved out of the `rendertype` subpackage AT 1.21.11. This is a clean,
+        // reversible package-move (same class name) so it rides as a replacement; `\b` stops
+        // before RenderTypeS (which was a separate split-out class on 1.21.11 — handled via
+        // directives, since its members merged back onto RenderType on 1.21.10).
+        regex {
+            direction.set(isPre1_21_11)
+            replace(
+                "net\\.minecraft\\.client\\.renderer\\.rendertype\\.RenderType\\b", "net.minecraft.client.renderer.RenderType",
+                "net\\.minecraft\\.client\\.renderer\\.RenderType\\b", "net.minecraft.client.renderer.rendertype.RenderType"
+            )
+        }
+        // RenderTypes (the stored render-type accessors) was split out as its own class AT 1.21.11;
+        // on 1.21.10 those statics live back on RenderType. This handles the fully-qualified call
+        // sites (rendertype.RenderTypes.foo() -> renderer.RenderType.foo()); the handful of files that
+        // import + use it BARE are converted via //? directives (a bare RenderTypes->RenderType swap
+        // is NOT safely reversible, since it would clobber legitimate RenderType usages on 26.1/1.21.11).
+        regex {
+            direction.set(isPre1_21_11)
+            replace(
+                "net\\.minecraft\\.client\\.renderer\\.rendertype\\.RenderTypes\\.", "net.minecraft.client.renderer.RenderType.",
+                "net\\.minecraft\\.client\\.renderer\\.RenderType\\.", "net.minecraft.client.renderer.rendertype.RenderTypes."
+            )
+        }
+        // Game-test assertions: 1.21.10's GameTestHelper.assertTrue/assertFalse take a Component message
+        // (1.21.11+/26.1 take a String). Route helper.assert*(...) through GameTestUtil (which wraps the
+        // String) on the 1.21.10 node only. `\bhelper\.` matches the GameTestHelper param (never JUnit
+        // Assertions.*). Only test sources contain `helper.assertTrue(`, so this is inert for main code.
+        regex {
+            direction.set(isPre1_21_11)
+            replace(
+                "\\bhelper\\.assertTrue\\(", "buildcraft.lib.test.GameTestUtil.assertTrue(helper, ",
+                "\\bbuildcraft\\.lib\\.test\\.GameTestUtil\\.assertTrue\\(helper, ", "helper.assertTrue("
+            )
+        }
+        regex {
+            direction.set(isPre1_21_11)
+            replace(
+                "\\bhelper\\.assertFalse\\(", "buildcraft.lib.test.GameTestUtil.assertFalse(helper, ",
+                "\\bbuildcraft\\.lib\\.test\\.GameTestUtil\\.assertFalse\\(helper, ", "helper.assertFalse("
+            )
+        }
+    }
+}
 
 java {
     toolchain {
@@ -93,6 +158,10 @@ dependencies {
     compileOnly("mezz.jei:jei-$minecraftVersion-common-api:$jeiVersion")
     compileOnly("mezz.jei:jei-$minecraftVersion-neoforge-api:$jeiVersion")
     runtimeOnly("mezz.jei:jei-$minecraftVersion-neoforge:$jeiVersion")
+
+    // jspecify @Nullable/@NonNull: NeoForge exposes it transitively on 1.21.11+ / 26.1, but the
+    // 21.10.x line does not put it on the compile classpath — add it explicitly for that node.
+    if (isPre1_21_11) compileOnly("org.jspecify:jspecify:1.0.0")
 
     // REI — No compatible versions for MC 26.1 yet
     // compileOnly("me.shedaniel:RoughlyEnoughItems-api-neoforge:16.0.799")

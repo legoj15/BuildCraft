@@ -134,12 +134,15 @@ public class MutableQuad {
              | ((v.colour_g & 0xFF) << 8)  |  (v.colour_b & 0xFF);
     }
 
-    /** Builds a NeoForge BakedColors from this quad's per-vertex colours. */
+    //? if >=1.21.11 {
+    /** Builds a NeoForge BakedColors from this quad's per-vertex colours.
+     * (1.21.11+ only — 1.21.10 bakes per-vertex colour straight into the BLOCK vertex int[].) */
     private net.neoforged.neoforge.client.model.quad.BakedColors buildBakedColors() {
         return net.neoforged.neoforge.client.model.quad.BakedColors.of(
             packArgb(vertex_0), packArgb(vertex_1),
             packArgb(vertex_2), packArgb(vertex_3));
     }
+    //?}
 
     /** Converts this MutableQuad into a MC 26.1 BakedQuad, preserving per-vertex colours. */
     public BakedQuad toBakedBlock() {
@@ -161,7 +164,7 @@ public class MutableQuad {
             net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
             buildBakedColors()
         );
-        //?} else {
+        //?} elif >=1.21.11 {
         /*// 1.21.11 carries tintIndex/sprite/shade/lightEmission as separate record components and
         // has no per-quad chunk layer (the block's RenderType decides cutout vs translucent), so the
         // CUTOUT/TRANSLUCENT split below collapses here. hasAmbientOcclusion=true matches vanilla.
@@ -176,6 +179,15 @@ public class MutableQuad {
             net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
             buildBakedColors(), true
         );*/
+        //?} else {
+        /*// 1.21.10 BakedQuad is the old int[] vertex form (no Vector3fc / BakedColors / per-quad layer);
+        // MutableVertex.toBakedBlock packs the BLOCK format (8 ints/vertex, colour+light+normal inline).
+        int[] data = new int[32];
+        vertex_0.toBakedBlock(data, 0);
+        vertex_1.toBakedBlock(data, 8);
+        vertex_2.toBakedBlock(data, 16);
+        vertex_3.toBakedBlock(data, 24);
+        return new BakedQuad(data, tintIndex, face, sprite, shade, lightEmission);*/
         //?}
     }
 
@@ -201,7 +213,7 @@ public class MutableQuad {
             net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
             buildBakedColors()
         );
-        //?} else {
+        //?} elif >=1.21.11 {
         /*// 1.21.11 BakedQuad has no per-quad layer; translucent routing is a TODO for 1.21.11 visual
         // parity (needs a TRANSLUCENT block RenderType). Produces the same quad as toBakedBlock().
         return new BakedQuad(
@@ -215,6 +227,14 @@ public class MutableQuad {
             net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
             buildBakedColors(), true
         );*/
+        //?} else {
+        /*// 1.21.10: same int[] BakedQuad as toBakedBlock (no per-quad translucent layer here either).
+        int[] data = new int[32];
+        vertex_0.toBakedBlock(data, 0);
+        vertex_1.toBakedBlock(data, 8);
+        vertex_2.toBakedBlock(data, 16);
+        vertex_3.toBakedBlock(data, 24);
+        return new BakedQuad(data, tintIndex, face, sprite, shade, lightEmission);*/
         //?}
     }
 
@@ -274,10 +294,19 @@ public class MutableQuad {
         lightEmission = quad.lightEmission();*/
         //?}
 
+        //? if >=1.21.11 {
         readVertexFromBaked(vertex_0, quad.position0(), quad.packedUV0());
         readVertexFromBaked(vertex_1, quad.position1(), quad.packedUV1());
         readVertexFromBaked(vertex_2, quad.position2(), quad.packedUV2());
         readVertexFromBaked(vertex_3, quad.position3(), quad.packedUV3());
+        //?} else {
+        /*// 1.21.10 BakedQuad stores the raw BLOCK vertex int[] (8 ints/vertex); decode positions + UVs.
+        int[] vd = quad.vertices();
+        readVertexFromBakedArray(vertex_0, vd, 0);
+        readVertexFromBakedArray(vertex_1, vd, 8);
+        readVertexFromBakedArray(vertex_2, vd, 16);
+        readVertexFromBakedArray(vertex_3, vd, 24);*/
+        //?}
 
         return this;
     }
@@ -286,6 +315,13 @@ public class MutableQuad {
         v.positionf(pos.x(), pos.y(), pos.z());
         // UVPair.pack stores two floats in a long; unpack manually
         v.texf(Float.intBitsToFloat((int) (packedUV >> 32)), Float.intBitsToFloat((int) packedUV));
+    }
+
+    /** Decodes a vertex from a 1.21.10 BakedQuad's raw BLOCK vertex int[] (8 ints/vertex): position at
+     * [o..o+2] and texture UV at [o+4..o+5], both as float bits. Mirrors {@link MutableVertex#toBakedBlock}. */
+    private static void readVertexFromBakedArray(MutableVertex v, int[] data, int o) {
+        v.positionf(Float.intBitsToFloat(data[o]), Float.intBitsToFloat(data[o + 1]), Float.intBitsToFloat(data[o + 2]));
+        v.texf(Float.intBitsToFloat(data[o + 4]), Float.intBitsToFloat(data[o + 5]));
     }
 
     /** Alias for {@link #fromBakedBlock(BakedQuad)}. */
@@ -319,7 +355,16 @@ public class MutableQuad {
     }
 
     public void setCalculatedNormal() {
-        normalvf(getCalculatedNormal());
+        Vector3f n = getCalculatedNormal();
+        // Normalise: getCalculatedNormal returns the raw edge cross-product, whose length is the quad's
+        // area — well under 1 for small quads. 1.21.11+ ignores baked vertex normals (it bakes with
+        // BakedNormals.UNSPECIFIED and recomputes), but the 1.21.10 int[] vertex path packs this normal
+        // directly, so a sub-unit normal there produces too-dark GUI item diffuse (e.g. gates/lenses).
+        // Normalising is correct on every line and inert where the baked normal is ignored.
+        if (n.lengthSquared() > 1.0e-6f) {
+            n.normalize();
+        }
+        normalvf(n);
     }
 
     public static float diffuseLight(Vector3f normal) {

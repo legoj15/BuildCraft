@@ -133,10 +133,18 @@ public record FluidLerpSpriteSource(Identifier source, Identifier output, String
     }
 
     private record Loader(LazyLoadedImage base, int light, int dark, int frametime, Identifier outputId)
+            //? if >=1.21.11 {
             implements DiscardableLoader {
+            //?} else {
+            /*implements net.minecraft.client.renderer.texture.atlas.SpriteSource.SpriteSupplier {*/
+            //?}
 
         @Override
+        //? if >=1.21.11 {
         public @Nullable SpriteContents get(SpriteResourceLoader loader) {
+        //?} else {
+        /*public @Nullable SpriteContents apply(SpriteResourceLoader loader) {*/
+        //?}
             NativeImage out = null;
             try {
                 NativeImage baseImg = base.get();
@@ -154,8 +162,13 @@ public record FluidLerpSpriteSource(Identifier source, Identifier output, String
                 FrameSize frameSize = new FrameSize(w, w);
                 AnimationMetadataSection animation = new AnimationMetadataSection(
                     Optional.empty(), Optional.empty(), Optional.empty(), frametime, true);
+                //? if >=1.21.11 {
                 SpriteContents result = new SpriteContents(
                     outputId, frameSize, out, Optional.of(animation), List.of(), Optional.empty());
+                //?} else {
+                /*SpriteContents result = new SpriteContents(
+                    outputId, frameSize, out, Optional.of(animation), List.of());*/
+                //?}
                 out = null; // ownership transferred to SpriteContents
                 return result;
             } catch (IOException e) {

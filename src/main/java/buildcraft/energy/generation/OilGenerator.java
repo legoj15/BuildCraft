@@ -23,6 +23,7 @@ import buildcraft.api.core.BCDebugging;
 import buildcraft.api.core.BCLog;
 
 import buildcraft.lib.misc.RandUtil;
+import buildcraft.lib.misc.RegistryKeyUtil;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.misc.data.Box;
 
@@ -199,7 +200,7 @@ public class OilGenerator {
 
     /** Check if the dimension is excluded based on config. */
     private static boolean isDimensionExcluded(ResourceKey<Level> dimKey) {
-        boolean inList = BCEnergyConfig.getExcludedDimensions().contains(dimKey.identifier());
+        boolean inList = BCEnergyConfig.getExcludedDimensions().contains(RegistryKeyUtil.id(dimKey));
         return BCEnergyConfig.dimensionListMode.get() == BCEnergyConfig.ListMode.BLACKLIST ? inList : !inList;
     }
 

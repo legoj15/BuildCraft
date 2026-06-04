@@ -405,7 +405,7 @@ public final class GateRecipeVariantTester {
             if (!(holder.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe)) {
                 continue;
             }
-            String id = holder.id().identifier().toString();
+            String id = buildcraft.lib.misc.RegistryKeyUtil.id(holder.id()).toString();
             if (id.contains("_to_or")) {
                 toOr++;
             } else if (id.contains("_to_and")) {

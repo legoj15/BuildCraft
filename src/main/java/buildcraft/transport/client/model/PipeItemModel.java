@@ -224,7 +224,7 @@ public class PipeItemModel implements ItemModel {
                 var overlayLayer = renderState.newLayer();
                 overlayLayer.prepareQuadList().addAll(overlayQuads);
                 overlayLayer.setExtents(() -> BlockModelWrapper.computeExtents(overlayQuads));
-                overlayLayer.setRenderType(Sheets.translucentBlockItemSheet());
+                overlayLayer.setRenderType(buildcraft.lib.client.render.BCLibRenderTypes.translucentItemSheet());
                 props.applyToLayer(overlayLayer, displayContext);
                 // Semi-transparent dye colour at tintIndex 0 (alpha 76 ~= 30% glaze).
                 int tintColour = (76 << 24) | buildcraft.lib.misc.ColourUtil.getLightHex(colour);

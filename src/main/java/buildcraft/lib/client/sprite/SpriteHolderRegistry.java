@@ -38,7 +38,11 @@ public class SpriteHolderRegistry {
     private static final class AtlasLookup {
         static final Identifier[] ORDER = {
             TextureAtlas.LOCATION_BLOCKS,
+            //? if >=1.21.11 {
+            // 1.21.11+ stitches item textures onto a separate items atlas; 1.21.10 keeps them
+            // on the blocks atlas, so there's nothing extra to scan there.
             TextureAtlas.LOCATION_ITEMS,
+            //?}
             Sheets.GUI_SHEET,
         };
     }

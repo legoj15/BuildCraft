@@ -26,6 +26,7 @@ import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.item.crafting.ShapelessRecipe;
 
 import buildcraft.lib.client.guide.parts.GuidePartFactory;
+import buildcraft.lib.misc.RegistryKeyUtil;
 
 /** Crafting recipe lookup for the guide book.
  *
@@ -77,8 +78,8 @@ public enum GuideCraftingRecipes implements IStackRecipes {
         java.util.TreeMap<String, CraftingRecipe> matched = new java.util.TreeMap<>();
         for (RecipeHolder<?> holder : manager.getRecipes()) {
             if (holder.value() instanceof CraftingRecipe crafting
-                && holder.id().identifier().toString().contains(substring)) {
-                matched.put(holder.id().identifier().toString(), crafting);
+                && RegistryKeyUtil.id(holder.id()).toString().contains(substring)) {
+                matched.put(RegistryKeyUtil.id(holder.id()).toString(), crafting);
             }
         }
         return new ArrayList<>(matched.values());

@@ -12,7 +12,7 @@ import org.joml.Vector3f;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -112,8 +112,8 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer fluidBB = bufferSource.getBuffer(
             flow.renderCacheTranslucent
-                ? RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS)
-                : RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
+                ? BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS)
+                : BCLibRenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
 
         double[] amounts = SCRATCH_AMOUNTS.get();
         double[] offX = SCRATCH_OFF_X.get();

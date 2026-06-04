@@ -1,6 +1,7 @@
 package buildcraft.transport.client.gui;
 
 import buildcraft.lib.gui.BCGraphics;
+import buildcraft.lib.gui.button.BCButton;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -99,7 +100,7 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
         return super.mouseReleased(event);
     }
 
-    private class PaintButton extends net.minecraft.client.gui.components.AbstractButton {
+    private class PaintButton extends BCButton {
         private final SlotIndex index;
         private int pressedButton = -1; // kept for potential future use
 
@@ -145,11 +146,7 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
         }
 
         @Override
-        //? if >=26.1 {
-        protected void extractContents(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        //?} else {
-        /*protected void renderContents(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {*/
-        //?}
+        protected void drawButtonContent(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
             // Show indent while this button is the actively pressed one
             int v = (activePressedButton == this) ? 20 : 0;
             GuiIcon bgIcon = new GuiIcon(TEXTURE, 176, v, 20, 20, 256);

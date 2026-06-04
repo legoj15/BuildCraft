@@ -312,7 +312,7 @@ public class AdvancementTester {
                         "Tag " + tagKey.location() + " not loaded — JSON missing or path wrong."))
                 .stream()
                 .map(Holder::unwrapKey)
-                .map(opt -> opt.orElseThrow().identifier())
+                .map(opt -> buildcraft.lib.misc.RegistryKeyUtil.id(opt.orElseThrow()))
                 .collect(Collectors.toSet());
     }
 

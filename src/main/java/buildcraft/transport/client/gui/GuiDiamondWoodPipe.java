@@ -6,6 +6,7 @@
 package buildcraft.transport.client.gui;
 
 import buildcraft.lib.gui.BCGraphics;
+import buildcraft.lib.gui.button.BCButton;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -91,7 +92,7 @@ public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
     }
 
 
-    private class FilterButton extends AbstractButton {
+    private class FilterButton extends BCButton {
         private final FilterMode mode;
         private final int iconU, iconV;
 
@@ -109,11 +110,7 @@ public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
         }
 
         @Override
-        //? if >=26.1 {
-        protected void extractContents(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        //?} else {
-        /*protected void renderContents(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {*/
-        //?}
+        protected void drawButtonContent(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
             int state;
             boolean selected = menu.behaviour.filterMode == mode;
             if (!this.active) {

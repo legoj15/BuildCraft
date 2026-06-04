@@ -43,6 +43,7 @@ import buildcraft.lib.client.guide.GuideManager;
 import buildcraft.lib.client.guide.GuidePageRegistry;
 import buildcraft.lib.client.guide.PageLine;
 import buildcraft.lib.client.guide.entry.PageEntry;
+import buildcraft.lib.misc.RegistryKeyUtil;
 import buildcraft.lib.client.guide.entry.PageValueType;
 import buildcraft.lib.client.guide.parts.GuideChapterWithin;
 import buildcraft.lib.client.guide.parts.GuideImageFactory;
@@ -819,7 +820,7 @@ public enum XmlPageLoader implements IPageLoaderText {
             return null;
         }
         for (RecipeHolder<?> holder : manager.getRecipes()) {
-            if (holder.id().identifier().equals(rl)) {
+            if (RegistryKeyUtil.id(holder.id()).equals(rl)) {
                 if (holder.value() instanceof CraftingRecipe crafting) {
                     return GuideCraftingFactory.getFactory(crafting);
                 }

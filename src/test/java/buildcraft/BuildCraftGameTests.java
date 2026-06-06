@@ -18,8 +18,10 @@ public class BuildCraftGameTests {
     // Game-test registration. 1.21.5+ uses the dynamic Registries.TEST_FUNCTION registry + JSON
     // test_instance manifests; 1.21.1 (below that cliff) has neither, so it reflects TestFunctions
     // straight into GameTestRegistry against the buildcraftunofficial:empty arena
-    // (data/buildcraftunofficial/structure/empty.nbt — a 1x1x1 air copy of minecraft:empty with the
-    // 1.21.1 DataVersion). registerAll() below is the SINGLE source of truth for all node lines;
+    // (data/buildcraftunofficial/structure/empty.nbt — a 16x16x16 air arena standing in for the
+    // 1.21.5+ minecraft:empty structure, with the 1.21.1 DataVersion; the size gives encaseStructure
+    // room for the oil-gen surface scan). registerAll() below is the SINGLE source of truth for all
+    // node lines;
     // each node only differs in the registrar lambda it passes.
     //? if >=1.21.10 {
     @net.neoforged.bus.api.SubscribeEvent
@@ -44,8 +46,14 @@ public class BuildCraftGameTests {
             @SuppressWarnings("unchecked")
             java.util.Collection<net.minecraft.gametest.framework.TestFunction> coll =
                 (java.util.Collection<net.minecraft.gametest.framework.TestFunction>) f.get(null);
+            // skyAccess=true (11th arg) so StructureUtils.encaseStructure omits the BARRIER CEILING
+            // (it always builds walls, but adds a ceiling only when !skyAccess). Without it the oil-gen
+            // surface-scan (findSolidSurfaceTop, top-down) hits the ceiling instead of the test floor,
+            // and spring tests can't place fluid above. Full ctor: batch, name, structure, rotation,
+            // maxTicks, setupTicks, required, manualOnly, maxAttempts, requiredSuccesses, skyAccess, fn.
             coll.add(new net.minecraft.gametest.framework.TestFunction(
-                "defaultBatch", id, "buildcraftunofficial:empty", 100, 0L, true, sup.get()));
+                "defaultBatch", id, "buildcraftunofficial:empty",
+                net.minecraft.world.level.block.Rotation.NONE, 100, 0L, true, false, 1, 1, true, sup.get()));
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException("Failed to register 1.21.1 game test " + id, e);
         }

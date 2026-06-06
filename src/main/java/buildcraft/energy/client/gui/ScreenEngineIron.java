@@ -167,10 +167,14 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
                     tintColor
                 );
                 //?} else {
-                /*graphics.blit(
+                /*// regionWidth/regionHeight (drawW, drawH) are REQUIRED so this binds to the (…,int color)
+                // region-blit overload; without them it binds to blit(…,int textureSize) and tintColor is
+                // consumed as the texture size (garbage UVs, no tint → water invisible, fluids grey).
+                graphics.blit(
                     TextureAtlas.LOCATION_BLOCKS,
                     tileX, tileY,
                     sprite.getU0() * atlasWidth, sprite.getV0() * atlasHeight,
+                    drawW, drawH,
                     drawW, drawH,
                     atlasWidth, atlasHeight,
                     tintColor

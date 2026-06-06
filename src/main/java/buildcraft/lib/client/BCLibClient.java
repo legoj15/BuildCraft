@@ -146,7 +146,10 @@ public class BCLibClient {
             event -> GuideManager.INSTANCE.ensureLoaded()
         );
 
-        NeoForge.EVENT_BUS.register(BCDebugOverlay.class);
+        // (BCDebugOverlay removed: it was a second, redundant F3-debug renderer that drew the
+        // targeted tile's client info with a "[BC] " prefix — duplicating DebugOverlayRenderer, which
+        // already renders the same info plus the server/client diff. Both were registered, so the F3
+        // overlay showed the client info twice. DebugOverlayRenderer (RegisterGuiLayersEvent) is the keeper.)
         NeoForge.EVENT_BUS.register(BCTooltips.class);
 
         // Advanced-debug overlay: draws the in-world highlight for whatever tile the player last

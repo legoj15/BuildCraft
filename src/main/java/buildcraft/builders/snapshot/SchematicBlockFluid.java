@@ -108,7 +108,13 @@ public class SchematicBlockFluid implements ISchematicBlock {
                 Stream.of(BlockPos.ZERO)
             )
                 .map(blockPos::offset)
+                //? if >=1.21.10 {
                 .forEach(updatePos -> level.neighborChanged(updatePos, blockState.getBlock(), null));
+                //?} else {
+                /*// 1.21.1 CollectingNeighborUpdater.neighborChanged NPEs on a null fromPos (no guard,
+                // unlike modern); pass the placed block pos as the source.
+                .forEach(updatePos -> level.neighborChanged(updatePos, blockState.getBlock(), blockPos));*/
+                //?}
             return true;
         }
         return false;

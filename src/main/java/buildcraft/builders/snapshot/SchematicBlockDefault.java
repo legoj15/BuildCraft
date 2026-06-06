@@ -674,7 +674,13 @@ public class SchematicBlockDefault implements ISchematicBlock {
             }
             updateBlockOffsets.stream()
                 .map(blockPos::offset)
+                //? if >=1.21.10 {
                 .forEach(updatePos -> level.neighborChanged(updatePos, placeBlock, null));
+                //?} else {
+                /*// 1.21.1 CollectingNeighborUpdater.neighborChanged calls fromPos.immutable() with no
+                // null-guard (NPE), unlike modern; pass the placed block pos (the legitimate source).
+                .forEach(updatePos -> level.neighborChanged(updatePos, placeBlock, blockPos));*/
+                //?}
             if (tileNbt != null) {
                 BlockEntity tileEntity = level.getBlockEntity(blockPos);
                 if (tileEntity != null) {

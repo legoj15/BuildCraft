@@ -45,6 +45,19 @@ public class ItemPipeHolder extends BlockItem implements IItemPipe {
         return definition;
     }
 
+    //? if <1.21.10 {
+    /*@Override
+    public String getDescriptionId() {
+        // 1.21.1: BlockItem.getDescriptionId() returns the BLOCK's id, and every pipe item wraps the
+        // single shared pipe_holder block -- so all pipes would display the untranslated
+        // "block.buildcraftunofficial.pipe_holder". Return the ITEM's own key
+        // (item.buildcraftunofficial.pipe_<x>_item), which the lang file is keyed on. 26.1+ resolves
+        // names via the ITEM_NAME data component instead, so no override is needed there (and this
+        // branch is absent on those nodes, keeping them byte-identical).
+        return this.getOrCreateDescriptionId();
+    }*/
+    //?}
+
     /** Registers this item as the canonical item for its definition in PipeApi. */
     public ItemPipeHolder registerWithPipeApi() {
         PipeApi.pipeRegistry.setItemForPipe(definition, this);

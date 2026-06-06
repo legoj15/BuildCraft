@@ -140,10 +140,16 @@ public class GuiElementFluidTank implements IInteractionElement {
                     tintColor
                 );
                 //?} else {
-                /*graphics.blit(
+                /*// regionWidth/regionHeight (drawW, drawH) are REQUIRED: without them the call binds to
+                // the blit(...,int textureSize) overload and tintColor is silently consumed as the texture
+                // size — garbage UVs + no tint (water rendered invisible, BC fluids dark grey). With them
+                // it binds to the (…,int color) region overload: sample drawW×drawH px from the sprite and
+                // tint by the fluid colour. Matches the modern path above.
+                graphics.blit(
                     TextureAtlas.LOCATION_BLOCKS,
                     tileX, tileY,
                     sprite.getU0() * atlasWidth, sprite.getV0() * atlasHeight,
+                    drawW, drawH,
                     drawW, drawH,
                     atlasWidth, atlasHeight,
                     tintColor

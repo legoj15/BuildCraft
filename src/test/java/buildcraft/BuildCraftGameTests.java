@@ -461,7 +461,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:gate_modifier_recipe_rejects_wrong_material", () -> buildcraft.silicon.GateRecipeVariantTester::testGoldLapisRecipeRejectsIronPlainGate);
         reg.accept("buildcraftunofficial:gate_modifier_recipe_rejects_already_modified", () -> buildcraft.silicon.GateRecipeVariantTester::testGoldLapisRecipeRejectsAlreadyModifiedGate);
         reg.accept("buildcraftunofficial:gate_modifier_recipe_rejects_wrong_logic", () -> buildcraft.silicon.GateRecipeVariantTester::testOrLogicRecipeRejectsAndLogicGate);
+        //? if >=1.21.10 {
+        // SlotDisplay recipe-display API is 1.21.5+; this test is inapplicable on 1.21.1 (not registered there).
         reg.accept("buildcraftunofficial:gate_modifier_recipe_display_preserves_variant", () -> buildcraft.silicon.GateRecipeVariantTester::testGoldLapisRecipeDisplayPreservesGoldVariant);
+        //?}
         reg.accept("buildcraftunofficial:basic_gate_recipe_emitted_by_collector", () -> buildcraft.silicon.GateRecipeVariantTester::testBasicGateRecipeExistsAndCollectorEmitsIt);
         // JEI U/R lookup simulation — walks the collected entries with the same subtype key
         // (GateVariant.getVariantName) the JEI subtype interpreter uses. If U on a Basic Gate

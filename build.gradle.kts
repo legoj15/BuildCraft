@@ -187,9 +187,11 @@ fun convIngredient1211(v: Any?): Any? = when (v) {
 }
 
 // Recursively down-port nested 1.21.2+ recipe-JSON shapes to 1.21.1:
-//  - drop minecraft:custom_model_data (result components AND component-matching ingredients like
-//    neoforge:components for gate variants) — its 1.21.5+ record form ({strings/floats}) won't
-//    parse against 1.21.1's single-int component;
+//  - rewrite minecraft:custom_model_data from its 1.21.5+ record form ({strings/floats}) to the
+//    1.21.1 single int 0 (result components AND component-matching ingredients like neoforge:components
+//    for gate variants). NOT dropped: BC's 1.21.1 gate/pipe items carry CustomModelData(0) (the
+//    multi-string variant routing collapses to a single int on 1.21.1; the real variant identity is
+//    in custom_data), and the gate-recipe game tests assert the crafted output has CustomModelData[0];
 //  - rename the custom-ingredient dispatch key "neoforge:ingredient_type" -> "type": 1.21.1's
 //    CraftingHelper.makeIngredientMapCodec dispatches on "type" (NeoForgeExtraCodecs.dispatchMapOrElse),
 //    a key NeoForge renamed in 1.21.2. Safe: only ingredient objects carry it; the recipe root's
@@ -199,7 +201,9 @@ fun stripCustomModelData(node: Any?) {
     when (node) {
         is MutableMap<*, *> -> {
             val m = node as MutableMap<String, Any?>
-            m.remove("minecraft:custom_model_data")
+            if (m.containsKey("minecraft:custom_model_data")) {
+                m["minecraft:custom_model_data"] = 0
+            }
             if (m.containsKey("neoforge:ingredient_type")) {
                 m["type"] = m.remove("neoforge:ingredient_type")
             }

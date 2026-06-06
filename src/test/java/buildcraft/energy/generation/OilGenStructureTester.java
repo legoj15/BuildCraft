@@ -49,13 +49,13 @@ public class OilGenStructureTester {
             // Centre cell should now be oil.
             if (!helper.getBlockState(relativeCenter).is(
                     BCEnergyFluids.OIL_COOL.source().get().defaultFluidState().createLegacyBlock().getBlock())) {
-                throw new IllegalStateException("Pool centre is not oil at " + relativeCenter
+                helper.fail("Pool centre is not oil at " + relativeCenter
                         + " (got " + helper.getBlockState(relativeCenter) + ")");
             }
             // Far corner (well outside any plausible pool radius) should still be stone.
             BlockPos farCorner = new BlockPos(0, floorY, 0);
             if (!helper.getBlockState(farCorner).is(Blocks.STONE)) {
-                throw new IllegalStateException("Pool spilled onto far corner " + farCorner
+                helper.fail("Pool spilled onto far corner " + farCorner
                         + " — expected STONE, got " + helper.getBlockState(farCorner));
             }
         });
@@ -97,7 +97,7 @@ public class OilGenStructureTester {
             for (int dy = 1; dy <= 15; dy++) {
                 BlockPos pos = relativeCenter.above(dy);
                 if (helper.getBlockState(pos).is(BlockTags.LOGS)) {
-                    throw new IllegalStateException("Tall-tree BFS left a log at " + pos
+                    helper.fail("Tall-tree BFS left a log at " + pos
                             + " (dy=" + dy + ") — budget exhausted before reaching the trunk base.");
                 }
             }

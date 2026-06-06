@@ -172,6 +172,70 @@ sourceSets {
     }
 }
 
+// ─── 1.21.1 recipe data-format down-port ─────────────────────────────────────
+// The recipe JSONs are hand-authored in the 1.21.2+ datapack format: bare-string ingredients
+// ("#c:dyes/black", "buildcraftunofficial:gear") and the record-shaped minecraft:custom_model_data
+// ({"strings":[...],"floats":[...]}). MC 1.21.1 wants object ingredients ({"tag":...}/{"item":...})
+// and a single-int custom_model_data. Stonecutter doesn't touch resources, so we transform the
+// COPIED output (src stays the canonical modern form; only the 1.21.1 node's processResources runs
+// this — the released nodes get no doLast and are byte-identical). custom_model_data is dropped: on
+// 1.21.1 BC's gate/pipe variants render via programmatic models reading NBT, not custom_model_data.
+fun convIngredient1211(v: Any?): Any? = when (v) {
+    is String -> if (v.startsWith("#")) linkedMapOf("tag" to v.substring(1)) else linkedMapOf("item" to v)
+    is List<*> -> v.map { convIngredient1211(it) }
+    else -> v
+}
+
+// Recursively down-port nested 1.21.2+ recipe-JSON shapes to 1.21.1:
+//  - drop minecraft:custom_model_data (result components AND component-matching ingredients like
+//    neoforge:components for gate variants) — its 1.21.5+ record form ({strings/floats}) won't
+//    parse against 1.21.1's single-int component;
+//  - rename the custom-ingredient dispatch key "neoforge:ingredient_type" -> "type": 1.21.1's
+//    CraftingHelper.makeIngredientMapCodec dispatches on "type" (NeoForgeExtraCodecs.dispatchMapOrElse),
+//    a key NeoForge renamed in 1.21.2. Safe: only ingredient objects carry it; the recipe root's
+//    own "type" (e.g. minecraft:crafting_shaped) has no neoforge:ingredient_type to clash with.
+@Suppress("UNCHECKED_CAST")
+fun stripCustomModelData(node: Any?) {
+    when (node) {
+        is MutableMap<*, *> -> {
+            val m = node as MutableMap<String, Any?>
+            m.remove("minecraft:custom_model_data")
+            if (m.containsKey("neoforge:ingredient_type")) {
+                m["type"] = m.remove("neoforge:ingredient_type")
+            }
+            m.values.toList().forEach { stripCustomModelData(it) }
+        }
+        is List<*> -> node.forEach { stripCustomModelData(it) }
+    }
+}
+
+@Suppress("UNCHECKED_CAST")
+fun convertRecipe1211(root: Any?) {
+    val r = root as? MutableMap<String, Any?> ?: return
+    (r["key"] as? MutableMap<String, Any?>)?.let { key ->
+        for (k in key.keys.toList()) key[k] = convIngredient1211(key[k])
+    }
+    (r["ingredients"] as? List<Any?>)?.let { r["ingredients"] = it.map { e -> convIngredient1211(e) } }
+    if (r.containsKey("ingredient")) r["ingredient"] = convIngredient1211(r["ingredient"])
+    stripCustomModelData(r)
+}
+
+tasks.named<Copy>("processResources") {
+    if (isPre1_21_10) {
+        doLast {
+            val recipeDir = destinationDir.resolve("data/buildcraftunofficial/recipe")
+            if (recipeDir.isDirectory) {
+                val slurper = groovy.json.JsonSlurper()
+                recipeDir.listFiles()?.filter { it.extension == "json" }?.forEach { f ->
+                    val root = slurper.parse(f)
+                    convertRecipe1211(root)
+                    f.writeText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(root)))
+                }
+            }
+        }
+    }
+}
+
 // ─── NeoForge Configuration ─────────────────────────────────────────────────
 neoForge {
     version = neoVersion

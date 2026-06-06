@@ -169,8 +169,17 @@ public class OilGenerator {
             return;
         }
 
-        int x = chunkX * 16 + 8;
-        int z = chunkZ * 16 + 8;
+        // Clip region = EXACTLY the chunk being loaded (chunk-aligned). This used to be offset by
+        // +8 (chunk centre .. centre+15), which made the box straddle the current chunk's second half
+        // AND the next chunk's first half. Oil generates on ChunkEvent.Load (server thread, mid
+        // FULL-status task); a read/write landing in that not-yet-loaded next chunk forces a synchronous
+        // ServerChunkCache.getChunk that parks the server thread forever (worldgen deadlock — the
+        // watchdog reports "a single server tick took 45 s"). Chunk-aligned, every structure slice that
+        // overlaps this chunk is generated here, and each neighbouring chunk generates its own slice when
+        // IT loads (the offset and aligned boxes both tile the world, so the union — the full structure —
+        // is identical; only which load event places a given block changes).
+        int x = chunkX * 16;
+        int z = chunkZ * 16;
         BlockPos min = new BlockPos(x, level.getMinY(), z);
         BlockPos maxPos = new BlockPos(x + 15, level.getMaxY(), z + 15);
         Box box = new Box(min, maxPos);

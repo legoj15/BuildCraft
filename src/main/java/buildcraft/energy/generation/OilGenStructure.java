@@ -9,6 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -27,6 +28,20 @@ import buildcraft.energy.tile.TileSpringOil;
 
 @SuppressWarnings("deprecation")
 public abstract class OilGenStructure {
+    /**
+     * Block-update flags for all worldgen placement in this class. {@link Block#UPDATE_KNOWN_SHAPE}
+     * is the load-bearing bit: it tells {@code markAndNotifyBlock} to skip {@code updateNeighbourShapes},
+     * which otherwise reads neighbour {@link net.minecraft.world.level.block.state.BlockState}s. Because
+     * oil generates on {@code ChunkEvent.Load} (on the server thread, against the live {@code ServerLevel}),
+     * a block placed at a chunk edge would shape-update a neighbour in an UNLOADED chunk, forcing a
+     * synchronous {@code ServerChunkCache.getChunk} that blocks the server thread waiting for a chunk that
+     * is itself queued behind the current task — a worldgen deadlock (a single tick hangs indefinitely;
+     * the dedicated-server watchdog reports "a single server tick took 45 s"). {@link Block#UPDATE_CLIENTS}
+     * is kept so the placement still syncs when the chunk is later sent. Vanilla worldgen never runs shape
+     * updates either, so this is behaviour-equivalent for the generated world.
+     */
+    protected static final int WORLDGEN_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
+
     public final Box box;
     public final ReplaceType replaceType;
 
@@ -60,7 +75,7 @@ public abstract class OilGenStructure {
     }
 
     public static void setOil(LevelAccessor level, BlockPos pos) {
-        level.setBlock(pos, BCEnergyFluids.OIL_COOL.source().get().defaultFluidState().createLegacyBlock(), 2);
+        level.setBlock(pos, BCEnergyFluids.OIL_COOL.source().get().defaultFluidState().createLegacyBlock(), WORLDGEN_FLAGS);
     }
 
     /**
@@ -197,7 +212,7 @@ public abstract class OilGenStructure {
             // pop's setBlock could touch a neighbour that's already in our queue if
             // they share a tag — rare but cheap to handle).
             if (!state.is(BlockTags.LOGS) && !state.is(BlockTags.LEAVES)) continue;
-            level.setBlock(pos, Blocks.AIR.defaultBlockState(), 2);
+            level.setBlock(pos, Blocks.AIR.defaultBlockState(), WORLDGEN_FLAGS);
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dy = -1; dy <= 1; dy++) {
                     for (int dz = -1; dz <= 1; dz++) {
@@ -205,6 +220,12 @@ public abstract class OilGenStructure {
                         BlockPos n = pos.offset(dx, dy, dz);
                         if (n.getX() < minX || n.getX() > maxX || n.getZ() < minZ || n.getZ() > maxZ) continue;
                         if (!visited.add(n.asLong())) continue;
+                        // Skip neighbours in not-yet-loaded chunks: the BFS may reach
+                        // TREE_CLEAR_CHUNK_EXPANSION blocks past the chunk edge, and reading a block in an
+                        // unloaded chunk during ChunkEvent.Load would force a blocking getChunk (worldgen
+                        // deadlock). Tree-clearing across the boundary is cosmetic; that neighbour clears
+                        // its own overhang when it loads.
+                        if (!level.hasChunk(n.getX() >> 4, n.getZ() >> 4)) continue;
                         BlockState ns = level.getBlockState(n);
                         if (ns.is(BlockTags.LOGS) || ns.is(BlockTags.LEAVES)) {
                             queue.add(n);
@@ -342,7 +363,7 @@ public abstract class OilGenStructure {
                         BlockPos upper = findWorldSurfaceTop(level, x, z);
                         if (canReplaceForOil(level, upper)) {
                             for (int y = 0; y < 5; y++) {
-                                level.setBlock(upper.above(y), Blocks.AIR.defaultBlockState(), 2);
+                                level.setBlock(upper.above(y), Blocks.AIR.defaultBlockState(), WORLDGEN_FLAGS);
                             }
                             for (int y = 0; y < depth; y++) {
                                 setOilIfCanReplace(level, upper.below(y));
@@ -404,7 +425,7 @@ public abstract class OilGenStructure {
                         BlockPos upper = clearTreesAndFindGround(level, baseTop, intersect);
                         if (canReplaceForOil(level, upper)) {
                             for (int y = 0; y < 5; y++) {
-                                level.setBlock(upper.above(y), Blocks.AIR.defaultBlockState(), 2);
+                                level.setBlock(upper.above(y), Blocks.AIR.defaultBlockState(), WORLDGEN_FLAGS);
                             }
                             for (int y = 0; y < depth; y++) {
                                 setOilIfCanReplace(level, upper.below(y));
@@ -506,7 +527,7 @@ public abstract class OilGenStructure {
 
         public void generate(LevelAccessor level, int count) {
             BlockState state = BCCoreBlocks.SPRING_OIL.get().defaultBlockState();
-            level.setBlock(pos, state, 2);
+            level.setBlock(pos, state, WORLDGEN_FLAGS);
             // Force-place oil directly above the spring so it can function.
             // Spring sits at level.getMinY() (replacing the 100%-bedrock floor),
             // so pos.above() is at minY+1 — well within the bedrock gradient.

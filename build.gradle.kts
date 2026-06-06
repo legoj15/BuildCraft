@@ -224,6 +224,66 @@ fun convertRecipe1211(root: Any?) {
     stripCustomModelData(r)
 }
 
+// 1.21.1 ITEM-MODEL FORMAT BACKPORT (1.21.1 node only — modern src untouched, released nodes
+// byte-identical). 1.21.4+ defines item models in assets/<ns>/items/<name>.json (the component-driven
+// model selector: minecraft:model / minecraft:range_dispatch / select / condition). 1.21.1 has none of
+// that — it reads the classic assets/<ns>/models/item/<name>.json (parent + textures + custom_model_data
+// overrides). Without a classic model an item shows MISSING TEXTURE in inventories (the in-world block
+// still renders from its blockstate). So for every items/ definition we synthesise the classic model:
+//   • minecraft:model            -> { parent: <referenced model> }  (only when no hand-authored classic
+//                                    model already ships — never clobber a textured one)
+//   • minecraft:range_dispatch   -> classic base (existing model, or parent=fallback) + classic
+//     (custom_model_data)            `overrides` translated from the range entries. The matching items
+//                                    set CUSTOM_MODEL_DATA on 1.21.1 (gated `else` branches in
+//                                    Item{Paintbrush_BC8,List_BC8,MapLocation,GateCopier}), so the
+//                                    overrides resolve the colour/state variant the selector picked.
+@Suppress("UNCHECKED_CAST")
+fun generateOldItemModels1211(itemsDir: File, modelsItemDir: File) {
+    if (!itemsDir.isDirectory) return
+    val slurper = groovy.json.JsonSlurper()
+    fun write(file: File, model: Any?) {
+        file.parentFile.mkdirs()
+        file.writeText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(model)))
+    }
+    itemsDir.listFiles()?.filter { it.extension == "json" }?.forEach { f ->
+        val root = slurper.parse(f) as? Map<String, Any?> ?: return@forEach
+        val spec = root["model"] as? Map<String, Any?> ?: return@forEach
+        val outFile = modelsItemDir.resolve("${f.nameWithoutExtension}.json")
+        when (spec["type"]) {
+            "minecraft:model" -> {
+                if (!outFile.exists()) write(outFile, linkedMapOf("parent" to spec["model"]))
+            }
+            "neoforge:fluid_container" -> {
+                // Fluid buckets: 1.21.4+ items/ uses `"type": "neoforge:fluid_container"`; the classic
+                // models/item/ form is the same dynamic model under `"loader"` (same id, same fields).
+                if (!outFile.exists()) {
+                    val model = linkedMapOf<String, Any?>("loader" to "neoforge:fluid_container")
+                    spec.forEach { (k, v) -> if (k != "type") model[k] = v }
+                    write(outFile, model)
+                }
+            }
+            "minecraft:range_dispatch" -> {
+                if (spec["property"] == "minecraft:custom_model_data") {
+                    val entries = (spec["entries"] as? List<Map<String, Any?>>) ?: emptyList()
+                    val overrides = entries.map { e ->
+                        linkedMapOf(
+                            "predicate" to linkedMapOf("custom_model_data" to e["threshold"]),
+                            "model" to (e["model"] as Map<String, Any?>)["model"]
+                        )
+                    }
+                    val out: MutableMap<String, Any?> = if (outFile.exists()) {
+                        slurper.parse(outFile) as MutableMap<String, Any?>
+                    } else {
+                        linkedMapOf("parent" to (spec["fallback"] as Map<String, Any?>)["model"])
+                    }
+                    out["overrides"] = overrides
+                    write(outFile, out)
+                }
+            }
+        }
+    }
+}
+
 tasks.named<Copy>("processResources") {
     if (isPre1_21_10) {
         doLast {
@@ -236,6 +296,11 @@ tasks.named<Copy>("processResources") {
                     f.writeText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(root)))
                 }
             }
+            // Synthesise classic models/item/ JSONs from the 1.21.4+ items/ definitions (see fn doc).
+            generateOldItemModels1211(
+                destinationDir.resolve("assets/buildcraftunofficial/items"),
+                destinationDir.resolve("assets/buildcraftunofficial/models/item")
+            )
         }
     }
 }

@@ -197,6 +197,9 @@ public class BuildCraftGameTests {
         // Filler Planner is a pattern-only screen — its container must expose no slots (no player inventory).
         reg.accept("buildcraftunofficial:filler_planner_has_no_slots", () -> buildcraft.builders.FillerPlannerContainerTester::testFillerPlannerHasNoSlots);
 
+        // Quarry frames must not be washed away (and dropped) by flowing fluid (infinite-frame exploit).
+        reg.accept("buildcraftunofficial:frame_not_washed_away_by_fluid", () -> buildcraft.builders.block.BlockFrameTester::testFrameNotWashedAwayByFluid);
+
         // Template Builder — fillable-slot classification (grass tufts / snow / fluids).
         // Regression guard for the user-reported "Filler with Excavate doesn't clear grass
         // tufts" bug: TemplateBuilder.isBlockCorrect used to flag any non-air block as

@@ -23,9 +23,15 @@ public class BCBuildersBlocks {
 
     // 1.12.2 Material.IRON → pickaxe required for drops (parity restored via
     // requiresCorrectToolForDrops + minecraft:mineable/pickaxe tag).
+    // forceSolidOn(): the frame is a non-full-cube block, so by default blocksMotion()==false, which
+    // makes FlowingFluid.canHoldFluid() true — flowing fluid (oil/water reaching the quarry) would
+    // "wash it away", dropping the frame item (an unobtainable block → infinite-frame exploit).
+    // Forcing solid makes blocksMotion()==true so fluid flows AROUND the frame instead of destroying
+    // it. No other effect on a non-full block: suffocation/view-blocking/redstone all additionally
+    // require a full collision cube, which the frame is not.
     public static final DeferredBlock<BlockFrame> FRAME = RegistrationUtilBC.registerBlock(BLOCKS,
             "frame",
-            BlockFrame::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
+            BlockFrame::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().forceSolidOn().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockFiller> FILLER = RegistrationUtilBC.registerBlock(BLOCKS,
             "filler",

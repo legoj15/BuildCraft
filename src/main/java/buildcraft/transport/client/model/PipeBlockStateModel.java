@@ -178,16 +178,27 @@ public class PipeBlockStateModel implements net.neoforged.neoforge.client.model.
             return vanillaDelegate.getQuads(state, side, random, extraData, renderType);
         }
         java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> out = new java.util.ArrayList<>();
-        out.addAll(PipeModelCacheAll.getCutoutModel(tile));
-        out.addAll(PipeModelCacheAll.getTranslucentModel(tile));
+        // Split by chunk layer: the pipe body rides the cutout pass, the painted-pipe colour overlay
+        // rides the translucent pass so its 30%-tint mask alpha-blends instead of rendering opaque.
+        // (renderType is null for non-chunk callers — emit everything in that case.)
+        if (renderType == null || renderType == net.minecraft.client.renderer.RenderType.cutout()) {
+            out.addAll(PipeModelCacheAll.getCutoutModel(tile));
+        }
+        if (renderType == null || renderType == net.minecraft.client.renderer.RenderType.translucent()) {
+            out.addAll(PipeModelCacheAll.getTranslucentModel(tile));
+        }
         return out;
     }
 
     @Override
     public net.neoforged.neoforge.client.ChunkRenderTypeSet getRenderTypes(
             BlockState state, RandomSource rand, ModelData data) {
-        // Pipe body + paint overlay both ride the cutout chunk layer on 1.21.1.
-        return net.neoforged.neoforge.client.ChunkRenderTypeSet.of(net.minecraft.client.renderer.RenderType.cutout());
+        // Pipe body on the cutout layer; painted-pipe colour overlay on the translucent layer so it
+        // alpha-blends (otherwise the 30%-tint mask renders opaque). Matches the modern nodes, which
+        // route the translucent part to the translucent chunk layer via collectParts.
+        return net.neoforged.neoforge.client.ChunkRenderTypeSet.of(
+                net.minecraft.client.renderer.RenderType.cutout(),
+                net.minecraft.client.renderer.RenderType.translucent());
     }
 
     @Override

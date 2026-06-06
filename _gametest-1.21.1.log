@@ -5,26 +5,26 @@ Running Stonecutter 0.9.4
 > Task :1.21.1:stonecutterGenerate UP-TO-DATE
 > Task :1.21.1:createMinecraftArtifacts UP-TO-DATE
 > Task :1.21.1:compileJava UP-TO-DATE
-> Task :1.21.1:processResources
-> Task :1.21.1:classes
+> Task :1.21.1:processResources UP-TO-DATE
+> Task :1.21.1:classes UP-TO-DATE
 > Task :1.21.1:stonecutterPrepareTest UP-TO-DATE
-> Task :1.21.1:stonecutterGenerateTest UP-TO-DATE
+> Task :1.21.1:stonecutterGenerateTest
 > Task :1.21.1:compileTestJava UP-TO-DATE
 > Task :1.21.1:downloadAssets UP-TO-DATE
 > Task :1.21.1:writeGameTestServerLegacyClasspath UP-TO-DATE
 > Task :1.21.1:prepareGameTestServerRun UP-TO-DATE
-> Task :1.21.1:processTestResources UP-TO-DATE
-> Task :1.21.1:testClasses UP-TO-DATE
+> Task :1.21.1:processTestResources
+> Task :1.21.1:testClasses
 
 > Task :1.21.1:runGameTestServer
 WARN StatusConsoleListener Advanced terminal features are not available in this environment
-[16:03:31] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher running: args [--launchTarget, forgeserverdev, --gameDir, ., --fml.fmlVersion, 4.0.42, --fml.mcVersion, 1.21.1, --fml.neoForgeVersion, 21.1.233, --fml.neoFormVersion, 20240808.144430]
-[16:03:31] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: JVM identified as Oracle Corporation OpenJDK 64-Bit Server VM 21.0.2+13-58
-[16:03:31] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher 11.0.5+main.901c6ea8 starting: java version 21.0.2 by Oracle Corporation; OS Windows 11 arch amd64 version 10.0
-[16:03:31] [main/INFO] [ne.ne.fm.lo.ImmediateWindowHandler/]: ImmediateWindowProvider not loading because launch target is forgeserverdev
-[16:03:31] [main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.7 Source=union:/C:/Users/legoj/.gradle/caches/modules-2/files-2.1/net.fabricmc/sponge-mixin/0.15.2+mixin.0.8.7/2af2f021d8e02a0220dc27a7a72b4666d66d44ca/sponge-mixin-0.15.2+mixin.0.8.7.jar%2394!/ Service=ModLauncher Env=SERVER
-[16:03:32] [main/INFO] [ne.ne.fm.lo.mo.lo.JarInJarDependencyLocator/]: Found 2 dependencies adding them to mods collection
-[16:03:32] [main/INFO] [ne.ne.fm.lo.mo.ModDiscoverer/]: 
+[16:06:46] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher running: args [--launchTarget, forgeserverdev, --gameDir, ., --fml.fmlVersion, 4.0.42, --fml.mcVersion, 1.21.1, --fml.neoForgeVersion, 21.1.233, --fml.neoFormVersion, 20240808.144430]
+[16:06:46] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: JVM identified as Oracle Corporation OpenJDK 64-Bit Server VM 21.0.2+13-58
+[16:06:46] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher 11.0.5+main.901c6ea8 starting: java version 21.0.2 by Oracle Corporation; OS Windows 11 arch amd64 version 10.0
+[16:06:46] [main/INFO] [ne.ne.fm.lo.ImmediateWindowHandler/]: ImmediateWindowProvider not loading because launch target is forgeserverdev
+[16:06:46] [main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.7 Source=union:/C:/Users/legoj/.gradle/caches/modules-2/files-2.1/net.fabricmc/sponge-mixin/0.15.2+mixin.0.8.7/2af2f021d8e02a0220dc27a7a72b4666d66d44ca/sponge-mixin-0.15.2+mixin.0.8.7.jar%2394!/ Service=ModLauncher Env=SERVER
+[16:06:46] [main/INFO] [ne.ne.fm.lo.mo.lo.JarInJarDependencyLocator/]: Found 2 dependencies adding them to mods collection
+[16:06:46] [main/INFO] [ne.ne.fm.lo.mo.ModDiscoverer/]: 
      Mod List:
 		Name Version (Mod Id)
 
@@ -32,50 +32,56 @@ WARN StatusConsoleListener Advanced terminal features are not available in this 
 		Just Enough Items 19.27.0.340 (jei)
 		Minecraft 1.21.1 (minecraft)
 		NeoForge 21.1.233 (neoforge)
-[16:03:33] [main/INFO] [cp.mo.mo.LaunchServiceHandler/MODLAUNCHER]: Launching target 'forgeserverdev' with arguments [--gameDir, .]
-[16:03:35] [main/WARN] [os.dr.wi.pe.PerfmonDisabled/]: Invalid registry value type detected for PerfOS counters. Should be REG_DWORD. Ignoring: HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\PerfOS\Performance\Disable Performance Counters.
-[16:03:35] [main/INFO] [MixinExtras|Service/]: Initializing MixinExtras via com.llamalad7.mixinextras.service.MixinExtrasServiceImpl(version=0.5.3).
-[16:03:42] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, location] and [teleport, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
-[16:03:42] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, location] and [teleport, targets] with inputs: [0.1 -0.5 .9, 0 0 0]
-[16:03:42] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, destination] and [teleport, targets] with inputs: [Player, 0123, @e, dd12be42-52a9-4a91-a8a1-11c01849e498]
-[16:03:42] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, targets] and [teleport, destination] with inputs: [Player, 0123, dd12be42-52a9-4a91-a8a1-11c01849e498]
-[16:03:42] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, targets, location] and [teleport, targets, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
-[16:03:42] [modloading-worker-0/INFO] [ne.ne.ne.co.NeoForgeMod/NEOFORGE-MOD]: NeoForge mod loading, version 21.1.233, for MC 1.21.1
-[16:03:42] [modloading-worker-0/INFO] [bu.tr.BCTransport/]: BuildCraft Transport initialized
-[16:03:42] [modloading-worker-0/INFO] [bu.fa.BCFactory/]: BuildCraft Factory initialized
-[16:03:42] [modloading-worker-0/INFO] [bu.en.BCEnergy/]: BuildCraft Energy initialized
-[16:03:42] [modloading-worker-0/INFO] [bu.si.BCSilicon/]: BuildCraft Silicon initialized
-[16:03:42] [modloading-worker-0/INFO] [bu.ro.BCRobotics/]: BuildCraft Robotics initialized
-[16:03:43] [modloading-worker-0/INFO] [BuildCraft/]: [debugger] Debugging not automatically enabled for all of buildcraft. Logging all possible debug options.
-[16:03:43] [modloading-worker-0/INFO] [BuildCraft/]:               To enable it for only logging messages add "-Dbuildcraft.debug=log" to your launch VM arguments
-[16:03:43] [modloading-worker-0/INFO] [BuildCraft/]:               To enable it for ALL debugging "-Dbuildcraft.debug=all" to your launch VM arguments
-[16:03:43] [modloading-worker-0/INFO] [BuildCraft/]:               To remove this message and all future ones add "-Dbuildcraft.debug=disable" to your launch VM arguments
-[16:03:43] [modloading-worker-0/INFO] [BuildCraft/]: [debugger] To enable debugging for lib.markers add the option "-Dbuildcraft.lib.markers.debug=true" to your launch config as a VM argument (LOG).
-[16:03:43] [modloading-worker-0/INFO] [BuildCraft/]: [debugger] To enable debugging for api.painting add the option "-Dbuildcraft.api.painting.debug=true" to your launch config as a VM argument (LOG).
-[16:03:43] [modloading-worker-0/INFO] [BuildCraft/]: [debugger] To enable debugging for api.rotation add the option "-Dbuildcraft.api.rotation.debug=true" to your launch config as a VM argument (LOG).
-[16:03:43] [modloading-sync-worker/INFO] [BuildCraft/]: [energy.oilgen] Registered oil world generation on chunk load.
-[16:03:43] [modloading-sync-worker/INFO] [BuildCraft/]: [silicon.plugs] Registered 6 pluggable definitions
-[16:03:43] [modloading-sync-worker/INFO] [BuildCraft/]: [debugger] To enable debugging for silicon.facade add the option "-Dbuildcraft.silicon.facade.debug=true" to your launch config as a VM argument (LOG).
-[16:03:43] [NeoForge Version Check/INFO] [ne.ne.fm.VersionChecker/]: [buildcraftunofficial] Starting version check at https://raw.githubusercontent.com/legoj15/BuildCraft/main/BuildCraftVersions.json
-[16:03:43] [main/INFO] [mojang/YggdrasilAuthenticationService]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, name=PROD]
-[16:03:43] [main/WARN] [minecraft/VanillaPackResourcesBuilder]: Assets URL 'union:/E:/GitHub/BuildCraft/versions/1.21.1/build/moddev/artifacts/neoforge-21.1.233.jar%23125!/assets/.mcassetsroot' uses unexpected schema
-[16:03:43] [main/WARN] [minecraft/VanillaPackResourcesBuilder]: Assets URL 'union:/E:/GitHub/BuildCraft/versions/1.21.1/build/moddev/artifacts/neoforge-21.1.233.jar%23125!/data/.mcassetsroot' uses unexpected schema
-[16:03:43] [main/INFO] [ne.ne.ne.ga.GameTestHooks/]: Enabled Gametest Namespaces: []
-[16:03:43] [NeoForge Version Check/INFO] [ne.ne.fm.VersionChecker/]: [buildcraftunofficial] Found status: BETA Current: 2026.1.0-rc3 Target: null
-[16:03:45] [main/INFO] [minecraft/RecipeManager]: Loaded 1437 recipes
-[16:03:45] [main/INFO] [minecraft/AdvancementTree]: Loaded 1475 advancements
-[16:03:45] [Server thread/INFO] [BuildCraft/]: [silicon.facade] Total valid facade states: 2367
-[16:03:46] [Server thread/INFO] [BuildCraft/]: [debugger] To enable debugging for energy.oilgen add the option "-Dbuildcraft.energy.oilgen.debug=true" to your launch config as a VM argument (LOG).
-[16:03:46] [Server thread/INFO] [BuildCraft/]: [debugger] To enable debugging for energy.oilgen add the option "-Dbuildcraft.energy.oilgen.debug=true" to your launch config as a VM argument (COMPLEX).
-[16:03:46] [Server thread/INFO] [minecraft/MinecraftServer]: Preparing start region for dimension minecraft:overworld
-[16:03:46] [worldgen/INFO] [minecraft/LoggerChunkProgressListener]: Preparing spawn area: 2%
-[16:03:46] [Server thread/INFO] [minecraft/LoggerChunkProgressListener]: Time elapsed: 449 ms
-[16:03:46] [Server thread/INFO] [minecraft/GameTestServer]: Started game test server
-[16:03:46] [Server thread/INFO] [ne.ne.ne.se.pe.PermissionAPI/]: Successfully initialized permission handler neoforge:default_handler
-[16:03:46] [Server thread/INFO] [minecraft/GameTestServer]: 283 tests are now running at position 1092632, -59, 2514670!
-[16:03:47] [Server thread/INFO] [minecraft/GameTestRunner]: Running test batch 'defaultBatch:0' (50 tests)...
-[16:03:47] [Server thread/INFO] [minecraft/GameTestServer]: [                                                                                                                                                                                                                                                                                           ]
-[16:03:47] [Server thread/INFO] [BuildCraft/]: [debugger] To enable debugging for transport.pipe.event_bus add the option "-Dbuildcraft.transport.pipe.event_bus.debug=true" to your launch config as a VM argument (LOG).
+[16:06:48] [main/INFO] [cp.mo.mo.LaunchServiceHandler/MODLAUNCHER]: Launching target 'forgeserverdev' with arguments [--gameDir, .]
+[16:06:50] [main/WARN] [os.dr.wi.pe.PerfmonDisabled/]: Invalid registry value type detected for PerfOS counters. Should be REG_DWORD. Ignoring: HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\PerfOS\Performance\Disable Performance Counters.
+[16:06:50] [main/INFO] [MixinExtras|Service/]: Initializing MixinExtras via com.llamalad7.mixinextras.service.MixinExtrasServiceImpl(version=0.5.3).
+[16:06:56] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, location] and [teleport, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
+[16:06:56] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, location] and [teleport, targets] with inputs: [0.1 -0.5 .9, 0 0 0]
+[16:06:56] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, destination] and [teleport, targets] with inputs: [Player, 0123, @e, dd12be42-52a9-4a91-a8a1-11c01849e498]
+[16:06:56] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, targets] and [teleport, destination] with inputs: [Player, 0123, dd12be42-52a9-4a91-a8a1-11c01849e498]
+[16:06:56] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, targets, location] and [teleport, targets, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
+[16:06:56] [modloading-worker-0/INFO] [ne.ne.ne.co.NeoForgeMod/NEOFORGE-MOD]: NeoForge mod loading, version 21.1.233, for MC 1.21.1
+[16:06:56] [modloading-worker-0/INFO] [bu.tr.BCTransport/]: BuildCraft Transport initialized
+[16:06:56] [modloading-worker-0/INFO] [bu.fa.BCFactory/]: BuildCraft Factory initialized
+[16:06:56] [modloading-worker-0/INFO] [bu.en.BCEnergy/]: BuildCraft Energy initialized
+[16:06:56] [modloading-worker-0/INFO] [bu.si.BCSilicon/]: BuildCraft Silicon initialized
+[16:06:56] [modloading-worker-0/INFO] [bu.ro.BCRobotics/]: BuildCraft Robotics initialized
+[16:06:57] [modloading-worker-0/INFO] [BuildCraft/]: [debugger] Debugging not automatically enabled for all of buildcraft. Logging all possible debug options.
+[16:06:57] [modloading-worker-0/INFO] [BuildCraft/]:               To enable it for only logging messages add "-Dbuildcraft.debug=log" to your launch VM arguments
+[16:06:57] [modloading-worker-0/INFO] [BuildCraft/]:               To enable it for ALL debugging "-Dbuildcraft.debug=all" to your launch VM arguments
+[16:06:57] [modloading-worker-0/INFO] [BuildCraft/]:               To remove this message and all future ones add "-Dbuildcraft.debug=disable" to your launch VM arguments
+[16:06:57] [modloading-worker-0/INFO] [BuildCraft/]: [debugger] To enable debugging for lib.markers add the option "-Dbuildcraft.lib.markers.debug=true" to your launch config as a VM argument (LOG).
+[16:06:57] [modloading-worker-0/INFO] [BuildCraft/]: [debugger] To enable debugging for api.painting add the option "-Dbuildcraft.api.painting.debug=true" to your launch config as a VM argument (LOG).
+[16:06:57] [modloading-worker-0/INFO] [BuildCraft/]: [debugger] To enable debugging for api.rotation add the option "-Dbuildcraft.api.rotation.debug=true" to your launch config as a VM argument (LOG).
+[16:06:57] [modloading-sync-worker/INFO] [BuildCraft/]: [energy.oilgen] Registered oil world generation on chunk load.
+[16:06:57] [modloading-sync-worker/INFO] [BuildCraft/]: [silicon.plugs] Registered 6 pluggable definitions
+[16:06:57] [modloading-sync-worker/INFO] [BuildCraft/]: [debugger] To enable debugging for silicon.facade add the option "-Dbuildcraft.silicon.facade.debug=true" to your launch config as a VM argument (LOG).
+[16:06:57] [NeoForge Version Check/INFO] [ne.ne.fm.VersionChecker/]: [buildcraftunofficial] Starting version check at https://raw.githubusercontent.com/legoj15/BuildCraft/main/BuildCraftVersions.json
+[16:06:57] [main/INFO] [mojang/YggdrasilAuthenticationService]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, name=PROD]
+[16:06:58] [main/WARN] [minecraft/VanillaPackResourcesBuilder]: Assets URL 'union:/E:/GitHub/BuildCraft/versions/1.21.1/build/moddev/artifacts/neoforge-21.1.233.jar%23125!/assets/.mcassetsroot' uses unexpected schema
+[16:06:58] [main/WARN] [minecraft/VanillaPackResourcesBuilder]: Assets URL 'union:/E:/GitHub/BuildCraft/versions/1.21.1/build/moddev/artifacts/neoforge-21.1.233.jar%23125!/data/.mcassetsroot' uses unexpected schema
+[16:06:58] [main/INFO] [ne.ne.ne.ga.GameTestHooks/]: Enabled Gametest Namespaces: []
+[16:06:58] [NeoForge Version Check/INFO] [ne.ne.fm.VersionChecker/]: [buildcraftunofficial] Found status: BETA Current: 2026.1.0-rc3 Target: null
+[16:06:59] [main/INFO] [minecraft/RecipeManager]: Loaded 1437 recipes
+[16:06:59] [main/INFO] [minecraft/AdvancementTree]: Loaded 1475 advancements
+[16:07:00] [Server thread/INFO] [BuildCraft/]: [silicon.facade] Total valid facade states: 2367
+[16:07:00] [Server thread/INFO] [BuildCraft/]: [debugger] To enable debugging for energy.oilgen add the option "-Dbuildcraft.energy.oilgen.debug=true" to your launch config as a VM argument (LOG).
+[16:07:00] [Server thread/INFO] [BuildCraft/]: [debugger] To enable debugging for energy.oilgen add the option "-Dbuildcraft.energy.oilgen.debug=true" to your launch config as a VM argument (COMPLEX).
+[16:07:00] [Server thread/INFO] [minecraft/MinecraftServer]: Preparing start region for dimension minecraft:overworld
+[16:07:00] [worldgen/INFO] [minecraft/LoggerChunkProgressListener]: Preparing spawn area: 2%
+[16:07:00] [Server thread/INFO] [minecraft/LoggerChunkProgressListener]: Time elapsed: 472 ms
+[16:07:01] [Server thread/INFO] [minecraft/GameTestServer]: Started game test server
+[16:07:01] [Server thread/INFO] [ne.ne.ne.se.pe.PermissionAPI/]: Successfully initialized permission handler neoforge:default_handler
+[16:07:01] [Server thread/INFO] [minecraft/GameTestServer]: 283 tests are now running at position -7932850, -59, -9336274!
+[16:07:02] [Server thread/INFO] [minecraft/GameTestRunner]: Running test batch 'defaultBatch:0' (50 tests)...
+[16:07:02] [Server thread/INFO] [minecraft/GameTestServer]: [                                                                                                                                                                                                                                                                                           ]
+[16:07:02] [Server thread/INFO] [BuildCraft/]: [debugger] To enable debugging for transport.pipe.event_bus add the option "-Dbuildcraft.transport.pipe.event_bus.debug=true" to your launch config as a VM argument (LOG).
+Assertion 1: Is newly created trans empty?
+Assertion 2: Is leftOver empty after insert?
+Assertion 3: Extracted match inserted?
+Insert Item: minecraft:apple Components: {minecraft:max_stack_size=>64, minecraft:lore=>ItemLore[lines=[], styledLines=[]], minecraft:enchantments=>ItemEnchantments{enchantments={}, showInTooltip=true}, minecraft:repair_cost=>0, minecraft:attribute_modifiers=>ItemAttributeModifiers[modifiers=[], showInTooltip=true], minecraft:rarity=>COMMON, minecraft:food=>FoodProperties[nutrition=4, saturation=2.4, canAlwaysEat=false, eatSeconds=1.6, usingConvertsTo=Optional.empty, effects=[]]}
+Extract Item: minecraft:apple Components: {minecraft:max_stack_size=>64, minecraft:lore=>ItemLore[lines=[], styledLines=[]], minecraft:enchantments=>ItemEnchantments{enchantments={}, showInTooltip=true}, minecraft:repair_cost=>0, minecraft:attribute_modifiers=>ItemAttributeModifiers[modifiers=[], showInTooltip=true], minecraft:rarity=>COMMON, minecraft:food=>FoodProperties[nutrition=4, saturation=2.4, canAlwaysEat=false, eatSeconds=1.6, usingConvertsTo=Optional.empty, effects=[]]}
+Assertion 4: Is empty after second extract?
 Testing pattern buildcraft:fill in 1, 1, 1
 Testing pattern buildcraft:fill in 2, 1, 1
 Testing pattern buildcraft:fill in 3, 1, 1
@@ -376,16 +382,16 @@ Testing spheres for equality in 10, 10, 10
 Testing spheres for equality in 12, 12, 12
 Testing spheres for equality in 14, 14, 14
 Testing spheres for equality in 22, 26, 24
-[16:03:48] [Server thread/INFO] [minecraft/GameTestServer]: [+++++++   +++++   +++++   +___+   +++++                                                                                                                                                                                                                                                    ]
-Assertion 1: Is newly created trans empty?
-Assertion 2: Is leftOver empty after insert?
-Assertion 3: Extracted match inserted?
-Insert Item: minecraft:apple Components: {minecraft:max_stack_size=>64, minecraft:lore=>ItemLore[lines=[], styledLines=[]], minecraft:enchantments=>ItemEnchantments{enchantments={}, showInTooltip=true}, minecraft:repair_cost=>0, minecraft:attribute_modifiers=>ItemAttributeModifiers[modifiers=[], showInTooltip=true], minecraft:rarity=>COMMON, minecraft:food=>FoodProperties[nutrition=4, saturation=2.4, canAlwaysEat=false, eatSeconds=1.6, usingConvertsTo=Optional.empty, effects=[]]}
-Extract Item: minecraft:apple Components: {minecraft:max_stack_size=>64, minecraft:lore=>ItemLore[lines=[], styledLines=[]], minecraft:enchantments=>ItemEnchantments{enchantments={}, showInTooltip=true}, minecraft:repair_cost=>0, minecraft:attribute_modifiers=>ItemAttributeModifiers[modifiers=[], showInTooltip=true], minecraft:rarity=>COMMON, minecraft:food=>FoodProperties[nutrition=4, saturation=2.4, canAlwaysEat=false, eatSeconds=1.6, usingConvertsTo=Optional.empty, effects=[]]}
-Assertion 4: Is empty after second extract?
-[16:03:48] [Server thread/ERROR] [minecraft/MinecraftServer]: Encountered an unexpected exception
-java.lang.IllegalStateException: Generated fluid does not match expected oil fluid!
-	at TRANSFORMER/buildcraftunofficial@2026.1.0-rc3/buildcraft.core.block.SpringTester.lambda$testOilSpring$0(SpringTester.java:72) ~[%23127!/:?] {re:classloading}
+[16:07:02] [Server thread/INFO] [minecraft/GameTestServer]: [++++++++++++++++++++++++++++__++++++++++++++++++                                                                                                                                                                                                                                           ]
+[16:07:02] [Server thread/INFO] [minecraft/GameTestServer]: [+++++++++++++++++++++++++++++_++++++++++++++++++++                                                                                                                                                                                                                                         ]
+[16:07:03] [Server thread/INFO] [minecraft/GameTestServer]: [+++++++++++++++++++++++++++++_++++++++++++++++++++                                                                                                                                                                                                                                         ]
+[16:07:03] [Server thread/INFO] [minecraft/GameTestServer]: [+++++++++++++++++++++++++++++_++++++++++++++++++++                                                                                                                                                                                                                                         ]
+[16:07:03] [Server thread/INFO] [minecraft/GameTestServer]: [+++++++++++++++++++++++++++++_++++++++++++++++++++                                                                                                                                                                                                                                         ]
+[16:07:03] [Server thread/INFO] [minecraft/GameTestRunner]: Running test batch 'defaultBatch:1' (50 tests)...
+[16:07:04] [Server thread/INFO] [minecraft/GameTestServer]: [++++++++++++++++++++++++++++++++++++++++++++++++++                                                                                                                                                                                                                                         ]
+[16:07:04] [Server thread/ERROR] [minecraft/MinecraftServer]: Encountered an unexpected exception
+java.lang.IllegalStateException: Pool centre is not oil at BlockPos{x=12, y=1, z=12} (got Block{minecraft:stone})
+	at TRANSFORMER/buildcraftunofficial@2026.1.0-rc3/buildcraft.energy.generation.OilGenStructureTester.lambda$testSurfacePoolCleanShape$0(OilGenStructureTester.java:53) ~[%23127!/:?] {re:classloading}
 	at TRANSFORMER/minecraft@1.21.1/net.minecraft.gametest.framework.GameTestSequence.tick(GameTestSequence.java:101) ~[neoforge-21.1.233.jar%23125!/:?] {re:classloading,pl:accesstransformer:B}
 	at TRANSFORMER/minecraft@1.21.1/net.minecraft.gametest.framework.GameTestSequence.tickAndContinue(GameTestSequence.java:75) ~[neoforge-21.1.233.jar%23125!/:?] {re:classloading,pl:accesstransformer:B}
 	at TRANSFORMER/minecraft@1.21.1/net.minecraft.gametest.framework.GameTestInfo.lambda$tickInternal$4(GameTestInfo.java:152) ~[neoforge-21.1.233.jar%23125!/:?] {re:classloading,pl:accesstransformer:B}
@@ -401,18 +407,18 @@ java.lang.IllegalStateException: Generated fluid does not match expected oil flu
 	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.runServer(MinecraftServer.java:707) ~[neoforge-21.1.233.jar%23125!/:?] {re:classloading,pl:accesstransformer:B}
 	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.MinecraftServer.lambda$spin$2(MinecraftServer.java:267) ~[neoforge-21.1.233.jar%23125!/:?] {re:classloading,pl:accesstransformer:B}
 	at java.base/java.lang.Thread.run(Thread.java:1583) [?:?] {}
-[16:03:48] [Server thread/FATAL] [ne.ne.ne.co.NeoForgeMod/]: Preparing crash report with UUID e7254e0d-cd16-4c60-8a72-fc26d07a950e
-[16:03:48] [Server thread/ERROR] [minecraft/MinecraftServer]: This crash report has been saved to: E:\GitHub\BuildCraft\versions\1.21.1\run-gameTestServer\crash-reports\crash-2026-06-06_16.03.48-server.txt
-[16:03:48] [Server thread/FATAL] [ne.ne.ne.co.NeoForgeMod/]: Preparing crash report with UUID 1e87df99-021c-4a9b-918c-7ae428e3b1d9
-[16:03:48] [Server thread/ERROR] [minecraft/GameTestServer]: Game test server crashed
+[16:07:04] [Server thread/FATAL] [ne.ne.ne.co.NeoForgeMod/]: Preparing crash report with UUID 64470593-7bed-44a2-a18a-6bd9d2f7a576
+[16:07:04] [Server thread/ERROR] [minecraft/MinecraftServer]: This crash report has been saved to: E:\GitHub\BuildCraft\versions\1.21.1\run-gameTestServer\crash-reports\crash-2026-06-06_16.07.04-server.txt
+[16:07:04] [Server thread/FATAL] [ne.ne.ne.co.NeoForgeMod/]: Preparing crash report with UUID 2fedbbeb-e936-4c3c-be86-a45139e84a37
+[16:07:04] [Server thread/ERROR] [minecraft/GameTestServer]: Game test server crashed
 ---- Minecraft Crash Report ----
-// Daisy, daisy...
+// This doesn't make any sense!
 
-Time: 2026-06-06 16:03:48
+Time: 2026-06-06 16:07:04
 Description: Exception in server tick loop
 
-java.lang.IllegalStateException: Generated fluid does not match expected oil fluid!
-	at TRANSFORMER/buildcraftunofficial@2026.1.0-rc3/buildcraft.core.block.SpringTester.lambda$testOilSpring$0(SpringTester.java:72) ~[%23127!/:?] {re:classloading}
+java.lang.IllegalStateException: Pool centre is not oil at BlockPos{x=12, y=1, z=12} (got Block{minecraft:stone})
+	at TRANSFORMER/buildcraftunofficial@2026.1.0-rc3/buildcraft.energy.generation.OilGenStructureTester.lambda$testSurfacePoolCleanShape$0(OilGenStructureTester.java:53) ~[%23127!/:?] {re:classloading}
 	at TRANSFORMER/minecraft@1.21.1/net.minecraft.gametest.framework.GameTestSequence.tick(GameTestSequence.java:101) ~[neoforge-21.1.233.jar%23125!/:?] {re:classloading,pl:accesstransformer:B}
 	at TRANSFORMER/minecraft@1.21.1/net.minecraft.gametest.framework.GameTestSequence.tickAndContinue(GameTestSequence.java:75) ~[neoforge-21.1.233.jar%23125!/:?] {re:classloading,pl:accesstransformer:B}
 	at TRANSFORMER/minecraft@1.21.1/net.minecraft.gametest.framework.GameTestInfo.lambda$tickInternal$4(GameTestInfo.java:152) ~[neoforge-21.1.233.jar%23125!/:?] {re:classloading,pl:accesstransformer:B}
@@ -440,7 +446,7 @@ Details:
 	Operating System: Windows 11 (amd64) version 10.0
 	Java Version: 21.0.2, Oracle Corporation
 	Java VM Version: OpenJDK 64-Bit Server VM (mixed mode, sharing), Oracle Corporation
-	Memory: 287461824 bytes (274 MiB) / 578813952 bytes (552 MiB) up to 17163091968 bytes (16368 MiB)
+	Memory: 120762856 bytes (115 MiB) / 520093696 bytes (496 MiB) up to 17163091968 bytes (16368 MiB)
 	CPUs: 32
 	Processor Vendor: AuthenticAMD
 	Processor Name: AMD Ryzen 9 5950X 16-Core Processor            
@@ -468,14 +474,14 @@ Details:
 	Memory slot #3 clockSpeed (GHz): 2.40
 	Memory slot #3 type: DDR4
 	Virtual memory max (MiB): 459555.06
-	Virtual memory used (MiB): 36980.70
+	Virtual memory used (MiB): 36585.29
 	Swap memory total (MiB): 394096.00
-	Swap memory used (MiB): 150.20
+	Swap memory used (MiB): 150.07
 	Space in storage for jna.tmpdir (MiB): <path not set>
 	Space in storage for org.lwjgl.system.SharedLibraryExtractPath (MiB): <path not set>
 	Space in storage for io.netty.native.workdir (MiB): <path not set>
-	Space in storage for java.io.tmpdir (MiB): available: 311238.00, total: 1904847.00
-	Space in storage for workdir (MiB): available: 585523.81, total: 7630756.00
+	Space in storage for java.io.tmpdir (MiB): available: 311235.50, total: 1904847.00
+	Space in storage for workdir (MiB): available: 585517.00, total: 7630756.00
 	JVM Flags: 0 total; 
 	Server Running: true
 	Player Count: 0 / 1; []
@@ -504,7 +510,7 @@ Details:
 		jei-1.21.1-neoforge-19.27.0.340.jar               |Just Enough Items             |jei                           |19.27.0.340         |Manifest: NOSIGNATURE
 		neoforge-21.1.233.jar                             |Minecraft                     |minecraft                     |1.21.1              |Manifest: NOSIGNATURE
 		neoforge-21.1.233.jar                             |NeoForge                      |neoforge                      |21.1.233            |Manifest: NOSIGNATURE
-	Crash Report UUID: 1e87df99-021c-4a9b-918c-7ae428e3b1d9
+	Crash Report UUID: 2fedbbeb-e936-4c3c-be86-a45139e84a37
 	FML: 4.0.42
 	NeoForge: 21.1.233
 
@@ -522,5 +528,5 @@ Execution failed for task ':1.21.1:runGameTestServer'.
 > Run with --scan to get full insights from a Build Scan (powered by Develocity).
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 34s
-13 actionable tasks: 2 executed, 11 up-to-date
+BUILD FAILED in 29s
+13 actionable tasks: 3 executed, 10 up-to-date

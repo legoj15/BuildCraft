@@ -1,6 +1,7 @@
 package buildcraft.silicon;
 
 import net.neoforged.neoforge.registries.DeferredRegister;
+import buildcraft.lib.misc.RegistrationUtilBC;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.item.BlockItem;
@@ -54,31 +55,31 @@ public class BCSiliconItems {
 
     // Gate Copier
     public static final DeferredItem<ItemGateCopier> GATE_COPIER =
-            ITEMS.registerItem("gate_copier", ItemGateCopier::new);
+            RegistrationUtilBC.registerItem(ITEMS,"gate_copier", ItemGateCopier::new);
 
     // Facade
     public static final DeferredItem<ItemPluggableFacade> PLUG_FACADE =
-            ITEMS.registerItem("plug_facade", ItemPluggableFacade::new);
+            RegistrationUtilBC.registerItem(ITEMS,"plug_facade", ItemPluggableFacade::new);
 
     // Gate
     public static final DeferredItem<ItemPluggableGate> PLUG_GATE =
-            ITEMS.registerItem("plug_gate", ItemPluggableGate::new);
+            RegistrationUtilBC.registerItem(ITEMS,"plug_gate", ItemPluggableGate::new);
 
     // Pulsar
     public static final DeferredItem<ItemPluggablePulsar> PLUG_PULSAR =
-            ITEMS.registerItem("plug_pulsar", ItemPluggablePulsar::new);
+            RegistrationUtilBC.registerItem(ITEMS,"plug_pulsar", ItemPluggablePulsar::new);
 
     // Lens
     public static final DeferredItem<ItemPluggableLens> PLUG_LENS =
-            ITEMS.registerItem("plug_lens", ItemPluggableLens::new);
+            RegistrationUtilBC.registerItem(ITEMS,"plug_lens", ItemPluggableLens::new);
 
     // Light Sensor
     public static final DeferredItem<Item> PLUG_LIGHT_SENSOR =
-            ITEMS.registerItem("plug_light_sensor", props -> new buildcraft.transport.item.ItemPluggableSimple(props, buildcraft.silicon.BCSiliconPlugs.lightSensor, null));
+            RegistrationUtilBC.registerItem(ITEMS,"plug_light_sensor", props -> new buildcraft.transport.item.ItemPluggableSimple(props, buildcraft.silicon.BCSiliconPlugs.lightSensor, null));
 
     // Timer
     public static final DeferredItem<Item> PLUG_TIMER =
-            ITEMS.registerItem("plug_timer", props -> new buildcraft.transport.item.ItemPluggableSimple(props, buildcraft.silicon.BCSiliconPlugs.timer, null));
+            RegistrationUtilBC.registerItem(ITEMS,"plug_timer", props -> new buildcraft.transport.item.ItemPluggableSimple(props, buildcraft.silicon.BCSiliconPlugs.timer, null));
 
 
     public static void init(IEventBus modEventBus) {

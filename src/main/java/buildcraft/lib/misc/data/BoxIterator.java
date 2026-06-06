@@ -51,12 +51,12 @@ public class BoxIterator implements Iterator<BlockPos> {
 
     @Nullable
     public static BoxIterator readFromNbt(CompoundTag nbt) {
-        BlockPos min = NBTUtilBC.readBlockPos(nbt.getCompoundOrEmpty("min"));
-        BlockPos max = NBTUtilBC.readBlockPos(nbt.getCompoundOrEmpty("max"));
-        boolean invert = nbt.getBooleanOr("invert", false);
+        BlockPos min = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "min"));
+        BlockPos max = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "max"));
+        boolean invert = NBTUtilBC.getBoolean(nbt, "invert", false);
         boolean repeat = false;
-        AxisOrder order = AxisOrder.readNbt(nbt.getCompoundOrEmpty("order"));
-        BlockPos current = NBTUtilBC.readBlockPos(nbt.getCompoundOrEmpty("current"));
+        AxisOrder order = AxisOrder.readNbt(NBTUtilBC.getCompound(nbt, "order"));
+        BlockPos current = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "current"));
         if (min == null || max == null || order == null) {
             return null;
         }

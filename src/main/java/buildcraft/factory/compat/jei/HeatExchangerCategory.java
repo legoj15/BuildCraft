@@ -93,14 +93,22 @@ public class HeatExchangerCategory extends AbstractRecipeCategory<HeatExchangerR
         if (!hIn.isEmpty()) {
             builder.addInputSlot(START_IN_X, START_IN_Y)
                     .setFluidRenderer(hIn.getAmount(), false, START_IN_W, START_IN_H)
+                    //? if >=1.21.10 {
                     .add(hIn.getFluid(), hIn.getAmount(), hIn.getComponentsPatch());
+                    //?} else {
+                    /*.addFluidStack(hIn.getFluid(), hIn.getAmount(), hIn.getComponentsPatch());*/
+                    //?}
             FluidContainerAliases.addAliases(builder, hIn, RecipeIngredientRole.INPUT);
         }
         FluidStack cIn = coolable.in();
         if (!cIn.isEmpty()) {
             builder.addInputSlot(END_IN_X, END_IN_Y)
                     .setFluidRenderer(cIn.getAmount(), false, END_IN_W, END_IN_H)
+                    //? if >=1.21.10 {
                     .add(cIn.getFluid(), cIn.getAmount(), cIn.getComponentsPatch());
+                    //?} else {
+                    /*.addFluidStack(cIn.getFluid(), cIn.getAmount(), cIn.getComponentsPatch());*/
+                    //?}
             FluidContainerAliases.addAliases(builder, cIn, RecipeIngredientRole.INPUT);
         }
 
@@ -112,14 +120,22 @@ public class HeatExchangerCategory extends AbstractRecipeCategory<HeatExchangerR
         if (hOut != null && !hOut.isEmpty()) {
             builder.addOutputSlot(END_OUT_X, END_OUT_Y)
                     .setFluidRenderer(hOut.getAmount(), false, END_OUT_W, END_OUT_H)
+                    //? if >=1.21.10 {
                     .add(hOut.getFluid(), hOut.getAmount(), hOut.getComponentsPatch());
+                    //?} else {
+                    /*.addFluidStack(hOut.getFluid(), hOut.getAmount(), hOut.getComponentsPatch());*/
+                    //?}
             FluidContainerAliases.addAliases(builder, hOut, RecipeIngredientRole.OUTPUT);
         }
         FluidStack cOut = coolable.out();
         if (cOut != null && !cOut.isEmpty()) {
             builder.addOutputSlot(START_OUT_X, START_OUT_Y)
                     .setFluidRenderer(cOut.getAmount(), false, START_OUT_W, START_OUT_H)
+                    //? if >=1.21.10 {
                     .add(cOut.getFluid(), cOut.getAmount(), cOut.getComponentsPatch());
+                    //?} else {
+                    /*.addFluidStack(cOut.getFluid(), cOut.getAmount(), cOut.getComponentsPatch());*/
+                    //?}
             FluidContainerAliases.addAliases(builder, cOut, RecipeIngredientRole.OUTPUT);
         }
     }

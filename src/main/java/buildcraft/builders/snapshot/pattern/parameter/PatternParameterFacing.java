@@ -23,6 +23,7 @@ import buildcraft.api.statements.StatementMouseClick;
 
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.MathUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 
 import buildcraft.builders.BCBuildersSprites;
@@ -51,7 +52,7 @@ public enum PatternParameterFacing implements IStatementParameter {
     }
 
     public static PatternParameterFacing readFromNbt(CompoundTag nbt) {
-        return values()[MathUtil.clamp(nbt.getByte("v").orElse((byte) 0), 0, 6)];
+        return values()[MathUtil.clamp(NBTUtilBC.getByte(nbt, "v", (byte) 0), 0, 6)];
     }
 
     public static PatternParameterFacing get(Direction face) {

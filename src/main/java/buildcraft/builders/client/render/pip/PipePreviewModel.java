@@ -23,6 +23,8 @@ import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.PipeEvent;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
+import buildcraft.lib.misc.NBTUtilBC;
+
 import buildcraft.transport.block.BlockPipeHolder;
 import buildcraft.transport.client.model.key.PipeModelKey;
 import buildcraft.transport.pipe.Pipe;
@@ -62,7 +64,7 @@ public final class PipePreviewModel {
         if (tileNbt == null) {
             return null;
         }
-        CompoundTag pipeNbt = tileNbt.getCompoundOrEmpty("pipe");
+        CompoundTag pipeNbt = NBTUtilBC.getCompound(tileNbt, "pipe");
         if (pipeNbt.isEmpty()) {
             return null;
         }

@@ -16,7 +16,9 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+//? if >=1.21.10 {
 import net.minecraft.world.item.component.TooltipDisplay;
+//?}
 import net.minecraft.world.level.block.Block;
 
 import buildcraft.api.transport.pipe.IItemPipe;
@@ -71,8 +73,16 @@ public class ItemPipeHolder extends BlockItem implements IItemPipe {
     }
 
     @Override
+    //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
                                 Consumer<Component> tooltip, TooltipFlag flag) {
+    //?} else {
+    /*// 1.21.1: appendHoverText has no TooltipDisplay and takes List<Component>; adapt to the shared
+    // Consumer-based body below via tooltipList::add.
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context,
+                                java.util.List<Component> tooltipList, TooltipFlag flag) {
+        Consumer<Component> tooltip = tooltipList::add;*/
+    //?}
         // Descriptive tip from lang file (e.g. "Extraction pipe", "Sorts items")
         String id = definition.identifier; // e.g. "buildcraftunofficial:wood_item"
         int colon = id.indexOf(':');

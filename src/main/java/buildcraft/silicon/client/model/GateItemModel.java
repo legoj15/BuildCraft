@@ -23,10 +23,12 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 //?} else {
 /*import net.minecraft.client.renderer.block.model.BakedQuad;*/
 //?}
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.world.entity.ItemOwner;
+//?}
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
@@ -47,7 +49,11 @@ import buildcraft.silicon.client.model.plug.PlugGateBaker;
  * this class applies the per-context rotate/scale/translate so dropped
  * entities, in-hand, and item-frame renderings each match what 1.12.2 did.
  */
+//? if >=1.21.10 {
 public class GateItemModel implements ItemModel {
+//?} else {
+/*public class GateItemModel implements net.minecraft.client.resources.model.BakedModel {*/
+//?}
 
     /**
      * Per-context display transform. Rotations are degrees, translation is in
@@ -106,12 +112,26 @@ public class GateItemModel implements ItemModel {
         }
     }
 
-    public GateItemModel() {}
+    //? if <1.21.10 {
+    /*// 1.21.1 per-stack resolved gate variant. Null on the registry-level model; populated by the
+    // ItemOverrides below for each rendered stack (and left null when the stack has no variant).
+    @Nullable private final GateVariant resolvedVariant;
+    private GateItemModel(@Nullable GateVariant variant) {
+        this.resolvedVariant = variant;
+    }*/
+    //?}
+
+    public GateItemModel() {
+        //? if <1.21.10 {
+        /*this.resolvedVariant = null;*/
+        //?}
+    }
 
     public static void onModelBake() {
         cache.invalidateAll();
     }
 
+    //? if >=1.21.10 {
     @Override
     public void update(ItemStackRenderState renderState, ItemStack stack, ItemModelResolver modelResolver,
                        ItemDisplayContext displayContext, @Nullable ClientLevel level,
@@ -139,4 +159,74 @@ public class GateItemModel implements ItemModel {
         layer.setRenderType(net.minecraft.client.renderer.Sheets.cutoutBlockSheet());*/
         //?}
     }
+    //?} else {
+    /*// 1.21.1 dynamic item path (no ItemModel / ItemStackRenderState): resolve() reads the gate
+    // variant per-stack, applyTransform() picks the per-(variant, context) pre-baked quad set —
+    // the same cache the modern update() uses — and wraps it in a QuadItemBakedModel.
+    private final net.minecraft.client.renderer.block.model.ItemOverrides overrides =
+        new net.minecraft.client.renderer.block.model.ItemOverrides() {
+            @Override
+            public net.minecraft.client.resources.model.BakedModel resolve(
+                    net.minecraft.client.resources.model.BakedModel model, ItemStack stack,
+                    @Nullable ClientLevel level,
+                    net.minecraft.world.entity.LivingEntity entity, int seed) {
+                return new GateItemModel(ItemPluggableGate.getVariant(stack));
+            }
+        };
+
+    @Override
+    public net.minecraft.client.renderer.block.model.ItemOverrides getOverrides() {
+        return overrides;
+    }
+
+    @Override
+    public net.minecraft.client.resources.model.BakedModel applyTransform(
+            ItemDisplayContext displayContext, com.mojang.blaze3d.vertex.PoseStack pose, boolean leftHand) {
+        if (resolvedVariant == null) {
+            return this;
+        }
+        List<BakedQuad> quads = cache.getUnchecked(new CacheKey(resolvedVariant, displayContext));
+        if (quads.isEmpty()) {
+            return this;
+        }
+        return new buildcraft.lib.client.model.QuadItemBakedModel(
+                quads, quads.get(0).getSprite(), true, net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
+    }
+
+    @Override
+    public List<BakedQuad> getQuads(net.minecraft.world.level.block.state.BlockState s,
+            net.minecraft.core.Direction side, net.minecraft.util.RandomSource rand) {
+        return List.of();
+    }
+
+    @Override
+    public boolean useAmbientOcclusion() {
+        return false;
+    }
+
+    @Override
+    public boolean isGui3d() {
+        return true;
+    }
+
+    @Override
+    public boolean usesBlockLight() {
+        return false;
+    }
+
+    @Override
+    public boolean isCustomRenderer() {
+        return false;
+    }
+
+    @Override
+    public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
+        return net.minecraft.client.Minecraft.getInstance().getModelManager().getMissingModel().getParticleIcon();
+    }
+
+    @Override
+    public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
+        return net.minecraft.client.renderer.block.model.ItemTransforms.NO_TRANSFORMS;
+    }*/
+    //?}
 }

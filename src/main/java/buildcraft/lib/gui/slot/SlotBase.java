@@ -9,8 +9,10 @@ import net.minecraft.world.Container;
 
 import buildcraft.lib.tile.item.IItemHandlerAdv;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
+//?}
 
 public class SlotBase extends Slot {
     public final int handlerIndex;
@@ -35,11 +37,16 @@ public class SlotBase extends Slot {
     @Override
     @Nonnull
     public ItemStack getItem() {
+        //? if >=1.21.10 {
         return itemHandler.getResource(handlerIndex).toStack(itemHandler.getAmountAsInt(handlerIndex));
+        //?} else {
+        /*return itemHandler.getStackInSlot(handlerIndex);*/
+        //?}
     }
 
     @Override
     public void set(@Nonnull ItemStack stack) {
+        //? if >=1.21.10 {
         if (itemHandler instanceof ItemHandlerSimple) {
             ((ItemHandlerSimple) itemHandler).setStackInSlot(handlerIndex, stack);
         } else {
@@ -51,6 +58,10 @@ public class SlotBase extends Slot {
                 tx.commit();
             }
         }
+        //?} else {
+        /*// On 1.21.1 every IItemHandlerAdv is an IItemHandlerModifiable, so setStackInSlot is available directly.
+        itemHandler.setStackInSlot(handlerIndex, stack);*/
+        //?}
         this.setChanged();
     }
 
@@ -61,12 +72,20 @@ public class SlotBase extends Slot {
 
     @Override
     public int getMaxStackSize() {
+        //? if >=1.21.10 {
         return (int) itemHandler.getCapacityAsLong(handlerIndex, ItemResource.EMPTY);
+        //?} else {
+        /*return itemHandler.getSlotLimit(handlerIndex);*/
+        //?}
     }
 
     @Override
     public int getMaxStackSize(@Nonnull ItemStack stack) {
+        //? if >=1.21.10 {
         int slotLimit = (int) itemHandler.getCapacityAsLong(handlerIndex, ItemResource.of(stack));
+        //?} else {
+        /*int slotLimit = itemHandler.getSlotLimit(handlerIndex);*/
+        //?}
         return Math.min(slotLimit, stack.getMaxStackSize());
     }
 
@@ -75,21 +94,30 @@ public class SlotBase extends Slot {
     public ItemStack remove(int amount) {
         ItemStack current = getItem();
         if (current.isEmpty()) return ItemStack.EMPTY;
+        //? if >=1.21.10 {
         int extracted = 0;
         try (Transaction tx = Transaction.openRoot()) {
             extracted = itemHandler.extract(handlerIndex, ItemResource.of(current), amount, tx);
             tx.commit();
         }
         return current.copyWithCount(extracted);
+        //?} else {
+        /*return itemHandler.extractItem(handlerIndex, amount, false);*/
+        //?}
     }
 
     // Dummy Container implementation
     private static class DummyContainer implements Container {
         private final IItemHandlerAdv handler;
         public DummyContainer(IItemHandlerAdv handler) { this.handler = handler; }
+        //? if >=1.21.10 {
         @Override public int getContainerSize() { return handler.size(); }
-        @Override public boolean isEmpty() { return false; }
         @Override public ItemStack getItem(int index) { return handler.getResource(index).toStack(handler.getAmountAsInt(index)); }
+        //?} else {
+        /*@Override public int getContainerSize() { return handler.getSlots(); }
+        @Override public ItemStack getItem(int index) { return handler.getStackInSlot(index); }*/
+        //?}
+        @Override public boolean isEmpty() { return false; }
         @Override public ItemStack removeItem(int index, int count) { return ItemStack.EMPTY; }
         @Override public ItemStack removeItemNoUpdate(int index) { return ItemStack.EMPTY; }
         @Override public void setItem(int index, ItemStack stack) {}

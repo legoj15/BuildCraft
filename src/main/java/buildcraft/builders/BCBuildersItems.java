@@ -7,6 +7,7 @@ package buildcraft.builders;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import buildcraft.lib.misc.RegistrationUtilBC;
 
 import buildcraft.api.enums.EnumSnapshotType;
 import net.minecraft.world.item.BlockItem;
@@ -40,37 +41,37 @@ public class BCBuildersItems {
     public static final DeferredItem<BlockItem> QUARRY = ITEMS
             .registerSimpleBlockItem("quarry", BCBuildersBlocks.QUARRY);
 
-    public static final DeferredItem<ItemSnapshot> BLUEPRINT_CLEAN = ITEMS.registerItem(
+    public static final DeferredItem<ItemSnapshot> BLUEPRINT_CLEAN = RegistrationUtilBC.registerItem(ITEMS,
             "blueprint_clean",
             props -> new ItemSnapshot(props, EnumSnapshotType.BLUEPRINT, false),
             props -> props.stacksTo(16));
 
-    public static final DeferredItem<ItemSnapshot> BLUEPRINT_USED = ITEMS.registerItem(
+    public static final DeferredItem<ItemSnapshot> BLUEPRINT_USED = RegistrationUtilBC.registerItem(ITEMS,
             "blueprint_used",
             props -> new ItemSnapshot(props, EnumSnapshotType.BLUEPRINT, true),
             props -> props.stacksTo(1));
 
-    public static final DeferredItem<ItemSnapshot> TEMPLATE_CLEAN = ITEMS.registerItem(
+    public static final DeferredItem<ItemSnapshot> TEMPLATE_CLEAN = RegistrationUtilBC.registerItem(ITEMS,
             "template_clean",
             props -> new ItemSnapshot(props, EnumSnapshotType.TEMPLATE, false),
             props -> props.stacksTo(16));
 
-    public static final DeferredItem<ItemSnapshot> TEMPLATE_USED = ITEMS.registerItem(
+    public static final DeferredItem<ItemSnapshot> TEMPLATE_USED = RegistrationUtilBC.registerItem(ITEMS,
             "template_used",
             props -> new ItemSnapshot(props, EnumSnapshotType.TEMPLATE, true),
             props -> props.stacksTo(1));
 
-    public static final DeferredItem<ItemSchematicSingle> SCHEMATIC_SINGLE_CLEAN = ITEMS.registerItem(
+    public static final DeferredItem<ItemSchematicSingle> SCHEMATIC_SINGLE_CLEAN = RegistrationUtilBC.registerItem(ITEMS,
             "schematic_single_clean",
             props -> new ItemSchematicSingle(props, false),
             props -> props.stacksTo(16));
 
-    public static final DeferredItem<ItemSchematicSingle> SCHEMATIC_SINGLE_USED = ITEMS.registerItem(
+    public static final DeferredItem<ItemSchematicSingle> SCHEMATIC_SINGLE_USED = RegistrationUtilBC.registerItem(ITEMS,
             "schematic_single_used",
             props -> new ItemSchematicSingle(props, true),
             props -> props.stacksTo(1));
 
-    public static final DeferredItem<ItemFillerPlanner> FILLER_PLANNER = ITEMS.registerItem(
+    public static final DeferredItem<ItemFillerPlanner> FILLER_PLANNER = RegistrationUtilBC.registerItem(ITEMS,
             "filler_planner",
             ItemFillerPlanner::new,
             props -> props.stacksTo(1));

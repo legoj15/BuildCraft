@@ -11,10 +11,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-
 import buildcraft.api.items.FluidItemDrops;
+import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
@@ -37,9 +35,8 @@ public final class BlockDropsUtil {
 
     /** Drop everything registered with the tile's ItemHandlerManager (skipping PHANTOM
      *  slots automatically) plus any extra fluid tanks as fragile fluid-shard items. */
-    @SafeVarargs
     public static void dropTileContents(Level level, BlockPos pos, TileBC_Neptune tile,
-            ResourceHandler<FluidResource>... fluidTanks) {
+            BCFluidTank... fluidTanks) {
         if (level.isClientSide()) {
             return;
         }
@@ -81,9 +78,8 @@ public final class BlockDropsUtil {
     }
 
     /** Drop fluid tanks as fragile fluid-shard items. */
-    @SafeVarargs
     public static void dropFluidShards(Level level, BlockPos pos,
-            ResourceHandler<FluidResource>... tanks) {
+            BCFluidTank... tanks) {
         if (level.isClientSide() || tanks == null || tanks.length == 0) {
             return;
         }

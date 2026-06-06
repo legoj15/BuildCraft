@@ -15,7 +15,7 @@ import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.resources.model.geometry.QuadCollection;
 import net.minecraft.client.resources.model.sprite.Material;
-//?} else {
+//?} elif >=1.21.10 {
 /*import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.client.renderer.block.model.BlockModelPart;
 import net.minecraft.client.renderer.block.model.BlockStateModel;
@@ -23,11 +23,14 @@ import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.resources.model.QuadCollection;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;*/
 //?}
+// (1.21.1 has no block-model-STATE system — the IDynamicBakedModel class below fully-qualifies its types.)
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.state.BlockState;
 
+//? if >=1.21.10 {
 import net.neoforged.neoforge.client.model.DynamicBlockStateModel;
+//?}
 import net.neoforged.neoforge.model.data.ModelData;
 
 import buildcraft.transport.tile.TilePipeHolder;
@@ -49,6 +52,7 @@ import buildcraft.transport.tile.TilePipeHolder;
  * pipe connections or paint change.
  */
 @SuppressWarnings("deprecation")
+//? if >=1.21.10 {
 public class PipeBlockStateModel implements DynamicBlockStateModel {
     private final BlockStateModel vanillaDelegate;
 
@@ -149,3 +153,58 @@ public class PipeBlockStateModel implements DynamicBlockStateModel {
     }
     //?}
 }
+//?} else {
+/*// 1.21.1 has no DynamicBlockStateModel / collectParts — the dynamic block model is a classic
+// IDynamicBakedModel whose getQuads() returns the same shared PipeModelCacheAll quad lists the
+// modern collectParts() wraps into BlockModelParts. Behaviour matches the 1.21.10/11 nodes
+// (translucent overlay shares the cutout buffer; no per-quad chunk layer on these lines).
+public class PipeBlockStateModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {
+    private final net.minecraft.client.resources.model.BakedModel vanillaDelegate;
+
+    public PipeBlockStateModel(net.minecraft.client.resources.model.BakedModel vanillaDelegate) {
+        this.vanillaDelegate = vanillaDelegate;
+    }
+
+    @Override
+    public java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> getQuads(
+            BlockState state, net.minecraft.core.Direction side, RandomSource random,
+            ModelData extraData, net.minecraft.client.renderer.RenderType renderType) {
+        // Pipe quads are sub-block and unculled — only emit on the general (null-side) pass.
+        if (side != null) {
+            return java.util.List.of();
+        }
+        TilePipeHolder tile = extraData.get(TilePipeHolder.PIPE_MODEL_DATA);
+        if (tile == null || tile.getPipe() == null) {
+            return vanillaDelegate.getQuads(state, side, random, extraData, renderType);
+        }
+        java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> out = new java.util.ArrayList<>();
+        out.addAll(PipeModelCacheAll.getCutoutModel(tile));
+        out.addAll(PipeModelCacheAll.getTranslucentModel(tile));
+        return out;
+    }
+
+    @Override
+    public net.neoforged.neoforge.client.ChunkRenderTypeSet getRenderTypes(
+            BlockState state, RandomSource rand, ModelData data) {
+        // Pipe body + paint overlay both ride the cutout chunk layer on 1.21.1.
+        return net.neoforged.neoforge.client.ChunkRenderTypeSet.of(net.minecraft.client.renderer.RenderType.cutout());
+    }
+
+    @Override
+    public boolean useAmbientOcclusion() { return vanillaDelegate.useAmbientOcclusion(); }
+    @Override
+    public boolean isGui3d() { return vanillaDelegate.isGui3d(); }
+    @Override
+    public boolean usesBlockLight() { return vanillaDelegate.usesBlockLight(); }
+    @Override
+    public boolean isCustomRenderer() { return false; }
+    @Override
+    public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
+        return vanillaDelegate.getParticleIcon();
+    }
+    @Override
+    public net.minecraft.client.renderer.block.model.ItemOverrides getOverrides() {
+        return net.minecraft.client.renderer.block.model.ItemOverrides.EMPTY;
+    }
+}*/
+//?}

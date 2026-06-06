@@ -64,7 +64,12 @@ public class TubeRenderer {
         ACTIVE_MINERS.remove(miner);
     }
 
+    //? if >=1.21.10 {
     public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    //?} else {
+    /*public static void onRenderLevel(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
+    //?}
         if (ACTIVE_MINERS.isEmpty()) return;
 
         Minecraft mc = Minecraft.getInstance();
@@ -80,7 +85,11 @@ public class TubeRenderer {
         ACTIVE_MINERS.removeIf(miner -> miner.isRemoved() || miner.getLevel() != mc.level);
 
         PoseStack poseStack = event.getPoseStack();
+        //? if >=1.21.10 {
         Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
+        //?} else {
+        /*Vec3 cameraPos = event.getCamera().getPosition();*/
+        //?}
         float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
         for (TileMiner miner : ACTIVE_MINERS) {

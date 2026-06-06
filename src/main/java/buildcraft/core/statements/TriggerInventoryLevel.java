@@ -11,8 +11,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
-import net.neoforged.neoforge.transfer.ResourceHandler;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.item.ItemResource;
+//?}
 import net.neoforged.neoforge.capabilities.Capabilities;
 
 import buildcraft.api.items.IList;
@@ -56,7 +57,11 @@ public class TriggerInventoryLevel extends BCStatement implements ITriggerExtern
     public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer container,
         IStatementParameter[] parameters) {
         if (tile.getLevel() == null) return false;
-        ResourceHandler<ItemResource> itemHandler = tile.getLevel().getCapability(Capabilities.Item.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null);
+        //? if >=1.21.10 {
+        var itemHandler = tile.getLevel().getCapability(Capabilities.Item.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null);
+        //?} else {
+        /*var itemHandler = tile.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null);*/
+        //?}
         if (itemHandler == null) {
             return false;
         }
@@ -66,23 +71,44 @@ public class TriggerInventoryLevel extends BCStatement implements ITriggerExtern
 
         int itemSpace = 0;
         int foundItems = 0;
-        for (int slot = 0; slot < itemHandler.size(); slot++) {
+        //? if >=1.21.10 {
+        int slotCount = itemHandler.size();
+        //?} else {
+        /*int slotCount = itemHandler.getSlots();*/
+        //?}
+        for (int slot = 0; slot < slotCount; slot++) {
+            //? if >=1.21.10 {
             ItemResource res = itemHandler.getResource(slot);
             ItemStack stackInSlot = res.isEmpty() ? ItemStack.EMPTY : res.toStack(itemHandler.getAmountAsInt(slot));
+            //?} else {
+            /*ItemStack stackInSlot = itemHandler.getStackInSlot(slot);*/
+            //?}
             if (stackInSlot.isEmpty()) {
                 if (searchStack.isEmpty()) {
+                    //? if >=1.21.10 {
                     itemSpace += itemHandler.getCapacityAsInt(slot, ItemResource.EMPTY);
+                    //?} else {
+                    /*itemSpace += itemHandler.getSlotLimit(slot);*/
+                    //?}
                 } else {
                     if (searchStack.getItem() instanceof IList) {
                         // Lists are too generic; skip without a filtered inventory
                     } else {
+                        //? if >=1.21.10 {
                         int count = Math.min(itemHandler.getCapacityAsInt(slot, ItemResource.of(searchStack)), searchStack.getMaxStackSize());
+                        //?} else {
+                        /*int count = Math.min(itemHandler.getSlotLimit(slot), searchStack.getMaxStackSize());*/
+                        //?}
                         itemSpace += count;
                     }
                 }
             } else {
                 if (searchStack.isEmpty() || matchesStackOrList(searchStack, stackInSlot)) {
+                    //? if >=1.21.10 {
                     itemSpace += Math.min(stackInSlot.getMaxStackSize(), itemHandler.getCapacityAsInt(slot, res));
+                    //?} else {
+                    /*itemSpace += Math.min(stackInSlot.getMaxStackSize(), itemHandler.getSlotLimit(slot));*/
+                    //?}
                     foundItems += stackInSlot.getCount();
                 }
             }

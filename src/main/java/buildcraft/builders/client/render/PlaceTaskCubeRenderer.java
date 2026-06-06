@@ -33,7 +33,10 @@ public final class PlaceTaskCubeRenderer {
 
     /** Draw one place-task item as a ~0.30-block sprite cube at {@code pos} (camera-relative). */
     public static void renderItemCube(ItemStack item, Vec3 pos, Vec3 cameraPos, PoseStack poseStack) {
-        //? if <26.1 {
+        //? if >=26.1 {
+        // 26.1 renders the place-task cube via the SubmitNodeCollector path in ItemRenderUtil;
+        // this method is a no-op stub on that node.
+        //?} elif >=1.21.10 {
         /*if (item.isEmpty()) return;
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
         int light = buildcraft.lib.client.render.laser.LaserRenderer_BC8.computeLightmap(pos.x, pos.y, pos.z, 0);
@@ -58,6 +61,50 @@ public final class PlaceTaskCubeRenderer {
                 net.minecraft.world.item.ItemDisplayContext.FIXED, mc.level, null, 0);
             net.minecraft.client.renderer.texture.TextureAtlasSprite sprite =
                 rs.isEmpty() ? null : rs.pickParticleIcon(net.minecraft.util.RandomSource.create());
+            if (sprite != null) {
+                com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(
+                    net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(sprite.atlasLocation()));
+                float r = 0.15F;
+                buildcraft.lib.client.model.ModelUtil.UvFaceData uv =
+                    new buildcraft.lib.client.model.ModelUtil.UvFaceData(
+                        sprite.getU0(), sprite.getV0(), sprite.getU1(), sprite.getV1());
+                for (net.minecraft.core.Direction face : net.minecraft.core.Direction.values()) {
+                    buildcraft.lib.client.model.ModelUtil.createFace(
+                        face, new org.joml.Vector3f(0F, 0F, 0F), new org.joml.Vector3f(r, r, r), uv)
+                        .lighti(light)
+                        .colouri(255, 255, 255, 255)
+                        .render(poseStack.last(), buffer);
+                }
+            }
+        }
+
+        poseStack.popPose();
+        bufferSource.endBatch();*/
+        //?} else {
+        /*// 1.21.1: no ItemStackRenderState/ItemModelResolver — resolve the particle sprite via the
+        // classic BakedModel path (mc.getItemRenderer().getModel(...).getParticleIcon()).
+        if (item.isEmpty()) return;
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        int light = buildcraft.lib.client.render.laser.LaserRenderer_BC8.computeLightmap(pos.x, pos.y, pos.z, 0);
+        net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
+
+        poseStack.pushPose();
+        poseStack.translate(pos.x - cameraPos.x, pos.y - cameraPos.y, pos.z - cameraPos.z);
+
+        if (item.getItem() instanceof net.minecraft.world.item.BlockItem blockItem) {
+            // Render the actual block model so each face gets its correct texture — a particle-sprite
+            // cube shows the block's side texture on every face (wrong top on grass/logs/etc). Centre
+            // the 0..1 model on the origin and scale to ~0.30 block.
+            poseStack.scale(0.30F, 0.30F, 0.30F);
+            poseStack.translate(-0.5F, -0.5F, -0.5F);
+            mc.getBlockRenderer().renderSingleBlock(blockItem.getBlock().defaultBlockState(), poseStack,
+                bufferSource, light, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY);
+        } else {
+            // Non-block items: small cube textured with the item's particle sprite.
+            net.minecraft.client.resources.model.BakedModel bakedModel =
+                mc.getItemRenderer().getModel(item, mc.level, null, 0);
+            net.minecraft.client.renderer.texture.TextureAtlasSprite sprite =
+                bakedModel == null ? null : bakedModel.getParticleIcon();
             if (sprite != null) {
                 com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(
                     net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(sprite.atlasLocation()));

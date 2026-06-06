@@ -19,6 +19,8 @@ import buildcraft.api.schematics.SchematicBlockContext;
 import buildcraft.api.schematics.SchematicBlockFactory;
 import buildcraft.api.schematics.SchematicBlockFactoryRegistry;
 
+import buildcraft.lib.misc.NBTUtilBC;
+
 public class SchematicBlockManager {
     @SuppressWarnings("WeakerAccess")
     public static ISchematicBlock getSchematicBlock(SchematicBlockContext context) {
@@ -56,13 +58,13 @@ public class SchematicBlockManager {
 
     @Nonnull
     public static ISchematicBlock readFromNBT(CompoundTag schematicBlockTag) throws InvalidInputDataException {
-        Identifier name = Identifier.parse(schematicBlockTag.getStringOr("name", ""));
+        Identifier name = Identifier.parse(NBTUtilBC.getString(schematicBlockTag, "name", ""));
         SchematicBlockFactory<?> factory = SchematicBlockFactoryRegistry.getFactoryByName(name);
         if (factory == null) {
             throw new InvalidInputDataException("Unknown schematic type " + name);
         }
         ISchematicBlock schematicBlock = factory.supplier.get();
-        CompoundTag data = schematicBlockTag.getCompoundOrEmpty("data");
+        CompoundTag data = NBTUtilBC.getCompound(schematicBlockTag, "data");
         try {
             schematicBlock.deserializeNBT(data);
             return schematicBlock;

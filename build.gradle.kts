@@ -20,6 +20,9 @@ val mcDepRange = property("mc_dep_range") as String
 // True only on MC lines below 1.21.11 (i.e. the 1.21.10 node). Gates the back-compat source
 // replacements + the extra deps that the 26.1.2 / 1.21.11 nodes already get transitively.
 val isPre1_21_11 = stonecutter.eval(stonecutter.current.version, "<1.21.11")
+// True only on the 1.21.1 node (1.21.10/1.21.11/26.1 have the newer APIs). Gates cliffs that
+// landed AT 1.21.10 — e.g. FMLEnvironment.dist became the getDist() accessor.
+val isPre1_21_10 = stonecutter.eval(stonecutter.current.version, "<1.21.10")
 
 // ─── Stonecutter source replacements ─────────────────────────────────────────
 // The 1.21.10 node (ONLY) reverses Mojang's 1.21.11 ResourceLocation->Identifier rename
@@ -78,6 +81,70 @@ stonecutter {
             replace(
                 "\\bhelper\\.assertFalse\\(", "buildcraft.lib.test.GameTestUtil.assertFalse(helper, ",
                 "\\bbuildcraft\\.lib\\.test\\.GameTestUtil\\.assertFalse\\(helper, ", "helper.assertFalse("
+            )
+        }
+        // 1.21.1 ONLY: FMLEnvironment.getDist() (the accessor, added at 1.21.10) -> the older public
+        // static `dist` field. Specific + reversible; no collision since the canonical source only ever
+        // writes getDist(). Inert on 1.21.10/1.21.11/26.1 (direction=false there).
+        regex {
+            direction.set(isPre1_21_10)
+            replace(
+                "FMLEnvironment\\.getDist\\(\\)", "FMLEnvironment.dist",
+                "FMLEnvironment\\.dist\\b", "FMLEnvironment.getDist()"
+            )
+        }
+        // 1.21.1 ONLY: the model-data API (ModelData/ModelProperty/ModelDataManager) lives under
+        // `client.model.data` on 1.21.1; it was moved up to `model.data` at 1.21.10. Pure package move,
+        // same API. Specific + reversible; released nodes only ever write `model.data` so the reverse is
+        // inert there (direction=false). No substring overlap (the moved form inserts `.client` mid-path).
+        regex {
+            direction.set(isPre1_21_10)
+            replace(
+                "net\\.neoforged\\.neoforge\\.model\\.data", "net.neoforged.neoforge.client.model.data",
+                "net\\.neoforged\\.neoforge\\.client\\.model\\.data", "net.neoforged.neoforge.model.data"
+            )
+        }
+        // 1.21.1 ONLY: LevelHeightAccessor.getMaxY()/getMinY() (the short accessors, present from 1.21.2)
+        // were getMaxBuildHeight()/getMinBuildHeight() on 1.21.1. All call sites are `level.getMaxY()` /
+        // `level.getMinY()` (no BuildCraft class defines either), so the literal `.getMaxY()`/`.getMinY()`
+        // form is unambiguous. Specific + reversible; inert on 1.21.10/1.21.11/26.1 (direction=false).
+        regex {
+            direction.set(isPre1_21_10)
+            replace(
+                "\\.getMaxY\\(\\)", ".getMaxBuildHeight()",
+                "\\.getMaxBuildHeight\\(\\)", ".getMaxY()"
+            )
+        }
+        regex {
+            direction.set(isPre1_21_10)
+            replace(
+                "\\.getMinY\\(\\)", ".getMinBuildHeight()",
+                "\\.getMinBuildHeight\\(\\)", ".getMinY()"
+            )
+        }
+        // 1.21.1 ONLY: Minecraft.getDeltaTracker() (added when getTimer() was renamed at 1.21.2) was
+        // getTimer() on 1.21.1 — both return DeltaTracker (with getGameTimeDeltaPartialTick). Every BC
+        // call site receives Minecraft (`Minecraft.getInstance().getDeltaTracker()` / `mc.getDeltaTracker()`)
+        // and 1.21.1 defines no other getDeltaTracker(), so the literal `.getDeltaTracker()` is unambiguous.
+        // Specific + reversible; inert on 1.21.10/1.21.11/26.1 (direction=false).
+        regex {
+            direction.set(isPre1_21_10)
+            replace(
+                "\\.getDeltaTracker\\(\\)", ".getTimer()",
+                "\\.getTimer\\(\\)", ".getDeltaTracker()"
+            )
+        }
+
+        // 1.21.1 ONLY: JEI's IRecipeCatalystRegistration.addCraftingStation(IRecipeType, ItemLike...)
+        // (JEI 26.x / MC 1.21.10+) was addRecipeCatalysts(RecipeType, ItemLike...) on JEI 19.27 / 1.21.1.
+        // Same arg shape (the recipe-type constants already resolve per-node via the recipe.types gate),
+        // so the literal method-name swap suffices. JEI-specific name — no BC collision. Reversible;
+        // inert on 1.21.10/1.21.11/26.1 (direction=false).
+        regex {
+            direction.set(isPre1_21_10)
+            replace(
+                "\\.addCraftingStation\\(", ".addRecipeCatalysts(",
+                "\\.addRecipeCatalysts\\(", ".addCraftingStation("
             )
         }
     }

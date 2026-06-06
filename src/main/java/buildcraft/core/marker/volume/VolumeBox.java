@@ -24,6 +24,8 @@ import net.minecraft.world.level.Level;
 
 import buildcraft.api.core.BCLog;
 
+import buildcraft.lib.misc.GameProfileUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.data.Box;
 
 public class VolumeBox {
@@ -51,43 +53,43 @@ public class VolumeBox {
             throw new NullPointerException("world");
         this.world = world;
 
-        id = UUID.fromString(nbt.getString("id").orElse(""));
+        id = UUID.fromString(NBTUtilBC.getString(nbt, "id", ""));
         box = new Box();
-        box.initialize(nbt.getCompound("box").orElseGet(CompoundTag::new));
+        box.initialize(NBTUtilBC.getCompound(nbt, "box"));
 
-        player = nbt.contains("player") ? UUID.fromString(nbt.getString("player").orElse("")) : null;
-        oldPlayer = nbt.contains("oldPlayer") ? UUID.fromString(nbt.getString("oldPlayer").orElse("")) : null;
+        player = nbt.contains("player") ? UUID.fromString(NBTUtilBC.getString(nbt, "player", "")) : null;
+        oldPlayer = nbt.contains("oldPlayer") ? UUID.fromString(NBTUtilBC.getString(nbt, "oldPlayer", "")) : null;
 
         if (nbt.contains("held")) {
-            CompoundTag heldTag = nbt.getCompound("held").orElseGet(CompoundTag::new);
-            held = new BlockPos(heldTag.getInt("X").orElse(0), heldTag.getInt("Y").orElse(0),
-                    heldTag.getInt("Z").orElse(0));
+            CompoundTag heldTag = NBTUtilBC.getCompound(nbt, "held");
+            held = new BlockPos(NBTUtilBC.getInt(heldTag, "X", 0), NBTUtilBC.getInt(heldTag, "Y", 0),
+                    NBTUtilBC.getInt(heldTag, "Z", 0));
         }
-        dist = nbt.getDouble("dist").orElse(0.0);
+        dist = NBTUtilBC.getDouble(nbt, "dist", 0.0);
 
         if (nbt.contains("oldMin")) {
-            CompoundTag oldMinTag = nbt.getCompound("oldMin").orElseGet(CompoundTag::new);
-            oldMin = new BlockPos(oldMinTag.getInt("X").orElse(0), oldMinTag.getInt("Y").orElse(0),
-                    oldMinTag.getInt("Z").orElse(0));
+            CompoundTag oldMinTag = NBTUtilBC.getCompound(nbt, "oldMin");
+            oldMin = new BlockPos(NBTUtilBC.getInt(oldMinTag, "X", 0), NBTUtilBC.getInt(oldMinTag, "Y", 0),
+                    NBTUtilBC.getInt(oldMinTag, "Z", 0));
         }
         if (nbt.contains("oldMax")) {
-            CompoundTag oldMaxTag = nbt.getCompound("oldMax").orElseGet(CompoundTag::new);
-            oldMax = new BlockPos(oldMaxTag.getInt("X").orElse(0), oldMaxTag.getInt("Y").orElse(0),
-                    oldMaxTag.getInt("Z").orElse(0));
+            CompoundTag oldMaxTag = NBTUtilBC.getCompound(nbt, "oldMax");
+            oldMax = new BlockPos(NBTUtilBC.getInt(oldMaxTag, "X", 0), NBTUtilBC.getInt(oldMaxTag, "Y", 0),
+                    NBTUtilBC.getInt(oldMaxTag, "Z", 0));
         }
 
         if (nbt.contains("addons")) {
-            ListTag addonsList = nbt.getList("addons").orElseGet(ListTag::new);
+            ListTag addonsList = NBTUtilBC.getList(nbt, "addons", Tag.TAG_COMPOUND);
             for (int i = 0; i < addonsList.size(); i++) {
-                CompoundTag addonsEntryTag = addonsList.getCompound(i).orElseGet(CompoundTag::new);
-                String addonClassName = addonsEntryTag.getString("addonClass").orElse("");
+                CompoundTag addonsEntryTag = NBTUtilBC.getCompound(addonsList, i);
+                String addonClassName = NBTUtilBC.getString(addonsEntryTag, "addonClass", "");
                 try {
                     Class<? extends Addon> addonClass = AddonsRegistry.INSTANCE
                             .getClassByName(Identifier.parse(addonClassName));
                     Addon addon = addonClass.getDeclaredConstructor().newInstance();
                     addon.volumeBox = this;
-                    addon.readFromNBT(addonsEntryTag.getCompound("addonData").orElseGet(CompoundTag::new));
-                    String slotStr = addonsEntryTag.getString("slot").orElse("");
+                    addon.readFromNBT(NBTUtilBC.getCompound(addonsEntryTag, "addonData"));
+                    String slotStr = NBTUtilBC.getString(addonsEntryTag, "slot", "");
                     EnumAddonSlot slot = EnumAddonSlot.valueOf(slotStr);
                     addons.put(slot, addon);
                     addon.postReadFromNbt();
@@ -98,9 +100,9 @@ public class VolumeBox {
         }
 
         if (nbt.contains("locks")) {
-            ListTag locksList = nbt.getList("locks").orElseGet(ListTag::new);
+            ListTag locksList = NBTUtilBC.getList(nbt, "locks", Tag.TAG_COMPOUND);
             for (int i = 0; i < locksList.size(); i++) {
-                CompoundTag lockTag = locksList.getCompound(i).orElseGet(CompoundTag::new);
+                CompoundTag lockTag = NBTUtilBC.getCompound(locksList, i);
                 Lock lock = new Lock();
                 lock.readFromNBT(lockTag);
                 locks.add(lock);
@@ -145,15 +147,15 @@ public class VolumeBox {
     }
 
     public void setPlayer(Player player) {
-        this.player = player.getGameProfile().id();
+        this.player = GameProfileUtil.getId(player.getGameProfile());
     }
 
     public boolean isEditingBy(Player player) {
-        return player != null && Objects.equals(this.player, player.getGameProfile().id());
+        return player != null && Objects.equals(this.player, GameProfileUtil.getId(player.getGameProfile()));
     }
 
     public boolean isPausedEditingBy(Player player) {
-        return oldPlayer != null && Objects.equals(oldPlayer, player.getGameProfile().id());
+        return oldPlayer != null && Objects.equals(oldPlayer, GameProfileUtil.getId(player.getGameProfile()));
     }
 
     @SuppressWarnings("WeakerAccess")

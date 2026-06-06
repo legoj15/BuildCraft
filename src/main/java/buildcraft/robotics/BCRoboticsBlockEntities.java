@@ -8,6 +8,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.lib.BCLib;
+import buildcraft.lib.misc.BlockEntityTypeUtilBC;
 import buildcraft.robotics.tile.TileZonePlanner;
 
 public class BCRoboticsBlockEntities {
@@ -20,7 +21,7 @@ public class BCRoboticsBlockEntities {
     static {
         ZONE_PLANNER = (BCLib.DEV && BCRoboticsBlocks.ZONE_PLANNER != null)
                 ? BLOCK_ENTITIES.register("zone_planner",
-                        () -> new BlockEntityType<>(TileZonePlanner::new, BCRoboticsBlocks.ZONE_PLANNER.get()))
+                        () -> BlockEntityTypeUtilBC.create(TileZonePlanner::new, BCRoboticsBlocks.ZONE_PLANNER.get()))
                 : null;
     }
 

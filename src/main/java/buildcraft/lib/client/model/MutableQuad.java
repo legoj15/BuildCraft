@@ -22,7 +22,9 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
+//? if >=1.21.10 {
 import net.minecraft.util.ARGB;
+//?}
 import net.minecraft.world.phys.Vec3;
 
 /** Holds all of the information necessary to make a {@link BakedQuad}. This provides a variety of methods to quickly
@@ -179,7 +181,7 @@ public class MutableQuad {
             net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
             buildBakedColors(), true
         );*/
-        //?} else {
+        //?} elif >=1.21.10 {
         /*// 1.21.10 BakedQuad is the old int[] vertex form (no Vector3fc / BakedColors / per-quad layer);
         // MutableVertex.toBakedBlock packs the BLOCK format (8 ints/vertex, colour+light+normal inline).
         int[] data = new int[32];
@@ -188,6 +190,15 @@ public class MutableQuad {
         vertex_2.toBakedBlock(data, 16);
         vertex_3.toBakedBlock(data, 24);
         return new BakedQuad(data, tintIndex, face, sprite, shade, lightEmission);*/
+        //?} else {
+        /*// 1.21.1 BakedQuad: same int[] BLOCK vertex form as 1.21.10, but the constructor has no
+        // lightEmission parameter (per-quad light emission was added after 1.21.1) — drop it.
+        int[] data = new int[32];
+        vertex_0.toBakedBlock(data, 0);
+        vertex_1.toBakedBlock(data, 8);
+        vertex_2.toBakedBlock(data, 16);
+        vertex_3.toBakedBlock(data, 24);
+        return new BakedQuad(data, tintIndex, face, sprite, shade);*/
         //?}
     }
 
@@ -227,7 +238,7 @@ public class MutableQuad {
             net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
             buildBakedColors(), true
         );*/
-        //?} else {
+        //?} elif >=1.21.10 {
         /*// 1.21.10: same int[] BakedQuad as toBakedBlock (no per-quad translucent layer here either).
         int[] data = new int[32];
         vertex_0.toBakedBlock(data, 0);
@@ -235,6 +246,14 @@ public class MutableQuad {
         vertex_2.toBakedBlock(data, 16);
         vertex_3.toBakedBlock(data, 24);
         return new BakedQuad(data, tintIndex, face, sprite, shade, lightEmission);*/
+        //?} else {
+        /*// 1.21.1: same int[] BakedQuad as toBakedBlock; 5-arg ctor (no lightEmission).
+        int[] data = new int[32];
+        vertex_0.toBakedBlock(data, 0);
+        vertex_1.toBakedBlock(data, 8);
+        vertex_2.toBakedBlock(data, 16);
+        vertex_3.toBakedBlock(data, 24);
+        return new BakedQuad(data, tintIndex, face, sprite, shade);*/
         //?}
     }
 
@@ -279,19 +298,29 @@ public class MutableQuad {
 
     /** Reads a BakedQuad's data into this MutableQuad. */
     public MutableQuad fromBakedBlock(BakedQuad quad) {
+        //? if >=1.21.10 {
         face = quad.direction();
+        //?} else {
+        /*face = quad.getDirection();*/
+        //?}
         //? if >=26.1 {
         BakedQuad.MaterialInfo mat = quad.materialInfo();
         tintIndex = mat.tintIndex();
         sprite = mat.sprite();
         shade = mat.shade();
         lightEmission = mat.lightEmission();
-        //?} else {
-        /*// 1.21.11 BakedQuad carries these directly (no MaterialInfo record).
+        //?} elif >=1.21.10 {
+        /*// 1.21.11/1.21.10 BakedQuad carries these directly (no MaterialInfo record).
         tintIndex = quad.tintIndex();
         sprite = quad.sprite();
         shade = quad.shade();
         lightEmission = quad.lightEmission();*/
+        //?} else {
+        /*// 1.21.1 BakedQuad uses bean-style accessors and has no per-quad light emission.
+        tintIndex = quad.getTintIndex();
+        sprite = quad.getSprite();
+        shade = quad.isShade();
+        lightEmission = 0;*/
         //?}
 
         //? if >=1.21.11 {
@@ -299,9 +328,16 @@ public class MutableQuad {
         readVertexFromBaked(vertex_1, quad.position1(), quad.packedUV1());
         readVertexFromBaked(vertex_2, quad.position2(), quad.packedUV2());
         readVertexFromBaked(vertex_3, quad.position3(), quad.packedUV3());
-        //?} else {
+        //?} elif >=1.21.10 {
         /*// 1.21.10 BakedQuad stores the raw BLOCK vertex int[] (8 ints/vertex); decode positions + UVs.
         int[] vd = quad.vertices();
+        readVertexFromBakedArray(vertex_0, vd, 0);
+        readVertexFromBakedArray(vertex_1, vd, 8);
+        readVertexFromBakedArray(vertex_2, vd, 16);
+        readVertexFromBakedArray(vertex_3, vd, 24);*/
+        //?} else {
+        /*// 1.21.1 BakedQuad: bean-style getVertices() instead of the record vertices(); same int[] form.
+        int[] vd = quad.getVertices();
         readVertexFromBakedArray(vertex_0, vd, 0);
         readVertexFromBakedArray(vertex_1, vd, 8);
         readVertexFromBakedArray(vertex_2, vd, 16);

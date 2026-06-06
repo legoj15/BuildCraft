@@ -171,7 +171,7 @@ public class Blueprint extends Snapshot {
         // Support both ListTag and IntArray for data
         Tag dataTag = nbt.get("data");
         ListTag serializedDataList = dataTag instanceof ListTag lt ? lt : null;
-        int[] serializedDataIntArray = nbt.getIntArray("data").orElse(null);
+        int[] serializedDataIntArray = NBTUtilBC.getIntArray(nbt, "data", null);
 
         if (serializedDataIntArray == null && serializedDataList == null) {
             throw new InvalidInputDataException("Can't read a blueprint with no data!");
@@ -192,7 +192,11 @@ public class Blueprint extends Snapshot {
                     int idx = posToIndex(x, y, z);
                     if (serializedDataList != null) {
                         Tag element = serializedDataList.get(idx);
+                        //? if >=1.21.10 {
                         data[idx] = element instanceof IntTag it ? it.value() : 0;
+                        //?} else {
+                        /*data[idx] = element instanceof IntTag it ? it.getAsInt() : 0;*/
+                        //?}
                     } else {
                         data[idx] = serializedDataIntArray[idx];
                     }

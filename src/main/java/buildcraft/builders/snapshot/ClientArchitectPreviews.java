@@ -9,7 +9,9 @@ import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 
+//? if >=1.21.10 {
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+//?}
 
 /**
  * Client-side cache of transient Architect Table previews, keyed by tile position. Mirrors the
@@ -42,7 +44,11 @@ public enum ClientArchitectPreviews {
         Blueprint cached = previews.get(pos);
         if (cached == null && !pending.contains(pos)) {
             pending.add(pos);
+            //? if >=1.21.10 {
             ClientPacketDistributor.sendToServer(new ArchitectPreviewRequestPayload(pos.immutable()));
+            //?} else {
+            /*net.neoforged.neoforge.network.PacketDistributor.sendToServer(new ArchitectPreviewRequestPayload(pos.immutable()));*/
+            //?}
         }
         return cached;
     }
@@ -56,7 +62,11 @@ public enum ClientArchitectPreviews {
         BlockPos key = pos.immutable();
         if (!pending.contains(key)) {
             pending.add(key);
+            //? if >=1.21.10 {
             ClientPacketDistributor.sendToServer(new ArchitectPreviewRequestPayload(key));
+            //?} else {
+            /*net.neoforged.neoforge.network.PacketDistributor.sendToServer(new ArchitectPreviewRequestPayload(key));*/
+            //?}
         }
     }
 

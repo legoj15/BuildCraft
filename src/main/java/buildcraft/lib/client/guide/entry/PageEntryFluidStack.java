@@ -83,7 +83,7 @@ public class PageEntryFluidStack extends PageValueType<FluidStackValueFilter> {
         }
         String str = json.get("fluid").getAsString().trim();
         Identifier loc = Identifier.parse(str);
-        Fluid fluid = BuiltInRegistries.FLUID.get(loc).map(ref -> ref.value()).orElse(null);
+        Fluid fluid = buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.FLUID, loc);
         if (fluid == null) {
             return new OptionallyDisabled<>("Unknown fluid '" + str + "'");
         }

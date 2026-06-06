@@ -10,6 +10,7 @@ import java.util.List;
 
 import net.minecraft.client.gui.components.WidgetSprites;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
+//? if >=1.21.10 {
 import net.minecraft.client.gui.screens.recipebook.GhostSlots;
 import net.minecraft.client.gui.screens.recipebook.RecipeCollection;
 import net.minecraft.client.gui.screens.recipebook.SearchRecipeBookCategory;
@@ -26,11 +27,13 @@ import net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay;
 import net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay;
 
 import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
+//?}
 
 /**
  * Recipe book component for the Advanced Crafting Table.
  * Mirrors vanilla CraftingRecipeBookComponent but works with our container.
  */
+//? if >=1.21.10 {
 public class ACTRecipeBookComponent extends RecipeBookComponent<ContainerAdvancedCraftingTable> {
     private static final WidgetSprites FILTER_BUTTON_SPRITES = new WidgetSprites(
         Identifier.withDefaultNamespace("recipe_book/filter_enabled"),
@@ -120,3 +123,11 @@ public class ACTRecipeBookComponent extends RecipeBookComponent<ContainerAdvance
         collection.selectRecipes(contents, this::canDisplay);
     }
 }
+//?} else {
+/*// 1.21.1: recipe-book widget deferred (the 1.21.1 RecipeBookComponent API differs throughout and is
+// visual-verify-bound). The Advanced Crafting Table GUI omits the recipe book on 1.21.1 (manual
+// crafting + JEI still work); this minimal subclass exists only so the screen's field type resolves —
+// it is never instantiated there. TODO: full 1.21.1 recipe-book integration at runClient time.
+public class ACTRecipeBookComponent extends RecipeBookComponent {
+}*/
+//?}

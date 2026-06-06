@@ -12,30 +12,44 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.ShapeRenderer;
+//?} else {
+/*import net.minecraft.client.renderer.LevelRenderer;*/
+//?}
 import buildcraft.lib.client.render.BCLibRenderTypes;
 //? if >=26.1 {
 import net.minecraft.client.renderer.state.level.BlockOutlineRenderState;
-//?} else {
+//?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.state.BlockOutlineRenderState;*/
 //?}
 //? if >=26.1 {
 import net.minecraft.client.renderer.state.level.LevelRenderState;
-//?} else {
+//?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.state.LevelRenderState;*/
 //?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+//? if >=1.21.10 {
 import net.minecraft.util.ARGB;
+//?}
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
+//? if <1.21.10 {
+/*import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;*/
+//?}
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
+//? if >=1.21.10 {
 import net.neoforged.neoforge.client.CustomBlockOutlineRenderer;
 import net.neoforged.neoforge.client.event.ExtractBlockOutlineRenderStateEvent;
+//?} else {
+/*import net.neoforged.neoforge.client.event.RenderHighlightEvent;*/
+//?}
 
 import buildcraft.api.transport.EnumWirePart;
 import buildcraft.api.transport.IItemPluggable;
@@ -65,6 +79,7 @@ import buildcraft.transport.tile.TilePipeHolder;
 public final class PipePlacementHighlight {
     private PipePlacementHighlight() {}
 
+    //? if >=1.21.10 {
     /** {@link ExtractBlockOutlineRenderStateEvent} listener (game event bus, client only). */
     public static void onExtractBlockOutline(ExtractBlockOutlineRenderStateEvent event) {
         if (!(event.getBlockState().getBlock() instanceof BlockPipeHolder)) {
@@ -83,6 +98,41 @@ public final class PipePlacementHighlight {
             event.addCustomRenderer(new PreviewRenderer(preview));
         }
     }
+    //?} else {
+    /*// RenderHighlightEvent.Block listener (game event bus, client only). 1.21.1 has no
+    // outline-render-state extraction: draw the preview inline and cancel the vanilla outline.
+    public static void onRenderHighlightBlock(RenderHighlightEvent.Block event) {
+        BlockHitResult hit = event.getTarget();
+        Level level = Minecraft.getInstance().level;
+        if (level == null) {
+            return;
+        }
+        BlockPos blockPos = hit.getBlockPos();
+        BlockState state = level.getBlockState(blockPos);
+        if (!(state.getBlock() instanceof BlockPipeHolder)) {
+            return;
+        }
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player == null) {
+            return;
+        }
+        BlockEntity be = level.getBlockEntity(blockPos);
+        if (!(be instanceof TilePipeHolder tile) || tile.getPipe() == null) {
+            return;
+        }
+        VoxelShape preview = previewShape(tile, hit, player);
+        if (preview == null) {
+            return;
+        }
+        Vec3 cam = event.getCamera().getPosition();
+        PoseStack poseStack = event.getPoseStack();
+        VertexConsumer lines = event.getMultiBufferSource().getBuffer(BCLibRenderTypes.lines());
+        LevelRenderer.renderVoxelShape(poseStack, lines, preview,
+                blockPos.getX() - cam.x, blockPos.getY() - cam.y, blockPos.getZ() - cam.z,
+                0.0F, 0.0F, 0.0F, 0.4F, false);
+        event.setCanceled(true);
+    }*/
+    //?}
 
     /** The outline to draw for what the held item would place, or {@code null} to leave the
      *  default outline in place (the held item places nothing on a pipe, or the resolved target
@@ -127,6 +177,7 @@ public final class PipePlacementHighlight {
         return null;
     }
 
+    //? if >=1.21.10 {
     /** Draws the preview outline in place of the vanilla outline. Captures only the immutable
      *  shape — never the level — as {@link CustomBlockOutlineRenderer} requires. */
     private record PreviewRenderer(VoxelShape shape) implements CustomBlockOutlineRenderer {
@@ -152,4 +203,5 @@ public final class PipePlacementHighlight {
             return true;
         }
     }
+    //?}
 }

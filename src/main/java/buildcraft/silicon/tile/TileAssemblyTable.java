@@ -21,13 +21,14 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.resources.Identifier;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.recipes.AssemblyRecipe;
 
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.NBTUtilBC;
@@ -189,7 +190,7 @@ public class TileAssemblyTable extends TileLaserTableBase {
             // Fires every tick while a recipe is active until the player has it;
             // tracker.award is idempotent so re-firing is a no-op HashMap lookup.
             if (getOwner() != null) {
-                AdvancementUtil.unlockAdvancement(getOwner().id(), getLevel(), ADVANCEMENT);
+                AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), getLevel(), ADVANCEMENT);
             }
             if (power >= getTarget()) {
                 AssemblyInstruction instruction = getActiveRecipe();
@@ -206,8 +207,8 @@ public class TileAssemblyTable extends TileLaserTableBase {
     // --- Save / Load ---
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         CompoundTag wrapper = new CompoundTag();
         ListTag recipesStatesTag = new ListTag();
         recipesStates.forEach((instruction, state) -> {
@@ -229,31 +230,37 @@ public class TileAssemblyTable extends TileLaserTableBase {
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
         recipesStates.clear();
         input.read("recipes_states", CompoundTag.CODEC).ifPresent(wrapper -> {
-            wrapper.getList("entries").ifPresent(recipesStatesTag -> {
+            ListTag recipesStatesTag = NBTUtilBC.getList(wrapper, "entries", Tag.TAG_COMPOUND);
+            {
                 for (int i = 0; i < recipesStatesTag.size(); i++) {
-                    recipesStatesTag.getCompound(i).ifPresent(entryTag -> {
-                        entryTag.getString("recipe").ifPresent(name -> {
+                    CompoundTag entryTag = NBTUtilBC.getCompoundOrNull(recipesStatesTag, i);
+                    if (entryTag == null) {
+                        continue;
+                    }
+                    {
+                        String name = NBTUtilBC.getString(entryTag, "recipe", "");
+                        if (!name.isEmpty()) {
                             AssemblyRecipe recipe = AssemblyRecipeRegistry.REGISTRY.get(name);
                             if (recipe != null) {
-                                int stateOrdinal = entryTag.getIntOr("state", 0);
+                                int stateOrdinal = NBTUtilBC.getInt(entryTag, "state", 0);
                                 EnumAssemblyRecipeState[] values = EnumAssemblyRecipeState.values();
                                 if (stateOrdinal >= 0 && stateOrdinal < values.length) {
                                     // Try to load the specific output ItemStack from saved data
-                                    ItemStack outputStack = entryTag.getCompound("output")
-                                        .map(outputTag -> {
-                                            ItemStack stack = NBTUtilBC.itemStackFromNBT(outputTag);
-                                            // Restore custom data component if present
-                                            outputTag.getCompound("customData").ifPresent(cd -> {
-                                                NBTUtilBC.setItemData(stack, cd);
-                                            });
-                                            return stack;
-                                        })
-                                        .orElse(ItemStack.EMPTY);
-                                    
+                                    ItemStack outputStack = ItemStack.EMPTY;
+                                    CompoundTag outputTag = NBTUtilBC.getCompoundOrNull(entryTag, "output");
+                                    if (outputTag != null) {
+                                        outputStack = NBTUtilBC.itemStackFromNBT(outputTag);
+                                        // Restore custom data component if present
+                                        CompoundTag cd = NBTUtilBC.getCompoundOrNull(outputTag, "customData");
+                                        if (cd != null) {
+                                            NBTUtilBC.setItemData(outputStack, cd);
+                                        }
+                                    }
+
                                     if (outputStack.isEmpty()) {
                                         // Fallback for legacy data: take the first output
                                         Set<ItemStack> outputs = recipe.getOutputs(inv.stacks);
@@ -267,10 +274,10 @@ public class TileAssemblyTable extends TileLaserTableBase {
                                     }
                                 }
                             }
-                        });
-                    });
+                        }
+                    }
                 }
-            });
+            }
         });
     }
 

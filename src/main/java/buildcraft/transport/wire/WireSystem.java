@@ -43,6 +43,8 @@ import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.PipeApi;
 
+import buildcraft.lib.misc.NBTUtilBC;
+
 public final class WireSystem {
     public final ImmutableList<WireElement> elements;
     public final DyeColor color;
@@ -215,7 +217,7 @@ public final class WireSystem {
     }
 
     public WireSystem(CompoundTag nbt) {
-        ListTag elementsList = nbt.getListOrEmpty("elements");
+        ListTag elementsList = NBTUtilBC.getList(nbt, "elements", Tag.TAG_COMPOUND);
         //noinspection UnstableApiUsage
         elements = IntStream.range(0, elementsList.size())
             .mapToObj(i -> {
@@ -224,7 +226,7 @@ public final class WireSystem {
             })
             .map(WireElement::new)
             .collect(ImmutableList.toImmutableList());
-        color = DyeColor.byId(nbt.getIntOr("color", 0));
+        color = DyeColor.byId(NBTUtilBC.getInt(nbt, "color", 0));
 
         this.cachedHashCode = this.computeHashCode();
         this.cachedWiresHashCode = this.computeCachedWiresHashCode();
@@ -298,17 +300,17 @@ public final class WireSystem {
         }
 
         public WireElement(CompoundTag nbt) {
-            type = Type.values()[nbt.getIntOr("type", 0)];
-            int bpX = nbt.getIntOr("bpX", 0);
-            int bpY = nbt.getIntOr("bpY", 0);
-            int bpZ = nbt.getIntOr("bpZ", 0);
+            type = Type.values()[NBTUtilBC.getInt(nbt, "type", 0)];
+            int bpX = NBTUtilBC.getInt(nbt, "bpX", 0);
+            int bpY = NBTUtilBC.getInt(nbt, "bpY", 0);
+            int bpZ = NBTUtilBC.getInt(nbt, "bpZ", 0);
             blockPos = new BlockPos(bpX, bpY, bpZ);
             if (type == Type.WIRE_PART) {
-                wirePart = EnumWirePart.VALUES[nbt.getIntOr("wirePart", 0)];
+                wirePart = EnumWirePart.VALUES[NBTUtilBC.getInt(nbt, "wirePart", 0)];
                 this.emitterSide = null;
             } else if (type == Type.EMITTER_SIDE) {
                 this.wirePart = null;
-                emitterSide = Direction.from3DDataValue(nbt.getIntOr("emitterSide", 0));
+                emitterSide = Direction.from3DDataValue(NBTUtilBC.getInt(nbt, "emitterSide", 0));
             } else {
                 this.wirePart = null;
                 this.emitterSide = null;

@@ -23,7 +23,9 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+//? if >=1.21.10 {
 import net.minecraft.world.level.redstone.Orientation;
+//?}
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -33,6 +35,8 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import buildcraft.api.blocks.ICustomRotationHandler;
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.api.tools.IToolWrench;
+
+import buildcraft.lib.misc.BlockUtil;
 
 /**
  * Abstract base block for all BuildCraft engine blocks.
@@ -170,9 +174,14 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock, 
      * via the wrench item's useOn() path, NOT through this method.
      */
     @Override
+    //? if >=1.21.10 {
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
-        return InteractionResult.PASS;
+    //?} else {
+    /*protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+            Player player, InteractionHand hand, BlockHitResult hitResult) {*/
+    //?}
+        return BlockUtil.itemUsePass();
     }
 
     // --- Neighbor changes ---
@@ -183,8 +192,13 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock, 
      * NeoForge 1.21.11 signature: uses Orientation instead of BlockPos.
      */
     @Override
+    //? if >=1.21.10 {
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block blockIn,
             @Nullable Orientation orientation, boolean isMoving) {
+    //?} else {
+    /*protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block blockIn,
+            BlockPos neighborPos, boolean isMoving) {*/
+    //?}
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TileEngineBase_BC8 engine) {
             engine.onNeighborUpdate();

@@ -7,6 +7,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.function.Supplier;
 
+import buildcraft.lib.misc.BlockEntityTypeUtilBC;
 import buildcraft.builders.tile.TileArchitectTable;
 import buildcraft.builders.tile.TileBuilder;
 import buildcraft.builders.tile.TileElectronicLibrary;
@@ -20,27 +21,27 @@ public class BCBuildersBlockEntities {
 
     public static final Supplier<BlockEntityType<TileFiller>> FILLER = BLOCK_ENTITIES.register(
             "filler",
-            () -> new BlockEntityType<>(TileFiller::new, BCBuildersBlocks.FILLER.get()));
+            () -> BlockEntityTypeUtilBC.create(TileFiller::new, BCBuildersBlocks.FILLER.get()));
 
     public static final Supplier<BlockEntityType<TileBuilder>> BUILDER = BLOCK_ENTITIES.register(
             "builder",
-            () -> new BlockEntityType<>(TileBuilder::new, BCBuildersBlocks.BUILDER.get()));
+            () -> BlockEntityTypeUtilBC.create(TileBuilder::new, BCBuildersBlocks.BUILDER.get()));
 
     public static final Supplier<BlockEntityType<TileArchitectTable>> ARCHITECT = BLOCK_ENTITIES.register(
             "architect",
-            () -> new BlockEntityType<>(TileArchitectTable::new, BCBuildersBlocks.ARCHITECT.get()));
+            () -> BlockEntityTypeUtilBC.create(TileArchitectTable::new, BCBuildersBlocks.ARCHITECT.get()));
 
     public static final Supplier<BlockEntityType<TileElectronicLibrary>> LIBRARY = BLOCK_ENTITIES.register(
             "library",
-            () -> new BlockEntityType<>(TileElectronicLibrary::new, BCBuildersBlocks.LIBRARY.get()));
+            () -> BlockEntityTypeUtilBC.create(TileElectronicLibrary::new, BCBuildersBlocks.LIBRARY.get()));
 
     public static final Supplier<BlockEntityType<TileReplacer>> REPLACER = BLOCK_ENTITIES.register(
             "replacer",
-            () -> new BlockEntityType<>(TileReplacer::new, BCBuildersBlocks.REPLACER.get()));
+            () -> BlockEntityTypeUtilBC.create(TileReplacer::new, BCBuildersBlocks.REPLACER.get()));
 
     public static final Supplier<BlockEntityType<TileQuarry>> QUARRY = BLOCK_ENTITIES.register(
             "quarry",
-            () -> new BlockEntityType<>(TileQuarry::new, BCBuildersBlocks.QUARRY.get()));
+            () -> BlockEntityTypeUtilBC.create(TileQuarry::new, BCBuildersBlocks.QUARRY.get()));
 
     public static void init(IEventBus modEventBus) {
         BLOCK_ENTITIES.register(modEventBus);

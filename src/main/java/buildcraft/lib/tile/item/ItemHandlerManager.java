@@ -20,8 +20,7 @@ import net.minecraft.core.NonNullList;
 
 
 import buildcraft.lib.misc.INBTSerializable;
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.item.ItemResource;
+import buildcraft.lib.misc.NBTUtilBC;
 
 import buildcraft.api.core.EnumPipePart;
 
@@ -37,7 +36,7 @@ public class ItemHandlerManager implements INBTSerializable<CompoundTag> {
     }
 
     public final StackChangeCallback callback;
-    private final List<ResourceHandler<ItemResource>> handlersToDrop = new ArrayList<>();
+    private final List<IBCItemHandler> handlersToDrop = new ArrayList<>();
     private final Map<EnumPipePart, Wrapper> wrappers = new EnumMap<>(EnumPipePart.class);
     private final Map<String, INBTSerializable<CompoundTag>> handlers = new HashMap<>();
 
@@ -49,12 +48,12 @@ public class ItemHandlerManager implements INBTSerializable<CompoundTag> {
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends INBTSerializable<CompoundTag> & ResourceHandler<ItemResource>> T addInvHandler(String key, T handler,
+    public <T extends INBTSerializable<CompoundTag> & IBCItemHandler> T addInvHandler(String key, T handler,
         EnumAccess access, EnumPipePart... parts) {
         if (parts == null) {
             parts = new EnumPipePart[0];
         }
-        ResourceHandler<ItemResource> external = handler;
+        IBCItemHandler external = handler;
         if (access == EnumAccess.NONE || access == EnumAccess.PHANTOM) {
             external = null;
             if (parts.length > 0) {
@@ -111,13 +110,13 @@ public class ItemHandlerManager implements INBTSerializable<CompoundTag> {
     }
 
     public void addDrops(NonNullList<ItemStack> toDrop) {
-        for (ResourceHandler<ItemResource> itemHandler : handlersToDrop) {
+        for (IBCItemHandler itemHandler : handlersToDrop) {
             InventoryUtil.addAll(itemHandler, toDrop);
         }
     }
 
     /** Gets the combined item handler for the given direction, or null if none. */
-    public ResourceHandler<ItemResource> getItemHandler(Direction facing) {
+    public IBCItemHandler getItemHandler(Direction facing) {
         Wrapper wrapper = wrappers.get(EnumPipePart.fromFacing(facing));
         return wrapper.combined;
     }
@@ -136,13 +135,13 @@ public class ItemHandlerManager implements INBTSerializable<CompoundTag> {
     public void deserializeNBT(CompoundTag nbt) {
         for (Entry<String, INBTSerializable<CompoundTag>> entry : handlers.entrySet()) {
             String key = entry.getKey();
-            entry.getValue().deserializeNBT(nbt.getCompound(key).orElseGet(CompoundTag::new));
+            entry.getValue().deserializeNBT(NBTUtilBC.getCompound(nbt, key));
         }
     }
 
     private static class Wrapper {
-        private final List<ResourceHandler<ItemResource>> handlers = new ArrayList<>();
-        private ResourceHandler<ItemResource> combined = null;
+        private final List<IBCItemHandler> handlers = new ArrayList<>();
+        private IBCItemHandler combined = null;
 
         public void genWrapper() {
             if (handlers.size() == 1) {
@@ -151,7 +150,7 @@ public class ItemHandlerManager implements INBTSerializable<CompoundTag> {
                 return;
             }
             @SuppressWarnings({"unchecked", "rawtypes"})
-            ResourceHandler<ItemResource>[] arr = new ResourceHandler[handlers.size()];
+            IBCItemHandler[] arr = new IBCItemHandler[handlers.size()];
             arr = handlers.toArray(arr);
             combined = new CombinedItemHandlerWrapper(arr);
         }

@@ -12,6 +12,7 @@ import buildcraft.api.statements.ITrigger;
 import buildcraft.api.statements.ITriggerInternal;
 import buildcraft.api.statements.StatementManager;
 
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.lib.statement.StatementType;
 import buildcraft.lib.statement.TriggerWrapper;
@@ -38,11 +39,11 @@ public class TriggerType extends StatementType<TriggerWrapper> {
         if (nbt == null) {
             return null;
         }
-        String kind = nbt.getString("kind").orElse(null);
+        String kind = NBTUtilBC.getString(nbt, "kind", null);
         if (kind == null || kind.isEmpty()) {
             return null;
         }
-        EnumPipePart side = EnumPipePart.fromMeta(nbt.getByte("side").orElse((byte) 5));
+        EnumPipePart side = EnumPipePart.fromMeta(NBTUtilBC.getByte(nbt, "side", (byte) 5));
         IStatement statement = StatementManager.statements.get(kind);
         if (statement instanceof ITrigger) {
             return TriggerWrapper.wrap(statement, side.face);

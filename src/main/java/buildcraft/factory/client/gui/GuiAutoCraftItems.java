@@ -10,8 +10,10 @@ import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
+//? if >=1.21.10 {
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+//?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -66,6 +68,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
         super.init();
         this.widthTooNarrow = this.width < 379;
 
+        //? if >=1.21.10 {
         this.recipeBookComponent = new AWRecipeBookComponent(this.menu);
         this.recipeBookComponent.init(this.width, this.height, this.minecraft, this.widthTooNarrow);
 
@@ -86,6 +89,8 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
         );
         addRenderableWidget(this.recipeBookButton);
         addRenderableWidget(this.recipeBookComponent);
+        //?}
+        // 1.21.1: recipe book deferred — recipeBookComponent stays null; the GUI works for manual crafting.
     }
 
     private ScreenPosition getRecipeBookButtonPosition() {
@@ -169,6 +174,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     protected void drawTooltipLayer(int mouseX, int mouseY, float partialTick) {
         // The panel itself renders via addRenderableWidget(recipeBookComponent) in init();
         // draw its tooltips on top here (mirrors vanilla AbstractRecipeBookScreen).
+        //? if >=1.21.10 {
         if (this.recipeBookComponent != null && this.recipeBookComponent.isVisible()) {
             BCGraphics graphics = GuiIcon.getGuiGraphics();
             //? if >=26.1 {
@@ -177,9 +183,11 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
             /*this.recipeBookComponent.renderTooltip(graphics.raw, mouseX, mouseY, this.hoveredSlot);*/
             //?}
         }
+        //?}
     }
 
 
+    //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean entered) {
         if (this.recipeBookComponent != null && this.recipeBookComponent.mouseClicked(event, entered)) {
@@ -189,12 +197,27 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
         // Defer to super class to allow clicking slots even if recipe book logic is unfinished
         return super.mouseClicked(event, entered);
     }
+    //?} else {
+    /*@Override
+    public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
+        if (this.recipeBookComponent != null && this.recipeBookComponent.mouseClicked(mouseXd, mouseYd, button)) {
+            this.setFocused(this.recipeBookComponent);
+            return true;
+        }
+        // Defer to super class to allow clicking slots even if recipe book logic is unfinished
+        return super.mouseClicked(mouseXd, mouseYd, button);
+    }*/
+    //?}
 
     protected boolean hasClickedOutside(double mouseX, double mouseY, int left, int top, int button) {
         boolean outside = mouseX < left || mouseY < top || mouseX >= left + this.imageWidth || mouseY >= top + this.imageHeight;
+        //? if >=1.21.10 {
         return this.recipeBookComponent != null
             ? this.recipeBookComponent.hasClickedOutside(mouseX, mouseY, this.leftPos, this.topPos, this.imageWidth, this.imageHeight) && outside
             : outside;
+        //?} else {
+        /*return outside;*/
+        //?}
     }
 
     public void recipesUpdated() {
@@ -203,11 +226,19 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
         }
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean keyPressed(KeyEvent event) {
         return this.recipeBookComponent != null && this.recipeBookComponent.keyPressed(event)
             ? true : super.keyPressed(event);
     }
+    //?} else {
+    /*@Override
+    public boolean keyPressed(int key, int scancode, int modifiers) {
+        return this.recipeBookComponent != null && this.recipeBookComponent.keyPressed(key, scancode, modifiers)
+            ? true : super.keyPressed(key, scancode, modifiers);
+    }*/
+    //?}
 
     @Override
     protected boolean isHovering(int x, int y, int width, int height, double mouseX, double mouseY) {

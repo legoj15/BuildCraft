@@ -12,9 +12,14 @@ import net.minecraft.core.Direction;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
+//?} else {
+/*import net.neoforged.neoforge.fluids.FluidUtil;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
+//?}
 
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementContainer;
@@ -53,6 +58,7 @@ public class TriggerFluidContainer extends BCStatement implements ITriggerExtern
         return LocaleUtil.localize("gate.trigger.fluid." + state.name().toLowerCase(Locale.ROOT));
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer statementContainer, IStatementParameter[] parameters) {
         if (tile == null || tile.getLevel() == null) {
@@ -145,6 +151,87 @@ public class TriggerFluidContainer extends BCStatement implements ITriggerExtern
         }
         return false;
     }
+    //?} else {
+    /*@Override
+    public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer statementContainer, IStatementParameter[] parameters) {
+        if (tile == null || tile.getLevel() == null) {
+            return false;
+        }
+
+        IFluidHandler handler = tile.getLevel().getCapability(
+            Capabilities.FluidHandler.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null
+        );
+
+        if (handler == null) {
+            return false;
+        }
+
+        FluidStack searchedFluid = FluidStack.EMPTY;
+
+        if (parameters != null && parameters.length >= 1 && parameters[0] != null && !parameters[0].getItemStack().isEmpty()) {
+            net.minecraft.world.item.ItemStack stack = parameters[0].getItemStack();
+            searchedFluid = FluidUtil.getFluidContained(stack).orElse(FluidStack.EMPTY);
+        }
+
+        int tanks = handler.getTanks();
+        if (tanks == 0) {
+            return false;
+        }
+
+        switch (state) {
+            case EMPTY: {
+                for (int i = 0; i < tanks; i++) {
+                    FluidStack fluid = handler.getFluidInTank(i);
+                    if (!fluid.isEmpty() && fluid.getAmount() > 0) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            case CONTAINS: {
+                for (int i = 0; i < tanks; i++) {
+                    FluidStack fluid = handler.getFluidInTank(i);
+                    if (!fluid.isEmpty() && fluid.getAmount() > 0
+                        && (searchedFluid.isEmpty() || FluidStack.isSameFluidSameComponents(fluid, searchedFluid))) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            case SPACE: {
+                if (searchedFluid.isEmpty()) {
+                    for (int i = 0; i < tanks; i++) {
+                        FluidStack fluid = handler.getFluidInTank(i);
+                        int cap = handler.getTankCapacity(i);
+                        if (fluid.isEmpty() || fluid.getAmount() < cap) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+                FluidStack probe = searchedFluid.copy();
+                probe.setAmount(1);
+                return handler.fill(probe, IFluidHandler.FluidAction.SIMULATE) > 0;
+            }
+            case FULL: {
+                if (searchedFluid.isEmpty()) {
+                    for (int i = 0; i < tanks; i++) {
+                        FluidStack fluid = handler.getFluidInTank(i);
+                        int cap = handler.getTankCapacity(i);
+                        if (fluid.isEmpty() || fluid.getAmount() < cap) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+                FluidStack probe = searchedFluid.copy();
+                probe.setAmount(1);
+                return handler.fill(probe, IFluidHandler.FluidAction.SIMULATE) <= 0;
+            }
+        }
+        return false;
+    }*/
+    //?}
 
     @Override
     public IStatementParameter createParameter(int index) {

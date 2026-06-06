@@ -6,15 +6,15 @@
 
 package buildcraft.factory.compat.jei;
 
-import mezz.jei.api.recipe.types.IRecipeType;
+import mezz.jei.api.recipe.RecipeType;
 
 /**
- * Holds the JEI {@link IRecipeType} for the heat exchanger. There is a single
+ * Holds the JEI {@link RecipeType} for the heat exchanger. There is a single
  * type because each JEI recipe is a paired (heatable + coolable) operation —
  * see {@link HeatExchangerRecipePair}.
  */
 public final class HeatExchangerRecipeTypes {
-    public static final IRecipeType<HeatExchangerRecipePair> PAIR = IRecipeType.create(
+    public static final RecipeType<HeatExchangerRecipePair> PAIR = RecipeType.create(
             "buildcraftunofficial", "heat_exchanger", HeatExchangerRecipePair.class);
 
     private HeatExchangerRecipeTypes() {}

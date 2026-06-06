@@ -14,7 +14,9 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+//? if >=1.21.10 {
 import net.minecraft.world.entity.player.StackedItemContents;
+//?}
 import net.minecraft.world.inventory.RecipeBookType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -115,6 +117,7 @@ public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchIt
         return this.slots.get(0); // First slot added is the output slot
     }
 
+    //? if >=1.21.10 {
     @Override
     public PostPlaceAction handlePlacement(boolean useMaxItems, boolean isCreative, RecipeHolder<?> recipe,
         ServerLevel level, Inventory playerInv) {
@@ -124,9 +127,23 @@ public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchIt
         CraftingUtil.placeRecipeInBlueprint(craftingRecipe, tile.invBlueprint, level);
         return PostPlaceAction.PLACE_GHOST_RECIPE;
     }
+    //?} else {
+    /*@Override
+    public void handlePlacement(boolean useMaxItems, boolean isCreative, RecipeHolder<?> recipe,
+        ServerLevel level, Inventory playerInv) {
+        if (!(recipe.value() instanceof CraftingRecipe craftingRecipe)) {
+            return;
+        }
+        CraftingUtil.placeRecipeInBlueprint(craftingRecipe, tile.invBlueprint, level);
+    }*/
+    //?}
 
     @Override
+    //? if >=1.21.10 {
     public void fillCraftSlotsStackedContents(StackedItemContents contents) {
+    //?} else {
+    /*public void fillCraftSlotsStackedContents(net.minecraft.world.entity.player.StackedContents contents) {*/
+    //?}
         for (int i = 0; i < tile.invMaterials.getSlots(); i++) {
             contents.accountStack(tile.invMaterials.getStackInSlot(i));
         }

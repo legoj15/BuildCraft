@@ -131,7 +131,11 @@ public final class BlueprintTooltipOverlay {
             if (w > textWidth) {
                 textWidth = w;
             }
+            //? if >=1.21.10 {
             contentHeight += c.getHeight(font);
+            //?} else {
+            /*contentHeight += c.getHeight();*/
+            //?}
         }
 
         // Run the positioner to find the final on-screen coordinate. We have to do this
@@ -165,9 +169,12 @@ public final class BlueprintTooltipOverlay {
         //? if >=26.1 {
         TooltipRenderUtil.extractTooltipBackground(
                 event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);
-        //?} else {
+        //?} elif >=1.21.10 {
         /*TooltipRenderUtil.renderTooltipBackground(
                 event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);*/
+        //?} else {
+        /*TooltipRenderUtil.renderTooltipBackground(
+                event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, 400);*/
         //?}
 
         // Hand the 3D rendering off to the PiP pipeline. Both snapshot kinds render: Blueprints as

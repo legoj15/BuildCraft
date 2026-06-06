@@ -22,13 +22,13 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.enums.EnumSnapshotType;
 
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.nbt.NbtSquisher;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
@@ -213,8 +213,8 @@ public class TileElectronicLibrary extends TileBC_Neptune implements MenuProvide
     // --- NBT persistence ---
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         output.putInt("progressDown", progressDown);
         output.putInt("progressUp", progressUp);
         output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
@@ -224,8 +224,8 @@ public class TileElectronicLibrary extends TileBC_Neptune implements MenuProvide
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
         progressDown = input.getIntOr("progressDown", -1);
         progressUp = input.getIntOr("progressUp", -1);
         input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);

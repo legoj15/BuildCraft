@@ -31,7 +31,12 @@ public final class AdvDebugRenderer {
     private AdvDebugRenderer() {}
 
     @SubscribeEvent
+    //? if >=1.21.10 {
     public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    //?} else {
+    /*public static void onRenderLevel(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
+    //?}
         BlockPos target = BCAdvDebugging.INSTANCE.getClientTarget();
         if (target == null) {
             return;
@@ -47,7 +52,11 @@ public final class AdvDebugRenderer {
             return;
         }
 
+        //? if >=1.21.10 {
         Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
+        //?} else {
+        /*Vec3 cameraPos = event.getCamera().getPosition();*/
+        //?}
         PoseStack poseStack = event.getPoseStack();
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
 

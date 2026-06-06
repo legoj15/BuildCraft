@@ -93,7 +93,11 @@ public final class SchematicSingleTooltipOverlay {
             if (w > textWidth) {
                 textWidth = w;
             }
+            //? if >=1.21.10 {
             contentHeight += c.getHeight(font);
+            //?} else {
+            /*contentHeight += c.getHeight();*/
+            //?}
         }
         ClientTooltipPositioner positioner = event.getTooltipPositioner();
         Vector2ic finalPos = positioner.positionTooltip(
@@ -108,9 +112,12 @@ public final class SchematicSingleTooltipOverlay {
         //? if >=26.1 {
         TooltipRenderUtil.extractTooltipBackground(
                 event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);
-        //?} else {
+        //?} elif >=1.21.10 {
         /*TooltipRenderUtil.renderTooltipBackground(
                 event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, null);*/
+        //?} else {
+        /*TooltipRenderUtil.renderTooltipBackground(
+                event.getGraphics(), pX, pY, PREVIEW_SIZE, PREVIEW_SIZE, 400);*/
         //?}
 
         // Synthesize a 1×1×1 blueprint so BlueprintRenderer's existing pipeline just works.

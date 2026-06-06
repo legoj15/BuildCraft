@@ -57,14 +57,23 @@ public class BlockTube extends Block {
     }
 
     @Override
+    //? if >=1.21.10 {
     protected boolean propagatesSkylightDown(BlockState state) {
+    //?} else {
+    /*protected boolean propagatesSkylightDown(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos) {*/
+    //?}
         return true;
     }
 
     @Override
+    //? if >=1.21.10 {
     public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
             net.minecraft.world.item.ItemStack toolStack, boolean willHarvest,
             net.minecraft.world.level.material.FluidState fluid) {
+    //?} else {
+    /*public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
+            boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {*/
+    //?}
         // Walk upwards to find if a TileMiner is above this tube column
         BlockPos checkPos = pos;
         while (level.getBlockState(checkPos = checkPos.above()).getBlock() == this) {
@@ -74,6 +83,10 @@ public class BlockTube extends Block {
             // Don't allow breaking — the miner owns this tube
             return false;
         }
+        //? if >=1.21.10 {
         return super.onDestroyedByPlayer(state, level, pos, player, toolStack, willHarvest, fluid);
+        //?} else {
+        /*return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);*/
+        //?}
     }
 }

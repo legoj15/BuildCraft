@@ -106,21 +106,33 @@ public class DistillerCategory extends AbstractRecipeCategory<IDistillationRecip
         if (!in.isEmpty()) {
             builder.addInputSlot(TANK_IN_X, TANK_IN_Y)
                     .setFluidRenderer(in.getAmount(), false, TANK_IN_W, TANK_IN_H)
+                    //? if >=1.21.10 {
                     .add(in.getFluid(), in.getAmount(), in.getComponentsPatch());
+                    //?} else {
+                    /*.addFluidStack(in.getFluid(), in.getAmount(), in.getComponentsPatch());*/
+                    //?}
             FluidContainerAliases.addAliases(builder, in, RecipeIngredientRole.INPUT);
         }
         FluidStack outGas = recipe.outGas();
         if (outGas != null && !outGas.isEmpty()) {
             builder.addOutputSlot(TANK_GAS_X, TANK_GAS_Y)
                     .setFluidRenderer(outGas.getAmount(), false, TANK_GAS_W, TANK_GAS_H)
+                    //? if >=1.21.10 {
                     .add(outGas.getFluid(), outGas.getAmount(), outGas.getComponentsPatch());
+                    //?} else {
+                    /*.addFluidStack(outGas.getFluid(), outGas.getAmount(), outGas.getComponentsPatch());*/
+                    //?}
             FluidContainerAliases.addAliases(builder, outGas, RecipeIngredientRole.OUTPUT);
         }
         FluidStack outLiquid = recipe.outLiquid();
         if (outLiquid != null && !outLiquid.isEmpty()) {
             builder.addOutputSlot(TANK_LIQ_X, TANK_LIQ_Y)
                     .setFluidRenderer(outLiquid.getAmount(), false, TANK_LIQ_W, TANK_LIQ_H)
+                    //? if >=1.21.10 {
                     .add(outLiquid.getFluid(), outLiquid.getAmount(), outLiquid.getComponentsPatch());
+                    //?} else {
+                    /*.addFluidStack(outLiquid.getFluid(), outLiquid.getAmount(), outLiquid.getComponentsPatch());*/
+                    //?}
             FluidContainerAliases.addAliases(builder, outLiquid, RecipeIngredientRole.OUTPUT);
         }
     }

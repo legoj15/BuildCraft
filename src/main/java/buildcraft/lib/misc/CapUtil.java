@@ -13,8 +13,11 @@ import net.neoforged.neoforge.capabilities.Capabilities;
  * routes them to the actual NeoForge level.getCapability() calls.
  *
  * For MJ capabilities BuildCraft defines its own tokens in MjAPI.
- * For items and fluids we wrap the NeoForge capability tokens. */
+ * For items and fluids we wrap the NeoForge capability tokens. On 1.21.10+ those
+ * are the Transfer-API tokens (Capabilities.Item/Fluid/Energy.BLOCK); on 1.21.1
+ * they are the classic handler tokens (Capabilities.ItemHandler/FluidHandler/EnergyStorage.BLOCK). */
 public class CapUtil {
+    //? if >=1.21.10 {
     /** Token for item handler capability. Routes to Capabilities.Item.BLOCK. */
     @Nonnull
     public static final Object CAP_ITEMS = Capabilities.Item.BLOCK;
@@ -26,4 +29,14 @@ public class CapUtil {
     /** Token for energy handler capability. Routes to Capabilities.Energy.BLOCK. */
     @Nonnull
     public static final Object CAP_ENERGY = Capabilities.Energy.BLOCK;
+    //?} else {
+    /*@Nonnull
+    public static final Object CAP_ITEMS = Capabilities.ItemHandler.BLOCK;
+
+    @Nonnull
+    public static final Object CAP_FLUIDS = Capabilities.FluidHandler.BLOCK;
+
+    @Nonnull
+    public static final Object CAP_ENERGY = Capabilities.EnergyStorage.BLOCK;*/
+    //?}
 }

@@ -11,12 +11,14 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 //? if >=26.1 {
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-//?} else {
+//?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.state.CameraRenderState;*/
 //?}
 import net.minecraft.core.BlockPos;
@@ -49,7 +51,11 @@ import buildcraft.builders.tile.TileArchitectTable;
  *       green lit, red half-lit (a "please remove the blueprint" cue).</li>
  * </ul>
  */
+//? if >=1.21.10 {
 public class RenderArchitectTable implements BlockEntityRenderer<TileArchitectTable, ArchitectTableRenderState> {
+//?} else {
+/*public class RenderArchitectTable implements BlockEntityRenderer<TileArchitectTable> {*/
+//?}
     /** Half-intensity red. Roughly half of {@link LedRenderUtil#COLOUR_RED_ON} per ABGR channel —
      *  visible enough to read as lit, but clearly dimmer than the "scanning" red. */
     private static final int COLOUR_RED_HALF = 0xFF_11_11_77;
@@ -68,6 +74,7 @@ public class RenderArchitectTable implements BlockEntityRenderer<TileArchitectTa
     public RenderArchitectTable(BlockEntityRendererProvider.Context context) {
     }
 
+    //? if >=1.21.10 {
     @Override
     public ArchitectTableRenderState createRenderState() {
         return new ArchitectTableRenderState();
@@ -91,7 +98,17 @@ public class RenderArchitectTable implements BlockEntityRenderer<TileArchitectTa
 
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TileArchitectTable tile)) return;
-
+    //?} else {
+    /*// 1.21.1: classic direct BlockEntityRenderer.render — the tile is passed, so no camera-pos
+    // reconstruction is needed. The passed buffers/packedLight/packedOverlay/partialTicks go unused
+    // (the shared body sources its own buffer/light from the level, as the modern submit path does).
+    @Override
+    public void render(TileArchitectTable tile, float partialTicks, PoseStack poseStack,
+                       MultiBufferSource buffers, int packedLight, int packedOverlay) {
+        BlockPos pos = tile.getBlockPos();
+        Level level = tile.getLevel();
+        if (level == null) return;*/
+    //?}
         BlockState state = level.getBlockState(pos);
         if (!state.hasProperty(HorizontalDirectionalBlock.FACING)) return;
         Direction facing = state.getValue(HorizontalDirectionalBlock.FACING);

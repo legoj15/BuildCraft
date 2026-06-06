@@ -13,18 +13,22 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.joml.Vector3f;
 
+//? if >=1.21.10 {
 import net.minecraft.client.color.item.ItemTintSource;
+//?}
 import net.minecraft.client.multiplayer.ClientLevel;
 //? if >=26.1 {
 import net.minecraft.client.renderer.item.CuboidItemModelWrapper;
-//?} else {
+//?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.item.BlockModelWrapper;*/
 //?}
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.item.ModelRenderProperties;
+//?}
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 //? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.BakedQuad;
@@ -35,7 +39,9 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.resources.model.geometry.QuadCollection;
 //?}
 import net.minecraft.core.Direction;
+//? if >=1.21.10 {
 import net.minecraft.world.entity.ItemOwner;
+//?}
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -63,6 +69,7 @@ import buildcraft.transport.BCTransportItems;
  * BlockModelWrapper exposes {@code properties} publicly, so its branch needs no reflection.
  */
 @SuppressWarnings("deprecation")
+//? if >=1.21.10 {
 public class PipeItemModel implements ItemModel {
 
     // Reflection fields cached at class-load time. 26.1 only: CuboidItemModelWrapper hides quads/
@@ -337,3 +344,41 @@ public class PipeItemModel implements ItemModel {
         }
     }
 }
+//?} else {
+/*// 1.21.1 has no 1.21.4+ ItemModel/ItemStackRenderState system — pipe items are classic BakedModels.
+// This wraps the vanilla item baked model and renders the BASE pipe correctly. Painted-pipe colour
+// (dyed sprite for fluid pipes, tinted overlay for transport/kinesis) is a 1.21.1 TODO: it needs the
+// classic ItemColor (RegisterColorHandlersEvent.Item) + ItemOverrides path — until then painted pipes
+// render as the base item, exactly the state the 1.21.11 node shipped in before its own paint fix.
+public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {
+    private final net.minecraft.client.resources.model.BakedModel vanillaDelegate;
+    private final PipeDefinition definition;
+
+    public PipeItemModel(net.minecraft.client.resources.model.BakedModel vanillaDelegate, PipeDefinition definition) {
+        this.vanillaDelegate = vanillaDelegate;
+        this.definition = definition;
+    }
+
+    @Override
+    public java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> getQuads(
+            net.minecraft.world.level.block.state.BlockState state, net.minecraft.core.Direction side,
+            net.minecraft.util.RandomSource rand, net.neoforged.neoforge.client.model.data.ModelData data,
+            net.minecraft.client.renderer.RenderType renderType) {
+        return vanillaDelegate.getQuads(state, side, rand, data, renderType);
+    }
+
+    @Override public boolean useAmbientOcclusion() { return vanillaDelegate.useAmbientOcclusion(); }
+    @Override public boolean isGui3d() { return vanillaDelegate.isGui3d(); }
+    @Override public boolean usesBlockLight() { return vanillaDelegate.usesBlockLight(); }
+    @Override public boolean isCustomRenderer() { return false; }
+    @Override public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
+        return vanillaDelegate.getParticleIcon();
+    }
+    @Override public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
+        return vanillaDelegate.getTransforms();
+    }
+    @Override public net.minecraft.client.renderer.block.model.ItemOverrides getOverrides() {
+        return vanillaDelegate.getOverrides();
+    }
+}*/
+//?}

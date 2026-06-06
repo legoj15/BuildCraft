@@ -64,7 +64,12 @@ public class ListMatchHandlerTags extends ListMatchHandler {
         Set<Item> seen = new HashSet<>();
         NonNullList<ItemStack> out = NonNullList.create();
 
+        //? if >=1.21.10 {
         BuiltInRegistries.ITEM.getTags().forEach((HolderSet.Named<Item> named) -> {
+        //?} else {
+        /*BuiltInRegistries.ITEM.getTags().forEach((com.mojang.datafixers.util.Pair<TagKey<Item>, HolderSet.Named<Item>> pair) -> {
+            HolderSet.Named<Item> named = pair.getSecond();*/
+        //?}
             TagKey<Item> tag = named.key();
             String part = partOf(tag, type);
             if (!parts.contains(part)) return;

@@ -45,6 +45,40 @@ public class BlockUtil {
     /** Mining multiplier, set by BCCoreConfig on init. Default 1.0. */
     public static double miningMultiplier = 1.0;
 
+    // --- Version-neutral useItemOn result values ---
+    // BlockBehaviour#useItemOn returns InteractionResult on 1.21.10+ but the older ItemInteractionResult
+    // enum on 1.21.1. These return the node-appropriate value so block useItemOn bodies stay shared across
+    // nodes; only each override's declared return type is gated. PASS maps to PASS_TO_DEFAULT_BLOCK_INTERACTION
+    // on 1.21.1 (the equivalent "fall through to useWithoutItem" signal).
+    //? if >=1.21.10 {
+    public static net.minecraft.world.InteractionResult itemUsePass() { return net.minecraft.world.InteractionResult.PASS; }
+    public static net.minecraft.world.InteractionResult itemUseSuccess() { return net.minecraft.world.InteractionResult.SUCCESS; }
+    public static net.minecraft.world.InteractionResult itemUseConsume() { return net.minecraft.world.InteractionResult.CONSUME; }
+    public static net.minecraft.world.InteractionResult itemUseFail() { return net.minecraft.world.InteractionResult.FAIL; }
+    public static net.minecraft.world.InteractionResult itemUseTryWithEmptyHand() { return net.minecraft.world.InteractionResult.TRY_WITH_EMPTY_HAND; }
+
+    /** Adapt an {@link net.minecraft.world.InteractionResult} (e.g. from a shared GUI-open helper that
+     *  both useItemOn and useWithoutItem call) to the useItemOn return type. Identity on 1.21.10+; maps
+     *  to the {@code ItemInteractionResult} enum on 1.21.1 (PASS -> PASS_TO_DEFAULT_BLOCK_INTERACTION). */
+    public static net.minecraft.world.InteractionResult itemUseFrom(net.minecraft.world.InteractionResult result) { return result; }
+    //?} else {
+    /*public static net.minecraft.world.ItemInteractionResult itemUsePass() { return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION; }
+    public static net.minecraft.world.ItemInteractionResult itemUseSuccess() { return net.minecraft.world.ItemInteractionResult.SUCCESS; }
+    public static net.minecraft.world.ItemInteractionResult itemUseConsume() { return net.minecraft.world.ItemInteractionResult.CONSUME; }
+    public static net.minecraft.world.ItemInteractionResult itemUseFail() { return net.minecraft.world.ItemInteractionResult.FAIL; }
+    public static net.minecraft.world.ItemInteractionResult itemUseTryWithEmptyHand() { return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION; }
+
+    public static net.minecraft.world.ItemInteractionResult itemUseFrom(net.minecraft.world.InteractionResult result) {
+        return switch (result) {
+            case SUCCESS, SUCCESS_NO_ITEM_USED -> net.minecraft.world.ItemInteractionResult.SUCCESS;
+            case CONSUME -> net.minecraft.world.ItemInteractionResult.CONSUME;
+            case CONSUME_PARTIAL -> net.minecraft.world.ItemInteractionResult.CONSUME_PARTIAL;
+            case FAIL -> net.minecraft.world.ItemInteractionResult.FAIL;
+            case PASS -> net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        };
+    }*/
+    //?}
+
     /** Fallback profile used when a mining tile has no recorded owner (e.g. set-block, worldgen).
      *  Same UUID seed and display name as BCCore's BC_PROFILE so protection mods see one identity. */
     private static final GameProfile MACHINE_FAKE_PROFILE = new GameProfile(
@@ -65,7 +99,7 @@ public class BlockUtil {
         if (BCCoreConfig.minePlayerProtected.get()) {
             return true;
         }
-        GameProfile profile = (owner != null && owner.name() != null) ? owner : MACHINE_FAKE_PROFILE;
+        GameProfile profile = (owner != null && GameProfileUtil.getName(owner) != null) ? owner : MACHINE_FAKE_PROFILE;
         Player fp = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, profile, pos);
         BlockState state = level.getBlockState(pos);
         return BreakEventCompat.canBreak(level, pos, state, fp);

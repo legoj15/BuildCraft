@@ -20,6 +20,7 @@ import buildcraft.api.facades.FacadeType;
 import buildcraft.api.facades.IFacade;
 import buildcraft.api.facades.IFacadePhasedState;
 
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.PacketBufferBC;
 
 public class FacadeInstance implements IFacade {
@@ -46,7 +47,7 @@ public class FacadeInstance implements IFacade {
     }
 
     public static FacadeInstance readFromNbt(CompoundTag nbt) {
-        ListTag list = nbt.getListOrEmpty("states");
+        ListTag list = NBTUtilBC.getList(nbt, "states", Tag.TAG_COMPOUND);
         if (list.isEmpty()) {
             return FacadeInstance.createSingle(FacadeStateManager.defaultState, false);
         }
@@ -56,7 +57,7 @@ public class FacadeInstance implements IFacade {
             CompoundTag compound = element instanceof CompoundTag ct ? ct : new CompoundTag();
             states[i] = FacadePhasedState.readFromNbt(compound);
         }
-        boolean hollow = nbt.getBooleanOr("isHollow", false);
+        boolean hollow = NBTUtilBC.getBoolean(nbt, "isHollow", false);
         return new FacadeInstance(states, hollow);
     }
 

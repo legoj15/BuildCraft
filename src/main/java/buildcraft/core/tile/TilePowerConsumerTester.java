@@ -11,14 +11,14 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.tiles.IDebuggable;
 
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.tile.TileBC_Neptune;
 
@@ -41,8 +41,8 @@ public class TilePowerConsumerTester extends TileBC_Neptune implements IMjReceiv
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
         lastReceived = input.getLongOr("last", 0L);
         nextTickReceived = input.getLongOr("nt", 0L);
         lastTickReceived = input.getLongOr("lt", 0L);
@@ -50,8 +50,8 @@ public class TilePowerConsumerTester extends TileBC_Neptune implements IMjReceiv
     }
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         output.putLong("last", lastReceived);
         output.putLong("nt", nextTickReceived);
         output.putLong("lt", lastTickReceived);

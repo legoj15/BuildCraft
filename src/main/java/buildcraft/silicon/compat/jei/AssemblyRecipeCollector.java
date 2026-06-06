@@ -13,10 +13,14 @@ import java.util.List;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+//? if >=1.21.10 {
 import net.minecraft.util.context.ContextMap;
+//?}
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+//? if >=1.21.10 {
 import net.minecraft.world.item.crafting.display.SlotDisplayContext;
+//?}
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.recipes.AssemblyRecipe;
@@ -78,7 +82,9 @@ public final class AssemblyRecipeCollector {
         // — don't read REGISTRIES or FUEL_VALUES from it, so no Level handle is
         // needed at JEI plugin-init time. Tag-based ingredients would; we don't
         // use any in this registry.
+        //? if >=1.21.10 {
         ContextMap displayCtx = new ContextMap.Builder().create(SlotDisplayContext.CONTEXT);
+        //?}
         for (ItemStack output : recipe.getOutputPreviews()) {
             if (output.isEmpty()) continue;
 
@@ -89,7 +95,11 @@ public final class AssemblyRecipeCollector {
                 // ingredients (e.g. DataComponentIngredient for gate variants), so
                 // an Iron AND Gate input stays Iron AND Gate in the JEI slot rather
                 // than collapsing to a bare PLUG_GATE with default GateVariant.
+                //? if >=1.21.10 {
                 for (ItemStack template : ing.ingredient.display().resolveForStacks(displayCtx)) {
+                //?} else {
+                /*for (ItemStack template : ing.ingredient.getItems()) {*/
+                //?}
                     if (template.isEmpty() || template.getItem() == Items.AIR) continue;
                     ItemStack stack = template.copy();
                     stack.setCount(ing.count);
@@ -116,7 +126,7 @@ public final class AssemblyRecipeCollector {
         // We don't try to fall back to the cobblestone-wall placeholder used inside
         // FacadeAssemblyRecipes — if structure pipe isn't registered, JEI would
         // mislead anyway and the cleanest signal is "no facade entry."
-        net.minecraft.world.item.Item structurePipe = BuiltInRegistries.ITEM.getValue(
+        net.minecraft.world.item.Item structurePipe = buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.ITEM,
                 Identifier.parse("buildcraftunofficial:pipe_structure"));
         if (structurePipe == Items.AIR) {
             return List.of();

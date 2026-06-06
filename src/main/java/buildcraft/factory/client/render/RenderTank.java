@@ -13,12 +13,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.Sheets;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 //? if >=26.1 {
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-//?} else {
+//?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.state.CameraRenderState;*/
 //?}
 import net.minecraft.client.renderer.texture.TextureAtlas;
@@ -27,7 +29,9 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
+//? if >=1.21.10 {
 import net.minecraft.util.profiling.Profiler;
+//?}
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -47,7 +51,11 @@ import buildcraft.lib.misc.FluidUtilBC;
  * Ported from 1.12.2 RenderTank.
  */
 @SuppressWarnings("deprecation")
+//? if >=1.21.10 {
 public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState> {
+//?} else {
+/*public class RenderTank implements BlockEntityRenderer<TileTank> {*/
+//?}
 
     private static final float MIN_XZ = 2.0f / 16.0f + 0.01f;
     private static final float MAX_XZ = 14.0f / 16.0f - 0.01f;
@@ -59,6 +67,7 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
     public RenderTank(BlockEntityRendererProvider.Context context) {
     }
 
+    //? if >=1.21.10 {
     @Override
     public TankRenderState createRenderState() {
         return new TankRenderState();
@@ -87,6 +96,20 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
 
         // Use the FluidSmoother for interpolated rendering — prevents level snapping
         float partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
+    //?} else {
+    /*// 1.21.1: classic direct BlockEntityRenderer.render — the tile + partialTicks are passed, so no
+    // camera-pos reconstruction is needed. The passed buffers/packedLight/packedOverlay go unused (the
+    // shared body below sources its own buffer/light, exactly as the modern submit path does).
+    @Override
+    public void render(TileTank tile, float partialTicks, PoseStack poseStack,
+                       MultiBufferSource buffers, int packedLight, int packedOverlay) {
+        ProfilerFiller _profiler = Minecraft.getInstance().getProfiler();
+        _profiler.push("buildcraft:tank_render");
+        try {
+        BlockPos pos = tile.getBlockPos();
+        Level level = tile.getLevel();
+        if (level == null) return;*/
+    //?}
         buildcraft.lib.fluid.FluidSmoother.FluidStackInterp interp = tile.smoothedTank.getFluidForRender(partialTicks);
         if (interp == null) return;
 
@@ -136,9 +159,15 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
         MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
         // Translucent for vanilla water, cutout for BC fluids (reuse water texture opaquely)
+        //? if >=1.21.10 {
         VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
                     ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+        //?} else {
+        /*VertexConsumer buffer = bufferSource.getBuffer(
+                FluidUtilBC.shouldRenderTranslucent(fluid)
+                    ? net.minecraft.client.renderer.RenderType.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));*/
+        //?}
         PoseStack.Pose pose = poseStack.last();
 
         boolean renderBottom = !connectedDown;
@@ -192,15 +221,15 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
         BlockEntity neighbor = tile.getLevel().getBlockEntity(neighborPos);
         if (neighbor instanceof TileTank otherTank) {
             if (!TileTank.canTanksConnect(tile, otherTank, direction)) return false;
-            net.neoforged.neoforge.transfer.fluid.FluidResource otherFluid = otherTank.tank.getResource(0);
-            net.neoforged.neoforge.transfer.fluid.FluidResource thisFluid = tile.tank.getResource(0);
+            FluidStack otherFluid = otherTank.tank.getFluidStack(0);
+            FluidStack thisFluid = tile.tank.getFluidStack(0);
             if (otherFluid.isEmpty() || thisFluid.isEmpty()) return false;
-            if (!thisFluid.equals(otherFluid)) return false;
+            if (!FluidStack.isSameFluidSameComponents(thisFluid, otherFluid)) return false;
 
             // For gaseous fluids, invert the direction check:
             // a tank below with matching gas connects seamlessly (gas floats up)
-            Direction checkDir = FluidUtilBC.isGaseous(thisFluid.toStack(1)) ? direction.getOpposite() : direction;
-            return otherTank.tank.getAmountAsLong(0) >= otherTank.tank.getCapacityAsLong(0, net.neoforged.neoforge.transfer.fluid.FluidResource.EMPTY)
+            Direction checkDir = FluidUtilBC.isGaseous(thisFluid) ? direction.getOpposite() : direction;
+            return otherTank.tank.getAmountMb(0) >= otherTank.tank.getCapacityMb(0)
                     || checkDir == Direction.UP;
         }
         return false;

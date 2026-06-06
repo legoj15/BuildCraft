@@ -5,6 +5,7 @@ import net.minecraft.nbt.CompoundTag;
 import buildcraft.api.filler.FillerManager;
 import buildcraft.api.filler.IFillerPattern;
 
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.lib.statement.StatementType;
 
@@ -24,7 +25,7 @@ public class FillerType extends StatementType<IFillerPattern> {
 
     @Override
     public IFillerPattern readFromNbt(CompoundTag nbt) {
-        String kind = nbt.getString("kind").orElse("");
+        String kind = NBTUtilBC.getString(nbt, "kind", "");
         IFillerPattern pattern = FillerManager.registry.getPattern(kind);
         if (pattern == null) {
             return defaultStatement;

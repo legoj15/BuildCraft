@@ -19,13 +19,13 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 
 import buildcraft.robotics.BCRoboticsBlockEntities;
 import buildcraft.robotics.container.ContainerZonePlanner;
 import buildcraft.robotics.zone.ZonePlan;
 
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
@@ -71,8 +71,8 @@ public class TileZonePlanner extends TileBC_Neptune implements MenuProvider {
     }
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         for (int i = 0; i < layers.length; i++) {
             CompoundTag layerTag = new CompoundTag();
             layers[i].writeToNBT(layerTag);
@@ -90,8 +90,8 @@ public class TileZonePlanner extends TileBC_Neptune implements MenuProvider {
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
         for (int i = 0; i < layers.length; i++) {
             final int idx = i;
             input.read("layer_" + i, CompoundTag.CODEC).ifPresent(tag -> {

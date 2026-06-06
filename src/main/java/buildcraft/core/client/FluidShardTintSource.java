@@ -9,11 +9,15 @@ package buildcraft.core.client;
 import com.mojang.serialization.MapCodec;
 
 import net.minecraft.client.Minecraft;
+//? if >=1.21.10 {
 import net.minecraft.client.color.item.ItemTintSource;
+//?}
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+//? if >=1.21.10 {
 import net.minecraft.data.AtlasIds;
+//?}
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -34,14 +38,21 @@ import buildcraft.lib.misc.FluidUtilBC;
  * Delegates sprite lookup to {@link FluidUtilBC#getFluidTexture(FluidStack)}
  * which correctly resolves both vanilla and BuildCraft pre-recolored fluid sprites.
  */
+//? if >=1.21.10 {
 public final class FluidShardTintSource implements ItemTintSource {
+//?} else {
+/*public final class FluidShardTintSource implements net.minecraft.client.color.item.ItemColor {*/
+//?}
     public static final FluidShardTintSource INSTANCE = new FluidShardTintSource();
+    //? if >=1.21.10 {
     public static final MapCodec<FluidShardTintSource> MAP_CODEC = MapCodec.unit(INSTANCE);
+    //?}
 
     private FluidShardTintSource() {}
 
-    @Override
-    public int calculate(ItemStack stack, @Nullable ClientLevel level, @Nullable LivingEntity entity) {
+    /** Shared colour computation. The modern {@code calculate} and the 1.21.1 {@code getColor}
+     *  both delegate here — neither the (level, entity) nor the tintIndex affects the result. */
+    private int computeColor(ItemStack stack) {
         SimpleFluidContent content = stack.getOrDefault(BCCore.FLUID_CONTENT.get(), SimpleFluidContent.EMPTY);
         FluidStack fluid = content.copy();
         if (fluid.isEmpty()) {
@@ -56,11 +67,28 @@ public final class FluidShardTintSource implements ItemTintSource {
         // Delegate to FluidUtilBC for correct sprite path resolution
         Identifier stillTex = FluidUtilBC.getFluidTexture(fluid);
 
+        //? if >=1.21.10 {
         TextureAtlas atlas = Minecraft.getInstance()
                 .getAtlasManager().getAtlasOrThrow(AtlasIds.BLOCKS);
+        //?} else {
+        /*TextureAtlas atlas = Minecraft.getInstance()
+                .getModelManager().getAtlas(TextureAtlas.LOCATION_BLOCKS);*/
+        //?}
         TextureAtlasSprite sprite = atlas.getSprite(stillTex);
         return averageSpriteColor(sprite);
     }
+
+    //? if >=1.21.10 {
+    @Override
+    public int calculate(ItemStack stack, @Nullable ClientLevel level, @Nullable LivingEntity entity) {
+        return computeColor(stack);
+    }
+    //?} else {
+    /*@Override
+    public int getColor(ItemStack stack, int tintIndex) {
+        return computeColor(stack);
+    }*/
+    //?}
 
     /** Computes the average RGB color of the first frame of a sprite, with full alpha. */
     private static int averageSpriteColor(TextureAtlasSprite sprite) {
@@ -97,8 +125,10 @@ public final class FluidShardTintSource implements ItemTintSource {
         return 0xFF000000 | (avgR << 16) | (avgG << 8) | avgB;
     }
 
+    //? if >=1.21.10 {
     @Override
     public MapCodec<? extends ItemTintSource> type() {
         return MAP_CODEC;
     }
+    //?}
 }

@@ -23,7 +23,9 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+//? if >=1.21.10 {
 import net.minecraft.world.level.redstone.Orientation;
+//?}
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -34,6 +36,7 @@ import buildcraft.api.transport.pipe.IItemPipe;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.energy.tile.TileDynamoMJ;
 import buildcraft.lib.engine.TileEngineBase_BC8;
+import buildcraft.lib.misc.BlockUtil;
 
 @SuppressWarnings("this-escape")
 public class BlockDynamoMJ extends Block implements EntityBlock, ICustomRotationHandler {
@@ -143,31 +146,36 @@ public class BlockDynamoMJ extends Block implements EntityBlock, ICustomRotation
      *   4. Default → open GUI.
      */
     @Override
+    //? if >=1.21.10 {
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
+    //?} else {
+    /*protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+            Player player, InteractionHand hand, BlockHitResult hitResult) {*/
+    //?}
         if (stack.getItem() instanceof IItemPipe pipe) {
             InteractionResult placed = EnginePipeInteraction.tryPlacePipe(
                     pipe, stack, level, player, hand, hitResult, PipeApi.flowPower, PipeApi.flowRf);
-            return placed != null ? placed : openGui(state, level, pos, player);
+            return BlockUtil.itemUseFrom(placed != null ? placed : openGui(state, level, pos, player));
         }
 
         if (player.isShiftKeyDown()) {
-            return openGui(state, level, pos, player);
+            return BlockUtil.itemUseFrom(openGui(state, level, pos, player));
         }
 
         if (stack.getItem() instanceof IToolWrench) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof TileEngineBase_BC8 engine && engine.hasAlternateReceiver()) {
-                return InteractionResult.PASS;
+                return BlockUtil.itemUsePass();
             }
             if (!level.isClientSide()) {
                 level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 1.3f);
             }
             player.swing(hand);
-            return InteractionResult.CONSUME;
+            return BlockUtil.itemUseConsume();
         }
 
-        return openGui(state, level, pos, player);
+        return BlockUtil.itemUseFrom(openGui(state, level, pos, player));
     }
 
     @Override
@@ -188,8 +196,13 @@ public class BlockDynamoMJ extends Block implements EntityBlock, ICustomRotation
     }
 
     @Override
+    //? if >=1.21.10 {
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block blockIn,
             @Nullable Orientation orientation, boolean isMoving) {
+    //?} else {
+    /*protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block blockIn,
+            BlockPos neighborPos, boolean isMoving) {*/
+    //?}
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TileDynamoMJ dynamo) {
             dynamo.onNeighborUpdate();

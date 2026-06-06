@@ -23,9 +23,15 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+//?}
 
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.GameProfileUtil;
+import buildcraft.lib.tile.item.IBCItemHandler;
 import buildcraft.lib.tile.item.ItemHandlerManager;
 
 /**
@@ -91,25 +97,52 @@ public abstract class TileBC_Neptune extends BlockEntity {
 
     // --- Owner persistence ---
 
+    // Platform bridge: vanilla's BlockEntity load/save signature differs across the MC-1.21.5 cliff
+    // (ValueInput/ValueOutput on 1.21.5+, CompoundTag+HolderLookup.Provider on 1.21.1). It is isolated
+    // here; subclasses override the version-neutral writeData/readData hooks below instead.
+    //? if >=1.21.10 {
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
-        if (owner != null && owner.id() != null) {
-            output.putString("ownerUUID", owner.id().toString());
-            if (owner.name() != null) {
-                output.putString("ownerName", owner.name());
-            }
-        }
+        writeData(new BCValueOutput(output));
     }
 
     @Override
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
-        String uuidStr = input.getStringOr("ownerUUID", "");
+        readData(new BCValueInput(input));
+    }
+    //?} else {
+    /*@Override
+    protected void saveAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        writeData(new BCValueOutput(tag));
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        readData(new BCValueInput(tag));
+    }*/
+    //?}
+
+    /** Version-neutral write hook. Subclasses override this (NOT saveAdditional) and call {@code super.writeData(out)}. */
+    protected void writeData(BCValueOutput out) {
+        if (owner != null && GameProfileUtil.getId(owner) != null) {
+            out.putString("ownerUUID", GameProfileUtil.getId(owner).toString());
+            if (GameProfileUtil.getName(owner) != null) {
+                out.putString("ownerName", GameProfileUtil.getName(owner));
+            }
+        }
+    }
+
+    /** Version-neutral read hook. Subclasses override this (NOT loadAdditional) and call {@code super.readData(in)}. */
+    protected void readData(BCValueInput in) {
+        String uuidStr = in.getStringOr("ownerUUID", "");
         if (!uuidStr.isEmpty()) {
             try {
                 UUID uuid = UUID.fromString(uuidStr);
-                String name = input.getStringOr("ownerName", "Unknown");
+                String name = in.getStringOr("ownerName", "Unknown");
                 owner = new GameProfile(uuid, name);
             } catch (IllegalArgumentException e) {
                 owner = null;
@@ -124,7 +157,7 @@ public abstract class TileBC_Neptune extends BlockEntity {
     }
 
     @Nullable
-    public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> getItemHandler(net.minecraft.core.Direction facing) {
+    public IBCItemHandler getItemHandler(net.minecraft.core.Direction facing) {
         return itemManager.getItemHandler(facing);
     }
 

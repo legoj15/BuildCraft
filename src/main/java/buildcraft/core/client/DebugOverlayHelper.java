@@ -15,7 +15,9 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 
+//? if >=1.21.10 {
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+//?}
 
 import buildcraft.api.tiles.IDebuggable;
 
@@ -71,7 +73,11 @@ public class DebugOverlayHelper {
         // Send request to server for server-side data
         if (mouseOver instanceof BlockHitResult blockHit) {
             BlockPos pos = blockHit.getBlockPos();
+            //? if >=1.21.10 {
             ClientPacketDistributor.sendToServer(new MessageDebugRequest(pos, side));
+            //?} else {
+            /*net.neoforged.neoforge.network.PacketDistributor.sendToServer(new MessageDebugRequest(pos, side));*/
+            //?}
         }
     }
 

@@ -44,8 +44,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -60,7 +58,10 @@ import buildcraft.lib.chunkload.ChunkLoaderManager;
 import buildcraft.lib.chunkload.IChunkLoadingTile;
 import buildcraft.lib.debug.IAdvDebugTarget;
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.BoundingBoxUtil;
 import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.LocaleUtil;
@@ -685,7 +686,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                 // Only latch advancementGranted when the award actually reached the player.
                 // unlockAdvancement returns false if the owner is offline; latching anyway
                 // would silently drop the award and never retry on subsequent ticks.
-                if (AdvancementUtil.unlockAdvancement(getOwner().id(), level, DIGGY_DIGGY_HOLE)) {
+                if (AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, DIGGY_DIGGY_HOLE)) {
                     advancementGranted = true;
                     setChanged();
                 }
@@ -779,8 +780,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     // NBT
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         // Mining box — write coordinates directly (Box.writeToNBT uses nested tags that don't work with flat ValueOutput)
         output.putBoolean("box_init", miningBox.isInitialized());
         if (miningBox.isInitialized()) {
@@ -826,7 +827,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             }
             output.putByte("currentTaskId", (byte) taskId);
             CompoundTag taskTag = currentTask.serializeNBT();
-            output.putLong("task_power", taskTag.getLongOr("power", 0L));
+            output.putLong("task_power", NBTUtilBC.getLong(taskTag, "power", 0L));
             if (currentTask instanceof TaskBreakBlock tb) {
                 output.putInt("task_breakX", tb.breakPos.getX());
                 output.putInt("task_breakY", tb.breakPos.getY());
@@ -876,8 +877,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
 
         // Mining box
         if (input.getBooleanOr("box_init", false)) {

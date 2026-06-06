@@ -12,7 +12,9 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 
 import net.minecraft.server.level.ServerLevel;
+//? if >=1.21.10 {
 import net.minecraft.util.context.ContextMap;
+//?}
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
@@ -21,7 +23,9 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.item.crafting.ShapelessRecipe;
+//? if >=1.21.10 {
 import net.minecraft.world.item.crafting.display.SlotDisplayContext;
+//?}
 import net.minecraft.world.level.Level;
 
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -37,9 +41,15 @@ public final class CraftingUtil {
         if (!(level instanceof ServerLevel serverLevel)) {
             return null;
         }
+        //? if >=1.21.10 {
         return serverLevel.recipeAccess()
             .getRecipeFor(RecipeType.CRAFTING, input, serverLevel)
             .orElse(null);
+        //?} else {
+        /*return serverLevel.getRecipeManager()
+            .getRecipeFor(RecipeType.CRAFTING, input, serverLevel)
+            .orElse(null);*/
+        //?}
     }
 
     /**
@@ -57,6 +67,7 @@ public final class CraftingUtil {
             blueprint.setStackInSlot(i, ItemStack.EMPTY);
         }
 
+        //? if >=1.21.10 {
         // Context for resolving ingredient SlotDisplays. fromLevel() supplies
         // SlotDisplayContext.REGISTRIES (+ FUEL_VALUES); without REGISTRIES a TagSlotDisplay —
         // i.e. every tag-based ingredient like #c:ingots/iron or #c:gears/stone — resolves to an
@@ -130,6 +141,43 @@ public final class CraftingUtil {
                 buildcraft.api.core.BCLog.logger.error("[CraftingUtil] Error fallback parsing display", e);
             }
         }
+        //?} else {
+        /*// 1.21.1 has no SlotDisplay/RecipeDisplay system — ingredients are read directly off the recipe.
+        if (recipe instanceof ShapedRecipe shaped) {
+            int recipeWidth = shaped.getWidth();
+            int recipeHeight = shaped.getHeight();
+            net.minecraft.core.NonNullList<Ingredient> ingredients = shaped.pattern.ingredients();
+            for (int row = 0; row < recipeHeight && row < 3; row++) {
+                for (int col = 0; col < recipeWidth && col < 3; col++) {
+                    int ingredientIdx = col + row * recipeWidth;
+                    int blueprintIdx = col + row * 3;
+                    if (ingredientIdx < ingredients.size()) {
+                        ItemStack stack = ingredientToStack(ingredients.get(ingredientIdx));
+                        if (!stack.isEmpty()) {
+                            blueprint.setStackInSlot(blueprintIdx, stack);
+                        }
+                    }
+                }
+            }
+        } else if (recipe instanceof ShapelessRecipe shapeless) {
+            net.minecraft.core.NonNullList<Ingredient> ingredients = shapeless.ingredients;
+            for (int i = 0; i < ingredients.size() && i < 9; i++) {
+                ItemStack stack = ingredientToStack(ingredients.get(i));
+                if (!stack.isEmpty()) {
+                    blueprint.setStackInSlot(i, stack);
+                }
+            }
+        } else {
+            buildcraft.api.core.BCLog.logger.info("[CraftingUtil] Fallback for unknown recipe class: " + recipe.getClass().getName());
+            net.minecraft.core.NonNullList<Ingredient> ingredients = recipe.getIngredients();
+            for (int i = 0; i < ingredients.size() && i < 9; i++) {
+                ItemStack stack = ingredientToStack(ingredients.get(i));
+                if (!stack.isEmpty()) {
+                    blueprint.setStackInSlot(i, stack);
+                }
+            }
+        }*/
+        //?}
     }
 
     /** Convert an Ingredient to the first matching ItemStack.
@@ -141,6 +189,7 @@ public final class CraftingUtil {
      * variant patch and pre-fill the slot with a default-variant stack — clicking "+" on the
      * Iron+Lapis recipe would populate the gate slot with a bare CLAY_BRICK "Basic Gate"
      * instead of the Iron AND Gate the recipe actually requires. */
+    //? if >=1.21.10 {
     private static ItemStack ingredientToStack(Ingredient ingredient, ContextMap ctx) {
         for (ItemStack candidate : ingredient.display().resolveForStacks(ctx)) {
             if (!candidate.isEmpty() && candidate.getItem() != net.minecraft.world.item.Items.AIR) {
@@ -149,4 +198,15 @@ public final class CraftingUtil {
         }
         return ItemStack.EMPTY;
     }
+    //?} else {
+    /*// 1.21.1: Ingredient.getItems() returns the matching stacks (incl. DataComponentIngredient patches).
+    private static ItemStack ingredientToStack(Ingredient ingredient) {
+        for (ItemStack candidate : ingredient.getItems()) {
+            if (!candidate.isEmpty() && candidate.getItem() != net.minecraft.world.item.Items.AIR) {
+                return candidate.copy();
+            }
+        }
+        return ItemStack.EMPTY;
+    }*/
+    //?}
 }

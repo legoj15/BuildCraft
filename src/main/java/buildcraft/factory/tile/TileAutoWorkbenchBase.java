@@ -21,10 +21,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 
 import net.minecraft.resources.Identifier;
+
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.mj.IMjConnector;
@@ -33,6 +34,7 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.tiles.IHasWork;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.craft.IAutoCraft;
 import buildcraft.lib.tile.craft.WorkbenchCrafting;
@@ -190,7 +192,7 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
                     // Keep 1 if more crafts are possible, else reset to 0
                     powerStored = crafting.canCraft() ? 1 : 0;
                     if (getOwner() != null) {
-                        AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT);
+                        AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT);
                     }
                 }
             } else {
@@ -289,8 +291,8 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
 
     // region Save/Load
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
         output.putLong("powerStored", powerStored);
         if (!resultClient.isEmpty()) {
@@ -299,8 +301,8 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
         input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
         powerStored = input.getLongOr("powerStored", 0L);
         resultClient = input.read("resultClient", ItemStack.CODEC).orElse(ItemStack.EMPTY);

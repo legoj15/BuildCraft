@@ -257,12 +257,20 @@ public class BCCore {
                 buildcraft.core.marker.volume.MessageVolumeBoxes.STREAM_CODEC,
                 buildcraft.core.marker.volume.MessageVolumeBoxes::handle
         );
+        //? if >=1.21.10 {
         registrar.playBidirectional(
                 MessageContainerPayload.TYPE,
                 MessageContainerPayload.STREAM_CODEC,
                 MessageContainerPayload::handle,
                 MessageContainerPayload::handle
         );
+        //?} else {
+        /*registrar.playBidirectional(
+                MessageContainerPayload.TYPE,
+                MessageContainerPayload.STREAM_CODEC,
+                MessageContainerPayload::handle
+        );*/
+        //?}
         // F3 debug overlay networking
         registrar.playToServer(
                 MessageDebugRequest.TYPE,
@@ -305,6 +313,7 @@ public class BCCore {
     }
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {
+        //? if >=1.21.10 {
         event.registerItem(
                 Capabilities.Fluid.ITEM,
                 (stack, ctx) -> new net.neoforged.neoforge.transfer.fluid.ItemAccessFluidHandler(ctx,
@@ -362,6 +371,22 @@ public class BCCore {
                     }
                 },
                 BCCoreItems.FRAGILE_FLUID_CONTAINER);
+        //?} else {
+        /*// 1.21.1: the fragile container is an extract-only, consume-on-empty fluid item. The classic
+        // FluidHandlerItemStack.Consumable already shatters the shard when drained (setContainerToEmpty
+        // -> container.shrink(1)); overriding canFillFluidType to false makes it un-fillable (the modern
+        // ItemAccessFluidHandler override returned 0 from insert for the same reason).
+        event.registerItem(
+                Capabilities.FluidHandler.ITEM,
+                (stack, ctx) -> new net.neoforged.neoforge.fluids.capability.templates.FluidHandlerItemStack.Consumable(
+                        FLUID_CONTENT, stack, buildcraft.core.item.ItemFragileFluidContainer.MAX_FLUID_HELD) {
+                    @Override
+                    public boolean canFillFluidType(net.neoforged.neoforge.fluids.FluidStack fluid) {
+                        return false;
+                    }
+                },
+                BCCoreItems.FRAGILE_FLUID_CONTAINER);*/
+        //?}
 
         // MJ connector capability for engines
         event.registerBlockEntity(

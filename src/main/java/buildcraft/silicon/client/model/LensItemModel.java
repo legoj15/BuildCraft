@@ -23,11 +23,15 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 //?} else {
 /*import net.minecraft.client.renderer.block.model.BakedQuad;*/
 //?}
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
+//?}
 import net.minecraft.core.Direction;
+//? if >=1.21.10 {
 import net.minecraft.world.entity.ItemOwner;
+//?}
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -50,7 +54,11 @@ import buildcraft.silicon.item.ItemPluggableLens;
  * translate is applied so dropped, in-hand and item-frame views each match
  * what 1.12.2 did.
  */
+//? if >=1.21.10 {
 public class LensItemModel implements ItemModel {
+//?} else {
+/*public class LensItemModel implements net.minecraft.client.resources.model.BakedModel {*/
+//?}
 
     /** Inner identity for the lens itself: colour + isFilter. */
     private record LensKey(@Nullable DyeColor colour, boolean isFilter) {}
@@ -143,12 +151,26 @@ public class LensItemModel implements ItemModel {
         }
     }
 
-    public LensItemModel() {}
+    //? if <1.21.10 {
+    /*// 1.21.1 per-stack resolved lens (colour + isFilter). Null on the registry-level model;
+    // populated by the ItemOverrides below for each rendered stack.
+    @Nullable private final LensKey resolvedLens;
+    private LensItemModel(LensKey lens) {
+        this.resolvedLens = lens;
+    }*/
+    //?}
+
+    public LensItemModel() {
+        //? if <1.21.10 {
+        /*this.resolvedLens = null;*/
+        //?}
+    }
 
     public static void onModelBake() {
         cache.invalidateAll();
     }
 
+    //? if >=1.21.10 {
     @Override
     public void update(ItemStackRenderState renderState, ItemStack stack, ItemModelResolver modelResolver,
                        ItemDisplayContext displayContext, @Nullable ClientLevel level,
@@ -192,4 +214,80 @@ public class LensItemModel implements ItemModel {
         layer.setRenderType(buildcraft.lib.client.render.BCLibRenderTypes.translucentItemSheet());*/
         //?}
     }
+    //?} else {
+    /*// 1.21.1 dynamic item path (no ItemModel / ItemStackRenderState): resolve() reads the lens
+    // colour + filter flag per-stack, applyTransform() picks the per-(lens, context) pre-baked quad
+    // set — the same cache the modern update() uses — and wraps it in a QuadItemBakedModel on the
+    // translucent item sheet (opaque frame stays opaque at alpha 255; coloured glass blends).
+    // The modern setAnimated() bookkeeping is unnecessary here: 1.21.1's classic ItemRenderer GUI
+    // path re-renders each frame, so the clear-lens water overlay animates without an explicit flag.
+    private final net.minecraft.client.renderer.block.model.ItemOverrides overrides =
+        new net.minecraft.client.renderer.block.model.ItemOverrides() {
+            @Override
+            public net.minecraft.client.resources.model.BakedModel resolve(
+                    net.minecraft.client.resources.model.BakedModel model, ItemStack stack,
+                    @Nullable ClientLevel level,
+                    @Nullable net.minecraft.world.entity.LivingEntity entity, int seed) {
+                DyeColor colour = ItemPluggableLens.getColour(stack);
+                boolean isFilter = ItemPluggableLens.isFilter(stack);
+                return new LensItemModel(new LensKey(colour, isFilter));
+            }
+        };
+
+    @Override
+    public net.minecraft.client.renderer.block.model.ItemOverrides getOverrides() {
+        return overrides;
+    }
+
+    @Override
+    public net.minecraft.client.resources.model.BakedModel applyTransform(
+            ItemDisplayContext displayContext, com.mojang.blaze3d.vertex.PoseStack pose, boolean leftHand) {
+        if (resolvedLens == null) {
+            return this;
+        }
+        List<BakedQuad> quads = cache.getUnchecked(new CacheKey(resolvedLens, displayContext));
+        if (quads.isEmpty()) {
+            return this;
+        }
+        return new buildcraft.lib.client.model.QuadItemBakedModel(
+                quads, quads.get(0).getSprite(), true,
+                buildcraft.lib.client.render.BCLibRenderTypes.translucentItemSheet());
+    }
+
+    @Override
+    public List<BakedQuad> getQuads(@Nullable net.minecraft.world.level.block.state.BlockState s,
+            @Nullable Direction side, net.minecraft.util.RandomSource rand) {
+        return List.of();
+    }
+
+    @Override
+    public boolean useAmbientOcclusion() {
+        return false;
+    }
+
+    @Override
+    public boolean isGui3d() {
+        return true;
+    }
+
+    @Override
+    public boolean usesBlockLight() {
+        return false;
+    }
+
+    @Override
+    public boolean isCustomRenderer() {
+        return false;
+    }
+
+    @Override
+    public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
+        return net.minecraft.client.Minecraft.getInstance().getModelManager().getMissingModel().getParticleIcon();
+    }
+
+    @Override
+    public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
+        return net.minecraft.client.renderer.block.model.ItemTransforms.NO_TRANSFORMS;
+    }*/
+    //?}
 }

@@ -41,7 +41,11 @@ public class PipeBehaviourWoodPower extends PipeBehaviour {
             return 0;
         }
         if (pipe.getFlow() instanceof buildcraft.transport.pipe.flow.PipeFlowRedstoneFlux) {
+            //? if >=1.21.10 {
             net.neoforged.neoforge.transfer.energy.EnergyHandler handler = pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK);
+            //?} else {
+            /*net.neoforged.neoforge.energy.IEnergyStorage handler = pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK);*/
+            //?}
             if (handler == null) return 1;
             
             // Exclude Redstone Engine (FE Consumer) from generating an extraction plug
@@ -50,9 +54,13 @@ public class PipeBehaviourWoodPower extends PipeBehaviour {
             if (tile instanceof buildcraft.energy.tile.TileDynamoMJ) return 1;
             
             // Fallback for foreign blocks by performing a fast insertion check
+            //? if >=1.21.10 {
             try (net.neoforged.neoforge.transfer.transaction.Transaction tx = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
                 if (handler.insert(1, tx) > 0) return 0;
             }
+            //?} else {
+            /*if (handler.receiveEnergy(1, true) > 0) return 0;*/
+            //?}
             return 1;
         } else {
             // Check if neighbour can receive MJ — use NeoForge capability lookup

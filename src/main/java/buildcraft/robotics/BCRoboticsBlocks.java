@@ -1,6 +1,7 @@
 package buildcraft.robotics;
 
 import net.neoforged.neoforge.registries.DeferredRegister;
+import buildcraft.lib.misc.RegistrationUtilBC;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.SoundType;
@@ -20,7 +21,7 @@ public class BCRoboticsBlocks {
 
     static {
         ZONE_PLANNER = BCLib.DEV
-                ? BLOCKS.registerBlock("zone_planner", BlockZonePlanner::new,
+                ? RegistrationUtilBC.registerBlock(BLOCKS, "zone_planner", BlockZonePlanner::new,
                         () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops())
                 : null;
     }

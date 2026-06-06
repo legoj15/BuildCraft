@@ -14,7 +14,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.resources.Identifier;
+//? if >=1.21.10 {
 import net.minecraft.world.level.saveddata.SavedDataType;
+//?}
 
 /**
  * Persists both marker positions and connections for path markers.
@@ -73,16 +75,35 @@ public class PathSavedData extends SavedData {
         return data;
     }));
 
+    //? if >=26.1 {
     public static final SavedDataType<PathSavedData> TYPE = new SavedDataType<>(
-            //? if >=26.1 {
             Identifier.withDefaultNamespace(ID),
-            //?} else {
-            /*ID,*/
-            //?}
             PathSavedData::new,
             CODEC,
             net.minecraft.util.datafix.DataFixTypes.LEVEL
     );
+    //?} elif >=1.21.10 {
+    /*public static final SavedDataType<PathSavedData> TYPE = new SavedDataType<>(
+            ID,
+            PathSavedData::new,
+            CODEC,
+            net.minecraft.util.datafix.DataFixTypes.LEVEL
+    );*/
+    //?} else {
+    /*// 1.21.1: SavedData.Factory (ctor, (tag,provider)->T via CODEC, DataFixTypes).
+    public static final SavedData.Factory<PathSavedData> TYPE = new SavedData.Factory<>(
+            PathSavedData::new,
+            (tag, provider) -> CODEC.parse(net.minecraft.nbt.NbtOps.INSTANCE, tag).result().orElseGet(PathSavedData::new),
+            net.minecraft.util.datafix.DataFixTypes.LEVEL
+    );
+
+    @Override
+    public net.minecraft.nbt.CompoundTag save(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
+        // 1.21.1: serialize via the same CODEC the SavedDataType uses on modern nodes.
+        return (net.minecraft.nbt.CompoundTag) CODEC.encodeStart(net.minecraft.nbt.NbtOps.INSTANCE, this)
+                .result().orElseGet(net.minecraft.nbt.CompoundTag::new);
+    }*/
+    //?}
 
     // -------------------------------------------------------------------------
     // Access
@@ -90,7 +111,12 @@ public class PathSavedData extends SavedData {
 
     public static PathSavedData getOrCreate(Level level) {
         if (level.isClientSide()) return new PathSavedData();
+        //? if >=1.21.10 {
         return ((net.minecraft.server.level.ServerLevel) level)
                 .getDataStorage().computeIfAbsent(TYPE);
+        //?} else {
+        /*return ((net.minecraft.server.level.ServerLevel) level)
+                .getDataStorage().computeIfAbsent(TYPE, ID);*/
+        //?}
     }
 }

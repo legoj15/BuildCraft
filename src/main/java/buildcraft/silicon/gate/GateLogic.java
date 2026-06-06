@@ -11,7 +11,9 @@ import java.util.TreeSet;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+//? if >=1.21.10 {
 import net.minecraft.util.profiling.Profiler;
+//?}
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -112,12 +114,12 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
     // Saving + Loading
 
     public GateLogic(PluggableGate pluggable, CompoundTag nbt) {
-        this(pluggable, new GateVariant(nbt.getCompound("variant").orElse(new CompoundTag())));
+        this(pluggable, new GateVariant(NBTUtilBC.getCompound(nbt, "variant")));
 
         readConfigData(nbt);
 
         if (nbt.contains("wireBroadcasts")) {
-            int[] arr = nbt.getIntArray("wireBroadcasts").orElse(new int[0]);
+            int[] arr = NBTUtilBC.getIntArray(nbt, "wireBroadcasts", new int[0]);
             for (int i : arr) {
                 if (i >= 0 && i < DyeColor.values().length) {
                     wireBroadcasts.add(DyeColor.values()[i]);
@@ -127,7 +129,7 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
     }
 
     public void readConfigData(CompoundTag nbt) {
-        short c = nbt.getShort("connections").orElse((short) 0);
+        short c = NBTUtilBC.getShort(nbt, "connections", (short) 0);
         for (int i = 0; i < connections.length; i++) {
             connections[i] = ((c >>> i) & 1) == 1;
         }
@@ -138,31 +140,31 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
             // Only apply legacy conversion if the tag has the old format (kind at root)
             // and NOT the new FullStatement format (data inside "s" sub-compound)
             if (nbt.contains(tName)) {
-                CompoundTag existing = nbt.getCompound(tName).orElse(new CompoundTag());
+                CompoundTag existing = NBTUtilBC.getCompound(nbt, tName);
                 if (existing.contains("kind") && !existing.contains("s")) {
                     // Old 1.12.2 format: kind and side at root level → wrap into "s" sub-compound
                     CompoundTag nbt2 = new CompoundTag();
                     CompoundTag sTag = new CompoundTag();
-                    sTag.putString("kind", existing.getString("kind").orElse(""));
-                    sTag.putByte("side", existing.getByte("side").orElse((byte) 6));
+                    sTag.putString("kind", NBTUtilBC.getString(existing, "kind", ""));
+                    sTag.putByte("side", NBTUtilBC.getByte(existing, "side", (byte) 6));
                     nbt2.put("s", sTag);
                     nbt.put(tName, nbt2);
                 }
             }
             if (nbt.contains(aName)) {
-                CompoundTag existing = nbt.getCompound(aName).orElse(new CompoundTag());
+                CompoundTag existing = NBTUtilBC.getCompound(nbt, aName);
                 if (existing.contains("kind") && !existing.contains("s")) {
                     CompoundTag nbt2 = new CompoundTag();
                     CompoundTag sTag = new CompoundTag();
-                    sTag.putString("kind", existing.getString("kind").orElse(""));
-                    sTag.putByte("side", existing.getByte("side").orElse((byte) 6));
+                    sTag.putString("kind", NBTUtilBC.getString(existing, "kind", ""));
+                    sTag.putByte("side", NBTUtilBC.getByte(existing, "side", (byte) 6));
                     nbt2.put("s", sTag);
                     nbt.put(aName, nbt2);
                 }
             }
 
-            statements[i].trigger.readFromNbt(nbt.getCompound(tName).orElse(new CompoundTag()));
-            statements[i].action.readFromNbt(nbt.getCompound(aName).orElse(new CompoundTag()));
+            statements[i].trigger.readFromNbt(NBTUtilBC.getCompound(nbt, tName));
+            statements[i].action.readFromNbt(NBTUtilBC.getCompound(nbt, aName));
         }
     }
 
@@ -235,15 +237,15 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
     }
 
     public void readClientState(CompoundTag nbt) {
-        short tOn = nbt.getShort("triggerOn").orElse((short) 0);
+        short tOn = NBTUtilBC.getShort(nbt, "triggerOn", (short) 0);
         for (int i = 0; i < triggerOn.length; i++) {
             triggerOn[i] = ((tOn >>> i) & 1) == 1;
         }
-        short aOn = nbt.getShort("actionOn").orElse((short) 0);
+        short aOn = NBTUtilBC.getShort(nbt, "actionOn", (short) 0);
         for (int i = 0; i < actionOn.length; i++) {
             actionOn[i] = ((aOn >>> i) & 1) == 1;
         }
-        isOn = nbt.getBoolean("isOn").orElse(false);
+        isOn = NBTUtilBC.getBoolean(nbt, "isOn", false);
     }
 
     // Networking
@@ -455,7 +457,12 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
     }
 
     public void resolveActions() {
+        //? if >=1.21.10 {
         ProfilerFiller _profiler = Profiler.get();
+        //?} else {
+        /*// 1.21.1 has no thread-local Profiler.get(); profiling is a non-gameplay dev tool, so use a no-op.
+        ProfilerFiller _profiler = net.minecraft.util.profiling.InactiveProfiler.INSTANCE;*/
+        //?}
         _profiler.push("buildcraft:gate_resolveActions");
         try {
         int groupCount = 0;

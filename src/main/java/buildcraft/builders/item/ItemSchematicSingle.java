@@ -19,7 +19,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUtils;
 import net.minecraft.world.item.TooltipFlag;
+//? if >=1.21.10 {
 import net.minecraft.world.item.component.TooltipDisplay;
+//?}
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -68,7 +70,19 @@ public class ItemSchematicSingle extends Item {
 
     // region Right-click in air — sneak to clear
     @Override
+    //? if >=1.21.10 {
     public InteractionResult use(Level world, Player player, InteractionHand hand) {
+        return useImpl(world, player, hand);
+    }
+    //?} else {
+    /*// 1.21.1: Item.use returns InteractionResultHolder<ItemStack>. Wrap the shared InteractionResult
+    // logic (useImpl) with the held stack — InteractionResult.PASS/SUCCESS are version-neutral.
+    public net.minecraft.world.InteractionResultHolder<ItemStack> use(Level world, Player player, InteractionHand hand) {
+        return new net.minecraft.world.InteractionResultHolder<>(useImpl(world, player, hand), player.getItemInHand(hand));
+    }*/
+    //?}
+
+    private InteractionResult useImpl(Level world, Player player, InteractionHand hand) {
         if (world.isClientSide()) {
             return InteractionResult.PASS;
         }
@@ -202,7 +216,7 @@ public class ItemSchematicSingle extends Item {
         if (stack.getItem() instanceof ItemSchematicSingle) {
             CompoundTag itemData = NBTUtilBC.getItemData(stack);
             if (itemData.contains(NBT_KEY)) {
-                return SchematicBlockManager.readFromNBT(itemData.getCompoundOrEmpty(NBT_KEY));
+                return SchematicBlockManager.readFromNBT(NBTUtilBC.getCompound(itemData, NBT_KEY));
             }
         }
         return null;
@@ -227,10 +241,19 @@ public class ItemSchematicSingle extends Item {
      * handler pattern.
      */
     @Override
+    //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, Item.TooltipContext context,
                                 TooltipDisplay display, Consumer<Component> tooltip,
                                 TooltipFlag flag) {
         super.appendHoverText(stack, context, display, tooltip, flag);
+    //?} else {
+    /*// 1.21.1: appendHoverText has no TooltipDisplay and takes List<Component>; adapt to the shared
+    // Consumer-based body below via tooltipList::add.
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context,
+                                java.util.List<Component> tooltipList, TooltipFlag flag) {
+        Consumer<Component> tooltip = tooltipList::add;
+        super.appendHoverText(stack, context, tooltipList, flag);*/
+    //?}
         if (!used) {
             tooltip.accept(Component.translatable("item.blueprint.blank").withStyle(ChatFormatting.GRAY));
             tooltip.accept(

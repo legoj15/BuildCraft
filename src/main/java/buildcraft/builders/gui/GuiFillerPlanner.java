@@ -8,8 +8,10 @@ package buildcraft.builders.gui;
 import java.util.List;
 
 import buildcraft.lib.gui.BCGraphics;
+//? if >=1.21.10 {
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
+//?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -104,7 +106,11 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
 
     @Override
     protected void drawBackgroundTexture(BCGraphics graphics) {
+        //? if >=1.21.10 {
         graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+        //?} else {
+        /*graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);*/
+        //?}
 
         int mx = (int) this.mainGui.mouse.getX() - leftPos;
         int my = (int) this.mainGui.mouse.getY() - topPos;
@@ -125,6 +131,7 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
         graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 10, 0xFF404040, false);
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (event.button() == 0) {
@@ -140,4 +147,21 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
         }
         return super.mouseClicked(event, doubleClick);
     }
+    //?} else {
+    /*@Override
+    public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
+        if (button == 0) {
+            int mx = (int) mouseXd - leftPos;
+            int my = (int) mouseYd - topPos;
+            if (mx >= 152 && mx < 168 && my >= 40 && my < 56) {
+                menu.sendMessage(ContainerFillerPlanner.NET_INVERT, (buf) -> {});
+                if (this.minecraft.player != null) {
+                    this.minecraft.player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 1.0F, 1.0F);
+                }
+                return true;
+            }
+        }
+        return super.mouseClicked(mouseXd, mouseYd, button);
+    }*/
+    //?}
 }

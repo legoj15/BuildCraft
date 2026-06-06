@@ -5,7 +5,9 @@
 package buildcraft.energy.client.gui;
 
 import buildcraft.lib.gui.BCGraphics;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.RenderPipelines;
+//?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -74,6 +76,7 @@ public class ScreenEngineStone extends GuiBC8<ContainerEngineStone> {
         if (menu.isBurning()) {
             float progress = menu.getBurnProgress();
             int flameHeight = (int) Math.ceil(progress * 14);
+            //? if >=1.21.10 {
             graphics.blit(
                 RenderPipelines.GUI_TEXTURED, TEXTURE,
                 (int) flameRect.getX(),
@@ -84,6 +87,18 @@ public class ScreenEngineStone extends GuiBC8<ContainerEngineStone> {
                 flameHeight + 2,
                 256, 256
             );
+            //?} else {
+            /*graphics.blit(
+                TEXTURE,
+                (int) flameRect.getX(),
+                (int) (flameRect.getY() + flameRect.getHeight() - flameHeight),
+                176f,
+                (float) (14 - flameHeight),
+                14,
+                flameHeight + 2,
+                256, 256
+            );*/
+            //?}
         }
     }
 

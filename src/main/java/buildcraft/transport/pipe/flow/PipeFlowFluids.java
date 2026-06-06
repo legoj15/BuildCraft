@@ -29,9 +29,14 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.world.level.Level;
 
 import net.neoforged.neoforge.fluids.FluidStack;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
+//?}
+//? if <1.21.10 {
+/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
+//?}
 
 import buildcraft.api.items.FluidItemDrops;
 import buildcraft.api.core.BCLog;
@@ -54,6 +59,7 @@ import buildcraft.api.transport.pipe.PipeFlow;
 import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.MathUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 
 import buildcraft.core.BCCoreConfig;
 import buildcraft.transport.BCTransportStatements;
@@ -118,12 +124,12 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
         if (nbt.contains("fluid_id")) {
             // Deserialize fluid using registry key string (no HolderLookup.Provider needed)
-            String fluidId = nbt.getStringOr("fluid_id", "");
+            String fluidId = NBTUtilBC.getString(nbt, "fluid_id", "");
             if (!fluidId.isEmpty()) {
                 net.minecraft.resources.Identifier fluidRL =
                     net.minecraft.resources.Identifier.parse(fluidId);
                 net.minecraft.world.level.material.Fluid fluid =
-                    net.minecraft.core.registries.BuiltInRegistries.FLUID.getValue(fluidRL);
+                    buildcraft.lib.misc.RegistryUtilBC.getValue(net.minecraft.core.registries.BuiltInRegistries.FLUID, fluidRL);
                 if (fluid != null && fluid != net.minecraft.world.level.material.Fluids.EMPTY) {
                     setFluid(new FluidStack(fluid, 1000));
                 } else {
@@ -140,7 +146,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             int direction = part.getIndex();
             String key = "tank[" + direction + "]";
             if (nbt.contains(key)) {
-                CompoundTag compound = nbt.getCompoundOrEmpty(key);
+                CompoundTag compound = NBTUtilBC.getCompound(nbt, key);
                 sections.get(part).readFromNbt(compound);
             }
         }
@@ -172,12 +178,12 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     @Override
     public void readFromNbt(CompoundTag nbt) {
         if (nbt.contains("fluid_id")) {
-            String fluidId = nbt.getStringOr("fluid_id", "");
+            String fluidId = NBTUtilBC.getString(nbt, "fluid_id", "");
             if (!fluidId.isEmpty()) {
                 net.minecraft.resources.Identifier fluidRL =
                     net.minecraft.resources.Identifier.parse(fluidId);
                 net.minecraft.world.level.material.Fluid fluid =
-                    net.minecraft.core.registries.BuiltInRegistries.FLUID.getValue(fluidRL);
+                    buildcraft.lib.misc.RegistryUtilBC.getValue(net.minecraft.core.registries.BuiltInRegistries.FLUID, fluidRL);
                 if (fluid != null && fluid != net.minecraft.world.level.material.Fluids.EMPTY) {
                     // Set fluid directly without calling setFluid() to avoid resetting section state
                     currentFluid = new FluidStack(fluid, 1000);
@@ -195,7 +201,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             int direction = part.getIndex();
             String key = "tank[" + direction + "]";
             if (nbt.contains(key)) {
-                CompoundTag compound = nbt.getCompoundOrEmpty(key);
+                CompoundTag compound = NBTUtilBC.getCompound(nbt, key);
                 sections.get(part).readFromNbt(compound);
             }
         }
@@ -256,7 +262,11 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         if (from == null || millibuckets <= 0) {
             return null;
         }
+        //? if >=1.21.10 {
         ResourceHandler<FluidResource> handler = pipe.getHolder().getCapabilityFromPipe(from, CapUtil.CAP_FLUIDS);
+        //?} else {
+        /*IFluidHandler handler = pipe.getHolder().getCapabilityFromPipe(from, CapUtil.CAP_FLUIDS);*/
+        //?}
         if (handler == null) {
             return null;
         }
@@ -267,6 +277,9 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             return null;
         }
 
+        int extracted;
+        FluidStack toAdd;
+        //? if >=1.21.10 {
         // Determine what fluid resource to extract
         FluidResource resource;
         if (filter != null && !filter.isEmpty()) {
@@ -279,7 +292,6 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             }
         }
 
-        int extracted;
         if (simulate) {
             try (Transaction tx = Transaction.openRoot()) {
                 extracted = handler.extract(resource, millibuckets, tx);
@@ -296,7 +308,30 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             return null;
         }
 
-        FluidStack toAdd = resource.toStack(extracted);
+        toAdd = resource.toStack(extracted);
+        //?} else {
+        /*// Determine what fluid to extract
+        FluidStack drainFilter;
+        if (filter != null && !filter.isEmpty()) {
+            drainFilter = filter;
+        } else {
+            // Extract whatever the handler has
+            drainFilter = handler.getFluidInTank(0);
+            if (drainFilter == null || drainFilter.isEmpty()) {
+                return null;
+            }
+        }
+
+        FluidStack drained = handler.drain(drainFilter.copyWithAmount(millibuckets),
+            simulate ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE);
+        extracted = drained.getAmount();
+
+        if (extracted <= 0) {
+            return null;
+        }
+
+        toAdd = drained.copy();
+        *///?}
         if (currentFluid.isEmpty() && !simulate) {
             setFluid(toAdd);
         }
@@ -581,6 +616,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                 sideCheck.disallowAllExcept(part.face);
                 pipe.getHolder().fireEvent(sideCheck);
                 if (sideCheck.getOrder().size() == 1) {
+                    //? if >=1.21.10 {
                     ResourceHandler<FluidResource> handler = pipe.getHolder().getCapabilityFromPipe(part.face, CapUtil.CAP_FLUIDS);
                     if (handler == null) continue;
 
@@ -596,6 +632,18 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                             section.ticksInDirection = COOLDOWN_OUTPUT;
                         }
                     }
+                    //?} else {
+                    /*IFluidHandler handler = pipe.getHolder().getCapabilityFromPipe(part.face, CapUtil.CAP_FLUIDS);
+                    if (handler == null) continue;
+
+                    if (maxDrain > 0) {
+                        int filled = handler.fill(currentFluid.copyWithAmount(maxDrain), IFluidHandler.FluidAction.EXECUTE);
+                        if (filled > 0) {
+                            section.drainInternal(filled, true);
+                            section.ticksInDirection = COOLDOWN_OUTPUT;
+                        }
+                    }
+                    *///?}
                 }
             }
         }
@@ -783,7 +831,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                 net.minecraft.resources.Identifier fluidRL =
                     net.minecraft.resources.Identifier.parse(fluidId);
                 net.minecraft.world.level.material.Fluid fluid =
-                    net.minecraft.core.registries.BuiltInRegistries.FLUID.getValue(fluidRL);
+                    buildcraft.lib.misc.RegistryUtilBC.getValue(net.minecraft.core.registries.BuiltInRegistries.FLUID, fluidRL);
                 if (fluid != null && fluid != net.minecraft.world.level.material.Fluids.EMPTY) {
                     currentFluid = new FluidStack(fluid, 1000);
                 }
@@ -806,7 +854,11 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     }
 
     /** Holds data about a single section of this pipe. */
+    //? if >=1.21.10 {
     class Section implements ResourceHandler<FluidResource> {
+    //?} else {
+    /*class Section implements net.neoforged.neoforge.fluids.capability.IFluidHandler {*/
+    //?}
         final EnumPipePart part;
 
         int amount = 0;
@@ -850,9 +902,9 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
 
         void readFromNbt(CompoundTag nbt) {
-            this.amount = nbt.getShortOr("capacity", (short) 0);
-            this.lastSentAmount = nbt.getShortOr("lastSentAmount", (short) 0);
-            this.ticksInDirection = nbt.getShortOr("ticksInDirection", (short) 0);
+            this.amount = NBTUtilBC.getShort(nbt, "capacity", (short) 0);
+            this.lastSentAmount = NBTUtilBC.getShort(nbt, "lastSentAmount", (short) 0);
+            this.ticksInDirection = NBTUtilBC.getShort(nbt, "ticksInDirection", (short) 0);
             // Initialize client interpolation fields so fluid is visible immediately
             // on chunk load, before any custom network packets arrive
             this.target = this.amount;
@@ -861,7 +913,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
 
             incomingTotalCache = 0;
             for (int i = 0; i < incoming.length; ++i) {
-                incomingTotalCache += incoming[i] = nbt.getShortOr("in[" + i + "]", (short) 0);
+                incomingTotalCache += incoming[i] = NBTUtilBC.getShort(nbt, "in[" + i + "]", (short) 0);
             }
         }
 
@@ -1005,8 +1057,9 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             return clientAmountThis > 0 | clientAmountLast > 0;
         }
 
-        // ResourceHandler<FluidResource>
-
+        // Fluid-handler capability surface — Transfer API (ResourceHandler<FluidResource>) on 1.21.10+,
+        // classic IFluidHandler on 1.21.1. The pipe section is a single tank (size/getTanks == 1).
+        //? if >=1.21.10 {
         @Override
         public int size() {
             return 1;
@@ -1073,6 +1126,70 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             // Pipe sections don't support external drain
             return 0;
         }
+        //?} else {
+        /*@Override
+        public int getTanks() {
+            return 1;
+        }
+
+        @Override
+        public FluidStack getFluidInTank(int tank) {
+            if (tank == 0 && !currentFluid.isEmpty() && amount > 0) {
+                return currentFluid.copyWithAmount(amount);
+            }
+            return FluidStack.EMPTY;
+        }
+
+        @Override
+        public int getTankCapacity(int tank) {
+            return tank == 0 ? capacity : 0;
+        }
+
+        @Override
+        public boolean isFluidValid(int tank, FluidStack stack) {
+            if (tank != 0) return false;
+            return currentFluid.isEmpty()
+                || FluidStack.isSameFluidSameComponents(currentFluid, stack);
+        }
+
+        @Override
+        public int fill(FluidStack fluidStack, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) {
+            if (!getCurrentDirection().canInput() || !pipe.isConnected(part.face) || fluidStack.isEmpty()) {
+                return 0;
+            }
+            PipeEventFluid.TryInsert tryInsert = new PipeEventFluid.TryInsert(
+                pipe.getHolder(), PipeFlowFluids.this, part.face, fluidStack
+            );
+            pipe.getHolder().fireEvent(tryInsert);
+            if (tryInsert.isCanceled()) {
+                return 0;
+            }
+
+            if (currentFluid.isEmpty() || FluidStack.isSameFluidSameComponents(currentFluid, fluidStack)) {
+                if (currentFluid.isEmpty()) {
+                    setFluid(fluidStack.copy());
+                }
+                int filled = fill(fluidStack.getAmount(), action.execute());
+                if (filled > 0) {
+                    ticksInDirection = COOLDOWN_INPUT;
+                }
+                return filled;
+            }
+            return 0;
+        }
+
+        @Override
+        public FluidStack drain(FluidStack resource, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) {
+            // Pipe sections don't support external drain
+            return FluidStack.EMPTY;
+        }
+
+        @Override
+        public FluidStack drain(int maxDrain, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) {
+            // Pipe sections don't support external drain
+            return FluidStack.EMPTY;
+        }
+        *///?}
     }
 
     /** Enum used for the current direction that a fluid is flowing. */

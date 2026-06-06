@@ -3,7 +3,9 @@ package buildcraft.silicon.client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.item.ItemModel;
+//?}
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.EventPriority;
@@ -31,8 +33,10 @@ public class BCSiliconClient {
     private static java.util.Map<net.minecraft.world.level.block.state.BlockState,
             //? if >=26.1 {
             net.minecraft.client.renderer.block.dispatch.BlockStateModel> cachedBlockStateModels;
-            //?} else {
+            //?} elif >=1.21.10 {
             /*net.minecraft.client.renderer.block.model.BlockStateModel> cachedBlockStateModels;*/
+            //?} else {
+            /*net.minecraft.client.resources.model.BakedModel> cachedBlockStateModels;*/
             //?}
 
     @SubscribeEvent
@@ -79,6 +83,7 @@ public class BCSiliconClient {
                 + "Facade in-world rendering will not work.");
         }
 
+        //? if >=1.21.10 {
         // Swap vanilla item model with dynamic facade model
         var itemModels = event.getBakingResult().itemStackModels();
         Identifier facadeId = BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_FACADE.get());
@@ -102,6 +107,26 @@ public class BCSiliconClient {
         if (vanillaLensModel != null) {
             itemModels.put(lensId, new buildcraft.silicon.client.model.LensItemModel());
         }
+        //?} else {
+        /*// 1.21.1: all baked models live in one Map<ModelResourceLocation, BakedModel>. Swap each
+        // plug item's "inventory" model with its dynamic BakedModel (Facade/Gate/LensItemModel).
+        java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation, net.minecraft.client.resources.model.BakedModel> models = event.getModels();
+        Identifier facadeId = BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_FACADE.get());
+        net.minecraft.client.resources.model.ModelResourceLocation facadeMrl = net.minecraft.client.resources.model.ModelResourceLocation.inventory(facadeId);
+        if (models.get(facadeMrl) != null) {
+            models.put(facadeMrl, new FacadeItemModel());
+        }
+        Identifier gateId = BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_GATE.get());
+        net.minecraft.client.resources.model.ModelResourceLocation gateMrl = net.minecraft.client.resources.model.ModelResourceLocation.inventory(gateId);
+        if (models.get(gateMrl) != null) {
+            models.put(gateMrl, new buildcraft.silicon.client.model.GateItemModel());
+        }
+        Identifier lensId = BuiltInRegistries.ITEM.getKey(BCSiliconItems.PLUG_LENS.get());
+        net.minecraft.client.resources.model.ModelResourceLocation lensMrl = net.minecraft.client.resources.model.ModelResourceLocation.inventory(lensId);
+        if (models.get(lensMrl) != null) {
+            models.put(lensMrl, new buildcraft.silicon.client.model.LensItemModel());
+        }*/
+        //?}
 
         FacadeItemModel.onModelBake();
         buildcraft.silicon.client.model.GateItemModel.onModelBake();
@@ -119,7 +144,24 @@ public class BCSiliconClient {
         // Cache the blockstate models for deferred facade deduplication.
         // We can't run dedup here because ItemStack components aren't bound yet
         // during the initial resource reload. Dedup runs later via runDeferredDedup().
+        //? if >=1.21.10 {
         cachedBlockStateModels = event.getBakingResult().blockStateModels();
+        //?} else {
+        /*// 1.21.1 has no blockStateModels() accessor — build a BlockState->BakedModel view of the
+        // unified model map (keyed via BlockModelShaper.stateToModelLocation) for FacadeDeduplicator.
+        java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation, net.minecraft.client.resources.model.BakedModel> allModels = event.getModels();
+        java.util.Map<net.minecraft.world.level.block.state.BlockState, net.minecraft.client.resources.model.BakedModel> byState = new java.util.HashMap<>();
+        for (net.minecraft.world.level.block.Block block : BuiltInRegistries.BLOCK) {
+            for (net.minecraft.world.level.block.state.BlockState state : block.getStateDefinition().getPossibleStates()) {
+                net.minecraft.client.resources.model.BakedModel m =
+                    allModels.get(net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(state));
+                if (m != null) {
+                    byState.put(state, m);
+                }
+            }
+        }
+        cachedBlockStateModels = byState;*/
+        //?}
     }
 
     /**

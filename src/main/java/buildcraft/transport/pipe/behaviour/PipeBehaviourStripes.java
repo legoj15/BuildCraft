@@ -53,7 +53,7 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
 
     public PipeBehaviourStripes(IPipe pipe, CompoundTag nbt) {
         super(pipe, nbt);
-        battery.deserializeNBT(nbt.getCompoundOrEmpty("battery"));
+        battery.deserializeNBT(NBTUtilBC.getCompound(nbt, "battery"));
         direction = NBTUtilBC.readEnum(nbt.get("direction"), Direction.class);
     }
 
@@ -70,7 +70,7 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
     @Override
     public void readFromNbt(CompoundTag nbt) {
         super.readFromNbt(nbt);
-        battery.deserializeNBT(nbt.getCompoundOrEmpty("battery"));
+        battery.deserializeNBT(NBTUtilBC.getCompound(nbt, "battery"));
         direction = NBTUtilBC.readEnum(nbt.get("direction"), Direction.class);
     }
 
@@ -224,7 +224,11 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
             player.setPos(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
         }
         player.getInventory().clearContent();
+        //? if >=1.21.10 {
         player.getInventory().setItem(player.getInventory().getSelectedSlot(), event.getStack());
+        //?} else {
+        /*player.getInventory().setItem(player.getInventory().selected, event.getStack());*/
+        //?}
         if (PipeApi.stripeRegistry != null &&
             PipeApi.stripeRegistry.handleItem(world, pos, direction, event.getStack(), player, this)) {
             event.setStack(ItemStack.EMPTY);

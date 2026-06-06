@@ -25,6 +25,8 @@ import buildcraft.api.transport.pipe.PipeBehaviour;
 import buildcraft.api.transport.pipe.PipeFaceTex;
 
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.GameProfileUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 import buildcraft.transport.BCTransportMenuTypes;
@@ -50,7 +52,7 @@ public abstract class PipeBehaviourDiamond extends PipeBehaviour {
 
     public PipeBehaviourDiamond(IPipe pipe, CompoundTag nbt) {
         super(pipe, nbt);
-        CompoundTag filtersTag = nbt.getCompoundOrEmpty("filters");
+        CompoundTag filtersTag = NBTUtilBC.getCompound(nbt, "filters");
         if (!filtersTag.isEmpty()) {
             filters.deserializeNBT(filtersTag);
         }
@@ -66,7 +68,7 @@ public abstract class PipeBehaviourDiamond extends PipeBehaviour {
     @Override
     public void readFromNbt(CompoundTag nbt) {
         super.readFromNbt(nbt);
-        filters.deserializeNBT(nbt.getCompoundOrEmpty("filters"));
+        filters.deserializeNBT(NBTUtilBC.getCompound(nbt, "filters"));
     }
 
     /** Grants the "too many pipe filters" advancement (and its List recipe reward) once a
@@ -86,8 +88,8 @@ public abstract class PipeBehaviourDiamond extends PipeBehaviour {
         }
         if (count >= FILTERS_PER_SIDE - 2) {
             GameProfile owner = pipe.getHolder().getOwner();
-            if (owner != null && owner.id() != null) {
-                AdvancementUtil.unlockAdvancement(owner.id(), level, ADVANCEMENT_NEED_LIST);
+            if (owner != null && GameProfileUtil.getId(owner) != null) {
+                AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(owner), level, ADVANCEMENT_NEED_LIST);
             }
         }
     }

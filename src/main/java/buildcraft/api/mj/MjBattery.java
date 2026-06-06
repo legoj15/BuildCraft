@@ -7,6 +7,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.Level;
 
+import buildcraft.lib.misc.NBTUtilBC;
+
 
 
 /** Provides a basic implementation of a simple battery. Note that you should call {@link #tick(Level, BlockPos)} or
@@ -26,7 +28,7 @@ public class MjBattery  {
     }
 
     public void deserializeNBT(CompoundTag nbt) {
-        setStored(nbt.getLong("stored").orElse(0L));
+        setStored(NBTUtilBC.getLong(nbt, "stored", 0L));
     }
 
     public void writeToBuffer(ByteBuf buffer) {

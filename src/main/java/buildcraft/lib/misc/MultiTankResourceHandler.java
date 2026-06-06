@@ -9,24 +9,28 @@ package buildcraft.lib.misc;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.TransferPreconditions;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
+//?}
 
 /**
- * Adapts multiple legacy {@link FluidTank} instances to the NeoForge 1.21.11
- * {@link ResourceHandler}{@code <FluidResource>} API so they can be exposed via
- * {@link net.neoforged.neoforge.capabilities.Capabilities.Fluid#BLOCK}.
+ * Adapts multiple classic {@link FluidTank} instances to a fluid capability handler so they can be exposed via
+ * {@code Capabilities.Fluid#BLOCK} (1.21.10+) / {@code Capabilities.FluidHandler#BLOCK} (1.21.1).
  * <p>
- * Transaction support is provided by snapshotting all tanks' {@link FluidStack}s.
- * <p>
- * Insert tries each tank in order until one accepts the fluid.
- * Extract tries each tank in order until one yields fluid.
+ * On 1.21.10+ this is a {@link ResourceHandler}{@code <FluidResource>} with transaction support provided by
+ * snapshotting all tanks' {@link FluidStack}s; on 1.21.1 (no Transfer API) it is a classic {@link IFluidHandler}
+ * over the same {@code FluidTank[]}. Insert tries each tank in order until one accepts; extract until one yields.
  */
 @SuppressWarnings("removal")
+//? if >=1.21.10 {
 public class MultiTankResourceHandler extends SnapshotJournal<FluidStack[]> implements ResourceHandler<FluidResource> {
+//?} else {
+/*public class MultiTankResourceHandler implements IFluidHandler {*/
+//?}
 
     private final FluidTank[] tanks;
 
@@ -34,6 +38,7 @@ public class MultiTankResourceHandler extends SnapshotJournal<FluidStack[]> impl
         this.tanks = tanks;
     }
 
+    //? if >=1.21.10 {
     // --- Snapshot / rollback for transactions ---
 
     @Override
@@ -115,6 +120,65 @@ public class MultiTankResourceHandler extends SnapshotJournal<FluidStack[]> impl
         }
         return extracted;
     }
+    //?} else {
+    /*// --- classic IFluidHandler implementation (1.21.1) ---
+
+    @Override
+    public int getTanks() {
+        return tanks.length;
+    }
+
+    @Override
+    public FluidStack getFluidInTank(int index) {
+        checkIndex(index);
+        return tanks[index].getFluid();
+    }
+
+    @Override
+    public int getTankCapacity(int index) {
+        checkIndex(index);
+        return tanks[index].getCapacity();
+    }
+
+    @Override
+    public boolean isFluidValid(int index, FluidStack stack) {
+        checkIndex(index);
+        return tanks[index].isFluidValid(stack);
+    }
+
+    @Override
+    public int fill(FluidStack resource, IFluidHandler.FluidAction action) {
+        for (FluidTank tank : tanks) {
+            int accepted = tank.fill(resource, action);
+            if (accepted > 0) {
+                return accepted;
+            }
+        }
+        return 0;
+    }
+
+    @Override
+    public FluidStack drain(FluidStack resource, IFluidHandler.FluidAction action) {
+        for (FluidTank tank : tanks) {
+            FluidStack drained = tank.drain(resource, action);
+            if (!drained.isEmpty()) {
+                return drained;
+            }
+        }
+        return FluidStack.EMPTY;
+    }
+
+    @Override
+    public FluidStack drain(int maxDrain, IFluidHandler.FluidAction action) {
+        for (FluidTank tank : tanks) {
+            FluidStack drained = tank.drain(maxDrain, action);
+            if (!drained.isEmpty()) {
+                return drained;
+            }
+        }
+        return FluidStack.EMPTY;
+    }*/
+    //?}
 
     private void checkIndex(int index) {
         if (index < 0 || index >= tanks.length) {

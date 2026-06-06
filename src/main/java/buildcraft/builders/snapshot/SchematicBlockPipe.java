@@ -26,6 +26,8 @@ import buildcraft.api.transport.pipe.PipeDefinition;
 import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
 
+import buildcraft.lib.misc.NBTUtilBC;
+
 import buildcraft.transport.block.BlockPipeHolder;
 import buildcraft.transport.pipe.PipeRegistry;
 
@@ -88,13 +90,13 @@ public class SchematicBlockPipe extends SchematicBlockDefault {
         if (tileNbt == null || PipeApi.pluggableRegistry == null) {
             return;
         }
-        CompoundTag plugTag = tileNbt.getCompoundOrEmpty("plugs");
+        CompoundTag plugTag = NBTUtilBC.getCompound(tileNbt, "plugs");
         if (plugTag.isEmpty()) {
             return;
         }
         for (Direction face : Direction.values()) {
-            CompoundTag entry = plugTag.getCompoundOrEmpty(face.getName());
-            String plugId = entry.getStringOr("id", "");
+            CompoundTag entry = NBTUtilBC.getCompound(plugTag, face.getName());
+            String plugId = NBTUtilBC.getString(entry, "id", "");
             if (plugId.isEmpty()) {
                 continue;
             }
@@ -103,7 +105,7 @@ public class SchematicBlockPipe extends SchematicBlockDefault {
                 continue;
             }
             try {
-                PipePluggable plug = def.readFromNbt(null, face, entry.getCompoundOrEmpty("data"));
+                PipePluggable plug = def.readFromNbt(null, face, NBTUtilBC.getCompound(entry, "data"));
                 if (plug != null) {
                     ItemStack stack = plug.getPickStack();
                     if (stack != null && !stack.isEmpty()) {
@@ -149,10 +151,10 @@ public class SchematicBlockPipe extends SchematicBlockDefault {
             return original;
         }
         CompoundTag copy = original.copy();
-        CompoundTag oldPlugs = copy.getCompoundOrEmpty("plugs");
+        CompoundTag oldPlugs = NBTUtilBC.getCompound(copy, "plugs");
         CompoundTag newPlugs = new CompoundTag();
         for (Direction face : Direction.values()) {
-            CompoundTag entry = oldPlugs.getCompoundOrEmpty(face.getName());
+            CompoundTag entry = NBTUtilBC.getCompound(oldPlugs, face.getName());
             if (!entry.isEmpty()) {
                 newPlugs.put(rotation.rotate(face).getName(), entry);
             }
@@ -166,8 +168,8 @@ public class SchematicBlockPipe extends SchematicBlockDefault {
         if (tileNbt == null) {
             return null;
         }
-        CompoundTag pipeTag = tileNbt.getCompoundOrEmpty("pipe");
-        String defId = pipeTag.getStringOr("def", "");
+        CompoundTag pipeTag = NBTUtilBC.getCompound(tileNbt, "pipe");
+        String defId = NBTUtilBC.getString(pipeTag, "def", "");
         if (defId.isEmpty()) {
             return null;
         }

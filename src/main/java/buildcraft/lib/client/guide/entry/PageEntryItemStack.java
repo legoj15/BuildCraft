@@ -109,7 +109,7 @@ public class PageEntryItemStack extends PageValueType<ItemStackValueFilter> {
         }
         str = str.trim();
         Identifier loc = Identifier.parse(str);
-        Item item = BuiltInRegistries.ITEM.get(loc).map(ref -> ref.value()).orElse(null);
+        Item item = buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.ITEM, loc);
         if (item == null) {
             return new OptionallyDisabled<>("Unknown item '" + str + "' (from stack '" + json.get("stack").getAsString() + "')");
         }

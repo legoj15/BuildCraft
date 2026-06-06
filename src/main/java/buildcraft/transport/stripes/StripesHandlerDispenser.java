@@ -66,7 +66,11 @@ public enum StripesHandlerDispenser implements IStripesHandlerItem {
         }
 
         // Strategy 3: Use in air (right-click with no target block)
+        //? if >=1.21.10 {
         if (stack.getItem().use(world, player, InteractionHand.MAIN_HAND).consumesAction()) {
+        //?} else {
+        /*if (stack.getItem().use(world, player, InteractionHand.MAIN_HAND).getResult().consumesAction()) {*/
+        //?}
             return true;
         }
 

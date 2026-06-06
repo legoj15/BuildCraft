@@ -23,7 +23,11 @@ public class BCCoreClient {
                 net.neoforged.neoforge.client.gui.ConfigurationScreen::new);
 
         NeoForge.EVENT_BUS.addListener(
+                //? if >=1.21.10 {
                 net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentBlocks.class,
+                //?} else {
+                /*net.neoforged.neoforge.client.event.RenderLevelStageEvent.class,*/
+                //?}
                 event -> buildcraft.lib.client.render.MarkerRenderer.onRenderLevelStage(event)
         );
         // Register volume box rendering callback
@@ -53,6 +57,7 @@ public class BCCoreClient {
                 event -> buildcraft.core.client.DebugOverlayHelper.onClientTick()
         );
         // Register the fluid shard tint source for fragile fluid containers
+        //? if >=1.21.10 {
         modEventBus.addListener(
                 net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.ItemTintSources.class,
                 event -> event.register(
@@ -60,6 +65,16 @@ public class BCCoreClient {
                         buildcraft.core.client.FluidShardTintSource.MAP_CODEC
                 )
         );
+        //?} else {
+        /*// 1.21.1 has no data-driven ItemTintSource — register the equivalent ItemColor on the item.
+        modEventBus.addListener(
+                net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Item.class,
+                event -> event.register(
+                        buildcraft.core.client.FluidShardTintSource.INSTANCE,
+                        buildcraft.core.BCCoreItems.FRAGILE_FLUID_CONTAINER.get()
+                )
+        );*/
+        //?}
         // F3 debug overlay: register the overlay layer on the mod bus
         modEventBus.addListener(
                 net.neoforged.neoforge.client.event.RegisterGuiLayersEvent.class,

@@ -95,12 +95,12 @@ public class GuiTank extends GuiBC8<ContainerTank> {
         if (mouseX >= absX && mouseX < absX + TANK_WIDTH
                 && mouseY >= absY && mouseY < absY + TANK_HEIGHT) {
 
-            int amount = (int) menu.tile.tank.getAmountAsLong(0);
-            int capacity = (int) menu.tile.tank.getCapacityAsLong(0, net.neoforged.neoforge.transfer.fluid.FluidResource.EMPTY);
+            int amount = menu.tile.tank.getAmountMb(0);
+            int capacity = menu.tile.tank.getCapacityMb(0);
 
             List<Component> lines = new ArrayList<>();
             if (amount > 0) {
-                lines.add(menu.tile.tank.getResource(0).toStack(amount).getHoverName());
+                lines.add(menu.tile.tank.getFluidStack(0).getHoverName());
             }
             lines.add(Component.literal(amount + " / " + capacity + " mB")
                     .withStyle(ChatFormatting.GRAY));

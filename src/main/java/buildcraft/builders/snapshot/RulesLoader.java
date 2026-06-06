@@ -130,7 +130,7 @@ public class RulesLoader {
                                         ? base.substring(0, base.indexOf("["))
                                         : base
                                 );
-                                Block block = BuiltInRegistries.BLOCK.getValue(blockId);
+                                Block block = buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.BLOCK, blockId);
                                 return block == blockState.getBlock() &&
                                     (!complex ||
                                         Arrays.stream(

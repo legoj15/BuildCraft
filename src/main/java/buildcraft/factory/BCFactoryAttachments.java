@@ -7,12 +7,16 @@ package buildcraft.factory;
 
 import java.util.function.Supplier;
 
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+//?}
 
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.common.util.ValueIOSerializable;
+//?}
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
@@ -42,7 +46,11 @@ public class BCFactoryAttachments {
      * at {@link #PER_FLUID_TARGET}. The advancement is granted when every counter
      * is saturated.
      */
+    //? if >=1.21.10 {
     public static final class OilAndFuelProduction implements ValueIOSerializable {
+    //?} else {
+    /*public static final class OilAndFuelProduction implements net.neoforged.neoforge.common.util.INBTSerializable<net.minecraft.nbt.CompoundTag> {*/
+    //?}
         public static final int PER_FLUID_TARGET = 16_000;
 
         /** Parallel array to {@link BCEnergyFluids#BASE_NAMES}; values in [0, PER_FLUID_TARGET]. */
@@ -82,6 +90,7 @@ public class BCFactoryAttachments {
             return index < 0 ? -1 : amounts[index];
         }
 
+        //? if >=1.21.10 {
         @Override
         public void serialize(ValueOutput output) {
             // Single packed array keyed by BASE_NAMES order. Storing under each
@@ -103,5 +112,23 @@ public class BCFactoryAttachments {
                 amounts[i] = Math.min(PER_FLUID_TARGET, Math.max(0, saved[i]));
             }
         }
+        //?} else {
+        /*@Override
+        public net.minecraft.nbt.CompoundTag serializeNBT(net.minecraft.core.HolderLookup.Provider provider) {
+            net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+            tag.putIntArray("amounts", amounts.clone());
+            return tag;
+        }
+
+        @Override
+        public void deserializeNBT(net.minecraft.core.HolderLookup.Provider provider, net.minecraft.nbt.CompoundTag nbt) {
+            // 1.21.1 CompoundTag.getIntArray returns the array directly (empty if absent).
+            int[] saved = nbt.getIntArray("amounts");
+            int n = Math.min(saved.length, amounts.length);
+            for (int i = 0; i < n; i++) {
+                amounts[i] = Math.min(PER_FLUID_TARGET, Math.max(0, saved[i]));
+            }
+        }*/
+        //?}
     }
 }

@@ -3,8 +3,10 @@ package buildcraft.builders.entity;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+//?}
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -54,10 +56,18 @@ public class EntityQuarryRig extends Entity {
     }
 
     @Override
+    //? if >=1.21.10 {
     protected void readAdditionalSaveData(ValueInput input) {}
+    //?} else {
+    /*protected void readAdditionalSaveData(net.minecraft.nbt.CompoundTag input) {}*/
+    //?}
 
     @Override
+    //? if >=1.21.10 {
     protected void addAdditionalSaveData(ValueOutput output) {}
+    //?} else {
+    /*protected void addAdditionalSaveData(net.minecraft.nbt.CompoundTag output) {}*/
+    //?}
 
     @Override
     public boolean shouldBeSaved() {
@@ -74,14 +84,23 @@ public class EntityQuarryRig extends Entity {
      * {@code setPos()}, which calls this method, so the AABB is always correct.
      */
     @Override
+    //? if >=1.21.10 {
     protected AABB makeBoundingBox(Vec3 position) {
+    //?} else {
+    /*protected AABB makeBoundingBox() {
+        net.minecraft.world.phys.Vec3 position = this.position();*/
+    //?}
         float halfX = this.entityData.get(SIZE_X) / 2.0f;
         float halfY = this.entityData.get(SIZE_Y) / 2.0f;
         float halfZ = this.entityData.get(SIZE_Z) / 2.0f;
 
         // Before dimensions are set (SIZE_X is 0), fall back to default
         if (halfX <= 0) {
+            //? if >=1.21.10 {
             return super.makeBoundingBox(position);
+            //?} else {
+            /*return super.makeBoundingBox();*/
+            //?}
         }
 
         return new AABB(
@@ -99,7 +118,11 @@ public class EntityQuarryRig extends Entity {
      * we return true (unless phasing).
      */
     @Override
+    //? if >=1.21.10 {
     public boolean canBeCollidedWith(Entity other) {
+    //?} else {
+    /*public boolean canBeCollidedWith() {*/
+    //?}
         return !phasing;
     }
 
@@ -116,9 +139,13 @@ public class EntityQuarryRig extends Entity {
     }
 
     @Override
+    //? if >=1.21.10 {
     public boolean hurtServer(net.minecraft.server.level.ServerLevel level,
                               net.minecraft.world.damagesource.DamageSource source,
                               float amount) {
+    //?} else {
+    /*public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {*/
+    //?}
         return false;
     }
 

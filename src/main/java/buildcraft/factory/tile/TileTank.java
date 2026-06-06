@@ -14,10 +14,13 @@ import java.util.List;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.nbt.CompoundTag;
+//? if >=1.21.10 {
 import net.minecraft.util.profiling.Profiler;
+//?}
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -26,20 +29,20 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+//?}
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.container.ContainerTank;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.MessageUtil;
+import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.fluid.FluidSmoother;
 import buildcraft.api.tiles.IDebuggable;
 
@@ -52,7 +55,7 @@ import buildcraft.api.tiles.IDebuggable;
 @SuppressWarnings("deprecation")
 public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
 
-    public final FluidStacksResourceHandler tank = new FluidStacksResourceHandler(1, 16_000); // 16 buckets
+    public final BCFluidTank tank = new BCFluidTank(1, 16_000); // 16 buckets
     public final FluidSmoother smoothedTank = new FluidSmoother(tank);
 
     private int lastComparatorLevel;
@@ -65,8 +68,8 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
     // --- Comparator ---
 
     public int getComparatorLevel() {
-        int amount = tank.getAmountAsInt(0);
-        int cap = tank.getCapacityAsInt(0, FluidResource.EMPTY);
+        int amount = tank.getAmountMb(0);
+        int cap = tank.getCapacityMb(0);
         return amount * 14 / cap + (amount > 0 ? 1 : 0);
     }
 
@@ -74,11 +77,16 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
 
     public void serverTick() {
         if (level == null || level.isClientSide()) return;
+        //? if >=1.21.10 {
         ProfilerFiller _profiler = Profiler.get();
+        //?} else {
+        /*// 1.21.1 has no thread-local Profiler.get(); profiling is a non-gameplay dev tool, so use a no-op.
+        ProfilerFiller _profiler = net.minecraft.util.profiling.InactiveProfiler.INSTANCE;*/
+        //?}
         _profiler.push("buildcraft:tank_serverTick");
         try {
 
-        int currentAmount = tank.getAmountAsInt(0);
+        int currentAmount = tank.getAmountMb(0);
 
         // Sync to client when fluid contents change
         if (currentAmount != lastSyncedAmount) {
@@ -105,17 +113,17 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
 
     @Override
     public void getDebugInfo(List<String> left, List<String> right, Direction side) {
-        String contents = (!tank.getResource(0).isEmpty()) ? "Fluid" : "Empty";
-        left.add("fluid = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tank.getResource(0).toStack(tank.getAmountAsInt(0))));
-        left.add("current = " + tank.getAmountAsInt(0) + " of " + contents);
-        left.add("lastSent = " + lastSyncedAmount + " of " + ((!tank.getResource(0).isEmpty()) ? "Something" : "Nothing"));
+        String contents = (!tank.isTankEmpty(0)) ? "Fluid" : "Empty";
+        left.add("fluid = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tank.getFluidStack(0)));
+        left.add("current = " + tank.getAmountMb(0) + " of " + contents);
+        left.add("lastSent = " + lastSyncedAmount + " of " + ((!tank.isTankEmpty(0)) ? "Something" : "Nothing"));
     }
 
     @Override
     public void getClientDebugInfo(List<String> left, List<String> right, Direction side) {
         if (smoothedTank != null) {
             smoothedTank.getDebugInfo(left, right, side);
-            left.add("shown = " + (int) smoothedTank.getDisplayAmount() + ", target = " + tank.getAmountAsInt(0));
+            left.add("shown = " + (int) smoothedTank.getDisplayAmount() + ", target = " + tank.getAmountMb(0));
         }
     }
 
@@ -138,19 +146,19 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
      * move everything as high as possible. */
     public void balanceTankFluids() {
         List<TileTank> tanks = getTankColumn();
-        FluidResource fluid = FluidResource.EMPTY;
+        FluidStack fluid = FluidStack.EMPTY;
         for (TileTank tile : tanks) {
-            FluidResource held = tile.tank.getResource(0);
+            FluidStack held = tile.tank.getFluidStack(0);
             if (held.isEmpty()) continue;
             if (fluid.isEmpty()) {
                 fluid = held;
-            } else if (!fluid.equals(held)) {
+            } else if (!FluidStack.isSameFluidSameComponents(fluid, held)) {
                 return; // Different fluids — can't balance
             }
         }
         if (fluid.isEmpty()) return;
 
-        if (FluidUtilBC.isGaseous(fluid.toStack(1))) {
+        if (FluidUtilBC.isGaseous(fluid)) {
             // Move fluid upward (gaseous) — iterate from bottom, move to the tank above
             TileTank prev = null;
             for (int i = tanks.size() - 1; i >= 0; i--) {
@@ -218,135 +226,42 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
         return new ArrayList<>(tanks);
     }
 
-    // --- Column-Aware ResourceHandler ---
-
-    /**
-     * Returns a {@link ResourceHandler} that fills/drains across the entire vertical column. 
-     * Used natively for capabilities routing via neoForge.
-     */
-    public ResourceHandler<FluidResource> getColumnResourceHandler() {
-        return new ResourceHandler<FluidResource>() {
-            @Override
-            public int size() {
-                return 1;
-            }
-
-            @Override
-            public FluidResource getResource(int index) {
-                for (TileTank t : getTankColumn()) {
-                    FluidResource held = t.tank.getResource(0);
-                    if (!held.isEmpty()) {
-                        return held;
-                    }
-                }
-                return FluidResource.EMPTY;
-            }
-
-            @Override
-            public long getAmountAsLong(int index) {
-                long result = 0;
-                for (TileTank t : getTankColumn()) {
-                    FluidResource held = t.tank.getResource(0);
-                    if (!held.isEmpty()) {
-                        result += t.tank.getAmountAsInt(0);
-                    }
-                }
-                return result;
-            }
-
-            @Override
-            public long getCapacityAsLong(int index, FluidResource resource) {
-                long total = 0;
-                for (TileTank t : getTankColumn()) {
-                    total += t.tank.getCapacityAsInt(0, resource);
-                }
-                return total;
-            }
-
-            @Override
-            public boolean isValid(int index, FluidResource resource) {
-                return !resource.isEmpty();
-            }
-
-            @Override
-            public int insert(int index, FluidResource resource, int amount, TransactionContext transaction) {
-                if (resource.isEmpty() || amount <= 0) return 0;
-                List<TileTank> tanks = getTankColumn();
-                // Check compatibility
-                for (TileTank t : tanks) {
-                    FluidResource current = t.tank.getResource(0);
-                    if (!current.isEmpty() && !current.equals(resource)) {
-                        return 0;
-                    }
-                }
-                // Fill bottom to top for liquids, top to bottom for gases
-                boolean gaseous = FluidUtilBC.isGaseous(resource.toStack(1));
-                int remaining = amount;
-                int totalFilled = 0;
-                if (gaseous) {
-                    for (int i = tanks.size() - 1; i >= 0; i--) {
-                        if (remaining <= 0) break;
-                        int filled = tanks.get(i).tank.insert(0, resource, remaining, transaction);
-                        remaining -= filled;
-                        totalFilled += filled;
-                    }
-                } else {
-                    for (TileTank t : tanks) {
-                        if (remaining <= 0) break;
-                        int filled = t.tank.insert(0, resource, remaining, transaction);
-                        remaining -= filled;
-                        totalFilled += filled;
-                    }
-                }
-                return totalFilled;
-            }
-
-            @Override
-            public int extract(int index, FluidResource resource, int amount, TransactionContext transaction) {
-                if (resource.isEmpty() || amount <= 0) return 0;
-                List<TileTank> tanks = getTankColumn();
-                // Check compatibility
-                // Drain top to bottom for liquids, bottom to top for gases
-                boolean gaseous = FluidUtilBC.isGaseous(resource.toStack(1));
-                int remaining = amount;
-                int totalDrained = 0;
-                if (gaseous) {
-                    for (TileTank t : tanks) {
-                        if (remaining <= 0) break;
-                        int drained = t.tank.extract(0, resource, remaining, transaction);
-                        if (drained > 0) {
-                            remaining -= drained;
-                            totalDrained += drained;
-                        }
-                    }
-                } else {
-                    for (int i = tanks.size() - 1; i >= 0; i--) {
-                        if (remaining <= 0) break;
-                        TileTank t = tanks.get(i);
-                        int drained = t.tank.extract(0, resource, remaining, transaction);
-                        if (drained > 0) {
-                            remaining -= drained;
-                            totalDrained += drained;
-                        }
-                    }
-                }
-                return totalDrained;
-            }
-        };
-    }
-
     // --- Save / Load ---
 
+    // Platform bridge — TileTank extends BlockEntity directly (not TileBC_Neptune), so it carries
+    // its own copy of the load/save signature directive (see TileBC_Neptune for the rationale).
+    //? if >=1.21.10 {
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
-        tank.serialize(output);
+        writeData(new BCValueOutput(output));
     }
 
     @Override
     public void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
-        tank.deserialize(input);
+        readData(new BCValueInput(input));
+    }
+    //?} else {
+    /*@Override
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        writeData(new BCValueOutput(tag));
+    }
+
+    @Override
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        readData(new BCValueInput(tag));
+    }*/
+    //?}
+
+    protected void writeData(BCValueOutput output) {
+        tank.serialize(output.raw);
+    }
+
+    protected void readData(BCValueInput input) {
+        tank.deserialize(input.raw);
     }
 
     /**
@@ -360,15 +275,25 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
      * full — effectively duplicating fluid on every placement.
      * <p>
      * BC's fluid economy expects tanks to be broken (which drops fluid as separate item
-     * shards) before being moved, so a picked tank should always come back empty. The
-     * {@code "stacks"} key is the {@link net.neoforged.neoforge.transfer.StacksResourceHandler#VALUE_IO_KEY},
-     * which is what {@code tank.serialize(output)} writes above.
+     * shards) before being moved, so a picked tank should always come back empty. On 1.21.10+
+     * the {@code "stacks"} key is {@code StacksResourceHandler.VALUE_IO_KEY}, what
+     * {@code tank.serialize} writes; on 1.21.1 {@link buildcraft.lib.fluid.BCFluidTank} writes
+     * per-slot {@code "fluid<i>"}/{@code "amount<i>"} keys instead, so those are discarded there.
      */
+    //? if >=1.21.10 {
     @Override
     public void removeComponentsFromTag(ValueOutput output) {
         super.removeComponentsFromTag(output);
         output.discard("stacks");
     }
+    //?} else {
+    /*@Override
+    public void removeComponentsFromTag(CompoundTag tag) {
+        super.removeComponentsFromTag(tag);
+        tag.remove("fluid0");
+        tag.remove("amount0");
+    }*/
+    //?}
 
     // --- MenuProvider (GUI) ---
 

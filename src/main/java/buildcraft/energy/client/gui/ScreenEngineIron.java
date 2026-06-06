@@ -156,6 +156,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
                 int drawW = Math.min(spriteSize, x + width - tileX);
                 int drawH = Math.min(spriteSize, y + height - tileY);
                 // Use the blit overload with a color parameter for tinting
+                //? if >=1.21.10 {
                 graphics.blit(
                     net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
                     TextureAtlas.LOCATION_BLOCKS,
@@ -165,6 +166,16 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
                     atlasWidth, atlasHeight,
                     tintColor
                 );
+                //?} else {
+                /*graphics.blit(
+                    TextureAtlas.LOCATION_BLOCKS,
+                    tileX, tileY,
+                    sprite.getU0() * atlasWidth, sprite.getV0() * atlasHeight,
+                    drawW, drawH,
+                    atlasWidth, atlasHeight,
+                    tintColor
+                );*/
+                //?}
             }
         }
 
@@ -221,6 +232,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
         }
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
         double mouseX = event.x();
@@ -240,6 +252,27 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
         }
         return super.mouseClicked(event, doubleClick);
     }
+    //?} else {
+    /*@Override
+    public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
+        double mouseX = mouseXd;
+        double mouseY = mouseYd;
+        // Check if click is within any of the 3 tank areas
+        if (isTankClicked(mouseX, mouseY, TANK_FUEL_X, TANK_FUEL_Y)) {
+            menu.widgetFuel.sendClick();
+            return true;
+        }
+        if (isTankClicked(mouseX, mouseY, TANK_COOLANT_X, TANK_COOLANT_Y)) {
+            menu.widgetCoolant.sendClick();
+            return true;
+        }
+        if (isTankClicked(mouseX, mouseY, TANK_RESIDUE_X, TANK_RESIDUE_Y)) {
+            menu.widgetResidue.sendClick();
+            return true;
+        }
+        return super.mouseClicked(mouseXd, mouseYd, button);
+    }*/
+    //?}
 
     private boolean isTankClicked(double mouseX, double mouseY, int tankX, int tankY) {
         int absX = leftPos + tankX;

@@ -62,8 +62,18 @@ public class BCEnergy {
     }
 
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
+        // Version-neutral capability tokens: Transfer-API on 1.21.10+, classic handler tokens on 1.21.1.
+        //? if >=1.21.10 {
+        var itemCap = Capabilities.Item.BLOCK;
+        var fluidCap = Capabilities.Fluid.BLOCK;
+        var energyCap = Capabilities.Energy.BLOCK;
+        //?} else {
+        /*var itemCap = Capabilities.ItemHandler.BLOCK;
+        var fluidCap = Capabilities.FluidHandler.BLOCK;
+        var energyCap = Capabilities.EnergyStorage.BLOCK;*/
+        //?}
         event.registerBlockEntity(
-            Capabilities.Fluid.BLOCK,
+            fluidCap,
             BCEnergyBlockEntities.ENGINE_IRON.get(),
             (engine, direction) -> {
                 if (direction == engine.getOrientation()) return null;
@@ -72,7 +82,7 @@ public class BCEnergy {
         );
 
         event.registerBlockEntity(
-            Capabilities.Item.BLOCK,
+            itemCap,
             BCEnergyBlockEntities.ENGINE_STONE.get(),
             (engine, direction) -> direction == engine.getOrientation() ? null : engine.fuelItemHandler
         );
@@ -118,7 +128,7 @@ public class BCEnergy {
         );
 
         event.registerBlockEntity(
-            net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK, BCEnergyBlockEntities.ENGINE_FE.get(),
+            energyCap, BCEnergyBlockEntities.ENGINE_FE.get(),
             (engine, direction) -> {
                 // FE input on non-facing sides only (facing side outputs MJ)
                 if (direction == engine.getOrientation()) return null;
@@ -126,7 +136,7 @@ public class BCEnergy {
             }
         );
         event.registerBlockEntity(
-            net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK, BCEnergyBlockEntities.DYNAMO_MJ.get(),
+            energyCap, BCEnergyBlockEntities.DYNAMO_MJ.get(),
             (dynamo, direction) -> {
                 // FE output on facing direction only
                 if (direction != dynamo.getOrientation()) return null;

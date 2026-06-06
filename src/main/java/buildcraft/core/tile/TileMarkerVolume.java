@@ -18,8 +18,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueOutput;
-import net.minecraft.world.level.storage.ValueInput;
 
 
 import buildcraft.core.BCCoreBlockEntities;
@@ -28,6 +26,8 @@ import buildcraft.api.tiles.ITileAreaProvider;
 
 import buildcraft.lib.marker.MarkerSubCache;
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.PositionUtil;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.tile.TileMarker;
@@ -61,14 +61,14 @@ public class TileMarkerVolume extends TileMarker<VolumeConnection> implements IT
     }
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         output.putBoolean("showSignals", showSignals);
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
         showSignals = input.getBooleanOr("showSignals", false);
     }
 

@@ -75,6 +75,9 @@ Dump.class
 decompiled.java
 gametest_output*.log
 
+# Transient compile logs from version-bump / multi-node compile sweeps (scratch, not for VCS)
+_compile-*.log
+
 # NeoForge / Minecraft reference sources (scripts/neoforge-sources-sync.sh)
 /.neoforge-ref/
 

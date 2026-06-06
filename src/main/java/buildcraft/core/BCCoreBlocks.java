@@ -1,6 +1,7 @@
 package buildcraft.core;
 
 import net.neoforged.neoforge.registries.DeferredRegister;
+import buildcraft.lib.misc.RegistrationUtilBC;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.Block;
@@ -17,10 +18,10 @@ import buildcraft.core.block.BlockEngineCreative;
 public class BCCoreBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCCore.MODID);
 
-    public static final DeferredBlock<BlockSpring> SPRING_WATER = BLOCKS.registerBlock("spring_water",
+    public static final DeferredBlock<BlockSpring> SPRING_WATER = RegistrationUtilBC.registerBlock(BLOCKS, "spring_water",
             props -> new BlockSpring(EnumSpring.WATER, props), () -> BlockBehaviour.Properties.of().sound(SoundType.STONE));
 
-    public static final DeferredBlock<BlockSpring> SPRING_OIL = BLOCKS.registerBlock("spring_oil",
+    public static final DeferredBlock<BlockSpring> SPRING_OIL = RegistrationUtilBC.registerBlock(BLOCKS, "spring_oil",
             props -> new BlockSpring(EnumSpring.OIL, props), () -> BlockBehaviour.Properties.of().sound(SoundType.STONE));
 
     // Decorated blocks — mirrors 1.12.2's buildcraftcore:decorated meta variants.
@@ -35,7 +36,11 @@ public class BCCoreBlocks {
     // their loot tables would just orphan the item references and spam the server log; when a
     // variant is promoted, give it a loot table + recipe and drop the .noLootTable() like LASER.
     public static final DeferredBlock<Block> DECORATED_LASER = BLOCKS.registerSimpleBlock(
+            //? if >=1.21.10 {
             "decorated_laser", () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
+            //?} else {
+            /*"decorated_laser", BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());*/
+            //?}
 
     public static final DeferredBlock<Block> DECORATED_DESTROY;
     public static final DeferredBlock<Block> DECORATED_BLUEPRINT;
@@ -44,19 +49,19 @@ public class BCCoreBlocks {
     public static final DeferredBlock<Block> DECORATED_LEATHER;
 
     // Markers were Material.CIRCUITS in 1.12.2 → hand-breakable (no tool gate).
-    public static final DeferredBlock<buildcraft.core.block.BlockMarkerVolume> MARKER_VOLUME = BLOCKS.registerBlock(
+    public static final DeferredBlock<buildcraft.core.block.BlockMarkerVolume> MARKER_VOLUME = RegistrationUtilBC.registerBlock(BLOCKS,
             "marker_volume",
             buildcraft.core.block.BlockMarkerVolume::new, () -> BlockBehaviour.Properties.of().sound(SoundType.METAL));
 
-    public static final DeferredBlock<BlockMarkerPath> MARKER_PATH = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockMarkerPath> MARKER_PATH = RegistrationUtilBC.registerBlock(BLOCKS,
             "marker_path",
             BlockMarkerPath::new, () -> BlockBehaviour.Properties.of().sound(SoundType.METAL));
 
-    public static final DeferredBlock<BlockEngineRedstone_BC8> ENGINE_REDSTONE = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockEngineRedstone_BC8> ENGINE_REDSTONE = RegistrationUtilBC.registerBlock(BLOCKS,
             "engine_redstone",
             BlockEngineRedstone_BC8::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockEngineCreative> ENGINE_CREATIVE = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockEngineCreative> ENGINE_CREATIVE = RegistrationUtilBC.registerBlock(BLOCKS,
             "engine_creative",
             BlockEngineCreative::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
@@ -66,30 +71,50 @@ public class BCCoreBlocks {
 
     static {
         POWER_TESTER = BCLib.DEV
-                ? BLOCKS.registerBlock("power_tester",
+                ? RegistrationUtilBC.registerBlock(BLOCKS, "power_tester",
                         BlockPowerConsumerTester::new,
                         () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops())
                 : null;
 
         DECORATED_DESTROY = BCLib.DEV
                 ? BLOCKS.registerSimpleBlock("decorated_destroy",
+                        //? if >=1.21.10 {
                         () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())
+                        //?} else {
+                        /*BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())*/
+                        //?}
                 : null;
         DECORATED_BLUEPRINT = BCLib.DEV
                 ? BLOCKS.registerSimpleBlock("decorated_blueprint",
+                        //? if >=1.21.10 {
                         () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())
+                        //?} else {
+                        /*BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())*/
+                        //?}
                 : null;
         DECORATED_TEMPLATE = BCLib.DEV
                 ? BLOCKS.registerSimpleBlock("decorated_template",
+                        //? if >=1.21.10 {
                         () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())
+                        //?} else {
+                        /*BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())*/
+                        //?}
                 : null;
         DECORATED_PAPER = BCLib.DEV
                 ? BLOCKS.registerSimpleBlock("decorated_paper",
+                        //? if >=1.21.10 {
                         () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())
+                        //?} else {
+                        /*BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())*/
+                        //?}
                 : null;
         DECORATED_LEATHER = BCLib.DEV
                 ? BLOCKS.registerSimpleBlock("decorated_leather",
+                        //? if >=1.21.10 {
                         () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())
+                        //?} else {
+                        /*BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())*/
+                        //?}
                 : null;
     }
 

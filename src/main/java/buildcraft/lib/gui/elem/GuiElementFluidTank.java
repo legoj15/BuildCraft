@@ -10,14 +10,16 @@ import java.util.List;
 
 import net.minecraft.client.Minecraft;
 import buildcraft.lib.gui.BCGraphics;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.RenderPipelines;
+//?}
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.Identifier;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 
+import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.gui.BuildCraftGui;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.IInteractionElement;
@@ -33,12 +35,12 @@ public class GuiElementFluidTank implements IInteractionElement {
 
     private final BuildCraftGui gui;
     private final IGuiArea area;
-    private final net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler tank;
+    private final BCFluidTank tank;
     private final WidgetFluidTank widget;
     private final GuiIcon overlay;
 
     public GuiElementFluidTank(BuildCraftGui gui, IGuiArea area,
-            net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler tank,
+            BCFluidTank tank,
             WidgetFluidTank widget,
             GuiIcon overlay) {
         this.gui = gui;
@@ -49,7 +51,7 @@ public class GuiElementFluidTank implements IInteractionElement {
     }
 
     /** Exposed so the JEI handler can read the current contents for U/R recipe lookups. */
-    public net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler getTank() {
+    public BCFluidTank getTank() {
         return tank;
     }
 
@@ -73,13 +75,13 @@ public class GuiElementFluidTank implements IInteractionElement {
     public void drawBackground(float partialTicks) {
         if (tank == null) return;
 
-        net.neoforged.neoforge.transfer.fluid.FluidResource fluid = tank.getResource(0);
-        long capacity = tank.getCapacityAsLong(0, net.neoforged.neoforge.transfer.fluid.FluidResource.EMPTY);
-        long amount = tank.getAmountAsLong(0);
+        FluidStack fluid = tank.getFluidStack(0);
+        long capacity = tank.getCapacityMb(0);
+        long amount = tank.getAmountMb(0);
         if (!fluid.isEmpty() && capacity > 0 && amount > 0) {
             BCGraphics graphics = GuiIcon.getGuiGraphics();
             if (graphics != null) {
-                drawFluid(graphics, fluid.toStack((int) amount), (int) amount, (int) capacity);
+                drawFluid(graphics, fluid, (int) amount, (int) capacity);
             }
         }
 
@@ -127,6 +129,7 @@ public class GuiElementFluidTank implements IInteractionElement {
             for (int tileX = x; tileX < x + w; tileX += spriteSize) {
                 int drawW = Math.min(spriteSize, x + w - tileX);
                 int drawH = Math.min(spriteSize, fillY + fillHeight - tileY);
+                //? if >=1.21.10 {
                 graphics.blit(
                     RenderPipelines.GUI_TEXTURED,
                     TextureAtlas.LOCATION_BLOCKS,
@@ -136,6 +139,16 @@ public class GuiElementFluidTank implements IInteractionElement {
                     atlasWidth, atlasHeight,
                     tintColor
                 );
+                //?} else {
+                /*graphics.blit(
+                    TextureAtlas.LOCATION_BLOCKS,
+                    tileX, tileY,
+                    sprite.getU0() * atlasWidth, sprite.getV0() * atlasHeight,
+                    drawW, drawH,
+                    atlasWidth, atlasHeight,
+                    tintColor
+                );*/
+                //?}
             }
         }
 
@@ -149,13 +162,13 @@ public class GuiElementFluidTank implements IInteractionElement {
         if (tank == null) return;
         if (!contains(gui.mouse.getX(), gui.mouse.getY())) return;
 
-        net.neoforged.neoforge.transfer.fluid.FluidResource fluid = tank.getResource(0);
-        long capacity = tank.getCapacityAsLong(0, net.neoforged.neoforge.transfer.fluid.FluidResource.EMPTY);
-        long amount = tank.getAmountAsLong(0);
+        FluidStack fluid = tank.getFluidStack(0);
+        long capacity = tank.getCapacityMb(0);
+        long amount = tank.getAmountMb(0);
         // 1.12.2 shape: first line = fluid name (or "Empty"), second line = "x / cap mB" in
         // gray. Section sign §7 = ChatFormatting.GRAY, which the vanilla tooltip renderer picks
         // up on per-line strings.
-        String name = fluid.isEmpty() || amount == 0 ? "Empty" : fluid.toStack(1).getHoverName().getString();
+        String name = fluid.isEmpty() || amount == 0 ? "Empty" : fluid.getHoverName().getString();
         tooltips.add(new ToolTip(
             name,
             net.minecraft.ChatFormatting.GRAY + (amount + " / " + capacity + " mB")

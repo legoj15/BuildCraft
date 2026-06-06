@@ -11,12 +11,14 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 //? if >=26.1 {
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-//?} else {
+//?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.state.CameraRenderState;*/
 //?}
 import net.minecraft.core.BlockPos;
@@ -54,7 +56,11 @@ import buildcraft.builders.tile.TileFiller;
  *       {@code TileFiller.isFinished()} short-circuits to {@code mode != LOOP && finished}.</li>
  * </ul>
  */
+//? if >=1.21.10 {
 public class RenderFiller implements BlockEntityRenderer<TileFiller, FillerRenderState> {
+//?} else {
+/*public class RenderFiller implements BlockEntityRenderer<TileFiller> {*/
+//?}
     /** Half-intensity green — the "LOOP mode" indicator. Roughly half each ABGR channel of
      *  {@link LedRenderUtil#COLOUR_GREEN_ON} ({@code 0xFF_77_DD_77} → {@code 0xFF_3F_77_3F}). */
     private static final int COLOUR_GREEN_HALF = 0xFF_3F_77_3F;
@@ -80,6 +86,7 @@ public class RenderFiller implements BlockEntityRenderer<TileFiller, FillerRende
     public RenderFiller(BlockEntityRendererProvider.Context context) {
     }
 
+    //? if >=1.21.10 {
     @Override
     public FillerRenderState createRenderState() {
         return new FillerRenderState();
@@ -103,7 +110,14 @@ public class RenderFiller implements BlockEntityRenderer<TileFiller, FillerRende
 
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TileFiller tile)) return;
-
+    //?} else {
+    /*// 1.21.1: classic direct BlockEntityRenderer.render — the tile is passed, so no camera-pos
+    // reconstruction is needed. The passed buffers/packedLight/packedOverlay/partialTicks go unused
+    // (the shared body sources its own buffer/light from the level, as the modern submit path does).
+    @Override
+    public void render(TileFiller tile, float partialTicks, PoseStack poseStack,
+                       MultiBufferSource buffers, int packedLight, int packedOverlay) {*/
+    //?}
         poseStack.pushPose();
 
         MultiBufferSource.BufferSource bufferSource =

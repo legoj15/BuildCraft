@@ -5,6 +5,12 @@
  */
 package buildcraft.builders.client.render.pip;
 
+// Whole-file >=1.21.10: this renderer extends PictureInPictureRenderer and is built on the 1.21.5+
+// PiP pipeline + GPU-buffer/SubmitNodeStorage/TrackingItemStackRenderState paradigm, none of which
+// exists on 1.21.1. The blueprint tooltip preview is stubbed on 1.21.1 (BlueprintRenderer.renderSnapshot
+// no-ops; the PiP renderer is not registered) — gate the entire class out there. TODO(1.21.1 visual
+// pass): reimplement the rotating 3D preview with a classic offscreen/in-tooltip render if desired.
+//? if >=1.21.10 {
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -691,3 +697,4 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
      */
     private static final TrackingItemStackRenderState MARKER_EMPTY = new TrackingItemStackRenderState();
 }
+//?}

@@ -13,7 +13,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomModelData;
+//? if >=1.21.10 {
 import net.minecraft.world.item.component.TooltipDisplay;
+//?}
 import net.minecraft.world.level.Level;
 import java.util.function.Consumer;
 
@@ -28,8 +30,16 @@ public class ItemGateCopier extends Item {
     }
 
     @Override
+    //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, display, tooltip, flag);
+    //?} else {
+    /*// 1.21.1: appendHoverText has no TooltipDisplay and takes List<Component>; adapt to the shared
+    // Consumer-based body below via tooltipList::add.
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, java.util.List<Component> tooltipList, TooltipFlag flag) {
+        Consumer<Component> tooltip = tooltipList::add;
+        super.appendHoverText(stack, context, tooltipList, flag);*/
+    //?}
         if (getCopiedGateData(stack) != null) {
             // Keybind components render the player's *actual* bound keys (so a player who
             // rebound sneak to Right Ctrl, or "use item" off the right mouse button, sees
@@ -40,7 +50,19 @@ public class ItemGateCopier extends Item {
     }
 
     @Override
+    //? if >=1.21.10 {
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
+        return useImpl(level, player, hand);
+    }
+    //?} else {
+    /*// 1.21.1: Item.use returns InteractionResultHolder<ItemStack>. Wrap the shared InteractionResult
+    // logic (useImpl) with the held stack — InteractionResult.PASS/SUCCESS are version-neutral.
+    public net.minecraft.world.InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        return new net.minecraft.world.InteractionResultHolder<>(useImpl(level, player, hand), player.getItemInHand(hand));
+    }*/
+    //?}
+
+    private InteractionResult useImpl(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (level.isClientSide()) {
             return InteractionResult.PASS;
@@ -73,8 +95,13 @@ public class ItemGateCopier extends Item {
      * Mirrors {@link buildcraft.core.item.ItemList_BC8}'s {@code updateModelData}. */
     private static void updateModelData(ItemStack stack) {
         if (getCopiedGateData(stack) != null) {
+            //? if >=1.21.10 {
             stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(
                 List.of(1.0f), List.of(), List.of(), List.of()));
+            //?} else {
+            /*// 1.21.1: CustomModelData is the single-int record.
+            stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(1));*/
+            //?}
         } else {
             stack.remove(DataComponents.CUSTOM_MODEL_DATA);
         }
@@ -83,7 +110,7 @@ public class ItemGateCopier extends Item {
     public static CompoundTag getCopiedGateData(ItemStack stack) {
         CompoundTag data = NBTUtilBC.getItemData(stack);
         if (data.contains(NBT_DATA)) {
-            return data.getCompound(NBT_DATA).orElse(new CompoundTag());
+            return NBTUtilBC.getCompound(data, NBT_DATA);
         }
         return null;
     }

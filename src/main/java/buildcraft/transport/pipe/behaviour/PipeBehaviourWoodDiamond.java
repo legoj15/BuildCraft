@@ -19,6 +19,7 @@ import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver;
 
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
@@ -50,12 +51,12 @@ public class PipeBehaviourWoodDiamond extends PipeBehaviourWood {
 
     public PipeBehaviourWoodDiamond(IPipe pipe, CompoundTag nbt) {
         super(pipe, nbt);
-        CompoundTag filtersTag = nbt.getCompoundOrEmpty("filters");
+        CompoundTag filtersTag = NBTUtilBC.getCompound(nbt, "filters");
         if (!filtersTag.isEmpty()) {
             filters.deserializeNBT(filtersTag);
         }
-        filterMode = FilterMode.get(nbt.getByteOr("mode", (byte) 0));
-        currentFilter = nbt.getByteOr("currentFilter", (byte) 0) % filters.getSlots();
+        filterMode = FilterMode.get(NBTUtilBC.getByte(nbt, "mode", (byte) 0));
+        currentFilter = NBTUtilBC.getByte(nbt, "currentFilter", (byte) 0) % filters.getSlots();
         filterValid = hasAnyFilter();
     }
 
@@ -71,9 +72,9 @@ public class PipeBehaviourWoodDiamond extends PipeBehaviourWood {
     @Override
     public void readFromNbt(CompoundTag nbt) {
         super.readFromNbt(nbt);
-        filters.deserializeNBT(nbt.getCompoundOrEmpty("filters"));
-        filterMode = FilterMode.get(nbt.getByteOr("mode", (byte) 0));
-        currentFilter = nbt.getByteOr("currentFilter", (byte) 0) % filters.getSlots();
+        filters.deserializeNBT(NBTUtilBC.getCompound(nbt, "filters"));
+        filterMode = FilterMode.get(NBTUtilBC.getByte(nbt, "mode", (byte) 0));
+        currentFilter = NBTUtilBC.getByte(nbt, "currentFilter", (byte) 0) % filters.getSlots();
         filterValid = hasAnyFilter();
     }
 

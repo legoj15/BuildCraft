@@ -30,9 +30,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.transfer.ResourceHandler;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
+//?}
 
 import buildcraft.api.core.IStackFilter;
 import buildcraft.api.transport.IInjectable;
@@ -46,6 +47,7 @@ import buildcraft.api.transport.pipe.PipeFlow;
 
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.misc.CapUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.data.DelayedList;
 
 import buildcraft.api.transport.pipe.PipeEventHandler;
@@ -69,7 +71,7 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
 
     public PipeFlowItems(IPipe pipe, CompoundTag nbt) {
         super(pipe, nbt);
-        ListTag list = nbt.getListOrEmpty("items");
+        ListTag list = NBTUtilBC.getList(nbt, "items", Tag.TAG_COMPOUND);
         Level world = pipe.getHolder().getPipeWorld();
         long tickNow = world != null ? world.getGameTime() : 0;
         for (int i = 0; i < list.size(); i++) {
@@ -158,8 +160,13 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
         IPipeHolder holder = pipe.getHolder();
         Level level = holder.getPipeWorld();
         BlockPos neighborPos = holder.getPipePos().relative(from);
-        ResourceHandler<ItemResource> handler = level.getCapability(
+        //? if >=1.21.10 {
+        var handler = level.getCapability(
             Capabilities.Item.BLOCK, neighborPos, from.getOpposite());
+        //?} else {
+        /*var handler = level.getCapability(
+            Capabilities.ItemHandler.BLOCK, neighborPos, from.getOpposite());*/
+        //?}
         if (handler == null) {
             return 0;
         }
@@ -167,6 +174,7 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
         // Find a matching stack to extract (simulate first)
         ItemStack possible = ItemStack.EMPTY;
         int sourceSlot = -1;
+        //? if >=1.21.10 {
         for (int i = 0; i < handler.size(); i++) {
             ItemResource res = handler.getResource(i);
             if (res.isEmpty()) continue;
@@ -190,6 +198,27 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
                 }
             }
         }
+        //?} else {
+        /*for (int i = 0; i < handler.getSlots(); i++) {
+            ItemStack inSlot = handler.getStackInSlot(i);
+            if (inSlot.isEmpty()) continue;
+            int available = inSlot.getCount();
+            if (available <= 0) continue;
+            ItemStack slotStack = inSlot.copyWithCount(Math.min(available, count));
+            if (filter.matches(slotStack)) {
+                // Simulate extraction to confirm the slot actually yields items (insert-only
+                // inventories match the filter but refuse extraction) — keep scanning on refusal.
+                ItemStack extracted = handler.extractItem(i, Math.min(available, count), true);
+                if (!extracted.isEmpty()) {
+                    possible = extracted;
+                    sourceSlot = i;
+                }
+                if (sourceSlot >= 0) {
+                    break;
+                }
+            }
+        }*/
+        //?}
 
         if (possible.isEmpty() || sourceSlot < 0) {
             return 0;
@@ -209,6 +238,7 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
         count = Math.min(count, tryInsert.accepted);
 
         // Actually extract items
+        //? if >=1.21.10 {
         ItemResource resource = ItemResource.of(possible);
         int actuallyExtracted;
         if (simulate) {
@@ -224,12 +254,15 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
                 }
             }
         }
+        ItemStack stack = actuallyExtracted <= 0 ? ItemStack.EMPTY : resource.toStack(actuallyExtracted);
+        //?} else {
+        /*ItemStack stack = handler.extractItem(sourceSlot, count, simulate);
+        int actuallyExtracted = stack.getCount();*/
+        //?}
 
         if (actuallyExtracted <= 0) {
             return 0;
         }
-
-        ItemStack stack = resource.toStack(actuallyExtracted);
 
         if (!simulate) {
             insertItemEvents(stack, colour, EXTRACT_SPEED, from);
@@ -458,7 +491,8 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
                     if (tile != null) {
                         Level level = holder.getPipeWorld();
                         BlockPos neighborPos = holder.getPipePos().relative(item.side);
-                        ResourceHandler<ItemResource> tileHandler = level.getCapability(
+                        //? if >=1.21.10 {
+                        var tileHandler = level.getCapability(
                             Capabilities.Item.BLOCK, neighborPos, oppositeSide);
                         if (tileHandler != null) {
                             ItemResource resource = ItemResource.of(excess);
@@ -473,6 +507,20 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
                                 }
                             }
                         }
+                        //?} else {
+                        /*var tileHandler = level.getCapability(
+                            Capabilities.ItemHandler.BLOCK, neighborPos, oppositeSide);
+                        if (tileHandler != null) {
+                            ItemStack leftover = net.neoforged.neoforge.items.ItemHandlerHelper.insertItemStacked(tileHandler, excess.copy(), false);
+                            int inserted = excess.getCount() - leftover.getCount();
+                            if (inserted > 0) {
+                                excess.shrink(inserted);
+                                if (excess.isEmpty()) {
+                                    excess = ItemStack.EMPTY;
+                                }
+                            }
+                        }*/
+                        //?}
                     }
                     break;
                 }

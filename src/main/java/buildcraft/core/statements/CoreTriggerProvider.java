@@ -13,9 +13,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.item.ItemResource;
 
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.ITriggerExternal;
@@ -73,8 +70,14 @@ public enum CoreTriggerProvider implements ITriggerProvider {
         }
 
         if (!blockInventoryTriggers && tile != null && tile.getLevel() != null) {
-            ResourceHandler<ItemResource> itemHandler = tile.getLevel().getCapability(Capabilities.Item.BLOCK, tile.getBlockPos(), side.getOpposite());
-            if (itemHandler != null && itemHandler.size() > 0) {
+            //? if >=1.21.10 {
+            var itemHandler = tile.getLevel().getCapability(Capabilities.Item.BLOCK, tile.getBlockPos(), side.getOpposite());
+            boolean hasInventory = itemHandler != null && itemHandler.size() > 0;
+            //?} else {
+            /*var itemHandler = tile.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, tile.getBlockPos(), side.getOpposite());
+            boolean hasInventory = itemHandler != null && itemHandler.getSlots() > 0;*/
+            //?}
+            if (hasInventory) {
                 res.add(BCCoreStatements.TRIGGER_INVENTORY_EMPTY);
                 res.add(BCCoreStatements.TRIGGER_INVENTORY_SPACE);
                 res.add(BCCoreStatements.TRIGGER_INVENTORY_CONTAINS);
@@ -86,8 +89,14 @@ public enum CoreTriggerProvider implements ITriggerProvider {
         }
 
         if (!blockFluidHandlerTriggers && tile != null && tile.getLevel() != null) {
-            ResourceHandler<FluidResource> fluidHandler = tile.getLevel().getCapability(Capabilities.Fluid.BLOCK, tile.getBlockPos(), side.getOpposite());
-            if (fluidHandler != null && fluidHandler.size() > 0) {
+            //? if >=1.21.10 {
+            var fluidHandler = tile.getLevel().getCapability(Capabilities.Fluid.BLOCK, tile.getBlockPos(), side.getOpposite());
+            boolean hasFluid = fluidHandler != null && fluidHandler.size() > 0;
+            //?} else {
+            /*var fluidHandler = tile.getLevel().getCapability(Capabilities.FluidHandler.BLOCK, tile.getBlockPos(), side.getOpposite());
+            boolean hasFluid = fluidHandler != null && fluidHandler.getTanks() > 0;*/
+            //?}
+            if (hasFluid) {
                 res.add(BCCoreStatements.TRIGGER_FLUID_EMPTY);
                 res.add(BCCoreStatements.TRIGGER_FLUID_SPACE);
                 res.add(BCCoreStatements.TRIGGER_FLUID_CONTAINS);

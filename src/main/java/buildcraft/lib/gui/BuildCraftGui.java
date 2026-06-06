@@ -89,7 +89,12 @@ public class BuildCraftGui {
     public void drawBackgroundLayer(float partialTicks, int mouseX, int mouseY, Runnable menuBackgroundRenderer) {
         // 1.12.2 parity: explicitly source partialTicks from the MC timer
         // to avoid stale values from the incoming argument
+        //? if >=1.21.10 {
         partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        //?} else {
+        /*// 1.21.1 exposes the DeltaTracker via getTimer(), not getDeltaTracker().
+        partialTicks = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);*/
+        //?}
         this.lastPartialTicks = partialTicks;
         mouse.setMousePosition(mouseX, mouseY);
         // Always draw the gate background — even when a variant/menu popup is open.
@@ -148,15 +153,25 @@ public class BuildCraftGui {
     public void preDrawForeground() {
         buildcraft.lib.gui.BCGraphics graphics = GuiIcon.getGuiGraphics();
         if (graphics != null) {
+            //? if >=1.21.10 {
             graphics.pose().pushMatrix();
             graphics.pose().translate((float) -rootElement.getX(), (float) -rootElement.getY());
+            //?} else {
+            /*// 1.21.1 pose() is a 3D PoseStack: pushPose/popPose, and translate takes a z component.
+            graphics.pose().pushPose();
+            graphics.pose().translate((float) -rootElement.getX(), (float) -rootElement.getY(), 0.0F);*/
+            //?}
         }
     }
 
     public void postDrawForeground() {
         buildcraft.lib.gui.BCGraphics graphics = GuiIcon.getGuiGraphics();
         if (graphics != null) {
+            //? if >=1.21.10 {
             graphics.pose().popMatrix();
+            //?} else {
+            /*graphics.pose().popPose();*/
+            //?}
         }
     }
 

@@ -11,6 +11,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.BlockPos;
 
 import buildcraft.api.core.EnumPipePart;
+import buildcraft.lib.misc.NBTUtilBC;
 
 public class ResourceIdBlock extends ResourceId {
 
@@ -64,7 +65,7 @@ public class ResourceIdBlock extends ResourceId {
     @Override
     protected void readFromNBT(CompoundTag nbt) {
         super.readFromNBT(nbt);
-        int[] arr = nbt.getIntArray("pos").orElse(new int[0]);
+        int[] arr = NBTUtilBC.getIntArray(nbt, "pos", new int[0]);
         pos = new BlockPos(arr[0], arr[1], arr[2]);
 
         side = EnumPipePart.readFromNBT(nbt.get("side"));

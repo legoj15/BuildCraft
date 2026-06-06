@@ -27,7 +27,9 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+//? if >=1.21.10 {
 import net.minecraft.util.profiling.Profiler;
+//?}
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -57,6 +59,10 @@ import buildcraft.api.transport.pluggable.PipePluggable;
 
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.GameProfileUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
@@ -100,13 +106,40 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     // --- Read / Write ---
 
+    // Platform bridge: TilePipeHolder extends BlockEntity directly (not TileBC_Neptune), so it carries its
+    // own save/load bridge. 1.21.10+ uses the ValueOutput/ValueInput API; 1.21.1 uses CompoundTag + provider.
+    // The actual serialization lives in the version-neutral writeData/readData hooks below.
+    //? if >=1.21.10 {
     @Override
     protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
         super.saveAdditional(output);
-        if (owner != null && owner.id() != null) {
-            output.putString("ownerUUID", owner.id().toString());
-            if (owner.name() != null) {
-                output.putString("ownerName", owner.name());
+        writeData(new BCValueOutput(output));
+    }
+
+    @Override
+    public void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        super.loadAdditional(input);
+        readData(new BCValueInput(input));
+    }
+    //?} else {
+    /*@Override
+    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        writeData(new BCValueOutput(tag));
+    }
+
+    @Override
+    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        readData(new BCValueInput(tag));
+    }*/
+    //?}
+
+    protected void writeData(BCValueOutput output) {
+        if (owner != null && GameProfileUtil.getId(owner) != null) {
+            output.putString("ownerUUID", GameProfileUtil.getId(owner).toString());
+            if (GameProfileUtil.getName(owner) != null) {
+                output.putString("ownerName", GameProfileUtil.getName(owner));
             }
         }
         if (pipe != null) {
@@ -132,9 +165,7 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         }
     }
 
-    @Override
-    public void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
         String ownerUuid = input.getStringOr("ownerUUID", "");
         if (!ownerUuid.isEmpty()) {
             try {
@@ -163,14 +194,14 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         input.read("plugs", CompoundTag.CODEC).ifPresentOrElse(plugTag -> {
             for (Direction face : Direction.values()) {
                 if (plugTag.contains(face.getName())) {
-                    CompoundTag entry = plugTag.getCompound(face.getName()).orElse(new CompoundTag());
-                    String id = entry.getString("id").orElse("");
+                    CompoundTag entry = NBTUtilBC.getCompound(plugTag, face.getName());
+                    String id = NBTUtilBC.getString(entry, "id", "");
                     if (!id.isEmpty()) {
                         net.minecraft.resources.Identifier plugId = net.minecraft.resources.Identifier.parse(id);
                         PluggableDefinition def = PipeApi.pluggableRegistry != null
                                 ? PipeApi.pluggableRegistry.getDefinition(plugId) : null;
                         if (def != null) {
-                            CompoundTag data = entry.getCompound("data").orElse(new CompoundTag());
+                            CompoundTag data = NBTUtilBC.getCompound(entry, "data");
                             // Reuse existing pluggable if the definition matches, to preserve
                             // live references held by open GUI containers (e.g. ContainerGate → GateLogic)
                             PipePluggable existing = pluggables[face.ordinal()];
@@ -246,23 +277,42 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         return tag;
     }
 
+    //? if >=1.21.10 {
     @Override
     public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
         super.handleUpdateTag(input);
-        applyClientUpdateData(input);
-        // Schedule client-side render refresh after receiving updated state.
-        // UPDATE_CLIENTS (not UPDATE_ALL): client doesn't need the UPDATE_NEIGHBORS bit, and on
-        // the server side it would re-fire updateNeighborsAt redundantly with tick()'s explicit one.
-        requestModelDataUpdate();
-        if (level != null && level.isClientSide()) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
-        }
+        applyClientUpdateData(new BCValueInput(input));
+        afterClientNbtUpdate();
     }
 
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
         super.onDataPacket(net, input);
-        applyClientUpdateData(input);
+        applyClientUpdateData(new BCValueInput(input));
+        afterClientNbtUpdate();
+    }
+    //?} else {
+    /*@Override
+    public void handleUpdateTag(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
+        super.handleUpdateTag(tag, provider);
+        applyClientUpdateData(new BCValueInput(tag));
+        afterClientNbtUpdate();
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket pkt, net.minecraft.core.HolderLookup.Provider provider) {
+        super.onDataPacket(net, pkt, provider);
+        if (pkt.getTag() != null) {
+            applyClientUpdateData(new BCValueInput(pkt.getTag()));
+        }
+        afterClientNbtUpdate();
+    }*/
+    //?}
+
+    // Schedule client-side render refresh after receiving updated state.
+    // UPDATE_CLIENTS (not UPDATE_ALL): client doesn't need the UPDATE_NEIGHBORS bit, and on
+    // the server side it would re-fire updateNeighborsAt redundantly with tick()'s explicit one.
+    private void afterClientNbtUpdate() {
         requestModelDataUpdate();
         if (level != null && level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
@@ -270,13 +320,13 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     }
 
     /** Applies the per-pluggable runtime state from getUpdateTag's "plugsClient" sub-tag onto the already-rebuilt pluggables (client side). */
-    private void applyClientUpdateData(net.minecraft.world.level.storage.ValueInput input) {
+    private void applyClientUpdateData(BCValueInput input) {
         input.read("plugsClient", CompoundTag.CODEC).ifPresent(plugsClient -> {
             for (Direction face : Direction.values()) {
                 PipePluggable plug = pluggables[face.ordinal()];
                 if (plug != null && plugsClient.contains(face.getName())) {
                     plug.readClientUpdateData(
-                        plugsClient.getCompound(face.getName()).orElse(new CompoundTag()));
+                        NBTUtilBC.getCompound(plugsClient, face.getName()));
                 }
             }
         });
@@ -336,7 +386,11 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     // --- Tick ---
 
     public void tick() {
+        //? if >=1.21.10 {
         ProfilerFiller _profiler = Profiler.get();
+        //?} else {
+        /*ProfilerFiller _profiler = net.minecraft.util.profiling.InactiveProfiler.INSTANCE;*/
+        //?}
         _profiler.push("buildcraft:pipe_tick");
         try {
         // Prepare redstone outputs for this tick
@@ -504,7 +558,11 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
                 BlockPos npos = worldPosition.relative(dir);
                 BlockState nstate = level.getBlockState(npos);
                 if (!nstate.isAir()) {
+                    //? if >=1.21.10 {
                     BlockState res = nstate.updateShape(level, level, npos, dir.getOpposite(), worldPosition, getBlockState(), level.getRandom());
+                    //?} else {
+                    /*BlockState res = nstate.updateShape(dir.getOpposite(), getBlockState(), level, npos, worldPosition);*/
+                    //?}
                     if (res != nstate) {
                         Block.updateOrDestroy(nstate, res, level, npos, Block.UPDATE_ALL);
                     }

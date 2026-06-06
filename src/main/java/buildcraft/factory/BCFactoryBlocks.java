@@ -1,6 +1,7 @@
 package buildcraft.factory;
 
 import net.neoforged.neoforge.registries.DeferredRegister;
+import buildcraft.lib.misc.RegistrationUtilBC;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.SoundType;
@@ -20,48 +21,48 @@ public class BCFactoryBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCFactory.MODID);
 
     // 1.12.2 Material.ROCK → pickaxe required.
-    public static final DeferredBlock<BlockAutoWorkbenchItems> AUTOWORKBENCH_ITEM = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockAutoWorkbenchItems> AUTOWORKBENCH_ITEM = RegistrationUtilBC.registerBlock(BLOCKS,
             "autoworkbench_item",
             BlockAutoWorkbenchItems::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     // 1.12.2 Material.IRON → pickaxe required (parity restored via
     // requiresCorrectToolForDrops + minecraft:mineable/pickaxe tag).
-    public static final DeferredBlock<BlockMiningWell> MINING_WELL = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockMiningWell> MINING_WELL = RegistrationUtilBC.registerBlock(BLOCKS,
             "mining_well",
             BlockMiningWell::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockPump> PUMP = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockPump> PUMP = RegistrationUtilBC.registerBlock(BLOCKS,
             "pump",
             BlockPump::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockFloodGate> FLOOD_GATE = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockFloodGate> FLOOD_GATE = RegistrationUtilBC.registerBlock(BLOCKS,
             "flood_gate",
             BlockFloodGate::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockTank> TANK = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockTank> TANK = RegistrationUtilBC.registerBlock(BLOCKS,
             "tank",
             BlockTank::new, () -> BlockBehaviour.Properties.of().strength(0.3f).noOcclusion().sound(SoundType.GLASS).requiresCorrectToolForDrops());
 
     // Tube is owned by the mining well / pump and stays unbreakable in survival
     // (destroyTime(-1.0f)); no tool gate needed.
-    public static final DeferredBlock<BlockTube> TUBE = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockTube> TUBE = RegistrationUtilBC.registerBlock(BLOCKS,
             "tube",
             BlockTube::new, () -> BlockBehaviour.Properties.of().destroyTime(-1.0f).noOcclusion().sound(SoundType.METAL));
 
-    public static final DeferredBlock<BlockChute> CHUTE = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockChute> CHUTE = RegistrationUtilBC.registerBlock(BLOCKS,
             "chute",
             BlockChute::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockDistiller> DISTILLER = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockDistiller> DISTILLER = RegistrationUtilBC.registerBlock(BLOCKS,
             "distiller",
             BlockDistiller::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockHeatExchange> HEAT_EXCHANGE = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockHeatExchange> HEAT_EXCHANGE = RegistrationUtilBC.registerBlock(BLOCKS,
             "heat_exchange",
             BlockHeatExchange::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     // 1.12.2 Material.CLAY → hand-breakable; getDrops returns the gelled_water item.
-    public static final DeferredBlock<BlockWaterGel> WATER_GEL = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockWaterGel> WATER_GEL = RegistrationUtilBC.registerBlock(BLOCKS,
             "water_gel",
             BlockWaterGel::new, () -> BlockBehaviour.Properties.of()
                     .strength(0.6f)

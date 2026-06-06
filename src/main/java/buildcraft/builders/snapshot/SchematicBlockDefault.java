@@ -24,7 +24,9 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.resources.Identifier;
+//? if >=1.21.10 {
 import net.minecraft.util.ProblemReporter;
+//?}
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -44,7 +46,9 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.TagValueInput;
+//?}
 
 import net.neoforged.neoforge.fluids.FluidStack;
 
@@ -265,7 +269,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
             .filter(Objects::nonNull)
             .findFirst()
             .map(Identifier::parse)
-            .map(BuiltInRegistries.BLOCK::getValue)
+            .map(id -> buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.BLOCK, id))
             .orElse(context.block);
     }
 
@@ -280,7 +284,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 .forEach(updateBlockOffsets::add);
         } else {
             Stream.of(Direction.values())
-                .map(Direction::getUnitVec3i)
+                .map(buildcraft.lib.misc.PositionUtil::getDirectionNormal)
                 .map(BlockPos::new)
                 .forEach(updateBlockOffsets::add);
             updateBlockOffsets.add(BlockPos.ZERO);
@@ -295,7 +299,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
             .filter(Objects::nonNull)
             .flatMap(Collection::stream)
             .map(Identifier::parse)
-            .map(BuiltInRegistries.BLOCK::getValue)
+            .map(id -> buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.BLOCK, id))
             .forEach(canBeReplacedWithBlocks::add);
         canBeReplacedWithBlocks.add(context.block);
         canBeReplacedWithBlocks.add(placeBlock);
@@ -644,9 +648,15 @@ public class SchematicBlockDefault implements ISchematicBlock {
             for (Direction dir : Direction.values()) {
                 BlockPos neighborPos = blockPos.relative(dir);
                 BlockState neighborState = level.getBlockState(neighborPos);
+                //? if >=1.21.10 {
                 BlockState updated = afterShape.updateShape(
                     level, level, blockPos, dir, neighborPos, neighborState, level.getRandom()
                 );
+                //?} else {
+                /*BlockState updated = afterShape.updateShape(
+                    dir, neighborState, level, blockPos, neighborPos
+                );*/
+                //?}
                 if (updated.isAir()) {
                     // Block self-destructed via updateShape (e.g. torch with no sturdy block
                     // below). Roll back this half AND the atomic other half (if applicable),
@@ -675,6 +685,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
                     newTileNbt.putInt("x", blockPos.getX());
                     newTileNbt.putInt("y", blockPos.getY());
                     newTileNbt.putInt("z", blockPos.getZ());
+                    //? if >=1.21.10 {
                     tileEntity.loadWithComponents(
                         TagValueInput.create(
                             ProblemReporter.DISCARDING,
@@ -682,6 +693,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
                             newTileNbt
                         )
                     );
+                    //?} else {
+                    /*tileEntity.loadWithComponents(newTileNbt, level.registryAccess());*/
+                    //?}
                 }
             }
             return true;
@@ -715,6 +729,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
                     newTileNbt.putInt("x", blockPos.getX());
                     newTileNbt.putInt("y", blockPos.getY());
                     newTileNbt.putInt("z", blockPos.getZ());
+                    //? if >=1.21.10 {
                     tileEntity.loadWithComponents(
                         TagValueInput.create(
                             ProblemReporter.DISCARDING,
@@ -722,6 +737,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
                             newTileNbt
                         )
                     );
+                    //?} else {
+                    /*tileEntity.loadWithComponents(newTileNbt, level.registryAccess());*/
+                    //?}
                 }
             }
             return true;
@@ -831,8 +849,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
             .map(NBTUtilBC::readBlockPos)
             .forEach(requiredBlockOffsets::add);
         blockState = NbtUtils.readBlockState(
-            BuiltInRegistries.BLOCK,
-            nbt.getCompoundOrEmpty("blockState")
+            buildcraft.lib.misc.RegistryUtilBC.blockLookup(),
+            NBTUtilBC.getCompound(nbt, "blockState")
         );
         NBTUtilBC.readStringList(nbt.get("ignoredProperties"))
             .map(propertyName ->
@@ -844,17 +862,17 @@ public class SchematicBlockDefault implements ISchematicBlock {
             .filter(java.util.Objects::nonNull)
             .forEach(ignoredProperties::add);
         if (nbt.contains("tileNbt")) {
-            tileNbt = nbt.getCompoundOrEmpty("tileNbt");
+            tileNbt = NBTUtilBC.getCompound(nbt, "tileNbt");
         }
         tileRotation = NBTUtilBC.readEnum(nbt.get("tileRotation"), Rotation.class);
         if (tileRotation == null) tileRotation = Rotation.NONE;
-        placeBlock = BuiltInRegistries.BLOCK.getValue(Identifier.parse(nbt.getStringOr("placeBlock", "")));
+        placeBlock = buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.BLOCK, Identifier.parse(NBTUtilBC.getString(nbt, "placeBlock", "")));
         NBTUtilBC.readCompoundList(nbt.get("updateBlockOffsets"))
             .map(NBTUtilBC::readBlockPos)
             .forEach(updateBlockOffsets::add);
         NBTUtilBC.readStringList(nbt.get("canBeReplacedWithBlocks"))
             .map(Identifier::parse)
-            .map(BuiltInRegistries.BLOCK::getValue)
+            .map(id -> buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.BLOCK, id))
             .forEach(canBeReplacedWithBlocks::add);
         // Migrate old schematics to current JSON rules. Schematics saved before a rule was added
         // (e.g. before walls/leaves got their connection/persistent properties listed in

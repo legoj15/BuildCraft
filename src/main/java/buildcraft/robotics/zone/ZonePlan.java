@@ -21,6 +21,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.IZone;
+import buildcraft.lib.misc.NBTUtilBC;
 
 public class ZonePlan implements IZone {
     private final HashMap<ChunkPos, ZoneChunk> chunkMapping = new HashMap<>();
@@ -116,20 +117,19 @@ public class ZonePlan implements IZone {
 
     public void readFromNBT(CompoundTag nbt) {
         chunkMapping.clear();
-        nbt.getList("chunkMapping").ifPresent(list -> {
-            for (int i = 0; i < list.size(); i++) {
-                CompoundTag zoneChunkTag = list.getCompoundOrEmpty(i);
-                ZoneChunk chunk = new ZoneChunk();
-                chunk.readFromNBT(zoneChunkTag);
-                chunkMapping.put(
-                    new ChunkPos(
-                        zoneChunkTag.getIntOr("chunkX", 0),
-                        zoneChunkTag.getIntOr("chunkZ", 0)
-                    ),
-                    chunk
-                );
-            }
-        });
+        ListTag list = NBTUtilBC.getList(nbt, "chunkMapping", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag zoneChunkTag = NBTUtilBC.getCompound(list, i);
+            ZoneChunk chunk = new ZoneChunk();
+            chunk.readFromNBT(zoneChunkTag);
+            chunkMapping.put(
+                new ChunkPos(
+                    NBTUtilBC.getInt(zoneChunkTag, "chunkX", 0),
+                    NBTUtilBC.getInt(zoneChunkTag, "chunkZ", 0)
+                ),
+                chunk
+            );
+        }
     }
 
     @Override

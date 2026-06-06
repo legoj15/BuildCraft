@@ -20,15 +20,17 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
+//?} else {
+/*import net.neoforged.neoforge.energy.IEnergyStorage;*/
+//?}
 import buildcraft.api.mj.MjRfConversion;
 
-import net.neoforged.neoforge.transfer.energy.SimpleEnergyHandler;
+import buildcraft.lib.mj.BCFeStorage;
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.mj.IMjConnector;
@@ -39,6 +41,8 @@ import buildcraft.core.BCCoreItems;
 import buildcraft.energy.BCEnergyBlockEntities;
 import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.engine.TileEngineBase_BC8;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.mj.MjBatteryReceiver;
 
 @SuppressWarnings("this-escape")
@@ -73,9 +77,9 @@ public class TileDynamoMJ extends TileEngineBase_BC8 implements MenuProvider {
         upgrades.setLimitedInsertor(1);
     }
 
-    public final SimpleEnergyHandler energyStorage = new SimpleEnergyHandler(MAX_FE, 0, MAX_FE) {
+    public final BCFeStorage energyStorage = new BCFeStorage(MAX_FE, 0, MAX_FE) {
         @Override
-        protected void onEnergyChanged(int previousAmount) {
+        protected void onFeChanged() {
             setChanged();
         }
     };
@@ -172,20 +176,33 @@ public class TileDynamoMJ extends TileEngineBase_BC8 implements MenuProvider {
     private void sendFeToReceiver() {
         int currentFe = getCurrentFe();
         if (level == null || currentFe <= 0) return;
+        //? if >=1.21.10 {
         EnergyHandler receiver = getFeReceiver(orientation);
         if (receiver == null) return;
         // Because EnergyHandler strictly requires a transaction context:
-        try (net.neoforged.neoforge.transfer.transaction.Transaction transaction = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+        try (Transaction transaction = Transaction.openRoot()) {
             int accepted = receiver.insert(currentFe, transaction);
             if (accepted > 0) {
                 energyStorage.set(currentFe - accepted);
                 transaction.commit();
             }
         }
+        //?} else {
+        /*net.neoforged.neoforge.energy.IEnergyStorage receiver = getFeReceiver(orientation);
+        if (receiver == null) return;
+        int accepted = receiver.receiveEnergy(currentFe, false);
+        if (accepted > 0) {
+            energyStorage.set(currentFe - accepted);
+        }*/
+        //?}
     }
 
     @Nullable
+    //? if >=1.21.10 {
     public EnergyHandler getFeReceiver(Direction side) {
+    //?} else {
+    /*public net.neoforged.neoforge.energy.IEnergyStorage getFeReceiver(Direction side) {*/
+    //?}
         if (level == null) return null;
         // Engine chaining (1.12.2 parity): hop through up to getMaxChainLength() further Dynamos
         // facing this same way to reach the FE receiver at the end of the line.
@@ -205,7 +222,11 @@ public class TileDynamoMJ extends TileEngineBase_BC8 implements MenuProvider {
                 continue;
             }
             // Any other tile — the FE receiver at the end of the chain.
+            //? if >=1.21.10 {
             return level.getCapability(Capabilities.Energy.BLOCK, targetPos, side.getOpposite());
+            //?} else {
+            /*return level.getCapability(Capabilities.EnergyStorage.BLOCK, targetPos, side.getOpposite());*/
+            //?}
         }
         return null;
     }
@@ -283,16 +304,16 @@ public class TileDynamoMJ extends TileEngineBase_BC8 implements MenuProvider {
     }
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         output.putInt("currentFe", getCurrentFe());
         output.store("upgrades", net.minecraft.nbt.CompoundTag.CODEC, upgrades.serializeNBT());
         output.putLong("mjStored", mjBattery.getStored());
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
         setCurrentFe(input.getIntOr("currentFe", 0));
         upgrades.deserializeNBT(input.read("upgrades", net.minecraft.nbt.CompoundTag.CODEC).orElseGet(net.minecraft.nbt.CompoundTag::new));
 

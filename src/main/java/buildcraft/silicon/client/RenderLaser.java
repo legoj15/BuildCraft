@@ -56,7 +56,12 @@ public class RenderLaser {
     }
 
     @SubscribeEvent
+    //? if >=1.21.10 {
     public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    //?} else {
+    /*public static void onRenderLevel(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
+    //?}
         if (ACTIVE_LASERS.isEmpty()) return;
 
         Minecraft mc = Minecraft.getInstance();
@@ -69,7 +74,11 @@ public class RenderLaser {
         ACTIVE_LASERS.removeIf(laser -> laser.isRemoved() || laser.getLevel() != mc.level);
 
         PoseStack poseStack = event.getPoseStack();
+        //? if >=1.21.10 {
         Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
+        //?} else {
+        /*Vec3 cameraPos = event.getCamera().getPosition();*/
+        //?}
 
         for (TileLaser laser : ACTIVE_LASERS) {
             Vec3 target = laser.laserPos;
@@ -81,8 +90,13 @@ public class RenderLaser {
 
             // Direction-aware start offset: emit from the red face of the laser block.
             Direction side = laser.getBlockState().getValue(BlockLaser.FACING);
+            //? if >=1.21.10 {
             Vec3 offset = new Vec3(0.5, 0.5, 0.5).add(
                 Vec3.atLowerCornerOf(side.getUnitVec3i()).scale(4 / 16D));
+            //?} else {
+            /*Vec3 offset = new Vec3(0.5, 0.5, 0.5).add(
+                Vec3.atLowerCornerOf(side.getNormal()).scale(4 / 16D));*/
+            //?}
             Vec3 start = Vec3.atLowerCornerOf(laser.getBlockPos()).add(offset);
 
             int index = (int) (avg * MAX_POWER / laser.getMaxPowerPerTick());

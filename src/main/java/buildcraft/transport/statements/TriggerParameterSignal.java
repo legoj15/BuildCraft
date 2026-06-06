@@ -28,6 +28,7 @@ import buildcraft.api.statements.StatementMouseClick;
 
 import buildcraft.lib.misc.ColourUtil;
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 
 import buildcraft.transport.BCTransportSprites;
@@ -56,8 +57,8 @@ public class TriggerParameterSignal implements IStatementParameter {
 
     public static TriggerParameterSignal readFromNbt(CompoundTag nbt) {
         if (nbt.contains("color")) {
-            DyeColor colour = DyeColor.byId(nbt.getByteOr("color", (byte) 0));
-            boolean active = nbt.getBooleanOr("active", false);
+            DyeColor colour = DyeColor.byId(NBTUtilBC.getByte(nbt, "color", (byte) 0));
+            boolean active = NBTUtilBC.getBoolean(nbt, "active", false);
             return get(active, colour);
         } else {
             return EMPTY;

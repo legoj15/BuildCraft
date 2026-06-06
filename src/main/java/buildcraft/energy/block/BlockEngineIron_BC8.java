@@ -26,6 +26,7 @@ import buildcraft.api.transport.pipe.IItemPipe;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.energy.tile.TileEngineIron_BC8;
 import buildcraft.lib.engine.BlockEngineBase_BC8;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.SoundUtil;
 
@@ -52,8 +53,13 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
      *   6. Default → open GUI.
      */
     @Override
+    //? if >=1.21.10 {
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
+    //?} else {
+    /*protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+            Player player, InteractionHand hand, BlockHitResult hitResult) {*/
+    //?}
         boolean isWrench = !stack.isEmpty() && stack.getItem() instanceof IToolWrench;
         BlockEntity be = level.getBlockEntity(pos);
         TileEngineIron_BC8 engine = (be instanceof TileEngineIron_BC8 e) ? e : null;
@@ -64,35 +70,35 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
                 SoundUtil.playSlideSound(level, pos, state, InteractionResult.SUCCESS);
             }
             player.swing(hand);
-            return InteractionResult.CONSUME;
+            return BlockUtil.itemUseConsume();
         }
 
         if (stack.getItem() instanceof IItemPipe pipe) {
             InteractionResult placed = EnginePipeInteraction.tryPlacePipe(
                     pipe, stack, level, player, hand, hitResult, PipeApi.flowFluids, PipeApi.flowPower);
-            return placed != null ? placed : openGui(state, level, pos, player);
+            return BlockUtil.itemUseFrom(placed != null ? placed : openGui(state, level, pos, player));
         }
 
         if (player.isShiftKeyDown()) {
-            return openGui(state, level, pos, player);
+            return BlockUtil.itemUseFrom(openGui(state, level, pos, player));
         }
 
         if (isWrench) {
             if (engine != null && engine.hasAlternateReceiver()) {
-                return InteractionResult.PASS;
+                return BlockUtil.itemUsePass();
             }
             if (!level.isClientSide()) {
                 level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 1.3f);
             }
             player.swing(hand);
-            return InteractionResult.CONSUME;
+            return BlockUtil.itemUseConsume();
         }
 
         if (engine != null && FluidUtilBC.onTankActivated(player, pos, hand, engine.combinedFluidHandler)) {
-            return InteractionResult.SUCCESS;
+            return BlockUtil.itemUseSuccess();
         }
 
-        return openGui(state, level, pos, player);
+        return BlockUtil.itemUseFrom(openGui(state, level, pos, player));
     }
 
     /**

@@ -17,9 +17,11 @@ import com.google.common.collect.Queues;
 import net.minecraft.client.Minecraft;
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.screens.Screen;
+//? if >=1.21.10 {
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.input.CharacterEvent;
+//?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
@@ -374,7 +376,12 @@ public class GuiGuide extends Screen {
         // ~0.33 of the way from "last" to "next", visibly snapping rather than smoothly
         // interpolating. Substitute the proper 0-1 fraction here so all downstream
         // partialTicks consumers (cover flip, chapter hover lerp) interpolate correctly.
+        //? if >=1.21.10 {
         partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        //?} else {
+        /*// 1.21.1 exposes the DeltaTracker via getTimer(), not getDeltaTracker().
+        partialTicks = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);*/
+        //?}
 
         lastPartialTicks = partialTicks;
         minX = (this.width - PAGE_LEFT.width * 2) / 2;
@@ -648,6 +655,7 @@ public class GuiGuide extends Screen {
         currentPage.setFontRenderer(currentFont);
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (currentPage != null && currentPage.mouseClicked(event, doubleClick)) {
@@ -656,6 +664,14 @@ public class GuiGuide extends Screen {
         double mouseX = event.x();
         double mouseY = event.y();
         int mouseButton = event.button();
+    //?} else {
+    /*@Override
+    public boolean mouseClicked(double mouseX, double mouseY, int mouseButton) {
+        boolean doubleClick = false; // 1.21.1 mouseClicked has no double-click signal
+        if (currentPage != null && currentPage.mouseClicked(mouseX, mouseY, mouseButton)) {
+            return true;
+        }*/
+    //?}
         mouse.setMousePosition((int) mouseX, (int) mouseY);
 
         if (mouseButton == 0) {
@@ -759,9 +775,14 @@ public class GuiGuide extends Screen {
             }
         }
 
+        //? if >=1.21.10 {
         return super.mouseClicked(event, doubleClick);
+        //?} else {
+        /*return super.mouseClicked(mouseX, mouseY, mouseButton);*/
+        //?}
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean keyPressed(KeyEvent keyEvent) {
         if (currentPage != null && currentPage.keyPressed(keyEvent)) {
@@ -781,12 +802,34 @@ public class GuiGuide extends Screen {
 
         return super.keyPressed(keyEvent);
     }
+    //?} else {
+    /*@Override
+    public boolean keyPressed(int key, int scancode, int modifiers) {
+        if (currentPage != null && currentPage.keyPressed(key, scancode, modifiers)) {
+            return true;
+        }
+
+        // Page turning with left/right keys (GLFW_KEY_LEFT=263, GLFW_KEY_RIGHT=262)
+        if (isOpen) {
+            if (key == 263) {
+                currentPage.lastPage();
+                return true;
+            } else if (key == 262) {
+                currentPage.nextPage();
+                return true;
+            }
+        }
+
+        return super.keyPressed(key, scancode, modifiers);
+    }*/
+    //?}
 
     @Override
     public boolean isPauseScreen() {
         return false;
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean charTyped(CharacterEvent event) {
         if (currentPage != null && currentPage.charTyped(event)) {
@@ -794,4 +837,13 @@ public class GuiGuide extends Screen {
         }
         return super.charTyped(event);
     }
+    //?} else {
+    /*@Override
+    public boolean charTyped(char chr, int modifiers) {
+        if (currentPage != null && currentPage.charTyped(chr, modifiers)) {
+            return true;
+        }
+        return super.charTyped(chr, modifiers);
+    }*/
+    //?}
 }

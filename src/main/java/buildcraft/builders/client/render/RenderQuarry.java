@@ -11,12 +11,14 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 //? if >=26.1 {
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-//?} else {
+//?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.state.CameraRenderState;*/
 //?}
 import net.minecraft.core.BlockPos;
@@ -48,7 +50,11 @@ import buildcraft.builders.tile.TileQuarry;
  * {@code BCBuildersEventDist} via {@link net.neoforged.neoforge.client.event.RenderLevelStageEvent}
  * because those cross block boundaries; this BER only covers the block-local LEDs.
  */
+//? if >=1.21.10 {
 public class RenderQuarry implements BlockEntityRenderer<TileQuarry, QuarryRenderState> {
+//?} else {
+/*public class RenderQuarry implements BlockEntityRenderer<TileQuarry> {*/
+//?}
     private static final double LED_INSET = 0.4 / 16.0;
     private static final double GREEN_OFFSET = 1.5 / 16.0;
     private static final double RED_OFFSET = 3.5 / 16.0;
@@ -74,6 +80,7 @@ public class RenderQuarry implements BlockEntityRenderer<TileQuarry, QuarryRende
     public static void init() {
     }
 
+    //? if >=1.21.10 {
     @Override
     public QuarryRenderState createRenderState() {
         return new QuarryRenderState();
@@ -97,7 +104,17 @@ public class RenderQuarry implements BlockEntityRenderer<TileQuarry, QuarryRende
 
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TileQuarry tile)) return;
-
+    //?} else {
+    /*// 1.21.1: classic direct BlockEntityRenderer.render — the tile is passed, so no camera-pos
+    // reconstruction is needed. The passed buffers/packedLight/packedOverlay/partialTicks go unused
+    // (the shared body sources its own buffer/light from the level, as the modern submit path does).
+    @Override
+    public void render(TileQuarry tile, float partialTicks, PoseStack poseStack,
+                       MultiBufferSource buffers, int packedLight, int packedOverlay) {
+        BlockPos pos = tile.getBlockPos();
+        Level level = tile.getLevel();
+        if (level == null) return;*/
+    //?}
         BlockState state = level.getBlockState(pos);
         Direction front = state.hasProperty(HorizontalDirectionalBlock.FACING)
                 ? state.getValue(HorizontalDirectionalBlock.FACING)

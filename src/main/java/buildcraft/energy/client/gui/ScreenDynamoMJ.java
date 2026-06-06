@@ -114,6 +114,7 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
         graphics.item(gearIron, x + 60, y + 21);
         graphics.item(gearGold, x + 83, y + 21);
         
+        //? if >=1.21.10 {
         graphics.blit(
             net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE,
             x + 39, y + 18,
@@ -123,6 +124,17 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
             256, 256,
             0xA5FFFFFF
         );
+        //?} else {
+        /*graphics.blit(
+            TEXTURE,
+            x + 39, y + 18,
+            39.0f, 18.0f,
+            80, 23,
+            80, 23,
+            256, 256,
+            0xA5FFFFFF
+        );*/
+        //?}
         
         double rfHeight = 60.0 * menu.getSyncedFeStored() / buildcraft.energy.tile.TileDynamoMJ.MAX_FE;
         double scale = net.minecraft.client.Minecraft.getInstance().getWindow().getGuiScale();

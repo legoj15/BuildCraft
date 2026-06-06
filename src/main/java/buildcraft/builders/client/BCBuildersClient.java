@@ -23,7 +23,12 @@ import buildcraft.builders.gui.GuiBuilder;
 public class BCBuildersClient {
     public static void initClient(IEventBus modEventBus) {
         modEventBus.register(BCBuildersClient.class);
-        NeoForge.EVENT_BUS.addListener(RenderLevelStageEvent.AfterTranslucentBlocks.class,
+        NeoForge.EVENT_BUS.addListener(
+                //? if >=1.21.10 {
+                RenderLevelStageEvent.AfterTranslucentBlocks.class,
+                //?} else {
+                /*RenderLevelStageEvent.class,*/
+                //?}
                 event -> {
                     BCBuildersEventDist.INSTANCE.renderAllQuarries(event);
                     BCBuildersEventDist.INSTANCE.renderAllFillers(event);
@@ -91,6 +96,7 @@ public class BCBuildersClient {
      * {@code BlueprintPipRenderState} submitted by {@link buildcraft.builders.client.render.BlueprintRenderer}
      * would be silently dropped by the GuiRenderer (no matching renderer class).
      */
+    //? if >=1.21.10 {
     @SubscribeEvent
     public static void registerPipRenderers(
             net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEvent event) {
@@ -98,4 +104,5 @@ public class BCBuildersClient {
                 buildcraft.builders.client.render.pip.BlueprintPipRenderState.class,
                 buildcraft.builders.client.render.pip.BlueprintPipRenderer::new);
     }
+    //?}
 }

@@ -8,8 +8,10 @@ import java.util.List;
 
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.components.Button;
+//? if >=1.21.10 {
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
+//?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -181,11 +183,19 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
 
     @Override
     protected void drawBackgroundTexture(BCGraphics graphics) {
+        //? if >=1.21.10 {
         graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE,
                 leftPos, topPos,
                 0f, 0f,
                 imageWidth, imageHeight,
                 256, 256);
+        //?} else {
+        /*graphics.blit(TEXTURE,
+                leftPos, topPos,
+                0f, 0f,
+                imageWidth, imageHeight,
+                256, 256);*/
+        //?}
 
         // Download arrow (← top row): reveal the filled ← sprite from RIGHT to LEFT.
         int progressDown = menu.getSyncedProgressDown();
@@ -193,21 +203,37 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
             int w = Math.min(ARROW_W, Math.max(1, (int) Math.ceil(ARROW_W * (progressDown / 50.0f))));
             // Source region starts at (FILLED_DOWN_U + ARROW_W - w, FILLED_DOWN_V) — the right w
             // pixels of the ← sprite. Draw at the matching right edge of the static arrow slot.
+            //? if >=1.21.10 {
             graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE,
                     leftPos + ARROW_DOWN_X + ARROW_W - w, topPos + ARROW_DOWN_Y,
                     (float) (FILLED_DOWN_U + ARROW_W - w), (float) FILLED_DOWN_V,
                     w, ARROW_H,
                     256, 256);
+            //?} else {
+            /*graphics.blit(TEXTURE,
+                    leftPos + ARROW_DOWN_X + ARROW_W - w, topPos + ARROW_DOWN_Y,
+                    (float) (FILLED_DOWN_U + ARROW_W - w), (float) FILLED_DOWN_V,
+                    w, ARROW_H,
+                    256, 256);*/
+            //?}
         }
         // Upload arrow (→ bottom row): reveal the filled → sprite from LEFT to RIGHT.
         int progressUp = menu.getSyncedProgressUp();
         if (progressUp > 0) {
             int w = Math.min(ARROW_W, Math.max(1, (int) Math.ceil(ARROW_W * (progressUp / 50.0f))));
+            //? if >=1.21.10 {
             graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE,
                     leftPos + ARROW_UP_X, topPos + ARROW_UP_Y,
                     (float) FILLED_UP_U, (float) FILLED_UP_V,
                     w, ARROW_H,
                     256, 256);
+            //?} else {
+            /*graphics.blit(TEXTURE,
+                    leftPos + ARROW_UP_X, topPos + ARROW_UP_Y,
+                    (float) FILLED_UP_U, (float) FILLED_UP_V,
+                    w, ARROW_H,
+                    256, 256);*/
+            //?}
         }
     }
 
@@ -243,6 +269,7 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
         graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         double mouseX = event.x();
@@ -268,4 +295,31 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
         }
         return super.mouseClicked(event, doubleClick);
     }
+    //?} else {
+    /*@Override
+    public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
+        double mouseX = mouseXd;
+        double mouseY = mouseYd;
+
+        // Snapshot list row selection.
+        GlobalSavedDataSnapshots snapshots = GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT);
+        List<Snapshot.Key> list = snapshots.getList();
+        int rowY = topPos + LIST_Y;
+        for (int i = 0; i < list.size() && i < LIST_MAX_ROWS; i++) {
+            if (mouseX >= leftPos + LIST_X && mouseX < leftPos + LIST_X + LIST_W
+                    && mouseY >= rowY && mouseY < rowY + LIST_ROW_H) {
+                Snapshot.Key key = list.get(i);
+                menu.sendSelectedToServer(key);
+                // Optimistic client-side update for immediate visual feedback
+                if (menu.tile != null) {
+                    menu.tile.selected = key;
+                }
+                updateDeleteButtonActive();
+                return true;
+            }
+            rowY += LIST_ROW_H;
+        }
+        return super.mouseClicked(mouseXd, mouseYd, button);
+    }*/
+    //?}
 }

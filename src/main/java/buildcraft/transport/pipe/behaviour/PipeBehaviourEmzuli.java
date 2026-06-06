@@ -79,14 +79,14 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
 
     public PipeBehaviourEmzuli(IPipe pipe, CompoundTag nbt) {
         super(pipe, nbt);
-        CompoundTag filtersTag = nbt.getCompoundOrEmpty("Filters");
+        CompoundTag filtersTag = NBTUtilBC.getCompound(nbt, "Filters");
         if (!filtersTag.isEmpty()) {
             invFilters.deserializeNBT(filtersTag);
         }
         activeSlots = EnumSet.noneOf(SlotIndex.class);
         currentSlot = NBTUtilBC.readEnum(nbt.get("currentSlot"), SlotIndex.class);
         for (SlotIndex index : SlotIndex.VALUES) {
-            byte c = nbt.getByteOr("slotColors[" + index.ordinal() + "]", (byte) 0);
+            byte c = NBTUtilBC.getByte(nbt, "slotColors[" + index.ordinal() + "]", (byte) 0);
             if (c > 0 && c <= 16) {
                 slotColours.put(index, DyeColor.byId(c - 1));
             }
@@ -110,10 +110,10 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
     @Override
     public void readFromNbt(CompoundTag nbt) {
         super.readFromNbt(nbt);
-        invFilters.deserializeNBT(nbt.getCompoundOrEmpty("Filters"));
+        invFilters.deserializeNBT(NBTUtilBC.getCompound(nbt, "Filters"));
         currentSlot = NBTUtilBC.readEnum(nbt.get("currentSlot"), SlotIndex.class);
         for (SlotIndex index : SlotIndex.VALUES) {
-            byte c = nbt.getByteOr("slotColors[" + index.ordinal() + "]", (byte) 0);
+            byte c = NBTUtilBC.getByte(nbt, "slotColors[" + index.ordinal() + "]", (byte) 0);
             if (c > 0 && c <= 16) {
                 slotColours.put(index, DyeColor.byId(c - 1));
             } else {

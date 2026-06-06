@@ -5,6 +5,10 @@
  */
 package buildcraft.builders.client.render.pip;
 
+// Whole-file >=1.21.10: PictureInPictureRenderState is the 1.21.5+ GUI PiP pipeline (absent on
+// 1.21.1). The blueprint tooltip preview is stubbed on 1.21.1 (BlueprintRenderer.renderSnapshot
+// no-ops there), so nothing references this record — gate the entire body out.
+//? if >=1.21.10 {
 import javax.annotation.Nullable;
 
 import net.minecraft.client.gui.navigation.ScreenRectangle;
@@ -55,3 +59,4 @@ public record BlueprintPipRenderState(
              PictureInPictureRenderState.getBounds(x0, y0, x1, y1, scissorArea));
     }
 }
+//?}

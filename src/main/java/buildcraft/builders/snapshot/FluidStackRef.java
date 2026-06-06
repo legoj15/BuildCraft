@@ -35,12 +35,20 @@ public class FluidStackRef {
             fluid
                 .get(nbt)
                 .orElseThrow(NullPointerException::new)
+                //? if >=1.21.10 {
                 .value()
+                //?} else {
+                /*.getAsString()*/
+                //?}
         );
-        Fluid fluidObj = BuiltInRegistries.FLUID.getValue(fluidId);
+        Fluid fluidObj = buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.FLUID, fluidId);
         int fluidAmount = Optional.ofNullable(amount)
             .flatMap(ref -> ref.get(nbt))
+            //? if >=1.21.10 {
             .map(IntTag::value)
+            //?} else {
+            /*.map(IntTag::getAsInt)*/
+            //?}
             .orElse(1000); // Default to bucket volume
         return new FluidStack(fluidObj, fluidAmount);
     }

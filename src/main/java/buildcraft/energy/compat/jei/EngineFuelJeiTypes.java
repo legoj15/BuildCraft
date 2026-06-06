@@ -6,12 +6,12 @@
 
 package buildcraft.energy.compat.jei;
 
-import mezz.jei.api.recipe.types.IRecipeType;
+import mezz.jei.api.recipe.RecipeType;
 
 import buildcraft.api.fuels.IFuel;
 
 /**
- * Holds the JEI {@link IRecipeType}s for the energy module's engine fuel/coolant
+ * Holds the JEI {@link RecipeType}s for the energy module's engine fuel/coolant
  * recipe-holder categories.
  *
  * <ul>
@@ -24,13 +24,13 @@ import buildcraft.api.fuels.IFuel;
  * </ul>
  */
 public final class EngineFuelJeiTypes {
-    public static final IRecipeType<IFuel> COMBUSTION_FUEL = IRecipeType.create(
+    public static final RecipeType<IFuel> COMBUSTION_FUEL = RecipeType.create(
             "buildcraftunofficial", "combustion_engine_fuel", IFuel.class);
 
-    public static final IRecipeType<CombustionCoolantJei> COMBUSTION_COOLANT = IRecipeType.create(
+    public static final RecipeType<CombustionCoolantJei> COMBUSTION_COOLANT = RecipeType.create(
             "buildcraftunofficial", "combustion_engine_coolant", CombustionCoolantJei.class);
 
-    public static final IRecipeType<StirlingFuelJei> STIRLING_FUEL = IRecipeType.create(
+    public static final RecipeType<StirlingFuelJei> STIRLING_FUEL = RecipeType.create(
             "buildcraftunofficial", "stirling_engine_fuel", StirlingFuelJei.class);
 
     private EngineFuelJeiTypes() {}

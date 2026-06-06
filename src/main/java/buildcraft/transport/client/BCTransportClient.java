@@ -2,17 +2,23 @@ package buildcraft.transport.client;
 
 //? if >=26.1 {
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
-//?} else {
+//?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.block.model.BlockStateModel;*/
 //?}
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.item.ItemModel;
+//?}
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.client.event.ExtractBlockOutlineRenderStateEvent;
+//?} else {
+/*import net.neoforged.neoforge.client.event.RenderHighlightEvent;*/
+//?}
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
@@ -71,8 +77,13 @@ public class BCTransportClient {
         init();
         modEventBus.register(PipeBlockColourHandler.class);
         // Face/corner-accurate placement-preview outline shown while holding a pluggable or wire.
+        //? if >=1.21.10 {
         NeoForge.EVENT_BUS.addListener(ExtractBlockOutlineRenderStateEvent.class,
                 PipePlacementHighlight::onExtractBlockOutline);
+        //?} else {
+        /*NeoForge.EVENT_BUS.addListener(RenderHighlightEvent.Block.class,
+                PipePlacementHighlight::onRenderHighlightBlock);*/
+        //?}
     }
 
     @SubscribeEvent
@@ -100,6 +111,7 @@ public class BCTransportClient {
     /**
      * Register the pipe colour tint source so item model JSON can reference it.
      */
+    //? if >=1.21.10 {
     @SubscribeEvent
     public static void registerItemTintSources(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.ItemTintSources event) {
         event.register(
@@ -107,6 +119,11 @@ public class BCTransportClient {
                 PipeColourTintSource.MAP_CODEC
         );
     }
+    //?}
+    // 1.21.1: no data-driven ItemTintSource, and the painted-pipe ITEM colour overlay is a deferred
+    // TODO there anyway (PipeItemModel base-delegates without a tintindex overlay). PipeColourTintSource
+    // still compiles as an ItemColor on 1.21.1, ready to wire via RegisterColorHandlersEvent.Item once
+    // PipeItemModel emits the tinted overlay quads. See the PipeItemModel 1.21.1 paint TODO.
 
 
     /**
@@ -115,6 +132,7 @@ public class BCTransportClient {
      */
     @SubscribeEvent
     public static void onModifyBakingResult(ModelEvent.ModifyBakingResult event) {
+        //? if >=1.21.10 {
         // Block model swap
         BlockState pipeState = BCTransportBlocks.PIPE_HOLDER.get().defaultBlockState();
         var blockModels = event.getBakingResult().blockStateModels();
@@ -137,6 +155,32 @@ public class BCTransportClient {
                 }
             }
         }
+        //?} else {
+        /*// 1.21.1: all baked models (block + item) live in one Map<ModelResourceLocation, BakedModel>.
+        java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation, net.minecraft.client.resources.model.BakedModel> models =
+            event.getModels();
+        // Block model swap — keyed by the pipe_holder's blockstate ModelResourceLocation.
+        BlockState pipeState = BCTransportBlocks.PIPE_HOLDER.get().defaultBlockState();
+        net.minecraft.client.resources.model.ModelResourceLocation blockMrl =
+            net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(pipeState);
+        net.minecraft.client.resources.model.BakedModel vanillaModel = models.get(blockMrl);
+        if (vanillaModel != null) {
+            models.put(blockMrl, new PipeBlockStateModel(vanillaModel));
+        }
+        // Item model swap — each pipe item's "inventory" ModelResourceLocation.
+        for (PipeDefinition def : PipeApi.pipeRegistry.getAllRegisteredPipes()) {
+            Item pipeItem = (Item) PipeApi.pipeRegistry.getItemForPipe(def);
+            if (pipeItem != null) {
+                Identifier itemId = BuiltInRegistries.ITEM.getKey(pipeItem);
+                net.minecraft.client.resources.model.ModelResourceLocation itemMrl =
+                    net.minecraft.client.resources.model.ModelResourceLocation.inventory(itemId);
+                net.minecraft.client.resources.model.BakedModel vanillaItemModel = models.get(itemMrl);
+                if (vanillaItemModel != null) {
+                    models.put(itemMrl, new PipeItemModel(vanillaItemModel, def));
+                }
+            }
+        }*/
+        //?}
     }
 
     /** Called during mod init to register pipe flow renderers and pluggable bakers. */

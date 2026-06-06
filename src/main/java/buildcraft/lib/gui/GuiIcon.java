@@ -7,7 +7,9 @@
 package buildcraft.lib.gui;
 
 import buildcraft.lib.gui.BCGraphics;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.RenderPipelines;
+//?}
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
 
@@ -63,7 +65,12 @@ public class GuiIcon implements ISimpleDrawable {
     }
 
     public DynamicTexture createDynamicTexture(int scale) {
+        //? if >=1.21.10 {
         return new DynamicTexture("bc_guide_icon", width * scale, height * scale, false);
+        //?} else {
+        /*// 1.21.1 DynamicTexture has no debug-name parameter.
+        return new DynamicTexture(width * scale, height * scale, false);*/
+        //?}
     }
 
     @Override
@@ -108,6 +115,7 @@ public class GuiIcon implements ISimpleDrawable {
         float uPixel = (float) (raw.uMin * textureSize);
         float vPixel = (float) (raw.vMin * textureSize);
 
+        //? if >=1.21.10 {
         currentGraphics.blit(
             RenderPipelines.GUI_TEXTURED, raw.location,
             (int) x, (int) y,
@@ -115,6 +123,15 @@ public class GuiIcon implements ISimpleDrawable {
             (int) displayWidth, (int) displayHeight,
             textureSize, textureSize
         );
+        //?} else {
+        /*currentGraphics.blit(
+            raw.location,
+            (int) x, (int) y,
+            uPixel, vPixel,
+            (int) displayWidth, (int) displayHeight,
+            textureSize, textureSize
+        );*/
+        //?}
     }
 
     public static void drawAt(ISprite sprite, double x, double y, double size) {
@@ -135,6 +152,7 @@ public class GuiIcon implements ISimpleDrawable {
             int drawWidth = (int) (xMax - xMin);
             int drawHeight = (int) (yMax - yMin);
 
+            //? if >=1.21.10 {
             currentGraphics.blit(
                 RenderPipelines.GUI_TEXTURED, raw.location,
                 (int) xMin, (int) yMin,
@@ -143,10 +161,24 @@ public class GuiIcon implements ISimpleDrawable {
                 (int) uWidth, (int) vHeight,
                 raw.texSize, raw.texSize
             );
+            //?} else {
+            /*currentGraphics.blit(
+                raw.location,
+                (int) xMin, (int) yMin,
+                uPixel, vPixel,
+                drawWidth, drawHeight,
+                (int) uWidth, (int) vHeight,
+                raw.texSize, raw.texSize
+            );*/
+            //?}
         } else if (sprite instanceof buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder holder) {
             net.minecraft.client.renderer.texture.TextureAtlasSprite tas = holder.getSprite();
             if (tas != null) {
+                //? if >=1.21.10 {
                 currentGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, tas, (int) xMin, (int) yMin, (int) (xMax - xMin), (int) (yMax - yMin));
+                //?} else {
+                /*currentGraphics.blitSprite(tas, (int) xMin, (int) yMin, (int) (xMax - xMin), (int) (yMax - yMin));*/
+                //?}
             }
         }
     }
@@ -177,6 +209,7 @@ public class GuiIcon implements ISimpleDrawable {
         int uW = (int) ((uMax - uMin) * lastBoundTexSize);
         int vH = (int) ((vMax - vMin) * lastBoundTexSize);
 
+        //? if >=1.21.10 {
         currentGraphics.blit(
             RenderPipelines.GUI_TEXTURED, lastBoundLocation,
             xLow, yLow,
@@ -186,6 +219,17 @@ public class GuiIcon implements ISimpleDrawable {
             lastBoundTexSize, lastBoundTexSize,
             colour
         );
+        //?} else {
+        /*currentGraphics.blit(
+            lastBoundLocation,
+            xLow, yLow,
+            uPx, vPx,
+            drawW, drawH,
+            uW, vH,
+            lastBoundTexSize, lastBoundTexSize,
+            colour
+        );*/
+        //?}
     }
 
     /** Track the last bound texture location for drawBoundQuad. */

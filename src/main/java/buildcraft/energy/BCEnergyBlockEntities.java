@@ -7,6 +7,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import buildcraft.lib.misc.BlockEntityTypeUtilBC;
 import buildcraft.core.BCCore;
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.block.BlockSpring;
@@ -23,23 +24,23 @@ public class BCEnergyBlockEntities {
 
     public static final Supplier<BlockEntityType<TileSpringOil>> SPRING_OIL = BLOCK_ENTITIES.register(
             "spring_oil",
-            () -> new BlockEntityType<>(TileSpringOil::new, BCCoreBlocks.SPRING_OIL.get()));
+            () -> BlockEntityTypeUtilBC.create(TileSpringOil::new, BCCoreBlocks.SPRING_OIL.get()));
 
     public static final Supplier<BlockEntityType<TileEngineStone_BC8>> ENGINE_STONE = BLOCK_ENTITIES.register(
             "engine_stone",
-            () -> new BlockEntityType<>(TileEngineStone_BC8::new, BCEnergyBlocks.ENGINE_STONE.get()));
+            () -> BlockEntityTypeUtilBC.create(TileEngineStone_BC8::new, BCEnergyBlocks.ENGINE_STONE.get()));
 
     public static final Supplier<BlockEntityType<TileEngineIron_BC8>> ENGINE_IRON = BLOCK_ENTITIES.register(
             "engine_iron",
-            () -> new BlockEntityType<>(TileEngineIron_BC8::new, BCEnergyBlocks.ENGINE_IRON.get()));
+            () -> BlockEntityTypeUtilBC.create(TileEngineIron_BC8::new, BCEnergyBlocks.ENGINE_IRON.get()));
 
     public static final Supplier<BlockEntityType<TileEngineFE>> ENGINE_FE = BLOCK_ENTITIES.register(
             "engine_rf",
-            () -> new BlockEntityType<>(TileEngineFE::new, BCEnergyBlocks.ENGINE_FE.get()));
+            () -> BlockEntityTypeUtilBC.create(TileEngineFE::new, BCEnergyBlocks.ENGINE_FE.get()));
 
     public static final Supplier<BlockEntityType<TileDynamoMJ>> DYNAMO_MJ = BLOCK_ENTITIES.register(
             "mj_dynamo",
-            () -> new BlockEntityType<>(TileDynamoMJ::new, BCEnergyBlocks.DYNAMO_MJ.get()));
+            () -> BlockEntityTypeUtilBC.create(TileDynamoMJ::new, BCEnergyBlocks.DYNAMO_MJ.get()));
 
     public static void init(IEventBus modEventBus) {
         BLOCK_ENTITIES.register(modEventBus);

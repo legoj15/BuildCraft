@@ -10,6 +10,7 @@ import java.util.List;
 
 import net.minecraft.client.gui.components.WidgetSprites;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
+//? if >=1.21.10 {
 import net.minecraft.client.gui.screens.recipebook.GhostSlots;
 import net.minecraft.client.gui.screens.recipebook.RecipeCollection;
 import net.minecraft.client.gui.screens.recipebook.SearchRecipeBookCategory;
@@ -26,11 +27,13 @@ import net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay;
 import net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay;
 
 import buildcraft.factory.container.ContainerAutoCraftItems;
+//?}
 
 /**
  * Recipe book component for the Auto Workbench.
  * Mirrors vanilla CraftingRecipeBookComponent but works with our container.
  */
+//? if >=1.21.10 {
 public class AWRecipeBookComponent extends RecipeBookComponent<ContainerAutoCraftItems> {
     private static final WidgetSprites FILTER_BUTTON_SPRITES = new WidgetSprites(
         Identifier.withDefaultNamespace("recipe_book/filter_enabled"),
@@ -120,3 +123,13 @@ public class AWRecipeBookComponent extends RecipeBookComponent<ContainerAutoCraf
         collection.selectRecipes(contents, this::canDisplay);
     }
 }
+//?} else {
+/*// 1.21.1: the recipe-book widget is deferred. The 1.21.1 RecipeBookComponent API differs throughout
+// (raw not generic; init(5-arg) with the menu; renderTooltip(5-arg); hasClickedOutside(7-arg);
+// GhostSlots/RecipeDisplay/ContextMap are all 1.21.5+) and is visual-verify-bound. The BC crafting GUI
+// omits the recipe book on 1.21.1 (manual crafting + JEI still work); this minimal subclass exists only
+// so the screen's field type resolves — it is never instantiated there. TODO: full 1.21.1 recipe-book
+// integration at runClient visual-verification time.
+public class AWRecipeBookComponent extends RecipeBookComponent {
+}*/
+//?}

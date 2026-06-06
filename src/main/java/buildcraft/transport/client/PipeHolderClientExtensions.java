@@ -5,8 +5,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.client.particle.SingleQuadParticle;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
+//?}
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -43,8 +45,10 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
 
 
 
+    //? if >=1.21.10 {
     /** Reusable render state to avoid allocation per particle. */
     private final ItemStackRenderState renderState = new ItemStackRenderState();
+    //?}
 
     private PipeHolderClientExtensions() {}
 
@@ -131,7 +135,10 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
             }
         }
 
-        // Final fallback: try ItemStackRenderState
+        //? if >=1.21.10 {
+        // Final fallback: try ItemStackRenderState (modern item-render-state particle material).
+        // 1.21.1 has no ItemStackRenderState; the earlier block-model / baked-quad paths cover the
+        // common cases there, so this fallback is simply skipped (returns null below).
         ItemStack stack = pluggable.getPickStack();
         if (!stack.isEmpty()) {
             Minecraft mc = Minecraft.getInstance();
@@ -150,6 +157,7 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
                 }
             }
         }
+        //?}
         return null;
     }
 
@@ -367,7 +375,13 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
         PipeBreakParticle(ClientLevel level, double x, double y, double z,
                           double xd, double yd, double zd,
                           TextureAtlasSprite sprite) {
+            //? if >=1.21.10 {
             super(level, x, y, z, xd, yd, zd, sprite);
+            //?} else {
+            /*// 1.21.1 SingleQuadParticle takes no sprite (7-arg); the sprite drives the UVs below + the
+            // TERRAIN_SHEET render type, so the block-atlas region renders correctly without storing it.
+            super(level, x, y, z, xd, yd, zd);*/
+            //?}
             this.gravity = 1.0F;
             this.quadSize /= 2.0F;
 
@@ -387,13 +401,22 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
         @Override protected float getV0() { return v0; }
         @Override protected float getV1() { return v1; }
 
+        //? if >=26.1 {
         @Override
         protected Layer getLayer() {
-            //? if >=26.1 {
             return Layer.OPAQUE_TERRAIN;
-            //?} else {
-            /*return Layer.TERRAIN;*/
-            //?}
         }
+        //?} elif >=1.21.10 {
+        /*@Override
+        protected Layer getLayer() {
+            return Layer.TERRAIN;
+        }*/
+        //?} else {
+        /*// 1.21.1: SingleQuadParticle has no getLayer(); Particle.getRenderType() returns ParticleRenderType.
+        @Override
+        public net.minecraft.client.particle.ParticleRenderType getRenderType() {
+            return net.minecraft.client.particle.ParticleRenderType.TERRAIN_SHEET;
+        }*/
+        //?}
     }
 }

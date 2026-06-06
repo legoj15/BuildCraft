@@ -27,6 +27,7 @@ import buildcraft.api.transport.pluggable.PluggableModelKey;
 import buildcraft.silicon.client.model.key.KeyPlugGate;
 
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.data.ModelVariableData;
 import buildcraft.lib.net.IPayloadWriter;
 import buildcraft.lib.net.PacketBufferBC;
@@ -81,7 +82,7 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
 
     public PluggableGate(PluggableDefinition def, IPipeHolder holder, Direction side, CompoundTag nbt) {
         super(def, holder, side);
-        logic = new GateLogic(this, nbt.getCompound("data").orElse(new CompoundTag()));
+        logic = new GateLogic(this, NBTUtilBC.getCompound(nbt, "data"));
     }
 
     @Override
@@ -93,7 +94,7 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
 
     @Override
     public boolean readFromNbt(CompoundTag nbt) {
-        CompoundTag data = nbt.getCompound("data").orElse(new CompoundTag());
+        CompoundTag data = NBTUtilBC.getCompound(nbt, "data");
         logic.readConfigData(data);
         return true;
     }

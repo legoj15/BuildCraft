@@ -31,6 +31,7 @@ import buildcraft.api.transport.pipe.PipeEventRedstoneFlux;
 
 import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.MathUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 
 import buildcraft.transport.pipe.flow.PipeFlowRedstoneFlux;
 import buildcraft.transport.statements.ActionPowerLimit;
@@ -47,7 +48,7 @@ public class PipeBehaviourLimiter extends PipeBehaviour {
 
     public PipeBehaviourLimiter(IPipe pipe, CompoundTag nbt) {
         super(pipe, nbt);
-        limitShift = MathUtil.clamp(nbt.getIntOr("limitShift", 0), 0, MAX_SHIFT);
+        limitShift = MathUtil.clamp(NBTUtilBC.getInt(nbt, "limitShift", 0), 0, MAX_SHIFT);
     }
 
     @Override
@@ -60,7 +61,7 @@ public class PipeBehaviourLimiter extends PipeBehaviour {
     @Override
     public void readFromNbt(CompoundTag nbt) {
         super.readFromNbt(nbt);
-        limitShift = MathUtil.clamp(nbt.getIntOr("limitShift", 0), 0, MAX_SHIFT);
+        limitShift = MathUtil.clamp(NBTUtilBC.getInt(nbt, "limitShift", 0), 0, MAX_SHIFT);
     }
 
     public void readPayload(FriendlyByteBuf buffer, Object side) throws IOException {

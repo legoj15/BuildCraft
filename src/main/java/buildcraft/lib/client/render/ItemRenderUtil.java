@@ -10,9 +10,11 @@ import java.util.Random;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.Minecraft;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
+//?}
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -30,10 +32,15 @@ public class ItemRenderUtil {
 
     // Batch state — set by beginItemBatch, used by renderItemStack
     private static PoseStack currentPoseStack;
+    //? if >=1.21.10 {
     private static SubmitNodeCollector currentCollector;
-    private static int currentLight;
     private static ItemStackRenderState renderState;
+    //?} else {
+    /*private static net.minecraft.client.renderer.MultiBufferSource currentBuffer;*/
+    //?}
+    private static int currentLight;
 
+    //? if >=1.21.10 {
     /** Begin a batch of item renders. Must be called before renderItemStack. */
     public static void beginItemBatch(PoseStack poseStack, SubmitNodeCollector collector, int light) {
         currentPoseStack = poseStack;
@@ -41,6 +48,14 @@ public class ItemRenderUtil {
         currentLight = light;
         renderState = new ItemStackRenderState();
     }
+    //?} else {
+    /*// 1.21.1: classic BER rendering uses a MultiBufferSource (no deferred SubmitNodeCollector).
+    public static void beginItemBatch(PoseStack poseStack, net.minecraft.client.renderer.MultiBufferSource buffer, int light) {
+        currentPoseStack = poseStack;
+        currentBuffer = buffer;
+        currentLight = light;
+    }*/
+    //?}
 
     /** Returns the current PoseStack set by beginItemBatch, or null if not in a batch.
      *  Used by overlay renderers (e.g. colour boxes) that need PoseStack transforms. */
@@ -63,13 +78,20 @@ public class ItemRenderUtil {
      */
     public static void renderItemStack(double x, double y, double z, ItemStack stack,
             int stackCount, int lightc, Direction dir, com.mojang.blaze3d.vertex.VertexConsumer bb) {
+        //? if >=1.21.10 {
         if (stack.isEmpty() || currentPoseStack == null || currentCollector == null) {
             return;
         }
+        //?} else {
+        /*if (stack.isEmpty() || currentPoseStack == null || currentBuffer == null) {
+            return;
+        }*/
+        //?}
         if (dir == null) {
             dir = Direction.EAST;
         }
 
+        //? if >=1.21.10 {
         // Populate the render state from the ItemStack
         ItemModelResolver resolver = Minecraft.getInstance().getItemModelResolver();
         renderState.clear();
@@ -79,6 +101,10 @@ public class ItemRenderUtil {
         if (renderState.isEmpty()) {
             return;
         }
+        //?} else {
+        /*// 1.21.1: classic item renderer; renderStatic handles model resolution + empty internally.
+        net.minecraft.client.renderer.entity.ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();*/
+        //?}
 
         final int itemModelCount = getStackModelCount(stackCount);
         if (itemModelCount > 1) {
@@ -104,9 +130,15 @@ public class ItemRenderUtil {
             // Rotate to face the travel direction
             applyDirectionRotation(currentPoseStack, dir);
 
+            //? if >=1.21.10 {
             // Render the item using the new 1.21.11 API
             renderState.submit(currentPoseStack, currentCollector,
                     lightc, OverlayTexture.NO_OVERLAY, 0);
+            //?} else {
+            /*// 1.21.1: classic direct item render into the buffer source.
+            itemRenderer.renderStatic(stack, ItemDisplayContext.FIXED, lightc, OverlayTexture.NO_OVERLAY,
+                    currentPoseStack, currentBuffer, Minecraft.getInstance().level, 0);*/
+            //?}
 
             currentPoseStack.popPose();
         }
@@ -147,6 +179,10 @@ public class ItemRenderUtil {
     /** Clears the batch state. */
     public static void endItemBatch() {
         currentPoseStack = null;
+        //? if >=1.21.10 {
         currentCollector = null;
+        //?} else {
+        /*currentBuffer = null;*/
+        //?}
     }
 }

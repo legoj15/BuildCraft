@@ -36,10 +36,24 @@ public class BCCoreJeiPlugin implements IModPlugin {
     public void registerItemSubtypes(ISubtypeRegistration registration) {
         // Tell JEI to differentiate paintbrush stacks by their brush_color component.
         // This handles both ingredient list display AND recipe output matching.
+        //? if >=1.21.10 {
         registration.registerFromDataComponentTypes(
                 BCCoreItems.PAINTBRUSH.get(),
                 BCCore.BRUSH_COLOR.get()
         );
+        //?} else {
+        /*// 1.21.1 JEI has no registerFromDataComponentTypes — hand-write the equivalent
+        // interpreter, keying the paintbrush stack on its brush_color (DyeColor) component.
+        registration.registerSubtypeInterpreter(
+                BCCoreItems.PAINTBRUSH.get(),
+                (stack, context) -> {
+                    net.minecraft.world.item.DyeColor color = stack.get(BCCore.BRUSH_COLOR.get());
+                    return color == null
+                            ? mezz.jei.api.ingredients.subtypes.IIngredientSubtypeInterpreter.NONE
+                            : color.toString();
+                }
+        );*/
+        //?}
 
         // Differentiate fragile fluid shards by their stored fluid type, but
         // ignore the mB amount in the FLUID_CONTENT component. registerFromDataComponentTypes
@@ -55,7 +69,11 @@ public class BCCoreJeiPlugin implements IModPlugin {
                     if (fluid.isEmpty()) {
                         return null;
                     }
+                    //? if >=1.21.10 {
                     return BuiltInRegistries.FLUID.getKey(fluid.getFluid());
+                    //?} else {
+                    /*return BuiltInRegistries.FLUID.getKey(fluid.getFluid()).toString();*/
+                    //?}
                 }
         );
     }

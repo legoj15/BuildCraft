@@ -54,32 +54,32 @@ public class TravellingItem {
 
     public TravellingItem(CompoundTag nbt, long tickNow) {
         clientItemLink = () -> ItemStack.EMPTY;
-        stack = NBTUtilBC.itemStackFromNBT(nbt.getCompoundOrEmpty("stack"));
+        stack = NBTUtilBC.itemStackFromNBT(NBTUtilBC.getCompound(nbt, "stack"));
         if (stack.isEmpty()) {
             // Fallback: try reading as a raw compound
-            CompoundTag stackTag = nbt.getCompoundOrEmpty("stack");
+            CompoundTag stackTag = NBTUtilBC.getCompound(nbt, "stack");
             if (!stackTag.isEmpty()) {
                 // Best effort — item may not load without registries
                 stack = ItemStack.EMPTY;
             }
         }
-        int c = nbt.getByteOr("colour", (byte) 0);
+        int c = NBTUtilBC.getByte(nbt, "colour", (byte) 0);
         this.colour = c == 0 ? null : DyeColor.byId(c - 1);
-        this.toCenter = nbt.getBooleanOr("toCenter", false);
-        this.speed = nbt.getDoubleOr("speed", 0.05);
+        this.toCenter = NBTUtilBC.getBoolean(nbt, "toCenter", false);
+        this.speed = NBTUtilBC.getDouble(nbt, "speed", 0.05);
         if (speed < 0.001) {
             speed = 0.001;
         }
-        tickStarted = nbt.getIntOr("tickStarted", 0) + tickNow;
-        tickFinished = nbt.getIntOr("tickFinished", 0) + tickNow;
-        timeToDest = nbt.getIntOr("timeToDest", 0);
+        tickStarted = NBTUtilBC.getInt(nbt, "tickStarted", 0) + tickNow;
+        tickFinished = NBTUtilBC.getInt(nbt, "tickFinished", 0) + tickNow;
+        timeToDest = NBTUtilBC.getInt(nbt, "timeToDest", 0);
 
         side = NBTUtilBC.readEnum(nbt.get("side"), Direction.class);
         if (side == null || timeToDest == 0) {
             toCenter = true;
         }
         tried = readEnumSet(nbt.get("tried"), Direction.class);
-        isPhantom = nbt.getBooleanOr("isPhantom", false);
+        isPhantom = NBTUtilBC.getBoolean(nbt, "isPhantom", false);
     }
 
     public CompoundTag writeToNbt(long tickNow) {

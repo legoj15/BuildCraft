@@ -11,7 +11,9 @@ import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 import buildcraft.lib.gui.BCGraphics;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.RenderPipelines;
+//?}
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 import buildcraft.api.enums.EnumPowerStage;
@@ -87,7 +89,11 @@ public class LedgerEngineFE extends Ledger_Neptune {
         }
         TextureAtlasSprite sprite = holder.getSprite();
         if (sprite != null) {
+            //? if >=1.21.10 {
             graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, (int) x, (int) y, 16, 16);
+            //?} else {
+            /*graphics.blitSprite(sprite, (int) x, (int) y, 16, 16);*/
+            //?}
         }
     }
 }

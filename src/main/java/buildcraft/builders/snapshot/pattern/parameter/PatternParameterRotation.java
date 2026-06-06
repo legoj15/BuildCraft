@@ -18,6 +18,7 @@ import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementMouseClick;
 
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 
 import buildcraft.builders.BCBuildersSprites;
@@ -38,7 +39,7 @@ public enum PatternParameterRotation implements IStatementParameter {
     }
 
     public static PatternParameterRotation readFromNbt(CompoundTag nbt) {
-        int d = nbt.getByte("d").orElse((byte) 0);
+        int d = NBTUtilBC.getByte(nbt, "d", (byte) 0);
         return values()[d & 3];
     }
 

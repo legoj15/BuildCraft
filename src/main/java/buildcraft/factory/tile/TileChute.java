@@ -25,14 +25,14 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
 import net.neoforged.neoforge.transfer.item.ItemResource;
+//?}
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.mj.IMjReceiver;
@@ -43,6 +43,9 @@ import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.block.BlockChute;
 import buildcraft.factory.container.ContainerChute;
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.tile.TileBC_Neptune;
@@ -184,6 +187,7 @@ public class TileChute extends TileBC_Neptune implements MenuProvider {
             List<Direction> sides = new ArrayList<>(List.of(Direction.values()));
             Collections.shuffle(sides);
             sides.remove(currentSide);
+            //? if >=1.21.10 {
             ItemResource resource = ItemResource.of(inSlot);
             for (Direction side : sides) {
                 ResourceHandler<ItemResource> handler = level.getCapability(
@@ -198,12 +202,28 @@ public class TileChute extends TileBC_Neptune implements MenuProvider {
                     return;
                 }
             }
+            //?} else {
+            /*for (Direction side : sides) {
+                net.neoforged.neoforge.items.IItemHandler handler = level.getCapability(
+                        Capabilities.ItemHandler.BLOCK,
+                        worldPosition.relative(side),
+                        side.getOpposite());
+                if (handler == null) continue;
+                ItemStack remainder = net.neoforged.neoforge.items.ItemHandlerHelper.insertItemStacked(handler, inSlot.copyWithCount(1), false);
+                int inserted = 1 - remainder.getCount();
+                if (inserted > 0) {
+                    inv.extractItem(ourSlot, inserted, false);
+                    grantAdvancement();
+                    return;
+                }
+            }*/
+            //?}
         }
     }
 
     private void grantAdvancement() {
         if (getOwner() != null) {
-            AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT);
+            AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT);
         }
     }
 
@@ -223,16 +243,16 @@ public class TileChute extends TileBC_Neptune implements MenuProvider {
     // --- Save / Load ---
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         output.putInt("progress", progress);
         output.putLong("mjStored", battery.getStored());
         output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
         progress = input.getIntOr("progress", 0);
         battery.addPowerChecking(input.getLongOr("mjStored", 0L), false);
         input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);

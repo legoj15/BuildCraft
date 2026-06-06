@@ -53,14 +53,22 @@ public class CombustionFuelCategory extends AbstractRecipeCategory<IFuel> {
         if (fuel != null && !fuel.isEmpty()) {
             builder.addInputSlot(IN_X, IN_Y)
                     .setFluidRenderer(BUCKET, false, TANK_W, TANK_H)
+                    //? if >=1.21.10 {
                     .add(fuel.getFluid(), BUCKET, fuel.getComponentsPatch());
+                    //?} else {
+                    /*.addFluidStack(fuel.getFluid(), BUCKET, fuel.getComponentsPatch());*/
+                    //?}
         }
         if (recipe instanceof IDirtyFuel dirty) {
             FluidStack residue = dirty.getResidue();
             if (residue != null && !residue.isEmpty()) {
                 builder.addOutputSlot(RESIDUE_X, RESIDUE_Y)
                         .setFluidRenderer(residue.getAmount(), false, TANK_W, TANK_H)
+                        //? if >=1.21.10 {
                         .add(residue.getFluid(), residue.getAmount(), residue.getComponentsPatch());
+                        //?} else {
+                        /*.addFluidStack(residue.getFluid(), residue.getAmount(), residue.getComponentsPatch());*/
+                        //?}
             }
         }
     }

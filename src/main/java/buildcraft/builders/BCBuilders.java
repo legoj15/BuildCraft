@@ -85,20 +85,35 @@ public class BCBuilders {
     }
 
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
+        // Version-neutral capability tokens: Transfer-API on 1.21.10+, classic handler tokens on 1.21.1.
+        //? if >=1.21.10 {
+        var itemCap = Capabilities.Item.BLOCK;
+        var fluidCap = Capabilities.Fluid.BLOCK;
+        var energyCap = Capabilities.Energy.BLOCK;
+        //?} else {
+        /*var itemCap = Capabilities.ItemHandler.BLOCK;
+        var fluidCap = Capabilities.FluidHandler.BLOCK;
+        var energyCap = Capabilities.EnergyStorage.BLOCK;*/
+        //?}
         // Quarry
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCBuildersBlockEntities.QUARRY.get(),
             (quarry, direction) -> quarry.getMjReceiver());
-        event.registerBlockEntity(Capabilities.Energy.BLOCK, BCBuildersBlockEntities.QUARRY.get(),
+        event.registerBlockEntity(energyCap, BCBuildersBlockEntities.QUARRY.get(),
             (quarry, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(quarry.getBattery()));
-        event.registerBlockEntity(Capabilities.Item.BLOCK, BCBuildersBlockEntities.QUARRY.get(),
+        //? if >=1.21.10 {
+        event.registerBlockEntity(itemCap, BCBuildersBlockEntities.QUARRY.get(),
             (quarry, direction) -> net.neoforged.neoforge.transfer.EmptyResourceHandler.instance());
+        //?} else {
+        /*event.registerBlockEntity(itemCap, BCBuildersBlockEntities.QUARRY.get(),
+            (quarry, direction) -> net.neoforged.neoforge.items.wrapper.EmptyItemHandler.INSTANCE);*/
+        //?}
 
         // Filler
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCBuildersBlockEntities.FILLER.get(),
             (filler, direction) -> filler.getMjReceiver());
-        event.registerBlockEntity(Capabilities.Energy.BLOCK, BCBuildersBlockEntities.FILLER.get(),
+        event.registerBlockEntity(energyCap, BCBuildersBlockEntities.FILLER.get(),
             (filler, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(filler.getBattery()));
-        event.registerBlockEntity(Capabilities.Item.BLOCK, BCBuildersBlockEntities.FILLER.get(),
+        event.registerBlockEntity(itemCap, BCBuildersBlockEntities.FILLER.get(),
             (filler, direction) -> filler.getItemHandler(direction));
 
         // Builder — wires it into the same pipe/engine capability surfaces as the Filler so MJ
@@ -106,21 +121,21 @@ public class BCBuilders {
         // fluid pipes can top off the 4 tanks for fluid-block placement.
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCBuildersBlockEntities.BUILDER.get(),
             (builder, direction) -> builder.getMjReceiver());
-        event.registerBlockEntity(Capabilities.Energy.BLOCK, BCBuildersBlockEntities.BUILDER.get(),
+        event.registerBlockEntity(energyCap, BCBuildersBlockEntities.BUILDER.get(),
             (builder, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(builder.getBattery()));
-        event.registerBlockEntity(Capabilities.Item.BLOCK, BCBuildersBlockEntities.BUILDER.get(),
+        event.registerBlockEntity(itemCap, BCBuildersBlockEntities.BUILDER.get(),
             (builder, direction) -> builder.getItemHandler(direction));
-        event.registerBlockEntity(Capabilities.Fluid.BLOCK, BCBuildersBlockEntities.BUILDER.get(),
+        event.registerBlockEntity(fluidCap, BCBuildersBlockEntities.BUILDER.get(),
             (builder, direction) -> builder.getTankManager());
 
         // Electronic Library — exposes its snapshot up/download slots to item pipes.
-        event.registerBlockEntity(Capabilities.Item.BLOCK, BCBuildersBlockEntities.LIBRARY.get(),
+        event.registerBlockEntity(itemCap, BCBuildersBlockEntities.LIBRARY.get(),
             (library, direction) -> library.getItemHandler(direction));
 
         // Architect Table — exposes the INSERT input slot (blank Blueprint/Template) and the
         // EXTRACT output slot (finished snapshot) so item pipes can connect and exchange snapshots,
         // matching 1.12.2. Without this the slots are invisible to PipeFlowItems.canConnect.
-        event.registerBlockEntity(Capabilities.Item.BLOCK, BCBuildersBlockEntities.ARCHITECT.get(),
+        event.registerBlockEntity(itemCap, BCBuildersBlockEntities.ARCHITECT.get(),
             (architect, direction) -> architect.getItemHandler(direction));
     }
 

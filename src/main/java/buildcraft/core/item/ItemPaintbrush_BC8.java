@@ -61,12 +61,17 @@ public class ItemPaintbrush_BC8 extends Item {
         // Set CUSTOM_MODEL_DATA for the range_dispatch item model selector.
         // Values 1-16 map to DyeColor ordinals + 1 (0 = clean/fallback).
         // In 1.21.4+, CustomModelData takes (floats, flags, strings, colors).
+        //? if >=1.21.10 {
         stack.set(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(
                 java.util.List.of((float) (colour.ordinal() + 1)),
                 java.util.List.of(),
                 java.util.List.of(),
                 java.util.List.of()
         ));
+        //?} else {
+        /*// 1.21.1: CustomModelData is the single-int record.
+        stack.set(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(colour.ordinal() + 1));*/
+        //?}
     }
 
     /** Create a pre-colored paintbrush stack (for creative tab population). */
@@ -93,9 +98,18 @@ public class ItemPaintbrush_BC8 extends Item {
     }
 
     @Override
+    //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
             java.util.function.Consumer<Component> tooltip, net.minecraft.world.item.TooltipFlag flag) {
         super.appendHoverText(stack, context, display, tooltip, flag);
+    //?} else {
+    /*// 1.21.1: appendHoverText has no TooltipDisplay and takes List<Component>; adapt to the shared
+    // Consumer-based body below via tooltipList::add.
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context,
+            java.util.List<Component> tooltipList, net.minecraft.world.item.TooltipFlag flag) {
+        java.util.function.Consumer<Component> tooltip = tooltipList::add;
+        super.appendHoverText(stack, context, tooltipList, flag);*/
+    //?}
         if (getColour(stack) == null) {
             tooltip.accept(Component.translatable("tip.item.paintbrush.clean").withStyle(ChatFormatting.GRAY));
         }

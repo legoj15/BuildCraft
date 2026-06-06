@@ -7,7 +7,9 @@ package buildcraft.builders.client.render;
 
 import buildcraft.lib.gui.BCGraphics;
 
+//? if >=1.21.10 {
 import buildcraft.builders.client.render.pip.BlueprintPipRenderState;
+//?}
 import buildcraft.builders.snapshot.Snapshot;
 
 /**
@@ -47,6 +49,10 @@ public class BlueprintRenderer {
             return;
         }
 
+        // 1.21.1: the PiP pipeline (offscreen-texture blueprint preview) doesn't exist; this is a
+        // no-op there so the tooltip frame/text still render without the rotating 3D cube. The
+        // whole modern body is gated out. TODO(1.21.1 visual pass): classic preview if desired.
+        //? if >=1.21.10 {
         int sizeX = Math.max(1, snapshot.size.getX());
         int sizeY = Math.max(1, snapshot.size.getY());
         int sizeZ = Math.max(1, snapshot.size.getZ());
@@ -79,5 +85,6 @@ public class BlueprintRenderer {
                 // PiP base class intersects this with the full bounds internally.
                 graphics.raw.peekScissorStack());
         graphics.raw.submitPictureInPictureRenderState(state);
+        //?}
     }
 }

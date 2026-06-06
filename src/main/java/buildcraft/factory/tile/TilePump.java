@@ -31,13 +31,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
@@ -49,9 +44,13 @@ import buildcraft.energy.BCEnergyFluids;
 import buildcraft.factory.BCFactoryAttachments;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.BCFactoryBlocks;
+import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.mj.MjRedstoneBatteryReceiver;
 import buildcraft.api.tiles.IDebuggable;
@@ -110,7 +109,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         CONFIG_REVISION.incrementAndGet();
     }
 
-    private final FluidStacksResourceHandler tank = new FluidStacksResourceHandler(1, 16 * 1000); // 16 buckets
+    private final BCFluidTank tank = new BCFluidTank(1, 16 * 1000); // 16 buckets
     private boolean queueBuilt = false;
     private long builtAtRevision = -1;
     private final Map<BlockPos, FluidPath> paths = new HashMap<>();
@@ -134,7 +133,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         return new MjRedstoneBatteryReceiver(battery);
     }
 
-    public FluidStacksResourceHandler getTank() {
+    public BCFluidTank getTank() {
         return tank;
     }
 
@@ -202,7 +201,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         if (getOwner() == null || level == null || level.isClientSide()) return;
         net.minecraft.server.MinecraftServer server = level.getServer();
         if (server == null) return;
-        net.minecraft.server.level.ServerPlayer player = server.getPlayerList().getPlayer(getOwner().id());
+        net.minecraft.server.level.ServerPlayer player = server.getPlayerList().getPlayer(GameProfileUtil.getId(getOwner()));
         if (player == null) return;
         String baseName = BCEnergyFluids.getBaseName(drain.getFluid());
         if (baseName == null) return;
@@ -349,10 +348,10 @@ public class TilePump extends TileMiner implements IDebuggable {
 
     private boolean canDrain(BlockPos blockPos) {
         Fluid fluid = BlockUtil.getFluid(level, blockPos);
-        if (tank.getAmountAsInt(0) == 0) {
+        if (tank.getAmountMb(0) == 0) {
             return fluid != null;
         }
-        return FluidUtilBC.areFluidsEqual(fluid, tank.getResource(0).getFluid());
+        return FluidUtilBC.areFluidsEqual(fluid, tank.getFluidStack(0).getFluid());
     }
 
     /**
@@ -426,7 +425,7 @@ public class TilePump extends TileMiner implements IDebuggable {
 
     @Override
     protected void mine() {
-        if (tank.getAmountAsInt(0) > tank.getCapacityAsInt(0, FluidResource.EMPTY) / 2) {
+        if (tank.getAmountMb(0) > tank.getCapacityMb(0) / 2) {
             return;
         }
 
@@ -455,14 +454,11 @@ public class TilePump extends TileMiner implements IDebuggable {
                     break drain_attempt;
                 }
 
-                try (Transaction tx = Transaction.openRoot()) {
-                    tank.insert(0, FluidResource.of(drain), drain.getAmount(), tx);
-                    tx.commit();
-                }
+                tank.fill(0, drain, false);
                 progress = 0;
 
                 if (getOwner() != null) {
-                    AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT_DRAIN_ANY);
+                    AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT_DRAIN_ANY);
                 }
 
                 // Re-evaluate against the live world state so state changes since the
@@ -477,7 +473,7 @@ public class TilePump extends TileMiner implements IDebuggable {
                     BlockUtil.drainBlock(level, currentPos, true);
                     if (isOil(drain.getFluid())) {
                         if (getOwner() != null) {
-                            AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT_DRAIN_OIL);
+                            AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT_DRAIN_OIL);
                         }
                         creditRefineAndRedefineFromPumpedOil(drain);
                         if (oilSpringPos != null) {
@@ -524,9 +520,9 @@ public class TilePump extends TileMiner implements IDebuggable {
     // --- Save / Load ---
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        tank.serialize(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
+        tank.serialize(output.raw);
         if (oilSpringPos != null) {
             output.putBoolean("hasOilSpring", true);
             output.putInt("oilSpringX", oilSpringPos.getX());
@@ -536,9 +532,9 @@ public class TilePump extends TileMiner implements IDebuggable {
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        tank.deserialize(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
+        tank.deserialize(input.raw);
         if (input.getBooleanOr("hasOilSpring", false)) {
             oilSpringPos = new BlockPos(
                 input.getIntOr("oilSpringX", 0),
@@ -562,7 +558,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         left.add("isComplete = " + isComplete());
         left.add("progress = " + MjAPI.formatMj((long) progress));
         // TilePump-specific fields
-        left.add("fluid = " + FluidUtilBC.getDebugString(tank.getResource(0).toStack(tank.getAmountAsInt(0))));
+        left.add("fluid = " + FluidUtilBC.getDebugString(tank.getFluidStack(0)));
         left.add("queue size = " + queue.size());
         left.add("infinite = " + isInfiniteWaterSource);
     }
@@ -575,7 +571,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         left.add("currentLength = " + currentLength);
         left.add("isComplete = " + isComplete());
         left.add("progress = " + MjAPI.formatMj((long) progress));
-        left.add("fluid = " + FluidUtilBC.getDebugString(tank.getResource(0).toStack(tank.getAmountAsInt(0))));
+        left.add("fluid = " + FluidUtilBC.getDebugString(tank.getFluidStack(0)));
         left.add("queue size = " + queue.size());
         left.add("infinite = " + isInfiniteWaterSource);
     }

@@ -39,6 +39,7 @@ import buildcraft.api.items.FluidItemDrops;
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileDistiller_BC8;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 
 /**
@@ -110,8 +111,13 @@ public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHa
     }
 
     @Override
+    //? if >=1.21.10 {
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
+    //?} else {
+    /*protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+            Player player, InteractionHand hand, BlockHitResult hitResult) {*/
+    //?}
         // Wrench priority (unified with engine/dynamo blocks):
         //   - crouch + wrench → open GUI (overrides rotation, so the player can sneak-tweak
         //     a working distiller without spinning it)
@@ -125,13 +131,13 @@ public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHa
                         player.openMenu(distiller, pos);
                     }
                 }
-                return InteractionResult.SUCCESS;
+                return BlockUtil.itemUseSuccess();
             }
-            return InteractionResult.PASS;
+            return BlockUtil.itemUsePass();
         }
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TileDistiller_BC8 distiller)) {
-            return InteractionResult.PASS;
+            return BlockUtil.itemUsePass();
         }
         // 1.12.2 behaviour: TileBC_Neptune.onActivated calls tankManager.onActivated,
         // which iterates the tanks. Each distiller tank is gated:
@@ -152,13 +158,13 @@ public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHa
             didChange = drainedLiquid;
         }
         if (didChange) {
-            return InteractionResult.SUCCESS;
+            return BlockUtil.itemUseSuccess();
         }
         // No fluid interaction — open the GUI
         if (!level.isClientSide()) {
             player.openMenu(distiller, pos);
         }
-        return InteractionResult.SUCCESS;
+        return BlockUtil.itemUseSuccess();
     }
 
     // --- ICustomRotationHandler ---

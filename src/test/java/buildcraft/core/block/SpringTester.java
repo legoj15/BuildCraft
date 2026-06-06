@@ -85,7 +85,11 @@ public class SpringTester {
         BlockPos pos = new BlockPos(1, 1, 1);
         helper.setBlock(pos, BCCoreBlocks.SPRING_OIL.get());
 
+        //? if >=1.21.10 {
         BlockEntity tile = helper.getBlockEntity(pos, BlockEntity.class);
+        //?} else {
+        /*BlockEntity tile = helper.getBlockEntity(pos);*/
+        //?}
         if (tile == null) {
             throw new IllegalStateException(
                 "Oil spring did not attach a BlockEntity (BlockSpring is missing EntityBlock support).");

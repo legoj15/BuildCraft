@@ -13,6 +13,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 
+import buildcraft.lib.misc.GameProfileUtil;
+
 import buildcraft.builders.BCBuildersBlocks;
 
 /**
@@ -33,7 +35,11 @@ public class TileQuarryOwnerTester {
         try {
             BlockPos local = new BlockPos(2, 2, 2);
             helper.setBlock(local, BCBuildersBlocks.QUARRY.get());
+            //? if >=1.21.10 {
             TileQuarry quarry = helper.getBlockEntity(local, TileQuarry.class);
+            //?} else {
+            /*TileQuarry quarry = helper.getBlockEntity(local);*/
+            //?}
             assertTrue(quarry != null, "quarry block-entity must be present at " + local);
             assertTrue(quarry.getOwner() == null,
                     "owner must be null before onPlacedBy runs");
@@ -47,9 +53,9 @@ public class TileQuarryOwnerTester {
                     "TileQuarry.onPlacedBy must chain to super.onPlacedBy so the placer "
                             + "is recorded — without this, getOwner() stays null and the "
                             + "Diggy Diggy Hole + Destroying the World advancements never fire");
-            assertTrue(expected.id().equals(actual.id()),
+            assertTrue(GameProfileUtil.getId(expected).equals(GameProfileUtil.getId(actual)),
                     "recorded owner UUID must match the placer (expected "
-                            + expected.id() + ", got " + actual.id() + ")");
+                            + GameProfileUtil.getId(expected) + ", got " + GameProfileUtil.getId(actual) + ")");
 
             helper.succeed();
         } catch (Throwable t) {

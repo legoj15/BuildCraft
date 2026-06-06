@@ -39,7 +39,11 @@ public class EnergyConverterTester {
                 .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP));
 
         helper.runAfterDelay(2, () -> {
+            //? if >=1.21.10 {
             TileDynamoMJ dynamo = helper.getBlockEntity(pos, TileDynamoMJ.class);
+            //?} else {
+            /*TileDynamoMJ dynamo = helper.getBlockEntity(pos);*/
+            //?}
             if (dynamo == null) {
                 throw new IllegalStateException("Failed to place MJ Dynamo!");
             }
@@ -133,7 +137,11 @@ public class EnergyConverterTester {
                 .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP));
 
         helper.runAfterDelay(2, () -> {
+            //? if >=1.21.10 {
             TileEngineFE engine = helper.getBlockEntity(pos, TileEngineFE.class);
+            //?} else {
+            /*TileEngineFE engine = helper.getBlockEntity(pos);*/
+            //?}
             if (engine == null) {
                 throw new IllegalStateException("Failed to place FE Engine!");
             }
@@ -193,7 +201,11 @@ public class EnergyConverterTester {
         helper.setBlock(new BlockPos(2, 1, 2), Blocks.REDSTONE_BLOCK);
 
         helper.runAfterDelay(2, () -> {
+            //? if >=1.21.10 {
             TileDynamoMJ dynamo = helper.getBlockEntity(pos, TileDynamoMJ.class);
+            //?} else {
+            /*TileDynamoMJ dynamo = helper.getBlockEntity(pos);*/
+            //?}
             if (dynamo == null) {
                 throw new IllegalStateException("Failed to place MJ Dynamo!");
             }
@@ -321,7 +333,11 @@ public class EnergyConverterTester {
         helper.setBlock(new BlockPos(2, 1, 2), Blocks.REDSTONE_BLOCK);
 
         helper.runAfterDelay(2, () -> {
+            //? if >=1.21.10 {
             TileEngineFE engine = helper.getBlockEntity(pos, TileEngineFE.class);
+            //?} else {
+            /*TileEngineFE engine = helper.getBlockEntity(pos);*/
+            //?}
             if (engine == null) {
                 throw new IllegalStateException("Failed to place FE Engine!");
             }
@@ -458,7 +474,11 @@ public class EnergyConverterTester {
                 .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP));
 
         helper.runAfterDelay(2, () -> {
+            //? if >=1.21.10 {
             TileDynamoMJ dynamo = helper.getBlockEntity(pos, TileDynamoMJ.class);
+            //?} else {
+            /*TileDynamoMJ dynamo = helper.getBlockEntity(pos);*/
+            //?}
             if (dynamo == null) {
                 throw new IllegalStateException("Failed to place MJ Dynamo!");
             }
@@ -500,7 +520,11 @@ public class EnergyConverterTester {
                 .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP));
 
         helper.runAfterDelay(2, () -> {
+            //? if >=1.21.10 {
             TileEngineFE engine = helper.getBlockEntity(pos, TileEngineFE.class);
+            //?} else {
+            /*TileEngineFE engine = helper.getBlockEntity(pos);*/
+            //?}
             if (engine == null) {
                 throw new IllegalStateException("Failed to place FE Engine!");
             }

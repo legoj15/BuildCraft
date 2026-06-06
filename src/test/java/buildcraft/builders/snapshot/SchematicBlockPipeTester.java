@@ -21,6 +21,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
 
+import buildcraft.lib.misc.NBTUtilBC;
+
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.BCTransportPlugs;
@@ -45,7 +47,11 @@ public class SchematicBlockPipeTester {
     /** Place a pipe of the given type, capture it as a schematic, and return its single required item. */
     private static ItemStack requiredItemFor(GameTestHelper helper, BlockPos relPos, Item pipeItem) {
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(relPos);*/
+        //?}
         // Initialises the pipe (and its definition) on the BE exactly as a player placement would.
         tile.onPlacedBy(null, new ItemStack(pipeItem));
 
@@ -102,7 +108,11 @@ public class SchematicBlockPipeTester {
     public static void pipeSchematicCostsPluggables(GameTestHelper helper) {
         BlockPos relPos = new BlockPos(1, 2, 1);
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(relPos);*/
+        //?}
         Item pipeItem = BCTransportItems.PIPE_COBBLE_ITEM.get();
         tile.onPlacedBy(null, new ItemStack(pipeItem));
         // Attach a blocker pluggable (fixed item, holder-free getPickStack) on one face.
@@ -136,7 +146,11 @@ public class SchematicBlockPipeTester {
     public static void pipeSchematicRotatesPluggableFaces(GameTestHelper helper) {
         BlockPos relPos = new BlockPos(1, 2, 1);
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(relPos);*/
+        //?}
         tile.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get()));
         tile.replacePluggable(Direction.NORTH, new PluggableBlocker(BCTransportPlugs.blocker, tile, Direction.NORTH));
 
@@ -149,27 +163,27 @@ public class SchematicBlockPipeTester {
                 "Pipe holder should route to SchematicBlockPipe, got " + schematic.getClass().getSimpleName());
 
         // Sanity: captured on NORTH.
-        helper.assertFalse(plugsOf(schematic).getCompoundOrEmpty("north").isEmpty(),
+        helper.assertFalse(NBTUtilBC.getCompound(plugsOf(schematic), "north").isEmpty(),
                 "Captured pluggable should be on NORTH before rotation");
 
         // 90° clockwise: NORTH → EAST.
         ISchematicBlock rotated = schematic.getRotated(Rotation.CLOCKWISE_90);
         CompoundTag rotatedPlugs = plugsOf(rotated);
-        helper.assertFalse(rotatedPlugs.getCompoundOrEmpty("east").isEmpty(),
+        helper.assertFalse(NBTUtilBC.getCompound(rotatedPlugs, "east").isEmpty(),
                 "After CLOCKWISE_90 the pluggable must move to EAST");
-        helper.assertTrue(rotatedPlugs.getCompoundOrEmpty("north").isEmpty(),
+        helper.assertTrue(NBTUtilBC.getCompound(rotatedPlugs, "north").isEmpty(),
                 "After CLOCKWISE_90 the pluggable must no longer be on NORTH");
-        helper.assertTrue(rotatedPlugs.getCompoundOrEmpty("east").getStringOr("id", "").contains("blocker"),
+        helper.assertTrue(NBTUtilBC.getString(NBTUtilBC.getCompound(rotatedPlugs, "east"), "id", "").contains("blocker"),
                 "The rotated EAST entry must still carry the blocker pluggable");
 
         // getRotated returns a copy — the original schematic's NBT must be untouched.
-        helper.assertFalse(plugsOf(schematic).getCompoundOrEmpty("north").isEmpty(),
+        helper.assertFalse(NBTUtilBC.getCompound(plugsOf(schematic), "north").isEmpty(),
                 "getRotated must not mutate the original schematic (its pluggable should still be on NORTH)");
         helper.succeed();
     }
 
     private static CompoundTag plugsOf(ISchematicBlock schematic) {
-        return schematic.getTileNbtForRender().getCompoundOrEmpty("plugs");
+        return NBTUtilBC.getCompound(schematic.getTileNbtForRender(), "plugs");
     }
 
     private static String itemNames(List<ItemStack> stacks) {

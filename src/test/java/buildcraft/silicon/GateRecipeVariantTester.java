@@ -44,8 +44,13 @@ public final class GateRecipeVariantTester {
             helper.fail("Gold + Lapis recipe rejected the correct Gold AND (plain) input");
         }
         ItemStack out = outputs.iterator().next();
+        //? if >=1.21.10 {
         GateVariant outVar = new GateVariant(buildcraft.lib.misc.NBTUtilBC.getItemData(out)
             .getCompound("gate").orElseThrow());
+        //?} else {
+        /*GateVariant outVar = new GateVariant(buildcraft.lib.misc.NBTUtilBC.getCompound(
+            buildcraft.lib.misc.NBTUtilBC.getItemData(out), "gate"));*/
+        //?}
         if (outVar.material != EnumGateMaterial.GOLD
             || outVar.modifier != EnumGateModifier.LAPIS
             || outVar.logic != EnumGateLogic.AND) {
@@ -101,6 +106,7 @@ public final class GateRecipeVariantTester {
      * display path now surfaces the right variant for the Gold + Lapis recipe input.
      */
     public static void testGoldLapisRecipeDisplayPreservesGoldVariant(GameTestHelper helper) {
+        //? if >=1.21.10 {
         AssemblyRecipe recipe = recipe("gate-modifier-AND-GOLD-LAPIS");
         net.minecraft.util.context.ContextMap ctx = new net.minecraft.util.context.ContextMap.Builder()
             .create(net.minecraft.world.item.crafting.display.SlotDisplayContext.CONTEXT);
@@ -139,6 +145,12 @@ public final class GateRecipeVariantTester {
                 + goldPlain.getComponentsPatch() + " displayed patch=" + first.getComponentsPatch());
         }
         helper.succeed();
+        //?} else {
+        /*// SlotDisplay system (net.minecraft.world.item.crafting.display.* + net.minecraft.util.context.*)
+        // does not exist pre-1.21.5; this deferred game test is compile-only on the 1.21.1 node.
+        helper.fail("testGoldLapisRecipeDisplayPreservesGoldVariant is not supported on MC 1.21.1 "
+            + "(SlotDisplay API absent); should not be invoked on this node");*/
+        //?}
     }
 
     /**

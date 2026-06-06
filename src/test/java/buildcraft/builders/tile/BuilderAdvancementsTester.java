@@ -15,7 +15,9 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ProblemReporter;
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.TagValueInput;
+//?}
 
 import buildcraft.builders.BCBuildersBlocks;
 
@@ -58,7 +60,11 @@ public class BuilderAdvancementsTester {
     public static void testPavingTheWayRejectsSinglePositionBuilder(GameTestHelper helper) {
         BlockPos builderPos = new BlockPos(1, 2, 1);
         helper.setBlock(builderPos, BCBuildersBlocks.BUILDER.get());
+        //? if >=1.21.10 {
         TileBuilder tile = helper.getBlockEntity(builderPos, TileBuilder.class);
+        //?} else {
+        /*TileBuilder tile = helper.getBlockEntity(builderPos);*/
+        //?}
 
         assertTrue(tile.path == null, "fresh builder has no path");
         // basePoses defaults to a single-position list pointing at the block in front; the predicate
@@ -72,7 +78,11 @@ public class BuilderAdvancementsTester {
     public static void testPavingTheWayRejectsMidPath(GameTestHelper helper) {
         BlockPos builderPos = new BlockPos(1, 2, 1);
         helper.setBlock(builderPos, BCBuildersBlocks.BUILDER.get());
+        //? if >=1.21.10 {
         TileBuilder tile = helper.getBlockEntity(builderPos, TileBuilder.class);
+        //?} else {
+        /*TileBuilder tile = helper.getBlockEntity(builderPos);*/
+        //?}
 
         tile.path = ImmutableList.of(
                 new BlockPos(10, 64, 20),
@@ -95,7 +105,11 @@ public class BuilderAdvancementsTester {
     public static void testPavingTheWayAcceptsAtLastPosition(GameTestHelper helper) {
         BlockPos builderPos = new BlockPos(1, 2, 1);
         helper.setBlock(builderPos, BCBuildersBlocks.BUILDER.get());
+        //? if >=1.21.10 {
         TileBuilder tile = helper.getBlockEntity(builderPos, TileBuilder.class);
+        //?} else {
+        /*TileBuilder tile = helper.getBlockEntity(builderPos);*/
+        //?}
 
         tile.path = ImmutableList.of(
                 new BlockPos(10, 64, 20),
@@ -133,7 +147,11 @@ public class BuilderAdvancementsTester {
     public static void testNbtRoundTripPreservesAdvancementState(GameTestHelper helper) {
         BlockPos builderPos = new BlockPos(1, 2, 1);
         helper.setBlock(builderPos, BCBuildersBlocks.BUILDER.get());
+        //? if >=1.21.10 {
         TileBuilder tile = helper.getBlockEntity(builderPos, TileBuilder.class);
+        //?} else {
+        /*TileBuilder tile = helper.getBlockEntity(builderPos);*/
+        //?}
 
         // Seed non-default values for every persisted advancement field.
         setField(tile, "bigStructureCellsBuilt", 800L);
@@ -148,7 +166,11 @@ public class BuilderAdvancementsTester {
         setField(tile, "pavingTheWayGranted", Boolean.FALSE);
         setField(tile, "startOfSomethingBigGranted", Boolean.TRUE);
         setField(tile, "wasDoneLastTick", Boolean.FALSE);
+        //? if >=1.21.10 {
         tile.loadCustomOnly(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), tag));
+        //?} else {
+        /*tile.loadCustomOnly(tag, level.registryAccess());*/
+        //?}
 
         assertTrue(((Long) getField(tile, "bigStructureCellsBuilt")) == 800L,
                 "bigStructureCellsBuilt must round-trip — got " + getField(tile, "bigStructureCellsBuilt"));
@@ -165,7 +187,11 @@ public class BuilderAdvancementsTester {
     public static void testFreshBuilderAdvancementStateIsZero(GameTestHelper helper) {
         BlockPos builderPos = new BlockPos(1, 2, 1);
         helper.setBlock(builderPos, BCBuildersBlocks.BUILDER.get());
+        //? if >=1.21.10 {
         TileBuilder tile = helper.getBlockEntity(builderPos, TileBuilder.class);
+        //?} else {
+        /*TileBuilder tile = helper.getBlockEntity(builderPos);*/
+        //?}
 
         assertTrue(((Long) getField(tile, "bigStructureCellsBuilt")) == 0L,
                 "fresh builder bigStructureCellsBuilt must be 0");

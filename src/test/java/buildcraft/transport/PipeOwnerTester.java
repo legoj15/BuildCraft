@@ -29,7 +29,11 @@ public class PipeOwnerTester {
     public static void testPipeRecordsOwnerOnPlacement(GameTestHelper helper) {
         BlockPos pipePos = new BlockPos(1, 2, 1);
         helper.setBlock(pipePos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(pipePos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(pipePos);*/
+        //?}
 
         helper.assertTrue(tile.getOwner() == null, "A pipe tile has no owner before it is placed");
 

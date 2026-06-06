@@ -46,7 +46,11 @@ public class ElectronicLibraryTester {
         helper.setBlock(pos, BCBuildersBlocks.LIBRARY.get());
 
         helper.runAfterDelay(2, () -> {
+            //? if >=1.21.10 {
             TileElectronicLibrary tile = helper.getBlockEntity(pos, TileElectronicLibrary.class);
+            //?} else {
+            /*TileElectronicLibrary tile = helper.getBlockEntity(pos);*/
+            //?}
             if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
 
             Snapshot.Header header = fakeHeader();
@@ -80,7 +84,11 @@ public class ElectronicLibraryTester {
         helper.setBlock(pos, BCBuildersBlocks.LIBRARY.get());
 
         helper.runAfterDelay(2, () -> {
+            //? if >=1.21.10 {
             TileElectronicLibrary tile = helper.getBlockEntity(pos, TileElectronicLibrary.class);
+            //?} else {
+            /*TileElectronicLibrary tile = helper.getBlockEntity(pos);*/
+            //?}
             if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
 
             assertTrue(tile.progressDown == -1, "progressDown should be idle (-1) initially");
@@ -113,7 +121,11 @@ public class ElectronicLibraryTester {
         helper.setBlock(pos, BCBuildersBlocks.LIBRARY.get());
 
         helper.runAfterDelay(2, () -> {
+            //? if >=1.21.10 {
             TileElectronicLibrary tile = helper.getBlockEntity(pos, TileElectronicLibrary.class);
+            //?} else {
+            /*TileElectronicLibrary tile = helper.getBlockEntity(pos);*/
+            //?}
             if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
 
             // Seed: selected key + clean blueprint in invUpIn (simulates player picked a snapshot
@@ -141,7 +153,11 @@ public class ElectronicLibraryTester {
         helper.setBlock(pos, BCBuildersBlocks.LIBRARY.get());
 
         helper.runAfterDelay(5, () -> {
+            //? if >=1.21.10 {
             TileElectronicLibrary tile = helper.getBlockEntity(pos, TileElectronicLibrary.class);
+            //?} else {
+            /*TileElectronicLibrary tile = helper.getBlockEntity(pos);*/
+            //?}
             if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
 
             // Nothing in invDownIn: progress must stay idle

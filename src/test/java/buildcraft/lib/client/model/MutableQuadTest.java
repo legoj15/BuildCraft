@@ -14,7 +14,11 @@ public class MutableQuadTest {
     public void testRotations() {
         for (Direction from : Direction.values()) {
             for (Direction to : Direction.values()) {
+                //? if >=1.21.10 {
                 Vec3i vec = from.getUnitVec3i();
+                //?} else {
+                /*Vec3i vec = from.getNormal();*/
+                //?}
                 MutableQuad q = new MutableQuad();
                 q.vertex_0.positionf(vec.getX(), vec.getY(), vec.getZ());
                 q.rotate(from, to, 0, 0, 0);

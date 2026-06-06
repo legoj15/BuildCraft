@@ -44,7 +44,11 @@ public class PaintedPipeConnectionTester {
 
     private static TilePipeHolder placePipe(GameTestHelper helper, BlockPos relPos, Item pipeItem) {
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(relPos);*/
+        //?}
         tile.onPlacedBy(null, new ItemStack(pipeItem));
         return tile;
     }

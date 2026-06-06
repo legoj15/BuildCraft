@@ -4,6 +4,7 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
 package buildcraft.factory;
+//? if >=1.21.10 {
 
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.item.ItemStack;
@@ -214,3 +215,4 @@ public class HeatExchangerTester {
         helper.succeed();
     }
 }
+//?}

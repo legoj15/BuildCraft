@@ -4,6 +4,7 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
 package buildcraft.factory;
+//? if >=1.21.10 {
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -271,3 +272,4 @@ public class DistillerTester {
         helper.succeed();
     }
 }
+//?}

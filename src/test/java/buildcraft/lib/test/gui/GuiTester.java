@@ -51,7 +51,11 @@ public class GuiTester {
         BlockPos pos = new BlockPos(1, 2, 1);
         
         // 1. Place the block
+        //? if >=1.21.10 {
         Item blockItem = BuiltInRegistries.ITEM.get(Identifier.parse(spec.block)).orElseThrow().value();
+        //?} else {
+        /*Item blockItem = BuiltInRegistries.ITEM.get(Identifier.parse(spec.block));*/
+        //?}
         helper.setBlock(pos, net.minecraft.world.level.block.Block.byItem(blockItem));
 
         helper.runAfterDelay(2, () -> {
@@ -77,7 +81,11 @@ public class GuiTester {
                         }
                         break;
                     case "set_hotbar":
+                        //? if >=1.21.10 {
                         Item itemToGive = BuiltInRegistries.ITEM.get(Identifier.parse(action.item)).orElseThrow().value();
+                        //?} else {
+                        /*Item itemToGive = BuiltInRegistries.ITEM.get(Identifier.parse(action.item));*/
+                        //?}
                         ItemStack stack = new ItemStack(itemToGive, action.count != null ? action.count : 1);
                         mockPlayer.getInventory().setItem(action.slot != null ? action.slot : 0, stack);
                         break;
@@ -127,7 +135,11 @@ public class GuiTester {
             for (GuiTestSpec.GuiAssert assertion : spec.asserts) {
                 if ("slot_equals".equals(assertion.type)) {
                     AbstractContainerMenu menu = mockPlayer.containerMenu;
+                    //? if >=1.21.10 {
                     Item expectedItem = BuiltInRegistries.ITEM.get(Identifier.parse(assertion.item)).orElseThrow().value();
+                    //?} else {
+                    /*Item expectedItem = BuiltInRegistries.ITEM.get(Identifier.parse(assertion.item));*/
+                    //?}
                     ItemStack slotItem = menu.getSlot(assertion.slot).getItem();
                     
                     if (!slotItem.is(expectedItem)) {

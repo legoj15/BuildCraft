@@ -33,9 +33,15 @@ public class LegacyAliasTester {
         StringBuilder errors = new StringBuilder();
         for (Mapping m : LegacyAliases.MAPPINGS) {
             Registry<?> registry = m.registry();
+            //? if >=1.21.10 {
             Object missing = registry.getValue(ABSENT);
             Object target = registry.getValue(m.to());
             Object resolved = registry.getValue(m.from());
+            //?} else {
+            /*Object missing = registry.get(ABSENT);
+            Object target = registry.get(m.to());
+            Object resolved = registry.get(m.from());*/
+            //?}
 
             if (target == missing) {
                 errors.append("\n  dangling target: ").append(m.from()).append(" -> ").append(m.to());
@@ -63,9 +69,15 @@ public class LegacyAliasTester {
     }
 
     private static void assertItemAlias(String from, String to) {
+        //? if >=1.21.10 {
         Item target = BuiltInRegistries.ITEM.getValue(Identifier.parse(to));
         Item resolved = BuiltInRegistries.ITEM.getValue(Identifier.parse(from));
         Item air = BuiltInRegistries.ITEM.getValue(ABSENT);
+        //?} else {
+        /*Item target = BuiltInRegistries.ITEM.get(Identifier.parse(to));
+        Item resolved = BuiltInRegistries.ITEM.get(Identifier.parse(from));
+        Item air = BuiltInRegistries.ITEM.get(ABSENT);*/
+        //?}
         if (target == air) {
             throw new IllegalStateException("Spot-check target is not registered: " + to);
         }

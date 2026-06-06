@@ -61,7 +61,11 @@ public class TileQuarryDropsTester {
         helper.setBlock(chestLocal, Blocks.CHEST);
         helper.setBlock(breakLocal, Blocks.STONE);
 
+        //? if >=1.21.10 {
         TileQuarry quarry = helper.getBlockEntity(quarryLocal, TileQuarry.class);
+        //?} else {
+        /*TileQuarry quarry = helper.getBlockEntity(quarryLocal);*/
+        //?}
         assertTrue(quarry != null, "quarry block-entity must be present");
 
         BlockPos breakAbs = helper.absolutePos(breakLocal);

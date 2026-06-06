@@ -14,8 +14,11 @@ import buildcraft.integration.pipes.PipeRoutingTest;
 
 @EventBusSubscriber(modid = "buildcraftunofficial")
 public class BuildCraftGameTests {
-    // 1.21.11 introduced dynamic TEST_FUNCTION registries. We create a DeferredRegister for it.
-    // Wait, TEST_FUNCTION is in net.minecraft.core.registries.Registries.TEST_FUNCTION
+    // Game-test registration paradigm. 1.21.5+ uses the dynamic Registries.TEST_FUNCTION registry
+    // + JSON test_instance manifests; 1.21.1 (below that cliff) uses @GameTest annotations +
+    // RegisterGameTestsEvent. The 305 registrations below target the modern registry; the 1.21.1
+    // branch is a compiling stub — running the game tests on 1.21.1 is a deferred follow-up.
+    //? if >=1.21.10 {
     @net.neoforged.bus.api.SubscribeEvent
     public static void onRegister(net.neoforged.neoforge.registries.RegisterEvent event) {
         if (event.getRegistryKey().equals(Registries.TEST_FUNCTION)) {
@@ -507,4 +510,14 @@ public class BuildCraftGameTests {
             event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse("buildcraftunofficial:legacy_aliases_resolve"), () -> buildcraft.lib.registry.LegacyAliasTester::testAliasesResolve);
         }
     }
+    //?} else {
+    /*// 1.21.1 game-test registration (DEFERRED follow-up): 1.21.1 discovers tests from @GameTest
+    // annotations via RegisterGameTestsEvent.register(SomeTester.class). This pass targets compile-0
+    // + JUnit; running the 305 game tests on 1.21.1 (annotating methods + resolving the empty-arena
+    // structure) is the follow-up. Stub kept empty so the node compiles and registers no game tests.
+    @net.neoforged.bus.api.SubscribeEvent
+    public static void onRegisterGameTests(net.neoforged.neoforge.event.RegisterGameTestsEvent event) {
+        // intentionally empty (deferred)
+    }*/
+    //?}
 }

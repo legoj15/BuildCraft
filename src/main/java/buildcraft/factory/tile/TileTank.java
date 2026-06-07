@@ -139,6 +139,18 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
+    //? if <1.21.10 {
+    /*// 1.21.1's onDataPacket only applies a NON-empty update tag, so a tank drained to empty (which
+    // serialises to an empty tag) would never clear on the client — it stays showing the last contents
+    // until reload. Apply unconditionally, matching 26.1.2. (TileTank doesn't extend TileBC_Neptune,
+    // so it needs its own copy of this override.) 1.21.1-only.
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net,
+            ClientboundBlockEntityDataPacket pkt, net.minecraft.core.HolderLookup.Provider registries) {
+        loadWithComponents(pkt.getTag(), registries);
+    }*/
+    //?}
+
     // --- Tank Column Balancing ---
 
     /** Moves fluids around to their preferred positions. For liquid fluids this

@@ -173,4 +173,18 @@ public abstract class TileBC_Neptune extends BlockEntity {
     public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
         return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
     }
+
+    //? if <1.21.10 {
+    /*// 1.21.1's IBlockEntityExtension.onDataPacket only applies the update tag when it is NON-empty.
+    // A tile that serialises to an EMPTY tag in some state (e.g. a tank drained empty, an engine that
+    // cleared its buffer) would then never have that state applied on the client — it keeps showing
+    // the last non-empty contents until the chunk reloads. Apply the tag unconditionally, matching
+    // 26.1.2 (whose onDataPacket has no such guard). 1.21.1-only.
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net,
+            net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket pkt,
+            net.minecraft.core.HolderLookup.Provider registries) {
+        loadWithComponents(pkt.getTag(), registries);
+    }*/
+    //?}
 }

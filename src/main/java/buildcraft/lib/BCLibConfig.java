@@ -58,13 +58,14 @@ public class BCLibConfig {
 
         abbreviateLargeNumbers = builder
                 .comment(
-                        "If true, collapse FE/RF readouts at or above 1,000 into compact suffixed form:",
-                        "1,234 -> 1.2k, 1,500,000 -> 1.5M, 2,500,000,000 -> 2.5G, 4,000,000,000,000 -> 4.0T.",
-                        "Suffixes (k = thousand, M = million, G = billion, T = trillion) honour the configured",
-                        "decimal separator. MJ readouts and JEI category power labels stay unabbreviated since",
-                        "those values are either small in normal play or load-bearing precision. Default false."
+                        "If true, large numbers in machine readouts collapse to a compact form:",
+                        "FE/RF and MJ values at or above 1,000 use k/M/G/T suffixes (1,234 -> 1.2k,",
+                        "1,500,000 -> 1.5M, 2,500,000,000 -> 2.5G, 4,000,000,000,000 -> 4.0T), and fluid",
+                        "volumes/rates at or above 1,000 mB switch to buckets (1,600 mB -> 1.6 B,",
+                        "4,000 mB -> 4 buckets). The k/M/G/T suffixes and the bucket decimal honour the",
+                        "configured decimal separator. JEI recipe-cost labels keep full precision. Default true."
                 )
-                .define("abbreviateLargeNumbers", false);
+                .define("abbreviateLargeNumbers", true);
 
         flowDisplay = builder
                 .comment(

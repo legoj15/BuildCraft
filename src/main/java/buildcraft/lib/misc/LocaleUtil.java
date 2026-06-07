@@ -258,6 +258,12 @@ public class LocaleUtil {
         return numberFormat(t, d, decimals).format(value);
     }
 
+    /** Under JUnit (config null) this returns {@code false} so the structural formatter tests (flow
+     *  modes, thousands grouping, RF readouts — paths that abbreviate via the global toggle with no
+     *  explicit flag) see raw un-abbreviated output. In game the registered {@code abbreviateLargeNumbers}
+     *  default ({@code true}) takes over once the config loads. The unset fallback is deliberately the
+     *  safe raw value, NOT the configured default — unlike the label-choice toggles (full unit names,
+     *  separators) whose fallback mirrors their default. */
     private static boolean shouldAbbreviate() {
         return BCLibConfig.abbreviateLargeNumbers != null && BCLibConfig.abbreviateLargeNumbers.get();
     }

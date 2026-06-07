@@ -1,4 +1,6 @@
 ###### Changes since 2026.1.0-rc2:
+- Filter lenses now actually block items whose colour doesn't match (previously they only re-prioritised matching items and let everything else pass)
+- Eroded Badlands now counts as a rich oil-generation biome, like the other badlands variants
 - Fixed the Quarry's drill arm catching fire (showing flames) when mining through lava
 - Fixed fluids clinging to the side of an adjacent pipe they aren't connected to (e.g. a differently-painted pipe), appearing to flow into the non-connection
 - Fixed a server freeze during world generation when oil generated near the edge of a newly-loaded chunk (most likely at high render/simulation distances)

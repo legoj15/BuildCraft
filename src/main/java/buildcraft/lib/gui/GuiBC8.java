@@ -140,6 +140,13 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
         mainGui.drawDragLayer(bcg);
         mainGui.drawMenuOverlayLayer(bcg);
         drawTooltipLayer(mouseX, mouseY, partialTicks);
+        // 1.21.1: draw the single deferred tooltip set during this frame (last-wins, on top),
+        // mirroring 26.1.2's engine-level "for next frame" tooltip. Without this, 1.21.1's
+        // immediate renderTooltip drew every tooltip set in the frame, overlapping. (>=1.21.10
+        // defers in-engine, so no flush is needed there.)
+        //? if <1.21.10 {
+        /*BCGraphics.flushDeferredTooltip();*/
+        //?}
     }
 
     //? if >=1.21.10 {

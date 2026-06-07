@@ -272,13 +272,26 @@ public final class BCGraphics {
     }*/
     //?}
 
-    // On 1.21.1 there is no deferred "for next frame" tooltip; renderTooltip(...) draws immediately.
-    // BuildCraft calls these late in the render pass, so immediate draw lands on top as intended.
+    // 1.21.1 has no engine-level "for next frame" tooltip, and GuiGraphics.renderTooltip(...) draws
+    // IMMEDIATELY — so a frame that set two tooltips (e.g. a fluid-tank widget's own tooltip plus a
+    // screen's custom tank tooltip) drew BOTH, overlapping. Mirror 26.1.2's deferred/last-wins
+    // behaviour: each setter stores the most-recent tooltip as a render action, and GuiBC8.render
+    // flushes the single pending one at the end of the frame (so only the last tooltip set draws,
+    // on top). flush clears the slot first, so a frame that sets no tooltip draws nothing.
+    //? if <1.21.10 {
+    /*private static Runnable pendingTooltip = null;
+    public static void flushDeferredTooltip() {
+        Runnable t = pendingTooltip;
+        pendingTooltip = null;
+        if (t != null) t.run();
+    }*/
+    //?}
+
     public void setTooltipForNextFrame(Component text, int x, int y) {
         //? if >=1.21.10 {
         raw.setTooltipForNextFrame(text, x, y);
         //?} else {
-        /*raw.renderTooltip(net.minecraft.client.Minecraft.getInstance().font, text, x, y);*/
+        /*pendingTooltip = () -> raw.renderTooltip(net.minecraft.client.Minecraft.getInstance().font, text, x, y);*/
         //?}
     }
 
@@ -286,7 +299,7 @@ public final class BCGraphics {
         //? if >=1.21.10 {
         raw.setTooltipForNextFrame(font, text, x, y);
         //?} else {
-        /*raw.renderTooltip(font, text, x, y);*/
+        /*pendingTooltip = () -> raw.renderTooltip(font, text, x, y);*/
         //?}
     }
 
@@ -294,7 +307,7 @@ public final class BCGraphics {
         //? if >=1.21.10 {
         raw.setTooltipForNextFrame(font, stack, x, y);
         //?} else {
-        /*raw.renderTooltip(font, stack, x, y);*/
+        /*pendingTooltip = () -> raw.renderTooltip(font, stack, x, y);*/
         //?}
     }
 
@@ -302,7 +315,7 @@ public final class BCGraphics {
         //? if >=1.21.10 {
         raw.setTooltipForNextFrame(lines, x, y);
         //?} else {
-        /*raw.renderTooltip(net.minecraft.client.Minecraft.getInstance().font, lines, x, y);*/
+        /*pendingTooltip = () -> raw.renderTooltip(net.minecraft.client.Minecraft.getInstance().font, lines, x, y);*/
         //?}
     }
 
@@ -310,7 +323,7 @@ public final class BCGraphics {
         //? if >=1.21.10 {
         raw.setTooltipForNextFrame(font, lines, x, y);
         //?} else {
-        /*raw.renderTooltip(font, lines, x, y);*/
+        /*pendingTooltip = () -> raw.renderTooltip(font, lines, x, y);*/
         //?}
     }
 
@@ -319,7 +332,7 @@ public final class BCGraphics {
         //? if >=1.21.10 {
         raw.setTooltipForNextFrame(font, textComponents, tooltipComponent, x, y);
         //?} else {
-        /*raw.renderTooltip(font, textComponents, tooltipComponent, x, y);*/
+        /*pendingTooltip = () -> raw.renderTooltip(font, textComponents, tooltipComponent, x, y);*/
         //?}
     }
 }

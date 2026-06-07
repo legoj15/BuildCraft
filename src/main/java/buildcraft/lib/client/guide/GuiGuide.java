@@ -629,6 +629,12 @@ public class GuiGuide extends Screen {
                 }
             }
         }
+        // 1.21.1: GuiGuide is a plain Screen (not GuiBC8), so it must flush its own deferred tooltip
+        // (BCGraphics defers setTooltipForNextFrame on 1.21.1; without this flush the guide's item/link
+        // tooltips would be stored but never drawn). >=1.21.10 defers in-engine, so no flush is needed.
+        //? if <1.21.10 {
+        /*buildcraft.lib.gui.BCGraphics.flushDeferredTooltip();*/
+        //?}
     }
 
     private void drawPageTurnArrows(int currentPageIndex, int pageCount, boolean isHalfPage) {

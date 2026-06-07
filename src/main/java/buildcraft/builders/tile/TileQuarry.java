@@ -637,7 +637,18 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                         break;
                     }
                 }
-                drillPos = Vec3.atLowerCornerOf(miningBox.closestInsideTo(worldPosition));
+                // Only seed the drill at the mining-box corner when it has no position yet (initial
+                // setup after the frame is built). The boxIterator isn't persisted, so it is ALWAYS
+                // recreated on load — but drillPos IS persisted (saveAdditional/readData), and on a world
+                // reload it arrives here non-null. Recomputing it then would discard the saved mid-mining
+                // position and snap the drill (and its collision rig entity) to the corner, while the
+                // client's rendered rig stays at the restored position until the next move syncs — the
+                // whole-block "collision desynced from the rig after reload" offset that persisted until
+                // the quarry was broken and replaced. Guarding on null preserves the restored drillPos so
+                // the rig entity and the rendered rig agree.
+                if (drillPos == null) {
+                    drillPos = Vec3.atLowerCornerOf(miningBox.closestInsideTo(worldPosition));
+                }
             }
 
             if (boxIterator != null && boxIterator.hasNext()) {

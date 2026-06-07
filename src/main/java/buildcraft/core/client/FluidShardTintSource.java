@@ -50,8 +50,10 @@ public final class FluidShardTintSource implements ItemTintSource {
 
     private FluidShardTintSource() {}
 
-    /** Shared colour computation. The modern {@code calculate} and the 1.21.1 {@code getColor}
-     *  both delegate here — neither the (level, entity) nor the tintIndex affects the result. */
+    /** Shared colour computation: samples the fluid's representative tint. Both the modern
+     *  {@code calculate} and the 1.21.1 {@code getColor} delegate here for the FLUID layer.
+     *  The (level, entity) args never affect the result; on 1.21.1 {@code getColor} additionally
+     *  guards on tintIndex so only the fluid layer — not the frame/cover — is tinted. */
     private int computeColor(ItemStack stack) {
         SimpleFluidContent content = stack.getOrDefault(BCCore.FLUID_CONTENT.get(), SimpleFluidContent.EMPTY);
         FluidStack fluid = content.copy();
@@ -86,6 +88,14 @@ public final class FluidShardTintSource implements ItemTintSource {
     //?} else {
     /*@Override
     public int getColor(ItemStack stack, int tintIndex) {
+        // DynamicFluidContainerModel emits tintIndex 0 = base (frame), 1 = fluid, 2 = cover.
+        // Tint ONLY the fluid layer; leave the frame and cover neutral (white), matching
+        // NeoForge's own DynamicFluidContainerModel.Colors and the 26.1 item-model format,
+        // which scopes the tint source to the fluid layer alone. Without this guard the shard
+        // FRAME takes the fluid colour. 1.21.1-only (modern calculate() is scoped by the model).
+        if (tintIndex != 1) {
+            return 0xFFFFFFFF;
+        }
         return computeColor(stack);
     }*/
     //?}

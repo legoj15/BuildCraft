@@ -129,6 +129,19 @@ public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchIt
     @Override
     public int getSize() {
         return 9; // 3x3 blueprint grid
+    }
+
+    // Recipe-book click: vanilla RecipeBookMenu.handlePlacement defaults to ServerPlaceRecipe, which MOVES
+    // real items from the player's inventory into the grid — wrong for our PHANTOM blueprint grid (it just
+    // deletes them). Override to set the phantom pattern instead (the same CraftingUtil path the JEI "+"
+    // button uses), consuming nothing and regardless of whether the player has the materials.
+    @Override
+    public void handlePlacement(boolean useMaxItems, RecipeHolder<?> recipe,
+            net.minecraft.server.level.ServerPlayer player) {
+        if (recipe.value() instanceof CraftingRecipe craftingRecipe
+                && player.level() instanceof ServerLevel serverLevel) {
+            CraftingUtil.placeRecipeInBlueprint(craftingRecipe, tile.invBlueprint, serverLevel);
+        }
     }*/
     //?}
 

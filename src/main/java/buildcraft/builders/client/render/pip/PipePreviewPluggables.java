@@ -14,7 +14,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 //? if >=26.1 {
-import com.mojang.blaze3d.vertex.QuadInstance;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 //?} else {
 /*import net.minecraft.client.renderer.block.model.BakedQuad;*/
@@ -38,6 +37,7 @@ import buildcraft.api.transport.pipe.PipeEvent;
 import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
 
+import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.lib.misc.NBTUtilBC;
 
@@ -61,6 +61,9 @@ import buildcraft.transport.client.model.PipeModelCachePluggable.PluggableKey;
 public final class PipePreviewPluggables {
 
     private PipePreviewPluggables() {}
+
+    /** One-shot guard so a recurring per-frame failure logs once, not every frame. */
+    private static boolean loggedFailure = false;
 
     /**
      * Renders every pluggable captured in {@code tileNbt} at the given (already cell-translated)
@@ -109,7 +112,14 @@ public final class PipePreviewPluggables {
             renderQuads(PipeModelCachePluggable.cacheTranslucentAll.bake(new PluggableKey(false, holder)),
                     pose, buffers.getBuffer(BCLibRenderTypes.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS)), light);
         } catch (Throwable t) {
-            // Degrade to pipe-body-only on any offline reconstruction/bake failure.
+            // Degrade to pipe-body-only on any offline reconstruction/bake failure. Log once — this was
+            // a silent black box before, so surface it if a future pluggable can't be rebuilt offline.
+            if (!loggedFailure) {
+                loggedFailure = true;
+                org.apache.logging.log4j.LogManager.getLogger("BCPipePreviewPluggables").warn(
+                        "Failed to render captured pluggables in the snapshot preview "
+                                + "(degrading to pipe-body-only)", t);
+            }
         }
     }
 
@@ -119,16 +129,15 @@ public final class PipePreviewPluggables {
         }
     }
 
-    /** Emit one baked quad — the per-MC-line vertex sink (26.1 putBakedQuad / pre-26.1 putBulkData). */
+    /** Emit one baked quad through the {@link MutableQuad} path the pipe BODY already uses — which is
+     *  version-agnostic and proven on every node, unlike the raw BakedQuad sinks. (26.1's
+     *  {@code putBakedQuad} multiplies in the quad's own baked colours, which rendered the pluggables
+     *  invisible in the offscreen preview; pre-26.1 {@code putBulkData} is a different signature again.)
+     *  A fresh MutableQuad's vertices default to opaque white and {@code fromBakedItem} copies
+     *  position/UV/sprite but not colour, so the pluggable's texture shows as-is; full-bright light
+     *  matches the rest of the preview. Same call shape as {@code PlugBakerFacade}. */
     private static void emit(VertexConsumer vc, PoseStack.Pose pose, BakedQuad quad, int light) {
-        //? if >=26.1 {
-        QuadInstance instance = new QuadInstance();
-        instance.setLightCoords(light);
-        vc.putBakedQuad(pose, quad, instance);
-        //?} else {
-        /*vc.putBulkData(pose, quad, 1.0f, 1.0f, 1.0f, 1.0f, light,
-                net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY);*/
-        //?}
+        new MutableQuad().fromBakedItem(quad).lighti(light).render(pose, vc);
     }
 
     /**

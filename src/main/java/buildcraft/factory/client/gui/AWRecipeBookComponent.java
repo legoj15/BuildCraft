@@ -124,12 +124,12 @@ public class AWRecipeBookComponent extends RecipeBookComponent<ContainerAutoCraf
     }
 }
 //?} else {
-/*// 1.21.1: the recipe-book widget is deferred. The 1.21.1 RecipeBookComponent API differs throughout
-// (raw not generic; init(5-arg) with the menu; renderTooltip(5-arg); hasClickedOutside(7-arg);
-// GhostSlots/RecipeDisplay/ContextMap are all 1.21.5+) and is visual-verify-bound. The BC crafting GUI
-// omits the recipe book on 1.21.1 (manual crafting + JEI still work); this minimal subclass exists only
-// so the screen's field type resolves — it is never instantiated there. TODO: full 1.21.1 recipe-book
-// integration at runClient visual-verification time.
+/*// 1.21.1: vanilla RecipeBookComponent is a CONCRETE class that already implements the whole widget
+// (layout, search/browse, ghost-recipe display) and drives it from the RecipeBookMenu container, so this
+// thin no-arg alias needs no overrides. It IS instantiated by the screen (new AWRecipeBookComponent()
+// then the 5-arg init that passes the menu). The modern >=1.21.10 branch above must instead subclass the
+// abstract generic RecipeBookComponent<M> and supply fillGhostRecipe/selectMatchingRecipes by hand, hence
+// the shared name. Recipe clicks land in ContainerAutoCraftItems.handlePlacement (phantom grid).
 public class AWRecipeBookComponent extends RecipeBookComponent {
 }*/
 //?}

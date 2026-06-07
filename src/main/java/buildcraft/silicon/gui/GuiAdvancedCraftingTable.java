@@ -86,8 +86,26 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
         );
         addRenderableWidget(this.recipeBookButton);
         addRenderableWidget(this.recipeBookComponent);
+        //?} else {
+        /*// 1.21.1: RecipeBookComponent is a concrete vanilla class, so ACTRecipeBookComponent is a thin
+        // alias — instantiate no-arg and pass the menu to the 5-arg init (modern uses ctor-menu + 4-arg).
+        this.recipeBookComponent = new ACTRecipeBookComponent();
+        this.recipeBookComponent.init(this.width, this.height, this.minecraft, this.widthTooNarrow, this.menu);
+        this.leftPos = this.recipeBookComponent.updateScreenPosition(this.width, this.imageWidth);
+        ScreenPosition buttonPos = getRecipeBookButtonPosition();
+        this.recipeBookButton = new ImageButton(
+            buttonPos.x(), buttonPos.y(), 20, 18,
+            RecipeBookComponent.RECIPE_BUTTON_SPRITES,
+            p -> {
+                this.recipeBookComponent.toggleVisibility();
+                this.leftPos = this.recipeBookComponent.updateScreenPosition(this.width, this.imageWidth);
+                ScreenPosition newPos = getRecipeBookButtonPosition();
+                this.recipeBookButton.setPosition(newPos.x(), newPos.y());
+            }
+        );
+        addRenderableWidget(this.recipeBookButton);
+        addRenderableWidget(this.recipeBookComponent);*/
         //?}
-        // 1.21.1: recipe book deferred — recipeBookComponent stays null; the GUI works for manual crafting.
     }
 
     private ScreenPosition getRecipeBookButtonPosition() {
@@ -134,6 +152,12 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
             /*this.recipeBookComponent.renderTooltip(graphics.raw, mouseX, mouseY, this.hoveredSlot);*/
             //?}
         }
+        //?} else {
+        /*// 1.21.1: vanilla RecipeBookComponent.renderTooltip(graphics, leftPos, topPos, mouseX, mouseY).
+        if (this.recipeBookComponent != null && this.recipeBookComponent.isVisible()) {
+            BCGraphics graphics = GuiIcon.getGuiGraphics();
+            this.recipeBookComponent.renderTooltip(graphics.raw, this.leftPos, this.topPos, mouseX, mouseY);
+        }*/
         //?}
     }
 
@@ -172,7 +196,10 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
             ? this.recipeBookComponent.hasClickedOutside(mouseX, mouseY, this.leftPos, this.topPos, this.imageWidth, this.imageHeight) && outside
             : outside;
         //?} else {
-        /*return outside;*/
+        /*// 1.21.1 hasClickedOutside takes the mouse button as a 7th arg.
+        return this.recipeBookComponent != null
+            ? this.recipeBookComponent.hasClickedOutside(mouseX, mouseY, this.leftPos, this.topPos, this.imageWidth, this.imageHeight, button) && outside
+            : outside;*/
         //?}
     }
 

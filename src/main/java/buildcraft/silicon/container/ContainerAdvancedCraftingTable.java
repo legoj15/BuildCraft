@@ -96,6 +96,31 @@ public class ContainerAdvancedCraftingTable extends ContainerBCTile<TileAdvanced
         return this.slots.get(0); // First slot added is the display slot
     }
 
+    //? if <1.21.10 {
+    /*// 1.21.1-only RecipeBookMenu abstracts (modern's RecipeBookMenu lacks these); the base stubs them
+    // grid-0, the table reports its real 3x3 blueprint grid + result slot. handlePlacement is overridden
+    // to set the PHANTOM blueprint pattern via CraftingUtil (the JEI "+" path) instead of vanilla's
+    // ServerPlaceRecipe, which would MOVE real items into the phantom grid and just delete them.
+    @Override
+    public int getResultSlotIndex() {
+        return 0; // the display/result slot is the first slot added
+    }
+
+    @Override
+    public int getSize() {
+        return 9; // 3x3 blueprint grid
+    }
+
+    @Override
+    public void handlePlacement(boolean useMaxItems, RecipeHolder<?> recipe,
+            net.minecraft.server.level.ServerPlayer player) {
+        if (recipe.value() instanceof CraftingRecipe craftingRecipe
+                && player.level() instanceof ServerLevel serverLevel) {
+            CraftingUtil.placeRecipeInBlueprint(craftingRecipe, tile.invBlueprint, serverLevel);
+        }
+    }*/
+    //?}
+
     //? if >=1.21.10 {
     @Override
     public PostPlaceAction handlePlacement(boolean useMaxItems, boolean isCreative, RecipeHolder<?> recipe,

@@ -36,11 +36,16 @@ import net.neoforged.neoforge.client.model.data.ModelData;
 // 26.1.2 / 1.21.11 (modern render) and 1.12.2 (old render) render it cleanly.
 //
 // Fix (two parts), keeping the vanilla geometry/mask/animation/tint:
-//   1. Drop the extrusion's side-wall quads — keep only the flat front/back faces (the Z-axis faces).
-//      That alone removes the per-pixel-cuboid clutter and gives the flat 1.12.2 / 26.1.2 look.
+//   1. Tint-aware side-wall filter. The BASE FRAME (tintIndex 0) keeps its full extrusion — its outer
+//      silhouette side walls give the shard real 3D depth (the white frame pixels render as cuboids,
+//      so it reads as a fluid container, not flat planes). The FLUID layer (tintIndex 1) keeps only
+//      its flat front/back faces (drop its side walls), so it sits inside the frame as a clean fluid
+//      surface instead of a second extruded shell whose per-pixel walls intersect the frame's (the
+//      "collection of intersecting voxels" z-fighting). A single-layer extrusion only walls its outer
+//      boundary, so keeping the frame's walls = the item's outermost edges only.
 //   2. Render with the CULL + SORTED translucent item type 1.21.1 provides (ITEM_LAYERED_TRANSLUCENT),
-//      not the NO_CULL + UNSORTED one the fluid_container picks, so the remaining front (and the
-//      base behind it) blend correctly. Water stays see-through; the shard is clean and flat.
+//      not the NO_CULL + UNSORTED one the fluid_container picks, so the frame and the fluid inside it
+//      blend correctly. Water stays see-through; the shard reads like 1.12.2 / 26.1.2.
 public class FragileFluidShardModel implements IDynamicBakedModel {
 
     private static final List<RenderType> LAYERED_TRANSLUCENT =
@@ -104,11 +109,13 @@ public class FragileFluidShardModel implements IDynamicBakedModel {
             if (in.isEmpty()) {
                 return in;
             }
-            // Keep only the flat front/back faces (normal along Z); drop the per-pixel extrusion
-            // side walls (normal along X/Y), which are what cause the inside-facing z-fighting.
+            // Frame (tintIndex != 1): keep the full extrusion (front/back + outer silhouette walls)
+            // for real 3D depth. Fluid (tintIndex 1): keep only the flat front/back faces (normal
+            // along Z), dropping its side walls so it doesn't form a second voxel shell that
+            // intersects the frame and z-fights.
             List<BakedQuad> out = new ArrayList<>(in.size());
             for (BakedQuad q : in) {
-                if (q.getDirection().getAxis() == Direction.Axis.Z) {
+                if (q.getTintIndex() != 1 || q.getDirection().getAxis() == Direction.Axis.Z) {
                     out.add(q);
                 }
             }

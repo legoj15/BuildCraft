@@ -7,9 +7,10 @@ package buildcraft.builders.client.render.pip;
 
 // Whole-file >=1.21.10: this renderer extends PictureInPictureRenderer and is built on the 1.21.5+
 // PiP pipeline + GPU-buffer/SubmitNodeStorage/TrackingItemStackRenderState paradigm, none of which
-// exists on 1.21.1. The blueprint tooltip preview is stubbed on 1.21.1 (BlueprintRenderer.renderSnapshot
-// no-ops; the PiP renderer is not registered) — gate the entire class out there. TODO(1.21.1 visual
-// pass): reimplement the rotating 3D preview with a classic offscreen/in-tooltip render if desired.
+// exists on 1.21.1 — so the whole class is gated out there. On 1.21.1 the same rotating 3D preview
+// IS implemented, just differently: BlueprintRenderer.renderSnapshot's <1.21.10 branch draws it
+// straight into the GUI via BlueprintGuiRenderer (GuiGraphics.pose() is a real 3D PoseStack pre-26.1),
+// instead of through this offscreen PiP path.
 //? if >=1.21.10 {
 import java.nio.ByteBuffer;
 import java.util.Collections;

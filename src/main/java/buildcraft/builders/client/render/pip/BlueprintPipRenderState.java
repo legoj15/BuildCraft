@@ -6,8 +6,8 @@
 package buildcraft.builders.client.render.pip;
 
 // Whole-file >=1.21.10: PictureInPictureRenderState is the 1.21.5+ GUI PiP pipeline (absent on
-// 1.21.1). The blueprint tooltip preview is stubbed on 1.21.1 (BlueprintRenderer.renderSnapshot
-// no-ops there), so nothing references this record — gate the entire body out.
+// 1.21.1), so this PiP render-state record is gated out there. On 1.21.1 the same preview is drawn
+// directly into the GUI by BlueprintGuiRenderer (no PiP render state), so nothing references this.
 //? if >=1.21.10 {
 import javax.annotation.Nullable;
 

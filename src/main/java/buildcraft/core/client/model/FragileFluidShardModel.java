@@ -10,7 +10,6 @@ import java.util.List;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.ItemOverrides;
 import net.minecraft.client.renderer.block.model.ItemTransforms;
@@ -22,25 +21,28 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
+import net.neoforged.neoforge.client.NeoForgeRenderTypes;
 import net.neoforged.neoforge.client.model.IDynamicBakedModel;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
 // 1.21.1-only fix for the fragile fluid shard rendering as a translucent, z-fighting blob.
 //
 // The shard renders through NeoForge's neoforge:fluid_container model (DynamicFluidContainerModel),
-// which extrudes the base frame and the (masked, animated, tinted) fluid sprite into thin 3D layers
-// and draws the fluid layer TRANSLUCENT. On 26.1.2 / 1.21.11's modern item render that looks clean,
-// but on 1.21.1's classic item render the translucent front lets you see through to the extrusion's
-// back/inside faces, which read as inside-facing z-fighting (the "odd blob").
+// which extrudes the base frame and the (masked, animated, tinted) fluid sprite into thin 3D layers.
+// On 1.21.1 it draws the fluid layer with NeoForgeRenderTypes.ITEM_UNSORTED_TRANSLUCENT, which is
+// NO_CULL + UNSORTED: the extrusion's back/inside faces render and show through the translucent front,
+// and all the translucent faces blend in arbitrary (upload) order rather than back-to-front. Together
+// that reads as inside-facing z-fighting. 26.1.2 / 1.21.11 (modern render) and 1.12.2 (old render)
+// both cull + sort translucent item geometry, so the same shard looks clean there.
 //
-// Fix: keep the vanilla geometry/mask/animation/tint, but render the whole model on the OPAQUE cutout
-// sheet. Opaque draws only the frontmost surface (depth-test + draw order resolve the coplanar layers
-// exactly like a normal multi-layer item, e.g. a spawn egg), so there is nothing to see through and
-// nothing to z-fight — a flat, uniform shard like 1.12.2 / 26.1.2. The fluid still animates and the
-// frame stays neutral; it just no longer reads as a see-through volume.
+// Fix: keep the vanilla geometry/mask/animation/tint, but render the model with the CULL + SORTED
+// translucent item type 1.21.1 also provides (ITEM_LAYERED_TRANSLUCENT). Culling drops the back/inside
+// faces; sorting blends what remains correctly — so water stays see-through but renders as a clean,
+// flat, uniform shard like 1.12.2 / 26.1.2 (no opaque fallback needed).
 public class FragileFluidShardModel implements IDynamicBakedModel {
 
-    private static final List<RenderType> CUTOUT = List.of(Sheets.cutoutBlockSheet());
+    private static final List<RenderType> LAYERED_TRANSLUCENT =
+            List.of(NeoForgeRenderTypes.ITEM_LAYERED_TRANSLUCENT.get());
 
     private final BakedModel vanilla;
     private final ItemOverrides overrides;
@@ -67,11 +69,11 @@ public class FragileFluidShardModel implements IDynamicBakedModel {
 
     @Override
     public List<RenderType> getRenderTypes(ItemStack stack, boolean fabulous) {
-        return CUTOUT;
+        return LAYERED_TRANSLUCENT;
     }
 
     // Resolves the vanilla per-fluid model (keeping mask/animation/tint), then wraps it to force the
-    // opaque cutout render type.
+    // cull + sorted translucent render type.
     private final class ShardOverrides extends ItemOverrides {
         @Override
         public BakedModel resolve(BakedModel model, ItemStack stack, ClientLevel level,
@@ -80,16 +82,16 @@ public class FragileFluidShardModel implements IDynamicBakedModel {
             if (resolved == null) {
                 resolved = vanilla;
             }
-            return new CutoutModel(resolved);
+            return new WrappedModel(resolved);
         }
     }
 
-    // Serves the resolved vanilla quads unchanged, but on the opaque cutout sheet (the fix). Everything
-    // else delegates to the resolved model.
-    private final class CutoutModel implements IDynamicBakedModel {
+    // Serves the resolved vanilla quads unchanged, but on the cull + sorted translucent sheet (the fix).
+    // Everything else delegates to the resolved model.
+    private final class WrappedModel implements IDynamicBakedModel {
         private final BakedModel resolved;
 
-        CutoutModel(BakedModel resolved) {
+        WrappedModel(BakedModel resolved) {
             this.resolved = resolved;
         }
 
@@ -101,7 +103,7 @@ public class FragileFluidShardModel implements IDynamicBakedModel {
 
         @Override
         public List<RenderType> getRenderTypes(ItemStack stack, boolean fabulous) {
-            return CUTOUT;
+            return LAYERED_TRANSLUCENT;
         }
 
         @Override public boolean useAmbientOcclusion() { return resolved.useAmbientOcclusion(); }

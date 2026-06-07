@@ -186,7 +186,7 @@ public final class BlueprintGuiRenderer {
                                     buffers.getBuffer(BCLibRenderTypes.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS)),
                                     FULL_BRIGHT, PIPE_PAINT_ALPHA);
                             // Pluggables captured on this pipe — reconstructed offline, rendered like the body.
-                            PipePreviewPluggables.render(schBlock.getTileNbtForRender(), pipePose, buffers, FULL_BRIGHT);
+                            PipePreviewPluggables.render(schBlock.getTileNbtForRender(), pose, buffers, FULL_BRIGHT);
                             pose.popPose();
                             continue;
                         }

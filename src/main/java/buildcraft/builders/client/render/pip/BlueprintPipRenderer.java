@@ -412,7 +412,7 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                                     FULL_BRIGHT, PIPE_PAINT_ALPHA);
                             // Pluggables (plugs/gates/lenses/filters/wires/facades) captured on this
                             // pipe — reconstructed offline and rendered like the body.
-                            PipePreviewPluggables.render(schBlock.getTileNbtForRender(), pipePose,
+                            PipePreviewPluggables.render(schBlock.getTileNbtForRender(), poseStack,
                                     this.bufferSource, FULL_BRIGHT);
                             poseStack.popPose();
                             submittedPipe++;

@@ -34,6 +34,7 @@ import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeEvent;
+import buildcraft.api.transport.pluggable.IPlugDynamicRenderer;
 import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
 
@@ -41,15 +42,17 @@ import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.lib.misc.NBTUtilBC;
 
+import buildcraft.transport.client.PipeRegistryClient;
 import buildcraft.transport.client.model.PipeModelCachePluggable;
 import buildcraft.transport.client.model.PipeModelCachePluggable.PluggableKey;
 
 /**
  * Client-only companion to {@link PipePreviewModel}: reconstructs a captured pipe's pluggables
- * (plugs, gates, lenses, filters, wires, facades) offline from its tile NBT and renders their
- * static model quads into the snapshot 3D preview, the same way the pipe body is. The pluggable
- * bakers ({@link PipeModelCachePluggable}) produce vanilla {@code BakedQuad}s, so the only
- * version-specific bit is the per-quad emit (26.1 {@code putBakedQuad} / pre-26.1 {@code putBulkData}).
+ * (plugs, gates, lenses, filters, wires, facades) offline from its tile NBT and renders them into the
+ * snapshot 3D preview, the same way the pipe body is. Static-baked pluggables (plugs/lenses/filters/
+ * facades) come from {@link PipeModelCachePluggable} as vanilla {@code BakedQuad}s; dynamic-rendered
+ * ones (gates and pulsars contribute zero static quads, to keep chunk re-meshes cheap) are drawn
+ * through their registered {@link IPlugDynamicRenderer}.
  * <p>
  * Kept separate from {@link PipePreviewModel} so the body-model-key path stays free of any
  * {@code net.minecraft.client} / GL reference (it's exercised on a dedicated server by the
@@ -66,10 +69,12 @@ public final class PipePreviewPluggables {
     private static boolean loggedFailure = false;
 
     /**
-     * Renders every pluggable captured in {@code tileNbt} at the given (already cell-translated)
-     * pose into {@code buffers}. No-op if there are no pluggables or reconstruction fails.
+     * Renders every pluggable captured in {@code tileNbt} into {@code buffers}, at the cell the given
+     * {@code poseStack} is already translated to. No-op if there are no pluggables or reconstruction
+     * fails. Takes the PoseStack (not just its top Pose) because the dynamic-renderer pluggables
+     * (gates, pulsars) apply their own per-side rotation.
      */
-    public static void render(@Nullable CompoundTag tileNbt, PoseStack.Pose pose,
+    public static void render(@Nullable CompoundTag tileNbt, PoseStack poseStack,
             MultiBufferSource buffers, int light) {
         if (tileNbt == null) {
             return;
@@ -105,12 +110,29 @@ public final class PipePreviewPluggables {
             if (!any) {
                 return;
             }
-            // Cutout geometry (the bodies of plugs/gates/facades) then translucent (lens glass,
-            // coloured overlays) — same render types the pipe body uses so they sit together.
+            PoseStack.Pose pose = poseStack.last();
+            // Static-baked pluggables (plugs, lenses, filters, facades): their quads come from the
+            // pluggable model cache — cutout then translucent (lens glass / colour overlays), the same
+            // render types the pipe body uses so they sit together.
             renderQuads(PipeModelCachePluggable.cacheCutoutAll.bake(new PluggableKey(true, holder)),
                     pose, buffers.getBuffer(BCLibRenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS)), light);
             renderQuads(PipeModelCachePluggable.cacheTranslucentAll.bake(new PluggableKey(false, holder)),
                     pose, buffers.getBuffer(BCLibRenderTypes.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS)), light);
+            // Dynamic-renderer pluggables (gates, pulsars) contribute ZERO static quads — in-world a
+            // registered per-frame renderer draws them (so toggling one doesn't force a chunk re-mesh).
+            // Drive that same renderer here. It applies its own per-side rotation (hence the PoseStack),
+            // and offline there's no live world so PlugGateRenderer falls back to full-bright.
+            VertexConsumer dynBuffer =
+                    buffers.getBuffer(BCLibRenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS));
+            for (PipePluggable plug : holder.plugs) {
+                if (plug == null) {
+                    continue;
+                }
+                IPlugDynamicRenderer<PipePluggable> dyn = PipeRegistryClient.getPlugRenderer(plug);
+                if (dyn != null) {
+                    dyn.render(plug, 0, 0, 0, 0, dynBuffer, poseStack);
+                }
+            }
         } catch (Throwable t) {
             // Degrade to pipe-body-only on any offline reconstruction/bake failure. Log once — this was
             // a silent black box before, so surface it if a future pluggable can't be rebuilt offline.

@@ -163,21 +163,43 @@ public class GuiElementFluidTank implements IInteractionElement {
 
     // --- Tooltips ---
 
+    /**
+     * Builds the standard BC tank tooltip lines. Line 1 is the fluid's name, or — for an empty
+     * tank — "Empty &lt;capacity&gt; &lt;unit&gt; Tank". Line 2 is "&lt;amount&gt; / &lt;capacity&gt; &lt;unit&gt;"
+     * in grey. The fluid-volume unit (mB / millibuckets) follows the {@code useFullUnitNames} config.
+     * Shared by the per-screen tank-tooltip renderers and {@link #addToolTips}.
+     */
+    public static List<net.minecraft.network.chat.Component> buildTankTooltip(FluidStack fluid, int amount, int capacity) {
+        String unit = buildcraft.lib.misc.LocaleUtil.fluidUnit();
+        List<net.minecraft.network.chat.Component> lines = new java.util.ArrayList<>();
+        if (amount > 0 && fluid != null && !fluid.isEmpty()) {
+            lines.add(fluid.getHoverName());
+        } else {
+            lines.add(net.minecraft.network.chat.Component.translatable("buildcraft.tank.empty", capacity + " " + unit));
+        }
+        lines.add(net.minecraft.network.chat.Component.literal(amount + " / " + capacity + " " + unit)
+                .withStyle(net.minecraft.ChatFormatting.GRAY));
+        return lines;
+    }
+
     @Override
     public void addToolTips(List<ToolTip> tooltips) {
         if (tank == null) return;
         if (!contains(gui.mouse.getX(), gui.mouse.getY())) return;
 
         FluidStack fluid = tank.getFluidStack(0);
-        long capacity = tank.getCapacityMb(0);
-        long amount = tank.getAmountMb(0);
-        // 1.12.2 shape: first line = fluid name (or "Empty"), second line = "x / cap mB" in
-        // gray. Section sign §7 = ChatFormatting.GRAY, which the vanilla tooltip renderer picks
-        // up on per-line strings.
-        String name = fluid.isEmpty() || amount == 0 ? "Empty" : fluid.getHoverName().getString();
+        int capacity = tank.getCapacityMb(0);
+        int amount = tank.getAmountMb(0);
+        // First line = fluid name (or "Empty <capacity> <unit> Tank"), second line = "x / cap <unit>"
+        // in grey (§7 = ChatFormatting.GRAY). Mirrors buildTankTooltip; the unit follows
+        // useFullUnitNames.
+        String unit = buildcraft.lib.misc.LocaleUtil.fluidUnit();
+        String name = (fluid.isEmpty() || amount == 0)
+                ? net.minecraft.network.chat.Component.translatable("buildcraft.tank.empty", capacity + " " + unit).getString()
+                : fluid.getHoverName().getString();
         tooltips.add(new ToolTip(
             name,
-            net.minecraft.ChatFormatting.GRAY + (amount + " / " + capacity + " mB")
+            net.minecraft.ChatFormatting.GRAY + (amount + " / " + capacity + " " + unit)
         ));
     }
 

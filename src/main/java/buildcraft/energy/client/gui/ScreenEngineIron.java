@@ -220,11 +220,14 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
         if (mouseX >= absX && mouseX < absX + TANK_WIDTH
             && mouseY >= absY && mouseY < absY + TANK_HEIGHT) {
 
+            String unit = buildcraft.lib.misc.LocaleUtil.fluidUnit();
             List<Component> lines = new java.util.ArrayList<>();
             if (fluid != null && fluid != Fluids.EMPTY && amount > 0) {
                 lines.add(fluid.getFluidType().getDescription());
+            } else {
+                lines.add(Component.translatable("buildcraft.tank.empty", maxAmount + " " + unit));
             }
-            lines.add(Component.literal(amount + " / " + maxAmount + " mB")
+            lines.add(Component.literal(amount + " / " + maxAmount + " " + unit)
                 .withStyle(net.minecraft.ChatFormatting.GRAY));
 
             // MC 26.1: Tooltip rendering APIs have changed significantly.

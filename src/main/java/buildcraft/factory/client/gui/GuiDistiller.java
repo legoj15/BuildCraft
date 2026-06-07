@@ -168,12 +168,8 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
             int amount = tank.getAmountMb(0);
             int capacity = tank.getCapacityMb(0);
 
-            List<Component> lines = new ArrayList<>();
-            if (amount > 0) {
-                lines.add(tank.getFluidStack(0).getHoverName());
-            }
-            lines.add(Component.literal(amount + " / " + capacity + " mB")
-                    .withStyle(ChatFormatting.GRAY));
+            List<Component> lines = buildcraft.lib.gui.elem.GuiElementFluidTank.buildTankTooltip(
+                    tank.getFluidStack(0), amount, capacity);
             java.util.List<net.minecraft.util.FormattedCharSequence> comps = new java.util.ArrayList<>();
             for (net.minecraft.network.chat.Component c : lines) {
                 comps.add(c.getVisualOrderText());

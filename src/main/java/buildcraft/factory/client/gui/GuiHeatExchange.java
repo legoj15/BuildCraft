@@ -212,12 +212,8 @@ public class GuiHeatExchange extends GuiBC8<ContainerHeatExchange> {
             int amount = tank.getAmountMb(0);
             int capacity = tank.getCapacityMb(0);
 
-            List<Component> lines = new ArrayList<>();
-            if (amount > 0) {
-                lines.add(tank.getFluidStack(0).getHoverName());
-            }
-            lines.add(Component.literal(amount + " / " + capacity + " mB")
-                    .withStyle(ChatFormatting.GRAY));
+            List<Component> lines = buildcraft.lib.gui.elem.GuiElementFluidTank.buildTankTooltip(
+                    tank.getFluidStack(0), amount, capacity);
             List<FormattedCharSequence> comps = new ArrayList<>();
             for (Component c : lines) {
                 comps.add(c.getVisualOrderText());

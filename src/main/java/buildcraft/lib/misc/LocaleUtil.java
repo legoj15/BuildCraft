@@ -138,6 +138,12 @@ public class LocaleUtil {
         return fullSuffix ? "millibuckets" : "mB";
     }
 
+    /** The fluid-volume unit label for the user's display preferences: "millibuckets" when
+     *  {@link BCEnergyConfig#useFullUnitNames} is on (default), else "mB". */
+    public static String fluidUnit() {
+        return fluidUnit(shouldUseFullNames());
+    }
+
     private static String bucketsUnit(boolean fullSuffix) {
         return fullSuffix ? "buckets" : "B";
     }

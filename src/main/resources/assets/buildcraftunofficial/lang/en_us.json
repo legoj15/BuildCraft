@@ -433,6 +433,7 @@
     "buildcraft.help.filtered_buffer.filter": "Restricts what item or block can enter the buffer slot below.",
     "buildcraft.help.filtered_buffer.main.title": "Buffer Slots",
     "buildcraft.help.filtered_buffer.main": "Items or blocks matched against the corresponding filter enter and are stored in their respective buffer slot.",
+    "buildcraft.tank.empty": "Empty %s Tank",
     "buildcraft.help.tank.title.tankGeneric": "Tank",
     "buildcraft.help.tank.generic_block.desc": "Holds up to 16 buckets of any single fluid. Pipes can fill or empty it from any side.",
     "buildcraft.help.chute.slots.title": "Buffer Slots",

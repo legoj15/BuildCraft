@@ -120,10 +120,25 @@ public class BCTransportClient {
         );
     }
     //?}
-    // 1.21.1: no data-driven ItemTintSource, and the painted-pipe ITEM colour overlay is a deferred
-    // TODO there anyway (PipeItemModel base-delegates without a tintindex overlay). PipeColourTintSource
-    // still compiles as an ItemColor on 1.21.1, ready to wire via RegisterColorHandlersEvent.Item once
-    // PipeItemModel emits the tinted overlay quads. See the PipeItemModel 1.21.1 paint TODO.
+    //? if <1.21.10 {
+    /*// 1.21.1 has no data-driven ItemTintSource, so register PipeColourTintSource as a classic ItemColor
+    // for every pipe item. PipeItemModel's 1.21.1 painted overlay emits its mask quads at tintIndex 0,
+    // which this handler tints with the (semi-transparent) PIPE_COLOUR; the dyed-sprite fluid-pipe
+    // variant bakes the colour into the texture and carries no tintindex, so it is unaffected.
+    @SubscribeEvent
+    public static void registerItemColors(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Item event) {
+        java.util.List<Item> pipeItems = new java.util.ArrayList<>();
+        for (PipeDefinition def : PipeApi.pipeRegistry.getAllRegisteredPipes()) {
+            Item pipeItem = (Item) PipeApi.pipeRegistry.getItemForPipe(def);
+            if (pipeItem != null) {
+                pipeItems.add(pipeItem);
+            }
+        }
+        if (!pipeItems.isEmpty()) {
+            event.register(PipeColourTintSource.INSTANCE, pipeItems.toArray(new Item[0]));
+        }
+    }*/
+    //?}
 
 
     /**

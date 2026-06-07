@@ -346,22 +346,29 @@ public class PipeItemModel implements ItemModel {
 }
 //?} else {
 /*// 1.21.1 has no 1.21.4+ ItemModel/ItemStackRenderState system — pipe items are classic BakedModels.
-// This wraps the vanilla item baked model and renders the BASE pipe correctly. Painted-pipe colour
-// (dyed sprite for fluid pipes, tinted overlay for transport/kinesis) is a 1.21.1 TODO: it needs the
-// classic ItemColor (RegisterColorHandlersEvent.Item) + ItemOverrides path — until then painted pipes
-// render as the base item, exactly the state the 1.21.11 node shipped in before its own paint fix.
+// Unpainted pipes delegate to the vanilla baked model. Painted pipes are resolved per-stack through
+// ItemOverrides into a small fixed-quad BakedModel (cached per colour): fluid pipes get the
+// dye_replace sprite baked in; transport/kinesis pipes get the vanilla base quads plus a mask overlay
+// (tintIndex 0) whose colour comes from the PipeColourTintSource ItemColor (registered for every pipe
+// item in BCTransportClient on 1.21.1). The transport variant draws on the translucent item sheet so
+// the ~30%-alpha overlay tint blends instead of rendering opaque — the 1.21.1 ItemRenderer reads the
+// tint alpha and renders the model once per render type, so one render type avoids double-draw.
+// Geometry mirrors the >=1.21.10 ItemModel branch (and pipe_item.json) exactly. 1.21.1-only.
 public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {
     private final net.minecraft.client.resources.model.BakedModel vanillaDelegate;
     private final PipeDefinition definition;
+    private final net.minecraft.client.renderer.block.model.ItemOverrides paintOverrides;
 
     public PipeItemModel(net.minecraft.client.resources.model.BakedModel vanillaDelegate, PipeDefinition definition) {
         this.vanillaDelegate = vanillaDelegate;
         this.definition = definition;
+        this.paintOverrides = new PaintOverrides();
     }
 
+    // Unpainted base rendering — delegate to the vanilla pipe item model.
     @Override
-    public java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> getQuads(
-            net.minecraft.world.level.block.state.BlockState state, net.minecraft.core.Direction side,
+    public java.util.List<BakedQuad> getQuads(
+            net.minecraft.world.level.block.state.BlockState state, Direction side,
             net.minecraft.util.RandomSource rand, net.neoforged.neoforge.client.model.data.ModelData data,
             net.minecraft.client.renderer.RenderType renderType) {
         return vanillaDelegate.getQuads(state, side, rand, data, renderType);
@@ -378,7 +385,153 @@ public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynam
         return vanillaDelegate.getTransforms();
     }
     @Override public net.minecraft.client.renderer.block.model.ItemOverrides getOverrides() {
-        return vanillaDelegate.getOverrides();
+        return paintOverrides;
+    }
+
+    // ItemOverrides: pick a painted, per-colour model when the stack carries PIPE_COLOUR; otherwise the
+    // base model (which delegates to vanilla). Painted models are cached per colour.
+    private final class PaintOverrides extends net.minecraft.client.renderer.block.model.ItemOverrides {
+        private final java.util.Map<DyeColor, net.minecraft.client.resources.model.BakedModel> cache =
+                new java.util.EnumMap<>(DyeColor.class);
+
+        @Override
+        public net.minecraft.client.resources.model.BakedModel resolve(
+                net.minecraft.client.resources.model.BakedModel model, ItemStack stack,
+                net.minecraft.client.multiplayer.ClientLevel level,
+                net.minecraft.world.entity.LivingEntity entity, int seed) {
+            DyeColor colour = stack.get(BCTransportItems.PIPE_COLOUR.get());
+            if (colour == null) {
+                return model;
+            }
+            return cache.computeIfAbsent(colour, PipeItemModel.this::buildPaintedModel);
+        }
+    }
+
+    private net.minecraft.client.resources.model.BakedModel buildPaintedModel(DyeColor colour) {
+        if (definition.flowType == PipeApi.flowFluids) {
+            // Fluid pipes: dye_replace sprite variant (colour baked into the texture), opaque cutout.
+            TextureAtlasSprite[] dyedSprites = PipeBaseModelGenStandard.ensureDyedSprites(definition, colour);
+            int itemTexIndex = definition.itemTextureTop;
+            TextureAtlasSprite dyedSprite = itemTexIndex < dyedSprites.length ? dyedSprites[itemTexIndex] : dyedSprites[0];
+            return new PaintedPipeModel(generatePipeQuads(dyedSprite),
+                    net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
+        }
+
+        // Transport/kinesis: vanilla base quads + mask overlay (tintIndex 0), all on the translucent sheet.
+        java.util.List<BakedQuad> quads = new ArrayList<>();
+        net.minecraft.util.RandomSource rand = net.minecraft.util.RandomSource.create(42L);
+        net.neoforged.neoforge.client.model.data.ModelData empty = net.neoforged.neoforge.client.model.data.ModelData.EMPTY;
+        quads.addAll(vanillaDelegate.getQuads(null, null, rand, empty, null));
+        for (Direction d : Direction.values()) {
+            quads.addAll(vanillaDelegate.getQuads(null, d, rand, empty, null));
+        }
+        TextureAtlasSprite[] maskArray = PipeBaseModelGenStandard.ensureMaskSprites(definition);
+        TextureAtlasSprite maskSprite = (maskArray != null && maskArray.length > 0) ? maskArray[0] : null;
+        if (maskSprite != null && maskSprite != SpriteUtil.missingSprite()) {
+            quads.addAll(generateOverlayQuads(maskSprite));
+        }
+        return new PaintedPipeModel(quads, buildcraft.lib.client.render.BCLibRenderTypes.translucentItemSheet());
+    }
+
+    // A fixed-quad BakedModel: serves the painted quads under the null side on a single render type, and
+    // delegates transforms / particle / lighting to the vanilla pipe model. Its own overrides are EMPTY
+    // (it is already the resolved result, so no further per-stack resolution).
+    private final class PaintedPipeModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {
+        private final java.util.List<BakedQuad> quads;
+        private final java.util.List<net.minecraft.client.renderer.RenderType> renderTypes;
+
+        PaintedPipeModel(java.util.List<BakedQuad> quads, net.minecraft.client.renderer.RenderType renderType) {
+            this.quads = quads;
+            this.renderTypes = java.util.List.of(renderType);
+        }
+
+        @Override
+        public java.util.List<BakedQuad> getQuads(
+                net.minecraft.world.level.block.state.BlockState state, Direction side,
+                net.minecraft.util.RandomSource rand, net.neoforged.neoforge.client.model.data.ModelData data,
+                net.minecraft.client.renderer.RenderType renderType) {
+            return side == null ? quads : java.util.Collections.emptyList();
+        }
+
+        @Override
+        public java.util.List<net.minecraft.client.renderer.RenderType> getRenderTypes(ItemStack stack, boolean fabulous) {
+            return renderTypes;
+        }
+
+        @Override public boolean useAmbientOcclusion() { return vanillaDelegate.useAmbientOcclusion(); }
+        @Override public boolean isGui3d() { return vanillaDelegate.isGui3d(); }
+        @Override public boolean usesBlockLight() { return vanillaDelegate.usesBlockLight(); }
+        @Override public boolean isCustomRenderer() { return false; }
+        @Override public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
+            return vanillaDelegate.getParticleIcon();
+        }
+        @Override public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
+            return vanillaDelegate.getTransforms();
+        }
+        @Override public net.minecraft.client.renderer.block.model.ItemOverrides getOverrides() {
+            return net.minecraft.client.renderer.block.model.ItemOverrides.EMPTY;
+        }
+    }
+
+    // --- geometry (matches pipe_item.json's 3-cube model; identical to the >=1.21.10 branch) ---
+
+    private static java.util.List<BakedQuad> generatePipeQuads(TextureAtlasSprite sprite) {
+        java.util.List<BakedQuad> quads = new ArrayList<>();
+        UvFaceData bottomSideUvs = UvFaceData.from16(4, 12, 12, 16);
+        UvFaceData centerUvs     = UvFaceData.from16(4, 4, 12, 12);
+        UvFaceData topSideUvs    = UvFaceData.from16(4, 0, 12, 4);
+        UvFaceData capFaceUvs    = UvFaceData.from16(4, 4, 12, 12);
+        addPipeFaces(quads, sprite, new Vector3f(0.5f, 0.125f, 0.5f), new Vector3f(0.25f, 0.125f, 0.25f),
+                new Direction[]{ Direction.DOWN }, capFaceUvs);
+        addPipeFaces(quads, sprite, new Vector3f(0.5f, 0.125f, 0.5f), new Vector3f(0.25f, 0.125f, 0.25f),
+                new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST }, bottomSideUvs);
+        addPipeFaces(quads, sprite, new Vector3f(0.5f, 0.5f, 0.5f), new Vector3f(0.25f, 0.25f, 0.25f),
+                new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST }, centerUvs);
+        addPipeFaces(quads, sprite, new Vector3f(0.5f, 0.875f, 0.5f), new Vector3f(0.25f, 0.125f, 0.25f),
+                new Direction[]{ Direction.UP }, capFaceUvs);
+        addPipeFaces(quads, sprite, new Vector3f(0.5f, 0.875f, 0.5f), new Vector3f(0.25f, 0.125f, 0.25f),
+                new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST }, topSideUvs);
+        return quads;
+    }
+
+    private static void addPipeFaces(java.util.List<BakedQuad> quads, TextureAtlasSprite sprite,
+            Vector3f center, Vector3f radius, Direction[] faces, UvFaceData uvs) {
+        for (Direction face : faces) {
+            MutableQuad quad = ModelUtil.createFace(face, center, radius, uvs);
+            quad.setSprite(sprite);
+            quad.texFromSprite(sprite);
+            quads.add(quad.toBakedBlock());
+        }
+    }
+
+    private static java.util.List<BakedQuad> generateOverlayQuads(TextureAtlasSprite maskSprite) {
+        java.util.List<BakedQuad> quads = new ArrayList<>();
+        UvFaceData bottomSideUvs = UvFaceData.from16(4, 12, 12, 16);
+        UvFaceData centerUvs     = UvFaceData.from16(4, 4, 12, 12);
+        UvFaceData topSideUvs    = UvFaceData.from16(4, 0, 12, 4);
+        UvFaceData capFaceUvs    = UvFaceData.from16(4, 4, 12, 12);
+        addOverlayFaces(quads, maskSprite, new Vector3f(0.5f, 0.125f, 0.5f), new Vector3f(0.25f, 0.125f, 0.25f),
+                new Direction[]{ Direction.DOWN }, capFaceUvs);
+        addOverlayFaces(quads, maskSprite, new Vector3f(0.5f, 0.125f, 0.5f), new Vector3f(0.25f, 0.125f, 0.25f),
+                new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST }, bottomSideUvs);
+        addOverlayFaces(quads, maskSprite, new Vector3f(0.5f, 0.5f, 0.5f), new Vector3f(0.25f, 0.25f, 0.25f),
+                new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST }, centerUvs);
+        addOverlayFaces(quads, maskSprite, new Vector3f(0.5f, 0.875f, 0.5f), new Vector3f(0.25f, 0.125f, 0.25f),
+                new Direction[]{ Direction.UP }, capFaceUvs);
+        addOverlayFaces(quads, maskSprite, new Vector3f(0.5f, 0.875f, 0.5f), new Vector3f(0.25f, 0.125f, 0.25f),
+                new Direction[]{ Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST }, topSideUvs);
+        return quads;
+    }
+
+    private static void addOverlayFaces(java.util.List<BakedQuad> quads, TextureAtlasSprite sprite,
+            Vector3f center, Vector3f radius, Direction[] faces, UvFaceData uvs) {
+        for (Direction face : faces) {
+            MutableQuad quad = ModelUtil.createFace(face, center, radius, uvs);
+            quad.setSprite(sprite);
+            quad.texFromSprite(sprite);
+            quad.setTint(0);
+            quads.add(quad.toBakedTranslucent());
+        }
     }
 }*/
 //?}

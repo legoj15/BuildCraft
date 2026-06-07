@@ -5,7 +5,7 @@
 - Fixed the Quarry's drill arm catching fire (showing flames) when mining through lava
 - Fixed the Quarry resetting its drill to the mining start after a world reload instead of resuming where it left off (which could also leave the moving rig's collision a block out of step with the visible rig)
 - Fixed the Quarry's moving rig collision sitting a block or two off from the visible rig — you could fall through part of a boom arm, most noticeably once the drill stopped after moving (the drill's final position wasn't being sent to the client)
-- Fixed the Quarry's vertical drill arm having no collision once it had descended a long way down (you could walk straight through it where it met the frame)
+- Fixed being able to fall through parts of the Quarry's moving rig even though it was clearly there — the far ends of long boom arms, and the vertical drill arm once it had descended a long way down (the rig's collision is now segmented so it stays solid along its full length, whatever the frame size or mining depth)
 - The Debugger item now draws the Quarry's boom-arm collision boxes as solid red cuboids (in addition to the existing force-loaded-chunk highlights), making the moving rig's collision easy to see
 - Fixed fluids clinging to the side of an adjacent pipe they aren't connected to (e.g. a differently-painted pipe), appearing to flow into the non-connection
 - Fixed a server freeze during world generation caused by oil generating near the edge of a newly-loaded chunk (could strike when creating a new world or exploring at high render/simulation distances)

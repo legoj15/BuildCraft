@@ -39,16 +39,6 @@ public class EntityQuarryRig extends Entity {
     private static final EntityDataAccessor<Float> SIZE_X = SynchedEntityData.defineId(EntityQuarryRig.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> SIZE_Y = SynchedEntityData.defineId(EntityQuarryRig.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> SIZE_Z = SynchedEntityData.defineId(EntityQuarryRig.class, EntityDataSerializers.FLOAT);
-    /**
-     * When true the box hangs DOWN from the entity position instead of being centred on it (so the AABB
-     * is {@code [pos.y - SIZE_Y, pos.y]}). Used for the tall vertical drill column: anchoring it at the
-     * TOP keeps the entity's <em>position</em> — and therefore the entity-storage section MC scans for
-     * collision — up at the frame top where the player stands, even when the column extends ~hundreds of
-     * blocks down. A column centred on its midpoint puts its position section far below the player, and
-     * {@code EntitySectionStorage.forEachAccessibleNonEmptySection} only scans sections within ~a few
-     * blocks of the query — so the player never finds it and the fully-extended arm has no collision.
-     */
-    private static final EntityDataAccessor<Boolean> ANCHOR_TOP = SynchedEntityData.defineId(EntityQuarryRig.class, EntityDataSerializers.BOOLEAN);
 
     public boolean phasing = false;
 
@@ -63,7 +53,6 @@ public class EntityQuarryRig extends Entity {
         builder.define(SIZE_X, 0f);
         builder.define(SIZE_Y, 0f);
         builder.define(SIZE_Z, 0f);
-        builder.define(ANCHOR_TOP, false);
     }
 
     @Override
@@ -101,8 +90,8 @@ public class EntityQuarryRig extends Entity {
     /*protected AABB makeBoundingBox() {
         net.minecraft.world.phys.Vec3 position = this.position();*/
     //?}
-        float sizeY = this.entityData.get(SIZE_Y);
         float halfX = this.entityData.get(SIZE_X) / 2.0f;
+        float halfY = this.entityData.get(SIZE_Y) / 2.0f;
         float halfZ = this.entityData.get(SIZE_Z) / 2.0f;
 
         // Before dimensions are set (SIZE_X is 0), fall back to default
@@ -114,12 +103,9 @@ public class EntityQuarryRig extends Entity {
             //?}
         }
 
-        // The column hangs straight down from its anchor (position.y is the TOP); the beams are centred.
-        double minY = this.entityData.get(ANCHOR_TOP) ? position.y - sizeY : position.y - sizeY / 2.0;
-        double maxY = this.entityData.get(ANCHOR_TOP) ? position.y : position.y + sizeY / 2.0;
         return new AABB(
-            position.x - halfX, minY, position.z - halfZ,
-            position.x + halfX, maxY, position.z + halfZ
+            position.x - halfX, position.y - halfY, position.z - halfZ,
+            position.x + halfX, position.y + halfY, position.z + halfZ
         );
     }
 
@@ -216,7 +202,7 @@ public class EntityQuarryRig extends Entity {
     public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
         super.onSyncedDataUpdated(key);
         if (this.level().isClientSide()
-                && (SIZE_X.equals(key) || SIZE_Y.equals(key) || SIZE_Z.equals(key) || ANCHOR_TOP.equals(key))) {
+                && (SIZE_X.equals(key) || SIZE_Y.equals(key) || SIZE_Z.equals(key))) {
             this.setPos(this.getX(), this.getY(), this.getZ());
         }
     }
@@ -242,26 +228,8 @@ public class EntityQuarryRig extends Entity {
         this.entityData.set(SIZE_X, (float) (aabb.maxX - aabb.minX));
         this.entityData.set(SIZE_Y, (float) (aabb.maxY - aabb.minY));
         this.entityData.set(SIZE_Z, (float) (aabb.maxZ - aabb.minZ));
-        this.entityData.set(ANCHOR_TOP, false);
 
         // Now setPos will call makeBoundingBox() which reads the updated sizes
         this.setPos((aabb.minX + aabb.maxX) / 2.0, (aabb.minY + aabb.maxY) / 2.0, (aabb.minZ + aabb.maxZ) / 2.0);
-    }
-
-    /**
-     * Like {@link #setRiggingBox} but positions the entity at the box's TOP face, with the box hanging
-     * straight down from there ({@link #ANCHOR_TOP}). For the tall vertical drill column: keeps the
-     * entity's position (and its entity-storage section) up at the frame top near the player so the
-     * collision query actually scans it, instead of burying it at the column midpoint hundreds of blocks
-     * below — see {@link #ANCHOR_TOP}.
-     */
-    public void setRiggingBoxAnchoredTop(AABB aabb) {
-        this.entityData.set(SIZE_X, (float) (aabb.maxX - aabb.minX));
-        this.entityData.set(SIZE_Y, (float) (aabb.maxY - aabb.minY));
-        this.entityData.set(SIZE_Z, (float) (aabb.maxZ - aabb.minZ));
-        this.entityData.set(ANCHOR_TOP, true);
-
-        // Position at the top face; makeBoundingBox() (ANCHOR_TOP) then extends the box down by SIZE_Y.
-        this.setPos((aabb.minX + aabb.maxX) / 2.0, aabb.maxY, (aabb.minZ + aabb.maxZ) / 2.0);
     }
 }

@@ -129,7 +129,10 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     private List<AABB> collisionBoxes = ImmutableList.of();
     private Vec3 collisionDrillPos;
 
-    private final EntityQuarryRig[] rigs = new EntityQuarryRig[3];
+    /** The collision rig entities. Each moving arm (2 horizontal beams + 1 vertical column) is split
+     *  into section-aligned segment entities so a player anywhere along it lands in a section the
+     *  collision query actually scans — a single long entity is only found near its own position. */
+    private final List<EntityQuarryRig> rigs = new ArrayList<>();
 
     public TileQuarry(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.QUARRY.get(), pos, state);
@@ -736,40 +739,78 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             return;
         }
 
-        boolean isDrillMoving = (currentTask instanceof TaskMoveDrill);
+        // Split each arm along its long axis into 16-block, section-aligned segments. MC files every
+        // entity in the single entity-storage section at its POSITION and a collision query only scans
+        // sections within ~a couple of blocks of the query (EntitySectionStorage.forEachAccessibleNon-
+        // EmptySection); one long entity is therefore only found near its own centre, so a player out at
+        // a beam's end — or partway down a deep column — falls through despite the box being there.
+        // Per-section segments keep a collidable piece in whichever section the player is in.
+        List<AABB> beamSegments = new ArrayList<>();
+        splitBySection(beamSegments, boxes.get(0), Axis.Z); // X-axis beam runs along Z
+        splitBySection(beamSegments, boxes.get(1), Axis.X); // Z-axis beam runs along X
+        List<AABB> columnSegments = new ArrayList<>();
+        splitBySection(columnSegments, boxes.get(2), Axis.Y); // vertical column runs along Y
 
-        for (int i = 0; i < 3; i++) {
-            EntityQuarryRig rig = rigs[i];
+        boolean isDrillMoving = (currentTask instanceof TaskMoveDrill);
+        int total = beamSegments.size() + columnSegments.size();
+
+        // Resize the rig list to match the segment count, discarding any now-surplus entities (the
+        // column's segment count grows as the drill descends and shrinks if the box is rebuilt smaller).
+        while (rigs.size() > total) {
+            EntityQuarryRig surplus = rigs.remove(rigs.size() - 1);
+            if (surplus != null && !surplus.isRemoved()) {
+                surplus.discard();
+            }
+        }
+        while (rigs.size() < total) {
+            rigs.add(null);
+        }
+
+        for (int i = 0; i < total; i++) {
+            boolean isColumn = i >= beamSegments.size();
+            AABB box = isColumn ? columnSegments.get(i - beamSegments.size()) : beamSegments.get(i);
+            EntityQuarryRig rig = rigs.get(i);
             if (rig == null || rig.isRemoved()) {
                 rig = new EntityQuarryRig(BCBuildersEntities.QUARRY_RIG.get(), level);
-                if (rig != null) {
-                    level.addFreshEntity(rig);
-                    rigs[i] = rig;
-                }
+                level.addFreshEntity(rig);
+                rigs.set(i, rig);
             }
-            if (rig != null) {
-                if (i == 2) {
-                    // The vertical column: anchor its collision entity at the TOP (frame top) so its
-                    // entity-storage section stays up where the player is. A box this tall (drill to frame
-                    // top, hundreds of blocks when deep) centred on its midpoint sinks its position far
-                    // below the player, and MC's collision query only scans sections near the query — so
-                    // the fully-extended arm would have no collision.
-                    rig.setRiggingBoxAnchoredTop(boxes.get(i));
-                    rig.setPhasing(isDrillMoving);
-                } else {
-                    rig.setRiggingBox(boxes.get(i));
-                }
+            rig.setRiggingBox(box);
+            // Only the column phases (passes through the player) while the drill moves, so the moving
+            // mast doesn't shove anyone; the beams stay solid to be walked on.
+            rig.setPhasing(isColumn && isDrillMoving);
+        }
+    }
+
+    /** Appends {@code box} to {@code out}, cut into pieces aligned to 16-block entity-storage sections
+     *  along {@code axis} (so each piece's centre — where its entity is filed — sits in its own section).
+     *  Package-private for {@code TileQuarrySplitBySectionTester}. */
+    static void splitBySection(List<AABB> out, AABB box, Axis axis) {
+        double min = axis == Axis.X ? box.minX : axis == Axis.Y ? box.minY : box.minZ;
+        double max = axis == Axis.X ? box.maxX : axis == Axis.Y ? box.maxY : box.maxZ;
+        int sectionMin = (int) Math.floor(min) >> 4;
+        int sectionMax = (int) Math.floor(max - 1.0e-7) >> 4;
+        for (int s = sectionMin; s <= sectionMax; s++) {
+            double lo = Math.max(min, (double) (s << 4));
+            double hi = Math.min(max, (double) ((s + 1) << 4));
+            if (hi - lo < 1.0e-4) {
+                continue;
             }
+            out.add(switch (axis) {
+                case X -> new AABB(lo, box.minY, box.minZ, hi, box.maxY, box.maxZ);
+                case Y -> new AABB(box.minX, lo, box.minZ, box.maxX, hi, box.maxZ);
+                case Z -> new AABB(box.minX, box.minY, lo, box.maxX, box.maxY, hi);
+            });
         }
     }
 
     private void discardRigs() {
-        for (int i = 0; i < 3; i++) {
-            if (rigs[i] != null && !rigs[i].isRemoved()) {
-                rigs[i].discard();
+        for (EntityQuarryRig rig : rigs) {
+            if (rig != null && !rig.isRemoved()) {
+                rig.discard();
             }
-            rigs[i] = null;
         }
+        rigs.clear();
     }
 
     /** Returns collision boxes for the quarry's moving drill rig, allowing players to walk on it.

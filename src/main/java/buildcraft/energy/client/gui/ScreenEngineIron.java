@@ -227,8 +227,9 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
                     .withStyle(net.minecraft.ChatFormatting.GRAY));
             } else {
                 // Empty: only "Empty <capacity> Tank" — the capacity is already shown, no 0/x line.
+                // localizeFluidCapacity uses the singular unit ("Empty 4 bucket Tank") for the modifier.
                 lines.add(Component.translatable("buildcraft.tank.empty",
-                    buildcraft.lib.misc.LocaleUtil.localizeFluidStatic(maxAmount)));
+                    buildcraft.lib.misc.LocaleUtil.localizeFluidCapacity(maxAmount)));
             }
 
             // MC 26.1: Tooltip rendering APIs have changed significantly.

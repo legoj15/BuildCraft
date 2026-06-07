@@ -357,6 +357,29 @@ public class LocaleUtilNumberFormatTester {
     }
 
     @Test
+    public void staticFluid_compoundModifierUsesSingularUnit() {
+        // The "Empty <capacity> Tank" position keeps the unit SINGULAR regardless of count ("4 bucket tank").
+        Assertions.assertEquals("4 bucket", LocaleUtil.formatStaticFluid(4000, true, true, true));
+        Assertions.assertEquals("16 bucket", LocaleUtil.formatStaticFluid(16_000, true, true, true));
+        Assertions.assertEquals("1 bucket", LocaleUtil.formatStaticFluid(1000, true, true, true));
+        Assertions.assertEquals("500 millibucket", LocaleUtil.formatStaticFluid(500, true, false, true));
+        // Symbols don't inflect: the singular flag is a no-op for mB / B.
+        Assertions.assertEquals("4 B", LocaleUtil.formatStaticFluid(4000, false, true, true));
+        Assertions.assertEquals("500 mB", LocaleUtil.formatStaticFluid(500, false, false, true));
+        // The plural 3-arg overload is unchanged (standalone position).
+        Assertions.assertEquals("4 buckets", LocaleUtil.formatStaticFluid(4000, true, true));
+        Assertions.assertEquals("500 millibuckets", LocaleUtil.formatStaticFluid(500, true, false));
+    }
+
+    @Test
+    public void localizeFluidCapacity_singular_vs_localizeFluidStatic_plural() {
+        // Config unset under JUnit → full names ON, abbreviation OFF (documented defaults). The capacity
+        // (compound modifier) is singular; the standalone static form is plural.
+        Assertions.assertEquals("16,000 millibucket", LocaleUtil.localizeFluidCapacity(16_000));
+        Assertions.assertEquals("16,000 millibuckets", LocaleUtil.localizeFluidStatic(16_000));
+    }
+
+    @Test
     public void tank_sharesUnitWhenBothSameScale() {
         Assertions.assertEquals("500 / 800 mB", LocaleUtil.formatFluidTank(500, 800, false, false));
         Assertions.assertEquals("2 / 4 B", LocaleUtil.formatFluidTank(2000, 4000, false, true));
@@ -364,10 +387,20 @@ public class LocaleUtilNumberFormatTester {
     }
 
     @Test
-    public void tank_perValueUnitsWhenScalesDiffer() {
-        // A near-empty bucket-scale tank: amount < 1000 stays mB, capacity ≥ 1000 shows buckets.
-        Assertions.assertEquals("500 mB / 4 B", LocaleUtil.formatFluidTank(500, 4000, false, true));
-        Assertions.assertEquals("500 millibuckets / 4 buckets",
-                LocaleUtil.formatFluidTank(500, 4000, true, true));
+    public void tank_harmonizesToCapacityScale_noMixedUnits() {
+        // When the capacity is bucket-scale (≥ 1000 mB) and abbreviation is on, the amount is shown in
+        // buckets too — even when it's under 1000 mB — so the readout never mixes mB with buckets.
+        // 174 mB → 0.174 → "0.2"; 4000 mB → "4".
+        Assertions.assertEquals("0.2 / 4 B", LocaleUtil.formatFluidTank(174, 4000, false, true));
+        Assertions.assertEquals("0.2 / 4 buckets", LocaleUtil.formatFluidTank(174, 4000, true, true));
+        // A precisely-half bucket.
+        Assertions.assertEquals("0.5 / 4 buckets", LocaleUtil.formatFluidTank(500, 4000, true, true));
+    }
+
+    @Test
+    public void tank_subBucketCapacityStaysMillibuckets() {
+        // Capacity under 1000 mB: the whole readout stays in mB even with abbreviation on (no bucket scale).
+        Assertions.assertEquals("174 / 500 mB", LocaleUtil.formatFluidTank(174, 500, false, true));
+        Assertions.assertEquals("174 / 500 millibuckets", LocaleUtil.formatFluidTank(174, 500, true, true));
     }
 }

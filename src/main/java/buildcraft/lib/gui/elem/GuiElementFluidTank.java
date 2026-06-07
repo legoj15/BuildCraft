@@ -165,11 +165,13 @@ public class GuiElementFluidTank implements IInteractionElement {
 
     /**
      * Builds the standard BC tank tooltip lines. For a tank with fluid: line 1 is the fluid's name and
-     * line 2 is "&lt;amount&gt; / &lt;capacity&gt; &lt;unit&gt;" in grey. For an empty tank: a single
-     * "Empty &lt;capacity&gt; &lt;unit&gt; Tank" line — no "0 / &lt;capacity&gt;" line, since that line
-     * already states the capacity. The unit follows {@code useFullUnitNames} (mB / millibuckets); amounts
-     * at or above 1000 mB collapse to buckets when {@code abbreviateLargeNumbers} is on. Shared by the
-     * per-screen tank-tooltip renderers and {@link #addToolTips}.
+     * line 2 is "&lt;amount&gt; / &lt;capacity&gt; &lt;unit&gt;" in grey, both sides sharing one unit. For
+     * an empty tank: a single "Empty &lt;capacity&gt; &lt;unit&gt; Tank" line — no "0 / &lt;capacity&gt;"
+     * line, since that line already states the capacity — with the unit kept SINGULAR ("Empty 4 bucket
+     * Tank") because it modifies the noun "Tank". The unit follows {@code useFullUnitNames} (mB /
+     * millibuckets); when {@code abbreviateLargeNumbers} is on a bucket-scale tank (capacity ≥ 1000 mB)
+     * shows the whole readout in buckets — including a sub-bucket amount ("0.2 / 4 buckets"), never a mixed
+     * "174 mB / 4 buckets". Shared by the per-screen tank-tooltip renderers and {@link #addToolTips}.
      */
     public static List<net.minecraft.network.chat.Component> buildTankTooltip(FluidStack fluid, int amount, int capacity) {
         List<net.minecraft.network.chat.Component> lines = new java.util.ArrayList<>();
@@ -182,7 +184,7 @@ public class GuiElementFluidTank implements IInteractionElement {
             // Empty: the "Empty <capacity> Tank" line already states the capacity, so there's no separate
             // "0 / <capacity>" line to add.
             lines.add(net.minecraft.network.chat.Component.translatable("buildcraft.tank.empty",
-                    buildcraft.lib.misc.LocaleUtil.localizeFluidStatic(capacity)));
+                    buildcraft.lib.misc.LocaleUtil.localizeFluidCapacity(capacity)));
         }
         return lines;
     }
@@ -200,7 +202,7 @@ public class GuiElementFluidTank implements IInteractionElement {
         // when the setting is on, and the unit follows useFullUnitNames.
         if (fluid.isEmpty() || amount == 0) {
             tooltips.add(new ToolTip(net.minecraft.network.chat.Component
-                    .translatable("buildcraft.tank.empty", buildcraft.lib.misc.LocaleUtil.localizeFluidStatic(capacity))
+                    .translatable("buildcraft.tank.empty", buildcraft.lib.misc.LocaleUtil.localizeFluidCapacity(capacity))
                     .getString()));
         } else {
             tooltips.add(new ToolTip(

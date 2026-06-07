@@ -128,10 +128,10 @@ public class LocaleUtil {
         if (abbreviate && Math.abs(mb) >= 1000L) {
             double buckets = mb / 1000.0;
             return formatAbbreviated(buckets, currentThousandsSep(), currentDecimalSep())
-                    + " " + bucketsUnit(fullSuffix);
+                    + " " + bucketsUnit(fullSuffix, false);
         }
         return formatLong(mb, currentThousandsSep(), currentDecimalSep(), false)
-                + " " + fluidUnit(fullSuffix);
+                + " " + fluidUnit(fullSuffix, false);
     }
 
     /** Buckets with an OPTIONAL single decimal — "1" for a whole bucket, "1.1" for a fraction, "16" for
@@ -154,16 +154,32 @@ public class LocaleUtil {
                 : formatLong(mb, currentThousandsSep(), currentDecimalSep(), false);
     }
 
-    /** {@code "<value> <unit>"} for a single static fluid volume — e.g. {@code "4000 mB"},
-     *  {@code "4 buckets"}, {@code "1.1 B"}. The unit follows {@link BCEnergyConfig#useFullUnitNames}; under
-     *  {@link BCLibConfig#abbreviateLargeNumbers} a value ≥ 1000 mB is shown in buckets. */
+    /** {@code "<value> <unit>"} for a single standalone fluid volume — e.g. {@code "4000 mB"},
+     *  {@code "4 buckets"}, {@code "1.1 B"}. Standalone position, so the unit is PLURAL. The unit follows
+     *  {@link BCEnergyConfig#useFullUnitNames}; under {@link BCLibConfig#abbreviateLargeNumbers} a value
+     *  ≥ 1000 mB is shown in buckets. */
     static String formatStaticFluid(long mb, boolean full, boolean abbreviate) {
-        boolean buckets = abbreviate && Math.abs(mb) >= 1000L;
-        return formatFluidValue(mb, buckets) + " " + (buckets ? bucketsUnit(full) : fluidUnit(full));
+        return formatStaticFluid(mb, full, abbreviate, false);
     }
 
+    /** As {@link #formatStaticFluid(long, boolean, boolean)} but {@code singular} forces the SINGULAR
+     *  unit name ("bucket"/"millibucket") for the compound-modifier position — the "Empty 4 bucket Tank"
+     *  capacity readout, where a number+unit modifies the following noun and English keeps the unit
+     *  singular regardless of count ("a 4-bucket tank", like "a 5-gallon drum"). The mB/B symbols don't
+     *  inflect, so {@code singular} only affects the spelled-out full names. */
+    static String formatStaticFluid(long mb, boolean full, boolean abbreviate, boolean singular) {
+        boolean buckets = abbreviate && Math.abs(mb) >= 1000L;
+        return formatFluidValue(mb, buckets) + " " + unitFor(buckets, full, singular);
+    }
+
+    /** A standalone single fluid volume with the PLURAL unit (e.g. "4 buckets"). */
     public static String localizeFluidStatic(long mb) {
-        return formatStaticFluid(mb, shouldUseFullNames(), shouldAbbreviate());
+        return formatStaticFluid(mb, shouldUseFullNames(), shouldAbbreviate(), false);
+    }
+
+    /** A tank CAPACITY for the "Empty &lt;capacity&gt; Tank" line — SINGULAR unit (compound modifier). */
+    public static String localizeFluidCapacity(long mb) {
+        return formatStaticFluid(mb, shouldUseFullNames(), shouldAbbreviate(), true);
     }
 
     /** {@code "<amount> / <capacity> <unit>"} for a tank readout — see {@link #formatFluidTank}. */
@@ -171,33 +187,37 @@ public class LocaleUtil {
         return formatFluidTank(amount, capacity, shouldUseFullNames(), shouldAbbreviate());
     }
 
-    /** Package-visible explicit-flag variant for unit tests (mirrors {@link #formatFluidFlow}). Each value
-     *  follows abbreviation (≥ 1000 mB → buckets); the unit is shared when both land in the same one
-     *  ({@code "500 / 4000 mB"}, {@code "2 / 4 buckets"}), otherwise each carries its own — a near-empty
-     *  bucket-scale tank reads {@code "500 mB / 4 buckets"}. */
+    /** Package-visible explicit-flag variant for unit tests (mirrors {@link #formatFluidFlow}). ONE shared
+     *  unit, chosen by the CAPACITY's scale: when abbreviation is on and the capacity is ≥ 1000 mB the whole
+     *  readout is in buckets — a near-empty bucket-scale tank reads {@code "0.2 / 4 buckets"}, never a mixed
+     *  {@code "174 mB / 4 buckets"} — otherwise both sides stay in mB ({@code "174 / 500 mB"}). The unit is
+     *  PLURAL (standalone "x / y unit" position, no trailing noun). */
     static String formatFluidTank(long amount, long capacity, boolean full, boolean abbreviate) {
-        boolean amountBuckets = abbreviate && Math.abs(amount) >= 1000L;
-        boolean capacityBuckets = abbreviate && Math.abs(capacity) >= 1000L;
-        if (amountBuckets == capacityBuckets) {
-            String unit = capacityBuckets ? bucketsUnit(full) : fluidUnit(full);
-            return formatFluidValue(amount, amountBuckets) + " / " + formatFluidValue(capacity, capacityBuckets)
-                    + " " + unit;
-        }
-        return formatStaticFluid(amount, full, abbreviate) + " / " + formatStaticFluid(capacity, full, abbreviate);
+        boolean buckets = abbreviate && Math.abs(capacity) >= 1000L;
+        return formatFluidValue(amount, buckets) + " / " + formatFluidValue(capacity, buckets)
+                + " " + unitFor(buckets, full, false);
     }
 
-    private static String fluidUnit(boolean fullSuffix) {
-        return fullSuffix ? "millibuckets" : "mB";
+    /** Selects the fluid-volume unit label: buckets vs millibuckets, full name vs symbol, and (for the
+     *  full names only) singular vs plural. The mB/B symbols never inflect. */
+    private static String unitFor(boolean buckets, boolean full, boolean singular) {
+        return buckets ? bucketsUnit(full, singular) : fluidUnit(full, singular);
     }
 
-    /** The fluid-volume unit label for the user's display preferences: "millibuckets" when
+    private static String fluidUnit(boolean fullSuffix, boolean singular) {
+        if (!fullSuffix) return "mB";
+        return singular ? "millibucket" : "millibuckets";
+    }
+
+    /** The fluid-volume unit label (plural) for the user's display preferences: "millibuckets" when
      *  {@link BCEnergyConfig#useFullUnitNames} is on (default), else "mB". */
     public static String fluidUnit() {
-        return fluidUnit(shouldUseFullNames());
+        return fluidUnit(shouldUseFullNames(), false);
     }
 
-    private static String bucketsUnit(boolean fullSuffix) {
-        return fullSuffix ? "buckets" : "B";
+    private static String bucketsUnit(boolean fullSuffix, boolean singular) {
+        if (!fullSuffix) return "B";
+        return singular ? "bucket" : "buckets";
     }
 
     /** Format a long with the configured thousands grouping separator. When

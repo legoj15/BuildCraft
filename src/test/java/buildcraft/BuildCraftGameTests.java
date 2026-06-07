@@ -350,7 +350,13 @@ public class BuildCraftGameTests {
         // rotation, otherwise facades stay on captured faces after a rotated build and block flow.
         reg.accept("buildcraftunofficial:pipe_schematic_rotates_pluggable_faces", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesPluggableFaces);
 
-        // Heat Exchanger fluid filtering (heatant on START, coolant on END; output drain-only)
+        // Heat Exchanger fluid filtering (heatant on START, coolant on END; output drain-only).
+        // NOTE: this and the other fluid testers gated >=1.21.10 below (DistillerTester,
+        // FloodGateTester, TankManagerTester) are MODERN-ONLY — they're written entirely against the
+        // NeoForge Transfer API (FluidResource / FluidStacksResourceHandler / Transaction.openRoot),
+        // which is absent on 1.21.1, so their methods don't compile there. Running them on 1.21.1
+        // needs a rewrite to the classic IFluidHandler / BCFluidTank facade. Deferred — it's test
+        // coverage only: the production fluid tiles already use the facade and pass in-game on 1.21.1.
         //? if >=1.21.10 {
         reg.accept("buildcraftunofficial:heat_exchanger_output_rejects_external_insert", () -> buildcraft.factory.HeatExchangerTester::testOutputTankRejectsExternalInsert);
         reg.accept("buildcraftunofficial:heat_exchanger_output_accepts_internal_insert", () -> buildcraft.factory.HeatExchangerTester::testOutputTankAcceptsInternalInsert);

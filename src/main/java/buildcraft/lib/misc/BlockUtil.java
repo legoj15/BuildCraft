@@ -48,8 +48,19 @@ public class BlockUtil {
     // --- Version-neutral useItemOn result values ---
     // BlockBehaviour#useItemOn returns InteractionResult on 1.21.10+ but the older ItemInteractionResult
     // enum on 1.21.1. These return the node-appropriate value so block useItemOn bodies stay shared across
-    // nodes; only each override's declared return type is gated. PASS maps to PASS_TO_DEFAULT_BLOCK_INTERACTION
-    // on 1.21.1 (the equivalent "fall through to useWithoutItem" signal).
+    // nodes; only each override's declared return type is gated.
+    //
+    // Cross-node mapping of the two "I didn't handle the item" signals (they are NOT interchangeable):
+    //   itemUsePass()            -> 26.1: PASS ;             1.21.1: SKIP_DEFAULT_BLOCK_INTERACTION
+    //       "skip the block's empty-hand interaction, fall straight through to Item#useOn". On 26.1
+    //       plain PASS already skips useWithoutItem (only TRY_WITH_EMPTY_HAND triggers it), so the
+    //       1.21.1 equivalent is SKIP_DEFAULT — NOT PASS_TO_DEFAULT (which would run useWithoutItem
+    //       first and, for a block whose useWithoutItem opens a GUI, swallow the click before the
+    //       held item's useOn — e.g. a wrench could never reach its rotation path). Use this when a
+    //       held item must reach its own useOn.
+    //   itemUseTryWithEmptyHand() -> 26.1: TRY_WITH_EMPTY_HAND ; 1.21.1: PASS_TO_DEFAULT_BLOCK_INTERACTION
+    //       "run the block's empty-hand interaction (useWithoutItem) for this item too". Use when the
+    //       block's no-item behaviour should also apply while holding this item.
     //? if >=1.21.10 {
     public static net.minecraft.world.InteractionResult itemUsePass() { return net.minecraft.world.InteractionResult.PASS; }
     public static net.minecraft.world.InteractionResult itemUseSuccess() { return net.minecraft.world.InteractionResult.SUCCESS; }
@@ -59,10 +70,11 @@ public class BlockUtil {
 
     /** Adapt an {@link net.minecraft.world.InteractionResult} (e.g. from a shared GUI-open helper that
      *  both useItemOn and useWithoutItem call) to the useItemOn return type. Identity on 1.21.10+; maps
-     *  to the {@code ItemInteractionResult} enum on 1.21.1 (PASS -> PASS_TO_DEFAULT_BLOCK_INTERACTION). */
+     *  to the {@code ItemInteractionResult} enum on 1.21.1 (PASS -> SKIP_DEFAULT_BLOCK_INTERACTION, so a
+     *  helper that returns PASS lets the held item's useOn run, matching 26.1's PASS semantics). */
     public static net.minecraft.world.InteractionResult itemUseFrom(net.minecraft.world.InteractionResult result) { return result; }
     //?} else {
-    /*public static net.minecraft.world.ItemInteractionResult itemUsePass() { return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION; }
+    /*public static net.minecraft.world.ItemInteractionResult itemUsePass() { return net.minecraft.world.ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION; }
     public static net.minecraft.world.ItemInteractionResult itemUseSuccess() { return net.minecraft.world.ItemInteractionResult.SUCCESS; }
     public static net.minecraft.world.ItemInteractionResult itemUseConsume() { return net.minecraft.world.ItemInteractionResult.CONSUME; }
     public static net.minecraft.world.ItemInteractionResult itemUseFail() { return net.minecraft.world.ItemInteractionResult.FAIL; }
@@ -74,7 +86,7 @@ public class BlockUtil {
             case CONSUME -> net.minecraft.world.ItemInteractionResult.CONSUME;
             case CONSUME_PARTIAL -> net.minecraft.world.ItemInteractionResult.CONSUME_PARTIAL;
             case FAIL -> net.minecraft.world.ItemInteractionResult.FAIL;
-            case PASS -> net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            case PASS -> net.minecraft.world.ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         };
     }*/
     //?}

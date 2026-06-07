@@ -185,6 +185,28 @@ public class EntityQuarryRig extends Entity {
         }
     }
 
+    /**
+     * Rebuild the collision box from the synched dimensions whenever they change on the client.
+     *
+     * <p>{@link #makeBoundingBox} is only invoked by {@code setPos} — i.e. on a POSITION update. But the
+     * synched {@code SIZE_*} values arrive in a separate packet a tick after this entity's spawn packet,
+     * and a boom-arm beam that isn't moving in its own axis (e.g. the X-beam while the drill is doing a
+     * Z-pass) receives no position update to pick up the new size. Without this hook its box would stay at
+     * the stale spawn size — the {@code halfX <= 0} 1×1 fallback — until the next periodic re-sync,
+     * leaving a gap in the rig's collision (small frames make it a couple of blocks; it only shows when
+     * an arm happens to be idle right after the entity (re)spawns, e.g. after a world reload). Re-applying
+     * the current position here refreshes the AABB the moment the size syncs. Client-only: the server
+     * positions the rig via {@code TileQuarry.setRiggingBox}, which already setPos-es after setting size.
+     */
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+        if (this.level().isClientSide()
+                && (SIZE_X.equals(key) || SIZE_Y.equals(key) || SIZE_Z.equals(key))) {
+            this.setPos(this.getX(), this.getY(), this.getZ());
+        }
+    }
+
     // ── Setters (server-side) ────────────────────────────────────────────
 
     public void setPhasing(boolean phase) {

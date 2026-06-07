@@ -748,9 +748,16 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                 }
             }
             if (rig != null) {
-                rig.setRiggingBox(boxes.get(i));
                 if (i == 2) {
+                    // The vertical column: anchor its collision entity at the TOP (frame top) so its
+                    // entity-storage section stays up where the player is. A box this tall (drill to frame
+                    // top, hundreds of blocks when deep) centred on its midpoint sinks its position far
+                    // below the player, and MC's collision query only scans sections near the query — so
+                    // the fully-extended arm would have no collision.
+                    rig.setRiggingBoxAnchoredTop(boxes.get(i));
                     rig.setPhasing(isDrillMoving);
+                } else {
+                    rig.setRiggingBox(boxes.get(i));
                 }
             }
         }

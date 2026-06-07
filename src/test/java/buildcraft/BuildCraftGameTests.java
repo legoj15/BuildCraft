@@ -112,6 +112,10 @@ public class BuildCraftGameTests {
         // directly by PipeFlowRendererPowerGeometryTester.
         reg.accept("buildcraftunofficial:power_pipe_engine_to_tester", () -> buildcraft.transport.pipe.flow.PipeFlowPowerTester::testEngineThroughDiamondPipesPowersTester);
 
+        // FE pipes must size a receiver's demand by a simulated insert, not buffer headroom —
+        // otherwise bufferless pass-through sinks (AE2's Energy Acceptor) are never fed.
+        reg.accept("buildcraftunofficial:fe_pipe_bufferless_receiver_demand", () -> buildcraft.transport.pipe.flow.PipeFlowRedstoneFluxDemandTester::testBufferlessReceiverReportsDemand);
+
         // Transport Storage
         reg.accept("buildcraftunofficial:filtered_buffer_drops", () -> buildcraft.transport.FilteredBufferTester::testFilteredBufferDrops);
         

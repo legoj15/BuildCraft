@@ -338,41 +338,31 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
             s.displayPower = (int) (value * MjAPI.MJ);
         }
 
-        // Compute the tiles requesting power that are not power pipes
+        // Compute the power that connected non-pipe tiles are willing to accept this tick.
+        // We ASK each receiver how much it will actually take (via a rolled-back simulated
+        // insert in queryEnergyDemand) rather than inferring demand from buffer headroom
+        // (capacity - stored). NeoForge's EnergyHandler contract is explicit that the capacity
+        // hint can read 0 — or even below the current amount — while the handler still accepts
+        // power: "the only way to know if a handler will accept a resource is to try to insert
+        // it." AE2's Energy Acceptor is exactly that case — a bufferless FE->AE converter
+        // (internalMaxPower 0) that funnels straight into the ME grid, so capacity-stored was
+        // always 0 and the pipe never fed it (whereas the ME Controller, which carries an
+        // 8000 AE buffer, worked).
         for (Direction face : Direction.values()) {
             if (pipe.getConnectedType(face) != ConnectedType.TILE) {
                 continue;
             }
             //? if >=1.21.10 {
             EnergyHandler recv = pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK);
-            if (recv != null) {
-                // Check if the tile can actually receive energy (equivalent to 1.12.2 canReceive())
-                boolean canReceive;
-                try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
-                         net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
-                    canReceive = recv.insert(1, tx) > 0;
-                    // Don't commit — just testing
-                }
-                if (canReceive) {
-                    int requested = (int) (recv.getCapacityAsLong() - recv.getAmountAsLong());
-                    if (requested > 0) {
-                        requestPower(face, requested);
-                    }
-                }
-            }
             //?} else {
-            /*net.neoforged.neoforge.energy.IEnergyStorage recv = pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK);
+            /*net.neoforged.neoforge.energy.IEnergyStorage recv = pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK);*/
+            //?}
             if (recv != null) {
-                // Check if the tile can actually receive energy (simulate a 1-unit receive)
-                boolean canReceive = recv.receiveEnergy(1, true) > 0;
-                if (canReceive) {
-                    int requested = recv.getMaxEnergyStored() - recv.getEnergyStored();
-                    if (requested > 0) {
-                        requestPower(face, requested);
-                    }
+                int demand = queryEnergyDemand(recv, maxPower);
+                if (demand > 0) {
+                    requestPower(face, demand);
                 }
             }
-            *///?}
         }
 
         // Sum the amount of power requested on each side
@@ -440,6 +430,26 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         }
         s.nextPowerQuery = Math.min(s.nextPowerQuery, maxPower);
     }
+
+    /** Measures how much power {@code recv} will actually accept right now by performing a
+     *  rolled-back simulated insert of up to {@code max}. This is the contract-correct way to
+     *  size demand: NeoForge's EnergyHandler explicitly notes the capacity hint can read 0 (or
+     *  below the current amount) while the handler still accepts power, so {@code capacity -
+     *  stored} computed 0 demand for bufferless pass-through receivers such as AE2's Energy
+     *  Acceptor and they were never fed. Package-visible for {@code PipeFlowRedstoneFluxDemandTester}. */
+    //? if >=1.21.10 {
+    static int queryEnergyDemand(EnergyHandler recv, int max) {
+        try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
+                 net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+            return recv.insert(max, tx);
+            // No commit — the transaction rolls back; this is a measurement, not a transfer.
+        }
+    }
+    //?} else {
+    /*static int queryEnergyDemand(net.neoforged.neoforge.energy.IEnergyStorage recv, int max) {
+        return recv.receiveEnergy(max, true);
+    }*/
+    //?}
 
     public int getPowerRequested(@Nullable Direction side) {
         int req = 0;

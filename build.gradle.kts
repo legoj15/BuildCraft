@@ -378,6 +378,12 @@ tasks.withType<JavaCompile>().configureEach {
     exclude("**/compat/rei/**")
     // Surface the full cross-cliff error set during the 1.21.11 port (javac caps at 100 by default).
     options.compilerArgs.addAll(listOf("-Xmaxerrs", "2000", "-Xmaxwarns", "200"))
+    // Opt-in lint audit: `-PbcLint=deprecation` (also =all, =unchecked, =removal, ...) surfaces the
+    // javac warning detail that's otherwise just summarised ("recompile with -Xlint"). Default builds
+    // are unchanged — no extra warnings/noise — so this is purely a diagnostic switch.
+    if (project.hasProperty("bcLint")) {
+        options.compilerArgs.addAll(listOf("-Xlint:${project.property("bcLint")}", "-Xmaxwarns", "5000"))
+    }
 }
 
 tasks.test {

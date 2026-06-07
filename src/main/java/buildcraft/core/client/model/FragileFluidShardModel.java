@@ -6,6 +6,7 @@
 //? if <1.21.10 {
 /*package buildcraft.core.client.model;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -28,17 +29,18 @@ import net.neoforged.neoforge.client.model.data.ModelData;
 // 1.21.1-only fix for the fragile fluid shard rendering as a translucent, z-fighting blob.
 //
 // The shard renders through NeoForge's neoforge:fluid_container model (DynamicFluidContainerModel),
-// which extrudes the base frame and the (masked, animated, tinted) fluid sprite into thin 3D layers.
-// On 1.21.1 it draws the fluid layer with NeoForgeRenderTypes.ITEM_UNSORTED_TRANSLUCENT, which is
-// NO_CULL + UNSORTED: the extrusion's back/inside faces render and show through the translucent front,
-// and all the translucent faces blend in arbitrary (upload) order rather than back-to-front. Together
-// that reads as inside-facing z-fighting. 26.1.2 / 1.21.11 (modern render) and 1.12.2 (old render)
-// both cull + sort translucent item geometry, so the same shard looks clean there.
+// which EXTRUDES the base frame and the (masked, animated, tinted) fluid sprite into thin 3D shapes:
+// a flat front face, a flat back face, and per-pixel SIDE WALLS along the sprite's alpha edges. On
+// 1.21.1's classic item render those translucent side walls (plus the fluid layer's NO_CULL +
+// UNSORTED render type) overlap and blend in arbitrary order — the inside-facing z-fighting.
+// 26.1.2 / 1.21.11 (modern render) and 1.12.2 (old render) render it cleanly.
 //
-// Fix: keep the vanilla geometry/mask/animation/tint, but render the model with the CULL + SORTED
-// translucent item type 1.21.1 also provides (ITEM_LAYERED_TRANSLUCENT). Culling drops the back/inside
-// faces; sorting blends what remains correctly — so water stays see-through but renders as a clean,
-// flat, uniform shard like 1.12.2 / 26.1.2 (no opaque fallback needed).
+// Fix (two parts), keeping the vanilla geometry/mask/animation/tint:
+//   1. Drop the extrusion's side-wall quads — keep only the flat front/back faces (the Z-axis faces).
+//      That alone removes the per-pixel-cuboid clutter and gives the flat 1.12.2 / 26.1.2 look.
+//   2. Render with the CULL + SORTED translucent item type 1.21.1 provides (ITEM_LAYERED_TRANSLUCENT),
+//      not the NO_CULL + UNSORTED one the fluid_container picks, so the remaining front (and the
+//      base behind it) blend correctly. Water stays see-through; the shard is clean and flat.
 public class FragileFluidShardModel implements IDynamicBakedModel {
 
     private static final List<RenderType> LAYERED_TRANSLUCENT =
@@ -86,8 +88,8 @@ public class FragileFluidShardModel implements IDynamicBakedModel {
         }
     }
 
-    // Serves the resolved vanilla quads unchanged, but on the cull + sorted translucent sheet (the fix).
-    // Everything else delegates to the resolved model.
+    // Serves the resolved vanilla quads with the extrusion side walls removed (keep only the flat
+    // front/back faces) and on the cull + sorted translucent sheet. Everything else delegates.
     private final class WrappedModel implements IDynamicBakedModel {
         private final BakedModel resolved;
 
@@ -98,7 +100,19 @@ public class FragileFluidShardModel implements IDynamicBakedModel {
         @Override
         public List<BakedQuad> getQuads(BlockState state, Direction side, RandomSource rand,
                 ModelData data, RenderType renderType) {
-            return resolved.getQuads(state, side, rand, data, renderType);
+            List<BakedQuad> in = resolved.getQuads(state, side, rand, data, renderType);
+            if (in.isEmpty()) {
+                return in;
+            }
+            // Keep only the flat front/back faces (normal along Z); drop the per-pixel extrusion
+            // side walls (normal along X/Y), which are what cause the inside-facing z-fighting.
+            List<BakedQuad> out = new ArrayList<>(in.size());
+            for (BakedQuad q : in) {
+                if (q.getDirection().getAxis() == Direction.Axis.Z) {
+                    out.add(q);
+                }
+            }
+            return out;
         }
 
         @Override

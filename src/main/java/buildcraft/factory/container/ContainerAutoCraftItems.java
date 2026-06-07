@@ -117,6 +117,21 @@ public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchIt
         return this.slots.get(0); // First slot added is the output slot
     }
 
+    //? if <1.21.10 {
+    /*// 1.21.1 RecipeBookMenu has these extra abstracts that modern's RecipeBookMenu doesn't. The base
+    // ContainerBC_Neptune stubs them to a grid-0 no-op for non-crafting containers; the Auto Workbench
+    // reports its real 3x3 blueprint grid + output slot so the recipe book lays out and fills correctly.
+    @Override
+    public int getResultSlotIndex() {
+        return 0; // the output slot is the first slot added
+    }
+
+    @Override
+    public int getSize() {
+        return 9; // 3x3 blueprint grid
+    }*/
+    //?}
+
     //? if >=1.21.10 {
     @Override
     public PostPlaceAction handlePlacement(boolean useMaxItems, boolean isCreative, RecipeHolder<?> recipe,

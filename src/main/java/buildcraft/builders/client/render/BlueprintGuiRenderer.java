@@ -102,6 +102,13 @@ public final class BlueprintGuiRenderer {
 
         // Clip the spinning model to its panel.
         graphics.raw.enableScissor(viewportX, viewportY, viewportX + viewportWidth, viewportY + viewportHeight);
+        // Tooltip previews draw at RenderTooltipEvent.Pre, AFTER the GUI + slot items have written depth
+        // into this screen region; a 3D structure then depth-tests against that stale depth and is culled
+        // (the Architect renders in the background phase into a fresh region, which is why IT already
+        // works). Clear the depth buffer inside our scissor so the structure has a clean slate — the same
+        // thing the modern PiP path gets from its own offscreen depth buffer. glClear honours the GL
+        // scissor box enableScissor just set, so only the preview panel's depth is touched.
+        RenderSystem.clear(org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
 
         pose.pushPose();
         // Origin at the viewport centre, pushed into the GUI depth band. scale(s, s, -s): s GUI pixels

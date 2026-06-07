@@ -75,6 +75,27 @@ public class BCCoreClient {
                 )
         );*/
         //?}
+        // 1.21.1 only: swap the shard's neoforge:fluid_container model for one that pushes the fluid
+        // layer clear of the frame, fixing the base/fluid z-fight. The vanilla FLUID_TRANSFORM gap
+        // (~0.001) is below 1.21.1's classic item-render depth precision; modern nodes render it fine,
+        // so this is a 1.21.1-only swap (their model-baking-result API differs anyway).
+        //? if <1.21.10 {
+        /*modEventBus.addListener(
+                net.neoforged.neoforge.client.event.ModelEvent.ModifyBakingResult.class,
+                event -> {
+                    java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation, net.minecraft.client.resources.model.BakedModel> models =
+                            event.getModels();
+                    net.minecraft.client.resources.model.ModelResourceLocation mrl =
+                            net.minecraft.client.resources.model.ModelResourceLocation.inventory(
+                                    net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(
+                                            buildcraft.core.BCCoreItems.FRAGILE_FLUID_CONTAINER.get()));
+                    net.minecraft.client.resources.model.BakedModel vanilla = models.get(mrl);
+                    if (vanilla != null) {
+                        models.put(mrl, new buildcraft.core.client.model.FragileFluidShardModel(vanilla));
+                    }
+                }
+        );*/
+        //?}
         // F3 debug overlay: register the overlay layer on the mod bus
         modEventBus.addListener(
                 net.neoforged.neoforge.client.event.RegisterGuiLayersEvent.class,

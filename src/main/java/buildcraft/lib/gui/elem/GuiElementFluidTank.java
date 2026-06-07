@@ -164,21 +164,26 @@ public class GuiElementFluidTank implements IInteractionElement {
     // --- Tooltips ---
 
     /**
-     * Builds the standard BC tank tooltip lines. Line 1 is the fluid's name, or — for an empty
-     * tank — "Empty &lt;capacity&gt; &lt;unit&gt; Tank". Line 2 is "&lt;amount&gt; / &lt;capacity&gt; &lt;unit&gt;"
-     * in grey. The fluid-volume unit (mB / millibuckets) follows the {@code useFullUnitNames} config.
-     * Shared by the per-screen tank-tooltip renderers and {@link #addToolTips}.
+     * Builds the standard BC tank tooltip lines. For a tank with fluid: line 1 is the fluid's name and
+     * line 2 is "&lt;amount&gt; / &lt;capacity&gt; &lt;unit&gt;" in grey. For an empty tank: a single
+     * "Empty &lt;capacity&gt; &lt;unit&gt; Tank" line — no "0 / &lt;capacity&gt;" line, since that line
+     * already states the capacity. The unit follows {@code useFullUnitNames} (mB / millibuckets); amounts
+     * at or above 1000 mB collapse to buckets when {@code abbreviateLargeNumbers} is on. Shared by the
+     * per-screen tank-tooltip renderers and {@link #addToolTips}.
      */
     public static List<net.minecraft.network.chat.Component> buildTankTooltip(FluidStack fluid, int amount, int capacity) {
-        String unit = buildcraft.lib.misc.LocaleUtil.fluidUnit();
         List<net.minecraft.network.chat.Component> lines = new java.util.ArrayList<>();
         if (amount > 0 && fluid != null && !fluid.isEmpty()) {
             lines.add(fluid.getHoverName());
+            lines.add(net.minecraft.network.chat.Component
+                    .literal(buildcraft.lib.misc.LocaleUtil.localizeFluidTank(amount, capacity))
+                    .withStyle(net.minecraft.ChatFormatting.GRAY));
         } else {
-            lines.add(net.minecraft.network.chat.Component.translatable("buildcraft.tank.empty", capacity + " " + unit));
+            // Empty: the "Empty <capacity> Tank" line already states the capacity, so there's no separate
+            // "0 / <capacity>" line to add.
+            lines.add(net.minecraft.network.chat.Component.translatable("buildcraft.tank.empty",
+                    buildcraft.lib.misc.LocaleUtil.localizeFluidStatic(capacity)));
         }
-        lines.add(net.minecraft.network.chat.Component.literal(amount + " / " + capacity + " " + unit)
-                .withStyle(net.minecraft.ChatFormatting.GRAY));
         return lines;
     }
 
@@ -190,17 +195,19 @@ public class GuiElementFluidTank implements IInteractionElement {
         FluidStack fluid = tank.getFluidStack(0);
         int capacity = tank.getCapacityMb(0);
         int amount = tank.getAmountMb(0);
-        // First line = fluid name (or "Empty <capacity> <unit> Tank"), second line = "x / cap <unit>"
-        // in grey (§7 = ChatFormatting.GRAY). Mirrors buildTankTooltip; the unit follows
-        // useFullUnitNames.
-        String unit = buildcraft.lib.misc.LocaleUtil.fluidUnit();
-        String name = (fluid.isEmpty() || amount == 0)
-                ? net.minecraft.network.chat.Component.translatable("buildcraft.tank.empty", capacity + " " + unit).getString()
-                : fluid.getHoverName().getString();
-        tooltips.add(new ToolTip(
-            name,
-            net.minecraft.ChatFormatting.GRAY + (amount + " / " + capacity + " " + unit)
-        ));
+        // Mirrors buildTankTooltip: a full tank shows its name + "x / cap" in grey; an empty tank shows
+        // only "Empty <capacity> Tank" (no separate 0/x line). Amounts abbreviate to buckets at ≥1000 mB
+        // when the setting is on, and the unit follows useFullUnitNames.
+        if (fluid.isEmpty() || amount == 0) {
+            tooltips.add(new ToolTip(net.minecraft.network.chat.Component
+                    .translatable("buildcraft.tank.empty", buildcraft.lib.misc.LocaleUtil.localizeFluidStatic(capacity))
+                    .getString()));
+        } else {
+            tooltips.add(new ToolTip(
+                fluid.getHoverName().getString(),
+                net.minecraft.ChatFormatting.GRAY + buildcraft.lib.misc.LocaleUtil.localizeFluidTank(amount, capacity)
+            ));
+        }
     }
 
     // --- Interaction ---

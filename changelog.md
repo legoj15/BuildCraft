@@ -1,5 +1,5 @@
 ###### Changes since 2026.1.0-rc2:
-- Tank tooltips now label an empty tank as "Empty <capacity> Tank" and honour the full-unit-names setting (millibuckets vs mB)
+- Tank tooltips now label an empty tank as "Empty <capacity> Tank" (without the redundant "0 / <capacity>" line), honour the full-unit-names setting (millibuckets vs mB), and — when "abbreviate large numbers" is on — show amounts of 1000 mB or more in buckets (e.g. "4 B" / "1.1 buckets")
 - Filter lenses now actually block items whose colour doesn't match (previously they only re-prioritised matching items and let everything else pass)
 - Eroded Badlands now counts as a rich oil-generation biome, like the other badlands variants
 - Fixed the Quarry's drill arm catching fire (showing flames) when mining through lava

@@ -330,4 +330,44 @@ public class LocaleUtilNumberFormatTester {
         Assertions.assertEquals("2.0k B/s",
                 LocaleUtil.formatFluidFlow(100_000, FlowDisplay.PER_SECOND, false, true));
     }
+
+    // --- Static tank-volume formatting (localizeFluidStatic / localizeFluidTank) ---
+
+    @Test
+    public void staticFluid_abbreviationOn_collapsesToBucketsAtOrAbove1000() {
+        Assertions.assertEquals("1 B", LocaleUtil.formatStaticFluid(1000, false, true));
+        Assertions.assertEquals("1.1 B", LocaleUtil.formatStaticFluid(1100, false, true));
+        Assertions.assertEquals("16 B", LocaleUtil.formatStaticFluid(16_000, false, true));
+        // Whole buckets drop the decimal — "1 bucket", not "1.0".
+        Assertions.assertEquals("1 buckets", LocaleUtil.formatStaticFluid(1000, true, true));
+        Assertions.assertEquals("4 buckets", LocaleUtil.formatStaticFluid(4000, true, true));
+    }
+
+    @Test
+    public void staticFluid_belowThreshold_staysMillibuckets() {
+        Assertions.assertEquals("999 mB", LocaleUtil.formatStaticFluid(999, false, true));
+        Assertions.assertEquals("0 mB", LocaleUtil.formatStaticFluid(0, false, true));
+        Assertions.assertEquals("500 millibuckets", LocaleUtil.formatStaticFluid(500, true, true));
+    }
+
+    @Test
+    public void staticFluid_abbreviationOff_staysMillibuckets() {
+        Assertions.assertEquals("5,000 mB", LocaleUtil.formatStaticFluid(5000, false, false));
+        Assertions.assertEquals("4,000 millibuckets", LocaleUtil.formatStaticFluid(4000, true, false));
+    }
+
+    @Test
+    public void tank_sharesUnitWhenBothSameScale() {
+        Assertions.assertEquals("500 / 800 mB", LocaleUtil.formatFluidTank(500, 800, false, false));
+        Assertions.assertEquals("2 / 4 B", LocaleUtil.formatFluidTank(2000, 4000, false, true));
+        Assertions.assertEquals("2 / 4 buckets", LocaleUtil.formatFluidTank(2000, 4000, true, true));
+    }
+
+    @Test
+    public void tank_perValueUnitsWhenScalesDiffer() {
+        // A near-empty bucket-scale tank: amount < 1000 stays mB, capacity ≥ 1000 shows buckets.
+        Assertions.assertEquals("500 mB / 4 B", LocaleUtil.formatFluidTank(500, 4000, false, true));
+        Assertions.assertEquals("500 millibuckets / 4 buckets",
+                LocaleUtil.formatFluidTank(500, 4000, true, true));
+    }
 }

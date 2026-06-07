@@ -134,6 +134,58 @@ public class LocaleUtil {
                 + " " + fluidUnit(fullSuffix);
     }
 
+    /** Buckets with an OPTIONAL single decimal — "1" for a whole bucket, "1.1" for a fraction, "16" for
+     *  a full tank — matching the "1 bucket" / "1.1 B" form players expect. (The flow display keeps its
+     *  own forced-one-decimal formatAbbreviated with k/M tiers; tank volumes don't need tiers.) */
+    private static String formatBuckets(long mb, BCLibConfig.ThousandsSeparator t, BCLibConfig.DecimalSeparator d) {
+        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
+        symbols.setDecimalSeparator(d.ch);
+        if (t != BCLibConfig.ThousandsSeparator.NONE) {
+            symbols.setGroupingSeparator(t.ch);
+        }
+        String pattern = (t == BCLibConfig.ThousandsSeparator.NONE ? "0" : "#,##0") + ".#";
+        return new DecimalFormat(pattern, symbols).format(mb / 1000.0);
+    }
+
+    /** The numeric part only (no unit) of a fluid volume, in either mB or buckets. */
+    private static String formatFluidValue(long mb, boolean buckets) {
+        return buckets
+                ? formatBuckets(mb, currentThousandsSep(), currentDecimalSep())
+                : formatLong(mb, currentThousandsSep(), currentDecimalSep(), false);
+    }
+
+    /** {@code "<value> <unit>"} for a single static fluid volume — e.g. {@code "4000 mB"},
+     *  {@code "4 buckets"}, {@code "1.1 B"}. The unit follows {@link BCEnergyConfig#useFullUnitNames}; under
+     *  {@link BCLibConfig#abbreviateLargeNumbers} a value ≥ 1000 mB is shown in buckets. */
+    static String formatStaticFluid(long mb, boolean full, boolean abbreviate) {
+        boolean buckets = abbreviate && Math.abs(mb) >= 1000L;
+        return formatFluidValue(mb, buckets) + " " + (buckets ? bucketsUnit(full) : fluidUnit(full));
+    }
+
+    public static String localizeFluidStatic(long mb) {
+        return formatStaticFluid(mb, shouldUseFullNames(), shouldAbbreviate());
+    }
+
+    /** {@code "<amount> / <capacity> <unit>"} for a tank readout — see {@link #formatFluidTank}. */
+    public static String localizeFluidTank(long amount, long capacity) {
+        return formatFluidTank(amount, capacity, shouldUseFullNames(), shouldAbbreviate());
+    }
+
+    /** Package-visible explicit-flag variant for unit tests (mirrors {@link #formatFluidFlow}). Each value
+     *  follows abbreviation (≥ 1000 mB → buckets); the unit is shared when both land in the same one
+     *  ({@code "500 / 4000 mB"}, {@code "2 / 4 buckets"}), otherwise each carries its own — a near-empty
+     *  bucket-scale tank reads {@code "500 mB / 4 buckets"}. */
+    static String formatFluidTank(long amount, long capacity, boolean full, boolean abbreviate) {
+        boolean amountBuckets = abbreviate && Math.abs(amount) >= 1000L;
+        boolean capacityBuckets = abbreviate && Math.abs(capacity) >= 1000L;
+        if (amountBuckets == capacityBuckets) {
+            String unit = capacityBuckets ? bucketsUnit(full) : fluidUnit(full);
+            return formatFluidValue(amount, amountBuckets) + " / " + formatFluidValue(capacity, capacityBuckets)
+                    + " " + unit;
+        }
+        return formatStaticFluid(amount, full, abbreviate) + " / " + formatStaticFluid(capacity, full, abbreviate);
+    }
+
     private static String fluidUnit(boolean fullSuffix) {
         return fullSuffix ? "millibuckets" : "mB";
     }

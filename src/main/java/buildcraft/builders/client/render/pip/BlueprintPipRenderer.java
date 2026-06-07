@@ -410,6 +410,10 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                                     this.bufferSource.getBuffer(
                                             BCLibRenderTypes.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS)),
                                     FULL_BRIGHT, PIPE_PAINT_ALPHA);
+                            // Pluggables (plugs/gates/lenses/filters/wires/facades) captured on this
+                            // pipe — reconstructed offline and rendered like the body.
+                            PipePreviewPluggables.render(schBlock.getTileNbtForRender(), pipePose,
+                                    this.bufferSource, FULL_BRIGHT);
                             poseStack.popPose();
                             submittedPipe++;
                             continue;

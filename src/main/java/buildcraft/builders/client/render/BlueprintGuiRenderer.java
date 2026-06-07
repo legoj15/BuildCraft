@@ -47,6 +47,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.builders.client.render.pip.PipePreviewModel;
+import buildcraft.builders.client.render.pip.PipePreviewPluggables;
 import buildcraft.builders.client.render.pip.TemplateGhostGeometry;
 import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.Snapshot;
@@ -184,6 +185,8 @@ public final class BlueprintGuiRenderer {
                             ModelPipe.renderMaskOverlay(pipeKey, pipePose,
                                     buffers.getBuffer(BCLibRenderTypes.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS)),
                                     FULL_BRIGHT, PIPE_PAINT_ALPHA);
+                            // Pluggables captured on this pipe — reconstructed offline, rendered like the body.
+                            PipePreviewPluggables.render(schBlock.getTileNbtForRender(), pipePose, buffers, FULL_BRIGHT);
                             pose.popPose();
                             continue;
                         }

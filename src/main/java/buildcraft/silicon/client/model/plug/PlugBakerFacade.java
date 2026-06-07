@@ -77,9 +77,9 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
      * NeoForge 1.21.11 no longer has BakedModel.getQuads() — we must use
      * collectParts() to get BlockModelParts, then extract quads from each part's QuadCollection. */
     //? if >=1.21.10 {
-    private static List<BakedQuad> getQuadsFromModel(BlockStateModel model, Direction side) {
+    private static List<BakedQuad> getQuadsFromModel(BlockState state, BlockStateModel model, Direction side) {
     //?} else {
-    /*private static List<BakedQuad> getQuadsFromModel(net.minecraft.client.resources.model.BakedModel model, Direction side) {*/
+    /*private static List<BakedQuad> getQuadsFromModel(BlockState state, net.minecraft.client.resources.model.BakedModel model, Direction side) {*/
     //?}
         //? if >=26.1 {
         List<BlockStateModelPart> parts = new ArrayList<>();
@@ -104,8 +104,10 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
         }
         return result;*/
         //?} else {
-        /*// 1.21.1: BakedModel exposes quads directly; SimpleBakedModel ignores the (null) state.
-        return model.getQuads(null, side, RANDOM);*/
+        /*// 1.21.1: BakedModel.getQuads needs the real block state so MULTIPART models (mushroom
+        // blocks etc.) can evaluate their multipart selectors — passing null matched no parts and
+        // returned zero quads, so a mushroom-block facade rendered invisible.
+        return model.getQuads(state, side, RANDOM);*/
         //?}
     }
 
@@ -155,7 +157,7 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
                                                   //?}
                                                   Direction side,
                                                   Vec3 pos0, Vec3 pos1, Vec3 pos2, Vec3 pos3) {
-        return getQuadsFromModel(model, side).stream()
+        return getQuadsFromModel(state, model, side).stream()
             .map(quad -> {
                 MutableQuad mutableQuad = new MutableQuad().fromBakedItem(quad);
                 boolean positive = side.getAxisDirection() == Direction.AxisDirection.POSITIVE;

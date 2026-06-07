@@ -15,7 +15,7 @@ import net.minecraft.core.Direction.Axis;
 import net.minecraft.world.phys.AABB;
 
 /**
- * Pins {@link TileQuarry#splitBySection}, the core of the quarry rig collision fix: each moving arm is
+ * Pins {@link QuarryRigGeometry#splitBySection}, the core of the quarry rig collision fix: each moving arm is
  * cut into 16-block, section-aligned segment entities so a player anywhere along it lands in an
  * entity-storage section MC's collision query actually scans. (A single long entity is only found near
  * its own filed position — which is why a boom-arm end, or a deep column, had no collision even though
@@ -39,7 +39,7 @@ public class TileQuarrySplitBySectionTester {
 
     private static List<AABB> split(AABB box, Axis axis) {
         List<AABB> out = new ArrayList<>();
-        TileQuarry.splitBySection(out, box, axis);
+        QuarryRigGeometry.splitBySection(out, box, axis);
         return out;
     }
 

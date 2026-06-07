@@ -746,10 +746,10 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         // a beam's end — or partway down a deep column — falls through despite the box being there.
         // Per-section segments keep a collidable piece in whichever section the player is in.
         List<AABB> beamSegments = new ArrayList<>();
-        splitBySection(beamSegments, boxes.get(0), Axis.Z); // X-axis beam runs along Z
-        splitBySection(beamSegments, boxes.get(1), Axis.X); // Z-axis beam runs along X
+        QuarryRigGeometry.splitBySection(beamSegments, boxes.get(0), Axis.Z); // X-axis beam runs along Z
+        QuarryRigGeometry.splitBySection(beamSegments, boxes.get(1), Axis.X); // Z-axis beam runs along X
         List<AABB> columnSegments = new ArrayList<>();
-        splitBySection(columnSegments, boxes.get(2), Axis.Y); // vertical column runs along Y
+        QuarryRigGeometry.splitBySection(columnSegments, boxes.get(2), Axis.Y); // vertical column runs along Y
 
         boolean isDrillMoving = (currentTask instanceof TaskMoveDrill);
         int total = beamSegments.size() + columnSegments.size();
@@ -779,28 +779,6 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             // Only the column phases (passes through the player) while the drill moves, so the moving
             // mast doesn't shove anyone; the beams stay solid to be walked on.
             rig.setPhasing(isColumn && isDrillMoving);
-        }
-    }
-
-    /** Appends {@code box} to {@code out}, cut into pieces aligned to 16-block entity-storage sections
-     *  along {@code axis} (so each piece's centre — where its entity is filed — sits in its own section).
-     *  Package-private for {@code TileQuarrySplitBySectionTester}. */
-    static void splitBySection(List<AABB> out, AABB box, Axis axis) {
-        double min = axis == Axis.X ? box.minX : axis == Axis.Y ? box.minY : box.minZ;
-        double max = axis == Axis.X ? box.maxX : axis == Axis.Y ? box.maxY : box.maxZ;
-        int sectionMin = (int) Math.floor(min) >> 4;
-        int sectionMax = (int) Math.floor(max - 1.0e-7) >> 4;
-        for (int s = sectionMin; s <= sectionMax; s++) {
-            double lo = Math.max(min, (double) (s << 4));
-            double hi = Math.min(max, (double) ((s + 1) << 4));
-            if (hi - lo < 1.0e-4) {
-                continue;
-            }
-            out.add(switch (axis) {
-                case X -> new AABB(lo, box.minY, box.minZ, hi, box.maxY, box.maxZ);
-                case Y -> new AABB(box.minX, lo, box.minZ, box.maxX, hi, box.maxZ);
-                case Z -> new AABB(box.minX, box.minY, lo, box.maxX, box.maxY, hi);
-            });
         }
     }
 

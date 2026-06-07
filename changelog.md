@@ -4,7 +4,7 @@
 - Eroded Badlands now counts as a rich oil-generation biome, like the other badlands variants
 - Fixed the Quarry's drill arm catching fire (showing flames) when mining through lava
 - Fixed fluids clinging to the side of an adjacent pipe they aren't connected to (e.g. a differently-painted pipe), appearing to flow into the non-connection
-- Fixed a server freeze during world generation when oil generated near the edge of a newly-loaded chunk (most likely at high render/simulation distances)
+- Fixed a server freeze during world generation caused by oil generating near the edge of a newly-loaded chunk (could strike when creating a new world or exploring at high render/simulation distances)
 - Fixed quarry frames being washed away (and dropped as items) by flowing fluids like oil or water
 - Fixed the Builder looping forever on tall grass and other two-tall plants
 - You can now check engine fuels in JEI

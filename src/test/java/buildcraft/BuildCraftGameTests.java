@@ -155,6 +155,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:marker_volume_triangulation_3d", () -> buildcraft.core.marker.MarkerTester::testVolumeTriangulation3D);
 
         // Oil generation primitives (SurfacePool shape + defensive tree-clearing)
+        reg.accept("buildcraftunofficial:oilgen_set_oil_skips_unloaded_chunk", () -> buildcraft.energy.generation.OilGenStructureTester::testSetOilSkipsUnloadedChunk);
+        reg.accept("buildcraftunofficial:oilgen_set_oil_skips_block_entity", () -> buildcraft.energy.generation.OilGenStructureTester::testSetOilSkipsBlockEntity);
         reg.accept("buildcraftunofficial:oilgen_surface_pool_clean_shape", () -> buildcraft.energy.generation.OilGenStructureTester::testSurfacePoolCleanShape);
         reg.accept("buildcraftunofficial:oilgen_surface_pool_clears_tall_tree_fully", () -> buildcraft.energy.generation.OilGenStructureTester::testSurfacePoolClearsTallTreeFully);
 

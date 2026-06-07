@@ -52,8 +52,16 @@ public class ContainerArchitectTable extends ContainerBCTile<TileArchitectTable>
                 public int get(int index) {
                     return switch (index) {
                         case DATA_SCANNING -> tile.isScanning() ? 1 : 0;
-                        case DATA_PROGRESS -> tile.getScanProgress();
-                        case DATA_TOTAL -> tile.getScanTotal();
+                        // Sync a 0–1000 permille, NOT the raw cell counts: ContainerData transmits
+                        // 16-bit shorts, so a large scan volume (e.g. 64^3 = 262144 cells) would wrap
+                        // (262144 & 0xFFFF == 0) and the GUI's "total > 0" gate would fail — the
+                        // progress arrow never drew for big volumes. Dividing server-side keeps it
+                        // inside a short whatever the volume.
+                        case DATA_PROGRESS -> {
+                            int total = tile.getScanTotal();
+                            yield total > 0 ? (int) Math.min(1000L, 1000L * tile.getScanProgress() / total) : 0;
+                        }
+                        case DATA_TOTAL -> tile.getScanTotal() > 0 ? 1 : 0; // scan active/draining flag
                         case DATA_VALID -> tile.getIsValid() ? 1 : 0;
                         default -> 0;
                     };
@@ -101,12 +109,15 @@ public class ContainerArchitectTable extends ContainerBCTile<TileArchitectTable>
         return data.get(DATA_SCANNING) != 0;
     }
 
-    public int getSyncedProgress() {
+    /** 0–1000 permille of the current scan (or drain) — already divided server-side so it survives the
+     *  16-bit ContainerData sync no matter how many cells the volume holds. */
+    public int getSyncedScanPermille() {
         return data.get(DATA_PROGRESS);
     }
 
-    public int getSyncedTotal() {
-        return data.get(DATA_TOTAL);
+    /** True while a scan is running or its progress bar is still draining (scanTotal &gt; 0). */
+    public boolean getSyncedScanActive() {
+        return data.get(DATA_TOTAL) != 0;
     }
 
     public boolean getSyncedValid() {

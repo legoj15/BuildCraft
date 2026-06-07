@@ -518,6 +518,15 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
         snapshotType = (stOrd >= 0 && stOrd < stValues.length) ? stValues[stOrd] : EnumSnapshotType.BLUEPRINT;
         isValid = input.getBooleanOr("isValid", false);
         name = input.getStringOr("name", "<unnamed>");
+        // A scan interrupted by chunk unload/reload can't truly resume — the partial scan buffers
+        // (palette + one int/bit per cell, megabytes for a large volume) aren't persisted, so the scan
+        // restarts on the next tick (scanInitialized defaults false). scanTotal isn't persisted either,
+        // so re-derive it here; otherwise it stays 0 and the progress bar reads empty for the whole
+        // re-scan (most visible on the large volumes that are slow enough to be reloaded mid-scan).
+        if (scanning && box.isInitialized()) {
+            scanTotal = box.size().getX() * box.size().getY() * box.size().getZ();
+            scanProgress = 0;
+        }
         input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
         // Migrate the transient pre-fix plain-ItemStack format: earlier in the 26.1 port the two
         // snapshot slots were stored under top-level "invSnapshotIn" / "invSnapshotOut" keys. If a

@@ -2,6 +2,7 @@
 - Tank tooltips now label an empty tank as "Empty <capacity> Tank" (dropping the redundant "0 / <capacity>" line, with the unit kept singular — "Empty 4 bucket Tank"), honour the full-unit-names setting (millibuckets vs mB), and — when "abbreviate large numbers" is on — show fluid volumes of 1000 mB or more in buckets (e.g. "4 B" / "1.1 buckets"), with a tank's amount and capacity always sharing one unit so a near-empty bucket-scale tank reads "0.2 / 4 buckets" rather than a mixed "174 mB / 4 buckets"
 - Large numbers are now abbreviated by default — energy/power readouts at or above 1,000 use k/M/G/T suffixes (e.g. "1.2k FE", "10.0k MJ") and fluid amounts of 1,000 mB or more show in buckets. Turn it off with the "abbreviate large numbers" display setting
 - Blueprint and template 3D previews now also render the pluggables on captured pipes (gates, plugs, lenses, filters, facades), not just the pipe body
+- Fixed the Architect Table's scan-progress arrow never filling for large scan areas (the raw block count overflowed the GUI value sync and wrapped to zero above ~32k blocks), and a scan interrupted by a world reload now restarts with a correct progress bar instead of an empty one
 - Filter lenses now actually block items whose colour doesn't match (previously they only re-prioritised matching items and let everything else pass)
 - Eroded Badlands now counts as a rich oil-generation biome, like the other badlands variants
 - Fixed the Quarry's drill arm catching fire (showing flames) when mining through lava

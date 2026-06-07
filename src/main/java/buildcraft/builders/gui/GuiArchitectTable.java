@@ -196,10 +196,8 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
         // architect.png over the empty arrow baked into the GUI background. Partial-width blit
         // grows left-to-right as the scan progresses, matching the conventional Minecraft
         // progress arrow look.
-        int total = menu.getSyncedTotal();
-        if (total > 0) {
-            int progress = menu.getSyncedProgress();
-            int progressWidth = Math.min(22, (int) (22.0f * progress / total));
+        if (menu.getSyncedScanActive()) {
+            int progressWidth = Math.min(22, 22 * menu.getSyncedScanPermille() / 1000);
             if (progressWidth > 0) {
                 //? if >=1.21.10 {
                 graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_BASE,

@@ -1,4 +1,5 @@
 ###### Changes since 2026.1.0-rc2:
+- Fixed fluids clinging to the side of an adjacent pipe they aren't connected to (e.g. a differently-painted pipe), appearing to flow into the non-connection
 - Fixed a server freeze during world generation when oil generated near the edge of a newly-loaded chunk (most likely at high render/simulation distances)
 - Fixed quarry frames being washed away (and dropped as items) by flowing fluids like oil or water
 - Fixed the Builder looping forever on tall grass and other two-tall plants

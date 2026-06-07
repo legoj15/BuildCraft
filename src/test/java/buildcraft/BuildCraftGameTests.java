@@ -75,6 +75,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:painted_pipe_nbt_roundtrip_preserves", () -> buildcraft.transport.pipe.PaintedPipeConnectionTester::testNbtRoundTripPreservesColourAndConnections);
         reg.accept("buildcraftunofficial:painted_pipe_two_pink_connect", () -> buildcraft.transport.pipe.PaintedPipeConnectionTester::testTwoPinkFluidPipesConnect);
         reg.accept("buildcraftunofficial:painted_pipe_different_colours_do_not_connect", () -> buildcraft.transport.pipe.PaintedPipeConnectionTester::testDifferentColouredFluidPipesDoNotConnect);
+        reg.accept("buildcraftunofficial:painted_pipe_no_fluid_stuck_toward_different_colour", () -> buildcraft.transport.pipe.PaintedPipeConnectionTester::testNoFluidStuckTowardDifferentColouredNeighbour);
 
         // Wire connectivity predicate gating the logic_transportation advancement
         reg.accept("buildcraftunofficial:wire_connectivity_isolated", () -> buildcraft.transport.block.PipeWireConnectivityTester::testIsolatedWireNotConnected);

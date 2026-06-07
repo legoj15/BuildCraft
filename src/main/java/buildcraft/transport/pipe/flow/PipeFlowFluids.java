@@ -665,7 +665,8 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                 continue;
             }
             if (
-                section.getMaxFilled() > 0
+                pipe.isConnected(direction)
+                && section.getMaxFilled() > 0
                 && pipe.getHolder().getCapabilityFromPipe(direction, CapUtil.CAP_FLUIDS) != null
             ) {
                 realDirections.add(direction);

@@ -9,9 +9,11 @@ import net.minecraft.ChatFormatting;
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+//? if >=1.21.10 {
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
+//?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -228,11 +230,19 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
     @Override
     protected void drawBackgroundTexture(BCGraphics graphics) {
         // Base texture
+        //? if >=1.21.10 {
         graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE,
                 leftPos, topPos,
                 0f, 0f,
                 imageWidth, imageHeight,
                 256, 256);
+        //?} else {
+        /*graphics.blit(TEXTURE,
+                leftPos, topPos,
+                0f, 0f,
+                imageWidth, imageHeight,
+                256, 256);*/
+        //?}
 
         // Resolve the slot-0 blueprint — if ClientSnapshots doesn't have it yet, this kicks off
         // an async request and returns null; the preview stays empty until the response lands.
@@ -331,6 +341,7 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
         return block == null ? "?" : block.getName().getString();
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean keyPressed(KeyEvent event) {
         if (nameField != null && nameField.isFocused()) {
@@ -363,6 +374,40 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
         }
         return super.mouseClicked(event, doubleClick);
     }
+    //?} else {
+    /*@Override
+    public boolean keyPressed(int key, int scancode, int modifiers) {
+        if (nameField != null && nameField.isFocused()) {
+            // ENTER / NUMPAD_ENTER commits focus away from the field so the Replace button can
+            // be activated by subsequent key presses. Matches GuiArchitectTable's pattern.
+            if (key == 257 || key == 335) {
+                this.setFocused(null);
+                return true;
+            }
+            if (key == 256) { // ESC: let the screen close as usual, even mid-rename
+                return super.keyPressed(key, scancode, modifiers);
+            }
+            // Forward editing keys to the field, then swallow everything else via canConsumeInput()
+            // so AbstractContainerScreen.keyPressed never reaches checkHotbarKeyPressed (1-9
+            // quick-swap), onClose() (inventory key), or the drop/clone handlers while typing — the
+            // character still inserts through the separate charTyped callback. See GuiArchitectTable
+            // for the full rationale.
+            if (this.nameField.keyPressed(key, scancode, modifiers) || this.nameField.canConsumeInput()) {
+                return true;
+            }
+        }
+        return super.keyPressed(key, scancode, modifiers);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
+        if (nameField != null && nameField.isFocused()
+                && !nameField.isMouseOver(mouseXd, mouseYd)) {
+            this.setFocused(null);
+        }
+        return super.mouseClicked(mouseXd, mouseYd, button);
+    }*/
+    //?}
 
 
     /**

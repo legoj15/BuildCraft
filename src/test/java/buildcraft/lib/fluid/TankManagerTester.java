@@ -4,6 +4,10 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
 package buildcraft.lib.fluid;
+//? if >=1.21.10 {
+// Whole-file gate: this tester exercises the NeoForge Transfer API directly
+// (ResourceHandler / FluidResource / FluidStacksResourceHandler / Transaction), which does
+// not exist pre-1.21.9. Deferred game test — compile-only on the 1.21.1 node.
 
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.level.material.Fluids;
@@ -170,3 +174,4 @@ public class TankManagerTester {
         };
     }
 }
+//?}

@@ -3,8 +3,10 @@ package buildcraft.builders.entity;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+//?}
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -54,10 +56,18 @@ public class EntityQuarryRig extends Entity {
     }
 
     @Override
+    //? if >=1.21.10 {
     protected void readAdditionalSaveData(ValueInput input) {}
+    //?} else {
+    /*protected void readAdditionalSaveData(net.minecraft.nbt.CompoundTag input) {}*/
+    //?}
 
     @Override
+    //? if >=1.21.10 {
     protected void addAdditionalSaveData(ValueOutput output) {}
+    //?} else {
+    /*protected void addAdditionalSaveData(net.minecraft.nbt.CompoundTag output) {}*/
+    //?}
 
     @Override
     public boolean shouldBeSaved() {
@@ -74,14 +84,23 @@ public class EntityQuarryRig extends Entity {
      * {@code setPos()}, which calls this method, so the AABB is always correct.
      */
     @Override
+    //? if >=1.21.10 {
     protected AABB makeBoundingBox(Vec3 position) {
+    //?} else {
+    /*protected AABB makeBoundingBox() {
+        net.minecraft.world.phys.Vec3 position = this.position();*/
+    //?}
         float halfX = this.entityData.get(SIZE_X) / 2.0f;
         float halfY = this.entityData.get(SIZE_Y) / 2.0f;
         float halfZ = this.entityData.get(SIZE_Z) / 2.0f;
 
         // Before dimensions are set (SIZE_X is 0), fall back to default
         if (halfX <= 0) {
+            //? if >=1.21.10 {
             return super.makeBoundingBox(position);
+            //?} else {
+            /*return super.makeBoundingBox();*/
+            //?}
         }
 
         return new AABB(
@@ -99,7 +118,11 @@ public class EntityQuarryRig extends Entity {
      * we return true (unless phasing).
      */
     @Override
+    //? if >=1.21.10 {
     public boolean canBeCollidedWith(Entity other) {
+    //?} else {
+    /*public boolean canBeCollidedWith() {*/
+    //?}
         return !phasing;
     }
 
@@ -116,11 +139,41 @@ public class EntityQuarryRig extends Entity {
     }
 
     @Override
+    //? if >=1.21.10 {
     public boolean hurtServer(net.minecraft.server.level.ServerLevel level,
                               net.minecraft.world.damagesource.DamageSource source,
                               float amount) {
+    //?} else {
+    /*public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {*/
+    //?}
         return false;
     }
+
+    /**
+     * Fire-immune on every node. This is an invisible structural collision entity for the drill arms;
+     * when the arms pass through lava it would otherwise catch fire and the entity render dispatcher
+     * would draw the fire overlay sprite over the (invisible) entity — i.e. floating fire across the
+     * middle of the drill arm. Being fire-immune skips lava ignition entirely, so no overlay and no
+     * fire ticks.
+     */
+    @Override
+    public boolean fireImmune() {
+        return true;
+    }
+
+    //? if <1.21.10 {
+    /*// 1.21.1 only: snap to each synced position instead of smoothing. The classic client entity lerp
+    // (lerpTo with a fixed multi-step interpolation) made this collision entity lag visibly behind the
+    // BER-rendered drill arm — the visual follows the block entity's per-tick clientDrillPos, so the
+    // multi-tick lerp left the collision "somewhere other than where it visually is". With
+    // updateInterval(1) the rig gets a position every tick, so snapping tracks the visual within a
+    // tick. 1.21.10+/26.1 use the adaptive InterpolationHandler, which already keeps pace — so this
+    // override is 1.21.1-only.
+    @Override
+    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
+        this.setPos(x, y, z);
+    }*/
+    //?}
 
     // ── Tick ──────────────────────────────────────────────────────────────
 
@@ -129,6 +182,28 @@ public class EntityQuarryRig extends Entity {
         super.tick();
         if (this.level().isClientSide()) {
             this.phasing = this.entityData.get(PHASING);
+        }
+    }
+
+    /**
+     * Rebuild the collision box from the synched dimensions whenever they change on the client.
+     *
+     * <p>{@link #makeBoundingBox} is only invoked by {@code setPos} — i.e. on a POSITION update. But the
+     * synched {@code SIZE_*} values arrive in a separate packet a tick after this entity's spawn packet,
+     * and a boom-arm beam that isn't moving in its own axis (e.g. the X-beam while the drill is doing a
+     * Z-pass) receives no position update to pick up the new size. Without this hook its box would stay at
+     * the stale spawn size — the {@code halfX <= 0} 1×1 fallback — until the next periodic re-sync,
+     * leaving a gap in the rig's collision (small frames make it a couple of blocks; it only shows when
+     * an arm happens to be idle right after the entity (re)spawns, e.g. after a world reload). Re-applying
+     * the current position here refreshes the AABB the moment the size syncs. Client-only: the server
+     * positions the rig via {@code TileQuarry.setRiggingBox}, which already setPos-es after setting size.
+     */
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+        if (this.level().isClientSide()
+                && (SIZE_X.equals(key) || SIZE_Y.equals(key) || SIZE_Z.equals(key))) {
+            this.setPos(this.getX(), this.getY(), this.getZ());
         }
     }
 

@@ -54,14 +54,22 @@ public class CombustionCoolantCategory extends AbstractRecipeCategory<Combustion
             if (water != null && !water.isEmpty()) {
                 builder.addOutputSlot(OUT_X, OUT_Y)
                         .setFluidRenderer(water.getAmount(), false, TANK_W, TANK_H)
+                        //? if >=1.21.10 {
                         .add(water.getFluid(), water.getAmount(), water.getComponentsPatch());
+                        //?} else {
+                        /*.addFluidStack(water.getFluid(), water.getAmount(), water.getComponentsPatch());*/
+                        //?}
             }
         } else {
             FluidStack fluid = recipe.fluid();
             if (fluid != null && !fluid.isEmpty()) {
                 builder.addInputSlot(IN_X, IN_Y)
                         .setFluidRenderer(BUCKET, false, TANK_W, TANK_H)
+                        //? if >=1.21.10 {
                         .add(fluid.getFluid(), BUCKET, fluid.getComponentsPatch());
+                        //?} else {
+                        /*.addFluidStack(fluid.getFluid(), BUCKET, fluid.getComponentsPatch());*/
+                        //?}
             }
         }
     }

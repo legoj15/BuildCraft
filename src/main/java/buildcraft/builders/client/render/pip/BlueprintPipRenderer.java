@@ -5,6 +5,13 @@
  */
 package buildcraft.builders.client.render.pip;
 
+// Whole-file >=1.21.10: this renderer extends PictureInPictureRenderer and is built on the 1.21.5+
+// PiP pipeline + GPU-buffer/SubmitNodeStorage/TrackingItemStackRenderState paradigm, none of which
+// exists on 1.21.1 — so the whole class is gated out there. On 1.21.1 the same rotating 3D preview
+// IS implemented, just differently: BlueprintRenderer.renderSnapshot's <1.21.10 branch draws it
+// straight into the GUI via BlueprintGuiRenderer (GuiGraphics.pose() is a real 3D PoseStack pre-26.1),
+// instead of through this offscreen PiP path.
+//? if >=1.21.10 {
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -404,6 +411,10 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                                     this.bufferSource.getBuffer(
                                             BCLibRenderTypes.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS)),
                                     FULL_BRIGHT, PIPE_PAINT_ALPHA);
+                            // Pluggables (plugs/gates/lenses/filters/wires/facades) captured on this
+                            // pipe — reconstructed offline and rendered like the body.
+                            PipePreviewPluggables.render(schBlock.getTileNbtForRender(), poseStack,
+                                    this.bufferSource, FULL_BRIGHT);
                             poseStack.popPose();
                             submittedPipe++;
                             continue;
@@ -691,3 +702,4 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
      */
     private static final TrackingItemStackRenderState MARKER_EMPTY = new TrackingItemStackRenderState();
 }
+//?}

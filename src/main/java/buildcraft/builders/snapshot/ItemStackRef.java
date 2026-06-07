@@ -42,14 +42,22 @@ public class ItemStackRef {
             item
                 .get(nbt)
                 .orElseThrow(NullPointerException::new)
+                //? if >=1.21.10 {
                 .value()
+                //?} else {
+                /*.getAsString()*/
+                //?}
         );
-        Item itemObj = BuiltInRegistries.ITEM.getValue(itemId);
+        Item itemObj = buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.ITEM, itemId);
         Objects.requireNonNull(itemObj, "Unknown item: " + itemId);
 
         int count = Optional.ofNullable(amount)
             .flatMap(ref -> ref.get(nbt))
+            //? if >=1.21.10 {
             .map(IntTag::value)
+            //?} else {
+            /*.map(IntTag::getAsInt)*/
+            //?}
             .orElse(1);
 
         ItemStack itemStack = new ItemStack(itemObj, count);

@@ -24,7 +24,11 @@ public enum ClientSnapshots {
                     : buildcraft.lib.misc.HashUtil.convertHashToString(key.hash);
             LOGGER.info("Sending SnapshotRequest to server: hash={} hasHeader={}",
                     hashHex, key.header != null);
+            //? if >=1.21.10 {
             net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new SnapshotRequestPayload(key));
+            //?} else {
+            /*net.neoforged.neoforge.network.PacketDistributor.sendToServer(new SnapshotRequestPayload(key));*/
+            //?}
         }
         return found;
     }

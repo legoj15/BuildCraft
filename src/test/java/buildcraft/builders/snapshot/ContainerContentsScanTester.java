@@ -83,7 +83,11 @@ public class ContainerContentsScanTester {
             // used by SchematicBlockDefault.setTileNbt.
             net.minecraft.nbt.CompoundTag tileNbt = be.saveWithoutMetadata(level.registryAccess());
             assertTrue(tileNbt.contains("Items"),
+                    //? if >=1.21.10 {
                     "expected Items tag on chest tileNbt; got keys: " + tileNbt.keySet());
+                    //?} else {
+                    /*"expected Items tag on chest tileNbt; got keys: " + tileNbt.getAllKeys());*/
+                    //?}
 
             BlockState chestState = level.getBlockState(abs);
             SchematicBlockContext context = new SchematicBlockContext(

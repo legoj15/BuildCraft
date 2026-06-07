@@ -11,12 +11,14 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 //? if >=26.1 {
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-//?} else {
+//?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.state.CameraRenderState;*/
 //?}
 import net.minecraft.core.BlockPos;
@@ -44,7 +46,11 @@ import buildcraft.factory.tile.TileMiningWell;
  * the front face and a laser-textured tube beam extending downward.
  * Ported from 1.12.2 RenderMiningWell + RenderTube.
  */
+//? if >=1.21.10 {
 public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, MiningWellRenderState> {
+//?} else {
+/*public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell> {*/
+//?}
     /** 16-step red→yellow gradient driven by battery fill %. ABGR; the low byte is red. */
     private static final int[] COLOUR_POWER = new int[16];
 
@@ -77,10 +83,12 @@ public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, Min
     public RenderMiningWell(BlockEntityRendererProvider.Context context) {
     }
 
+    //? if >=1.21.10 {
     @Override
     public MiningWellRenderState createRenderState() {
         return new MiningWellRenderState();
     }
+    //?}
 
     @Override
     public boolean shouldRender(TileMiningWell tile, Vec3 cameraPos) {
@@ -88,6 +96,7 @@ public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, Min
         return true;
     }
 
+    //? if >=1.21.10 {
     @Override
     public void submit(MiningWellRenderState renderState, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
@@ -106,6 +115,17 @@ public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, Min
 
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TileMiningWell tile)) return;
+    //?} else {
+    /*// 1.21.1: classic direct BlockEntityRenderer.render — tile + partialTicks are passed, so the
+    // camera-pos reconstruction is replaced by reading pos/level off the tile. The passed
+    // buffers/packedLight/packedOverlay go unused (the shared body sources its own buffer/light).
+    @Override
+    public void render(TileMiningWell tile, float partialTicks, PoseStack poseStack,
+                       MultiBufferSource buffers, int packedLight, int packedOverlay) {
+        BlockPos pos = tile.getBlockPos();
+        Level level = tile.getLevel();
+        if (level == null) return;*/
+    //?}
 
         poseStack.pushPose();
 

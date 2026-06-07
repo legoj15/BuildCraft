@@ -3,11 +3,17 @@ package buildcraft.lib.client;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.IEventBus;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
+//?}
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
+//?}
+//? if >=1.21.10 {
 import net.neoforged.neoforge.client.event.RegisterSpriteSourcesEvent;
+//?}
 import net.neoforged.neoforge.common.NeoForge;
 
 import buildcraft.api.registry.EventBuildCraftReload;
@@ -33,18 +39,29 @@ public class BCLibClient {
         // Register custom render pipelines (LED indicator pipeline, etc.). Must fire on the
         // mod event bus during the registration phase so the pipeline is known to the
         // rendering engine before any RenderType referencing it is queried.
+        //? if >=1.21.10 {
         modEventBus.addListener(RegisterRenderPipelinesEvent.class, event ->
             event.registerPipeline(BCLibRenderTypes.LED_PIPELINE)
         );
+        //?}
+        // (1.21.1 has no RenderPipeline GPU API — the LED RenderType is built directly in
+        // BCLibRenderTypes via the classic CompositeState, so there is nothing to register here.)
 
         // Register custom SpriteSource types, both replacing on-disk PNGs with
         // stitch-time synthesis: dye_replace synthesises the 16 dyed variants of
         // each fluid-pipe base sprite; fluid_lerp recolors the grayscale heat
         // base into every energy-fluid sprite.
+        //? if >=1.21.10 {
         modEventBus.addListener(RegisterSpriteSourcesEvent.class, event -> {
             event.register(DyeReplaceSpriteSource.ID, DyeReplaceSpriteSource.MAP_CODEC);
             event.register(FluidLerpSpriteSource.ID, FluidLerpSpriteSource.MAP_CODEC);
         });
+        //?} else {
+        /*modEventBus.addListener(net.neoforged.neoforge.client.event.RegisterSpriteSourceTypesEvent.class, event -> {
+            DyeReplaceSpriteSource.TYPE = event.register(DyeReplaceSpriteSource.ID, DyeReplaceSpriteSource.MAP_CODEC);
+            FluidLerpSpriteSource.TYPE = event.register(FluidLerpSpriteSource.ID, FluidLerpSpriteSource.MAP_CODEC);
+        });*/
+        //?}
 
         modEventBus.addListener(ModelEvent.BakingCompleted.class, event -> {
             java.util.HashSet<Identifier> sprites = new java.util.HashSet<>();
@@ -60,12 +77,20 @@ public class BCLibClient {
         // F3+T appeared to be a no-op. The cast routes through the
         // ResourceManagerReloadListener single-method form (the event takes the broader
         // PreparableReloadListener interface, which would otherwise be ambiguous).
+        //? if >=1.21.10 {
         modEventBus.addListener(AddClientReloadListenersEvent.class, event ->
             event.addListener(
                 Identifier.fromNamespaceAndPath("buildcraftunofficial", "guide"),
                 (ResourceManagerReloadListener) GuideManager.INSTANCE::onResourceManagerReload
             )
         );
+        //?} else {
+        /*modEventBus.addListener(net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent.class, event ->
+            event.registerReloadListener(
+                (ResourceManagerReloadListener) GuideManager.INSTANCE::onResourceManagerReload
+            )
+        );*/
+        //?}
 
         // Drop PipeBaseModelGenStandard's sprite caches whenever the client resource manager
         // reloads. Three scenarios trigger this: F3+T (player-initiated reload), a resource
@@ -79,6 +104,7 @@ public class BCLibClient {
         // pack toggles (no cb state change for ON/OFF users), and our cached sprites would
         // be just as stale in that case. The next chunk re-bake will populate the cache
         // afresh on demand.
+        //? if >=1.21.10 {
         modEventBus.addListener(AddClientReloadListenersEvent.class, event ->
             event.addListener(
                 Identifier.fromNamespaceAndPath("buildcraftunofficial", "pipe_sprite_cache"),
@@ -86,6 +112,14 @@ public class BCLibClient {
                     buildcraft.transport.client.model.PipeBaseModelGenStandard.clearSpriteCaches()
             )
         );
+        //?} else {
+        /*modEventBus.addListener(net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent.class, event ->
+            event.registerReloadListener(
+                (ResourceManagerReloadListener) rm ->
+                    buildcraft.transport.client.model.PipeBaseModelGenStandard.clearSpriteCaches()
+            )
+        );*/
+        //?}
 
         // Catch BC-registry reloads (anything routed through ReloadableRegistryManager) so
         // the guide regenerates against the new entries. Guarded internally by isInReload
@@ -112,7 +146,10 @@ public class BCLibClient {
             event -> GuideManager.INSTANCE.ensureLoaded()
         );
 
-        NeoForge.EVENT_BUS.register(BCDebugOverlay.class);
+        // (BCDebugOverlay removed: it was a second, redundant F3-debug renderer that drew the
+        // targeted tile's client info with a "[BC] " prefix — duplicating DebugOverlayRenderer, which
+        // already renders the same info plus the server/client diff. Both were registered, so the F3
+        // overlay showed the client info twice. DebugOverlayRenderer (RegisterGuiLayersEvent) is the keeper.)
         NeoForge.EVENT_BUS.register(BCTooltips.class);
 
         // Advanced-debug overlay: draws the in-world highlight for whatever tile the player last

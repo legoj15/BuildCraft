@@ -27,6 +27,8 @@ Last audited: 2026-05-31 (final pre-rc review — removed dev scaffolding, swept
 - [ ] Utilize modern Minecraft sounds (copper grates for pipes, etc)
 - [ ] **Goggles texture.** `item/goggles.png` is a verbatim copy of the vanilla paper texture used as a placeholder — the dev-gated Goggles headpiece needs real art before it could be un-gated.
 - [ ] Builder UX: flag blocks that can't be placed yet (floating torches, flowers on stone, etc.) — e.g. a red box overlay on the resource list or the build area — so a stalled build is legible to the player.
+- [ ] AE2 GuideME support
+- [ ] Quarry item transport visualization
 
 ---
 

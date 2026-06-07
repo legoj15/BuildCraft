@@ -26,6 +26,8 @@ import buildcraft.api.lists.ListMatchHandler;
 import buildcraft.api.lists.ListMatchHandler.Type;
 import buildcraft.api.lists.ListRegistry;
 
+import buildcraft.lib.misc.NBTUtilBC;
+
 public final class ListHandler {
     public static final int WIDTH = 9;
     public static final int HEIGHT = 2;
@@ -138,10 +140,10 @@ public final class ListHandler {
             Line line = new Line();
 
             if (data != null && data.contains("st")) {
-                ListTag l = data.getList("st").orElse(null);
+                ListTag l = NBTUtilBC.getListOrNull(data, "st", Tag.TAG_COMPOUND);
                 if (l != null) {
                     for (int i = 0; i < l.size() && i < WIDTH; i++) {
-                        CompoundTag itemTag = l.getCompound(i).orElse(null);
+                        CompoundTag itemTag = NBTUtilBC.getCompoundOrNull(l, i);
                         if (itemTag == null) continue;
                         // Use ItemStack.CODEC so components (enchantments, custom name, damage,
                         // etc.) round-trip — Precise mode compares components, so the saved
@@ -156,11 +158,11 @@ public final class ListHandler {
                                     .ifPresent(s -> line.stacks.set(slotIdx, s));
                         } else if (itemTag.contains("id")) {
                             // Legacy format (id + count, no components).
-                            String itemId = itemTag.getString("id").orElse("");
-                            int count = itemTag.getInt("count").orElse(1);
+                            String itemId = NBTUtilBC.getString(itemTag, "id", "");
+                            int count = NBTUtilBC.getInt(itemTag, "count", 1);
                             net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(itemId);
                             if (id != null) {
-                                Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(id);
+                                Item item = buildcraft.lib.misc.RegistryUtilBC.getValue(net.minecraft.core.registries.BuiltInRegistries.ITEM, id);
                                 if (item != null && item != net.minecraft.world.item.Items.AIR) {
                                     line.stacks.set(i, new ItemStack(item, count));
                                 }
@@ -169,9 +171,9 @@ public final class ListHandler {
                     }
                 }
 
-                line.precise = data.getBoolean("Fp").orElse(false);
-                line.byType = data.getBoolean("Ft").orElse(false);
-                line.byMaterial = data.getBoolean("Fm").orElse(false);
+                line.precise = NBTUtilBC.getBoolean(data, "Fp", false);
+                line.byType = NBTUtilBC.getBoolean(data, "Ft", false);
+                line.byMaterial = NBTUtilBC.getBoolean(data, "Fm", false);
             }
 
             return line;
@@ -281,11 +283,11 @@ public final class ListHandler {
         if (customData != null) {
             CompoundTag data = customData.copyTag();
             if (data.contains("written") && data.contains("lines")) {
-                ListTag list = data.getList("lines").orElse(null);
+                ListTag list = NBTUtilBC.getListOrNull(data, "lines", Tag.TAG_COMPOUND);
                 if (list != null) {
                     Line[] lines = new Line[list.size()];
                     for (int i = 0; i < lines.length; i++) {
-                        CompoundTag lineTag = list.getCompound(i).orElse(null);
+                        CompoundTag lineTag = NBTUtilBC.getCompoundOrNull(list, i);
                         lines[i] = lineTag != null ? Line.fromTag(lineTag) : new Line();
                     }
                     return lines;
@@ -340,10 +342,10 @@ public final class ListHandler {
         if (customData == null) return false;
         CompoundTag data = customData.copyTag();
         if (data.contains("written") && data.contains("lines")) {
-            ListTag list = data.getList("lines").orElse(null);
+            ListTag list = NBTUtilBC.getListOrNull(data, "lines", Tag.TAG_COMPOUND);
             if (list != null) {
                 for (int i = 0; i < list.size(); i++) {
-                    CompoundTag lineTag = list.getCompound(i).orElse(null);
+                    CompoundTag lineTag = NBTUtilBC.getCompoundOrNull(list, i);
                     if (lineTag != null) {
                         Line line = Line.fromTag(lineTag);
                         if (line.matches(item)) {

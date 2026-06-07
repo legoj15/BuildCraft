@@ -35,15 +35,17 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 
+import net.neoforged.neoforge.fluids.FluidStack;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+//?}
+
+import buildcraft.lib.fluid.BCFluidTank;
+import buildcraft.lib.tile.item.IBCItemHandler;
 
 import buildcraft.api.core.IPathProvider;
 import buildcraft.api.core.IStackFilter;
@@ -55,6 +57,9 @@ import buildcraft.api.mj.MjBattery;
 import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.PositionUtil;
 import buildcraft.lib.misc.data.Box;
@@ -141,36 +146,31 @@ public class TileBuilder extends TileBC_Neptune
     private final NonNullList<ItemStack> invResources = NonNullList.withSize(RESOURCE_SLOTS, ItemStack.EMPTY);
 
     // Fluid tanks: 4 slots, 8 buckets each, matching 1.12.2. Each tank is a single-slot
-    // FluidStacksResourceHandler so WidgetFluidTank can bind to it directly in the GUI. The
-    // combined tankManager below is what BlueprintBuilder uses for fluid-block placement.
-    // Each insert/extract calls setChanged() so the chunk is marked dirty on mutation —
-    // otherwise tank contents only persist by accident when the chunk saves for another reason.
-    private final FluidStacksResourceHandler[] tanks = new FluidStacksResourceHandler[] {
+    // BCFluidTank so WidgetFluidTank can bind to it directly in the GUI. The combined
+    // tankManager below is what BlueprintBuilder uses for fluid-block placement.
+    // onChanged() calls setChanged() so the chunk is marked dirty on mutation — otherwise
+    // tank contents only persist by accident when the chunk saves for another reason.
+    private final BCFluidTank[] tanks = new BCFluidTank[] {
         makeDirtyingTank(),
         makeDirtyingTank(),
         makeDirtyingTank(),
         makeDirtyingTank(),
     };
 
-    private FluidStacksResourceHandler makeDirtyingTank() {
-        return new FluidStacksResourceHandler(1, TANK_CAPACITY) {
+    private BCFluidTank makeDirtyingTank() {
+        return new BCFluidTank(1, TANK_CAPACITY) {
             @Override
-            public int insert(int slot, FluidResource resource, int amount, TransactionContext ctx) {
-                int moved = super.insert(slot, resource, amount, ctx);
-                if (moved > 0) setChanged();
-                return moved;
-            }
-
-            @Override
-            public int extract(int slot, FluidResource resource, int amount, TransactionContext ctx) {
-                int moved = super.extract(slot, resource, amount, ctx);
-                if (moved > 0) setChanged();
-                return moved;
+            protected void onChanged() {
+                setChanged();
             }
         };
     }
 
-    /** Combined read/write view over {@link #tanks} exposed via {@link #getTankManager()}. */
+    /** Combined read/write view over {@link #tanks} exposed via {@link #getTankManager()}.
+     *  On 1.21.10+ this is a Transfer-API {@code ResourceHandler<FluidResource>}; on 1.21.1
+     *  (no Transfer API) it is a classic {@code IFluidHandler} fanning across the 4 single-slot
+     *  {@link BCFluidTank}s — insert tries each tank in order, extract until one yields. */
+    //? if >=1.21.10 {
     private final ResourceHandler<FluidResource> tankManager = new ResourceHandler<>() {
         @Override
         public int size() {
@@ -207,12 +207,69 @@ public class TileBuilder extends TileBC_Neptune
             return slot >= 0 && slot < tanks.length ? tanks[slot].extract(0, resource, amount, ctx) : 0;
         }
     };
+    //?} else {
+    /*private final net.neoforged.neoforge.fluids.capability.IFluidHandler tankManager =
+            new net.neoforged.neoforge.fluids.capability.IFluidHandler() {
+        @Override
+        public int getTanks() {
+            return tanks.length;
+        }
+
+        @Override
+        public FluidStack getFluidInTank(int slot) {
+            return slot >= 0 && slot < tanks.length ? tanks[slot].getFluidStack(0) : FluidStack.EMPTY;
+        }
+
+        @Override
+        public int getTankCapacity(int slot) {
+            return slot >= 0 && slot < tanks.length ? tanks[slot].getCapacityMb(0) : 0;
+        }
+
+        @Override
+        public boolean isFluidValid(int slot, FluidStack stack) {
+            return slot >= 0 && slot < tanks.length && tanks[slot].isFluidValid(0, stack);
+        }
+
+        @Override
+        public int fill(FluidStack resource, FluidAction action) {
+            for (int i = 0; i < tanks.length; i++) {
+                int n = tanks[i].fill(0, resource, action.simulate());
+                if (n > 0) {
+                    return n;
+                }
+            }
+            return 0;
+        }
+
+        @Override
+        public FluidStack drain(FluidStack resource, FluidAction action) {
+            for (int i = 0; i < tanks.length; i++) {
+                FluidStack inTank = tanks[i].getFluidStack(0);
+                if (!inTank.isEmpty() && FluidStack.isSameFluidSameComponents(inTank, resource)) {
+                    return tanks[i].drain(0, resource.getAmount(), action.simulate());
+                }
+            }
+            return FluidStack.EMPTY;
+        }
+
+        @Override
+        public FluidStack drain(int maxDrain, FluidAction action) {
+            for (int i = 0; i < tanks.length; i++) {
+                if (!tanks[i].getFluidStack(0).isEmpty()) {
+                    return tanks[i].drain(0, maxDrain, action.simulate());
+                }
+            }
+            return FluidStack.EMPTY;
+        }
+    };*/
+    //?}
 
     /** Pipe-facing adapter: wraps {@link #invResources} as a NeoForge {@code ResourceHandler<ItemResource>}
      *  so pipes can push items into the Builder. Insert tries matching slots first then empty slots.
      *  Extract is intentionally disabled — 1.12.2 pipes also only inserted into the Builder's
      *  resource inventory; pulling finished items out doesn't make sense. */
-    private final ResourceHandler<ItemResource> pipeItemHandler = new ResourceHandler<>() {
+    private final IBCItemHandler pipeItemHandler = new IBCItemHandler() {
+        //? if >=1.21.10 {
         @Override
         public int size() { return invResources.size(); }
 
@@ -275,6 +332,54 @@ public class TileBuilder extends TileBC_Neptune
         private int getCapacityAsInt(ItemResource resource) {
             return (int) Math.min(Integer.MAX_VALUE, getCapacityAsLong(0, resource));
         }
+        //?} else {
+        /*@Override
+        public int getSlots() { return invResources.size(); }
+
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            if (slot < 0 || slot >= invResources.size()) return ItemStack.EMPTY;
+            return invResources.get(slot);
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            if (slot < 0 || slot >= invResources.size() || stack.isEmpty()) return stack;
+            ItemStack existing = invResources.get(slot);
+            int maxStack = Math.min(64, stack.getMaxStackSize());
+            if (existing.isEmpty()) {
+                int moved = Math.min(stack.getCount(), maxStack);
+                if (!simulate) {
+                    invResources.set(slot, stack.copyWithCount(moved));
+                    onResourcesChanged();
+                }
+                return moved >= stack.getCount() ? ItemStack.EMPTY : stack.copyWithCount(stack.getCount() - moved);
+            }
+            if (!ItemStack.isSameItemSameComponents(existing, stack)) return stack;
+            int space = Math.min(maxStack, existing.getMaxStackSize()) - existing.getCount();
+            if (space <= 0) return stack;
+            int moved = Math.min(space, stack.getCount());
+            if (!simulate) {
+                existing.grow(moved);
+                onResourcesChanged();
+            }
+            return moved >= stack.getCount() ? ItemStack.EMPTY : stack.copyWithCount(stack.getCount() - moved);
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            // Pipes can't pull items out of the Builder — matches 1.12.2 behavior.
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public int getSlotLimit(int slot) { return 64; }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            return slot >= 0 && slot < invResources.size();
+        }*/
+        //?}
     };
 
     /** Bridges the legacy {@link IItemTransactor} API the snapshot builders call into to the
@@ -399,7 +504,7 @@ public class TileBuilder extends TileBC_Neptune
 
     /** Exposes {@link #invResources} to NeoForge capabilities so pipes can push items in. */
     @Override
-    public ResourceHandler<ItemResource> getItemHandler(Direction facing) {
+    public IBCItemHandler getItemHandler(Direction facing) {
         return pipeItemHandler;
     }
 
@@ -529,7 +634,7 @@ public class TileBuilder extends TileBC_Neptune
         if (level == null || level.isClientSide() || getOwner() == null) {
             return;
         }
-        java.util.UUID ownerId = getOwner().id();
+        java.util.UUID ownerId = GameProfileUtil.getId(getOwner());
         if (!startOfSomethingBigGranted && snapshot != null) {
             bigStructureCellsBuilt += snapshot.countNonAirCells();
             if (bigStructureCellsBuilt >= BIG_STRUCTURE_THRESHOLD) {
@@ -668,7 +773,7 @@ public class TileBuilder extends TileBC_Neptune
         onResourcesChanged();
     }
 
-    public FluidStacksResourceHandler getTank(int i) {
+    public BCFluidTank getTank(int i) {
         return (i >= 0 && i < tanks.length) ? tanks[i] : null;
     }
 
@@ -683,8 +788,8 @@ public class TileBuilder extends TileBC_Neptune
     // NBT
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         output.putLong("battery_mj", battery.getStored());
         output.putBoolean("canExcavate", canExcavate);
         output.putInt("fluidMode", fluidMode.ordinal());
@@ -719,12 +824,12 @@ public class TileBuilder extends TileBC_Neptune
         }
         // Tanks: store fluid id + amount per tank (same shape as TileEngineIron_BC8).
         for (int i = 0; i < tanks.length; i++) {
-            FluidResource res = tanks[i].getResource(0);
-            if (!res.isEmpty()) {
-                Identifier id = BuiltInRegistries.FLUID.getKey(res.getFluid());
+            FluidStack fluid = tanks[i].getFluidStack(0);
+            if (!fluid.isEmpty()) {
+                Identifier id = BuiltInRegistries.FLUID.getKey(fluid.getFluid());
                 if (id != null) {
                     output.putString("tank_" + i + "_fluid", id.toString());
-                    output.putInt("tank_" + i + "_amount", (int) tanks[i].getAmountAsLong(0));
+                    output.putInt("tank_" + i + "_amount", tanks[i].getAmountMb(0));
                 }
             }
         }
@@ -768,8 +873,8 @@ public class TileBuilder extends TileBC_Neptune
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
         long stored = input.getLongOr("battery_mj", 0L);
         // Absolute set, not addPower. ClientboundBlockEntityDataPacket re-runs loadAdditional on
         // the client every 5 ticks; the additive call would accumulate the server's snapshot
@@ -804,25 +909,21 @@ public class TileBuilder extends TileBC_Neptune
         // update packet, so we MUST drain first before inserting — otherwise each sync adds
         // another copy of the fluid, making the client tanks "count up" until they cap.
         for (int i = 0; i < tanks.length; i++) {
-            try (Transaction tx = Transaction.openRoot()) {
-                FluidResource existing = tanks[i].getResource(0);
-                if (!existing.isEmpty()) {
-                    tanks[i].extract(0, existing, Integer.MAX_VALUE, tx);
-                }
-                String fluidId = input.getStringOr("tank_" + i + "_fluid", "");
-                if (!fluidId.isEmpty()) {
-                    Identifier id = Identifier.tryParse(fluidId);
-                    if (id != null) {
-                        Fluid fluid = BuiltInRegistries.FLUID.getValue(id);
-                        if (fluid != null && fluid != Fluids.EMPTY) {
-                            int amount = input.getIntOr("tank_" + i + "_amount", 0);
-                            if (amount > 0) {
-                                tanks[i].insert(0, FluidResource.of(fluid), amount, tx);
-                            }
+            if (!tanks[i].isTankEmpty(0)) {
+                tanks[i].drain(0, Integer.MAX_VALUE, false);
+            }
+            String fluidId = input.getStringOr("tank_" + i + "_fluid", "");
+            if (!fluidId.isEmpty()) {
+                Identifier id = Identifier.tryParse(fluidId);
+                if (id != null) {
+                    Fluid fluid = buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.FLUID, id);
+                    if (fluid != null && fluid != Fluids.EMPTY) {
+                        int amount = input.getIntOr("tank_" + i + "_amount", 0);
+                        if (amount > 0) {
+                            tanks[i].fill(0, new FluidStack(fluid, amount), false);
                         }
                     }
                 }
-                tx.commit();
             }
         }
         // Restore advancement state — defaults preserve a fresh-builder zero/false posture for
@@ -1045,9 +1146,15 @@ public class TileBuilder extends TileBC_Neptune
     }
 
     @Override
+    //? if >=1.21.10 {
     public ResourceHandler<FluidResource> getTankManager() {
         return tankManager;
     }
+    //?} else {
+    /*public net.neoforged.neoforge.fluids.capability.IFluidHandler getTankManager() {
+        return tankManager;
+    }*/
+    //?}
 
     // Destruction-laser tier + drop routing ─────────────────────────────────────
 
@@ -1096,14 +1203,15 @@ public class TileBuilder extends TileBC_Neptune
         // Tank-absorb cleared fluid (CLEAR mode only). Defensive recheck on the mode here
         // even though the break queue only admits fluids under CLEAR — keeps the contract
         // local to this method so a future caller change can't accidentally tank-fill.
+        // Fill each tank in order (matching the combined tankManager's fan-out) until the
+        // captured fluid is exhausted; tank-full overflow is silently dropped (see javadoc).
         if (!capturedFluid.isEmpty() && getFluidMode() == buildcraft.builders.snapshot.EnumFluidHandlingMode.CLEAR) {
-            try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
-                    net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
-                tankManager.insert(
-                        net.neoforged.neoforge.transfer.fluid.FluidResource.of(capturedFluid),
-                        capturedFluid.getAmount(),
-                        tx);
-                tx.commit();
+            FluidStack remaining = capturedFluid.copy();
+            for (int i = 0; i < tanks.length && !remaining.isEmpty(); i++) {
+                int filled = tanks[i].fill(0, remaining, false);
+                if (filled > 0) {
+                    remaining.shrink(filled);
+                }
             }
         }
     }

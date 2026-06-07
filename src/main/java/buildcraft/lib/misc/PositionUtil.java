@@ -56,6 +56,16 @@ public class PositionUtil {
         //?}
     }
 
+    /** A {@link Direction}'s unit normal vector. Renamed {@code getNormal()} -> {@code getUnitVec3i()}
+     *  at MC 1.21.10; this hides the split so call sites (and method references) stay version-neutral. */
+    public static Vec3i getDirectionNormal(Direction dir) {
+        //? if >=1.21.10 {
+        return dir.getUnitVec3i();
+        //?} else {
+        /*return dir.getNormal();*/
+        //?}
+    }
+
     /** Pack a ChunkPos to its long key (26.1 {@code cp.pack()} ⇄ 1.21.11 {@code cp.toLong()}). */
     public static long chunkPack(ChunkPos cp) {
         //? if >=26.1 {

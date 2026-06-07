@@ -160,20 +160,16 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     }
 
     private void renderTankTooltip(BCGraphics graphics, int mouseX, int mouseY,
-            net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler tank, int relX, int relY, int w, int h) {
+            buildcraft.lib.fluid.BCFluidTank tank, int relX, int relY, int w, int h) {
         if (tank == null) return;
         int absX = leftPos + relX;
         int absY = topPos + relY;
         if (mouseX >= absX && mouseX < absX + w && mouseY >= absY && mouseY < absY + h) {
-            int amount = (int) tank.getAmountAsLong(0);
-            int capacity = (int) tank.getCapacityAsLong(0, net.neoforged.neoforge.transfer.fluid.FluidResource.EMPTY);
+            int amount = tank.getAmountMb(0);
+            int capacity = tank.getCapacityMb(0);
 
-            List<Component> lines = new ArrayList<>();
-            if (amount > 0) {
-                lines.add(tank.getResource(0).toStack(amount).getHoverName());
-            }
-            lines.add(Component.literal(amount + " / " + capacity + " mB")
-                    .withStyle(ChatFormatting.GRAY));
+            List<Component> lines = buildcraft.lib.gui.elem.GuiElementFluidTank.buildTankTooltip(
+                    tank.getFluidStack(0), amount, capacity);
             java.util.List<net.minecraft.util.FormattedCharSequence> comps = new java.util.ArrayList<>();
             for (net.minecraft.network.chat.Component c : lines) {
                 comps.add(c.getVisualOrderText());

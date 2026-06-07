@@ -6,10 +6,12 @@
 
 package buildcraft.lib.tile.item;
 
-import net.minecraft.resources.Identifier;
-
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.item.ItemResource;
-
-/** A form of {@link ResourceHandler} that provides insertion-checking functionality via {@link StackInsertionChecker} */
-public interface IItemHandlerAdv extends ResourceHandler<ItemResource>, StackInsertionChecker {}
+/** BuildCraft's advanced item handler: an {@link IBCItemHandler} (so a {@code ResourceHandler<ItemResource>}
+ * on 1.21.10+ via the NeoForge Transfer API, or a classic {@code IItemHandler} on 1.21.1), plus
+ * insertion-checking via {@link StackInsertionChecker}. On 1.21.1 it additionally exposes
+ * {@code IItemHandlerModifiable} so callers can {@code setStackInSlot} through the type. */
+//? if >=1.21.10 {
+public interface IItemHandlerAdv extends IBCItemHandler, StackInsertionChecker {}
+//?} else {
+/*public interface IItemHandlerAdv extends IBCItemHandler, StackInsertionChecker, net.neoforged.neoforge.items.IItemHandlerModifiable {}*/
+//?}

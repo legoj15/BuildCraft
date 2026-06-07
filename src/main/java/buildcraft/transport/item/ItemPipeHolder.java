@@ -16,7 +16,9 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+//? if >=1.21.10 {
 import net.minecraft.world.item.component.TooltipDisplay;
+//?}
 import net.minecraft.world.level.block.Block;
 
 import buildcraft.api.transport.pipe.IItemPipe;
@@ -42,6 +44,19 @@ public class ItemPipeHolder extends BlockItem implements IItemPipe {
     public PipeDefinition getDefinition() {
         return definition;
     }
+
+    //? if <1.21.10 {
+    /*@Override
+    public String getDescriptionId() {
+        // 1.21.1: BlockItem.getDescriptionId() returns the BLOCK's id, and every pipe item wraps the
+        // single shared pipe_holder block -- so all pipes would display the untranslated
+        // "block.buildcraftunofficial.pipe_holder". Return the ITEM's own key
+        // (item.buildcraftunofficial.pipe_<x>_item), which the lang file is keyed on. 26.1+ resolves
+        // names via the ITEM_NAME data component instead, so no override is needed there (and this
+        // branch is absent on those nodes, keeping them byte-identical).
+        return this.getOrCreateDescriptionId();
+    }*/
+    //?}
 
     /** Registers this item as the canonical item for its definition in PipeApi. */
     public ItemPipeHolder registerWithPipeApi() {
@@ -71,8 +86,16 @@ public class ItemPipeHolder extends BlockItem implements IItemPipe {
     }
 
     @Override
+    //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
                                 Consumer<Component> tooltip, TooltipFlag flag) {
+    //?} else {
+    /*// 1.21.1: appendHoverText has no TooltipDisplay and takes List<Component>; adapt to the shared
+    // Consumer-based body below via tooltipList::add.
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context,
+                                java.util.List<Component> tooltipList, TooltipFlag flag) {
+        Consumer<Component> tooltip = tooltipList::add;*/
+    //?}
         // Descriptive tip from lang file (e.g. "Extraction pipe", "Sorts items")
         String id = definition.identifier; // e.g. "buildcraftunofficial:wood_item"
         int colon = id.indexOf(':');

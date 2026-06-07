@@ -56,7 +56,11 @@ public class FillerAdvancementTester {
         //     full builder/inventory/box just to exercise the transition.
         BlockPos pos = new BlockPos(2, 2, 2);
         helper.setBlock(pos, BCBuildersBlocks.FILLER.get());
+        //? if >=1.21.10 {
         TileFiller filler = helper.getBlockEntity(pos, TileFiller.class);
+        //?} else {
+        /*TileFiller filler = helper.getBlockEntity(pos);*/
+        //?}
         java.lang.reflect.Field finishedField;
         try {
             finishedField = TileFiller.class.getDeclaredField("finished");

@@ -98,7 +98,7 @@ public class SoundTestCommand {
     private static int play(CommandContext<CommandSourceStack> ctx, float pitch, float volume) {
         CommandSourceStack source = ctx.getSource();
         Identifier soundId = IdentifierArgument.getId(ctx, "sound");
-        SoundEvent event = BuiltInRegistries.SOUND_EVENT.getValue(soundId);
+        SoundEvent event = buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.SOUND_EVENT, soundId);
         if (event == null) {
             source.sendFailure(Component.literal("Unknown sound: " + soundId)
                 .withStyle(ChatFormatting.RED));
@@ -141,8 +141,13 @@ public class SoundTestCommand {
                 MutableComponent button = Component.literal("[" + formatPitch(pitch) + "]")
                     .withStyle(Style.EMPTY
                         .withColor(ChatFormatting.GREEN)
+                        //? if >=1.21.10 {
                         .withClickEvent(new ClickEvent.RunCommand(cmd))
                         .withHoverEvent(new HoverEvent.ShowText(Component.literal(cmd))));
+                        //?} else {
+                        /*.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cmd))
+                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(cmd))));*/
+                        //?}
                 line.append(Component.literal(" ")).append(button);
             }
             source.sendSystemMessage(line);

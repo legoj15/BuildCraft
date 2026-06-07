@@ -10,7 +10,9 @@ import buildcraft.lib.gui.button.BCButton;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+//? if >=1.21.10 {
 import net.minecraft.client.input.InputWithModifiers;
+//?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -104,10 +106,17 @@ public class GuiDiamondWoodPipe extends GuiBC8<ContainerDiamondWoodPipe> {
             this.setTooltip(Tooltip.create(Component.translatable(tooltipKey)));
         }
 
+        //? if >=1.21.10 {
         @Override
         public void onPress(InputWithModifiers modifiers) {
             setFilterMode(mode);
         }
+        //?} else {
+        /*@Override
+        public void onPress() {
+            setFilterMode(mode);
+        }*/
+        //?}
 
         @Override
         protected void drawButtonContent(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {

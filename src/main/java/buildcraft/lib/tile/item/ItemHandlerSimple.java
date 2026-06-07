@@ -15,20 +15,24 @@ import javax.annotation.Nullable;
 import buildcraft.api.core.IStackFilter;
 import buildcraft.lib.inventory.AbstractInvItemTransactor;
 import buildcraft.lib.misc.INBTSerializable;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.tile.item.StackInsertionFunction.InsertionResult;
 
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
+//?}
 
 @SuppressWarnings("this-escape")
 public class ItemHandlerSimple extends AbstractInvItemTransactor
     implements IItemHandlerAdv, INBTSerializable<CompoundTag> {
 
+    //? if >=1.21.10 {
     private final SnapshotJournal<ItemStack[]> journal = new SnapshotJournal<>() {
         @Override
         protected ItemStack[] createSnapshot() {
@@ -46,6 +50,7 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
             }
         }
     };
+    //?}
 
 
     private StackInsertionChecker checker;
@@ -126,9 +131,9 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
 
     @Override
     public void deserializeNBT(CompoundTag nbt) {
-        ListTag list = nbt.getList("items").orElseGet(ListTag::new);
+        ListTag list = NBTUtilBC.getList(nbt, "items", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size() && i < size(); i++) {
-            CompoundTag itemNbt = list.getCompound(i).orElseGet(CompoundTag::new);
+            CompoundTag itemNbt = NBTUtilBC.getCompound(list, i);
             ItemStack stack = ItemStack.EMPTY;
             Tag stackPayload = itemNbt.get("stack");
             if (stackPayload != null) {
@@ -137,11 +142,11 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
                         .orElse(ItemStack.EMPTY);
             } else if (itemNbt.contains("id")) {
                 // Legacy format (id + count, no components) -- read existing world saves.
-                String idStr = itemNbt.getString("id").orElse("");
+                String idStr = NBTUtilBC.getString(itemNbt, "id", "");
                 net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(idStr);
                 if (id != null) {
-                    net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(id);
-                    int count = itemNbt.getInt("count").orElse(1);
+                    net.minecraft.world.item.Item item = buildcraft.lib.misc.RegistryUtilBC.getValue(net.minecraft.core.registries.BuiltInRegistries.ITEM, id);
+                    int count = NBTUtilBC.getInt(itemNbt, "count", 1);
                     if (item != null && item != net.minecraft.world.item.Items.AIR) {
                         stack = new ItemStack(item, count);
                     }
@@ -180,6 +185,11 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         return 64; // Default legacy behavior
     }
 
+    // Classic IItemHandler contract method (required on 1.21.1; harmless extra public method on modern nodes).
+    public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
+        return canSet(slot, stack);
+    }
+
     private boolean badSlotIndex(int slot) {
         return slot < 0 || slot >= stacks.size();
     }
@@ -190,6 +200,9 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         return stacks.get(slot).isEmpty();
     }
 
+    // Transfer-API (ResourceHandler<ItemResource>) adapter surface — 1.21.10+ only. On 1.21.1 the classic
+    // IItemHandler methods (insertItem/extractItem/getStackInSlot/getSlots/getSlotLimit/...) satisfy the cap.
+    //? if >=1.21.10 {
     @Override
     public ItemResource getResource(int index) {
         return badSlotIndex(index) ? ItemResource.EMPTY : ItemResource.of(stacks.get(index));
@@ -267,6 +280,7 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         }
         return toExtract;
     }
+    //?}
 
     public void setStackInSlot(int slot, @Nonnull ItemStack stack) {
         if (badSlotIndex(slot)) {
@@ -303,6 +317,7 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         }
     }
 
+    //? if >=1.21.10 {
     @Override
     protected ItemStack insert(int slot, @Nonnull ItemStack stack, boolean simulate) {
         if (stack.isEmpty()) return ItemStack.EMPTY;
@@ -325,6 +340,48 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
             return current.copyWithCount(ex);
         }
     }
+    //?} else {
+    /*@Override
+    protected ItemStack insert(int slot, @Nonnull ItemStack stack, boolean simulate) {
+        if (stack.isEmpty()) return StackUtil.EMPTY;
+        if (badSlotIndex(slot)) return stack;
+        ItemStack current = stacks.get(slot);
+        if (!canSet(slot, stack) || !canSet(slot, current)) return stack;
+        InsertionResult result = inserter.modifyForInsertion(slot, asValid(current.copy()), asValid(stack.copy()));
+        if (!canSet(slot, result.toSet)) {
+            throw new RuntimeException("Conflicting Insertion in ItemHandlerSimple! existing=" + current
+                + " inserting=" + stack + " toSet=" + result.toSet);
+        }
+        int inserted = stack.getCount() - result.toReturn.getCount();
+        if (inserted > 0 && !simulate) {
+            setStackInternal(slot, result.toSet);
+            if (callback != null) {
+                callback.onStackChange(this, slot, current, result.toSet);
+            }
+        }
+        return result.toReturn;
+    }
+
+    @Override
+    protected ItemStack extract(int slot, IStackFilter filter, int min, int max, boolean simulate) {
+        if (badSlotIndex(slot) || max < min) return StackUtil.EMPTY;
+        ItemStack current = stacks.get(slot);
+        if (current.isEmpty() || current.getCount() < min || !filter.matches(asValid(current))) return StackUtil.EMPTY;
+        int toExtract = Math.min(max, current.getCount());
+        if (toExtract <= 0) return StackUtil.EMPTY;
+        ItemStack before = current.copy();
+        ItemStack after = current.copy();
+        after.shrink(toExtract);
+        if (after.getCount() <= 0) after = StackUtil.EMPTY;
+        if (!simulate) {
+            setStackInternal(slot, after);
+            if (callback != null) {
+                callback.onStackChange(this, slot, before, after);
+            }
+        }
+        return before.copyWithCount(toExtract);
+    }*/
+    //?}
 
     @Override
     public String toString() {

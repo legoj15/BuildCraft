@@ -8,7 +8,9 @@ package buildcraft.lib.gui;
 
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+//? if >=1.21.10 {
 import net.minecraft.client.input.MouseButtonEvent;
+//?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
@@ -131,12 +133,23 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
         //?}
         // Draw the drag icon AFTER super (which draws slots/items/highlights) using nextStratum()
         // so the drag icon always sorts on top, matching MC's own carried-item rendering.
+        //? if >=1.21.10 {
         graphics.nextStratum();
+        //?}
+        // (1.21.1 GuiGraphics has no stratum system; immediate draw order already sorts the drag icon on top.)
         mainGui.drawDragLayer(bcg);
         mainGui.drawMenuOverlayLayer(bcg);
         drawTooltipLayer(mouseX, mouseY, partialTicks);
+        // 1.21.1: draw the single deferred tooltip set during this frame (last-wins, on top),
+        // mirroring 26.1.2's engine-level "for next frame" tooltip. Without this, 1.21.1's
+        // immediate renderTooltip drew every tooltip set in the frame, overlapping. (>=1.21.10
+        // defers in-engine, so no flush is needed there.)
+        //? if <1.21.10 {
+        /*BCGraphics.flushDeferredTooltip();*/
+        //?}
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         int mouseX = (int) event.x();
@@ -165,6 +178,33 @@ public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractCont
         mainGui.onMouseDragged(mouseX, mouseY, button, 0);
         return super.mouseDragged(event, dragX, dragY);
     }
+    //?} else {
+    /*@Override
+    public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
+        int mouseX = (int) mouseXd;
+        int mouseY = (int) mouseYd;
+        if (mainGui.onMouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
+        return super.mouseClicked(mouseXd, mouseYd, button);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseXd, double mouseYd, int button) {
+        int mouseX = (int) mouseXd;
+        int mouseY = (int) mouseYd;
+        mainGui.onMouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(mouseXd, mouseYd, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseXd, double mouseYd, int button, double dragX, double dragY) {
+        int mouseX = (int) mouseXd;
+        int mouseY = (int) mouseYd;
+        mainGui.onMouseDragged(mouseX, mouseY, button, 0);
+        return super.mouseDragged(mouseXd, mouseYd, button, dragX, dragY);
+    }*/
+    //?}
 
     /** Foreground labels. 26.1: extractLabels(GuiGraphicsExtractor); 1.21.11: renderLabels(GuiGraphics). */
     @Override

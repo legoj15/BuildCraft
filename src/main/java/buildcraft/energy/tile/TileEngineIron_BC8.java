@@ -13,15 +13,15 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 
 import net.neoforged.neoforge.fluids.FluidStack;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
+//?} else {
+/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
+//?}
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.fuels.BuildcraftFuelRegistry;
@@ -33,7 +33,11 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.energy.BCEnergyBlockEntities;
 import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
+import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.GameProfileUtil;
 
 /**
  * Combustion engine (Iron Engine). Burns fluid fuels and requires fluid coolant.
@@ -53,22 +57,22 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
     public static final double HEAT_PER_MJ = 0.0023;
     public static final double IDEAL_HEAT = 204.0;
 
-    public final FluidStacksResourceHandler tankFuel = new FluidStacksResourceHandler(1, MAX_FLUID) {
+    public final BCFluidTank tankFuel = new BCFluidTank(1, MAX_FLUID) {
         @Override
-        public boolean isValid(int index, FluidResource resource) {
-            return isValidFuel(resource.toStack(1));
+        protected boolean isFluidValid(FluidStack stack) {
+            return isValidFuel(stack);
         }
     };
-    public final FluidStacksResourceHandler tankCoolant = new FluidStacksResourceHandler(1, MAX_FLUID) {
+    public final BCFluidTank tankCoolant = new BCFluidTank(1, MAX_FLUID) {
         @Override
-        public boolean isValid(int index, FluidResource resource) {
-            return isValidCoolant(resource.toStack(1));
+        protected boolean isFluidValid(FluidStack stack) {
+            return isValidCoolant(stack);
         }
     };
-    public final FluidStacksResourceHandler tankResidue = new FluidStacksResourceHandler(1, MAX_FLUID) {
+    public final BCFluidTank tankResidue = new BCFluidTank(1, MAX_FLUID) {
         @Override
-        public boolean isValid(int index, FluidResource resource) {
-            return isResidue(resource.toStack(1));
+        protected boolean isFluidValid(FluidStack stack) {
+            return isResidue(stack);
         }
     };
 
@@ -92,8 +96,7 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
 
     @Override
     public boolean isBurning() {
-        FluidResource fuelres = tankFuel.getResource(0);
-        return !fuelres.isEmpty() && tankFuel.getAmountAsLong(0) > 0 && penaltyCooling == 0 && isRedstonePowered;
+        return !tankFuel.isTankEmpty(0) && tankFuel.getAmountMb(0) > 0 && penaltyCooling == 0 && isRedstonePowered;
     }
 
     @Override
@@ -111,13 +114,12 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
         // Coolant is still extracted via updateHeatLevel(), so combustion engines can
         // self-recover from overheat if coolant is available.
         if (getPowerStage() == EnumPowerStage.OVERHEAT) return;
-        final FluidResource fuelRes = tankFuel.getResource(0);
-        final FluidStack fuel = fuelRes.toStack((int) tankFuel.getAmountAsLong(0));
+        final FluidStack fuel = tankFuel.getFluidStack(0);
         if (currentFuel == null || currentFuel.getFluid().getFluid() != fuel.getFluid()) {
             currentFuel = BuildcraftFuelRegistry.fuel.getFuel(fuel);
         }
 
-        if (fuelRes.isEmpty() || currentFuel == null) {
+        if (tankFuel.isTankEmpty(0) || currentFuel == null) {
             return;
         }
 
@@ -125,7 +127,7 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
             if (isRedstonePowered) {
                 lastPowered = true;
                 if (getOwner() != null && level != null) {
-                    AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT_POWERING_UP);
+                    AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT_POWERING_UP);
                 }
 
                 if (burnTime > 0 || fuel.getAmount() > 0) {
@@ -133,11 +135,8 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
                         burnTime--;
                     }
                     if (burnTime <= 0) {
-                        if (tankFuel.getAmountAsLong(0) > 0) {
-                            try (Transaction tx = Transaction.openRoot()) {
-                                tankFuel.extract(0, fuelRes, 1, tx);
-                                tx.commit();
-                            }
+                        if (tankFuel.getAmountMb(0) > 0) {
+                            tankFuel.drain(0, 1, false);
                             burnTime += currentFuel.getTotalBurningTime() / 1000.0;
 
                             // Produce residue for dirty fuels
@@ -146,11 +145,8 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
                                 residueAmount += residueFluid.getAmount() / 1000.0;
                                 if (residueAmount >= 1) {
                                     int residueInt = Mth.floor(residueAmount);
-                                    try (Transaction tx = Transaction.openRoot()) {
-                                        int filled = tankResidue.insert(0, FluidResource.of(residueFluid), residueInt, tx);
-                                        if (filled > 0) tx.commit();
-                                        residueAmount -= filled;
-                                    }
+                                    int filled = tankResidue.fill(0, residueFluid.copyWithAmount(residueInt), false);
+                                    residueAmount -= filled;
                                 }
                             }
                         } else {
@@ -169,11 +165,8 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
             }
         }
 
-        if (burnTime <= 0 && tankFuel.getAmountAsLong(0) <= 0) {
-            try (Transaction tx = Transaction.openRoot()) {
-                tankFuel.extract(0, tankFuel.getResource(0), MAX_FLUID, tx);
-                tx.commit();
-            }
+        if (burnTime <= 0 && tankFuel.getAmountMb(0) <= 0) {
+            tankFuel.drain(0, MAX_FLUID, false);
         }
     }
 
@@ -196,21 +189,19 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
             double extraHeat = heat - target;
 
             if (extraHeat > 0) {
-                if (tankCoolant.getAmountAsLong(0) > 0) {
-                    FluidResource coolRes = tankCoolant.getResource(0);
+                if (tankCoolant.getAmountMb(0) > 0) {
+                    FluidStack coolFluid = tankCoolant.getFluidStack(0);
                     float coolPerMb = BuildcraftFuelRegistry.coolant.getDegreesPerMb(
-                        coolRes.toStack(1), heat);
+                        coolFluid.copyWithAmount(1), heat);
                     if (coolPerMb > 0) {
-                        int coolantAmount = (int) Math.min(MAX_COOLANT_PER_TICK, tankCoolant.getAmountAsLong(0));
+                        int coolantAmount = (int) Math.min(MAX_COOLANT_PER_TICK, tankCoolant.getAmountMb(0));
                         coolingBuffer += coolantAmount * coolPerMb;
-                        try (Transaction tx = Transaction.openRoot()) {
-                            tankCoolant.extract(0, coolRes, coolantAmount, tx);
-                            tx.commit();
-                        }
+                        tankCoolant.drain(0, coolantAmount, false);
                         // Ice cool advancement: coolant that isn't water
-                        if (!coolRes.isEmpty() && !coolRes.is(net.minecraft.world.level.material.Fluids.WATER)
+                        if (!coolFluid.isEmpty()
+                            && coolFluid.getFluid() != net.minecraft.world.level.material.Fluids.WATER
                             && getOwner() != null && level != null) {
-                            AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT_ICE_COOL);
+                            AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT_ICE_COOL);
                         }
                     }
                 }
@@ -321,6 +312,7 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
      * Combined handler exposing 3 tanks: fuel (0), coolant (1), residue (2).
      * Fuel and coolant tanks accept fills; residue tank allows drains.
      */
+    //? if >=1.21.10 {
     public final ResourceHandler<FluidResource> combinedFluidHandler = new ResourceHandler<FluidResource>() {
         @Override
         public int size() { return 3; }
@@ -334,7 +326,7 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
                 default -> FluidResource.EMPTY;
             };
         }
-        
+
         @Override
         public long getAmountAsLong(int tank) {
             return switch (tank) {
@@ -370,38 +362,95 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
             return 0; // only residue can be extracted
         }
     };
+    //?} else {
+    /*public final IFluidHandler combinedFluidHandler = new IFluidHandler() {
+        @Override
+        public int getTanks() { return 3; }
+
+        @Override
+        public FluidStack getFluidInTank(int tank) {
+            return switch (tank) {
+                case 0 -> tankFuel.getFluidStack(0);
+                case 1 -> tankCoolant.getFluidStack(0);
+                case 2 -> tankResidue.getFluidStack(0);
+                default -> FluidStack.EMPTY;
+            };
+        }
+
+        @Override
+        public int getTankCapacity(int tank) {
+            return switch (tank) {
+                case 0 -> tankFuel.getCapacityMb(0);
+                case 1 -> tankCoolant.getCapacityMb(0);
+                case 2 -> tankResidue.getCapacityMb(0);
+                default -> 0;
+            };
+        }
+
+        @Override
+        public boolean isFluidValid(int tank, FluidStack stack) {
+            return switch (tank) {
+                case 0 -> tankFuel.isFluidValid(0, stack);
+                case 1 -> tankCoolant.isFluidValid(0, stack);
+                default -> false;
+            };
+        }
+
+        @Override
+        public int fill(FluidStack resource, FluidAction action) {
+            boolean simulate = action.simulate();
+            int filled = tankFuel.fill(0, resource, simulate);
+            if (filled > 0) return filled;
+            return tankCoolant.fill(0, resource, simulate);
+        }
+
+        @Override
+        public FluidStack drain(FluidStack resource, FluidAction action) {
+            FluidStack inResidue = tankResidue.getFluidStack(0);
+            if (!inResidue.isEmpty() && FluidStack.isSameFluidSameComponents(inResidue, resource)) {
+                return tankResidue.drain(0, resource.getAmount(), action.simulate());
+            }
+            return FluidStack.EMPTY;
+        }
+
+        @Override
+        public FluidStack drain(int maxDrain, FluidAction action) {
+            return tankResidue.drain(0, maxDrain, action.simulate());
+        }
+    };*/
+    //?}
 
 
     // --- NBT ---
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         output.putInt("penaltyCooling", penaltyCooling);
         output.putDouble("burnTime", burnTime);
         output.putDouble("residueAmount", residueAmount);
 
         // Save fluid tanks
-        if (!tankFuel.getResource(0).isEmpty()) {
-            net.minecraft.resources.Identifier fuelId = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(tankFuel.getResource(0).getFluid());
+        if (!tankFuel.isTankEmpty(0)) {
+            net.minecraft.resources.Identifier fuelId = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(tankFuel.getFluidStack(0).getFluid());
             output.putString("fuelFluid", fuelId.toString());
-            output.putInt("fuelAmount", (int) tankFuel.getAmountAsLong(0));
+            output.putInt("fuelAmount", tankFuel.getAmountMb(0));
         }
-        if (!tankCoolant.getResource(0).isEmpty()) {
-            net.minecraft.resources.Identifier coolId = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(tankCoolant.getResource(0).getFluid());
+        if (!tankCoolant.isTankEmpty(0)) {
+            net.minecraft.resources.Identifier coolId = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(tankCoolant.getFluidStack(0).getFluid());
             output.putString("coolantFluid", coolId.toString());
-            output.putInt("coolantAmount", (int) tankCoolant.getAmountAsLong(0));
+            output.putInt("coolantAmount", tankCoolant.getAmountMb(0));
         }
-        if (!tankResidue.getResource(0).isEmpty()) {
-            net.minecraft.resources.Identifier resId = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(tankResidue.getResource(0).getFluid());
+        if (!tankResidue.isTankEmpty(0)) {
+            net.minecraft.resources.Identifier resId = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(tankResidue.getFluidStack(0).getFluid());
             output.putString("residueFluid", resId.toString());
-            output.putInt("residueAmountTank", (int) tankResidue.getAmountAsLong(0));
+            output.putInt("residueAmountTank", tankResidue.getAmountMb(0));
         }
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
         penaltyCooling = input.getIntOr("penaltyCooling", 0);
         burnTime = input.getDoubleOr("burnTime", 0);
         residueAmount = Math.max(0, input.getDoubleOr("residueAmount", 0));
@@ -412,20 +461,17 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
         loadTank(input, "residueFluid", "residueAmountTank", tankResidue);
     }
 
-    private void loadTank(ValueInput input, String fluidKey, String amountKey, FluidStacksResourceHandler tank) {
+    private void loadTank(BCValueInput input, String fluidKey, String amountKey, BCFluidTank tank) {
         String fluidId = input.getStringOr(fluidKey, "");
         if (!fluidId.isEmpty()) {
             net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(fluidId);
             if (id != null) {
                 net.minecraft.world.level.material.Fluid fluid =
-                    net.minecraft.core.registries.BuiltInRegistries.FLUID.getValue(id);
+                    buildcraft.lib.misc.RegistryUtilBC.getValue(net.minecraft.core.registries.BuiltInRegistries.FLUID, id);
                 if (fluid != null && fluid != net.minecraft.world.level.material.Fluids.EMPTY) {
                     int amount = input.getIntOr(amountKey, 0);
                     if (amount > 0) {
-                        try (Transaction tx = Transaction.openRoot()) {
-                            tank.insert(0, FluidResource.of(fluid), amount, tx);
-                            tx.commit();
-                        }
+                        tank.fill(0, new FluidStack(fluid, amount), false);
                     }
                 }
             }

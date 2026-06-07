@@ -117,7 +117,11 @@ public class PipeDropsTester {
      *  would, so the resulting tile has a real Pipe + flow + behaviour to exercise. */
     private static TilePipeHolder placeItemPipe(GameTestHelper helper, BlockPos relPos) {
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(relPos);*/
+        //?}
         tile.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_WOOD_ITEM.get()));
         return tile;
     }
@@ -126,7 +130,11 @@ public class PipeDropsTester {
      *  is the flow instance. */
     private static TilePipeHolder placeFluidPipe(GameTestHelper helper, BlockPos relPos) {
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(relPos);*/
+        //?}
         tile.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_COBBLE_FLUID.get()));
         return tile;
     }
@@ -155,8 +163,13 @@ public class PipeDropsTester {
         // Click-break path: BlockPipeHolder.onDestroyedByPlayer should detect the plug hit,
         // pop the plug item, remove the plug from the tile, and return false to cancel the
         // pipe break.
+        //? if >=1.21.10 {
         boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
                 player.getMainHandItem(), false, fluidState);
+        //?} else {
+        /*boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
+                false, fluidState);*/
+        //?}
 
         helper.assertFalse(removed, "Pipe should not be destroyed when clicking on a plug");
         helper.assertBlockPresent(BCTransportBlocks.PIPE_HOLDER.get(), pipePos);
@@ -194,8 +207,13 @@ public class PipeDropsTester {
         Player player = playerLookingDownAt(helper, absPos, 0.21875, 0.21875, ItemStack.EMPTY);
         FluidState fluidState = level.getFluidState(absPos);
 
+        //? if >=1.21.10 {
         boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
                 player.getMainHandItem(), false, fluidState);
+        //?} else {
+        /*boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
+                false, fluidState);*/
+        //?}
 
         helper.assertFalse(removed, "Pipe should not be destroyed when clicking on a wire");
         helper.assertBlockPresent(BCTransportBlocks.PIPE_HOLDER.get(), pipePos);

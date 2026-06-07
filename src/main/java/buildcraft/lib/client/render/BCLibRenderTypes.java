@@ -10,12 +10,16 @@ import java.util.function.Function;
 //? if >=26.1 {
 import com.mojang.blaze3d.pipeline.DepthStencilState;
 //?}
+//? if >=1.21.10 {
 import com.mojang.blaze3d.pipeline.RenderPipeline;
+//?}
 
 //? if >=1.21.11 {
 import net.minecraft.util.Util;
 //?}
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.RenderPipelines;
+//?}
 //? if >=1.21.11 {
 import net.minecraft.client.renderer.rendertype.LayeringTransform;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
@@ -54,6 +58,7 @@ public final class BCLibRenderTypes {
      * Must be registered via {@link net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent}
      * — see {@link buildcraft.lib.client.BCLibClient#initClient}.
      */
+    //? if >=1.21.10 {
     public static final RenderPipeline LED_PIPELINE = RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
             .withLocation(Identifier.fromNamespaceAndPath("buildcraftunofficial", "pipeline/led"))
             //? if >=26.1 {
@@ -62,6 +67,7 @@ public final class BCLibRenderTypes {
             /*.withDepthWrite(true)*/
             //?}
             .build();
+    //?}
 
     //? if >=1.21.11 {
     private static final RenderType LED = RenderType.create(
@@ -70,11 +76,26 @@ public final class BCLibRenderTypes {
                     .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
                     .createRenderSetup()
     );
-    //?} else {
+    //?} elif >=1.21.10 {
     /*private static final RenderType LED = RenderType.create(
             "buildcraft:led", 1536, false, false, LED_PIPELINE,
             RenderType.CompositeState.builder()
                     .setLayeringState(RenderType.VIEW_OFFSET_Z_LAYERING)
+                    .createCompositeState(false)
+    );*/
+    //?} else {
+    /*// 1.21.1: no RenderPipeline GPU API — build the LED type the classic way. Mirrors LED_PIPELINE's
+    // state: position_color shader, TRANSLUCENT blend (vanilla DEBUG_FILLED), LEQUAL depth WITH depth
+    // write (default write-mask, so LEDs occlude each other), view-offset-z layering for face-flush quads.
+    private static final RenderType LED = RenderType.create(
+            "buildcraft:led",
+            com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR,
+            com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
+            1536, false, false,
+            RenderType.CompositeState.builder()
+                    .setShaderState(net.minecraft.client.renderer.RenderStateShard.POSITION_COLOR_SHADER)
+                    .setTransparencyState(net.minecraft.client.renderer.RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                    .setLayeringState(net.minecraft.client.renderer.RenderStateShard.VIEW_OFFSET_Z_LAYERING)
                     .createCompositeState(false)
     );*/
     //?}
@@ -89,10 +110,41 @@ public final class BCLibRenderTypes {
             "buildcraft:debug_solid",
             RenderSetup.builder(LED_PIPELINE).createRenderSetup()
     );
-    //?} else {
+    //?} elif >=1.21.10 {
     /*private static final RenderType DEBUG_SOLID = RenderType.create(
             "buildcraft:debug_solid", 1536, false, false, LED_PIPELINE,
             RenderType.CompositeState.builder().createCompositeState(false)
+    );*/
+    //?} else {
+    /*// 1.21.1: classic build of the same state as LED, minus the view-offset-z layering.
+    private static final RenderType DEBUG_SOLID = RenderType.create(
+            "buildcraft:debug_solid",
+            com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR,
+            com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
+            1536, false, false,
+            RenderType.CompositeState.builder()
+                    .setShaderState(net.minecraft.client.renderer.RenderStateShard.POSITION_COLOR_SHADER)
+                    .setTransparencyState(net.minecraft.client.renderer.RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                    .createCompositeState(false)
+    );*/
+    //?}
+
+    //? if <1.21.10 {
+    /*// 1.21.1 only: vanilla's debugFilledBox() is TRIANGLE_STRIP here, but our debug cubes
+    // (RenderPartCube) emit QUADS — feeding QUADS to a TRIANGLE_STRIP type collapses every face into
+    // degenerate triangles. This is debugFilledBox's exact composite state with the mode corrected to
+    // QUADS (POSITION_COLOR, translucent, view-offset-Z layering). 26.1.2/1.21.11 already use a QUADS
+    // debugFilledBox; 1.21.10 uses the QUADS debugQuads() — see debugFilled().
+    private static final RenderType DEBUG_FILLED = RenderType.create(
+            "buildcraft:debug_filled",
+            com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR,
+            com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
+            1536, false, true,
+            RenderType.CompositeState.builder()
+                    .setShaderState(net.minecraft.client.renderer.RenderStateShard.POSITION_COLOR_SHADER)
+                    .setLayeringState(net.minecraft.client.renderer.RenderStateShard.VIEW_OFFSET_Z_LAYERING)
+                    .setTransparencyState(net.minecraft.client.renderer.RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                    .createCompositeState(false)
     );*/
     //?}
 
@@ -108,8 +160,12 @@ public final class BCLibRenderTypes {
     public static RenderType debugFilled() {
         //? if >=1.21.11 {
         return RenderTypes.debugFilledBox();
+        //?} elif >=1.21.10 {
+        /*// 1.21.10's debugFilledBox() is TRIANGLE_STRIP; our cubes (RenderPartCube) emit QUADS, so
+        // use the QUADS-mode debugQuads() instead to avoid collapsing every face into degenerate tris.
+        return RenderType.debugQuads();*/
         //?} else {
-        /*return RenderType.debugFilledBox();*/
+        /*return DEBUG_FILLED;*/
         //?}
     }
 

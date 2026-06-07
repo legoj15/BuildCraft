@@ -7,16 +7,20 @@ package buildcraft.builders.client.render;
 
 import buildcraft.lib.gui.BCGraphics;
 
+//? if >=1.21.10 {
 import buildcraft.builders.client.render.pip.BlueprintPipRenderState;
+//?}
 import buildcraft.builders.snapshot.Snapshot;
 
 /**
- * Thin adapter from the {@link buildcraft.builders.client.tooltip.BlueprintTooltipOverlay
- * BlueprintTooltipOverlay} call-site to the PiP pipeline. Builds a
- * {@link BlueprintPipRenderState} sized to the requested viewport and hands it off to
- * {@link BCGraphics#submitPictureInPictureRenderState}. The actual 3D rendering,
- * including rotation animation and depth-buffer occlusion, happens in
- * {@link buildcraft.builders.client.render.pip.BlueprintPipRenderer}.
+ * Thin adapter from the snapshot-preview call-sites (the blueprint/template/schematic tooltip
+ * overlays, the Architect Table GUI, and the Replacer GUI) to whichever 3D-preview backend the MC
+ * line provides. On the modern nodes (&gt;=1.21.10) it builds a {@code BlueprintPipRenderState}
+ * sized to the viewport and hands it to the offscreen picture-in-picture pipeline
+ * ({@code BlueprintPipRenderer}); on 1.21.1, which has no PiP pipeline, it renders the same rotating
+ * model directly into the GUI ({@code BlueprintGuiRenderer} — {@code GuiGraphics.pose()} is a real 3D
+ * {@code PoseStack} pre-26.1). Both do the rotation animation and depth occlusion; only the plumbing
+ * differs.
  * <p>
  * This replaced an earlier 2D implementation that drew a stack of axis-aligned item sprites per
  * cell; the sprites' positions rotated but their orientation didn't, so the preview looked like a
@@ -47,6 +51,10 @@ public class BlueprintRenderer {
             return;
         }
 
+        // The modern (>=1.21.10) body builds a PiP render state and hands it to the offscreen
+        // picture-in-picture pipeline. On 1.21.1 that pipeline doesn't exist, so the else branch
+        // renders the same rotating 3D preview directly into the GUI (see BlueprintGuiRenderer).
+        //? if >=1.21.10 {
         int sizeX = Math.max(1, snapshot.size.getX());
         int sizeY = Math.max(1, snapshot.size.getY());
         int sizeZ = Math.max(1, snapshot.size.getZ());
@@ -79,5 +87,12 @@ public class BlueprintRenderer {
                 // PiP base class intersects this with the full bounds internally.
                 graphics.raw.peekScissorStack());
         graphics.raw.submitPictureInPictureRenderState(state);
+        //?} else {
+        /*// 1.21.1: no PiP pipeline — render the rotating 3D preview straight into the GUI buffer source
+        // (GuiGraphics.pose() is a real 3D PoseStack on 1.21.1, not 26.1's 2D Matrix3x2fStack). The full
+        // per-cell logic (blocks/fluids/templates/pipes) lives in BlueprintGuiRenderer.
+        BlueprintGuiRenderer.render(graphics, snapshot, viewportX, viewportY, viewportWidth, viewportHeight,
+                System.currentTimeMillis());*/
+        //?}
     }
 }

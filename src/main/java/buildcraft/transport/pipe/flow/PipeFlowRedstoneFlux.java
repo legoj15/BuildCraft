@@ -24,8 +24,13 @@ import net.minecraft.core.Direction.AxisDirection;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
+//?}
+//? if <1.21.10 {
+/*import net.neoforged.neoforge.energy.IEnergyStorage;*/
+//?}
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.mj.MjAPI;
@@ -39,6 +44,7 @@ import buildcraft.api.transport.pipe.PipeEventRedstoneFlux;
 import buildcraft.api.transport.pipe.PipeFlow;
 
 import buildcraft.lib.misc.CapUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.misc.data.AverageInt;
 
@@ -69,7 +75,7 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
 
     public PipeFlowRedstoneFlux(IPipe pipe, CompoundTag nbt) {
         super(pipe, nbt);
-        isReceiver = nbt.getBooleanOr("isReceiver", false);
+        isReceiver = NBTUtilBC.getBoolean(nbt, "isReceiver", false);
         sections = new EnumMap<>(Direction.class);
         for (Direction face : Direction.values()) {
             sections.put(face, new Section(face));
@@ -116,8 +122,13 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
     public boolean canConnect(Direction face, BlockEntity oTile) {
         // Match 1.12.2: connect to any tile that exposes FE/Energy capability.
         // The receiver flag only affects internal flow direction, not connectivity.
+        //? if >=1.21.10 {
         net.neoforged.neoforge.transfer.energy.EnergyHandler handler =
             pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK);
+        //?} else {
+        /*net.neoforged.neoforge.energy.IEnergyStorage handler =
+            pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK);*/
+        //?}
         return handler != null;
     }
 
@@ -145,6 +156,7 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         if (!isReceiver || disabled) {
             return 0;
         }
+        //? if >=1.21.10 {
         EnergyHandler source = pipe.getHolder().getCapabilityFromPipe(
             from, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK
         );
@@ -157,6 +169,15 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
             transaction.commit();
             return extracted;
         }
+        //?} else {
+        /*net.neoforged.neoforge.energy.IEnergyStorage source = pipe.getHolder().getCapabilityFromPipe(
+            from, net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK
+        );
+        if (source == null) {
+            return 0;
+        }
+        return source.extractEnergy(maxExtracted, false);*/
+        //?}
     }
 
     @Override
@@ -175,7 +196,11 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         if (facing == null) {
             return null;
         }
+        //? if >=1.21.10 {
         if (capability == net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK || capability == CapUtil.CAP_ENERGY) {
+        //?} else {
+        /*if (capability == net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK || capability == CapUtil.CAP_ENERGY) {*/
+        //?}
             return (T) sections.get(facing);
         }
         return null;
@@ -270,6 +295,7 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
                                 PipeFlowRedstoneFlux oFlow = (PipeFlowRedstoneFlux) neighbour.getFlow();
                                 leftover = oFlow.sections.get(face2.getOpposite()).receivePowerInternal(watts);
                             } else {
+                                //? if >=1.21.10 {
                                 EnergyHandler receiver = pipe.getHolder().getCapabilityFromPipe(
                                     face2, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK
                                 );
@@ -280,6 +306,15 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
                                         transaction.commit();
                                     }
                                 }
+                                //?} else {
+                                /*net.neoforged.neoforge.energy.IEnergyStorage receiver = pipe.getHolder().getCapabilityFromPipe(
+                                    face2, net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK
+                                );
+                                if (receiver != null) {
+                                    int accepted = receiver.receiveEnergy(watts, false);
+                                    leftover = watts - accepted;
+                                }
+                                *///?}
                             }
                             int used = watts - leftover;
                             s.internalPower -= used;
@@ -308,6 +343,7 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
             if (pipe.getConnectedType(face) != ConnectedType.TILE) {
                 continue;
             }
+            //? if >=1.21.10 {
             EnergyHandler recv = pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK);
             if (recv != null) {
                 // Check if the tile can actually receive energy (equivalent to 1.12.2 canReceive())
@@ -324,6 +360,19 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
                     }
                 }
             }
+            //?} else {
+            /*net.neoforged.neoforge.energy.IEnergyStorage recv = pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK);
+            if (recv != null) {
+                // Check if the tile can actually receive energy (simulate a 1-unit receive)
+                boolean canReceive = recv.receiveEnergy(1, true) > 0;
+                if (canReceive) {
+                    int requested = recv.getMaxEnergyStored() - recv.getEnergyStored();
+                    if (requested > 0) {
+                        requestPower(face, requested);
+                    }
+                }
+            }
+            *///?}
         }
 
         // Sum the amount of power requested on each side
@@ -402,7 +451,11 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         return req;
     }
 
+    //? if >=1.21.10 {
     public class Section implements EnergyHandler {
+    //?} else {
+    /*public class Section implements net.neoforged.neoforge.energy.IEnergyStorage {*/
+    //?}
         public final Direction side;
 
         public double clientDisplayFlow, clientDisplayFlowLast;
@@ -433,6 +486,7 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
             internalNextPower = 0;
         }
 
+        //? if >=1.21.10 {
         private final net.neoforged.neoforge.transfer.transaction.SnapshotJournal<Integer> powerJournal = new net.neoforged.neoforge.transfer.transaction.SnapshotJournal<Integer>() {
             @Override
             protected Integer createSnapshot() {
@@ -477,6 +531,51 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         public long getCapacityAsLong() {
             return maxPower;
         }
+        //?} else {
+        /*@Override
+        public int receiveEnergy(int maxReceive, boolean simulate) {
+            if (isReceiver && maxReceive > 0) {
+                PipeFlowRedstoneFlux.this.step();
+                int maxCanAccept = maxPower - (internalPower + internalNextPower);
+                if (maxCanAccept <= 0) return 0;
+
+                int accepted = Math.min(maxCanAccept, maxReceive);
+                if (accepted > 0) {
+                    if (!simulate) {
+                        debugPowerOffered += accepted;
+                        internalNextPower += accepted;
+                    }
+                    return accepted;
+                }
+            }
+            return 0;
+        }
+
+        @Override
+        public int extractEnergy(int maxExtract, boolean simulate) {
+            return 0;
+        }
+
+        @Override
+        public int getEnergyStored() {
+            return internalPower + internalNextPower;
+        }
+
+        @Override
+        public int getMaxEnergyStored() {
+            return maxPower;
+        }
+
+        @Override
+        public boolean canExtract() {
+            return false;
+        }
+
+        @Override
+        public boolean canReceive() {
+            return isReceiver;
+        }
+        *///?}
 
         int receivePowerInternal(int sent) {
             if (sent > 0) {

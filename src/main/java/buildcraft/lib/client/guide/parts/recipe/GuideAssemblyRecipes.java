@@ -84,11 +84,17 @@ public enum GuideAssemblyRecipes implements IStackRecipes {
      *  so tag ingredients resolve (see {@code GuideCraftingFactory.displayContext}) rather than blank. */
     private static ItemStack[] resolveInputStacks(buildcraft.api.recipes.AssemblyRecipe recipe, ItemStack output) {
         java.util.Set<buildcraft.api.recipes.IngredientStack> inputs = recipe.getInputsFor(output);
+        //? if >=1.21.10 {
         net.minecraft.util.context.ContextMap ctx = GuideCraftingFactory.displayContext();
+        //?}
         ItemStack[] inStacks = new ItemStack[inputs.size()];
         int i = 0;
         for (buildcraft.api.recipes.IngredientStack ing : inputs) {
+            //? if >=1.21.10 {
             java.util.List<ItemStack> resolved = ing.ingredient.display().resolveForStacks(ctx);
+            //?} else {
+            /*java.util.List<ItemStack> resolved = java.util.Arrays.asList(ing.ingredient.getItems());*/
+            //?}
             ItemStack first = ItemStack.EMPTY;
             for (ItemStack candidate : resolved) {
                 if (!candidate.isEmpty() && candidate.getItem() != net.minecraft.world.item.Items.AIR) {

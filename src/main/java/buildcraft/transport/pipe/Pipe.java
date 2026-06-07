@@ -15,7 +15,9 @@ import javax.annotation.Nullable;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+//? if >=1.21.10 {
 import net.minecraft.util.profiling.Profiler;
+//?}
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
@@ -64,18 +66,18 @@ public final class Pipe implements IPipe, IDebuggable {
 
     public Pipe(IPipeHolder holder, CompoundTag nbt) throws InvalidInputDataException {
         this.holder = holder;
-        String colStr = nbt.getStringOr("col", "");
+        String colStr = NBTUtilBC.getString(nbt, "col", "");
         if (!colStr.isEmpty()) {
             this.colour = NBTUtilBC.readEnum(nbt.get("col"), DyeColor.class);
         }
-        this.definition = PipeRegistry.INSTANCE.loadDefinition(nbt.getStringOr("def", ""));
+        this.definition = PipeRegistry.INSTANCE.loadDefinition(NBTUtilBC.getString(nbt, "def", ""));
         if (!definition.canBeColoured) {
             colour = null;
         }
-        this.behaviour = definition.logicLoader.loadBehaviour(this, nbt.getCompoundOrEmpty("beh"));
-        this.flow = definition.flowType.loader.loadFlow(this, nbt.getCompoundOrEmpty("flow"));
+        this.behaviour = definition.logicLoader.loadBehaviour(this, NBTUtilBC.getCompound(nbt, "beh"));
+        this.flow = definition.flowType.loader.loadFlow(this, NBTUtilBC.getCompound(nbt, "flow"));
 
-        int connectionData = nbt.getIntOr("con", 0);
+        int connectionData = NBTUtilBC.getInt(nbt, "con", 0);
         for (Direction face : Direction.values()) {
             int data = (connectionData >>> (face.ordinal() * 2)) & 0b11;
             if (data == 0b01) {
@@ -114,7 +116,7 @@ public final class Pipe implements IPipe, IDebuggable {
      *  recreate-from-scratch path in loadAdditional. */
     public void readFromNbt(CompoundTag nbt) {
         // Update colour
-        String colStr = nbt.getStringOr("col", "");
+        String colStr = NBTUtilBC.getString(nbt, "col", "");
         if (!colStr.isEmpty()) {
             this.colour = NBTUtilBC.readEnum(nbt.get("col"), DyeColor.class);
         } else {
@@ -126,7 +128,7 @@ public final class Pipe implements IPipe, IDebuggable {
         // Update connections
         connected.clear();
         types.clear();
-        int connectionData = nbt.getIntOr("con", 0);
+        int connectionData = NBTUtilBC.getInt(nbt, "con", 0);
         for (Direction face : Direction.values()) {
             int data = (connectionData >>> (face.ordinal() * 2)) & 0b11;
             if (data == 0b01) {
@@ -139,11 +141,11 @@ public final class Pipe implements IPipe, IDebuggable {
         }
         // Delegate behaviour data update
         if (nbt.contains("beh")) {
-            behaviour.readFromNbt(nbt.getCompoundOrEmpty("beh"));
+            behaviour.readFromNbt(NBTUtilBC.getCompound(nbt, "beh"));
         }
         // Delegate flow data update
         if (nbt.contains("flow")) {
-            flow.readFromNbt(nbt.getCompoundOrEmpty("flow"));
+            flow.readFromNbt(NBTUtilBC.getCompound(nbt, "flow"));
         }
     }
 
@@ -237,7 +239,12 @@ public final class Pipe implements IPipe, IDebuggable {
     }
 
     public void onTick() {
+        //? if >=1.21.10 {
         ProfilerFiller _profiler = Profiler.get();
+        //?} else {
+        /*// 1.21.1 has no thread-local Profiler.get(); profiling is a non-gameplay dev tool, so use a no-op.
+        ProfilerFiller _profiler = net.minecraft.util.profiling.InactiveProfiler.INSTANCE;*/
+        //?}
         if (updateMarked) {
             updateConnections();
         }
@@ -263,7 +270,12 @@ public final class Pipe implements IPipe, IDebuggable {
     }
 
     private void updateConnections() {
+        //? if >=1.21.10 {
         ProfilerFiller _profiler = Profiler.get();
+        //?} else {
+        /*// 1.21.1 has no thread-local Profiler.get(); profiling is a non-gameplay dev tool, so use a no-op.
+        ProfilerFiller _profiler = net.minecraft.util.profiling.InactiveProfiler.INSTANCE;*/
+        //?}
         _profiler.push("buildcraft:pipe_connections");
         try {
         if (holder.getPipeWorld().isClientSide()) {

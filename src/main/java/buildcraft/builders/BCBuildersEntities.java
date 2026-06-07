@@ -20,7 +20,11 @@ public class BCBuildersEntities {
                     .sized(1.0F, 1.0F)
                     .clientTrackingRange(4)
                     .updateInterval(1)
+                    //? if >=1.21.10 {
                     .build(net.minecraft.resources.ResourceKey.create(Registries.ENTITY_TYPE, key)));
+                    //?} else {
+                    /*.build(key.toString()));*/
+                    //?}
 
     public static void init(IEventBus modEventBus) {
         ENTITIES.register(modEventBus);

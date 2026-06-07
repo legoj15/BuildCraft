@@ -825,8 +825,13 @@ public enum GuideManager {
             if (graphics == null) return;
             net.minecraft.client.renderer.texture.TextureAtlasSprite sprite = compassFrame.getSprite();
             if (sprite == null) return;
+            //? if >=1.21.10 {
             graphics.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
                 sprite, (int) x, (int) y, 16, 16, 0xFFFFFFFF);
+            //?} else {
+            /*graphics.blitSprite(
+                sprite, (int) x, (int) y, 16, 16, 0xFFFFFFFF);*/
+            //?}
         };
         registerCategory(adder, "buildcraft", "set_pipe_direction",
             new String[] { "buildcraft.guide.contents.actions" },

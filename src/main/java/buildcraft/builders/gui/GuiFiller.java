@@ -1,13 +1,17 @@
 package buildcraft.builders.gui;
 
 import buildcraft.lib.gui.BCGraphics;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.RenderPipelines;
+//?}
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.Inventory;
+//? if >=1.21.10 {
 import net.minecraft.client.input.MouseButtonEvent;
+//?}
 
 import buildcraft.api.filler.IFillerPattern;
 
@@ -172,7 +176,11 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
 
     @Override
     protected void drawBackgroundTexture(BCGraphics graphics) {
+        //? if >=1.21.10 {
         graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+        //?} else {
+        /*graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);*/
+        //?}
 
         int mx = (int) this.mainGui.mouse.getX() - leftPos;
         int my = (int) this.mainGui.mouse.getY() - topPos;
@@ -207,6 +215,7 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
         graphics.text(font, Component.translatable("container.inventory").getString(), 7, 141, 0xFF404040, false);
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         // Handle button clicks BEFORE super so they aren't consumed by ACS slot handling
@@ -228,4 +237,27 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
         }
         return super.mouseClicked(event, doubleClick);
     }
+    //?} else {
+    /*@Override
+    public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
+        // Handle button clicks BEFORE super so they aren't consumed by ACS slot handling
+        if (button == 0) {
+            int mx = (int) mouseXd - leftPos;
+            int my = (int) mouseYd - topPos;
+
+            if (mx >= 130 && mx < 146 && my >= 40 && my < 56) {
+                menu.sendMessage(ContainerFiller.NET_EXCAVATE, (buf) -> {});
+                this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                return true;
+            }
+
+            if (mx >= 152 && mx < 168 && my >= 40 && my < 56) {
+                menu.sendMessage(ContainerFiller.NET_INVERT, (buf) -> {});
+                this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                return true;
+            }
+        }
+        return super.mouseClicked(mouseXd, mouseYd, button);
+    }*/
+    //?}
 }

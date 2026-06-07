@@ -45,11 +45,18 @@ public class FluidPhysicsTest {
         //? if >=26.1 {
         // Tag-based water physics: prove buoyancy — the pig left the bottom and rose into the surface region.
         helper.succeedWhen(() -> helper.assertEntityPresent(EntityType.PIG, surface));
-        //?} else {
+        //?} elif >=1.21.10 {
         /*// FluidType-gated water physics: crude oil isn't water-like, so prove the pig did NOT float — after
         // a settle window it remains out of the surface region (resting on the floor at the bottom).
         helper.runAtTickTime(100, () -> {
             helper.assertEntityNotPresent(EntityType.PIG, surface);
+            helper.succeed();
+        });
+        *///?} else {
+        /*// 1.21.1: GameTestHelper has no assertEntityNotPresent(EntityType, AABB) overload yet — use the
+        // (EntityType, Vec3 min, Vec3 max) corner form against the same surface region.
+        helper.runAtTickTime(100, () -> {
+            helper.assertEntityNotPresent(EntityType.PIG, surface.getMinPosition(), surface.getMaxPosition());
             helper.succeed();
         });
         *///?}
@@ -100,18 +107,35 @@ public class FluidPhysicsTest {
      */
     public static void crudeOilIsNotWaterLike(GameTestHelper helper) {
         net.neoforged.neoforge.fluids.FluidType crude = BCEnergyFluids.OIL_COOL.fluidType().get();
+        //? if >=1.21.10 {
         if (crude.getIsWaterLike() || crude.canSwim(null)) {
             helper.fail("crude oil must be non-water-like and non-swimmable (turnOffSplashes): isWaterLike="
                 + crude.getIsWaterLike() + " canSwim=" + crude.canSwim(null));
             return;
         }
+        //?} else {
+        /*// 1.21.1: FluidType has no getIsWaterLike() (the isWaterLike property predates this NeoForge line);
+        // assert only the swim flag that exists here. Crude must be non-swimmable (turnOffSplashes).
+        if (crude.canSwim(null)) {
+            helper.fail("crude oil must be non-swimmable (turnOffSplashes): canSwim=" + crude.canSwim(null));
+            return;
+        }*/
+        //?}
         net.neoforged.neoforge.fluids.FluidType heavy = BCEnergyFluids.ALL.stream()
             .filter(e -> e.baseName().equals("oil_heavy")).findFirst().orElseThrow().fluidType().get();
+        //? if >=1.21.10 {
         if (!heavy.getIsWaterLike() || !heavy.canSwim(null)) {
             helper.fail("refined oils must stay water-like/swimmable: heavy oil isWaterLike="
                 + heavy.getIsWaterLike() + " canSwim=" + heavy.canSwim(null));
             return;
         }
+        //?} else {
+        /*// 1.21.1: no getIsWaterLike(); assert only the swim flag. Refined oils stay swimmable.
+        if (!heavy.canSwim(null)) {
+            helper.fail("refined oils must stay swimmable: heavy oil canSwim=" + heavy.canSwim(null));
+            return;
+        }*/
+        //?}
         helper.succeed();
     }
 

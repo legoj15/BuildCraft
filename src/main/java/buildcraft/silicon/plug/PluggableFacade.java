@@ -29,6 +29,7 @@ import buildcraft.api.transport.pluggable.PluggableDefinition;
 import buildcraft.api.transport.pluggable.PluggableModelKey;
 
 import buildcraft.lib.misc.MathUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.PacketBufferBC;
 
 import buildcraft.silicon.BCSiliconItems;
@@ -72,18 +73,18 @@ public class PluggableFacade extends PipePluggable implements IFacade {
         super(def, holder, side);
         // Handle legacy data migration
         if (nbt.contains("states") && !nbt.contains("facade")) {
-            ListTag tagStates = nbt.getListOrEmpty("states");
+            ListTag tagStates = NBTUtilBC.getList(nbt, "states", Tag.TAG_COMPOUND);
             if (!tagStates.isEmpty()) {
                 Tag firstElement = tagStates.get(0);
-                boolean isHollow = firstElement instanceof CompoundTag ct && ct.getBooleanOr("isHollow", false);
+                boolean isHollow = firstElement instanceof CompoundTag ct && NBTUtilBC.getBoolean(ct, "isHollow", false);
                 CompoundTag tagFacade = new CompoundTag();
                 tagFacade.put("states", tagStates);
                 tagFacade.putBoolean("isHollow", isHollow);
                 nbt.put("facade", tagFacade);
             }
         }
-        this.states = FacadeInstance.readFromNbt(nbt.getCompoundOrEmpty("facade"));
-        activeState = MathUtil.clamp(nbt.getIntOr("activeState", 0), 0, states.phasedStates.length - 1);
+        this.states = FacadeInstance.readFromNbt(NBTUtilBC.getCompound(nbt, "facade"));
+        activeState = MathUtil.clamp(NBTUtilBC.getInt(nbt, "activeState", 0), 0, states.phasedStates.length - 1);
         isSideSolid = states.areAllStatesSolid(side);
     }
 

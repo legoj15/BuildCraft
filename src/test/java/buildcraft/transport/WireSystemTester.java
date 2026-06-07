@@ -54,7 +54,11 @@ public class WireSystemTester {
 
     private static TilePipeHolder placeStructurePipe(GameTestHelper helper, BlockPos relPos) {
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(relPos);*/
+        //?}
         tile.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_STRUCTURE.get()));
         return tile;
     }

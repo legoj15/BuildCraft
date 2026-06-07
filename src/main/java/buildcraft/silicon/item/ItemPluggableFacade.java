@@ -21,7 +21,9 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+//? if >=1.21.10 {
 import net.minecraft.world.item.component.TooltipDisplay;
+//?}
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
@@ -45,6 +47,7 @@ import buildcraft.silicon.plug.FacadeStateManager;
 import buildcraft.silicon.plug.PluggableFacade;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 
 @SuppressWarnings("deprecation")
 public class ItemPluggableFacade extends Item implements IItemPluggable, IFacadeItem {
@@ -64,7 +67,7 @@ public class ItemPluggableFacade extends Item implements IItemPluggable, IFacade
     public static FacadeInstance getStates(@Nonnull ItemStack item) {
         CompoundTag nbt = NBTUtilBC.getItemData(item);
 
-        String strPreview = nbt.getStringOr("preview", "");
+        String strPreview = NBTUtilBC.getString(nbt, "preview", "");
         if ("basic".equalsIgnoreCase(strPreview)) {
             return FacadeInstance.createSingle(FacadeStateManager.previewState, false);
         }
@@ -72,10 +75,10 @@ public class ItemPluggableFacade extends Item implements IItemPluggable, IFacade
         // Handle legacy data migration from pre-facade format
         if (!nbt.contains("facade") && nbt.contains("states")) {
             // Only migrate if we actually have a facade to migrate.
-            var statesList = nbt.getListOrEmpty("states");
+            var statesList = NBTUtilBC.getList(nbt, "states", Tag.TAG_COMPOUND);
             if (!statesList.isEmpty()) {
                 var firstElement = statesList.get(0);
-                boolean isHollow = firstElement instanceof CompoundTag ct && ct.getBooleanOr("isHollow", false);
+                boolean isHollow = firstElement instanceof CompoundTag ct && NBTUtilBC.getBoolean(ct, "isHollow", false);
                 CompoundTag tagFacade = new CompoundTag();
                 tagFacade.putBoolean("isHollow", isHollow);
                 tagFacade.put("states", statesList);
@@ -83,7 +86,7 @@ public class ItemPluggableFacade extends Item implements IItemPluggable, IFacade
             }
         }
 
-        return FacadeInstance.readFromNbt(nbt.getCompoundOrEmpty("facade"));
+        return FacadeInstance.readFromNbt(NBTUtilBC.getCompound(nbt, "facade"));
     }
 
     @Nonnull
@@ -146,8 +149,16 @@ public class ItemPluggableFacade extends Item implements IItemPluggable, IFacade
     }
 
     @Override
+    //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
                                 Consumer<Component> tooltip, TooltipFlag flag) {
+    //?} else {
+    /*// 1.21.1: appendHoverText has no TooltipDisplay and takes List<Component>; adapt to the shared
+    // Consumer-based body below via tooltipList::add.
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context,
+                                List<Component> tooltipList, TooltipFlag flag) {
+        Consumer<Component> tooltip = tooltipList::add;*/
+    //?}
         FacadeInstance states = getStates(stack);
         if (states.type == FacadeType.Phased) {
             FacadePhasedState defaultState = null;

@@ -127,7 +127,7 @@ public class BCEnergyConfig {
                         "minecraft:deep_ocean", "minecraft:deep_lukewarm_ocean",
                         "minecraft:deep_cold_ocean", "minecraft:deep_frozen_ocean",
                         "minecraft:desert",
-                        "minecraft:badlands", "minecraft:wooded_badlands"
+                        "minecraft:badlands", "minecraft:wooded_badlands", "minecraft:eroded_badlands"
                 ),
                 () -> "",
                 s -> s instanceof String

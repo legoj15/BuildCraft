@@ -210,8 +210,11 @@ public enum PlugGateRenderer implements IPlugDynamicRenderer<PluggableGate> {
         // on the OUTSIDE of the pipe — where the gate's visible faces actually are — so the
         // gate is lit by the surrounding world rather than by the pipe block's own lightmap
         // value.
-        int naturalBlockLight = 0;
-        int naturalSkyLight = 0;
+        // Full-bright by default so the offline snapshot 3D preview (which renders gates through this
+        // same path but has no live world) shows the gate lit instead of pitch black. In world the
+        // holder's level is always present, so the sampling below overrides this — unchanged there.
+        int naturalBlockLight = 15;
+        int naturalSkyLight = 15;
         boolean on = plug.logic.isOn;
         if (plug.holder != null && plug.holder.getPipeWorld() != null) {
             Level world = plug.holder.getPipeWorld();

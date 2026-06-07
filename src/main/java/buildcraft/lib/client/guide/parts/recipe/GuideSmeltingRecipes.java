@@ -41,8 +41,10 @@ public enum GuideSmeltingRecipes implements IStackRecipes {
                 if (holder.value() instanceof SmeltingRecipe smelt) {
                     //? if >=26.1 {
                     ItemStack output = smelt.result.create();
-                    //?} else {
+                    //?} elif >=1.21.10 {
                     /*ItemStack output = smelt.result.copy();*/
+                    //?} else {
+                    /*ItemStack output = smelt.getResultItem(null).copy();*/
                     //?}
                     if (!output.isEmpty()) {
                         list.add(new GuideSmeltingFactory(getIngredientStack(smelt), output));
@@ -56,11 +58,17 @@ public enum GuideSmeltingRecipes implements IStackRecipes {
         List<GuidePartFactory> list = new ArrayList<>();
         for (RecipeHolder<?> holder : manager.getRecipes()) {
             if (holder.value() instanceof SmeltingRecipe smelt) {
+                //? if >=1.21.10 {
                 if (smelt.input.test(stack)) {
+                //?} else {
+                /*if (smelt.getIngredients().get(0).test(stack)) {*/
+                //?}
                     //? if >=26.1 {
                     ItemStack output = smelt.result.create();
-                    //?} else {
+                    //?} elif >=1.21.10 {
                     /*ItemStack output = smelt.result.copy();*/
+                    //?} else {
+                    /*ItemStack output = smelt.getResultItem(null).copy();*/
                     //?}
                     if (!output.isEmpty()) {
                         list.add(new GuideSmeltingFactory(stack, output));
@@ -81,8 +89,10 @@ public enum GuideSmeltingRecipes implements IStackRecipes {
             if (holder.value() instanceof SmeltingRecipe smelt) {
                 //? if >=26.1 {
                 ItemStack output = smelt.result.create();
-                //?} else {
+                //?} elif >=1.21.10 {
                 /*ItemStack output = smelt.result.copy();*/
+                //?} else {
+                /*ItemStack output = smelt.getResultItem(null).copy();*/
                 //?}
                 if (!output.isEmpty() && ItemStack.isSameItem(stack, output)) {
                     list.add(new GuideSmeltingFactory(getIngredientStack(smelt), output));
@@ -95,7 +105,12 @@ public enum GuideSmeltingRecipes implements IStackRecipes {
     /** Get a representative ItemStack from a cooking recipe's ingredient for display.
      * Uses the AT-opened AbstractCookingRecipe.ingredient field. */
     private static ItemStack getIngredientStack(AbstractCookingRecipe recipe) {
+        //? if >=1.21.10 {
         return GuideCraftingFactory.ingredientToChanging(recipe.input)
             .get().baseStack;
+        //?} else {
+        /*return GuideCraftingFactory.ingredientToChanging(recipe.getIngredients().get(0))
+            .get().baseStack;*/
+        //?}
     }
 }

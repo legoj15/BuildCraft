@@ -10,6 +10,7 @@ import java.util.List;
 
 import net.minecraft.client.gui.components.WidgetSprites;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
+//? if >=1.21.10 {
 import net.minecraft.client.gui.screens.recipebook.GhostSlots;
 import net.minecraft.client.gui.screens.recipebook.RecipeCollection;
 import net.minecraft.client.gui.screens.recipebook.SearchRecipeBookCategory;
@@ -26,11 +27,13 @@ import net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay;
 import net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay;
 
 import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
+//?}
 
 /**
  * Recipe book component for the Advanced Crafting Table.
  * Mirrors vanilla CraftingRecipeBookComponent but works with our container.
  */
+//? if >=1.21.10 {
 public class ACTRecipeBookComponent extends RecipeBookComponent<ContainerAdvancedCraftingTable> {
     private static final WidgetSprites FILTER_BUTTON_SPRITES = new WidgetSprites(
         Identifier.withDefaultNamespace("recipe_book/filter_enabled"),
@@ -120,3 +123,13 @@ public class ACTRecipeBookComponent extends RecipeBookComponent<ContainerAdvance
         collection.selectRecipes(contents, this::canDisplay);
     }
 }
+//?} else {
+/*// 1.21.1: vanilla RecipeBookComponent is a CONCRETE class that already implements the whole widget
+// (layout, search/browse, ghost-recipe display) and drives it from the RecipeBookMenu container, so this
+// thin no-arg alias needs no overrides. It IS instantiated by the screen (new ACTRecipeBookComponent()
+// then the 5-arg init that passes the menu). The modern >=1.21.10 branch above must instead subclass the
+// abstract generic RecipeBookComponent<M> and supply fillGhostRecipe/selectMatchingRecipes by hand, hence
+// the shared name. Recipe clicks land in ContainerAdvancedCraftingTable.handlePlacement (phantom grid).
+public class ACTRecipeBookComponent extends RecipeBookComponent {
+}*/
+//?}

@@ -24,6 +24,7 @@ import buildcraft.api.transport.IWireManager;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder;
 
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.PacketBufferBC;
 
 public class WireManager implements IWireManager {
@@ -211,7 +212,7 @@ public class WireManager implements IWireManager {
 
     public void readFromNbt(CompoundTag nbt) {
         parts.clear();
-        int[] wiresArray = nbt.getIntArray("parts").orElse(new int[0]);
+        int[] wiresArray = NBTUtilBC.getIntArray(nbt, "parts", new int[0]);
         for (int i = 0; i < wiresArray.length; i += 2) {
             parts.put(EnumWirePart.VALUES[wiresArray[i]], DyeColor.byId(wiresArray[i + 1]));
         }

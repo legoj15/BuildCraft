@@ -22,14 +22,18 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+//? if >=1.21.10 {
 import net.minecraft.util.profiling.Profiler;
+//?}
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+//?}
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.mj.IMjConnector;
@@ -41,10 +45,17 @@ import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.LocaleUtil;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
+//?} else {
+/*import net.neoforged.neoforge.energy.IEnergyStorage;*/
+//?}
 
 /**
  * Abstract base class for all BuildCraft engines.
@@ -346,7 +357,11 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
                 return receiver;
             }
             // 2. Fallback: NeoForge FE/RF energy, auto-converted.
+            //? if >=1.21.10 {
             EnergyHandler feHandler = level.getCapability(Capabilities.Energy.BLOCK, targetPos, side.getOpposite());
+            //?} else {
+            /*IEnergyStorage feHandler = level.getCapability(Capabilities.EnergyStorage.BLOCK, targetPos, side.getOpposite());*/
+            //?}
             if (feHandler != null) {
                 IMjReceiver feReceiver = MjToRfAutoConvertor.createReceiver(feHandler);
                 if (feReceiver != null && feReceiver.canConnect(getMjConnector())) {
@@ -383,7 +398,12 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
     // --- Tick logic ---
 
     public static <T extends TileEngineBase_BC8> void serverTick(Level level, BlockPos pos, BlockState state, T engine) {
+        //? if >=1.21.10 {
         ProfilerFiller _profiler = Profiler.get();
+        //?} else {
+        /*// 1.21.1 has no thread-local Profiler.get(); profiling is a non-gameplay dev tool, so use a no-op.
+        ProfilerFiller _profiler = net.minecraft.util.profiling.InactiveProfiler.INSTANCE;*/
+        //?}
         _profiler.push("buildcraft:engine_serverTick");
         try {
         // Periodically poll redstone state every 10 ticks as workaround for
@@ -640,9 +660,36 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
 
     // --- NBT ---
 
+    // Platform bridge — TileEngineBase_BC8 extends BlockEntity directly (not TileBC_Neptune), so it carries
+    // its own copy of the load/save signature directive (see TileBC_Neptune for the rationale). Subclasses
+    // override writeData/readData (NOT the platform methods).
+    //? if >=1.21.10 {
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
+        writeData(new BCValueOutput(output));
+    }
+
+    @Override
+    public void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        readData(new BCValueInput(input));
+    }
+    //?} else {
+    /*@Override
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        writeData(new BCValueOutput(tag));
+    }
+
+    @Override
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        readData(new BCValueInput(tag));
+    }*/
+    //?}
+
+    protected void writeData(BCValueOutput output) {
         output.putByte("orientation", (byte) orientation.ordinal());
         output.putLong("power", power);
         output.putFloat("heat", heat);
@@ -651,17 +698,15 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
         output.putBoolean("isRedstonePowered", isRedstonePowered);
         output.putByte("powerStage", (byte) powerStage.ordinal());
         // Owner persistence (matches 1.12.2 TileBC_Neptune)
-        if (owner != null && owner.id() != null) {
-            output.putString("ownerUUID", owner.id().toString());
-            if (owner.name() != null) {
-                output.putString("ownerName", owner.name());
+        if (owner != null && GameProfileUtil.getId(owner) != null) {
+            output.putString("ownerUUID", GameProfileUtil.getId(owner).toString());
+            if (GameProfileUtil.getName(owner) != null) {
+                output.putString("ownerName", GameProfileUtil.getName(owner));
             }
         }
     }
 
-    @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
         int ord = input.getByteOr("orientation", (byte) Direction.UP.ordinal());
         orientation = Direction.values()[Math.min(ord, 5)];
         power = input.getLongOr("power", 0L);

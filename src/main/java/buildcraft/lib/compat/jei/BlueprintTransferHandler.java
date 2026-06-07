@@ -21,7 +21,11 @@ import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
+//? if >=1.21.10 {
 import mezz.jei.api.recipe.types.IRecipeType;
+//?} else {
+/*import mezz.jei.api.recipe.RecipeType;*/
+//?}
 
 import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.misc.RegistryKeyUtil;
@@ -63,7 +67,11 @@ public class BlueprintTransferHandler<C extends AbstractContainerMenu>
     }
 
     @Override
+    //? if >=1.21.10 {
     public IRecipeType<RecipeHolder<CraftingRecipe>> getRecipeType() {
+    //?} else {
+    /*public RecipeType<RecipeHolder<CraftingRecipe>> getRecipeType() {*/
+    //?}
         return RecipeTypes.CRAFTING;
     }
 

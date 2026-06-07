@@ -35,8 +35,10 @@ public class DebugOverlayRenderer {
 
         //? if >=1.21.11 {
         if (mc.debugEntries == null || !mc.debugEntries.isOverlayVisible()) {
-        //?} else {
+        //?} elif >=1.21.10 {
         /*if (mc.debugEntries == null || !mc.debugEntries.isF3Visible()) {*/
+        //?} else {
+        /*if (!mc.getDebugOverlay().showDebugScreen()) {*/
         //?}
             return;
         }

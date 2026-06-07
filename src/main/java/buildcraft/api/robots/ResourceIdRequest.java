@@ -9,6 +9,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import net.minecraft.nbt.CompoundTag;
 
 import buildcraft.api.core.EnumPipePart;
+import buildcraft.lib.misc.NBTUtilBC;
 
 public class ResourceIdRequest extends ResourceIdBlock {
 
@@ -49,7 +50,7 @@ public class ResourceIdRequest extends ResourceIdBlock {
     protected void readFromNBT(CompoundTag nbt) {
         super.readFromNBT(nbt);
 
-        slot = nbt.getInt("localId").orElse(0);
+        slot = NBTUtilBC.getInt(nbt, "localId", 0);
     }
 }
 

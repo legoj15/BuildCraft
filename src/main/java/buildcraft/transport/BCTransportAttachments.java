@@ -11,12 +11,16 @@ import java.util.function.Supplier;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+//?}
 
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.common.util.ValueIOSerializable;
+//?}
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
@@ -62,7 +66,11 @@ public class BCTransportAttachments {
         }
     }
 
+    //? if >=1.21.10 {
     public static final class WireColoursPlaced implements ValueIOSerializable {
+    //?} else {
+    /*public static final class WireColoursPlaced implements net.neoforged.neoforge.common.util.INBTSerializable<net.minecraft.nbt.CompoundTag> {*/
+    //?}
         public static final int ALL_COLOURS_MASK = 0xFFFF; // 16 bits, one per DyeColor
 
         private int mask = 0;
@@ -80,6 +88,7 @@ public class BCTransportAttachments {
             return mask == ALL_COLOURS_MASK;
         }
 
+        //? if >=1.21.10 {
         @Override
         public void serialize(ValueOutput output) {
             output.putInt("mask", mask);
@@ -89,9 +98,26 @@ public class BCTransportAttachments {
         public void deserialize(ValueInput input) {
             mask = input.getIntOr("mask", 0);
         }
+        //?} else {
+        /*@Override
+        public net.minecraft.nbt.CompoundTag serializeNBT(net.minecraft.core.HolderLookup.Provider provider) {
+            net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+            tag.putInt("mask", mask);
+            return tag;
+        }
+
+        @Override
+        public void deserializeNBT(net.minecraft.core.HolderLookup.Provider provider, net.minecraft.nbt.CompoundTag nbt) {
+            mask = nbt.getInt("mask");
+        }*/
+        //?}
     }
 
+    //? if >=1.21.10 {
     public static final class PluggablesPlaced implements ValueIOSerializable {
+    //?} else {
+    /*public static final class PluggablesPlaced implements net.neoforged.neoforge.common.util.INBTSerializable<net.minecraft.nbt.CompoundTag> {*/
+    //?}
         /** One enum value per kind shown in the "pluggables" creative tab. Ordinal is the bit
          *  index in {@link #mask}; {@link #criterionName()} matches the criterion ids defined in
          *  {@code data/buildcraftunofficial/advancement/all_plugged_up.json}. Reordering or
@@ -121,6 +147,7 @@ public class BCTransportAttachments {
             return mask == ALL_KINDS_MASK;
         }
 
+        //? if >=1.21.10 {
         @Override
         public void serialize(ValueOutput output) {
             output.putInt("mask", mask);
@@ -130,5 +157,18 @@ public class BCTransportAttachments {
         public void deserialize(ValueInput input) {
             mask = input.getIntOr("mask", 0);
         }
+        //?} else {
+        /*@Override
+        public net.minecraft.nbt.CompoundTag serializeNBT(net.minecraft.core.HolderLookup.Provider provider) {
+            net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+            tag.putInt("mask", mask);
+            return tag;
+        }
+
+        @Override
+        public void deserializeNBT(net.minecraft.core.HolderLookup.Provider provider, net.minecraft.nbt.CompoundTag nbt) {
+            mask = nbt.getInt("mask");
+        }*/
+        //?}
     }
 }

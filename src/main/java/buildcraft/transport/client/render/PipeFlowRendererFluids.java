@@ -131,10 +131,15 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
             double size = ((Pipe) flow.pipe).getConnectedDist(face);
             int fi = face.ordinal();
             double amount = amounts[fi];
+            boolean connected = flow.pipe.isConnected(face);
             if (face.getAxis() != Axis.Y) {
-                horizontal |= flow.pipe.isConnected(face) && amount > 0;
+                horizontal |= connected && amount > 0;
             }
-            if (amount <= 0) continue;
+            // Don't draw a face section toward a direction the pipe isn't connected to (e.g. a
+            // differently-painted neighbour). Such a section can briefly retain fluid that hasn't
+            // drained back to centre yet; mirrors the flow guard in PipeFlowFluids.moveFromCenter
+            // so fluid never appears to flow into a non-connection.
+            if (amount <= 0 || !connected) continue;
 
             // center = (0.5, 0.5, 0.5) shifted along `face` by (0.245 + size/2).
             double centerShift = 0.245 + size / 2;

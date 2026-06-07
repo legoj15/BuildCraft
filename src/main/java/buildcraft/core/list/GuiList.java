@@ -9,16 +9,22 @@ package buildcraft.core.list;
 import net.minecraft.client.Minecraft;
 import buildcraft.lib.gui.BCGraphics;
 import buildcraft.lib.gui.button.BCButton;
+//? if >=1.21.10 {
 import net.minecraft.client.input.InputWithModifiers;
+//?}
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
+//? if >=1.21.10 {
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
+//?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+//? if >=1.21.10 {
 import net.minecraft.util.ARGB;
+//?}
 import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.core.item.ItemList_BC8;
@@ -208,10 +214,17 @@ public class GuiList extends GuiBC8<ContainerList> {
             this.onPressAction = onPressAction;
         }
 
+        //? if >=1.21.10 {
         @Override
         public void onPress(InputWithModifiers modifiers) {
             onPressAction.run();
         }
+        //?} else {
+        /*@Override
+        public void onPress() {
+            onPressAction.run();
+        }*/
+        //?}
 
         void setToggled(boolean toggled) {
             this.toggled = toggled;
@@ -229,13 +242,21 @@ public class GuiList extends GuiBC8<ContainerList> {
             } else {
                 sprite = SPRITE_NORMAL;
             }
+            //? if >=1.21.10 {
             graphics.raw.blitSprite(RenderPipelines.GUI_TEXTURED, sprite,
                     getX(), getY(), getWidth(), getHeight(),
                     ARGB.white(this.alpha));
+            //?} else {
+            /*// 1.21.1: classic blitSprite(ResourceLocation, x, y, w, h) has no tint arg; apply alpha via setColor.
+            graphics.raw.setColor(1.0F, 1.0F, 1.0F, this.alpha);
+            graphics.raw.blitSprite(sprite, getX(), getY(), getWidth(), getHeight());
+            graphics.raw.setColor(1.0F, 1.0F, 1.0F, 1.0F);*/
+            //?}
             // Centred letter label via the BCButton helper (the version-specific text path lives there).
             drawDefaultButtonLabel(graphics);
         }
 
+        //? if >=1.21.10 {
         @Override
         public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
             // Mirrors vanilla AbstractWidget.mouseClicked but skips the !active early-return
@@ -251,6 +272,21 @@ public class GuiList extends GuiBC8<ContainerList> {
             }
             return false;
         }
+        //?} else {
+        /*@Override
+        public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
+            // Mirrors vanilla AbstractWidget.mouseClicked but skips the !active early-return and
+            // explicitly plays the click sound. 1.21.1: isValidClickButton(int), onClick(double, double).
+            if (this.visible
+                    && this.isValidClickButton(button)
+                    && this.isMouseOver(mouseXd, mouseYd)) {
+                playDownSound(Minecraft.getInstance().getSoundManager());
+                this.onClick(mouseXd, mouseYd);
+                return true;
+            }
+            return false;
+        }*/
+        //?}
     }
 
     @Override
@@ -338,6 +374,7 @@ public class GuiList extends GuiBC8<ContainerList> {
         return ((long) itemHash << 8) | flags;
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean keyPressed(KeyEvent event) {
         if (labelField != null && labelField.isFocused()) {
@@ -355,7 +392,25 @@ public class GuiList extends GuiBC8<ContainerList> {
         }
         return super.keyPressed(event);
     }
+    //?} else {
+    /*@Override
+    public boolean keyPressed(int key, int scancode, int modifiers) {
+        if (labelField != null && labelField.isFocused()) {
+            // Enter / numpad-Enter commits the edit and releases focus.
+            if (key == 257 || key == 335) {
+                this.setFocused(null);
+                return true;
+            }
+            // Swallow the inventory key (1.21.1 KeyMapping.matches(int key, int scancode)).
+            if (this.minecraft.options.keyInventory.matches(key, scancode)) {
+                return true;
+            }
+        }
+        return super.keyPressed(key, scancode, modifiers);
+    }*/
+    //?}
 
+    //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean entered) {
         // Click-outside unfocuses the field — without this, focus sticks until the player
@@ -366,5 +421,16 @@ public class GuiList extends GuiBC8<ContainerList> {
         }
         return super.mouseClicked(event, entered);
     }
+    //?} else {
+    /*@Override
+    public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
+        // Click-outside unfocuses the field. Mirrors GuiArchitectTable.
+        if (labelField != null && labelField.isFocused()
+                && !labelField.isMouseOver(mouseXd, mouseYd)) {
+            this.setFocused(null);
+        }
+        return super.mouseClicked(mouseXd, mouseYd, button);
+    }*/
+    //?}
 
 }

@@ -22,6 +22,7 @@ import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementMouseClick;
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 
 /** Directions *might* be replaced with individual triggers and actions per direction. Not sure yet. */
 @Deprecated
@@ -69,7 +70,7 @@ public class StatementParameterDirection implements IStatementParameter {
     public static StatementParameterDirection readFromNbt(CompoundTag nbt) {
         StatementParameterDirection param = new StatementParameterDirection();
         if (nbt.contains("direction")) {
-            param.direction = Direction.values()[nbt.getByte("direction").orElse((byte) 0)];
+            param.direction = Direction.values()[NBTUtilBC.getByte(nbt, "direction", (byte) 0)];
         }
         return param;
     }

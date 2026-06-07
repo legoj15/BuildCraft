@@ -1,17 +1,22 @@
 package buildcraft.lib.tile.item;
 
-import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.minecraft.world.item.ItemStack;
+
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
+//?}
+
 import buildcraft.api.inventory.IItemHandlerFiltered;
 
-public class DelegateItemHandler implements ResourceHandler<ItemResource>, IItemHandlerFiltered {
-    protected final ResourceHandler<ItemResource> delegate;
+public class DelegateItemHandler implements IBCItemHandler, IItemHandlerFiltered {
+    protected final IBCItemHandler delegate;
 
-    public DelegateItemHandler(ResourceHandler<ItemResource> delegate) {
+    public DelegateItemHandler(IBCItemHandler delegate) {
         this.delegate = delegate;
     }
 
+    //? if >=1.21.10 {
     @Override
     public int size() {
         return delegate.size();
@@ -46,9 +51,40 @@ public class DelegateItemHandler implements ResourceHandler<ItemResource>, IItem
     public int extract(int index, ItemResource resource, int amount, TransactionContext tx) {
         return delegate.extract(index, resource, amount, tx);
     }
+    //?} else {
+    /*@Override
+    public int getSlots() {
+        return delegate.getSlots();
+    }
 
     @Override
-    public net.minecraft.world.item.ItemStack getFilter(int slot) {
+    public ItemStack getStackInSlot(int slot) {
+        return delegate.getStackInSlot(slot);
+    }
+
+    @Override
+    public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+        return delegate.insertItem(slot, stack, simulate);
+    }
+
+    @Override
+    public ItemStack extractItem(int slot, int amount, boolean simulate) {
+        return delegate.extractItem(slot, amount, simulate);
+    }
+
+    @Override
+    public int getSlotLimit(int slot) {
+        return delegate.getSlotLimit(slot);
+    }
+
+    @Override
+    public boolean isItemValid(int slot, ItemStack stack) {
+        return delegate.isItemValid(slot, stack);
+    }*/
+    //?}
+
+    @Override
+    public ItemStack getFilter(int slot) {
         if (delegate instanceof IItemHandlerFiltered) {
             return ((IItemHandlerFiltered) delegate).getFilter(slot);
         }

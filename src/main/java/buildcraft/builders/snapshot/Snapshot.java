@@ -138,10 +138,10 @@ public abstract class Snapshot {
     }
 
     public void deserializeNBT(CompoundTag nbt) throws InvalidInputDataException {
-        key = new Key(nbt.getCompoundOrEmpty("key"));
-        size = NBTUtilBC.readBlockPos(nbt.getCompoundOrEmpty("size"));
+        key = new Key(NBTUtilBC.getCompound(nbt, "key"));
+        size = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "size"));
         facing = NBTUtilBC.readEnum(nbt.get("facing"), Direction.class);
-        offset = NBTUtilBC.readBlockPos(nbt.getCompoundOrEmpty("offset"));
+        offset = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "offset"));
     }
 
     abstract public Snapshot copy();
@@ -203,8 +203,8 @@ public abstract class Snapshot {
 
         @SuppressWarnings("WeakerAccess")
         public Key(CompoundTag nbt) {
-            hash = nbt.getByteArray("hash").orElse(new byte[0]);
-            header = nbt.contains("header") ? new Header(nbt.getCompoundOrEmpty("header")) : null;
+            hash = NBTUtilBC.getByteArray(nbt, "hash", new byte[0]);
+            header = nbt.contains("header") ? new Header(NBTUtilBC.getCompound(nbt, "header")) : null;
         }
 
         public Key(FriendlyByteBuf buf) {
@@ -265,10 +265,10 @@ public abstract class Snapshot {
 
         @SuppressWarnings("WeakerAccess")
         public Header(CompoundTag nbt) {
-            key = new Key(nbt.getCompoundOrEmpty("key"));
+            key = new Key(NBTUtilBC.getCompound(nbt, "key"));
             owner = NBTUtilBC.getUUID(nbt, "owner");
-            created = new Date(nbt.getLongOr("created", 0L));
-            name = nbt.getStringOr("name", "");
+            created = new Date(NBTUtilBC.getLong(nbt, "created", 0L));
+            name = NBTUtilBC.getString(nbt, "name", "");
         }
 
         public Header(FriendlyByteBuf buf) {

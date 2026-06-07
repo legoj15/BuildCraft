@@ -42,6 +42,8 @@ import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.api.blocks.ICustomPaintHandler;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeDefinition;
+
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.pipe.Pipe;
@@ -215,7 +217,11 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     }
 
     @Override
+    //? if >=1.21.10 {
     public boolean propagatesSkylightDown(BlockState state) {
+    //?} else {
+    /*public boolean propagatesSkylightDown(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos) {*/
+    //?}
         return true;
     }
 
@@ -273,14 +279,19 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     }
 
     @Override
+    //? if >=1.21.10 {
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                            Player player, InteractionHand hand, BlockHitResult hitResult) {
+    //?} else {
+    /*protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                           Player player, InteractionHand hand, BlockHitResult hitResult) {*/
+    //?}
         if (stack.isEmpty()) {
-            return InteractionResult.TRY_WITH_EMPTY_HAND;
+            return BlockUtil.itemUseTryWithEmptyHand();
         }
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TilePipeHolder tile) || tile.getPipe() == null) {
-            return InteractionResult.PASS;
+            return BlockUtil.itemUsePass();
         }
 
         // Determine which face was clicked (shared with the placement-preview outline)
@@ -300,7 +311,7 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                             stack.shrink(1);
                         }
                     }
-                    return InteractionResult.SUCCESS;
+                    return BlockUtil.itemUseSuccess();
                 }
             }
         }
@@ -330,7 +341,7 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                         player, buildcraft.transport.BCTransportAttachments.PluggablesPlaced.Kind.WIRE);
                     level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
                 }
-                return InteractionResult.SUCCESS;
+                return BlockUtil.itemUseSuccess();
             }
         }
 
@@ -348,7 +359,7 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                 if (existing.onPluggableActivate(player, hitResult,
                         (float) hitResult.getLocation().x, (float) hitResult.getLocation().y,
                         (float) hitResult.getLocation().z)) {
-                    return InteractionResult.SUCCESS;
+                    return BlockUtil.itemUseSuccess();
                 }
             }
         }
@@ -356,14 +367,14 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         if (pipe.getBehaviour().onPipeActivate(player, hitResult,
                 (float) hitResult.getLocation().x, (float) hitResult.getLocation().y,
                 (float) hitResult.getLocation().z, hitPart)) {
-            return InteractionResult.SUCCESS;
+            return BlockUtil.itemUseSuccess();
         }
         if (pipe.getFlow().onFlowActivate(player, hitResult,
                 (float) hitResult.getLocation().x, (float) hitResult.getLocation().y,
                 (float) hitResult.getLocation().z, hitPart)) {
-            return InteractionResult.SUCCESS;
+            return BlockUtil.itemUseSuccess();
         }
-        return InteractionResult.TRY_WITH_EMPTY_HAND;
+        return BlockUtil.itemUseTryWithEmptyHand();
     }
 
     /**
@@ -517,8 +528,13 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     // NeoForge hook: returning false prevents the block from being destroyed.
     // If the player targets a pluggable, remove only the pluggable and return false.
     @Override
+    //? if >=1.21.10 {
     public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
                                        ItemStack toolStack, boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {
+    //?} else {
+    /*public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
+                                       boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {*/
+    //?}
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TilePipeHolder tile) {
             net.minecraft.world.phys.HitResult hit = player.pick(5.0, 0.0f, false);
@@ -591,7 +607,11 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                 }
             }
         }
+        //? if >=1.21.10 {
         return super.onDestroyedByPlayer(state, level, pos, player, toolStack, willHarvest, fluid);
+        //?} else {
+        /*return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);*/
+        //?}
     }
 
     // Block removal — drops pipe item (only called when the pipe is actually being destroyed)
@@ -638,9 +658,18 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
 
     // Neighbour changes → update pipe connections
     @Override
-    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock, 
+    //? if >=1.21.10 {
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
                                 @Nullable net.minecraft.world.level.redstone.Orientation orientation, boolean movedByPiston) {
+    //?} else {
+    /*protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
+                                BlockPos neighborPos, boolean movedByPiston) {*/
+    //?}
+        //? if >=1.21.10 {
         super.neighborChanged(state, level, pos, neighborBlock, orientation, movedByPiston);
+        //?} else {
+        /*super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);*/
+        //?}
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TilePipeHolder tile && tile.getPipe() != null) {
             tile.getPipe().markForUpdate();
@@ -693,11 +722,19 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
 
     // Pick block (middle click) — return the correct item for what's targeted
     @Override
+    //? if >=1.21.10 {
     public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData, Player player) {
+    //?} else {
+    /*public ItemStack getCloneItemStack(BlockState state, net.minecraft.world.phys.HitResult target, LevelReader level, BlockPos pos, Player player) {*/
+    //?}
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TilePipeHolder tile) {
             // Use player.pick to get the hit result (works on both client and server via player entity)
+            //? if >=1.21.10 {
             net.minecraft.world.phys.HitResult hit = player.pick(5.0, 0.0f, false);
+            //?} else {
+            /*net.minecraft.world.phys.HitResult hit = target;*/
+            //?}
             if (hit instanceof BlockHitResult blockHit && pos.equals(blockHit.getBlockPos())) {
                 double lx = blockHit.getLocation().x - pos.getX();
                 double ly = blockHit.getLocation().y - pos.getY();
@@ -739,7 +776,11 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                 }
             }
         }
+        //? if >=1.21.10 {
         return super.getCloneItemStack(level, pos, state, includeData, player);
+        //?} else {
+        /*return super.getCloneItemStack(level, pos, state);*/
+        //?}
     }
 
     // Sprint particles — pipes use INVISIBLE render shape so vanilla won't create particles.

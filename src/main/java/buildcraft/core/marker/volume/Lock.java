@@ -14,11 +14,13 @@ import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 
 
 import buildcraft.lib.client.render.laser.LaserData_BC8;
+import buildcraft.lib.misc.NBTUtilBC;
 
 public class Lock {
     public Cause cause;
@@ -51,18 +53,18 @@ public class Lock {
     }
 
     public void readFromNBT(CompoundTag nbt) {
-        CompoundTag causeTag = nbt.getCompound("cause").orElseGet(CompoundTag::new);
-        String causeType = causeTag.getString("type").orElse("BLOCK");
+        CompoundTag causeTag = NBTUtilBC.getCompound(nbt, "cause");
+        String causeType = NBTUtilBC.getString(causeTag, "type", "BLOCK");
         cause = Cause.EnumCause.valueOf(causeType).supplier.get();
-        cause.readFromNBT(causeTag.getCompound("data").orElseGet(CompoundTag::new));
+        cause.readFromNBT(NBTUtilBC.getCompound(causeTag, "data"));
 
         if (nbt.contains("targets")) {
-            ListTag targetsList = nbt.getList("targets").orElseGet(ListTag::new);
+            ListTag targetsList = NBTUtilBC.getList(nbt, "targets", Tag.TAG_COMPOUND);
             for (int i = 0; i < targetsList.size(); i++) {
-                CompoundTag targetTag = targetsList.getCompound(i).orElseGet(CompoundTag::new);
-                String targetType = targetTag.getString("type").orElse("REMOVE");
+                CompoundTag targetTag = NBTUtilBC.getCompound(targetsList, i);
+                String targetType = NBTUtilBC.getString(targetTag, "type", "REMOVE");
                 Target target = Target.EnumTarget.valueOf(targetType).supplier.get();
-                target.readFromNBT(targetTag.getCompound("data").orElseGet(CompoundTag::new));
+                target.readFromNBT(NBTUtilBC.getCompound(targetTag, "data"));
                 targets.add(target);
             }
         }
@@ -104,13 +106,18 @@ public class Lock {
             @Override
             public void readFromNBT(CompoundTag nbt) {
                 if (nbt.contains("pos")) {
-                    CompoundTag posTag = nbt.getCompound("pos").orElseGet(CompoundTag::new);
-                    pos = new BlockPos(posTag.getInt("X").orElse(0), posTag.getInt("Y").orElse(0),
-                            posTag.getInt("Z").orElse(0));
+                    CompoundTag posTag = NBTUtilBC.getCompound(nbt, "pos");
+                    pos = new BlockPos(NBTUtilBC.getInt(posTag, "X", 0), NBTUtilBC.getInt(posTag, "Y", 0),
+                            NBTUtilBC.getInt(posTag, "Z", 0));
                 }
-                String blockKey = nbt.getString("block").orElse("minecraft:air");
+                String blockKey = NBTUtilBC.getString(nbt, "block", "minecraft:air");
+                //? if >=1.21.10 {
                 block = net.minecraft.core.registries.BuiltInRegistries.BLOCK
                         .getValue(Identifier.parse(blockKey));
+                //?} else {
+                /*block = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                        .get(Identifier.parse(blockKey));*/
+                //?}
             }
 
             @Override
@@ -182,7 +189,7 @@ public class Lock {
 
             @Override
             public void readFromNBT(CompoundTag nbt) {
-                slot = EnumAddonSlot.valueOf(nbt.getString("slot").orElse(""));
+                slot = EnumAddonSlot.valueOf(NBTUtilBC.getString(nbt, "slot", ""));
             }
         }
 
@@ -204,7 +211,7 @@ public class Lock {
 
             @Override
             public void readFromNBT(CompoundTag nbt) {
-                type = EnumType.valueOf(nbt.getString("type").orElse("STRIPES_WRITE"));
+                type = EnumType.valueOf(NBTUtilBC.getString(nbt, "type", "STRIPES_WRITE"));
             }
 
             public enum EnumType {

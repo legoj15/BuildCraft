@@ -41,12 +41,21 @@ public class MarkerRenderer {
     private static PoseStack currentPoseStack;
     private static Vec3 currentCameraPos;
 
+    //? if >=1.21.10 {
     public static void onRenderLevelStage(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    //?} else {
+    /*public static void onRenderLevelStage(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
+    //?}
         Player player = Minecraft.getInstance().player;
         if (player == null) return;
 
         // Get camera position from the level render state (1.21.11 pattern)
+        //? if >=1.21.10 {
         currentCameraPos = event.getLevelRenderState().cameraRenderState.pos;
+        //?} else {
+        /*currentCameraPos = event.getCamera().getPosition();*/
+        //?}
         currentPoseStack = event.getPoseStack();
 
         // Render all active connections across all marker cache types

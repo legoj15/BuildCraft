@@ -22,6 +22,7 @@ import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementMouseClick;
 
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 
 import buildcraft.builders.BCBuildersSprites;
@@ -38,7 +39,7 @@ public enum PatternParameterAxis implements IStatementParameter {
     }
 
     public static PatternParameterAxis readFromNbt(CompoundTag nbt) {
-        byte ord = nbt.getByte("a").orElse((byte) 0);
+        byte ord = NBTUtilBC.getByte(nbt, "a", (byte) 0);
         if (ord <= 0) {
             return X;
         }

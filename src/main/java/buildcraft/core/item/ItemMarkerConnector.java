@@ -53,7 +53,19 @@ public class ItemMarkerConnector extends Item {
     }
 
     @Override
+    //? if >=1.21.10 {
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
+        return useImpl(level, player, hand);
+    }
+    //?} else {
+    /*// 1.21.1: Item.use returns InteractionResultHolder<ItemStack>. Wrap the shared InteractionResult
+    // logic (useImpl) with the held stack — InteractionResult.SUCCESS is version-neutral.
+    public net.minecraft.world.InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        return new net.minecraft.world.InteractionResultHolder<>(useImpl(level, player, hand), player.getItemInHand(hand));
+    }*/
+    //?}
+
+    private InteractionResult useImpl(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide()) {
             for (MarkerCache<?> cache : MarkerCache.CACHES) {
                 if (interactCache(cache.getSubCache(level), player)) {

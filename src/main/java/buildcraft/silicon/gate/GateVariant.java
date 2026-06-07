@@ -6,6 +6,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 
+import buildcraft.lib.misc.NBTUtilBC;
+
 public class GateVariant {
     public final EnumGateLogic logic;
     public final EnumGateMaterial material;
@@ -25,9 +27,9 @@ public class GateVariant {
     }
 
     public GateVariant(CompoundTag nbt) {
-        this.logic = EnumGateLogic.getByOrdinal(nbt.getByte("logic").orElse((byte) 0));
-        this.material = EnumGateMaterial.getByOrdinal(nbt.getByte("material").orElse((byte) 0));
-        this.modifier = EnumGateModifier.getByOrdinal(nbt.getByte("modifier").orElse((byte) 0));
+        this.logic = EnumGateLogic.getByOrdinal(NBTUtilBC.getByte(nbt, "logic", (byte) 0));
+        this.material = EnumGateMaterial.getByOrdinal(NBTUtilBC.getByte(nbt, "material", (byte) 0));
+        this.modifier = EnumGateModifier.getByOrdinal(NBTUtilBC.getByte(nbt, "modifier", (byte) 0));
         this.numSlots = material.numSlots / modifier.slotDivisor;
         this.numTriggerArgs = modifier.triggerParams;
         this.numActionArgs = modifier.actionParams;

@@ -15,7 +15,9 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.TagValueInput;
+//?}
 
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.BCBuildersItems;
@@ -41,7 +43,11 @@ public class BuilderDropsTester {
         helper.setBlock(builderPos, BCBuildersBlocks.BUILDER.get());
         helper.assertBlockPresent(BCBuildersBlocks.BUILDER.get(), builderPos);
 
+        //? if >=1.21.10 {
         TileBuilder tile = helper.getBlockEntity(builderPos, TileBuilder.class);
+        //?} else {
+        /*TileBuilder tile = helper.getBlockEntity(builderPos);*/
+        //?}
 
         // Seed the snapshot slot with a used blueprint item — the snapshot-loading logic will
         // no-op because there's no GlobalSavedDataSnapshots entry for it, but the item itself
@@ -94,7 +100,11 @@ public class BuilderDropsTester {
         helper.setBlock(architectPos, BCBuildersBlocks.ARCHITECT.get());
         helper.assertBlockPresent(BCBuildersBlocks.ARCHITECT.get(), architectPos);
 
+        //? if >=1.21.10 {
         TileArchitectTable tile = helper.getBlockEntity(architectPos, TileArchitectTable.class);
+        //?} else {
+        /*TileArchitectTable tile = helper.getBlockEntity(architectPos);*/
+        //?}
         tile.setSnapshotIn(new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
         tile.setSnapshotOut(new ItemStack(BCBuildersItems.BLUEPRINT_USED.get()));
 
@@ -129,7 +139,11 @@ public class BuilderDropsTester {
     public static void testBuilderPathSurvivesNbtRoundTrip(GameTestHelper helper) {
         BlockPos builderPos = new BlockPos(1, 2, 1);
         helper.setBlock(builderPos, BCBuildersBlocks.BUILDER.get());
+        //? if >=1.21.10 {
         TileBuilder tile = helper.getBlockEntity(builderPos, TileBuilder.class);
+        //?} else {
+        /*TileBuilder tile = helper.getBlockEntity(builderPos);*/
+        //?}
 
         helper.assertTrue(tile.path == null, "fresh builder must have null path");
 
@@ -144,7 +158,11 @@ public class BuilderDropsTester {
         ServerLevel level = helper.getLevel();
         CompoundTag tag = tile.saveCustomOnly(level.registryAccess());
         tile.path = null;  // clear to prove load is what restores it
+        //? if >=1.21.10 {
         tile.loadCustomOnly(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), tag));
+        //?} else {
+        /*tile.loadCustomOnly(tag, level.registryAccess());*/
+        //?}
 
         helper.assertTrue(tile.path != null, "path must survive the NBT round-trip");
         helper.assertTrue(tile.path.size() == 3,
@@ -157,7 +175,11 @@ public class BuilderDropsTester {
         // make updateBasePoses() crash on path.get(0) the next time it runs).
         tile.path = null;
         CompoundTag emptyTag = tile.saveCustomOnly(level.registryAccess());
+        //? if >=1.21.10 {
         tile.loadCustomOnly(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), emptyTag));
+        //?} else {
+        /*tile.loadCustomOnly(emptyTag, level.registryAccess());*/
+        //?}
         helper.assertTrue(tile.path == null, "round-tripping with no path must leave path null");
 
         helper.succeed();

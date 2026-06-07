@@ -284,7 +284,11 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
         final double colourOffset = 0.01;
         Vec3[] faceOffset = new Vec3[6];
         for (Direction face : Direction.values()) {
+            //? if >=1.21.10 {
             Vec3 dir = Vec3.atLowerCornerOf(face.getOpposite().getUnitVec3i());
+            //?} else {
+            /*Vec3 dir = Vec3.atLowerCornerOf(face.getOpposite().getNormal());*/
+            //?}
             faceOffset[face.ordinal()] = dir.scale(colourOffset);
         }
 

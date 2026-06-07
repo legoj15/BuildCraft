@@ -44,8 +44,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -60,7 +58,10 @@ import buildcraft.lib.chunkload.ChunkLoaderManager;
 import buildcraft.lib.chunkload.IChunkLoadingTile;
 import buildcraft.lib.debug.IAdvDebugTarget;
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.BoundingBoxUtil;
 import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.LocaleUtil;
@@ -128,7 +129,10 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     private List<AABB> collisionBoxes = ImmutableList.of();
     private Vec3 collisionDrillPos;
 
-    private final EntityQuarryRig[] rigs = new EntityQuarryRig[3];
+    /** The collision rig entities. Each moving arm (2 horizontal beams + 1 vertical column) is split
+     *  into section-aligned segment entities so a player anywhere along it lands in a section the
+     *  collision query actually scans — a single long entity is only found near its own position. */
+    private final List<EntityQuarryRig> rigs = new ArrayList<>();
 
     public TileQuarry(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.QUARRY.get(), pos, state);
@@ -593,6 +597,14 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                 }
                 if (currentTask.addPower(added)) {
                     currentTask = null;
+                    // Sync the final drill position the task just committed (TaskMoveDrill.finish sets
+                    // drillPos = to). Without this a task that COMPLETES on this tick — common at high
+                    // power, where a whole 1-block move finishes in a single tick — never pushes its final
+                    // drillPos to the client: the tile only synced while the task was still running, so
+                    // clientDrillPos (and the rendered rig) lags a block or two behind the rig's collision
+                    // entity (which syncs every tick), leaving a gap in a boom arm's collision that
+                    // persists while the drill is stopped. Re-sync so the visual matches the collision.
+                    sendUpdate = true;
                 } else {
                     sendUpdate = true;
                     break;
@@ -636,7 +648,18 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                         break;
                     }
                 }
-                drillPos = Vec3.atLowerCornerOf(miningBox.closestInsideTo(worldPosition));
+                // Only seed the drill at the mining-box corner when it has no position yet (initial
+                // setup after the frame is built). The boxIterator isn't persisted, so it is ALWAYS
+                // recreated on load — but drillPos IS persisted (saveAdditional/readData), and on a world
+                // reload it arrives here non-null. Recomputing it then would discard the saved mid-mining
+                // position and snap the drill (and its collision rig entity) to the corner, while the
+                // client's rendered rig stays at the restored position until the next move syncs — the
+                // whole-block "collision desynced from the rig after reload" offset that persisted until
+                // the quarry was broken and replaced. Guarding on null preserves the restored drillPos so
+                // the rig entity and the rendered rig agree.
+                if (drillPos == null) {
+                    drillPos = Vec3.atLowerCornerOf(miningBox.closestInsideTo(worldPosition));
+                }
             }
 
             if (boxIterator != null && boxIterator.hasNext()) {
@@ -685,7 +708,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                 // Only latch advancementGranted when the award actually reached the player.
                 // unlockAdvancement returns false if the owner is offline; latching anyway
                 // would silently drop the award and never retry on subsequent ticks.
-                if (AdvancementUtil.unlockAdvancement(getOwner().id(), level, DIGGY_DIGGY_HOLE)) {
+                if (AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, DIGGY_DIGGY_HOLE)) {
                     advancementGranted = true;
                     setChanged();
                 }
@@ -716,33 +739,56 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             return;
         }
 
-        boolean isDrillMoving = (currentTask instanceof TaskMoveDrill);
+        // Split each arm along its long axis into 16-block, section-aligned segments. MC files every
+        // entity in the single entity-storage section at its POSITION and a collision query only scans
+        // sections within ~a couple of blocks of the query (EntitySectionStorage.forEachAccessibleNon-
+        // EmptySection); one long entity is therefore only found near its own centre, so a player out at
+        // a beam's end — or partway down a deep column — falls through despite the box being there.
+        // Per-section segments keep a collidable piece in whichever section the player is in.
+        List<AABB> beamSegments = new ArrayList<>();
+        QuarryRigGeometry.splitBySection(beamSegments, boxes.get(0), Axis.Z); // X-axis beam runs along Z
+        QuarryRigGeometry.splitBySection(beamSegments, boxes.get(1), Axis.X); // Z-axis beam runs along X
+        List<AABB> columnSegments = new ArrayList<>();
+        QuarryRigGeometry.splitBySection(columnSegments, boxes.get(2), Axis.Y); // vertical column runs along Y
 
-        for (int i = 0; i < 3; i++) {
-            EntityQuarryRig rig = rigs[i];
+        boolean isDrillMoving = (currentTask instanceof TaskMoveDrill);
+        int total = beamSegments.size() + columnSegments.size();
+
+        // Resize the rig list to match the segment count, discarding any now-surplus entities (the
+        // column's segment count grows as the drill descends and shrinks if the box is rebuilt smaller).
+        while (rigs.size() > total) {
+            EntityQuarryRig surplus = rigs.remove(rigs.size() - 1);
+            if (surplus != null && !surplus.isRemoved()) {
+                surplus.discard();
+            }
+        }
+        while (rigs.size() < total) {
+            rigs.add(null);
+        }
+
+        for (int i = 0; i < total; i++) {
+            boolean isColumn = i >= beamSegments.size();
+            AABB box = isColumn ? columnSegments.get(i - beamSegments.size()) : beamSegments.get(i);
+            EntityQuarryRig rig = rigs.get(i);
             if (rig == null || rig.isRemoved()) {
                 rig = new EntityQuarryRig(BCBuildersEntities.QUARRY_RIG.get(), level);
-                if (rig != null) {
-                    level.addFreshEntity(rig);
-                    rigs[i] = rig;
-                }
+                level.addFreshEntity(rig);
+                rigs.set(i, rig);
             }
-            if (rig != null) {
-                rig.setRiggingBox(boxes.get(i));
-                if (i == 2) {
-                    rig.setPhasing(isDrillMoving);
-                }
-            }
+            rig.setRiggingBox(box);
+            // Only the column phases (passes through the player) while the drill moves, so the moving
+            // mast doesn't shove anyone; the beams stay solid to be walked on.
+            rig.setPhasing(isColumn && isDrillMoving);
         }
     }
 
     private void discardRigs() {
-        for (int i = 0; i < 3; i++) {
-            if (rigs[i] != null && !rigs[i].isRemoved()) {
-                rigs[i].discard();
+        for (EntityQuarryRig rig : rigs) {
+            if (rig != null && !rig.isRemoved()) {
+                rig.discard();
             }
-            rigs[i] = null;
         }
+        rigs.clear();
     }
 
     /** Returns collision boxes for the quarry's moving drill rig, allowing players to walk on it.
@@ -779,8 +825,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     // NBT
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         // Mining box — write coordinates directly (Box.writeToNBT uses nested tags that don't work with flat ValueOutput)
         output.putBoolean("box_init", miningBox.isInitialized());
         if (miningBox.isInitialized()) {
@@ -826,7 +872,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             }
             output.putByte("currentTaskId", (byte) taskId);
             CompoundTag taskTag = currentTask.serializeNBT();
-            output.putLong("task_power", taskTag.getLongOr("power", 0L));
+            output.putLong("task_power", NBTUtilBC.getLong(taskTag, "power", 0L));
             if (currentTask instanceof TaskBreakBlock tb) {
                 output.putInt("task_breakX", tb.breakPos.getX());
                 output.putInt("task_breakY", tb.breakPos.getY());
@@ -876,8 +922,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
 
         // Mining box
         if (input.getBooleanOr("box_init", false)) {

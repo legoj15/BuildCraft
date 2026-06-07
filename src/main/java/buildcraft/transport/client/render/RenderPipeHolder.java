@@ -19,15 +19,19 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.Sheets;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
+//?}
 //? if >=26.1 {
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-//?} else {
+//?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.state.CameraRenderState;*/
 //?}
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -66,6 +70,7 @@ import org.jspecify.annotations.Nullable;
  *  Following the vanilla CampfireRenderer pattern: item models are resolved during
  *  extractRenderState() and stored as pre-resolved ItemStackRenderState instances.
  *  The submit() method only positions and draws them. */
+//? if >=1.21.10 {
 public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, PipeHolderRenderState> {
 
     private final ItemModelResolver itemModelResolver;
@@ -73,7 +78,14 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
     public RenderPipeHolder(BlockEntityRendererProvider.Context context) {
         this.itemModelResolver = context.itemModelResolver();
     }
+//?} else {
+/*public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder> {
 
+    public RenderPipeHolder(BlockEntityRendererProvider.Context context) {
+    }*/
+//?}
+
+    //? if >=1.21.10 {
     @Override
     public PipeHolderRenderState createRenderState() {
         return new PipeHolderRenderState();
@@ -248,6 +260,101 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         }
         poseStack.popPose();
     }
+    //?} else {
+    /*// 1.21.1 classic BlockEntityRenderer: a single render() draws everything directly (no separate
+    // render-state / SubmitNodeCollector). The modern extractRenderState (item-model resolution) and
+    // submitItems (positioning + submit) collapse into renderItems() using ItemRenderer.renderStatic.
+    @Override
+    public void render(TilePipeHolder pipe, float partialTick, PoseStack poseStack,
+                       net.minecraft.client.renderer.MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
+        if (pipe == null) return;
+        Level level = pipe.getLevel();
+        if (level == null) return;
+        int light = buildcraft.lib.client.render.LightUtil.getLightCoords(level, pipe.getBlockPos());
+
+        poseStack.pushPose();
+        PipeWireRenderer.renderWires(pipe, poseStack.last(), light);
+        renderItems(pipe, poseStack, bufferSource, light, partialTick);
+        ItemRenderUtil.beginItemBatch(poseStack, bufferSource, light);
+        renderContents(pipe, 0, 0, 0, partialTick, poseStack);
+        ItemRenderUtil.endItemBatch();
+        poseStack.popPose();
+    }
+
+    private void renderItems(TilePipeHolder pipe, PoseStack poseStack,
+                             net.minecraft.client.renderer.MultiBufferSource bufferSource, int light, float partialTick) {
+        Pipe p = pipe.getPipe();
+        if (p == null || !(p.flow instanceof PipeFlowItems flowItems)) return;
+        Level world = pipe.getLevel();
+        if (world == null) return;
+        net.minecraft.client.renderer.entity.ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
+        long now = world.getGameTime();
+        int posHash = (int) pipe.getBlockPos().asLong();
+        List<TravellingItem> items = flowItems.getAllItemsForRender();
+        Random modelOffsetRandom = new Random(0);
+        VertexConsumer colourBuffer = null;
+        MultiBufferSource.BufferSource colourBufferSource = null;
+        boolean needsColourFlush = false;
+
+        for (int idx = 0; idx < items.size(); idx++) {
+            TravellingItem item = items.get(idx);
+            ItemStack stack = item.clientItemLink.get();
+            if (stack == null || stack.isEmpty()) stack = item.getStack();
+            if (stack == null || stack.isEmpty()) continue;
+
+            Vec3 pos = item.getRenderPosition(BlockPos.ZERO, now, partialTick, flowItems);
+            Direction dir = item.getRenderDirection(now, partialTick);
+            if (dir == null) dir = Direction.EAST;
+            int count = item.stackSize > 0 ? item.stackSize : stack.getCount();
+
+            int itemModelCount = getStackModelCount(count);
+            if (itemModelCount > 1) setupModelOffsetRandom(modelOffsetRandom, count);
+
+            for (int i = 0; i < itemModelCount; i++) {
+                poseStack.pushPose();
+                float dx = 0, dy = 0, dz = 0;
+                if (i > 0) {
+                    dx = (modelOffsetRandom.nextFloat() * 2.0F - 1.0F) * 0.08F;
+                    dy = (modelOffsetRandom.nextFloat() * 2.0F - 1.0F) * 0.08F;
+                    dz = (modelOffsetRandom.nextFloat() * 2.0F - 1.0F) * 0.08F;
+                }
+                poseStack.translate(pos.x + dx, pos.y + dy, pos.z + dz);
+                poseStack.scale(0.30f, 0.30f, 0.30f);
+                applyDirectionRotation(poseStack, dir);
+                itemRenderer.renderStatic(stack, ItemDisplayContext.NONE, light, OverlayTexture.NO_OVERLAY,
+                        poseStack, bufferSource, world, posHash + idx);
+                poseStack.popPose();
+            }
+
+            if (item.colour != null) {
+                if (colourBuffer == null) {
+                    colourBufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+                    colourBuffer = colourBufferSource.getBuffer(Sheets.cutoutBlockSheet());
+                    needsColourFlush = true;
+                }
+                MutableQuad[] colourQuads = PipeFlowRendererItems.getColouredQuads();
+                if (colourQuads != null) {
+                    int col = buildcraft.lib.misc.ColourUtil.getLightHex(item.colour);
+                    int r = (col >> 16) & 0xFF, g = (col >> 8) & 0xFF, b = col & 0xFF;
+                    poseStack.pushPose();
+                    poseStack.translate(pos.x, pos.y, pos.z);
+                    for (MutableQuad q : colourQuads) {
+                        if (q == null) continue;
+                        MutableQuad q2 = new MutableQuad(q);
+                        q2.lighti(15, 15);
+                        q2.multColouri(r, g, b, 255);
+                        q2.render(poseStack.last(), colourBuffer);
+                    }
+                    poseStack.popPose();
+                }
+            }
+        }
+
+        if (needsColourFlush && colourBufferSource != null) {
+            colourBufferSource.endBatch(Sheets.cutoutBlockSheet());
+        }
+    }*/
+    //?}
 
     /** Applies rotation so the item faces the given direction of travel. */
     private static void applyDirectionRotation(PoseStack ps, Direction dir) {

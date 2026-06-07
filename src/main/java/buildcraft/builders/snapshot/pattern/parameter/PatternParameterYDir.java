@@ -18,6 +18,7 @@ import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementMouseClick;
 
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 
 import buildcraft.builders.BCBuildersSprites;
@@ -35,7 +36,7 @@ public enum PatternParameterYDir implements IStatementParameter {
     }
 
     public static PatternParameterYDir readFromNbt(CompoundTag nbt) {
-        if (nbt.getBoolean("up").orElse(false)) {
+        if (NBTUtilBC.getBoolean(nbt, "up", false)) {
             return UP;
         }
         return DOWN;

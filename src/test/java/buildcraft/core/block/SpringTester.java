@@ -48,7 +48,7 @@ public class SpringTester {
             
             // Safety check: Ensure the liquid block is correctly initialized
             if (type.liquidBlock == null || type.liquidBlock.isAir()) {
-                throw new IllegalStateException("Oil spring liquid block is not initialized!");
+                helper.fail("Oil spring liquid block is not initialized!");
             }
 
             // Force generation by spamming ticks until the block above is no longer air
@@ -66,10 +66,10 @@ public class SpringTester {
             BlockState actual = helper.getBlockState(new BlockPos(1, 2, 1));
             BlockState expected = BCCoreBlocks.SPRING_OIL.get().getSpringType().liquidBlock;
             if (actual.isAir()) {
-                throw new IllegalStateException("Oil did not generate above spring!");
+                helper.fail("Oil did not generate above spring!");
             }
             if (actual.getBlock() != expected.getBlock()) {
-                throw new IllegalStateException("Generated fluid does not match expected oil fluid!");
+                helper.fail("Generated fluid does not match expected oil fluid!");
             }
         });
     }
@@ -85,13 +85,17 @@ public class SpringTester {
         BlockPos pos = new BlockPos(1, 1, 1);
         helper.setBlock(pos, BCCoreBlocks.SPRING_OIL.get());
 
+        //? if >=1.21.10 {
         BlockEntity tile = helper.getBlockEntity(pos, BlockEntity.class);
+        //?} else {
+        /*BlockEntity tile = helper.getBlockEntity(pos);*/
+        //?}
         if (tile == null) {
-            throw new IllegalStateException(
+            helper.fail(
                 "Oil spring did not attach a BlockEntity (BlockSpring is missing EntityBlock support).");
         }
         if (!(tile instanceof ITileOilSpring)) {
-            throw new IllegalStateException(
+            helper.fail(
                 "Oil spring attached the wrong BlockEntity type: " + tile.getClass().getName());
         }
         helper.succeed();
@@ -126,7 +130,7 @@ public class SpringTester {
         helper.succeedIf(() -> {
             BlockState actual = helper.getBlockState(up);
             if (actual.getBlock() != oil.getBlock()) {
-                throw new IllegalStateException(
+                helper.fail(
                     "Oil spring failed to regenerate through water — block above is " + actual.getBlock());
             }
         });
@@ -155,7 +159,7 @@ public class SpringTester {
         helper.succeedIf(() -> {
             BlockState actual = helper.getBlockState(up);
             if (!actual.is(Blocks.STONE)) {
-                throw new IllegalStateException(
+                helper.fail(
                     "Oil spring overwrote a solid block above it — block above is now " + actual.getBlock());
             }
         });

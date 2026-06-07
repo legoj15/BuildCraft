@@ -39,7 +39,7 @@ public class FacadePhasedState implements IFacadePhasedState {
         if (nbt.contains("state")) {
             try {
                 BlockState blockState = NbtUtils.readBlockState(
-                    BuiltInRegistries.BLOCK, nbt.getCompoundOrEmpty("state"));
+                    buildcraft.lib.misc.RegistryUtilBC.blockLookup(), NBTUtilBC.getCompound(nbt, "state"));
                 stateInfo = FacadeStateManager.validFacadeStates.get(blockState);
                 if (stateInfo == null) {
                     stateInfo = FacadeStateManager.defaultState;

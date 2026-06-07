@@ -14,11 +14,16 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
+import net.minecraft.world.level.material.Fluids;
+
+import net.neoforged.neoforge.fluids.FluidStack;
+
 import buildcraft.api.blocks.CustomPaintHelper;
 import buildcraft.api.transport.pipe.IPipe;
 
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
+import buildcraft.transport.pipe.flow.PipeFlowFluids;
 import buildcraft.transport.tile.TilePipeHolder;
 
 /**
@@ -44,7 +49,11 @@ public class PaintedPipeConnectionTester {
 
     private static TilePipeHolder placePipe(GameTestHelper helper, BlockPos relPos, Item pipeItem) {
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(relPos);*/
+        //?}
         tile.onPlacedBy(null, new ItemStack(pipeItem));
         return tile;
     }
@@ -232,6 +241,64 @@ public class PaintedPipeConnectionTester {
                 "Pink + Lime fluid pipes must NOT connect — canColoursConnect(PINK, LIME) is false");
         helper.assertFalse(stonePipe.isConnected(Direction.WEST),
                 "Lime + Pink fluid pipes must NOT connect (symmetric check)");
+        helper.succeed();
+    }
+
+    /**
+     * The painted-pipe FLUID bug: a fluid pipe must not push fluid into the side section toward a
+     * differently-coloured (non-connected) neighbour. Such a neighbour still exposes a fluid
+     * capability, so {@link PipeFlowFluids#moveFromCenter()} used to fill that section even though the
+     * pipes don't connect — the fluid then visibly "stuck" to that face (appearing to flow into the
+     * non-connection, e.g. upward into a differently-coloured pipe above) and could never drain out.
+     * Guards the {@code pipe.isConnected(direction)} filter added to {@code moveFromCenter}. Shared
+     * across nodes (the unguarded filter existed on every version).
+     */
+    public static void testNoFluidStuckTowardDifferentColouredNeighbour(GameTestHelper helper) {
+        BlockPos aPos = new BlockPos(1, 2, 1);
+        BlockPos bPos = new BlockPos(2, 2, 1); // EAST of A
+
+        TilePipeHolder aTile = placePipe(helper, aPos, BCTransportItems.PIPE_STONE_FLUID.get());
+        TilePipeHolder bTile = placePipe(helper, bPos, BCTransportItems.PIPE_STONE_FLUID.get());
+
+        Pipe aPipe = (Pipe) aTile.getPipe();
+        Pipe bPipe = (Pipe) bTile.getPipe();
+
+        // Paint different colours so the two pipes do NOT connect.
+        aPipe.setColour(DyeColor.PINK);
+        bPipe.setColour(DyeColor.LIME);
+        aPipe.onTick();
+        bPipe.onTick();
+        helper.assertFalse(aPipe.isConnected(Direction.EAST),
+                "Setup: differently-coloured fluid pipes must not connect");
+
+        // Feed fluid into A's centre each tick and run the flow.
+        PipeFlowFluids aFlow = (PipeFlowFluids) aPipe.getFlow();
+        for (int i = 0; i < 60; i++) {
+            aFlow.insertFluidsForce(new FluidStack(Fluids.WATER, 200), null, false);
+            aPipe.onTick();
+            bPipe.onTick();
+        }
+
+        // The section toward the non-connected EAST neighbour must stay empty. (Server-side
+        // writeAmountsForRender reports the raw section.amount; indices follow Direction.ordinal().)
+        double[] amounts = new double[7];
+        aFlow.writeAmountsForRender(0f, amounts);
+        double eastSection = amounts[Direction.EAST.ordinal()];
+        helper.assertTrue(eastSection == 0,
+                "Fluid must NOT accumulate in the section toward a differently-coloured (non-connected)"
+                        + " neighbour — it 'sticks' to that face otherwise. Got " + eastSection + " mB EAST");
+
+        // And none should have leaked to the non-connected neighbour B.
+        PipeFlowFluids bFlow = (PipeFlowFluids) bPipe.getFlow();
+        double[] bAmounts = new double[7];
+        bFlow.writeAmountsForRender(0f, bAmounts);
+        double bTotal = 0;
+        for (double v : bAmounts) {
+            bTotal += v;
+        }
+        helper.assertTrue(bTotal == 0,
+                "No fluid should reach the non-connected neighbour B; got " + bTotal + " mB");
+
         helper.succeed();
     }
 }

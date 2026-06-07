@@ -13,10 +13,13 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.client.Minecraft;
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.multiplayer.PlayerInfo;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.RenderPipelines;
+//?}
 import net.minecraft.resources.Identifier;
 
 import buildcraft.lib.gui.BuildCraftGui;
+import buildcraft.lib.misc.GameProfileUtil;
 
 /** Ledger that shows the owner (player who placed the block).
  *  Renders the owner's actual skin face, matching 1.12.2's SpriteUtil.getFaceSprite(). */
@@ -36,7 +39,7 @@ public class LedgerOwnership extends Ledger_Neptune {
         // 1.12.2 used colour 0 (black) for the owner name text
         appendText(() -> {
             GameProfile profile = ownerSupplier.get();
-            return profile != null ? profile.name() : "Unknown";
+            return profile != null ? GameProfileUtil.getName(profile) : "Unknown";
         }, 0x000000);
 
         calculateMaxSize();
@@ -48,32 +51,49 @@ public class LedgerOwnership extends Ledger_Neptune {
 
         // Draw the 8x8 face region from the 64x64 skin texture, scaled to 16x16.
         // The face pixels are at UV (8, 8) → (16, 16) in the skin texture.
+        //? if >=1.21.10 {
         graphics.blit(RenderPipelines.GUI_TEXTURED, skinTexture,
             (int) x, (int) y, 8f, 8f, 16, 16, 8, 8, 64, 64);
+        //?} else {
+        /*graphics.blit(skinTexture,
+            (int) x, (int) y, 8f, 8f, 16, 16, 8, 8, 64, 64);*/
+        //?}
 
         // Draw the hat overlay layer on top (matching 1.12.2 SpriteUtil.getFaceOverlaySprite()).
         // The hat overlay pixels are at UV (40, 8) → (48, 16) in the skin texture.
+        //? if >=1.21.10 {
         graphics.blit(RenderPipelines.GUI_TEXTURED, skinTexture,
             (int) x, (int) y, 40f, 8f, 16, 16, 8, 8, 64, 64);
+        //?} else {
+        /*graphics.blit(skinTexture,
+            (int) x, (int) y, 40f, 8f, 16, 16, 8, 8, 64, 64);*/
+        //?}
     }
 
     /** Get the skin texture Identifier for the given player profile.
      *  Tries the network connection first (for online players), then falls back to Steve. */
     private static Identifier getSkinTexture(GameProfile profile) {
-        if (profile == null || profile.id() == null) {
+        if (profile == null || GameProfileUtil.getId(profile) == null) {
             return STEVE_SKIN;
         }
         try {
             // Look up the player in the connection — this has their loaded skin
             var connection = Minecraft.getInstance().getConnection();
             if (connection != null) {
-                PlayerInfo info = connection.getPlayerInfo(profile.id());
+                PlayerInfo info = connection.getPlayerInfo(GameProfileUtil.getId(profile));
                 if (info != null) {
                     var skin = info.getSkin();
+                    //? if >=1.21.10 {
                     var bodyTex = skin.body();
                     if (bodyTex != null) {
                         return bodyTex.id();
                     }
+                    //?} else {
+                    /*var bodyTex = skin.texture();
+                    if (bodyTex != null) {
+                        return bodyTex;
+                    }*/
+                    //?}
                 }
             }
         } catch (Exception e) {

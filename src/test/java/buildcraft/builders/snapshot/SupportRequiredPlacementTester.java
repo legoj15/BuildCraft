@@ -213,9 +213,15 @@ public class SupportRequiredPlacementTester {
             BlockPos local = new BlockPos(1, 2, 1);
             BlockPos abs = helper.absolutePos(local);
 
+            //? if >=1.21.10 {
             BlockState schematicWall = Blocks.COBBLESTONE_WALL.defaultBlockState()
                     .setValue(WallBlock.NORTH, WallSide.LOW)
                     .setValue(WallBlock.EAST, WallSide.LOW);
+            //?} else {
+            /*BlockState schematicWall = Blocks.COBBLESTONE_WALL.defaultBlockState()
+                    .setValue(WallBlock.NORTH_WALL, WallSide.LOW)
+                    .setValue(WallBlock.EAST_WALL, WallSide.LOW);*/
+            //?}
             BlockState worldWall = Blocks.COBBLESTONE_WALL.defaultBlockState();
             // World state has all sides NONE (default) — what updateShape produces when no
             // wall neighbours are present. Schematic asks for two LOW connections.
@@ -224,10 +230,17 @@ public class SupportRequiredPlacementTester {
             SchematicBlockDefault s = schem(schematicWall);
             s.canBeReplacedWithBlocks.add(Blocks.COBBLESTONE_WALL);
             // Match what the JSON rule populates at init time.
+            //? if >=1.21.10 {
             s.ignoredProperties.add(WallBlock.NORTH);
             s.ignoredProperties.add(WallBlock.EAST);
             s.ignoredProperties.add(WallBlock.SOUTH);
             s.ignoredProperties.add(WallBlock.WEST);
+            //?} else {
+            /*s.ignoredProperties.add(WallBlock.NORTH_WALL);
+            s.ignoredProperties.add(WallBlock.EAST_WALL);
+            s.ignoredProperties.add(WallBlock.SOUTH_WALL);
+            s.ignoredProperties.add(WallBlock.WEST_WALL);*/
+            //?}
             s.ignoredProperties.add(WallBlock.UP);
             assertTrue(s.isBuilt(helper.getLevel(), abs),
                     "isBuilt must accept world wall with no connections when schematic asked for LOW connections (connections are ignored)");

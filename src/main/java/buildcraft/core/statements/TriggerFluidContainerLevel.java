@@ -12,9 +12,14 @@ import net.minecraft.core.Direction;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
+//?} else {
+/*import net.neoforged.neoforge.fluids.FluidUtil;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
+//?}
 
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementContainer;
@@ -53,6 +58,7 @@ public class TriggerFluidContainerLevel extends BCStatement implements ITriggerE
         return String.format(LocaleUtil.localize("gate.trigger.fluidlevel.below"), (int) (type.level * 100));
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer statementContainer, IStatementParameter[] parameters) {
         if (tile == null || tile.getLevel() == null) {
@@ -104,6 +110,56 @@ public class TriggerFluidContainerLevel extends BCStatement implements ITriggerE
         }
         return false;
     }
+    //?} else {
+    /*@Override
+    public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer statementContainer, IStatementParameter[] parameters) {
+        if (tile == null || tile.getLevel() == null) {
+            return false;
+        }
+        IFluidHandler handler = tile.getLevel().getCapability(
+            Capabilities.FluidHandler.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null
+        );
+        if (handler == null) {
+            return false;
+        }
+
+        FluidStack searchedFluid = FluidStack.EMPTY;
+
+        if (parameters != null && parameters.length >= 1 && parameters[0] != null && !parameters[0].getItemStack().isEmpty()) {
+            net.minecraft.world.item.ItemStack stack = parameters[0].getItemStack();
+            searchedFluid = FluidUtil.getFluidContained(stack).orElse(FluidStack.EMPTY);
+        }
+
+        int tanks = handler.getTanks();
+        if (tanks == 0) {
+            return false;
+        }
+
+        for (int i = 0; i < tanks; i++) {
+            FluidStack fluid = handler.getFluidInTank(i);
+            int capacity = handler.getTankCapacity(i);
+            if (capacity <= 0) continue;
+
+            if (fluid.isEmpty()) {
+                // Empty tank — if we're searching for a specific fluid, check if we can fill it
+                if (searchedFluid.isEmpty()) {
+                    return true; // Empty tank is certainly below threshold
+                }
+                FluidStack probe = searchedFluid.copy();
+                probe.setAmount(1);
+                if (handler.fill(probe, IFluidHandler.FluidAction.SIMULATE) > 0) {
+                    return true;
+                }
+            } else {
+                if (searchedFluid.isEmpty() || FluidStack.isSameFluidSameComponents(fluid, searchedFluid)) {
+                    float percentage = fluid.getAmount() / (float) capacity;
+                    return percentage < type.level;
+                }
+            }
+        }
+        return false;
+    }*/
+    //?}
 
     @Override
     public IStatementParameter createParameter(int index) {

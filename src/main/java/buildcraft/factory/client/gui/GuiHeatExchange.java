@@ -16,8 +16,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import buildcraft.lib.fluid.BCFluidTank;
 
 import buildcraft.factory.container.ContainerHeatExchange;
 import buildcraft.factory.tile.TileHeatExchange.EnumProgressState;
@@ -205,20 +204,16 @@ public class GuiHeatExchange extends GuiBC8<ContainerHeatExchange> {
     }
 
     private void renderTankTooltip(BCGraphics graphics, int mouseX, int mouseY,
-            FluidStacksResourceHandler tank, int relX, int relY, int w, int h) {
+            BCFluidTank tank, int relX, int relY, int w, int h) {
         if (tank == null) return;
         int absX = leftPos + relX;
         int absY = topPos + relY;
         if (mouseX >= absX && mouseX < absX + w && mouseY >= absY && mouseY < absY + h) {
-            int amount = (int) tank.getAmountAsLong(0);
-            int capacity = (int) tank.getCapacityAsLong(0, FluidResource.EMPTY);
+            int amount = tank.getAmountMb(0);
+            int capacity = tank.getCapacityMb(0);
 
-            List<Component> lines = new ArrayList<>();
-            if (amount > 0) {
-                lines.add(tank.getResource(0).toStack(amount).getHoverName());
-            }
-            lines.add(Component.literal(amount + " / " + capacity + " mB")
-                    .withStyle(ChatFormatting.GRAY));
+            List<Component> lines = buildcraft.lib.gui.elem.GuiElementFluidTank.buildTankTooltip(
+                    tank.getFluidStack(0), amount, capacity);
             List<FormattedCharSequence> comps = new ArrayList<>();
             for (Component c : lines) {
                 comps.add(c.getVisualOrderText());

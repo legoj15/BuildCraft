@@ -20,6 +20,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
@@ -27,9 +28,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.resources.Identifier;
+//? if >=1.21.10 {
 import net.minecraft.world.level.saveddata.SavedDataType;
+//?}
 
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import buildcraft.lib.misc.NBTUtilBC;
 
 public class LevelSavedDataVolumeBoxes extends SavedData {
     private static final String DATA_NAME = "buildcraft_volume_boxes";
@@ -42,18 +47,40 @@ public class LevelSavedDataVolumeBoxes extends SavedData {
 
     // The SavedDataType uses CompoundTag.CODEC to persist the raw tag, and we
     // decode it manually because VolumeBox needs a Level reference.
+    //? if >=26.1 {
     public static SavedDataType<LevelSavedDataVolumeBoxes> createType(Level world) {
         return new SavedDataType<>(
-                //? if >=26.1 {
                 Identifier.withDefaultNamespace(DATA_NAME),
-                //?} else {
-                /*DATA_NAME,*/
-                //?}
                 () -> new LevelSavedDataVolumeBoxes(world),
                 buildCodec(world),
                 net.minecraft.util.datafix.DataFixTypes.LEVEL
         );
     }
+    //?} elif >=1.21.10 {
+    /*public static SavedDataType<LevelSavedDataVolumeBoxes> createType(Level world) {
+        return new SavedDataType<>(
+                DATA_NAME,
+                () -> new LevelSavedDataVolumeBoxes(world),
+                buildCodec(world),
+                net.minecraft.util.datafix.DataFixTypes.LEVEL
+        );
+    }*/
+    //?} else {
+    /*// 1.21.1: SavedData.Factory (ctor, (tag,provider)->T via fromNbt(world), DataFixTypes).
+    public static SavedData.Factory<LevelSavedDataVolumeBoxes> createType(Level world) {
+        return new SavedData.Factory<>(
+                () -> new LevelSavedDataVolumeBoxes(world),
+                (tag, provider) -> fromNbt(tag, world),
+                net.minecraft.util.datafix.DataFixTypes.LEVEL
+        );
+    }
+
+    @Override
+    public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
+        // 1.21.1: SavedData.save is abstract; reuse the existing toNbt serializer.
+        return toNbt(this);
+    }*/
+    //?}
 
     private static Codec<LevelSavedDataVolumeBoxes> buildCodec(Level world) {
         return CompoundTag.CODEC.xmap(
@@ -65,9 +92,9 @@ public class LevelSavedDataVolumeBoxes extends SavedData {
     private static LevelSavedDataVolumeBoxes fromNbt(CompoundTag nbt, Level world) {
         LevelSavedDataVolumeBoxes instance = new LevelSavedDataVolumeBoxes(world);
         if (nbt.contains("volumeBoxes")) {
-            ListTag listTag = nbt.getList("volumeBoxes").orElseGet(ListTag::new);
+            ListTag listTag = NBTUtilBC.getList(nbt, "volumeBoxes", Tag.TAG_COMPOUND);
             for (int i = 0; i < listTag.size(); i++) {
-                CompoundTag tag = listTag.getCompound(i).orElseGet(CompoundTag::new);
+                CompoundTag tag = NBTUtilBC.getCompound(listTag, i);
                 instance.volumeBoxes.add(new VolumeBox(world, tag));
             }
         }
@@ -172,6 +199,10 @@ public class LevelSavedDataVolumeBoxes extends SavedData {
             throw new IllegalArgumentException("Tried to create a world saved data instance on the client!");
         }
         ServerLevel serverLevel = (ServerLevel) world;
+        //? if >=1.21.10 {
         return serverLevel.getDataStorage().computeIfAbsent(createType(world));
+        //?} else {
+        /*return serverLevel.getDataStorage().computeIfAbsent(createType(world), DATA_NAME);*/
+        //?}
     }
 }

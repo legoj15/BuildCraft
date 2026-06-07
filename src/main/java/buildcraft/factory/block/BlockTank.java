@@ -18,7 +18,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.LevelReader;
+//? if >=1.21.10 {
 import net.minecraft.world.level.ScheduledTickAccess;
+//?}
 import net.minecraft.util.RandomSource;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.BlockGetter;
@@ -45,6 +47,7 @@ import buildcraft.factory.tile.TileTank;
 import net.neoforged.neoforge.capabilities.Capabilities;
 
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 
 /**
@@ -131,13 +134,22 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
     }
 
     @Override
+    //? if >=1.21.10 {
     protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess scheduledTickAccess,
             BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
+    //?} else {
+    /*protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
+            net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockPos neighborPos) {*/
+    //?}
         if (direction == Direction.DOWN) {
             boolean isTankBelow = neighborState.getBlock() instanceof ITankBlockConnector;
             return state.setValue(JOINED_BELOW, isTankBelow);
         }
+        //? if >=1.21.10 {
         return super.updateShape(state, level, scheduledTickAccess, pos, direction, neighborPos, neighborState, random);
+        //?} else {
+        /*return super.updateShape(state, direction, neighborState, level, pos, neighborPos);*/
+        //?}
     }
 
     @Override
@@ -169,11 +181,16 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
     }
 
     @Override
+    //? if >=1.21.10 {
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
+    //?} else {
+    /*protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+            Player player, InteractionHand hand, BlockHitResult hitResult) {*/
+    //?}
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TileTank tank)) {
-            return InteractionResult.PASS;
+            return BlockUtil.itemUsePass();
         }
         // Try bucket interaction first — use column-aware handler so buckets
         // fill/drain across the entire tank stack
@@ -182,17 +199,21 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
             if (!level.isClientSide()) {
                 AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);
             }
-            return InteractionResult.SUCCESS;
+            return BlockUtil.itemUseSuccess();
         }
         // If the held item is a fluid container, the transfer had no valid result
         // (tank full/empty) — consume silently without opening the GUI, matching
         // 1.12.2 behavior where repeated right-clicking with a bucket did nothing.
         // Only open the GUI for non-fluid items (e.g. a wrench or empty hand fallback).
+        //? if >=1.21.10 {
         boolean isFluidContainer = stack.getCapability(Capabilities.Fluid.ITEM, null) != null;
+        //?} else {
+        /*boolean isFluidContainer = stack.getCapability(Capabilities.FluidHandler.ITEM, null) != null;*/
+        //?}
         if (!isFluidContainer && !level.isClientSide()) {
             player.openMenu(tank, pos);
         }
-        return InteractionResult.SUCCESS;
+        return BlockUtil.itemUseSuccess();
     }
 
     // --- Block removal: drop fluid shards ---

@@ -68,22 +68,30 @@ public class BCSilicon {
     }
 
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
+        // Version-neutral capability tokens: Transfer-API on 1.21.10+, classic handler tokens on 1.21.1.
+        //? if >=1.21.10 {
+        var itemCap = Capabilities.Item.BLOCK;
+        var energyCap = Capabilities.Energy.BLOCK;
+        //?} else {
+        /*var itemCap = Capabilities.ItemHandler.BLOCK;
+        var energyCap = Capabilities.EnergyStorage.BLOCK;*/
+        //?}
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCSiliconBlockEntities.LASER.get(),
             (laser, direction) -> laser.getMjReceiver());
         event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCSiliconBlockEntities.LASER.get(),
             (laser, direction) -> laser.getMjReceiver());
-        event.registerBlockEntity(Capabilities.Energy.BLOCK, BCSiliconBlockEntities.LASER.get(),
+        event.registerBlockEntity(energyCap, BCSiliconBlockEntities.LASER.get(),
             (laser, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(laser.getBattery()));
 
         // Item handlers — lets item pipes connect to and exchange items with the laser tables.
-        event.registerBlockEntity(Capabilities.Item.BLOCK, BCSiliconBlockEntities.ASSEMBLY_TABLE.get(),
+        event.registerBlockEntity(itemCap, BCSiliconBlockEntities.ASSEMBLY_TABLE.get(),
             (table, direction) -> table.getItemHandler(direction));
         // Integration Table is dev-only — absent from public builds.
         if (BCSiliconBlockEntities.INTEGRATION_TABLE != null) {
-            event.registerBlockEntity(Capabilities.Item.BLOCK, BCSiliconBlockEntities.INTEGRATION_TABLE.get(),
+            event.registerBlockEntity(itemCap, BCSiliconBlockEntities.INTEGRATION_TABLE.get(),
                 (table, direction) -> table.getItemHandler(direction));
         }
-        event.registerBlockEntity(Capabilities.Item.BLOCK, BCSiliconBlockEntities.ADVANCED_CRAFTING_TABLE.get(),
+        event.registerBlockEntity(itemCap, BCSiliconBlockEntities.ADVANCED_CRAFTING_TABLE.get(),
             (table, direction) -> table.getItemHandler(direction));
     }
 

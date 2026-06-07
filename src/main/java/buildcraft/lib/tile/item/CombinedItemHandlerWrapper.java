@@ -1,27 +1,32 @@
 package buildcraft.lib.tile.item;
 
-import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.minecraft.world.item.ItemStack;
+
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
+//?}
 
 import buildcraft.api.inventory.IItemHandlerFiltered;
 
-/** Combines several {@link ResourceHandler} into one class. 
+/** Combines several {@link IBCItemHandler} into one class.
  * <p>
  * Also provides {@link IItemHandlerFiltered#getFilter(int)} if the wrapped handlers support it. */
-public class CombinedItemHandlerWrapper implements ResourceHandler<ItemResource>, IItemHandlerFiltered {
-    private final ResourceHandler<ItemResource>[] itemHandler;
+public class CombinedItemHandlerWrapper implements IBCItemHandler, IItemHandlerFiltered {
+    private final IBCItemHandler[] itemHandler;
     private final int[] baseIndex;
     private final int slotCount;
 
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    public CombinedItemHandlerWrapper(ResourceHandler<ItemResource>... itemHandler) {
+    public CombinedItemHandlerWrapper(IBCItemHandler... itemHandler) {
         this.itemHandler = itemHandler;
         this.baseIndex = new int[itemHandler.length];
         int index = 0;
         for (int i = 0; i < itemHandler.length; i++) {
+            //? if >=1.21.10 {
             index += itemHandler[i].size();
+            //?} else {
+            /*index += itemHandler[i].getSlots();*/
+            //?}
             baseIndex[i] = index;
         }
         this.slotCount = index;
@@ -39,7 +44,7 @@ public class CombinedItemHandlerWrapper implements ResourceHandler<ItemResource>
         return -1;
     }
 
-    protected ResourceHandler<ItemResource> getHandlerFromIndex(int index) {
+    protected IBCItemHandler getHandlerFromIndex(int index) {
         return itemHandler[index];
     }
 
@@ -50,6 +55,7 @@ public class CombinedItemHandlerWrapper implements ResourceHandler<ItemResource>
         return index == 0 ? slot : slot - baseIndex[index - 1];
     }
 
+    //? if >=1.21.10 {
     @Override
     public int size() {
         return slotCount;
@@ -96,15 +102,60 @@ public class CombinedItemHandlerWrapper implements ResourceHandler<ItemResource>
         int localSlot = getSlotFromIndex(index, handlerIndex);
         return getHandlerFromIndex(handlerIndex).extract(localSlot, resource, amount, tx);
     }
+    //?} else {
+    /*@Override
+    public int getSlots() {
+        return slotCount;
+    }
 
     @Override
-    public net.minecraft.world.item.ItemStack getFilter(int slot) {
+    public ItemStack getStackInSlot(int slot) {
+        int handlerIndex = getIndexForSlot(slot);
+        int localSlot = getSlotFromIndex(slot, handlerIndex);
+        return getHandlerFromIndex(handlerIndex).getStackInSlot(localSlot);
+    }
+
+    @Override
+    public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+        int handlerIndex = getIndexForSlot(slot);
+        int localSlot = getSlotFromIndex(slot, handlerIndex);
+        return getHandlerFromIndex(handlerIndex).insertItem(localSlot, stack, simulate);
+    }
+
+    @Override
+    public ItemStack extractItem(int slot, int amount, boolean simulate) {
+        int handlerIndex = getIndexForSlot(slot);
+        int localSlot = getSlotFromIndex(slot, handlerIndex);
+        return getHandlerFromIndex(handlerIndex).extractItem(localSlot, amount, simulate);
+    }
+
+    @Override
+    public int getSlotLimit(int slot) {
+        int handlerIndex = getIndexForSlot(slot);
+        int localSlot = getSlotFromIndex(slot, handlerIndex);
+        return getHandlerFromIndex(handlerIndex).getSlotLimit(localSlot);
+    }
+
+    @Override
+    public boolean isItemValid(int slot, ItemStack stack) {
+        int handlerIndex = getIndexForSlot(slot);
+        int localSlot = getSlotFromIndex(slot, handlerIndex);
+        return getHandlerFromIndex(handlerIndex).isItemValid(localSlot, stack);
+    }*/
+    //?}
+
+    @Override
+    public ItemStack getFilter(int slot) {
         int index = getIndexForSlot(slot);
-        ResourceHandler<ItemResource> handler = getHandlerFromIndex(index);
+        IBCItemHandler handler = getHandlerFromIndex(index);
         slot = getSlotFromIndex(slot, index);
         if (handler instanceof IItemHandlerFiltered) {
             return ((IItemHandlerFiltered) handler).getFilter(slot);
         }
+        //? if >=1.21.10 {
         return handler.getResource(slot).toStack(handler.getAmountAsInt(slot));
+        //?} else {
+        /*return handler.getStackInSlot(slot);*/
+        //?}
     }
 }

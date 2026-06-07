@@ -7,6 +7,7 @@ package buildcraft.api.robots;
 import net.minecraft.nbt.CompoundTag;
 
 import buildcraft.api.core.BCLog;
+import buildcraft.lib.misc.NBTUtilBC;
 
 public abstract class ResourceId {
 
@@ -23,9 +24,9 @@ public abstract class ResourceId {
             Class<?> cls;
             if (nbt.contains("class")) {
                 // Migration support for 6.4.x
-                cls = RobotManager.getResourceIdByLegacyClassName(nbt.getString("class").orElse(""));
+                cls = RobotManager.getResourceIdByLegacyClassName(NBTUtilBC.getString(nbt, "class", ""));
             } else {
-                cls = RobotManager.getResourceIdByName(nbt.getString("resourceName").orElse(""));
+                cls = RobotManager.getResourceIdByName(NBTUtilBC.getString(nbt, "resourceName", ""));
             }
 
             ResourceId id = (ResourceId) cls.getDeclaredConstructor().newInstance();

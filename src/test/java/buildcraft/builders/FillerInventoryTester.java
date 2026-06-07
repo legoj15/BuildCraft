@@ -40,7 +40,11 @@ public class FillerInventoryTester {
         helper.setBlock(pos, BCBuildersBlocks.FILLER.get());
 
         helper.runAfterDelay(2, () -> {
+            //? if >=1.21.10 {
             var filler = helper.getBlockEntity(pos, buildcraft.builders.tile.TileFiller.class);
+            //?} else {
+            /*buildcraft.builders.tile.TileFiller filler = helper.getBlockEntity(pos);*/
+            //?}
             if (filler == null) {
                 throw new IllegalStateException("Expected TileFiller at " + pos);
             }

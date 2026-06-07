@@ -21,7 +21,9 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+//? if >=1.21.10 {
 import net.minecraft.world.level.block.entity.FuelValues;
+//?}
 
 import net.neoforged.neoforge.fluids.FluidStack;
 
@@ -109,6 +111,7 @@ public class BCEnergyJeiPlugin implements IModPlugin {
      */
     private static List<StirlingFuelJei> collectStirlingFuels() {
         List<StirlingFuelJei> out = new ArrayList<>();
+        //? if >=1.21.10 {
         Level level = Minecraft.getInstance().level;
         if (level == null) return out;
         FuelValues fuelValues = level.fuelValues();
@@ -119,6 +122,15 @@ public class BCEnergyJeiPlugin implements IModPlugin {
                 out.add(new StirlingFuelJei(stack, burnTime));
             }
         }
+        //?} else {
+        /*for (Item item : net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity.getFuel().keySet()) {
+            ItemStack stack = new ItemStack(item);
+            int burnTime = stack.getBurnTime(null);
+            if (burnTime > 0) {
+                out.add(new StirlingFuelJei(stack, burnTime));
+            }
+        }*/
+        //?}
         return out;
     }
 

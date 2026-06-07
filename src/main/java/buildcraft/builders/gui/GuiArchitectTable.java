@@ -7,12 +7,16 @@ package buildcraft.builders.gui;
 import buildcraft.lib.gui.BCGraphics;
 import buildcraft.lib.gui.GuiIcon;
 import net.minecraft.client.gui.components.EditBox;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.RenderPipelines;
+//?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
+//? if >=1.21.10 {
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.input.KeyEvent;
+//?}
 
 import buildcraft.builders.container.ContainerArchitectTable;
 
@@ -105,6 +109,7 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
         addRenderableWidget(nameField);
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean keyPressed(KeyEvent event) {
         if (this.nameField.isFocused()) {
@@ -136,30 +141,77 @@ public class GuiArchitectTable extends GuiBC8<ContainerArchitectTable> {
         }
         return super.mouseClicked(event, entered);
     }
+    //?} else {
+    /*@Override
+    public boolean keyPressed(int key, int scancode, int modifiers) {
+        if (this.nameField.isFocused()) {
+            if (key == 257 || key == 335) { // ENTER or NUMPAD_ENTER
+                this.setFocused(null);
+                return true;
+            }
+            if (key == 256) { // ESC: let the screen close as usual, even mid-rename
+                return super.keyPressed(key, scancode, modifiers);
+            }
+            // While the field is focused & editable, forward the key to it (so backspace / arrows /
+            // ctrl-edits act) and otherwise SWALLOW it via canConsumeInput(). This stops
+            // AbstractContainerScreen.keyPressed from reaching checkHotbarKeyPressed (the 1-9
+            // quick-swap), onClose() (inventory key), or the drop/clone handlers while the player is
+            // typing a name — those number/letter keys never consume in EditBox.keyPressed (they
+            // insert via the separate charTyped callback), so without this they fall straight through
+            // to the hotbar logic. Mirrors vanilla's ItemCombinerScreen name-field handling.
+            if (this.nameField.keyPressed(key, scancode, modifiers) || this.nameField.canConsumeInput()) {
+                return true;
+            }
+        }
+        return super.keyPressed(key, scancode, modifiers);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
+        if (this.nameField.isFocused() && !this.nameField.isMouseOver(mouseXd, mouseYd)) {
+            this.setFocused(null);
+        }
+        return super.mouseClicked(mouseXd, mouseYd, button);
+    }*/
+    //?}
 
     @Override
     protected void drawBackgroundTexture(BCGraphics graphics) {
         // Draw main GUI background
+        //? if >=1.21.10 {
         graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_BASE,
                 leftPos, topPos,
                 0f, 0f,
                 SIZE_X, SIZE_Y,
                 256, 256);
+        //?} else {
+        /*graphics.blit(TEXTURE_BASE,
+                leftPos, topPos,
+                0f, 0f,
+                SIZE_X, SIZE_Y,
+                256, 256);*/
+        //?}
 
         // Draw progress bar by blitting the 22×16 filled-arrow sprite at the bottom-left of
         // architect.png over the empty arrow baked into the GUI background. Partial-width blit
         // grows left-to-right as the scan progresses, matching the conventional Minecraft
         // progress arrow look.
-        int total = menu.getSyncedTotal();
-        if (total > 0) {
-            int progress = menu.getSyncedProgress();
-            int progressWidth = Math.min(22, (int) (22.0f * progress / total));
+        if (menu.getSyncedScanActive()) {
+            int progressWidth = Math.min(22, 22 * menu.getSyncedScanPermille() / 1000);
             if (progressWidth > 0) {
+                //? if >=1.21.10 {
                 graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_BASE,
                         leftPos + PROGRESS_X, topPos + PROGRESS_Y,
                         0f, 240f,
                         progressWidth, PROGRESS_H,
                         256, 256);
+                //?} else {
+                /*graphics.blit(TEXTURE_BASE,
+                        leftPos + PROGRESS_X, topPos + PROGRESS_Y,
+                        0f, 240f,
+                        progressWidth, PROGRESS_H,
+                        256, 256);*/
+                //?}
             }
         }
 

@@ -22,16 +22,20 @@ public final class GameTestUtil {
     public static void assertTrue(GameTestHelper gth, boolean condition, String message) {
         //? if >=1.21.11 {
         gth.assertTrue(condition, message);
-        //?} else {
+        //?} elif >=1.21.10 {
         /*gth.assertTrue(condition, net.minecraft.network.chat.Component.literal(message));*/
+        //?} else {
+        /*gth.assertTrue(condition, message);*/
         //?}
     }
 
     public static void assertFalse(GameTestHelper gth, boolean condition, String message) {
         //? if >=1.21.11 {
         gth.assertFalse(condition, message);
-        //?} else {
+        //?} elif >=1.21.10 {
         /*gth.assertFalse(condition, net.minecraft.network.chat.Component.literal(message));*/
+        //?} else {
+        /*gth.assertFalse(condition, message);*/
         //?}
     }
 

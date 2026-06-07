@@ -14,7 +14,9 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
 
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
+//?}
 
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.properties.BuildCraftProperties;
@@ -41,7 +43,11 @@ public class EngineTester {
         
         // Give the engine 40 ticks to natively generate power via its internal block mechanics
         helper.runAfterDelay(40, () -> {
+            //? if >=1.21.10 {
             TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
+            //?} else {
+            /*TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos);*/
+            //?}
             if (engine == null) {
                 throw new IllegalStateException("Failed to place Redstone Engine!");
             }
@@ -96,7 +102,11 @@ public class EngineTester {
         helper.setBlock(new BlockPos(2, 1, 2), Blocks.REDSTONE_BLOCK);
 
         helper.runAfterDelay(1, () -> {
+            //? if >=1.21.10 {
             TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
+            //?} else {
+            /*TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos);*/
+            //?}
             // Push to 84% (right at the boundary below OVERHEAT which is 85%)
             // The engine naturally maxes out at 80% (0.8f). 
             fastForwardEnergy(engine, 0.84f);
@@ -121,7 +131,11 @@ public class EngineTester {
         helper.setBlock(new BlockPos(2, 1, 2), Blocks.REDSTONE_BLOCK);
 
         helper.runAfterDelay(2, () -> {
+            //? if >=1.21.10 {
             TileEngineStone_BC8 engine = helper.getBlockEntity(enginePos, TileEngineStone_BC8.class);
+            //?} else {
+            /*TileEngineStone_BC8 engine = helper.getBlockEntity(enginePos);*/
+            //?}
             
             // Attempt invalid fuel
             ItemStack dirt = new ItemStack(Items.DIRT);
@@ -154,7 +168,11 @@ public class EngineTester {
         helper.setBlock(enginePos, BCEnergyBlocks.ENGINE_STONE.get());
 
         helper.runAfterDelay(1, () -> {
+            //? if >=1.21.10 {
             TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
+            //?} else {
+            /*TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos);*/
+            //?}
             
             // Instantly cap energy buffer to push to OVERHEAT boundary
             fastForwardEnergy(engine, 1.0f);
@@ -173,7 +191,11 @@ public class EngineTester {
         helper.setBlock(enginePos, BCEnergyBlocks.ENGINE_IRON.get());
 
         helper.runAfterDelay(1, () -> {
+            //? if >=1.21.10 {
             TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos, TileEngineIron_BC8.class);
+            //?} else {
+            /*TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos);*/
+            //?}
             helper.succeed();
             // TODO: Combustion Engine tests assert dual fluids when fluids are fully linked via NeoForge Capabilities
         });
@@ -191,14 +213,22 @@ public class EngineTester {
         helper.setBlock(enginePos, BCEnergyBlocks.ENGINE_IRON.get());
 
         helper.runAfterDelay(2, () -> {
+            //? if >=1.21.10 {
             TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos, TileEngineIron_BC8.class);
+            //?} else {
+            /*TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos);*/
+            //?}
             if (engine == null) {
                 throw new IllegalStateException("Failed to place Combustion Engine!");
             }
 
             // Survival: ice converts to water and the block is consumed.
             clickCoolantTankWithIce(helper, engine, false);
+            //? if >=1.21.10 {
             engine.tankCoolant.set(0, FluidResource.EMPTY, 0);
+            //?} else {
+            /*engine.tankCoolant.setFluidStack(0, net.neoforged.neoforge.fluids.FluidStack.EMPTY);*/
+            //?}
             // Creative: ice converts to water and the block is NOT consumed (the regressed path).
             clickCoolantTankWithIce(helper, engine, true);
 
@@ -227,15 +257,26 @@ public class EngineTester {
         container.widgetCoolant.handleWidgetDataServer(null, buffer);
         buffer.release();
 
+        //? if >=1.21.10 {
         long amount = engine.tankCoolant.getAmountAsLong(0);
+        //?} else {
+        /*long amount = engine.tankCoolant.getAmountMb(0);*/
+        //?}
         if (amount != 1500) {
             throw new IllegalStateException(who + " player: clicking the coolant tank with an ice "
                     + "block should fill it with 1500 mB of water, got " + amount + " mB");
         }
+        //? if >=1.21.10 {
         if (!engine.tankCoolant.getResource(0).is(Fluids.WATER)) {
             throw new IllegalStateException(who + " player: coolant tank should hold water after "
                     + "ice conversion, got " + engine.tankCoolant.getResource(0));
         }
+        //?} else {
+        /*if (!engine.tankCoolant.getFluidStack(0).is(Fluids.WATER)) {
+            throw new IllegalStateException(who + " player: coolant tank should hold water after "
+                    + "ice conversion, got " + engine.tankCoolant.getFluidStack(0));
+        }*/
+        //?}
 
         ItemStack cursor = container.getCarried();
         if (creative && (cursor.isEmpty() || cursor.getCount() != 1)) {
@@ -257,7 +298,11 @@ public class EngineTester {
         helper.setBlock(enginePos, BCEnergyBlocks.ENGINE_STONE.get());
 
         helper.runAfterDelay(1, () -> {
+            //? if >=1.21.10 {
             TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
+            //?} else {
+            /*TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos);*/
+            //?}
             fastForwardEnergy(engine, 1.0f);
 
             // Trigger the BLUE → OVERHEAT transition (would have exploded pre-port)
@@ -271,7 +316,11 @@ public class EngineTester {
                 if (stateAfter.getBlock() != BCEnergyBlocks.ENGINE_STONE.get()) {
                     throw new IllegalStateException("Engine should still be present with canEnginesExplode=false. Block now: " + stateAfter.getBlock());
                 }
+                //? if >=1.21.10 {
                 TileEngineBase_BC8 engineAfter = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
+                //?} else {
+                /*TileEngineBase_BC8 engineAfter = helper.getBlockEntity(enginePos);*/
+                //?}
                 if (engineAfter == null) {
                     throw new IllegalStateException("Engine block entity disappeared after OVERHEAT transition");
                 }
@@ -292,7 +341,11 @@ public class EngineTester {
         helper.setBlock(enginePos, BCEnergyBlocks.ENGINE_STONE.get());
 
         helper.runAfterDelay(1, () -> {
+            //? if >=1.21.10 {
             TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
+            //?} else {
+            /*TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos);*/
+            //?}
             boolean previousValue = BCLibConfig.canEnginesExplode.get();
             try {
                 BCLibConfig.canEnginesExplode.set(true);
@@ -321,7 +374,11 @@ public class EngineTester {
         helper.setBlock(enginePos, BCEnergyBlocks.ENGINE_STONE.get());
 
         helper.runAfterDelay(1, () -> {
+            //? if >=1.21.10 {
             TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
+            //?} else {
+            /*TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos);*/
+            //?}
             fastForwardEnergy(engine, 1.0f);
             if (engine.getPowerStage() != EnumPowerStage.OVERHEAT) {
                 throw new IllegalStateException("Engine should be OVERHEAT before clear. Found: " + engine.getPowerStage());
@@ -355,7 +412,11 @@ public class EngineTester {
         helper.setBlock(enginePos, BCEnergyBlocks.ENGINE_STONE.get());
 
         helper.runAfterDelay(1, () -> {
+            //? if >=1.21.10 {
             TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
+            //?} else {
+            /*TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos);*/
+            //?}
             if (engine.hasAlternateReceiver()) {
                 throw new IllegalStateException("Isolated engine should report no alternate receivers");
             }

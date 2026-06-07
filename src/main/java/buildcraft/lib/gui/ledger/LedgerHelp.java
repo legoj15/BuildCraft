@@ -10,7 +10,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import buildcraft.lib.gui.BCGraphics;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.RenderPipelines;
+//?}
 import net.minecraft.resources.Identifier;
 
 import buildcraft.lib.gui.BuildCraftGui;
@@ -66,8 +68,13 @@ public class LedgerHelp extends Ledger_Neptune {
             foundAny = !elements.isEmpty();
         }
         // Draw the help icon
+        //? if >=1.21.10 {
         graphics.blit(RenderPipelines.GUI_TEXTURED, ICON_HELP,
             (int) x, (int) y, 0f, 0f, 16, 16, 16, 16);
+        //?} else {
+        /*graphics.blit(ICON_HELP,
+            (int) x, (int) y, 0f, 0f, 16, 16, 16, 16);*/
+        //?}
     }
 
     @Override

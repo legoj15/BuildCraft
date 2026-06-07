@@ -14,6 +14,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.core.Direction.AxisDirection;
 
+import buildcraft.lib.misc.NBTUtilBC;
+
 public class AxisOrder {
     private static final Table<EnumAxisOrder, Inversion, AxisOrder> allOrders;
 
@@ -44,8 +46,8 @@ public class AxisOrder {
 
     public static AxisOrder readNbt(CompoundTag nbt) {
         return getFor(//
-                EnumAxisOrder.getOrder(nbt.getStringOr("order", "")),//
-                Inversion.getFor(nbt.getStringOr("inversion", ""))//
+                EnumAxisOrder.getOrder(NBTUtilBC.getString(nbt, "order", "")),//
+                Inversion.getFor(NBTUtilBC.getString(nbt, "inversion", ""))//
         );
     }
 

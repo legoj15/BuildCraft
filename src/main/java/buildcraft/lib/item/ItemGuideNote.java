@@ -24,7 +24,17 @@ public class ItemGuideNote extends Item {
     }
 
     @Override
+    //? if >=1.21.10 {
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
+        return useImpl(level, player, hand);
+    }
+    //?} else {
+    /*public net.minecraft.world.InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        return new net.minecraft.world.InteractionResultHolder<>(useImpl(level, player, hand), player.getItemInHand(hand));
+    }*/
+    //?}
+
+    private InteractionResult useImpl(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide()) {
             buildcraft.lib.misc.MessageUtil.sendSystemMessage(player,
                     Component.translatable("buildcraft.guide.not_available"));

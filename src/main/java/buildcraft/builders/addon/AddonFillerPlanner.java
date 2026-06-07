@@ -22,6 +22,7 @@ import buildcraft.api.filler.IFillerPattern;
 import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.containers.IFillerStatementContainer;
 
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.lib.statement.FullStatement;
 
@@ -94,8 +95,8 @@ public class AddonFillerPlanner extends Addon implements ISingleAddon, IFillerSt
 
     @Override
     public void readFromNBT(CompoundTag nbt) {
-        patternStatement.readFromNbt(nbt.getCompound("patternStatement").orElse(new CompoundTag()));
-        inverted = nbt.getBoolean("inverted").orElse(false);
+        patternStatement.readFromNbt(NBTUtilBC.getCompound(nbt, "patternStatement"));
+        inverted = NBTUtilBC.getBoolean(nbt, "inverted", false);
     }
 
     // IFillerStatementContainer

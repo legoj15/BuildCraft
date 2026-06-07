@@ -39,6 +39,7 @@ import buildcraft.api.tools.IToolWrench;
 
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileFloodGate;
+import buildcraft.lib.misc.BlockUtil;
 
 /**
  * The Flood Gate block. Has 5 configurable sides (all except UP) that can be
@@ -120,14 +121,19 @@ public class BlockFloodGate extends BaseEntityBlock {
     // pipes), so the wrench item's own useOn falls through with PASS and never grants
     // the advancement. Same workaround as BlockEngineCreative's power-cycle path.
     @Override
+    //? if >=1.21.10 {
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
+    //?} else {
+    /*protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+            Player player, InteractionHand hand, BlockHitResult hitResult) {*/
+    //?}
         if (!(stack.getItem() instanceof IToolWrench wrench)) {
-            return InteractionResult.TRY_WITH_EMPTY_HAND;
+            return BlockUtil.itemUseTryWithEmptyHand();
         }
         Direction side = hitResult.getDirection();
         if (side == Direction.UP || !CONNECTED_MAP.containsKey(side)) {
-            return InteractionResult.TRY_WITH_EMPTY_HAND;
+            return BlockUtil.itemUseTryWithEmptyHand();
         }
         if (!level.isClientSide()) {
             BlockEntity be = level.getBlockEntity(pos);
@@ -169,7 +175,7 @@ public class BlockFloodGate extends BaseEntityBlock {
         // Award `wrenched` advancement + swing arm. Server-side guard inside
         // AdvancementUtil; both sides swing.
         wrench.wrenchUsed(player, hand, stack, hitResult);
-        return InteractionResult.SUCCESS;
+        return BlockUtil.itemUseSuccess();
     }
 
     /** Drops the internal 2-bucket tank as fragile fluid-shard items. The flood gate has no

@@ -22,11 +22,14 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.resources.model.geometry.QuadCollection;
-//?} else {
+//?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.BlockModelPart;
 import net.minecraft.client.renderer.block.model.BlockStateModel;
 import net.minecraft.client.resources.model.QuadCollection;*/
+//?} else {
+/*import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.BakedModel;*/
 //?}
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
@@ -100,7 +103,11 @@ public class FacadeDeduplicator {
      *
      * @param blockStateModels the baked blockstate-to-model map from the BakingResult
      */
+    //? if >=1.21.10 {
     public static void deduplicateVisuallyIdentical(Map<BlockState, BlockStateModel> blockStateModels) {
+    //?} else {
+    /*public static void deduplicateVisuallyIdentical(Map<BlockState, net.minecraft.client.resources.model.BakedModel> blockStateModels) {*/
+    //?}
         // Snapshot the current maps once at the top — we operate on copies for the entire pass.
         SortedMap<BlockState, FacadeBlockStateInfo> currentValid = FacadeStateManager.validFacadeStates;
         Map<ItemStackKey, List<FacadeBlockStateInfo>> currentStackFacades = FacadeStateManager.stackFacades;
@@ -118,7 +125,11 @@ public class FacadeDeduplicator {
             FacadeBlockStateInfo info = entry.getValue();
             if (!info.isVisible) continue;
 
+            //? if >=1.21.10 {
             BlockStateModel model = blockStateModels.get(info.state);
+            //?} else {
+            /*net.minecraft.client.resources.model.BakedModel model = blockStateModels.get(info.state);*/
+            //?}
             if (model == null) {
                 nullFingerprints++;
                 continue;
@@ -196,7 +207,11 @@ public class FacadeDeduplicator {
         // redirect any that share textures with a surviving facade.
         // This enables e.g. brick_slab → bricks facade in the Assembly Table.
         int extraRedirects = 0;
+        //? if >=1.21.10 {
         for (Map.Entry<BlockState, BlockStateModel> modelEntry : blockStateModels.entrySet()) {
+        //?} else {
+        /*for (Map.Entry<BlockState, net.minecraft.client.resources.model.BakedModel> modelEntry : blockStateModels.entrySet()) {*/
+        //?}
             BlockState state = modelEntry.getKey();
             // Skip blocks that are already valid facades — they're handled above
             if (nextValid.containsKey(state)) continue;
@@ -213,7 +228,11 @@ public class FacadeDeduplicator {
             if (nextStackFacades.containsKey(stackKey)) continue;
             if (nextStackRedirects.containsKey(stackKey)) continue;
 
+            //? if >=1.21.10 {
             BlockStateModel model = modelEntry.getValue();
+            //?} else {
+            /*net.minecraft.client.resources.model.BakedModel model = modelEntry.getValue();*/
+            //?}
             if (model == null) continue;
 
             String fingerprint = computeTextureFingerprint(model);
@@ -306,7 +325,11 @@ public class FacadeDeduplicator {
      * on all 6 faces. Uses the NeoForge 1.21.11 collectParts/SimpleModelWrapper API.
      * Returns a canonical string of sorted texture names, or null if no quads found.
      */
+    //? if >=1.21.10 {
     private static String computeTextureFingerprint(BlockStateModel model) {
+    //?} else {
+    /*private static String computeTextureFingerprint(net.minecraft.client.resources.model.BakedModel model) {*/
+    //?}
         try {
             Set<String> textures = new LinkedHashSet<>();
 
@@ -315,8 +338,10 @@ public class FacadeDeduplicator {
                 for (BakedQuad quad : quads) {
                     //? if >=26.1 {
                     textures.add(dir.name() + ":" + quad.materialInfo().sprite().contents().name().toString());
-                    //?} else {
+                    //?} elif >=1.21.10 {
                     /*textures.add(dir.name() + ":" + quad.sprite().contents().name().toString());*/
+                    //?} else {
+                    /*textures.add(dir.name() + ":" + quad.getSprite().contents().name().toString());*/
                     //?}
                 }
             }
@@ -325,8 +350,10 @@ public class FacadeDeduplicator {
             for (BakedQuad quad : generalQuads) {
                 //? if >=26.1 {
                 textures.add("GENERAL:" + quad.materialInfo().sprite().contents().name().toString());
-                //?} else {
+                //?} elif >=1.21.10 {
                 /*textures.add("GENERAL:" + quad.sprite().contents().name().toString());*/
+                //?} else {
+                /*textures.add("GENERAL:" + quad.getSprite().contents().name().toString());*/
                 //?}
             }
 
@@ -347,25 +374,36 @@ public class FacadeDeduplicator {
      * Extracts BakedQuads for a given face from a BlockStateModel using the
      * NeoForge 1.21.11 collectParts/SimpleModelWrapper API.
      */
+    //? if >=1.21.10 {
     private static List<BakedQuad> getQuadsFromModel(BlockStateModel model, Direction side) {
+    //?} else {
+    /*private static List<BakedQuad> getQuadsFromModel(net.minecraft.client.resources.model.BakedModel model, Direction side) {*/
+    //?}
         //? if >=26.1 {
         List<BlockStateModelPart> parts = new ArrayList<>();
-        //?} else {
-        /*List<BlockModelPart> parts = new ArrayList<>();*/
-        //?}
         model.collectParts(RANDOM, parts);
         List<BakedQuad> result = new ArrayList<>();
-        //? if >=26.1 {
         for (BlockStateModelPart part : parts) {
             if (part instanceof net.minecraft.client.resources.model.SimpleModelWrapper smw) {
-        //?} else {
-        /*for (BlockModelPart part : parts) {
-            if (part instanceof net.minecraft.client.renderer.block.model.SimpleModelWrapper smw) {*/
-        //?}
                 QuadCollection qc = smw.quads();
                 result.addAll(qc.getQuads(side));
             }
         }
         return result;
+        //?} elif >=1.21.10 {
+        /*List<BlockModelPart> parts = new ArrayList<>();
+        model.collectParts(RANDOM, parts);
+        List<BakedQuad> result = new ArrayList<>();
+        for (BlockModelPart part : parts) {
+            if (part instanceof net.minecraft.client.renderer.block.model.SimpleModelWrapper smw) {
+                QuadCollection qc = smw.quads();
+                result.addAll(qc.getQuads(side));
+            }
+        }
+        return result;*/
+        //?} else {
+        /*// 1.21.1: BakedModel exposes quads directly; SimpleBakedModel ignores the (null) state.
+        return model.getQuads(null, side, RANDOM);*/
+        //?}
     }
 }

@@ -16,12 +16,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.Sheets;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 //? if >=26.1 {
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-//?} else {
+//?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.state.CameraRenderState;*/
 //?}
 import net.minecraft.client.renderer.texture.TextureAtlas;
@@ -52,7 +54,11 @@ import buildcraft.lib.misc.FluidUtilBC;
  * Ported from 1.12.2 RenderDistiller.
  */
 @SuppressWarnings("deprecation")
+//? if >=1.21.10 {
 public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, DistillerRenderState> {
+//?} else {
+/*public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8> {*/
+//?}
 
     /** Tank render sizes for each facing direction, in pixel coordinates (1/16 scale). */
     private static final Map<Direction, TankSizes> TANK_SIZES = new EnumMap<>(Direction.class);
@@ -106,6 +112,7 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
     public RenderDistiller(BlockEntityRendererProvider.Context context) {
     }
 
+    //? if >=1.21.10 {
     @Override
     public DistillerRenderState createRenderState() {
         return new DistillerRenderState();
@@ -128,6 +135,17 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
 
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TileDistiller_BC8 tile)) return;
+    //?} else {
+    /*// 1.21.1: classic direct BlockEntityRenderer.render — tile + partialTicks are passed, so the
+    // camera-pos reconstruction is replaced by reading pos/level off the tile. The passed
+    // buffers/packedLight/packedOverlay go unused (the shared body sources its own buffer/light).
+    @Override
+    public void render(TileDistiller_BC8 tile, float partialTicks, PoseStack poseStack,
+                       MultiBufferSource buffers, int packedLight, int packedOverlay) {
+        BlockPos pos = tile.getBlockPos();
+        Level level = tile.getLevel();
+        if (level == null) return;*/
+    //?}
 
         BlockState state = level.getBlockState(pos);
         Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
@@ -141,7 +159,9 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
         MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
 
+        //? if >=1.21.10 {
         float partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        //?}
 
         // Render fluid in tanks
         renderSmoothedFluid(tile.getSmoothIn(), sizes.tankIn, poseStack, bufferSource, light, partialTicks);
@@ -204,9 +224,15 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
         }
 
         // Translucent for vanilla water, cutout for BC fluids (reuse water texture opaquely)
+        //? if >=1.21.10 {
         VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
                     ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+        //?} else {
+        /*VertexConsumer buffer = bufferSource.getBuffer(
+                FluidUtilBC.shouldRenderTranslucent(fluid)
+                    ? net.minecraft.client.renderer.RenderType.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));*/
+        //?}
         PoseStack.Pose pose = poseStack.last();
         int overlay = OverlayTexture.NO_OVERLAY;
 
@@ -272,7 +298,11 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
         // Color: full white (texture provides color)
         float r = 1.0f, g = 1.0f, b = 1.0f, a = 1.0f;
 
+        //? if >=1.21.10 {
         VertexConsumer buffer = bufferSource.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+        //?} else {
+        /*VertexConsumer buffer = bufferSource.getBuffer(net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));*/
+        //?}
         PoseStack.Pose pose = poseStack.last();
         int overlay = OverlayTexture.NO_OVERLAY;
 

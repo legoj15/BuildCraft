@@ -1,6 +1,7 @@
 package buildcraft.core;
 
 import net.neoforged.neoforge.registries.DeferredRegister;
+import buildcraft.lib.misc.RegistrationUtilBC;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.item.Item;
@@ -19,35 +20,35 @@ import buildcraft.lib.BCLib;
 public class BCCoreItems {
         public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCCore.MODID);
 
-        public static final DeferredItem<ItemWrench_Neptune> WRENCH = ITEMS.registerItem("wrench",
+        public static final DeferredItem<ItemWrench_Neptune> WRENCH = RegistrationUtilBC.registerItem(ITEMS,"wrench",
                         ItemWrench_Neptune::new, props -> props.stacksTo(1));
 
-        public static final DeferredItem<ItemFragileFluidContainer> FRAGILE_FLUID_CONTAINER = ITEMS.registerItem(
+        public static final DeferredItem<ItemFragileFluidContainer> FRAGILE_FLUID_CONTAINER = RegistrationUtilBC.registerItem(ITEMS,
                         "fragile_fluid_container",
                         ItemFragileFluidContainer::new, props -> props);
 
-        public static final DeferredItem<ItemMarkerConnector> MARKER_CONNECTOR = ITEMS.registerItem(
+        public static final DeferredItem<ItemMarkerConnector> MARKER_CONNECTOR = RegistrationUtilBC.registerItem(ITEMS,
                         "marker_connector",
                         ItemMarkerConnector::new, props -> props.stacksTo(1));
 
-        public static final DeferredItem<ItemVolumeBox> VOLUME_BOX = ITEMS.registerItem(
+        public static final DeferredItem<ItemVolumeBox> VOLUME_BOX = RegistrationUtilBC.registerItem(ITEMS,
                         "volume_box",
                         ItemVolumeBox::new, props -> props.stacksTo(16));
 
-        public static final DeferredItem<ItemPaintbrush_BC8> PAINTBRUSH = ITEMS.registerItem(
+        public static final DeferredItem<ItemPaintbrush_BC8> PAINTBRUSH = RegistrationUtilBC.registerItem(ITEMS,
                         "paintbrush",
                         ItemPaintbrush_BC8::new, props -> props.stacksTo(1));
 
-        public static final DeferredItem<ItemList_BC8> LIST = ITEMS.registerItem(
+        public static final DeferredItem<ItemList_BC8> LIST = RegistrationUtilBC.registerItem(ITEMS,
                         "list",
                         ItemList_BC8::new, props -> props.stacksTo(1));
 
         // Gear items
-        public static final DeferredItem<Item> GEAR_WOOD = ITEMS.registerItem("gear_wood", Item::new, p -> p);
-        public static final DeferredItem<Item> GEAR_STONE = ITEMS.registerItem("gear_stone", Item::new, p -> p);
-        public static final DeferredItem<Item> GEAR_IRON = ITEMS.registerItem("gear_iron", Item::new, p -> p);
-        public static final DeferredItem<Item> GEAR_GOLD = ITEMS.registerItem("gear_gold", Item::new, p -> p);
-        public static final DeferredItem<Item> GEAR_DIAMOND = ITEMS.registerItem("gear_diamond", Item::new, p -> p);
+        public static final DeferredItem<Item> GEAR_WOOD = RegistrationUtilBC.registerItem(ITEMS,"gear_wood", Item::new, p -> p);
+        public static final DeferredItem<Item> GEAR_STONE = RegistrationUtilBC.registerItem(ITEMS,"gear_stone", Item::new, p -> p);
+        public static final DeferredItem<Item> GEAR_IRON = RegistrationUtilBC.registerItem(ITEMS,"gear_iron", Item::new, p -> p);
+        public static final DeferredItem<Item> GEAR_GOLD = RegistrationUtilBC.registerItem(ITEMS,"gear_gold", Item::new, p -> p);
+        public static final DeferredItem<Item> GEAR_DIAMOND = RegistrationUtilBC.registerItem(ITEMS,"gear_diamond", Item::new, p -> p);
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> ENGINE_REDSTONE = ITEMS
                         .registerSimpleBlockItem("engine_redstone", BCCoreBlocks.ENGINE_REDSTONE);
@@ -97,15 +98,22 @@ public class BCCoreItems {
         public static final DeferredItem<ItemMapLocation> MAP_LOCATION;
 
         static {
+                //? if >=1.21.10 {
                 GOGGLES = BCLib.DEV
-                                ? ITEMS.registerItem("goggles", ItemGoggles::new,
+                                ? RegistrationUtilBC.registerItem(ITEMS,"goggles", ItemGoggles::new,
                                                 props -> props.stacksTo(1).durability(0).equippable(EquipmentSlot.HEAD))
                                 : null;
+                //?} else {
+                /*GOGGLES = BCLib.DEV
+                                ? RegistrationUtilBC.registerItem(ITEMS,"goggles", ItemGoggles::new,
+                                                props -> props.stacksTo(1).durability(0))
+                                : null;*/
+                //?}
                 POWER_TESTER = (BCLib.DEV && BCCoreBlocks.POWER_TESTER != null)
                                 ? ITEMS.registerSimpleBlockItem("power_tester", BCCoreBlocks.POWER_TESTER)
                                 : null;
                 MAP_LOCATION = BCLib.DEV
-                                ? ITEMS.registerItem("map_location", ItemMapLocation::new,
+                                ? RegistrationUtilBC.registerItem(ITEMS,"map_location", ItemMapLocation::new,
                                                 props -> props.stacksTo(16))
                                 : null;
                 DECORATED_DESTROY = (BCLib.DEV && BCCoreBlocks.DECORATED_DESTROY != null)

@@ -46,7 +46,11 @@ public class GateRedstoneSyncTester {
      *  exact gate configuration from the reported desync. */
     private static PluggableGate placePipeWithRedstoneGate(GameTestHelper helper, BlockPos pipePos) {
         helper.setBlock(pipePos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(pipePos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(pipePos);*/
+        //?}
         tile.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_STRUCTURE.get()));
 
         GateVariant variant = new GateVariant(
@@ -150,7 +154,11 @@ public class GateRedstoneSyncTester {
 
         // The block-entity update tag a client builds the gate from must carry the runtime
         // state under "plugsClient"...
+        //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(pipePos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(pipePos);*/
+        //?}
         CompoundTag updateTag = tile.getUpdateTag(helper.getLevel().registryAccess());
         helper.assertTrue(updateTag.contains("plugsClient"),
             "block-entity update tag must carry pluggable runtime state");

@@ -1,6 +1,7 @@
 package buildcraft.silicon;
 
 import net.neoforged.neoforge.registries.DeferredRegister;
+import buildcraft.lib.misc.RegistrationUtilBC;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.SoundType;
@@ -20,17 +21,17 @@ public class BCSiliconBlocks {
 
     // 1.12.2 Material.IRON → pickaxe required for drops (parity restored via
     // requiresCorrectToolForDrops + minecraft:mineable/pickaxe tag).
-    public static final DeferredBlock<BlockLaser> LASER = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockLaser> LASER = RegistrationUtilBC.registerBlock(BLOCKS,
             "laser",
             BlockLaser::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockLaserTable> ASSEMBLY_TABLE = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockLaserTable> ASSEMBLY_TABLE = RegistrationUtilBC.registerBlock(BLOCKS,
             "assembly_table",
             props -> new BlockLaserTable(props,
                 BCSiliconBlockEntities.ASSEMBLY_TABLE,
                 (id, inv, tile) -> new ContainerAssemblyTable(id, inv.player, (TileAssemblyTable) tile)), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockLaserTable> ADVANCED_CRAFTING_TABLE = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockLaserTable> ADVANCED_CRAFTING_TABLE = RegistrationUtilBC.registerBlock(BLOCKS,
             "advanced_crafting_table",
             props -> new BlockLaserTable(props,
                 BCSiliconBlockEntities.ADVANCED_CRAFTING_TABLE,
@@ -43,7 +44,7 @@ public class BCSiliconBlocks {
 
     static {
         INTEGRATION_TABLE = BCLib.DEV
-                ? BLOCKS.registerBlock(
+                ? RegistrationUtilBC.registerBlock(BLOCKS,
                     "integration_table",
                     props -> new BlockLaserTable(props,
                         BCSiliconBlockEntities.INTEGRATION_TABLE,

@@ -12,11 +12,14 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+//? if >=1.21.10 {
 import net.minecraft.world.item.component.TooltipDisplay;
+//?}
 import net.minecraft.nbt.CompoundTag;
 
 import buildcraft.api.enums.EnumSnapshotType;
 import buildcraft.lib.misc.HashUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 
 import buildcraft.builders.snapshot.Snapshot.Header;
 
@@ -67,7 +70,7 @@ public class ItemSnapshot extends Item {
             if (customData != null) {
                 CompoundTag nbt = customData.copyTag();
                 if (nbt.contains("header")) {
-                    return new Header(nbt.getCompoundOrEmpty("header"));
+                    return new Header(NBTUtilBC.getCompound(nbt, "header"));
                 }
             }
         }
@@ -75,9 +78,18 @@ public class ItemSnapshot extends Item {
     }
 
     @Override
+    //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
             Consumer<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, display, tooltip, flag);
+    //?} else {
+    /*// 1.21.1: appendHoverText has no TooltipDisplay and takes List<Component>; adapt to the shared
+    // Consumer-based body below via tooltipList::add.
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context,
+            java.util.List<Component> tooltipList, TooltipFlag flag) {
+        Consumer<Component> tooltip = tooltipList::add;
+        super.appendHoverText(stack, context, tooltipList, flag);*/
+    //?}
         Header header = getHeader(stack);
         // Gray on every line except the item name. 1.12.2's vanilla tooltip pipeline auto-applied
         // ChatFormatting.GRAY to anything added via addInformation; modern MC dropped that default

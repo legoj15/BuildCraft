@@ -23,7 +23,11 @@ public class FilteredBufferTester {
         // Place Filtered Buffer
         helper.setBlock(bufferPos, BCTransportBlocks.FILTERED_BUFFER.get());
 
+        //? if >=1.21.10 {
         TileFilteredBuffer buffer = helper.getBlockEntity(bufferPos, TileFilteredBuffer.class);
+        //?} else {
+        /*TileFilteredBuffer buffer = helper.getBlockEntity(bufferPos);*/
+        //?}
 
         // Add a mock item into the main inventory (Slot 0)
         buffer.invMain.setStackInSlot(0, new ItemStack(Items.DIAMOND, 5));

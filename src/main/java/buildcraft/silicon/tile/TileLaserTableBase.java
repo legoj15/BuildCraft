@@ -20,14 +20,14 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 
 import buildcraft.api.mj.ILaserTarget;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.recipes.IngredientStack;
 import buildcraft.api.tiles.IDebuggable;
 
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.data.AverageLong;
 import buildcraft.lib.tile.TileBC_Neptune;
@@ -88,16 +88,16 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
     // --- Save / Load ---
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         output.putLong("power", power);
         output.putLong("avg_power", avgPowerClient);
         output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
         power = input.getLongOr("power", 0L);
         avgPowerClient = input.getLongOr("avg_power", 0L);
         input.read("items", CompoundTag.CODEC).ifPresent(tag -> itemManager.deserializeNBT(tag));

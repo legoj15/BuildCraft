@@ -19,6 +19,8 @@ import buildcraft.api.schematics.SchematicEntityContext;
 import buildcraft.api.schematics.SchematicEntityFactory;
 import buildcraft.api.schematics.SchematicEntityFactoryRegistry;
 
+import buildcraft.lib.misc.NBTUtilBC;
+
 public class SchematicEntityManager {
     @SuppressWarnings("WeakerAccess")
     public static ISchematicEntity getSchematicEntity(SchematicEntityContext context) {
@@ -56,13 +58,13 @@ public class SchematicEntityManager {
 
     @Nonnull
     public static ISchematicEntity readFromNBT(CompoundTag schematicEntityTag) throws InvalidInputDataException {
-        Identifier name = Identifier.parse(schematicEntityTag.getStringOr("name", ""));
+        Identifier name = Identifier.parse(NBTUtilBC.getString(schematicEntityTag, "name", ""));
         SchematicEntityFactory<?> factory = SchematicEntityFactoryRegistry.getFactoryByName(name);
         if (factory == null) {
             throw new InvalidInputDataException("Unknown schematic type " + name);
         }
         ISchematicEntity schematicEntity = factory.supplier.get();
-        CompoundTag data = schematicEntityTag.getCompoundOrEmpty("data");
+        CompoundTag data = NBTUtilBC.getCompound(schematicEntityTag, "data");
         try {
             schematicEntity.deserializeNBT(data);
             return schematicEntity;

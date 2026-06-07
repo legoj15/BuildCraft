@@ -15,7 +15,9 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+//? if >=1.21.10 {
 import net.minecraft.world.item.equipment.Equippable;
+//?}
 
 /** Modern replacement for the 1.12.2 ItemArmor-based handler. Uses the {@link DataComponents#EQUIPPABLE}
  * data component, which is how vanilla and mods now expose "this is wearable in slot X". */
@@ -23,8 +25,14 @@ public class ListMatchHandlerArmor extends buildcraft.api.lists.ListMatchHandler
 
     @Nullable
     private static EquipmentSlot slotOf(@Nonnull ItemStack stack) {
+        //? if >=1.21.10 {
         Equippable e = stack.get(DataComponents.EQUIPPABLE);
         return e == null ? null : e.slot();
+        //?} else {
+        /*// 1.21.1 has no EQUIPPABLE component; the Equipable interface gives the slot (null if not wearable).
+        net.minecraft.world.item.Equipable e = net.minecraft.world.item.Equipable.get(stack);
+        return e == null ? null : e.getEquipmentSlot();*/
+        //?}
     }
 
     @Override

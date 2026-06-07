@@ -1,5 +1,8 @@
 package buildcraft.transport.client.render;
 
+// 1.21.1: the pipe BER renders directly (classic paradigm) and has no separate render-state class,
+// so this whole file is gated out there (BlockEntityRenderState / ItemStackRenderState are 1.21.5+).
+//? if >=1.21.10 {
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,3 +47,4 @@ public class PipeHolderRenderState extends BlockEntityRenderState {
         }
     }
 }
+//?}

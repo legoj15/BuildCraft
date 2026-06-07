@@ -14,6 +14,7 @@ import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
@@ -29,14 +30,12 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+//?}
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
@@ -45,6 +44,7 @@ import buildcraft.api.recipes.BuildcraftRecipeRegistry;
 import buildcraft.api.recipes.IRefineryRecipeManager;
 import buildcraft.api.recipes.IRefineryRecipeManager.IDistillationRecipe;
 import buildcraft.api.tiles.IDebuggable;
+import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.fluid.FluidSmoother;
 
 import buildcraft.energy.BCEnergyFluids;
@@ -53,6 +53,9 @@ import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.container.ContainerDistiller;
 import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
 
 /**
@@ -173,7 +176,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
      * Horizontal sides → input tank, UP → gas output, DOWN → liquid output.
      */
     @Nullable
-    public FluidStacksResourceHandler getTankForSide(@Nullable Direction side) {
+    public BCFluidTank getTankForSide(@Nullable Direction side) {
         if (side == null) return null;
         if (side == Direction.UP) return tankGasOut;
         if (side == Direction.DOWN) return tankLiquidOut;
@@ -293,7 +296,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         if (owner == null || level == null || level.isClientSide()) return;
         net.minecraft.server.MinecraftServer server = level.getServer();
         if (server == null) return;
-        net.minecraft.server.level.ServerPlayer player = server.getPlayerList().getPlayer(owner.id());
+        net.minecraft.server.level.ServerPlayer player = server.getPlayerList().getPlayer(GameProfileUtil.getId(owner));
         if (player == null) return;
         var tracker = player.getData(BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get());
         String gasBase = BCEnergyFluids.getBaseName(outGas.getFluid());
@@ -319,33 +322,57 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
 
         if (level.getGameTime() % 5 == 0) {
             // Slot 0: Input container -> drain into tankIn
+            //? if >=1.21.10 {
             net.minecraft.world.item.ItemStack inStack = containerSlots.getResource(0).toStack(containerSlots.getAmountAsInt(0));
+            //?} else {
+            /*net.minecraft.world.item.ItemStack inStack = containerSlots.getStackInSlot(0);*/
+            //?}
             if (!inStack.isEmpty()) {
                 @SuppressWarnings("removal")
                 net.neoforged.neoforge.fluids.FluidActionResult result = net.neoforged.neoforge.fluids.FluidUtil.tryEmptyContainer(
+                    //? if >=1.21.10 {
                     inStack, net.neoforged.neoforge.fluids.capability.IFluidHandler.of(tankIn), Integer.MAX_VALUE, null, true
+                    //?} else {
+                    /*inStack, tankIn, Integer.MAX_VALUE, null, true*/
+                    //?}
                 );
                 if (result.isSuccess()) {
                     containerSlots.setStackInSlot(0, result.getResult());
                 }
             }
             // Slot 1: Output container gas -> fill from tankGasOut
+            //? if >=1.21.10 {
             net.minecraft.world.item.ItemStack gasStack = containerSlots.getResource(1).toStack(containerSlots.getAmountAsInt(1));
+            //?} else {
+            /*net.minecraft.world.item.ItemStack gasStack = containerSlots.getStackInSlot(1);*/
+            //?}
             if (!gasStack.isEmpty()) {
                 @SuppressWarnings("removal")
                 net.neoforged.neoforge.fluids.FluidActionResult result = net.neoforged.neoforge.fluids.FluidUtil.tryFillContainer(
+                    //? if >=1.21.10 {
                     gasStack, net.neoforged.neoforge.fluids.capability.IFluidHandler.of(tankGasOut), Integer.MAX_VALUE, null, true
+                    //?} else {
+                    /*gasStack, tankGasOut, Integer.MAX_VALUE, null, true*/
+                    //?}
                 );
                 if (result.isSuccess()) {
                     containerSlots.setStackInSlot(1, result.getResult());
                 }
             }
             // Slot 2: Output container liquid -> fill from tankLiquidOut
+            //? if >=1.21.10 {
             net.minecraft.world.item.ItemStack liqStack = containerSlots.getResource(2).toStack(containerSlots.getAmountAsInt(2));
+            //?} else {
+            /*net.minecraft.world.item.ItemStack liqStack = containerSlots.getStackInSlot(2);*/
+            //?}
             if (!liqStack.isEmpty()) {
                 @SuppressWarnings("removal")
                 net.neoforged.neoforge.fluids.FluidActionResult result = net.neoforged.neoforge.fluids.FluidUtil.tryFillContainer(
+                    //? if >=1.21.10 {
                     liqStack, net.neoforged.neoforge.fluids.capability.IFluidHandler.of(tankLiquidOut), Integer.MAX_VALUE, null, true
+                    //?} else {
+                    /*liqStack, tankLiquidOut, Integer.MAX_VALUE, null, true*/
+                    //?}
                 );
                 if (result.isSuccess()) {
                     containerSlots.setStackInSlot(2, result.getResult());
@@ -358,7 +385,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         currentRecipe = null;
         IRefineryRecipeManager manager = BuildcraftRecipeRegistry.refineryRecipes;
         if (manager != null) {
-            FluidStack inFluid = tankIn.getResource(0).toStack(tankIn.getAmountAsInt(0));
+            FluidStack inFluid = tankIn.getFluidStack(0);
             if (!inFluid.isEmpty()) {
                 currentRecipe = manager.getDistillationRegistry().getRecipeForInput(inFluid);
             }
@@ -374,19 +401,14 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
             FluidStack outLiquid = currentRecipe.outLiquid();
             FluidStack outGas = currentRecipe.outGas();
 
-            FluidResource resIn = tankIn.getResource(0);
+            FluidStack resIn = tankIn.getFluidStack(0);
             boolean canExtract = !resIn.isEmpty()
-                    && resIn.equals(FluidResource.of(reqIn))
-                    && tankIn.getAmountAsInt(0) >= reqIn.getAmount();
+                    && FluidStack.isSameFluidSameComponents(resIn, reqIn)
+                    && tankIn.getAmountMb(0) >= reqIn.getAmount();
 
-            boolean canFillLiquid;
-            try (Transaction tx = Transaction.openRoot()) {
-                canFillLiquid = tankLiquidOut.insertInternal(0, FluidResource.of(outLiquid), outLiquid.getAmount(), tx) >= outLiquid.getAmount();
-            }
-            boolean canFillGas;
-            try (Transaction tx = Transaction.openRoot()) {
-                canFillGas = tankGasOut.insertInternal(0, FluidResource.of(outGas), outGas.getAmount(), tx) >= outGas.getAmount();
-            }
+            // Simulate the output fills (internalInsert flag lets the guarded OutputTank accept them).
+            boolean canFillLiquid = tankLiquidOut.insertInternal(outLiquid, true) >= outLiquid.getAmount();
+            boolean canFillGas = tankGasOut.insertInternal(outGas, true) >= outGas.getAmount();
 
             isStuck = !canFillLiquid || !canFillGas;
 
@@ -404,12 +426,12 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
                 if (distillPower >= powerReq) {
                     isActive = true;
                     distillPower -= powerReq;
-                    try (Transaction tx = Transaction.openRoot()) {
-                        tankIn.extractInternal(0, FluidResource.of(reqIn), reqIn.getAmount(), tx);
-                        tankGasOut.insertInternal(0, FluidResource.of(outGas), outGas.getAmount(), tx);
-                        tankLiquidOut.insertInternal(0, FluidResource.of(outLiquid), outLiquid.getAmount(), tx);
-                        tx.commit();
-                    }
+                    // Pre-verified above this tick (canExtract/canFill*) and nothing else mutates
+                    // these tanks between the check and here, so the three ops all succeed; the
+                    // old single-transaction atomicity is unnecessary with the version-neutral API.
+                    tankIn.extractInternal(reqIn.getAmount(), false);
+                    tankGasOut.insertInternal(outGas, false);
+                    tankLiquidOut.insertInternal(outLiquid, false);
                     creditRefineAndRedefine(outGas, outLiquid);
                 }
             } else {
@@ -427,7 +449,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         if (distilling && !wasDistillingForAdvancement && owner != null) {
             int inputHeat = BCEnergyFluids.getHeat(currentRecipe.in().getFluid());
             if (qualifiesForHeatingAdvancement(inputHeat, level.dimension() == Level.NETHER)) {
-                AdvancementUtil.unlockAdvancement(owner.id(), level, ADVANCEMENT_HEATING_AND_DISTILLING);
+                AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(owner), level, ADVANCEMENT_HEATING_AND_DISTILLING);
             }
         }
         wasDistillingForAdvancement = distilling;
@@ -444,9 +466,9 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         powerAvgClient = Math.min(powerAvgClient, MAX_MJ_PER_TICK);
 
         // Send client sync when fluid amounts or active state change
-        int curIn = tankIn.getAmountAsInt(0);
-        int curGas = tankGasOut.getAmountAsInt(0);
-        int curLiq = tankLiquidOut.getAmountAsInt(0);
+        int curIn = tankIn.getAmountMb(0);
+        int curGas = tankGasOut.getAmountMb(0);
+        int curLiq = tankLiquidOut.getAmountMb(0);
         boolean needsSync = curIn != lastSyncedIn || curGas != lastSyncedGas || curLiq != lastSyncedLiquid
                 || isActive != lastSyncedActive || isStuck != lastSyncedStuck || powerAvgClient != lastSyncedPower;
         if (needsSync) {
@@ -466,9 +488,9 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
     @Override
     public void getDebugInfo(java.util.List<String> left, java.util.List<String> right, Direction side) {
         // We use fluid stacks here to represent the contents
-        left.add("In = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankIn.getResource(0).toStack(tankIn.getAmountAsInt(0))));
-        left.add("GasOut = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankGasOut.getResource(0).toStack(tankGasOut.getAmountAsInt(0))));
-        left.add("LiquidOut = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankLiquidOut.getResource(0).toStack(tankLiquidOut.getAmountAsInt(0))));
+        left.add("In = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankIn.getFluidStack(0)));
+        left.add("GasOut = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankGasOut.getFluidStack(0)));
+        left.add("LiquidOut = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankLiquidOut.getFluidStack(0)));
         left.add("Battery = " + mjBattery.getDebugString());
         left.add("Progress = " + MjAPI.formatMj(distillPower));
         left.add("Rate = " + buildcraft.lib.misc.LocaleUtil.localizeMjFlow(powerAvgClient));
@@ -513,24 +535,50 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
 
     // --- Save / Load ---
 
+    // Platform bridge — TileDistiller_BC8 extends BlockEntity directly (not TileBC_Neptune), so it carries
+    // its own copy of the load/save signature directive (see TileBC_Neptune for the rationale).
+    //? if >=1.21.10 {
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
-        if (owner != null && owner.id() != null) {
-            output.putString("ownerUUID", owner.id().toString());
-            if (owner.name() != null) {
-                output.putString("ownerName", owner.name());
+        writeData(new BCValueOutput(output));
+    }
+
+    @Override
+    public void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        readData(new BCValueInput(input));
+    }
+    //?} else {
+    /*@Override
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        writeData(new BCValueOutput(tag));
+    }
+
+    @Override
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        readData(new BCValueInput(tag));
+    }*/
+    //?}
+
+    protected void writeData(BCValueOutput output) {
+        if (owner != null && GameProfileUtil.getId(owner) != null) {
+            output.putString("ownerUUID", GameProfileUtil.getId(owner).toString());
+            if (GameProfileUtil.getName(owner) != null) {
+                output.putString("ownerName", GameProfileUtil.getName(owner));
             }
         }
         // Save each tank's fluid contents directly
-        if (!tankIn.getResource(0).isEmpty()) {
-            output.store("fluidIn", FluidStack.CODEC, tankIn.getResource(0).toStack(tankIn.getAmountAsInt(0)));
+        if (!tankIn.isTankEmpty(0)) {
+            output.store("fluidIn", FluidStack.CODEC, tankIn.getFluidStack(0));
         }
-        if (!tankGasOut.getResource(0).isEmpty()) {
-            output.store("fluidGasOut", FluidStack.CODEC, tankGasOut.getResource(0).toStack(tankGasOut.getAmountAsInt(0)));
+        if (!tankGasOut.isTankEmpty(0)) {
+            output.store("fluidGasOut", FluidStack.CODEC, tankGasOut.getFluidStack(0));
         }
-        if (!tankLiquidOut.getResource(0).isEmpty()) {
-            output.store("fluidLiquidOut", FluidStack.CODEC, tankLiquidOut.getResource(0).toStack(tankLiquidOut.getAmountAsInt(0)));
+        if (!tankLiquidOut.isTankEmpty(0)) {
+            output.store("fluidLiquidOut", FluidStack.CODEC, tankLiquidOut.getFluidStack(0));
         }
         output.putLong("mjStored", mjBattery.getStored());
         output.putLong("distillPower", distillPower);
@@ -540,9 +588,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         output.store("containerSlots", net.minecraft.nbt.CompoundTag.CODEC, containerSlots.serializeNBT());
     }
 
-    @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
         String ownerUuid = input.getStringOr("ownerUUID", "");
         if (!ownerUuid.isEmpty()) {
             try {
@@ -564,20 +610,17 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
 
     /**
      * Reads a fluid stack from {@code input} under {@code key} and writes it directly into
-     * {@code tank} via {@link FluidStacksResourceHandler#set}. <em>Always</em> writes — when
+     * {@code tank} via {@link BCFluidTank#setFluidStack}. <em>Always</em> writes — when
      * the key is absent (saveAdditional only stores non-empty tanks) the tank is forced to
      * empty. Without this, a client whose tank previously held fluid would never see a server
      * drain reflected: the {@code getUpdateTag} → {@code loadAdditional} round-trip omits the
-     * key for an empty server-side tank, so {@code insert()} (which adds to existing contents)
-     * leaves stale client values in place forever.
+     * key for an empty server-side tank, so a fill (which adds to existing contents) would
+     * leave stale client values in place forever. {@code setFluidStack} also bypasses the
+     * input/output tank guards, as the saved fluid is trusted.
      */
-    private static void loadTank(FluidStacksResourceHandler tank, ValueInput input, String key) {
+    private static void loadTank(BCFluidTank tank, BCValueInput input, String key) {
         FluidStack fluid = input.read(key, FluidStack.CODEC).orElse(FluidStack.EMPTY);
-        if (fluid.isEmpty()) {
-            tank.set(0, FluidResource.EMPTY, 0);
-        } else {
-            tank.set(0, FluidResource.of(fluid), fluid.getAmount());
-        }
+        tank.setFluidStack(0, fluid);
     }
 
     // --- Network Sync ---
@@ -595,14 +638,16 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
     /**
      * Input tank that gates external interactions to match 1.12.2's
      * {@code tankIn.setFilter(isDistillableFluid)} + {@code setCanDrain(false)}:
-     * external {@code insert} accepts only fluids with a registered distillation
-     * recipe, and external {@code extract} returns 0 outright. The serverTick craft
-     * loop drains the tank via {@link #extractInternal}, which flips a guard for the
-     * duration of one {@code super.extract} call so recipes still consume input.
-     * NBT load uses {@code set()} directly to bypass both gates (saved fluid is
-     * trusted, and the recipe registry may not be ready during early chunk load).
+     * external fill accepts only fluids with a registered distillation recipe (via
+     * the {@link #isFluidValid} hook, which both nodes consult on the fill path), and
+     * external drain returns empty outright (the {@code drain} override below, since
+     * neither node's drain path consults validity). The serverTick craft loop drains
+     * the tank via {@link #extractInternal}, which flips a guard for the duration of
+     * one {@code super.drain} call so recipes still consume input. NBT load uses
+     * {@code setFluidStack()} directly to bypass both gates (saved fluid is trusted,
+     * and the recipe registry may not be ready during early chunk load).
      */
-    public class InputTank extends FluidStacksResourceHandler {
+    public class InputTank extends BCFluidTank {
         private boolean internalExtract = false;
 
         public InputTank() {
@@ -610,19 +655,42 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         }
 
         @Override
-        public boolean isValid(int index, FluidResource resource) {
-            // Accept anything during initial registry load (when distillation
-            // registry may be empty) — set() bypasses this anyway, but keep the
-            // check robust against simulated capability checks before recipes load.
-            return isDistillableFluid(resource.toStack(1));
+        protected boolean isFluidValid(FluidStack stack) {
+            // Accept only registered distillation inputs. setFluidStack() bypasses
+            // this anyway (trusted NBT load), but keep the check robust against
+            // simulated capability checks before recipes load.
+            return isDistillableFluid(stack);
         }
 
         @Override
-        public int extract(int index, FluidResource resource, int amount, TransactionContext tx) {
+        public FluidStack drain(int slot, int maxMb, boolean simulate) {
+            // External drains are rejected (setCanDrain(false)); only the craft loop's
+            // extractInternal — which flips internalExtract — may pull input out.
+            return internalExtract ? super.drain(slot, maxMb, simulate) : FluidStack.EMPTY;
+        }
+
+        /** Internal drain used by the craft loop; flips the guard so {@link #drain} succeeds. */
+        public FluidStack extractInternal(int amount, boolean simulate) {
+            internalExtract = true;
+            try {
+                return super.drain(0, amount, simulate);
+            } finally {
+                internalExtract = false;
+            }
+        }
+
+        //? if >=1.21.10 {
+        /** Modern external-extract guard: the capability + the atomicity unit tests reach the tank via
+         *  the Transfer-API {@code extract} (which ignores validity), so block it here unless internal. */
+        @Override
+        public int extract(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource, int amount,
+                net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
             return internalExtract ? super.extract(index, resource, amount, tx) : 0;
         }
 
-        public int extractInternal(int index, FluidResource resource, int amount, TransactionContext tx) {
+        /** Modern Transfer-API internal extract retained for the shared-transaction unit tests. */
+        public int extractInternal(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource, int amount,
+                net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
             internalExtract = true;
             try {
                 return super.extract(index, resource, amount, tx);
@@ -630,17 +698,20 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
                 internalExtract = false;
             }
         }
+        //?}
     }
 
     /**
      * Output tank that rejects external insertions, matching 1.12.2's
      * {@code tankOut.setCanFill(false)}. The craft loop fills via
      * {@link #insertInternal}, which flips a guard for the duration of one
-     * {@code super.insert} call so recipe results still land. External callers
+     * {@code super.fill} call so recipe results still land. External callers
      * (capability access, bucket right-clicks, GUI tank widget clicks) all funnel
-     * through {@code insert}, which checks {@code isValid} and so is blocked.
+     * through fill, which checks {@link #isFluidValid} (consulted on the fill path of
+     * both nodes) and so is blocked. External drain stays open so pipes/buckets can
+     * pull the outputs.
      */
-    public static class OutputTank extends FluidStacksResourceHandler {
+    public static class OutputTank extends BCFluidTank {
         private boolean internalInsert = false;
 
         public OutputTank() {
@@ -648,11 +719,24 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         }
 
         @Override
-        public boolean isValid(int index, FluidResource resource) {
+        protected boolean isFluidValid(FluidStack stack) {
             return internalInsert;
         }
 
-        public int insertInternal(int index, FluidResource resource, int amount, TransactionContext tx) {
+        /** Internal fill used by the craft loop; flips the guard so {@link #fill} accepts the result. */
+        public int insertInternal(FluidStack stack, boolean simulate) {
+            internalInsert = true;
+            try {
+                return super.fill(0, stack, simulate);
+            } finally {
+                internalInsert = false;
+            }
+        }
+
+        //? if >=1.21.10 {
+        /** Modern Transfer-API internal insert retained for the shared-transaction unit tests. */
+        public int insertInternal(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource, int amount,
+                net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
             internalInsert = true;
             try {
                 return super.insert(index, resource, amount, tx);
@@ -660,6 +744,7 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
                 internalInsert = false;
             }
         }
+        //?}
     }
 }
 

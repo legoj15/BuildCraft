@@ -5,6 +5,10 @@
  */
 package buildcraft.builders.client.render.pip;
 
+// Whole-file >=1.21.10: PictureInPictureRenderState is the 1.21.5+ GUI PiP pipeline (absent on
+// 1.21.1), so this PiP render-state record is gated out there. On 1.21.1 the same preview is drawn
+// directly into the GUI by BlueprintGuiRenderer (no PiP render state), so nothing references this.
+//? if >=1.21.10 {
 import javax.annotation.Nullable;
 
 import net.minecraft.client.gui.navigation.ScreenRectangle;
@@ -55,3 +59,4 @@ public record BlueprintPipRenderState(
              PictureInPictureRenderState.getBounds(x0, y0, x1, y1, scissorArea));
     }
 }
+//?}

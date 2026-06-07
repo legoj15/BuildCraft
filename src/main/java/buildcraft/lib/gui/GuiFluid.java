@@ -9,7 +9,9 @@ package buildcraft.lib.gui;
 
 import net.minecraft.client.Minecraft;
 import buildcraft.lib.gui.BCGraphics;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.RenderPipelines;
+//?}
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.Identifier;
@@ -59,6 +61,10 @@ public class GuiFluid implements ISimpleDrawable {
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
         if (sprite == null) return;
         int color = FluidUtilBC.getFluidColor(stack);
+        //? if >=1.21.10 {
         currentGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, (int) x, (int) y, 16, 16, color);
+        //?} else {
+        /*currentGraphics.blitSprite(sprite, (int) x, (int) y, 16, 16, color);*/
+        //?}
     }
 }

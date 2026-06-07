@@ -11,7 +11,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.saveddata.SavedData;
+//? if >=1.21.10 {
 import net.minecraft.world.level.saveddata.SavedDataType;
+//?}
 
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -161,16 +163,34 @@ public class BCEnergyWorldGen {
                         .forGetter(d -> new java.util.ArrayList<>(d.generatedChunks))
         ).apply(instance, OilGenSavedData::new));
 
+        //? if >=26.1 {
         public static final SavedDataType<OilGenSavedData> TYPE = new SavedDataType<>(
-                //? if >=26.1 {
                 Identifier.withDefaultNamespace(DATA_NAME),
-                //?} else {
-                /*DATA_NAME,*/
-                //?}
                 OilGenSavedData::new,
                 CODEC,
                 net.minecraft.util.datafix.DataFixTypes.LEVEL
         );
+        //?} elif >=1.21.10 {
+        /*public static final SavedDataType<OilGenSavedData> TYPE = new SavedDataType<>(
+                DATA_NAME,
+                OilGenSavedData::new,
+                CODEC,
+                net.minecraft.util.datafix.DataFixTypes.LEVEL
+        );*/
+        //?} else {
+        /*// 1.21.1: SavedData.Factory (ctor, (tag,provider)->T via CODEC, DataFixTypes).
+        public static final SavedData.Factory<OilGenSavedData> TYPE = new SavedData.Factory<>(
+                OilGenSavedData::new,
+                (tag, provider) -> CODEC.parse(net.minecraft.nbt.NbtOps.INSTANCE, tag).result().orElseGet(OilGenSavedData::new),
+                net.minecraft.util.datafix.DataFixTypes.LEVEL
+        );
+
+        @Override
+        public net.minecraft.nbt.CompoundTag save(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
+            return (net.minecraft.nbt.CompoundTag) CODEC.encodeStart(net.minecraft.nbt.NbtOps.INSTANCE, this)
+                    .result().orElseGet(net.minecraft.nbt.CompoundTag::new);
+        }*/
+        //?}
 
         public boolean hasGenerated(ChunkPos pos) {
             return generatedChunks.contains(buildcraft.lib.misc.PositionUtil.chunkPack(pos));
@@ -182,7 +202,11 @@ public class BCEnergyWorldGen {
         }
 
         public static OilGenSavedData getOrCreate(ServerLevel level) {
+            //? if >=1.21.10 {
             return level.getDataStorage().computeIfAbsent(TYPE);
+            //?} else {
+            /*return level.getDataStorage().computeIfAbsent(TYPE, DATA_NAME);*/
+            //?}
         }
     }
 }

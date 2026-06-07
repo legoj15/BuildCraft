@@ -23,16 +23,22 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
+//? if >=1.21.10 {
 import net.minecraft.util.ProblemReporter;
+//?}
 import net.minecraft.world.entity.Entity;
+//? if >=1.21.10 {
 import net.minecraft.world.entity.EntitySpawnReason;
+//?}
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.HangingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
+//?}
 import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -55,9 +61,14 @@ public class SchematicEntityDefault implements ISchematicEntity {
         Identifier registryName = BuiltInRegistries.ENTITY_TYPE.getKey(context.entity.getType());
         if (registryName == null) return false;
         if (!RulesLoader.READ_DOMAINS.contains(registryName.getNamespace())) return false;
+        //? if >=1.21.10 {
         TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, context.world.registryAccess());
         context.entity.save(output);
         CompoundTag entityNbt = output.buildResult();
+        //?} else {
+        /*CompoundTag entityNbt = new CompoundTag();
+        context.entity.save(entityNbt);*/
+        //?}
         return RulesLoader.getRules(registryName, entityNbt)
             .stream()
             .anyMatch(rule -> rule.capture);
@@ -65,9 +76,14 @@ public class SchematicEntityDefault implements ISchematicEntity {
 
     @Override
     public void init(SchematicEntityContext context) {
+        //? if >=1.21.10 {
         TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, context.world.registryAccess());
         context.entity.save(output);
         entityNbt = output.buildResult();
+        //?} else {
+        /*entityNbt = new CompoundTag();
+        context.entity.save(entityNbt);*/
+        //?}
         pos = context.entity.position().subtract(Vec3.atLowerCornerOf(context.basePos));
         if (context.entity instanceof HangingEntity hangingEntity) {
             hangingPos = hangingEntity.getPos().subtract(context.basePos);
@@ -86,7 +102,7 @@ public class SchematicEntityDefault implements ISchematicEntity {
     @Nonnull
     @Override
     public List<ItemStack> computeRequiredItems() {
-        Identifier entityId = Identifier.parse(entityNbt.getStringOr("id", ""));
+        Identifier entityId = Identifier.parse(NBTUtilBC.getString(entityNbt, "id", ""));
         Set<JsonRule> rules = RulesLoader.getRules(entityId, entityNbt);
         if (rules.isEmpty()) {
             return Collections.emptyList();
@@ -103,7 +119,7 @@ public class SchematicEntityDefault implements ISchematicEntity {
     @Nonnull
     @Override
     public List<FluidStack> computeRequiredFluids() {
-        Identifier entityId = Identifier.parse(entityNbt.getStringOr("id", ""));
+        Identifier entityId = Identifier.parse(NBTUtilBC.getString(entityNbt, "id", ""));
         Set<JsonRule> rules = RulesLoader.getRules(entityId, entityNbt);
         return rules.stream()
             .map(rule -> rule.requiredExtractors)
@@ -145,6 +161,7 @@ public class SchematicEntityDefault implements ISchematicEntity {
             rotate = false;
         }
         // Load entity from NBT via EntityType.create
+        //? if >=1.21.10 {
         Optional<Entity> optEntity = EntityType.create(
             TagValueInput.create(
                 ProblemReporter.DISCARDING,
@@ -154,6 +171,9 @@ public class SchematicEntityDefault implements ISchematicEntity {
             level,
             EntitySpawnReason.COMMAND
         );
+        //?} else {
+        /*Optional<Entity> optEntity = EntityType.create(newEntityNbt, level);*/
+        //?}
         if (optEntity.isPresent()) {
             Entity entity = optEntity.get();
             if (rotate && entityRotation != Rotation.NONE) {
@@ -186,12 +206,12 @@ public class SchematicEntityDefault implements ISchematicEntity {
 
     @Override
     public void deserializeNBT(CompoundTag nbt) throws InvalidInputDataException {
-        entityNbt = nbt.getCompoundOrEmpty("entityNbt");
+        entityNbt = NBTUtilBC.getCompound(nbt, "entityNbt");
         pos = NBTUtilBC.readVec3(nbt.get("pos"));
         if (pos == null) {
             pos = Vec3.ZERO;
         }
-        hangingPos = NBTUtilBC.readBlockPos(nbt.getCompoundOrEmpty("hangingPos"));
+        hangingPos = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "hangingPos"));
         hangingFacing = NBTUtilBC.readEnum(nbt.get("hangingFacing"), Direction.class);
         if (hangingFacing == null) hangingFacing = Direction.NORTH;
         entityRotation = NBTUtilBC.readEnum(nbt.get("entityRotation"), Rotation.class);

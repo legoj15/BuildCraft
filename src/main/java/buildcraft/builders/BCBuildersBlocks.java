@@ -8,6 +8,7 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import buildcraft.lib.misc.RegistrationUtilBC;
 
 import buildcraft.builders.block.BlockArchitectTable;
 import buildcraft.builders.block.BlockBuilder;
@@ -22,35 +23,41 @@ public class BCBuildersBlocks {
 
     // 1.12.2 Material.IRON → pickaxe required for drops (parity restored via
     // requiresCorrectToolForDrops + minecraft:mineable/pickaxe tag).
-    public static final DeferredBlock<BlockFrame> FRAME = BLOCKS.registerBlock(
+    // forceSolidOn(): the frame is a non-full-cube block, so by default blocksMotion()==false, which
+    // makes FlowingFluid.canHoldFluid() true — flowing fluid (oil/water reaching the quarry) would
+    // "wash it away", dropping the frame item (an unobtainable block → infinite-frame exploit).
+    // Forcing solid makes blocksMotion()==true so fluid flows AROUND the frame instead of destroying
+    // it. No other effect on a non-full block: suffocation/view-blocking/redstone all additionally
+    // require a full collision cube, which the frame is not.
+    public static final DeferredBlock<BlockFrame> FRAME = RegistrationUtilBC.registerBlock(BLOCKS,
             "frame",
-            BlockFrame::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
+            BlockFrame::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().forceSolidOn().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockFiller> FILLER = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockFiller> FILLER = RegistrationUtilBC.registerBlock(BLOCKS,
             "filler",
             BlockFiller::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockBuilder> BUILDER = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockBuilder> BUILDER = RegistrationUtilBC.registerBlock(BLOCKS,
             "builder",
             BlockBuilder::new, () -> BlockBehaviour.Properties.of()
                 .strength(5.0f, 10.0f).sound(SoundType.METAL)
                 .requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockArchitectTable> ARCHITECT = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockArchitectTable> ARCHITECT = RegistrationUtilBC.registerBlock(BLOCKS,
             "architect",
             BlockArchitectTable::new, () -> BlockBehaviour.Properties.of()
                 .strength(5.0f, 10.0f).sound(SoundType.METAL)
                 .requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockElectronicLibrary> LIBRARY = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockElectronicLibrary> LIBRARY = RegistrationUtilBC.registerBlock(BLOCKS,
             "library",
             BlockElectronicLibrary::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockReplacer> REPLACER = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockReplacer> REPLACER = RegistrationUtilBC.registerBlock(BLOCKS,
             "replacer",
             BlockReplacer::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockQuarry> QUARRY = BLOCKS.registerBlock(
+    public static final DeferredBlock<BlockQuarry> QUARRY = RegistrationUtilBC.registerBlock(BLOCKS,
             "quarry",
             BlockQuarry::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.ANVIL).requiresCorrectToolForDrops());
 

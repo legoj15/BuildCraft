@@ -41,6 +41,7 @@ import buildcraft.api.transport.pipe.PipeFlow;
 
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.MathUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.misc.data.AverageInt;
 
@@ -73,7 +74,7 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
 
     public PipeFlowPower(IPipe pipe, CompoundTag nbt) {
         super(pipe, nbt);
-        isReceiver = nbt.getBooleanOr("isReceiver", false);
+        isReceiver = NBTUtilBC.getBoolean(nbt, "isReceiver", false);
         sections = new EnumMap<>(Direction.class);
         for (Direction face : Direction.values()) {
             sections.put(face, new Section(face));
@@ -100,9 +101,9 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
 
     @Override
     public void readFromNbt(CompoundTag nbt) {
-        isReceiver = nbt.getBooleanOr("isReceiver", false);
-        int[] powers = nbt.getIntArray("displayPower").orElse(new int[6]);
-        int[] flows = nbt.getIntArray("displayFlow").orElse(new int[6]);
+        isReceiver = NBTUtilBC.getBoolean(nbt, "isReceiver", false);
+        int[] powers = NBTUtilBC.getIntArray(nbt, "displayPower", new int[6]);
+        int[] flows = NBTUtilBC.getIntArray(nbt, "displayFlow", new int[6]);
         for (Direction face : Direction.values()) {
             int i = face.ordinal();
             Section s = sections.get(face);

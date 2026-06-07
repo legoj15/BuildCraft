@@ -18,8 +18,10 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.neoforge.fluids.FluidStack;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
+//?}
 
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.core.BCCoreBlocks;
@@ -120,7 +122,11 @@ public class BlockDropsTester {
         BlockPos pos = new BlockPos(1, 2, 1);
         helper.setBlock(pos, BCFactoryBlocks.CHUTE.get());
 
+        //? if >=1.21.10 {
         TileChute chute = helper.getBlockEntity(pos, TileChute.class);
+        //?} else {
+        /*TileChute chute = helper.getBlockEntity(pos);*/
+        //?}
         chute.inv.setStackInSlot(0, new ItemStack(Items.DIAMOND, 5));
         chute.inv.setStackInSlot(3, new ItemStack(Items.GOLD_INGOT, 11));
 
@@ -139,7 +145,11 @@ public class BlockDropsTester {
         BlockPos pos = new BlockPos(1, 2, 1);
         helper.setBlock(pos, BCFactoryBlocks.CHUTE.get());
 
+        //? if >=1.21.10 {
         TileChute chute = helper.getBlockEntity(pos, TileChute.class);
+        //?} else {
+        /*TileChute chute = helper.getBlockEntity(pos);*/
+        //?}
         chute.inv.setStackInSlot(0, new ItemStack(Items.DIAMOND, 5));
 
         breakAs(helper, pos, survivalPlayerWith(helper, ItemStack.EMPTY));
@@ -161,7 +171,11 @@ public class BlockDropsTester {
         BlockPos pos = new BlockPos(1, 2, 1);
         helper.setBlock(pos, BCFactoryBlocks.AUTOWORKBENCH_ITEM.get());
 
+        //? if >=1.21.10 {
         TileAutoWorkbenchItems workbench = helper.getBlockEntity(pos, TileAutoWorkbenchItems.class);
+        //?} else {
+        /*TileAutoWorkbenchItems workbench = helper.getBlockEntity(pos);*/
+        //?}
 
         // PHANTOM template slots — these never held real items in 1.12.2 and must not
         // duplicate on break. Use rare items so the assertion below can detect a leak
@@ -195,7 +209,11 @@ public class BlockDropsTester {
         BlockPos pos = new BlockPos(1, 2, 1);
         helper.setBlock(pos, BCFactoryBlocks.TANK.get());
 
+        //? if >=1.21.10 {
         TileTank tank = helper.getBlockEntity(pos, TileTank.class);
+        //?} else {
+        /*TileTank tank = helper.getBlockEntity(pos);*/
+        //?}
         fillTank(tank, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
 
         breakAs(helper, pos, survivalPlayerWith(helper, new ItemStack(Items.WOODEN_PICKAXE)));
@@ -212,7 +230,11 @@ public class BlockDropsTester {
         BlockPos pos = new BlockPos(1, 2, 1);
         helper.setBlock(pos, BCFactoryBlocks.TANK.get());
 
+        //? if >=1.21.10 {
         TileTank tank = helper.getBlockEntity(pos, TileTank.class);
+        //?} else {
+        /*TileTank tank = helper.getBlockEntity(pos);*/
+        //?}
         fillTank(tank, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
 
         breakAs(helper, pos, survivalPlayerWith(helper, ItemStack.EMPTY));
@@ -226,10 +248,15 @@ public class BlockDropsTester {
     }
 
     private static void fillTank(TileTank tank, FluidStack stack) {
+        //? if >=1.21.10 {
         try (Transaction tx = Transaction.open(null)) {
             tank.tank.insert(0, FluidResource.of(stack), stack.getAmount(), tx);
             tx.commit();
         }
+        //?} else {
+        /*// 1.21.1 has no Transfer API; BCFluidTank exposes a version-neutral fill(slot, stack, simulate).
+        tank.tank.fill(0, stack, false);*/
+        //?}
     }
 
     // ---------- Stirling engine (raw fuel slot) ----------
@@ -238,7 +265,11 @@ public class BlockDropsTester {
         BlockPos pos = new BlockPos(1, 2, 1);
         helper.setBlock(pos, BCEnergyBlocks.ENGINE_STONE.get());
 
+        //? if >=1.21.10 {
         TileEngineStone_BC8 engine = helper.getBlockEntity(pos, TileEngineStone_BC8.class);
+        //?} else {
+        /*TileEngineStone_BC8 engine = helper.getBlockEntity(pos);*/
+        //?}
         engine.setFuelStack(new ItemStack(Items.COAL, 17));
 
         breakAs(helper, pos, survivalPlayerWith(helper, ItemStack.EMPTY));
@@ -255,7 +286,11 @@ public class BlockDropsTester {
         BlockPos pos = new BlockPos(1, 2, 1);
         helper.setBlock(pos, BCEnergyBlocks.ENGINE_STONE.get());
 
+        //? if >=1.21.10 {
         TileEngineStone_BC8 engine = helper.getBlockEntity(pos, TileEngineStone_BC8.class);
+        //?} else {
+        /*TileEngineStone_BC8 engine = helper.getBlockEntity(pos);*/
+        //?}
         engine.setFuelStack(new ItemStack(Items.COAL, 17));
 
         breakAs(helper, pos, survivalPlayerWith(helper, new ItemStack(Items.WOODEN_PICKAXE)));
@@ -274,7 +309,11 @@ public class BlockDropsTester {
         BlockPos pos = new BlockPos(1, 2, 1);
         helper.setBlock(pos, BCTransportBlocks.FILTERED_BUFFER.get());
 
+        //? if >=1.21.10 {
         TileFilteredBuffer buffer = helper.getBlockEntity(pos, TileFilteredBuffer.class);
+        //?} else {
+        /*TileFilteredBuffer buffer = helper.getBlockEntity(pos);*/
+        //?}
 
         // PHANTOM filter slots — these record what the buffer accepts, they were never
         // consumed. Use a distinctive item so a leak is visible.

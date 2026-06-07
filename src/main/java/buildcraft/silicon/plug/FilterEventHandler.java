@@ -41,6 +41,11 @@ public class FilterEventHandler {
                         event.increasePriority(side);
                     } else if (colourAt == null) {
                         event.decreasePriority(side);
+                    } else {
+                        // Item carries a different colour than the filter lens — block it. Without
+                        // this the filter only re-prioritised matching items and let every other
+                        // colour pass straight through, so it didn't actually filter.
+                        event.disallow(side);
                     }
                 }
             }

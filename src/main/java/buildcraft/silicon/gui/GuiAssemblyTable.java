@@ -115,6 +115,7 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
         graphics.text(font, title, (imageWidth - font.width(title)) / 2, 15, 0xFF404040, false);
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
         if (event.button() == 0) {
@@ -132,4 +133,23 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
         }
         return super.mouseClicked(event, doubleClick);
     }
+    //?} else {
+    /*@Override
+    public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
+        if (button == 0) {
+            int mouseX = (int) mouseXd;
+            int mouseY = (int) mouseYd;
+            for (int i = 0; i < menu.tile.recipesStates.size(); i++) {
+                IGuiArea area = getRecipeArea(i);
+                if (area.contains(mouseX, mouseY)) {
+                    if (minecraft != null && minecraft.gameMode != null) {
+                        minecraft.gameMode.handleInventoryButtonClick(menu.containerId, i);
+                    }
+                    return true;
+                }
+            }
+        }
+        return super.mouseClicked(mouseXd, mouseYd, button);
+    }*/
+    //?}
 }

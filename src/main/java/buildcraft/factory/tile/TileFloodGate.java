@@ -39,21 +39,24 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.material.Fluid;
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+//?}
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.block.BlockFloodGate;
+import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
 
 /**
@@ -79,7 +82,7 @@ public class TileFloodGate extends BlockEntity implements IDebuggable {
     private static final Identifier ADVANCEMENT_FLOODING_THE_WORLD =
         Identifier.parse("buildcraftunofficial:flooding_the_world");
 
-    private final FluidStacksResourceHandler tank = new FluidStacksResourceHandler(1, 2000); // 2 buckets
+    private final BCFluidTank tank = new BCFluidTank(1, 2000); // 2 buckets
     public final EnumSet<Direction> openSides = EnumSet.of(
             Direction.DOWN, Direction.NORTH, Direction.SOUTH,
             Direction.WEST, Direction.EAST);
@@ -97,7 +100,7 @@ public class TileFloodGate extends BlockEntity implements IDebuggable {
         super(BCFactoryBlockEntities.FLOOD_GATE.get(), pos, state);
     }
 
-    public FluidStacksResourceHandler getTank() {
+    public BCFluidTank getTank() {
         return tank;
     }
 
@@ -140,7 +143,7 @@ public class TileFloodGate extends BlockEntity implements IDebuggable {
     private void buildQueue() {
         queue.clear();
         paths.clear();
-        FluidResource fluid = tank.getResource(0);
+        FluidStack fluid = tank.getFluidStack(0);
         if (fluid.isEmpty()) {
             return;
         }
@@ -152,7 +155,7 @@ public class TileFloodGate extends BlockEntity implements IDebuggable {
             nextPosesToCheck.add(offset);
             paths.put(offset, ImmutableList.of(offset));
         }
-        Direction[] directions = FluidUtilBC.isGaseous(fluid.toStack(1)) ? SEARCH_GASEOUS : SEARCH_NORMAL;
+        Direction[] directions = FluidUtilBC.isGaseous(fluid) ? SEARCH_GASEOUS : SEARCH_NORMAL;
 
         outer:
         while (!nextPosesToCheck.isEmpty()) {
@@ -193,7 +196,7 @@ public class TileFloodGate extends BlockEntity implements IDebuggable {
             return true;
         }
         Fluid fluid = BlockUtil.getFluidWithFlowing(level, offsetPos);
-        return fluid != null && FluidUtilBC.areFluidsEqual(fluid, tank.getResource(0).getFluid())
+        return fluid != null && FluidUtilBC.areFluidsEqual(fluid, tank.getFluidStack(0).getFluid())
                 && BlockUtil.getFluidWithoutFlowing(level.getBlockState(offsetPos)) == null;
     }
 
@@ -202,7 +205,7 @@ public class TileFloodGate extends BlockEntity implements IDebuggable {
             return true;
         }
         Fluid fluid = BlockUtil.getFluid(level, offsetPos);
-        return FluidUtilBC.areFluidsEqual(fluid, tank.getResource(0).getFluid());
+        return FluidUtilBC.areFluidsEqual(fluid, tank.getFluidStack(0).getFluid());
     }
 
     private boolean canFillThrough(BlockPos pos) {
@@ -210,7 +213,7 @@ public class TileFloodGate extends BlockEntity implements IDebuggable {
             return false;
         }
         Fluid fluid = BlockUtil.getFluidWithFlowing(level, pos);
-        return FluidUtilBC.areFluidsEqual(fluid, tank.getResource(0).getFluid());
+        return FluidUtilBC.areFluidsEqual(fluid, tank.getFluidStack(0).getFluid());
     }
 
     // --- Ticking ---
@@ -222,21 +225,21 @@ public class TileFloodGate extends BlockEntity implements IDebuggable {
 
         // Sync tank fluid amount to clients whenever it changes (pipe inserts as
         // well as our own extracts), so the F3 fluid line stays accurate.
-        int currentAmount = tank.getAmountAsInt(0);
+        int currentAmount = tank.getAmountMb(0);
         if (currentAmount != lastSyncedAmount) {
             lastSyncedAmount = currentAmount;
             MessageUtil.sendUpdateToTrackingPlayers(this);
         }
 
-        if (tank.getAmountAsInt(0) < 1000) {
+        if (tank.getAmountMb(0) < 1000) {
             return;
         }
 
         tick++;
         if (tick % 16 == 0) {
-            if (!tank.getResource(0).isEmpty() && !queue.isEmpty()) {
-                FluidResource res = tank.getResource(0);
-                if (tank.getAmountAsInt(0) >= 1000) {
+            if (!tank.isTankEmpty(0) && !queue.isEmpty()) {
+                FluidStack res = tank.getFluidStack(0);
+                if (tank.getAmountMb(0) >= 1000) {
                     BlockPos currentPos = queue.removeLast();
                     List<BlockPos> path = paths.get(currentPos);
                     boolean canFill = true;
@@ -257,14 +260,11 @@ public class TileFloodGate extends BlockEntity implements IDebuggable {
                         BlockState fluidBlock = fluidType.defaultFluidState().createLegacyBlock();
                         if (!fluidBlock.isAir()) {
                             level.setBlock(currentPos, fluidBlock, Block.UPDATE_ALL);
-                            try (Transaction tx = Transaction.openRoot()) {
-                                tank.extract(0, res, 1000, tx);
-                                tx.commit();
-                            }
+                            tank.drain(0, 1000, false);
                             // "Flooding the world" — granted to the owner each time the gate
                             // successfully places a fluid block (1.12.2 TileFloodGate parity).
                             if (owner != null) {
-                                AdvancementUtil.unlockAdvancement(owner.id(), level, ADVANCEMENT_FLOODING_THE_WORLD);
+                                AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(owner), level, ADVANCEMENT_FLOODING_THE_WORLD);
                             }
                             delayIndex = 0;
                             tick = 0;
@@ -285,13 +285,39 @@ public class TileFloodGate extends BlockEntity implements IDebuggable {
 
     // --- Save / Load ---
 
+    // Platform bridge — TileFloodGate extends BlockEntity directly (not TileBC_Neptune), so it carries
+    // its own copy of the load/save signature directive (see TileBC_Neptune for the rationale).
+    //? if >=1.21.10 {
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
-        if (owner != null && owner.id() != null) {
-            output.putString("ownerUUID", owner.id().toString());
-            if (owner.name() != null) {
-                output.putString("ownerName", owner.name());
+        writeData(new BCValueOutput(output));
+    }
+
+    @Override
+    public void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        readData(new BCValueInput(input));
+    }
+    //?} else {
+    /*@Override
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        writeData(new BCValueOutput(tag));
+    }
+
+    @Override
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        readData(new BCValueInput(tag));
+    }*/
+    //?}
+
+    protected void writeData(BCValueOutput output) {
+        if (owner != null && GameProfileUtil.getId(owner) != null) {
+            output.putString("ownerUUID", GameProfileUtil.getId(owner).toString());
+            if (GameProfileUtil.getName(owner) != null) {
+                output.putString("ownerName", GameProfileUtil.getName(owner));
             }
         }
         byte sides = 0;
@@ -303,12 +329,10 @@ public class TileFloodGate extends BlockEntity implements IDebuggable {
         output.putByte("openSides", sides);
 
         // Save tank fluid using FluidTank's built-in serialization
-        tank.serialize(output);
+        tank.serialize(output.raw);
     }
 
-    @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
         String ownerUuid = input.getStringOr("ownerUUID", "");
         if (!ownerUuid.isEmpty()) {
             try {
@@ -326,7 +350,7 @@ public class TileFloodGate extends BlockEntity implements IDebuggable {
         }
 
         // Load tank fluid using FluidTank's built-in deserialization
-        tank.deserialize(input);
+        tank.deserialize(input.raw);
     }
 
     // --- Client Sync ---
@@ -345,8 +369,8 @@ public class TileFloodGate extends BlockEntity implements IDebuggable {
 
     @Override
     public void getDebugInfo(List<String> left, List<String> right, Direction side) {
-        left.add("fluid = " + FluidUtilBC.getDebugString(tank));
-        left.add("owner = " + (owner != null ? owner.name() : "none"));
+        left.add("fluid = " + FluidUtilBC.getDebugString(tank.getFluidStack(0)));
+        left.add("owner = " + (owner != null ? GameProfileUtil.getName(owner) : "none"));
         left.add("openSides = " + openSides.stream().map(Enum::name).collect(Collectors.joining(", ")));
         left.add("delay = " + getCurrentDelay());
         left.add("tick = " + tick);

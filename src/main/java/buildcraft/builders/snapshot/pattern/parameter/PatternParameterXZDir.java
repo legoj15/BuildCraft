@@ -22,6 +22,7 @@ import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementMouseClick;
 
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 
 import buildcraft.builders.BCBuildersSprites;
@@ -62,10 +63,10 @@ public enum PatternParameterXZDir implements IStatementParameter {
         Direction dir;
         if (nbt.contains("dir")) {
             // Older versions
-            int d = nbt.getByte("dir").orElse((byte) 0) + 2;
+            int d = NBTUtilBC.getByte(nbt, "dir", (byte) 0) + 2;
             dir = Direction.from2DDataValue(d);
         } else {
-            dir = Direction.from2DDataValue(nbt.getByte("d").orElse((byte) 0));
+            dir = Direction.from2DDataValue(NBTUtilBC.getByte(nbt, "d", (byte) 0));
         }
         PatternParameterXZDir param = map.get(dir);
         if (param == null) {

@@ -168,7 +168,11 @@ public class DestroyingTheWorldTester {
 
     private static TileQuarry placeQuarry(GameTestHelper helper, BlockPos localPos) {
         helper.setBlock(localPos, BCBuildersBlocks.QUARRY.get());
+        //? if >=1.21.10 {
         TileQuarry q = helper.getBlockEntity(localPos, TileQuarry.class);
+        //?} else {
+        /*TileQuarry q = helper.getBlockEntity(localPos);*/
+        //?}
         assertTrue(q != null, "quarry BE must be present at " + localPos);
         return q;
     }

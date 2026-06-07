@@ -11,8 +11,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.Direction;
 
 import buildcraft.api.enums.EnumPowerStage;
@@ -23,6 +21,8 @@ import buildcraft.api.tools.IToolWrench;
 import buildcraft.core.BCCoreBlockEntities;
 import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.MathUtil;
 
 public class TileEngineCreative extends TileEngineBase_BC8 {
@@ -129,14 +129,14 @@ public class TileEngineCreative extends TileEngineBase_BC8 {
     // --- NBT ---
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         output.putInt("currentOutputIndex", currentOutputIndex);
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
         currentOutputIndex = input.getIntOr("currentOutputIndex", 0);
         currentOutputIndex = MathUtil.clamp(currentOutputIndex, 0, OUTPUTS.length - 1);
     }

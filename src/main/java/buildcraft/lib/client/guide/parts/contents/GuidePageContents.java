@@ -15,9 +15,11 @@ import java.util.Set;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.resources.language.I18n;
+//? if >=1.21.10 {
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.CharacterEvent;
+//?}
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
@@ -298,15 +300,23 @@ public class GuidePageContents extends GuidePageBase {
         }
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         double mouseX = event.x();
         double mouseY = event.y();
         int mouseButton = event.button();
-        
+
         if (searchText.isFocused() && searchText.mouseClicked(event, doubleClick)) {
              return true;
         }
+    //?} else {
+    /*@Override
+    public boolean mouseClicked(double mouseX, double mouseY, int mouseButton) {
+        if (searchText.isFocused() && searchText.mouseClicked(mouseX, mouseY, mouseButton)) {
+             return true;
+        }*/
+    //?}
 
         // A click on a sort-order icon must re-sort, not focus search. The search tab's
         // generous hitbox (the 40x34 rect below, carried over verbatim from 1.12.2) overlaps
@@ -341,7 +351,11 @@ public class GuidePageContents extends GuidePageBase {
             return true;
         }
         
+        //? if >=1.21.10 {
         return super.mouseClicked(event, doubleClick);
+        //?} else {
+        /*return super.mouseClicked(mouseX, mouseY, mouseButton);*/
+        //?}
     }
 
     /** True iff (mouseX, mouseY) is over one of the three sort-order icons. Reconstructs the
@@ -363,6 +377,7 @@ public class GuidePageContents extends GuidePageBase {
         return false;
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean keyPressed(KeyEvent event) {
         if (searchText.isFocused()) {
@@ -372,7 +387,19 @@ public class GuidePageContents extends GuidePageBase {
         }
         return super.keyPressed(event);
     }
+    //?} else {
+    /*@Override
+    public boolean keyPressed(int key, int scancode, int modifiers) {
+        if (searchText.isFocused()) {
+            if (searchText.keyPressed(key, scancode, modifiers)) {
+                return true;
+            }
+        }
+        return super.keyPressed(key, scancode, modifiers);
+    }*/
+    //?}
 
+    //? if >=1.21.10 {
     @Override
     public boolean charTyped(CharacterEvent event) {
         if (searchText.isFocused()) {
@@ -382,4 +409,15 @@ public class GuidePageContents extends GuidePageBase {
         }
         return super.charTyped(event);
     }
+    //?} else {
+    /*@Override
+    public boolean charTyped(char chr, int modifiers) {
+        if (searchText.isFocused()) {
+            if (searchText.charTyped(chr, modifiers)) {
+                return true;
+            }
+        }
+        return super.charTyped(chr, modifiers);
+    }*/
+    //?}
 }

@@ -67,7 +67,11 @@ public class MachinePipeConnectivityTester {
         BlockPos pipePos = new BlockPos(1, 2, 2);
 
         helper.setBlock(workbenchPos, BCFactoryBlocks.AUTOWORKBENCH_ITEM.get());
+        //? if >=1.21.10 {
         TileAutoWorkbenchItems workbench = helper.getBlockEntity(workbenchPos, TileAutoWorkbenchItems.class);
+        //?} else {
+        /*TileAutoWorkbenchItems workbench = helper.getBlockEntity(workbenchPos);*/
+        //?}
         // The result slot is extract-access — the natural place a wood pipe pulls crafted output from.
         workbench.invResult.setStackInSlot(0, new ItemStack(Items.DIAMOND));
         // The materials inventory is insert-only: a wood pipe must not extract ingredients from it.
@@ -109,7 +113,11 @@ public class MachinePipeConnectivityTester {
         BlockPos pipePos = new BlockPos(1, 2, 2);
 
         helper.setBlock(tablePos, BCSiliconBlocks.ASSEMBLY_TABLE.get());
+        //? if >=1.21.10 {
         TileAssemblyTable table = helper.getBlockEntity(tablePos, TileAssemblyTable.class);
+        //?} else {
+        /*TileAssemblyTable table = helper.getBlockEntity(tablePos);*/
+        //?}
         // The resource inventory is insert-only — a wood pipe must not pull these out.
         table.inv.setStackInSlot(0, new ItemStack(Items.REDSTONE));
 
@@ -163,7 +171,11 @@ public class MachinePipeConnectivityTester {
         BlockPos pipePos = new BlockPos(1, 2, 2);
 
         helper.setBlock(workbenchPos, BCFactoryBlocks.AUTOWORKBENCH_ITEM.get());
+        //? if >=1.21.10 {
         TileAutoWorkbenchItems workbench = helper.getBlockEntity(workbenchPos, TileAutoWorkbenchItems.class);
+        //?} else {
+        /*TileAutoWorkbenchItems workbench = helper.getBlockEntity(workbenchPos);*/
+        //?}
 
         TilePipeHolder pipeTile = placeItemPipe(helper, pipePos, BCTransportItems.PIPE_CLAY_ITEM.get());
         Pipe pipe = pipeTile.getPipe();
@@ -193,7 +205,11 @@ public class MachinePipeConnectivityTester {
         BlockPos pipePos = new BlockPos(1, 2, 2);
 
         helper.setBlock(architectPos, BCBuildersBlocks.ARCHITECT.get());
+        //? if >=1.21.10 {
         TileArchitectTable architect = helper.getBlockEntity(architectPos, TileArchitectTable.class);
+        //?} else {
+        /*TileArchitectTable architect = helper.getBlockEntity(architectPos);*/
+        //?}
         // Drop a finished blueprint into the output slot a wood pipe pulls from. The box is invalid
         // (placed via setBlock, no land marks), so the Architect never scans or touches this slot.
         architect.invSnapshotOut.setStackInSlot(0, new ItemStack(BCBuildersItems.BLUEPRINT_USED.get()));
@@ -225,7 +241,11 @@ public class MachinePipeConnectivityTester {
         BlockPos pipePos = new BlockPos(1, 2, 2);
 
         helper.setBlock(architectPos, BCBuildersBlocks.ARCHITECT.get());
+        //? if >=1.21.10 {
         TileArchitectTable architect = helper.getBlockEntity(architectPos, TileArchitectTable.class);
+        //?} else {
+        /*TileArchitectTable architect = helper.getBlockEntity(architectPos);*/
+        //?}
 
         TilePipeHolder pipeTile = placeItemPipe(helper, pipePos, BCTransportItems.PIPE_CLAY_ITEM.get());
         Pipe pipe = pipeTile.getPipe();
@@ -307,7 +327,11 @@ public class MachinePipeConnectivityTester {
      *  would, so the resulting tile has a real Pipe + flow + behaviour to exercise. */
     private static TilePipeHolder placeItemPipe(GameTestHelper helper, BlockPos relPos, Item pipeItem) {
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(relPos);*/
+        //?}
         tile.onPlacedBy(null, new ItemStack(pipeItem));
         return tile;
     }
@@ -317,7 +341,11 @@ public class MachinePipeConnectivityTester {
         helper.setBlock(relPos, block);
         ServerLevel level = helper.getLevel();
         BlockPos absPos = helper.absolutePos(relPos);
+        //? if >=1.21.10 {
         var handler = level.getCapability(Capabilities.Item.BLOCK, absPos, Direction.NORTH);
+        //?} else {
+        /*var handler = level.getCapability(Capabilities.ItemHandler.BLOCK, absPos, Direction.NORTH);*/
+        //?}
         helper.assertTrue(handler != null,
             name + " must expose Capabilities.Item.BLOCK so item pipes can connect to it");
     }
@@ -351,12 +379,21 @@ public class MachinePipeConnectivityTester {
         helper.setBlock(relPos, block);
         ServerLevel level = helper.getLevel();
         BlockPos absPos = helper.absolutePos(relPos);
+        //? if >=1.21.10 {
         var energy = level.getCapability(Capabilities.Energy.BLOCK, absPos, Direction.NORTH);
+        //?} else {
+        /*var energy = level.getCapability(Capabilities.EnergyStorage.BLOCK, absPos, Direction.NORTH);*/
+        //?}
         if (expectExposed) {
             helper.assertTrue(energy != null,
                 name + " must expose Forge Energy when MJ-RF autoconversion is enabled");
+            //? if >=1.21.10 {
             helper.assertTrue(energy.getCapacityAsLong() > 0,
                 name + "'s Forge Energy handler should report a non-zero capacity");
+            //?} else {
+            /*helper.assertTrue(energy.getMaxEnergyStored() > 0,
+                name + "'s Forge Energy handler should report a non-zero capacity");*/
+            //?}
         } else {
             helper.assertTrue(energy == null,
                 name + " must not expose Forge Energy under PowerMode.MJ_ONLY");

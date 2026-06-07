@@ -18,6 +18,7 @@ import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementMouseClick;
 
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 
 import buildcraft.builders.BCBuildersSprites;
@@ -36,8 +37,8 @@ public enum PatternParameterHollow implements IStatementParameter {
     }
 
     public static PatternParameterHollow readFromNbt(CompoundTag nbt) {
-        if (nbt.getBoolean("filled").orElse(false)) {
-            if (nbt.getBoolean("outer").orElse(false)) {
+        if (NBTUtilBC.getBoolean(nbt, "filled", false)) {
+            if (NBTUtilBC.getBoolean(nbt, "outer", false)) {
                 return FILLED_OUTER;
             } else {
                 return FILLED_INNER;

@@ -13,7 +13,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomModelData;
+//? if >=1.21.10 {
 import net.minecraft.world.item.component.TooltipDisplay;
+//?}
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import java.util.function.Consumer;
@@ -35,7 +37,7 @@ public class ItemPluggableGate extends Item implements IItemPluggable {
     }
 
     public static GateVariant getVariant(ItemStack stack) {
-        return new GateVariant(NBTUtilBC.getItemData(stack).getCompound("gate").orElse(new CompoundTag()));
+        return new GateVariant(NBTUtilBC.getCompound(NBTUtilBC.getItemData(stack), "gate"));
     }
 
     public ItemStack getStack(GateVariant variant) {
@@ -44,8 +46,13 @@ public class ItemPluggableGate extends Item implements IItemPluggable {
         data.put("gate", variant.writeToNBT());
         NBTUtilBC.setItemData(stack, data);
         // Set CustomModelData with the variant name so minecraft:select can route to the correct model
+        //? if >=1.21.10 {
         stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(
             List.of(), List.of(), List.of(variant.getVariantName()), List.of()));
+        //?} else {
+        /*// 1.21.1: CustomModelData is the single-int record; no string-tag routing available.
+        stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(0));*/
+        //?}
         return stack;
     }
 
@@ -64,8 +71,16 @@ public class ItemPluggableGate extends Item implements IItemPluggable {
     }
 
     @Override
+    //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, display, tooltip, flag);
+    //?} else {
+    /*// 1.21.1: appendHoverText has no TooltipDisplay and takes List<Component>; adapt to the shared
+    // Consumer-based body below via tooltipList::add.
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltipList, TooltipFlag flag) {
+        Consumer<Component> tooltip = tooltipList::add;
+        super.appendHoverText(stack, context, tooltipList, flag);*/
+    //?}
         GateVariant variant = getVariant(stack);
 
         tooltip.accept(Component.translatable("gate.slots", variant.numSlots));

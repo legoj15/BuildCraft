@@ -24,11 +24,15 @@ import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.FluidUtil;
 import net.neoforged.neoforge.capabilities.Capabilities;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
+//?} else {
+/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import buildcraft.lib.fluid.BCFluidTank;*/
+//?}
 
 import net.minecraft.world.level.material.Fluids;
 
@@ -134,6 +138,7 @@ public class FluidUtilBC {
      * Pushes fluid from the given FluidStacksResourceHandler to all adjacent fluid-capable blocks.
      * Uses NeoForge 1.21.11's Capabilities.Fluid.BLOCK with ResourceHandler API.
      */
+    //? if >=1.21.10 {
     public static void pushFluidToNeighbors(Level level, BlockPos pos, FluidStacksResourceHandler tank) {
         if (tank.getAmountAsLong(0) <= 0) return;
         for (Direction dir : Direction.values()) {
@@ -157,6 +162,21 @@ public class FluidUtilBC {
             }
         }
     }
+    //?} else {
+    /*public static void pushFluidToNeighbors(Level level, BlockPos pos, BCFluidTank tank) {
+        if (tank.getAmountMb(0) <= 0) return;
+        for (Direction dir : Direction.values()) {
+            if (tank.getAmountMb(0) <= 0) break;
+            BlockPos neighborPos = pos.relative(dir);
+            IFluidHandler neighbor = level.getCapability(
+                    Capabilities.FluidHandler.BLOCK, neighborPos, dir.getOpposite());
+            if (neighbor == null) continue;
+            if (tank.isTankEmpty(0)) break;
+            int amountToTry = Math.min(tank.getAmountMb(0), 1000);
+            FluidUtil.tryFluidTransfer(neighbor, tank, amountToTry, true);
+        }
+    }*/
+    //?}
 
     public static List<FluidStack> mergeSameFluids(List<FluidStack> fluids) {
         List<FluidStack> stacks = new ArrayList<>();
@@ -196,22 +216,23 @@ public class FluidUtilBC {
      * Moves fluid between two generic ResourceHandlers.
      * @return The fluidstack that was moved, or null if no fluid was moved. 
      */
+    //? if >=1.21.10 {
     @Nullable
     public static FluidStack move(ResourceHandler<FluidResource> from, ResourceHandler<FluidResource> to) {
         return move(from, to, Integer.MAX_VALUE);
     }
 
-    /** 
+    /**
      * Moves a maximum amount of fluid between two generic ResourceHandlers.
      * @param max The maximum amount of fluid to move.
-     * @return The fluidstack that was moved, or null if no fluid was moved. 
+     * @return The fluidstack that was moved, or null if no fluid was moved.
      */
     @Nullable
     public static FluidStack move(ResourceHandler<FluidResource> from, ResourceHandler<FluidResource> to, int max) {
         if (from == null || to == null) {
             return null;
         }
-        
+
         try (Transaction tx = Transaction.openRoot()) {
             // Check what fluid we have before moving, so we can return the correct stack
             FluidResource firstAvailable = FluidResource.EMPTY;
@@ -232,6 +253,21 @@ public class FluidUtilBC {
         }
         return null;
     }
+    //?} else {
+    /*@Nullable
+    public static FluidStack move(IFluidHandler from, IFluidHandler to) {
+        return move(from, to, Integer.MAX_VALUE);
+    }
+
+    @Nullable
+    public static FluidStack move(IFluidHandler from, IFluidHandler to, int max) {
+        if (from == null || to == null) {
+            return null;
+        }
+        FluidStack moved = FluidUtil.tryFluidTransfer(to, from, max, true);
+        return moved.isEmpty() ? null : moved;
+    }*/
+    //?}
 
     /** @return A debug string representation of the given fluid stack, or "empty" if empty. */
     public static String getDebugString(FluidStack stack) {
@@ -239,13 +275,6 @@ public class FluidUtilBC {
             return "empty";
         }
         return stack.getAmount() + " mB " + net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(stack.getFluid());
-    }
-
-    /** @return A debug string matching the 1.12.2 Tank format: "amount / capacity mB of fluidName". */
-    public static String getDebugString(FluidStacksResourceHandler tank) {
-        FluidResource f = tank.getResource(0);
-        String name = f.isEmpty() ? "n/a" : net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(f.getFluid()).toString();
-        return (f.isEmpty() ? 0 : tank.getAmountAsLong(0)) + " / " + tank.getCapacityAsLong(0, FluidResource.EMPTY) + " mB of " + name;
     }
 
     /**
@@ -263,6 +292,7 @@ public class FluidUtilBC {
         return fluid != null && fluid.getFluidType().isLighterThanAir();
     }
 
+    //? if >=1.21.10 {
     public static boolean onTankActivated(Player player, BlockPos pos, InteractionHand hand,
         ResourceHandler<FluidResource> fluidHandler) {
         ItemStack held = player.getItemInHand(hand);
@@ -324,6 +354,16 @@ public class FluidUtilBC {
         }
         return false;
     }
+    //?} else {
+    /*public static boolean onTankActivated(Player player, BlockPos pos, InteractionHand hand,
+        IFluidHandler fluidHandler) {
+        ItemStack held = player.getItemInHand(hand);
+        if (held.isEmpty()) return false;
+        Level world = player.level();
+        if (world.isClientSide()) return true;
+        return FluidUtil.interactWithFluidHandler(player, hand, fluidHandler);
+    }*/
+    //?}
 
     public static ItemStack getFilledBucket(FluidStack fluidStack) {
         if (fluidStack == null || fluidStack.isEmpty()) {

@@ -6,6 +6,8 @@ import net.minecraft.core.NonNullList;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.IFluidTank;
 
+import buildcraft.lib.fluid.BCFluidTank;
+
 public class FluidItemDrops {
 
     public static IItemFluidShard item;
@@ -19,14 +21,13 @@ public class FluidItemDrops {
     }
 
 
-    @SafeVarargs
-    public static void addFluidDrops(NonNullList<ItemStack> toDrop, net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource>... tanks) {
+    public static void addFluidDrops(NonNullList<ItemStack> toDrop, BCFluidTank... tanks) {
         if (item != null) {
-            for (net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> tank : tanks) {
-                if (tank != null && tank.size() > 0) {
-                    net.neoforged.neoforge.transfer.fluid.FluidResource res = tank.getResource(0);
-                    if (!res.isEmpty()) {
-                        item.addFluidDrops(toDrop, res.toStack((int) tank.getAmountAsLong(0)));
+            for (BCFluidTank tank : tanks) {
+                if (tank != null) {
+                    FluidStack fs = tank.getFluidStack(0);
+                    if (!fs.isEmpty()) {
+                        item.addFluidDrops(toDrop, fs);
                     }
                 }
             }

@@ -11,7 +11,9 @@ import net.neoforged.neoforge.fluids.SimpleFluidContent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.Identifier;
+//? if >=1.21.10 {
 import net.minecraft.world.item.component.TooltipDisplay;
+//?}
 import java.util.function.Consumer;
 
 import buildcraft.api.items.IItemFluidShard;
@@ -40,9 +42,18 @@ public class ItemFragileFluidContainer extends Item implements IItemFluidShard {
     }
 
     @Override
+    //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
             Consumer<Component> tooltip, TooltipFlag flagIn) {
         super.appendHoverText(stack, context, display, tooltip, flagIn);
+    //?} else {
+    /*// 1.21.1: appendHoverText has no TooltipDisplay and takes List<Component>; adapt to the shared
+    // Consumer-based body below via tooltipList::add.
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context,
+            List<Component> tooltipList, TooltipFlag flagIn) {
+        Consumer<Component> tooltip = tooltipList::add;
+        super.appendHoverText(stack, context, tooltipList, flagIn);*/
+    //?}
         FluidStack fluid = getFluid(stack);
         if (!fluid.isEmpty() && fluid.getAmount() > 0) {
             tooltip.accept(Component.literal(fluid.getAmount() + " mB / " + MAX_FLUID_HELD + " mB"));

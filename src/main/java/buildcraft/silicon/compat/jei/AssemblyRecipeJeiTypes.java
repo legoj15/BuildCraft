@@ -6,15 +6,15 @@
 
 package buildcraft.silicon.compat.jei;
 
-import mezz.jei.api.recipe.types.IRecipeType;
+import mezz.jei.api.recipe.RecipeType;
 
 /**
- * Holds the JEI {@link IRecipeType} for the Assembly Table. Every entry in the
+ * Holds the JEI {@link RecipeType} for the Assembly Table. Every entry in the
  * category — chipsets, gates, lenses, plugs, gate copier, and the unified
  * cycling facade entry — is an {@link AssemblyRecipeJei}.
  */
 public final class AssemblyRecipeJeiTypes {
-    public static final IRecipeType<AssemblyRecipeJei> ASSEMBLY = IRecipeType.create(
+    public static final RecipeType<AssemblyRecipeJei> ASSEMBLY = RecipeType.create(
             "buildcraftunofficial", "assembly_table", AssemblyRecipeJei.class);
 
     private AssemblyRecipeJeiTypes() {}

@@ -62,7 +62,7 @@ public class ContainerDistiller extends ContainerBC_Neptune {
             int count = buffer.readVarInt();
             for (int i = 0; i < count; i++) {
                 int slot = buffer.readVarInt();
-                Item bucket = BuiltInRegistries.ITEM.getValue(Identifier.parse(buffer.readUtf()));
+                Item bucket = buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.ITEM, Identifier.parse(buffer.readUtf()));
                 JeiTransferUtil.moveBucketToSlot(player.getInventory(), bucket, tile.containerSlots, slot);
             }
             return;

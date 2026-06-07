@@ -26,5 +26,16 @@ public final class RegistryKeyUtil {
         //?}
     }
 
+    /**
+     * Pass-through overload for nodes where {@code RecipeHolder.id()} already yields an
+     * {@link Identifier} (1.21.1, whose RecipeManager is keyed by {@code ResourceLocation}) rather
+     * than a {@link ResourceKey}. Lets {@code RegistryKeyUtil.id(holder.id())} stay version-neutral
+     * at the call site — Java overload resolution picks this by the argument's actual type. Unused
+     * (and unreachable) on nodes whose {@code id()} returns a {@code ResourceKey}.
+     */
+    public static Identifier id(Identifier id) {
+        return id;
+    }
+
     private RegistryKeyUtil() {}
 }

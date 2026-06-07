@@ -26,7 +26,9 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.saveddata.SavedData;
+//? if >=1.21.10 {
 import net.minecraft.world.level.saveddata.SavedDataType;
+//?}
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.datafix.DataFixTypes;
 
@@ -37,20 +39,37 @@ import buildcraft.api.transport.EnumWirePart;
 import buildcraft.api.transport.IWireEmitter;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pluggable.PipePluggable;
+import buildcraft.lib.misc.NBTUtilBC;
 
 import org.jspecify.annotations.Nullable;
 
 public class SavedDataWireSystems extends SavedData {
+    //? if >=26.1 {
     public static final SavedDataType<SavedDataWireSystems> TYPE = new SavedDataType<>(
-        //? if >=26.1 {
         Identifier.withDefaultNamespace("buildcraft_wire_systems"),
-        //?} else {
-        /*"buildcraft_wire_systems",*/
-        //?}
         () -> new SavedDataWireSystems(null),
         makeCodec(null),
         DataFixTypes.SAVED_DATA_MAP_DATA
     );
+    //?} elif >=1.21.10 {
+    /*public static final SavedDataType<SavedDataWireSystems> TYPE = new SavedDataType<>(
+        "buildcraft_wire_systems",
+        () -> new SavedDataWireSystems(null),
+        makeCodec(null),
+        DataFixTypes.SAVED_DATA_MAP_DATA
+    );*/
+    //?} else {
+    /*// 1.21.1: no SavedDataType — use SavedData.Factory (ctor, (tag,provider)->T deserializer, DataFixTypes).
+    public static final SavedData.Factory<SavedDataWireSystems> TYPE = new SavedData.Factory<>(
+        () -> new SavedDataWireSystems(null),
+        (tag, provider) -> {
+            SavedDataWireSystems data = new SavedDataWireSystems(null);
+            data.readFromTag(tag);
+            return data;
+        },
+        DataFixTypes.SAVED_DATA_MAP_DATA
+    );*/
+    //?}
 
     public Level world;
     public final Map<WireSystem, Boolean> wireSystems = new HashMap<>();
@@ -65,6 +84,15 @@ public class SavedDataWireSystems extends SavedData {
     public SavedDataWireSystems(@Nullable ServerLevel level) {
         this.world = level;
     }
+
+    //? if <1.21.10 {
+    /*// 1.21.1: SavedData.save(CompoundTag, Provider) is abstract (no Codec-driven SavedDataType).
+    // Reuse the existing tag serializer; the returned tag is what DimensionDataStorage persists.
+    @Override
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
+        return writeToTag();
+    }*/
+    //?}
 
     private static Codec<SavedDataWireSystems> makeCodec(@Nullable ServerLevel level) {
         return CompoundTag.CODEC.flatXmap(
@@ -243,12 +271,12 @@ public class SavedDataWireSystems extends SavedData {
         wireSystems.clear();
         this.elementsToWireSystemsIndex.clear();
 
-        ListTag entriesList = nbt.getListOrEmpty("entries");
+        ListTag entriesList = NBTUtilBC.getList(nbt, "entries", Tag.TAG_COMPOUND);
         for (int i = 0; i < entriesList.size(); i++) {
             Tag tag = entriesList.get(i);
             if (tag instanceof CompoundTag entry) {
-                CompoundTag wsTag = entry.getCompound("wireSystem").orElse(new CompoundTag());
-                this.addWireSystem(new WireSystem(wsTag), entry.getBooleanOr("powered", false));
+                CompoundTag wsTag = NBTUtilBC.getCompound(entry, "wireSystem");
+                this.addWireSystem(new WireSystem(wsTag), NBTUtilBC.getBoolean(entry, "powered", false));
             }
         }
     }
@@ -258,7 +286,11 @@ public class SavedDataWireSystems extends SavedData {
             throw new UnsupportedOperationException("Attempted to get SavedDataWireSystems on the client!");
         }
         if (world instanceof ServerLevel serverLevel) {
+            //? if >=1.21.10 {
             SavedDataWireSystems instance = serverLevel.getDataStorage().computeIfAbsent(TYPE);
+            //?} else {
+            /*SavedDataWireSystems instance = serverLevel.getDataStorage().computeIfAbsent(TYPE, "buildcraft_wire_systems");*/
+            //?}
             instance.world = world;
             return instance;
         }

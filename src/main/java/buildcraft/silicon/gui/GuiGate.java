@@ -4,7 +4,9 @@ import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
+//? if >=1.21.10 {
 import net.minecraft.client.input.MouseButtonEvent;
+//?}
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
@@ -119,6 +121,7 @@ public class GuiGate extends GuiBC8<ContainerGate> {
         }
     }
 
+    //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         // Check connector button clicks BEFORE super.mouseClicked(), because
@@ -158,6 +161,47 @@ public class GuiGate extends GuiBC8<ContainerGate> {
         }
         return super.mouseClicked(event, doubleClick);
     }
+    //?} else {
+    /*@Override
+    public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
+        // Check connector button clicks BEFORE super.mouseClicked(), because
+        // AbstractContainerScreen.mouseClicked() returns true for any click in the
+        // container area (slot interactions), which would swallow the connector click.
+        if (button == 0) {
+            boolean twoColumns = menu.gate.isSplitInTwo();
+            int horizontalSlotCount = twoColumns ? 2 : 1;
+            int verticalSlotCount = menu.gate.variant.numSlots / horizontalSlotCount;
+            int numTriggerArgs = menu.gate.variant.numTriggerArgs;
+            int numActionArgs = menu.gate.variant.numActionArgs;
+            int slotPairWidth = 18 * (3 + numTriggerArgs + numActionArgs);
+            int slotPairStart = (162 - (slotPairWidth + (twoColumns ? slotPairWidth + 18 : 0))) / 2;
+
+            int mx = (int) mouseXd - leftPos;
+            int my = (int) mouseYd - topPos;
+
+            for (int row = 0; row < verticalSlotCount - 1; row++) {
+                for (int col = 0; col < horizontalSlotCount; col++) {
+                    int connBaseX = slotPairStart + 7 + col * (18 + slotPairWidth) + 18 * (1 + numTriggerArgs);
+                    int connBaseY = 16 + 9 + row * 18;
+
+                    if (mx >= connBaseX && mx < connBaseX + 18 && my >= connBaseY && my < connBaseY + 18) {
+                        int pairIndex = row + col * verticalSlotCount;
+                        boolean newState = !menu.gate.connections[pairIndex];
+                        // Optimistic client-side update for instant visual feedback
+                        menu.gate.connections[pairIndex] = newState;
+                        // Send the change to the server
+                        menu.setConnected(pairIndex, newState);
+                        if (net.minecraft.client.Minecraft.getInstance().player != null) {
+                            net.minecraft.client.Minecraft.getInstance().player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 1.0F, 1.0F);
+                        }
+                        return true;
+                    }
+                }
+            }
+        }
+        return super.mouseClicked(mouseXd, mouseYd, button);
+    }*/
+    //?}
 
     @Override
     protected void init() {

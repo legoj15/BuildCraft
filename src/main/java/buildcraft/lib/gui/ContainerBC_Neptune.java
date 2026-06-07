@@ -19,7 +19,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.server.level.ServerLevel;
+//? if >=1.21.10 {
 import net.minecraft.world.entity.player.StackedItemContents;
+//?} else {
+/*import net.minecraft.world.entity.player.StackedContents;*/
+//?}
 import net.minecraft.world.inventory.RecipeBookMenu;
 import net.minecraft.world.inventory.RecipeBookType;
 import net.minecraft.world.item.crafting.CraftingRecipe;
@@ -49,7 +53,11 @@ import buildcraft.lib.net.PacketBufferBC;
  * {@link MessageContainerPayload}.
  */
 @SuppressWarnings("unchecked")
+//? if >=1.21.10 {
 public abstract class ContainerBC_Neptune extends RecipeBookMenu {
+//?} else {
+/*public abstract class ContainerBC_Neptune extends RecipeBookMenu<net.minecraft.world.item.crafting.CraftingInput, CraftingRecipe> {*/
+//?}
 
     public static final int NET_WIDGET = 0;
     /** Container message ID used by JEI's BlueprintTransferHandler. */
@@ -112,7 +120,11 @@ public abstract class ContainerBC_Neptune extends RecipeBookMenu {
 
         MessageContainerPayload payload = new MessageContainerPayload(containerId, id, bytes);
         if (player.level().isClientSide()) {
+            //? if >=1.21.10 {
             net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(payload);
+            //?} else {
+            /*net.neoforged.neoforge.network.PacketDistributor.sendToServer(payload);*/
+            //?}
         } else if (player instanceof ServerPlayer serverPlayer) {
             PacketDistributor.sendToPlayer(serverPlayer, payload);
         }
@@ -166,11 +178,16 @@ public abstract class ContainerBC_Neptune extends RecipeBookMenu {
             // Look up the recipe by resource location and delegate to handlePlacement().
             Identifier recipeId = Identifier.parse(buffer.readUtf());
             if (player.level() instanceof ServerLevel serverLevel) {
+                //? if >=1.21.10 {
                 net.minecraft.resources.ResourceKey<net.minecraft.world.item.crafting.Recipe<?>> key =
                         net.minecraft.resources.ResourceKey.create(
                                 net.minecraft.core.registries.Registries.RECIPE, recipeId);
                 Optional<RecipeHolder<CraftingRecipe>> holder = serverLevel.recipeAccess()
                         .byKey(key)
+                //?} else {
+                /*Optional<RecipeHolder<CraftingRecipe>> holder = serverLevel.getRecipeManager()
+                        .byKey(recipeId)*/
+                //?}
                         .filter(r -> r.value() instanceof CraftingRecipe)
                         .map(r -> (RecipeHolder<CraftingRecipe>) (RecipeHolder<?>) r);
                 holder.ifPresent(recipe -> handlePlacement(
@@ -182,11 +199,12 @@ public abstract class ContainerBC_Neptune extends RecipeBookMenu {
             int slotIdx = buffer.readUnsignedShort();
             String itemId = buffer.readUtf();
             if (slotIdx >= 0 && slotIdx < slots.size() && slots.get(slotIdx) instanceof SlotPhantom phantom) {
-                net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
-                        Identifier.parse(itemId)).ifPresent(itemRef -> {
-                    ItemStack stack = new ItemStack(itemRef.value(), 1);
+                net.minecraft.world.item.Item ghostItem = buildcraft.lib.misc.RegistryUtilBC.getValue(
+                        net.minecraft.core.registries.BuiltInRegistries.ITEM, Identifier.parse(itemId));
+                if (ghostItem != null) {
+                    ItemStack stack = new ItemStack(ghostItem, 1);
                     phantom.set(stack);
-                });
+                }
             }
         }
     }
@@ -296,6 +314,7 @@ public abstract class ContainerBC_Neptune extends RecipeBookMenu {
 
     // --- RecipeBookMenu defaults (override in containers that support recipe book) ---
 
+    //? if >=1.21.10 {
     @Override
     public PostPlaceAction handlePlacement(boolean useMaxItems, boolean isCreative, RecipeHolder<?> recipe,
         ServerLevel level, Inventory playerInv) {
@@ -311,4 +330,59 @@ public abstract class ContainerBC_Neptune extends RecipeBookMenu {
     public RecipeBookType getRecipeBookType() {
         return RecipeBookType.CRAFTING;
     }
+    //?} else {
+    /*// 1.21.1: RecipeBookMenu<I,R> has NINE abstract methods (vs modern's 3). The base provides
+    // do-nothing stubs (grid size 0) so every non-crafting container compiles; the crafting tables
+    // (ContainerAutoCraftItems / ContainerAdvancedCraftingTable) override the relevant ones.
+    // NOTE: BC's 5-arg handlePlacement is NOT an @Override here — vanilla's 1.21.1 handlePlacement is
+    // 3-arg (boolean, RecipeHolder, ServerPlayer); this overload feeds the JEI transfer path and its
+    // result is unused, so it returns void.
+    public void handlePlacement(boolean useMaxItems, boolean isCreative, RecipeHolder<?> recipe,
+        ServerLevel level, Inventory playerInv) {
+    }
+
+    @Override
+    public void fillCraftSlotsStackedContents(net.minecraft.world.entity.player.StackedContents contents) {
+        // No-op by default
+    }
+
+    @Override
+    public void clearCraftingContent() {
+    }
+
+    @Override
+    public boolean recipeMatches(RecipeHolder<CraftingRecipe> recipe) {
+        return false;
+    }
+
+    @Override
+    public int getResultSlotIndex() {
+        return -1;
+    }
+
+    @Override
+    public int getGridWidth() {
+        return 0;
+    }
+
+    @Override
+    public int getGridHeight() {
+        return 0;
+    }
+
+    @Override
+    public int getSize() {
+        return 0;
+    }
+
+    @Override
+    public RecipeBookType getRecipeBookType() {
+        return RecipeBookType.CRAFTING;
+    }
+
+    @Override
+    public boolean shouldMoveToInventory(int slotIndex) {
+        return false;
+    }*/
+    //?}
 }

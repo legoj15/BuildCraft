@@ -156,8 +156,13 @@ public final class FacadeRedirectTester {
     private static ItemStack baseRequirement() {
         // Mirror FacadeAssemblyRecipes.baseRequirementStack(): 3x structure pipe, or the cobblestone-wall
         // fallback if (somehow) the pipe item isn't registered in this test environment.
+        //? if >=1.21.10 {
         net.minecraft.world.item.Item pipe = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(
             net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_structure"));
+        //?} else {
+        /*net.minecraft.world.item.Item pipe = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+            net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_structure"));*/
+        //?}
         if (pipe == Items.AIR) {
             return new ItemStack(Items.COBBLESTONE_WALL);
         }

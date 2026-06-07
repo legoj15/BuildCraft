@@ -21,8 +21,10 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+//? if >=1.21.10 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+//?}
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -35,6 +37,8 @@ import buildcraft.api.mj.MjBattery;
 import buildcraft.lib.block.ILocalBlockUpdateSubscriber;
 import buildcraft.lib.block.LocalBlockUpdateNotifier;
 import buildcraft.lib.debug.IAdvDebugTarget;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.VolumeUtil;
 import buildcraft.lib.misc.data.AverageLong;
@@ -230,9 +234,36 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
 
     // --- Save / Load (ValueOutput / ValueInput API) ---
 
+    // Platform bridge — TileLaser extends BlockEntity directly (not TileBC_Neptune), so it carries
+    // its own copy of the load/save signature directive (see TileBC_Neptune for the rationale). Subclasses
+    // override writeData/readData (NOT the platform methods).
+    //? if >=1.21.10 {
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
+        writeData(new BCValueOutput(output));
+    }
+
+    @Override
+    public void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        readData(new BCValueInput(input));
+    }
+    //?} else {
+    /*@Override
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        writeData(new BCValueOutput(tag));
+    }
+
+    @Override
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        readData(new BCValueInput(tag));
+    }*/
+    //?}
+
+    protected void writeData(BCValueOutput output) {
         output.store("battery", CompoundTag.CODEC, battery.serializeNBT());
         if (laserPos != null) {
             output.putDouble("laser_x", laserPos.x);
@@ -250,9 +281,7 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
         output.store("avg_power", CompoundTag.CODEC, avgTag);
     }
 
-    @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
         input.read("battery", CompoundTag.CODEC).ifPresent(batteryTag -> battery.deserializeNBT(batteryTag));
         if (input.getBooleanOr("has_target", false)) {
             targetPos = new BlockPos(

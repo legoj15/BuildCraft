@@ -93,7 +93,11 @@ public class BCSiliconJeiPlugin implements IModPlugin {
         // comparisons are cheap; the Phased case keys on the multi-state list and isHollow bit.
         registration.registerSubtypeInterpreter(
                 BCSiliconItems.PLUG_FACADE.get(),
-                (stack, context) -> NBTUtilBC.getItemData(stack).getCompoundOrEmpty("facade")
+                //? if >=1.21.10 {
+                (stack, context) -> NBTUtilBC.getCompound(NBTUtilBC.getItemData(stack), "facade")
+                //?} else {
+                /*(stack, context) -> NBTUtilBC.getCompound(NBTUtilBC.getItemData(stack), "facade").toString()*/
+                //?}
         );
     }
 

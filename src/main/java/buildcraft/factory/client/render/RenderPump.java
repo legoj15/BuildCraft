@@ -11,12 +11,14 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 //? if >=26.1 {
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-//?} else {
+//?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.state.CameraRenderState;*/
 //?}
 import net.minecraft.core.BlockPos;
@@ -42,7 +44,11 @@ import buildcraft.factory.tile.TilePump;
  * four sides and a laser-textured tube beam extending downward.
  * Ported from 1.12.2 RenderPump + RenderTube.
  */
+//? if >=1.21.10 {
 public class RenderPump implements BlockEntityRenderer<TilePump, PumpRenderState> {
+//?} else {
+/*public class RenderPump implements BlockEntityRenderer<TilePump> {*/
+//?}
     /** 16-step red→yellow gradient driven by battery fill %. ABGR; the low byte is red. */
     private static final int[] COLOUR_POWER = new int[16];
 
@@ -83,10 +89,12 @@ public class RenderPump implements BlockEntityRenderer<TilePump, PumpRenderState
     public RenderPump(BlockEntityRendererProvider.Context context) {
     }
 
+    //? if >=1.21.10 {
     @Override
     public PumpRenderState createRenderState() {
         return new PumpRenderState();
     }
+    //?}
 
     @Override
     public boolean shouldRender(TilePump tile, Vec3 cameraPos) {
@@ -94,6 +102,7 @@ public class RenderPump implements BlockEntityRenderer<TilePump, PumpRenderState
         return true;
     }
 
+    //? if >=1.21.10 {
     @Override
     public void submit(PumpRenderState renderState, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
@@ -112,6 +121,14 @@ public class RenderPump implements BlockEntityRenderer<TilePump, PumpRenderState
 
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TilePump tile)) return;
+    //?} else {
+    /*// 1.21.1: classic direct BlockEntityRenderer.render — the tile is passed directly, so no
+    // camera-pos reconstruction is needed. The passed buffers/packedLight/packedOverlay go unused
+    // (the shared body below sources its own buffer/light, exactly as the modern submit path does).
+    @Override
+    public void render(TilePump tile, float partialTicks, PoseStack poseStack,
+                       MultiBufferSource buffers, int packedLight, int packedOverlay) {*/
+    //?}
 
         poseStack.pushPose();
 

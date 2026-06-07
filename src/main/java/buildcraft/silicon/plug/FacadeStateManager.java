@@ -50,6 +50,7 @@ import buildcraft.api.facades.IFacadeRegistry;
 import buildcraft.api.facades.IFacadeState;
 
 import buildcraft.lib.misc.ItemStackKey;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.PacketBufferBC;
 
 public enum FacadeStateManager implements IFacadeRegistry {
@@ -308,7 +309,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
                     FacadePhasedState phasedState = info.createPhased(null);
                     CompoundTag nbt = phasedState.writeToNbt();
                     BlockState nbtReadState = NbtUtils.readBlockState(
-                        BuiltInRegistries.BLOCK, nbt.getCompoundOrEmpty("state"));
+                        buildcraft.lib.misc.RegistryUtilBC.blockLookup(), NBTUtilBC.getCompound(nbt, "state"));
                     if (nbtReadState != info.state) {
                         throw new IllegalStateException("Read (from NBT) state was different! (\n\t"
                             + nbtReadState + "\n !=\n\t" + info.state + "\n\tNBT = " + nbt + "\n)");

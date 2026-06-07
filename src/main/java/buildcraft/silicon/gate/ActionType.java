@@ -12,6 +12,7 @@ import buildcraft.api.statements.IActionInternal;
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.StatementManager;
 
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.lib.statement.ActionWrapper;
 import buildcraft.lib.statement.ActionWrapper.ActionWrapperInternal;
@@ -38,11 +39,11 @@ public class ActionType extends StatementType<ActionWrapper> {
         if (nbt == null) {
             return null;
         }
-        String kind = nbt.getString("kind").orElse("");
+        String kind = NBTUtilBC.getString(nbt, "kind", "");
         if (kind == null || kind.isEmpty()) {
             return null;
         }
-        EnumPipePart side = EnumPipePart.fromMeta(nbt.getByte("side").orElse((byte) 5));
+        EnumPipePart side = EnumPipePart.fromMeta(NBTUtilBC.getByte(nbt, "side", (byte) 5));
         IStatement statement = StatementManager.statements.get(kind);
         if (statement instanceof IAction) {
             return ActionWrapper.wrap(statement, side.face);

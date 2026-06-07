@@ -37,6 +37,7 @@ import buildcraft.lib.client.render.laser.LaserRenderer_BC8;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.VecUtil;
 
 import buildcraft.builders.tile.TileArchitectTable;
@@ -203,10 +204,10 @@ public enum BCBuildersEventDist {
             if (lastFullSpeed == Long.MIN_VALUE) continue;
             if (currentTick - lastFullSpeed > FULL_SPEED_WINDOW_TICKS) continue;
             GameProfile owner = q.getOwner();
-            if (owner == null || owner.id() == null) continue;
-            int next = countByOwner.getOrDefault(owner.id(), 0) + 1;
-            countByOwner.put(owner.id(), next);
-            if (next >= 2) winners.add(owner.id());
+            if (owner == null || GameProfileUtil.getId(owner) == null) continue;
+            int next = countByOwner.getOrDefault(GameProfileUtil.getId(owner), 0) + 1;
+            countByOwner.put(GameProfileUtil.getId(owner), next);
+            if (next >= 2) winners.add(GameProfileUtil.getId(owner));
         }
         return winners;
     }
@@ -249,7 +250,12 @@ public enum BCBuildersEventDist {
     }
 
     /** Called from RenderLevelStageEvent to render quarry frame outlines and drill beams. */
+    //? if >=1.21.10 {
     public void renderAllQuarries(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    //?} else {
+    /*public void renderAllQuarries(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
+    //?}
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
@@ -258,7 +264,11 @@ public enum BCBuildersEventDist {
             return;
         }
 
+        //? if >=1.21.10 {
         Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
+        //?} else {
+        /*Vec3 cameraPos = event.getCamera().getPosition();*/
+        //?}
         PoseStack poseStack = event.getPoseStack();
         float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
@@ -369,11 +379,20 @@ public enum BCBuildersEventDist {
 
     /** Called from RenderLevelStageEvent to render architect table laser box outlines and the
      * fading green "digitizing" cubes for blocks currently being scanned. */
+    //? if >=1.21.10 {
     public void renderAllArchitectTables(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    //?} else {
+    /*public void renderAllArchitectTables(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
+    //?}
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
+        //? if >=1.21.10 {
         Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
+        //?} else {
+        /*Vec3 cameraPos = event.getCamera().getPosition();*/
+        //?}
         PoseStack poseStack = event.getPoseStack();
 
         Deque<WeakReference<TileArchitectTable>> tables = allArchitectTables.get(mc.level);
@@ -456,14 +475,23 @@ public enum BCBuildersEventDist {
      *  floating robot cube while it's breaking blocks, and the break lasers from the robot to
      *  each target. Place-task block-throwing animation lives in
      *  {@link #renderAllBuildersCustomGeometry}. */
+    //? if >=1.21.10 {
     public void renderAllBuilders(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    //?} else {
+    /*public void renderAllBuilders(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
+    //?}
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
         Deque<WeakReference<TileBuilder>> builders = allBuilders.get(mc.level);
         if (builders == null || builders.isEmpty()) return;
 
+        //? if >=1.21.10 {
         Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
+        //?} else {
+        /*Vec3 cameraPos = event.getCamera().getPosition();*/
+        //?}
         PoseStack poseStack = event.getPoseStack();
         float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
@@ -619,6 +647,7 @@ public enum BCBuildersEventDist {
      *  as {@link buildcraft.builders.snapshot.SnapshotBuilder#getPlaceTaskItemPos}. Without this
      *  the compiler treats each dereference of {@code ?} as a fresh capture and fails the
      *  method-reference type check. */
+    //? if >=1.21.10 {
     private static <T extends buildcraft.builders.snapshot.ITileForSnapshotBuilder> void renderPlaceTasks(
             buildcraft.builders.snapshot.SnapshotBuilder<T> active,
             Vec3 cameraPos,
@@ -654,16 +683,26 @@ public enum BCBuildersEventDist {
             }
         }
     }
+    //?}
 
     /** Called from RenderLevelStageEvent to render filler laser box outlines. */
+    //? if >=1.21.10 {
     public void renderAllFillers(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    //?} else {
+    /*public void renderAllFillers(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
+    //?}
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
         Deque<WeakReference<TileFiller>> fillers = allFillers.get(mc.level);
         if (fillers == null || fillers.isEmpty()) return;
 
+        //? if >=1.21.10 {
         Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
+        //?} else {
+        /*Vec3 cameraPos = event.getCamera().getPosition();*/
+        //?}
         PoseStack poseStack = event.getPoseStack();
 
         Iterator<WeakReference<TileFiller>> iter = fillers.iterator();

@@ -36,8 +36,6 @@ import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.IAreaProvider;
@@ -54,6 +52,9 @@ import buildcraft.api.tiles.IControllable;
 import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.mj.MjBatteryReceiver;
@@ -280,7 +281,7 @@ public class TileFiller extends TileBC_Neptune
                 // false→true transition — in LOOP mode this branch re-enters every tick once
                 // the builder has nothing left to do.
                 if (!finished && mode == Mode.LOOP && owner != null) {
-                    AdvancementUtil.unlockAdvancement(owner.id(), level, ADVANCEMENT_BUILDING_FOR_THE_FUTURE);
+                    AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(owner), level, ADVANCEMENT_BUILDING_FOR_THE_FUTURE);
                 }
                 finished = true;
                 // Clear stale render cache so the client receives empty task lists
@@ -305,8 +306,8 @@ public class TileFiller extends TileBC_Neptune
     // ==================== NBT ====================
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         output.putLong("battery_mj", battery.getStored());
         output.putBoolean("canExcavate", canExcavate);
         output.putBoolean("inverted", inverted);
@@ -344,15 +345,15 @@ public class TileFiller extends TileBC_Neptune
 
         // Owner
         if (owner != null) {
-            ValueOutput ownerChild = output.child("owner");
-            ownerChild.putString("name", owner.name() != null ? owner.name() : "");
-            ownerChild.putString("uuid", owner.id() != null ? owner.id().toString() : "");
+            BCValueOutput ownerChild = output.child("owner");
+            ownerChild.putString("name", GameProfileUtil.getName(owner) != null ? GameProfileUtil.getName(owner) : "");
+            ownerChild.putString("uuid", GameProfileUtil.getId(owner) != null ? GameProfileUtil.getId(owner).toString() : "");
         }
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
         // Battery: absolute set. Replaces the prior extractAll() + addPower() workaround that
         // existed because addPower lacks capacity clamping; setStored is the proper API.
         long stored = input.getLongOr("battery_mj", 0L);
@@ -425,9 +426,9 @@ public class TileFiller extends TileBC_Neptune
         }
 
         // Owner
-        Optional<ValueInput> ownerInputOpt = input.child("owner");
+        Optional<BCValueInput> ownerInputOpt = input.child("owner");
         if (ownerInputOpt.isPresent()) {
-            ValueInput ownerInput = ownerInputOpt.get();
+            BCValueInput ownerInput = ownerInputOpt.get();
             String uuidStr = ownerInput.getStringOr("uuid", "");
             String name = ownerInput.getStringOr("name", "");
             if (!uuidStr.isEmpty()) {
@@ -560,8 +561,10 @@ public class TileFiller extends TileBC_Neptune
         if (stack.isEmpty()) return ItemStack.EMPTY;
         java.util.List<Direction> faces = new java.util.ArrayList<>(java.util.List.of(Direction.values()));
         java.util.Collections.shuffle(faces);
+        //? if >=1.21.10 {
         net.neoforged.neoforge.transfer.item.ItemResource resource =
                 net.neoforged.neoforge.transfer.item.ItemResource.of(stack);
+        //?}
         int remaining = stack.getCount();
         for (Direction face : faces) {
             if (remaining <= 0) break;
@@ -572,6 +575,7 @@ public class TileFiller extends TileBC_Neptune
             // systems aren't recognized here — if a modded pipe registers Capabilities.Item.BLOCK
             // it would still siphon, but that's a known edge case we accept.
             if (adjBe instanceof buildcraft.api.transport.pipe.IPipeHolder) continue;
+            //? if >=1.21.10 {
             var handler = serverLevel.getCapability(
                     net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK,
                     adj, face.getOpposite());
@@ -579,6 +583,15 @@ public class TileFiller extends TileBC_Neptune
             int inserted = net.neoforged.neoforge.transfer.ResourceHandlerUtil.insertStacking(
                     handler, resource, remaining, null);
             remaining -= inserted;
+            //?} else {
+            /*var handler = serverLevel.getCapability(
+                    net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
+                    adj, face.getOpposite());
+            if (handler == null) continue;
+            ItemStack leftover = net.neoforged.neoforge.items.ItemHandlerHelper.insertItemStacked(
+                    handler, stack.copyWithCount(remaining), false);
+            remaining = leftover.getCount();*/
+            //?}
         }
         return remaining <= 0 ? ItemStack.EMPTY : stack.copyWithCount(remaining);
     }

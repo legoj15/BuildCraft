@@ -29,6 +29,8 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
+import buildcraft.lib.misc.RegistrationUtilBC;
+
 /**
  * Registers all BuildCraft Energy fluids at 3 temperature levels.
  *
@@ -222,7 +224,9 @@ public class BCEnergyFluids {
                         .canSwim(!turnOffSplashes)
                         .canPushEntity(true)
                         .canDrown(true)
+                        //? if >=1.21.10 {
                         .isWaterLike(!turnOffSplashes)
+                        //?}
                         .sound(SoundActions.BUCKET_FILL, SoundEvents.BUCKET_FILL)
                         .sound(SoundActions.BUCKET_EMPTY, SoundEvents.BUCKET_EMPTY)
                 ));
@@ -245,7 +249,7 @@ public class BCEnergyFluids {
 
         // Block
         MapColor mapColor = gaseous ? MapColor.NONE : MapColor.COLOR_BLACK;
-        blockHolder[0] = BLOCKS.registerBlock(regName,
+        blockHolder[0] = RegistrationUtilBC.registerBlock(BLOCKS, regName,
                 props -> new LiquidBlock(sourceHolder[0].get(), props
                         .mapColor(mapColor)
                         .replaceable()
@@ -257,7 +261,7 @@ public class BCEnergyFluids {
                 ), () -> BlockBehaviour.Properties.of());
 
         // Bucket
-        bucketHolder[0] = ITEMS.registerItem(regName + "_bucket",
+        bucketHolder[0] = RegistrationUtilBC.registerItem(ITEMS, regName + "_bucket",
                 props -> new BucketItem(sourceHolder[0].get(), props
                         .craftRemainder(Items.BUCKET)
                         .stacksTo(1)
@@ -332,7 +336,11 @@ public class BCEnergyFluids {
         }
 
         @Override
+        //? if >=1.21.10 {
         public void tick(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state, FluidState fluidState) {
+        //?} else {
+        /*public void tick(net.minecraft.world.level.Level level, BlockPos pos, FluidState fluidState) {*/
+        //?}
             if (isDenseFluid()) {
                 BlockPos below = pos.below();
                 FluidState stateBelow = level.getFluidState(below);
@@ -341,7 +349,11 @@ public class BCEnergyFluids {
                     level.setBlockAndUpdate(below, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
                 }
             }
+            //? if >=1.21.10 {
             super.tick(level, pos, state, fluidState);
+            //?} else {
+            /*super.tick(level, pos, fluidState);*/
+            //?}
 
             if (!isDenseFluid() && !fluidState.isSource()) {
                 BlockPos below = pos.below();
@@ -371,7 +383,11 @@ public class BCEnergyFluids {
         }
 
         @Override
+        //? if >=1.21.10 {
         protected java.util.Map<Direction, FluidState> getSpread(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state) {
+        //?} else {
+        /*protected java.util.Map<Direction, FluidState> getSpread(net.minecraft.world.level.Level level, BlockPos pos, BlockState state) {*/
+        //?}
             java.util.Map<Direction, FluidState> map = new java.util.EnumMap<>(super.getSpread(level, pos, state));
             FluidState belowFluid = level.getFluidState(pos.below());
             if (!isDenseFluid() && belowFluid.is(FluidTags.WATER) && !belowFluid.getType().isSame(this)) {
@@ -410,7 +426,11 @@ public class BCEnergyFluids {
         }
 
         @Override
+        //? if >=1.21.10 {
         public void tick(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state, FluidState fluidState) {
+        //?} else {
+        /*public void tick(net.minecraft.world.level.Level level, BlockPos pos, FluidState fluidState) {*/
+        //?}
             if (isDenseFluid()) {
                 BlockPos below = pos.below();
                 FluidState stateBelow = level.getFluidState(below);
@@ -419,7 +439,11 @@ public class BCEnergyFluids {
                     level.setBlockAndUpdate(below, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
                 }
             }
+            //? if >=1.21.10 {
             super.tick(level, pos, state, fluidState);
+            //?} else {
+            /*super.tick(level, pos, fluidState);*/
+            //?}
 
             if (!isDenseFluid() && !fluidState.isSource()) {
                 BlockPos below = pos.below();
@@ -448,7 +472,11 @@ public class BCEnergyFluids {
         }
 
         @Override
+        //? if >=1.21.10 {
         protected java.util.Map<Direction, FluidState> getSpread(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state) {
+        //?} else {
+        /*protected java.util.Map<Direction, FluidState> getSpread(net.minecraft.world.level.Level level, BlockPos pos, BlockState state) {*/
+        //?}
             java.util.Map<Direction, FluidState> map = new java.util.EnumMap<>(super.getSpread(level, pos, state));
             if (!isDenseFluid() && level.getFluidState(pos.below()).is(FluidTags.WATER)) {
                  for (Direction dir : Direction.Plane.HORIZONTAL) {

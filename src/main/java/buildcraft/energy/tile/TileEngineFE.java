@@ -12,15 +12,16 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.capabilities.Capabilities;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
+//?} else {
+/*import net.neoforged.neoforge.energy.IEnergyStorage;*/
+//?}
 import buildcraft.api.mj.MjRfConversion;
 
-import net.neoforged.neoforge.transfer.energy.SimpleEnergyHandler;
+import buildcraft.lib.mj.BCFeStorage;
 
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.MjAPI;
@@ -29,6 +30,8 @@ import buildcraft.energy.BCEnergyBlockEntities;
 import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
 
 @SuppressWarnings("this-escape")
 public class TileEngineFE extends TileEngineBase_BC8 {
@@ -58,9 +61,9 @@ public class TileEngineFE extends TileEngineBase_BC8 {
         upgrades.setLimitedInsertor(1);
     }
 
-    public final SimpleEnergyHandler energyStorage = new SimpleEnergyHandler(MAX_FE, MAX_FE, 0) {
+    public final BCFeStorage energyStorage = new BCFeStorage(MAX_FE, MAX_FE, 0) {
         @Override
-        protected void onEnergyChanged(int previousAmount) {
+        protected void onFeChanged() {
             setChanged();
         }
     };
@@ -140,6 +143,7 @@ public class TileEngineFE extends TileEngineBase_BC8 {
             if (dir == orientation) continue; // facing side is MJ output
             if (currentFe >= MAX_FE) break;
             BlockPos neighborPos = getBlockPos().relative(dir);
+            //? if >=1.21.10 {
             EnergyHandler handler = level.getCapability(
                 Capabilities.Energy.BLOCK, neighborPos, dir.getOpposite());
             if (handler == null) continue;
@@ -153,6 +157,18 @@ public class TileEngineFE extends TileEngineBase_BC8 {
                     transaction.commit();
                 }
             }
+            //?} else {
+            /*net.neoforged.neoforge.energy.IEnergyStorage handler = level.getCapability(
+                Capabilities.EnergyStorage.BLOCK, neighborPos, dir.getOpposite());
+            if (handler == null) continue;
+            int want = MAX_FE - currentFe;
+            if (want <= 0) break;
+            int extracted = handler.extractEnergy(want, false);
+            if (extracted > 0) {
+                currentFe += extracted;
+                energyStorage.set(currentFe);
+            }*/
+            //?}
         }
     }
 
@@ -213,15 +229,15 @@ public class TileEngineFE extends TileEngineBase_BC8 {
     }
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         output.putInt("currentFe", getCurrentFe());
         output.store("upgrades", net.minecraft.nbt.CompoundTag.CODEC, upgrades.serializeNBT());
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
         setCurrentFe(input.getIntOr("currentFe", 0));
         upgrades.deserializeNBT(input.read("upgrades", net.minecraft.nbt.CompoundTag.CODEC).orElseGet(net.minecraft.nbt.CompoundTag::new));
     }

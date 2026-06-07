@@ -28,8 +28,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 
 import buildcraft.api.core.EnumPipePart;
@@ -43,6 +41,9 @@ import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -439,7 +440,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
         invSnapshotOut.setStackInSlot(0, usedItem.createUsedStack(
             new Header(
                 snapshot.key,
-                getOwner() != null ? getOwner().id() : new java.util.UUID(0, 0),
+                getOwner() != null ? GameProfileUtil.getId(getOwner()) : new java.util.UUID(0, 0),
                 new Date(),
                 name
             )
@@ -451,11 +452,11 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
         blueprintScannedData = null;
         blueprintScannedEntities.clear();
         if (getOwner() != null) {
-            AdvancementUtil.unlockAdvancement(getOwner().id(), level, ADVANCEMENT);
+            AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT);
             String paperCriterion = (snapshotType == EnumSnapshotType.BLUEPRINT)
                 ? buildcraft.core.PaperAdvancement.WRITE_TO_BLUEPRINT
                 : buildcraft.core.PaperAdvancement.WRITE_TO_TEMPLATE;
-            AdvancementUtil.unlockAdvancement(getOwner().id(), level,
+            AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level,
                 buildcraft.core.PaperAdvancement.ID, paperCriterion);
         }
         setChanged();
@@ -470,8 +471,8 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
     // NBT
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
         if (box.isInitialized()) {
             output.putBoolean("box_initialized", true);
             BlockPos bMin = box.min();
@@ -497,8 +498,8 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
     }
 
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
+    protected void readData(BCValueInput input) {
+        super.readData(input);
         if (input.getBooleanOr("box_initialized", false)) {
             int minX = input.getIntOr("box_minX", 0);
             int minY = input.getIntOr("box_minY", 0);
@@ -517,6 +518,15 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
         snapshotType = (stOrd >= 0 && stOrd < stValues.length) ? stValues[stOrd] : EnumSnapshotType.BLUEPRINT;
         isValid = input.getBooleanOr("isValid", false);
         name = input.getStringOr("name", "<unnamed>");
+        // A scan interrupted by chunk unload/reload can't truly resume — the partial scan buffers
+        // (palette + one int/bit per cell, megabytes for a large volume) aren't persisted, so the scan
+        // restarts on the next tick (scanInitialized defaults false). scanTotal isn't persisted either,
+        // so re-derive it here; otherwise it stays 0 and the progress bar reads empty for the whole
+        // re-scan (most visible on the large volumes that are slow enough to be reloaded mid-scan).
+        if (scanning && box.isInitialized()) {
+            scanTotal = box.size().getX() * box.size().getY() * box.size().getZ();
+            scanProgress = 0;
+        }
         input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
         // Migrate the transient pre-fix plain-ItemStack format: earlier in the 26.1 port the two
         // snapshot slots were stored under top-level "invSnapshotIn" / "invSnapshotOut" keys. If a

@@ -36,7 +36,8 @@ public class PipeBehaviourDiamondFluid extends PipeBehaviourDiamond {
                 for (int i = 0; i < FILTERS_PER_SIDE; i++) {
                     ItemStack compareTo = filters.getStackInSlot(offset + i);
                     if (compareTo.isEmpty()) continue;
-                    
+
+                    //? if >=1.21.10 {
                     net.neoforged.neoforge.transfer.access.ItemAccess access = net.neoforged.neoforge.transfer.access.ItemAccess.forStack(compareTo);
                     net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> handler = access.getCapability(net.neoforged.neoforge.capabilities.Capabilities.Fluid.ITEM);
                     FluidStack target = FluidStack.EMPTY;
@@ -49,7 +50,10 @@ public class PipeBehaviourDiamondFluid extends PipeBehaviourDiamond {
                             }
                         }
                     }
-                    
+                    //?} else {
+                    /*FluidStack target = net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(compareTo).orElse(FluidStack.EMPTY);*/
+                    //?}
+
                     if (target.isEmpty()) {
                         continue;
                     }

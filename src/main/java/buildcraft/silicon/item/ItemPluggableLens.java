@@ -65,13 +65,13 @@ public class ItemPluggableLens extends Item implements IItemPluggable {
     public static DyeColor getColour(@Nonnull ItemStack stack) {
         CompoundTag nbt = NBTUtilBC.getItemData(stack);
         if (nbt.contains("colour")) {
-            return DyeColor.byName(nbt.getStringOr("colour", ""), null);
+            return DyeColor.byName(NBTUtilBC.getString(nbt, "colour", ""), null);
         }
         return null;
     }
 
     public static boolean isFilter(@Nonnull ItemStack stack) {
-        return NBTUtilBC.getItemData(stack).getBooleanOr("isFilter", false);
+        return NBTUtilBC.getBoolean(NBTUtilBC.getItemData(stack), "isFilter", false);
     }
 
     @Nullable

@@ -15,6 +15,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 
+import buildcraft.lib.misc.NBTUtilBC;
+
 public class ZoneChunk {
     public BitSet property;
     private boolean fullSet = false;
@@ -84,11 +86,12 @@ public class ZoneChunk {
     }
 
     public void readFromNBT(CompoundTag nbt) {
-        fullSet = nbt.getBooleanOr("fullSet", false);
+        fullSet = NBTUtilBC.getBoolean(nbt, "fullSet", false);
 
-        nbt.getByteArray("bits").ifPresent(bytes -> {
+        byte[] bytes = NBTUtilBC.getByteArray(nbt, "bits", null);
+        if (bytes != null) {
             property = BitSet.valueOf(bytes);
-        });
+        }
     }
 
     public BlockPos getRandomBlockPos(Random rand) {

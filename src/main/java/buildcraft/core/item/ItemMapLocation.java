@@ -18,10 +18,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.CustomModelData;
+//? if >=1.21.10 {
 import net.minecraft.world.item.component.TooltipDisplay;
+//?}
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionHand;
@@ -38,6 +41,7 @@ import buildcraft.api.core.IPathProvider;
 import buildcraft.api.core.IZone;
 import buildcraft.api.items.IMapLocation;
 
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.data.Box;
 
 @SuppressWarnings("deprecation")
@@ -60,7 +64,7 @@ public class ItemMapLocation extends Item implements IMapLocation {
         if (!tag.contains(TAG_MAP_TYPE)) {
             return MapLocationType.CLEAN;
         }
-        String typeName = tag.getString(TAG_MAP_TYPE).orElse("");
+        String typeName = NBTUtilBC.getString(tag, TAG_MAP_TYPE, "");
         try {
             return MapLocationType.valueOf(typeName);
         } catch (IllegalArgumentException e) {
@@ -85,12 +89,17 @@ public class ItemMapLocation extends Item implements IMapLocation {
             stack.remove(DataComponents.CUSTOM_MODEL_DATA);
         } else {
             // ordinal: CLEAN=0, SPOT=1, AREA=2, PATH=3, ZONE=4, PATH_REPEATING=5
+            //? if >=1.21.10 {
             stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(
                     java.util.List.of((float) type.ordinal()),
                     java.util.List.of(),
                     java.util.List.of(),
                     java.util.List.of()
             ));
+            //?} else {
+            /*// 1.21.1: CustomModelData is the single-int record.
+            stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(type.ordinal()));*/
+            //?}
         }
     }
 
@@ -118,22 +127,31 @@ public class ItemMapLocation extends Item implements IMapLocation {
 
     private static BlockPos readBlockPosNbt(CompoundTag tag) {
         return new BlockPos(
-            tag.getInt("X").orElse(0),
-            tag.getInt("Y").orElse(0),
-            tag.getInt("Z").orElse(0)
+            NBTUtilBC.getInt(tag, "X", 0),
+            NBTUtilBC.getInt(tag, "Y", 0),
+            NBTUtilBC.getInt(tag, "Z", 0)
         );
     }
 
     // --- Tooltip ---
 
     @Override
+    //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
             Consumer<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, display, tooltip, flag);
+    //?} else {
+    /*// 1.21.1: appendHoverText has no TooltipDisplay and takes List<Component>; adapt to the shared
+    // Consumer-based body below via tooltipList::add.
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context,
+            List<Component> tooltipList, TooltipFlag flag) {
+        Consumer<Component> tooltip = tooltipList::add;
+        super.appendHoverText(stack, context, tooltipList, flag);*/
+    //?}
         CompoundTag cpt = getCustomTag(stack);
 
         if (cpt.contains("name")) {
-            String name = cpt.getString("name").orElse("");
+            String name = NBTUtilBC.getString(cpt, "name", "");
             if (!name.isEmpty()) {
                 tooltip.accept(Component.literal(name));
             }
@@ -143,10 +161,10 @@ public class ItemMapLocation extends Item implements IMapLocation {
         switch (type) {
             case SPOT: {
                 if (cpt.contains("x") && cpt.contains("y") && cpt.contains("z") && cpt.contains("side")) {
-                    int x = cpt.getInt("x").orElse(0);
-                    int y = cpt.getInt("y").orElse(0);
-                    int z = cpt.getInt("z").orElse(0);
-                    Direction side = Direction.values()[cpt.getByte("side").orElse((byte) 0)];
+                    int x = NBTUtilBC.getInt(cpt, "x", 0);
+                    int y = NBTUtilBC.getInt(cpt, "y", 0);
+                    int z = NBTUtilBC.getInt(cpt, "z", 0);
+                    Direction side = Direction.values()[NBTUtilBC.getByte(cpt, "side", (byte) 0)];
                     tooltip.accept(Component.literal("{" + x + ", " + y + ", " + z + ", " + side + "}"));
                 }
                 break;
@@ -154,12 +172,12 @@ public class ItemMapLocation extends Item implements IMapLocation {
             case AREA: {
                 if (cpt.contains("xMin") && cpt.contains("yMin") && cpt.contains("zMin")
                         && cpt.contains("xMax") && cpt.contains("yMax") && cpt.contains("zMax")) {
-                    int x = cpt.getInt("xMin").orElse(0);
-                    int y = cpt.getInt("yMin").orElse(0);
-                    int z = cpt.getInt("zMin").orElse(0);
-                    int xLength = cpt.getInt("xMax").orElse(0) - x + 1;
-                    int yLength = cpt.getInt("yMax").orElse(0) - y + 1;
-                    int zLength = cpt.getInt("zMax").orElse(0) - z + 1;
+                    int x = NBTUtilBC.getInt(cpt, "xMin", 0);
+                    int y = NBTUtilBC.getInt(cpt, "yMin", 0);
+                    int z = NBTUtilBC.getInt(cpt, "zMin", 0);
+                    int xLength = NBTUtilBC.getInt(cpt, "xMax", 0) - x + 1;
+                    int yLength = NBTUtilBC.getInt(cpt, "yMax", 0) - y + 1;
+                    int zLength = NBTUtilBC.getInt(cpt, "zMax", 0) - z + 1;
                     tooltip.accept(Component.literal(
                         "{" + x + ", " + y + ", " + z + "} + {" + xLength + " x " + yLength + " x " + zLength + "}"));
                 }
@@ -167,9 +185,9 @@ public class ItemMapLocation extends Item implements IMapLocation {
             }
             case PATH:
             case PATH_REPEATING: {
-                ListTag pathNBT = cpt.getList("path").orElse(null);
+                ListTag pathNBT = NBTUtilBC.getListOrNull(cpt, "path", Tag.TAG_COMPOUND);
                 if (pathNBT != null && pathNBT.size() > 0) {
-                    CompoundTag firstTag = pathNBT.getCompound(0).orElse(null);
+                    CompoundTag firstTag = NBTUtilBC.getCompoundOrNull(pathNBT, 0);
                     if (firstTag != null) {
                         BlockPos first = readBlockPosNbt(firstTag);
                         tooltip.accept(Component.literal(
@@ -191,7 +209,19 @@ public class ItemMapLocation extends Item implements IMapLocation {
     // --- Right-click in air (shift to clear) ---
 
     @Override
+    //? if >=1.21.10 {
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
+        return useImpl(level, player, hand);
+    }
+    //?} else {
+    /*// 1.21.1: Item.use returns InteractionResultHolder<ItemStack>. Wrap the shared InteractionResult
+    // logic (useImpl) with the held stack — InteractionResult.PASS/SUCCESS are version-neutral.
+    public net.minecraft.world.InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        return new net.minecraft.world.InteractionResultHolder<>(useImpl(level, player, hand), player.getItemInHand(hand));
+    }*/
+    //?}
+
+    private InteractionResult useImpl(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (level.isClientSide()) {
             return InteractionResult.PASS;
@@ -304,14 +334,14 @@ public class ItemMapLocation extends Item implements IMapLocation {
 
     public static IBox getAreaBox(@Nonnull ItemStack item) {
         CompoundTag cpt = getCustomTag(item);
-        int xMin = cpt.getInt("xMin").orElse(0);
-        int yMin = cpt.getInt("yMin").orElse(0);
-        int zMin = cpt.getInt("zMin").orElse(0);
+        int xMin = NBTUtilBC.getInt(cpt, "xMin", 0);
+        int yMin = NBTUtilBC.getInt(cpt, "yMin", 0);
+        int zMin = NBTUtilBC.getInt(cpt, "zMin", 0);
         BlockPos min = new BlockPos(xMin, yMin, zMin);
 
-        int xMax = cpt.getInt("xMax").orElse(0);
-        int yMax = cpt.getInt("yMax").orElse(0);
-        int zMax = cpt.getInt("zMax").orElse(0);
+        int xMax = NBTUtilBC.getInt(cpt, "xMax", 0);
+        int yMax = NBTUtilBC.getInt(cpt, "yMax", 0);
+        int zMax = NBTUtilBC.getInt(cpt, "zMax", 0);
         BlockPos max = new BlockPos(xMax, yMax, zMax);
 
         return new Box(min, max);
@@ -323,9 +353,9 @@ public class ItemMapLocation extends Item implements IMapLocation {
 
         switch (type) {
             case SPOT: {
-                int x = cpt.getInt("x").orElse(0);
-                int y = cpt.getInt("y").orElse(0);
-                int z = cpt.getInt("z").orElse(0);
+                int x = NBTUtilBC.getInt(cpt, "x", 0);
+                int y = NBTUtilBC.getInt(cpt, "y", 0);
+                int z = NBTUtilBC.getInt(cpt, "z", 0);
                 BlockPos pos = new BlockPos(x, y, z);
                 return new Box(pos, pos);
             }
@@ -336,7 +366,7 @@ public class ItemMapLocation extends Item implements IMapLocation {
 
     public static Direction getPointFace(@Nonnull ItemStack stack) {
         CompoundTag cpt = getCustomTag(stack);
-        return Direction.values()[cpt.getByte("side").orElse((byte) 0)];
+        return Direction.values()[NBTUtilBC.getByte(cpt, "side", (byte) 0)];
     }
 
     @Override
@@ -359,7 +389,7 @@ public class ItemMapLocation extends Item implements IMapLocation {
 
         if (type == MapLocationType.SPOT) {
             CompoundTag cpt = getCustomTag(item);
-            return Direction.values()[cpt.getByte("side").orElse((byte) 0)];
+            return Direction.values()[NBTUtilBC.getByte(cpt, "side", (byte) 0)];
         }
         return null;
     }
@@ -371,9 +401,9 @@ public class ItemMapLocation extends Item implements IMapLocation {
 
         if (type == MapLocationType.SPOT) {
             return new BlockPos(
-                cpt.getInt("x").orElse(0),
-                cpt.getInt("y").orElse(0),
-                cpt.getInt("z").orElse(0)
+                NBTUtilBC.getInt(cpt, "x", 0),
+                NBTUtilBC.getInt(cpt, "y", 0),
+                NBTUtilBC.getInt(cpt, "z", 0)
             );
         }
         return null;
@@ -404,10 +434,10 @@ public class ItemMapLocation extends Item implements IMapLocation {
             case PATH:
             case PATH_REPEATING: {
                 List<BlockPos> indexList = new ArrayList<>();
-                ListTag pathNBT = cpt.getList("path").orElse(null);
+                ListTag pathNBT = NBTUtilBC.getListOrNull(cpt, "path", Tag.TAG_COMPOUND);
                 if (pathNBT != null) {
                     for (int i = 0; i < pathNBT.size(); i++) {
-                        CompoundTag posTag = pathNBT.getCompound(i).orElse(null);
+                        CompoundTag posTag = NBTUtilBC.getCompoundOrNull(pathNBT, i);
                         if (posTag != null) {
                             indexList.add(readBlockPosNbt(posTag));
                         }
@@ -418,9 +448,9 @@ public class ItemMapLocation extends Item implements IMapLocation {
             case SPOT: {
                 List<BlockPos> indexList = new ArrayList<>();
                 indexList.add(new BlockPos(
-                    cpt.getInt("x").orElse(0),
-                    cpt.getInt("y").orElse(0),
-                    cpt.getInt("z").orElse(0)
+                    NBTUtilBC.getInt(cpt, "x", 0),
+                    NBTUtilBC.getInt(cpt, "y", 0),
+                    NBTUtilBC.getInt(cpt, "z", 0)
                 ));
                 return indexList;
             }
@@ -437,7 +467,7 @@ public class ItemMapLocation extends Item implements IMapLocation {
     @Override
     public String getLocationName(@Nonnull ItemStack item) {
         CompoundTag cpt = getCustomTag(item);
-        return cpt.getString("name").orElse("");
+        return NBTUtilBC.getString(cpt, "name", "");
     }
 
     @Override

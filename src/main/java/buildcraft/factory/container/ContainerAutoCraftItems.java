@@ -14,7 +14,9 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+//? if >=1.21.10 {
 import net.minecraft.world.entity.player.StackedItemContents;
+//?}
 import net.minecraft.world.inventory.RecipeBookType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -115,6 +117,35 @@ public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchIt
         return this.slots.get(0); // First slot added is the output slot
     }
 
+    //? if <1.21.10 {
+    /*// 1.21.1 RecipeBookMenu has these extra abstracts that modern's RecipeBookMenu doesn't. The base
+    // ContainerBC_Neptune stubs them to a grid-0 no-op for non-crafting containers; the Auto Workbench
+    // reports its real 3x3 blueprint grid + output slot so the recipe book lays out and fills correctly.
+    @Override
+    public int getResultSlotIndex() {
+        return 0; // the output slot is the first slot added
+    }
+
+    @Override
+    public int getSize() {
+        return 9; // 3x3 blueprint grid
+    }
+
+    // Recipe-book click: vanilla RecipeBookMenu.handlePlacement defaults to ServerPlaceRecipe, which MOVES
+    // real items from the player's inventory into the grid — wrong for our PHANTOM blueprint grid (it just
+    // deletes them). Override to set the phantom pattern instead (the same CraftingUtil path the JEI "+"
+    // button uses), consuming nothing and regardless of whether the player has the materials.
+    @Override
+    public void handlePlacement(boolean useMaxItems, RecipeHolder<?> recipe,
+            net.minecraft.server.level.ServerPlayer player) {
+        if (recipe.value() instanceof CraftingRecipe craftingRecipe
+                && player.level() instanceof ServerLevel serverLevel) {
+            CraftingUtil.placeRecipeInBlueprint(craftingRecipe, tile.invBlueprint, serverLevel);
+        }
+    }*/
+    //?}
+
+    //? if >=1.21.10 {
     @Override
     public PostPlaceAction handlePlacement(boolean useMaxItems, boolean isCreative, RecipeHolder<?> recipe,
         ServerLevel level, Inventory playerInv) {
@@ -124,9 +155,23 @@ public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchIt
         CraftingUtil.placeRecipeInBlueprint(craftingRecipe, tile.invBlueprint, level);
         return PostPlaceAction.PLACE_GHOST_RECIPE;
     }
+    //?} else {
+    /*@Override
+    public void handlePlacement(boolean useMaxItems, boolean isCreative, RecipeHolder<?> recipe,
+        ServerLevel level, Inventory playerInv) {
+        if (!(recipe.value() instanceof CraftingRecipe craftingRecipe)) {
+            return;
+        }
+        CraftingUtil.placeRecipeInBlueprint(craftingRecipe, tile.invBlueprint, level);
+    }*/
+    //?}
 
     @Override
+    //? if >=1.21.10 {
     public void fillCraftSlotsStackedContents(StackedItemContents contents) {
+    //?} else {
+    /*public void fillCraftSlotsStackedContents(net.minecraft.world.entity.player.StackedContents contents) {*/
+    //?}
         for (int i = 0; i < tile.invMaterials.getSlots(); i++) {
             contents.accountStack(tile.invMaterials.getStackInSlot(i));
         }

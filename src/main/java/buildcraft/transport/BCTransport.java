@@ -196,6 +196,16 @@ public class BCTransport {
 
     @SuppressWarnings("unchecked")
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
+        // Version-neutral capability tokens: Transfer-API on 1.21.10+, classic handler tokens on 1.21.1.
+        //? if >=1.21.10 {
+        var itemCap = Capabilities.Item.BLOCK;
+        var fluidCap = Capabilities.Fluid.BLOCK;
+        var energyCap = Capabilities.Energy.BLOCK;
+        //?} else {
+        /*var itemCap = Capabilities.ItemHandler.BLOCK;
+        var fluidCap = Capabilities.FluidHandler.BLOCK;
+        var energyCap = Capabilities.EnergyStorage.BLOCK;*/
+        //?}
         event.registerBlockEntity(
             MjAPI.CAP_RECEIVER, BCTransportBlockEntities.PIPE_HOLDER.get(),
             (tile, side) -> {
@@ -248,7 +258,7 @@ public class BCTransport {
         );
 
         event.registerBlockEntity(
-            Capabilities.Fluid.BLOCK, BCTransportBlockEntities.PIPE_HOLDER.get(),
+            fluidCap, BCTransportBlockEntities.PIPE_HOLDER.get(),
             (tile, side) -> {
                 Pipe pipe = tile.getPipe();
                 if (pipe == null || side == null) return null;
@@ -259,7 +269,7 @@ public class BCTransport {
         );
 
         event.registerBlockEntity(
-            net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK, BCTransportBlockEntities.PIPE_HOLDER.get(),
+            energyCap, BCTransportBlockEntities.PIPE_HOLDER.get(),
             (tile, side) -> {
                 if (side != null) {
                     buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
@@ -268,14 +278,14 @@ public class BCTransport {
                 
                 buildcraft.api.transport.pipe.IPipe pipe = tile.getPipe();
                 if (pipe != null && pipe.getFlow() != null) {
-                    return pipe.getFlow().getCapability(net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK, side);
+                    return pipe.getFlow().getCapability(energyCap, side);
                 }
                 return null;
             }
         );
 
         event.registerBlockEntity(
-            net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK, 
+            itemCap, 
             BCTransportBlockEntities.FILTERED_BUFFER.get(),
             (tile, side) -> tile.getItemHandler(side)
         );

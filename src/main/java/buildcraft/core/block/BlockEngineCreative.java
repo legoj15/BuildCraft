@@ -22,6 +22,7 @@ import buildcraft.api.tools.IToolWrench;
 import buildcraft.core.tile.TileEngineCreative;
 import buildcraft.lib.engine.BlockEngineBase_BC8;
 import buildcraft.lib.engine.TileEngineBase_BC8;
+import buildcraft.lib.misc.BlockUtil;
 
 public class BlockEngineCreative extends BlockEngineBase_BC8 {
     public BlockEngineCreative(Properties properties) {
@@ -44,23 +45,28 @@ public class BlockEngineCreative extends BlockEngineBase_BC8 {
      *      tripwire sound (not the slide/piston sound, which is reserved for rotation).
      */
     @Override
+    //? if >=1.21.10 {
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
+    //?} else {
+    /*protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+            Player player, InteractionHand hand, BlockHitResult hitResult) {*/
+    //?}
         if (!(stack.getItem() instanceof IToolWrench wrench)) {
-            return InteractionResult.PASS;
+            return BlockUtil.itemUsePass();
         }
         BlockEntity be = level.getBlockEntity(pos);
 
         if (player.isShiftKeyDown()) {
             if (be instanceof TileEngineBase_BC8 engine && engine.hasAlternateReceiver()) {
-                return InteractionResult.PASS;
+                return BlockUtil.itemUsePass();
             }
             if (!level.isClientSide()) {
                 // Crouch-with-nothing-to-rotate-to: same soft-fail sound as the other engines.
                 level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 1.3f);
             }
             player.swing(hand);
-            return InteractionResult.CONSUME;
+            return BlockUtil.itemUseConsume();
         }
 
         if (be instanceof TileEngineCreative creative) {
@@ -73,6 +79,6 @@ public class BlockEngineCreative extends BlockEngineBase_BC8 {
             // Cycle-power confirmation: lower-pitched lever click, distinct from the soft-fail.
             level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 0.7f);
         }
-        return InteractionResult.CONSUME;
+        return BlockUtil.itemUseConsume();
     }
 }

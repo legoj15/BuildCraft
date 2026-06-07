@@ -22,6 +22,7 @@ import buildcraft.api.tools.IToolWrench;
 import buildcraft.core.tile.TileEngineRedstone_BC8;
 import buildcraft.lib.engine.BlockEngineBase_BC8;
 import buildcraft.lib.engine.TileEngineBase_BC8;
+import buildcraft.lib.misc.BlockUtil;
 
 public class BlockEngineRedstone_BC8 extends BlockEngineBase_BC8 {
     public BlockEngineRedstone_BC8(Properties properties) {
@@ -44,14 +45,19 @@ public class BlockEngineRedstone_BC8 extends BlockEngineBase_BC8 {
      * Crouch is irrelevant.
      */
     @Override
+    //? if >=1.21.10 {
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
+    //?} else {
+    /*protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+            Player player, InteractionHand hand, BlockHitResult hitResult) {*/
+    //?}
         if (!(stack.getItem() instanceof IToolWrench)) {
-            return InteractionResult.PASS;
+            return BlockUtil.itemUsePass();
         }
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TileEngineBase_BC8 engine && engine.hasAlternateReceiver()) {
-            return InteractionResult.PASS;
+            return BlockUtil.itemUsePass();
         }
         if (!level.isClientSide()) {
             level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 1.3f);
@@ -60,6 +66,6 @@ public class BlockEngineRedstone_BC8 extends BlockEngineBase_BC8 {
         // broadcasts to observers. Server-only swing doesn't reliably animate the swinger's
         // own first-person hand — same reason ItemWrench_Neptune.wrenchUsed swings unconditionally.
         player.swing(hand);
-        return InteractionResult.CONSUME;
+        return BlockUtil.itemUseConsume();
     }
 }

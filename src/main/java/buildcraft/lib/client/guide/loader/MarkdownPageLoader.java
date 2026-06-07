@@ -49,9 +49,7 @@ public enum MarkdownPageLoader implements IPageLoaderText {
         if (itemId == null) {
             return new OptionallyDisabled<>(args[0] + " was not a valid item identifier!");
         }
-        Item item = BuiltInRegistries.ITEM.get(itemId)
-            .map(ref -> ref.value())
-            .orElse(null);
+        Item item = buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.ITEM, itemId);
         if (item == null) {
             return new OptionallyDisabled<>(args[0] + " was not a valid item!");
         }

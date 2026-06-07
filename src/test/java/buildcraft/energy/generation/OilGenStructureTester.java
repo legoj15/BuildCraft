@@ -24,6 +24,55 @@ import buildcraft.lib.misc.data.Box;
 public class OilGenStructureTester {
 
     /**
+     * Worldgen-deadlock guard: {@link OilGenStructure#setOil} must NOT touch a chunk that isn't
+     * loaded. During a real {@code ChunkEvent.Load}, a setBlock into an unloaded neighbour (e.g. a
+     * rich-biome spout tube crossing a chunk border) forces a blocking
+     * {@code ServerChunkCache.getChunk} that parks the server thread forever — the freeze. The
+     * hasChunk guard makes it a no-op. This verifies the guard skips a far, unloaded chunk without
+     * loading it (without the guard, setOil would generate that chunk and hasChunk would flip true).
+     */
+    public static void testSetOilSkipsUnloadedChunk(GameTestHelper helper) {
+        net.minecraft.server.level.ServerLevel level = helper.getLevel();
+        // Far from the arena and spawn — guaranteed unloaded.
+        BlockPos arena = helper.absolutePos(new BlockPos(0, 0, 0));
+        BlockPos farPos = new BlockPos(arena.getX() + 8000, level.getMinY() + 40, arena.getZ() + 8000);
+        int cx = farPos.getX() >> 4;
+        int cz = farPos.getZ() >> 4;
+        helper.assertFalse(level.hasChunk(cx, cz), "Precondition: the far chunk must start unloaded");
+        OilGenStructure.setOil(level, farPos);
+        helper.assertFalse(level.hasChunk(cx, cz),
+                "setOil must skip an unloaded chunk (not load/generate it) — the worldgen-deadlock guard");
+        helper.succeed();
+    }
+
+    /**
+     * Worldgen-deadlock guard #2 (the leaf that survived the first, write-only fix): oil generation must
+     * NOT replace a block that has a {@link net.minecraft.world.level.block.entity.BlockEntity}. Removing
+     * one runs {@code Level.removeBlockEntity → updateNeighbourForOutputSignal} (a NeoForge patch fired
+     * unconditionally to refresh comparator outputs), which reads the horizontal neighbours and
+     * force-loads any that are only ticket-eligible for FULL but not yet generated — parking the server
+     * thread forever (the freeze, reached via a comparator update rather than a direct cross-chunk write —
+     * confirmed by a live thread dump at {@code SurfacePool.generateWithin}). The fix routes every oil-gen
+     * write through {@code setWorldgenBlock}, which skips block-entity blocks. This places a chest and
+     * asserts {@code setOil} leaves it intact (without the guard, setOil would replace it with oil and the
+     * chest would be gone). In the loaded test arena the neighbours exist so the call returns rather than
+     * deadlocking; the preserved chest is the invariant that prevents the deadlock in a live chunk-load.
+     */
+    public static void testSetOilSkipsBlockEntity(GameTestHelper helper) {
+        net.minecraft.server.level.ServerLevel level = helper.getLevel();
+        BlockPos rel = new BlockPos(1, 1, 1);
+        BlockPos abs = helper.absolutePos(rel);
+        helper.setBlock(rel, Blocks.CHEST);
+        helper.assertTrue(level.getBlockState(abs).hasBlockEntity(),
+                "Precondition: the placed chest must have a block entity");
+        OilGenStructure.setOil(level, abs);
+        helper.assertTrue(level.getBlockState(abs).is(Blocks.CHEST),
+                "setOil must skip a block-entity block (got " + level.getBlockState(abs)
+                        + ") — the comparator-update worldgen-deadlock guard");
+        helper.succeed();
+    }
+
+    /**
      * SurfacePool produces a roughly-circular oil footprint with mild radial noise:
      * centre cell is oil, far corners are unchanged. Exercises the new disc-with-noise
      * pattern.
@@ -49,13 +98,13 @@ public class OilGenStructureTester {
             // Centre cell should now be oil.
             if (!helper.getBlockState(relativeCenter).is(
                     BCEnergyFluids.OIL_COOL.source().get().defaultFluidState().createLegacyBlock().getBlock())) {
-                throw new IllegalStateException("Pool centre is not oil at " + relativeCenter
+                helper.fail("Pool centre is not oil at " + relativeCenter
                         + " (got " + helper.getBlockState(relativeCenter) + ")");
             }
             // Far corner (well outside any plausible pool radius) should still be stone.
             BlockPos farCorner = new BlockPos(0, floorY, 0);
             if (!helper.getBlockState(farCorner).is(Blocks.STONE)) {
-                throw new IllegalStateException("Pool spilled onto far corner " + farCorner
+                helper.fail("Pool spilled onto far corner " + farCorner
                         + " — expected STONE, got " + helper.getBlockState(farCorner));
             }
         });
@@ -97,7 +146,7 @@ public class OilGenStructureTester {
             for (int dy = 1; dy <= 15; dy++) {
                 BlockPos pos = relativeCenter.above(dy);
                 if (helper.getBlockState(pos).is(BlockTags.LOGS)) {
-                    throw new IllegalStateException("Tall-tree BFS left a log at " + pos
+                    helper.fail("Tall-tree BFS left a log at " + pos
                             + " (dy=" + dy + ") — budget exhausted before reaching the trunk base.");
                 }
             }

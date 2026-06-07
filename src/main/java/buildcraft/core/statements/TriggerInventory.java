@@ -11,8 +11,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
-import net.neoforged.neoforge.transfer.ResourceHandler;
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.item.ItemResource;
+//?}
 import net.neoforged.neoforge.capabilities.Capabilities;
 
 import buildcraft.api.items.IList;
@@ -56,7 +57,11 @@ public class TriggerInventory extends BCStatement implements ITriggerExternal {
     @Override
     public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer container, IStatementParameter[] parameters) {
         if (tile.getLevel() == null) return false;
-        ResourceHandler<ItemResource> handler = tile.getLevel().getCapability(Capabilities.Item.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null);
+        //? if >=1.21.10 {
+        var handler = tile.getLevel().getCapability(Capabilities.Item.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null);
+        //?} else {
+        /*var handler = tile.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null);*/
+        //?}
         if (handler == null) {
             return false;
         }
@@ -73,10 +78,19 @@ public class TriggerInventory extends BCStatement implements ITriggerExternal {
         boolean isList = !searchedStack.isEmpty() && searchedStack.getItem() instanceof IList;
         IList listFilter = isList ? (IList) searchedStack.getItem() : null;
 
-        for (int i = 0; i < handler.size(); i++) {
+        //? if >=1.21.10 {
+        int slotCount = handler.size();
+        //?} else {
+        /*int slotCount = handler.getSlots();*/
+        //?}
+        for (int i = 0; i < slotCount; i++) {
             hasSlots = true;
+            //? if >=1.21.10 {
             ItemResource res = handler.getResource(i);
             ItemStack stack = res.isEmpty() ? ItemStack.EMPTY : res.toStack(handler.getAmountAsInt(i));
+            //?} else {
+            /*ItemStack stack = handler.getStackInSlot(i);*/
+            //?}
 
             boolean stackMatchesSearch;
             if (searchedStack.isEmpty()) {
@@ -99,7 +113,12 @@ public class TriggerInventory extends BCStatement implements ITriggerExternal {
                 hasSpace = stackMatchesSearch && stack.getCount() < stack.getMaxStackSize();
             } else if (canStacksMerge(stack, searchedStack) && stack.getCount() < stack.getMaxStackSize()) {
                 int amount = Math.min(searchedStack.getCount(), stack.getMaxStackSize() - stack.getCount());
-                if (amount > 0 && handler.getCapacityAsInt(i, ItemResource.of(searchedStack)) >= stack.getCount() + amount) {
+                //? if >=1.21.10 {
+                int slotCap = handler.getCapacityAsInt(i, ItemResource.of(searchedStack));
+                //?} else {
+                /*int slotCap = handler.getSlotLimit(i);*/
+                //?}
+                if (amount > 0 && slotCap >= stack.getCount() + amount) {
                     hasSpace = true;
                 }
             }

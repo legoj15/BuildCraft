@@ -24,7 +24,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
+//? if >=1.21.10 {
 import net.minecraft.world.level.ScheduledTickAccess;
+//?}
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
@@ -36,7 +38,9 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+//? if >=1.21.10 {
 import net.minecraft.world.level.redstone.Orientation;
+//?}
 import net.minecraft.world.phys.BlockHitResult;
 
 import buildcraft.api.blocks.ICustomRotationHandler;
@@ -45,6 +49,7 @@ import buildcraft.api.tools.IToolWrench;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.tile.TileHeatExchange;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 
 /**
@@ -101,8 +106,13 @@ public class BlockHeatExchange extends BaseEntityBlock implements ICustomRotatio
     }
 
     @Override
+    //? if >=1.21.10 {
     protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess scheduledTickAccess,
             BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource randomSource) {
+    //?} else {
+    /*protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
+            net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockPos neighborPos) {*/
+    //?}
         // Only care about horizontal neighbors
         if (direction.getAxis().isVertical()) {
             return state;
@@ -153,8 +163,13 @@ public class BlockHeatExchange extends BaseEntityBlock implements ICustomRotatio
     }
 
     @Override
+    //? if >=1.21.10 {
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {
+    //?} else {
+    /*protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+            Player player, InteractionHand hand, BlockHitResult hitResult) {*/
+    //?}
         // Wrench priority (unified with engine/distiller/dynamo blocks):
         //   - crouch + wrench → open GUI (so the player can sneak-tweak a running
         //     chain without rotating it)
@@ -166,15 +181,15 @@ public class BlockHeatExchange extends BaseEntityBlock implements ICustomRotatio
             if (player.isShiftKeyDown()) {
                 BlockEntity be = level.getBlockEntity(pos);
                 if (be instanceof TileHeatExchange exchange) {
-                    return openExchangeMenu(level, exchange, player);
+                    return BlockUtil.itemUseFrom(openExchangeMenu(level, exchange, player));
                 }
-                return InteractionResult.PASS;
+                return BlockUtil.itemUsePass();
             }
-            return InteractionResult.PASS;
+            return BlockUtil.itemUsePass();
         }
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TileHeatExchange exchange)) {
-            return InteractionResult.PASS;
+            return BlockUtil.itemUsePass();
         }
         TileHeatExchange.ExchangeSection section = exchange.getSection();
         if (section != null) {
@@ -187,10 +202,10 @@ public class BlockHeatExchange extends BaseEntityBlock implements ICustomRotatio
                 didChange = didChangeOutput;
             }
             if (didChange) {
-                return InteractionResult.SUCCESS;
+                return BlockUtil.itemUseSuccess();
             }
         }
-        return openExchangeMenu(level, exchange, player);
+        return BlockUtil.itemUseFrom(openExchangeMenu(level, exchange, player));
     }
 
     @Override
@@ -249,8 +264,7 @@ public class BlockHeatExchange extends BaseEntityBlock implements ICustomRotatio
                 }
                 // Drop bucket / fluid-shard slot contents from the START tile.
                 for (int i = 0; i < exchange.containerSlots.size(); i++) {
-                    ItemStack slotStack = exchange.containerSlots.getResource(i)
-                            .toStack(exchange.containerSlots.getAmountAsInt(i));
+                    ItemStack slotStack = exchange.containerSlots.getStackInSlot(i);
                     if (!slotStack.isEmpty()) {
                         Block.popResource(level, pos, slotStack);
                     }
@@ -261,9 +275,18 @@ public class BlockHeatExchange extends BaseEntityBlock implements ICustomRotatio
     }
 
     @Override
+    //? if >=1.21.10 {
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
             @Nullable Orientation orientation, boolean movedByPiston) {
+    //?} else {
+    /*protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
+            BlockPos neighborPos, boolean movedByPiston) {*/
+    //?}
+        //? if >=1.21.10 {
         super.neighborChanged(state, level, pos, neighborBlock, orientation, movedByPiston);
+        //?} else {
+        /*super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);*/
+        //?}
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TileHeatExchange exchange) {
             exchange.markCheckNeighbours();

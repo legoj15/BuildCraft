@@ -19,6 +19,7 @@ import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.enums.EnumSnapshotType;
 import buildcraft.api.filler.IFilledTemplate;
 
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.VecUtil;
 
 public class Template extends Snapshot {
@@ -53,7 +54,7 @@ public class Template extends Snapshot {
     @Override
     public void deserializeNBT(CompoundTag nbt) throws InvalidInputDataException {
         super.deserializeNBT(nbt);
-        data = BitSet.valueOf(nbt.getByteArray("data").orElse(new byte[0]));
+        data = BitSet.valueOf(NBTUtilBC.getByteArray(nbt, "data", new byte[0]));
         if (data.length() > getDataSize()) {
             throw new InvalidInputDataException(
                 "Serialized data has length of " + data.length() +

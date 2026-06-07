@@ -51,8 +51,10 @@ public class BCEnergyFluidsClient {
                 @Override
                 //? if >=26.1 {
                 public void modifyFogColor(net.minecraft.client.Camera camera, float partialTick, net.minecraft.client.multiplayer.ClientLevel level, int renderDistance, float darkenWorldAmount, org.joml.Vector4f fluidFogColor) {
-                //?} else {
+                //?} elif >=1.21.10 {
                 /*public org.joml.Vector4f modifyFogColor(net.minecraft.client.Camera camera, float partialTick, net.minecraft.client.multiplayer.ClientLevel level, int renderDistance, float darkenWorldAmount, org.joml.Vector4f fluidFogColor) {*/
+                //?} else {
+                /*public org.joml.Vector3f modifyFogColor(net.minecraft.client.Camera camera, float partialTick, net.minecraft.client.multiplayer.ClientLevel level, int renderDistance, float darkenWorldAmount, org.joml.Vector3f fluidFogColor) {*/
                 //?}
                     int color = entry.tintColor();
                     float r = ((color >> 16) & 0xFF) / 255.0F;
@@ -60,12 +62,15 @@ public class BCEnergyFluidsClient {
                     float b = (color & 0xFF) / 255.0F;
                     //? if >=26.1 {
                     fluidFogColor.set(r, g, b, 1.0F);
-                    //?} else {
+                    //?} elif >=1.21.10 {
                     /*return fluidFogColor.set(r, g, b, 1.0F);*/
+                    //?} else {
+                    /*return fluidFogColor.set(r, g, b);*/
                     //?}
                 }
 
                 @Override
+                //? if >=1.21.10 {
                 public void modifyFogRender(net.minecraft.client.Camera camera, net.minecraft.client.renderer.fog.environment.FogEnvironment environment, float renderDistance, float partialTick, net.minecraft.client.renderer.fog.FogData fogData) {
                     float distance = entry.gaseous() ? 5.0F : 3.0F;
                     fogData.environmentalStart = 0.0F;
@@ -73,6 +78,13 @@ public class BCEnergyFluidsClient {
                     fogData.renderDistanceStart = 0.0F;
                     fogData.renderDistanceEnd = distance;
                 }
+                //?} else {
+                /*public void modifyFogRender(net.minecraft.client.Camera camera, net.minecraft.client.renderer.FogRenderer.FogMode mode, float renderDistance, float partialTick, float nearDistance, float farDistance, com.mojang.blaze3d.shaders.FogShape shape) {
+                    float distance = entry.gaseous() ? 5.0F : 3.0F;
+                    com.mojang.blaze3d.systems.RenderSystem.setShaderFogStart(0.0F);
+                    com.mojang.blaze3d.systems.RenderSystem.setShaderFogEnd(distance);
+                }*/
+                //?}
             }, entry.fluidType().get());
         }
     }

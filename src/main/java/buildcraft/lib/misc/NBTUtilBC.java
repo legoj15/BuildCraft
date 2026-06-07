@@ -118,9 +118,9 @@ public class NBTUtilBC {
 
     public static BlockPos readBlockPos(CompoundTag nbt) {
         return new BlockPos(
-            nbt.getIntOr("X", 0),
-            nbt.getIntOr("Y", 0),
-            nbt.getIntOr("Z", 0)
+            getInt(nbt, "X", 0),
+            getInt(nbt, "Y", 0),
+            getInt(nbt, "Z", 0)
         );
     }
 
@@ -133,8 +133,8 @@ public class NBTUtilBC {
 
     public static UUID getUUID(CompoundTag nbt, String key) {
         return new UUID(
-            nbt.getLongOr(key + "Most", 0L),
-            nbt.getLongOr(key + "Least", 0L)
+            getLong(nbt, key + "Most", 0L),
+            getLong(nbt, key + "Least", 0L)
         );
     }
 
@@ -148,7 +148,11 @@ public class NBTUtilBC {
     public static <E extends Enum<E>> E readEnum(Tag tag, Class<E> clazz) {
         if (tag instanceof StringTag stringTag) {
             try {
+                //? if >=1.21.10 {
                 return Enum.valueOf(clazz, stringTag.value());
+                //?} else {
+                /*return Enum.valueOf(clazz, stringTag.getAsString());*/
+                //?}
             } catch (IllegalArgumentException e) {
                 return null;
             }
@@ -189,9 +193,9 @@ public class NBTUtilBC {
     public static Vec3 readVec3(@Nullable Tag tag) {
         if (tag instanceof ListTag listTag && listTag.size() >= 3) {
             return new Vec3(
-                listTag.getDoubleOr(0, 0.0),
-                listTag.getDoubleOr(1, 0.0),
-                listTag.getDoubleOr(2, 0.0)
+                getDouble(listTag, 0, 0.0),
+                getDouble(listTag, 1, 0.0),
+                getDouble(listTag, 2, 0.0)
             );
         }
         return null;
@@ -210,7 +214,11 @@ public class NBTUtilBC {
             return IntStream.range(0, listTag.size())
                     .mapToObj(i -> {
                         Tag element = listTag.get(i);
+                        //? if >=1.21.10 {
                         return element instanceof StringTag st ? st.value() : "";
+                        //?} else {
+                        /*return element instanceof StringTag st ? st.getAsString() : "";*/
+                        //?}
                     });
         }
         return Stream.empty();
@@ -239,17 +247,173 @@ public class NBTUtilBC {
         if (nbt.isEmpty()) {
             return net.minecraft.world.item.ItemStack.EMPTY;
         }
-        String idStr = nbt.getStringOr("id", "");
+        String idStr = getString(nbt, "id", "");
         if (idStr.isEmpty()) {
             return net.minecraft.world.item.ItemStack.EMPTY;
         }
         net.minecraft.resources.Identifier itemId = net.minecraft.resources.Identifier.parse(idStr);
         net.minecraft.world.item.Item item =
-            net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(itemId);
+            buildcraft.lib.misc.RegistryUtilBC.getValue(net.minecraft.core.registries.BuiltInRegistries.ITEM, itemId);
         if (item == null || item == net.minecraft.world.item.Items.AIR) {
             return net.minecraft.world.item.ItemStack.EMPTY;
         }
-        int count = nbt.getIntOr("count", 1);
+        int count = getInt(nbt, "count", 1);
         return new net.minecraft.world.item.ItemStack(item, count);
+    }
+
+    // ───────────────────────────────────────────────────────────────────────────
+    // Version-neutral NBT accessors. On 1.21.5+ the vanilla CompoundTag/ListTag getX
+    // accessors return Optional<X> (with getXOr / getXOrEmpty convenience variants); on
+    // 1.21.1 they return the value (or a type default) directly and getList takes a
+    // tag-type argument. Shared BuildCraft serialization routes through these so it reads
+    // NBT identically on every node. The >=1.21.10 branch is exactly the call BuildCraft
+    // already makes today, so runtime behaviour on the released nodes is unchanged.
+    // ───────────────────────────────────────────────────────────────────────────
+
+    public static byte getByte(CompoundTag nbt, String key, byte def) {
+        //? if >=1.21.10 {
+        return nbt.getByteOr(key, def);
+        //?} else {
+        /*return nbt.contains(key) ? nbt.getByte(key) : def;*/
+        //?}
+    }
+
+    public static short getShort(CompoundTag nbt, String key, short def) {
+        //? if >=1.21.10 {
+        return nbt.getShortOr(key, def);
+        //?} else {
+        /*return nbt.contains(key) ? nbt.getShort(key) : def;*/
+        //?}
+    }
+
+    public static int getInt(CompoundTag nbt, String key, int def) {
+        //? if >=1.21.10 {
+        return nbt.getIntOr(key, def);
+        //?} else {
+        /*return nbt.contains(key) ? nbt.getInt(key) : def;*/
+        //?}
+    }
+
+    public static long getLong(CompoundTag nbt, String key, long def) {
+        //? if >=1.21.10 {
+        return nbt.getLongOr(key, def);
+        //?} else {
+        /*return nbt.contains(key) ? nbt.getLong(key) : def;*/
+        //?}
+    }
+
+    public static float getFloat(CompoundTag nbt, String key, float def) {
+        //? if >=1.21.10 {
+        return nbt.getFloatOr(key, def);
+        //?} else {
+        /*return nbt.contains(key) ? nbt.getFloat(key) : def;*/
+        //?}
+    }
+
+    public static double getDouble(CompoundTag nbt, String key, double def) {
+        //? if >=1.21.10 {
+        return nbt.getDoubleOr(key, def);
+        //?} else {
+        /*return nbt.contains(key) ? nbt.getDouble(key) : def;*/
+        //?}
+    }
+
+    public static boolean getBoolean(CompoundTag nbt, String key, boolean def) {
+        //? if >=1.21.10 {
+        return nbt.getBooleanOr(key, def);
+        //?} else {
+        /*return nbt.contains(key) ? nbt.getBoolean(key) : def;*/
+        //?}
+    }
+
+    public static String getString(CompoundTag nbt, String key, String def) {
+        //? if >=1.21.10 {
+        return nbt.getStringOr(key, def);
+        //?} else {
+        /*return nbt.contains(key) ? nbt.getString(key) : def;*/
+        //?}
+    }
+
+    public static int[] getIntArray(CompoundTag nbt, String key, int[] def) {
+        //? if >=1.21.10 {
+        return nbt.getIntArray(key).orElse(def);
+        //?} else {
+        /*return nbt.contains(key) ? nbt.getIntArray(key) : def;*/
+        //?}
+    }
+
+    public static byte[] getByteArray(CompoundTag nbt, String key, byte[] def) {
+        //? if >=1.21.10 {
+        return nbt.getByteArray(key).orElse(def);
+        //?} else {
+        /*return nbt.contains(key) ? nbt.getByteArray(key) : def;*/
+        //?}
+    }
+
+    /** CompoundTag child, empty (new) when absent. */
+    public static CompoundTag getCompound(CompoundTag nbt, String key) {
+        //? if >=1.21.10 {
+        return nbt.getCompoundOrEmpty(key);
+        //?} else {
+        /*return nbt.getCompound(key);*/
+        //?}
+    }
+
+    /** CompoundTag child, null when absent (for callers that branch on null). */
+    @Nullable
+    public static CompoundTag getCompoundOrNull(CompoundTag nbt, String key) {
+        //? if >=1.21.10 {
+        return nbt.getCompound(key).orElse(null);
+        //?} else {
+        /*return nbt.contains(key, Tag.TAG_COMPOUND) ? nbt.getCompound(key) : null;*/
+        //?}
+    }
+
+    /** ListTag child, empty (new) when absent. tagType is a {@code Tag.TAG_*} constant (ignored on modern nodes). */
+    public static ListTag getList(CompoundTag nbt, String key, int tagType) {
+        //? if >=1.21.10 {
+        return nbt.getListOrEmpty(key);
+        //?} else {
+        /*return nbt.getList(key, tagType);*/
+        //?}
+    }
+
+    /** ListTag child, null when absent. tagType is a {@code Tag.TAG_*} constant (ignored on modern nodes). */
+    @Nullable
+    public static ListTag getListOrNull(CompoundTag nbt, String key, int tagType) {
+        //? if >=1.21.10 {
+        return nbt.getList(key).orElse(null);
+        //?} else {
+        /*return nbt.contains(key, Tag.TAG_LIST) ? nbt.getList(key, tagType) : null;*/
+        //?}
+    }
+
+    // ── ListTag indexed access ──
+
+    /** CompoundTag element at index i, empty (new) when absent/wrong-type. */
+    public static CompoundTag getCompound(ListTag list, int i) {
+        //? if >=1.21.10 {
+        return list.getCompoundOrEmpty(i);
+        //?} else {
+        /*return list.getCompound(i);*/
+        //?}
+    }
+
+    /** CompoundTag element at index i, null when absent/wrong-type. */
+    @Nullable
+    public static CompoundTag getCompoundOrNull(ListTag list, int i) {
+        //? if >=1.21.10 {
+        return list.getCompound(i).orElse(null);
+        //?} else {
+        /*return i >= 0 && i < list.size() && list.get(i) instanceof CompoundTag ct ? ct : null;*/
+        //?}
+    }
+
+    public static double getDouble(ListTag list, int i, double def) {
+        //? if >=1.21.10 {
+        return list.getDoubleOr(i, def);
+        //?} else {
+        /*return i >= 0 && i < list.size() ? list.getDouble(i) : def;*/
+        //?}
     }
 }

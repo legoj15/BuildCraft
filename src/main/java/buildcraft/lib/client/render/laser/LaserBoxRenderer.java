@@ -116,8 +116,13 @@ public class LaserBoxRenderer {
     private static LaserData_BC8 makeLaser(LaserType type, boolean enableDiffuse, Vec3 min, Vec3 max, Axis axis) {
         Direction faceForMin = VecUtil.getFacing(axis, true);
         Direction faceForMax = VecUtil.getFacing(axis, false);
+        //? if >=1.21.10 {
         Vec3 dirMin = Vec3.atLowerCornerOf(faceForMin.getUnitVec3i());
         Vec3 dirMax = Vec3.atLowerCornerOf(faceForMax.getUnitVec3i());
+        //?} else {
+        /*Vec3 dirMin = Vec3.atLowerCornerOf(faceForMin.getNormal());
+        Vec3 dirMax = Vec3.atLowerCornerOf(faceForMax.getNormal());*/
+        //?}
         Vec3 one = min.add(dirMin.scale(1 / 16D));
         Vec3 two = max.add(dirMax.scale(1 / 16D));
         return new LaserData_BC8(type, one, two, RENDER_SCALE, enableDiffuse, false, 15);

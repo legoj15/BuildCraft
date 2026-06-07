@@ -67,7 +67,11 @@ public class PipeFlowPowerTester {
         helper.setBlock(enginePos, engineState);
         helper.setBlock(redstonePos, Blocks.REDSTONE_BLOCK);
 
+        //? if >=1.21.10 {
         TileEngineCreative engine = helper.getBlockEntity(enginePos, TileEngineCreative.class);
+        //?} else {
+        /*TileEngineCreative engine = helper.getBlockEntity(enginePos);*/
+        //?}
         engine.currentOutputIndex = TileEngineCreative.OUTPUTS.length - 1; // 256 MJ/t
 
         // Connection bookkeeping isn't established by setBlock+onPlacedBy alone — the
@@ -84,7 +88,11 @@ public class PipeFlowPowerTester {
         // expires (set generously high in the JSON manifest). helper.assertTrue throws
         // the GameTestAssertException variant that succeedWhen treats as retry-now.
         helper.succeedWhen(() -> {
+            //? if >=1.21.10 {
             TilePowerConsumerTester tester = helper.getBlockEntity(testerPos, TilePowerConsumerTester.class);
+            //?} else {
+            /*TilePowerConsumerTester tester = helper.getBlockEntity(testerPos);*/
+            //?}
             helper.assertTrue(readTesterTotal(tester) > 0,
                     "Power tester has not yet received MJ through the engine→pipe chain");
         });
@@ -92,7 +100,11 @@ public class PipeFlowPowerTester {
 
     private static TilePipeHolder placePowerPipe(GameTestHelper helper, BlockPos pos, Item pipeItem) {
         helper.setBlock(pos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(pos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(pos);*/
+        //?}
         tile.onPlacedBy(null, new ItemStack(pipeItem));
         return tile;
     }

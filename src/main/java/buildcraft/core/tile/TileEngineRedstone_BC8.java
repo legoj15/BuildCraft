@@ -19,6 +19,7 @@ import buildcraft.core.BCCoreBlockEntities;
 import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.GameProfileUtil;
 
 public class TileEngineRedstone_BC8 extends TileEngineBase_BC8 {
     private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:free_power");
@@ -49,7 +50,7 @@ public class TileEngineRedstone_BC8 extends TileEngineBase_BC8 {
                 }
                 if (isPumping && !givenAdvancement && getOwner() != null) {
                     givenAdvancement = AdvancementUtil.unlockAdvancement(
-                        getOwner().id(), level, ADVANCEMENT);
+                        GameProfileUtil.getId(getOwner()), level, ADVANCEMENT);
                 }
             }
         } else {

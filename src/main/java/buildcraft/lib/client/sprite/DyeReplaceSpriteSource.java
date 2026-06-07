@@ -109,10 +109,21 @@ public record DyeReplaceSpriteSource(Identifier source, Identifier mask) impleme
         }
     }
 
+    //? if >=1.21.10 {
     @Override
     public MapCodec<? extends SpriteSource> codec() {
         return MAP_CODEC;
     }
+    //?} else {
+    /*// 1.21.1 SpriteSource exposes type():SpriteSourceType (not codec()); the type is created at
+    // registration time (RegisterSpriteSourceTypesEvent.register returns it) and stashed here.
+    public static net.minecraft.client.renderer.texture.atlas.SpriteSourceType TYPE;
+
+    @Override
+    public net.minecraft.client.renderer.texture.atlas.SpriteSourceType type() {
+        return TYPE;
+    }*/
+    //?}
 
     private record Loader(LazyLoadedImage base, LazyLoadedImage mask, int dyeRgb, Identifier outputId)
             //? if >=1.21.11 {
@@ -148,28 +159,32 @@ public record DyeReplaceSpriteSource(Identifier source, Identifier mask) impleme
                 out = new NativeImage(w, h, false);
                 for (int y = 0; y < h; y++) {
                     for (int x = 0; x < w; x++) {
-                        int srcPixel = baseImg.getPixel(x, y);   // ARGB
+                        int srcPixel = NativeImagePixels.getArgb(baseImg, x, y);   // ARGB
                         int srcA = (srcPixel >>> 24) & 0xFF;
                         if (srcA == 0) {
-                            out.setPixel(x, y, 0);
+                            NativeImagePixels.setArgb(out, x, y, 0);
                             continue;
                         }
                         int srcR = (srcPixel >> 16) & 0xFF;
                         int srcG = (srcPixel >> 8)  & 0xFF;
                         int srcB =  srcPixel        & 0xFF;
 
-                        int maskA = (maskImg.getPixel(x, y) >>> 24) & 0xFF;
+                        int maskA = (NativeImagePixels.getArgb(maskImg, x, y) >>> 24) & 0xFF;
                         if (maskA > 0 && isWaterproofing(srcR, srcG, srcB)) {
                             // Replace with dye colour, preserving source alpha
-                            out.setPixel(x, y,
+                            NativeImagePixels.setArgb(out, x, y,
                                 (srcA << 24) | (dyeR << 16) | (dyeG << 8) | dyeB);
                         } else {
-                            out.setPixel(x, y, srcPixel);
+                            NativeImagePixels.setArgb(out, x, y, srcPixel);
                         }
                     }
                 }
 
+                //? if >=1.21.10 {
                 SpriteContents result = new SpriteContents(outputId, new FrameSize(w, h), out);
+                //?} else {
+                /*SpriteContents result = new SpriteContents(outputId, new FrameSize(w, h), out, net.minecraft.server.packs.resources.ResourceMetadata.EMPTY);*/
+                //?}
                 out = null; // ownership transferred to SpriteContents
                 return result;
             } catch (IOException e) {

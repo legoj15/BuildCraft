@@ -17,12 +17,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.Sheets;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 //? if >=26.1 {
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-//?} else {
+//?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.state.CameraRenderState;*/
 //?}
 import net.minecraft.client.renderer.texture.TextureAtlas;
@@ -57,7 +59,11 @@ import buildcraft.lib.misc.FluidUtilBC;
  * Ported from 1.12.2 RenderHeatExchange.
  */
 @SuppressWarnings("deprecation")
+//? if >=1.21.10 {
 public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange, HeatExchangeRenderState> {
+//?} else {
+/*public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange> {*/
+//?}
 
     private static final Map<Direction, TankSideData> TANK_SIDES = new EnumMap<>(Direction.class);
     private static final TankBounds TANK_BOTTOM, TANK_TOP;
@@ -79,6 +85,7 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
     public RenderHeatExchange(BlockEntityRendererProvider.Context context) {
     }
 
+    //? if >=1.21.10 {
     @Override
     public HeatExchangeRenderState createRenderState() {
         return new HeatExchangeRenderState();
@@ -101,6 +108,17 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
 
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TileHeatExchange tile)) return;
+    //?} else {
+    /*// 1.21.1: classic direct BlockEntityRenderer.render — tile + partialTicks are passed, so the
+    // camera-pos reconstruction is replaced by reading pos/level off the tile. The passed
+    // buffers/packedLight/packedOverlay go unused (the shared body sources its own buffer/light).
+    @Override
+    public void render(TileHeatExchange tile, float partialTicks, PoseStack poseStack,
+                       MultiBufferSource buffers, int packedLight, int packedOverlay) {
+        BlockPos pos = tile.getBlockPos();
+        Level level = tile.getLevel();
+        if (level == null) return;*/
+    //?}
 
         if (!tile.isStart()) return;
 
@@ -141,7 +159,9 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
 
+        //? if >=1.21.10 {
         float partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        //?}
 
         // Render fluid in start tanks
         renderSmoothedFluid(section.smoothedTankInput, TANK_BOTTOM, poseStack, bufferSource, light, partialTicks);
@@ -253,9 +273,15 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         }
 
         // Translucent for vanilla water, cutout for BC fluids (reuse water texture opaquely)
+        //? if >=1.21.10 {
         VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
                     ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+        //?} else {
+        /*VertexConsumer buffer = bufferSource.getBuffer(
+                FluidUtilBC.shouldRenderTranslucent(fluid)
+                    ? net.minecraft.client.renderer.RenderType.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));*/
+        //?}
         PoseStack.Pose pose = poseStack.last();
         int overlay = OverlayTexture.NO_OVERLAY;
 
@@ -306,9 +332,15 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         if (a <= 0) a = 1.0f;
 
         // Translucent for vanilla water, cutout for BC fluids
+        //? if >=1.21.10 {
         VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
                     ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+        //?} else {
+        /*VertexConsumer buffer = bufferSource.getBuffer(
+                FluidUtilBC.shouldRenderTranslucent(fluid)
+                    ? net.minecraft.client.renderer.RenderType.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));*/
+        //?}
         int overlay = OverlayTexture.NO_OVERLAY;
 
         Level level = Minecraft.getInstance().level;
@@ -320,7 +352,11 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
             offset = -offset;
             renderFace = face.getOpposite();
         }
+        //? if >=1.21.10 {
         Vec3 dirVec = Vec3.atLowerCornerOf(renderFace.getUnitVec3i());
+        //?} else {
+        /*Vec3 dirVec = Vec3.atLowerCornerOf(renderFace.getNormal());*/
+        //?}
         double ds = (point + 0.1) / 16.0;
         float minCross = (float) ds;
         float maxCross = (float) (1 - ds);

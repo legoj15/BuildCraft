@@ -7,6 +7,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import buildcraft.lib.misc.BlockEntityTypeUtilBC;
 import buildcraft.transport.tile.TileFilteredBuffer;
 import buildcraft.transport.tile.TilePipeHolder;
 
@@ -16,12 +17,12 @@ public class BCTransportBlockEntities {
 
     public static final Supplier<BlockEntityType<TileFilteredBuffer>> FILTERED_BUFFER =
             BLOCK_ENTITIES.register("filtered_buffer",
-                    () -> new BlockEntityType<>(TileFilteredBuffer::new,
+                    () -> BlockEntityTypeUtilBC.create(TileFilteredBuffer::new,
                             BCTransportBlocks.FILTERED_BUFFER.get()));
 
     public static final Supplier<BlockEntityType<TilePipeHolder>> PIPE_HOLDER =
             BLOCK_ENTITIES.register("pipe_holder",
-                    () -> new BlockEntityType<>(TilePipeHolder::new,
+                    () -> BlockEntityTypeUtilBC.create(TilePipeHolder::new,
                             BCTransportBlocks.PIPE_HOLDER.get()));
 
     public static void init(IEventBus modEventBus) {

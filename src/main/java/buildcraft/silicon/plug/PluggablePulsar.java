@@ -25,6 +25,7 @@ import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
 
 import buildcraft.lib.misc.MathUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.BCSiliconStatements;
@@ -71,10 +72,10 @@ public class PluggablePulsar extends PipePluggable {
 
     public PluggablePulsar(PluggableDefinition definition, IPipeHolder holder, Direction side, CompoundTag nbt) {
         super(definition, holder, side);
-        this.manuallyEnabled = nbt.getBooleanOr("manuallyEnabled", false);
-        gateEnabledTicks = nbt.getIntOr("gateEnabledTicks", 0);
-        gateSinglePulses = nbt.getIntOr("gateSinglePulses", 0);
-        pulseStage = MathUtil.clamp(nbt.getIntOr("pulseStage", 0), 0, PULSE_STAGE);
+        this.manuallyEnabled = NBTUtilBC.getBoolean(nbt, "manuallyEnabled", false);
+        gateEnabledTicks = NBTUtilBC.getInt(nbt, "gateEnabledTicks", 0);
+        gateSinglePulses = NBTUtilBC.getInt(nbt, "gateSinglePulses", 0);
+        pulseStage = MathUtil.clamp(NBTUtilBC.getInt(nbt, "pulseStage", 0), 0, PULSE_STAGE);
     }
 
     @Override

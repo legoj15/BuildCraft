@@ -127,10 +127,20 @@ public record FluidLerpSpriteSource(Identifier source, Identifier output, String
         }
     }
 
+    //? if >=1.21.10 {
     @Override
     public MapCodec<? extends SpriteSource> codec() {
         return MAP_CODEC;
     }
+    //?} else {
+    /*// 1.21.1 SpriteSource exposes type():SpriteSourceType (not codec()); set at registration time.
+    public static net.minecraft.client.renderer.texture.atlas.SpriteSourceType TYPE;
+
+    @Override
+    public net.minecraft.client.renderer.texture.atlas.SpriteSourceType type() {
+        return TYPE;
+    }*/
+    //?}
 
     private record Loader(LazyLoadedImage base, int light, int dark, int frametime, Identifier outputId)
             //? if >=1.21.11 {
@@ -154,20 +164,30 @@ public record FluidLerpSpriteSource(Identifier source, Identifier output, String
                 out = new NativeImage(w, h, false);
                 for (int y = 0; y < h; y++) {
                     for (int x = 0; x < w; x++) {
-                        out.setPixel(x, y, recolour(baseImg.getPixel(x, y), light, dark));
+                        NativeImagePixels.setArgb(out, x, y, recolour(NativeImagePixels.getArgb(baseImg, x, y), light, dark));
                     }
                 }
 
                 // Vertical strip of square frames; per-heat animation speed.
                 FrameSize frameSize = new FrameSize(w, w);
+                //? if >=1.21.10 {
                 AnimationMetadataSection animation = new AnimationMetadataSection(
                     Optional.empty(), Optional.empty(), Optional.empty(), frametime, true);
+                //?} else {
+                /*AnimationMetadataSection animation = new AnimationMetadataSection(
+                    java.util.List.of(), -1, -1, frametime, true);*/
+                //?}
                 //? if >=1.21.11 {
                 SpriteContents result = new SpriteContents(
                     outputId, frameSize, out, Optional.of(animation), List.of(), Optional.empty());
-                //?} else {
+                //?} elif >=1.21.10 {
                 /*SpriteContents result = new SpriteContents(
                     outputId, frameSize, out, Optional.of(animation), List.of());*/
+                //?} else {
+                /*net.minecraft.server.packs.resources.ResourceMetadata meta =
+                    new net.minecraft.server.packs.resources.ResourceMetadata.Builder()
+                        .put(AnimationMetadataSection.SERIALIZER, animation).build();
+                SpriteContents result = new SpriteContents(outputId, frameSize, out, meta);*/
                 //?}
                 out = null; // ownership transferred to SpriteContents
                 return result;

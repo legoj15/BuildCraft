@@ -8,6 +8,7 @@ import net.minecraft.nbt.CompoundTag;
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementParameter;
 
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.data.IReference;
 import buildcraft.lib.net.PacketBufferBC;
 
@@ -37,12 +38,12 @@ public class FullStatement<S extends IStatement> implements IReference<S> {
     // NBT
 
     public void readFromNbt(CompoundTag nbt) {
-        statement = type.readFromNbt(nbt.getCompound("s").orElse(new CompoundTag()));
+        statement = type.readFromNbt(NBTUtilBC.getCompound(nbt, "s"));
         if (statement == null) {
             Arrays.fill(params, null);
         } else {
             for (int p = 0; p < params.length; p++) {
-                CompoundTag pNbt = nbt.getCompound(Integer.toString(p)).orElse(new CompoundTag());
+                CompoundTag pNbt = NBTUtilBC.getCompound(nbt, Integer.toString(p));
                 params[p] = StatementTypeParam.INSTANCE.readFromNbt(pNbt);
             }
         }

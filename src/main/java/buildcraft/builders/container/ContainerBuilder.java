@@ -25,12 +25,11 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 
 import net.neoforged.neoforge.network.handling.IPayloadContext;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
+import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.enums.EnumSnapshotType;
 
+import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotDisplay;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
@@ -231,9 +230,9 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
         FluidSnapshot[] current = new FluidSnapshot[TileBuilder.TANK_COUNT];
         boolean changed = false;
         for (int i = 0; i < TileBuilder.TANK_COUNT; i++) {
-            FluidStacksResourceHandler t = tile.getTank(i);
-            FluidResource res = t.getResource(0);
-            int amount = (int) t.getAmountAsLong(0);
+            BCFluidTank t = tile.getTank(i);
+            FluidStack res = t.getFluidStack(0);
+            int amount = t.getAmountMb(0);
             if (res.isEmpty() || amount == 0) {
                 current[i] = FluidSnapshot.EMPTY;
             } else {
@@ -294,14 +293,13 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
             return;
         }
         if (id == NET_TANK_LEVELS && isClient) {
-            // Decode 4 (fluidId, amount) pairs and replay them into the client-side tanks via
-            // transactions so the widget sees matching fluid/amount state. FluidStacksResourceHandler
-            // has no direct setter, so we drain-then-fill per tank.
+            // Decode 4 (fluidId, amount) pairs and replay them into the client-side tanks so the
+            // widget sees matching fluid/amount state.
             for (int i = 0; i < TileBuilder.TANK_COUNT; i++) {
                 String fluidIdStr = buffer.readUtf();
                 int amount = buffer.readVarInt();
                 if (tile == null) continue;
-                FluidStacksResourceHandler handler = tile.getTank(i);
+                BCFluidTank handler = tile.getTank(i);
                 if (handler == null) continue;
                 applyTankState(handler, fluidIdStr, amount);
             }
@@ -310,23 +308,16 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
         super.readMessage(id, buffer, isClient, ctx);
     }
 
-    private static void applyTankState(FluidStacksResourceHandler handler, String fluidIdStr, int amount) {
-        try (Transaction tx = Transaction.openRoot()) {
-            FluidResource existing = handler.getResource(0);
-            if (!existing.isEmpty()) {
-                handler.extract(0, existing, Integer.MAX_VALUE, tx);
+    private static void applyTankState(BCFluidTank handler, String fluidIdStr, int amount) {
+        if (!fluidIdStr.isEmpty() && amount > 0) {
+            Identifier fluidId = Identifier.tryParse(fluidIdStr);
+            Fluid fluid = fluidId != null ? buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.FLUID, fluidId) : null;
+            if (fluid != null && fluid != Fluids.EMPTY) {
+                handler.setFluidStack(0, new FluidStack(fluid, amount));
+                return;
             }
-            if (!fluidIdStr.isEmpty() && amount > 0) {
-                Identifier fluidId = Identifier.tryParse(fluidIdStr);
-                if (fluidId != null) {
-                    Fluid fluid = BuiltInRegistries.FLUID.getValue(fluidId);
-                    if (fluid != null && fluid != Fluids.EMPTY) {
-                        handler.insert(0, FluidResource.of(fluid), amount, tx);
-                    }
-                }
-            }
-            tx.commit();
         }
+        handler.setFluidStack(0, FluidStack.EMPTY);
     }
 
     private static boolean displayListEquals(List<ItemStack> a, List<ItemStack> b) {

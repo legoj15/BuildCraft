@@ -2,7 +2,9 @@ package buildcraft.transport.client.gui;
 
 import buildcraft.lib.gui.BCGraphics;
 import buildcraft.lib.gui.button.BCButton;
+//? if >=1.21.10 {
 import net.minecraft.client.input.MouseButtonEvent;
+//?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -75,6 +77,7 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
 
     // Handle ALL mouse clicks on paint buttons at the screen level.
     // This fires on mouse DOWN, so pressing state is set immediately.
+    //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         int mouseX = (int) event.x();
@@ -99,6 +102,31 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
         }
         return super.mouseReleased(event);
     }
+    //?} else {
+    /*@Override
+    public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
+        int mouseX = (int) mouseXd;
+        int mouseY = (int) mouseYd;
+        for (PaintButton btn : paintButtons) {
+            if (btn != null && btn.isMouseOver(mouseX, mouseY)) {
+                btn.handleClick(button);
+                activePressedButton = btn;
+                return true;
+            }
+        }
+        return super.mouseClicked(mouseXd, mouseYd, button);
+    }
+
+    // Clear pressed state when any mouse button is released
+    @Override
+    public boolean mouseReleased(double mouseXd, double mouseYd, int button) {
+        if (activePressedButton != null) {
+            activePressedButton = null;
+            return true;
+        }
+        return super.mouseReleased(mouseXd, mouseYd, button);
+    }*/
+    //?}
 
     private class PaintButton extends BCButton {
         private final SlotIndex index;
@@ -110,10 +138,17 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
             updateTooltip();
         }
 
+        //? if >=1.21.10 {
         @Override
         public void onPress(net.minecraft.client.input.InputWithModifiers input) {
             // No-op: we handle all clicks in the screen-level mouseClicked
         }
+        //?} else {
+        /*@Override
+        public void onPress() {
+            // No-op: we handle all clicks in the screen-level mouseClicked
+        }*/
+        //?}
 
         /** Handle a click with the given mouse button (0=left, 1=right, 2=middle). */
         public void handleClick(int button) {

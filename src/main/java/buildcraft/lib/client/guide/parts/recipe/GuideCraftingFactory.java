@@ -124,7 +124,11 @@ public class GuideCraftingFactory implements GuidePartFactory {
 
         int width = recipe.getWidth();
         int height = recipe.getHeight();
+        //? if >=1.21.10 {
         List<Optional<Ingredient>> ingredients = recipe.pattern.ingredients();
+        //?} else {
+        /*net.minecraft.core.NonNullList<Ingredient> ingredients = recipe.pattern.ingredients();*/
+        //?}
         int offsetX = width == 1 ? 1 : 0;
         int offsetY = height == 1 ? 1 : 0;
 
@@ -139,9 +143,13 @@ public class GuideCraftingFactory implements GuidePartFactory {
                 if (i >= ingredients.size() || (x - offsetX) >= width) {
                     matrix[x][y] = new ChangingItemStack(ItemStack.EMPTY);
                 } else {
+                    //? if >=1.21.10 {
                     Optional<Ingredient> opt = ingredients.get(i);
                     matrix[x][y] = opt.map(GuideCraftingFactory::ingredientToChanging)
                         .orElse(new ChangingItemStack(ItemStack.EMPTY));
+                    //?} else {
+                    /*matrix[x][y] = ingredientToChanging(ingredients.get(i));*/
+                    //?}
                 }
             }
         }
@@ -217,6 +225,7 @@ public class GuideCraftingFactory implements GuidePartFactory {
      * still resolves item/component ingredients (tags stay blank) when there is no client level —
      * either before a world loads or off-client entirely (e.g. {@code Minecraft.getInstance()} is
      * null on a dedicated/game-test server that exercises this rendering path). */
+    //? if >=1.21.10 {
     static net.minecraft.util.context.ContextMap displayContext() {
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
         net.minecraft.client.multiplayer.ClientLevel level = mc == null ? null : mc.level;
@@ -226,6 +235,7 @@ public class GuideCraftingFactory implements GuidePartFactory {
         return new net.minecraft.util.context.ContextMap.Builder()
             .create(net.minecraft.world.item.crafting.display.SlotDisplayContext.CONTEXT);
     }
+    //?}
 
     /** Convert an Ingredient to a ChangingItemStack for display.
      * Uses {@code Ingredient.display().resolveForStacks(ctx)} (not {@code Ingredient.items()})
@@ -236,9 +246,13 @@ public class GuideCraftingFactory implements GuidePartFactory {
      * which displays as the default GateVariant (CLAY_BRICK "Basic Gate") and led players to
      * conclude the Basic Gate was an ingredient in higher-tier gates. */
     static ChangingItemStack ingredientToChanging(Ingredient ingredient) {
-        net.minecraft.util.context.ContextMap ctx = displayContext();
         List<ItemStack> stacks = new ArrayList<>();
+        //? if >=1.21.10 {
+        net.minecraft.util.context.ContextMap ctx = displayContext();
         for (ItemStack stack : ingredient.display().resolveForStacks(ctx)) {
+        //?} else {
+        /*for (ItemStack stack : ingredient.getItems()) {*/
+        //?}
             if (!stack.isEmpty() && stack.getItem() != net.minecraft.world.item.Items.AIR) {
                 stacks.add(stack);
             }

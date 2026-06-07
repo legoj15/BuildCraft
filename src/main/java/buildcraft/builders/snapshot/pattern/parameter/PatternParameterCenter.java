@@ -18,6 +18,7 @@ import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementMouseClick;
 
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 
 import buildcraft.builders.BCBuildersSprites;
@@ -46,7 +47,7 @@ public enum PatternParameterCenter implements IStatementParameter {
     }
 
     public static PatternParameterCenter readFromNbt(CompoundTag nbt) {
-        int ord = nbt.getByte("dir").orElse((byte) 0);
+        int ord = NBTUtilBC.getByte(nbt, "dir", (byte) 0);
         if (ord < 0 || ord >= values().length) {
             return CENTER;
         }

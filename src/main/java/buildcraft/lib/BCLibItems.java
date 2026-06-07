@@ -7,6 +7,7 @@ package buildcraft.lib;
 
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import buildcraft.lib.misc.RegistrationUtilBC;
 
 import buildcraft.lib.item.ItemDebugger;
 import buildcraft.lib.item.ItemGuide;
@@ -17,17 +18,17 @@ import buildcraft.core.BCCore;
 public class BCLibItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCCore.MODID);
 
-    public static final DeferredItem<ItemGuide> GUIDE = ITEMS.registerItem("guide",
+    public static final DeferredItem<ItemGuide> GUIDE = RegistrationUtilBC.registerItem(ITEMS,"guide",
             props -> new ItemGuide(props, "buildcraftunofficial:main"),
             props -> props.stacksTo(1));
 
-    public static final DeferredItem<ItemGuide> GUIDE_CONFIG = ITEMS.registerItem("guide_config",
+    public static final DeferredItem<ItemGuide> GUIDE_CONFIG = RegistrationUtilBC.registerItem(ITEMS,"guide_config",
             props -> new ItemGuide(props, "buildcraftunofficial:config"),
             props -> props.stacksTo(1));
 
-    public static final DeferredItem<ItemGuideNote> GUIDE_NOTE = ITEMS.registerItem("guide_note",
+    public static final DeferredItem<ItemGuideNote> GUIDE_NOTE = RegistrationUtilBC.registerItem(ITEMS,"guide_note",
             ItemGuideNote::new, props -> props.stacksTo(1));
 
-    public static final DeferredItem<ItemDebugger> DEBUGGER = ITEMS.registerItem("debugger",
+    public static final DeferredItem<ItemDebugger> DEBUGGER = RegistrationUtilBC.registerItem(ITEMS,"debugger",
             ItemDebugger::new, props -> props.stacksTo(1));
 }

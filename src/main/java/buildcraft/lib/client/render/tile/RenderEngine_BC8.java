@@ -14,15 +14,19 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.Sheets;
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 //? if >=26.1 {
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-//?} else {
+//?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.state.CameraRenderState;*/
 //?}
 import net.minecraft.core.BlockPos;
+//? if >=1.21.10 {
 import net.minecraft.util.profiling.Profiler;
+//?}
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -36,7 +40,11 @@ import buildcraft.lib.engine.TileEngineBase_BC8;
  * Uses the JSON variable model system to render animated engines.
  * The quad provider function is injected by the energy module to avoid circular dependencies.
  */
+//? if >=1.21.10 {
 public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8, EngineRenderState> {
+//?} else {
+/*public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8> {*/
+//?}
 
     private final BiFunction<TileEngineBase_BC8, Float, MutableQuad[]> quadProvider;
 
@@ -48,6 +56,7 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
         this.quadProvider = quadProvider;
     }
 
+    //? if >=1.21.10 {
     @Override
     public EngineRenderState createRenderState() {
         return new EngineRenderState();
@@ -76,6 +85,21 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
 
         // Get animated quads from the quad provider (injected by energy module)
         float partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
+    //?} else {
+    /*// 1.21.1: classic direct BlockEntityRenderer.render — the engine (tile) + partialTicks are passed,
+    // so no camera-pos reconstruction is needed. The passed buffers/packedLight/packedOverlay go unused
+    // (the shared body sources its own buffer/light from the level, as the modern submit path does).
+    // Profiler.get() → Minecraft.getInstance().getProfiler() on this pre-render-state line.
+    @Override
+    public void render(TileEngineBase_BC8 engine, float partialTicks, PoseStack poseStack,
+                       MultiBufferSource buffers, int packedLight, int packedOverlay) {
+        ProfilerFiller _profiler = Minecraft.getInstance().getProfiler();
+        _profiler.push("buildcraft:engine_render");
+        try {
+        BlockPos pos = engine.getBlockPos();
+        Level level = engine.getLevel();
+        if (level == null) return;*/
+    //?}
         _profiler.push("buildcraft:engine_model_refresh");
         MutableQuad[] quads;
         try {

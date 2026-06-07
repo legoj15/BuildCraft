@@ -33,7 +33,11 @@ public class TileQuarryMiningDepthTester {
             BlockPos quarryLocal = new BlockPos(2, 3, 2);
             helper.setBlock(quarryLocal, BCBuildersBlocks.QUARRY.get());
 
+            //? if >=1.21.10 {
             TileQuarry quarry = helper.getBlockEntity(quarryLocal, TileQuarry.class);
+            //?} else {
+            /*TileQuarry quarry = helper.getBlockEntity(quarryLocal);*/
+            //?}
             assertTrue(quarry != null, "quarry block-entity must be present");
 
             BlockPos quarryAbs = helper.absolutePos(quarryLocal);

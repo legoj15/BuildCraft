@@ -62,12 +62,17 @@ public abstract class BCButton extends AbstractButton {
         extractDefaultSprite(graphics.raw);
         //?} elif >=1.21.11 {
         /*renderDefaultSprite(graphics.raw);*/
-        //?} else {
+        //?} elif >=1.21.10 {
         /*// 1.21.10 has no extract/renderDefaultSprite helper — replicate AbstractButton.renderWidget's blit.
         graphics.raw.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
             SPRITES.get(this.active, this.isHoveredOrFocused()),
             getX(), getY(), getWidth(), getHeight(),
             net.minecraft.util.ARGB.white(this.alpha));*/
+        //?} else {
+        /*// 1.21.1: classic blitSprite(ResourceLocation, x, y, w, h) — no pipeline, no tint (matches vanilla
+        // AbstractButton.renderWidget on 1.21.1, which blits the button sprite untinted).
+        graphics.raw.blitSprite(SPRITES.get(this.active, this.isHoveredOrFocused()),
+            getX(), getY(), getWidth(), getHeight());*/
         //?}
     }
 
@@ -79,9 +84,13 @@ public abstract class BCButton extends AbstractButton {
         //?} elif >=1.21.11 {
         /*renderDefaultLabel(graphics.raw.textRendererForWidget(this,
             net.minecraft.client.gui.GuiGraphics.HoveredTextEffects.NONE));*/
-        //?} else {
+        //?} elif >=1.21.10 {
         /*renderString(graphics.raw, net.minecraft.client.Minecraft.getInstance().font,
             net.minecraft.util.ARGB.color(this.alpha, getFGColor()));*/
+        //?} else {
+        /*// 1.21.1: ARGB.color(alpha, rgb) is absent; pack ARGB as vanilla AbstractButton does (rgb | alpha<<24).
+        renderString(graphics.raw, net.minecraft.client.Minecraft.getInstance().font,
+            getFGColor() | (net.minecraft.util.Mth.ceil(this.alpha * 255.0F) << 24));*/
         //?}
     }
 }

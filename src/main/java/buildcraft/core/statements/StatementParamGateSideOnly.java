@@ -16,6 +16,7 @@ import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementMouseClick;
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 
 import buildcraft.core.BCCoreSprites;
 
@@ -33,7 +34,7 @@ public enum StatementParamGateSideOnly implements IStatementParameter {
     }
 
     public static StatementParamGateSideOnly readFromNbt(CompoundTag nbt) {
-        if (nbt.getBoolean("isOn").orElse(false)) {
+        if (NBTUtilBC.getBoolean(nbt, "isOn", false)) {
             return SPECIFIC;
         }
         return ANY;

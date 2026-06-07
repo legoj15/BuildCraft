@@ -11,9 +11,8 @@ import java.util.Optional;
 import net.minecraft.client.renderer.Rect2i;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
 
+import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.IGuiElement;
 import buildcraft.lib.gui.elem.GuiElementFluidTank;
@@ -65,14 +64,13 @@ public class BCGuiContainerHandler implements IGuiContainerHandler<GuiBC8<?>> {
             double h = tankElem.getHeight();
             if (mouseX < x || mouseY < y || mouseX >= x + w || mouseY >= y + h) continue;
 
-            FluidStacksResourceHandler tank = tankElem.getTank();
+            BCFluidTank tank = tankElem.getTank();
             if (tank == null || tank.size() == 0) continue;
 
-            FluidResource fluid = tank.getResource(0);
-            long amount = tank.getAmountAsLong(0);
-            if (fluid.isEmpty() || amount <= 0) continue;
+            FluidStack stack = tank.getFluidStack(0);
+            long amount = tank.getAmountMb(0);
+            if (stack.isEmpty() || amount <= 0) continue;
 
-            FluidStack stack = fluid.toStack((int) Math.min(amount, Integer.MAX_VALUE));
             return builder.createBuilder(NeoForgeTypes.FLUID_STACK, stack)
                     .buildWithArea((int) x, (int) y, (int) Math.ceil(w), (int) Math.ceil(h));
         }

@@ -40,7 +40,11 @@ public final class CraftingUtilBlueprintTester {
         ServerLevel level = helper.getLevel();
 
         var key = ResourceKey.create(Registries.RECIPE, Identifier.parse("buildcraftunofficial:gear_stone"));
+        //? if >=1.21.10 {
         var holder = level.recipeAccess().byKey(key);
+        //?} else {
+        /*var holder = level.getRecipeManager().byKey(Identifier.parse("buildcraftunofficial:gear_stone"));*/
+        //?}
         if (holder.isEmpty() || !(holder.get().value() instanceof CraftingRecipe recipe)) {
             helper.fail("gear_stone crafting recipe not loaded — cannot exercise placeRecipeInBlueprint");
             return;

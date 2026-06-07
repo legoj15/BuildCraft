@@ -43,7 +43,11 @@ public class SpriteHolderRegistry {
             // on the blocks atlas, so there's nothing extra to scan there.
             TextureAtlas.LOCATION_ITEMS,
             //?}
+            //? if >=1.21.10 {
             Sheets.GUI_SHEET,
+            //?} else {
+            /*Identifier.withDefaultNamespace("textures/atlas/gui.png"),*/
+            //?}
         };
     }
 

@@ -594,6 +594,14 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                 }
                 if (currentTask.addPower(added)) {
                     currentTask = null;
+                    // Sync the final drill position the task just committed (TaskMoveDrill.finish sets
+                    // drillPos = to). Without this a task that COMPLETES on this tick — common at high
+                    // power, where a whole 1-block move finishes in a single tick — never pushes its final
+                    // drillPos to the client: the tile only synced while the task was still running, so
+                    // clientDrillPos (and the rendered rig) lags a block or two behind the rig's collision
+                    // entity (which syncs every tick), leaving a gap in a boom arm's collision that
+                    // persists while the drill is stopped. Re-sync so the visual matches the collision.
+                    sendUpdate = true;
                 } else {
                     sendUpdate = true;
                     break;

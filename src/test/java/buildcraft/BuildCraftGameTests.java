@@ -200,6 +200,7 @@ public class BuildCraftGameTests {
 
         // Quarry frames must not be washed away (and dropped) by flowing fluid (infinite-frame exploit).
         reg.accept("buildcraftunofficial:frame_not_washed_away_by_fluid", () -> buildcraft.builders.block.BlockFrameTester::testFrameNotWashedAwayByFluid);
+        reg.accept("buildcraftunofficial:quarry_rig_fire_immune", () -> buildcraft.builders.entity.EntityQuarryRigTester::testRigIsFireImmune);
 
         // Template Builder — fillable-slot classification (grass tufts / snow / fluids).
         // Regression guard for the user-reported "Filler with Excavate doesn't clear grass

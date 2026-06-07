@@ -149,6 +149,32 @@ public class EntityQuarryRig extends Entity {
         return false;
     }
 
+    /**
+     * Fire-immune on every node. This is an invisible structural collision entity for the drill arms;
+     * when the arms pass through lava it would otherwise catch fire and the entity render dispatcher
+     * would draw the fire overlay sprite over the (invisible) entity — i.e. floating fire across the
+     * middle of the drill arm. Being fire-immune skips lava ignition entirely, so no overlay and no
+     * fire ticks.
+     */
+    @Override
+    public boolean fireImmune() {
+        return true;
+    }
+
+    //? if <1.21.10 {
+    /*// 1.21.1 only: snap to each synced position instead of smoothing. The classic client entity lerp
+    // (lerpTo with a fixed multi-step interpolation) made this collision entity lag visibly behind the
+    // BER-rendered drill arm — the visual follows the block entity's per-tick clientDrillPos, so the
+    // multi-tick lerp left the collision "somewhere other than where it visually is". With
+    // updateInterval(1) the rig gets a position every tick, so snapping tracks the visual within a
+    // tick. 1.21.10+/26.1 use the adaptive InterpolationHandler, which already keeps pace — so this
+    // override is 1.21.1-only.
+    @Override
+    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
+        this.setPos(x, y, z);
+    }*/
+    //?}
+
     // ── Tick ──────────────────────────────────────────────────────────────
 
     @Override

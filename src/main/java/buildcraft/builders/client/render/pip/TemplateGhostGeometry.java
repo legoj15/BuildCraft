@@ -24,7 +24,7 @@ import buildcraft.builders.snapshot.Template;
  * state) so the culling logic can be exercised under plain JUnit without a client/GL context —
  * see {@code TemplateGhostGeometryTester}, mirroring the pattern of the pipe-flow geometry testers.
  */
-final class TemplateGhostGeometry {
+public final class TemplateGhostGeometry {
     private TemplateGhostGeometry() {}
 
     /**
@@ -44,7 +44,7 @@ final class TemplateGhostGeometry {
      * that direction is not also a filled cell. Faces shared with a filled neighbour are interior
      * to the shell and omitted, so a fully-enclosed cell yields an empty set.
      */
-    static EnumSet<Direction> visibleFaces(Template template, BlockPos size, int x, int y, int z) {
+    public static EnumSet<Direction> visibleFaces(Template template, BlockPos size, int x, int y, int z) {
         EnumSet<Direction> faces = EnumSet.noneOf(Direction.class);
         for (Direction face : Direction.values()) {
             if (!cellFilled(template, size,

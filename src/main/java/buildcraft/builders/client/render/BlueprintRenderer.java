@@ -85,6 +85,12 @@ public class BlueprintRenderer {
                 // PiP base class intersects this with the full bounds internally.
                 graphics.raw.peekScissorStack());
         graphics.raw.submitPictureInPictureRenderState(state);
+        //?} else {
+        /*// 1.21.1: no PiP pipeline — render the rotating 3D preview straight into the GUI buffer source
+        // (GuiGraphics.pose() is a real 3D PoseStack on 1.21.1, not 26.1's 2D Matrix3x2fStack). The full
+        // per-cell logic (blocks/fluids/templates/pipes) lives in BlueprintGuiRenderer.
+        BlueprintGuiRenderer.render(graphics, snapshot, viewportX, viewportY, viewportWidth, viewportHeight,
+                System.currentTimeMillis());*/
         //?}
     }
 }

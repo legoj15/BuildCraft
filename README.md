@@ -32,6 +32,7 @@ Please mention if you are using any other mods, especially mods which optimize o
 To test the mod locally, use the NeoForge run tasks. These are **per-node**, so prefix them with the Minecraft version you want (e.g. `:26.1.2:`):
 * Run the Client: `./gradlew :26.1.2:runClient` (or `.\gradlew.bat :26.1.2:runClient` on Windows)
 * Run the Server: `./gradlew :26.1.2:runServer` (or `.\gradlew.bat :26.1.2:runServer` on Windows)
+
 Valid versions are `:1.21.1:`, `:1.21.10:`, `:1.21.11:` and `:26.1.2:`.
 
 On Windows 11, `runClientAndServer.ps1` will launch both at the same time (against the `:26.1.2` node) to reduce the amount of steps.
@@ -42,9 +43,9 @@ Your directory structure will look like a standard monolithic Java project:
     BuildCraft
      |- build            (Generated after compiling)
      |- run              (Generated when running the client/server)
-     |- versions         (Stonecutter nodes, one per MC line; today just 26.1.2)
+     |- versions         (Stonecutter nodes, one per MC line)
      |   \- 26.1.2
-     \- src              (Shared source; one jar covers all of 26.1.x)
+     \- src              (Shared source between all versions)
       |- main            (Mod source code and resources)
       \- test            (Test source code)
 

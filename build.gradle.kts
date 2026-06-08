@@ -223,6 +223,26 @@ fun convertRecipe1211(root: Any?) {
     stripCustomModelData(r)
 }
 
+// Rewrite advancement background values from the 1.21.10+ bare-id form ("namespace:path") to the
+// 1.21.1 full-path form ("namespace:textures/path.png"). On 1.21.1 the background field is a raw
+// ResourceLocation blitted directly as a file path; on 1.21.10+ it is wrapped in ClientAsset.ResourceTexture
+// which auto-prepends "textures/" and appends ".png". No-op if the dir is absent.
+@Suppress("UNCHECKED_CAST")
+fun downportAdvancementBackground1211(advancementDir: File) {
+    if (!advancementDir.isDirectory) return
+    val slurper = groovy.json.JsonSlurper()
+    advancementDir.walkTopDown().filter { it.extension == "json" }.forEach { f ->
+        val root = slurper.parse(f) as? MutableMap<String, Any?> ?: return@forEach
+        val display = root["display"] as? MutableMap<String, Any?> ?: return@forEach
+        val bg = display["background"] as? String ?: return@forEach
+        val colon = bg.indexOf(':')
+        if (colon >= 0) {
+            display["background"] = "${bg.substring(0, colon)}:textures/${bg.substring(colon + 1)}.png"
+            f.writeText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(root)))
+        }
+    }
+}
+
 // Down-port every recipe JSON in a processed `…/recipe` dir in place (no-op if the dir is absent).
 // Shared by the main and test processResources hooks so test-only fixture recipes (e.g. the
 // cycle-output game tests' test_cycle_a/b) get the same 1.21.1 treatment as the shipped recipes.
@@ -300,6 +320,7 @@ tasks.named<Copy>("processResources") {
     if (isPre1_21_10) {
         doLast {
             downportRecipeDir1211(destinationDir.resolve("data/buildcraftunofficial/recipe"))
+            downportAdvancementBackground1211(destinationDir.resolve("data/buildcraftunofficial/advancement"))
             // Synthesise classic models/item/ JSONs from the 1.21.4+ items/ definitions (see fn doc).
             generateOldItemModels1211(
                 destinationDir.resolve("assets/buildcraftunofficial/items"),

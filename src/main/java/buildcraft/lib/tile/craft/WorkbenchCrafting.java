@@ -44,6 +44,15 @@ public class WorkbenchCrafting {
 
     @Nullable
     private RecipeHolder<CraftingRecipe> currentRecipe;
+    /** All recipes the current blueprint grid matches, sorted by id (see {@link CraftingUtil#findMatchingRecipes}).
+     *  When this holds 2+ entries the machine's GUI shows a cycle-output button. Server-side only. */
+    private List<RecipeHolder<CraftingRecipe>> matchingRecipes = List.of();
+    /** Index into {@link #matchingRecipes} of the output the player picked. Preserved by recipe id
+     *  across grid/material changes and reloads; clamps to 0 when the selection disappears. */
+    private int selectedIndex = 0;
+    /** A recipe id read from NBT on load, applied on the next {@link #tick()} once matches recompute. */
+    @Nullable
+    private String pendingSelectedRecipeId = null;
     private ItemStack assumedResult = ItemStack.EMPTY;
 
     public WorkbenchCrafting(int width, int height, TileBC_Neptune tile, ItemHandlerSimple invBlueprint,
@@ -92,21 +101,77 @@ public class WorkbenchCrafting {
         }
         if (isBlueprintDirty) {
             CraftingInput input = createBlueprintInput();
-            currentRecipe = CraftingUtil.findMatchingRecipe(input, tile.getLevel());
-            if (currentRecipe == null) {
-                assumedResult = ItemStack.EMPTY;
-            } else {
-                //? if >=26.1 {
-                assumedResult = currentRecipe.value().assemble(input);
-                //?} else {
-                /*assumedResult = currentRecipe.value().assemble(input, tile.getLevel().registryAccess());*/
-                //?}
-            }
+            // Remember which output the player had picked so a grid edit (or a reload) doesn't
+            // silently switch it: prefer the live selection, falling back to the id read from NBT.
+            String desiredId = currentRecipe != null ? CraftingUtil.recipeId(currentRecipe) : pendingSelectedRecipeId;
+            matchingRecipes = CraftingUtil.findMatchingRecipes(input, tile.getLevel());
+            pendingSelectedRecipeId = null;
+            selectedIndex = indexOfRecipeId(desiredId);
+            currentRecipe = matchingRecipes.isEmpty() ? null : matchingRecipes.get(selectedIndex);
+            updateAssumedResult(input);
             isBlueprintDirty = false;
             areMaterialsDirty = true; // re-check materials against new recipe
             return true;
         }
         return false;
+    }
+
+    /** Cycles the selected output among the matching recipes (dir = +1 next, -1 previous). No-op
+     *  unless 2+ recipes match. Refreshes the assumed result so the tile re-syncs it to the client.
+     *  @return true if the selection changed. */
+    public boolean cycleOutput(int dir) {
+        if (matchingRecipes.size() <= 1) {
+            return false;
+        }
+        selectedIndex = Math.floorMod(selectedIndex + dir, matchingRecipes.size());
+        currentRecipe = matchingRecipes.get(selectedIndex);
+        updateAssumedResult(createBlueprintInput());
+        areMaterialsDirty = true; // re-check materials/output against the newly selected result
+        return true;
+    }
+
+    /** Number of recipes the current grid matches (0 if none). The GUI shows the cycle button when &gt;1. */
+    public int getMatchCount() {
+        return matchingRecipes.size();
+    }
+
+    /** Index of the currently selected output within the match list. */
+    public int getSelectedIndex() {
+        return selectedIndex;
+    }
+
+    /** Id of the selected recipe, for NBT persistence; empty when nothing matches. */
+    public String getSelectedRecipeId() {
+        return currentRecipe != null ? CraftingUtil.recipeId(currentRecipe) : "";
+    }
+
+    /** Restores a selected-output choice from NBT; applied on the next {@link #tick()} once matches recompute. */
+    public void setPendingSelectedRecipeId(String id) {
+        pendingSelectedRecipeId = (id == null || id.isEmpty()) ? null : id;
+        isBlueprintDirty = true;
+    }
+
+    private int indexOfRecipeId(@Nullable String id) {
+        if (id != null) {
+            for (int i = 0; i < matchingRecipes.size(); i++) {
+                if (CraftingUtil.recipeId(matchingRecipes.get(i)).equals(id)) {
+                    return i;
+                }
+            }
+        }
+        return 0;
+    }
+
+    private void updateAssumedResult(CraftingInput input) {
+        if (currentRecipe == null) {
+            assumedResult = ItemStack.EMPTY;
+        } else {
+            //? if >=26.1 {
+            assumedResult = currentRecipe.value().assemble(input);
+            //?} else {
+            /*assumedResult = currentRecipe.value().assemble(input, tile.getLevel().registryAccess());*/
+            //?}
+        }
     }
 
     /** @return True if {@link #craft()} might return true. */

@@ -26,6 +26,8 @@ import buildcraft.api.recipes.IngredientStack;
 
 import buildcraft.core.BCCoreBlocks;
 
+import buildcraft.factory.BCFactoryBlocks;
+
 import buildcraft.lib.misc.ColourUtil;
 import buildcraft.lib.recipe.AssemblyRecipeRegistry;
 
@@ -48,6 +50,7 @@ public class BCSiliconRecipes {
         registerWireRecipes();
         registerGateCopierRecipe();
         registerFacadeRecipes();
+        registerTankRecipe();
     }
 
     // --- Plug Recipes ---
@@ -245,6 +248,27 @@ public class BCSiliconRecipes {
 
     private static void registerFacadeRecipes() {
         AssemblyRecipeRegistry.register(FacadeAssemblyRecipes.INSTANCE);
+    }
+
+    // --- Tank Recipe ---
+
+    private static void registerTankRecipe() {
+        // A power-assisted, more efficient alternative to the 8-glass crafting recipe:
+        // 6 cheap glass -> 1 BuildCraft tank. This is also how a player obtains a BuildCraft
+        // tank when another mod (e.g. IronTanks) claims the 8-glass crafting grid; see GitHub
+        // issue #20. "Cheap glass" is spelled out as clear glass + the 16 stained variants (the
+        // vanilla c:glass_blocks/cheap contents) rather than referencing the tag, because both
+        // the registry tag-getter and the Ingredient tag factory diverge across the 1.21.1
+        // cliff while Ingredient.of(ItemLike...) is uniform on every Stonecutter node.
+        java.util.List<net.minecraft.world.level.ItemLike> cheapGlass = new java.util.ArrayList<>();
+        cheapGlass.add(Blocks.GLASS);
+        for (DyeColor colour : ColourUtil.COLOURS) {
+            cheapGlass.add(getStainedGlass(colour));
+        }
+        ImmutableSet<IngredientStack> input = ImmutableSet.of(new IngredientStack(
+            Ingredient.of(cheapGlass.toArray(new net.minecraft.world.level.ItemLike[0])), 6));
+        AssemblyRecipeRegistry.register(new AssemblyRecipeBasic(
+            "tank", 2_000 * MjAPI.MJ, input, new ItemStack(BCFactoryBlocks.TANK.get())));
     }
 
     // --- Helpers ---

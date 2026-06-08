@@ -99,6 +99,29 @@ public class TileAdvancedCraftingTable extends TileLaserTableBase {
         return invBlueprint;
     }
 
+    /** Cycles which output the blueprint produces when 2+ recipes match (server-side; dir +1/-1) and
+     *  re-syncs the result preview to clients. Called from the container's cycle-output button. */
+    public void cycleCraftingOutput(int dir) {
+        if (level == null || level.isClientSide()) {
+            return;
+        }
+        if (crafting.cycleOutput(dir)) {
+            resultClient = crafting.getAssumedResult().copy();
+            setChanged();
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+        }
+    }
+
+    /** Number of recipes the current blueprint matches (&gt;1 enables the GUI cycle button). */
+    public int getCraftingMatchCount() {
+        return crafting.getMatchCount();
+    }
+
+    /** Index of the currently selected output among the matches. */
+    public int getCraftingSelectedIndex() {
+        return crafting.getSelectedIndex();
+    }
+
     // --- Save / Load ---
 
     @Override
@@ -107,12 +130,14 @@ public class TileAdvancedCraftingTable extends TileLaserTableBase {
         if (!resultClient.isEmpty()) {
             output.store("resultClient", ItemStack.CODEC, resultClient);
         }
+        output.putString("selectedRecipe", crafting.getSelectedRecipeId());
     }
 
     @Override
     protected void readData(BCValueInput input) {
         super.readData(input);
         resultClient = input.read("resultClient", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+        crafting.setPendingSelectedRecipeId(input.getStringOr("selectedRecipe", ""));
     }
 
     // --- Network Sync ---

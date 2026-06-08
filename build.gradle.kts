@@ -9,7 +9,6 @@ val minecraftVersion = property("minecraft_version") as String
 val neoVersion = property("neo_version") as String
 val jeiVersion = property("jei_version") as String
 val modVersion = property("mod_version") as String
-val mcJarTag = property("mc_jar_tag") as String
 // Per-node Java toolchain: 26.1+ needs Java 25; the 1.21.11 node (pre-CalVer) overrides to 21.
 val javaVersion = property("java_version") as String
 // Resolved at project scope (NOT inside tasks.processResources {}, where `property()` would
@@ -224,6 +223,19 @@ fun convertRecipe1211(root: Any?) {
     stripCustomModelData(r)
 }
 
+// Down-port every recipe JSON in a processed `…/recipe` dir in place (no-op if the dir is absent).
+// Shared by the main and test processResources hooks so test-only fixture recipes (e.g. the
+// cycle-output game tests' test_cycle_a/b) get the same 1.21.1 treatment as the shipped recipes.
+fun downportRecipeDir1211(recipeDir: File) {
+    if (!recipeDir.isDirectory) return
+    val slurper = groovy.json.JsonSlurper()
+    recipeDir.listFiles()?.filter { it.extension == "json" }?.forEach { f ->
+        val root = slurper.parse(f)
+        convertRecipe1211(root)
+        f.writeText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(root)))
+    }
+}
+
 // 1.21.1 ITEM-MODEL FORMAT BACKPORT (1.21.1 node only — modern src untouched, released nodes
 // byte-identical). 1.21.4+ defines item models in assets/<ns>/items/<name>.json (the component-driven
 // model selector: minecraft:model / minecraft:range_dispatch / select / condition). 1.21.1 has none of
@@ -287,20 +299,23 @@ fun generateOldItemModels1211(itemsDir: File, modelsItemDir: File) {
 tasks.named<Copy>("processResources") {
     if (isPre1_21_10) {
         doLast {
-            val recipeDir = destinationDir.resolve("data/buildcraftunofficial/recipe")
-            if (recipeDir.isDirectory) {
-                val slurper = groovy.json.JsonSlurper()
-                recipeDir.listFiles()?.filter { it.extension == "json" }?.forEach { f ->
-                    val root = slurper.parse(f)
-                    convertRecipe1211(root)
-                    f.writeText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(root)))
-                }
-            }
+            downportRecipeDir1211(destinationDir.resolve("data/buildcraftunofficial/recipe"))
             // Synthesise classic models/item/ JSONs from the 1.21.4+ items/ definitions (see fn doc).
             generateOldItemModels1211(
                 destinationDir.resolve("assets/buildcraftunofficial/items"),
                 destinationDir.resolve("assets/buildcraftunofficial/models/item")
             )
+        }
+    }
+}
+
+// Test-only resources need the same 1.21.1 recipe down-port: the cycle-output game tests ship
+// fixture recipes (test_cycle_a/b) under src/test/resources in the modern bare-string format, which
+// 1.21.1's ingredient codec rejects. (No item-model synthesis here — test resources ship no items/.)
+tasks.named<Copy>("processTestResources") {
+    if (isPre1_21_10) {
+        doLast {
+            downportRecipeDir1211(destinationDir.resolve("data/buildcraftunofficial/recipe"))
         }
     }
 }
@@ -410,7 +425,9 @@ tasks.jar {
     // Axis A (mod_version, CalVer) + Axis B (minecraft_version) as a SemVer build-metadata tag.
     // The +mc<mc> coordinate lives ONLY in the jar filename — never in the mods.toml version —
     // because NeoForge orders versions Maven-style, where '+...' would corrupt update ordering.
-    archiveVersion = "$modVersion+mc$mcJarTag"
+    // The tag IS the node's minecraft_version (e.g. +mc26.1.2), so there's no separate jar-tag
+    // property to keep in sync — one variable drives both the build target and the filename.
+    archiveVersion = "$modVersion+mc$minecraftVersion"
 }
 
 tasks.register<JavaExec>("dumpMethods") {

@@ -89,3 +89,7 @@ _gametest-*.log
 # Bespoke local pre-release test harness — maintainer's two-machine setup (Server1 + Prism);
 # not for VCS. The fullTestSuite Gradle task references it but self-skips when it's absent.
 /testing/
+
+# Maintainer-only release orchestrator (GitHub + CurseForge + Modrinth publish). Holds author
+# project IDs; tokens come from env vars. Not for third-party clones.
+/release/

@@ -8,6 +8,7 @@ package buildcraft.silicon.gui;
 
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.components.ImageButton;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
 //? if >=1.21.10 {
@@ -21,6 +22,7 @@ import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.button.CycleOutputButton;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
@@ -36,6 +38,8 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     private ACTRecipeBookComponent recipeBookComponent;
     private ImageButton recipeBookButton;
     private boolean widthTooNarrow;
+    private CycleOutputButton cycleButton;
+    private Boolean cycleHasAlternatives;
 
     public GuiAdvancedCraftingTable(ContainerAdvancedCraftingTable container, Inventory playerInventory,
         Component title) {
@@ -106,6 +110,15 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
         addRenderableWidget(this.recipeBookButton);
         addRenderableWidget(this.recipeBookComponent);*/
         //?}
+
+        // Cycle-output button: a frameless cycle.png icon ABOVE the recipe-output preview that lets
+        // the player pick among conflicting recipe outputs (e.g. a BuildCraft tank vs another mod's
+        // tank from the same 8-glass grid; GitHub issue #20). Always shown; greyed + unclickable
+        // unless 2+ recipes match. Clicking cycles forward (the server is a no-op past one match).
+        // Position + active state + tooltip are refreshed each tick (the recipe book shifts leftPos).
+        this.cycleButton = new CycleOutputButton(this.leftPos + 128, this.topPos + 14,
+            () -> menu.sendMessage(ContainerAdvancedCraftingTable.NET_CYCLE_OUTPUT, buf -> buf.writeBoolean(true)));
+        addRenderableWidget(this.cycleButton);
     }
 
     private ScreenPosition getRecipeBookButtonPosition() {
@@ -118,6 +131,24 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
         super.containerTick();
         if (this.recipeBookComponent != null) {
             this.recipeBookComponent.tick();
+        }
+        updateCycleButton();
+    }
+
+    /** Keeps the cycle-output button aligned (the recipe book shifts leftPos) and greys it out — with
+     *  an explanatory tooltip — when there are no alternative outputs to cycle to. */
+    private void updateCycleButton() {
+        if (this.cycleButton == null) {
+            return;
+        }
+        this.cycleButton.setPosition(this.leftPos + 128, this.topPos + 14);
+        boolean hasAlternatives = menu.getSyncedMatchCount() > 1;
+        this.cycleButton.active = hasAlternatives;
+        if (this.cycleHasAlternatives == null || this.cycleHasAlternatives != hasAlternatives) {
+            this.cycleHasAlternatives = hasAlternatives;
+            this.cycleButton.setTooltip(Tooltip.create(Component.translatable(hasAlternatives
+                ? "gui.buildcraftunofficial.cycle_output"
+                : "gui.buildcraftunofficial.cycle_output.none")));
         }
     }
 

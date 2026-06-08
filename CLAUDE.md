@@ -18,7 +18,7 @@ Java 25 is the project toolchain — used for compile, test, and the actual game
 # Compile the node (fast feedback)
 ./gradlew :26.1.2:compileJava
 
-# Build the jar(s) and collect into build/libs/<mod_version>/ (currently one jar, +mc26.1)
+# Build the jar(s) and collect into build/libs/<mod_version>/ (one jar per node, e.g. +mc26.1.2)
 ./gradlew buildAndCollect
 
 # Run the client / server
@@ -39,7 +39,7 @@ Two mechanisms handle version differences, chosen by *kind*:
 - **Across a cliff (a new line, e.g. a future 1.21.11 on Java 21) → a new node + `//? if` directives.** Add a `versions(...)` entry in `settings.gradle.kts`, a `versions/<id>/gradle.properties`, and wrap the genuinely cross-cliff call sites in Stonecutter directives (`//? if >=… { … } //?} else { … }`). That line then builds its own jar, and per-node/active-switching tasks (`:<id>:runClient`, `Set active project to <id>`) come into play.
 
 - **Build scripts (all Kotlin):** `settings.gradle.kts` declares the nodes; `stonecutter.gradle.kts` is the controller (active node + moddev `apply false`); `build.gradle.kts` is the shared per-node build. `src/` lives at the tree root.
-- `./gradlew buildAndCollect` builds each node and collects the `+mc<tag>` jars into `build/libs/<mod_version>/`. The 26.1.x jar is tagged `+mc26.1` (it covers the line); `mc_jar_tag` in the node's `gradle.properties` sets that tag.
+- `./gradlew buildAndCollect` builds each node and collects the `+mc<minecraft_version>` jars into `build/libs/<mod_version>/`. Each jar's tag IS the node's `minecraft_version` (the 26.1.x node ships `+mc26.1.2`, the actively-supported patch; its `neoforge.mods.toml` range still spans the whole line). One variable drives both the build target and the filename — there is no separate jar-tag property.
 - **Kotlin DSL gotcha:** inside a `tasks.xxx { }` block, `property("p")` resolves against the *task*, not the project — read gradle.properties values into top-level `val`s (see [build.gradle.kts](build.gradle.kts)).
 
 ## Architecture

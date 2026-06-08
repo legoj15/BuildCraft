@@ -10,7 +10,7 @@
     "i": "#c:ingots/iron",
     "g": "buildcraftunofficial:gear_iron",
     "b": "minecraft:iron_bars",
-    "t": "buildcraftunofficial:tank"
+    "t": "#buildcraftunofficial:tanks"
   },
   "result": {
     "id": "buildcraftunofficial:flood_gate"

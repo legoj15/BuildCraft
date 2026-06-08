@@ -6,6 +6,7 @@
 
 package buildcraft.lib.misc;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,6 +51,35 @@ public final class CraftingUtil {
             .getRecipeFor(RecipeType.CRAFTING, input, serverLevel)
             .orElse(null);*/
         //?}
+    }
+
+    /** Every crafting recipe whose ingredients the given grid satisfies, sorted by recipe id for a
+     *  stable, deterministic cycle order. Vanilla {@code getRecipeFor} keeps only the first match
+     *  ({@link #findMatchingRecipe}); the Auto Workbench / Advanced Crafting Table use this to let
+     *  players cycle between conflicting outputs (e.g. a BuildCraft tank vs another mod's tank from
+     *  the same 8-glass grid). Returns an empty list off-server. */
+    public static List<RecipeHolder<CraftingRecipe>> findMatchingRecipes(CraftingInput input, Level level) {
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return List.of();
+        }
+        //? if >=1.21.10 {
+        return serverLevel.recipeAccess().recipeMap()
+            .getRecipesFor(RecipeType.CRAFTING, input, serverLevel)
+            .sorted(Comparator.comparing(CraftingUtil::recipeId))
+            .toList();
+        //?} else {
+        /*return serverLevel.getRecipeManager().getAllRecipesFor(RecipeType.CRAFTING).stream()
+            .filter(holder -> holder.value().matches(input, serverLevel))
+            .sorted(Comparator.comparing(CraftingUtil::recipeId))
+            .toList();*/
+        //?}
+    }
+
+    /** The {@code namespace:path} id of a recipe holder. {@link RegistryKeyUtil#id} bridges the
+     *  1.21.1 (ResourceLocation id) / 1.21.10+ (ResourceKey id) cliff. Used as the stable key for
+     *  cycle ordering and for remembering the player's selected output across changes and reloads. */
+    public static String recipeId(RecipeHolder<?> holder) {
+        return RegistryKeyUtil.id(holder.id()).toString();
     }
 
     /**

@@ -1,0 +1,9 @@
+{
+  "values": [
+    "buildcraftunofficial:tank",
+    {
+      "id": "irontanks:glass_tank",
+      "required": false
+    }
+  ]
+}

@@ -12,7 +12,7 @@
     "f": "buildcraftunofficial:flood_gate",
     "g": "buildcraftunofficial:gear_diamond",
     "c": "buildcraftunofficial:chute",
-    "t": "buildcraftunofficial:tank",
+    "t": "#buildcraftunofficial:tanks",
     "b": "buildcraftunofficial:blueprint_clean",
     "l": "buildcraftunofficial:filler"
   },

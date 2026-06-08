@@ -26,7 +26,7 @@ Please mention if you are using any other mods, especially mods which optimize o
     * On Linux/Unix/Mac: `./gradlew buildAndCollect`
     * On Windows: `.\gradlew.bat buildAndCollect`
     * The Gradle wrapper pins the required Gradle version (9.x); you do **not** need Gradle installed.
-5. Once the build finishes, the jar — `BCunofficial-<version>+mc26.1.jar`, compatible with all of 26.1.x — is in `build/libs/<version>/`.
+5. Once the build finishes, the jar — `BCunofficial-<version>+mc26.1.2.jar`, compatible with all of 26.1.x — is in `build/libs/<version>/`.
 
 ### Running in a Development Environment
 To test the mod locally, use the NeoForge run tasks. These are **per-node**, so prefix them with the Minecraft version you want (e.g. `:26.1.2:`):

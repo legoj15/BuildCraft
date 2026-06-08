@@ -1,5 +1,9 @@
 {
   "homepage": "https://github.com/legoj15/BuildCraft",
+  "1.21.1": {
+  },
+  "1.21.10": {
+  },
   "1.21.11": {
     "2026.1.0-rc3": "- Fixed the Builder looping forever on tall grass and other two-tall plants\n- You can now check engine fuels in JEI\n- JEI's \"+\" button now loads recipes into the Assembly Table, Distiller, and Heat Exchanger\n- Fixed flowing fluids pushing entities with way too much force\n- Fixed the Builder listing every pipe as the same type\n- Fixed the Builder placing pipe add-ons for free"
   },
@@ -19,13 +23,17 @@
     "2026.1.0-rc3": "- Fixed the Builder looping forever on tall grass and other two-tall plants\n- You can now check engine fuels in JEI\n- JEI's \"+\" button now loads recipes into the Assembly Table, Distiller, and Heat Exchanger\n- Fixed flowing fluids pushing entities with way too much force\n- Fixed the Builder listing every pipe as the same type\n- Fixed the Builder placing pipe add-ons for free"
   },
   "promos": {
-    "1.21.11-recommended": "2026.1.0-rc3",
-    "1.21.11-latest": "2026.1.0-rc3",
+    "1.21.1-recommended": "2026.1.0-rc4",
+    "1.21.1-latest": "2026.1.0-rc4",
+    "1.21.10-recommended": "2026.1.0-rc4",
+    "1.21.10-latest": "2026.1.0-rc4",
+    "1.21.11-recommended": "2026.1.0-rc4",
+    "1.21.11-latest": "2026.1.0-rc4",
     "26.1-recommended": "2026.1.0-rc3",
-    "26.1-latest": "2026.1.0-rc3",
+    "26.1-latest": "2026.1.0-rc4",
     "26.1.1-recommended": "2026.1.0-rc3",
-    "26.1.1-latest": "2026.1.0-rc3",
-    "26.1.2-recommended": "2026.1.0-rc3",
-    "26.1.2-latest": "2026.1.0-rc3"
+    "26.1.1-latest": "2026.1.0-rc4",
+    "26.1.2-recommended": "2026.1.0-rc4",
+    "26.1.2-latest": "2026.1.0-r4"
   }
 }

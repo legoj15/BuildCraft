@@ -10,7 +10,7 @@
     "i": "#c:ingots/iron",
     "r": "#c:dusts/redstone",
     "g": "buildcraftunofficial:gear_iron",
-    "t": "buildcraftunofficial:tank",
+    "t": "#buildcraftunofficial:tanks",
     "b": "minecraft:bucket"
   },
   "result": {

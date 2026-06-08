@@ -7,7 +7,7 @@
   ],
   "key": {
     "r": "minecraft:redstone_torch",
-    "t": "buildcraftunofficial:tank",
+    "t": "#buildcraftunofficial:tanks",
     "g": "buildcraftunofficial:gear_diamond"
   },
   "result": {

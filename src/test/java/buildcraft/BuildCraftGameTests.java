@@ -533,6 +533,20 @@ public class BuildCraftGameTests {
         // the only consumer of Gelled Water, silently lost during the modern port then re-added).
         reg.accept("buildcraftunofficial:water_gel_to_bucket_recipe", () -> buildcraft.factory.WaterGelRecipeTester::water_gel_to_bucket_recipe);
 
+        // Tank / IronTanks compatibility (issue #20) — IronTanks keeps the 8-glass crafting grid;
+        // BuildCraft's tank stays reachable via the #buildcraftunofficial:tanks tag in the four
+        // machines (Pump checked here), its 8-glass crafting recipe when IronTanks is absent, and an
+        // always-available 6-cheap-glass Assembly Table recipe.
+        reg.accept("buildcraftunofficial:tank_compat_pump_accepts_buildcraft_tank", () -> buildcraft.factory.TankRecipeCompatTester::testPumpAcceptsBuildcraftTank);
+        reg.accept("buildcraftunofficial:tank_compat_craftable_without_irontanks", () -> buildcraft.factory.TankRecipeCompatTester::testTankCraftableWithoutIronTanks);
+        reg.accept("buildcraftunofficial:tank_compat_assembly_six_glass", () -> buildcraft.factory.TankRecipeCompatTester::testAssemblyTankRecipe);
+
+        // Conflicting-recipe cycle-output for the Auto Workbench / Advanced Crafting Table (issue #20
+        // follow-up). Two test-only recipes (test_cycle_a -> diamond, test_cycle_b -> emerald) both
+        // consume a single bedrock, so a one-bedrock grid matches both.
+        reg.accept("buildcraftunofficial:cycle_output_find_matching_recipes", () -> buildcraft.lib.CraftingOutputCycleTester::testFindMatchingRecipesConflicts);
+        reg.accept("buildcraftunofficial:cycle_output_advanced_crafting_table", () -> buildcraft.lib.CraftingOutputCycleTester::testAdvancedCraftingTableCyclesOutput);
+
         reg.accept("buildcraftunofficial:autoworkbench_cobblestone_pipe_connects", () -> buildcraft.factory.MachinePipeConnectivityTester::testCobblestonePipeConnectsToAutoWorkbench);
         reg.accept("buildcraftunofficial:autoworkbench_clay_pipe_inserts", () -> buildcraft.factory.MachinePipeConnectivityTester::testClayPipeInsertsIntoAutoWorkbench);
         reg.accept("buildcraftunofficial:architect_wood_pipe_extracts", () -> buildcraft.factory.MachinePipeConnectivityTester::testWoodPipeExtractsFinishedBlueprintFromArchitect);

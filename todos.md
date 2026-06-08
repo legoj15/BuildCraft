@@ -29,6 +29,8 @@ Last audited: 2026-05-31 (final pre-rc review — removed dev scaffolding, swept
 - [ ] Builder UX: flag blocks that can't be placed yet (floating torches, flowers on stone, etc.) — e.g. a red box overlay on the resource list or the build area — so a stalled build is legible to the player.
 - [ ] AE2 GuideME support
 - [ ] Quarry item transport visualization
+- [ ] Unify button implementation (native over custom button background images)
+- [ ] Buttons to allow for alternate recipe inputs (i.e. different woods and stones) and outputs (different stairs or doors) for the advanced crafting table
 
 ---
 

@@ -1,25 +1,15 @@
-###### Changes since 2026.1.0-rc2:
-- Fixed Forge Energy pipes not powering Applied Energistics 2's Energy Acceptor (and other bufferless FE receivers) — pipes now gauge how much power a block will actually accept rather than assuming it has an internal buffer to fill; a Wooden FE Pipe also no longer mistakes such a sink for a power source
-- Tank tooltips now label an empty tank as "Empty <capacity> Tank" (dropping the redundant "0 / <capacity>" line, with the unit kept singular — "Empty 4 bucket Tank"), honour the full-unit-names setting (millibuckets vs mB), and — when "abbreviate large numbers" is on — show fluid volumes of 1000 mB or more in buckets (e.g. "4 B" / "1.1 buckets"), with a tank's amount and capacity always sharing one unit so a near-empty bucket-scale tank reads "0.2 / 4 buckets" rather than a mixed "174 mB / 4 buckets"
-- Large numbers are now abbreviated by default — energy/power readouts at or above 1,000 use k/M/G/T suffixes (e.g. "1.2k FE", "10.0k MJ") and fluid amounts of 1,000 mB or more show in buckets. Turn it off with the "abbreviate large numbers" display setting
+###### Changes since 2026.1.0-rc3:
+- **Added support for Minecraft 1.21.10 and 1.21.1**
+- FE Pipes now power AE2's Energy Acceptor, not just the ME Controller
+- Added support for the [Iron Tanks](https://www.curseforge.com/minecraft/mc-mods/iron-tanks) "Glass Tank", thank you for your report, [Romz24](https://github.com/legoj15/BuildCraft/issues/20)!
+- Also made it so the Auto Workbench and Advanced Crafting Table can switch between conflicting recipes with a newly added button
+- Updated fluid tank GUI UX
+- Large numbers are now abbreviated by default, matching how 1.12.2 BuildCraft looked
 - Blueprint and template 3D previews now also render the pluggables on captured pipes (gates, plugs, lenses, filters, facades), not just the pipe body
-- Fixed the Architect Table's scan-progress arrow never filling for large scan areas (the raw block count overflowed the GUI value sync and wrapped to zero above ~32k blocks), and a scan interrupted by a world reload now restarts with a correct progress bar instead of an empty one
-- Filter lenses now actually block items whose colour doesn't match (previously they only re-prioritised matching items and let everything else pass)
+- Fixed the Architect Table's scan-progress arrow never filling for large scan areas
+- Filter lenses now actually block items whose colour doesn't match
 - Eroded Badlands now counts as a rich oil-generation biome, like the other badlands variants
-- Fixed the Quarry's drill arm catching fire (showing flames) when mining through lava
-- Fixed the Quarry resetting its drill to the mining start after a world reload instead of resuming where it left off (which could also leave the moving rig's collision a block out of step with the visible rig)
-- Fixed the Quarry's moving rig collision sitting a block or two off from the visible rig — you could fall through part of a boom arm, most noticeably once the drill stopped after moving (the drill's final position wasn't being sent to the client)
-- Fixed being able to fall through parts of the Quarry's moving rig even though it was clearly there — the far ends of long boom arms, and the vertical drill arm once it had descended a long way down (the rig's collision is now segmented so it stays solid along its full length, whatever the frame size or mining depth)
-- The Debugger item now draws the Quarry's boom-arm collision boxes as solid red cuboids (in addition to the existing force-loaded-chunk highlights), making the moving rig's collision easy to see
-- Fixed fluids clinging to the side of an adjacent pipe they aren't connected to (e.g. a differently-painted pipe), appearing to flow into the non-connection
+- Lots of bug fixes for the quarry's drilling rig entity
+- Fixed fluids clinging to the side of an adjacent pipe they aren't connected to appearing to flow into the non-connection
 - Fixed a server freeze during world generation caused by oil generating near the edge of a newly-loaded chunk (could strike when creating a new world or exploring at high render/simulation distances)
-- Fixed quarry frames being washed away (and dropped as items) by flowing fluids like oil or water
-- Fixed the Builder looping forever on tall grass and other two-tall plants
-- You can now check engine fuels in JEI
-- JEI's "+" button now loads recipes into the Assembly Table, Distiller, and Heat Exchanger
-- Fixed flowing fluids pushing entities with way too much force
-- Fixed the Builder listing every pipe as the same type
-- Fixed the Builder placing pipe add-ons for free
-- Added support for Minecraft 1.21.10
-- Fixed gates appearing too dark and lenses/filters being invisible in the inventory
-- Fixed the Builder and Filler showing the wrong block textures during their throwing animation
+- Fixed quarry frames being washed away and being dropped as items

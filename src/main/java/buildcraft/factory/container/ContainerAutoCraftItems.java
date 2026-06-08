@@ -23,6 +23,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
 import buildcraft.lib.gui.ContainerBCTile;
@@ -31,12 +33,19 @@ import buildcraft.lib.gui.slot.SlotDisplay;
 import buildcraft.lib.gui.slot.SlotOutput;
 import buildcraft.lib.gui.slot.SlotPhantom;
 import buildcraft.lib.misc.CraftingUtil;
+import buildcraft.lib.net.PacketBufferBC;
 
 @SuppressWarnings("this-escape")
 public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchItems> {
 
     private final List<Slot> blueprintSlots = new ArrayList<>();
     public final SlotBase[] materialSlots;
+
+    /** Message id for the client→server "cycle output" button (above the base ids in ContainerBC_Neptune). */
+    public static final int NET_CYCLE_OUTPUT = 104;
+    /** Client-synced copies of the tile's match count + selected index (server fills these via DataSlots). */
+    private int clientMatchCount;
+    private int clientSelectedIndex;
 
     // Client-side constructor (from network)
     public ContainerAutoCraftItems(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
@@ -92,7 +101,39 @@ public class ContainerAutoCraftItems extends ContainerBCTile<TileAutoWorkbenchIt
         });
 
         // Player inventory at (8, 115)
+        // Sync the conflicting-recipe count + selected index for the cycle-output button.
+        addDataSlot(new net.minecraft.world.inventory.DataSlot() {
+            @Override public int get() { return tile.getCraftingMatchCount(); }
+            @Override public void set(int value) { clientMatchCount = value; }
+        });
+        addDataSlot(new net.minecraft.world.inventory.DataSlot() {
+            @Override public int get() { return tile.getCraftingSelectedIndex(); }
+            @Override public void set(int value) { clientSelectedIndex = value; }
+        });
+
         addFullPlayerInventory(8, 115);
+    }
+
+    // --- Cycle Output ---
+
+    @Override
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+        if (id == NET_CYCLE_OUTPUT && !isClient) {
+            boolean next = buffer.readBoolean();
+            tile.cycleCraftingOutput(next ? 1 : -1);
+        } else {
+            super.readMessage(id, buffer, isClient, ctx);
+        }
+    }
+
+    /** Number of recipes the blueprint matches, synced from the server (&gt;1 shows the cycle button). */
+    public int getSyncedMatchCount() {
+        return clientMatchCount;
+    }
+
+    /** Index of the selected output among the matches, synced from the server. */
+    public int getSyncedSelectedIndex() {
+        return clientSelectedIndex;
     }
 
     // --- Recipe Book Support ---

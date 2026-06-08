@@ -25,11 +25,36 @@ public class FluidPhysicsTest {
         // swim navigation, so the 26.1.x bob is reliable rather than flaky. The deterministic companion
         // crudeOilIsNotWaterLike pins the underlying FluidType flags.
 
-        // Stone floor so the non-floating (1.21.11) case rests cleanly at the bottom instead of falling into
-        // the void arena, keeping the negative assertion stable.
-        helper.setBlock(new BlockPos(1, 0, 1), Blocks.STONE);
+        // The pig must actually TICK for any of this to be observable: an un-ticked entity never runs its
+        // fluid scan, so isInWater() stays false and FloatGoal never engages. The game-test framework
+        // force-loads the chunk(s) of the (minecraft:empty -> 1x1x1) test STRUCTURE, but the pig spawns at
+        // relative (1,1,1), which — depending on where the framework drops this test's origin — can land in a
+        // NEIGHBOURING chunk that isn't force-loaded. That entity then never ticks, and the test flaked (~1/10
+        // runs the pig sat frozen on the floor with the oil present but undetected). Force-load the pig's own
+        // chunk (3x3 to cover any origin alignment) so it is reliably entity-ticking; the framework unforces
+        // every force-loaded chunk at batch end (getForceLoadedChunks), so this self-cleans.
+        BlockPos pigPos = new BlockPos(1, 1, 1);
+        int pigChunkX = helper.absolutePos(pigPos).getX() >> 4;
+        int pigChunkZ = helper.absolutePos(pigPos).getZ() >> 4;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                helper.getLevel().setChunkForced(pigChunkX + dx, pigChunkZ + dz, true);
+            }
+        }
 
-        // 3-block deep pool of crude oil
+        // Sealed stone shaft around a 1x1 crude-oil well: once the pig ticks, this makes the bob instant and
+        // deterministic. Crude oil ("oil") behaves as a normal SPREADING fluid here (it isn't dense, and its
+        // water-merge spread branch needs water below — here it's the stone floor), so an OPEN 1-wide column
+        // over stone would bleed sideways into flowing oil that (canPushEntity=true) shoves the pig out of the
+        // column. Walls hold the oil as three stable full sources and trap the pig in the shaft, so buoyancy
+        // lifts it into the surface region on its first ticked frame. They also keep the non-floating
+        // (other-line) pig resting cleanly at the bottom, stabilising that branch too.
+        helper.setBlock(new BlockPos(1, 0, 1), Blocks.STONE);
+        for (int y = 1; y <= 3; y++) {
+            for (Direction d : Direction.Plane.HORIZONTAL) {
+                helper.setBlock(new BlockPos(1, y, 1).relative(d), Blocks.STONE);
+            }
+        }
         for (int y = 1; y <= 3; y++) {
             helper.setBlock(new BlockPos(1, y, 1), BCEnergyFluids.OIL_COOL.block().get());
         }
@@ -43,7 +68,8 @@ public class FluidPhysicsTest {
         AABB surface = new AABB(0.5, 2.0, 0.5, 2.5, 4.5, 2.5);
 
         //? if >=26.1 {
-        // Tag-based water physics: prove buoyancy — the pig left the bottom and rose into the surface region.
+        // Tag-based water physics: prove buoyancy — once ticking, the pig leaves the bottom and rises into
+        // the surface region (FloatGoal engages because crude oil joins the minecraft:water fluid tag).
         helper.succeedWhen(() -> helper.assertEntityPresent(EntityType.PIG, surface));
         //?} elif >=1.21.10 {
         /*// FluidType-gated water physics: crude oil isn't water-like, so prove the pig did NOT float — after

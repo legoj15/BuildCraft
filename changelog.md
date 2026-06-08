@@ -1,15 +1,1 @@
-###### Changes since 2026.1.0-rc3:
-- **Added support for Minecraft 1.21.10 and 1.21.1**
-- FE Pipes now power AE2's Energy Acceptor, not just the ME Controller
-- Added support for the [Iron Tanks](https://www.curseforge.com/minecraft/mc-mods/iron-tanks) "Glass Tank", thank you for your report, [Romz24](https://github.com/legoj15/BuildCraft/issues/20)!
-- Also made it so the Auto Workbench and Advanced Crafting Table can switch between conflicting recipes with a newly added button
-- Updated fluid tank GUI UX
-- Large numbers are now abbreviated by default, matching how 1.12.2 BuildCraft looked
-- Blueprint and template 3D previews now also render the pluggables on captured pipes (gates, plugs, lenses, filters, facades), not just the pipe body
-- Fixed the Architect Table's scan-progress arrow never filling for large scan areas
-- Filter lenses now actually block items whose colour doesn't match
-- Eroded Badlands now counts as a rich oil-generation biome, like the other badlands variants
-- Lots of bug fixes for the quarry's drilling rig entity
-- Fixed fluids clinging to the side of an adjacent pipe they aren't connected to appearing to flow into the non-connection
-- Fixed a server freeze during world generation caused by oil generating near the edge of a newly-loaded chunk (could strike when creating a new world or exploring at high render/simulation distances)
-- Fixed quarry frames being washed away and being dropped as items
+###### Changes since 2026.1.0-rc4:

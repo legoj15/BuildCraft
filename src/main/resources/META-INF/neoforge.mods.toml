@@ -9,7 +9,7 @@ version="${mod_version}"
 displayName="BuildCraft (Unofficial)"
 logoFile="logo.png"
 credits="Created by SpaceToad"
-authors="SpaceToad, BuildCraft Team, legoj15 (1.21.11+ port)"
+authors="SpaceToad, BuildCraft Team, legoj15 (1.21.1+ port)"
 description='''
 Extending Minecraft with pipes, auto-crafting, quarries, engines and much more!
 Unofficial port to NeoForge.

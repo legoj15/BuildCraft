@@ -3,7 +3,18 @@
 
 ### Reporting an issue
 
-Please open an issue if you encounter anything unexpected! For crashes or bugs/glitches, please ensure:
+| MC Version | Support | Notes |
+|---|---|---|
+| 26.1.2 | ✔️ | Latest version (primary support) |
+| 26.1.1 | ⚠️ | Not directly supported (may not run) |
+| 26.1 | ⚠️ | Not directly supported (may not run) |
+| 1.21.11 | ✔️ | Currently supported (low priority) |
+| 1.21.10 | ✔️ | Currently supported (low priority) |
+| 1.21.2-9 | ❌ | Not planned |
+| 1.21.1 | ✔️ | Currently supported |
+| ≤1.21 | ❌ | Not planned |
+
+If you're on a supported version, please open an issue if you encounter anything unexpected! For crashes or bugs/glitches, please ensure:
 
 * you are positive the bug is caused by BuildCraft and not by any other mod (bugged interactions with other mods are a valid issue),
 * you have at least one of the following:

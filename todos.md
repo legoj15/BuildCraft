@@ -5,6 +5,7 @@ Last audited: 2026-05-31 (final pre-rc review — removed dev scaffolding, swept
 ## Release Candidate 4 playtest feedback
 - Change how FE pipes get unlocked in the recipe book
 - Quarry guide book page doesn't list its recipe
+- Check gear progression in the recipe book
 
 
 ## 🆕 New Features (version 2026.2)

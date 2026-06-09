@@ -12,7 +12,7 @@
       "conditions": {
         "items": [
           {
-            "items": "buildcraftunofficial:pipe_cobblestone_power"
+            "items": "buildcraftunofficial:pipe_cobble_power"
           }
         ]
       }

@@ -236,6 +236,8 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
         }
     }
 
+    /** Combustion engine stalls power output during its {@code penaltyCooling} window (1.12.2 parity). */
+    @Override
     public boolean isActive() {
         return penaltyCooling <= 0;
     }

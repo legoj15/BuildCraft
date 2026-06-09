@@ -1,0 +1,9 @@
+{
+    "type":  "minecraft:function",
+    "function":  "buildcraftunofficial:engine_stirling_releases_stored_power",
+    "environment":  "minecraft:default",
+    "structure":  "minecraft:empty",
+    "max_ticks":  120,
+    "setup_ticks":  0,
+    "required":  true
+}

@@ -21,6 +21,7 @@ import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.core.BCCoreBlocks;
+import buildcraft.core.tile.TilePowerConsumerTester;
 import buildcraft.energy.BCEnergyBlocks;
 import buildcraft.energy.container.ContainerEngineIron;
 import buildcraft.energy.tile.TileEngineIron_BC8;
@@ -158,9 +159,68 @@ public class EngineTester {
             if (engine.getFuelStack().isEmpty()) {
                 // Assert it consumed 1 coal to fill the burn time buffer!
             }
-            
+
             helper.succeed();
         });
+    }
+
+    /**
+     * Regression for "stored energy doesn't release unless fueled" (RC4 feedback): a redstone-powered
+     * Stirling engine with a charged MJ buffer but NO fuel (burnTime stays 0, so isBurning()==false)
+     * must still deliver its stored buffer to an adjacent receiver. Under the pre-fix isBurning() send
+     * gate the buffer froze; the isActive() gate (base default true) releases it. The sink is the
+     * dev-only {@link TilePowerConsumerTester} (gated on -Dbuildcraft.dev=true), placed directly above
+     * the upward-facing engine so the engine's MJ capability query connects without any pipe bookkeeping.
+     */
+    public static void testStirlingEngineReleasesStoredPowerWithoutFuel(GameTestHelper helper) {
+        if (BCCoreBlocks.POWER_TESTER == null) {
+            throw new IllegalStateException(
+                    "POWER_TESTER block not registered — test JVM was launched without -Dbuildcraft.dev=true.");
+        }
+        BlockPos redstonePos = new BlockPos(2, 1, 2);
+        BlockPos enginePos   = new BlockPos(2, 2, 2);
+        BlockPos testerPos   = new BlockPos(2, 3, 2);
+
+        BlockState engineState = BCEnergyBlocks.ENGINE_STONE.get().defaultBlockState()
+                .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP);
+        helper.setBlock(enginePos, engineState);
+        helper.setBlock(testerPos, BCCoreBlocks.POWER_TESTER.get());
+        helper.setBlock(redstonePos, Blocks.REDSTONE_BLOCK);
+
+        //? if >=1.21.10 {
+        TileEngineStone_BC8 engine = helper.getBlockEntity(enginePos, TileEngineStone_BC8.class);
+        //?} else {
+        /*TileEngineStone_BC8 engine = helper.getBlockEntity(enginePos);*/
+        //?}
+        // Charge the buffer to 50% with an EMPTY fuel slot — burnTime never starts, so isBurning() is false.
+        fastForwardEnergy(engine, 0.5f);
+        if (engine.isBurning()) {
+            throw new IllegalStateException("Test precondition failed: engine must not be burning (no fuel)");
+        }
+
+        // Poll until the tester has received some MJ. Tolerant of arena startup jitter (redstone poll +
+        // capability connection take a variable few ticks). Cumulative total stays >0 once any arrives.
+        helper.succeedWhen(() -> {
+            //? if >=1.21.10 {
+            TilePowerConsumerTester tester = helper.getBlockEntity(testerPos, TilePowerConsumerTester.class);
+            //?} else {
+            /*TilePowerConsumerTester tester = helper.getBlockEntity(testerPos);*/
+            //?}
+            helper.assertTrue(readTesterTotal(tester) > 0,
+                    "Unfueled Stirling engine has not yet delivered its stored buffer to the receiver");
+        });
+    }
+
+    /** Sniffs the power tester's debug output for a non-zero "Total received" line (mirrors the helper
+     *  in PipeFlowPowerTester — avoids a package-private accessor just for tests). */
+    private static long readTesterTotal(TilePowerConsumerTester tester) {
+        java.util.List<String> left = new java.util.ArrayList<>();
+        java.util.List<String> right = new java.util.ArrayList<>();
+        tester.getDebugInfo(left, right, Direction.UP);
+        for (String line : left) {
+            if (line.startsWith("Total received") && !line.contains(" 0 ")) return 1;
+        }
+        return 0;
     }
 
     public static void testStirlingEngineExplosion(GameTestHelper helper) {
@@ -290,8 +350,10 @@ public class EngineTester {
     }
 
     /**
-     * Default behavior: an overheated engine sits in the OVERHEAT stage and does NOT explode.
-     * Verifies the block is still present and the stage remains OVERHEAT after a brief tick window.
+     * Default behavior: an overheated engine does NOT explode (canEnginesExplode=false) and, unlike
+     * the pre-fix brick state, passively self-cools back out of OVERHEAT (1.12.2 parity). Verifies the
+     * block survives the transition and that the stone engine bleeds its buffer down below the OVERHEAT
+     * threshold within a short tick window.
      */
     public static void testStirlingEngineOverheatNoExplodeDefault(GameTestHelper helper) {
         BlockPos enginePos = new BlockPos(2, 2, 2);
@@ -310,8 +372,13 @@ public class EngineTester {
                 throw new IllegalStateException("Engine should transition to OVERHEAT at 100% heat. Found: " + engine.getPowerStage());
             }
 
-            // 20 ticks later the block must still be present and still overheated
-            helper.runAfterDelay(20, () -> {
+            // Sit just inside the OVERHEAT band (0.86 > 0.85) so the 1 MJ/tick self-cooling bleed
+            // crosses back below the threshold within the watchdog window.
+            fastForwardEnergy(engine, 0.86f);
+
+            // ~25 ticks of self-cooling must drop it out of OVERHEAT, and the block must survive
+            // (no explosion with canEnginesExplode=false).
+            helper.runAfterDelay(25, () -> {
                 BlockState stateAfter = helper.getBlockState(enginePos);
                 if (stateAfter.getBlock() != BCEnergyBlocks.ENGINE_STONE.get()) {
                     throw new IllegalStateException("Engine should still be present with canEnginesExplode=false. Block now: " + stateAfter.getBlock());
@@ -324,8 +391,8 @@ public class EngineTester {
                 if (engineAfter == null) {
                     throw new IllegalStateException("Engine block entity disappeared after OVERHEAT transition");
                 }
-                if (engineAfter.getPowerStage() != EnumPowerStage.OVERHEAT) {
-                    throw new IllegalStateException("Engine should still be OVERHEAT after 20 ticks (no passive decay in stone). Found: " + engineAfter.getPowerStage());
+                if (engineAfter.getPowerStage() == EnumPowerStage.OVERHEAT) {
+                    throw new IllegalStateException("Engine should self-cool out of OVERHEAT within ~25 ticks (1 MJ/tick bleed). Still: " + engineAfter.getPowerStage());
                 }
                 helper.succeed();
             });
@@ -397,7 +464,21 @@ public class EngineTester {
             if (engine.clearOverheat(null)) {
                 throw new IllegalStateException("clearOverheat on a non-overheated engine should return false");
             }
-            helper.succeed();
+            // Regression for the "turns blue, then black again" bug: clearOverheat vents the power
+            // buffer, so the heat re-derived from power each tick stays low and the engine must NOT
+            // slide back into OVERHEAT on subsequent ticks. (The pre-fix clearOverheat reset only heat,
+            // which the next tick's updateHeatLevel undid from the still-full buffer.)
+            helper.runAfterDelay(5, () -> {
+                //? if >=1.21.10 {
+                TileEngineBase_BC8 engineAfter = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
+                //?} else {
+                /*TileEngineBase_BC8 engineAfter = helper.getBlockEntity(enginePos);*/
+                //?}
+                if (engineAfter.getPowerStage() == EnumPowerStage.OVERHEAT) {
+                    throw new IllegalStateException("Engine re-entered OVERHEAT after a wrench-clear — the power buffer was not vented");
+                }
+                helper.succeed();
+            });
         });
     }
 

@@ -168,6 +168,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:engine_redstone_dry_run", () -> buildcraft.energy.EngineTester::testRedstoneEngineDryRunHeat);
         reg.accept("buildcraftunofficial:engine_redstone_safe_limit", () -> buildcraft.energy.EngineTester::testRedstoneEngineSafeLimit);
         reg.accept("buildcraftunofficial:engine_stirling_fuel", () -> buildcraft.energy.EngineTester::testStirlingEngineFuel);
+        reg.accept("buildcraftunofficial:engine_stirling_releases_stored_power", () -> buildcraft.energy.EngineTester::testStirlingEngineReleasesStoredPowerWithoutFuel);
         reg.accept("buildcraftunofficial:engine_stirling_explosion", () -> buildcraft.energy.EngineTester::testStirlingEngineExplosion);
         reg.accept("buildcraftunofficial:engine_combustion_stable", () -> buildcraft.energy.EngineTester::testCombustionEngineStable);
         reg.accept("buildcraftunofficial:engine_overheat_no_explode_default", () -> buildcraft.energy.EngineTester::testStirlingEngineOverheatNoExplodeDefault);

@@ -115,8 +115,21 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
 
     // --- Abstract methods for subclasses ---
 
-    /** @return true if this engine is actively generating power (e.g. has fuel, is redstone powered) */
+    /** @return true if this engine is actively generating power (e.g. has fuel, is redstone powered).
+     *  This drives the GUI flame / render "burning" indicator ONLY — it is <em>not</em> the power-output
+     *  gate (see {@link #isActive()}). Keep it honest about fuel state; do not repurpose it for output. */
     public abstract boolean isBurning();
+
+    /**
+     * The power-transmission gate (1.12.2 parity). While redstone-powered, an engine sends its stored
+     * MJ buffer to the receiver whenever this returns true — independent of {@link #isBurning()}, so a
+     * Stirling/FE engine keeps delivering accumulated power across the gaps between fuel items instead
+     * of freezing its buffer. The base default is {@code true} (the Stirling engine relies on this);
+     * the Combustion engine overrides it to stall output during its {@code penaltyCooling} window.
+     */
+    public boolean isActive() {
+        return true;
+    }
 
     /** Called every server tick for subclass-specific engine logic (fuel consumption, power generation, etc.) */
     protected abstract void engineUpdate();
@@ -227,9 +240,9 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
 
     public final EnumPowerStage getPowerStage() {
         if (level != null && !level.isClientSide()) {
-            if (powerStage == EnumPowerStage.OVERHEAT) {
-                return powerStage;
-            }
+            // No OVERHEAT latch (1.12.2 parity): the stage tracks live heat every call, so an engine
+            // self-cools out of OVERHEAT as its heat falls (Stirling via the power bleed in serverTick,
+            // Combustion via coolant in its updateHeatLevel) instead of bricking until wrench-cleared.
             EnumPowerStage newStage = computePowerStage();
             if (powerStage != newStage) {
                 powerStage = newStage;
@@ -237,6 +250,13 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
                     overheat();
                 }
                 setChanged();
+                // Push render state to the client on every stage change (1.12.2 NET_RENDER_DATA parity).
+                // The serverTick OVERHEAT branch early-returns before the tail sync, so without this the
+                // RED->OVERHEAT (black trunk) transition would never reach the client until an unrelated
+                // block update (e.g. a wrench rotation). Skip if overheat() just exploded the block away.
+                if (!isRemoved()) {
+                    level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+                }
             }
         }
         return powerStage;
@@ -262,6 +282,12 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
     public boolean clearOverheat(@Nullable Player player) {
         if (powerStage != EnumPowerStage.OVERHEAT) return false;
         heat = MIN_HEAT;
+        // Vent the stored buffer to the PID target band so the clear actually sticks. Stone-class
+        // engines derive heat from power (updateHeatLevel), so without dropping power the next tick
+        // would re-derive max heat and re-enter OVERHEAT — the reported "turns blue, then black again"
+        // bug. 3/8 maxPower is the Stirling engine's natural operating point, so it resumes at normal
+        // running temperature; harmless for engines whose heat is independent of power (Combustion).
+        power = Math.min(power, 3 * getMaxPower() / 8);
         powerStage = computePowerStage();
         isPumping = false;
         setChanged();
@@ -440,7 +466,11 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
         engine.getPowerStage(); // updates + checks overheat
 
         if (engine.getPowerStage() == EnumPowerStage.OVERHEAT) {
-            engine.power = Math.max(engine.power - 10, 0);
+            // Self-cool: bleed the buffer at 1 MJ/tick so a stone-class engine (heat = f(power)) falls
+            // out of OVERHEAT in ~150 ticks (~7.5 s) instead of bricking. Combustion ignores this and
+            // recovers via coolant in its own updateHeatLevel above; the bleed merely trims its buffer.
+            // Fuel consumption stays paused (engineUpdate below is skipped) so no fuel is wasted while hot.
+            engine.power = engine.power > MjAPI.MJ ? engine.power - MjAPI.MJ : 0;
             return;
         }
 
@@ -472,7 +502,7 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
                 engine.progress = 0;
                 engine.progressPart = 0;
             }
-        } else if (engine.isRedstonePowered && engine.isBurning() && receiver != null) {
+        } else if (engine.isRedstonePowered && engine.isActive() && receiver != null) {
             long requested = receiver.getPowerRequested();
             if (requested > 0 && engine.extractPower(0, requested, false) > 0) {
                 engine.progressPart = 1;
@@ -486,7 +516,7 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
 
         // Constant power: send every tick (when not pulsed)
         if (!pulsedPower) {
-            if (engine.isRedstonePowered && engine.isBurning()) {
+            if (engine.isRedstonePowered && engine.isActive()) {
                 engine.sendPower(receiver);
             } else {
                 engine.currentOutput = 0;
@@ -505,10 +535,10 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
             engine.prevIsPumping = engine.isPumping;
             needsSync = true;
         }
-        if (engine.getPowerStage() != engine.prevPowerStage) {
-            engine.prevPowerStage = engine.getPowerStage();
-            needsSync = true;
-        }
+        // Power-stage changes are now synced inside getPowerStage() the moment they happen (1.12.2
+        // parity), so they no longer ride this tail block — keep prevPowerStage current to avoid a
+        // stale comparison, but don't request a second redundant sendBlockUpdated for it here.
+        engine.prevPowerStage = engine.getPowerStage();
         if (needsSync) {
             level.sendBlockUpdated(pos, state, state, 3);
         }

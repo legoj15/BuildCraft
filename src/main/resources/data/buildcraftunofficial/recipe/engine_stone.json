@@ -7,7 +7,7 @@
     "GpG"
   ],
   "key": {
-    "w": "#c:cobblestones/normal",
+    "w": "#minecraft:stone_tool_materials",
     "g": "#c:glass_blocks/colorless",
     "G": "buildcraftunofficial:gear_stone",
     "p": "minecraft:piston"

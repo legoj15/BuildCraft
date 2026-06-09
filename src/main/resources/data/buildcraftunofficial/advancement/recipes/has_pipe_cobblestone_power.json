@@ -1,0 +1,26 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "buildcraftunofficial:pipe_cobble_rf",
+      "buildcraftunofficial:pipe_cobble_power_from_rf"
+    ]
+  },
+  "criteria": {
+    "has_pipe_cobblestone_power": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "buildcraftunofficial:pipe_cobblestone_power"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_pipe_cobblestone_power"
+    ]
+  ]
+}

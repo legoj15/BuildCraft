@@ -1,0 +1,26 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "buildcraftunofficial:pipe_wood_rf",
+      "buildcraftunofficial:pipe_wood_power_from_rf"
+    ]
+  },
+  "criteria": {
+    "has_pipe_wood_power": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "buildcraftunofficial:pipe_wood_power"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_pipe_wood_power"
+    ]
+  ]
+}

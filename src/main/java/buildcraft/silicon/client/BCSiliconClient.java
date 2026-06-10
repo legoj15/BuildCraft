@@ -209,15 +209,21 @@ public class BCSiliconClient {
          * the dedup pass calls it too; calling twice is idempotent.)
          */
         // HIGH priority so facade state init runs before other LoggingIn listeners that may name
-        // facades — notably the guide-book content warm in BCLibClient (default/NORMAL priority,
-        // and registered first since BCLib inits before BCSilicon). On a multiplayer client this is
-        // the only place facade init happens before the guide indexes every item, so without the
-        // ordering the guide would see a null FacadeStateManager.defaultState. (Naming is also
-        // null-guarded in ItemPluggableFacade as a backstop; this keeps the names correct, not just
-        // crash-free.)
+        // facades. The guide-book content build happens even later — it now triggers off the
+        // server's recipe sync arriving (BCLibClient's RecipesReceivedEvent handler), which
+        // always follows LoggingIn — so facade state and the assembly registry below are both
+        // ready before the guide indexes every item. On a multiplayer client this is the only
+        // init trigger for either (ServerAboutToStartEvent never fires there); without it the
+        // guide would see a null FacadeStateManager.defaultState and an empty assembly registry.
+        // (Naming is also null-guarded in ItemPluggableFacade as a backstop; this keeps the
+        // names correct, not just crash-free.)
         @SubscribeEvent(priority = EventPriority.HIGH)
         public static void onClientLoggingIn(net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingIn event) {
             FacadeStateManager.ensureInitialized();
+            // Assembly recipes (gates, chipsets, lenses, wires, facades): populated at
+            // ServerAboutToStartEvent on servers; multiplayer clients populate here so the
+            // guide book's and JEI's assembly content exists there too.
+            buildcraft.silicon.BCSiliconRecipes.ensureInitialized();
             runDeferredDedup();
             FacadeDeduplicator.applyRedirectAuthority();
         }

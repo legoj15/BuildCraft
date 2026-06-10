@@ -196,6 +196,8 @@ public class BuildCraftGameTests {
         // GUI Headless Tests
         reg.accept("buildcraftunofficial:gui_test_dynamo_upgrade", () -> buildcraft.lib.test.gui.GuiTester::testDynamoUpgrade);
         reg.accept("buildcraftunofficial:gui_test_filler_ui", () -> buildcraft.lib.test.gui.GuiTester::testFillerUI);
+        // Guide book recipe lookups off the server-synced cache (multiplayer recipe-panel fix)
+        reg.accept("buildcraftunofficial:guide_recipe_lookup_synced_cache", () -> buildcraft.lib.test.guide.GuideRecipeLookupTester::testGuideRecipeLookupFromSyncedCache);
         // Slot Tests
         reg.accept("buildcraftunofficial:slot_max_stack_size", () -> buildcraft.lib.gui.SlotBaseTester::testSlotMaxStackSize);
 

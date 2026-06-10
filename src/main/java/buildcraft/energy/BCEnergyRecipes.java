@@ -26,7 +26,22 @@ import buildcraft.lib.misc.MathUtil;
 public class BCEnergyRecipes {
     private static final int TIME_BASE = 240_000; // multiple of 3, 5, 16, 1000
 
-    public static void init() {
+    private static boolean initialized = false;
+
+    /** Populates the fuel/coolant/distillation registries exactly once per JVM. Servers call
+     * this from ServerAboutToStartEvent; multiplayer clients — where that event never fires,
+     * which used to leave the registries empty and the guide book's and JEI's fuel and
+     * distillation content blank — call it from LoggingIn (BCEnergyClient). The guard is
+     * load-bearing beyond the client case: these registries are append-only lists that are
+     * never cleared, so the old once-per-ServerAboutToStart call duplicated every fuel,
+     * coolant, and distillation entry each time another world was opened in the same
+     * session. Content is deterministic code (no datapack input), so once-per-JVM is
+     * correct. */
+    public static synchronized void ensureInitialized() {
+        if (initialized) {
+            return;
+        }
+        initialized = true;
         // --- Coolants ---
         BuildcraftFuelRegistry.coolant.addCoolant(Fluids.WATER, 0.0023f);
         BuildcraftFuelRegistry.coolant.addSolidCoolant(

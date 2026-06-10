@@ -179,6 +179,22 @@ public class BCCore {
                 }
             }
         );
+
+        // Guide book recipe panels: request NeoForge's opt-in recipe sync so clients get the
+        // full crafting + smelting lists on join and after datapack /reload (vanilla stopped
+        // syncing recipes to clients in 1.21.2, and the guide's old integrated-server lookup
+        // was null in multiplayer). Received client-side via RecipesReceivedEvent — see
+        // BCLibClient and ClientGuideRecipeCache. The 1.21.1 line still gets vanilla's own
+        // full sync, so this hook (and OnDatapackSyncEvent.sendRecipes) doesn't exist there.
+        //? if >=1.21.10 {
+        NeoForge.EVENT_BUS.addListener(
+            net.neoforged.neoforge.event.OnDatapackSyncEvent.class,
+            syncEvent -> syncEvent.sendRecipes(
+                net.minecraft.world.item.crafting.RecipeType.CRAFTING,
+                net.minecraft.world.item.crafting.RecipeType.SMELTING
+            )
+        );
+        //?}
     }
 
     /**

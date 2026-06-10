@@ -42,7 +42,20 @@ import buildcraft.transport.BCTransportItems;
 @SuppressWarnings("deprecation")
 public class BCSiliconRecipes {
 
-    public static void init() {
+    private static boolean initialized = false;
+
+    /** Populates {@link AssemblyRecipeRegistry} exactly once per JVM. Servers (integrated and
+     * dedicated) call this from ServerAboutToStartEvent; multiplayer clients — where that
+     * event never fires, which used to leave the registry empty and the guide book's and
+     * JEI's assembly content blank — call it from LoggingIn (BCSiliconClient.GameBus). All
+     * registrations are deterministic code with no datapack input, so once-per-JVM is
+     * correct; the guard also stops the per-world re-registration the ServerAboutToStart
+     * path used to do (harmless here only because the registry is a name-keyed map). */
+    public static synchronized void ensureInitialized() {
+        if (initialized) {
+            return;
+        }
+        initialized = true;
         registerPlugRecipes();
         registerGateAssemblyRecipes();
         registerChipsetRecipes();

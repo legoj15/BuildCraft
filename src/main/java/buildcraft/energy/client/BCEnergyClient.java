@@ -72,5 +72,14 @@ public class BCEnergyClient {
     public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
         modEventBus.register(buildcraft.energy.client.BCEnergyFluidsClient.class);
         modEventBus.register(BCEnergyClient.class);
+
+        // Fuel/coolant/distillation registries feed the guide book and JEI. Servers populate
+        // them at ServerAboutToStartEvent (BCEnergy); a multiplayer client never fires that
+        // event, so populate at login — the guide content build runs even later (off the
+        // server's recipe sync arriving, see BCLibClient), so ordering is safe.
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+            net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingIn.class,
+            event -> buildcraft.energy.BCEnergyRecipes.ensureInitialized()
+        );
     }
 }

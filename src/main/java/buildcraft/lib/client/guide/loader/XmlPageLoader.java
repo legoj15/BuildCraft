@@ -28,7 +28,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.nbt.TagParser;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.util.profiling.ProfilerFiller;
@@ -61,6 +60,7 @@ import buildcraft.lib.client.guide.parts.GuidePartNewPage;
 import buildcraft.lib.client.guide.parts.GuideText;
 import buildcraft.lib.client.guide.parts.contents.PageLink;
 import buildcraft.lib.client.guide.parts.contents.PageLinkNormal;
+import buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache;
 import buildcraft.lib.client.guide.parts.recipe.GuideAssemblyRecipes;
 import buildcraft.lib.client.guide.parts.recipe.GuideCraftingFactory;
 import buildcraft.lib.client.guide.parts.recipe.GuideCraftingRecipes;
@@ -796,9 +796,9 @@ public enum XmlPageLoader implements IPageLoaderText {
     }
 
     /** Look up a single crafting recipe by its registry id and build a display factory for it.
-     *  Returns null (→ the tag renders as red error text) if the id is malformed, the recipe
-     *  manager isn't available yet (no integrated server — e.g. outside a world), no recipe has
-     *  that id, or the recipe isn't a crafting recipe. */
+     *  Returns null (→ the tag renders as red error text) if the id is malformed, no recipe
+     *  data is available yet (outside a world, before the server's recipe sync arrived), no
+     *  recipe has that id, or the recipe isn't a crafting recipe. */
     @Nullable
     private static GuidePartFactory loadRecipeById(String id, @Nullable String type) {
         // type="assembling" → resolve the id as an Assembly Table recipe by its registry name;
@@ -815,11 +815,7 @@ public enum XmlPageLoader implements IPageLoaderText {
             BCLog.logger.warn("[lib.guide.loader.xml] " + id + " is not a valid recipe id!");
             return null;
         }
-        RecipeManager manager = GuideCraftingRecipes.getRecipeManager();
-        if (manager == null) {
-            return null;
-        }
-        for (RecipeHolder<?> holder : manager.getRecipes()) {
+        for (RecipeHolder<?> holder : ClientGuideRecipeCache.getAllRecipeHolders()) {
             if (RegistryKeyUtil.id(holder.id()).equals(rl)) {
                 if (holder.value() instanceof CraftingRecipe crafting) {
                     return GuideCraftingFactory.getFactory(crafting);
@@ -929,41 +925,6 @@ public enum XmlPageLoader implements IPageLoaderText {
      *  filled its own page. The {@code <new_page/>} markdown tag bypasses this
      *  threshold (author-requested breaks always fire). */
     public static final int RECIPE_BREAK_THRESHOLD = 30;
-
-    public static void appendAllCrafting(ItemStack stack, List<GuidePart> parts, GuiGuide gui) {
-        List<GuidePartFactory> recipeFactories = RecipeLookupHelper.getAllRecipes(stack);
-        List<GuidePart> recipeParts = new ArrayList<>();
-        for (GuidePartFactory factory : recipeFactories) {
-            recipeParts.add(factory.createNew(gui));
-        }
-        recipeParts.removeAll(parts);
-        if (recipeParts.size() > 0) {
-            parts.add(new GuidePartNewPage(gui, RECIPE_BREAK_THRESHOLD));
-            if (recipeParts.size() == 1) {
-                parts.add(chapter("buildcraft.guide.recipe.create", 0).createNew(gui));
-            } else {
-                parts.add(chapter("buildcraft.guide.recipe.create.plural", 0).createNew(gui));
-            }
-            parts.addAll(recipeParts);
-        }
-        List<GuidePartFactory> usageFactories = RecipeLookupHelper.getAllUsages(stack);
-        List<GuidePart> usageParts = new ArrayList<>();
-        for (GuidePartFactory factory : usageFactories) {
-            usageParts.add(factory.createNew(gui));
-        }
-        usageParts.removeAll(parts);
-        if (usageParts.size() > 0) {
-            if (usageParts.size() != 1) {
-                parts.add(new GuidePartNewPage(gui, RECIPE_BREAK_THRESHOLD));
-            }
-            if (usageParts.size() == 1) {
-                parts.add(chapter("buildcraft.guide.recipe.use", 0).createNew(gui));
-            } else {
-                parts.add(chapter("buildcraft.guide.recipe.use.plural", 0).createNew(gui));
-            }
-            parts.addAll(usageParts);
-        }
-    }
 
     public static GuidePartFactory chapter(String after) {
         return chapter(after, 0);

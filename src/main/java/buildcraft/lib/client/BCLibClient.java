@@ -131,19 +131,51 @@ public class BCLibClient {
             GuideManager.INSTANCE::onRegistryReload
         );
 
-        // Warm the guide-book content cache at first world-join, so the ~750ms parse/index
-        // pass (markdown for every page + group population + suffix-array search index, see
-        // GuideManager#reload0) lands inside the "Loading world" screen instead of hitching
-        // the render thread the first time the player opens the book. ensureLoaded() no-ops
-        // once contents is populated, so the heavy work runs exactly once per session (the
-        // first LoggingIn) and is free on every later join; the synchronous ensureLoaded() in
-        // openGuideScreen() stays as a fallback for any path that opens the book first. Same
-        // render thread and same code path as the lazy load — just triggered earlier, where
-        // the cost is hidden by the loading screen. (Mirrors how the facade scan/dedup was
-        // moved off the JEI first-screen-open path onto LoggingIn.)
+        // Feed the guide's recipe store from the server's recipe sync, then (re)build guide
+        // content. This event fires on every world join (and again on datapack /reload), so it
+        // replaces the old LoggingIn ensureLoaded() warm-up — same render thread, still hidden
+        // by the "Loading world" screen, but now guaranteed to parse AFTER recipe data is
+        // present, so recipe panels are never baked empty. Re-fires also re-bake panels, which
+        // keeps an open guide correct across server switches and /reload (GuiGuide polls
+        // reloadGeneration and rebuilds open pages). The synchronous ensureLoaded() in
+        // openGuideScreen() stays as a fallback for any path that opens the book first.
+        // The facade scan stays on LoggingIn (BCSiliconClient, HIGH priority), which always
+        // precedes the recipe packets — ordering with the guide parse is preserved.
+        // On >=1.21.10 the source is NeoForge's opt-in sync (requested server-side in BCCore
+        // via OnDatapackSyncEvent.sendRecipes): real RecipeHolders over the wire on Neo<->Neo
+        // connections; empty maps (no mod requested recipes) still refresh the store,
+        // correctly degrading to no recipe panels. On 1.21.1 vanilla still syncs the full
+        // recipe list to every client itself, and RecipesUpdatedEvent fires once it has been
+        // received (same join + /reload lifecycle).
+        //? if >=1.21.10 {
         NeoForge.EVENT_BUS.addListener(
-            ClientPlayerNetworkEvent.LoggingIn.class,
-            event -> GuideManager.INSTANCE.ensureLoaded()
+            net.neoforged.neoforge.client.event.RecipesReceivedEvent.class,
+            event -> {
+                boolean firstSync = !buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache
+                    .hasSeenSyncThisConnection();
+                buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache
+                    .setSynced(event.getRecipeMap().values());
+                GuideManager.INSTANCE.onRecipeDataReceived(firstSync);
+            }
+        );
+        //?} else {
+        /*NeoForge.EVENT_BUS.addListener(
+            net.neoforged.neoforge.client.event.RecipesUpdatedEvent.class,
+            event -> {
+                boolean firstSync = !buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache
+                    .hasSeenSyncThisConnection();
+                buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache
+                    .setSynced(event.getRecipeManager().getRecipes());
+                GuideManager.INSTANCE.onRecipeDataReceived(firstSync);
+            }
+        );*/
+        //?}
+
+        // Forget the previous server's recipes on disconnect (the next join re-fills the store;
+        // recommended cleanup per RecipesReceivedEvent's own javadoc).
+        NeoForge.EVENT_BUS.addListener(
+            ClientPlayerNetworkEvent.LoggingOut.class,
+            event -> buildcraft.lib.client.guide.parts.recipe.ClientGuideRecipeCache.clear()
         );
 
         // (BCDebugOverlay removed: it was a second, redundant F3-debug renderer that drew the

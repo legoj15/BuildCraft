@@ -44,7 +44,7 @@ import buildcraft.energy.client.gui.ScreenEngineStone;
  * machines).
  *
  * <p>Fuel/coolant entries come from {@code BuildcraftFuelRegistry} — populated in
- * {@code BCEnergyRecipes.init()}, the same place the distillation recipes the Distiller category
+ * {@code BCEnergyRecipes.ensureInitialized()}, the same place the distillation recipes the Distiller category
  * reads are registered, so availability matches that shipped category. Stirling fuels come from
  * the level's {@link FuelValues}, available once in-world (which is when JEI builds its runtime).
  */

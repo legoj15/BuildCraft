@@ -11,12 +11,9 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
-import com.google.common.collect.ImmutableList;
-
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.SmeltingRecipe;
 import net.minecraft.world.level.block.Blocks;
 
@@ -24,20 +21,18 @@ import buildcraft.lib.client.guide.parts.GuidePartFactory;
 
 /** Smelting recipe lookup for the guide book.
  *
- * Uses RecipeManager.getRecipes() + instanceof filtering for SmeltingRecipe.
+ * Uses instanceof filtering for SmeltingRecipe over
+ * {@link ClientGuideRecipeCache#getAllRecipeHolders()} (server-synced, multiplayer-safe).
  * Uses AT-opened AbstractCookingRecipe.result and .ingredient fields. */
 public enum GuideSmeltingRecipes implements IStackRecipes {
     INSTANCE;
 
     @Override
     public List<GuidePartFactory> getUsages(@Nonnull ItemStack stack) {
-        RecipeManager manager = GuideCraftingRecipes.getRecipeManager();
-        if (manager == null) return ImmutableList.of();
-
         // If the target is a furnace, show all smelting recipes
         if (stack.is(Blocks.FURNACE.asItem())) {
             List<GuidePartFactory> list = new ArrayList<>();
-            for (RecipeHolder<?> holder : manager.getRecipes()) {
+            for (RecipeHolder<?> holder : ClientGuideRecipeCache.getAllRecipeHolders()) {
                 if (holder.value() instanceof SmeltingRecipe smelt) {
                     //? if >=26.1 {
                     ItemStack output = smelt.result.create();
@@ -56,7 +51,7 @@ public enum GuideSmeltingRecipes implements IStackRecipes {
 
         // Check if the target is used as an ingredient in any smelting recipe
         List<GuidePartFactory> list = new ArrayList<>();
-        for (RecipeHolder<?> holder : manager.getRecipes()) {
+        for (RecipeHolder<?> holder : ClientGuideRecipeCache.getAllRecipeHolders()) {
             if (holder.value() instanceof SmeltingRecipe smelt) {
                 //? if >=1.21.10 {
                 if (smelt.input.test(stack)) {
@@ -81,11 +76,8 @@ public enum GuideSmeltingRecipes implements IStackRecipes {
 
     @Override
     public List<GuidePartFactory> getRecipes(@Nonnull ItemStack stack) {
-        RecipeManager manager = GuideCraftingRecipes.getRecipeManager();
-        if (manager == null) return ImmutableList.of();
-
         List<GuidePartFactory> list = new ArrayList<>();
-        for (RecipeHolder<?> holder : manager.getRecipes()) {
+        for (RecipeHolder<?> holder : ClientGuideRecipeCache.getAllRecipeHolders()) {
             if (holder.value() instanceof SmeltingRecipe smelt) {
                 //? if >=26.1 {
                 ItemStack output = smelt.result.create();

@@ -182,14 +182,53 @@ public enum GuideManager {
         reload(Minecraft.getInstance().getResourceManager());
     }
 
-    /** Trigger a reload only if the contents tree hasn't been built yet. Belt-and-suspenders
+    /** Set when synced recipe data arrived but the re-parse was deferred (mid-session
+     * datapack /reload with no guide open — see onRecipeDataReceived). Honored by
+     * ensureLoaded(), i.e. paid on the next book open; cleared by every successful
+     * reload0() regardless of trigger. */
+    private volatile boolean recipeDataDirty = false;
+
+    /** Trigger a reload if the contents tree hasn't been built yet — or if recipe data
+     * arrived since the last build (deferred mid-session re-sync). Belt-and-suspenders
      * for the guide-book entry path: callers can invoke this before opening a guide screen
      * to guarantee the registry is populated, even if the resource-manager listener didn't
      * fire (e.g. tests, dev environments, listener registration regressions). */
     public void ensureLoaded() {
-        if (contents.isEmpty()) {
+        if (contents.isEmpty() || recipeDataDirty) {
             reload();
         }
+    }
+
+    /** Called on the client whenever a fresh batch of server-synced recipe data lands —
+     * every world join, datapack {@code /reload}, and server switch (see BCLibClient's
+     * RecipesReceivedEvent/RecipesUpdatedEvent handlers and ClientGuideRecipeCache).
+     *
+     * <p>The join-time sync ({@code firstSyncOfConnection}) re-parses immediately: it doubles
+     * as the content warm-load that used to hang off LoggingIn, and its ~750ms cost hides
+     * inside the "Joining world" screen. A mid-session re-sync (datapack /reload) only
+     * re-parses immediately when a guide is actually open (so the visible book self-heals
+     * via the reloadGeneration bump GuiGuide polls); otherwise it just marks the content
+     * dirty and the next book open pays the parse — re-parsing eagerly there would freeze
+     * the render thread mid-gameplay for content nobody is looking at.
+     *
+     * <p>Safe here (unlike the constructor-time resource reload this class skips): recipe
+     * packets only arrive in-world, long after item components are bound. */
+    public void onRecipeDataReceived(boolean firstSyncOfConnection) {
+        if (isInReload) {
+            // Unreachable today (both paths run on the render thread), but stay lossless:
+            // the running reload may have already consumed stale store contents.
+            recipeDataDirty = true;
+            return;
+        }
+        if (contents.isEmpty() || firstSyncOfConnection || isGuideScreenOpen()) {
+            reload();
+        } else {
+            recipeDataDirty = true;
+        }
+    }
+
+    private static boolean isGuideScreenOpen() {
+        return Minecraft.getInstance().screen instanceof GuiGuide;
     }
 
     private void reload(ResourceManager resourceManager) {
@@ -272,6 +311,9 @@ public enum GuideManager {
             "[lib.guide] Loaded " + p + " possible and " + a + " actual guide pages (" + e + " not found) in "
                 + time / 1000 + "ms."
         );
+
+        // This build consumed the current recipe store, whatever the trigger was.
+        recipeDataDirty = false;
 
         // Last statement so a thrown reload leaves the counter unchanged — the open
         // GuiGuide keeps using its previous (still-coherent) state instead of thrashing

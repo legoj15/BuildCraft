@@ -160,6 +160,6 @@ public class BCEnergy {
     }
 
     private static void onServerAboutToStart(ServerAboutToStartEvent event) {
-        BCEnergyRecipes.init();
+        BCEnergyRecipes.ensureInitialized();
     }
 }

@@ -20,7 +20,7 @@ import buildcraft.api.mj.MjAPI;
  * recipe holders silently empty out. JEI rendering itself is client-only and unit-untestable, but
  * the registry contents are server-side and exactly what this asserts.
  *
- * <p>Runs in the game-test server, where {@code BCEnergyRecipes.init()} populates the registry on
+ * <p>Runs in the game-test server, where {@code BCEnergyRecipes.ensureInitialized()} populates the registry on
  * {@code ServerAboutToStartEvent} (the same hook the shipped Distiller category depends on).
  */
 public class FuelRegistryTester {

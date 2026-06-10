@@ -13,15 +13,10 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableList;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.item.crafting.ShapelessRecipe;
 
@@ -30,8 +25,9 @@ import buildcraft.lib.misc.RegistryKeyUtil;
 
 /** Crafting recipe lookup for the guide book.
  *
- * Uses RecipeManager.getRecipes() + instanceof filtering for ShapedRecipe/ShapelessRecipe.
- * On the client, recipes are accessed via the integrated server's RecipeManager. */
+ * Uses instanceof filtering for ShapedRecipe/ShapelessRecipe over
+ * {@link ClientGuideRecipeCache#getAllRecipeHolders()} — the server-synced recipe store
+ * (works in multiplayer), with an integrated-server fallback for singleplayer. */
 public enum GuideCraftingRecipes implements IStackRecipes {
     INSTANCE;
 
@@ -68,15 +64,11 @@ public enum GuideCraftingRecipes implements IStackRecipes {
 
     /** Gather every crafting recipe whose id (ResourceLocation, stringified) contains {@code substring},
      *  in id order. Public so the {@code <recipe_cycle>} tag and a game test can both rely on which
-     *  recipes a given match selects. Returns an empty list when no recipe manager is available (outside
-     *  a world / off-client — crafting recipes live on the integrated server). */
+     *  recipes a given match selects. Returns an empty list when no recipe data is available
+     *  (outside a world, before the server's recipe sync has arrived). */
     public static List<CraftingRecipe> gatherByIdMatch(String substring) {
-        RecipeManager manager = getRecipeManager();
-        if (manager == null) {
-            return new ArrayList<>();
-        }
         java.util.TreeMap<String, CraftingRecipe> matched = new java.util.TreeMap<>();
-        for (RecipeHolder<?> holder : manager.getRecipes()) {
+        for (RecipeHolder<?> holder : ClientGuideRecipeCache.getAllRecipeHolders()) {
             if (holder.value() instanceof CraftingRecipe crafting
                 && RegistryKeyUtil.id(holder.id()).toString().contains(substring)) {
                 matched.put(RegistryKeyUtil.id(holder.id()).toString(), crafting);
@@ -90,10 +82,6 @@ public enum GuideCraftingRecipes implements IStackRecipes {
     @Nullable
     public static GuidePartFactory getCyclingFactoryByIdMatch(String substring) {
         return GuideCraftingFactory.getCyclingFactory(gatherByIdMatch(substring));
-    }
-
-    public void generateIndices() {
-        // No explicit indexing needed — 1.21 RecipeManager handles its own internal indexing.
     }
 
     private static boolean checkRecipeUses(CraftingRecipe recipe, @Nonnull ItemStack target) {
@@ -122,18 +110,6 @@ public enum GuideCraftingRecipes implements IStackRecipes {
     }
 
     private static Iterable<RecipeHolder<?>> getAllRecipes() {
-        RecipeManager manager = getRecipeManager();
-        if (manager == null) return ImmutableList.of();
-        return manager.getRecipes();
-    }
-
-    @Nullable
-    public static RecipeManager getRecipeManager() {
-        Minecraft mc = Minecraft.getInstance();
-        net.minecraft.server.MinecraftServer server = mc.getSingleplayerServer();
-        if (server != null) {
-            return server.getRecipeManager();
-        }
-        return null;
+        return ClientGuideRecipeCache.getAllRecipeHolders();
     }
 }

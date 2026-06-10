@@ -105,7 +105,7 @@ public class BCSilicon {
 
     private static void onServerAboutToStart(ServerAboutToStartEvent event) {
         FacadeStateManager.ensureInitialized();
-        BCSiliconRecipes.init();
+        BCSiliconRecipes.ensureInitialized();
     }
 
     private static void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {

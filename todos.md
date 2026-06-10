@@ -5,7 +5,6 @@ Last audited: 2026-05-31 (final pre-rc review — removed dev scaffolding, swept
 ## Release Candidate 4/5 playtest feedback
 - UX Improvement: If on the cover of the guide book, pressing E (or whatever the inventory key is) should close it; user may have opened it accidentally and is trying to close it. 
 - Check gear progression in the recipe book
-- Investigate Stirling engine power state flapping when overheating (oscilating between red and black); did 1.12.2 have this issue as well?
 - Investigate strange reaction a finished mining well has with flowing water (seems to retract, let water through, then shoot its tube down, retract, and repeat instead of staying finished)
 
 

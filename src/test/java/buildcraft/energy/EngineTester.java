@@ -350,10 +350,12 @@ public class EngineTester {
     }
 
     /**
-     * Default behavior: an overheated engine does NOT explode (canEnginesExplode=false) and, unlike
-     * the pre-fix brick state, passively self-cools back out of OVERHEAT (1.12.2 parity). Verifies the
-     * block survives the transition and that the stone engine bleeds its buffer down below the OVERHEAT
-     * threshold within a short tick window.
+     * Default behavior: an overheated engine does NOT explode (canEnginesExplode=false), holds the
+     * OVERHEAT stage through the hysteresis band (no rapid red/black flapping — the RC5 regression),
+     * and then passively self-cools back out. From 0.86 the 1 MJ/tick bleed needs
+     * (0.86 - 0.75) * 1000 = ~111 ticks to cross overheatExitLevel(); at tick 50 the stage must
+     * STILL be OVERHEAT (hysteresis hold — pre-hysteresis it exited after a single bleed tick),
+     * and by tick 140 it must have exited with the block intact.
      */
     public static void testStirlingEngineOverheatNoExplodeDefault(GameTestHelper helper) {
         BlockPos enginePos = new BlockPos(2, 2, 2);
@@ -372,13 +374,26 @@ public class EngineTester {
                 throw new IllegalStateException("Engine should transition to OVERHEAT at 100% heat. Found: " + engine.getPowerStage());
             }
 
-            // Sit just inside the OVERHEAT band (0.86 > 0.85) so the 1 MJ/tick self-cooling bleed
-            // crosses back below the threshold within the watchdog window.
+            // Sit just inside the OVERHEAT band (0.86 > 0.85); the bleed must now cool the engine
+            // through the whole hysteresis band before the stage may leave OVERHEAT.
             fastForwardEnergy(engine, 0.86f);
 
-            // ~25 ticks of self-cooling must drop it out of OVERHEAT, and the block must survive
+            // Hysteresis hold: at tick 50 (power ~0.81 — below entry, above the 0.75 exit) the stage
+            // must still read OVERHEAT instead of flapping back to RED.
+            helper.runAfterDelay(50, () -> {
+                //? if >=1.21.10 {
+                TileEngineBase_BC8 engineHeld = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
+                //?} else {
+                /*TileEngineBase_BC8 engineHeld = helper.getBlockEntity(enginePos);*/
+                //?}
+                if (engineHeld.getPowerStage() != EnumPowerStage.OVERHEAT) {
+                    throw new IllegalStateException("Hysteresis should hold OVERHEAT through the cool-down band at tick 50. Found: " + engineHeld.getPowerStage());
+                }
+            });
+
+            // By tick 140 the bleed has crossed the 0.75 exit: stage out of OVERHEAT, block intact
             // (no explosion with canEnginesExplode=false).
-            helper.runAfterDelay(25, () -> {
+            helper.runAfterDelay(140, () -> {
                 BlockState stateAfter = helper.getBlockState(enginePos);
                 if (stateAfter.getBlock() != BCEnergyBlocks.ENGINE_STONE.get()) {
                     throw new IllegalStateException("Engine should still be present with canEnginesExplode=false. Block now: " + stateAfter.getBlock());
@@ -392,7 +407,50 @@ public class EngineTester {
                     throw new IllegalStateException("Engine block entity disappeared after OVERHEAT transition");
                 }
                 if (engineAfter.getPowerStage() == EnumPowerStage.OVERHEAT) {
-                    throw new IllegalStateException("Engine should self-cool out of OVERHEAT within ~25 ticks (1 MJ/tick bleed). Still: " + engineAfter.getPowerStage());
+                    throw new IllegalStateException("Engine should self-cool past overheatExitLevel within ~140 ticks (1 MJ/tick bleed). Still: " + engineAfter.getPowerStage());
+                }
+                helper.succeed();
+            });
+        });
+    }
+
+    /**
+     * Pins the Combustion engine's coolant self-recovery against the overheatExitLevel() contract:
+     * its powered cooling equilibrium is IDEAL_HEAT = 204 °C (heatLevel 0.80 exactly), so its exit
+     * override MUST sit above 0.80 — with the base 0.75 a running water-cooled engine could never
+     * leave OVERHEAT (max coolant pull is 40 mB x 0.0023 °C/mB = 0.092 °C/tick toward 204, not
+     * below it). From heat 0.86 (217.8 °C), water cooling reaches the 0.84 exit (213.2 °C) in
+     * ~50 ticks; assert recovery within 80.
+     */
+    public static void testCombustionEngineOverheatCoolantRecovery(GameTestHelper helper) {
+        BlockPos enginePos = new BlockPos(2, 2, 2);
+        helper.setBlock(enginePos, BCEnergyBlocks.ENGINE_IRON.get());
+        helper.setBlock(new BlockPos(2, 1, 2), Blocks.REDSTONE_BLOCK);
+
+        helper.runAfterDelay(2, () -> {
+            //? if >=1.21.10 {
+            TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos, TileEngineIron_BC8.class);
+            //?} else {
+            /*TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos);*/
+            //?}
+            if (engine == null) {
+                throw new IllegalStateException("Failed to place Combustion Engine!");
+            }
+            // Plenty of water coolant (fill() is node-uniform — same call loadTank uses).
+            engine.tankCoolant.fill(0, new net.neoforged.neoforge.fluids.FluidStack(Fluids.WATER, 10_000), false);
+
+            // Force overheat. Iron heat is its own accumulator (not power-derived); fastForwardEnergy
+            // sets the heat field directly (the power it also sets is inert for iron's heat path).
+            fastForwardEnergy(engine, 0.86f);
+            if (engine.getPowerStage() != EnumPowerStage.OVERHEAT) {
+                throw new IllegalStateException("Combustion engine should be OVERHEAT at heat 0.86. Found: " + engine.getPowerStage());
+            }
+
+            helper.runAfterDelay(80, () -> {
+                if (engine.getPowerStage() == EnumPowerStage.OVERHEAT) {
+                    throw new IllegalStateException(
+                        "Redstone-powered, water-cooled combustion engine failed to self-recover from OVERHEAT "
+                        + "within 80 ticks — overheatExitLevel() likely sits at/below the 0.80 coolant equilibrium");
                 }
                 helper.succeed();
             });

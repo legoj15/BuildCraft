@@ -176,6 +176,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:engine_clear_overheat_api", () -> buildcraft.energy.EngineTester::testEngineClearOverheatApi);
         reg.accept("buildcraftunofficial:engine_has_alternate_receiver_isolated", () -> buildcraft.energy.EngineTester::testEngineHasAlternateReceiverIsolated);
         reg.accept("buildcraftunofficial:combustion_engine_coolant_accepts_ice", () -> buildcraft.energy.EngineTester::testCombustionEngineCoolantTankAcceptsIce);
+        reg.accept("buildcraftunofficial:engine_combustion_overheat_coolant_recovery", () -> buildcraft.energy.EngineTester::testCombustionEngineOverheatCoolantRecovery);
 
         // Engine fuel registry — data source for the JEI combustion-fuel/coolant categories
         reg.accept("buildcraftunofficial:fuel_registry_populated_for_jei", () -> buildcraft.energy.FuelRegistryTester::testFuelRegistryPopulatedForJei);

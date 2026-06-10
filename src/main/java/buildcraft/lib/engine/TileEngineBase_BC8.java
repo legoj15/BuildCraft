@@ -240,9 +240,17 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
 
     public final EnumPowerStage getPowerStage() {
         if (level != null && !level.isClientSide()) {
-            // No OVERHEAT latch (1.12.2 parity): the stage tracks live heat every call, so an engine
-            // self-cools out of OVERHEAT as its heat falls (Stirling via the power bleed in serverTick,
-            // Combustion via coolant in its updateHeatLevel) instead of bricking until wrench-cleared.
+            // The stage tracks live heat (1.12.2 parity — no permanent latch), but the OVERHEAT exit
+            // is hysteretic: once overheated, the engine must cool down through the band to
+            // overheatExitLevel() before the stage may recompute downward. Without this band, the
+            // 1 MJ/tick overheat bleed dips just below the single 0.85 threshold, the burner re-arms,
+            // and the stage flaps RED<->OVERHEAT in a 4-tick limit cycle (the RC5 "oscillating
+            // between red and black" report) — also breaking the wrench, whose clearOverheat() only
+            // fires on the 1-in-4 OVERHEAT tick. Keyed on the powerStage field itself (no extra
+            // state), so clearOverheat()'s vent + direct recompute clears it naturally.
+            if (powerStage == EnumPowerStage.OVERHEAT && getHeatLevel() >= overheatExitLevel()) {
+                return powerStage;
+            }
             EnumPowerStage newStage = computePowerStage();
             if (powerStage != newStage) {
                 powerStage = newStage;
@@ -260,6 +268,21 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
             }
         }
         return powerStage;
+    }
+
+    /**
+     * The OVERHEAT-exit hysteresis floor: once overheated, the stage stays OVERHEAT until
+     * {@link #getHeatLevel()} falls below this. Entry stays {@link #computePowerStage()}'s 0.85.
+     * <p>
+     * <b>Override contract:</b> the value MUST sit above the engine's powered cooling-equilibrium
+     * heat level, or a running engine can never leave OVERHEAT. The base default (0.75, the bottom
+     * of the RED band) suits engines whose heat derives from stored power and drains freely (the
+     * Stirling engine's overheat bleed). The Combustion engine overrides to 0.84 because its
+     * coolant only cools toward IDEAL_HEAT (= heatLevel 0.80) while redstone-powered — a 0.75 exit
+     * would be unreachable and would brick it.
+     */
+    protected float overheatExitLevel() {
+        return 0.75f;
     }
 
     protected void overheat() {
@@ -466,11 +489,23 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
         engine.getPowerStage(); // updates + checks overheat
 
         if (engine.getPowerStage() == EnumPowerStage.OVERHEAT) {
-            // Self-cool: bleed the buffer at 1 MJ/tick so a stone-class engine (heat = f(power)) falls
-            // out of OVERHEAT in ~150 ticks (~7.5 s) instead of bricking. Combustion ignores this and
-            // recovers via coolant in its own updateHeatLevel above; the bleed merely trims its buffer.
-            // Fuel consumption stays paused (engineUpdate below is skipped) so no fuel is wasted while hot.
+            // Self-cool: bleed the buffer at 1 MJ/tick so a stone-class engine (heat = f(power)) cools
+            // through the hysteresis band (0.85 entry -> overheatExitLevel() exit) in ~100 ticks
+            // instead of bricking. Combustion ignores this and recovers via coolant in its own
+            // updateHeatLevel above; the bleed merely trims its buffer. Fuel consumption stays paused
+            // (engineUpdate below is skipped) so no fuel is wasted while hot.
             engine.power = engine.power > MjAPI.MJ ? engine.power - MjAPI.MJ : 0;
+            // 1.12.2 parity: an overheated engine still RELEASES stored power — only fuel burning is
+            // paused. A connected constant-power receiver drains the buffer far faster than the bleed
+            // (up to maxPowerExtracted/tick), so connected engines recover in ticks, not seconds.
+            // Pulsed (IMjRedstoneReceiver) sends stay paused with the piston, as in 1.12.2.
+            IMjReceiver overheatReceiver = engine.getReceiverToPower(engine.orientation);
+            if (!(overheatReceiver instanceof IMjRedstoneReceiver)
+                && engine.isRedstonePowered && engine.isActive()) {
+                engine.sendPower(overheatReceiver);
+            } else {
+                engine.currentOutput = 0;
+            }
             return;
         }
 

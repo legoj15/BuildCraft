@@ -242,6 +242,18 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
         return penaltyCooling <= 0;
     }
 
+    /**
+     * MUST sit above the powered coolant equilibrium: while redstone-powered, {@link #updateHeatLevel()}
+     * only cools toward IDEAL_HEAT (204 °C = heatLevel 0.80 exactly), and the per-tick coolant
+     * overshoot is bounded by 40 mB x 0.0023 °C/mB = 0.092 °C — so the base 0.75 exit would be
+     * unreachable and a running water-cooled engine would stay OVERHEAT forever. 0.84 exits ~25-50
+     * ticks after coolant catches up, then settles at the 0.80 equilibrium (RED) without re-entry.
+     */
+    @Override
+    protected float overheatExitLevel() {
+        return 0.84f;
+    }
+
     @Override
     public long getMaxPower() {
         return 10_000 * MjAPI.MJ;

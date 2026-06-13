@@ -31,6 +31,20 @@ import buildcraft.api.lists.ListMatchHandler;
  * material=iron. Single-segment tags like {@code minecraft:planks} contribute type only. */
 public class ListMatchHandlerTags extends ListMatchHandler {
 
+    /** Vanilla grouping tags that lump otherwise-unrelated items together for reasons that have
+     * nothing to do with material/type equivalence. {@code minecraft:completes_find_tree_tutorial}
+     * is the offender: it contains logs, leaves AND wart blocks (it only exists to drive the
+     * "punch a tree" tutorial hint), so treating it as a shared part makes a log filter match
+     * leaves. The handler drops these tags before deriving any parts, so they never feed matching,
+     * the auto-filled examples, or the match-info ledger — in any mode. */
+    private static final Set<String> IGNORED_TAGS = Set.of(
+            "minecraft:completes_find_tree_tutorial"
+    );
+
+    private static boolean isIgnored(TagKey<Item> tag) {
+        return IGNORED_TAGS.contains(tag.location().toString());
+    }
+
     @Override
     public boolean isValidSource(Type type, @Nonnull ItemStack stack) {
         if (stack.isEmpty()) return false;
@@ -71,6 +85,7 @@ public class ListMatchHandlerTags extends ListMatchHandler {
             HolderSet.Named<Item> named = pair.getSecond();*/
         //?}
             TagKey<Item> tag = named.key();
+            if (isIgnored(tag)) return;
             String part = partOf(tag, type);
             if (!parts.contains(part)) return;
             for (Holder<Item> h : named) {
@@ -100,9 +115,9 @@ public class ListMatchHandlerTags extends ListMatchHandler {
 
     private static java.util.stream.Stream<TagKey<Item>> tagsOf(ItemStack stack) {
         //? if >=26.1 {
-        return stack.typeHolder().tags();
+        return stack.typeHolder().tags().filter(t -> !isIgnored(t));
         //?} else {
-        /*return stack.getItemHolder().tags();*/
+        /*return stack.getItemHolder().tags().filter(t -> !isIgnored(t));*/
         //?}
     }
 

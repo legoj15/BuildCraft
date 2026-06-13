@@ -8,3 +8,4 @@
 - Pipes can now be recoloured in the crafting grid with a paintbrush — spending one of its charges per pipe, just like painting in-world — or bleached back to unpainted with a water bucket; pipes can also be crafted pre-dyed directly from stained glass
 - Fluid and kinesis pipes can be crafted back down into their plain item pipes (the waterproof/redstone is lost), recovering a mistakenly-upgraded pipe
 - Facades can be toggled between their solid and hollow forms by crafting one on its own
+- List item: logs no longer count as equivalent to leaves in Accept Variations / Accept Equivalents mode (the shared "punch a tree" tutorial tag is now ignored)

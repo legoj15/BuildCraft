@@ -173,6 +173,37 @@ public class ListTester {
         helper.succeed();
     }
 
+    /** Regression: {@code minecraft:completes_find_tree_tutorial} is a vanilla grouping tag that
+     * lumps logs, leaves, and wart blocks together (it drives the "punch a tree" tutorial hint).
+     * Because a log and a leaf share only that single tag, it used to bridge them — an oak-log
+     * exemplar matched (and auto-filled examples with) oak leaves in both Accept Variations (TYPE)
+     * and Accept Equivalents (MATERIAL) mode. The Tags handler now ignores it, so logs and leaves
+     * are unrelated again while genuine log-to-log equivalence still holds. */
+    public static void testTagsIgnoreTreeTutorialTag(GameTestHelper helper) {
+        ListMatchHandlerTags matcher = new ListMatchHandlerTags();
+        ItemStack oakLog = new ItemStack(Items.OAK_LOG);
+        ItemStack birchLog = new ItemStack(Items.BIRCH_LOG);
+        ItemStack oakLeaves = new ItemStack(Items.OAK_LEAVES);
+
+        // Control: logs still match other logs (they share minecraft:logs / minecraft:logs_that_burn,
+        // not just the ignored tutorial tag), in both modes.
+        assertTrue(matcher.matches(Type.MATERIAL, oakLog, birchLog, false),
+                "oak log MATERIAL should still match birch log via shared log tags");
+        assertTrue(matcher.matches(Type.TYPE, oakLog, birchLog, false),
+                "oak log TYPE should still match birch log via shared log tags");
+
+        // The fix: the only tag a log and a leaf share is completes_find_tree_tutorial — once it's
+        // ignored there is no shared part, so they must not match in either mode (either direction).
+        assertFalse(matcher.matches(Type.MATERIAL, oakLog, oakLeaves, false),
+                "oak log MATERIAL must NOT match oak leaves (completes_find_tree_tutorial ignored)");
+        assertFalse(matcher.matches(Type.TYPE, oakLog, oakLeaves, false),
+                "oak log TYPE must NOT match oak leaves (completes_find_tree_tutorial ignored)");
+        assertFalse(matcher.matches(Type.MATERIAL, oakLeaves, oakLog, false),
+                "oak leaves MATERIAL must NOT match oak log (symmetric)");
+
+        helper.succeed();
+    }
+
     public static void testArmor(GameTestHelper helper) {
         ListMatchHandlerArmor matcher = new ListMatchHandlerArmor();
         ItemStack ironHelmet = new ItemStack(Items.IRON_HELMET);

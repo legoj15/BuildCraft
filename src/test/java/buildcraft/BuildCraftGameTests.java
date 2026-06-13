@@ -124,6 +124,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pipe_paint_count_matches_slots", () -> buildcraft.transport.PipePaintRecipeTester::testCountMatchesPipeSlots);
         reg.accept("buildcraftunofficial:pipe_paint_bleach", () -> buildcraft.transport.PipePaintRecipeTester::testBleach);
         reg.accept("buildcraftunofficial:pipe_paint_mixed_types_rejected", () -> buildcraft.transport.PipePaintRecipeTester::testMixedPipeTypesRejected);
+        reg.accept("buildcraftunofficial:pipe_paint_rejects_clean_brush", () -> buildcraft.transport.PipePaintRecipeTester::testRejectsCleanBrush);
+        reg.accept("buildcraftunofficial:pipe_paint_rejects_undercharged_brush", () -> buildcraft.transport.PipePaintRecipeTester::testRejectsUnderchargedBrush);
         reg.accept("buildcraftunofficial:facade_swap_toggles_hollow", () -> buildcraft.silicon.FacadeSwapRecipeTester::testSwapTogglesHollow);
         reg.accept("buildcraftunofficial:facade_swap_rejects_two", () -> buildcraft.silicon.FacadeSwapRecipeTester::testRejectsTwoFacades);
         reg.accept("buildcraftunofficial:dyed_pipe_symmetric_stone", () -> buildcraft.transport.DyedPipeRecipeTester::testSymmetricStonePipe);

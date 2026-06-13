@@ -9,7 +9,6 @@ package buildcraft.transport.recipe;
 import com.mojang.serialization.MapCodec;
 
 import net.minecraft.core.NonNullList;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.DyeColor;
@@ -22,13 +21,15 @@ import net.minecraft.world.item.crafting.CustomRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
 
+import buildcraft.core.item.ItemPaintbrush_BC8;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.item.ItemPipeHolder;
 
-/** Recolours or bleaches pipes in the crafting grid: any number (1–8) of pipes of a single type plus
- *  one dye recolours them ({@link BCTransportItems#PIPE_COLOUR}), or plus one water bucket bleaches them
- *  back to unpainted. Output count equals the number of pipes supplied. Ports the 1.12.2 pipe-colouring
- *  recipe. Stateless — a single instance suffices. */
+/** Recolours or bleaches pipes in the crafting grid: any number (1–8) of pipes of a single type plus a
+ *  charged paintbrush recolours them ({@link BCTransportItems#PIPE_COLOUR}), consuming one brush use per
+ *  pipe (so the brush's dye efficiency carries into crafting); or plus a water bucket bleaches them back
+ *  to unpainted. Output count equals the number of pipes supplied. The brush is returned with its uses
+ *  decremented (reverting to a clean brush when spent); the water bucket is returned empty. Stateless. */
 public class PipePaintRecipe extends CustomRecipe {
     public static final MapCodec<PipePaintRecipe> MAP_CODEC = MapCodec.unit(PipePaintRecipe::new);
     public static final StreamCodec<RegistryFriendlyByteBuf, PipePaintRecipe> STREAM_CODEC =
@@ -40,13 +41,15 @@ public class PipePaintRecipe extends CustomRecipe {
      *  ({@code null} = bleach to unpainted). */
     private record Parsed(Item pipe, int count, DyeColor colour) {}
 
-    /** Validates the grid and extracts the paint operation, or returns {@code null} if the grid is not a
-     *  valid paint/bleach: it must hold ≥1 pipe (all the same type) and exactly one modifier — a dye
-     *  (recolour) or a water bucket (bleach) — and nothing else. */
+    /** Validates the grid and extracts the paint operation, or returns {@code null} if it is not a valid
+     *  paint/bleach: it must hold ≥1 pipe (all the same type) and exactly one modifier — a <em>charged</em>
+     *  paintbrush with enough uses to cover every pipe (recolour), or a water bucket (bleach) — and
+     *  nothing else. */
     private static Parsed parse(CraftingInput input) {
         Item pipe = null;
         int pipeCount = 0;
-        DyeColor dye = null;
+        DyeColor colour = null;
+        int brushUses = 0;
         boolean bleach = false;
         int modifiers = 0;
 
@@ -64,9 +67,13 @@ public class PipePaintRecipe extends CustomRecipe {
                 pipeCount++;
                 continue;
             }
-            DyeColor colour = stack.get(DataComponents.DYE);
-            if (colour != null) {
-                dye = colour;
+            if (stack.getItem() instanceof ItemPaintbrush_BC8 brush) {
+                ItemPaintbrush_BC8.Brush data = brush.getBrushFromStack(stack);
+                if (data.colour == null || data.usesLeft <= 0) {
+                    return null; // a clean/empty brush can't paint
+                }
+                colour = data.colour;
+                brushUses = data.usesLeft;
                 modifiers++;
                 continue;
             }
@@ -81,7 +88,10 @@ public class PipePaintRecipe extends CustomRecipe {
         if (pipe == null || pipeCount == 0 || modifiers != 1) {
             return null;
         }
-        return new Parsed(pipe, pipeCount, bleach ? null : dye);
+        if (!bleach && brushUses < pipeCount) {
+            return null; // not enough charge to paint every pipe (one use each)
+        }
+        return new Parsed(pipe, pipeCount, bleach ? null : colour);
     }
 
     @Override
@@ -106,10 +116,15 @@ public class PipePaintRecipe extends CustomRecipe {
 
     @Override
     public NonNullList<ItemStack> getRemainingItems(CraftingInput input) {
-        // Keep vanilla crafting remainders, and make a bleaching water bucket leave an empty bucket.
         NonNullList<ItemStack> remaining = CraftingRecipe.defaultCraftingReminder(input);
+        Parsed parsed = parse(input);
+        int painted = parsed != null ? parsed.count() : 0;
         for (int i = 0; i < input.size(); i++) {
-            if (input.getItem(i).is(Items.WATER_BUCKET) && remaining.get(i).isEmpty()) {
+            ItemStack stack = input.getItem(i);
+            if (stack.getItem() instanceof ItemPaintbrush_BC8) {
+                // Charge one use per pipe painted; a spent brush comes back clean.
+                remaining.set(i, ItemPaintbrush_BC8.withUsesConsumed(stack, painted));
+            } else if (stack.is(Items.WATER_BUCKET) && remaining.get(i).isEmpty()) {
                 remaining.set(i, new ItemStack(Items.BUCKET));
             }
         }

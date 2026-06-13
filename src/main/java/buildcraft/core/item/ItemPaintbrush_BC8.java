@@ -83,6 +83,20 @@ public class ItemPaintbrush_BC8 extends Item {
         return stack;
     }
 
+    /** A copy of {@code brush} with {@code count} uses consumed, reverting to a clean brush when the
+     *  charge runs out — the same per-block cost as in-world painting ({@link #useOn}). Used by the
+     *  pipe-painting crafting recipe so the brush's dye efficiency carries into crafting. */
+    public static ItemStack withUsesConsumed(ItemStack brush, int count) {
+        ItemStack result = brush.copy();
+        int usesLeft = getUsesLeft(brush) - count;
+        if (usesLeft > 0) {
+            setBrushData(result, getColour(brush), usesLeft);
+        } else {
+            setBrushData(result, null, 0);
+        }
+        return result;
+    }
+
     // --- Item overrides ---
 
     @Override

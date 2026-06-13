@@ -204,6 +204,56 @@ public class ListTester {
         helper.succeed();
     }
 
+    /** Regression: NeoForge convention tags use the {@code c:<family>/<variant>} shape, and the
+     * plain member of each family lives under {@code .../normal} — {@code c:bricks/normal},
+     * {@code c:cobblestones/normal}, {@code c:pumpkins/normal}, {@code c:obsidians/normal}. The
+     * MATERIAL split keys off the after-slash segment, so a baked brick, cobblestone and a pumpkin
+     * all resolved to material "normal" and matched each other in Accept Equivalents. "normal" is a
+     * form qualifier, not a material, so it's now dropped from MATERIAL parts — while a genuine
+     * material leaf ({@code c:ingots/iron}) is untouched. */
+    public static void testTagsNormalVariantNotMaterial(GameTestHelper helper) {
+        ListMatchHandlerTags matcher = new ListMatchHandlerTags();
+        ItemStack brick = new ItemStack(Items.BRICK);
+        ItemStack cobblestone = new ItemStack(Items.COBBLESTONE);
+        ItemStack pumpkin = new ItemStack(Items.PUMPKIN);
+
+        // The bug: shared "normal" leaf must no longer bridge these unrelated families in MATERIAL.
+        assertFalse(matcher.matches(Type.MATERIAL, brick, cobblestone, false),
+                "baked brick MATERIAL must NOT match cobblestone (shared 'normal' qualifier is not a material)");
+        assertFalse(matcher.matches(Type.MATERIAL, cobblestone, pumpkin, false),
+                "cobblestone MATERIAL must NOT match pumpkin");
+        assertFalse(matcher.matches(Type.MATERIAL, pumpkin, brick, false),
+                "pumpkin MATERIAL must NOT match baked brick");
+
+        // With no real material, cobblestone is no longer a MATERIAL exemplar at all (its only
+        // structured tag was c:cobblestones/normal) — it falls through to identity matching.
+        assertFalse(matcher.isValidSource(Type.MATERIAL, cobblestone),
+                "cobblestone has no real material part, so it is not a MATERIAL source");
+
+        // Control: a genuine material leaf still matches across forms (c:ingots/iron ↔ c:storage_blocks/iron).
+        assertTrue(matcher.matches(Type.MATERIAL, new ItemStack(Items.IRON_INGOT), new ItemStack(Items.IRON_BLOCK), false),
+                "iron ingot MATERIAL still matches iron block (real material 'iron' unaffected)");
+
+        // End-to-end through the registered handlers: a cobblestone Accept-Equivalents list now
+        // matches only cobblestone (identity fallback), not every other "normal" block.
+        if (ListRegistry.getHandlers().isEmpty()) {
+            VanillaListHandlers.register();
+        }
+        ItemStack list = new ItemStack(Items.PAPER);
+        ListHandler.Line[] lines = ListHandler.getLines(list);
+        lines[0].stacks.set(0, new ItemStack(Items.COBBLESTONE));
+        lines[0].byMaterial = true;
+        ListHandler.saveLines(list, lines);
+        assertTrue(ListHandler.matches(list, new ItemStack(Items.COBBLESTONE)),
+                "cobblestone Accept-Equivalents list matches cobblestone (identity fallback)");
+        assertFalse(ListHandler.matches(list, new ItemStack(Items.BRICK)),
+                "cobblestone Accept-Equivalents list must NOT match baked brick");
+        assertFalse(ListHandler.matches(list, new ItemStack(Items.PUMPKIN)),
+                "cobblestone Accept-Equivalents list must NOT match pumpkin");
+
+        helper.succeed();
+    }
+
     public static void testArmor(GameTestHelper helper) {
         ListMatchHandlerArmor matcher = new ListMatchHandlerArmor();
         ItemStack ironHelmet = new ItemStack(Items.IRON_HELMET);

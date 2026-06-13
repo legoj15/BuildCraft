@@ -45,15 +45,26 @@ public class ListMatchHandlerTags extends ListMatchHandler {
         return IGNORED_TAGS.contains(tag.location().toString());
     }
 
+    /** Trailing segments of a {@code c:<family>/<variant>} tag that name a *form*, not a material.
+     * The convention tags share these leaves across unrelated families — {@code c:bricks/normal},
+     * {@code c:cobblestones/normal}, {@code c:obsidians/normal} and {@code c:pumpkins/normal} all
+     * end in {@code normal} — so the MATERIAL split (which keys off the after-slash segment) used
+     * to make a baked brick, cobblestone and a pumpkin all "equivalent" under material "normal".
+     * These leaves are dropped from MATERIAL parts; the family is still captured by TYPE mode via
+     * the {@code <family>} segment before the slash. Genuine materials ({@code c:ingots/iron}) are
+     * untouched — only this small, unambiguous set of form words is filtered. */
+    private static final Set<String> MATERIAL_VARIANT_QUALIFIERS = Set.of("normal");
+
     @Override
     public boolean isValidSource(Type type, @Nonnull ItemStack stack) {
         if (stack.isEmpty()) return false;
         if (type != Type.TYPE && type != Type.MATERIAL) return false;
-        // Any tag is a valid source for both modes — single-segment tags contribute the same
-        // value to both type and material (vanilla single-segment tags like minecraft:planks
-        // can't distinguish between "type of plank" and "material wood", so we treat them as
-        // matching either; structured tags like c:ingots/iron still split as expected).
-        return tagsOf(stack).findAny().isPresent();
+        // Valid iff the stack actually yields parts for this mode. For TYPE that's any tag; for
+        // MATERIAL it can be empty even when tags exist — e.g. cobblestone's only structured tag
+        // is c:cobblestones/normal, whose "normal" leaf is a form qualifier, not a material. An
+        // item with no real material then falls through to the List's identity match (matches
+        // itself) rather than being wrongly claimed as a material exemplar.
+        return !collectParts(stack, type).isEmpty();
     }
 
     @Override
@@ -108,6 +119,11 @@ public class ListMatchHandlerTags extends ListMatchHandler {
         Set<String> out = new LinkedHashSet<>();
         tagsOf(stack).forEach(tag -> {
             String part = partOf(tag, type);
+            if (type == Type.MATERIAL && MATERIAL_VARIANT_QUALIFIERS.contains(part)) {
+                // Form qualifier, not a material — it doesn't drive Accept Equivalents matching,
+                // so listing it in the ledger would misrepresent what the filter actually selects.
+                return;
+            }
             out.add("#" + tag.location() + " (" + part + ")");
         });
         return new ArrayList<>(out);
@@ -136,7 +152,13 @@ public class ListMatchHandlerTags extends ListMatchHandler {
                 if (hasSlashed && !slashed) {
                     continue;
                 }
-                parts.add(partOf(tag, type));
+                String part = partOf(tag, type);
+                if (MATERIAL_VARIANT_QUALIFIERS.contains(part)) {
+                    // "normal" et al. are form qualifiers shared across unrelated families
+                    // (c:bricks/normal, c:cobblestones/normal, ...) — not materials. Skip them.
+                    continue;
+                }
+                parts.add(part);
             }
         } else {
             for (TagKey<Item> tag : tags) {

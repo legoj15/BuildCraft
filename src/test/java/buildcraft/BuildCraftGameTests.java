@@ -155,6 +155,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:list_end_to_end_by_type", () -> buildcraft.lib.list.ListTester::testEndToEndByType);
         reg.accept("buildcraftunofficial:list_tags_single_segment_material_fallback", () -> buildcraft.lib.list.ListTester::testTagsSingleSegmentMaterialFallback);
         reg.accept("buildcraftunofficial:list_tags_ignore_tree_tutorial_tag", () -> buildcraft.lib.list.ListTester::testTagsIgnoreTreeTutorialTag);
+        reg.accept("buildcraftunofficial:list_tags_normal_variant_not_material", () -> buildcraft.lib.list.ListTester::testTagsNormalVariantNotMaterial);
         reg.accept("buildcraftunofficial:list_end_to_end_both_flags_union", () -> buildcraft.lib.list.ListTester::testEndToEndBothFlagsUnion);
         reg.accept("buildcraftunofficial:list_precise_enchantment_round_trip", () -> buildcraft.lib.list.ListTester::testPreciseEnchantmentRoundTrip);
         

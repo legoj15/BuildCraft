@@ -36,6 +36,7 @@ public class BCSilicon {
         BCSiliconBlockEntities.init(modEventBus);
         BCSiliconMenuTypes.init(modEventBus);
         BCSiliconCreativeTabs.init(modEventBus);
+        BCSiliconRecipeSerializers.init(modEventBus);
 
         // Register pluggable definitions (facade, etc.)
         BCSiliconPlugs.preInit();

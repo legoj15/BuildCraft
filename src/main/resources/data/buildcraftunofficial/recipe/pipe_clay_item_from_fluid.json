@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "buildcraft_pipe_undo",
+  "ingredients": [
+    "buildcraftunofficial:pipe_clay_fluid"
+  ],
+  "result": { "id": "buildcraftunofficial:pipe_clay_item" }
+}

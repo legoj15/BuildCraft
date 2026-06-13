@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "buildcraft_pipe_undo",
+  "ingredients": [
+    "buildcraftunofficial:pipe_gold_power"
+  ],
+  "result": { "id": "buildcraftunofficial:pipe_gold_item" }
+}

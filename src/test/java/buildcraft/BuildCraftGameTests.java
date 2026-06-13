@@ -118,7 +118,18 @@ public class BuildCraftGameTests {
 
         // Transport Storage
         reg.accept("buildcraftunofficial:filtered_buffer_drops", () -> buildcraft.transport.FilteredBufferTester::testFilteredBufferDrops);
-        
+
+        // Custom crafting recipes (1.12.2 parity): pipe paint/bleach + facade hollow-swap
+        reg.accept("buildcraftunofficial:pipe_paint_recolour", () -> buildcraft.transport.PipePaintRecipeTester::testRecolour);
+        reg.accept("buildcraftunofficial:pipe_paint_count_matches_slots", () -> buildcraft.transport.PipePaintRecipeTester::testCountMatchesPipeSlots);
+        reg.accept("buildcraftunofficial:pipe_paint_bleach", () -> buildcraft.transport.PipePaintRecipeTester::testBleach);
+        reg.accept("buildcraftunofficial:pipe_paint_mixed_types_rejected", () -> buildcraft.transport.PipePaintRecipeTester::testMixedPipeTypesRejected);
+        reg.accept("buildcraftunofficial:facade_swap_toggles_hollow", () -> buildcraft.silicon.FacadeSwapRecipeTester::testSwapTogglesHollow);
+        reg.accept("buildcraftunofficial:facade_swap_rejects_two", () -> buildcraft.silicon.FacadeSwapRecipeTester::testRejectsTwoFacades);
+        reg.accept("buildcraftunofficial:dyed_pipe_symmetric_stone", () -> buildcraft.transport.DyedPipeRecipeTester::testSymmetricStonePipe);
+        reg.accept("buildcraftunofficial:dyed_pipe_asymmetric_diamond_wood", () -> buildcraft.transport.DyedPipeRecipeTester::testAsymmetricDiamondWoodBothOrientations);
+        reg.accept("buildcraftunofficial:dyed_pipe_colourless_glass_rejected", () -> buildcraft.transport.DyedPipeRecipeTester::testColourlessGlassRejected);
+
         // Fluids
         reg.accept("buildcraftunofficial:oil_water_interaction", () -> buildcraft.energy.OilWaterInteractionTest::testOilOverWater);
         reg.accept("buildcraftunofficial:oil_bobbing_physics", () -> buildcraft.energy.FluidPhysicsTest::testOilBobbing);

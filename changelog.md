@@ -8,4 +8,5 @@
 - Pipes can now be recoloured in the crafting grid with a paintbrush — spending one of its charges per pipe, just like painting in-world — or bleached back to unpainted with a water bucket; pipes can also be crafted pre-dyed directly from stained glass
 - Fluid and kinesis pipes can be crafted back down into their plain item pipes (the waterproof/redstone is lost), recovering a mistakenly-upgraded pipe
 - Facades can be toggled between their solid and hollow forms by crafting one on its own
+- Fixed a crash that disconnected players when joining a multiplayer server, caused by the new pipe paint/dye and facade-swap recipes failing to sync to the client
 - List item: fixed false matches in Accept Variations / Accept Equivalents mode — logs no longer count as equivalent to leaves, and unrelated "plain" blocks like a baked brick, cobblestone and pumpkin no longer match each other

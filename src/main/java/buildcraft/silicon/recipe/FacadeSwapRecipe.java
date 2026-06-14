@@ -24,11 +24,29 @@ import buildcraft.silicon.plug.FacadeInstance;
  *  crafting grid yields the same facade with {@link FacadeInstance#isHollow} flipped, preserving its
  *  block state(s). Ports the 1.12.2 {@code FacadeSwapRecipe}. Stateless — a single instance suffices. */
 public class FacadeSwapRecipe extends CustomRecipe {
+    // Stateless: nothing to serialize. The 26.1 stream codec must use a no-op encoder + fresh-instance
+    // decoder, NOT StreamCodec.unit(instance) — unit() compares each synced recipe against a captured
+    // instance by identity (CustomRecipe has no equals), throwing "Can't encode" during recipe sync on
+    // join. The sub-26.1 branches dodge this: their Serializers serialize the CraftingBookCategory field.
+    //? if >=26.1 {
     public static final MapCodec<FacadeSwapRecipe> MAP_CODEC = MapCodec.unit(FacadeSwapRecipe::new);
     public static final StreamCodec<RegistryFriendlyByteBuf, FacadeSwapRecipe> STREAM_CODEC =
-            StreamCodec.unit(new FacadeSwapRecipe());
+            StreamCodec.of((buf, recipe) -> {}, buf -> new FacadeSwapRecipe());
     public static final RecipeSerializer<FacadeSwapRecipe> SERIALIZER =
             new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
+    //?} elif >=1.21.10 {
+    /*// Sub-26.1 CustomRecipe is built from a CraftingBookCategory; its Serializer derives the codecs
+    // from that one field, so MAP_CODEC/STREAM_CODEC are unneeded here.
+    public static final RecipeSerializer<FacadeSwapRecipe> SERIALIZER =
+            new CustomRecipe.Serializer<>(FacadeSwapRecipe::new);
+
+    public FacadeSwapRecipe(net.minecraft.world.item.crafting.CraftingBookCategory category) { super(category); }*/
+    //?} else {
+    /*public static final RecipeSerializer<FacadeSwapRecipe> SERIALIZER =
+            new net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<>(FacadeSwapRecipe::new);
+
+    public FacadeSwapRecipe(net.minecraft.world.item.crafting.CraftingBookCategory category) { super(category); }*/
+    //?}
 
     /** Returns the single non-empty stack in the grid, or {@link ItemStack#EMPTY} if there is not
      *  exactly one. */
@@ -52,8 +70,13 @@ public class FacadeSwapRecipe extends CustomRecipe {
         return !sole.isEmpty() && sole.getItem() == BCSiliconItems.PLUG_FACADE.get();
     }
 
+    //? if >=26.1 {
     @Override
     public ItemStack assemble(CraftingInput input) {
+    //?} else {
+    /*@Override
+    public ItemStack assemble(CraftingInput input, net.minecraft.core.HolderLookup.Provider provider) {*/
+    //?}
         ItemStack sole = soleStack(input);
         if (sole.isEmpty() || sole.getItem() != BCSiliconItems.PLUG_FACADE.get()) {
             return ItemStack.EMPTY;
@@ -66,4 +89,11 @@ public class FacadeSwapRecipe extends CustomRecipe {
     public RecipeSerializer<FacadeSwapRecipe> getSerializer() {
         return SERIALIZER;
     }
+
+    //? if <1.21.10 {
+    /*@Override
+    public boolean canCraftInDimensions(int width, int height) {
+        return width * height >= 1; // a single facade pluggable suffices
+    }*/
+    //?}
 }

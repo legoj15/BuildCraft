@@ -131,6 +131,12 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:dyed_pipe_symmetric_stone", () -> buildcraft.transport.DyedPipeRecipeTester::testSymmetricStonePipe);
         reg.accept("buildcraftunofficial:dyed_pipe_asymmetric_diamond_wood", () -> buildcraft.transport.DyedPipeRecipeTester::testAsymmetricDiamondWoodBothOrientations);
         reg.accept("buildcraftunofficial:dyed_pipe_colourless_glass_rejected", () -> buildcraft.transport.DyedPipeRecipeTester::testColourlessGlassRejected);
+        // Recipe-content sync round-trip — guards the login crash from StreamCodec.unit(instance) on
+        // these stateless CustomRecipes (encode compared a fresh datapack recipe to a captured instance
+        // by identity → "Can't encode" → dropped the joining player during recipe sync).
+        reg.accept("buildcraftunofficial:recipe_sync_dyed_pipe_roundtrip", () -> buildcraft.RecipeSyncStreamCodecTester::testDyedPipeSyncRoundTrip);
+        reg.accept("buildcraftunofficial:recipe_sync_pipe_paint_roundtrip", () -> buildcraft.RecipeSyncStreamCodecTester::testPipePaintSyncRoundTrip);
+        reg.accept("buildcraftunofficial:recipe_sync_facade_swap_roundtrip", () -> buildcraft.RecipeSyncStreamCodecTester::testFacadeSwapSyncRoundTrip);
 
         // Fluids
         reg.accept("buildcraftunofficial:oil_water_interaction", () -> buildcraft.energy.OilWaterInteractionTest::testOilOverWater);

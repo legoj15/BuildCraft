@@ -31,11 +31,28 @@ import buildcraft.transport.item.ItemPipeHolder;
  *  to unpainted. Output count equals the number of pipes supplied. The brush is returned with its uses
  *  decremented (reverting to a clean brush when spent); the water bucket is returned empty. Stateless. */
 public class PipePaintRecipe extends CustomRecipe {
+    //? if >=26.1 {
     public static final MapCodec<PipePaintRecipe> MAP_CODEC = MapCodec.unit(PipePaintRecipe::new);
+    // Stateless: nothing to serialize. A no-op encoder + fresh-instance decoder is required here —
+    // StreamCodec.unit(instance) compares each synced recipe against a captured instance by identity
+    // (CustomRecipe has no equals), throwing "Can't encode" during the recipe-content sync on join.
     public static final StreamCodec<RegistryFriendlyByteBuf, PipePaintRecipe> STREAM_CODEC =
-            StreamCodec.unit(new PipePaintRecipe());
+            StreamCodec.of((buf, recipe) -> {}, buf -> new PipePaintRecipe());
     public static final RecipeSerializer<PipePaintRecipe> SERIALIZER =
             new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
+    //?} elif >=1.21.10 {
+    /*// Sub-26.1 CustomRecipe is built from a CraftingBookCategory; its Serializer derives the codecs
+    // from that one field, so MAP_CODEC/STREAM_CODEC are unneeded here.
+    public static final RecipeSerializer<PipePaintRecipe> SERIALIZER =
+            new CustomRecipe.Serializer<>(PipePaintRecipe::new);
+
+    public PipePaintRecipe(net.minecraft.world.item.crafting.CraftingBookCategory category) { super(category); }*/
+    //?} else {
+    /*public static final RecipeSerializer<PipePaintRecipe> SERIALIZER =
+            new net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<>(PipePaintRecipe::new);
+
+    public PipePaintRecipe(net.minecraft.world.item.crafting.CraftingBookCategory category) { super(category); }*/
+    //?}
 
     /** Parsed grid contents: the pipe item, how many were supplied, and the target colour
      *  ({@code null} = bleach to unpainted). */
@@ -99,8 +116,13 @@ public class PipePaintRecipe extends CustomRecipe {
         return parse(input) != null;
     }
 
+    //? if >=26.1 {
     @Override
     public ItemStack assemble(CraftingInput input) {
+    //?} else {
+    /*@Override
+    public ItemStack assemble(CraftingInput input, net.minecraft.core.HolderLookup.Provider provider) {*/
+    //?}
         Parsed parsed = parse(input);
         if (parsed == null) {
             return ItemStack.EMPTY;
@@ -116,7 +138,18 @@ public class PipePaintRecipe extends CustomRecipe {
 
     @Override
     public NonNullList<ItemStack> getRemainingItems(CraftingInput input) {
+        //? if >=1.21.10 {
         NonNullList<ItemStack> remaining = CraftingRecipe.defaultCraftingReminder(input);
+        //?} else {
+        /*// 1.21.1 has no CraftingRecipe.defaultCraftingReminder — inline the vanilla Recipe default.
+        NonNullList<ItemStack> remaining = NonNullList.withSize(input.size(), ItemStack.EMPTY);
+        for (int j = 0; j < remaining.size(); j++) {
+            ItemStack item = input.getItem(j);
+            if (item.hasCraftingRemainingItem()) {
+                remaining.set(j, item.getCraftingRemainingItem());
+            }
+        }*/
+        //?}
         Parsed parsed = parse(input);
         int painted = parsed != null ? parsed.count() : 0;
         for (int i = 0; i < input.size(); i++) {
@@ -135,4 +168,11 @@ public class PipePaintRecipe extends CustomRecipe {
     public RecipeSerializer<PipePaintRecipe> getSerializer() {
         return SERIALIZER;
     }
+
+    //? if <1.21.10 {
+    /*@Override
+    public boolean canCraftInDimensions(int width, int height) {
+        return width * height >= 2; // at least one pipe + one modifier (brush or water bucket)
+    }*/
+    //?}
 }

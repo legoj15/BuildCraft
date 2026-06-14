@@ -39,11 +39,28 @@ import buildcraft.transport.BCTransportItems;
  *  JSONs; if a base pipe recipe's material ingredient changes, the matching entry below must be updated
  *  to match. The pipe-paint recipe ({@link PipePaintRecipe}) remains the general dye-any-pipe path. */
 public class DyedPipeRecipe extends CustomRecipe {
+    //? if >=26.1 {
     public static final MapCodec<DyedPipeRecipe> MAP_CODEC = MapCodec.unit(DyedPipeRecipe::new);
+    // Stateless: nothing to serialize. A no-op encoder + fresh-instance decoder is required here —
+    // StreamCodec.unit(instance) compares each synced recipe against a captured instance by identity
+    // (CustomRecipe has no equals), throwing "Can't encode" during the recipe-content sync on join.
     public static final StreamCodec<RegistryFriendlyByteBuf, DyedPipeRecipe> STREAM_CODEC =
-            StreamCodec.unit(new DyedPipeRecipe());
+            StreamCodec.of((buf, recipe) -> {}, buf -> new DyedPipeRecipe());
     public static final RecipeSerializer<DyedPipeRecipe> SERIALIZER =
             new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
+    //?} elif >=1.21.10 {
+    /*// Sub-26.1 CustomRecipe is built from a CraftingBookCategory; its Serializer derives the codecs
+    // from that one field, so MAP_CODEC/STREAM_CODEC are unneeded here.
+    public static final RecipeSerializer<DyedPipeRecipe> SERIALIZER =
+            new CustomRecipe.Serializer<>(DyedPipeRecipe::new);
+
+    public DyedPipeRecipe(net.minecraft.world.item.crafting.CraftingBookCategory category) { super(category); }*/
+    //?} else {
+    /*public static final RecipeSerializer<DyedPipeRecipe> SERIALIZER =
+            new net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<>(DyedPipeRecipe::new);
+
+    public DyedPipeRecipe(net.minecraft.world.item.crafting.CraftingBookCategory category) { super(category); }*/
+    //?}
 
     /** One pipe's recipe materials (left/right of the glass; order-insensitive, mirroring the base
      *  shaped recipes) and the pipe item they produce. */
@@ -94,7 +111,12 @@ public class DyedPipeRecipe extends CustomRecipe {
 
     private static Ingredient tag(String tagId) {
         TagKey<Item> key = TagKey.create(Registries.ITEM, Identifier.parse(tagId.substring(1)));
+        //? if >=1.21.10 {
         return Ingredient.of(BuiltInRegistries.ITEM.get(key).orElseThrow());
+        //?} else {
+        /*// 1.21.1: pre-HolderSet Ingredient takes the TagKey directly (no registry resolution).
+        return Ingredient.of(key);*/
+        //?}
     }
 
     /** The dye colour of a stained-glass <em>block</em> item, or {@code null} for anything else
@@ -131,8 +153,13 @@ public class DyedPipeRecipe extends CustomRecipe {
         return resolve(input) != null;
     }
 
+    //? if >=26.1 {
     @Override
     public ItemStack assemble(CraftingInput input) {
+    //?} else {
+    /*@Override
+    public ItemStack assemble(CraftingInput input, net.minecraft.core.HolderLookup.Provider provider) {*/
+    //?}
         Match match = resolve(input);
         if (match == null) {
             return ItemStack.EMPTY;
@@ -146,4 +173,11 @@ public class DyedPipeRecipe extends CustomRecipe {
     public RecipeSerializer<DyedPipeRecipe> getSerializer() {
         return SERIALIZER;
     }
+
+    //? if <1.21.10 {
+    /*@Override
+    public boolean canCraftInDimensions(int width, int height) {
+        return width * height >= 3; // [material, stained-glass, material] horizontal layout
+    }*/
+    //?}
 }

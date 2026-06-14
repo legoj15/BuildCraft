@@ -11,6 +11,22 @@ import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.tile.TileMarkerVolume;
 import buildcraft.core.tile.TileMarkerPath;
 
+/**
+ * Marker connection tests.
+ *
+ * <p><b>Isolation:</b> marker connections live in a process-wide singleton cache keyed only by
+ * dimension ({@link buildcraft.core.marker.VolumeCache}/{@link buildcraft.core.marker.PathCache}),
+ * and {@code runGameTestServer} packs every test arena into one shared grid only ~5 blocks apart.
+ * With {@code markerMaxDistance} defaulting to 64, the connection scan reaches straight across arena
+ * boundaries, so if two marker tests run <em>concurrently</em> they corrupt each other's connections
+ * (a neighbour's marker blocks {@code canCreateConnection} → box collapses to one block, or is pulled
+ * into the box → box shifts). The game-test framework runs every test in the same {@code environment}
+ * concurrently within a batch, and runs different batches strictly one after another. Each marker test
+ * below therefore declares its <em>own</em> {@code test_environment} (see
+ * {@code src/test/resources/data/buildcraftunofficial/test_environment/}), which puts it in its own
+ * batch so no two marker tests are ever live at the same time. Keep one environment per marker test —
+ * merging them back into a shared environment reintroduces the concurrency crosstalk.
+ */
 public class MarkerTester {
 
     public static void testMarkerOrientation(GameTestHelper helper) {
@@ -19,7 +35,7 @@ public class MarkerTester {
         BlockPos centerPath = new BlockPos(5, 2, 2);
         helper.setBlock(centerVolume, Blocks.STONE);
         helper.setBlock(centerPath, Blocks.STONE);
-        
+
         for (Direction dir : Direction.values()) {
             // Place Volume markers (should float)
             BlockPos volumePos = centerVolume.relative(dir);
@@ -39,11 +55,11 @@ public class MarkerTester {
                 throw new IllegalStateException("Failed to place path marker on face: " + dir);
             }
         }
-        
+
         // Remove the center blocks
         helper.setBlock(centerVolume, Blocks.AIR);
         helper.setBlock(centerPath, Blocks.AIR);
-        
+
         // Wait 5 ticks for the block update to process and drops to spawn
         helper.runAfterDelay(5, () -> {
             boolean droppedAnyPath = false;
@@ -62,7 +78,7 @@ public class MarkerTester {
 
                 // Verify item was dropped using absolute coordinates (Entity check)
                 java.util.List<net.minecraft.world.entity.item.ItemEntity> items = helper.getLevel().getEntitiesOfClass(
-                        net.minecraft.world.entity.item.ItemEntity.class, 
+                        net.minecraft.world.entity.item.ItemEntity.class,
                         new net.minecraft.world.phys.AABB(helper.absolutePos(pathPos)).inflate(2.0)
                 );
                 for (net.minecraft.world.entity.item.ItemEntity itemEntity : items) {
@@ -95,7 +111,7 @@ public class MarkerTester {
             helper.runAfterDelay(2, () -> {
             if (helper.getLevel().getBlockEntity(helper.absolutePos(pos1)) instanceof TileMarkerVolume volume) {
                 volume.onManualConnectionAttempt(null);
-                
+
                 // Validate connection
                 helper.runAfterDelay(5, () -> {
                     BlockPos expectedMin = helper.absolutePos(pos1);
@@ -120,7 +136,7 @@ public class MarkerTester {
         BlockPos pos2 = new BlockPos(5, 2, 5); // Diagonal
         BlockPos wallPos = new BlockPos(3, 2, 3);
 
-        helper.runAfterDelay(20, () -> {
+        helper.runAfterDelay(10, () -> {
             helper.setBlock(pos1, BCCoreBlocks.MARKER_PATH.get());
             helper.setBlock(pos2, BCCoreBlocks.MARKER_PATH.get());
             helper.setBlock(wallPos, Blocks.STONE); // Solid block obstructing
@@ -128,7 +144,7 @@ public class MarkerTester {
             helper.runAfterDelay(2, () -> {
             if (helper.getLevel().getBlockEntity(helper.absolutePos(pos1)) instanceof TileMarkerPath path) {
                 path.getCache().getSubCache(helper.getLevel()).tryConnect(helper.absolutePos(pos1), helper.absolutePos(pos2));
-                
+
                 helper.runAfterDelay(5, () -> {
                     BlockPos expectedPos = helper.absolutePos(pos2);
                     if (path.getCurrentConnection() == null || !path.getCurrentConnection().getMarkerPositions().contains(expectedPos)) {
@@ -151,16 +167,15 @@ public class MarkerTester {
         BlockPos pos2 = new BlockPos(5, 2, 1);
         BlockPos pos3 = new BlockPos(1, 2, 5);
 
-        // Offset start by 25 ticks to prevent Marker cache crosstalk with other concurrent spatial tests
-        helper.runAfterDelay(25, () -> {
+        helper.runAfterDelay(10, () -> {
             helper.setBlock(pos1, BCCoreBlocks.MARKER_VOLUME.get());
             helper.setBlock(pos2, BCCoreBlocks.MARKER_VOLUME.get());
             helper.setBlock(pos3, BCCoreBlocks.MARKER_VOLUME.get());
-            
+
             helper.runAfterDelay(2, () -> {
             if (helper.getLevel().getBlockEntity(helper.absolutePos(pos1)) instanceof TileMarkerVolume volume) {
                 volume.onManualConnectionAttempt(null);
-                
+
                 helper.runAfterDelay(5, () -> {
                     BlockPos expectedMin = helper.absolutePos(pos1);
                     BlockPos expectedMax = helper.absolutePos(new BlockPos(5, 2, 5));
@@ -183,17 +198,16 @@ public class MarkerTester {
         BlockPos pos3 = new BlockPos(2, 5, 2);
         BlockPos pos4 = new BlockPos(2, 2, 5);
 
-        // Offset start by 50 ticks to prevent Marker cache crosstalk
-        helper.runAfterDelay(50, () -> {
+        helper.runAfterDelay(10, () -> {
             helper.setBlock(pos1, BCCoreBlocks.MARKER_VOLUME.get());
             helper.setBlock(pos2, BCCoreBlocks.MARKER_VOLUME.get());
             helper.setBlock(pos3, BCCoreBlocks.MARKER_VOLUME.get());
             helper.setBlock(pos4, BCCoreBlocks.MARKER_VOLUME.get());
-            
+
             helper.runAfterDelay(2, () -> {
             if (helper.getLevel().getBlockEntity(helper.absolutePos(pos1)) instanceof TileMarkerVolume volume) {
                 volume.onManualConnectionAttempt(null);
-                
+
                 helper.runAfterDelay(10, () -> {
                     BlockPos expectedMin = helper.absolutePos(pos1);
                     BlockPos expectedMax = helper.absolutePos(new BlockPos(5, 5, 5));

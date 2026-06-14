@@ -1,10 +1,9 @@
 {
     "type":  "minecraft:function",
     "function":  "buildcraftunofficial:marker_orientation",
-    "environment":  "minecraft:default",
+    "environment":  "buildcraftunofficial:marker_orientation",
     "structure":  "minecraft:empty",
     "max_ticks":  100,
     "setup_ticks":  0,
-    "required":  true,
-    "batch":  "marker_orientation"
+    "required":  true
 }

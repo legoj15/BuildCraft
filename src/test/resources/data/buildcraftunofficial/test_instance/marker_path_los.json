@@ -1,10 +1,9 @@
 {
     "type":  "minecraft:function",
     "function":  "buildcraftunofficial:marker_path_los",
-    "environment":  "minecraft:default",
+    "environment":  "buildcraftunofficial:marker_path_los",
     "structure":  "minecraft:empty",
     "max_ticks":  100,
     "setup_ticks":  0,
-    "required":  true,
-    "batch":  "marker_path_los"
+    "required":  true
 }

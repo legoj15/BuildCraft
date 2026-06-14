@@ -1,10 +1,9 @@
 {
     "type":  "minecraft:function",
     "function":  "buildcraftunofficial:marker_volume_triangulation_2d",
-    "environment":  "minecraft:default",
+    "environment":  "buildcraftunofficial:marker_volume_triangulation_2d",
     "structure":  "minecraft:empty",
     "max_ticks":  100,
     "setup_ticks":  0,
-    "required":  true,
-    "batch":  "marker_volume_triangulation_2d"
+    "required":  true
 }

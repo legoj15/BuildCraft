@@ -12,6 +12,7 @@ import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
+import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.category.AbstractRecipeCategory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -20,6 +21,7 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.energy.BCEnergyItems;
+import buildcraft.lib.compat.jei.FluidContainerAliases;
 import buildcraft.lib.gui.BCGraphics;
 import buildcraft.lib.misc.LocaleUtil;
 
@@ -59,6 +61,7 @@ public class CombustionCoolantCategory extends AbstractRecipeCategory<Combustion
                         //?} else {
                         /*.addFluidStack(water.getFluid(), water.getAmount(), water.getComponentsPatch());*/
                         //?}
+                FluidContainerAliases.addAliases(builder, water, RecipeIngredientRole.OUTPUT);
             }
         } else {
             FluidStack fluid = recipe.fluid();
@@ -70,6 +73,9 @@ public class CombustionCoolantCategory extends AbstractRecipeCategory<Combustion
                         //?} else {
                         /*.addFluidStack(fluid.getFluid(), BUCKET, fluid.getComponentsPatch());*/
                         //?}
+                // Clicking a water bucket now also surfaces the engine-coolant recipe, matching the
+                // heat exchanger / distiller fluid lookups.
+                FluidContainerAliases.addAliases(builder, fluid, RecipeIngredientRole.INPUT);
             }
         }
     }

@@ -1,4 +1,5 @@
 ###### Changes since 2026.1.0-rc4:
+- Looking up a fuel, residue or coolant bucket in JEI (e.g. Cool Residue) now also lists the Combustion Engine recipes that consume or produce it, not just the heat exchanger and distiller
 - {1.21.1} Fixed missing texture in the advancements window background
 - Stirling Engine can now be crafted from blackstone and cobbled deepslate (like a stone pickaxe)
 - Engines now deliver their stored power continuously, instead of freezing the buffer between fuel items

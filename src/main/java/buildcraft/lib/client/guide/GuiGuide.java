@@ -795,6 +795,14 @@ public class GuiGuide extends Screen {
             return true;
         }
 
+        // While the book isn't fully open (cover or the opening flip), let the inventory key
+        // close it — the player may have opened it by accident and is trying to back out.
+        // Match the bound key (not a hard-coded E) so a rebound inventory shortcut still works.
+        if (!isOpen && this.minecraft.options.keyInventory.matches(keyEvent)) {
+            this.minecraft.setScreen(null);
+            return true;
+        }
+
         // Page turning with left/right keys
         if (isOpen) {
             if (keyEvent.isLeft()) {
@@ -812,6 +820,13 @@ public class GuiGuide extends Screen {
     /*@Override
     public boolean keyPressed(int key, int scancode, int modifiers) {
         if (currentPage != null && currentPage.keyPressed(key, scancode, modifiers)) {
+            return true;
+        }
+
+        // While the book isn't fully open (cover or the opening flip), let the inventory key
+        // close it — the player may have opened it by accident and is trying to back out.
+        if (!isOpen && this.minecraft.options.keyInventory.matches(key, scancode)) {
+            this.minecraft.setScreen(null);
             return true;
         }
 

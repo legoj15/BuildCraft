@@ -40,27 +40,7 @@
       "buildcraftunofficial:pipe_stripes_item",
       "buildcraftunofficial:pipe_structure",
       "buildcraftunofficial:pipe_sealant",
-      "buildcraftunofficial:pipe_sealant_from_green_dye",
-      "buildcraftunofficial:pipe_clay_item_from_fluid",
-      "buildcraftunofficial:pipe_cobble_item_from_fluid",
-      "buildcraftunofficial:pipe_diamond_item_from_fluid",
-      "buildcraftunofficial:pipe_diamond_wood_item_from_fluid",
-      "buildcraftunofficial:pipe_gold_item_from_fluid",
-      "buildcraftunofficial:pipe_iron_item_from_fluid",
-      "buildcraftunofficial:pipe_quartz_item_from_fluid",
-      "buildcraftunofficial:pipe_sandstone_item_from_fluid",
-      "buildcraftunofficial:pipe_stone_item_from_fluid",
-      "buildcraftunofficial:pipe_void_item_from_fluid",
-      "buildcraftunofficial:pipe_wood_item_from_fluid",
-      "buildcraftunofficial:pipe_cobble_item_from_power",
-      "buildcraftunofficial:pipe_diamond_item_from_power",
-      "buildcraftunofficial:pipe_diamond_wood_item_from_power",
-      "buildcraftunofficial:pipe_gold_item_from_power",
-      "buildcraftunofficial:pipe_iron_item_from_power",
-      "buildcraftunofficial:pipe_quartz_item_from_power",
-      "buildcraftunofficial:pipe_sandstone_item_from_power",
-      "buildcraftunofficial:pipe_stone_item_from_power",
-      "buildcraftunofficial:pipe_wood_item_from_power"
+      "buildcraftunofficial:pipe_sealant_from_green_dye"
     ]
   },
   "criteria": {

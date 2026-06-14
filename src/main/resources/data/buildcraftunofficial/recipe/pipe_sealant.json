@@ -1,6 +1,7 @@
 {
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
+  "group": "buildcraft_pipe_sealant",
   "ingredients": [
     "minecraft:slime_ball"
   ],

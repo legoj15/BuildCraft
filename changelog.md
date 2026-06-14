@@ -6,9 +6,10 @@
 - Fixed bugs in regards to engine overheating
 - A quarry that has finished mining now stops drawing power, so the engines feeding it idle down instead of pointlessly topping off (and then overheating against) its internal battery
 - Guide book now shows crafting and smelting recipes on multiplayer servers (they were silently missing), and keeps them up to date after a datapack /reload or server switch
-- FE pipes now appear and are grouped together in the recipe book (fixing a broken item id in the unlock advancement); their downgrade-back-to-kinesis recipes are kept out of the recipe book to cut clutter, but remain craftable in the grid
+- FE pipes now appear and are grouped together in the recipe book (fixing a broken item id in the unlock advancement)
 - Pipes can now be recoloured in the crafting grid with a paintbrush — spending one of its charges per pipe, just like painting in-world — or bleached back to unpainted with a water bucket; pipes can also be crafted pre-dyed directly from stained glass
-- Fluid and kinesis pipes can be crafted back down into their plain item pipes (the waterproof/redstone is lost), recovering a mistakenly-upgraded pipe
+- Pipe upgrades can be undone in the crafting grid — a fluid or kinesis pipe back into its plain item pipe, or an FE pipe back into a kinesis pipe (the waterproof/redstone is lost), recovering a mistakenly-upgraded pipe; all of these downgrade recipes are now kept out of the recipe book to cut clutter while staying craftable in the grid and listed in JEI
+- The three ways to make Pipe Sealant (slimeball, green dye, or an oil residue bucket) are now grouped into a single recipe-book entry
 - Facades can be toggled between their solid and hollow forms by crafting one on its own
 - Fixed a crash that disconnected players when joining a multiplayer server, caused by the new pipe paint/dye and facade-swap recipes failing to sync to the client
 - List item: fixed false matches in Accept Variations / Accept Equivalents mode — logs no longer count as equivalent to leaves, and unrelated "plain" blocks like a baked brick, cobblestone and pumpkin no longer match each other

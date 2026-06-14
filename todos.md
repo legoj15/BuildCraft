@@ -4,7 +4,6 @@ Last audited: 2026-05-31 (final pre-rc review — removed dev scaffolding, swept
 
 ## Release Candidate 4/5 playtest feedback
 - UX Improvement: If on the cover of the guide book, pressing E (or whatever the inventory key is) should close it; user may have opened it accidentally and is trying to close it. 
-- Check gear progression in the recipe book
 - Investigate strange reaction a finished mining well has with flowing water (seems to retract, let water through, then shoot its tube down, retract, and repeat instead of staying finished)
 
 

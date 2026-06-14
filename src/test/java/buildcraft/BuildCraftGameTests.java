@@ -131,6 +131,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:dyed_pipe_symmetric_stone", () -> buildcraft.transport.DyedPipeRecipeTester::testSymmetricStonePipe);
         reg.accept("buildcraftunofficial:dyed_pipe_asymmetric_diamond_wood", () -> buildcraft.transport.DyedPipeRecipeTester::testAsymmetricDiamondWoodBothOrientations);
         reg.accept("buildcraftunofficial:dyed_pipe_colourless_glass_rejected", () -> buildcraft.transport.DyedPipeRecipeTester::testColourlessGlassRejected);
+        // Recipe-book cleanup: every pipe downgrade recipe (fluid/kinesis->item, FE->kinesis) is special (hidden
+        // from the book) yet still matches; pipe-sealant producers share one group so the book collapses them.
+        reg.accept("buildcraftunofficial:pipe_downgrades_hidden", () -> buildcraft.transport.HiddenShapelessRecipeTester::testPipeDowngradesHidden);
+        reg.accept("buildcraftunofficial:pipe_sealant_recipes_grouped", () -> buildcraft.transport.HiddenShapelessRecipeTester::testPipeSealantRecipesGrouped);
         // Recipe-content sync round-trip — guards the login crash from StreamCodec.unit(instance) on
         // these stateless CustomRecipes (encode compared a fresh datapack recipe to a captured instance
         // by identity → "Can't encode" → dropped the joining player during recipe sync).

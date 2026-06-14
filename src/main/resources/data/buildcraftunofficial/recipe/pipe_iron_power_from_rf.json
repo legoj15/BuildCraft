@@ -1,6 +1,7 @@
 {
-  "type": "minecraft:crafting_shapeless",
+  "type": "buildcraftunofficial:hidden_shapeless",
   "category": "misc",
+  "group": "buildcraft_pipe_undo",
   "ingredients": [
     "buildcraftunofficial:pipe_iron_rf"
   ],

@@ -290,6 +290,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:quarry_frame_clearing_routes_drops", () -> buildcraft.builders.tile.TileQuarryDropsTester::testFrameClearingRoutesDropsToAdjacentChest);
         reg.accept("buildcraftunofficial:quarry_mining_routes_drops", () -> buildcraft.builders.tile.TileQuarryDropsTester::testMiningRoutesDropsToAdjacentChest);
         reg.accept("buildcraftunofficial:quarry_tick_reconciles_stale_mining_floor", () -> buildcraft.builders.tile.TileQuarryMiningDepthTester::testTickReconcilesStaleMiningFloor);
+        // A finished (or not-yet-working) quarry must request 0 MJ so feeding engines idle down
+        // instead of overheating while topping off a 24k buffer that's about to be torn down.
+        reg.accept("buildcraftunofficial:quarry_idle_requests_no_power", () -> buildcraft.builders.tile.TileQuarryIdlePowerTester::testIdleQuarryRequestsNoPower);
 
         // Owner-on-placement contract — load-bearing for both quarry advancements
         reg.accept("buildcraftunofficial:quarry_on_placed_by_records_owner", () -> buildcraft.builders.tile.TileQuarryOwnerTester::onPlacedByRecordsOwner);

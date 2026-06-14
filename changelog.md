@@ -4,6 +4,7 @@
 - Stirling Engine can now be crafted from blackstone and cobbled deepslate (like a stone pickaxe)
 - Engines now deliver their stored power continuously, instead of freezing the buffer between fuel items
 - Fixed bugs in regards to engine overheating
+- A quarry that has finished mining now stops drawing power, so the engines feeding it idle down instead of pointlessly topping off (and then overheating against) its internal battery
 - Guide book now shows crafting and smelting recipes on multiplayer servers (they were silently missing), and keeps them up to date after a datapack /reload or server switch
 - FE pipes now appear and are grouped together in the recipe book (fixing a broken item id in the unlock advancement); their downgrade-back-to-kinesis recipes are kept out of the recipe book to cut clutter, but remain craftable in the grid
 - Pipes can now be recoloured in the crafting grid with a paintbrush — spending one of its charges per pipe, just like painting in-world — or bleached back to unpainted with a water bucket; pipes can also be crafted pre-dyed directly from stained glass

@@ -98,7 +98,16 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     private static final Identifier DIGGY_DIGGY_HOLE = Identifier.parse("buildcraftunofficial:diggy_diggy_hole");
 
     private final MjBattery battery = new MjBattery(24000 * MjAPI.MJ);
-    private final MjBatteryReceiver mjReceiver = new MjBatteryReceiver(battery);
+    // A finished quarry has nothing to spend power on, so its receiver stops requesting MJ once
+    // work runs out (see hasPendingWork) instead of topping the 24k buffer off forever — which
+    // only overheats the feeding engines and is voided when the quarry is torn down. It resumes
+    // the instant real work is queued again.
+    private final MjBatteryReceiver mjReceiver = new MjBatteryReceiver(battery) {
+        @Override
+        public long getPowerRequested() {
+            return hasPendingWork() ? super.getPowerRequested() : 0;
+        }
+    };
     public final Box frameBox = new Box();
     final Box miningBox = new Box();
     private BoxIterator boxIterator;
@@ -506,6 +515,19 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
 
     public boolean isMining() {
         return currentTask != null;
+    }
+
+    /**
+     * True while the quarry still has something to spend power on: an in-flight task, queued
+     * frame break/place work, or unmined cells left in the box. A completed quarry returns false,
+     * which gates {@link #getMjReceiver()} so it stops pulling power (see the receiver's
+     * {@code getPowerRequested} override) rather than holding its battery topped off after the job.
+     */
+    boolean hasPendingWork() {
+        return currentTask != null
+            || !frameBreakBlockPoses.isEmpty()
+            || !framePlaceFramePoses.isEmpty()
+            || (boxIterator != null && boxIterator.hasNext());
     }
 
     /** Called once per tick by the BlockEntityTicker. */

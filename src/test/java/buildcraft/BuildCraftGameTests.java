@@ -450,6 +450,13 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pump_infinite_water_below_supports", () -> buildcraft.factory.PumpInfiniteDetectionTester::testWaterBelowProvidesSupport);
         reg.accept("buildcraftunofficial:pump_infinite_null_safety", () -> buildcraft.factory.PumpInfiniteDetectionTester::testNullSafetyShortCircuits);
 
+        // Mining Well fluid handling — low-viscosity fluids (water) are passable, not a mine
+        // target: the well drills its tube past them to the solids below and stays finished over
+        // a flooded bore, instead of breaking re-flowing water forever (the tube extend/retract
+        // oscillation). canBreak() now refuses all fluids, matching the Quarry's canMine().
+        reg.accept("buildcraftunofficial:mining_well_drills_past_water", () -> buildcraft.factory.tile.TileMiningWellFluidTester::testWellDrillsPastWaterToSolidBelow);
+        reg.accept("buildcraftunofficial:mining_well_stays_complete_over_water", () -> buildcraft.factory.tile.TileMiningWellFluidTester::testFinishedWellStaysCompleteOverWater);
+
         // Pump spring-aware probe — drilling past water to a submerged oil spring
         reg.accept("buildcraftunofficial:pump_probe_oil_beneath_water", () -> buildcraft.factory.PumpSpringProbeTester::testOilBeneathWaterIsFound);
         reg.accept("buildcraftunofficial:pump_probe_dry_spring_under_water", () -> buildcraft.factory.PumpSpringProbeTester::testDrySpringUnderWaterReportsNoOil);

@@ -14,7 +14,6 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 
 import buildcraft.api.mj.IMjConnector;
@@ -115,13 +114,16 @@ public class TileMiningWell extends TileMiner {
             return false;
         }
 
-        Fluid fluid = BlockUtil.getFluidWithFlowing(level, currentPos);
-        if (fluid == null) {
-            return true; // Not a fluid, can break
-        }
-        // Match 1.12.2: allow mining low-viscosity fluids (water, light fuel, etc.)
-        // but block high-viscosity fluids (lava, oil, etc.)
-        return fluid.getFluidType().getViscosity() <= 1000;
+        // Never break fluids (matches the Quarry's canMine()). nextPos() classifies them
+        // itself: low-viscosity fluids (water, light fuel, …) are passable — the tube drills
+        // straight past them to the solids below — while high-viscosity fluids (lava, oil)
+        // are impassable and stop the well. Returning true for water here used to make
+        // nextPos() TARGET flowing water (it tests canBreak() before its passable-fluid skip):
+        // a finished well standing in re-flowing water broke the water (a flat 1 MJ via
+        // computeBlockBreakPower), the column re-flooded ~5 ticks later, and it re-targeted the
+        // water forever — shooting its tube down and retracting it in place instead of staying
+        // finished.
+        return BlockUtil.getFluidWithFlowing(level, currentPos) == null;
     }
 
     private void nextPos() {

@@ -5,6 +5,7 @@
 - Engines now deliver their stored power continuously, instead of freezing the buffer between fuel items
 - Fixed bugs in regards to engine overheating
 - A quarry that has finished mining now stops drawing power, so the engines feeding it idle down instead of pointlessly topping off (and then overheating against) its internal battery
+- Mining Well no longer churns against flowing water: instead of repeatedly breaking the water and shooting its tube up and down, it now drills its tube straight past water (mining the solid blocks below, like the Quarry) and stays put once finished
 - Guide book now shows crafting and smelting recipes on multiplayer servers (they were silently missing), and keeps them up to date after a datapack /reload or server switch
 - FE pipes now appear and are grouped together in the recipe book (fixing a broken item id in the unlock advancement)
 - Pipes can now be recoloured in the crafting grid with a paintbrush — spending one of its charges per pipe, just like painting in-world — or bleached back to unpainted with a water bucket; pipes can also be crafted pre-dyed directly from stained glass

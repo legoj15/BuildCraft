@@ -6,6 +6,8 @@
 
 package buildcraft.lib.mj;
 
+import java.util.function.BooleanSupplier;
+
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
 
@@ -36,9 +38,18 @@ public class MjBatteryEnergyHandler extends SnapshotJournal<Long> implements Ene
 /*public class MjBatteryEnergyHandler implements IEnergyStorage {*/
 //?}
     private final MjBattery battery;
+    /** Insertion gate: FE pushes are refused while this returns false (e.g. a finished quarry that
+     *  has no work to spend power on — parity with the MJ receiver's {@code getPowerRequested == 0}).
+     *  Defaults to "always accept" for machines that should bank power whenever it's offered. */
+    private final BooleanSupplier acceptInsert;
 
     public MjBatteryEnergyHandler(MjBattery battery) {
+        this(battery, () -> true);
+    }
+
+    public MjBatteryEnergyHandler(MjBattery battery, BooleanSupplier acceptInsert) {
         this.battery = battery;
+        this.acceptInsert = acceptInsert;
     }
 
     /**
@@ -48,7 +59,15 @@ public class MjBatteryEnergyHandler extends SnapshotJournal<Long> implements Ene
      * won't connect — matching that mode's "machines require MJ exclusively" contract.
      */
     public static MjBatteryEnergyHandler createIfRfEnabled(MjBattery battery) {
-        return MjAPI.isRfAutoConversionEnabled() ? new MjBatteryEnergyHandler(battery) : null;
+        return createIfRfEnabled(battery, () -> true);
+    }
+
+    /**
+     * As {@link #createIfRfEnabled(MjBattery)}, but with an insertion gate so the machine can refuse
+     * FE pushes while it has nothing to spend power on (used by the quarry for MJ/FE parity).
+     */
+    public static MjBatteryEnergyHandler createIfRfEnabled(MjBattery battery, BooleanSupplier acceptInsert) {
+        return MjAPI.isRfAutoConversionEnabled() ? new MjBatteryEnergyHandler(battery, acceptInsert) : null;
     }
 
     private long mjPerRf() {
@@ -97,7 +116,7 @@ public class MjBatteryEnergyHandler extends SnapshotJournal<Long> implements Ene
 
     @Override
     public int insert(int amount, TransactionContext transaction) {
-        if (amount <= 0) return 0;
+        if (amount <= 0 || !acceptInsert.getAsBoolean()) return 0;
         long mjpr = mjPerRf();
         if (mjpr <= 0) return 0;
 
@@ -165,7 +184,7 @@ public class MjBatteryEnergyHandler extends SnapshotJournal<Long> implements Ene
 
     @Override
     public boolean canReceive() {
-        return true;
+        return acceptInsert.getAsBoolean();
     }
 
     @Override
@@ -175,7 +194,7 @@ public class MjBatteryEnergyHandler extends SnapshotJournal<Long> implements Ene
 
     @Override
     public int receiveEnergy(int amount, boolean simulate) {
-        if (amount <= 0) return 0;
+        if (amount <= 0 || !acceptInsert.getAsBoolean()) return 0;
         long mjpr = mjPerRf();
         if (mjpr <= 0) return 0;
 

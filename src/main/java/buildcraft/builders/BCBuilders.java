@@ -99,7 +99,9 @@ public class BCBuilders {
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCBuildersBlockEntities.QUARRY.get(),
             (quarry, direction) -> quarry.getMjReceiver());
         event.registerBlockEntity(energyCap, BCBuildersBlockEntities.QUARRY.get(),
-            (quarry, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(quarry.getBattery()));
+            // Gate FE insertion on the same "has work" predicate as the MJ receiver, so a finished
+            // quarry refuses FE pushes too instead of topping its battery off (MJ/FE parity).
+            (quarry, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(quarry.getBattery(), quarry::hasPendingWork));
         //? if >=1.21.10 {
         event.registerBlockEntity(itemCap, BCBuildersBlockEntities.QUARRY.get(),
             (quarry, direction) -> net.neoforged.neoforge.transfer.EmptyResourceHandler.instance());

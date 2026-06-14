@@ -522,8 +522,9 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
      * frame break/place work, or unmined cells left in the box. A completed quarry returns false,
      * which gates {@link #getMjReceiver()} so it stops pulling power (see the receiver's
      * {@code getPowerRequested} override) rather than holding its battery topped off after the job.
+     * The FE/RF energy handler is gated on the same predicate (see {@code BCBuilders}) for parity.
      */
-    boolean hasPendingWork() {
+    public boolean hasPendingWork() {
         return currentTask != null
             || !frameBreakBlockPoses.isEmpty()
             || !framePlaceFramePoses.isEmpty()

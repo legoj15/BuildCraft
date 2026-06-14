@@ -44,6 +44,21 @@ public class TileQuarryIdlePowerTester {
             assertTrue(idleRequest == 0,
                     "an idle quarry must request 0 MJ even with an empty battery, got " + idleRequest);
 
+            // FE parity (modern Transfer-API path only; 1.21.1 uses the classic IEnergyStorage
+            // gate, exercised in-game). Build the gated handler directly: the registered capability
+            // is null under the default MJ_ONLY power mode, but the gate logic is mode-independent.
+            //? if >=1.21.10 {
+            buildcraft.lib.mj.MjBatteryEnergyHandler feHandler =
+                    new buildcraft.lib.mj.MjBatteryEnergyHandler(quarry.getBattery(), quarry::hasPendingWork);
+            try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
+                    net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+                int insertedIdle = feHandler.insert(1000, tx);
+                assertTrue(insertedIdle == 0,
+                        "an idle quarry must refuse FE insertion, accepted " + insertedIdle);
+            }
+            assertTrue(quarry.getBattery().getStored() == 0, "refused FE insert must not store power");
+            //?}
+
             // Queue a task -> the quarry now has work, so the receiver must request its battery
             // deficit again (the full capacity here, since the battery is still empty).
             quarry.currentTask = quarry.new TaskBreakBlock();
@@ -52,6 +67,17 @@ public class TileQuarryIdlePowerTester {
             assertTrue(workingRequest == quarry.getBattery().getCapacity(),
                     "a working quarry with an empty battery must request its full capacity, got "
                             + workingRequest);
+
+            // FE parity, working side: the same handler now accepts a push.
+            //? if >=1.21.10 {
+            try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
+                    net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+                int insertedWorking = feHandler.insert(1000, tx);
+                assertTrue(insertedWorking > 0, "a working quarry must accept FE insertion");
+                tx.commit();
+            }
+            assertTrue(quarry.getBattery().getStored() > 0, "accepted FE insert must store power");
+            //?}
 
             helper.succeed();
         } catch (Throwable t) {

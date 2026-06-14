@@ -2,8 +2,7 @@
   "parent": "minecraft:recipes/root",
   "rewards": {
     "recipes": [
-      "buildcraftunofficial:pipe_quartz_rf",
-      "buildcraftunofficial:pipe_quartz_power_from_rf"
+      "buildcraftunofficial:pipe_quartz_rf"
     ]
   },
   "criteria": {

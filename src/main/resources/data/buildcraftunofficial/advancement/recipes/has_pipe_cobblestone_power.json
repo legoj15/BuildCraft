@@ -2,8 +2,7 @@
   "parent": "minecraft:recipes/root",
   "rewards": {
     "recipes": [
-      "buildcraftunofficial:pipe_cobble_rf",
-      "buildcraftunofficial:pipe_cobble_power_from_rf"
+      "buildcraftunofficial:pipe_cobble_rf"
     ]
   },
   "criteria": {

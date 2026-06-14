@@ -2,8 +2,7 @@
   "parent": "minecraft:recipes/root",
   "rewards": {
     "recipes": [
-      "buildcraftunofficial:pipe_gold_rf",
-      "buildcraftunofficial:pipe_gold_power_from_rf"
+      "buildcraftunofficial:pipe_gold_rf"
     ]
   },
   "criteria": {

@@ -2,8 +2,7 @@
   "parent": "minecraft:recipes/root",
   "rewards": {
     "recipes": [
-      "buildcraftunofficial:pipe_sandstone_rf",
-      "buildcraftunofficial:pipe_sandstone_power_from_rf"
+      "buildcraftunofficial:pipe_sandstone_rf"
     ]
   },
   "criteria": {

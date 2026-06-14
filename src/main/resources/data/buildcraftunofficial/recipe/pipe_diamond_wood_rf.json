@@ -1,6 +1,7 @@
 {
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
+  "group": "buildcraft_rf_pipes",
   "ingredients": [
     "buildcraftunofficial:pipe_diamond_wood_power",
     "#c:dusts/redstone"

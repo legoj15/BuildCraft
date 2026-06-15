@@ -29,6 +29,7 @@ Last audited: 2026-05-31 (final pre-rc review — removed dev scaffolding, swept
 - [ ] Quarry item transport visualization
 - [ ] Unify button implementation (native over custom button background images)
 - [ ] Buttons to allow for alternate recipe inputs (i.e. different woods and stones) and outputs (different stairs or doors) for the advanced crafting table
+- [ ] Enchantable Quarry and miner
 
 ---
 

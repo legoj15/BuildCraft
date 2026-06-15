@@ -127,10 +127,22 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
                 for (ItemStack drop : drops) {
                     Block.popResource(level, pos, drop);
                 }
+                engine.markDropsHandled();
             }
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
+
+    // Non-player removal catch-all for the pre-1.21.10 API; >=1.21.10 uses TileEngineIron_BC8#preRemoveSideEffects.
+    //? if <1.21.10 {
+    /*@Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof buildcraft.energy.tile.TileEngineIron_BC8 tile) {
+            tile.dropContentsOnRemoval(level, pos);
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
+    }*/
+    //?}
 
     /** Open the combustion engine GUI for the given player. */
     private InteractionResult openGui(BlockState state, Level level, BlockPos pos, Player player) {

@@ -195,7 +195,14 @@ public abstract class TileBC_Neptune extends BlockEntity {
         }
         contentsDropped = true;
         buildcraft.lib.misc.BlockDropsUtil.dropTileContents(level, pos, this, getDropTanks());
+        dropExtraContentsOnRemoval(level, pos);
     }
+
+    /** Override to spill contents NOT held in the itemManager or {@link #getDropTanks} — e.g. loose
+     *  ItemStack fields a tile keeps outside ItemHandlerManager (the Builder's snapshot + resource grid).
+     *  Called from {@link #dropContentsOnRemoval} after the itemManager + tank drops, so it only fires
+     *  for opted-in tiles on a non-player removal. Mirror the tile's playerWillDestroy drop set exactly. */
+    protected void dropExtraContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {}
 
     // Non-player removal catch-all (explosion / piston / /setblock / mod tools) on the >=1.21.10 API:
     // the BlockEntity is still alive here (removed right after, before affectNeighborsAfterRemoval).

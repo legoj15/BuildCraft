@@ -24,6 +24,7 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 //?}
 
 import buildcraft.builders.BCBuildersBlocks;
+import buildcraft.builders.tile.TileArchitectTable;
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.BCCoreItems;
 import buildcraft.energy.BCEnergyBlocks;
@@ -433,6 +434,57 @@ public class BlockDropsTester {
             // Markers were Material.CIRCUITS in 1.12.2 — hand-break returns the marker
             // item without needing a tool.
             helper.assertItemEntityPresent(BCCoreBlocks.MARKER_PATH.get().asItem(), markerPos, 2.0);
+            helper.succeed();
+        });
+    }
+
+    // ---------- More non-player removal coverage for the second machine batch ----------
+    // The remaining converted blocks (Builder, Laser Table, Distiller, Heat Exchange, Engine Iron)
+    // reuse mechanisms already exercised above: opt-in itemManager (Chute), opt-in + getDropTanks
+    // (Pump), and standalone fluid (Flood Gate). These two add the genuinely new wrinkles: the
+    // Architect's snapshot slots must be reachable by addDrops, and the Tank is the canonical
+    // standalone fluid block.
+
+    public static void testArchitectNonPlayerRemovalDropsContents(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 2, 1);
+        helper.setBlock(pos, BCBuildersBlocks.ARCHITECT.get());
+
+        //? if >=1.21.10 {
+        TileArchitectTable architect = helper.getBlockEntity(pos, TileArchitectTable.class);
+        //?} else {
+        /*TileArchitectTable architect = helper.getBlockEntity(pos);*/
+        //?}
+        // The snapshot in-slot is a real itemManager handler; addDrops must capture it on a
+        // non-player removal (this is the assumption behind wiring Architect via the opt-in path).
+        architect.invSnapshotIn.setStackInSlot(0, new ItemStack(Items.NETHER_STAR, 1));
+
+        helper.getLevel().removeBlock(helper.absolutePos(pos), false);
+        helper.assertBlockPresent(Blocks.AIR, pos);
+
+        helper.runAfterDelay(10, () -> {
+            helper.assertItemEntityPresent(Items.NETHER_STAR, pos, 2.0);
+            helper.assertItemEntityNotPresent(BCBuildersBlocks.ARCHITECT.get().asItem(), pos, 2.0);
+            helper.succeed();
+        });
+    }
+
+    public static void testTankNonPlayerRemovalDropsFluid(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 2, 1);
+        helper.setBlock(pos, BCFactoryBlocks.TANK.get());
+
+        //? if >=1.21.10 {
+        TileTank tank = helper.getBlockEntity(pos, TileTank.class);
+        //?} else {
+        /*TileTank tank = helper.getBlockEntity(pos);*/
+        //?}
+        fillTank(tank, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
+
+        helper.getLevel().removeBlock(helper.absolutePos(pos), false);
+        helper.assertBlockPresent(Blocks.AIR, pos);
+
+        helper.runAfterDelay(10, () -> {
+            helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pos, 2.0);
+            helper.assertItemEntityNotPresent(BCFactoryBlocks.TANK.get().asItem(), pos, 2.0);
             helper.succeed();
         });
     }

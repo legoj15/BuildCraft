@@ -506,6 +506,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:drops_chute_nonplayer", () -> BlockDropsTester::testChuteNonPlayerRemovalDropsContents);
         reg.accept("buildcraftunofficial:drops_pump_nonplayer", () -> BlockDropsTester::testPumpNonPlayerRemovalDropsFluid);
         reg.accept("buildcraftunofficial:drops_floodgate_nonplayer", () -> BlockDropsTester::testFloodGateNonPlayerRemovalDropsFluid);
+        reg.accept("buildcraftunofficial:drops_architect_nonplayer", () -> BlockDropsTester::testArchitectNonPlayerRemovalDropsContents);
+        reg.accept("buildcraftunofficial:drops_tank_nonplayer", () -> BlockDropsTester::testTankNonPlayerRemovalDropsFluid);
 
         // Stripes pipe direction NBT sync — covered by JUnit unit tests rather than game tests
         // (the regression is in PipeBehaviour.readFromNbt's no-op default; PipeBehaviourStripesSyncTester

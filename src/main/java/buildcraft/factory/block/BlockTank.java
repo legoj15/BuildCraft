@@ -229,8 +229,20 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
                 for (ItemStack drop : toDrop) {
                     Block.popResource(level, pos, drop);
                 }
+                tank.markDropsHandled();
             }
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
+
+    // Non-player removal catch-all for the pre-1.21.10 API; >=1.21.10 uses TileTank#preRemoveSideEffects.
+    //? if <1.21.10 {
+    /*@Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof buildcraft.factory.tile.TileTank tile) {
+            tile.dropContentsOnRemoval(level, pos);
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
+    }*/
+    //?}
 }

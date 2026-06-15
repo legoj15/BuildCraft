@@ -65,6 +65,34 @@ public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
         super(BCFactoryBlockEntities.TANK.get(), pos, state);
     }
 
+    // --- Non-player removal drops (explosion / piston / command) ---
+    // TileTank extends BlockEntity directly (not TileBC_Neptune), so it carries its own copy of the
+    // drop hook. Spills the tank as fragile fluid shards, mirroring BlockTank#playerWillDestroy.
+
+    private boolean dropsHandled = false;
+
+    public void markDropsHandled() {
+        dropsHandled = true;
+    }
+
+    public void dropContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {
+        if (dropsHandled || level.isClientSide()) {
+            return;
+        }
+        dropsHandled = true;
+        buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos, tank);
+    }
+
+    //? if >=1.21.10 {
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null) {
+            dropContentsOnRemoval(level, pos);
+        }
+    }
+    //?}
+
     // --- Comparator ---
 
     public int getComparatorLevel() {

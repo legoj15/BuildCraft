@@ -86,6 +86,35 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
         super(BCEnergyBlockEntities.ENGINE_IRON.get(), pos, state);
     }
 
+    // --- Non-player removal drops (explosion / piston / command) ---
+    // Engine tiles extend TileEngineBase_BC8 (a BlockEntity, not TileBC_Neptune), so this carries its
+    // own drop hook. Spills the fuel/coolant/residue tanks as fragile shards, mirroring
+    // BlockEngineIron_BC8#playerWillDestroy.
+
+    private boolean dropsHandled = false;
+
+    public void markDropsHandled() {
+        dropsHandled = true;
+    }
+
+    public void dropContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {
+        if (dropsHandled || level.isClientSide()) {
+            return;
+        }
+        dropsHandled = true;
+        buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos, tankFuel, tankCoolant, tankResidue);
+    }
+
+    //? if >=1.21.10 {
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null) {
+            dropContentsOnRemoval(level, pos);
+        }
+    }
+    //?}
+
     // --- Engine overrides ---
 
     @Nonnull

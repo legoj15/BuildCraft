@@ -210,8 +210,20 @@ public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHa
                 for (ItemStack drop : toDrop) {
                     Block.popResource(level, pos, drop);
                 }
+                distiller.markDropsHandled();
             }
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
+
+    // Non-player removal catch-all for the pre-1.21.10 API; >=1.21.10 uses TileDistiller_BC8#preRemoveSideEffects.
+    //? if <1.21.10 {
+    /*@Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof buildcraft.factory.tile.TileDistiller_BC8 tile) {
+            tile.dropContentsOnRemoval(level, pos);
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
+    }*/
+    //?}
 }

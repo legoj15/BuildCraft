@@ -486,6 +486,34 @@ public class TileBuilder extends TileBC_Neptune
         super(BCBuildersBlockEntities.BUILDER.get(), pos, state);
     }
 
+    // The Builder keeps its snapshot, 27-slot resource grid and 4 fluid tanks as loose fields outside
+    // the itemManager, so the central addDrops path can't see them. Opt in, route the tanks through
+    // getDropTanks, and spill the snapshot + resources via dropExtraContentsOnRemoval — mirroring
+    // playerWillDestroy exactly so a non-player removal (explosion / piston / command) drops the same set.
+    @Override
+    protected boolean spillsContentsOnRemoval() {
+        return true;
+    }
+
+    @Override
+    protected BCFluidTank[] getDropTanks() {
+        return new BCFluidTank[] { getTank(0), getTank(1), getTank(2), getTank(3) };
+    }
+
+    @Override
+    protected void dropExtraContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {
+        ItemStack snapshot = getSnapshot();
+        if (!snapshot.isEmpty()) {
+            net.minecraft.world.level.block.Block.popResource(level, pos, snapshot);
+        }
+        for (int i = 0; i < RESOURCE_SLOTS; i++) {
+            ItemStack stack = getResource(i);
+            if (!stack.isEmpty()) {
+                net.minecraft.world.level.block.Block.popResource(level, pos, stack);
+            }
+        }
+    }
+
     @Override
     public void setRemoved() {
         super.setRemoved();

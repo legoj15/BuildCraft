@@ -44,6 +44,13 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
         super(type, pos, state);
     }
 
+    // All real contents live in the itemManager (playerWillDestroy itself drops via addDrops), so the
+    // central addDrops path spills them on a non-player removal (explosion / piston / command).
+    @Override
+    protected boolean spillsContentsOnRemoval() {
+        return true;
+    }
+
     public abstract long getTarget();
 
     @Override

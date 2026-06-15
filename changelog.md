@@ -1,6 +1,6 @@
 ###### Changes since 2026.1.0-rc4:
 - A pipe destroyed by an explosion, piston, or world-edit command now spills the items and fluids it was carrying onto the ground instead of voiding them (breaking a pipe by hand or pickaxe already dropped its cargo)
-- Machines destroyed by an explosion, piston, or world-edit command (Auto Workbench, Chute, Filler, Electronic Library, Filtered Buffer, Flood Gate, Pump) now spill their stored items and fluids instead of voiding them — previously only a manual break returned the contents
+- Machines destroyed by an explosion, piston, or world-edit command now spill their stored items and fluids instead of voiding them — Auto Workbench, Chute, Filler, Electronic Library, Filtered Buffer, Flood Gate, Pump, Tank, Distiller, Heat Exchanger, Combustion Engine, Architect Table, Builder, and the Assembly/Advanced Crafting/Integration tables; previously only a manual break returned the contents
 - Looking up a fuel, residue or coolant bucket in JEI (e.g. Cool Residue) now also lists the Combustion Engine recipes that consume or produce it, not just the heat exchanger and distiller
 - {1.21.1} Fixed missing texture in the advancements window background
 - Fixed block textures looking grainy and shimmering at a distance — the recipe-cycle button's icon (new in rc4) was being stitched onto the block texture atlas and forcing its mipmaps off

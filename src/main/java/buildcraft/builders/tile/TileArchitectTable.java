@@ -122,6 +122,13 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
         super(BCBuildersBlockEntities.ARCHITECT.get(), pos, state);
     }
 
+    // The snapshot in/out slots are real itemManager handlers, so the central addDrops path spills
+    // them on a non-player removal (explosion / piston / command), matching playerWillDestroy.
+    @Override
+    protected boolean spillsContentsOnRemoval() {
+        return true;
+    }
+
     @Override
     public void setRemoved() {
         super.setRemoved();

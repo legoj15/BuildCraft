@@ -105,6 +105,39 @@ public class TileHeatExchange extends BlockEntity implements MenuProvider, IDebu
         super(BCFactoryBlockEntities.HEAT_EXCHANGE.get(), pos, state);
     }
 
+    // --- Non-player removal drops (explosion / piston / command) ---
+    // Standalone BlockEntity (not TileBC_Neptune): carries its own drop hook. Spills the section tanks
+    // (START/END tiles only) as fragile shards plus the container slots, mirroring
+    // BlockHeatExchange#playerWillDestroy.
+
+    private boolean dropsHandled = false;
+
+    public void markDropsHandled() {
+        dropsHandled = true;
+    }
+
+    public void dropContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {
+        if (dropsHandled || level.isClientSide()) {
+            return;
+        }
+        dropsHandled = true;
+        ExchangeSection section = getSection();
+        if (section != null) {
+            buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos, section.tankInput, section.tankOutput);
+        }
+        buildcraft.lib.misc.BlockDropsUtil.dropItems(level, pos, containerSlots);
+    }
+
+    //? if >=1.21.10 {
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null) {
+            dropContentsOnRemoval(level, pos);
+        }
+    }
+    //?}
+
     // --- Section accessors ---
 
     public boolean isStart() {

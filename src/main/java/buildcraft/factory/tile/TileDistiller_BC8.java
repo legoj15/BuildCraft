@@ -128,6 +128,35 @@ public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDeb
         super(BCFactoryBlockEntities.DISTILLER.get(), pos, state);
     }
 
+    // --- Non-player removal drops (explosion / piston / command) ---
+    // Standalone BlockEntity (not TileBC_Neptune): carries its own drop hook. Spills the three tanks
+    // as fragile fluid shards, mirroring BlockDistiller#playerWillDestroy.
+
+    private boolean dropsHandled = false;
+
+    public void markDropsHandled() {
+        dropsHandled = true;
+    }
+
+    public void dropContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {
+        if (dropsHandled || level.isClientSide()) {
+            return;
+        }
+        dropsHandled = true;
+        buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos,
+                getTankIn(), getTankGasOut(), getTankLiquidOut());
+    }
+
+    //? if >=1.21.10 {
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null) {
+            dropContentsOnRemoval(level, pos);
+        }
+    }
+    //?}
+
     // --- Accessors ---
 
     public InputTank getTankIn() {

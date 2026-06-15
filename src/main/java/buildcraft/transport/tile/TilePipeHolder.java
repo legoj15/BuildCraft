@@ -99,6 +99,12 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     // CompoundTag cache for pipe data (used because Pipe uses CompoundTag, not ValueOutput)
     private CompoundTag pipeSaveCache;
 
+    // Set when BlockPipeHolder#playerWillDestroy has already handled this removal's drops
+    // (survival break = full drop via dropPipeItems; creative = deliberate no-drop). Stops the
+    // non-player cargo fallback (preRemoveSideEffects / onRemove → dropPipeCargo) from running a
+    // second time during the same removal. See dropPipeCargo for the full breakdown.
+    private boolean dropsHandled = false;
+
 
     public TilePipeHolder(BlockPos pos, BlockState state) {
         super(BCTransportBlockEntities.PIPE_HOLDER.get(), pos, state);
@@ -497,6 +503,55 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
             }
         }
     }
+
+    /** Flags that the player-break path ({@link buildcraft.transport.block.BlockPipeHolder#playerWillDestroy})
+     *  owns this removal's drops, so the non-player {@link #dropPipeCargo} fallback stays quiet and the
+     *  in-transit cargo is not dropped twice. Called for both survival (full drop) and creative (no drop)
+     *  pipe-body breaks. */
+    public void markDropsHandled() {
+        dropsHandled = true;
+    }
+
+    /**
+     * Spills ONLY the in-transit cargo — traversing items (via {@link buildcraft.transport.pipe.flow.PipeFlowItems#addDrops})
+     * and fluid contents as fragile fluid-shard items (via {@link buildcraft.transport.pipe.flow.PipeFlowFluids#addDrops})
+     * — when the pipe is removed by something other than a player's hand: explosions, pistons, {@code /setblock},
+     * another mod's tool, world edits, etc. The pipe item, pluggables and wires are intentionally NOT returned in
+     * these cases (the block is treated as destroyed, like a chest spilling its contents on explosion). A survival
+     * hand/pickaxe break instead returns everything via
+     * {@link buildcraft.transport.block.BlockPipeHolder#playerWillDestroy} → {@link #dropPipeItems}, which calls
+     * {@link #markDropsHandled} so this fallback skips it.
+     * <p>
+     * No-op on the client, and idempotent via {@link #dropsHandled} so the same removal can never drop cargo twice
+     * (the player-break path triggers {@code level.removeBlock}, which fires this hook right after playerWillDestroy).
+     */
+    public void dropPipeCargo(Level lvl, BlockPos pos) {
+        if (dropsHandled || lvl.isClientSide()) {
+            return;
+        }
+        dropsHandled = true;
+        if (pipe != null) {
+            NonNullList<ItemStack> drops = NonNullList.create();
+            pipe.getFlow().addDrops(drops, 0);
+            for (ItemStack drop : drops) {
+                Block.popResource(lvl, pos, drop);
+            }
+        }
+    }
+
+    // Non-player removal catch-all (explosion / piston / /setblock / mod tools) on the >=1.21.10 API.
+    // The BlockEntity is still alive here — it is removed immediately after this returns, before
+    // affectNeighborsAfterRemoval — so this is the last point where the in-transit cargo can spill.
+    // Player breaks set dropsHandled in playerWillDestroy, making dropPipeCargo a no-op (no double drop).
+    //? if >=1.21.10 {
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null) {
+            dropPipeCargo(level, pos);
+        }
+    }
+    //?}
 
     // --- IPipeHolder ---
 

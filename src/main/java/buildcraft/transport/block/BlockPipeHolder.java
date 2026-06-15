@@ -650,11 +650,33 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
             // setRemoved() is also called during chunk unload/save, and mutating
             // SavedDataWireSystems mid-serialization causes a save hang.
             if (!level.isClientSide()) {
+                // This player break owns the removal's drops — survival dropped everything above,
+                // creative deliberately dropped nothing. Flag the tile so the non-player cargo
+                // fallback in TilePipeHolder#preRemoveSideEffects / onRemove (which the upcoming
+                // level.removeBlock still triggers) does not drop the in-transit cargo a second time.
+                tile.markDropsHandled();
                 tile.wireManager.invalidate();
             }
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
+
+    // Non-player removal catch-all for the pre-1.21.10 API (explosion, piston, /setblock, mod tools):
+    // spill the in-transit cargo while the BlockEntity is still alive in onRemove. On >=1.21.10 the BE
+    // is already gone by affectNeighborsAfterRemoval, so that line uses TilePipeHolder#preRemoveSideEffects
+    // instead. Player breaks set dropsHandled in playerWillDestroy, so dropPipeCargo is a no-op there.
+    //? if <1.21.10 {
+    /*@Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock())) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TilePipeHolder tile) {
+                tile.dropPipeCargo(level, pos);
+            }
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
+    }*/
+    //?}
 
     // Neighbour changes → update pipe connections
     @Override

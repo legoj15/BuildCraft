@@ -513,6 +513,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pipe_pickaxe_break_drops_everything", () -> buildcraft.transport.PipeDropsTester::testPipePickaxeBreakDropsEverything);
         reg.accept("buildcraftunofficial:pipe_hand_break_drops_everything", () -> buildcraft.transport.PipeDropsTester::testPipeHandBreakDropsEverything);
         reg.accept("buildcraftunofficial:pipe_fluid_break_drops_shards", () -> buildcraft.transport.PipeDropsTester::testFluidPipeBreakDropsFluidShards);
+        // Non-player removal (explosion / piston / /setblock) spills the in-transit cargo only — the
+        // pipe / pluggables / wires are lost. Regression guard for the dropPipeCargo catch-all.
+        reg.accept("buildcraftunofficial:pipe_nonplayer_break_drops_cargo", () -> buildcraft.transport.PipeDropsTester::testNonPlayerBreakDropsCargoOnly);
+        reg.accept("buildcraftunofficial:pipe_nonplayer_fluid_break_drops_cargo", () -> buildcraft.transport.PipeDropsTester::testNonPlayerFluidBreakDropsCargoOnly);
 
         // Machine ↔ pipe connectivity — item pipes must see machine inventories exposed as
         // Capabilities.Item.BLOCK (Auto Workbench, laser tables, Electronic Library).

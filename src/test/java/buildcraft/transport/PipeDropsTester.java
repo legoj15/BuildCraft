@@ -38,7 +38,7 @@ import buildcraft.transport.tile.TilePipeHolder;
 /**
  * Drop tests for pipes and the things attached to them.
  * <p>
- * Five scenarios:
+ * Seven scenarios:
  * <ol>
  *   <li><b>Pluggable click-break</b> — clicking on a pluggable's bounding box drops just that
  *       pluggable's pick stack; the pipe stays in place. Exercises
@@ -47,11 +47,19 @@ import buildcraft.transport.tile.TilePipeHolder;
  *   <li><b>Wire click-break</b> — same idea for a wire part; only the wire item drops.</li>
  *   <li><b>Pickaxe full break</b> — pipe + cargo (items + fluid shards) + pluggables + wires
  *       all drop in one go.</li>
- *   <li><b>Hand full break</b> — cargo + pluggables + wires drop, but the pipe item itself
- *       does NOT (1.12.2 Material.IRON parity, restored via {@code requiresCorrectToolForDrops}
- *       and the {@code canHarvestBlock} gate in {@code dropPipeItems}).</li>
+ *   <li><b>Hand full break</b> — same drop set as the pickaxe break (pipe + cargo + pluggables +
+ *       wires). Pipes are intentionally hand-breakable: {@code pipe_holder} omits
+ *       {@code requiresCorrectToolForDrops}, so a bare-hand break returns everything and a pickaxe
+ *       only speeds the break up via the mineable/pickaxe tag.</li>
  *   <li><b>Fluid pipe break drops fragile shards</b> — a fluid pipe carrying water in a section
  *       buffer drops fragile fluid-container items when broken with a pickaxe.</li>
+ *   <li><b>Non-player removal drops cargo only</b> — when the pipe is removed by something other
+ *       than a player's hand (here a plain {@code level.removeBlock}, standing in for an explosion /
+ *       piston / {@code /setblock}), only the in-transit items spill; the pipe, pluggables and wires
+ *       are lost. Exercises {@link buildcraft.transport.tile.TilePipeHolder#dropPipeCargo} via the
+ *       {@code preRemoveSideEffects} / {@code onRemove} catch-all rather than {@code playerWillDestroy}.</li>
+ *   <li><b>Non-player fluid removal drops shards only</b> — the fluid-flow counterpart: a non-player
+ *       removal spills fragile fluid shards but not the pipe item.</li>
  * </ol>
  * <p>
  * The click-break tests position a real Player above the pipe with pitch 90° so
@@ -307,6 +315,60 @@ public class PipeDropsTester {
         helper.runAfterDelay(10, () -> {
             helper.assertItemEntityPresent(BCTransportItems.PIPE_COBBLE_FLUID.get(), pipePos, 4.0);
             helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pipePos, 4.0);
+            helper.succeed();
+        });
+    }
+
+    // ---------- Non-player removal drops cargo only (explosion / piston / /setblock) ----------
+
+    public static void testNonPlayerBreakDropsCargoOnly(GameTestHelper helper) {
+        BlockPos pipePos = new BlockPos(1, 2, 1);
+        TilePipeHolder tile = placeItemPipe(helper, pipePos);
+
+        installBlockerOn(tile, Direction.DOWN);
+        tile.getWireManager().addPart(EnumWirePart.WEST_DOWN_NORTH, DyeColor.YELLOW);
+
+        PipeFlowItems flow = (PipeFlowItems) tile.getPipe().getFlow();
+        flow.insertItemsForce(new ItemStack(Items.DIAMOND, 5), Direction.NORTH, null, 0.04);
+
+        // No playerWillDestroy: a bare level.removeBlock is what an explosion / piston / command
+        // does. It drives LevelChunk.setBlockState → preRemoveSideEffects (>=1.21.10) or onRemove
+        // (1.21.1) → TilePipeHolder.dropPipeCargo, which must spill the cargo but nothing else.
+        ServerLevel level = helper.getLevel();
+        level.removeBlock(helper.absolutePos(pipePos), false);
+
+        helper.assertBlockPresent(Blocks.AIR, pipePos);
+
+        helper.runAfterDelay(10, () -> {
+            // The in-transit cargo spills...
+            helper.assertItemEntityPresent(Items.DIAMOND, pipePos, 4.0);
+            // ...but the pipe, pluggable and wire are destroyed with the block.
+            helper.assertItemEntityNotPresent(BCTransportItems.PIPE_WOOD_ITEM.get(), pipePos, 4.0);
+            helper.assertItemEntityNotPresent(BCTransportItems.PLUG_BLOCKER.get(), pipePos, 4.0);
+            helper.assertItemEntityNotPresent(
+                    BCTransportItems.WIRE_ITEMS.get(DyeColor.YELLOW).get().asItem(), pipePos, 4.0);
+            helper.succeed();
+        });
+    }
+
+    public static void testNonPlayerFluidBreakDropsCargoOnly(GameTestHelper helper) {
+        BlockPos pipePos = new BlockPos(1, 2, 1);
+        TilePipeHolder tile = placeFluidPipe(helper, pipePos);
+
+        PipeFlowFluids flow = (PipeFlowFluids) tile.getPipe().getFlow();
+        int inserted = flow.insertFluidsForce(new FluidStack(Fluids.WATER, 1000), null, false);
+        helper.assertTrue(inserted > 0, "Fluid pipe should accept water when empty");
+
+        ServerLevel level = helper.getLevel();
+        level.removeBlock(helper.absolutePos(pipePos), false);
+
+        helper.assertBlockPresent(Blocks.AIR, pipePos);
+
+        helper.runAfterDelay(10, () -> {
+            // Fluid cargo spills as fragile shards...
+            helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pipePos, 4.0);
+            // ...but the fluid pipe itself is destroyed with the block.
+            helper.assertItemEntityNotPresent(BCTransportItems.PIPE_COBBLE_FLUID.get(), pipePos, 4.0);
             helper.succeed();
         });
     }

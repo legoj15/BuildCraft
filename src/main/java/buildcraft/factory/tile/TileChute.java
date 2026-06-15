@@ -69,6 +69,11 @@ public class TileChute extends TileBC_Neptune implements MenuProvider {
     private final IMjReceiver mjReceiver = new MjBatteryReceiver(battery);
     private int progress = 0;
 
+    @Override
+    protected boolean spillsContentsOnRemoval() {
+        return true;
+    }
+
     public TileChute(BlockPos pos, BlockState state) {
         super(BCFactoryBlockEntities.CHUTE.get(), pos, state);
         // INSERT-only side access matches 1.12.2: external blocks (hoppers, pipes) can push

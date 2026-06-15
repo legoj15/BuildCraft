@@ -89,10 +89,24 @@ public class BlockPump extends BaseEntityBlock {
             if (be instanceof TilePump pump) {
                 pump.onRemove();
                 buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos, pump.getTank());
+                pump.markDropsHandled();
             } else if (be instanceof TileMiner miner) {
                 miner.onRemove();
             }
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
+
+    // Non-player removal catch-all for the pre-1.21.10 API (explosion, piston, /setblock, mod tools):
+    // spill the pump's tank while the BlockEntity is alive in onRemove. On >=1.21.10 this is handled
+    // centrally by TileBC_Neptune#preRemoveSideEffects. The player path set the guard in playerWillDestroy.
+    //? if <1.21.10 {
+    /*@Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof buildcraft.lib.tile.TileBC_Neptune tile) {
+            tile.dropContentsOnRemoval(level, pos);
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
+    }*/
+    //?}
 }

@@ -129,6 +129,16 @@ public class TilePump extends TileMiner implements IDebuggable {
     }
 
     @Override
+    protected boolean spillsContentsOnRemoval() {
+        return true;
+    }
+
+    @Override
+    protected buildcraft.lib.fluid.BCFluidTank[] getDropTanks() {
+        return new buildcraft.lib.fluid.BCFluidTank[] { getTank() };
+    }
+
+    @Override
     protected IMjReceiver createMjReceiver() {
         return new MjRedstoneBatteryReceiver(battery);
     }

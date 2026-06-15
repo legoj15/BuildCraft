@@ -39,6 +39,11 @@ public class TileFilteredBuffer extends TileBC_Neptune implements MenuProvider {
     public final ItemHandlerSimple invFilter;
     public final ItemHandlerFiltered invMain;
 
+    @Override
+    protected boolean spillsContentsOnRemoval() {
+        return true;
+    }
+
     public TileFilteredBuffer(BlockPos pos, BlockState state) {
         super(BCTransportBlockEntities.FILTERED_BUFFER.get(), pos, state);
 

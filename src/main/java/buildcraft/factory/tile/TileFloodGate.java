@@ -104,6 +104,37 @@ public class TileFloodGate extends BlockEntity implements IDebuggable {
         return tank;
     }
 
+    private boolean dropsHandled = false;
+
+    /** Flags that the player-break path has already dropped this gate's tank, so the non-player
+     *  {@link #dropContentsOnRemoval} fallback stays quiet (no double drop). */
+    public void markDropsHandled() {
+        dropsHandled = true;
+    }
+
+    /** Spills the tank as fragile fluid-shard items when the gate is removed by non-player means
+     *  (explosion, piston, /setblock, mod tools). No-op on the client and once drops are handled.
+     *  TileFloodGate extends BlockEntity directly (not TileBC_Neptune), so it carries its own copy of
+     *  this hook rather than inheriting the shared one. */
+    public void dropContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {
+        if (dropsHandled || level.isClientSide()) {
+            return;
+        }
+        dropsHandled = true;
+        buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos, tank);
+    }
+
+    // Non-player removal catch-all on the >=1.21.10 API — the BlockEntity is still alive here.
+    //? if >=1.21.10 {
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null) {
+            dropContentsOnRemoval(level, pos);
+        }
+    }
+    //?}
+
     /** @return the profile of the player who placed this flood gate, or {@code null} if unknown. */
     @Nullable
     public GameProfile getOwner() {

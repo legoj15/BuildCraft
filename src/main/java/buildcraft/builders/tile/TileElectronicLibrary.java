@@ -80,6 +80,11 @@ public class TileElectronicLibrary extends TileBC_Neptune implements MenuProvide
     }
 
     @Override
+    protected boolean spillsContentsOnRemoval() {
+        return true;
+    }
+
+    @Override
     public void onPlacedBy(@Nullable LivingEntity placer, ItemStack stack) {
         super.onPlacedBy(placer, stack);   // sets owner on the parent TileBC_Neptune
         if (level != null && !level.isClientSide()) {

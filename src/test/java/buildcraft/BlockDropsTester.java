@@ -30,7 +30,10 @@ import buildcraft.energy.BCEnergyBlocks;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
 import buildcraft.factory.tile.TileChute;
+import buildcraft.factory.tile.TileFloodGate;
+import buildcraft.factory.tile.TilePump;
 import buildcraft.factory.tile.TileTank;
+import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.energy.tile.TileEngineStone_BC8;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.tile.TileFilteredBuffer;
@@ -248,15 +251,92 @@ public class BlockDropsTester {
     }
 
     private static void fillTank(TileTank tank, FluidStack stack) {
+        fillBcTank(tank.tank, stack);
+    }
+
+    private static void fillBcTank(BCFluidTank tank, FluidStack stack) {
         //? if >=1.21.10 {
         try (Transaction tx = Transaction.open(null)) {
-            tank.tank.insert(0, FluidResource.of(stack), stack.getAmount(), tx);
+            tank.insert(0, FluidResource.of(stack), stack.getAmount(), tx);
             tx.commit();
         }
         //?} else {
         /*// 1.21.1 has no Transfer API; BCFluidTank exposes a version-neutral fill(slot, stack, simulate).
-        tank.tank.fill(0, stack, false);*/
+        tank.fill(0, stack, false);*/
         //?}
+    }
+
+    // ---------- Non-player removal (explosion / piston / command) spills contents ----------
+    // A bare level.removeBlock stands in for an explosion / piston / /setblock. It routes through
+    // TileBC_Neptune.preRemoveSideEffects (>=1.21.10) or the block's onRemove (1.21.1) → the central
+    // dropContentsOnRemoval, with no playerWillDestroy involved. The block item itself is gone (it
+    // only returns via the loot table on a tool harvest), but the stored contents must still spill —
+    // matching 1.12.2's universal breakBlock→onRemove→addDrops.
+
+    public static void testChuteNonPlayerRemovalDropsContents(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 2, 1);
+        helper.setBlock(pos, BCFactoryBlocks.CHUTE.get());
+
+        //? if >=1.21.10 {
+        TileChute chute = helper.getBlockEntity(pos, TileChute.class);
+        //?} else {
+        /*TileChute chute = helper.getBlockEntity(pos);*/
+        //?}
+        chute.inv.setStackInSlot(0, new ItemStack(Items.DIAMOND, 5));
+
+        helper.getLevel().removeBlock(helper.absolutePos(pos), false);
+        helper.assertBlockPresent(Blocks.AIR, pos);
+
+        helper.runAfterDelay(10, () -> {
+            helper.assertItemEntityPresent(Items.DIAMOND, pos, 2.0);
+            // The chute block itself is destroyed (no tool harvest → loot table doesn't fire).
+            helper.assertItemEntityNotPresent(BCFactoryBlocks.CHUTE.get().asItem(), pos, 2.0);
+            helper.succeed();
+        });
+    }
+
+    public static void testPumpNonPlayerRemovalDropsFluid(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 2, 1);
+        helper.setBlock(pos, BCFactoryBlocks.PUMP.get());
+
+        //? if >=1.21.10 {
+        TilePump pump = helper.getBlockEntity(pos, TilePump.class);
+        //?} else {
+        /*TilePump pump = helper.getBlockEntity(pos);*/
+        //?}
+        // Pump spills its tank via the central getDropTanks() override.
+        fillBcTank(pump.getTank(), new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
+
+        helper.getLevel().removeBlock(helper.absolutePos(pos), false);
+        helper.assertBlockPresent(Blocks.AIR, pos);
+
+        helper.runAfterDelay(10, () -> {
+            helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pos, 2.0);
+            helper.assertItemEntityNotPresent(BCFactoryBlocks.PUMP.get().asItem(), pos, 2.0);
+            helper.succeed();
+        });
+    }
+
+    public static void testFloodGateNonPlayerRemovalDropsFluid(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 2, 1);
+        helper.setBlock(pos, BCFactoryBlocks.FLOOD_GATE.get());
+
+        //? if >=1.21.10 {
+        TileFloodGate gate = helper.getBlockEntity(pos, TileFloodGate.class);
+        //?} else {
+        /*TileFloodGate gate = helper.getBlockEntity(pos);*/
+        //?}
+        // Flood Gate is a standalone BlockEntity; it carries its own preRemoveSideEffects / onRemove.
+        fillBcTank(gate.getTank(), new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
+
+        helper.getLevel().removeBlock(helper.absolutePos(pos), false);
+        helper.assertBlockPresent(Blocks.AIR, pos);
+
+        helper.runAfterDelay(10, () -> {
+            helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pos, 2.0);
+            helper.assertItemEntityNotPresent(BCFactoryBlocks.FLOOD_GATE.get().asItem(), pos, 2.0);
+            helper.succeed();
+        });
     }
 
     // ---------- Stirling engine (raw fuel slot) ----------

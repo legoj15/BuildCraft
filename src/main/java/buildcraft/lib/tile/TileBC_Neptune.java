@@ -49,6 +49,11 @@ public abstract class TileBC_Neptune extends BlockEntity {
     @Nullable
     private GameProfile owner;
 
+    /** Set once this tile's contents have been spilled for the current removal, so the non-player
+     *  {@link #dropContentsOnRemoval} fallback can't drop them twice — the player-break path drops
+     *  in playerWillDestroy, which the subsequent level.removeBlock re-triggers this hook after. */
+    private boolean contentsDropped = false;
+
     @SuppressWarnings("this-escape")
     public TileBC_Neptune(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -155,6 +160,55 @@ public abstract class TileBC_Neptune extends BlockEntity {
     public void addDrops(NonNullList<ItemStack> toDrop, int fortune) {
         itemManager.addDrops(toDrop);
     }
+
+    /** Tanks whose fluid should spill (as fragile fluid-shard items) when this tile is removed by
+     *  any means. Default none; fluid tiles override. Only consulted when
+     *  {@link #spillsContentsOnRemoval()} returns true. */
+    @Nullable
+    protected buildcraft.lib.fluid.BCFluidTank[] getDropTanks() {
+        return null;
+    }
+
+    /** Whether this tile spills its inventory/tank contents when removed by NON-player means
+     *  (explosion, piston, /setblock, mod tools) — restoring the universal drop that 1.12.2's
+     *  breakBlock&rarr;onRemove&rarr;addDrops gave every tile. Opt-in (default false) so tiles with
+     *  bespoke drop logic aren't double-dropped; flip to true once a tile's full content set is
+     *  covered by {@link #addDrops} + {@link #getDropTanks}. The matching block must also call
+     *  {@link #markDropsHandled} in playerWillDestroy and route its &lt;1.21.10 onRemove here. */
+    protected boolean spillsContentsOnRemoval() {
+        return false;
+    }
+
+    /** Flags that the player-break path has already handled this removal's drops, so the non-player
+     *  {@link #dropContentsOnRemoval} fallback stays quiet (no double drop). */
+    public void markDropsHandled() {
+        contentsDropped = true;
+    }
+
+    /** Spills this tile's inventory (via {@link #addDrops}, skipping phantom slots) and any
+     *  {@link #getDropTanks} fluid as fragile shards when removed by non-player means. No-op on the
+     *  client, for opted-out tiles, and once drops have been handled (idempotent + guards against the
+     *  player path, which drops in playerWillDestroy then re-fires this via level.removeBlock). */
+    public void dropContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {
+        if (contentsDropped || level.isClientSide() || !spillsContentsOnRemoval()) {
+            return;
+        }
+        contentsDropped = true;
+        buildcraft.lib.misc.BlockDropsUtil.dropTileContents(level, pos, this, getDropTanks());
+    }
+
+    // Non-player removal catch-all (explosion / piston / /setblock / mod tools) on the >=1.21.10 API:
+    // the BlockEntity is still alive here (removed right after, before affectNeighborsAfterRemoval).
+    // Player breaks set contentsDropped via markDropsHandled in playerWillDestroy, so this is a no-op there.
+    //? if >=1.21.10 {
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null) {
+            dropContentsOnRemoval(level, pos);
+        }
+    }
+    //?}
 
     @Nullable
     public IBCItemHandler getItemHandler(net.minecraft.core.Direction facing) {

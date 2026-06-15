@@ -15,4 +15,9 @@ public class TileAutoWorkbenchItems extends TileAutoWorkbenchBase {
     public TileAutoWorkbenchItems(BlockPos pos, BlockState state) {
         super(BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(), pos, state, 3, 3);
     }
+
+    @Override
+    protected boolean spillsContentsOnRemoval() {
+        return true;
+    }
 }

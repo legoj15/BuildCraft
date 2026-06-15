@@ -501,6 +501,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:drops_stirling_pickaxe", () -> BlockDropsTester::testStirlingEnginePickaxeDropsFuelAndSelf);
         reg.accept("buildcraftunofficial:drops_filtered_buffer_skips_filter", () -> BlockDropsTester::testFilteredBufferSkipsFilterSlots);
         reg.accept("buildcraftunofficial:drops_marker_hand", () -> BlockDropsTester::testMarkerHandBreakDropsSelf);
+        // Non-player removal (explosion / piston / command) spills machine contents — regression guard
+        // for the central TileBC_Neptune.dropContentsOnRemoval path (and Flood Gate's standalone copy).
+        reg.accept("buildcraftunofficial:drops_chute_nonplayer", () -> BlockDropsTester::testChuteNonPlayerRemovalDropsContents);
+        reg.accept("buildcraftunofficial:drops_pump_nonplayer", () -> BlockDropsTester::testPumpNonPlayerRemovalDropsFluid);
+        reg.accept("buildcraftunofficial:drops_floodgate_nonplayer", () -> BlockDropsTester::testFloodGateNonPlayerRemovalDropsFluid);
 
         // Stripes pipe direction NBT sync — covered by JUnit unit tests rather than game tests
         // (the regression is in PipeBehaviour.readFromNbt's no-op default; PipeBehaviourStripesSyncTester

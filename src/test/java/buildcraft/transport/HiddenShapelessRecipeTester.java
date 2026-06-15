@@ -33,9 +33,24 @@ import buildcraft.transport.recipe.HiddenShapelessRecipe;
 public class HiddenShapelessRecipeTester {
 
     private static Recipe<?> loaded(GameTestHelper helper, String id) {
+        // 1.21.1 has no ServerLevel.recipeAccess() and keys recipes by id (not ResourceKey); reach the
+        // recipe manager via the server there.
+        //? if >=1.21.10 {
         ResourceKey<Recipe<?>> key = ResourceKey.create(Registries.RECIPE, Identifier.parse(id));
         Optional<RecipeHolder<?>> holder = helper.getLevel().recipeAccess().byKey(key);
+        //?} else {
+        /*Optional<RecipeHolder<?>> holder = helper.getLevel().getServer().getRecipeManager().byKey(Identifier.parse(id));*/
+        //?}
         return holder.map(RecipeHolder::value).orElse(null);
+    }
+
+    // Recipe.group() was renamed from getGroup() at the 1.21.10 cliff; gate the divergence here.
+    private static String groupOf(Recipe<?> recipe) {
+        //? if >=1.21.10 {
+        return recipe.group();
+        //?} else {
+        /*return recipe.getGroup();*/
+        //?}
     }
 
     public static void testPipeDowngradesHidden(GameTestHelper helper) {
@@ -88,8 +103,8 @@ public class HiddenShapelessRecipeTester {
                 helper.fail(id + " did not load");
                 return;
             }
-            if (!"buildcraft_pipe_sealant".equals(recipe.group())) {
-                helper.fail(id + " should be in group 'buildcraft_pipe_sealant', was '" + recipe.group() + "'");
+            if (!"buildcraft_pipe_sealant".equals(groupOf(recipe))) {
+                helper.fail(id + " should be in group 'buildcraft_pipe_sealant', was '" + groupOf(recipe) + "'");
                 return;
             }
         }

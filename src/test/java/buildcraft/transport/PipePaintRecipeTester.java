@@ -18,7 +18,12 @@ import buildcraft.transport.recipe.PipePaintRecipe;
  *  pipe), bleach with a water bucket, output count tracks pipe count, and invalid grids (mixed types,
  *  clean brush, under-charged brush, no modifier) are rejected. */
 public class PipePaintRecipeTester {
+    //? if >=26.1 {
     private static final PipePaintRecipe RECIPE = new PipePaintRecipe();
+    //?} else {
+    /*private static final PipePaintRecipe RECIPE =
+            new PipePaintRecipe(net.minecraft.world.item.crafting.CraftingBookCategory.MISC);*/
+    //?}
 
     private static ItemStack chargedBrush(DyeColor colour, int uses) {
         ItemStack brush = ItemPaintbrush_BC8.createColoredStack(BCCoreItems.PAINTBRUSH.get(), colour);
@@ -38,7 +43,11 @@ public class PipePaintRecipeTester {
             helper.fail("paint recipe should match cobble pipe + charged red brush");
             return;
         }
+        //? if >=26.1 {
         ItemStack out = RECIPE.assemble(input);
+        //?} else {
+        /*ItemStack out = RECIPE.assemble(input, helper.getLevel().registryAccess());*/
+        //?}
         if (out.getItem() != BCTransportItems.PIPE_COBBLE_ITEM.get()) {
             helper.fail("output should be a cobble pipe");
             return;
@@ -65,7 +74,11 @@ public class PipePaintRecipeTester {
         ItemStack p3 = new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get());
         ItemStack brush = chargedBrush(DyeColor.GREEN, 64);
         CraftingInput input = CraftingInput.of(2, 2, List.of(p1, p2, p3, brush));
+        //? if >=26.1 {
         ItemStack out = RECIPE.assemble(input);
+        //?} else {
+        /*ItemStack out = RECIPE.assemble(input, helper.getLevel().registryAccess());*/
+        //?}
         if (out.getCount() != 3) {
             helper.fail("expected 3 painted pipes (one per pipe slot), got " + out.getCount());
             return;
@@ -91,7 +104,11 @@ public class PipePaintRecipeTester {
             helper.fail("paint recipe should match coloured pipe + water bucket (bleach)");
             return;
         }
+        //? if >=26.1 {
         ItemStack out = RECIPE.assemble(input);
+        //?} else {
+        /*ItemStack out = RECIPE.assemble(input, helper.getLevel().registryAccess());*/
+        //?}
         if (out.get(BCTransportItems.PIPE_COLOUR.get()) != null) {
             helper.fail("bleached pipe should carry no colour");
             return;

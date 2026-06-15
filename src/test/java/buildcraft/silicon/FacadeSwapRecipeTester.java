@@ -13,7 +13,12 @@ import buildcraft.silicon.recipe.FacadeSwapRecipe;
 /** Game tests for {@link FacadeSwapRecipe}: a lone facade toggles its hollow flag; two facades (or any
  *  multi-item grid) are rejected. */
 public class FacadeSwapRecipeTester {
+    //? if >=26.1 {
     private static final FacadeSwapRecipe RECIPE = new FacadeSwapRecipe();
+    //?} else {
+    /*private static final FacadeSwapRecipe RECIPE =
+            new FacadeSwapRecipe(net.minecraft.world.item.crafting.CraftingBookCategory.MISC);*/
+    //?}
 
     private static ItemStack stoneFacade() {
         ItemStack facade = BCSiliconItems.PLUG_FACADE.get().getFacadeForBlock(Blocks.STONE.defaultBlockState());
@@ -30,7 +35,11 @@ public class FacadeSwapRecipeTester {
             helper.fail("facade swap should match a lone facade");
             return;
         }
+        //? if >=26.1 {
         ItemStack out = RECIPE.assemble(input);
+        //?} else {
+        /*ItemStack out = RECIPE.assemble(input, helper.getLevel().registryAccess());*/
+        //?}
         if (out.isEmpty() || out.getItem() != BCSiliconItems.PLUG_FACADE.get()) {
             helper.fail("facade swap output should be a facade");
             return;

@@ -28,7 +28,8 @@ import buildcraft.transport.recipe.PipePaintRecipe;
  * Each test encodes a freshly-built recipe (distinct from anything the codec might hold) through its
  * real {@code STREAM_CODEC} and round-trips it. Pre-fix this throws; post-fix (no-op encoder +
  * fresh-instance decoder) it round-trips cleanly. Sub-26.1 nodes dodge the bug entirely — their
- * serializers serialize the {@code CraftingBookCategory} field rather than capturing an instance.
+ * serializers serialize the {@code CraftingBookCategory} field rather than capturing an instance, and
+ * they expose no {@code STREAM_CODEC} field to exercise, so each test here is a no-op on those nodes.
  */
 public class RecipeSyncStreamCodecTester {
 
@@ -53,14 +54,29 @@ public class RecipeSyncStreamCodecTester {
     }
 
     public static void testDyedPipeSyncRoundTrip(GameTestHelper helper) {
+        // 26.1-only: no STREAM_CODEC field exists below the 26.1 cliff, so this is a no-op there (see class doc).
+        //? if >=26.1 {
         assertRoundTrips(helper, DyedPipeRecipe.STREAM_CODEC, new DyedPipeRecipe(), "dyed_pipe");
+        //?} else {
+        /*helper.succeed();*/
+        //?}
     }
 
     public static void testPipePaintSyncRoundTrip(GameTestHelper helper) {
+        // 26.1-only: no STREAM_CODEC field exists below the 26.1 cliff, so this is a no-op there (see class doc).
+        //? if >=26.1 {
         assertRoundTrips(helper, PipePaintRecipe.STREAM_CODEC, new PipePaintRecipe(), "pipe_paint");
+        //?} else {
+        /*helper.succeed();*/
+        //?}
     }
 
     public static void testFacadeSwapSyncRoundTrip(GameTestHelper helper) {
+        // 26.1-only: no STREAM_CODEC field exists below the 26.1 cliff, so this is a no-op there (see class doc).
+        //? if >=26.1 {
         assertRoundTrips(helper, FacadeSwapRecipe.STREAM_CODEC, new FacadeSwapRecipe(), "facade_swap");
+        //?} else {
+        /*helper.succeed();*/
+        //?}
     }
 }

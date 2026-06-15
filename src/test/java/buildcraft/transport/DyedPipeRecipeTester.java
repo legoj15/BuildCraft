@@ -14,7 +14,12 @@ import buildcraft.transport.recipe.DyedPipeRecipe;
  *  (diamond-wood, both mirror orientations), and rejection of colourless glass (which the base recipe
  *  owns). */
 public class DyedPipeRecipeTester {
+    //? if >=26.1 {
     private static final DyedPipeRecipe RECIPE = new DyedPipeRecipe();
+    //?} else {
+    /*private static final DyedPipeRecipe RECIPE =
+            new DyedPipeRecipe(net.minecraft.world.item.crafting.CraftingBookCategory.MISC);*/
+    //?}
 
     public static void testSymmetricStonePipe(GameTestHelper helper) {
         ItemStack stone = new ItemStack(Items.STONE);
@@ -24,7 +29,11 @@ public class DyedPipeRecipeTester {
             helper.fail("dyed-pipe recipe should match stone + red stained glass + stone");
             return;
         }
+        //? if >=26.1 {
         ItemStack out = RECIPE.assemble(input);
+        //?} else {
+        /*ItemStack out = RECIPE.assemble(input, helper.getLevel().registryAccess());*/
+        //?}
         if (out.getItem() != BCTransportItems.PIPE_STONE_ITEM.get()) {
             helper.fail("expected a stone pipe, got " + out);
             return;
@@ -45,14 +54,22 @@ public class DyedPipeRecipeTester {
         ItemStack diamond = new ItemStack(Items.DIAMOND);
         ItemStack glass = new ItemStack(Items.LIME_STAINED_GLASS);
         // planks | glass | diamond
+        //? if >=26.1 {
         ItemStack a = RECIPE.assemble(CraftingInput.of(3, 1, List.of(planks, glass, diamond)));
+        //?} else {
+        /*ItemStack a = RECIPE.assemble(CraftingInput.of(3, 1, List.of(planks, glass, diamond)), helper.getLevel().registryAccess());*/
+        //?}
         if (a.getItem() != BCTransportItems.PIPE_DIAMOND_WOOD_ITEM.get()
                 || a.get(BCTransportItems.PIPE_COLOUR.get()) != DyeColor.LIME) {
             helper.fail("planks|glass|diamond should make a lime diamond-wood pipe, got " + a);
             return;
         }
         // mirror: diamond | glass | planks
+        //? if >=26.1 {
         ItemStack b = RECIPE.assemble(CraftingInput.of(3, 1, List.of(diamond, glass.copy(), planks.copy())));
+        //?} else {
+        /*ItemStack b = RECIPE.assemble(CraftingInput.of(3, 1, List.of(diamond, glass.copy(), planks.copy())), helper.getLevel().registryAccess());*/
+        //?}
         if (b.getItem() != BCTransportItems.PIPE_DIAMOND_WOOD_ITEM.get()) {
             helper.fail("mirrored diamond|glass|planks should also make a diamond-wood pipe, got " + b);
             return;

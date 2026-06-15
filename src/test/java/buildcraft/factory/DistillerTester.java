@@ -234,6 +234,47 @@ public class DistillerTester {
     }
 
     /**
+     * Regression for the "{@code X / 0 millibuckets}" output-tank readout (26.1.x Transfer-API node only).
+     * <p>
+     * {@code BCFluidTank.getCapacityMb} used to pass the tank's currently-held resource to
+     * {@code getCapacityAsLong}, which reports 0 for a non-empty resource that fails {@code isValid}.
+     * The {@link TileDistiller_BC8.OutputTank}'s {@code isFluidValid} only passes mid-internal-insert,
+     * so once a craft step finished the tank rejected the very fluid it held and its capacity read 0 —
+     * breaking the GUI tooltip, the in-GUI fill gauge, and the in-world 3D fluid render (the latter two
+     * bail on {@code capacity <= 0}, so the output fluid rendered invisible). The fix reports the raw,
+     * validity-independent capacity. This pins the exact at-rest state (a filled guarded output tank,
+     * {@code internalInsert} already reset) that produced the bug. The Heat Exchanger's identically
+     * guarded OutputTank shares the same {@code getCapacityMb} code path, so this covers it too.
+     */
+    public static void testOutputTankReportsCapacityAtRest(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(2, 2, 2);
+        helper.setBlock(pos, BCFactoryBlocks.DISTILLER.get());
+        TileDistiller_BC8 distiller = helper.getBlockEntity(pos, TileDistiller_BC8.class);
+
+        for (TileDistiller_BC8.OutputTank tank : new TileDistiller_BC8.OutputTank[] {
+                distiller.getTankGasOut(), distiller.getTankLiquidOut() }) {
+            // Empty tank: capacity was always correct (an empty resource takes the estimate branch).
+            assertTrue(tank.getCapacityMb(0) == 4000,
+                    "Empty OutputTank must report its 4000mb capacity, got " + tank.getCapacityMb(0));
+
+            // Fill it the way the craft loop does, then read capacity at rest — not mid-insert.
+            FluidResource water = FluidResource.of(new FluidStack(Fluids.WATER, 500));
+            try (Transaction tx = Transaction.openRoot()) {
+                tank.insertInternal(0, water, 500, tx);
+                tx.commit();
+            }
+            assertTrue(tank.getAmountMb(0) == 500,
+                    "OutputTank should hold 500mb after internal insert, got " + tank.getAmountMb(0));
+            // The regression: a non-empty guarded output tank must still report full capacity, not 0,
+            // now that internalInsert has reset.
+            assertTrue(tank.getCapacityMb(0) == 4000,
+                    "Filled OutputTank must report 4000mb capacity at rest, not 0 — got " + tank.getCapacityMb(0));
+        }
+
+        helper.succeed();
+    }
+
+    /**
      * Pins the "Heating and Distilling" advancement wiring.
      * <p>
      * (a) The advancement is granted from {@link TileDistiller_BC8#serverTick} via

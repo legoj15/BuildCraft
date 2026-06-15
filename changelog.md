@@ -1,4 +1,5 @@
 ###### Changes since 2026.1.0-rc4:
+- Fixed the Distiller and Heat Exchanger output tanks showing a "0 millibuckets" capacity (e.g. "4,000 / 0") and rendering their fluid as empty in the GUI gauge and the block itself — the tanks held and processed fluid correctly, only the displayed capacity and fill level were wrong
 - A pipe destroyed by an explosion, piston, or world-edit command now spills the items and fluids it was carrying onto the ground instead of voiding them (breaking a pipe by hand or pickaxe already dropped its cargo)
 - Machines destroyed by an explosion, piston, or world-edit command now spill their stored items and fluids instead of voiding them — Auto Workbench, Chute, Filler, Electronic Library, Filtered Buffer, Flood Gate, Pump, Tank, Distiller, Heat Exchanger, Combustion Engine, Architect Table, Builder, and the Assembly/Advanced Crafting/Integration tables; previously only a manual break returned the contents
 - Looking up a fuel, residue or coolant bucket in JEI (e.g. Cool Residue) now also lists the Combustion Engine recipes that consume or produce it, not just the heat exchanger and distiller

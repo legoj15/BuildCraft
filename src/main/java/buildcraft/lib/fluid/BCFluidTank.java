@@ -62,7 +62,12 @@ public class BCFluidTank extends FluidStacksResourceHandler {
     }
 
     public int getCapacityMb(int slot) {
-        return getCapacityAsInt(slot, getResource(slot));
+        // Report the tank's raw capacity, NOT the validity-gated one. getCapacityAsLong returns 0 for a
+        // non-empty resource that fails isValid(), and guarded output tanks (e.g. the Distiller/Heat
+        // Exchanger OutputTank, whose isFluidValid only passes mid-internal-insert) reject the very fluid
+        // they hold — so passing the held resource here reports capacity 0 once the fill finishes. Pass
+        // EMPTY to take getCapacityAsLong's empty/estimate branch, which returns the true constant capacity.
+        return getCapacityAsInt(slot, FluidResource.EMPTY);
     }
 
     public void setFluidStack(int slot, FluidStack stack) {

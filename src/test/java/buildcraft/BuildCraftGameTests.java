@@ -468,6 +468,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:distiller_input_rejects_non_distillable", () -> buildcraft.factory.DistillerTester::testInputTankRejectsNonDistillableInsert);
         reg.accept("buildcraftunofficial:distiller_input_blocks_external_extract", () -> buildcraft.factory.DistillerTester::testInputTankBlocksExternalExtract);
         reg.accept("buildcraftunofficial:distiller_output_rejects_external_insert", () -> buildcraft.factory.DistillerTester::testOutputTanksRejectExternalInsertButAcceptInternal);
+        reg.accept("buildcraftunofficial:distiller_output_reports_capacity_at_rest", () -> buildcraft.factory.DistillerTester::testOutputTankReportsCapacityAtRest);
         reg.accept("buildcraftunofficial:distiller_heating_and_distilling_advancement", () -> buildcraft.factory.DistillerTester::testHeatingAndDistillingAdvancement);
         //?}
 

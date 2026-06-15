@@ -5,6 +5,7 @@
 - Looking up a fuel, residue or coolant bucket in JEI (e.g. Cool Residue) now also lists the Combustion Engine recipes that consume or produce it, not just the heat exchanger and distiller
 - {1.21.1} Fixed missing texture in the advancements window background
 - Fixed block textures looking grainy and shimmering at a distance — the recipe-cycle button's icon (new in rc4) was being stitched onto the block texture atlas and forcing its mipmaps off
+- Fixed pipes fading out or disappearing when viewed from a distance (and popping back as you approached or looked along them at a shallow angle), most noticeable with Mipmap Levels and anisotropic filtering turned up — their cutout textures now hold their shape through the mipmap chain
 - Stirling Engine can now be crafted from blackstone and cobbled deepslate (like a stone pickaxe)
 - Engines now deliver their stored power continuously, instead of freezing the buffer between fuel items
 - Fixed bugs in regards to engine overheating

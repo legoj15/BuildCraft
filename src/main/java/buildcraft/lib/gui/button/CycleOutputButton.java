@@ -21,8 +21,11 @@ import buildcraft.lib.gui.BCGraphics;
  * the click sends the cycle message (the server is a no-op past a single match).
  */
 public class CycleOutputButton extends BCButton {
+    // Lives under textures/gui/ (a direct-blit GUI texture), NOT textures/icons/ — the latter is
+    // swept wholesale onto the blocks atlas by assets/minecraft/atlases/blocks.json's "icons/"
+    // source, and a non-power-of-two icon there caps the whole atlas's mip level (see issue notes).
     private static final Identifier ICON =
-        Identifier.parse("buildcraftunofficial:textures/icons/cycle.png");
+        Identifier.parse("buildcraftunofficial:textures/gui/cycle.png");
     private static final int ICON_SIZE = 10;
 
     private final Runnable onCycle;

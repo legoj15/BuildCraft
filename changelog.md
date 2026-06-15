@@ -1,6 +1,7 @@
 ###### Changes since 2026.1.0-rc4:
 - Looking up a fuel, residue or coolant bucket in JEI (e.g. Cool Residue) now also lists the Combustion Engine recipes that consume or produce it, not just the heat exchanger and distiller
 - {1.21.1} Fixed missing texture in the advancements window background
+- Fixed block textures looking grainy and shimmering at a distance — the recipe-cycle button's icon (new in rc4) was being stitched onto the block texture atlas and forcing its mipmaps off
 - Stirling Engine can now be crafted from blackstone and cobbled deepslate (like a stone pickaxe)
 - Engines now deliver their stored power continuously, instead of freezing the buffer between fuel items
 - Fixed bugs in regards to engine overheating
@@ -15,3 +16,4 @@
 - Facades can be toggled between their solid and hollow forms by crafting one on its own
 - Fixed a crash that disconnected players when joining a multiplayer server, caused by the new pipe paint/dye and facade-swap recipes failing to sync to the client
 - List item: fixed false matches in Accept Variations / Accept Equivalents mode — logs no longer count as equivalent to leaves, and unrelated "plain" blocks like a baked brick, cobblestone and pumpkin no longer match each other
+- Fixed crushing the mipmap due to a GUI icon making it into the block texture atlas

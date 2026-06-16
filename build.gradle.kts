@@ -354,17 +354,6 @@ neoForge {
             // Mirrors 1.12.2's VERSION.startsWith("$") fallback: any dev workspace is "DEV".
             // Enables BCLib.DEV-gated affordances (Power Tester block, /bcsoundtest command, ...).
             systemProperty("buildcraft.dev", "true")
-            // Profiling diagnostics (drop spark NeoForge jar into run/mods/ for /spark profiler).
-            // Remove these args once perf investigation is done — they write a continuous GC log
-            // plus a JDK Flight Recorder dump (run/bc-profile.jfr) when the client exits.
-            jvmArguments.addAll(
-                listOf(
-                    "-Xlog:gc*:file=gc.log:time,uptime,level,tags",
-                    "-XX:+UnlockDiagnosticVMOptions",
-                    "-XX:FlightRecorderOptions=stackdepth=256",
-                    "-XX:StartFlightRecording=name=BuildCraft,settings=profile,filename=bc-profile.jfr,dumponexit=true"
-                )
-            )
         }
         register("server") {
             server()

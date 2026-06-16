@@ -107,6 +107,13 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     private VoxelShape getFullShape(BlockGetter level, BlockPos pos) {
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TilePipeHolder tile && tile.getPipe() != null) {
+            // Reuse the merged shape until the pipe's structure changes — see TilePipeHolder's
+            // cachedCollisionShape. Merging VoxelShapes (Shapes.or) is expensive and this method is
+            // hit hard by vanilla's per-neighbour isRedstoneConductor probes on block updates.
+            VoxelShape cached = tile.getCachedCollisionShape();
+            if (cached != null) {
+                return cached;
+            }
             VoxelShape shape = CENTER;
             var pipe = tile.getPipe();
             for (Direction dir : Direction.values()) {
@@ -127,6 +134,7 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
             for (buildcraft.transport.wire.EnumWireBetween between : tile.getWireManager().betweens.keySet()) {
                 shape = Shapes.or(shape, Shapes.create(between.boundingBox));
             }
+            tile.setCachedCollisionShape(shape);
             return shape;
         }
         return CENTER;

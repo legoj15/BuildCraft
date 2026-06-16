@@ -93,6 +93,15 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     public final WireManager wireManager = new WireManager(this);
     private final PipePluggable[] pluggables = new PipePluggable[6];
     private boolean scheduleRenderUpdate = true;
+    /**
+     * Cached composite collision / server ray-trace shape (centre + connected arms + pluggable and
+     * wire boxes), computed lazily by {@link buildcraft.transport.block.BlockPipeHolder}. Without it
+     * the shape is re-merged via {@code Shapes.or(...)} on every query — and vanilla probes a block's
+     * collision shape from each neighbour's {@code isRedstoneConductor} check on every block update,
+     * so an un-cached shape made pipe-dense networks very expensive. Invalidated (set null) on any
+     * structural change via {@link #invalidateCollisionShapeCache()}.
+     */
+    private net.minecraft.world.phys.shapes.VoxelShape cachedCollisionShape;
     private final Set<PipeMessageReceiver> networkUpdates = EnumSet.noneOf(PipeMessageReceiver.class);
     private final Set<PipeMessageReceiver> networkGuiUpdates = EnumSet.noneOf(PipeMessageReceiver.class);
 
@@ -319,6 +328,8 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
     // UPDATE_CLIENTS (not UPDATE_ALL): client doesn't need the UPDATE_NEIGHBORS bit, and on
     // the server side it would re-fire updateNeighborsAt redundantly with tick()'s explicit one.
     private void afterClientNbtUpdate() {
+        // Client just received fresh connection/pluggable/wire state from the server.
+        invalidateCollisionShapeCache();
         requestModelDataUpdate();
         if (level != null && level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
@@ -389,6 +400,32 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         return null;
     }
 
+    // --- Collision shape cache ---
+
+    /** @return the cached composite collision shape, or null if it must be (re)computed. */
+    @Nullable
+    public net.minecraft.world.phys.shapes.VoxelShape getCachedCollisionShape() {
+        return cachedCollisionShape;
+    }
+
+    /** Stores the freshly-merged composite collision shape for reuse until the next structural change. */
+    public void setCachedCollisionShape(net.minecraft.world.phys.shapes.VoxelShape shape) {
+        cachedCollisionShape = shape;
+    }
+
+    /** Drops the cached shape so the next query re-merges it. Called from every structural-change path. */
+    private void invalidateCollisionShapeCache() {
+        cachedCollisionShape = null;
+    }
+
+    @Override
+    public void setChanged() {
+        // Real (non-per-tick) changes — pluggables, wires, etc. — route through setChanged();
+        // a structural change can alter the composite shape, so drop the cache here too.
+        invalidateCollisionShapeCache();
+        super.setChanged();
+    }
+
     // --- Tick ---
 
     public void tick() {
@@ -438,7 +475,16 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
         }
 
         if (level != null && !level.isClientSide()) {
-            setChanged();
+            // Mark the chunk unsaved so evolving flow state (fluid/power in transit) persists,
+            // but do NOT call setChanged(): vanilla's setChanged() unconditionally fires
+            // Level.updateNeighbourForOutputSignal(), which probes every neighbour's
+            // isRedstoneConductor → re-merges their (un-cached) pipe collision shapes. Running
+            // that for every loaded pipe every tick was the dominant server-tick cost in dense
+            // pipe networks. Pipes expose no comparator/analog output, and a gate's actual
+            // redstone output is already pushed via the explicit updateNeighborsAt() above when
+            // redstoneChanged — so the per-tick output-signal cascade is pure waste here.
+            // blockEntityChanged() does the exact save-dirtying half of setChanged(), nothing more.
+            level.blockEntityChanged(worldPosition);
         }
         } finally {
             _profiler.pop();
@@ -728,6 +774,7 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     @Override
     public void scheduleRenderUpdate() {
+        invalidateCollisionShapeCache();
         if (level != null && level.isClientSide()) {
             requestModelDataUpdate();
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
@@ -738,6 +785,8 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     @Override
     public void scheduleNetworkUpdate(PipeMessageReceiver... parts) {
+        // Connection changes come through here (Pipe.updateConnections) — they change the shape.
+        invalidateCollisionShapeCache();
         Collections.addAll(networkUpdates, parts);
         scheduleRenderUpdate = true;
     }

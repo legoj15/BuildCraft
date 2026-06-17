@@ -3,6 +3,6 @@
   "category": "misc",
   "group": "buildcraft_pipes",
   "pattern": [ "lgr" ],
-  "key": { "l": "minecraft:quartz_block", "g": "#c:glass_blocks/colorless", "r": "minecraft:quartz_block" },
+  "key": { "l": "#buildcraftunofficial:quartz_blocks", "g": "#c:glass_blocks/colorless", "r": "#buildcraftunofficial:quartz_blocks" },
   "result": { "id": "buildcraftunofficial:pipe_quartz_item", "count": 8 }
 }

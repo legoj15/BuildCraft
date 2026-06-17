@@ -3,6 +3,6 @@
   "category": "misc",
   "group": "buildcraft_pipes",
   "pattern": [ "lgr" ],
-  "key": { "l": "#c:stones", "g": "#c:glass_blocks/colorless", "r": "#c:stones" },
+  "key": { "l": "#buildcraftunofficial:cooked_stones", "g": "#c:glass_blocks/colorless", "r": "#buildcraftunofficial:cooked_stones" },
   "result": { "id": "buildcraftunofficial:pipe_stone_item", "count": 8 }
 }

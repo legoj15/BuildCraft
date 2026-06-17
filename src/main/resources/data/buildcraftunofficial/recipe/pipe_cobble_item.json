@@ -3,6 +3,6 @@
   "category": "misc",
   "group": "buildcraft_pipes",
   "pattern": [ "lgr" ],
-  "key": { "l": "#c:cobblestones/normal", "g": "#c:glass_blocks/colorless", "r": "#c:cobblestones/normal" },
+  "key": { "l": "#minecraft:stone_tool_materials", "g": "#c:glass_blocks/colorless", "r": "#minecraft:stone_tool_materials" },
   "result": { "id": "buildcraftunofficial:pipe_cobble_item", "count": 8 }
 }

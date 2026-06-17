@@ -131,6 +131,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:dyed_pipe_symmetric_stone", () -> buildcraft.transport.DyedPipeRecipeTester::testSymmetricStonePipe);
         reg.accept("buildcraftunofficial:dyed_pipe_asymmetric_diamond_wood", () -> buildcraft.transport.DyedPipeRecipeTester::testAsymmetricDiamondWoodBothOrientations);
         reg.accept("buildcraftunofficial:dyed_pipe_colourless_glass_rejected", () -> buildcraft.transport.DyedPipeRecipeTester::testColourlessGlassRejected);
+        // Guards the hand-maintained DyedPipeRecipe material table against drifting out of sync with the
+        // base pipe recipes (every dyed row must accept the same materials as its base [mat,glass,mat] recipe).
+        reg.accept("buildcraftunofficial:dyed_pipe_table_matches_base", () -> buildcraft.transport.DyedPipeTableDriftTester::testTableMatchesBaseRecipes);
         // Recipe-book cleanup: every pipe downgrade recipe (fluid/kinesis->item, FE->kinesis) is special (hidden
         // from the book) yet still matches; pipe-sealant producers share one group so the book collapses them.
         reg.accept("buildcraftunofficial:pipe_downgrades_hidden", () -> buildcraft.transport.HiddenShapelessRecipeTester::testPipeDowngradesHidden);

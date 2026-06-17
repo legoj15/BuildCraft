@@ -30,6 +30,7 @@ import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.StainedGlassBlock;
 
+import buildcraft.core.BCCoreItems;
 import buildcraft.transport.BCTransportItems;
 
 /** Crafts a pre-dyed pipe in one step: the same {@code [material, glass, material]} pattern as the base
@@ -68,6 +69,11 @@ public class DyedPipeRecipe extends CustomRecipe {
 
     private record Match(ItemLike pipe, DyeColor colour) {}
 
+    /** Test-support view of one dyed-pipe table row: the produced pipe and its two material ingredients.
+     *  Exposed (via {@link #tableForTest()}) so a game test can assert each row still matches the base
+     *  pipe recipe's material ingredients and fail loudly on drift. */
+    public record TableRow(Item pipe, Ingredient left, Ingredient right) {}
+
     // Built lazily on first craft attempt: tag-backed Ingredients can't be resolved at class-init
     // (item tags aren't bound until datapack load).
     private static volatile List<Entry> entries;
@@ -77,9 +83,12 @@ public class DyedPipeRecipe extends CustomRecipe {
         if (local == null) {
             local = List.of(
                     sym("#minecraft:planks", BCTransportItems.PIPE_WOOD_ITEM),
-                    sym("#c:cobblestones/normal", BCTransportItems.PIPE_COBBLE_ITEM),
-                    sym("#c:stones", BCTransportItems.PIPE_STONE_ITEM),
-                    sym(Items.QUARTZ_BLOCK, BCTransportItems.PIPE_QUARTZ_ITEM),
+                    // cobble/stone/quartz mirror the intent-scoped tags their base recipes use
+                    // (pipe_{cobble,stone,quartz}_item.json) — keep these in lock-step with them. The
+                    // dyed_pipe_table_matches_base game test enforces that they stay aligned.
+                    sym("#minecraft:stone_tool_materials", BCTransportItems.PIPE_COBBLE_ITEM),
+                    sym("#buildcraftunofficial:cooked_stones", BCTransportItems.PIPE_STONE_ITEM),
+                    sym("#buildcraftunofficial:quartz_blocks", BCTransportItems.PIPE_QUARTZ_ITEM),
                     sym("#c:ingots/iron", BCTransportItems.PIPE_IRON_ITEM),
                     sym("#c:ingots/gold", BCTransportItems.PIPE_GOLD_ITEM),
                     sym(Items.CLAY, BCTransportItems.PIPE_CLAY_ITEM),
@@ -87,12 +96,19 @@ public class DyedPipeRecipe extends CustomRecipe {
                     sym(Items.OBSIDIAN, BCTransportItems.PIPE_OBSIDIAN_ITEM),
                     sym("#c:gems/diamond", BCTransportItems.PIPE_DIAMOND_ITEM),
                     sym(Items.LAPIS_BLOCK, BCTransportItems.PIPE_LAPIS_ITEM),
+                    sym(BCCoreItems.GEAR_GOLD.get(), BCTransportItems.PIPE_STRIPES_ITEM),
                     asym(Ingredient.of(Items.LAPIS_BLOCK), tag("#c:gems/diamond"), BCTransportItems.PIPE_DAIZULI_ITEM),
                     asym(tag("#minecraft:planks"), tag("#c:gems/diamond"), BCTransportItems.PIPE_DIAMOND_WOOD_ITEM),
                     asym(tag("#c:dyes/black"), tag("#c:dusts/redstone"), BCTransportItems.PIPE_VOID_ITEM));
             entries = local;
         }
         return local;
+    }
+
+    /** Test-support: the dyed-pipe material table as (pipe, left, right) rows, so a game test can
+     *  cross-check every row against the corresponding base pipe recipe's material ingredients. */
+    public static List<TableRow> tableForTest() {
+        return entries().stream().map(e -> new TableRow(e.pipe().get().asItem(), e.a(), e.b())).toList();
     }
 
     private static Entry sym(String tagId, Supplier<? extends ItemLike> pipe) {

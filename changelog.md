@@ -16,7 +16,7 @@
 - Guide book now shows crafting and smelting recipes on multiplayer servers (they were silently missing), and keeps them up to date after a datapack /reload or server switch
 - Guide book can now be closed with the inventory key (E, or whatever it's bound to) while still on the cover or mid-opening — handy when it was opened by accident
 - FE pipes now appear and are grouped together in the recipe book (fixing a broken item id in the unlock advancement)
-- Pipes can now be recoloured in the crafting grid with a paintbrush — spending one of its charges per pipe, just like painting in-world — or bleached back to unpainted with a water bucket; pipes can also be crafted pre-dyed directly from stained glass
+- Pipes can now be recoloured in the crafting grid with a paintbrush — spending one of its charges per pipe, just like painting in-world — or bleached back to unpainted with a water bucket; pipes can also be crafted pre-dyed directly from stained glass (now including the Gold Stripes pipe), using the same materials as each pipe's plain recipe
 - Pipe upgrades can be undone in the crafting grid — a fluid or kinesis pipe back into its plain item pipe, or an FE pipe back into a kinesis pipe (the waterproof/redstone is lost), recovering a mistakenly-upgraded pipe; all of these downgrade recipes are now kept out of the recipe book to cut clutter while staying craftable in the grid and listed in JEI
 - The three ways to make Pipe Sealant (slimeball, green dye, or an oil residue bucket) are now grouped into a single recipe-book entry
 - Facades can be toggled between their solid and hollow forms by crafting one on its own

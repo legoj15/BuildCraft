@@ -55,6 +55,9 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
     public long clientLastDisplayTime = 0;
 
     private long maxPower = -1;
+    // powerLoss / powerResistance are computed in reconfigure() but never read anywhere else — pipe
+    // transport is unconditionally lossless. This is INTENTIONAL 8.0.x parity, not an oversight; see the
+    // note in reconfigure() before deleting these as dead code or "fixing" the missing loss.
     private long powerLoss = -1;
     private long powerResistance = -1;
     private boolean disabled = false;
@@ -197,6 +200,18 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
         if (maxPower <= 0) {
             maxPower = DEFAULT_MAX_POWER;
         }
+        // NOTE: powerLoss / powerResistance are derived here and then NEVER applied — onTick()'s forward
+        // distribution moves power untouched, so kinesis pipes lose nothing in transit and maxPower acts
+        // only as a request throttle (clamped into nextPowerQuery in requestPower()), not a hard
+        // throughput cap. This is faithful to the BuildCraft 8.0.x (Neptune) build this port derives from:
+        // the shipping 1.12.2 common/buildcraft/transport/pipe/flow/PipeFlowPower (upstream 8.0.x-1.12.2,
+        // last touched 2025-04-01) is byte-for-byte the same shape — Neptune scaffolded the loss config
+        // plumbing (PowerTransferInfo.lossPerTick/resistancePerTick) but never wired it into the transfer.
+        // So this is CURRENTLY INTENDED, not a regression — leave it unless deliberately adding loss.
+        // Re-introducing real loss would be a feature: apply powerResistance in the onTick() transfer step
+        // (pre-Neptune src_old_license/buildcraft/transport/PipeTransportPower ~L454-465 is the reference)
+        // and optionally clamp forward flow to maxPower so the per-tier rates actually bind. Gate it behind
+        // config (default off) to preserve this parity.
         powerLoss = MathUtil.clamp(configure.getPowerLoss(), -1, maxPower);
         powerResistance = MathUtil.clamp(configure.getPowerResistance(), -1, MjAPI.MJ);
 

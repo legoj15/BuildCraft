@@ -148,12 +148,14 @@ public class BCTransportClient {
     @SubscribeEvent
     public static void onModifyBakingResult(ModelEvent.ModifyBakingResult event) {
         //? if >=1.21.10 {
-        // Block model swap
-        BlockState pipeState = BCTransportBlocks.PIPE_HOLDER.get().defaultBlockState();
+        // Block model swap — every blockstate (waterlogged true/false), so a flooded pipe doesn't
+        // keep the un-swapped placeholder model.
         var blockModels = event.getBakingResult().blockStateModels();
-        BlockStateModel vanillaModel = blockModels.get(pipeState);
-        if (vanillaModel != null) {
-            blockModels.put(pipeState, new PipeBlockStateModel(vanillaModel));
+        for (BlockState pipeState : BCTransportBlocks.PIPE_HOLDER.get().getStateDefinition().getPossibleStates()) {
+            BlockStateModel vanillaModel = blockModels.get(pipeState);
+            if (vanillaModel != null) {
+                blockModels.put(pipeState, new PipeBlockStateModel(vanillaModel));
+            }
         }
 
         // Item model swap — wrap each pipe item with PipeItemModel
@@ -174,13 +176,15 @@ public class BCTransportClient {
         /*// 1.21.1: all baked models (block + item) live in one Map<ModelResourceLocation, BakedModel>.
         java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation, net.minecraft.client.resources.model.BakedModel> models =
             event.getModels();
-        // Block model swap — keyed by the pipe_holder's blockstate ModelResourceLocation.
-        BlockState pipeState = BCTransportBlocks.PIPE_HOLDER.get().defaultBlockState();
-        net.minecraft.client.resources.model.ModelResourceLocation blockMrl =
-            net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(pipeState);
-        net.minecraft.client.resources.model.BakedModel vanillaModel = models.get(blockMrl);
-        if (vanillaModel != null) {
-            models.put(blockMrl, new PipeBlockStateModel(vanillaModel));
+        // Block model swap — keyed by each pipe_holder blockstate's ModelResourceLocation (waterlogged
+        // true/false), so a flooded pipe doesn't keep the un-swapped placeholder model.
+        for (BlockState pipeState : BCTransportBlocks.PIPE_HOLDER.get().getStateDefinition().getPossibleStates()) {
+            net.minecraft.client.resources.model.ModelResourceLocation blockMrl =
+                net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(pipeState);
+            net.minecraft.client.resources.model.BakedModel vanillaModel = models.get(blockMrl);
+            if (vanillaModel != null) {
+                models.put(blockMrl, new PipeBlockStateModel(vanillaModel));
+            }
         }
         // Item model swap — each pipe item's "inventory" ModelResourceLocation.
         for (PipeDefinition def : PipeApi.pipeRegistry.getAllRegisteredPipes()) {

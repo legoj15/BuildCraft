@@ -531,6 +531,16 @@ public class BuildCraftGameTests {
         // pipe / pluggables / wires are lost. Regression guard for the dropPipeCargo catch-all.
         reg.accept("buildcraftunofficial:pipe_nonplayer_break_drops_cargo", () -> buildcraft.transport.PipeDropsTester::testNonPlayerBreakDropsCargoOnly);
         reg.accept("buildcraftunofficial:pipe_nonplayer_fluid_break_drops_cargo", () -> buildcraft.transport.PipeDropsTester::testNonPlayerFluidBreakDropsCargoOnly);
+        // Loot-table drop path (destroyBlock(true) = wither / /…destroy) returns the pipe hardware
+        // (pipe item + colour + pluggables + wires), and a survival break still drops the pipe exactly
+        // once — the dropsHandled guard keeps the loot path from double-dropping over the code path.
+        reg.accept("buildcraftunofficial:pipe_command_break_drops_pipe", () -> buildcraft.transport.PipeDropsTester::testCommandBreakDropsPipeViaLoot);
+        reg.accept("buildcraftunofficial:pipe_player_break_no_double_drop", () -> buildcraft.transport.PipeDropsTester::testPlayerBreakNoDoubleDrop);
+        // Waterlogging — pipes are floodable (partial collision + dynamicShape ⇒ blocksMotion()==false),
+        // so without SimpleWaterloggedBlock flowing water would delete them with no drop. Guards: the
+        // coexist (placeLiquid) branch waterlogs rather than destroys, and a real water source floods.
+        reg.accept("buildcraftunofficial:pipe_waterloggable", () -> buildcraft.transport.PipeWaterloggingTester::testPipeWaterloggable);
+        reg.accept("buildcraftunofficial:pipe_survives_flowing_water", () -> buildcraft.transport.PipeWaterloggingTester::testPipeSurvivesFlowingWater);
 
         // Machine ↔ pipe connectivity — item pipes must see machine inventories exposed as
         // Capabilities.Item.BLOCK (Auto Workbench, laser tables, Electronic Library).

@@ -25,11 +25,18 @@ import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.SimpleWaterloggedBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.pathfinder.PathComputationType;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -49,12 +56,17 @@ import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.tile.TilePipeHolder;
 
-public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintHandler {
+public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintHandler, SimpleWaterloggedBlock {
 
     private static final net.minecraft.resources.Identifier ADVANCEMENT_LOGIC_TRANSPORTATION
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:logic_transportation");
     private static final net.minecraft.resources.Identifier ADVANCEMENT_COLORFUL_ELECTRICIAN
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:colorful_electrician");
+
+    // Dynamic-drop name shared by the pipe_holder loot table's minecraft:dynamic entry and the
+    // getDrops override below.
+    private static final net.minecraft.resources.Identifier PIPE_CONTENTS_DROP
+        = net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_contents");
 
     // Center box: 4/16 → 12/16 (i.e. 0.25→0.75)
     private static final VoxelShape CENTER = Block.box(4, 4, 4, 12, 12, 12);
@@ -80,7 +92,56 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
 
     public BlockPipeHolder(Properties props) {
         super(props);
+        registerDefaultState(defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, false));
     }
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(BlockStateProperties.WATERLOGGED);
+    }
+
+    // Waterlogging — a pipe's collision is a partial centre cube, and (because the block is
+    // .dynamicShape()) it reports blocksMotion()==false, so without this any flowing fluid would
+    // wash the pipe away. Worse, the pipe item is dropped only on a player break (code-driven, no
+    // loot table), so a fluid-driven removal would delete the pipe with NO drop. Implementing
+    // SimpleWaterloggedBlock makes the pipe a LiquidBlockContainer, so FlowingFluid.spreadTo takes
+    // the placeLiquid (coexist) branch instead of the destroy branch — water flows around the pipe.
+
+    @Override
+    protected FluidState getFluidState(BlockState state) {
+        return state.getValue(BlockStateProperties.WATERLOGGED)
+            ? Fluids.WATER.getSource(false)
+            : super.getFluidState(state);
+    }
+
+    @Nullable
+    @Override
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        // Start waterlogged when placed directly into a water source so the water is preserved.
+        FluidState fluid = context.getLevel().getFluidState(context.getClickedPos());
+        return defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, fluid.getType() == Fluids.WATER);
+    }
+
+    // Keep the contained water flowing/levelling when neighbours change (standard SimpleWaterloggedBlock pattern).
+    @Override
+    //? if >=1.21.10 {
+    protected BlockState updateShape(BlockState state, LevelReader level,
+                                    net.minecraft.world.level.ScheduledTickAccess ticks, BlockPos pos, Direction direction,
+                                    BlockPos neighbourPos, BlockState neighbourState, net.minecraft.util.RandomSource random) {
+        if (state.getValue(BlockStateProperties.WATERLOGGED)) {
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+        }
+        return super.updateShape(state, level, ticks, pos, direction, neighbourPos, neighbourState, random);
+    }
+    //?} else {
+    /*protected BlockState updateShape(BlockState state, Direction direction, BlockState neighbourState,
+                                    net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockPos neighbourPos) {
+        if (state.getValue(BlockStateProperties.WATERLOGGED)) {
+            level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+        }
+        return super.updateShape(state, direction, neighbourState, level, pos, neighbourPos);
+    }*/
+    //?}
 
     // Block Entity
 
@@ -667,6 +728,24 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
             }
         }
         return super.playerWillDestroy(level, pos, state, player);
+    }
+
+    // Loot-table drop authority for NON-PLAYER removals — the wither, /setblock|/fill … destroy,
+    // Level.destroyBlock(true) and explosions all funnel block drops through getDrops. Without this the
+    // pipe (plus its pluggables and wires) would vanish with no drop, because pipe drops are code-driven
+    // and the pipe item is otherwise only returned in playerWillDestroy. The bare pipe + pluggables +
+    // wires are emitted through the pipe_holder loot table's minecraft:dynamic entry, which is gated by
+    // survives_explosion so TNT/creepers still consume pipes like every other BuildCraft machine; the
+    // in-transit cargo continues to spill separately via TilePipeHolder#dropPipeCargo. A survival player
+    // break already dropped everything in playerWillDestroy and set dropsHandled, so we add no dynamic
+    // drop in that case — preventing a double drop. (getDrops' signature is stable across all nodes.)
+    @Override
+    protected java.util.List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
+        BlockEntity be = params.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
+        if (be instanceof TilePipeHolder tile && !tile.areDropsHandled()) {
+            params = params.withDynamicDrop(PIPE_CONTENTS_DROP, tile::collectPipeDrops);
+        }
+        return super.getDrops(state, params);
     }
 
     // Non-player removal catch-all for the pre-1.21.10 API (explosion, piston, /setblock, mod tools):

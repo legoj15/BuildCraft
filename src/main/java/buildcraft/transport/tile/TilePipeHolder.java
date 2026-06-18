@@ -504,9 +504,16 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
      * a creative-mode break; the caller in {@link buildcraft.transport.block.BlockPipeHolder#playerWillDestroy}
      * already gates on {@code !player.isCreative()}.
      */
-    public void dropPipeItems(Level lvl, BlockPos pos) {
+    /**
+     * PURE collector of a pipe's recoverable <em>hardware</em> drops — the pipe item (carrying its
+     * paint colour), every pluggable's drops, and the wire items. It deliberately excludes in-transit
+     * cargo (that always spills via {@link #dropPipeCargo}, on player and non-player removals alike)
+     * and it does NOT mutate the tile, so it is safe to call both from the player-break path and from
+     * the loot-table {@code getDrops} query that serves non-player removals (wither / {@code /…destroy}
+     * / explosion) — see {@link buildcraft.transport.block.BlockPipeHolder#getDrops}.
+     */
+    public void collectPipeDrops(java.util.function.Consumer<ItemStack> out) {
         if (pipe != null) {
-            // Drop the pipe item itself
             PipeDefinition def = pipe.getDefinition();
             Item pipeItem = (Item) PipeApi.pipeRegistry.getItemForPipe(def);
             if (pipeItem != null) {
@@ -515,37 +522,56 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
                 if (col != null) {
                     pipeStack.set(BCTransportItems.PIPE_COLOUR.get(), col);
                 }
-                Block.popResource(lvl, pos, pipeStack);
-            }
-            // Drop flow/behaviour items — includes traversing items (PipeFlowItems.addDrops),
-            // traversing fluids as fragile fluid-shard items (PipeFlowFluids.addDrops), and
-            // behaviour items like the Emzuli pipe's filter slots.
-            NonNullList<ItemStack> drops = NonNullList.create();
-            pipe.addDrops(drops, 0);
-            for (ItemStack drop : drops) {
-                Block.popResource(lvl, pos, drop);
+                out.accept(pipeStack);
             }
         }
-        // Drop pluggables
         for (int i = 0; i < 6; i++) {
             PipePluggable plug = pluggables[i];
             if (plug != null) {
                 NonNullList<ItemStack> plugDrops = NonNullList.create();
                 plug.addDrops(plugDrops, 0);
                 for (ItemStack drop : plugDrops) {
-                    Block.popResource(lvl, pos, drop);
+                    out.accept(drop);
                 }
-                plug.onRemove();
-                pluggables[i] = null;
             }
         }
-        // Drop wires
         for (DyeColor color : wireManager.parts.values()) {
             if (color != null) {
                 Item wireItem = buildcraft.transport.BCTransportItems.WIRE_ITEMS.get(color).get();
                 if (wireItem != null) {
-                    Block.popResource(lvl, pos, new ItemStack(wireItem));
+                    out.accept(new ItemStack(wireItem));
                 }
+            }
+        }
+    }
+
+    /** Whether this removal's drops have already been emitted (set by the player-break path via
+     *  {@link #markDropsHandled}). The loot-table {@code getDrops} override reads this to skip the
+     *  dynamic drop on a survival break, so the hardware is not dropped a second time. */
+    public boolean areDropsHandled() {
+        return dropsHandled;
+    }
+
+    public void dropPipeItems(Level lvl, BlockPos pos) {
+        // Hardware (pipe item + colour, pluggables, wires) — shared verbatim with the loot/getDrops path.
+        collectPipeDrops(stack -> Block.popResource(lvl, pos, stack));
+        // In-transit cargo + behaviour items — traversing items (PipeFlowItems.addDrops), traversing
+        // fluids as fragile fluid-shard items (PipeFlowFluids.addDrops), and behaviour items like the
+        // Emzuli pipe's filter slots. The player break returns these here; a non-player removal returns
+        // the cargo via dropPipeCargo instead.
+        if (pipe != null) {
+            NonNullList<ItemStack> drops = NonNullList.create();
+            pipe.addDrops(drops, 0);
+            for (ItemStack drop : drops) {
+                Block.popResource(lvl, pos, drop);
+            }
+        }
+        // Pluggable cleanup — their drops were already emitted by collectPipeDrops above; detach now.
+        for (int i = 0; i < 6; i++) {
+            PipePluggable plug = pluggables[i];
+            if (plug != null) {
+                plug.onRemove();
+                pluggables[i] = null;
             }
         }
     }

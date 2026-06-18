@@ -14,12 +14,14 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.AABB;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 
@@ -53,11 +55,12 @@ import buildcraft.transport.tile.TilePipeHolder;
  *       only speeds the break up via the mineable/pickaxe tag.</li>
  *   <li><b>Fluid pipe break drops fragile shards</b> — a fluid pipe carrying water in a section
  *       buffer drops fragile fluid-container items when broken with a pickaxe.</li>
- *   <li><b>Non-player removal drops cargo only</b> — when the pipe is removed by something other
- *       than a player's hand (here a plain {@code level.removeBlock}, standing in for an explosion /
- *       piston / {@code /setblock}), only the in-transit items spill; the pipe, pluggables and wires
- *       are lost. Exercises {@link buildcraft.transport.tile.TilePipeHolder#dropPipeCargo} via the
- *       {@code preRemoveSideEffects} / {@code onRemove} catch-all rather than {@code playerWillDestroy}.</li>
+ *   <li><b>Non-player removal drops cargo only</b> — when the pipe is removed by a no-loot path (here a
+ *       plain {@code level.removeBlock(false)}, standing in for a piston move / {@code /setblock} replace /
+ *       mod setBlock), only the in-transit items spill; the pipe, pluggables and wires are lost. Exercises
+ *       {@link buildcraft.transport.tile.TilePipeHolder#dropPipeCargo} via the {@code preRemoveSideEffects}
+ *       / {@code onRemove} catch-all rather than {@code playerWillDestroy}. (Loot-bearing non-player
+ *       removals — explosion / wither / {@code /…destroy} — instead return the hardware via {@code getDrops}.)</li>
  *   <li><b>Non-player fluid removal drops shards only</b> — the fluid-flow counterpart: a non-player
  *       removal spills fragile fluid shards but not the pipe item.</li>
  * </ol>
@@ -331,9 +334,11 @@ public class PipeDropsTester {
         PipeFlowItems flow = (PipeFlowItems) tile.getPipe().getFlow();
         flow.insertItemsForce(new ItemStack(Items.DIAMOND, 5), Direction.NORTH, null, 0.04);
 
-        // No playerWillDestroy: a bare level.removeBlock is what an explosion / piston / command
-        // does. It drives LevelChunk.setBlockState → preRemoveSideEffects (>=1.21.10) or onRemove
-        // (1.21.1) → TilePipeHolder.dropPipeCargo, which must spill the cargo but nothing else.
+        // No playerWillDestroy: a bare level.removeBlock(false) is the no-loot removal — a piston move,
+        // a /setblock|/fill … replace, or a mod setBlock. It drives LevelChunk.setBlockState →
+        // preRemoveSideEffects (>=1.21.10) or onRemove (1.21.1) → TilePipeHolder.dropPipeCargo, which
+        // must spill the cargo but nothing else. (The loot-bearing removals — explosion, wither,
+        // /…destroy — instead return the hardware via getDrops; see testCommandBreakDropsPipeViaLoot.)
         ServerLevel level = helper.getLevel();
         level.removeBlock(helper.absolutePos(pipePos), false);
 
@@ -371,5 +376,72 @@ public class PipeDropsTester {
             helper.assertItemEntityNotPresent(BCTransportItems.PIPE_COBBLE_FLUID.get(), pipePos, 4.0);
             helper.succeed();
         });
+    }
+
+    // ---------- Command/wither loot path (destroyBlock(true)) returns the pipe hardware ----------
+
+    /** {@code Level.destroyBlock(pos, true)} is the loot-table path used by the wither and by
+     *  {@code /setblock|/fill … destroy}. Before the pipe had a loot table this silently deleted the
+     *  pipe, its pluggables and its wires; now {@link buildcraft.transport.block.BlockPipeHolder#getDrops}
+     *  returns them (and the cargo still spills via {@code dropPipeCargo}). Also checks the dropped pipe
+     *  item carries its paint colour. */
+    public static void testCommandBreakDropsPipeViaLoot(GameTestHelper helper) {
+        BlockPos pipePos = new BlockPos(1, 2, 1);
+        TilePipeHolder tile = placeItemPipe(helper, pipePos);
+
+        tile.getPipe().setColour(DyeColor.RED);
+        installBlockerOn(tile, Direction.DOWN);
+        tile.getWireManager().addPart(EnumWirePart.WEST_DOWN_NORTH, DyeColor.BLUE);
+        PipeFlowItems flow = (PipeFlowItems) tile.getPipe().getFlow();
+        flow.insertItemsForce(new ItemStack(Items.EMERALD, 2), Direction.NORTH, null, 0.04);
+
+        ServerLevel level = helper.getLevel();
+        level.destroyBlock(helper.absolutePos(pipePos), true);
+
+        helper.assertBlockPresent(Blocks.AIR, pipePos);
+
+        helper.runAfterDelay(10, () -> {
+            // Hardware comes back via the loot path...
+            helper.assertItemEntityPresent(BCTransportItems.PIPE_WOOD_ITEM.get(), pipePos, 4.0);
+            helper.assertItemEntityPresent(BCTransportItems.PLUG_BLOCKER.get(), pipePos, 4.0);
+            helper.assertItemEntityPresent(BCTransportItems.WIRE_ITEMS.get(DyeColor.BLUE).get().asItem(), pipePos, 4.0);
+            // ...the dropped pipe keeps its paint colour...
+            helper.assertTrue(hasColouredPipeDrop(helper, pipePos, DyeColor.RED),
+                    "the dropped pipe item should carry its RED paint colour");
+            // ...and the in-transit cargo still spills via the side-effect path.
+            helper.assertItemEntityPresent(Items.EMERALD, pipePos, 4.0);
+            helper.succeed();
+        });
+    }
+
+    /** A survival player break drives BOTH the code path (playerWillDestroy → dropPipeItems) and,
+     *  via playerDestroy → dropResources, the new loot path. The {@code dropsHandled} guard in
+     *  {@link buildcraft.transport.block.BlockPipeHolder#getDrops} must keep the loot path silent so the
+     *  pipe item drops EXACTLY once, not twice. */
+    public static void testPlayerBreakNoDoubleDrop(GameTestHelper helper) {
+        BlockPos pipePos = new BlockPos(1, 2, 1);
+        placeItemPipe(helper, pipePos);
+
+        breakAs(helper, pipePos, survivalPlayerWith(helper, new ItemStack(Items.WOODEN_PICKAXE)));
+
+        helper.assertBlockPresent(Blocks.AIR, pipePos);
+
+        helper.runAfterDelay(10, () -> {
+            helper.assertItemEntityCountIs(BCTransportItems.PIPE_WOOD_ITEM.get(), pipePos, 4.0, 1);
+            helper.succeed();
+        });
+    }
+
+    /** Scans for a dropped wood pipe item carrying the given paint colour data component. */
+    private static boolean hasColouredPipeDrop(GameTestHelper helper, BlockPos relPos, DyeColor colour) {
+        AABB box = new AABB(helper.absolutePos(relPos)).inflate(4.0);
+        for (ItemEntity ie : helper.getLevel().getEntitiesOfClass(ItemEntity.class, box)) {
+            ItemStack stack = ie.getItem();
+            if (stack.is(BCTransportItems.PIPE_WOOD_ITEM.get())
+                    && colour.equals(stack.get(BCTransportItems.PIPE_COLOUR.get()))) {
+                return true;
+            }
+        }
+        return false;
     }
 }

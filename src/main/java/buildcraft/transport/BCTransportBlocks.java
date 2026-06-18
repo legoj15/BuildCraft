@@ -16,10 +16,12 @@ public class BCTransportBlocks {
             "filtered_buffer",
             BlockFilteredBuffer::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    // Pipes are intentionally hand-breakable: bare-hand still drops the pipe + its cargo +
-    // pluggables + wires. The mineable/pickaxe tag stays (so pickaxes still get the
-    // break-speed bonus) but requiresCorrectToolForDrops is deliberately NOT set — that
-    // would gate the loot table on tool, which is the wrong semantics for pipes.
+    // Pipes are intentionally hand-breakable: a bare-hand break drops the pipe + its cargo +
+    // pluggables + wires. The mineable/pickaxe tag stays (so pickaxes still get the break-speed
+    // bonus) but requiresCorrectToolForDrops is deliberately NOT set. Player breaks drop via code
+    // (BlockPipeHolder#playerWillDestroy → TilePipeHolder#dropPipeItems); the pipe_holder loot table
+    // exists so NON-player removals (wither, /…destroy commands, explosions) return the pipe's
+    // hardware too, through BlockPipeHolder#getDrops — see that method for the dynamic-drop wiring.
     public static final DeferredBlock<BlockPipeHolder> PIPE_HOLDER = RegistrationUtilBC.registerBlock(BLOCKS,
             "pipe_holder",
             BlockPipeHolder::new, () -> BlockBehaviour.Properties.of()

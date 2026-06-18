@@ -8,6 +8,7 @@
 - {1.21.1} Fixed missing texture in the advancements window background
 - Fixed block textures looking grainy and shimmering at a distance — the recipe-cycle button's icon (new in rc4) was being stitched onto the block texture atlas and forcing its mipmaps off
 - Fixed pipes fading out or disappearing when viewed from a distance (and popping back as you approached or looked along them at a shallow angle), most noticeable with Mipmap Levels and anisotropic filtering turned up — their cutout textures now hold their shape through the mipmap chain
+- Fixed the moving power (MJ) glow being invisible inside kinesis pipes that carry a steady, unchanging load — most of a straight run would look empty while only a junction or a varying-load pipe showed the flow. The power level wasn't being applied when a pipe first loaded or after a relog, and a steady pipe never sends an update to correct it; pipes now pick up their current power flow on load
 - Stirling Engine can now be crafted from blackstone and cobbled deepslate (like a stone pickaxe)
 - Engines now deliver their stored power continuously, instead of freezing the buffer between fuel items
 - Fixed bugs in regards to engine overheating

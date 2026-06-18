@@ -98,6 +98,67 @@ public class PipeFlowPowerTester {
         });
     }
 
+    /** Regression guard for the "MJ flow invisible in straight kinesis runs" bug
+     *  (investigation 2026-06-17). A straight pipe at steady state holds a constant,
+     *  non-zero {@code displayPower} server-side, but it only re-syncs to the client via a
+     *  {@code NET_POWER_AMOUNTS} delta when that value CHANGES (the {@code didChange} gate) —
+     *  which never happens once steady. So the client's only chance to see the value is the
+     *  initial update-tag, which on first-track/relog is applied through the
+     *  {@link PipeFlowPower#PipeFlowPower(buildcraft.api.transport.pipe.IPipe, net.minecraft.nbt.CompoundTag)}
+     *  CONSTRUCTOR (TilePipeHolder.readData → new Pipe → loadFlow), NOT {@code readFromNbt}.
+     *  Before the fix the constructor dropped displayPower, leaving steady straight pipes
+     *  rendered invisibly while jittering junctions (continuous deltas) stayed visible.
+     *
+     *  <p>This drives a real engine→wood→stone→tester chain to steady state, then simulates
+     *  the client first-sync reconstruction and asserts the rebuilt pipe preserves the
+     *  server's displayPower. */
+    public static void testPowerDisplaySurvivesClientResync(GameTestHelper helper) {
+        BlockPos redstonePos = new BlockPos(2, 1, 2);
+        BlockPos enginePos   = new BlockPos(2, 2, 2);
+        BlockPos woodPos     = new BlockPos(2, 3, 2);
+        BlockPos stonePos    = new BlockPos(2, 4, 2);
+        BlockPos testerPos   = new BlockPos(2, 5, 2);
+
+        if (BCCoreBlocks.POWER_TESTER == null) {
+            throw new IllegalStateException("POWER_TESTER not registered — need -Dbuildcraft.dev=true");
+        }
+        helper.setBlock(testerPos, BCCoreBlocks.POWER_TESTER.get());
+        TilePipeHolder stone = placePowerPipe(helper, stonePos, BCTransportItems.PIPE_STONE_POWER.get());
+        TilePipeHolder wood  = placePowerPipe(helper, woodPos,  BCTransportItems.PIPE_WOOD_POWER.get());
+
+        BlockState engineState = BCCoreBlocks.ENGINE_CREATIVE.get().defaultBlockState()
+                .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP);
+        helper.setBlock(enginePos, engineState);
+        helper.setBlock(redstonePos, Blocks.REDSTONE_BLOCK);
+
+        TileEngineCreative engine = helper.getBlockEntity(enginePos, TileEngineCreative.class);
+        engine.currentOutputIndex = 3; // 8 MJ/t — matches the user's 160 MJ/s combustion engine
+
+        wood.getPipe().markForUpdate();
+        stone.getPipe().markForUpdate();
+
+        helper.succeedWhen(() -> {
+            TilePowerConsumerTester tester = helper.getBlockEntity(testerPos, TilePowerConsumerTester.class);
+            helper.assertTrue(readTesterTotal(tester) > 0,
+                    "power not yet flowing through the engine→wood→stone→tester chain");
+
+            PipeFlowPower stoneFlow = (PipeFlowPower) stone.getPipe().getFlow();
+            int serverDp = stoneFlow.getSection(Direction.UP).displayPower;
+            helper.assertTrue(serverDp > 0,
+                    "server stone-pipe displayPower should be non-zero while power flows");
+
+            // Reproduce the client first-sync/relog rebuild: writeToNbt (as the update tag does),
+            // then reconstruct through the constructor (new Pipe → loadFlow → PipeFlowPower::new).
+            net.minecraft.nbt.CompoundTag flowNbt = stoneFlow.writeToNbt();
+            PipeFlowPower rebuilt = new PipeFlowPower(stone.getPipe(), flowNbt);
+            int clientDp = rebuilt.getSection(Direction.UP).displayPower;
+
+            helper.assertTrue(clientDp == serverDp,
+                    "client first-sync must preserve displayPower (else steady straight pipes render"
+                    + " invisibly): serverDp=" + serverDp + " clientDp=" + clientDp);
+        });
+    }
+
     private static TilePipeHolder placePowerPipe(GameTestHelper helper, BlockPos pos, Item pipeItem) {
         helper.setBlock(pos, BCTransportBlocks.PIPE_HOLDER.get());
         //? if >=1.21.10 {

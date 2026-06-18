@@ -111,6 +111,7 @@ public class BuildCraftGameTests {
         // The renderer-side regression (visible gaps) is geometry math, pinned
         // directly by PipeFlowRendererPowerGeometryTester.
         reg.accept("buildcraftunofficial:power_pipe_engine_to_tester", () -> buildcraft.transport.pipe.flow.PipeFlowPowerTester::testEngineThroughDiamondPipesPowersTester);
+        reg.accept("buildcraftunofficial:power_display_survives_client_resync", () -> buildcraft.transport.pipe.flow.PipeFlowPowerTester::testPowerDisplaySurvivesClientResync);
 
         // FE pipes must size a receiver's demand by a simulated insert, not buffer headroom —
         // otherwise bufferless pass-through sinks (AE2's Energy Acceptor) are never fed.

@@ -74,11 +74,18 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
 
     public PipeFlowPower(IPipe pipe, CompoundTag nbt) {
         super(pipe, nbt);
-        isReceiver = NBTUtilBC.getBoolean(nbt, "isReceiver", false);
         sections = new EnumMap<>(Direction.class);
         for (Direction face : Direction.values()) {
             sections.put(face, new Section(face));
         }
+        // The client's first-sync / relog path rebuilds the pipe through THIS constructor
+        // (TilePipeHolder.readData -> new Pipe -> loadFlow -> PipeFlowPower::new), NOT through
+        // readFromNbt (which only runs for an already-existing pipe). So the display state
+        // serialized into the update tag must be applied here too. Without it, a steady-state
+        // straight pipe — which never re-sends a NET_POWER_AMOUNTS delta because didChange stays
+        // false — renders its MJ flow invisibly on the client until something forces a change,
+        // while jittering pipes (e.g. a splitting junction) self-heal via deltas.
+        readFromNbt(nbt);
     }
 
     @Override

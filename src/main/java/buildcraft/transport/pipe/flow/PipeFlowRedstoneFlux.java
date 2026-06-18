@@ -196,6 +196,11 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         if (facing == null) {
             return null;
         }
+        // disableRfPipe: withhold the energy capability so the pipe can neither receive nor be
+        // extracted from — a placed RF pipe is fully inert when the feature is turned off.
+        if (buildcraft.transport.BCTransportConfig.disableRfPipe.get()) {
+            return null;
+        }
         //? if >=1.21.10 {
         if (capability == net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK || capability == CapUtil.CAP_ENERGY) {
         //?} else {

@@ -13,8 +13,13 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.HitResult;
 
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidUtil;
+
 import buildcraft.api.core.EnumPipePart;
+import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IStackFilter;
+import buildcraft.api.transport.pipe.IFlowFluid;
 import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver;
@@ -169,6 +174,60 @@ public class PipeBehaviourWoodDiamond extends PipeBehaviourWood {
             advanceFilter();
         }
         return extracted;
+    }
+
+    @Override
+    protected FluidStack extractFluid(IFlowFluid flow, Direction dir, int millibuckets, boolean simulate) {
+        // 1.12.2 parity: the emerald (wood-diamond) FLUID pipe applies its whitelist/blacklist to
+        // fluid extraction. Without this override it inherited PipeBehaviourWood.extractFluid and
+        // pulled any fluid, making its filter slots inert.
+        switch (filterMode) {
+            case WHITE_LIST: {
+                if (!hasAnyFilter()) {
+                    // Empty whitelist behaves like a plain wooden fluid pipe: extract any fluid.
+                    return flow.tryExtractFluid(millibuckets, dir, null, simulate);
+                }
+                Object result = flow.tryExtractFluidAdv(millibuckets, dir, makeFluidFilter(false), simulate);
+                return result instanceof FluidStack fs ? fs : null;
+            }
+            case BLACK_LIST: {
+                Object result = flow.tryExtractFluidAdv(millibuckets, dir, makeFluidFilter(true), simulate);
+                return result instanceof FluidStack fs ? fs : null;
+            }
+            case ROUND_ROBIN:
+            default:
+                // 1.12.2 parity: round-robin is unsupported for fluids.
+                return null;
+        }
+    }
+
+    /** Builds an {@link IFluidFilter} over the filter slots (each slot's contained fluid).
+     *
+     * @param inverted true for blacklist semantics, false for whitelist. */
+    private IFluidFilter makeFluidFilter(boolean inverted) {
+        return fluid -> {
+            if (fluid == null || fluid.isEmpty()) {
+                return false;
+            }
+            boolean anyMatch = false;
+            for (int i = 0; i < filters.getSlots(); i++) {
+                FluidStack f = getFilterFluid(i);
+                if (!f.isEmpty() && FluidStack.isSameFluidSameComponents(f, fluid)) {
+                    anyMatch = true;
+                    break;
+                }
+            }
+            return inverted != anyMatch;
+        };
+    }
+
+    /** The fluid represented by the filter item in the given slot (e.g. a bucket's contents), or empty. */
+    private FluidStack getFilterFluid(int slot) {
+        ItemStack stack = filters.getStackInSlot(slot);
+        if (stack.isEmpty()) {
+            return FluidStack.EMPTY;
+        }
+        return FluidUtil.getFluidContained(stack).orElse(FluidStack.EMPTY);
     }
 
     private void advanceFilter() {

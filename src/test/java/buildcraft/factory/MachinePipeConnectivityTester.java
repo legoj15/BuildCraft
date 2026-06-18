@@ -107,7 +107,8 @@ public class MachinePipeConnectivityTester {
 
     /** A wood pipe must not drain the Assembly Table's resource inventory. The table holds its
      *  crafting materials in an insert-only inventory and ejects finished output itself (like a
-     *  quarry — there is no result slot), so a wood pipe has nothing to pull from it. */
+     *  quarry — there is no result slot), so a wood pipe has nothing to pull from it. This is a
+     *  deliberate divergence from 1.12.2 (which used EnumAccess.BOTH) — see commit a2bb0ee67. */
     public static void testWoodPipeSkipsAssemblyTableResources(GameTestHelper helper) {
         BlockPos tablePos = new BlockPos(1, 2, 1);
         BlockPos pipePos = new BlockPos(1, 2, 2);

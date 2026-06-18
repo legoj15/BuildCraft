@@ -18,9 +18,13 @@ import net.minecraft.world.phys.HitResult;
 
 import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.transport.pipe.IFlowFluid;
+import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.PipeEventHandler;
 import buildcraft.api.transport.pipe.PipeEventStatement;
+
+import buildcraft.transport.BCTransportConfig;
 import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
 
@@ -194,9 +198,17 @@ public class PluggablePulsar extends PipePluggable {
             pulseStage = 0;
             Object behaviour = holder.getPipe().getBehaviour();
             if (behaviour instanceof IMjRedstoneReceiver rsRec) {
-                // TODO: use transport-specific power values when cross-module config is wired up
-                long power = MjAPI.MJ;
                 if (gateSinglePulses > 0) {
+                    // 1.12.2: a single (gate-driven) pulse is sized to the pipe contents — a fluid
+                    // pipe gets mjPerMillibucket*1000, an item pipe gets mjPerItem, else 1 MJ. These
+                    // coincide with 1 MJ at default config but honour an operator's retuning.
+                    long power = MjAPI.MJ;
+                    Object flow = holder.getPipe().getFlow();
+                    if (flow instanceof IFlowFluid) {
+                        power = BCTransportConfig.mjPerMillibucket.get() * 1000;
+                    } else if (flow instanceof IFlowItems) {
+                        power = BCTransportConfig.mjPerItem.get();
+                    }
                     long excess = rsRec.receivePower(power, true);
                     if (excess == 0) {
                         rsRec.receivePower(power, false);
@@ -204,7 +216,8 @@ public class PluggablePulsar extends PipePluggable {
                         gateSinglePulses++;
                     }
                 } else {
-                    rsRec.receivePower(power, false);
+                    // Constant pulsing always delivers 1 MJ per pulse (1.12.2 parity).
+                    rsRec.receivePower(MjAPI.MJ, false);
                 }
             }
             if (gateSinglePulses > 0) {

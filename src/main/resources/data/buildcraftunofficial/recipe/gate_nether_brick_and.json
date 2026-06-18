@@ -9,7 +9,7 @@
   "key": {
     "m": "minecraft:nether_brick",
     "r": "minecraft:redstone",
-    "b": "minecraft:cobblestone"
+    "b": ["minecraft:cobblestone", "buildcraftunofficial:plug_blocker"]
   },
   "result": {
     "id": "buildcraftunofficial:plug_gate",

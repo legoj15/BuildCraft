@@ -59,10 +59,14 @@ public class TileAdvancedCraftingTable extends TileLaserTableBase {
     @Override
     public long getTarget() {
         if (level == null) return 0;
-        // Match 1.12.2: request laser power whenever a recipe is set,
-        // even if materials aren't available yet. Power accumulates
-        // and crafting happens once materials are provided.
-        return !resultClient.isEmpty() ? POWER_REQ : 0;
+        if (level.isClientSide()) {
+            // Client mirror for the HAS_WORK display only; lasers never read this client-side.
+            return !resultClient.isEmpty() ? POWER_REQ : 0;
+        }
+        // 1.12.2: the server only requests laser power when the recipe can actually be crafted
+        // (materials present). Requesting on a blueprint-only table tied up lasers it couldn't use,
+        // starving tables that could actually craft.
+        return crafting.canCraft() ? POWER_REQ : 0;
     }
 
     @Override

@@ -482,6 +482,11 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
                         if (!excess.isEmpty()) {
                             before.shrink(excess.getCount());
                         }
+                        // 1.12.2 parity: fire Ejected.IntoPipe so handlers can observe/modify the ejection.
+                        PipeEventItem.Ejected.IntoPipe ejected =
+                            new PipeEventItem.Ejected.IntoPipe(holder, this, before, excess, item.side, oFlow);
+                        holder.fireEvent(ejected);
+                        excess = ejected.getExcess();
                     }
                     break;
                 }
@@ -489,6 +494,7 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
                     // Insert items into the adjacent tile's item handler
                     BlockEntity tile = pipe.getConnectedTile(item.side);
                     if (tile != null) {
+                        ItemStack injectedBefore = excess.copy();
                         Level level = holder.getPipeWorld();
                         BlockPos neighborPos = holder.getPipePos().relative(item.side);
                         //? if >=1.21.10 {
@@ -521,6 +527,11 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
                             }
                         }*/
                         //?}
+                        // 1.12.2 parity: fire Ejected.IntoTile so handlers can observe/modify the ejection.
+                        PipeEventItem.Ejected.IntoTile ejected =
+                            new PipeEventItem.Ejected.IntoTile(holder, this, injectedBefore, excess, item.side, tile);
+                        holder.fireEvent(ejected);
+                        excess = ejected.getExcess();
                     }
                     break;
                 }

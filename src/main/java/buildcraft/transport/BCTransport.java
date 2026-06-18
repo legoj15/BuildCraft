@@ -154,15 +154,19 @@ public class BCTransport {
             event.accept(BCTransportItems.PIPE_SANDSTONE_POWER.get());
             event.accept(BCTransportItems.PIPE_DIAMOND_POWER.get());
             event.accept(BCTransportItems.PIPE_DIAMOND_WOOD_POWER.get());
-            event.accept(BCTransportItems.PIPE_WOOD_RF.get());
-            event.accept(BCTransportItems.PIPE_COBBLE_RF.get());
-            event.accept(BCTransportItems.PIPE_STONE_RF.get());
-            event.accept(BCTransportItems.PIPE_QUARTZ_RF.get());
-            event.accept(BCTransportItems.PIPE_IRON_RF.get());
-            event.accept(BCTransportItems.PIPE_GOLD_RF.get());
-            event.accept(BCTransportItems.PIPE_SANDSTONE_RF.get());
-            event.accept(BCTransportItems.PIPE_DIAMOND_RF.get());
-            event.accept(BCTransportItems.PIPE_DIAMOND_WOOD_RF.get());
+            // RF (Forge Energy) pipes are hidden when disableRfPipe is set, so the disable toggle
+            // removes them from the creative menu (they're also made inert in BCTransportConfig).
+            if (!BCTransportConfig.disableRfPipe.get()) {
+                event.accept(BCTransportItems.PIPE_WOOD_RF.get());
+                event.accept(BCTransportItems.PIPE_COBBLE_RF.get());
+                event.accept(BCTransportItems.PIPE_STONE_RF.get());
+                event.accept(BCTransportItems.PIPE_QUARTZ_RF.get());
+                event.accept(BCTransportItems.PIPE_IRON_RF.get());
+                event.accept(BCTransportItems.PIPE_GOLD_RF.get());
+                event.accept(BCTransportItems.PIPE_SANDSTONE_RF.get());
+                event.accept(BCTransportItems.PIPE_DIAMOND_RF.get());
+                event.accept(BCTransportItems.PIPE_DIAMOND_WOOD_RF.get());
+            }
         }
     }
 

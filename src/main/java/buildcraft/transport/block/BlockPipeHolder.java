@@ -620,6 +620,10 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
                             if (!player.isCreative() && !drop.isEmpty()) {
                                 Block.popResource(level, pos, drop);
                             }
+                            // 1.12.2 parity: notify the pluggable it's being detached (the full-pipe-break
+                            // path in TilePipeHolder.dropPipeItems already calls onRemove(); this single-
+                            // pluggable break path did not).
+                            plug.onRemove();
                         }
                         tile.replacePluggable(plugDir, null);
                         // Immediately sync the updated state to the client

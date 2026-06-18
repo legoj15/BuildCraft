@@ -41,6 +41,16 @@ public class TileMiningWell extends TileMiner {
         super(BCFactoryBlockEntities.MINING_WELL.get(), pos, state);
     }
 
+    /** Wake a finished/idle well so it re-scans its column on the next tick. Called from the block's
+     * neighbor-change hook — the NeoForge-pragmatic stand-in for 1.12.2's world block-update listener,
+     * which reacted instantly when a block in the well's column changed (e.g. an obstruction is removed).
+     * NeoForge has no global listener, so this catches changes adjacent to the well immediately while
+     * deeper column changes still rely on the periodic fallback re-scan in {@link #mine()}. */
+    public void scheduleRecheck() {
+        shouldCheck = true;
+        recheckCooldown = 0;
+    }
+
     @Override
     protected void mine() {
         if (currentPos != null && canBreak()) {

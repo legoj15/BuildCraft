@@ -9,7 +9,7 @@
   "key": {
     "m": "#c:ingots/iron",
     "r": "minecraft:redstone",
-    "b": "minecraft:cobblestone"
+    "b": ["minecraft:cobblestone", "buildcraftunofficial:plug_blocker"]
   },
   "result": {
     "id": "buildcraftunofficial:plug_gate",

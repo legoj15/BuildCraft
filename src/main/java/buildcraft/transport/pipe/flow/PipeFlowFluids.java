@@ -353,8 +353,46 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
 
     @Override
     public Object tryExtractFluidAdv(int millibuckets, Direction from, IFluidFilter filter, boolean simulate) {
-        // Advanced extraction — simplified port, uses basic extraction
-        return tryExtractFluid(millibuckets, from, null, simulate);
+        // No filter: fall back to basic extraction (extract whatever is present).
+        if (filter == null) {
+            return tryExtractFluid(millibuckets, from, null, simulate);
+        }
+        if (from == null || millibuckets <= 0) {
+            return null;
+        }
+        // Scan the source handler's tanks for the first fluid the filter accepts, then extract it
+        // through tryExtractFluid (which fills the pipe sections and runs under a Transaction).
+        //? if >=1.21.10 {
+        ResourceHandler<FluidResource> handler = pipe.getHolder().getCapabilityFromPipe(from, CapUtil.CAP_FLUIDS);
+        if (handler == null) {
+            return null;
+        }
+        for (int i = 0; i < handler.size(); i++) {
+            FluidResource res = handler.getResource(i);
+            if (res == null || res.isEmpty()) {
+                continue;
+            }
+            if (filter.matches(res.toStack(1))) {
+                return tryExtractFluid(millibuckets, from, res.toStack(millibuckets), simulate);
+            }
+        }
+        return null;
+        //?} else {
+        /*IFluidHandler handler = pipe.getHolder().getCapabilityFromPipe(from, CapUtil.CAP_FLUIDS);
+        if (handler == null) {
+            return null;
+        }
+        for (int i = 0; i < handler.getTanks(); i++) {
+            FluidStack inTank = handler.getFluidInTank(i);
+            if (inTank == null || inTank.isEmpty()) {
+                continue;
+            }
+            if (filter.matches(inTank)) {
+                return tryExtractFluid(millibuckets, from, inTank, simulate);
+            }
+        }
+        return null;
+        *///?}
     }
 
     @Override

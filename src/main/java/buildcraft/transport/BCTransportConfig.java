@@ -100,6 +100,10 @@ public class BCTransportConfig {
             rfTransfer(BCTransportPipes.diamondRf, rate * 64, false);
             rfTransfer(BCTransportPipes.diaWoodRf, rate * 64, true);
         }
+        // When disableRfPipe is set the defs are left unregistered; placed RF pipes are made inert by
+        // PipeFlowRedstoneFlux#getCapability withholding the energy capability (NeoForge can't
+        // unregister the items/BEs as 1.12.2 did), and they're hidden from the creative tab in
+        // BCTransport#addCreativeTabItems. Their static JSON craft recipes remain (craftable-but-inert).
     }
 
     private static void rfTransfer(PipeDefinition def, int maxTransfer, boolean recv) {

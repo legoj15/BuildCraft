@@ -389,12 +389,17 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         return true;
     }
 
-    private boolean canMoveThrough(BlockPos blockPos) {
+    // package-private for TileQuarryFluidPassabilityTester (drill-descent viscosity gate).
+    boolean canMoveThrough(BlockPos blockPos) {
         if (level.getBlockState(blockPos).isAir()) {
             return true;
         }
         Fluid fluid = BlockUtil.getFluidWithFlowing(level, blockPos);
-        return fluid != null;
+        // 1.12.2 parity: the drill descends through LOW-viscosity fluids (water, light fuel, …) but
+        // high-viscosity fluids (lava, oil) block it — matching the Mining Well (TileMiningWell.nextPos).
+        // Without the viscosity gate the drill bored through lava to mine the block beneath, letting the
+        // lava cascade into the pit.
+        return fluid != null && fluid.getFluidType().getViscosity() <= 1000;
     }
 
     private boolean canMoveDownTo(BlockPos blockPos) {

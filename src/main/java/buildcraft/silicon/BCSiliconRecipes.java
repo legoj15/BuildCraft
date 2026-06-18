@@ -25,6 +25,7 @@ import buildcraft.api.recipes.AssemblyRecipeBasic;
 import buildcraft.api.recipes.IngredientStack;
 
 import buildcraft.core.BCCoreBlocks;
+import buildcraft.core.BCCoreItems;
 
 import buildcraft.factory.BCFactoryBlocks;
 
@@ -203,19 +204,16 @@ public class BCSiliconRecipes {
     // --- Wire Recipes ---
 
     private static void registerWireRecipes() {
-        // 1.12.2 parity: assembly-table recipe per colour, dye + redstone + iron → 8 wires
-        // at 5,000 MJ. The 1.12.2 mod only registered four (RED/BLUE/GREEN/YELLOW); we
-        // register all 16 here since every colour ships as a registered item and is usable
-        // in-world.
+        // 1.12.2 parity: assembly-table recipe per colour, dye + redstone → 8 wires at 10,000 MJ.
+        // 1.12.2 looped ColourUtil.COLOURS (all 16 colours), redstone + dye only (no iron).
         for (DyeColor colour : ColourUtil.COLOURS) {
             String name = String.format("wire-%s", colour.getName());
             ImmutableSet<IngredientStack> input = ImmutableSet.of(
                 new IngredientStack(Ingredient.of(getDyeItem(colour))),
-                new IngredientStack(Ingredient.of(Items.REDSTONE)),
-                new IngredientStack(Ingredient.of(Items.IRON_INGOT)));
+                new IngredientStack(Ingredient.of(Items.REDSTONE)));
             ItemStack output = new ItemStack(BCTransportItems.WIRE_ITEMS.get(colour).get(), 8);
             AssemblyRecipeRegistry.register(
-                new AssemblyRecipeBasic(name, 5_000 * MjAPI.MJ, input, output));
+                new AssemblyRecipeBasic(name, 10_000 * MjAPI.MJ, input, output));
         }
     }
 
@@ -245,12 +243,10 @@ public class BCSiliconRecipes {
 
     private static void registerGateCopierRecipe() {
         ImmutableSet.Builder<IngredientStack> input = ImmutableSet.builder();
-        // Stick + iron as fallback (since wrench may not exist)
-        input.add(new IngredientStack(Ingredient.of(Items.STICK)));
-        input.add(new IngredientStack(Ingredient.of(Items.IRON_INGOT)));
-        input.add(new IngredientStack(Ingredient.of(Items.REDSTONE)));
-        input.add(new IngredientStack(Ingredient.of(Items.REDSTONE)));
-        input.add(new IngredientStack(Ingredient.of(Items.GOLD_INGOT)));
+        // 1.12.2 preferred a wrench + an iron redstone chipset (the stick+iron / raw-redstone forms
+        // were only fallbacks for when those items didn't exist). Both exist in this port, so use them.
+        input.add(new IngredientStack(Ingredient.of(BCCoreItems.WRENCH.get())));
+        input.add(new IngredientStack(Ingredient.of(BCSiliconItems.CHIPSET_IRON.get())));
 
         AssemblyRecipeRegistry.register(new AssemblyRecipeBasic(
             "gate_copier", 500 * MjAPI.MJ, input.build(),

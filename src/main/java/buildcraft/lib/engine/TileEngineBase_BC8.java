@@ -759,6 +759,7 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
         output.putLong("power", power);
         output.putFloat("heat", heat);
         output.putFloat("progress", progress);
+        output.putInt("progressPart", progressPart);
         output.putBoolean("isPumping", isPumping);
         output.putBoolean("isRedstonePowered", isRedstonePowered);
         output.putByte("powerStage", (byte) powerStage.ordinal());
@@ -777,6 +778,7 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
         power = input.getLongOr("power", 0L);
         heat = input.getFloatOr("heat", MIN_HEAT);
         progress = input.getFloatOr("progress", 0f);
+        progressPart = input.getIntOr("progressPart", 0);
         isPumping = input.getBooleanOr("isPumping", false);
         isRedstonePowered = input.getBooleanOr("isRedstonePowered", false);
         int ps = input.getByteOr("powerStage", (byte) 0);

@@ -46,7 +46,9 @@ public class BCCoreConfig {
 
         miningMultiplier = builder
                 .comment("Multiplier for the speed of mining machines")
-                .defineInRange("miningMultiplier", 1.0, 0.0, 100.0);
+                // 1.12.2 clamped this to [1, 200]; a floor of 0 let the block-break power formula
+                // resolve to 0 MJ (free/instant mining for the Quarry/Mining Well).
+                .defineInRange("miningMultiplier", 1.0, 1.0, 200.0);
 
         miningMaxDepth = builder
                 .comment("How deep can mining machines dig?")

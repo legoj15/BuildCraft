@@ -25,6 +25,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.redstone.Orientation;
 
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.factory.BCFactoryBlockEntities;
@@ -89,6 +90,30 @@ public class BlockMiningWell extends BaseEntityBlock {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof TileMiningWell well) {
                 well.onPlacedBy(placer, stack);
+            }
+        }
+    }
+
+    @Override
+    //? if >=1.21.10 {
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
+            @Nullable Orientation orientation, boolean movedByPiston) {
+    //?} else {
+    /*protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
+            BlockPos neighborPos, boolean movedByPiston) {*/
+    //?}
+        //? if >=1.21.10 {
+        super.neighborChanged(state, level, pos, neighborBlock, orientation, movedByPiston);
+        //?} else {
+        /*super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);*/
+        //?}
+        // Wake a finished/idle well when an adjacent block changes (1.12.2 reacted via a world
+        // block-update listener; NeoForge has no global equivalent, so this covers adjacent changes
+        // and deeper column changes fall back to the periodic re-scan).
+        if (!level.isClientSide()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileMiningWell well) {
+                well.scheduleRecheck();
             }
         }
     }

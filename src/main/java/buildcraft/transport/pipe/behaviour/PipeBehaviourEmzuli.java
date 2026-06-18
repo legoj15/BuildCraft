@@ -226,6 +226,11 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
     @Override
     public boolean onPipeActivate(Player player, HitResult trace, float hitX, float hitY, float hitZ,
         EnumPipePart part) {
+        // 1.12.2: a wrench cycles the extraction direction (via PipeBehaviourDirectional); an empty
+        // hand opens the preset GUI. Without this delegation the Emzuli pipe can't be re-aimed.
+        if (isHoldingWrench(player)) {
+            return super.onPipeActivate(player, trace, hitX, hitY, hitZ, part);
+        }
         if (!player.level().isClientSide() && player instanceof ServerPlayer serverPlayer) {
             final PipeBehaviourEmzuli self = this;
             serverPlayer.openMenu(new MenuProvider() {
@@ -262,8 +267,12 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
         Collections.addAll(event.actions, BCTransportStatements.ACTION_EXTRACTION_PRESET);
     }
 
+    // NOTE: must NOT be named onActionActivate — that would override PipeBehaviourDirectional's
+    // onActionActivate (same signature), which would shadow the gate-driven ACTION_PIPE_DIRECTION
+    // handling (so the pipe could no longer be aimed by a gate) and double-fire this preset handler.
+    // A distinct name keeps both handlers as separate @PipeEventHandler entries, each firing once.
     @PipeEventHandler
-    public void onActionActivate(PipeEventActionActivate event) {
+    public void onPresetActionActivate(PipeEventActionActivate event) {
         if (event.action instanceof ActionExtractionPreset) {
             ActionExtractionPreset preset = (ActionExtractionPreset) event.action;
             activeSlots.add(preset.index);

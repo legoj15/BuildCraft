@@ -27,3 +27,15 @@
 - Fixed a crash that disconnected players when joining a multiplayer server, caused by the new pipe paint/dye and facade-swap recipes failing to sync to the client
 - List item: fixed false matches in Accept Variations / Accept Equivalents mode — logs no longer count as equivalent to leaves, and unrelated "plain" blocks like a baked brick, cobblestone and pumpkin no longer match each other
 - Fixed crushing the mipmap due to a GUI icon making it into the block texture atlas
+- Fixed the Emerald (Diamond Wood) fluid pipe ignoring its filter — it was pulling any fluid like a plain Wooden fluid pipe; its filter slots now restrict fluid extraction to the configured fluids, as in 1.12.2
+- The Quarry no longer drills its arm down through lava or oil to mine the block beneath (which let the fluid pour into the pit) — thick fluids block the drill again, matching the Mining Well and 1.12.2 (route a Pump on top to clear them)
+- Emzuli pipe: a wrench rotates its extraction direction again, and a gate's Pipe Direction action can re-aim it again
+- The Advanced Crafting Table no longer reserves and hoards laser power while it only holds a blueprint with no materials, freeing lasers for tables that can actually craft
+- Restored the Pipe Wire assembly recipe to its 1.12.2 form (10,000 MJ from dye + redstone) — it had become half-cost but also demanded an extra iron ingot
+- The Gate Copier is now assembled from a Wrench + an iron Redstone Chipset, instead of a stick/iron/redstone/gold fallback mix
+- Basic, Iron and Nether Brick gates can again be crafted with a Plug Blocker in the bottom slot as an alternative to cobblestone
+- The "disable RF pipes" config option now genuinely disables them — hidden from the creative menu and inert (no power) when placed — instead of leaving them working
+- The mining-speed multiplier config can no longer be set to 0 (which made machine mining free and instant); its minimum is back to 1
+- The Redstone Pulsar's single-pulse (gate-driven) power again scales with the per-item / per-millibucket power config instead of a flat value (differs from default only when those are customised)
+- An engine's piston phase now survives a chunk reload without a one-tick animation hiccup
+- The Mining Well reacts immediately when an adjacent block changes, rather than waiting for its periodic re-scan

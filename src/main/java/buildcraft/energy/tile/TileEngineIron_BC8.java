@@ -55,7 +55,11 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
 
     // Heat constants (matching 1.12.2)
     public static final double HEAT_PER_MJ = 0.0023;
-    public static final double IDEAL_HEAT = 204.0;
+    // 1.12.2 parity: the combustion engine cools toward IDEAL_HEAT while redstone-powered, so this is
+    // the steady-state running temperature. 100 °C = heatLevel (100-20)/(250-20) = 0.348 → GREEN, well
+    // clear of the 0.85 OVERHEAT entry — exactly as 1.12.2 (inherited base IDEAL_HEAT = 100). A higher
+    // value makes the engine idle hotter (e.g. 204 = heatLevel 0.80 = RED, only 0.05 below overheat).
+    public static final double IDEAL_HEAT = 100.0;
 
     public final BCFluidTank tankFuel = new BCFluidTank(1, MAX_FLUID) {
         @Override
@@ -130,11 +134,12 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
 
     @Override
     protected void engineUpdate() {
+        // Cooling (updateHeatLevel) runs ONCE per tick, driven by the base serverTick BEFORE this hook
+        // (see TileEngineBase_BC8.serverTick) — matching 1.12.2, which cooled once per tick before
+        // burning. engineUpdate must NOT call updateHeatLevel() again: a second call would double the
+        // per-tick coolant draw (up to 80 mB instead of 40) and the passive cooldown rate during the
+        // post-shutdown / penalty window. So this hook only burns fuel.
         burn();
-
-        // Combustion engine has its own heat management, so we override the
-        // base class updateHeatLevel by doing cooling here
-        updateHeatLevel();
     }
 
     /** Core burn logic — ported from 1.12.2 TileEngineIron_BC8.burn() */
@@ -272,15 +277,16 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
     }
 
     /**
-     * MUST sit above the powered coolant equilibrium: while redstone-powered, {@link #updateHeatLevel()}
-     * only cools toward IDEAL_HEAT (204 °C = heatLevel 0.80 exactly), and the per-tick coolant
-     * overshoot is bounded by 40 mB x 0.0023 °C/mB = 0.092 °C — so the base 0.75 exit would be
-     * unreachable and a running water-cooled engine would stay OVERHEAT forever. 0.84 exits ~25-50
-     * ticks after coolant catches up, then settles at the 0.80 equilibrium (RED) without re-entry.
+     * Combustion engines have NO overheat hysteresis (1.12.2 parity). Their heat is coolant-driven
+     * toward {@link #IDEAL_HEAT} (100 °C = heatLevel 0.348, GREEN) — far below the 0.85 OVERHEAT entry —
+     * so a water-cooled engine cannot flap around the threshold the way a power-derived Stirling engine
+     * can (the limit-cycle the base 0.75 hysteresis band exists to suppress). Returning the 0.85 entry
+     * threshold makes the base hysteresis a no-op for this engine: it leaves OVERHEAT the instant
+     * heatLevel drops below 0.85, exactly as 1.12.2's stateless getPowerStage did.
      */
     @Override
     protected float overheatExitLevel() {
-        return 0.84f;
+        return 0.85f;
     }
 
     @Override

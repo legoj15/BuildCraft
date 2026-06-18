@@ -11,6 +11,7 @@
 - Stirling Engine can now be crafted from blackstone and cobbled deepslate (like a stone pickaxe)
 - Engines now deliver their stored power continuously, instead of freezing the buffer between fuel items
 - Fixed bugs in regards to engine overheating
+- Combustion (Iron) Engine now settles at a safe green temperature when water-cooled, instead of idling permanently red on the edge of overheating, and tolerates a coolant interruption far longer before overheating — restoring its original 1.12.2 behaviour. It also no longer consumes water/coolant at up to double the intended rate while cooling down after being switched off
 - A quarry that has finished mining now stops drawing power, so the engines feeding it idle down instead of pointlessly topping off (and then overheating against) its internal battery
 - Mining Well no longer churns against flowing water: instead of repeatedly breaking the water and shooting its tube up and down, it now drills its tube straight past water (mining the solid blocks below, like the Quarry) and stays put once finished
 - Guide book now shows crafting and smelting recipes on multiplayer servers (they were silently missing), and keeps them up to date after a datapack /reload or server switch

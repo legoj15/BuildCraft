@@ -415,12 +415,12 @@ public class EngineTester {
     }
 
     /**
-     * Pins the Combustion engine's coolant self-recovery against the overheatExitLevel() contract:
-     * its powered cooling equilibrium is IDEAL_HEAT = 204 °C (heatLevel 0.80 exactly), so its exit
-     * override MUST sit above 0.80 — with the base 0.75 a running water-cooled engine could never
-     * leave OVERHEAT (max coolant pull is 40 mB x 0.0023 °C/mB = 0.092 °C/tick toward 204, not
-     * below it). From heat 0.86 (217.8 °C), water cooling reaches the 0.84 exit (213.2 °C) in
-     * ~50 ticks; assert recovery within 80.
+     * Pins the Combustion engine's coolant self-recovery (1.12.2 parity). Its powered cooling
+     * equilibrium is IDEAL_HEAT = 100 °C (heatLevel 0.348, GREEN), well below the 0.85 OVERHEAT entry,
+     * and it has no hysteresis band (overheatExitLevel() == 0.85), so a running water-cooled engine
+     * leaves OVERHEAT the moment heatLevel drops below 0.85. From heat 0.86 (217.8 °C) the water pull
+     * of 40 mB x 0.0023 °C/mB = 0.092 °C/tick crosses the 0.85 exit (215.5 °C) in ~25 ticks; assert
+     * recovery within 80.
      */
     public static void testCombustionEngineOverheatCoolantRecovery(GameTestHelper helper) {
         BlockPos enginePos = new BlockPos(2, 2, 2);
@@ -454,6 +454,98 @@ public class EngineTester {
                 }
                 helper.succeed();
             });
+        });
+    }
+
+    /**
+     * 1.12.2 parity: a running (redstone-powered), water-cooled combustion engine cools toward
+     * IDEAL_HEAT and settles at GREEN (heatLevel ~0.348), NOT RED. Regression guard for the port's
+     * IDEAL_HEAT=204 artifact, which parked the equilibrium at heatLevel 0.80 (RED), one band below
+     * OVERHEAT. Starts at the OLD 204 °C equilibrium (heatLevel 0.80 = RED): with IDEAL_HEAT=100 the
+     * engine must cool BELOW that toward GREEN; with the pre-fix 204 it would stall at RED and fail.
+     */
+    public static void testCombustionEngineCoolsToGreenEquilibrium(GameTestHelper helper) {
+        BlockPos enginePos = new BlockPos(2, 2, 2);
+        helper.setBlock(enginePos, BCEnergyBlocks.ENGINE_IRON.get());
+
+        helper.runAfterDelay(2, () -> {
+            //? if >=1.21.10 {
+            TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos, TileEngineIron_BC8.class);
+            //?} else {
+            /*TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos);*/
+            //?}
+            if (engine == null) {
+                throw new IllegalStateException("Failed to place Combustion Engine!");
+            }
+            // A running combustion engine cools toward IDEAL_HEAT (powered), not MIN_HEAT.
+            setRedstonePowered(engine, true);
+            // Start at the OLD 204 °C equilibrium = heatLevel 0.80 = RED.
+            fastForwardEnergy(engine, 0.80f);
+
+            // Drive cooling to equilibrium with unlimited coolant. This is a pure-Java loop (no game
+            // ticks elapse), so the watchdog is untouched; ~1130 passes reach 100 °C from 204 at
+            // 0.092 °C/tick, 3000 is ample headroom. updateHeatLevel() self-stops once heat <= IDEAL.
+            for (int i = 0; i < 3000; i++) {
+                if (engine.tankCoolant.getAmountMb(0) < TileEngineIron_BC8.MAX_COOLANT_PER_TICK) {
+                    engine.tankCoolant.fill(0,
+                        new net.neoforged.neoforge.fluids.FluidStack(Fluids.WATER, 10_000), false);
+                }
+                engine.updateHeatLevel();
+            }
+
+            EnumPowerStage stage = engine.getPowerStage();
+            if (stage != EnumPowerStage.GREEN) {
+                throw new IllegalStateException(
+                    "A water-cooled, redstone-powered combustion engine must settle at GREEN "
+                    + "(IDEAL_HEAT=" + TileEngineIron_BC8.IDEAL_HEAT + " °C, heatLevel ~0.348). Found: "
+                    + stage + ", heatLevel=" + engine.getHeatLevel());
+            }
+            helper.succeed();
+        });
+    }
+
+    /**
+     * 1.12.2 parity: the combustion engine pulls at most MAX_COOLANT_PER_TICK (40 mB) of coolant in a
+     * single server tick, because updateHeatLevel() runs exactly once per tick. Regression guard for
+     * the double-invocation artifact (base serverTick + the engine's own engineUpdate both calling
+     * updateHeatLevel), which pulled up to 80 mB/tick and halved the post-shutdown cooldown duration.
+     */
+    public static void testCombustionEngineCoolantDrawPerTickBounded(GameTestHelper helper) {
+        BlockPos enginePos = new BlockPos(2, 2, 2);
+        helper.setBlock(enginePos, BCEnergyBlocks.ENGINE_IRON.get());
+        helper.setBlock(new BlockPos(2, 1, 2), Blocks.REDSTONE_BLOCK);
+
+        helper.runAfterDelay(2, () -> {
+            //? if >=1.21.10 {
+            TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos, TileEngineIron_BC8.class);
+            //?} else {
+            /*TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos);*/
+            //?}
+            if (engine == null) {
+                throw new IllegalStateException("Failed to place Combustion Engine!");
+            }
+            engine.tankCoolant.fill(0,
+                new net.neoforged.neoforge.fluids.FluidStack(Fluids.WATER, 10_000), false);
+            // RED (204 °C) is above IDEAL_HEAT (100), so the powered engine cools and pulls coolant.
+            fastForwardEnergy(engine, 0.80f);
+
+            long before = engine.tankCoolant.getAmountMb(0);
+            // ONE full server tick.
+            engine.serverTick(engine.getLevel(), enginePos, engine.getBlockState(), engine);
+            long drained = before - engine.tankCoolant.getAmountMb(0);
+
+            if (drained > TileEngineIron_BC8.MAX_COOLANT_PER_TICK) {
+                throw new IllegalStateException(
+                    "Combustion engine drained " + drained + " mB coolant in one tick — exceeds "
+                    + "MAX_COOLANT_PER_TICK (" + TileEngineIron_BC8.MAX_COOLANT_PER_TICK
+                    + "); updateHeatLevel() is running more than once per tick");
+            }
+            if (drained <= 0) {
+                throw new IllegalStateException(
+                    "Test precondition failed: expected the powered, hot, water-cooled engine to "
+                    + "pull coolant this tick, but drained " + drained + " mB");
+            }
+            helper.succeed();
         });
     }
 
@@ -578,6 +670,16 @@ public class EngineTester {
             
         } catch (Exception e) {
             throw new RuntimeException("Failed to fast-forward engine", e);
+        }
+    }
+
+    private static void setRedstonePowered(TileEngineBase_BC8 engine, boolean powered) {
+        try {
+            java.lang.reflect.Field f = TileEngineBase_BC8.class.getDeclaredField("isRedstonePowered");
+            f.setAccessible(true);
+            f.setBoolean(engine, powered);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to set isRedstonePowered", e);
         }
     }
 

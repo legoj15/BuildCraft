@@ -1,0 +1,9 @@
+{
+    "type":  "minecraft:function",
+    "function":  "buildcraftunofficial:combustion_engine_cools_to_green_equilibrium",
+    "environment":  "minecraft:default",
+    "structure":  "minecraft:empty",
+    "max_ticks":  40,
+    "setup_ticks":  0,
+    "required":  true
+}

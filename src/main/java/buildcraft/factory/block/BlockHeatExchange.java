@@ -256,8 +256,8 @@ public class BlockHeatExchange extends BaseEntityBlock implements ICustomRotatio
                 TileHeatExchange.ExchangeSection section = exchange.getSection();
                 if (section != null) {
                     NonNullList<ItemStack> toDrop = NonNullList.create();
-                    FluidItemDrops.addFluidDrops(toDrop, section.tankInput);
-                    FluidItemDrops.addFluidDrops(toDrop, section.tankOutput);
+                    FluidItemDrops.addFluidDrops(toDrop, section.tankInput.getFluidStack(0));
+                    FluidItemDrops.addFluidDrops(toDrop, section.tankOutput.getFluidStack(0));
                     for (ItemStack drop : toDrop) {
                         Block.popResource(level, pos, drop);
                     }

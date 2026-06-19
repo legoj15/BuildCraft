@@ -61,3 +61,57 @@ Your directory structure will look like a standard monolithic Java project:
       \- test            (Test source code)
 
 ***
+
+### For mod / addon developers (integrating with BuildCraft)
+
+BuildCraft's public API is the **`buildcraft.api`** package. It exposes the systems other mods are most
+likely to build on: pipes & transport, MJ power (`buildcraft.api.mj`), gates/statements
+(triggers & actions), facades, recipes (assembly / refinery / integration), fuels & coolants, robots, and
+the schematic/blueprint types. **Everything outside `buildcraft.api` is internal** and may change without
+notice between versions.
+
+There is currently **no separate `-api` jar** — you compile against the full released mod jar, and the
+installed mod provides the classes at runtime. The jars are published on
+[GitHub Releases](https://github.com/legoj15/BuildCraft/releases) (and on CurseForge / Modrinth), so the
+lowest-friction way to depend on one without hosting a Maven repo is the Modrinth Maven or CurseMaven proxy:
+
+```gradle
+// build.gradle(.kts) of YOUR mod (NeoForge / ModDevGradle or NeoGradle)
+repositories {
+    maven { url = "https://api.modrinth.com/maven" }   // Modrinth Maven
+    // or: maven { url = "https://cursemaven.com" }     // CurseMaven
+}
+dependencies {
+    // Compile against BuildCraft's API; the installed mod provides the classes at runtime.
+    compileOnly "maven.modrinth:<modrinth-slug>:<versionId>"
+    // For in-dev testing (runClient/runServer), put the real mod on the dev runtime classpath:
+    runtimeOnly "maven.modrinth:<modrinth-slug>:<versionId>"
+    // CurseMaven coordinate form instead: "curse.maven:<slug>-<projectId>:<fileId>"
+}
+```
+
+<!-- Maintainer: replace <modrinth-slug>/<versionId> (and the CurseMaven slug/projectId/fileId) with this
+     project's actual published identifiers before pointing addon authors here. -->
+
+Rules and gotchas (these matter — read them):
+
+1. **Match the Minecraft line.** Each BuildCraft jar is tagged `+mc<version>` and pins that line's APIs (for
+   example, fluid handling differs across the 1.21.1 cliff). Depend on the jar built for the MC version you
+   target — there is **no** universal jar.
+2. **Compile-only; never shade/bundle.** The full mod already contains `buildcraft.api.*` at runtime under the
+   single `buildcraftunofficial` mod id. Bundling the jar into your own (`implementation`, `jarJar`, shadow)
+   duplicates those classes and causes load errors. Use `compileOnly` + `runtimeOnly` only.
+3. **Same version at compile and runtime.** You compile against signatures the installed mod must still
+   provide, so build against the same `mod_version` you expect players to run, and treat a major-version bump
+   as a potential API break.
+4. **Use bare Gradle configurations.** BuildCraft (NeoForge/ModDevGradle) jars are plain — `compileOnly` /
+   `runtimeOnly` are correct. Do **not** use `modImplementation` or `fg.deobf(...)`; those are Fabric Loom /
+   old ForgeGradle idioms and will not resolve.
+5. **Registries are empty without the mod.** API singletons (the MJ effect manager, fuel/coolant, statement,
+   and pipe registries) are populated by the live mod at init. If you write tests that *exercise* them, put
+   the full jar on the test runtime classpath (`testRuntimeOnly`) — against a bare API they are empty by
+   design. (The MJ ⇄ RF conversion config falls back to BuildCraft's own defaults.)
+6. **Mind the toolchain floor.** The 26.1.2 / 1.21.11 jars are Java 25 bytecode; the 1.21.10 / 1.21.1 jars are
+   Java 21. Compile with a JDK at least matching the jar you target.
+
+A dedicated, slimmer `-api` artifact may be published later; for now the full jar is the integration surface.

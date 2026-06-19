@@ -130,7 +130,8 @@ public class BlockBuilder extends HorizontalDirectionalBlock implements EntityBl
                 }
                 net.minecraft.core.NonNullList<ItemStack> fluidDrops = net.minecraft.core.NonNullList.create();
                 buildcraft.api.items.FluidItemDrops.addFluidDrops(fluidDrops,
-                    builder.getTank(0), builder.getTank(1), builder.getTank(2), builder.getTank(3));
+                    builder.getTank(0).getFluidStack(0), builder.getTank(1).getFluidStack(0),
+                    builder.getTank(2).getFluidStack(0), builder.getTank(3).getFluidStack(0));
                 for (ItemStack drop : fluidDrops) {
                     Block.popResource(level, pos, drop);
                 }

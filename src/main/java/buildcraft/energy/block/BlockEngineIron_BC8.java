@@ -123,7 +123,8 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
             if (be instanceof TileEngineIron_BC8 engine) {
                 net.minecraft.core.NonNullList<ItemStack> drops = net.minecraft.core.NonNullList.create();
                 buildcraft.api.items.FluidItemDrops.addFluidDrops(drops,
-                        engine.tankFuel, engine.tankCoolant, engine.tankResidue);
+                        engine.tankFuel.getFluidStack(0), engine.tankCoolant.getFluidStack(0),
+                        engine.tankResidue.getFluidStack(0));
                 for (ItemStack drop : drops) {
                     Block.popResource(level, pos, drop);
                 }

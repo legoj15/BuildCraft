@@ -204,9 +204,9 @@ public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHa
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof TileDistiller_BC8 distiller) {
                 NonNullList<ItemStack> toDrop = NonNullList.create();
-                FluidItemDrops.addFluidDrops(toDrop, distiller.getTankIn());
-                FluidItemDrops.addFluidDrops(toDrop, distiller.getTankGasOut());
-                FluidItemDrops.addFluidDrops(toDrop, distiller.getTankLiquidOut());
+                FluidItemDrops.addFluidDrops(toDrop, distiller.getTankIn().getFluidStack(0));
+                FluidItemDrops.addFluidDrops(toDrop, distiller.getTankGasOut().getFluidStack(0));
+                FluidItemDrops.addFluidDrops(toDrop, distiller.getTankLiquidOut().getFluidStack(0));
                 for (ItemStack drop : toDrop) {
                     Block.popResource(level, pos, drop);
                 }

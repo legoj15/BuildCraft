@@ -23,7 +23,7 @@ import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.api.transport.IInjectable;
 
-import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.api.core.NbtApiUtil;
 
 public abstract class DockingStation {
     public Direction side;
@@ -136,13 +136,13 @@ public abstract class DockingStation {
     public void readFromNBT(CompoundTag nbt) {
         if (nbt.contains("index")) {
             // For compatibility with older versions of minecraft and buildcraft
-            CompoundTag indexNBT = NBTUtilBC.getCompound(nbt, "index");
-            int x = NBTUtilBC.getInt(indexNBT, "i", 0);
-            int y = NBTUtilBC.getInt(indexNBT, "j", 0);
-            int z = NBTUtilBC.getInt(indexNBT, "k", 0);
+            CompoundTag indexNBT = NbtApiUtil.getCompound(nbt, "index");
+            int x = NbtApiUtil.getInt(indexNBT, "i", 0);
+            int y = NbtApiUtil.getInt(indexNBT, "j", 0);
+            int z = NbtApiUtil.getInt(indexNBT, "k", 0);
             pos = new BlockPos(x, y, z);
         } else {
-            int[] array = NBTUtilBC.getIntArray(nbt, "pos", new int[0]);
+            int[] array = NbtApiUtil.getIntArray(nbt, "pos", new int[0]);
             if (array.length == 3) {
                 pos = new BlockPos(array[0], array[1], array[2]);
             } else if (array.length != 0) {
@@ -152,9 +152,9 @@ public abstract class DockingStation {
                 BCLog.logger.warn("Did not find any integer positions! This is a bug!");
             }
         }
-        side = Direction.values()[NBTUtilBC.getByte(nbt, "side", (byte) 0)];
-        linkIsMain = NBTUtilBC.getBoolean(nbt, "isMain", false);
-        robotTakingId = NBTUtilBC.getLong(nbt, "robotId", 0L);
+        side = Direction.values()[NbtApiUtil.getByte(nbt, "side", (byte) 0)];
+        linkIsMain = NbtApiUtil.getBoolean(nbt, "isMain", false);
+        robotTakingId = NbtApiUtil.getLong(nbt, "robotId", 0L);
     }
 
     public boolean isTaken() {

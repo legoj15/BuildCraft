@@ -42,8 +42,12 @@ public final class BlockDropsUtil {
         }
         NonNullList<ItemStack> toDrop = NonNullList.create();
         tile.addDrops(toDrop, 0);
-        if (fluidTanks != null && fluidTanks.length > 0) {
-            FluidItemDrops.addFluidDrops(toDrop, fluidTanks);
+        if (fluidTanks != null) {
+            for (BCFluidTank tank : fluidTanks) {
+                if (tank != null) {
+                    FluidItemDrops.addFluidDrops(toDrop, tank.getFluidStack(0));
+                }
+            }
         }
         for (ItemStack drop : toDrop) {
             if (!drop.isEmpty()) {
@@ -84,7 +88,11 @@ public final class BlockDropsUtil {
             return;
         }
         NonNullList<ItemStack> toDrop = NonNullList.create();
-        FluidItemDrops.addFluidDrops(toDrop, tanks);
+        for (BCFluidTank tank : tanks) {
+            if (tank != null) {
+                FluidItemDrops.addFluidDrops(toDrop, tank.getFluidStack(0));
+            }
+        }
         for (ItemStack drop : toDrop) {
             if (!drop.isEmpty()) {
                 Block.popResource(level, pos, drop);

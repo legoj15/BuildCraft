@@ -13,8 +13,6 @@ import net.neoforged.neoforge.capabilities.BlockCapability;
 
 import org.jspecify.annotations.Nullable;
 
-import buildcraft.lib.BCLibConfig;
-
 public class MjAPI {
 
     // ################################
@@ -33,6 +31,29 @@ public class MjAPI {
 
     public static IMjEffectManager EFFECT_MANAGER = NullaryEffectManager.INSTANCE;
 
+    /** MJ ⇄ RF conversion config, read at runtime. Populated by the live mod from its config at init (see
+     * {@code BCUnifiedConfig}); third parties compiling against the API see the defaults below — which match
+     * BuildCraft's own {@code MJ_ONLY} / 0.1-ratio defaults — until BuildCraft installs the real backing. */
+    public interface IMjConfig {
+        /** MJ-per-RF conversion ratio (only consulted when {@link #isRfAutoConvertEnabled()} is true). */
+        double getRfConversionAmount();
+
+        /** Whether MJ ⇄ RF auto-conversion is enabled (the {@code powerMode}'s {@code autoconvert} flag). */
+        boolean isRfAutoConvertEnabled();
+    }
+
+    public static IMjConfig config = new IMjConfig() {
+        @Override
+        public double getRfConversionAmount() {
+            return 0.1;
+        }
+
+        @Override
+        public boolean isRfAutoConvertEnabled() {
+            return false;
+        }
+    };
+
     // ###############
     //
     // Helpful methods
@@ -49,11 +70,11 @@ public class MjAPI {
     }
 
     public static MjRfConversion getRfConversion() {
-        return MjRfConversion.createParsed(BCLibConfig.mjRfConversionAmount.get());
+        return MjRfConversion.createParsed(config.getRfConversionAmount());
     }
 
     public static boolean isRfAutoConversionEnabled() {
-        return BCLibConfig.powerMode.get().autoconvert;
+        return config.isRfAutoConvertEnabled();
     }
 
     // ########################################

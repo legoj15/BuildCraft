@@ -225,7 +225,7 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof TileTank tank) {
                 NonNullList<ItemStack> toDrop = NonNullList.create();
-                FluidItemDrops.addFluidDrops(toDrop, tank.tank);
+                FluidItemDrops.addFluidDrops(toDrop, tank.tank.getFluidStack(0));
                 for (ItemStack drop : toDrop) {
                     Block.popResource(level, pos, drop);
                 }

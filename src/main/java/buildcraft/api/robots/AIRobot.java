@@ -10,7 +10,7 @@ import net.minecraft.nbt.CompoundTag;
 import buildcraft.api.core.BCLog;
 import buildcraft.api.mj.MjAPI;
 
-import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.api.core.NbtApiUtil;
 
 public class AIRobot {
     public EntityRobotBase robot;
@@ -174,18 +174,18 @@ public class AIRobot {
     }
 
     public final void loadFromNBT(CompoundTag nbt) {
-        loadSelfFromNBT(NBTUtilBC.getCompound(nbt, "data"));
+        loadSelfFromNBT(NbtApiUtil.getCompound(nbt, "data"));
 
         if (nbt.contains("delegateAI")) {
-            CompoundTag sub = NBTUtilBC.getCompound(nbt, "delegateAI");
+            CompoundTag sub = NbtApiUtil.getCompound(nbt, "delegateAI");
 
             try {
                 Class<?> aiRobotClass;
                 if (sub.contains("class")) {
                     // Migration support for 6.4.x
-                    aiRobotClass = RobotManager.getAIRobotByLegacyClassName(NBTUtilBC.getString(sub, "class", ""));
+                    aiRobotClass = RobotManager.getAIRobotByLegacyClassName(NbtApiUtil.getString(sub, "class", ""));
                 } else {
-                    aiRobotClass = RobotManager.getAIRobotByName(NBTUtilBC.getString(sub, "aiName", ""));
+                    aiRobotClass = RobotManager.getAIRobotByName(NbtApiUtil.getString(sub, "aiName", ""));
                 }
                 if (aiRobotClass != null) {
                     delegateAI = (AIRobot) aiRobotClass.getConstructor(EntityRobotBase.class).newInstance(robot);
@@ -208,9 +208,9 @@ public class AIRobot {
             Class<?> aiRobotClass;
             if (nbt.contains("class")) {
                 // Migration support for 6.4.x
-                aiRobotClass = RobotManager.getAIRobotByLegacyClassName(NBTUtilBC.getString(nbt, "class", ""));
+                aiRobotClass = RobotManager.getAIRobotByLegacyClassName(NbtApiUtil.getString(nbt, "class", ""));
             } else {
-                aiRobotClass = RobotManager.getAIRobotByName(NBTUtilBC.getString(nbt, "aiName", ""));
+                aiRobotClass = RobotManager.getAIRobotByName(NbtApiUtil.getString(nbt, "aiName", ""));
             }
             if (aiRobotClass != null) {
                 ai = (AIRobot) aiRobotClass.getConstructor(EntityRobotBase.class).newInstance(robot);

@@ -46,7 +46,7 @@ public class StatementParameterItemStack implements IStatementParameter {
         ItemStack read = ItemStack.EMPTY;
         Tag stackPayload = nbt.get("stack");
         if (stackPayload != null) {
-            read = ItemStack.CODEC.parse(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), stackPayload)
+            read = ItemStack.CODEC.parse(buildcraft.api.core.NbtApiUtil.registryAwareOps(), stackPayload)
                     .resultOrPartial()
                     .orElse(ItemStack.EMPTY);
         }
@@ -56,7 +56,7 @@ public class StatementParameterItemStack implements IStatementParameter {
     @Override
     public void writeToNbt(CompoundTag compound) {
         if (!stack.isEmpty()) {
-            ItemStack.CODEC.encodeStart(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), stack)
+            ItemStack.CODEC.encodeStart(buildcraft.api.core.NbtApiUtil.registryAwareOps(), stack)
                     .resultOrPartial()
                     .ifPresent(payload -> compound.put("stack", payload));
         }

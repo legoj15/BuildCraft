@@ -7,7 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.Level;
 
-import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.api.core.NbtApiUtil;
 
 
 
@@ -28,7 +28,7 @@ public class MjBattery  {
     }
 
     public void deserializeNBT(CompoundTag nbt) {
-        setStored(NBTUtilBC.getLong(nbt, "stored", 0L));
+        setStored(NbtApiUtil.getLong(nbt, "stored", 0L));
     }
 
     public void writeToBuffer(ByteBuf buffer) {

@@ -28,7 +28,7 @@
 - Removed the power storing feature of the Advanced Crafting Table since it would just take power without a recipe
 - Fixed the pipe wire and Gate Copier recipes
 - Basic, Iron and Nether Brick gates got their original recipes added back
-- The "disable RF pipes" config option now kinda actually disables them
+- The "disable RF pipes" config option now attempts to make RF pipes hidden and unobtainable
 - Fixed the mining time multiplier config setting being able to be set below 1
 - Pipe pulsar now obeys power config settings
 - An engine's piston phase now survives a chunk reload without a one-tick animation hiccup

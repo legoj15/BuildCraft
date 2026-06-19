@@ -38,7 +38,10 @@ public class BCTransportConfig {
         builder.push("pipes");
 
         disableRfPipe = builder
-                .comment("Set true to disable the RF pipe")
+                .comment("Set true to disable BuildCraft's RF (Forge Energy) pipes: placed RF pipes go inert and"
+                        + " they can no longer be crafted. Intended for packs that use another mod (AE2, Thermal,"
+                        + " Mekanism, ...) for energy transport. The MJ Dynamo and RF Engine, which convert between"
+                        + " MJ and FE, stay craftable so BuildCraft still interoperates with that energy system.")
                 .define("disableRfPipe", false);
 
         mjPerItem = builder
@@ -103,7 +106,11 @@ public class BCTransportConfig {
         // When disableRfPipe is set the defs are left unregistered; placed RF pipes are made inert by
         // PipeFlowRedstoneFlux#getCapability withholding the energy capability (NeoForge can't
         // unregister the items/BEs as 1.12.2 did), and they're hidden from the creative tab in
-        // BCTransport#addCreativeTabItems. Their static JSON craft recipes remain (craftable-but-inert).
+        // BCTransport#addCreativeTabItems. Their crafting recipes (the forward kinesis->RF crafts and the
+        // reverse RF->kinesis downgrades) are dropped at datapack load by the buildcraftunofficial:rf_enabled
+        // condition (RfEnabledCondition), so disabled RF pipes are also uncraftable and absent from the recipe
+        // book and JEI. The MJ Dynamo and RF Engine (the MJ<->FE conversion bridges) are intentionally NOT
+        // gated, so BuildCraft can still interoperate with another mod's energy system.
     }
 
     private static void rfTransfer(PipeDefinition def, int maxTransfer, boolean recv) {

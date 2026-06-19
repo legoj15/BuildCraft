@@ -1,4 +1,9 @@
 {
+  "neoforge:conditions": [
+    {
+      "type": "buildcraftunofficial:rf_enabled"
+    }
+  ],
   "type": "buildcraftunofficial:hidden_shapeless",
   "category": "misc",
   "group": "buildcraft_pipe_undo",

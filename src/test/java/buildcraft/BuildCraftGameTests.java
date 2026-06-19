@@ -139,6 +139,9 @@ public class BuildCraftGameTests {
         // from the book) yet still matches; pipe-sealant producers share one group so the book collapses them.
         reg.accept("buildcraftunofficial:pipe_downgrades_hidden", () -> buildcraft.transport.HiddenShapelessRecipeTester::testPipeDowngradesHidden);
         reg.accept("buildcraftunofficial:pipe_sealant_recipes_grouped", () -> buildcraft.transport.HiddenShapelessRecipeTester::testPipeSealantRecipesGrouped);
+        // The disableRfPipe config gates the RF/Forge-Energy recipes (RF pipes, RF engine, MJ dynamo) via the
+        // buildcraftunofficial:rf_enabled condition: each gated recipe is loaded iff RF is enabled.
+        reg.accept("buildcraftunofficial:rf_recipes_gated_by_config", () -> buildcraft.transport.RfRecipeGatingTester::testRfRecipesGatedByConfig);
         // Recipe-content sync round-trip — guards the login crash from StreamCodec.unit(instance) on
         // these stateless CustomRecipes (encode compared a fresh datapack recipe to a captured instance
         // by identity → "Can't encode" → dropped the joining player during recipe sync).

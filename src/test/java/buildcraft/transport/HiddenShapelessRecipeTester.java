@@ -55,11 +55,15 @@ public class HiddenShapelessRecipeTester {
 
     public static void testPipeDowngradesHidden(GameTestHelper helper) {
         // One representative from each downgrade family — all must load as a special HiddenShapelessRecipe.
-        String[] ids = {
+        // The FE->kinesis downgrade only exists when RF is enabled (the rf_enabled condition drops it when
+        // disableRfPipe is set); the item downgrades are always present.
+        java.util.List<String> ids = new java.util.ArrayList<>(java.util.List.of(
                 "buildcraftunofficial:pipe_cobble_item_from_power", // kinesis -> item
-                "buildcraftunofficial:pipe_cobble_item_from_fluid", // fluid   -> item
-                "buildcraftunofficial:pipe_cobble_power_from_rf",   // FE      -> kinesis
-        };
+                "buildcraftunofficial:pipe_cobble_item_from_fluid"  // fluid   -> item
+        ));
+        if (!BCTransportConfig.disableRfPipe.get()) {
+            ids.add("buildcraftunofficial:pipe_cobble_power_from_rf"); // FE -> kinesis
+        }
         for (String id : ids) {
             Recipe<?> recipe = loaded(helper, id);
             if (recipe == null) {

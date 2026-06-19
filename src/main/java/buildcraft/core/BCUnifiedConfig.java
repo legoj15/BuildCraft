@@ -35,5 +35,19 @@ public class BCUnifiedConfig {
         builder.pop();
 
         SPEC = builder.build();
+
+        // Back the API's MJ ⇄ RF config accessor with the live BCLibConfig values (read lazily, so config
+        // reloads are picked up). buildGeneral() above has assigned the ConfigValue fields by now.
+        buildcraft.api.mj.MjAPI.config = new buildcraft.api.mj.MjAPI.IMjConfig() {
+            @Override
+            public double getRfConversionAmount() {
+                return buildcraft.lib.BCLibConfig.mjRfConversionAmount.get();
+            }
+
+            @Override
+            public boolean isRfAutoConvertEnabled() {
+                return buildcraft.lib.BCLibConfig.powerMode.get().autoconvert;
+            }
+        };
     }
 }

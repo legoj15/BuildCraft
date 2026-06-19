@@ -1,41 +1,35 @@
 ###### Changes since 2026.1.0-rc4:
-- Stone Pipes now require a smelted ("cooked") stone — Stone, Deepslate, Smooth Stone, or Smooth Basalt — instead of any stone-type block. The previous recipe used a broad tag that also accepted raw granite, diorite, andesite, tuff and the like, which made Stone Pipes no costlier than the lower-tier Cobblestone Pipe; Cobblestone Pipes in turn now accept any stone tool material (cobblestone, cobbled deepslate, or blackstone), matching how stone tools are crafted. Quartz Pipes now accept any quartz block (plain, chiseled, pillar, smooth, or quartz bricks), not just the plain Block of Quartz
-- Large/long pipe networks no longer drag down the server tick: every loaded pipe was needlessly rebuilding its collision shape each tick (via an unnecessary block-update cascade), a cost that scaled with pipe count — a long pipeline could add tens of ms per tick once its chunks loaded. Pipes now skip that cascade and cache their shape, so big setups run smoothly (a 600-pipe test field went from +11.6 ms/tick to no measurable cost)
+- **Large/long pipe networks no longer drag down the server tick** (aka huge performance improvement)
+- Stone Pipes now actually require a traditional "stone" block instead of also counting granite and the other easy non-cobble blocks
 - Fixed the Distiller and Heat Exchanger output tanks showing a "0 millibuckets" capacity (e.g. "4,000 / 0") and rendering their fluid as empty in the GUI gauge and the block itself — the tanks held and processed fluid correctly, only the displayed capacity and fill level were wrong
-- A pipe destroyed by an explosion, piston, or world-edit command now spills the items and fluids it was carrying onto the ground instead of voiding them (breaking a pipe by hand or pickaxe already dropped its cargo)
-- Pipes are no longer washed away (and silently lost with no drop) by flowing water — they can now be waterlogged, so you can route pipes through water and flooded areas, and placing a pipe directly into a water source keeps the water
-- A pipe (with its gates and wires) destroyed by a wither, a TNT blast, or a `/setblock`/`/fill … destroy` command now drops as an item instead of vanishing — matching how BuildCraft machines already behave (creeper blasts still consume it)
-- Machines destroyed by an explosion, piston, or world-edit command now spill their stored items and fluids instead of voiding them — Auto Workbench, Chute, Filler, Electronic Library, Filtered Buffer, Flood Gate, Pump, Tank, Distiller, Heat Exchanger, Combustion Engine, Architect Table, Builder, and the Assembly/Advanced Crafting/Integration tables; previously only a manual break returned the contents
-- Looking up a fuel, residue or coolant bucket in JEI (e.g. Cool Residue) now also lists the Combustion Engine recipes that consume or produce it, not just the heat exchanger and distiller
+- Pipes and machines destroyed by non-player action drops themselves and their contents now
+- Pipes can now be waterlogged
+- The Combustion Engine is now a JEI recipe block
 - {1.21.1} Fixed missing texture in the advancements window background
-- Fixed block textures looking grainy and shimmering at a distance — the recipe-cycle button's icon (new in rc4) was being stitched onto the block texture atlas and forcing its mipmaps off
-- Fixed pipes fading out or disappearing when viewed from a distance (and popping back as you approached or looked along them at a shallow angle), most noticeable with Mipmap Levels and anisotropic filtering turned up — their cutout textures now hold their shape through the mipmap chain
-- Fixed the moving power (MJ) glow being invisible inside kinesis pipes that carry a steady, unchanging load — most of a straight run would look empty while only a junction or a varying-load pipe showed the flow. The power level wasn't being applied when a pipe first loaded or after a relog, and a steady pipe never sends an update to correct it; pipes now pick up their current power flow on load
-- Stirling Engine can now be crafted from blackstone and cobbled deepslate (like a stone pickaxe)
+- Unbroke the block atlas again
+- Adjusted pipe mipmaps so that they're not invisible at a distance anymore
+- Fixed an edgecase where MJ within a kinesis pipe would be invisible
+- Stirling Engine can now be crafted from the same materials as a pickaxe
 - Engines now deliver their stored power continuously, instead of freezing the buffer between fuel items
 - Fixed bugs in regards to engine overheating
-- Combustion (Iron) Engine now settles at a safe green temperature when water-cooled, instead of idling permanently red on the edge of overheating, and tolerates a coolant interruption far longer before overheating — restoring its original 1.12.2 behaviour. It also no longer consumes water/coolant at up to double the intended rate while cooling down after being switched off
-- A quarry that has finished mining now stops drawing power, so the engines feeding it idle down instead of pointlessly topping off (and then overheating against) its internal battery
-- Mining Well no longer churns against flowing water: instead of repeatedly breaking the water and shooting its tube up and down, it now drills its tube straight past water (mining the solid blocks below, like the Quarry) and stays put once finished
+- Combustion engines now obey the laws of thermodynamics
+- A quarry that has finished mining no longer requests further power
+- Mining Well ignores water completely now (prevents it cycling on flowing water)
 - Guide book now shows crafting and smelting recipes on multiplayer servers (they were silently missing), and keeps them up to date after a datapack /reload or server switch
-- Guide book can now be closed with the inventory key (E, or whatever it's bound to) while still on the cover or mid-opening — handy when it was opened by accident
-- FE pipes now appear and are grouped together in the recipe book (fixing a broken item id in the unlock advancement)
-- Pipes can now be recoloured in the crafting grid with a paintbrush — spending one of its charges per pipe, just like painting in-world — or bleached back to unpainted with a water bucket; pipes can also be crafted pre-dyed directly from stained glass (now including the Gold Stripes pipe), using the same materials as each pipe's plain recipe
-- Pipe upgrades can be undone in the crafting grid — a fluid or kinesis pipe back into its plain item pipe, or an FE pipe back into a kinesis pipe (the waterproof/redstone is lost), recovering a mistakenly-upgraded pipe; all of these downgrade recipes are now kept out of the recipe book to cut clutter while staying craftable in the grid and listed in JEI
+- Guide book can now be closed with the inventory key if you haven't opened the cover yet
+- Lots of minor fixes to pipe crafting recipes and their presentation within the recipe book and JEI
+- Pipes can now be recoloured in the crafting grid with a paintbrush or directly crafted as colored pipes by using stained glass blocks
 - The three ways to make Pipe Sealant (slimeball, green dye, or an oil residue bucket) are now grouped into a single recipe-book entry
 - Facades can be toggled between their solid and hollow forms by crafting one on its own
-- Fixed a crash that disconnected players when joining a multiplayer server, caused by the new pipe paint/dye and facade-swap recipes failing to sync to the client
-- List item: fixed false matches in Accept Variations / Accept Equivalents mode — logs no longer count as equivalent to leaves, and unrelated "plain" blocks like a baked brick, cobblestone and pumpkin no longer match each other
-- Fixed crushing the mipmap due to a GUI icon making it into the block texture atlas
-- Fixed the Emerald (Diamond Wood) fluid pipe ignoring its filter — it was pulling any fluid like a plain Wooden fluid pipe; its filter slots now restrict fluid extraction to the configured fluids, as in 1.12.2
-- The Quarry no longer drills its arm down through lava or oil to mine the block beneath (which let the fluid pour into the pit) — thick fluids block the drill again, matching the Mining Well and 1.12.2 (route a Pump on top to clear them)
-- Emzuli pipe: a wrench rotates its extraction direction again, and a gate's Pipe Direction action can re-aim it again
-- The Advanced Crafting Table no longer reserves and hoards laser power while it only holds a blueprint with no materials, freeing lasers for tables that can actually craft
-- Restored the Pipe Wire assembly recipe to its 1.12.2 form (10,000 MJ from dye + redstone) — it had become half-cost but also demanded an extra iron ingot
-- The Gate Copier is now assembled from a Wrench + an iron Redstone Chipset, instead of a stick/iron/redstone/gold fallback mix
-- Basic, Iron and Nether Brick gates can again be crafted with a Plug Blocker in the bottom slot as an alternative to cobblestone
-- The "disable RF pipes" config option now genuinely disables them — hidden from the creative menu and inert (no power) when placed — instead of leaving them working
-- The mining-speed multiplier config can no longer be set to 0 (which made machine mining free and instant); its minimum is back to 1
-- The Redstone Pulsar's single-pulse (gate-driven) power again scales with the per-item / per-millibucket power config instead of a flat value (differs from default only when those are customised)
+- The "List" filtering item: fixed false matches in Accept Variations / Accept Equivalents mode
+- Made the Wooden Diamond Fluid pipe actually filter
+- Fixed the quarry pretending stuff like lava didn't exist
+- Made the Emzuli pipe rotatable again
+- Removed the power storing feature of the Advanced Crafting Table since it would just take power without a recipe
+- Fixed the pipe wire and Gate Copier recipes
+- Basic, Iron and Nether Brick gates got their original recipes added back
+- The "disable RF pipes" config option now kinda actually disables them
+- Fixed the mining time multiplier config setting being able to be set below 1
+- Pipe pulsar now obeys power config settings
 - An engine's piston phase now survives a chunk reload without a one-tick animation hiccup
 - The Mining Well reacts immediately when an adjacent block changes, rather than waiting for its periodic re-scan

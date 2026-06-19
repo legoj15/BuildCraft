@@ -131,14 +131,22 @@ public class PipeFlowPowerTester {
         helper.setBlock(enginePos, engineState);
         helper.setBlock(redstonePos, Blocks.REDSTONE_BLOCK);
 
+        //? if >=1.21.10 {
         TileEngineCreative engine = helper.getBlockEntity(enginePos, TileEngineCreative.class);
+        //?} else {
+        /*TileEngineCreative engine = helper.getBlockEntity(enginePos);*/
+        //?}
         engine.currentOutputIndex = 3; // 8 MJ/t — matches the user's 160 MJ/s combustion engine
 
         wood.getPipe().markForUpdate();
         stone.getPipe().markForUpdate();
 
         helper.succeedWhen(() -> {
+            //? if >=1.21.10 {
             TilePowerConsumerTester tester = helper.getBlockEntity(testerPos, TilePowerConsumerTester.class);
+            //?} else {
+            /*TilePowerConsumerTester tester = helper.getBlockEntity(testerPos);*/
+            //?}
             helper.assertTrue(readTesterTotal(tester) > 0,
                     "power not yet flowing through the engine→wood→stone→tester chain");
 

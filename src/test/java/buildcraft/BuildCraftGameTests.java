@@ -53,9 +53,25 @@ public class BuildCraftGameTests {
             // maxTicks, setupTicks, required, manualOnly, maxAttempts, requiredSuccesses, skyAccess, fn.
             coll.add(new net.minecraft.gametest.framework.TestFunction(
                 "defaultBatch", id, "buildcraftunofficial:empty",
-                net.minecraft.world.level.block.Rotation.NONE, 100, 0L, true, false, 1, 1, true, sup.get()));
+                net.minecraft.world.level.block.Rotation.NONE, readMaxTicks(id, 100), 0L, true, false, 1, 1, true, sup.get()));
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException("Failed to register 1.21.1 game test " + id, e);
+        }
+    }
+
+    // 1.21.1 has no test_instance manifests, so read each test's declared max_ticks straight from the
+    // same JSON resource the modern nodes consume, keeping the legacy ctor's watchdog in lock-step with
+    // the per-test timeouts (the old hard-coded 100 guillotined longer tests like the overheat hold).
+    private static int readMaxTicks(String id, int fallback) {
+        String path = id.substring(id.indexOf(':') + 1);
+        try (java.io.InputStream in = BuildCraftGameTests.class.getResourceAsStream(
+                "/data/buildcraftunofficial/test_instance/" + path + ".json")) {
+            if (in == null) return fallback;
+            com.google.gson.JsonObject o = com.google.gson.JsonParser.parseReader(
+                    new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+            return o.has("max_ticks") ? o.get("max_ticks").getAsInt() : fallback;
+        } catch (Exception e) {
+            return fallback;
         }
     }*/
     //?}

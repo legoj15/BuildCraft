@@ -15,11 +15,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 
+import net.neoforged.bus.api.SubscribeEvent;
 //? if >=26.1 {
 import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 //?} else {
-/*import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;*/
+/*import net.neoforged.neoforge.client.event.RenderLevelStageEvent;*/
 //?}
 
 import buildcraft.builders.client.render.AdvDebuggerQuarry;
@@ -72,6 +72,7 @@ public final class AdvDebugRenderer {
      * {@link net.minecraft.client.renderer.SubmitNodeCollector} for retained-mode submission. There
      * is no batch to flush — the collector flushes itself after the event returns.
      */
+    @SubscribeEvent
     public static void onSubmitGeometry(SubmitCustomGeometryEvent event) {
         BlockEntity be = resolveTarget();
         if (be == null) {

@@ -49,7 +49,7 @@ public class VanillaPaintHandlers {
         // 26.2-only paint families (these became ColorCollections in 26.2, so they're one line each):
         registerColorOnlyFamily(Blocks.GLAZED_TERRACOTTA);
         registerColorFamily(Blocks.CANDLE, Blocks.DYED_CANDLE);
-        registerColorOnlyFamily(Blocks.BED);*/
+        registerBedFamily(Blocks.BED);*/
         //?} else {
         // --- Glass ---
         registerColorFamily(Blocks.GLASS,
@@ -141,6 +141,39 @@ public class VanillaPaintHandlers {
 
     private static void registerColorOnlyFamily(ColorCollection<Block> coloredFamily) {
         registerColorOnlyFamily(coloredFamily.asList().toArray(new Block[0]));
+    }
+
+    // Beds are two blocks (head + foot). Recolour BOTH halves with UPDATE_KNOWN_SHAPE (16) so
+    // BedBlock.updateShape never sees a mismatched partner and pops the bed; UPDATE_CLIENTS (2) still
+    // syncs the change. A single setBlock would recolour one half, then the other half's shape update
+    // would find a non-matching bed in its connected direction and break it.
+    private static void registerBedFamily(ColorCollection<Block> beds) {
+        java.util.List<Block> list = beds.asList();
+        Map<Block, DyeColor> blockToColor = new IdentityHashMap<>();
+        for (int i = 0; i < 16; i++) {
+            blockToColor.put(list.get(i), DyeColor.values()[i]);
+        }
+        ICustomPaintHandler handler = (world, pos, state, hitPos, hitSide, paintColour) -> {
+            Block currentBlock = state.getBlock();
+            if (!blockToColor.containsKey(currentBlock)) {
+                return InteractionResult.PASS;
+            }
+            if (paintColour == null || blockToColor.get(currentBlock) == paintColour) {
+                return InteractionResult.FAIL;
+            }
+            Block targetBlock = list.get(paintColour.ordinal());
+            int flags = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
+            BlockPos otherPos = pos.relative(net.minecraft.world.level.block.BedBlock.getConnectedDirection(state));
+            BlockState otherState = world.getBlockState(otherPos);
+            world.setBlock(pos, copyMatchingProperties(state, targetBlock.defaultBlockState()), flags);
+            if (otherState.getBlock() == currentBlock) {
+                world.setBlock(otherPos, copyMatchingProperties(otherState, targetBlock.defaultBlockState()), flags);
+            }
+            return InteractionResult.SUCCESS;
+        };
+        for (Block bed : list) {
+            CustomPaintHelper.INSTANCE.registerHandler(bed, handler);
+        }
     }*/
     //?}
 

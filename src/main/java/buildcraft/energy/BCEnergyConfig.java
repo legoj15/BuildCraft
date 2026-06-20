@@ -26,6 +26,8 @@ public class BCEnergyConfig {
 
     public static ModConfigSpec.BooleanValue oilIsSticky;
 
+    public static ModConfigSpec.BooleanValue searingFluidSteam;
+
     public static ModConfigSpec.ConfigValue<List<? extends String>> forceExcessiveOilBiomes;
     public static ModConfigSpec.ConfigValue<List<? extends String>> richSurfaceDepositBiomes;
     public static ModConfigSpec.ConfigValue<List<? extends String>> surfaceDepositBiomes;
@@ -223,6 +225,11 @@ public class BCEnergyConfig {
         oilIsSticky = builder
                 .comment("If true, oil source blocks slow down entities standing or moving through them")
                 .define("oilIsSticky", false);
+
+        searingFluidSteam = builder
+                .comment("If true, searing-hot BuildCraft fluids (the hottest heat tier) vent rising steam",
+                         "particles from their exposed surface. Purely cosmetic and client-side.")
+                .define("searingFluidSteam", true);
     }
 
     public static void buildDisplay(ModConfigSpec.Builder builder) {

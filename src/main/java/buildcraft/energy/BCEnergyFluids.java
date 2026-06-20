@@ -29,6 +29,7 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
+import buildcraft.energy.block.BCFluidBlock;
 import buildcraft.lib.misc.RegistrationUtilBC;
 
 /**
@@ -250,7 +251,7 @@ public class BCEnergyFluids {
         // Block
         MapColor mapColor = gaseous ? MapColor.NONE : MapColor.COLOR_BLACK;
         blockHolder[0] = RegistrationUtilBC.registerBlock(BLOCKS, regName,
-                props -> new LiquidBlock(sourceHolder[0].get(), props
+                props -> new BCFluidBlock(sourceHolder[0].get(), props
                         .mapColor(mapColor)
                         .replaceable()
                         .strength(100.0F)
@@ -258,7 +259,7 @@ public class BCEnergyFluids {
                         .noLootTable()
                         .liquid()
                         .lightLevel(s -> 0)
-                ), () -> BlockBehaviour.Properties.of());
+                , heat), () -> BlockBehaviour.Properties.of());
 
         // Bucket
         bucketHolder[0] = RegistrationUtilBC.registerItem(ITEMS, regName + "_bucket",

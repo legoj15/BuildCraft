@@ -45,7 +45,11 @@ public class VanillaPaintHandlers {
         registerColorOnlyFamily(Blocks.CARPET);
         registerColorOnlyFamily(Blocks.CONCRETE);
         registerColorOnlyFamily(Blocks.CONCRETE_POWDER);
-        registerColorFamily(Blocks.SHULKER_BOX, Blocks.DYED_SHULKER_BOX);*/
+        registerColorFamily(Blocks.SHULKER_BOX, Blocks.DYED_SHULKER_BOX);
+        // 26.2-only paint families (these became ColorCollections in 26.2, so they're one line each):
+        registerColorOnlyFamily(Blocks.GLAZED_TERRACOTTA);
+        registerColorFamily(Blocks.CANDLE, Blocks.DYED_CANDLE);
+        registerColorOnlyFamily(Blocks.BED);*/
         //?} else {
         // --- Glass ---
         registerColorFamily(Blocks.GLASS,

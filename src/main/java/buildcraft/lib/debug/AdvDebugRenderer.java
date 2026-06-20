@@ -86,6 +86,24 @@ public final class AdvDebugRenderer {
             currentCollector = null;
         }
     }
+    //?} elif >=1.21.10 {
+    /*@SubscribeEvent
+    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+        BlockEntity be = resolveTarget();
+        if (be == null) {
+            return;
+        }
+        Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
+        PoseStack poseStack = event.getPoseStack();
+        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+        currentBufferSource = bufferSource;
+        try {
+            dispatch(be, poseStack, cameraPos);
+        } finally {
+            bufferSource.endBatch();
+            currentBufferSource = null;
+        }
+    }*/
     //?} else {
     /*@SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {

@@ -13,10 +13,17 @@ import java.util.WeakHashMap;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.Minecraft;
+//? if >=26.1 {
+import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+//? if >=26.1 {
+import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
+//?} else {
+/*import net.neoforged.neoforge.client.event.RenderLevelStageEvent;*/
+//?}
 
 import buildcraft.lib.client.render.laser.LaserData_BC8;
 import buildcraft.lib.client.render.laser.LaserData_BC8.LaserRow;
@@ -64,8 +71,10 @@ public class TubeRenderer {
         ACTIVE_MINERS.remove(miner);
     }
 
-    //? if >=1.21.10 {
-    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    //? if >=26.1 {
+    public static void onRenderLevel(SubmitCustomGeometryEvent event) {
+    //?} elif >=1.21.10 {
+    /*public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {*/
     //?} else {
     /*public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
@@ -89,6 +98,9 @@ public class TubeRenderer {
         Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
         //?} else {
         /*Vec3 cameraPos = event.getCamera().getPosition();*/
+        //?}
+        //? if >=26.1 {
+        SubmitNodeCollector collector = event.getSubmitNodeCollector();
         //?}
         float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
@@ -128,7 +140,11 @@ public class TubeRenderer {
             // lightmap-interpolation alternation that the start-offset fix above handles.
             LaserData_BC8 data = new LaserData_BC8(type, start, end, 1 / 16.0,
                 true, false, 0);
-            LaserRenderer_BC8.renderLaserStatic(poseStack, data, cameraPos);
+            //? if >=26.1 {
+            LaserRenderer_BC8.renderLaserStatic(poseStack, data, cameraPos, collector);
+            //?} else {
+            /*LaserRenderer_BC8.renderLaserStatic(poseStack, data, cameraPos);*/
+            //?}
         }
     }
 }

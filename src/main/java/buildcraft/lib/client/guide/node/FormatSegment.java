@@ -38,10 +38,19 @@ public final class FormatSegment {
     public String toString() {
         StringBuilder miscStr = new StringBuilder();
         for (ChatFormatting format : misc) {
+            //? if >=26.2 {
+            /*miscStr.append(format.name().toLowerCase(java.util.Locale.ROOT));
+            *///?} else {
             miscStr.append(format.getName());
+            //?}
             miscStr.append(' ');
         }
+        //? if >=26.2 {
+        /*return (colour == null ? "" : (colour.name().toLowerCase(java.util.Locale.ROOT) + ""))
+            + miscStr + text;
+        *///?} else {
         return (colour == null ? "" : (colour.getName() + ""))
             + miscStr + text;
+        //?}
     }
 }

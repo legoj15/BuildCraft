@@ -14,7 +14,9 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
+//? if <1.21.10 {
+/*import net.minecraft.client.renderer.MultiBufferSource;*/
+//?}
 import net.minecraft.client.renderer.Sheets;
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -156,12 +158,19 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
 
         poseStack.pushPose();
 
-        MultiBufferSource.BufferSource bufferSource =
-                Minecraft.getInstance().renderBuffers().bufferSource();
-
         //? if >=1.21.10 {
         float partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        //?}
+
+        // Render fluid in tanks
+        renderSmoothedFluid(tile.getSmoothIn(), sizes.tankIn, poseStack, collector, light, partialTicks);
+        renderSmoothedFluid(tile.getSmoothGasOut(), sizes.tankGasOut, poseStack, collector, light, partialTicks);
+        renderSmoothedFluid(tile.getSmoothLiquidOut(), sizes.tankLiquidOut, poseStack, collector, light, partialTicks);
+
+        // Render animated power indicator cubes
+        renderPowerCubes(tile, sizes, poseStack, collector, light, partialTicks);
+        //?} else {
+        /*MultiBufferSource.BufferSource bufferSource =
+                Minecraft.getInstance().renderBuffers().bufferSource();
 
         // Render fluid in tanks
         renderSmoothedFluid(tile.getSmoothIn(), sizes.tankIn, poseStack, bufferSource, light, partialTicks);
@@ -171,13 +180,21 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
         // Render animated power indicator cubes
         renderPowerCubes(tile, sizes, poseStack, bufferSource, light, partialTicks);
 
+        bufferSource.endBatch();*/
+        //?}
+
         poseStack.popPose();
     }
 
     // --- Fluid Rendering ---
 
+    //? if >=1.21.10 {
     private static void renderSmoothedFluid(FluidSmoother smoother, TankBounds bounds, PoseStack poseStack,
-                                             MultiBufferSource.BufferSource bufferSource, int light, float partialTicks) {
+                                             SubmitNodeCollector collector, int light, float partialTicks) {
+    //?} else {
+    /*private static void renderSmoothedFluid(FluidSmoother smoother, TankBounds bounds, PoseStack poseStack,
+                                             MultiBufferSource.BufferSource bufferSource, int light, float partialTicks) {*/
+    //?}
         FluidSmoother.FluidStackInterp interp = smoother.getFluidForRender(partialTicks);
         if (interp == null || interp.amount() <= 0) return;
 
@@ -225,15 +242,25 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
 
         // Translucent for vanilla water, cutout for BC fluids (reuse water texture opaquely)
         //? if >=1.21.10 {
-        VertexConsumer buffer = bufferSource.getBuffer(
-                FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+        RenderType renderType = FluidUtilBC.shouldRenderTranslucent(fluid)
+                    ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);
+        final float fa = a; // 'a' is reassigned above, so capture an effectively-final copy for the lambda
+        collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) ->
+                drawFluidBox(pose, buffer, sprite, minX, maxX, minZ, maxZ, fluidTop, fluidBottom,
+                        r, g, b, fa, light));
         //?} else {
         /*VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? net.minecraft.client.renderer.RenderType.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));*/
+                    ? net.minecraft.client.renderer.RenderType.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+        drawFluidBox(poseStack.last(), buffer, sprite, minX, maxX, minZ, maxZ, fluidTop, fluidBottom,
+                r, g, b, a, light);*/
         //?}
-        PoseStack.Pose pose = poseStack.last();
+    }
+
+    /** Emit the six quads of one fluid box into the given pose/buffer. */
+    private static void drawFluidBox(PoseStack.Pose pose, VertexConsumer buffer, TextureAtlasSprite sprite,
+            float minX, float maxX, float minZ, float maxZ, float fluidTop, float fluidBottom,
+            float r, float g, float b, float a, int light) {
         int overlay = OverlayTexture.NO_OVERLAY;
 
         // North face (-Z)
@@ -262,9 +289,15 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
 
     // --- Power Cube Rendering ---
 
+    //? if >=1.21.10 {
     private static void renderPowerCubes(TileDistiller_BC8 tile, TankSizes sizes,
-                                          PoseStack poseStack, MultiBufferSource.BufferSource bufferSource,
+                                          PoseStack poseStack, SubmitNodeCollector collector,
                                           int light, float partialTicks) {
+    //?} else {
+    /*private static void renderPowerCubes(TileDistiller_BC8 tile, TankSizes sizes,
+                                          PoseStack poseStack, MultiBufferSource.BufferSource bufferSource,
+                                          int light, float partialTicks) {*/
+    //?}
         // Lerp between previous and current tick's animation state for smooth per-frame animation
         double prevAnim = tile.getPrevAnimState();
         double curAnim = tile.getAnimState();
@@ -297,19 +330,24 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
 
         // Color: full white (texture provides color)
         float r = 1.0f, g = 1.0f, b = 1.0f, a = 1.0f;
-
-        //? if >=1.21.10 {
-        VertexConsumer buffer = bufferSource.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
-        //?} else {
-        /*VertexConsumer buffer = bufferSource.getBuffer(net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));*/
-        //?}
-        PoseStack.Pose pose = poseStack.last();
         int overlay = OverlayTexture.NO_OVERLAY;
 
+        //? if >=1.21.10 {
+        RenderType renderType = net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);
+        collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
+            // Right power cube
+            renderPowerCube(pose, buffer, sprite, topHalf, sizes.powerRight, y1, r, g, b, a, light, overlay);
+            // Left power cube
+            renderPowerCube(pose, buffer, sprite, topHalf, sizes.powerLeft, y2, r, g, b, a, light, overlay);
+        });
+        //?} else {
+        /*VertexConsumer buffer = bufferSource.getBuffer(net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+        PoseStack.Pose pose = poseStack.last();
         // Right power cube
         renderPowerCube(pose, buffer, sprite, topHalf, sizes.powerRight, y1, r, g, b, a, light, overlay);
         // Left power cube
-        renderPowerCube(pose, buffer, sprite, topHalf, sizes.powerLeft, y2, r, g, b, a, light, overlay);
+        renderPowerCube(pose, buffer, sprite, topHalf, sizes.powerLeft, y2, r, g, b, a, light, overlay);*/
+        //?}
     }
 
     private static void renderPowerCube(PoseStack.Pose pose, VertexConsumer buffer,

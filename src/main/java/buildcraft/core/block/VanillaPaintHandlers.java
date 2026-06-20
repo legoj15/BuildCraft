@@ -19,6 +19,9 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+//? if >=26.2 {
+/*import net.minecraft.world.level.block.ColorCollection;*/
+//?}
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
@@ -34,6 +37,16 @@ import buildcraft.api.blocks.ICustomPaintHandler;
 public class VanillaPaintHandlers {
 
     public static void fmlInit() {
+        //? if >=26.2 {
+        /*registerColorFamily(Blocks.GLASS, Blocks.STAINED_GLASS);
+        registerColorFamily(Blocks.GLASS_PANE, Blocks.STAINED_GLASS_PANE);
+        registerColorFamily(Blocks.TERRACOTTA, Blocks.DYED_TERRACOTTA);
+        registerColorOnlyFamily(Blocks.WOOL);
+        registerColorOnlyFamily(Blocks.CARPET);
+        registerColorOnlyFamily(Blocks.CONCRETE);
+        registerColorOnlyFamily(Blocks.CONCRETE_POWDER);
+        registerColorFamily(Blocks.SHULKER_BOX, Blocks.DYED_SHULKER_BOX);*/
+        //?} else {
         // --- Glass ---
         registerColorFamily(Blocks.GLASS,
             Blocks.WHITE_STAINED_GLASS, Blocks.ORANGE_STAINED_GLASS, Blocks.MAGENTA_STAINED_GLASS,
@@ -113,9 +126,19 @@ public class VanillaPaintHandlers {
             Blocks.BROWN_SHULKER_BOX, Blocks.GREEN_SHULKER_BOX, Blocks.RED_SHULKER_BOX,
             Blocks.BLACK_SHULKER_BOX
         );
+        //?}
     }
 
     // region Registration helpers
+    //? if >=26.2 {
+    /*private static void registerColorFamily(Block clearBlock, ColorCollection<Block> coloredFamily) {
+        registerColorFamily(clearBlock, coloredFamily.asList().toArray(new Block[0]));
+    }
+
+    private static void registerColorOnlyFamily(ColorCollection<Block> coloredFamily) {
+        registerColorOnlyFamily(coloredFamily.asList().toArray(new Block[0]));
+    }*/
+    //?}
 
     /**
      * Registers a color family where there is a "clear" (uncolored) variant and 16 colored variants.

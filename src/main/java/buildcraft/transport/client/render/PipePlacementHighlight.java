@@ -7,14 +7,21 @@ package buildcraft.transport.client.render;
 import org.jetbrains.annotations.Nullable;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+//? if <26.2 {
 import com.mojang.blaze3d.vertex.VertexConsumer;
+//?}
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+//? if <26.2 {
 import net.minecraft.client.renderer.MultiBufferSource;
-//? if >=1.21.10 {
+//?}
+//? if >=26.2 {
+/*import net.minecraft.client.renderer.SubmitNodeCollector;*/
+//?}
+//? if >=1.21.10 && <26.2 {
 import net.minecraft.client.renderer.ShapeRenderer;
-//?} else {
+//?} elif <1.21.10 {
 /*import net.minecraft.client.renderer.LevelRenderer;*/
 //?}
 import buildcraft.lib.client.render.BCLibRenderTypes;
@@ -181,6 +188,24 @@ public final class PipePlacementHighlight {
     /** Draws the preview outline in place of the vanilla outline. Captures only the immutable
      *  shape — never the level — as {@link CustomBlockOutlineRenderer} requires. */
     private record PreviewRenderer(VoxelShape shape) implements CustomBlockOutlineRenderer {
+        //? if >=26.2 {
+        /*@Override
+        public boolean render(BlockOutlineRenderState renderState, SubmitNodeCollector submitNodeCollector,
+                PoseStack poseStack, LevelRenderState levelRenderState) {
+            // 26.2: outline geometry goes through the retained-mode submit system. There is no
+            // per-pass callback anymore — submitShapeOutline takes an `afterTerrain` flag
+            // (= renderState.isTranslucent()) that defers the draw to the right pass, exactly as
+            // LevelRenderer.submitBlockOutline does for the vanilla outline.
+            Vec3 cam = levelRenderState.cameraRenderState.pos;
+            BlockPos pos = renderState.pos();
+            poseStack.pushPose();
+            poseStack.translate(pos.getX() - cam.x, pos.getY() - cam.y, pos.getZ() - cam.z);
+            submitNodeCollector.submitShapeOutline(poseStack, shape, BCLibRenderTypes.lines(),
+                    ARGB.black(102), 2.5F, renderState.isTranslucent());
+            poseStack.popPose();
+            return true;
+        }*/
+        //?} else {
         @Override
         public boolean render(BlockOutlineRenderState renderState, MultiBufferSource.BufferSource buffer,
                 PoseStack poseStack, boolean translucentPass, LevelRenderState levelRenderState) {
@@ -202,6 +227,7 @@ public final class PipePlacementHighlight {
             buffer.endLastBatch();
             return true;
         }
+        //?}
     }
     //?}
 }

@@ -254,9 +254,17 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
      *  request a level re-render to swap them. Equivalent to F3+A. */
     public static void onColorBlindToggle() {
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        //? if >=26.2 {
+        /*// 26.2 relocated allChanged() off LevelRenderer onto the new LevelExtractor
+        // (Minecraft.levelExtractor), which owns chunk re-bake scheduling.
+        if (mc != null && mc.levelExtractor != null) {
+            mc.levelExtractor.allChanged();
+        }*/
+        //?} else {
         if (mc != null && mc.levelRenderer != null) {
             mc.levelRenderer.allChanged();
         }
+        //?}
     }
 
     /** Called from the resource-manager reload listener (BCLibClient) — fires on F3+T, on

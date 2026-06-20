@@ -27,7 +27,11 @@ public abstract class EntityRobotBase extends LivingEntity implements IFluidHand
     public static final long NULL_ROBOT_ID = Long.MAX_VALUE;
 
     public EntityRobotBase(Level par1World) {
+        //? if >=26.2 {
+        /*super(net.minecraft.world.entity.EntityTypes.PIG, par1World);*/
+        //?} else {
         super(net.minecraft.world.entity.EntityType.PIG, par1World);
+        //?}
     }
 
     public abstract void setItemInUse(ItemStack stack);

@@ -19,7 +19,11 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 /*import net.minecraft.client.renderer.block.model.BakedQuad;*/
 //?}
 
+//? if >=26.2 {
+/*import net.minecraft.client.renderer.SubmitNodeCollector;*/
+//?} else {
 import net.minecraft.client.renderer.MultiBufferSource;
+//?}
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -69,13 +73,22 @@ public final class PipePreviewPluggables {
     private static boolean loggedFailure = false;
 
     /**
-     * Renders every pluggable captured in {@code tileNbt} into {@code buffers}, at the cell the given
-     * {@code poseStack} is already translated to. No-op if there are no pluggables or reconstruction
-     * fails. Takes the PoseStack (not just its top Pose) because the dynamic-renderer pluggables
-     * (gates, pulsars) apply their own per-side rotation.
+     * Renders every pluggable captured in {@code tileNbt} at the cell the given {@code poseStack} is
+     * already translated to. No-op if there are no pluggables or reconstruction fails. Takes the
+     * PoseStack (not just its top Pose) because the dynamic-renderer pluggables (gates, pulsars) apply
+     * their own per-side rotation.
+     * <p>
+     * The draw sink diverges at the 26.2 cliff: 26.2 removed immediate-mode rendering, so the modern
+     * path routes every draw through {@code collector.submitCustomGeometry} (one lambda per render
+     * type); pre-26.2 keeps the classic {@code MultiBufferSource.getBuffer(...)} sink.
      */
+    //? if >=26.2 {
+    /*public static void render(@Nullable CompoundTag tileNbt, PoseStack poseStack,
+            SubmitNodeCollector collector, int light) {*/
+    //?} else {
     public static void render(@Nullable CompoundTag tileNbt, PoseStack poseStack,
             MultiBufferSource buffers, int light) {
+    //?}
         if (tileNbt == null) {
             return;
         }
@@ -110,13 +123,47 @@ public final class PipePreviewPluggables {
             if (!any) {
                 return;
             }
-            PoseStack.Pose pose = poseStack.last();
             // Static-baked pluggables (plugs, lenses, filters, facades): their quads come from the
             // pluggable model cache — cutout then translucent (lens glass / colour overlays), the same
-            // render types the pipe body uses so they sit together.
-            renderQuads(PipeModelCachePluggable.cacheCutoutAll.bake(new PluggableKey(true, holder)),
+            // render types the pipe body uses so they sit together. The bake is sink-agnostic; only the
+            // draw target differs across the 26.2 cliff.
+            List<BakedQuad> cutoutQuads =
+                    PipeModelCachePluggable.cacheCutoutAll.bake(new PluggableKey(true, holder));
+            List<BakedQuad> translucentQuads =
+                    PipeModelCachePluggable.cacheTranslucentAll.bake(new PluggableKey(false, holder));
+            //? if >=26.2 {
+            /*collector.submitCustomGeometry(poseStack,
+                    BCLibRenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS),
+                    (pose, vc) -> renderQuads(cutoutQuads, pose, vc, light));
+            collector.submitCustomGeometry(poseStack,
+                    BCLibRenderTypes.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS),
+                    (pose, vc) -> renderQuads(translucentQuads, pose, vc, light));
+            // Dynamic-renderer pluggables (gates, pulsars) contribute ZERO static quads — in-world a
+            // registered per-frame renderer draws them (so toggling one doesn't force a chunk re-mesh).
+            // Drive that same renderer here. It applies its own per-side rotation, so reconstruct a
+            // fresh PoseStack seeded from the snapshot Pose the submit callback hands back (the outer
+            // poseStack is already popped by the time the deferred lambda runs). Offline there's no live
+            // world, so PlugGateRenderer falls back to full-bright.
+            collector.submitCustomGeometry(poseStack,
+                    BCLibRenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS),
+                    (pose, vc) -> {
+                        PoseStack localStack = new PoseStack();
+                        localStack.last().set(pose);
+                        for (PipePluggable plug : holder.plugs) {
+                            if (plug == null) {
+                                continue;
+                            }
+                            IPlugDynamicRenderer<PipePluggable> dyn = PipeRegistryClient.getPlugRenderer(plug);
+                            if (dyn != null) {
+                                dyn.render(plug, 0, 0, 0, 0, vc, localStack);
+                            }
+                        }
+                    });*/
+            //?} else {
+            PoseStack.Pose pose = poseStack.last();
+            renderQuads(cutoutQuads,
                     pose, buffers.getBuffer(BCLibRenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS)), light);
-            renderQuads(PipeModelCachePluggable.cacheTranslucentAll.bake(new PluggableKey(false, holder)),
+            renderQuads(translucentQuads,
                     pose, buffers.getBuffer(BCLibRenderTypes.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS)), light);
             // Dynamic-renderer pluggables (gates, pulsars) contribute ZERO static quads — in-world a
             // registered per-frame renderer draws them (so toggling one doesn't force a chunk re-mesh).
@@ -133,6 +180,7 @@ public final class PipePreviewPluggables {
                     dyn.render(plug, 0, 0, 0, 0, dynBuffer, poseStack);
                 }
             }
+            //?}
         } catch (Throwable t) {
             // Degrade to pipe-body-only on any offline reconstruction/bake failure. Log once — this was
             // a silent black box before, so surface it if a future pluggable can't be rebuilt offline.

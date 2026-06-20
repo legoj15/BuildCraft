@@ -24,8 +24,10 @@ public class BCBuildersClient {
     public static void initClient(IEventBus modEventBus) {
         modEventBus.register(BCBuildersClient.class);
         NeoForge.EVENT_BUS.addListener(
-                //? if >=1.21.10 {
-                RenderLevelStageEvent.AfterTranslucentBlocks.class,
+                //? if >=26.1 {
+                net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent.class,
+                //?} elif >=1.21.10 {
+                /*RenderLevelStageEvent.AfterTranslucentBlocks.class,*/
                 //?} else {
                 /*RenderLevelStageEvent.class,*/
                 //?}

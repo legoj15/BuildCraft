@@ -6,10 +6,16 @@
 
 package buildcraft.transport.client.render;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.LevelRenderer;
+//? if <26.2 {
+import net.minecraft.client.renderer.MultiBufferSource;
+//?}
+//? if >=1.21.10 {
+import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
@@ -17,6 +23,7 @@ import net.minecraft.resources.Identifier;
 
 import buildcraft.api.transport.pipe.IPipeBehaviourRenderer;
 import buildcraft.lib.client.model.MutableQuad;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourStripes;
 
 /** Renders the stripes pipe's small directional "laser" beam protruding from
@@ -29,32 +36,60 @@ public enum PipeBehaviourRendererStripes implements IPipeBehaviourRenderer<PipeB
     /** Cached quads for each direction (lazily built). */
     private static final MutableQuad[][] DIRECTION_QUADS = new MutableQuad[6][];
 
+    //? if >=1.21.10 {
+    /** Modern (>=1.21.10) entry: the BER passes its {@link SubmitNodeCollector}, so the beam geometry
+     *  is queued via {@code submitCustomGeometry} (retained-mode "submit"). 26.2 removed the
+     *  immediate-mode {@code renderBuffers()} path entirely; the collector path is identical on
+     *  1.21.10/1.21.11/26.1/26.2. */
+    public void render(PipeBehaviourStripes stripes, double x, double y, double z, float partialTicks,
+                       SubmitNodeCollector collector, com.mojang.blaze3d.vertex.PoseStack poseStack) {
+        Direction dir = stripes.direction;
+        if (dir == null) return;
+        MutableQuad[] quads = getQuads(dir);
+        int light = beamLight(stripes);
+        collector.submitCustomGeometry(poseStack, BCLibRenderTypes.cutoutBlockSheet(),
+            (pose, consumer) -> drawBeam(quads, light, pose, consumer));
+    }
+    //?}
+
     @Override
     public void render(PipeBehaviourStripes stripes, double x, double y, double z,
-                       float partialTicks, VertexConsumer bb, com.mojang.blaze3d.vertex.PoseStack.Pose pose) {
+                       float partialTicks, VertexConsumer bb, PoseStack.Pose pose) {
         Direction dir = stripes.direction;
         if (dir == null) return;
 
         MutableQuad[] quads = getQuads(dir);
-        int light = buildcraft.lib.client.render.LightUtil.getLightCoords(
+        int light = beamLight(stripes);
+
+        //? if <26.2 {
+        // 1.21.1..26.1 classic immediate-mode path (this interface overload is only reached on those
+        // nodes; >=1.21.10 BERs call the SubmitNodeCollector overload above). The BER does not pass a
+        // shared VertexConsumer, so create a dedicated buffer.
+        MultiBufferSource.BufferSource bufferSource =
+            Minecraft.getInstance().renderBuffers().bufferSource();
+        VertexConsumer buffer = bufferSource.getBuffer(BCLibRenderTypes.cutoutBlockSheet());
+        drawBeam(quads, light, pose, buffer);
+        bufferSource.endBatch(BCLibRenderTypes.cutoutBlockSheet());
+        //?}
+    }
+
+    private static int beamLight(PipeBehaviourStripes stripes) {
+        return buildcraft.lib.client.render.LightUtil.getLightCoords(
             stripes.pipe.getHolder().getPipeWorld(),
             stripes.pipe.getHolder().getPipePos()
         );
+    }
 
-        // Create a dedicated buffer — the BER no longer passes a shared VertexConsumer
-        net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource =
-            Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer buffer = bufferSource.getBuffer(
-            net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
-
+    /** Draws the cached beam quads into {@code buffer}. Node-agnostic: {@code pose} / {@code buffer}
+     *  come from the {@code submitCustomGeometry} lambda on >=1.21.10 and from the immediate-mode
+     *  buffer source on 1.21.1. */
+    private static void drawBeam(MutableQuad[] quads, int light, PoseStack.Pose pose, VertexConsumer buffer) {
         for (MutableQuad cached : quads) {
             // Copy so we don't permanently mutate the cached quad
             MutableQuad q = new MutableQuad(cached);
             q.lighti(light);
             q.render(pose, buffer);
         }
-
-        bufferSource.endBatch(net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
     }
 
     /** Get or build the quads for the given direction. */

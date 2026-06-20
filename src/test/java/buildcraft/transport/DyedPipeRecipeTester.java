@@ -23,7 +23,11 @@ public class DyedPipeRecipeTester {
 
     public static void testSymmetricStonePipe(GameTestHelper helper) {
         ItemStack stone = new ItemStack(Items.STONE);
+        //? if >=26.2 {
+        /*ItemStack glass = new ItemStack(Items.STAINED_GLASS.pick(DyeColor.RED));*/
+        //?} else {
         ItemStack glass = new ItemStack(Items.RED_STAINED_GLASS);
+        //?}
         CraftingInput input = CraftingInput.of(3, 1, List.of(stone, glass, stone.copy()));
         if (!RECIPE.matches(input, helper.getLevel())) {
             helper.fail("dyed-pipe recipe should match stone + red stained glass + stone");
@@ -52,7 +56,11 @@ public class DyedPipeRecipeTester {
     public static void testAsymmetricDiamondWoodBothOrientations(GameTestHelper helper) {
         ItemStack planks = new ItemStack(Items.OAK_PLANKS);
         ItemStack diamond = new ItemStack(Items.DIAMOND);
+        //? if >=26.2 {
+        /*ItemStack glass = new ItemStack(Items.STAINED_GLASS.pick(DyeColor.LIME));*/
+        //?} else {
         ItemStack glass = new ItemStack(Items.LIME_STAINED_GLASS);
+        //?}
         // planks | glass | diamond
         //? if >=26.1 {
         ItemStack a = RECIPE.assemble(CraftingInput.of(3, 1, List.of(planks, glass, diamond)));

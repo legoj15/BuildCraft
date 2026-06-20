@@ -226,7 +226,12 @@ public class PathConnection extends MarkerConnection<PathConnection> {
         Vec3 two = offset(to, from);
         LaserData_BC8 data = new LaserData_BC8(BuildCraftLaserManager.MARKER_PATH_CONNECTED, one, two, RENDER_SCALE,
                 false, false, 0);
-        LaserRenderer_BC8.renderLaserStatic(MarkerRenderer.getPoseStack(), data, MarkerRenderer.getCameraPos());
+        //? if >=26.1 {
+        LaserRenderer_BC8.renderLaserStatic(MarkerRenderer.getPoseStack(), data, MarkerRenderer.getCameraPos(),
+                MarkerRenderer.getCollector());
+        //?} else {
+        /*LaserRenderer_BC8.renderLaserStatic(MarkerRenderer.getPoseStack(), data, MarkerRenderer.getCameraPos());*/
+        //?}
     }
 
     private static Vec3 offset(Vec3 from, Vec3 to) {

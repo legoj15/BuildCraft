@@ -33,9 +33,9 @@ public final class PlaceTaskCubeRenderer {
 
     /** Draw one place-task item as a ~0.30-block sprite cube at {@code pos} (camera-relative). */
     public static void renderItemCube(ItemStack item, Vec3 pos, Vec3 cameraPos, PoseStack poseStack) {
-        //? if >=26.1 {
         // 26.1 renders the place-task cube via the SubmitNodeCollector path in ItemRenderUtil;
         // this method is a no-op stub on that node.
+        //? if >=26.1 {
         //?} elif >=1.21.10 {
         /*if (item.isEmpty()) return;
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();

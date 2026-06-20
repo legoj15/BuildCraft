@@ -167,6 +167,10 @@ public class VolumeConnection extends MarkerConnection<VolumeConnection> {
         LaserBoxRenderer.renderLaserBoxStatic(
                 MarkerRenderer.getPoseStack(), box,
                 BuildCraftLaserManager.MARKER_VOLUME_CONNECTED, true, false,
-                MarkerRenderer.getCameraPos());
+                MarkerRenderer.getCameraPos()
+                //? if >=26.1 {
+                , MarkerRenderer.getCollector()
+                //?}
+        );
     }
 }

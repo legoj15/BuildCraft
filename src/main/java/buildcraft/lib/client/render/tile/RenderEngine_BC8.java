@@ -12,8 +12,9 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.Sheets;
+//? if <1.21.10 {
+/*import net.minecraft.client.renderer.MultiBufferSource;*/
+//?}
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 //?}
@@ -113,18 +114,13 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
 
         int light = buildcraft.lib.client.render.LightUtil.getLightCoords(level, pos);
 
-        MultiBufferSource.BufferSource bufferSource =
+        //? if >=1.21.10 {
+        collector.submitCustomGeometry(poseStack, buildcraft.lib.client.render.BCLibRenderTypes.cutoutBlockSheet(),
+                (pose, consumer) -> renderQuads(quads, light, pose, consumer));
+        //?} else {
+        /*MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer buffer = bufferSource.getBuffer(Sheets.cutoutBlockSheet());
-
-        // Render quads directly via MutableQuad.render() which writes per-vertex
-        // color, normal, UV, and lightmap data. This bypasses BakedQuad (which in
-        // 26.1 carries no vertex colors) and ensures diffuse shading is applied.
-        for (MutableQuad quad : quads) {
-            quad.setCalculatedDiffuse();
-            quad.lighti(light);
-            quad.render(poseStack.last(), buffer);
-        }
+        renderQuads(quads, light, poseStack.last(), bufferSource.getBuffer(buildcraft.lib.client.render.BCLibRenderTypes.cutoutBlockSheet()));
 
         // Intentionally not calling bufferSource.endBatch() here — the previous
         // implementation issued a *full* flush per engine per frame (no render-type
@@ -133,10 +129,29 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
         // GPU-sync overhead per visible engine. The BlockEntityRenderDispatcher
         // already calls endBatch on the shared buffer source after all BE
         // renders complete, so the quads we just wrote get drained at the
-        // correct time without any per-engine intervention.
+        // correct time without any per-engine intervention.*/
+        //?}
         poseStack.popPose();
         } finally {
             _profiler.pop();
+        }
+    }
+
+    /**
+     * Renders the animated engine quads into the supplied consumer. Node-agnostic:
+     * on the modern (>=1.21.10) submit path {@code pose}/{@code consumer} come from the
+     * {@link net.minecraft.client.renderer.SubmitNodeCollector.CustomGeometryRenderer}
+     * lambda; on 1.21.1 they are derived from the immediate-mode buffer source.
+     * <p>
+     * Render quads directly via {@link MutableQuad#render} which writes per-vertex
+     * color, normal, UV, and lightmap data. This bypasses BakedQuad (which in 26.1
+     * carries no vertex colors) and ensures diffuse shading is applied.
+     */
+    private void renderQuads(MutableQuad[] quads, int light, PoseStack.Pose pose, VertexConsumer consumer) {
+        for (MutableQuad quad : quads) {
+            quad.setCalculatedDiffuse();
+            quad.lighti(light);
+            quad.render(pose, consumer);
         }
     }
 }

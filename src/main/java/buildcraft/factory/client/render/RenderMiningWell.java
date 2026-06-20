@@ -10,7 +10,9 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+//? if <1.21.10 {
+/*import net.minecraft.client.renderer.MultiBufferSource;*/
+//?}
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 //?}
@@ -129,16 +131,21 @@ public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, Min
 
         poseStack.pushPose();
 
-        MultiBufferSource.BufferSource bufferSource =
+        //? if >=1.21.10 {
+        collector.submitCustomGeometry(poseStack, BCLibRenderTypes.led(),
+                (pose, consumer) -> renderLEDs(tile, pos, level, pose, consumer));
+        //?} else {
+        /*MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
-        renderLEDs(tile, pos, level, poseStack, bufferSource);
-        bufferSource.endBatch();
+        renderLEDs(tile, pos, level, poseStack.last(), bufferSource.getBuffer(BCLibRenderTypes.led()));
+        bufferSource.endBatch();*/
+        //?}
 
         poseStack.popPose();
     }
 
     private void renderLEDs(TileMiningWell tile, BlockPos pos, Level level,
-                            PoseStack poseStack, MultiBufferSource.BufferSource bufferSource) {
+                            PoseStack.Pose pose, VertexConsumer consumer) {
         BlockState state = level.getBlockState(pos);
         Direction facing = state.is(BCFactoryBlocks.MINING_WELL.get())
                 ? state.getValue(BuildCraftProperties.BLOCK_FACING)
@@ -154,9 +161,6 @@ public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, Min
         LedRenderUtil.setFacePosition(LED_STATUS, facing, LED_INSET, STATUS_OFFSET, Y);
         LED_POWER.center.colouri(powerColour);
         LED_STATUS.center.colouri(statusColour);
-
-        VertexConsumer consumer = bufferSource.getBuffer(BCLibRenderTypes.led());
-        PoseStack.Pose pose = poseStack.last();
 
         // Skip the inward face — it's always hidden against the block body
         Direction skipFace = facing.getOpposite();

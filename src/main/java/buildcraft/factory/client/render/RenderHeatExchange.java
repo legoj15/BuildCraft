@@ -15,7 +15,9 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
+//? if <1.21.10 {
+/*import net.minecraft.client.renderer.MultiBufferSource;*/
+//?}
 import net.minecraft.client.renderer.Sheets;
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -39,7 +41,11 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
+//? if >=1.21.10 {
 import net.minecraft.client.renderer.rendertype.RenderType;
+//?} else {
+/*import net.minecraft.client.renderer.RenderType;*/
+//?}
 
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -156,23 +162,34 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
 
         poseStack.pushPose();
 
-        MultiBufferSource.BufferSource bufferSource =
-                Minecraft.getInstance().renderBuffers().bufferSource();
-
         //? if >=1.21.10 {
         float partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        //?} else {
+        /*MultiBufferSource.BufferSource bufferSource =
+                Minecraft.getInstance().renderBuffers().bufferSource();*/
         //?}
 
+        //? if >=1.21.10 {
         // Render fluid in start tanks
+        renderSmoothedFluid(section.smoothedTankInput, TANK_BOTTOM, poseStack, collector, light, partialTicks);
+        renderSmoothedFluid(section.smoothedTankOutput, sideTank.start, poseStack, collector, light, partialTicks);
+        //?} else {
+        /*// Render fluid in start tanks
         renderSmoothedFluid(section.smoothedTankInput, TANK_BOTTOM, poseStack, bufferSource, light, partialTicks);
-        renderSmoothedFluid(section.smoothedTankOutput, sideTank.start, poseStack, bufferSource, light, partialTicks);
+        renderSmoothedFluid(section.smoothedTankOutput, sideTank.start, poseStack, bufferSource, light, partialTicks);*/
+        //?}
 
         // Render fluid in end tanks
         if (sectionEnd != null) {
             BlockPos diff = sectionEnd.getTile().getBlockPos().subtract(tile.getBlockPos());
             poseStack.translate(diff.getX(), diff.getY(), diff.getZ());
-            renderSmoothedFluid(sectionEnd.smoothedTankOutput, TANK_TOP, poseStack, bufferSource, light, partialTicks);
-            renderSmoothedFluid(sectionEnd.smoothedTankInput, sideTank.end, poseStack, bufferSource, light, partialTicks);
+            //? if >=1.21.10 {
+            renderSmoothedFluid(sectionEnd.smoothedTankOutput, TANK_TOP, poseStack, collector, light, partialTicks);
+            renderSmoothedFluid(sectionEnd.smoothedTankInput, sideTank.end, poseStack, collector, light, partialTicks);
+            //?} else {
+            /*renderSmoothedFluid(sectionEnd.smoothedTankOutput, TANK_TOP, poseStack, bufferSource, light, partialTicks);
+            renderSmoothedFluid(sectionEnd.smoothedTankInput, sideTank.end, poseStack, bufferSource, light, partialTicks);*/
+            //?}
             poseStack.translate(-diff.getX(), -diff.getY(), -diff.getZ());
         }
 
@@ -208,13 +225,23 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
                 FluidStack heatantFluid = section.smoothedTankInput.getFluid();
                 // Render upper flow (coolant)
                 if (!coolantFluid.isEmpty()) {
-                    renderFlow(vDiff, face, poseStack, bufferSource, progressStart + 0.01, progressEnd - 0.01,
+                    //? if >=1.21.10 {
+                    renderFlow(vDiff, face, poseStack, collector, progressStart + 0.01, progressEnd - 0.01,
                             coolantFluid, 4, partialTicks, light);
+                    //?} else {
+                    /*renderFlow(vDiff, face, poseStack, bufferSource, progressStart + 0.01, progressEnd - 0.01,
+                            coolantFluid, 4, partialTicks, light);*/
+                    //?}
                 }
                 // Render lower flow (heatant)
                 if (!heatantFluid.isEmpty()) {
-                    renderFlow(vDiff, face.getOpposite(), poseStack, bufferSource, otherStart, otherEnd,
+                    //? if >=1.21.10 {
+                    renderFlow(vDiff, face.getOpposite(), poseStack, collector, otherStart, otherEnd,
                             heatantFluid, 2, partialTicks, light);
+                    //?} else {
+                    /*renderFlow(vDiff, face.getOpposite(), poseStack, bufferSource, otherStart, otherEnd,
+                            heatantFluid, 2, partialTicks, light);*/
+                    //?}
                 }
             }
         }
@@ -229,8 +256,13 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
 
     // --- Fluid Rendering ---
 
+    //? if >=1.21.10 {
     private static void renderSmoothedFluid(FluidSmoother smoother, TankBounds bounds, PoseStack poseStack,
-                                             MultiBufferSource.BufferSource bufferSource, int light, float partialTicks) {
+                                             SubmitNodeCollector collector, int light, float partialTicks) {
+    //?} else {
+    /*private static void renderSmoothedFluid(FluidSmoother smoother, TankBounds bounds, PoseStack poseStack,
+                                             MultiBufferSource.BufferSource bufferSource, int light, float partialTicks) {*/
+    //?}
         FluidSmoother.FluidStackInterp interp = smoother.getFluidForRender(partialTicks);
         if (interp == null || interp.amount() <= 0) return;
 
@@ -272,17 +304,28 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
             fluidTop = minY + (maxY - minY) * fillRatio;
         }
 
+        // 'a' is reassigned above (0-alpha clamp), so alias it final for the lambda capture.
+        final float fa = a;
         // Translucent for vanilla water, cutout for BC fluids (reuse water texture opaquely)
         //? if >=1.21.10 {
-        VertexConsumer buffer = bufferSource.getBuffer(
+        collector.submitCustomGeometry(poseStack,
                 FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+                    ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS),
+                (pose, buffer) -> drawTankFluid(pose, buffer, sprite,
+                        minX, minZ, maxX, maxZ, fluidTop, fluidBottom, r, g, b, fa, light));
         //?} else {
         /*VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? net.minecraft.client.renderer.RenderType.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));*/
+                    ? net.minecraft.client.renderer.RenderType.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+        drawTankFluid(poseStack.last(), buffer, sprite,
+                minX, minZ, maxX, maxZ, fluidTop, fluidBottom, r, g, b, a, light);*/
         //?}
-        PoseStack.Pose pose = poseStack.last();
+    }
+
+    /** Node-agnostic core: draws the six faces of a tank's fluid box into {@code buffer}. */
+    private static void drawTankFluid(PoseStack.Pose pose, VertexConsumer buffer, TextureAtlasSprite sprite,
+            float minX, float minZ, float maxX, float maxZ, float fluidTop, float fluidBottom,
+            float r, float g, float b, float a, int light) {
         int overlay = OverlayTexture.NO_OVERLAY;
 
         // North face (-Z)
@@ -311,10 +354,17 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
 
     // --- Flow Rendering ---
 
+    //? if >=1.21.10 {
     private static void renderFlow(Vec3 diff, Direction face, PoseStack poseStack,
-                                    MultiBufferSource.BufferSource bufferSource,
+                                    SubmitNodeCollector collector,
                                     double s, double e, FluidStack fluid,
                                     int point, float partialTicks, int light) {
+    //?} else {
+    /*private static void renderFlow(Vec3 diff, Direction face, PoseStack poseStack,
+                                    MultiBufferSource.BufferSource bufferSource,
+                                    double s, double e, FluidStack fluid,
+                                    int point, float partialTicks, int light) {*/
+    //?}
         if (fluid.isEmpty()) return;
 
         Identifier stillTexture = FluidUtilBC.getFluidTexture(fluid);
@@ -333,15 +383,14 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
 
         // Translucent for vanilla water, cutout for BC fluids
         //? if >=1.21.10 {
-        VertexConsumer buffer = bufferSource.getBuffer(
+        final RenderType renderType =
                 FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+                    ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);
         //?} else {
         /*VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
                     ? net.minecraft.client.renderer.RenderType.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));*/
         //?}
-        int overlay = OverlayTexture.NO_OVERLAY;
 
         Level level = Minecraft.getInstance().level;
         double tickTime = level != null ? level.getGameTime() : 0;
@@ -358,8 +407,8 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         /*Vec3 dirVec = Vec3.atLowerCornerOf(renderFace.getNormal());*/
         //?}
         double ds = (point + 0.1) / 16.0;
-        float minCross = (float) ds;
-        float maxCross = (float) (1 - ds);
+        final float minCross = (float) ds;
+        final float maxCross = (float) (1 - ds);
 
         diff = diff.subtract(dirVec.scale(offset));
         s += offset;
@@ -377,7 +426,6 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
             }
             poseStack.pushPose();
             poseStack.translate(diff.x, diff.y, diff.z);
-            PoseStack.Pose pose = poseStack.last(); // capture AFTER translate
             diff = diff.add(dirVec);
 
             double s1 = s < i ? 0 : (s % 1);
@@ -399,37 +447,63 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
             if (s < i) sides[renderFace.getOpposite().ordinal()] = false;
             if (e > i + 1) sides[renderFace.ordinal()] = false;
 
-            // Render all visible faces
-            if (sides[Direction.NORTH.ordinal()]) {
-                quad(pose, buffer, sprite, flowMinX, flowMaxY, flowMinZ, flowMaxX, flowMaxY, flowMinZ,
-                        flowMaxX, flowMinY, flowMinZ, flowMinX, flowMinY, flowMinZ,
-                        0, 0, -1, r, g, b, a, light, overlay);
-            }
-            if (sides[Direction.SOUTH.ordinal()]) {
-                quad(pose, buffer, sprite, flowMinX, flowMinY, flowMaxZ, flowMaxX, flowMinY, flowMaxZ,
-                        flowMaxX, flowMaxY, flowMaxZ, flowMinX, flowMaxY, flowMaxZ,
-                        0, 0, 1, r, g, b, a, light, overlay);
-            }
-            if (sides[Direction.WEST.ordinal()]) {
-                quad(pose, buffer, sprite, flowMinX, flowMinY, flowMinZ, flowMinX, flowMinY, flowMaxZ,
-                        flowMinX, flowMaxY, flowMaxZ, flowMinX, flowMaxY, flowMinZ,
-                        -1, 0, 0, r, g, b, a, light, overlay);
-            }
-            if (sides[Direction.EAST.ordinal()]) {
-                quad(pose, buffer, sprite, flowMaxX, flowMaxY, flowMinZ, flowMaxX, flowMaxY, flowMaxZ,
-                        flowMaxX, flowMinY, flowMaxZ, flowMaxX, flowMinY, flowMinZ,
-                        1, 0, 0, r, g, b, a, light, overlay);
-            }
-            if (sides[Direction.UP.ordinal()]) {
-                quadHorizontal(pose, buffer, sprite, flowMinX, flowMaxX, flowMaxZ, flowMinZ, flowMaxY,
-                        0, 1, 0, r, g, b, a, light, overlay);
-            }
-            if (sides[Direction.DOWN.ordinal()]) {
-                quadHorizontal(pose, buffer, sprite, flowMinX, flowMaxX, flowMaxZ, flowMinZ, flowMinY,
-                        0, -1, 0, r, g, b, a, light, overlay);
-            }
+            // Snapshot per-box bounds/visibility into final locals so the modern submit lambda can capture them.
+            final float fMinX = flowMinX, fMaxX = flowMaxX;
+            final float fMinY = flowMinY, fMaxY = flowMaxY;
+            final float fMinZ = flowMinZ, fMaxZ = flowMaxZ;
+            final boolean[] visible = sides;
+            final float fr = r, fg = g, fb = b, fa = a;
+            final TextureAtlasSprite fSprite = sprite;
+            final int fLight = light;
+
+            //? if >=1.21.10 {
+            collector.submitCustomGeometry(poseStack, renderType,
+                    (pose, buffer) -> drawFlowBox(pose, buffer, fSprite, visible,
+                            fMinX, fMinY, fMinZ, fMaxX, fMaxY, fMaxZ, fr, fg, fb, fa, fLight));
+            //?} else {
+            /*drawFlowBox(poseStack.last(), buffer, fSprite, visible,
+                    fMinX, fMinY, fMinZ, fMaxX, fMaxY, fMaxZ, fr, fg, fb, fa, fLight);*/
+            //?}
 
             poseStack.popPose();
+        }
+    }
+
+    /** Node-agnostic core: draws the visible faces of one flow box into {@code buffer}. */
+    private static void drawFlowBox(PoseStack.Pose pose, VertexConsumer buffer, TextureAtlasSprite sprite,
+            boolean[] sides,
+            float flowMinX, float flowMinY, float flowMinZ, float flowMaxX, float flowMaxY, float flowMaxZ,
+            float r, float g, float b, float a, int light) {
+        int overlay = OverlayTexture.NO_OVERLAY;
+
+        // Render all visible faces
+        if (sides[Direction.NORTH.ordinal()]) {
+            quad(pose, buffer, sprite, flowMinX, flowMaxY, flowMinZ, flowMaxX, flowMaxY, flowMinZ,
+                    flowMaxX, flowMinY, flowMinZ, flowMinX, flowMinY, flowMinZ,
+                    0, 0, -1, r, g, b, a, light, overlay);
+        }
+        if (sides[Direction.SOUTH.ordinal()]) {
+            quad(pose, buffer, sprite, flowMinX, flowMinY, flowMaxZ, flowMaxX, flowMinY, flowMaxZ,
+                    flowMaxX, flowMaxY, flowMaxZ, flowMinX, flowMaxY, flowMaxZ,
+                    0, 0, 1, r, g, b, a, light, overlay);
+        }
+        if (sides[Direction.WEST.ordinal()]) {
+            quad(pose, buffer, sprite, flowMinX, flowMinY, flowMinZ, flowMinX, flowMinY, flowMaxZ,
+                    flowMinX, flowMaxY, flowMaxZ, flowMinX, flowMaxY, flowMinZ,
+                    -1, 0, 0, r, g, b, a, light, overlay);
+        }
+        if (sides[Direction.EAST.ordinal()]) {
+            quad(pose, buffer, sprite, flowMaxX, flowMaxY, flowMinZ, flowMaxX, flowMaxY, flowMaxZ,
+                    flowMaxX, flowMinY, flowMaxZ, flowMaxX, flowMinY, flowMinZ,
+                    1, 0, 0, r, g, b, a, light, overlay);
+        }
+        if (sides[Direction.UP.ordinal()]) {
+            quadHorizontal(pose, buffer, sprite, flowMinX, flowMaxX, flowMaxZ, flowMinZ, flowMaxY,
+                    0, 1, 0, r, g, b, a, light, overlay);
+        }
+        if (sides[Direction.DOWN.ordinal()]) {
+            quadHorizontal(pose, buffer, sprite, flowMinX, flowMaxX, flowMaxZ, flowMinZ, flowMinY,
+                    0, -1, 0, r, g, b, a, light, overlay);
         }
     }
 

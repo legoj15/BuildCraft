@@ -119,6 +119,29 @@ public enum MinecraftFont implements IFontRenderer {
      *  colour and decoration flags, so that the resulting String renders the
      *  same way the styled FormattedCharSequence did. */
     private static void appendLegacyCodes(StringBuilder sb, Style style) {
+        //? if >=26.2 {
+        /*// On 26.2 ChatFormatting.toString() already yields the full "§x" prefixed code,
+        // so append the constant directly instead of PREFIX_CODE + getChar().
+        sb.append(ChatFormatting.RESET);
+        TextColor color = style.getColor();
+        if (color != null) {
+            for (ChatFormatting fmt : ChatFormatting.values()) {
+                if (!isColour(fmt)) {
+                    continue;
+                }
+                TextColor fmtColor = TextColor.fromLegacyFormat(fmt);
+                if (fmtColor != null && fmtColor.getValue() == color.getValue()) {
+                    sb.append(fmt);
+                    break;
+                }
+            }
+        }
+        if (style.isBold()) sb.append(ChatFormatting.BOLD);
+        if (style.isItalic()) sb.append(ChatFormatting.ITALIC);
+        if (style.isUnderlined()) sb.append(ChatFormatting.UNDERLINE);
+        if (style.isStrikethrough()) sb.append(ChatFormatting.STRIKETHROUGH);
+        if (style.isObfuscated()) sb.append(ChatFormatting.OBFUSCATED);
+        *///?} else {
         sb.append(ChatFormatting.PREFIX_CODE).append(ChatFormatting.RESET.getChar());
         TextColor color = style.getColor();
         if (color != null) {
@@ -134,5 +157,14 @@ public enum MinecraftFont implements IFontRenderer {
         if (style.isUnderlined()) sb.append(ChatFormatting.PREFIX_CODE).append(ChatFormatting.UNDERLINE.getChar());
         if (style.isStrikethrough()) sb.append(ChatFormatting.PREFIX_CODE).append(ChatFormatting.STRIKETHROUGH.getChar());
         if (style.isObfuscated()) sb.append(ChatFormatting.PREFIX_CODE).append(ChatFormatting.OBFUSCATED.getChar());
+        //?}
     }
+
+    //? if >=26.2 {
+    /*// On 26.2 ChatFormatting lost isColor(); colours are the first 16 enum constants
+    // (BLACK=0 .. WHITE=15), styles and RESET come after.
+    private static boolean isColour(ChatFormatting f) {
+        return f.ordinal() <= ChatFormatting.WHITE.ordinal();
+    }
+    *///?}
 }

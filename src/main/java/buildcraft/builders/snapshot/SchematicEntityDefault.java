@@ -30,6 +30,9 @@ import net.minecraft.world.entity.Entity;
 //? if >=1.21.10 {
 import net.minecraft.world.entity.EntitySpawnReason;
 //?}
+//? if >=26.2 {
+/*import net.minecraft.world.entity.EntitySpawnRequest;*/
+//?}
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.HangingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -161,7 +164,17 @@ public class SchematicEntityDefault implements ISchematicEntity {
             rotate = false;
         }
         // Load entity from NBT via EntityType.create
-        //? if >=1.21.10 {
+        //? if >=26.2 {
+        /*Optional<Entity> optEntity = EntityType.create(
+            TagValueInput.create(
+                ProblemReporter.DISCARDING,
+                level.registryAccess(),
+                newEntityNbt
+            ),
+            level,
+            new EntitySpawnRequest(EntitySpawnReason.COMMAND, false)
+        );*/
+        //?} elif >=1.21.10 {
         Optional<Entity> optEntity = EntityType.create(
             TagValueInput.create(
                 ProblemReporter.DISCARDING,

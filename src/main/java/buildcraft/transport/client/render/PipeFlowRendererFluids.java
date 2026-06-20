@@ -11,7 +11,13 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import org.joml.Vector3f;
 
 import net.minecraft.client.Minecraft;
+//? if <26.2 {
 import net.minecraft.client.renderer.MultiBufferSource;
+//?}
+//? if >=1.21.10 {
+import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
+import net.minecraft.client.renderer.rendertype.RenderType;
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
@@ -84,6 +90,33 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
     private static final ThreadLocal<Vector3f> TL_NORM =
         ThreadLocal.withInitial(Vector3f::new);
 
+    /** The render type this fluid draws into. Translucent for vanilla water (the texture has alpha
+     *  pixels); cutout for BC fluids (which reuse water as a tint base but should be opaque). */
+    private static RenderType fluidRenderType(boolean translucent) {
+        return translucent
+            ? BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS)
+            : BCLibRenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS);
+    }
+
+    //? if >=1.21.10 {
+    /** Modern (>=1.21.10) entry: the BER passes its {@link SubmitNodeCollector}, so fluid geometry
+     *  is queued via {@code submitCustomGeometry} (retained-mode "submit"). 26.2 removed the
+     *  immediate-mode {@code renderBuffers()} path entirely; the collector path is identical on
+     *  1.21.10/1.21.11/26.1/26.2. */
+    public void render(PipeFlowFluids flow, double x, double y, double z, float partialTicks,
+                       SubmitNodeCollector collector, PoseStack poseStack) {
+        FluidStack forRender = flow.getFluidStackForRender();
+        if (forRender == null || forRender.isEmpty()) {
+            return;
+        }
+        ensureRenderCache(flow, forRender);
+        if (flow.renderCacheSpriteId == null) return;
+        boolean translucent = flow.renderCacheTranslucent;
+        collector.submitCustomGeometry(poseStack, fluidRenderType(translucent),
+            (pose, consumer) -> drawAll(flow, forRender, partialTicks, pose, consumer));
+    }
+    //?}
+
     @Override
     public void render(PipeFlowFluids flow, double x, double y, double z,
                         float partialTicks, VertexConsumer bb, PoseStack.Pose pose) {
@@ -91,9 +124,26 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
         if (forRender == null || forRender.isEmpty()) {
             return;
         }
-
-        // Cache sprite Identifier / tint / translucent flag per fluid-type change.
         ensureRenderCache(flow, forRender);
+        if (flow.renderCacheSpriteId == null) return;
+        //? if <26.2 {
+        // 1.21.1..26.1 classic immediate-mode path (this interface overload is only reached on those
+        // nodes; >=1.21.10 BERs call the SubmitNodeCollector overload above).
+        RenderType rt = fluidRenderType(flow.renderCacheTranslucent);
+        MultiBufferSource.BufferSource bufferSource =
+            Minecraft.getInstance().renderBuffers().bufferSource();
+        VertexConsumer fluidBB = bufferSource.getBuffer(rt);
+        drawAll(flow, forRender, partialTicks, pose, fluidBB);
+        bufferSource.endBatch(rt);
+        //?}
+    }
+
+    /** Draws the per-face, centre, and vertical-pillar fluid sections into {@code fluidBB}.
+     *  Node-agnostic: {@code pose} / {@code fluidBB} come from the {@code submitCustomGeometry}
+     *  lambda on >=1.21.10 and from the immediate-mode buffer source on 1.21.1.
+     *  {@code ensureRenderCache(flow, forRender)} must have run first. */
+    private static void drawAll(PipeFlowFluids flow, FluidStack forRender, float partialTicks,
+                                PoseStack.Pose pose, VertexConsumer fluidBB) {
         Identifier stillTexture = flow.renderCacheSpriteId;
         if (stillTexture == null) return;
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
@@ -104,16 +154,6 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
         int tG = flow.renderCacheTintG;
         int tB = flow.renderCacheTintB;
         int tA = flow.renderCacheTintA;
-
-        // Translucent for vanilla water (the texture has alpha pixels);
-        // cutout for BC fluids (which reuse water as a tint base but should be
-        // opaque).
-        MultiBufferSource.BufferSource bufferSource =
-            Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer fluidBB = bufferSource.getBuffer(
-            flow.renderCacheTranslucent
-                ? BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS)
-                : BCLibRenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
 
         double[] amounts = SCRATCH_AMOUNTS.get();
         double[] offX = SCRATCH_OFF_X.get();

@@ -56,8 +56,10 @@ public class BCFactoryClient {
     public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
         modEventBus.register(BCFactoryClient.class);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
-                //? if >=1.21.10 {
-                net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentBlocks.class,
+                //? if >=26.1 {
+                net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent.class,
+                //?} elif >=1.21.10 {
+                /*net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentBlocks.class,*/
                 //?} else {
                 /*net.neoforged.neoforge.client.event.RenderLevelStageEvent.class,*/
                 //?}

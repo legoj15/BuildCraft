@@ -26,7 +26,9 @@ import org.joml.Vector3f;
 import org.lwjgl.system.MemoryStack;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
+//? if <26.2 {
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
+//?}
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.GpuDevice;
@@ -37,15 +39,20 @@ import com.mojang.math.Axis;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
+//? if >=26.2 {
+/*import net.minecraft.client.renderer.SubmitNodeCollector;*/
+//?} else {
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
+//?}
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -195,9 +202,19 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
     // long (an int widens fine). UBO sizes are well within int range, so one field type serves all nodes.
     private int lightingBufferPaddedSize;
 
+    //? if >=26.2 {
+    /*// 26.2 dropped the BufferSource-taking PiP base constructor (immediate-mode rendering is gone);
+    // the base now defaults to a no-arg constructor and owns its SubmitNodeStorage internally. The
+    // matching RegisterPictureInPictureRenderersEvent.register takes a Supplier (not a Function), so
+    // BlueprintPipRenderer::new resolves to this no-arg constructor on 26.2.
+    public BlueprintPipRenderer() {
+        super();
+    }*/
+    //?} else {
     public BlueprintPipRenderer(MultiBufferSource.BufferSource bufferSource) {
         super(bufferSource);
     }
+    //?}
 
     /**
      * Allocate the lighting UBO the first time we need it. Layout matches vanilla's
@@ -207,7 +224,13 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
     private void ensureLightingBufferAllocated() {
         if (lightingBuffer != null) return;
         GpuDevice device = RenderSystem.getDevice();
-        lightingBufferPaddedSize = Mth.roundToward(Lighting.UBO_SIZE, device.getUniformOffsetAlignment());
+        //? if >=26.2 {
+        /*// 26.2 moved GpuDevice.getUniformOffsetAlignment() onto the DeviceInfo/DeviceLimits record.
+        int uniformOffsetAlignment = device.getDeviceInfo().limits().minUniformOffsetAlignment();*/
+        //?} else {
+        int uniformOffsetAlignment = device.getUniformOffsetAlignment();
+        //?}
+        lightingBufferPaddedSize = Mth.roundToward(Lighting.UBO_SIZE, uniformOffsetAlignment);
         lightingBuffer = device.createBuffer(
                 () -> "BCBlueprintPipLighting", 136, lightingBufferPaddedSize);
     }
@@ -247,8 +270,14 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         return height / 2.0f;
     }
 
+    //? if >=26.2 {
+    /*@Override
+    protected void renderToTexture(BlueprintPipRenderState renderState, PoseStack poseStack,
+                                   SubmitNodeCollector collector) {*/
+    //?} else {
     @Override
     protected void renderToTexture(BlueprintPipRenderState renderState, PoseStack poseStack) {
+    //?}
         Snapshot snapshot = renderState.snapshot();
         BlockPos size = snapshot.size;
         int sizeX = Math.max(1, size.getX());
@@ -297,11 +326,16 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         // i.e. locked to the blueprint itself rather than the camera. Rotations no longer
         // change the per-face illumination, so the sides hold steady as the preview spins.
         //
-        // We save the old shader-lights slice and restore it after flushing the draws so the
-        // rest of the game sees its normal lighting binding. The flush happens inside this
-        // method (before the restore) because the base class calls endBatch AFTER our method
-        // returns, which would otherwise execute the queued draws with the restored ITEMS_3D
-        // binding instead of ours.
+        // The shader-lights lifecycle differs across the 26.2 cliff because of WHEN the queued draws
+        // actually execute:
+        //   - <26.2 (immediate mode): the draws are flushed inside this method via
+        //     this.bufferSource.endBatch() below, so we save the old lights slice, bind ours, flush,
+        //     then restore — all before returning, because the base class's own endBatch runs AFTER us.
+        //   - >=26.2 (retained "submit" mode): every draw is queued via collector.submitCustomGeometry /
+        //     itemRenderState.submit and the base class executes them with renderAllFeatures(storage)
+        //     immediately AFTER renderToTexture returns. So we just set our lights and DON'T restore
+        //     here (the deferred draws still need the binding); the next render pass re-establishes the
+        //     normal lighting, exactly as OversizedItemRenderer relies on.
         Minecraft mc = Minecraft.getInstance();
         Vector3f light0Camera = poseStack.last().transformNormal(
                 LIGHT0_MODEL_SPACE.x(), LIGHT0_MODEL_SPACE.y(), LIGHT0_MODEL_SPACE.z(),
@@ -311,11 +345,21 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                 new Vector3f());
         ensureLightingBufferAllocated();
         writeLightDirections(light0Camera, light1Camera);
+
+        //? if >=26.2 {
+        /*// 26.2: bind our UBO and leave it — the base class owns the SubmitNodeStorage and runs
+        // renderAllFeatures(storage) (which executes the deferred draws) immediately after we return,
+        // so the binding must survive past this method. Item submits and custom geometry go through the
+        // passed-in collector.
+        RenderSystem.setShaderLights(lightingBuffer.slice(0, Lighting.UBO_SIZE));*/
+        //?} else {
+        // <26.2: snapshot the existing binding BEFORE swapping in ours; we restore it after the
+        // in-method endBatch flush below.
         GpuBufferSlice savedShaderLights = RenderSystem.getShaderLights();
         RenderSystem.setShaderLights(lightingBuffer.slice(0, Lighting.UBO_SIZE));
-
         FeatureRenderDispatcher featureRenderDispatcher = mc.gameRenderer.getFeatureRenderDispatcher();
         SubmitNodeStorage submitNodeStorage = featureRenderDispatcher.getSubmitNodeStorage();
+        //?}
 
         // Cache the TrackingItemStackRenderState per distinct BlockState so we don't re-resolve
         // the item model for every single cell. Updating for the top item is non-trivial
@@ -350,7 +394,11 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                         // filled cell are culled inside the helper, so a solid template reads as a
                         // clean outer shell rather than a haze of stacked translucent quads.
                         if (template.data != null && template.data.get(dataIndex)) {
+                            //? if >=26.2 {
+                            /*submitTemplateGhostCube(collector, poseStack, template, size, x, y, z);*/
+                            //?} else {
                             submitTemplateGhostCube(poseStack, template, size, x, y, z);
+                            //?}
                             submittedTemplate++;
                         } else {
                             skippedAirOrEmpty++;
@@ -395,7 +443,6 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                         if (pipeKey != null) {
                             poseStack.pushPose();
                             poseStack.translate(x, y, z);
-                            PoseStack.Pose pipePose = poseStack.last();
                             // Back-face CULLING render types are essential here: the pipe model
                             // emits front + inverted-"inside" coplanar quad pairs (the dupDarker
                             // pass in PipeBaseModelGenStandard) and relies on culling to drop the
@@ -403,6 +450,20 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                             // both quads rendered coplanar and the cutout pair z-fought (flickering
                             // bright/dark as the preview spins). The in-world pipe avoids this by
                             // rendering through the culling block sheet.
+                            CompoundTag pipeTileNbt = schBlock.getTileNbtForRender();
+                            //? if >=26.2 {
+                            /*collector.submitCustomGeometry(poseStack,
+                                    BCLibRenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS),
+                                    (pose, vc) -> ModelPipe.renderDirect(pipeKey, pose, vc, FULL_BRIGHT));
+                            collector.submitCustomGeometry(poseStack,
+                                    BCLibRenderTypes.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS),
+                                    (pose, vc) -> ModelPipe.renderMaskOverlay(pipeKey, pose, vc,
+                                            FULL_BRIGHT, PIPE_PAINT_ALPHA));
+                            // Pluggables (plugs/gates/lenses/filters/wires/facades) captured on this
+                            // pipe — reconstructed offline and rendered like the body, via the collector.
+                            PipePreviewPluggables.render(pipeTileNbt, poseStack, collector, FULL_BRIGHT);*/
+                            //?} else {
+                            PoseStack.Pose pipePose = poseStack.last();
                             ModelPipe.renderDirect(pipeKey, pipePose,
                                     this.bufferSource.getBuffer(
                                             BCLibRenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS)),
@@ -413,8 +474,9 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                                     FULL_BRIGHT, PIPE_PAINT_ALPHA);
                             // Pluggables (plugs/gates/lenses/filters/wires/facades) captured on this
                             // pipe — reconstructed offline and rendered like the body.
-                            PipePreviewPluggables.render(schBlock.getTileNbtForRender(), poseStack,
+                            PipePreviewPluggables.render(pipeTileNbt, poseStack,
                                     this.bufferSource, FULL_BRIGHT);
+                            //?}
                             poseStack.popPose();
                             submittedPipe++;
                             continue;
@@ -427,7 +489,11 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                     // both source and flowing cells appeared in the preview.
                     FluidState fluidState = state.getFluidState();
                     if (!fluidState.isEmpty()) {
+                        //? if >=26.2 {
+                        /*submitFluidCube(collector, poseStack, blueprint, size, x, y, z, fluidState, FULL_BRIGHT);*/
+                        //?} else {
                         submitFluidCube(poseStack, blueprint, size, x, y, z, fluidState, FULL_BRIGHT);
+                        //?}
                         submittedFluid++;
                         continue;
                     }
@@ -468,14 +534,26 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                     // compared to the overall extent. Fluid cubes don't need this (submitFluidCube
                     // emits vertices in [0, 1]^3 directly without going through ItemTransform).
                     poseStack.translate(x + 0.5f, y + 0.5f, z + 0.5f);
+                    //? if >=26.2 {
+                    /*itemRenderState.submit(poseStack, collector, FULL_BRIGHT,
+                            OverlayTexture.NO_OVERLAY, 0);*/
+                    //?} else {
                     itemRenderState.submit(poseStack, submitNodeStorage, FULL_BRIGHT,
                             OverlayTexture.NO_OVERLAY, 0);
+                    //?}
                     poseStack.popPose();
                     submitted++;
                 }
             }
         }
 
+        //? if >=26.2 {
+        /*// 26.2: nothing to flush or restore here. Every draw above was queued into the collector
+        // (which is the base class's own SubmitNodeStorage); the base class executes them via
+        // renderAllFeatures(storage) right after this method returns, while our custom shader-lights
+        // binding is still active. The next render pass re-establishes the normal lighting, exactly
+        // as OversizedItemRenderer relies on — so there is no save/restore to undo.*/
+        //?} else {
         // Process all feature submissions — this queues the actual GPU draw calls into the PiP
         // buffer source, but does NOT flush them to the GPU yet.
         featureRenderDispatcher.renderAllFeatures();
@@ -492,6 +570,7 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         // Restore whatever lights binding was active before we took over, now that all draws
         // using our custom UBO have been submitted to the GPU.
         RenderSystem.setShaderLights(savedShaderLights);
+        //?}
 
         if (LOGGED_SNAPSHOTS.add(System.identityHashCode(snapshot))) {
             LOGGER.info("renderToTexture: type={} size={}x{}x{} submitted={} submittedFluid={} submittedTemplate={} submittedPipe={} skippedNoItem={} skippedAirOrEmpty={} sampleSchBlock={} distinctStates={}",
@@ -517,10 +596,18 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
      * half-height flowing cube naturally shows the top half of the still sprite — same
      * position-based mapping used by {@link buildcraft.factory.client.render.RenderTank}.
      */
+    //? if >=26.2 {
+    /*private void submitFluidCube(
+            SubmitNodeCollector collector,
+            PoseStack poseStack, Blueprint blueprint, BlockPos size,
+            int xCell, int yCell, int zCell,
+            FluidState fluidState, int lightmap) {*/
+    //?} else {
     private void submitFluidCube(
             PoseStack poseStack, Blueprint blueprint, BlockPos size,
             int xCell, int yCell, int zCell,
             FluidState fluidState, int lightmap) {
+    //?}
         Fluid fluid = fluidState.getType();
         // FluidUtilBC expects a FluidStack; the amount doesn't matter here — only the fluid
         // identity is used to look up texture + colour.
@@ -563,15 +650,42 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
 
         // Water reuses the entity-translucent sheet so its semi-transparent pixels blend; every
         // other fluid (including BC energy fluids that tint the water sprite) uses entity-cutout
-        // so the alpha is clamped to binary and doesn't bleed the background through.
-        VertexConsumer vc = this.bufferSource.getBuffer(
-                FluidUtilBC.shouldRenderTranslucent(fluid)
-                        ? BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS)
-                        : BCLibRenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
+        // so the alpha is clamped to binary and doesn't bleed the background through. `var` keeps the
+        // RenderType import out of this file (its package diverges below 26.1) — see header.
+        var fluidRenderType = FluidUtilBC.shouldRenderTranslucent(fluid)
+                ? BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS)
+                : BCLibRenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS);
+
+        // final copies so the >=26.2 deferred lambda can capture them.
+        final float rr = r, gg = g, bb = b, aa = a, hh = h;
+        final boolean ct = cullTop, cb = cullBottom, cn = cullNorth, cs = cullSouth, cw = cullWest, ce = cullEast;
+        final TextureAtlasSprite spr = sprite;
 
         poseStack.pushPose();
         poseStack.translate(xCell, yCell, zCell);
-        PoseStack.Pose pose = poseStack.last();
+        //? if >=26.2 {
+        /*collector.submitCustomGeometry(poseStack, fluidRenderType,
+                (pose, vc) -> emitFluidCubeFaces(pose, vc, spr, rr, gg, bb, aa, hh,
+                        ct, cb, cn, cs, cw, ce, lightmap));*/
+        //?} else {
+        VertexConsumer vc = this.bufferSource.getBuffer(fluidRenderType);
+        emitFluidCubeFaces(poseStack.last(), vc, spr, rr, gg, bb, aa, hh,
+                ct, cb, cn, cs, cw, ce, lightmap);
+        //?}
+        poseStack.popPose();
+    }
+
+    /**
+     * Sink-agnostic six-face emission for one fluid cell. Pulled out of {@link #submitFluidCube} so the
+     * same geometry feeds both the pre-26.2 immediate {@code VertexConsumer} and the 26.2 deferred
+     * {@code submitCustomGeometry} callback. Vertices are authored in cell-local {@code [0, 1]^3}; the
+     * caller has already translated the pose to the cell.
+     */
+    private static void emitFluidCubeFaces(
+            PoseStack.Pose pose, VertexConsumer vc, TextureAtlasSprite sprite,
+            float r, float g, float b, float a, float h,
+            boolean cullTop, boolean cullBottom, boolean cullNorth, boolean cullSouth,
+            boolean cullWest, boolean cullEast, int lightmap) {
         int overlay = OverlayTexture.NO_OVERLAY;
 
         // Top (+Y): CCW viewed from above.
@@ -618,8 +732,6 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
             putFluidVertex(vc, pose, 1, h, 1, sprite.getU(1), sprite.getV(1 - h), r, g, b, a,  1,  0,  0, lightmap, overlay);
             putFluidVertex(vc, pose, 1, 0, 1, sprite.getU(1), sprite.getV(1),     r, g, b, a,  1,  0,  0, lightmap, overlay);
         }
-
-        poseStack.popPose();
     }
 
     /**
@@ -673,26 +785,46 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
      * inversion, and the outward normals pick up the same model-space diffuse lighting as the rest
      * of the preview. Cube vertices live in cell-local {@code [0, 1]^3} after the per-cell translate.
      */
+    //? if >=26.2 {
+    /*private void submitTemplateGhostCube(SubmitNodeCollector collector, PoseStack poseStack,
+                                         Template template, BlockPos size,
+                                         int xCell, int yCell, int zCell) {*/
+    //?} else {
     private void submitTemplateGhostCube(PoseStack poseStack, Template template, BlockPos size,
                                          int xCell, int yCell, int zCell) {
+    //?}
         // Cull faces shared with an adjacent filled cell up front — see TemplateGhostGeometry.
         EnumSet<Direction> faces = TemplateGhostGeometry.visibleFaces(template, size, xCell, yCell, zCell);
         if (faces.isEmpty()) {
             // Fully-enclosed interior cell: nothing exposed, so skip the buffer churn entirely.
             return;
         }
-        VertexConsumer vc = this.bufferSource.getBuffer(BCLibRenderTypes.entityTranslucent(SCAN_TEXTURE));
 
         poseStack.pushPose();
         poseStack.translate(xCell, yCell, zCell);
-        PoseStack.Pose pose = poseStack.last();
+        //? if >=26.2 {
+        /*collector.submitCustomGeometry(poseStack, BCLibRenderTypes.entityTranslucent(SCAN_TEXTURE),
+                (pose, vc) -> emitTemplateGhostFaces(pose, vc, faces));*/
+        //?} else {
+        VertexConsumer vc = this.bufferSource.getBuffer(BCLibRenderTypes.entityTranslucent(SCAN_TEXTURE));
+        emitTemplateGhostFaces(poseStack.last(), vc, faces);
+        //?}
+        poseStack.popPose();
+    }
+
+    /**
+     * Sink-agnostic ghost-face emission, shared by the pre-26.2 immediate {@code VertexConsumer} path
+     * and the 26.2 deferred {@code submitCustomGeometry} callback. The pose is already translated to
+     * the cell by the caller.
+     */
+    private static void emitTemplateGhostFaces(PoseStack.Pose pose, VertexConsumer vc,
+                                               EnumSet<Direction> faces) {
         for (Direction face : faces) {
             ModelUtil.createFace(face, GHOST_CENTER, GHOST_RADIUS, GHOST_UVS)
                     .lighti(15, 15)
                     .colouri(255, 255, 255, TEMPLATE_GHOST_ALPHA)
                     .render(pose, vc);
         }
-        poseStack.popPose();
     }
 
     /**

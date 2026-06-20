@@ -249,9 +249,13 @@ public enum BCBuildersEventDist {
         }
     }
 
-    /** Called from RenderLevelStageEvent to render quarry frame outlines and drill beams. */
-    //? if >=1.21.10 {
-    public void renderAllQuarries(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    /** Called from the render event to render quarry frame outlines and drill beams. On 26.1+ the
+     *  source event is SubmitCustomGeometryEvent (immediate-mode rendering was removed); on earlier
+     *  nodes it's RenderLevelStageEvent.AfterTranslucentBlocks. */
+    //? if >=26.1 {
+    public void renderAllQuarries(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent event) {
+    //?} elif >=1.21.10 {
+    /*public void renderAllQuarries(RenderLevelStageEvent.AfterTranslucentBlocks event) {*/
     //?} else {
     /*public void renderAllQuarries(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
@@ -270,6 +274,11 @@ public enum BCBuildersEventDist {
         /*Vec3 cameraPos = event.getCamera().getPosition();*/
         //?}
         PoseStack poseStack = event.getPoseStack();
+        //? if >=26.1 {
+        net.minecraft.client.renderer.SubmitNodeCollector collector = event.getSubmitNodeCollector();
+        //?} else {
+        /*Object collector = null;*/
+        //?}
         float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
         Iterator<WeakReference<TileQuarry>> iter = quarries.iterator();
@@ -280,11 +289,17 @@ public enum BCBuildersEventDist {
                 iter.remove();
                 continue;
             }
-            renderQuarry(quarry, poseStack, cameraPos, partialTicks);
+            renderQuarry(quarry, poseStack, cameraPos, partialTicks, collector);
         }
     }
 
-    private void renderQuarry(TileQuarry tile, PoseStack poseStack, Vec3 cameraPos, float partialTicks) {
+    //? if >=26.1 {
+    private void renderQuarry(TileQuarry tile, PoseStack poseStack, Vec3 cameraPos, float partialTicks,
+            net.minecraft.client.renderer.SubmitNodeCollector collector) {
+    //?} else {
+    /*private void renderQuarry(TileQuarry tile, PoseStack poseStack, Vec3 cameraPos, float partialTicks,
+            Object collector) {*/
+    //?}
         if (!tile.frameBox.isInitialized()) {
             return;
         }
@@ -302,8 +317,8 @@ public enum BCBuildersEventDist {
                 if (taskBreakBlock.clientPower != 0) {
                     Vec3 from = VecUtil.convertCenter(tile.getBlockPos());
                     Vec3 to = VecUtil.convertCenter(pos);
-                    LaserData_BC8 laser = new LaserData_BC8(BuildCraftLaserManager.POWER_LOW, from, to, 1 / 16.0);
-                    LaserRenderer_BC8.renderLaserStatic(poseStack, laser, cameraPos);
+                    LaserData_BC8 laserData = new LaserData_BC8(BuildCraftLaserManager.POWER_LOW, from, to, 1 / 16.0);
+                    laser(poseStack, laserData, cameraPos, collector);
                 }
             } else {
                 long power = (long) (
@@ -332,55 +347,140 @@ public enum BCBuildersEventDist {
             double frameY = max.getY() + 0.5;
 
             // Z-axis frame beams
-            LaserRenderer_BC8.renderLaserStatic(poseStack,
+            laser(poseStack,
                 new LaserData_BC8(FRAME,
                     new Vec3(interpolatedPos.x + 0.5, frameY, interpolatedPos.z),
                     new Vec3(interpolatedPos.x + 0.5, frameY, max.getZ() + 12 / 16D),
                     1 / 16D),
-                cameraPos);
-            LaserRenderer_BC8.renderLaserStatic(poseStack,
+                cameraPos, collector);
+            laser(poseStack,
                 new LaserData_BC8(FRAME,
                     new Vec3(interpolatedPos.x + 0.5, frameY, interpolatedPos.z),
                     new Vec3(interpolatedPos.x + 0.5, frameY, min.getZ() + 4 / 16D),
                     1 / 16D),
-                cameraPos);
+                cameraPos, collector);
             // X-axis frame beams
-            LaserRenderer_BC8.renderLaserStatic(poseStack,
+            laser(poseStack,
                 new LaserData_BC8(FRAME,
                     new Vec3(interpolatedPos.x, frameY, interpolatedPos.z + 0.5),
                     new Vec3(max.getX() + 12 / 16D, frameY, interpolatedPos.z + 0.5),
                     1 / 16D),
-                cameraPos);
-            LaserRenderer_BC8.renderLaserStatic(poseStack,
+                cameraPos, collector);
+            laser(poseStack,
                 new LaserData_BC8(FRAME,
                     new Vec3(interpolatedPos.x, frameY, interpolatedPos.z + 0.5),
                     new Vec3(min.getX() + 4 / 16D, frameY, interpolatedPos.z + 0.5),
                     1 / 16D),
-                cameraPos);
+                cameraPos, collector);
             // Vertical column beam (drill column to top)
-            LaserRenderer_BC8.renderLaserStatic(poseStack,
+            laser(poseStack,
                 new LaserData_BC8(FRAME_BOTTOM,
                     new Vec3(interpolatedPos.x + 0.5, interpolatedPos.y + 1 + 4 / 16D, interpolatedPos.z + 0.5),
                     new Vec3(interpolatedPos.x + 0.5, max.getY() + 0.5, interpolatedPos.z + 0.5),
                     1 / 16D),
-                cameraPos);
+                cameraPos, collector);
             // Drill head beam
-            LaserRenderer_BC8.renderLaserStatic(poseStack,
+            laser(poseStack,
                 new LaserData_BC8(DRILL,
                     new Vec3(interpolatedPos.x + 0.5, interpolatedPos.y + 1 + yOffset, interpolatedPos.z + 0.5),
                     new Vec3(interpolatedPos.x + 0.5, interpolatedPos.y + yOffset, interpolatedPos.z + 0.5),
                     1 / 16D),
-                cameraPos);
+                cameraPos, collector);
         } else {
             // No drill yet — show the whole frame box as laser outline (caution stripes)
-            LaserBoxRenderer.renderLaserBoxStatic(poseStack, tile.frameBox, BuildCraftLaserManager.STRIPES_WRITE, true, false, cameraPos);
+            laserBox(poseStack, tile.frameBox, BuildCraftLaserManager.STRIPES_WRITE, true, false, cameraPos, collector);
         }
+    }
+
+    // ── Node-uniform laser draw helpers ──────────────────────────────────────────────────────
+    // Hide the >=26.1 (SubmitNodeCollector) vs <26.1 (immediate-mode) overload split behind one
+    // call site each. The trailing {@code collector} arg is always present at call sites so the
+    // code reads uniformly; on >=26.1 it carries the real SubmitNodeCollector, on <26.1 it's a
+    // bound-to-null Object that the wrapper ignores (the <26.1 renderLaserStatic overload has no
+    // collector). Keeps the many quarry/frame draw sites readable across nodes.
+    //? if >=26.1 {
+    private static void laser(PoseStack poseStack, LaserData_BC8 data, Vec3 cameraPos,
+            net.minecraft.client.renderer.SubmitNodeCollector collector) {
+        LaserRenderer_BC8.renderLaserStatic(poseStack, data, cameraPos, collector);
+    }
+
+    private static void laserBox(PoseStack poseStack, buildcraft.lib.misc.data.Box box, LaserType type,
+            boolean center, boolean enableDiffuse, Vec3 cameraPos,
+            net.minecraft.client.renderer.SubmitNodeCollector collector) {
+        LaserBoxRenderer.renderLaserBoxStatic(poseStack, box, type, center, enableDiffuse, cameraPos, collector);
+    }
+    //?} else {
+    /*private static void laser(PoseStack poseStack, LaserData_BC8 data, Vec3 cameraPos, Object collector) {
+        LaserRenderer_BC8.renderLaserStatic(poseStack, data, cameraPos);
+    }
+
+    private static void laserBox(PoseStack poseStack, buildcraft.lib.misc.data.Box box, LaserType type,
+            boolean center, boolean enableDiffuse, Vec3 cameraPos, Object collector) {
+        LaserBoxRenderer.renderLaserBoxStatic(poseStack, box, type, center, enableDiffuse, cameraPos);
+    }*/
+    //?}
+
+    /** Draws the floating 6-faced robot doodad (the breaking-block "robot") textured with the ROBOT
+     *  sprite. Shared by the Builder and Filler break-task renderers. On 26.1+ the cube geometry is
+     *  queued through the SubmitNodeCollector (immediate-mode rendering was removed); on earlier
+     *  nodes it goes straight to a MultiBufferSource. */
+    //? if >=26.1 {
+    private static void renderRobotCube(PoseStack poseStack, Vec3 robotPos, Vec3 cameraPos, Minecraft mc,
+            net.minecraft.client.renderer.SubmitNodeCollector collector) {
+        net.minecraft.client.renderer.rendertype.RenderType renderType =
+            net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(
+                buildcraft.builders.BCBuildersSprites.ROBOT.getAtlasLocation());
+        collector.submitCustomGeometry(poseStack, renderType,
+            (pose, buffer) -> emitRobotCube(poseStack, robotPos, cameraPos, buffer));
+    }
+    //?} else {
+    /*private static void renderRobotCube(PoseStack poseStack, Vec3 robotPos, Vec3 cameraPos, Minecraft mc,
+            Object collector) {
+        net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource =
+            mc.renderBuffers().bufferSource();
+        com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(
+            net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(
+                buildcraft.builders.BCBuildersSprites.ROBOT.getAtlasLocation()));
+        emitRobotCube(poseStack, robotPos, cameraPos, buffer);
+        bufferSource.endBatch();
+    }*/
+    //?}
+
+    /** Emits the robot cube's 6 sprite-mapped faces into {@code buffer}, translating the captured
+     *  poseStack to the camera-relative robot position. Pure geometry — node-uniform. */
+    private static void emitRobotCube(PoseStack poseStack, Vec3 robotPos, Vec3 cameraPos,
+            com.mojang.blaze3d.vertex.VertexConsumer buffer) {
+        poseStack.pushPose();
+        poseStack.translate(robotPos.x - cameraPos.x, robotPos.y - cameraPos.y, robotPos.z - cameraPos.z);
+        int worldLight = buildcraft.lib.client.render.laser.LaserRenderer_BC8
+            .computeLightmap(robotPos.x, robotPos.y, robotPos.z, 0);
+
+        int i = 0;
+        for (net.minecraft.core.Direction face : net.minecraft.core.Direction.values()) {
+            buildcraft.lib.client.model.ModelUtil.createFace(
+                face,
+                new org.joml.Vector3f(0f, 0f, 0f),
+                new org.joml.Vector3f(4 / 16F, 4 / 16F, 4 / 16F),
+                new buildcraft.lib.client.model.ModelUtil.UvFaceData(
+                    buildcraft.builders.BCBuildersSprites.ROBOT.getInterpU((i * 8) / 64D),
+                    buildcraft.builders.BCBuildersSprites.ROBOT.getInterpV(0 / 64D),
+                    buildcraft.builders.BCBuildersSprites.ROBOT.getInterpU(((i + 1) * 8) / 64D),
+                    buildcraft.builders.BCBuildersSprites.ROBOT.getInterpV(8 / 64D)
+                )
+            )
+            .lighti(worldLight)
+            .render(poseStack.last(), buffer);
+            i++;
+        }
+        poseStack.popPose();
     }
 
     /** Called from RenderLevelStageEvent to render architect table laser box outlines and the
      * fading green "digitizing" cubes for blocks currently being scanned. */
-    //? if >=1.21.10 {
-    public void renderAllArchitectTables(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    //? if >=26.1 {
+    public void renderAllArchitectTables(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent event) {
+    //?} elif >=1.21.10 {
+    /*public void renderAllArchitectTables(RenderLevelStageEvent.AfterTranslucentBlocks event) {*/
     //?} else {
     /*public void renderAllArchitectTables(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
@@ -394,6 +494,11 @@ public enum BCBuildersEventDist {
         /*Vec3 cameraPos = event.getCamera().getPosition();*/
         //?}
         PoseStack poseStack = event.getPoseStack();
+        //? if >=26.1 {
+        net.minecraft.client.renderer.SubmitNodeCollector collector = event.getSubmitNodeCollector();
+        //?} else {
+        /*Object collector = null;*/
+        //?}
 
         Deque<WeakReference<TileArchitectTable>> tables = allArchitectTables.get(mc.level);
         if (tables != null && !tables.isEmpty()) {
@@ -406,16 +511,20 @@ public enum BCBuildersEventDist {
                     continue;
                 }
                 if (table.getIsValid() && table.markerBox && table.box.isInitialized()) {
-                    LaserBoxRenderer.renderLaserBoxStatic(
+                    laserBox(
                         poseStack, table.box,
                         BuildCraftLaserManager.STRIPES_READ,
-                        true, false, cameraPos
+                        true, false, cameraPos, collector
                     );
                 }
             }
         }
 
-        renderDigitizingCubes(cameraPos, poseStack, mc);
+        //? if >=26.1 {
+        renderDigitizingCubes(cameraPos, poseStack, mc, collector);
+        //?} else {
+        /*renderDigitizingCubes(cameraPos, poseStack, mc);*/
+        //?}
     }
 
     /** Standalone scan texture — bound via RenderType directly so we don't depend on the block
@@ -427,7 +536,12 @@ public enum BCBuildersEventDist {
     /** Draws a translucent green cube at every position reported by the server as being scanned
      * this second. Alpha fades with the entry's remaining lifetime so blocks pulse out over
      * ~2.5s, matching the 1.12.2 effect. */
-    private void renderDigitizingCubes(Vec3 cameraPos, PoseStack poseStack, Minecraft mc) {
+    //? if >=26.1 {
+    private void renderDigitizingCubes(Vec3 cameraPos, PoseStack poseStack, Minecraft mc,
+            net.minecraft.client.renderer.SubmitNodeCollector collector) {
+    //?} else {
+    /*private void renderDigitizingCubes(Vec3 cameraPos, PoseStack poseStack, Minecraft mc) {*/
+    //?}
         Map<BlockPos, Integer> scanned = buildcraft.builders.snapshot.ClientArchitectScans.INSTANCE.getScanned();
         if (scanned.isEmpty()) return;
 
@@ -439,16 +553,38 @@ public enum BCBuildersEventDist {
                 Vec3.atCenterOf(a.getKey()).distanceToSqr(cameraPos)
         ));
 
-        net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
         net.minecraft.client.renderer.rendertype.RenderType renderType =
                 net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(SCAN_TEXTURE);
-        com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(renderType);
 
         // Direct-texture binding → full 0..1 UV spans the entire scan.png file.
         buildcraft.lib.client.model.ModelUtil.UvFaceData uvs =
                 new buildcraft.lib.client.model.ModelUtil.UvFaceData(0f, 0f, 1f, 1f);
         org.joml.Vector3f center = new org.joml.Vector3f(0.5f, 0.5f, 0.5f);
         org.joml.Vector3f radius = new org.joml.Vector3f(0.5f, 0.5f, 0.5f);
+
+        //? if >=26.1 {
+        // MC 26.1+ removed immediate-mode rendering — queue all cubes through the collector. The
+        // captured poseStack's per-cube push/translate/pop runs synchronously inside the lambda.
+        collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
+            for (Map.Entry<BlockPos, Integer> entry : sorted) {
+                BlockPos pos = entry.getKey();
+                int remaining = entry.getValue();
+                int alpha = Math.max(0, Math.min(50, remaining));
+
+                poseStack.pushPose();
+                poseStack.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
+                for (net.minecraft.core.Direction face : net.minecraft.core.Direction.values()) {
+                    buildcraft.lib.client.model.ModelUtil.createFace(face, center, radius, uvs)
+                            .lighti(15, 15)
+                            .colouri(255, 255, 255, alpha)
+                            .render(poseStack.last(), buffer);
+                }
+                poseStack.popPose();
+            }
+        });
+        //?} else {
+        /*net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
+        com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(renderType);
 
         for (Map.Entry<BlockPos, Integer> entry : sorted) {
             BlockPos pos = entry.getKey();
@@ -467,7 +603,8 @@ public enum BCBuildersEventDist {
             }
             poseStack.popPose();
         }
-        bufferSource.endBatch(renderType);
+        bufferSource.endBatch(renderType);*/
+        //?}
     }
 
     /** Called from RenderLevelStageEvent to render the Builder's laser box outline (the volume
@@ -475,8 +612,10 @@ public enum BCBuildersEventDist {
      *  floating robot cube while it's breaking blocks, and the break lasers from the robot to
      *  each target. Place-task block-throwing animation lives in
      *  {@link #renderAllBuildersCustomGeometry}. */
-    //? if >=1.21.10 {
-    public void renderAllBuilders(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    //? if >=26.1 {
+    public void renderAllBuilders(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent event) {
+    //?} elif >=1.21.10 {
+    /*public void renderAllBuilders(RenderLevelStageEvent.AfterTranslucentBlocks event) {*/
     //?} else {
     /*public void renderAllBuilders(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
@@ -493,6 +632,11 @@ public enum BCBuildersEventDist {
         /*Vec3 cameraPos = event.getCamera().getPosition();*/
         //?}
         PoseStack poseStack = event.getPoseStack();
+        //? if >=26.1 {
+        net.minecraft.client.renderer.SubmitNodeCollector collector = event.getSubmitNodeCollector();
+        //?} else {
+        /*Object collector = null;*/
+        //?}
         float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
         Iterator<WeakReference<TileBuilder>> iter = builders.iterator();
@@ -506,10 +650,10 @@ public enum BCBuildersEventDist {
             // Only draw when there's an initialized box — before a snapshot is loaded the Builder
             // has no footprint to advertise.
             if (builder.getBox() != null && builder.getBox().isInitialized()) {
-                LaserBoxRenderer.renderLaserBoxStatic(
+                laserBox(
                     poseStack, builder.getBox(),
                     BuildCraftLaserManager.STRIPES_WRITE,
-                    true, false, cameraPos
+                    true, false, cameraPos, collector
                 );
             }
             // Path-based builders (fed by a path-marker chain consumed at placement) show
@@ -523,14 +667,14 @@ public enum BCBuildersEventDist {
                     Vec3 from = Vec3.atCenterOf(path.get(i - 1));
                     Vec3 to = Vec3.atCenterOf(path.get(i));
                     Vec3 dir = to.subtract(from).normalize().scale(PATH_LASER_INSET);
-                    LaserRenderer_BC8.renderLaserStatic(poseStack,
+                    laser(poseStack,
                         new LaserData_BC8(
                             BuildCraftLaserManager.STRIPES_WRITE_DIRECTION,
                             from.add(dir),
                             to.subtract(dir),
                             1 / 16.1
                         ),
-                        cameraPos
+                        cameraPos, collector
                     );
                 }
             }
@@ -552,36 +696,7 @@ public enum BCBuildersEventDist {
 
             // Robot cube renders only during breaking (matches Filler behaviour and 1.12.2).
             if (!active.clientBreakTasks.isEmpty()) {
-                net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource =
-                    mc.renderBuffers().bufferSource();
-                com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(
-                    net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(
-                        buildcraft.builders.BCBuildersSprites.ROBOT.getAtlasLocation()));
-
-                poseStack.pushPose();
-                poseStack.translate(robotPos.x - cameraPos.x, robotPos.y - cameraPos.y, robotPos.z - cameraPos.z);
-                int worldLight = buildcraft.lib.client.render.laser.LaserRenderer_BC8
-                    .computeLightmap(robotPos.x, robotPos.y, robotPos.z, 0);
-
-                int i = 0;
-                for (net.minecraft.core.Direction face : net.minecraft.core.Direction.values()) {
-                    buildcraft.lib.client.model.ModelUtil.createFace(
-                        face,
-                        new org.joml.Vector3f(0f, 0f, 0f),
-                        new org.joml.Vector3f(4 / 16F, 4 / 16F, 4 / 16F),
-                        new buildcraft.lib.client.model.ModelUtil.UvFaceData(
-                            buildcraft.builders.BCBuildersSprites.ROBOT.getInterpU((i * 8) / 64D),
-                            buildcraft.builders.BCBuildersSprites.ROBOT.getInterpV(0 / 64D),
-                            buildcraft.builders.BCBuildersSprites.ROBOT.getInterpU(((i + 1) * 8) / 64D),
-                            buildcraft.builders.BCBuildersSprites.ROBOT.getInterpV(8 / 64D)
-                        )
-                    )
-                    .lighti(worldLight)
-                    .render(poseStack.last(), buffer);
-                    i++;
-                }
-                poseStack.popPose();
-                bufferSource.endBatch();
+                renderRobotCube(poseStack, robotPos, cameraPos, mc, collector);
             }
 
             // Break lasers fan out from the robot to every current break task. Laser colour
@@ -591,14 +706,14 @@ public enum BCBuildersEventDist {
                     breakTask.power * 1D / breakTask.getTarget()
                 ));
                 int powerIdx = (int) Math.round(progress * (BuildCraftLaserManager.POWERS.length - 1));
-                LaserRenderer_BC8.renderLaserStatic(poseStack,
+                laser(poseStack,
                     new LaserData_BC8(
                         BuildCraftLaserManager.POWERS[powerIdx],
                         robotPos.subtract(new Vec3(0, 0.27, 0)),
                         Vec3.atCenterOf(breakTask.pos),
                         1 / 16D
                     ),
-                    cameraPos
+                    cameraPos, collector
                 );
             }
             // 1.21.11 has no SubmitCustomGeometryEvent, so the place-task throwing animation runs
@@ -685,9 +800,13 @@ public enum BCBuildersEventDist {
     }
     //?}
 
-    /** Called from RenderLevelStageEvent to render filler laser box outlines. */
-    //? if >=1.21.10 {
-    public void renderAllFillers(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    /** Called from the render event to render filler laser box outlines. On 26.1+ the source event
+     *  is SubmitCustomGeometryEvent (immediate-mode rendering was removed); on earlier nodes it's
+     *  RenderLevelStageEvent.AfterTranslucentBlocks. */
+    //? if >=26.1 {
+    public void renderAllFillers(net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent event) {
+    //?} elif >=1.21.10 {
+    /*public void renderAllFillers(RenderLevelStageEvent.AfterTranslucentBlocks event) {*/
     //?} else {
     /*public void renderAllFillers(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
@@ -704,6 +823,11 @@ public enum BCBuildersEventDist {
         /*Vec3 cameraPos = event.getCamera().getPosition();*/
         //?}
         PoseStack poseStack = event.getPoseStack();
+        //? if >=26.1 {
+        net.minecraft.client.renderer.SubmitNodeCollector collector = event.getSubmitNodeCollector();
+        //?} else {
+        /*Object collector = null;*/
+        //?}
 
         Iterator<WeakReference<TileFiller>> iter = fillers.iterator();
         while (iter.hasNext()) {
@@ -714,10 +838,10 @@ public enum BCBuildersEventDist {
                 continue;
             }
             if (filler.markerBox && filler.box.isInitialized()) {
-                LaserBoxRenderer.renderLaserBoxStatic(
+                laserBox(
                     poseStack, filler.box,
                     BuildCraftLaserManager.STRIPES_WRITE,
-                    true, false, cameraPos
+                    true, false, cameraPos, collector
                 );
             }
 
@@ -735,32 +859,7 @@ public enum BCBuildersEventDist {
 
                     // Only render robot cube if we are breaking (1.12.2 parity: Filler shouldn't use robot for placing)
                     if (!filler.builder.clientBreakTasks.isEmpty()) {
-                        net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
-                        com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(buildcraft.builders.BCBuildersSprites.ROBOT.getAtlasLocation()));
-
-                        poseStack.pushPose();
-                        poseStack.translate(robotPos.x - cameraPos.x, robotPos.y - cameraPos.y, robotPos.z - cameraPos.z);
-                        int worldLight = buildcraft.lib.client.render.laser.LaserRenderer_BC8.computeLightmap(robotPos.x, robotPos.y, robotPos.z, 0);
-
-                        int i = 0;
-                        for (net.minecraft.core.Direction face : net.minecraft.core.Direction.values()) {
-                            buildcraft.lib.client.model.ModelUtil.createFace(
-                                face,
-                                new org.joml.Vector3f(0f, 0f, 0f),
-                                new org.joml.Vector3f(4 / 16F, 4 / 16F, 4 / 16F),
-                                new buildcraft.lib.client.model.ModelUtil.UvFaceData(
-                                    buildcraft.builders.BCBuildersSprites.ROBOT.getInterpU((i * 8) / 64D),
-                                    buildcraft.builders.BCBuildersSprites.ROBOT.getInterpV(0 / 64D),
-                                    buildcraft.builders.BCBuildersSprites.ROBOT.getInterpU(((i + 1) * 8) / 64D),
-                                    buildcraft.builders.BCBuildersSprites.ROBOT.getInterpV(8 / 64D)
-                                )
-                            )
-                            .lighti(worldLight)
-                            .render(poseStack.last(), buffer);
-                            i++;
-                        }
-                        poseStack.popPose();
-                        bufferSource.endBatch();
+                        renderRobotCube(poseStack, robotPos, cameraPos, mc, collector);
                     }
 
                     // Render break lasers from robot to each break task position
@@ -769,14 +868,14 @@ public enum BCBuildersEventDist {
                             breakTask.power * 1D / breakTask.getTarget()
                         ));
                         int powerIdx = (int) Math.round(progress * (BuildCraftLaserManager.POWERS.length - 1));
-                        LaserRenderer_BC8.renderLaserStatic(poseStack,
+                        laser(poseStack,
                             new LaserData_BC8(
                                 BuildCraftLaserManager.POWERS[powerIdx],
                                 robotPos.subtract(new Vec3(0, 0.27, 0)),
                                 Vec3.atCenterOf(breakTask.pos),
                                 1 / 16D
                             ),
-                            cameraPos
+                            cameraPos, collector
                         );
                     }
                 }

@@ -273,6 +273,19 @@ public final class BCLibRenderTypes {
         //?}
     }
 
+    /**
+     * Block-atlas cutout sheet — the render type vanilla's {@code Sheets.cutoutBlockSheet()} returned
+     * (={@code RenderTypes.entityCutoutCull(LOCATION_BLOCKS)}). 26.2 dropped that convenience method, so
+     * reproduce it from the underlying factory there; pre-26.2 nodes keep the original call unchanged.
+     */
+    public static RenderType cutoutBlockSheet() {
+        //? if >=26.2 {
+        /*return RenderTypes.entityCutoutCull(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);*/
+        //?} else {
+        return net.minecraft.client.renderer.Sheets.cutoutBlockSheet();
+        //?}
+    }
+
     /** Translucent sheet for item-layer overlays: 1.21.11+ has a block-item variant; 1.21.10 the plain item sheet. */
     public static RenderType translucentItemSheet() {
         //? if >=1.21.11 {

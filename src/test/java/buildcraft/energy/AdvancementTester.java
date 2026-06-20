@@ -126,7 +126,11 @@ public class AdvancementTester {
     /** Resolves the trigger's registry ID and compares to {@code minecraft:impossible}.
      * Going through the registry rather than class-name string-matching means renames
      * of the {@code ImpossibleTrigger} class don't silently make the check pass. */
+    //? if >=26.2 {
+    /*private static boolean isImpossibleTrigger(net.minecraft.advancements.triggers.Criterion<?> c) {*/
+    //?} else {
     private static boolean isImpossibleTrigger(net.minecraft.advancements.Criterion<?> c) {
+    //?}
         Identifier id = net.minecraft.core.registries.BuiltInRegistries.TRIGGER_TYPES.getKey(c.trigger());
         return id != null && id.equals(Identifier.withDefaultNamespace("impossible"));
     }

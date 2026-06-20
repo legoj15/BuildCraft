@@ -13,11 +13,18 @@ import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.Minecraft;
+//? if >=26.1 {
+import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+//? if >=26.1 {
+import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
+//?} else {
+/*import net.neoforged.neoforge.client.event.RenderLevelStageEvent;*/
+//?}
 
 import buildcraft.lib.client.render.laser.LaserData_BC8;
 import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
@@ -41,8 +48,15 @@ public class MarkerRenderer {
     private static PoseStack currentPoseStack;
     private static Vec3 currentCameraPos;
 
-    //? if >=1.21.10 {
-    public static void onRenderLevelStage(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    //? if >=26.1 {
+    /** The retained-mode geometry collector for the current render frame. MC 26.1+ removed
+     *  immediate-mode rendering, so every overlay drawn within this event's scope must queue
+     *  onto this collector (see {@link #getCollector()}). */
+    private static SubmitNodeCollector currentCollector;
+
+    public static void onRenderLevelStage(SubmitCustomGeometryEvent event) {
+    //?} elif >=1.21.10 {
+    /*public static void onRenderLevelStage(RenderLevelStageEvent.AfterTranslucentBlocks event) {*/
     //?} else {
     /*public static void onRenderLevelStage(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
@@ -57,6 +71,9 @@ public class MarkerRenderer {
         /*currentCameraPos = event.getCamera().getPosition();*/
         //?}
         currentPoseStack = event.getPoseStack();
+        //? if >=26.1 {
+        currentCollector = event.getSubmitNodeCollector();
+        //?}
 
         // Render all active connections across all marker cache types
         for (MarkerCache<? extends MarkerSubCache<?>> cache : MarkerCache.CACHES) {
@@ -75,6 +92,9 @@ public class MarkerRenderer {
 
         currentPoseStack = null;
         currentCameraPos = null;
+        //? if >=26.1 {
+        currentCollector = null;
+        //?}
     }
 
     /**
@@ -106,7 +126,11 @@ public class MarkerRenderer {
                     Vec3 toOffset = offset(to, from);
                     LaserData_BC8 data = new LaserData_BC8(laserType, fromOffset, toOffset, RENDER_SCALE,
                             false, false, 15);
-                    LaserRenderer_BC8.renderLaserStatic(currentPoseStack, data, currentCameraPos);
+                    //? if >=26.1 {
+                    LaserRenderer_BC8.renderLaserStatic(currentPoseStack, data, currentCameraPos, currentCollector);
+                    //?} else {
+                    /*LaserRenderer_BC8.renderLaserStatic(currentPoseStack, data, currentCameraPos);*/
+                    //?}
                 }
             }
         }
@@ -160,4 +184,13 @@ public class MarkerRenderer {
     public static Vec3 getCameraPos() {
         return currentCameraPos;
     }
+
+    //? if >=26.1 {
+    /** Called by overlay renderers drawing within this event's scope (PathConnection,
+     *  TubeRenderer, RenderLaser, VolumeBoxRenderer, addon renderers) to obtain the retained-mode
+     *  geometry collector for the current frame. Null outside the render event. */
+    public static SubmitNodeCollector getCollector() {
+        return currentCollector;
+    }
+    //?}
 }

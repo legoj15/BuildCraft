@@ -12,7 +12,12 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+//? if <26.1 {
+/*import net.minecraft.client.renderer.MultiBufferSource;*/
+//?}
+//? if >=26.1 {
+import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import net.minecraft.client.renderer.rendertype.RenderType;
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -74,10 +79,28 @@ public class LaserRenderer_BC8 {
         type.bakeFor(ctx);
     }
 
+    //? if >=26.1 {
     /**
+     * Renders a single laser beam through the retained "submit" system. MC 26.1+ removed
+     * immediate-mode rendering (MultiBufferSource / renderBuffers().bufferSource()), so custom
+     * geometry must be queued onto a {@link SubmitNodeCollector} obtained from a render event
+     * (e.g. {@code SubmitCustomGeometryEvent.getSubmitNodeCollector()}). The draw is deferred to
+     * the collector's flush, but the supplied {@code poseStack} is captured by value at submit
+     * time and unchanged when the lambda runs, so {@link #renderLaser} can keep writing from
+     * {@code poseStack.last()}.
+     */
+    public static void renderLaserStatic(PoseStack poseStack, LaserData_BC8 data, Vec3 cameraPos,
+            SubmitNodeCollector collector) {
+        // Use entityTranslucent with the block atlas so laser sprites render with transparency
+        collector.submitCustomGeometry(poseStack,
+                BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS),
+                (pose, buffer) -> renderLaser(poseStack, buffer, data, cameraPos));
+    }
+    //?} else {
+    /*/^*
      * Renders a single laser beam, creating a buffer source and flushing immediately.
      * Uses entitySolid render type with the block atlas texture.
-     */
+     *^/
     public static void renderLaserStatic(PoseStack poseStack, LaserData_BC8 data, Vec3 cameraPos) {
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         // Use entityTranslucent with the block atlas so laser sprites render with transparency
@@ -85,7 +108,8 @@ public class LaserRenderer_BC8 {
                 BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
         renderLaser(poseStack, consumer, data, cameraPos);
         bufferSource.endBatch();
-    }
+    }*/
+    //?}
 
     /**
      * Computes the combined lightmap value for a position in the world.

@@ -10,7 +10,9 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+//? if <1.21.10 {
+/*import net.minecraft.client.renderer.MultiBufferSource;*/
+//?}
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 //?}
@@ -120,16 +122,20 @@ public class RenderFiller implements BlockEntityRenderer<TileFiller, FillerRende
     //?}
         poseStack.pushPose();
 
-        MultiBufferSource.BufferSource bufferSource =
+        //? if >=1.21.10 {
+        collector.submitCustomGeometry(poseStack, BCLibRenderTypes.led(),
+                (pose, consumer) -> renderLEDs(tile, pose, consumer));
+        //?} else {
+        /*MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
-        renderLEDs(tile, poseStack, bufferSource);
-        bufferSource.endBatch();
+        renderLEDs(tile, poseStack.last(), bufferSource.getBuffer(BCLibRenderTypes.led()));
+        bufferSource.endBatch();*/
+        //?}
 
         poseStack.popPose();
     }
 
-    private void renderLEDs(TileFiller tile, PoseStack poseStack,
-                            MultiBufferSource.BufferSource bufferSource) {
+    private void renderLEDs(TileFiller tile, PoseStack.Pose pose, VertexConsumer consumer) {
         Mode controlMode = tile.getControlMode();
         boolean hasPower = tile.hasPower();
         boolean finished = tile.isFinished();
@@ -156,9 +162,6 @@ public class RenderFiller implements BlockEntityRenderer<TileFiller, FillerRende
             greenColour = LedRenderUtil.COLOUR_GREEN_ON;
             redColour = LedRenderUtil.COLOUR_OFF;
         }
-
-        VertexConsumer consumer = bufferSource.getBuffer(BCLibRenderTypes.led());
-        PoseStack.Pose pose = poseStack.last();
 
         for (int i = 0; i < 4; i++) {
             Direction dir = Direction.from2DDataValue(i);

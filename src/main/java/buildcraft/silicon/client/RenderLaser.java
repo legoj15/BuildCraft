@@ -12,11 +12,18 @@ import java.util.WeakHashMap;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.Minecraft;
+//? if >=26.1 {
+import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+//? if >=26.1 {
+import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
+//?} else {
+/*import net.neoforged.neoforge.client.event.RenderLevelStageEvent;*/
+//?}
 
 import buildcraft.core.client.BuildCraftLaserManager;
 import buildcraft.lib.client.render.laser.LaserData_BC8;
@@ -56,8 +63,10 @@ public class RenderLaser {
     }
 
     @SubscribeEvent
-    //? if >=1.21.10 {
-    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    //? if >=26.1 {
+    public static void onRenderLevel(SubmitCustomGeometryEvent event) {
+    //?} elif >=1.21.10 {
+    /*public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {*/
     //?} else {
     /*public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;*/
@@ -78,6 +87,9 @@ public class RenderLaser {
         Vec3 cameraPos = event.getLevelRenderState().cameraRenderState.pos;
         //?} else {
         /*Vec3 cameraPos = event.getCamera().getPosition();*/
+        //?}
+        //? if >=26.1 {
+        SubmitNodeCollector collector = event.getSubmitNodeCollector();
         //?}
 
         for (TileLaser laser : ACTIVE_LASERS) {
@@ -110,7 +122,11 @@ public class RenderLaser {
                 BuildCraftLaserManager.POWERS[index], start, target, 1.0 / 16.0,
                 false, false, 15);
 
-            LaserRenderer_BC8.renderLaserStatic(poseStack, data, cameraPos);
+            //? if >=26.1 {
+            LaserRenderer_BC8.renderLaserStatic(poseStack, data, cameraPos, collector);
+            //?} else {
+            /*LaserRenderer_BC8.renderLaserStatic(poseStack, data, cameraPos);*/
+            //?}
         }
     }
 }

@@ -11,9 +11,13 @@ import org.joml.Vector3f;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
+//? if <26.2 {
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.Sheets;
+//?}
+//? if >=1.21.10 {
+import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
@@ -37,8 +41,58 @@ import buildcraft.transport.pipe.flow.PipeFlowPower.Section;
 public enum PipeFlowRendererPower implements IPipeFlowRenderer<PipeFlowPower> {
     INSTANCE;
 
+    /** The render type this flow draws into — translucent entity quads on the block atlas. */
+    static net.minecraft.client.renderer.rendertype.RenderType powerRenderType() {
+        return net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(
+            net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);
+    }
+
+    //? if >=1.21.10 {
+    /** Modern (>=1.21.10) entry: the BER passes its {@link SubmitNodeCollector}, so power geometry
+     *  is queued via {@code submitCustomGeometry} (retained-mode "submit"). 26.2 removed the
+     *  immediate-mode {@code renderBuffers()} path entirely; the collector path is identical on
+     *  1.21.10/1.21.11/26.1/26.2. */
+    public void render(PipeFlowPower flow, double x, double y, double z, float partialTicks,
+                       SubmitNodeCollector collector, PoseStack poseStack) {
+        if (computeCentrePower(flow) <= 0) {
+            return;
+        }
+        collector.submitCustomGeometry(poseStack, powerRenderType(),
+            (pose, consumer) -> drawAll(flow, partialTicks, pose, consumer));
+    }
+    //?}
+
     @Override
     public void render(PipeFlowPower flow, double x, double y, double z, float partialTicks, VertexConsumer bb, PoseStack.Pose pose) {
+        if (computeCentrePower(flow) <= 0) {
+            return;
+        }
+        //? if <26.2 {
+        // 1.21.1..26.1 classic immediate-mode path (this interface overload is only reached on those
+        // nodes; >=1.21.10 BERs call the SubmitNodeCollector overload above). Create a dedicated buffer
+        // for power rendering — do NOT use the global buffer source shared by other renderers to avoid
+        // endBatch() corrupting in-progress vertex data from other BERs.
+        MultiBufferSource.BufferSource bufferSource =
+            Minecraft.getInstance().renderBuffers().bufferSource();
+        VertexConsumer powerBB = bufferSource.getBuffer(powerRenderType());
+        drawAll(flow, partialTicks, pose, powerBB);
+        bufferSource.endBatch(powerRenderType());
+        //?}
+    }
+
+    private static double computeCentrePower(PipeFlowPower flow) {
+        double centrePower = 0;
+        for (Direction side : Direction.values()) {
+            Section s = flow.getSection(side);
+            centrePower = Math.max(centrePower, s.displayPower / (double) MjAPI.MJ);
+        }
+        return centrePower;
+    }
+
+    /** Draws every side stem plus the centre cube into {@code consumer}. Node-agnostic: {@code pose}
+     *  / {@code consumer} come from the {@code submitCustomGeometry} lambda on >=1.21.10 and from the
+     *  immediate-mode buffer source on 1.21.1. */
+    private static void drawAll(PipeFlowPower flow, float partialTicks, PoseStack.Pose pose, VertexConsumer consumer) {
         double centrePower = 0;
         double[] power = new double[6];
         for (Direction side : Direction.values()) {
@@ -48,34 +102,23 @@ public enum PipeFlowRendererPower implements IPipeFlowRenderer<PipeFlowPower> {
             centrePower = Math.max(centrePower, power[i]);
         }
 
-        if (centrePower > 0) {
-            // Create a dedicated buffer for power rendering — do NOT use the global
-            // buffer source shared by other renderers to avoid endBatch() corrupting
-            // in-progress vertex data from other BERs.
-            MultiBufferSource.BufferSource bufferSource =
-                Minecraft.getInstance().renderBuffers().bufferSource();
-            VertexConsumer powerBB = bufferSource.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
-
-            for (Direction side : Direction.values()) {
-                if (!flow.pipe.isConnected(side)) {
-                    continue;
-                }
-                int i = side.ordinal();
-                Section s = flow.getSection(side);
-                double offset = computeOffset(s.clientDisplayFlowLast, s.clientDisplayFlow, partialTicks);
-                renderSidePower(side, power[i], centrePower, offset, powerBB, pose);
+        for (Direction side : Direction.values()) {
+            if (!flow.pipe.isConnected(side)) {
+                continue;
             }
-
-            Vec3 offsetLast = flow.clientDisplayFlowCentreLast;
-            Vec3 offsetThis = flow.clientDisplayFlowCentre;
-            double offsetX = computeOffset(offsetLast.x, offsetThis.x, partialTicks);
-            double offsetY = computeOffset(offsetLast.y, offsetThis.y, partialTicks);
-            double offsetZ = computeOffset(offsetLast.z, offsetThis.z, partialTicks);
-
-            renderCentrePower(centrePower, offsetX, offsetY, offsetZ, powerBB, pose);
-
-            bufferSource.endBatch(net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+            int i = side.ordinal();
+            Section s = flow.getSection(side);
+            double offset = computeOffset(s.clientDisplayFlowLast, s.clientDisplayFlow, partialTicks);
+            renderSidePower(side, power[i], centrePower, offset, consumer, pose);
         }
+
+        Vec3 offsetLast = flow.clientDisplayFlowCentreLast;
+        Vec3 offsetThis = flow.clientDisplayFlowCentre;
+        double offsetX = computeOffset(offsetLast.x, offsetThis.x, partialTicks);
+        double offsetY = computeOffset(offsetLast.y, offsetThis.y, partialTicks);
+        double offsetZ = computeOffset(offsetLast.z, offsetThis.z, partialTicks);
+
+        renderCentrePower(centrePower, offsetX, offsetY, offsetZ, consumer, pose);
     }
 
     private static double computeOffset(double tick0, double tick1, float partialTicks) {
@@ -162,21 +205,21 @@ public enum PipeFlowRendererPower implements IPipeFlowRenderer<PipeFlowPower> {
                 0.5 + radius, 0.5 + radius, 0.5 + radius
             );
             Vec3 offsetVec = new Vec3(offsetX / 32.0, offsetY / 32.0, offsetZ / 32.0);
-            
+
             renderScrollingBox(box, offsetVec, face, uvs, sprite, bb, pose);
         }
     }
 
     private static void renderScrollingBox(AABB baseBox, Vec3 offsetVec, Direction face, UvFaceData uvs, TextureAtlasSprite sprite, VertexConsumer bb, PoseStack.Pose pose) {
         AABB movedBox = baseBox.move(offsetVec.x, offsetVec.y, offsetVec.z);
-        
+
         int fMinX = (int) Math.floor(movedBox.minX);
         int fMaxX = (int) Math.floor(movedBox.maxX);
         int fMinY = (int) Math.floor(movedBox.minY);
         int fMaxY = (int) Math.floor(movedBox.maxY);
         int fMinZ = (int) Math.floor(movedBox.minZ);
         int fMaxZ = (int) Math.floor(movedBox.maxZ);
-        
+
         for (int i = fMinX; i <= fMaxX; i++) {
             for (int j = fMinY; j <= fMaxY; j++) {
                 for (int k = fMinZ; k <= fMaxZ; k++) {
@@ -186,29 +229,29 @@ public enum PipeFlowRendererPower implements IPipeFlowRenderer<PipeFlowPower> {
                     double pMaxY = Math.min(movedBox.maxY, j + 1);
                     double pMinZ = Math.max(movedBox.minZ, k);
                     double pMaxZ = Math.min(movedBox.maxZ, k + 1);
-                    
+
                     if (pMinX >= pMaxX || pMinY >= pMaxY || pMinZ >= pMaxZ) continue;
-                    
+
                     if (face == Direction.WEST && pMinX > movedBox.minX + 1e-4) continue;
                     if (face == Direction.EAST && pMaxX < movedBox.maxX - 1e-4) continue;
                     if (face == Direction.DOWN && pMinY > movedBox.minY + 1e-4) continue;
                     if (face == Direction.UP && pMaxY < movedBox.maxY - 1e-4) continue;
                     if (face == Direction.NORTH && pMinZ > movedBox.minZ + 1e-4) continue;
                     if (face == Direction.SOUTH && pMaxZ < movedBox.maxZ - 1e-4) continue;
-                    
+
                     AABB uvBox = new AABB(pMinX - i, pMinY - j, pMinZ - k, pMaxX - i, pMaxY - j, pMaxZ - k);
                     ModelUtil.mapBoxToUvs(uvBox, face, uvs);
-                    
+
                     double gMinX = pMinX - offsetVec.x;
                     double gMaxX = pMaxX - offsetVec.x;
                     double gMinY = pMinY - offsetVec.y;
                     double gMaxY = pMaxY - offsetVec.y;
                     double gMinZ = pMinZ - offsetVec.z;
                     double gMaxZ = pMaxZ - offsetVec.z;
-                    
+
                     Vector3f pCent = new Vector3f((float)(gMinX + gMaxX) / 2f, (float)(gMinY + gMaxY) / 2f, (float)(gMinZ + gMaxZ) / 2f);
                     Vector3f pRad = new Vector3f((float)(gMaxX - gMinX) / 2f, (float)(gMaxY - gMinY) / 2f, (float)(gMaxZ - gMinZ) / 2f);
-                    
+
                     MutableQuad quad = ModelUtil.createFace(face, pCent, pRad, uvs);
                     quad.texFromSprite(sprite);
                     quad.lighti(15, 15);

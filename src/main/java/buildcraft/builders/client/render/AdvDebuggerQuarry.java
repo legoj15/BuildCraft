@@ -10,7 +10,6 @@ import java.util.Set;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
@@ -41,13 +40,13 @@ public final class AdvDebuggerQuarry {
 
     private AdvDebuggerQuarry() {}
 
-    public static void render(TileQuarry tile, PoseStack poseStack, MultiBufferSource bufferSource, Vec3 cameraPos) {
+    public static void render(TileQuarry tile, PoseStack poseStack, Vec3 cameraPos) {
         if (!tile.frameBox.isInitialized()) {
             return;
         }
 
-        renderBoomArmCollision(tile, poseStack, bufferSource, cameraPos);
-        renderForcedChunks(tile, poseStack, bufferSource, cameraPos);
+        renderBoomArmCollision(tile, poseStack, cameraPos);
+        renderForcedChunks(tile, poseStack, cameraPos);
     }
 
     /**
@@ -57,8 +56,7 @@ public final class AdvDebuggerQuarry {
      * and its box hangs hundreds of blocks down, which would dominate the view; a box is treated as a boom
      * arm when it is wider in X or Z than it is tall.
      */
-    private static void renderBoomArmCollision(TileQuarry tile, PoseStack poseStack, MultiBufferSource bufferSource,
-                                               Vec3 cameraPos) {
+    private static void renderBoomArmCollision(TileQuarry tile, PoseStack poseStack, Vec3 cameraPos) {
         Level level = tile.getLevel();
         if (level == null) {
             return;
@@ -71,13 +69,12 @@ public final class AdvDebuggerQuarry {
             AABB box = rig.getBoundingBox();
             boolean horizontal = box.getYsize() < box.getXsize() || box.getYsize() < box.getZsize();
             if (horizontal) {
-                DebugRenderHelper.renderSolidBox(poseStack, bufferSource, box, cameraPos, COLOUR_BOOM_ARM);
+                DebugRenderHelper.renderSolidBox(poseStack, box, cameraPos, COLOUR_BOOM_ARM);
             }
         }
     }
 
-    private static void renderForcedChunks(TileQuarry tile, PoseStack poseStack, MultiBufferSource bufferSource,
-                                           Vec3 cameraPos) {
+    private static void renderForcedChunks(TileQuarry tile, PoseStack poseStack, Vec3 cameraPos) {
         Set<ChunkPos> chunks = tile.getChunksToLoad();
         if (chunks == null || chunks.isEmpty()) {
             return;
@@ -91,7 +88,7 @@ public final class AdvDebuggerQuarry {
                 chunkPos.getMinBlockX() + 0.5, minY, chunkPos.getMinBlockZ() + 0.5,
                 chunkPos.getMaxBlockX() + 0.5, maxY, chunkPos.getMaxBlockZ() + 0.5
             );
-            DebugRenderHelper.renderTranslucentBox(poseStack, bufferSource, box, cameraPos, COLOUR_CHUNK);
+            DebugRenderHelper.renderTranslucentBox(poseStack, box, cameraPos, COLOUR_CHUNK);
         }
     }
 }

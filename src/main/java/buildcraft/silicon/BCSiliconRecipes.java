@@ -219,6 +219,9 @@ public class BCSiliconRecipes {
 
     /** Maps a DyeColor to its corresponding vanilla dye item. */
     private static net.minecraft.world.item.Item getDyeItem(DyeColor colour) {
+        //? if >=26.2 {
+        /*return Items.DYE.pick(colour);*/
+        //?} else {
         return switch (colour) {
             case WHITE -> Items.WHITE_DYE;
             case ORANGE -> Items.ORANGE_DYE;
@@ -237,6 +240,7 @@ public class BCSiliconRecipes {
             case RED -> Items.RED_DYE;
             case BLACK -> Items.BLACK_DYE;
         };
+        //?}
     }
 
     // --- Gate Copier Recipe ---
@@ -344,6 +348,9 @@ public class BCSiliconRecipes {
 
     /** Maps a DyeColor to its corresponding stained glass block. */
     private static Block getStainedGlass(DyeColor colour) {
+        //? if >=26.2 {
+        /*return Blocks.STAINED_GLASS.pick(colour);*/
+        //?} else {
         return switch (colour) {
             case WHITE -> Blocks.WHITE_STAINED_GLASS;
             case ORANGE -> Blocks.ORANGE_STAINED_GLASS;
@@ -362,5 +369,6 @@ public class BCSiliconRecipes {
             case RED -> Blocks.RED_STAINED_GLASS;
             case BLACK -> Blocks.BLACK_STAINED_GLASS;
         };
+        //?}
     }
 }

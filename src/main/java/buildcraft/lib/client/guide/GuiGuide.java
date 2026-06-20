@@ -230,7 +230,11 @@ public class GuiGuide extends Screen {
 
     public void closePage() {
         if (pages.isEmpty()) {
+            //? if >=26.2 {
+            /*minecraft.setScreenAndShow(null);*/
+            //?} else {
             minecraft.setScreen(null);
+            //?}
         } else {
             setPageInternal(pages.pop());
         }
@@ -799,7 +803,11 @@ public class GuiGuide extends Screen {
         // close it — the player may have opened it by accident and is trying to back out.
         // Match the bound key (not a hard-coded E) so a rebound inventory shortcut still works.
         if (!isOpen && this.minecraft.options.keyInventory.matches(keyEvent)) {
+            //? if >=26.2 {
+            /*this.minecraft.setScreenAndShow(null);*/
+            //?} else {
             this.minecraft.setScreen(null);
+            //?}
             return true;
         }
 

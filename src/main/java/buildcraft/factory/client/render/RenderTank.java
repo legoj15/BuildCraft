@@ -11,7 +11,9 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
+//? if <26.2 {
 import net.minecraft.client.renderer.MultiBufferSource;
+//?}
 import net.minecraft.client.renderer.Sheets;
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -154,60 +156,84 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
         int light = buildcraft.lib.client.render.LightUtil.getLightCoords(level, pos);
         int overlay = OverlayTexture.NO_OVERLAY;
 
-        poseStack.pushPose();
-
-        MultiBufferSource.BufferSource bufferSource =
-                Minecraft.getInstance().renderBuffers().bufferSource();
-        // Translucent for vanilla water, cutout for BC fluids (reuse water texture opaquely)
-        //? if >=1.21.10 {
-        VertexConsumer buffer = bufferSource.getBuffer(
-                FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
-        //?} else {
-        /*VertexConsumer buffer = bufferSource.getBuffer(
-                FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? net.minecraft.client.renderer.RenderType.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));*/
-        //?}
-        PoseStack.Pose pose = poseStack.last();
-
         boolean renderBottom = !connectedDown;
         boolean renderTop = !connectedUp || fillRatio < 1.0f;
 
+        // Translucent for vanilla water, cutout for BC fluids (reuse water texture opaquely)
+        //? if >=1.21.10 {
+        net.minecraft.client.renderer.rendertype.RenderType renderType =
+                FluidUtilBC.shouldRenderTranslucent(fluid)
+                    ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);
+        //?} else {
+        /*net.minecraft.client.renderer.RenderType renderType =
+                FluidUtilBC.shouldRenderTranslucent(fluid)
+                    ? net.minecraft.client.renderer.RenderType.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);*/
+        //?}
+
+        // 'a' (alpha) is reassigned above (0-alpha clamp), so alias it final for the lambda capture.
+        final float fa = a;
+
+        poseStack.pushPose();
+
+        // 26.2 removed immediate-mode rendering (MultiBufferSource / renderBuffers()); route the fluid
+        // geometry through the retained-mode submit system. Pre-26.2 nodes (incl. 1.21.1) keep the
+        // classic renderBuffers().bufferSource() draw path with identical output.
+        //? if >=26.2 {
+        /*collector.submitCustomGeometry(poseStack, renderType, (pose, consumer) ->
+                renderFluid(pose, consumer, sprite, fluidTop, fluidBottom, gaseous, fillRatio,
+                        connectedDown, renderTop, renderBottom, r, g, b, fa, light, overlay));*/
+        //?} else {
+        MultiBufferSource.BufferSource bufferSource =
+                Minecraft.getInstance().renderBuffers().bufferSource();
+        renderFluid(poseStack.last(), bufferSource.getBuffer(renderType), sprite, fluidTop, fluidBottom,
+                gaseous, fillRatio, connectedDown, renderTop, renderBottom, r, g, b, a, light, overlay);
+        bufferSource.endBatch();
+        //?}
+
+        poseStack.popPose();
+        } finally {
+            _profiler.pop();
+        }
+    }
+
+    /** Emit the fluid volume geometry into the given pose/consumer. Node-agnostic: the caller
+     *  supplies the {@link PoseStack.Pose} and {@link VertexConsumer} (from the submit collector on
+     *  26.2+, or from {@code renderBuffers().bufferSource()} on pre-26.2 nodes). Draw order is
+     *  preserved: 4 vertical faces, then the top/bottom horizontals, then the gaseous "open" face. */
+    private static void renderFluid(PoseStack.Pose pose, VertexConsumer consumer, TextureAtlasSprite sprite,
+            float fluidTop, float fluidBottom, boolean gaseous, float fillRatio, boolean connectedDown,
+            boolean renderTop, boolean renderBottom,
+            float r, float g, float b, float a, int light, int overlay) {
         // North face (facing -Z: CCW from outside)
-        quad(pose, buffer, sprite, MIN_XZ, fluidTop, MIN_XZ, MAX_XZ, fluidTop, MIN_XZ,
+        quad(pose, consumer, sprite, MIN_XZ, fluidTop, MIN_XZ, MAX_XZ, fluidTop, MIN_XZ,
                 MAX_XZ, fluidBottom, MIN_XZ, MIN_XZ, fluidBottom, MIN_XZ,
                 0, 0, -1, r, g, b, a, light, overlay);
         // South face (facing +Z: CCW from outside)
-        quad(pose, buffer, sprite, MIN_XZ, fluidBottom, MAX_XZ, MAX_XZ, fluidBottom, MAX_XZ,
+        quad(pose, consumer, sprite, MIN_XZ, fluidBottom, MAX_XZ, MAX_XZ, fluidBottom, MAX_XZ,
                 MAX_XZ, fluidTop, MAX_XZ, MIN_XZ, fluidTop, MAX_XZ,
                 0, 0, 1, r, g, b, a, light, overlay);
         // West face (facing -X: CCW from outside)
-        quad(pose, buffer, sprite, MIN_XZ, fluidBottom, MIN_XZ, MIN_XZ, fluidBottom, MAX_XZ,
+        quad(pose, consumer, sprite, MIN_XZ, fluidBottom, MIN_XZ, MIN_XZ, fluidBottom, MAX_XZ,
                 MIN_XZ, fluidTop, MAX_XZ, MIN_XZ, fluidTop, MIN_XZ,
                 -1, 0, 0, r, g, b, a, light, overlay);
         // East face (facing +X: CCW from outside)
-        quad(pose, buffer, sprite, MAX_XZ, fluidTop, MIN_XZ, MAX_XZ, fluidTop, MAX_XZ,
+        quad(pose, consumer, sprite, MAX_XZ, fluidTop, MIN_XZ, MAX_XZ, fluidTop, MAX_XZ,
                 MAX_XZ, fluidBottom, MAX_XZ, MAX_XZ, fluidBottom, MIN_XZ,
                 1, 0, 0, r, g, b, a, light, overlay);
 
         if (renderTop) {
-            quadHorizontal(pose, buffer, sprite, MIN_XZ, MAX_XZ, MAX_XZ, MIN_XZ, fluidTop,
+            quadHorizontal(pose, consumer, sprite, MIN_XZ, MAX_XZ, MAX_XZ, MIN_XZ, fluidTop,
                     0, 1, 0, r, g, b, a, light, overlay);
         }
         if (renderBottom) {
-            quadHorizontal(pose, buffer, sprite, MIN_XZ, MAX_XZ, MAX_XZ, MIN_XZ, fluidBottom,
+            quadHorizontal(pose, consumer, sprite, MIN_XZ, MAX_XZ, MAX_XZ, MIN_XZ, fluidBottom,
                     0, -1, 0, r, g, b, a, light, overlay);
         }
         // Render the "open" face for non-full gaseous fluid (bottom face visible)
         // or non-full liquid (top face visible when not connected up)
         if (gaseous && fillRatio < 1.0f && !connectedDown) {
-            quadHorizontal(pose, buffer, sprite, MIN_XZ, MAX_XZ, MAX_XZ, MIN_XZ, fluidBottom,
+            quadHorizontal(pose, consumer, sprite, MIN_XZ, MAX_XZ, MAX_XZ, MIN_XZ, fluidBottom,
                     0, -1, 0, r, g, b, a, light, overlay);
-        }
-
-        poseStack.popPose();
-        } finally {
-            _profiler.pop();
         }
     }
 

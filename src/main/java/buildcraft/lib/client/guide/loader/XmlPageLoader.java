@@ -333,7 +333,11 @@ public enum XmlPageLoader implements IPageLoaderText {
                 if (c == '<') {
                     XmlTag currentTag = parseTag(line.substring(i));
                     if (currentTag != null) {
+                        //? if >=26.2 {
+                        /*ChatFormatting formatting = formattingByName(currentTag.name.replace("_", ""));
+                        *///?} else {
                         ChatFormatting formatting = ChatFormatting.getByName(currentTag.name.replace("_", ""));
+                        //?}
                         if (formatting != null) {
                             if (currentTag.state == XmlTagState.END) {
                                 formattingElements.remove(formatting);
@@ -341,7 +345,11 @@ public enum XmlPageLoader implements IPageLoaderText {
                                     formatColours.remove();
                                 }
                             } else if (currentTag.state == XmlTagState.START) {
+                                //? if >=26.2 {
+                                /*if (isColour(formatting)) {
+                                *///?} else {
                                 if (formatting.isColor()) {
+                                //?}
                                     formatColours.push(formatting);
                                 } else {
                                     formattingElements.add(formatting);
@@ -1002,4 +1010,26 @@ public enum XmlPageLoader implements IPageLoaderText {
         }
         return stack;
     }
+
+    //? if >=26.2 {
+    /*// On 26.2 ChatFormatting lost getByName()/isColor(). These reproduce the old behaviour:
+    // getByName cleaned the name (lowercase, strip non-[a-z]) and matched the enum's name;
+    // isColor() was true for the first 16 colour constants (BLACK=0 .. WHITE=15).
+    private static ChatFormatting formattingByName(String name) {
+        if (name == null) {
+            return null;
+        }
+        String cleaned = name.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z]", "");
+        for (ChatFormatting f : ChatFormatting.values()) {
+            if (f.name().toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z]", "").equals(cleaned)) {
+                return f;
+            }
+        }
+        return null;
+    }
+
+    private static boolean isColour(ChatFormatting f) {
+        return f.ordinal() <= ChatFormatting.WHITE.ordinal();
+    }
+    *///?}
 }

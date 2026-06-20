@@ -101,7 +101,12 @@ public class ItemPipeHolder extends BlockItem implements IItemPipe {
         int colon = id.indexOf(':');
         String path = colon >= 0 ? id.substring(colon + 1) : id;
         String tipKey = "tip.pipe." + path;
-        if (I18n.exists(tipKey)) {
+        //? if >=26.2 {
+        /*boolean tipExists = net.minecraft.locale.Language.getInstance().has(tipKey);*/
+        //?} else {
+        boolean tipExists = I18n.exists(tipKey);
+        //?}
+        if (tipExists) {
             tooltip.accept(Component.literal(I18n.get(tipKey)).withStyle(ChatFormatting.GRAY));
         }
 

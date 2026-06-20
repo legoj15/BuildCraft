@@ -14,9 +14,13 @@ import org.joml.Vector3f;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
+//? if <26.2 {
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.Sheets;
+//?}
+//? if >=1.21.10 {
+import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
@@ -29,6 +33,7 @@ import buildcraft.api.transport.EnumWirePart;
 import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.ModelUtil.UvFaceData;
 import buildcraft.lib.client.model.MutableQuad;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.VecUtil;
@@ -184,16 +189,45 @@ public class PipeWireRenderer {
 
     // ---- Runtime rendering ----
 
+    //? if >=1.21.10 {
+    /** Modern (>=1.21.10) entry: the BER passes its {@link SubmitNodeCollector}, so wire geometry is
+     *  queued via {@code submitCustomGeometry} (retained-mode "submit"). 26.2 removed the immediate-mode
+     *  {@code renderBuffers()} path entirely; the collector path is identical on 1.21.10/1.21.11/26.1/26.2.
+     *
+     *  <p>{@code poseStack} is supplied (rather than a {@link PoseStack.Pose}) because
+     *  {@code submitCustomGeometry} hands the lambda its own {@code PoseStack.Pose}. */
+    public static void renderWires(TilePipeHolder pipe, com.mojang.blaze3d.vertex.PoseStack poseStack,
+                                   int packedLight, SubmitNodeCollector collector) {
+        WireManager wm = pipe.getWireManager();
+        if (wm == null || (wm.parts.isEmpty() && wm.betweens.isEmpty())) {
+            return;
+        }
+        collector.submitCustomGeometry(poseStack, BCLibRenderTypes.cutoutBlockSheet(),
+            (pose, consumer) -> drawWires(wm, pose, packedLight, consumer));
+    }
+    //?}
+
     public static void renderWires(TilePipeHolder pipe, PoseStack.Pose pose, int packedLight) {
         WireManager wm = pipe.getWireManager();
         if (wm == null || (wm.parts.isEmpty() && wm.betweens.isEmpty())) {
             return;
         }
 
+        //? if <26.2 {
+        // 1.21.1..26.1 classic immediate-mode path (this Pose-taking overload is only reached on those
+        // nodes; >=1.21.10 BERs call the SubmitNodeCollector overload above).
         MultiBufferSource.BufferSource bufferSource =
             Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer bb = bufferSource.getBuffer(Sheets.cutoutBlockSheet());
+        VertexConsumer bb = bufferSource.getBuffer(BCLibRenderTypes.cutoutBlockSheet());
+        drawWires(wm, pose, packedLight, bb);
+        bufferSource.endBatch(BCLibRenderTypes.cutoutBlockSheet());
+        //?}
+    }
 
+    /** Draws every powered wire part + between segment into {@code bb}. Node-agnostic: {@code pose} /
+     *  {@code bb} come from the {@code submitCustomGeometry} lambda on >=1.21.10 and from the
+     *  immediate-mode buffer source on 1.21.1. */
+    private static void drawWires(WireManager wm, PoseStack.Pose pose, int packedLight, VertexConsumer bb) {
         for (Map.Entry<EnumWirePart, DyeColor> entry : wm.parts.entrySet()) {
             EnumWirePart part = entry.getKey();
             DyeColor color = entry.getValue();
@@ -207,8 +241,6 @@ public class PipeWireRenderer {
             boolean isOn = wm.isPowered(between.parts[0]);
             renderQuads(betweenQuads.get(between), color, isOn, bb, pose, packedLight);
         }
-
-        bufferSource.endBatch(Sheets.cutoutBlockSheet());
     }
 
     private static void renderQuads(MutableQuad[] quads, DyeColor colour, boolean isOn,

@@ -9,10 +9,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
+//? if <26.1 {
+/*import com.mojang.blaze3d.vertex.VertexConsumer;*/
+//?}
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+//? if <26.1 {
+/*import net.minecraft.client.renderer.MultiBufferSource;*/
+//?}
+//? if >=26.1 {
+import net.minecraft.client.renderer.SubmitNodeCollector;
+//?}
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.Direction;
@@ -31,7 +38,33 @@ import buildcraft.lib.misc.data.Box;
 public class LaserBoxRenderer {
     private static final double RENDER_SCALE = 1 / 16.05;
 
-    public static void renderLaserBoxStatic(PoseStack poseStack, Box box, LaserType type, boolean center, Vec3 cameraPos) {
+    //? if >=26.1 {
+    public static void renderLaserBoxStatic(PoseStack poseStack, Box box, LaserType type, boolean center, Vec3 cameraPos,
+            SubmitNodeCollector collector) {
+        renderLaserBoxStatic(poseStack, box, type, center, false, cameraPos, collector);
+    }
+
+    public static void renderLaserBoxStatic(PoseStack poseStack, Box box, LaserType type, boolean center, boolean enableDiffuse, Vec3 cameraPos,
+            SubmitNodeCollector collector) {
+        if (box == null || box.min() == null || box.max() == null) {
+            return;
+        }
+
+        List<LaserData_BC8> datas = makeLaserBox(box, type, center, enableDiffuse);
+
+        // One submit per render type; draw all 12 edge-lasers inside the lambda. The captured
+        // poseStack is unchanged when the collector flushes, so renderLaser can keep writing from
+        // poseStack.last().
+        collector.submitCustomGeometry(poseStack,
+                BCLibRenderTypes.entitySolid(TextureAtlas.LOCATION_BLOCKS),
+                (pose, buffer) -> {
+                    for (LaserData_BC8 data : datas) {
+                        LaserRenderer_BC8.renderLaser(poseStack, buffer, data, cameraPos);
+                    }
+                });
+    }
+    //?} else {
+    /*public static void renderLaserBoxStatic(PoseStack poseStack, Box box, LaserType type, boolean center, Vec3 cameraPos) {
         renderLaserBoxStatic(poseStack, box, type, center, false, cameraPos);
     }
 
@@ -49,7 +82,8 @@ public class LaserBoxRenderer {
             LaserRenderer_BC8.renderLaser(poseStack, consumer, data, cameraPos);
         }
         bufferSource.endBatch();
-    }
+    }*/
+    //?}
 
     private static List<LaserData_BC8> makeLaserBox(Box box, LaserType type, boolean center, boolean enableDiffuse) {
         boolean renderX = !center || box.size().getX() > 1;

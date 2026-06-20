@@ -10,7 +10,9 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+//? if <1.21.10 {
+/*import net.minecraft.client.renderer.MultiBufferSource;*/
+//?}
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 //?}
@@ -123,16 +125,21 @@ public class RenderQuarry implements BlockEntityRenderer<TileQuarry, QuarryRende
 
         poseStack.pushPose();
 
-        MultiBufferSource.BufferSource bufferSource =
+        //? if >=1.21.10 {
+        collector.submitCustomGeometry(poseStack, BCLibRenderTypes.led(),
+                (pose, consumer) -> renderLEDs(tile, rear, pose, consumer));
+        //?} else {
+        /*MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
-        renderLEDs(tile, rear, poseStack, bufferSource);
-        bufferSource.endBatch();
+        renderLEDs(tile, rear, poseStack.last(), bufferSource.getBuffer(BCLibRenderTypes.led()));
+        bufferSource.endBatch();*/
+        //?}
 
         poseStack.popPose();
     }
 
     private void renderLEDs(TileQuarry tile, Direction rear,
-                            PoseStack poseStack, MultiBufferSource.BufferSource bufferSource) {
+                            PoseStack.Pose pose, VertexConsumer consumer) {
         boolean hasPower = tile.hasPower();
         boolean hasTask = tile.isMining();
 
@@ -148,9 +155,6 @@ public class RenderQuarry implements BlockEntityRenderer<TileQuarry, QuarryRende
 
         int greenColour = greenOn ? LedRenderUtil.COLOUR_GREEN_ON : LedRenderUtil.COLOUR_OFF;
         int redColour = redOn ? LedRenderUtil.COLOUR_RED_ON : LedRenderUtil.COLOUR_OFF;
-
-        VertexConsumer consumer = bufferSource.getBuffer(BCLibRenderTypes.led());
-        PoseStack.Pose pose = poseStack.last();
 
         for (int i = 0; i < 4; i++) {
             Direction dir = Direction.from2DDataValue(i);

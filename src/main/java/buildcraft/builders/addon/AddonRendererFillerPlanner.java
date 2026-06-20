@@ -16,7 +16,11 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import org.joml.Matrix4f;
 
-import net.minecraft.client.renderer.MultiBufferSource;
+//? if >=26.1 {
+import net.minecraft.client.renderer.SubmitNodeCollector;
+//?} else {
+/*import net.minecraft.client.renderer.MultiBufferSource;*/
+//?}
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
@@ -28,20 +32,39 @@ import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.core.marker.volume.IFastAddonRenderer;
 
 public class AddonRendererFillerPlanner implements IFastAddonRenderer<AddonFillerPlanner> {
+    //? if >=26.1 {
     @Override
+    public void renderAddonFast(AddonFillerPlanner addon, Player player, float partialTicks,
+                                 PoseStack poseStack, SubmitNodeCollector collector) {
+        if (addon.buildingInfo == null) {
+            return;
+        }
+        List<BlockPos> list = collectFillPositions(addon, player);
+        // Untextured, vertex-coloured translucent QUADs — equivalent to 1.12.2's ModelLoader.White.INSTANCE
+        // sprite usage. Sampling the block atlas (as the default addon render type does) would map our
+        // 0/1 UVs to the atlas corners and show random block textures instead of plain colour. MC 26.1+
+        // removed immediate-mode rendering, so the geometry is queued onto the collector.
+        collector.submitCustomGeometry(poseStack, BCLibRenderTypes.debugFilled(),
+                (pose, vb) -> emitFaces(vb, pose.pose(), list));
+    }
+    //?} else {
+    /*@Override
     public void renderAddonFast(AddonFillerPlanner addon, Player player, float partialTicks,
                                  PoseStack poseStack, MultiBufferSource bufferSource) {
         if (addon.buildingInfo == null) {
             return;
         }
-
+        List<BlockPos> list = collectFillPositions(addon, player);
         // Untextured, vertex-coloured translucent QUADs — equivalent to 1.12.2's ModelLoader.White.INSTANCE
         // sprite usage. Sampling the block atlas (as the default addon render type does) would map our
         // 0/1 UVs to the atlas corners and show random block textures instead of plain colour.
         VertexConsumer vb = bufferSource.getBuffer(BCLibRenderTypes.debugFilled());
-
         Matrix4f pose = poseStack.last().pose();
+        emitFaces(vb, pose, list);
+    }*/
+    //?}
 
+    private static List<BlockPos> collectFillPositions(AddonFillerPlanner addon, Player player) {
         List<BlockPos> list = StreamSupport.stream(
             BlockPos.betweenClosed(addon.buildingInfo.box.min(), addon.buildingInfo.box.max()).spliterator(),
             false
@@ -59,7 +82,10 @@ public class AddonRendererFillerPlanner implements IFastAddonRenderer<AddonFille
 
         list.sort(Comparator.<BlockPos>comparingDouble(p ->
             player.position().distanceToSqr(Vec3.atCenterOf(p))).reversed());
+        return list;
+    }
 
+    private void emitFaces(VertexConsumer vb, Matrix4f pose, List<BlockPos> list) {
         for (BlockPos p : list) {
             AABB bb = new AABB(Vec3.atLowerCornerOf(p), Vec3.atLowerCornerOf(p.offset(1, 1, 1))).inflate(-0.1);
 

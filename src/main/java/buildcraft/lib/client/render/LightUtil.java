@@ -5,7 +5,9 @@
  */
 package buildcraft.lib.client.render;
 
+//? if <26.2 {
 import net.minecraft.client.renderer.LevelRenderer;
+//?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
@@ -20,10 +22,12 @@ import net.minecraft.util.LightCoordsUtil;
  *
  * <p>26.1 introduced {@code net.minecraft.util.LightCoordsUtil} for light packing and renamed
  * {@code LevelRenderer.getLightColor} → {@code getLightCoords}; pre-CalVer (1.21.x) uses the
- * classic {@code LightTexture} + {@code LevelRenderer.getLightColor}. The packing convention
+ * classic {@code LightTexture} + {@code LevelRenderer.getLightColor}. 26.2 then relocated the
+ * position-to-coords getter itself off {@code LevelRenderer} onto {@code LightCoordsUtil}
+ * ({@code LightCoordsUtil.getLightCoords(level, pos)}). The packing convention
  * ({@code block << 4 | sky << 20}) and the {@code FULL_BRIGHT} value (15728880) are identical
- * across both lines — only the class/method names differ — so callers route through this util and
- * the {@code //? if} directives live here alone (durable for future 1.21.1 / 26.2 nodes).
+ * across every line — only the class/method names differ — so callers route through this util and
+ * the {@code //? if} directives live here alone (durable for the 1.21.1 / 26.2 nodes).
  */
 public final class LightUtil {
     private LightUtil() {}
@@ -43,9 +47,11 @@ public final class LightUtil {
         //?}
     }
 
-    /** Packed light coords for a world position (a {@link Level} satisfies both lines' getter type). */
+    /** Packed light coords for a world position (a {@link Level} satisfies every line's getter type). */
     public static int getLightCoords(Level level, BlockPos pos) {
-        //? if >=26.1 {
+        //? if >=26.2 {
+        /*return LightCoordsUtil.getLightCoords(level, pos);*/
+        //?} elif >=26.1 {
         return LevelRenderer.getLightCoords(level, pos);
         //?} else {
         /*return LevelRenderer.getLightColor(level, pos);*/

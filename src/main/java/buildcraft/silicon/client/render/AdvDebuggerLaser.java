@@ -8,7 +8,6 @@ package buildcraft.silicon.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -40,7 +39,7 @@ public final class AdvDebuggerLaser {
 
     private AdvDebuggerLaser() {}
 
-    public static void render(TileLaser tile, PoseStack poseStack, MultiBufferSource bufferSource, Vec3 cameraPos) {
+    public static void render(TileLaser tile, PoseStack poseStack, Vec3 cameraPos) {
         Level level = tile.getLevel();
         if (level == null) {
             return;
@@ -55,7 +54,7 @@ public final class AdvDebuggerLaser {
                 p.getX() + 0.5 - CUBE_RADIUS, p.getY() + 0.5 - CUBE_RADIUS, p.getZ() + 0.5 - CUBE_RADIUS,
                 p.getX() + 0.5 + CUBE_RADIUS, p.getY() + 0.5 + CUBE_RADIUS, p.getZ() + 0.5 + CUBE_RADIUS
             );
-            DebugRenderHelper.renderSolidBox(poseStack, bufferSource, box, cameraPos,
+            DebugRenderHelper.renderSolidBox(poseStack, box, cameraPos,
                 visible ? COLOUR_VISIBLE : COLOUR_BLOCKED);
         });
     }

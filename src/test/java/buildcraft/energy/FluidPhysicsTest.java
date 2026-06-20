@@ -60,14 +60,22 @@ public class FluidPhysicsTest {
         }
 
         // Spawn a pig at the bottom with AI intact (FloatGoal only drives the bob while AI is enabled).
+        //? if >=26.2 {
+        /*helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, 1, 1, 1);*/
+        //?} else {
         helper.spawn(EntityType.PIG, 1, 1, 1);
+        //?}
 
         // Surface region of the oil column (upper blocks, relative y 2..4). A region — not the single block
         // (1,3,1) — keeps the positive case robust: a bobbing mob often settles with its body in block
         // (1,2,1) and never reliably touches block 3, and the position is sampled at an arbitrary tick.
         AABB surface = new AABB(0.5, 2.0, 0.5, 2.5, 4.5, 2.5);
 
-        //? if >=26.1 {
+        //? if >=26.2 {
+        /*// Tag-based water physics: prove buoyancy — once ticking, the pig leaves the bottom and rises into
+        // the surface region (FloatGoal engages because crude oil joins the minecraft:water fluid tag).
+        helper.succeedWhen(() -> helper.assertEntityPresent(net.minecraft.world.entity.EntityTypes.PIG, surface));
+        *///?} elif >=26.1 {
         // Tag-based water physics: prove buoyancy — once ticking, the pig leaves the bottom and rises into
         // the surface region (FloatGoal engages because crude oil joins the minecraft:water fluid tag).
         helper.succeedWhen(() -> helper.assertEntityPresent(EntityType.PIG, surface));

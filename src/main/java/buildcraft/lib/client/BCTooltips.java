@@ -37,10 +37,10 @@ public class BCTooltips {
             // AND that variant exists in the lang file. Falls back to the base key otherwise.
             String rfFeKey = buildcraft.energy.BCEnergyConfig.rfFeKey(key);
             String resolved = !rfFeKey.equals(key)
-                    && net.minecraft.client.resources.language.I18n.exists(rfFeKey)
+                    && net.minecraft.locale.Language.getInstance().has(rfFeKey)
                     ? rfFeKey
                     : key;
-            if (net.minecraft.client.resources.language.I18n.exists(resolved)) {
+            if (net.minecraft.locale.Language.getInstance().has(resolved)) {
                 String translated = net.minecraft.client.resources.language.I18n.get(resolved);
                 for (String line : translated.split("\n")) {
                     event.getToolTip().add(Component.literal(line).withStyle(ChatFormatting.GRAY));

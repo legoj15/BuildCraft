@@ -10,7 +10,11 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import org.joml.Matrix4f;
 
-import net.minecraft.client.renderer.MultiBufferSource;
+//? if >=26.1 {
+import net.minecraft.client.renderer.SubmitNodeCollector;
+//?} else {
+/*import net.minecraft.client.renderer.MultiBufferSource;*/
+//?}
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
@@ -30,11 +34,25 @@ public class AddonDefaultRenderer<T extends Addon> implements IFastAddonRenderer
         this.sprite = sprite;
     }
 
+    //? if >=26.1 {
     @Override
+    public void renderAddonFast(T addon, Player player, float partialTicks, PoseStack poseStack, SubmitNodeCollector collector) {
+        AABB bb = addon.getBoundingBox();
+        collector.submitCustomGeometry(poseStack,
+                BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS),
+                (pose, builder) -> emitFaces(builder, pose.pose(), bb));
+    }
+    //?} else {
+    /*@Override
     public void renderAddonFast(T addon, Player player, float partialTicks, PoseStack poseStack, MultiBufferSource bufferSource) {
         VertexConsumer builder = bufferSource.getBuffer(BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
         AABB bb = addon.getBoundingBox();
         Matrix4f pose = poseStack.last().pose();
+        emitFaces(builder, pose, bb);
+    }*/
+    //?}
+
+    private void emitFaces(VertexConsumer builder, Matrix4f pose, AABB bb) {
         // Map raw 0-1 UV to atlas-relative UV via the sprite. Without this, vertices use the entire
         // texture atlas as the source rectangle and you see a chaotic mosaic instead of the icon.
         float u0 = sprite != null ? (float) sprite.getInterpU(0) : 0;

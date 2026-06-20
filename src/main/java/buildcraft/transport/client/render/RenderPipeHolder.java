@@ -17,7 +17,9 @@ import com.mojang.math.Axis;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
+//? if <26.2 {
 import net.minecraft.client.renderer.MultiBufferSource;
+//?}
 import net.minecraft.client.renderer.Sheets;
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -157,7 +159,13 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         // (DynamicBlockStateModel). The BER only handles dynamic content.
 
         // --- Render wires ---
+        //? if >=26.2 {
+        /*PipeWireRenderer.renderWires(pipe, poseStack, light, collector);*/
+        //?} else {
+        // 1.21.10/1.21.11/26.1 keep the proven immediate-mode self-sourcing wire draw; only 26.2
+        // (which removed renderBuffers()) routes wires through the collector above.
         PipeWireRenderer.renderWires(pipe, poseStack.last(), light);
+        //?}
 
         // --- Render pre-resolved item models ---
         // Following vanilla CampfireRenderer: item models were resolved in
@@ -165,10 +173,11 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         submitItems(renderState, poseStack, collector, light);
 
         // --- Render flow content that doesn't use pre-resolved state ---
-        // (fluids, power — these create their own buffer sources internally)
-        // Also renders behaviours (stripes beam)
+        // (fluids, power, stripes beam, pluggables). On 1.21.10/1.21.11/26.1 these self-source their
+        // own immediate-mode buffers; on 26.2 (renderBuffers() removed) they route through the
+        // collector via submitCustomGeometry. renderContents gates the two paths internally.
         ItemRenderUtil.beginItemBatch(poseStack, collector, light);
-        renderContents(pipe, 0, 0, 0, renderState.partialTick, poseStack);
+        renderContents(pipe, 0, 0, 0, renderState.partialTick, poseStack, collector);
         ItemRenderUtil.endItemBatch();
 
         poseStack.popPose();
@@ -182,10 +191,13 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
 
         Random modelOffsetRandom = new Random(0);
 
-        // Lazily create colour overlay buffer only if needed
+        //? if <26.2 {
+        // Lazily create colour overlay buffer only if needed (immediate-mode path; 26.2 routes the
+        // colour box through submitCustomGeometry below instead).
         VertexConsumer colourBuffer = null;
         MultiBufferSource.BufferSource colourBufferSource = null;
         boolean needsColourFlush = false;
+        //?}
 
         for (PipeHolderRenderState.ItemRenderEntry entry : renderState.itemEntries) {
             if (entry.renderState.isEmpty()) continue;
@@ -224,23 +236,51 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
 
             // Render colour overlay box for dye-tagged items
             if (entry.colour != null) {
+                //? if >=26.2 {
+                /*// 26.2 removed immediate-mode buffers: queue the colour box through the collector. The
+                // entry translation is baked into the snapshotted pose (submitCustomGeometry copies
+                // poseStack.last() at submit time), so the deferred lambda only emits the cached quads.
+                poseStack.pushPose();
+                poseStack.translate(entry.posX, entry.posY, entry.posZ);
+                final PipeHolderRenderState.ItemRenderEntry colourEntry = entry;
+                collector.submitCustomGeometry(poseStack,
+                    buildcraft.lib.client.render.BCLibRenderTypes.cutoutBlockSheet(),
+                    (pose, consumer) -> drawColourOverlay(pose, consumer, colourEntry));
+                poseStack.popPose();
+                *///?} else {
                 if (colourBuffer == null) {
                     colourBufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
                     colourBuffer = colourBufferSource.getBuffer(Sheets.cutoutBlockSheet());
                     needsColourFlush = true;
                 }
                 renderColourOverlay(poseStack, colourBuffer, entry);
+                //?}
             }
         }
 
+        //? if <26.2 {
         if (needsColourFlush && colourBufferSource != null) {
             colourBufferSource.endBatch(Sheets.cutoutBlockSheet());
         }
+        //?}
     }
 
-    /** Renders the dye colour overlay box for a tagged item. */
+    //? if <26.2 {
+    // Renders the dye colour overlay box for a tagged item (immediate-mode path). Applies the entry
+    // translation to poseStack itself, then draws into the supplied buffer.
     private static void renderColourOverlay(PoseStack poseStack, VertexConsumer buffer,
                                              PipeHolderRenderState.ItemRenderEntry entry) {
+        poseStack.pushPose();
+        poseStack.translate(entry.posX, entry.posY, entry.posZ);
+        drawColourOverlay(poseStack.last(), buffer, entry);
+        poseStack.popPose();
+    }
+    //?}
+
+    /** Emits the dye colour overlay quads into {@code buffer} using the already-positioned {@code pose}
+     *  (the entry translation must be baked into {@code pose} by the caller). Node-agnostic. */
+    private static void drawColourOverlay(PoseStack.Pose pose, VertexConsumer buffer,
+                                          PipeHolderRenderState.ItemRenderEntry entry) {
         MutableQuad[] colourQuads = PipeFlowRendererItems.getColouredQuads();
         if (colourQuads == null) return;
 
@@ -249,16 +289,13 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         int g = (col >> 8) & 0xFF;
         int b = col & 0xFF;
 
-        poseStack.pushPose();
-        poseStack.translate(entry.posX, entry.posY, entry.posZ);
         for (MutableQuad q : colourQuads) {
             if (q == null) continue;
             MutableQuad q2 = new MutableQuad(q);
             q2.lighti(15, 15);
             q2.multColouri(r, g, b, 255);
-            q2.render(poseStack.last(), buffer);
+            q2.render(pose, buffer);
         }
-        poseStack.popPose();
     }
     //?} else {
     /*// 1.21.1 classic BlockEntityRenderer: a single render() draws everything directly (no separate
@@ -380,28 +417,59 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         return 1;
     }
 
+    //? if >=1.21.10 {
     private static void renderContents(TilePipeHolder pipe, double x, double y, double z,
-        float partialTicks, PoseStack poseStack) {
+        float partialTicks, PoseStack poseStack, SubmitNodeCollector collector) {
+    //?} else {
+    /*private static void renderContents(TilePipeHolder pipe, double x, double y, double z,
+        float partialTicks, PoseStack poseStack) {*/
+    //?}
         Pipe p = pipe.getPipe();
         if (p == null) {
             return;
         }
-        // Item flow rendering is now handled by submitItems() using pre-resolved states.
+        // Item flow rendering is now handled by submitItems()/renderItems() using pre-resolved states.
         // Only render non-item flows here (fluids, power).
         if (p.flow != null && !(p.flow instanceof PipeFlowItems)) {
+            //? if >=26.2 {
+            /*renderFlow(p.flow, x, y, z, partialTicks, poseStack, collector);*/
+            //?} else {
             renderFlow(p.flow, x, y, z, partialTicks, poseStack.last());
+            //?}
         }
         if (p.behaviour != null) {
+            //? if >=26.2 {
+            /*renderBehaviour(p.behaviour, x, y, z, partialTicks, poseStack, collector);*/
+            //?} else {
             renderBehaviour(p.behaviour, x, y, z, partialTicks, poseStack.last());
+            //?}
         }
+        //? if >=26.2 {
+        /*// 26.2 removed immediate-mode buffers: queue all pluggable geometry through the collector.
+        // The plug renderers transform a PoseStack themselves and draw via poseStack.last(); inside a
+        // deferred submit lambda the outer poseStack has already been popped, so seed a fresh PoseStack
+        // from the snapshotted pose for them to build on.
+        collector.submitCustomGeometry(poseStack,
+            buildcraft.lib.client.render.BCLibRenderTypes.cutoutBlockSheet(), (pose, consumer) -> {
+                for (Direction facing : Direction.values()) {
+                    PipePluggable plug = pipe.getPluggable(facing);
+                    if (plug != null) {
+                        PoseStack plugPose = new PoseStack();
+                        plugPose.last().set(pose);
+                        renderPluggable(plug, x, y, z, partialTicks, consumer, plugPose);
+                    }
+                }
+            });
+        *///?} else {
         VertexConsumer plugBuffer = Minecraft.getInstance().renderBuffers().bufferSource()
-                .getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
+                .getBuffer(buildcraft.lib.client.render.BCLibRenderTypes.cutoutBlockSheet());
         for (Direction facing : Direction.values()) {
             PipePluggable plug = pipe.getPluggable(facing);
             if (plug != null) {
                 renderPluggable(plug, x, y, z, partialTicks, plugBuffer, poseStack);
             }
         }
+        //?}
     }
 
     @SuppressWarnings("unchecked")
@@ -413,6 +481,43 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
         }
     }
 
+    //? if >=26.2 {
+    /*@SuppressWarnings("unchecked")
+    private static <F extends PipeFlow> void renderFlow(F flow, double x, double y, double z,
+        float partialTicks, PoseStack poseStack, SubmitNodeCollector collector) {
+        // Modern (26.2) flow dispatch: route BuildCraft's own flow renderers through their
+        // SubmitNodeCollector overloads (submitCustomGeometry). Any third-party flow renderer (none
+        // ship today) falls back to the deprecated immediate-mode interface with the snapshot base pose.
+        IPipeFlowRenderer<F> renderer = PipeRegistryClient.getFlowRenderer(flow);
+        if (renderer == null) return;
+        if (renderer == PipeFlowRendererPower.INSTANCE) {
+            PipeFlowRendererPower.INSTANCE.render((buildcraft.transport.pipe.flow.PipeFlowPower) flow,
+                x, y, z, partialTicks, collector, poseStack);
+        } else if (renderer == PipeFlowRendererFE.INSTANCE) {
+            PipeFlowRendererFE.INSTANCE.render((buildcraft.transport.pipe.flow.PipeFlowRedstoneFlux) flow,
+                x, y, z, partialTicks, collector, poseStack);
+        } else if (renderer == PipeFlowRendererFluids.INSTANCE) {
+            PipeFlowRendererFluids.INSTANCE.render((buildcraft.transport.pipe.flow.PipeFlowFluids) flow,
+                x, y, z, partialTicks, collector, poseStack);
+        } else {
+            renderer.render(flow, x, y, z, partialTicks, null, poseStack.last());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <B extends PipeBehaviour> void renderBehaviour(B behaviour, double x, double y, double z,
+        float partialTicks, PoseStack poseStack, SubmitNodeCollector collector) {
+        IPipeBehaviourRenderer<B> renderer = PipeRegistryClient.getBehaviourRenderer(behaviour);
+        if (renderer == null) return;
+        if (renderer == PipeBehaviourRendererStripes.INSTANCE) {
+            PipeBehaviourRendererStripes.INSTANCE.render(
+                (buildcraft.transport.pipe.behaviour.PipeBehaviourStripes) behaviour,
+                x, y, z, partialTicks, collector, poseStack);
+        } else {
+            renderer.render(behaviour, x, y, z, partialTicks, null, poseStack.last());
+        }
+    }
+    *///?} else {
     @SuppressWarnings("unchecked")
     private static <F extends PipeFlow> void renderFlow(F flow, double x, double y, double z,
         float partialTicks, PoseStack.Pose pose) {
@@ -430,4 +535,5 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
             renderer.render(behaviour, x, y, z, partialTicks, null, pose);
         }
     }
+    //?}
 }

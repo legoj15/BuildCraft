@@ -8,7 +8,11 @@ package buildcraft.core.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+//? if >=26.1 {
+import net.minecraft.client.renderer.SubmitNodeCollector;
+//?} else {
+/*import net.minecraft.client.renderer.MultiBufferSource;*/
+//?}
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
@@ -35,40 +39,60 @@ public class VolumeBoxRenderer {
         PoseStack poseStack = MarkerRenderer.getPoseStack();
         Vec3 cameraPos = MarkerRenderer.getCameraPos();
         if (poseStack == null || cameraPos == null) return;
+        //? if >=26.1 {
+        SubmitNodeCollector collector = MarkerRenderer.getCollector();
+        if (collector == null) return;
+        //?}
 
         // Wireframe boxes.
         for (VolumeBox volumeBox : ClientVolumeBoxes.INSTANCE.volumeBoxes) {
             LaserType type = pickLaserType(volumeBox, player);
+            //? if >=26.1 {
             LaserBoxRenderer.renderLaserBoxStatic(
                     poseStack,
                     volumeBox.box,
                     type,
                     false, false,
-                    cameraPos);
+                    cameraPos, collector);
+            //?} else {
+            /*LaserBoxRenderer.renderLaserBoxStatic(
+                    poseStack,
+                    volumeBox.box,
+                    type,
+                    false, false,
+                    cameraPos);*/
+            //?}
         }
 
         if (player == null) return;
 
         // Addon icons + per-addon overlays. Push a camera-relative translation so the addon
-        // renderers can write world-space coords directly.
+        // renderers can write world-space coords directly. The translation persists onto the
+        // captured poseStack until the collector flushes (26.1+), so the deferred submits see it.
         poseStack.pushPose();
         poseStack.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
 
-        // Each addon picks its own RenderType off the bufferSource — corner icons go through
-        // entityTranslucent on the block atlas; the filler planner's preview goes through an
-        // untextured debug-filled type. endBatch() flushes all of them together.
-        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-
+        // Each addon picks its own RenderType — corner icons go through entityTranslucent on the
+        // block atlas; the filler planner's preview goes through an untextured debug-filled type.
+        //? if <26.1 {
+        /*MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();*/
+        //?}
         for (VolumeBox volumeBox : ClientVolumeBoxes.INSTANCE.volumeBoxes) {
             for (Addon addon : volumeBox.addons.values()) {
                 if (addon == null) continue;
                 @SuppressWarnings("unchecked")
                 IFastAddonRenderer<Addon> renderer = (IFastAddonRenderer<Addon>) addon.getRenderer();
-                renderer.renderAddonFast(addon, player, 1.0f, poseStack, bufferSource);
+                //? if >=26.1 {
+                renderer.renderAddonFast(addon, player, 1.0f, poseStack, collector);
+                //?} else {
+                /*renderer.renderAddonFast(addon, player, 1.0f, poseStack, bufferSource);*/
+                //?}
             }
         }
 
-        bufferSource.endBatch();
+        //? if <26.1 {
+        /*bufferSource.endBatch();*/
+        //?}
         poseStack.popPose();
     }
 

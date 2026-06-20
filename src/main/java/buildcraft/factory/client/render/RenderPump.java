@@ -10,7 +10,9 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+//? if <26.1 {
+/*import net.minecraft.client.renderer.MultiBufferSource;*/
+//?}
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 //?}
@@ -132,24 +134,27 @@ public class RenderPump implements BlockEntityRenderer<TilePump, PumpRenderState
 
         poseStack.pushPose();
 
-        MultiBufferSource.BufferSource bufferSource =
+        //? if >=26.1 {
+        // MC 26.1+ removed immediate-mode rendering — queue the LEDs onto the collector handed in
+        // by submit(). The captured poseStack is unchanged when the lambda runs.
+        collector.submitCustomGeometry(poseStack, BCLibRenderTypes.led(),
+                (pose, consumer) -> renderLEDs(tile, pose, consumer));
+        //?} else {
+        /*MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
-        renderLEDs(tile, poseStack, bufferSource);
-        bufferSource.endBatch();
+        renderLEDs(tile, poseStack.last(), bufferSource.getBuffer(BCLibRenderTypes.led()));
+        bufferSource.endBatch();*/
+        //?}
 
         poseStack.popPose();
     }
 
-    private void renderLEDs(TilePump tile, PoseStack poseStack,
-                            MultiBufferSource.BufferSource bufferSource) {
+    private void renderLEDs(TilePump tile, PoseStack.Pose pose, VertexConsumer consumer) {
         float percentFilled = tile.getPercentFilledForRender();
         int powerColour = COLOUR_POWER[(int) (percentFilled * (COLOUR_POWER.length - 1))];
 
         boolean complete = tile.isComplete();
         int statusColour = complete ? LedRenderUtil.COLOUR_OFF : LedRenderUtil.COLOUR_GREEN_ON;
-
-        VertexConsumer consumer = bufferSource.getBuffer(BCLibRenderTypes.led());
-        PoseStack.Pose pose = poseStack.last();
 
         for (int i = 0; i < 4; i++) {
             Direction dir = Direction.from2DDataValue(i);

@@ -10,7 +10,9 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+//? if <1.21.10 {
+/*import net.minecraft.client.renderer.MultiBufferSource;*/
+//?}
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 //?}
@@ -115,16 +117,21 @@ public class RenderArchitectTable implements BlockEntityRenderer<TileArchitectTa
 
         poseStack.pushPose();
 
-        MultiBufferSource.BufferSource bufferSource =
+        //? if >=1.21.10 {
+        collector.submitCustomGeometry(poseStack, BCLibRenderTypes.led(),
+                (pose, consumer) -> renderLEDs(tile, facing, pose, consumer));
+        //?} else {
+        /*MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
-        renderLEDs(tile, facing, poseStack, bufferSource);
-        bufferSource.endBatch();
+        renderLEDs(tile, facing, poseStack.last(), bufferSource.getBuffer(BCLibRenderTypes.led()));
+        bufferSource.endBatch();*/
+        //?}
 
         poseStack.popPose();
     }
 
     private void renderLEDs(TileArchitectTable tile, Direction facing,
-                            PoseStack poseStack, MultiBufferSource.BufferSource bufferSource) {
+                            PoseStack.Pose pose, VertexConsumer consumer) {
         boolean valid = tile.getIsValid();
         boolean hasInput = !tile.getSnapshotIn().isEmpty();
         boolean hasOutput = !tile.getSnapshotOut().isEmpty();
@@ -155,9 +162,6 @@ public class RenderArchitectTable implements BlockEntityRenderer<TileArchitectTa
         LedRenderUtil.setFacePosition(LED_RED, facing, LED_INSET, RED_OFFSET, Y);
         LED_GREEN.center.colouri(greenColour);
         LED_RED.center.colouri(redColour);
-
-        VertexConsumer consumer = bufferSource.getBuffer(BCLibRenderTypes.led());
-        PoseStack.Pose pose = poseStack.last();
 
         // Skip the inward face — it's hidden against the block body
         Direction skipFace = facing.getOpposite();

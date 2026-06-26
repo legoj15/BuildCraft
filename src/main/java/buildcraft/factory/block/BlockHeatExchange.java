@@ -177,7 +177,7 @@ public class BlockHeatExchange extends BaseEntityBlock implements ICustomRotatio
         //     rotation through ICustomRotationHandler#attemptRotation, which
         //     calls TileHeatExchange.rotate() (single block: 90°; chain: 180°
         //     swap of start/end). Matches 1.12.2's Block#rotateBlock wiring.
-        if (stack.getItem() instanceof IToolWrench) {
+        if (buildcraft.lib.misc.EntityUtil.isWrench(stack)) {
             if (player.isShiftKeyDown()) {
                 BlockEntity be = level.getBlockEntity(pos);
                 if (be instanceof TileHeatExchange exchange) {
@@ -185,7 +185,13 @@ public class BlockHeatExchange extends BaseEntityBlock implements ICustomRotatio
                 }
                 return BlockUtil.itemUsePass();
             }
-            return BlockUtil.itemUsePass();
+            // Non-crouch: rotate. BuildCraft's own wrench rotates via its useOn (ICustomRotationHandler);
+            // a foreign tag-only wrench has no such hook, so drive the rotation block-side here.
+            if (stack.getItem() instanceof IToolWrench) {
+                return BlockUtil.itemUsePass();
+            }
+            return BlockUtil.itemUseFrom(
+                    BlockUtil.rotateByForeignWrench(level, pos, state, player, hand, hitResult.getDirection()));
         }
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TileHeatExchange exchange)) {

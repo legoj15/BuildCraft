@@ -27,6 +27,7 @@ import buildcraft.energy.tile.TileEngineStone_BC8;
 import buildcraft.lib.engine.BlockEngineBase_BC8;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.SoundUtil;
 
 public class BlockEngineStone_BC8 extends BlockEngineBase_BC8 {
@@ -59,7 +60,7 @@ public class BlockEngineStone_BC8 extends BlockEngineBase_BC8 {
     /*protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {*/
     //?}
-        boolean isWrench = stack.getItem() instanceof IToolWrench;
+        boolean isWrench = EntityUtil.isWrench(stack);
         BlockEntity be = level.getBlockEntity(pos);
         TileEngineBase_BC8 engine = (be instanceof TileEngineBase_BC8 e) ? e : null;
 
@@ -84,7 +85,13 @@ public class BlockEngineStone_BC8 extends BlockEngineBase_BC8 {
 
         if (isWrench) {
             if (engine != null && engine.hasAlternateReceiver()) {
-                return BlockUtil.itemUsePass();
+                // BuildCraft's own wrench rotates via its useOn (ICustomRotationHandler); a foreign
+                // tag-only wrench has no such hook, so drive the rotation block-side here.
+                if (stack.getItem() instanceof IToolWrench) {
+                    return BlockUtil.itemUsePass();
+                }
+                return BlockUtil.itemUseFrom(
+                        BlockUtil.rotateByForeignWrench(level, pos, state, player, hand, hitResult.getDirection()));
             }
             if (!level.isClientSide()) {
                 level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 1.3f);

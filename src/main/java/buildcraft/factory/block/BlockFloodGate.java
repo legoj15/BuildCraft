@@ -35,7 +35,6 @@ import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.phys.BlockHitResult;
 
 import buildcraft.api.properties.BuildCraftProperties;
-import buildcraft.api.tools.IToolWrench;
 
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileFloodGate;
@@ -128,7 +127,7 @@ public class BlockFloodGate extends BaseEntityBlock {
     /*protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {*/
     //?}
-        if (!(stack.getItem() instanceof IToolWrench wrench)) {
+        if (!buildcraft.lib.misc.EntityUtil.isWrench(stack)) {
             return BlockUtil.itemUseTryWithEmptyHand();
         }
         Direction side = hitResult.getDirection();
@@ -172,9 +171,9 @@ public class BlockFloodGate extends BaseEntityBlock {
                         SoundSource.BLOCKS, 1.0F, level.getRandom().nextFloat() * 0.1F + 0.9F);
             }
         }
-        // Award `wrenched` advancement + swing arm. Server-side guard inside
-        // AdvancementUtil; both sides swing.
-        wrench.wrenchUsed(player, hand, stack, hitResult);
+        // BuildCraft's own wrench awards `wrenched` (server-side guard inside AdvancementUtil)
+        // and swings; a foreign tag-only wrench just swings the arm.
+        buildcraft.lib.misc.EntityUtil.wrenchUsed(player, hand, stack, hitResult);
         return BlockUtil.itemUseSuccess();
     }
 

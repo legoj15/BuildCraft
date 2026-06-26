@@ -223,6 +223,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:engine_overheat_explodes_when_configured", () -> buildcraft.energy.EngineTester::testStirlingEngineExplodesWhenConfigured);
         reg.accept("buildcraftunofficial:engine_clear_overheat_api", () -> buildcraft.energy.EngineTester::testEngineClearOverheatApi);
         reg.accept("buildcraftunofficial:engine_has_alternate_receiver_isolated", () -> buildcraft.energy.EngineTester::testEngineHasAlternateReceiverIsolated);
+        reg.accept("buildcraftunofficial:foreign_wrench_detection", () -> buildcraft.lib.misc.WrenchTagTester::testForeignWrenchDetection);
+        reg.accept("buildcraftunofficial:foreign_wrench_rotates_engine", () -> buildcraft.lib.misc.WrenchTagTester::testForeignWrenchRotatesEngine);
         reg.accept("buildcraftunofficial:combustion_engine_coolant_accepts_ice", () -> buildcraft.energy.EngineTester::testCombustionEngineCoolantTankAcceptsIce);
         reg.accept("buildcraftunofficial:engine_combustion_overheat_coolant_recovery", () -> buildcraft.energy.EngineTester::testCombustionEngineOverheatCoolantRecovery);
         reg.accept("buildcraftunofficial:combustion_engine_cools_to_green_equilibrium", () -> buildcraft.energy.EngineTester::testCombustionEngineCoolsToGreenEquilibrium);

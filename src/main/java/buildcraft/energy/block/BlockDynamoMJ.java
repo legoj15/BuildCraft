@@ -37,6 +37,7 @@ import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.energy.tile.TileDynamoMJ;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.EntityUtil;
 
 @SuppressWarnings("this-escape")
 public class BlockDynamoMJ extends Block implements EntityBlock, ICustomRotationHandler {
@@ -163,10 +164,16 @@ public class BlockDynamoMJ extends Block implements EntityBlock, ICustomRotation
             return BlockUtil.itemUseFrom(openGui(state, level, pos, player));
         }
 
-        if (stack.getItem() instanceof IToolWrench) {
+        if (EntityUtil.isWrench(stack)) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof TileEngineBase_BC8 engine && engine.hasAlternateReceiver()) {
-                return BlockUtil.itemUsePass();
+                // BuildCraft's own wrench rotates via its useOn (ICustomRotationHandler); a foreign
+                // tag-only wrench has no such hook, so drive the rotation block-side here.
+                if (stack.getItem() instanceof IToolWrench) {
+                    return BlockUtil.itemUsePass();
+                }
+                return BlockUtil.itemUseFrom(
+                        BlockUtil.rotateByForeignWrench(level, pos, state, player, hand, hitResult.getDirection()));
             }
             if (!level.isClientSide()) {
                 level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 1.3f);

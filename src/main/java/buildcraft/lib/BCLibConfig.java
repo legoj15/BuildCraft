@@ -16,6 +16,7 @@ public class BCLibConfig {
     public static ModConfigSpec.EnumValue<PowerMode> powerMode;
     public static ModConfigSpec.DoubleValue mjRfConversionAmount;
     public static ModConfigSpec.BooleanValue canEnginesExplode;
+    public static ModConfigSpec.BooleanValue allowForeignWrenches;
 
     public static ModConfigSpec.EnumValue<ThousandsSeparator> thousandsSeparator;
     public static ModConfigSpec.EnumValue<DecimalSeparator> decimalSeparator;
@@ -39,6 +40,22 @@ public class BCLibConfig {
                         "or via coolant on combustion engines) or cleared by hitting them with a wrench."
                 )
                 .define("canEnginesExplode", false);
+
+        allowForeignWrenches = builder
+                .comment(
+                        "If true (default), any item tagged 'c:tools/wrench' by another mod (e.g. a",
+                        "configurator) can rotate and configure BuildCraft blocks — pipes, engines,",
+                        "dynamos, the distiller and the heat exchanger — just like BuildCraft's own",
+                        "wrench. BuildCraft's wrench is itself added to that tag, so it likewise works",
+                        "on other mods' wrench-aware machines.",
+                        "Limitation: the crouch+wrench gesture that opens a machine's GUI only works",
+                        "with BuildCraft's own wrench. A foreign wrench cannot request the vanilla",
+                        "sneak-bypass, so on engines/dynamos it rotates (non-crouch) but a crouch-click",
+                        "won't open the GUI — use an empty hand for that instead.",
+                        "Set false to restrict every wrench interaction to wrenches that implement",
+                        "BuildCraft's own tool API."
+                )
+                .define("allowForeignWrenches", true);
     }
 
     public static void buildDisplay(ModConfigSpec.Builder builder) {

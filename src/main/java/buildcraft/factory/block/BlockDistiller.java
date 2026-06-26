@@ -123,7 +123,7 @@ public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHa
         //     a working distiller without spinning it)
         //   - non-crouch + wrench → PASS so ItemWrench_Neptune.useOn dispatches rotation
         //     through ICustomRotationHandler + plays the slide sound + grants `wrenched`
-        if (stack.getItem() instanceof IToolWrench) {
+        if (buildcraft.lib.misc.EntityUtil.isWrench(stack)) {
             if (player.isShiftKeyDown()) {
                 if (!level.isClientSide()) {
                     BlockEntity be = level.getBlockEntity(pos);
@@ -133,7 +133,13 @@ public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHa
                 }
                 return BlockUtil.itemUseSuccess();
             }
-            return BlockUtil.itemUsePass();
+            // Non-crouch: rotate. BuildCraft's own wrench rotates via its useOn (ICustomRotationHandler);
+            // a foreign tag-only wrench has no such hook, so drive the rotation block-side here.
+            if (stack.getItem() instanceof IToolWrench) {
+                return BlockUtil.itemUsePass();
+            }
+            return BlockUtil.itemUseFrom(
+                    BlockUtil.rotateByForeignWrench(level, pos, state, player, hand, hitResult.getDirection()));
         }
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof TileDistiller_BC8 distiller)) {

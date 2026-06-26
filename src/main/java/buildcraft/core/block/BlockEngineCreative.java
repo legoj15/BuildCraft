@@ -23,6 +23,7 @@ import buildcraft.core.tile.TileEngineCreative;
 import buildcraft.lib.engine.BlockEngineBase_BC8;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.EntityUtil;
 
 public class BlockEngineCreative extends BlockEngineBase_BC8 {
     public BlockEngineCreative(Properties properties) {
@@ -52,14 +53,20 @@ public class BlockEngineCreative extends BlockEngineBase_BC8 {
     /*protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hitResult) {*/
     //?}
-        if (!(stack.getItem() instanceof IToolWrench wrench)) {
+        if (!EntityUtil.isWrench(stack)) {
             return BlockUtil.itemUsePass();
         }
         BlockEntity be = level.getBlockEntity(pos);
 
         if (player.isShiftKeyDown()) {
             if (be instanceof TileEngineBase_BC8 engine && engine.hasAlternateReceiver()) {
-                return BlockUtil.itemUsePass();
+                // BuildCraft's own wrench rotates via its useOn (ICustomRotationHandler); a foreign
+                // tag-only wrench has no such hook, so drive the rotation block-side here.
+                if (stack.getItem() instanceof IToolWrench) {
+                    return BlockUtil.itemUsePass();
+                }
+                return BlockUtil.itemUseFrom(
+                        BlockUtil.rotateByForeignWrench(level, pos, state, player, hand, hitResult.getDirection()));
             }
             if (!level.isClientSide()) {
                 // Crouch-with-nothing-to-rotate-to: same soft-fail sound as the other engines.
@@ -72,9 +79,9 @@ public class BlockEngineCreative extends BlockEngineBase_BC8 {
         if (be instanceof TileEngineCreative creative) {
             creative.onWrenchInteract(player);
         }
-        // wrenchUsed on both sides: server side awards `wrenched` (guarded internally by
-        // ServerPlayer instanceof), both sides swing the arm. Matches ItemWrench_Neptune.useOn.
-        wrench.wrenchUsed(player, hand, stack, hitResult);
+        // wrenchUsed on both sides: BuildCraft's own wrench awards `wrenched` (guarded internally
+        // by ServerPlayer instanceof) and swings; a foreign tag-only wrench just swings the arm.
+        EntityUtil.wrenchUsed(player, hand, stack, hitResult);
         if (!level.isClientSide()) {
             // Cycle-power confirmation: lower-pitched lever click, distinct from the soft-fail.
             level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 0.7f);

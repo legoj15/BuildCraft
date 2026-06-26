@@ -91,6 +91,29 @@ public class BlockUtil {
     }*/
     //?}
 
+    /**
+     * Drives an {@link buildcraft.api.blocks.ICustomRotationHandler} rotation on behalf of a
+     * foreign (tag-only) wrench. BuildCraft's own wrench rotates these blocks from its
+     * {@code useOn()} via {@link buildcraft.api.blocks.CustomRotationHelper}; a third-party wrench
+     * in the {@code c:tools/wrench} tag has no such hook, so the block must drive the rotation
+     * itself. Mirrors {@code ItemWrench_Neptune.useOn} (rotate + slide sound + arm swing) minus the
+     * BuildCraft advancement, which stays reserved for BuildCraft's own wrench.
+     * <p>
+     * Returns {@link net.minecraft.world.InteractionResult#CONSUME}; wrap with {@link #itemUseFrom}
+     * for the node-correct {@code useItemOn} return type. Callers should only invoke this for a
+     * non-{@link buildcraft.api.tools.IToolWrench} wrench (BuildCraft's own wrench keeps its
+     * {@code useOn} rotation path via a {@code PASS}).
+     */
+    public static net.minecraft.world.InteractionResult rotateByForeignWrench(
+            Level level, BlockPos pos, BlockState state, Player player,
+            net.minecraft.world.InteractionHand hand, net.minecraft.core.Direction side) {
+        net.minecraft.world.InteractionResult result =
+                buildcraft.api.blocks.CustomRotationHelper.INSTANCE.attemptRotateBlock(level, pos, state, side);
+        SoundUtil.playSlideSound(level, pos, state, result);
+        player.swing(hand);
+        return net.minecraft.world.InteractionResult.CONSUME;
+    }
+
     /** Fallback profile used when a mining tile has no recorded owner (e.g. set-block, worldgen).
      *  Same UUID seed and display name as BCCore's BC_PROFILE so protection mods see one identity. */
     private static final GameProfile MACHINE_FAKE_PROFILE = new GameProfile(

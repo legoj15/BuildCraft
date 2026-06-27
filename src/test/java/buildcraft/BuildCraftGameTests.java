@@ -570,6 +570,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:autoworkbench_wood_pipe_extracts", () -> buildcraft.factory.MachinePipeConnectivityTester::testWoodPipeExtractsFromAutoWorkbench);
         reg.accept("buildcraftunofficial:assemblytable_wood_pipe_skips_resources", () -> buildcraft.factory.MachinePipeConnectivityTester::testWoodPipeSkipsAssemblyTableResources);
 
+        // Laser collision/outline hugs its model (base plate + emitter tower) rather than a full
+        // cube, so closely-packed lasers stay clickable-between (issue #22). Pins per-facing orientation.
+        reg.accept("buildcraftunofficial:laser_collision_matches_model", () -> buildcraft.silicon.LaserShapeTester::testCollisionShapeMatchesModel);
+
         // Gate modifier recipes must match the input gate by data-component variant, not just the
         // PLUG_GATE Item — see GateRecipeVariantTester for the regression context.
         reg.accept("buildcraftunofficial:gate_modifier_recipe_accepts_correct_variant", () -> buildcraft.silicon.GateRecipeVariantTester::testGoldLapisRecipeAcceptsGoldPlainGate);

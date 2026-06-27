@@ -227,8 +227,8 @@ public class BCEnergyConfig {
                 .define("oilIsSticky", false);
 
         searingFluidSteam = builder
-                .comment("If true, searing-hot BuildCraft fluids (the hottest heat tier) vent rising steam",
-                         "particles from their exposed surface. Purely cosmetic and client-side.")
+                .comment("Whether or not Searing fluids emit visual steam",
+                         "particles when placed in the world. Cosmetic only.")
                 .define("searingFluidSteam", true);
     }
 

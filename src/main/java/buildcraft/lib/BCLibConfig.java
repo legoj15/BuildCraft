@@ -52,17 +52,8 @@ public class BCLibConfig {
 
         allowForeignWrenches = builder
                 .comment(
-                        "If true (default), any item tagged 'c:tools/wrench' by another mod (e.g. a",
-                        "configurator) can rotate and configure BuildCraft blocks — pipes, engines,",
-                        "dynamos, the distiller and the heat exchanger — just like BuildCraft's own",
-                        "wrench. BuildCraft's wrench is itself added to that tag, so it likewise works",
-                        "on other mods' wrench-aware machines.",
-                        "Limitation: the crouch+wrench gesture that opens a machine's GUI only works",
-                        "with BuildCraft's own wrench. A foreign wrench cannot request the vanilla",
-                        "sneak-bypass, so on engines/dynamos it rotates (non-crouch) but a crouch-click",
-                        "won't open the GUI — use an empty hand for that instead.",
-                        "Set false to restrict every wrench interaction to wrenches that implement",
-                        "BuildCraft's own tool API."
+                        "If true (default), any item tagged 'c:tools/wrench' can rotate and configure BuildCraft blocks.",
+                        "When false, only a BuildCraft wrench can be used."
                 )
                 .define("allowForeignWrenches", true);
     }
@@ -84,12 +75,7 @@ public class BCLibConfig {
 
         abbreviateLargeNumbers = builder
                 .comment(
-                        "If true, large numbers in machine readouts collapse to a compact form:",
-                        "FE/RF and MJ values at or above 1,000 use k/M/G/T suffixes (1,234 -> 1.2k,",
-                        "1,500,000 -> 1.5M, 2,500,000,000 -> 2.5G, 4,000,000,000,000 -> 4.0T), and fluid",
-                        "volumes/rates at or above 1,000 mB switch to buckets (1,600 mB -> 1.6 B,",
-                        "4,000 mB -> 4 buckets). The k/M/G/T suffixes and the bucket decimal honour the",
-                        "configured decimal separator. JEI recipe-cost labels keep full precision. Default true."
+                        "If true, large energy and fluid numbers collapse to a compact form."
                 )
                 .define("abbreviateLargeNumbers", true);
 
@@ -105,13 +91,9 @@ public class BCLibConfig {
 
         colorBlindMode = builder
                 .comment(
-                        "Whether BuildCraft swaps to colourblind-friendly texture variants where available:",
-                        "the diamond pipe filter GUI shows numbered slot labels, and diamond item/fluid",
-                        "pipes show numbered west-face textures so each filter row is identifiable without",
-                        "colour vision. Restored from 1.12.2.",
+                        "Whether BuildCraft swaps to colourblind-friendly texture variants where available",
+                        "(textures that use the sorting colors, like the diamond pipes).",
                         "AUTO: follow Minecraft's Options → Accessibility → High Contrast toggle (default).",
-                        "      The MC option triggers a resource pack reload when toggled, which restitches",
-                        "      the block atlas — BuildCraft picks up the change on the next chunk re-bake.",
                         "OFF:  force off regardless of MC's accessibility setting.",
                         "ON:   force on regardless of MC's accessibility setting."
                 )

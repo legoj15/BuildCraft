@@ -5,6 +5,7 @@ import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.mj.MjRfConversion;
 import buildcraft.energy.BCEnergyConfig;
 import buildcraft.lib.BCLibConfig;
 import net.minecraft.locale.Language;
@@ -26,8 +27,14 @@ public class LocaleUtil {
      *  the abbreviation toggle is on and the value is ≥ 1000). Unit follows
      *  {@link BCEnergyConfig#useFullUnitNames}; thousands and decimal separators follow
      *  {@link BCLibConfig#thousandsSeparator} and {@link BCLibConfig#decimalSeparator};
-     *  abbreviation follows {@link BCLibConfig#abbreviateLargeNumbers}. */
+     *  abbreviation follows {@link BCLibConfig#abbreviateLargeNumbers}.
+     *  <p>When {@code powerMode == DISPLAY_RF} the value is converted to FE/RF (via the configured
+     *  {@code mjRfConversionAmount} ratio) and rendered with the FE/RF unit instead — so every
+     *  machine readout follows the same unit the player chose. */
     public static String localizeMj(long microMj) {
+        if (isDisplayRf()) {
+            return formatMjAsRf(microMj, currentMjPerRf(), energyUnit());
+        }
         double mj = microMj / (double) MjAPI.MJ;
         return formatMjAmount(mj, 2, shouldAbbreviate()) + " " + mjUnit();
     }
@@ -39,6 +46,18 @@ public class LocaleUtil {
      *  and {@link BCLibConfig#decimalSeparator}; abbreviation follows
      *  {@link BCLibConfig#abbreviateLargeNumbers}. */
     public static String localizeMjFlow(long microMjPerTick) {
+        if (isDisplayRf()) {
+            return formatMjFlowAsRf(microMjPerTick, currentMjPerRf(), currentFlowDisplay(),
+                    energyUnit(), shouldUseFullNames());
+        }
+        return localizeMjFlowForcedMj(microMjPerTick);
+    }
+
+    /** Always renders an MJ flow in MJ units, ignoring {@code powerMode == DISPLAY_RF}. For the
+     *  MJ↔FE conversion-help text on the FE-engine and MJ-dynamo screens, where the MJ side is the
+     *  whole point of the readout ("Converts X MJ → Y RF") and must stay MJ even when the rest of
+     *  the UI is switched to RF. Everywhere else use {@link #localizeMjFlow(long)}. */
+    public static String localizeMjFlowForcedMj(long microMjPerTick) {
         double mjPerTick = microMjPerTick / (double) MjAPI.MJ;
         return formatMjFlow(mjPerTick, currentFlowDisplay(), mjUnit(), shouldUseFullNames(), shouldAbbreviate());
     }
@@ -272,6 +291,24 @@ public class LocaleUtil {
         return BCLibConfig.flowDisplay != null ? BCLibConfig.flowDisplay.get() : BCLibConfig.FlowDisplay.PER_SECOND;
     }
 
+    /** Whether {@code powerMode} is {@code DISPLAY_RF} — the mode that switches machine readouts
+     *  from MJ to FE/RF. Null-safe (false under JUnit, where the config isn't booted), so the
+     *  MJ-formatting paths stay in their MJ branch for the structural formatter tests. */
+    private static boolean isDisplayRf() {
+        return BCLibConfig.powerMode != null
+                && BCLibConfig.powerMode.get() == BCLibConfig.PowerMode.DISPLAY_RF;
+    }
+
+    /** The MJ⇄RF conversion ratio as micro-MJ per 1 RF, parsed from {@code mjRfConversionAmount}
+     *  (MJ per RF) and clamped to the supported range by {@link MjRfConversion}. Falls back to the
+     *  default ratio when the config isn't loaded. */
+    private static long currentMjPerRf() {
+        double mjPerRf = BCLibConfig.mjRfConversionAmount != null
+                ? BCLibConfig.mjRfConversionAmount.get()
+                : MjRfConversion.DEFAULT_MJ_PER_RF / (double) MjAPI.MJ;
+        return MjRfConversion.createParsed(mjPerRf).mjPerRf;
+    }
+
     /** Package-visible — takes the unit string, suffix style, and abbreviation flag explicitly so
      *  unit tests can exercise every {@link BCLibConfig.FlowDisplay} × suffix × abbreviation combo
      *  without depending on the {@code mjUnit()} / {@code useFullUnitNames} /
@@ -301,6 +338,33 @@ public class LocaleUtil {
      *  {@link #localizeRfFlow(int)}'s overflow-safe widening. */
     static String formatRfFlow(int rfPerTick, BCLibConfig.FlowDisplay mode, String unit, boolean fullSuffix) {
         String perSec = formatLong(rfPerTick * 20L) + " " + unit + perSecondSuffix(fullSuffix);
+        String perTick = formatLong(rfPerTick) + " " + unit + perTickSuffix(fullSuffix);
+        return switch (mode) {
+            case PER_SECOND -> perSec;
+            case PER_TICK -> perTick;
+            case BOTH -> perSec + " (" + perTick + ")";
+        };
+    }
+
+    /** Package-visible — render a micro-MJ amount as an FE/RF amount, converting at {@code mjPerRf}
+     *  (micro-MJ per 1 RF). Used by {@link #localizeMj(long)} under {@code powerMode == DISPLAY_RF}.
+     *  Rounded to whole RF and formatted like {@link #localizeRf} (thousands grouping + abbreviation
+     *  via {@link #formatLong(long)}). */
+    static String formatMjAsRf(long microMj, long mjPerRf, String unit) {
+        long rf = Math.round(microMj / (double) mjPerRf);
+        return formatLong(rf) + " " + unit;
+    }
+
+    /** Package-visible — render a micro-MJ/tick flow as an FE/RF flow, converting at {@code mjPerRf}
+     *  (micro-MJ per 1 RF). Used by {@link #localizeMjFlow(long)} under {@code powerMode ==
+     *  DISPLAY_RF}. The per-second and per-tick figures are each rounded straight from the micro-MJ
+     *  source, so they never drift by the ×20 factor that re-deriving one from the other would
+     *  introduce on sub-RF/tick rates. */
+    static String formatMjFlowAsRf(long microMjPerTick, long mjPerRf, BCLibConfig.FlowDisplay mode,
+                                   String unit, boolean fullSuffix) {
+        long rfPerTick = Math.round(microMjPerTick / (double) mjPerRf);
+        long rfPerSecond = Math.round(microMjPerTick * 20.0 / mjPerRf);
+        String perSec = formatLong(rfPerSecond) + " " + unit + perSecondSuffix(fullSuffix);
         String perTick = formatLong(rfPerTick) + " " + unit + perTickSuffix(fullSuffix);
         return switch (mode) {
             case PER_SECOND -> perSec;

@@ -25,11 +25,20 @@ public class BCLibConfig {
 
     public static void buildGeneral(ModConfigSpec.Builder builder) {
         powerMode = builder
-                .comment("Power mode. Options are MJ_ONLY, MJ_AUTOCONVERT_RF, DISPLAY_RF")
+                .comment(
+                        "How BuildCraft machines handle and display power. Minecraft Joules is BuildCraft's own energy format.",
+                        "MJ_ONLY (default): machines show and accept only MJ. FE/RF requires the special conversion engine to use, and the dynamo to generate.",
+                        "MJ_AUTOCONVERT_RF: machines will accept FE/RF automatically, with MJ as the default power unit still.",
+                        "DISPLAY_RF: same auto-conversion as MJ_AUTOCONVERT_RF, but machines show RF/FE as the default power unit."
+                )
                 .defineEnum("powerMode", PowerMode.MJ_ONLY);
 
         mjRfConversionAmount = builder
-                .comment("Conversion ratio for MJ <-> RF if autoconvert is enabled (MJ per RF)")
+                .comment(
+                        "Conversion ratio for MJ <-> RF, in MJ per RF (default 0.1 -> 10 RF = 1 MJ).",
+                        "Used whenever auto-conversion is enabled (MJ_AUTOCONVERT_RF / DISPLAY_RF), and",
+                        "also drives the FE/RF figures shown under DISPLAY_RF."
+                )
                 .defineInRange("mjRfConversionAmount", 0.1, 0.0001, 0.2);
 
         canEnginesExplode = builder

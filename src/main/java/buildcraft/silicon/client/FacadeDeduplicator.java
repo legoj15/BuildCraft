@@ -135,7 +135,7 @@ public class FacadeDeduplicator {
                 continue;
             }
 
-            String fingerprint = computeTextureFingerprint(model);
+            String fingerprint = computeTextureFingerprint(info.state, model);
             if (fingerprint == null) {
                 nullFingerprints++;
                 continue;
@@ -235,7 +235,7 @@ public class FacadeDeduplicator {
             //?}
             if (model == null) continue;
 
-            String fingerprint = computeTextureFingerprint(model);
+            String fingerprint = computeTextureFingerprint(state, model);
             if (fingerprint == null) continue;
 
             FacadeBlockStateInfo match = seen.get(fingerprint);
@@ -324,17 +324,22 @@ public class FacadeDeduplicator {
      * Computes a texture fingerprint for a BlockStateModel by examining its quads
      * on all 6 faces. Uses the NeoForge 1.21.11 collectParts/SimpleModelWrapper API.
      * Returns a canonical string of sorted texture names, or null if no quads found.
+     *
+     * <p>{@code state} is the blockstate the {@code model} was looked up for. On the modern
+     * ({@code >=1.21.10}) nodes the model is already state-resolved and {@code collectParts}
+     * needs no state, so it is unused there; on 1.21.1 it is forwarded into the legacy
+     * {@code BakedModel.getQuads(state, ...)} call — see {@link #getQuadsFromModel}.
      */
     //? if >=1.21.10 {
-    private static String computeTextureFingerprint(BlockStateModel model) {
+    private static String computeTextureFingerprint(BlockState state, BlockStateModel model) {
     //?} else {
-    /*private static String computeTextureFingerprint(net.minecraft.client.resources.model.BakedModel model) {*/
+    /*private static String computeTextureFingerprint(BlockState state, net.minecraft.client.resources.model.BakedModel model) {*/
     //?}
         try {
             Set<String> textures = new LinkedHashSet<>();
 
             for (Direction dir : Direction.values()) {
-                List<BakedQuad> quads = getQuadsFromModel(model, dir);
+                List<BakedQuad> quads = getQuadsFromModel(state, model, dir);
                 for (BakedQuad quad : quads) {
                     //? if >=26.1 {
                     textures.add(dir.name() + ":" + quad.materialInfo().sprite().contents().name().toString());
@@ -346,7 +351,7 @@ public class FacadeDeduplicator {
                 }
             }
             // Also check null-direction (general/unculled quads)
-            List<BakedQuad> generalQuads = getQuadsFromModel(model, null);
+            List<BakedQuad> generalQuads = getQuadsFromModel(state, model, null);
             for (BakedQuad quad : generalQuads) {
                 //? if >=26.1 {
                 textures.add("GENERAL:" + quad.materialInfo().sprite().contents().name().toString());
@@ -375,9 +380,9 @@ public class FacadeDeduplicator {
      * NeoForge 1.21.11 collectParts/SimpleModelWrapper API.
      */
     //? if >=1.21.10 {
-    private static List<BakedQuad> getQuadsFromModel(BlockStateModel model, Direction side) {
+    private static List<BakedQuad> getQuadsFromModel(BlockState state, BlockStateModel model, Direction side) {
     //?} else {
-    /*private static List<BakedQuad> getQuadsFromModel(net.minecraft.client.resources.model.BakedModel model, Direction side) {*/
+    /*private static List<BakedQuad> getQuadsFromModel(BlockState state, net.minecraft.client.resources.model.BakedModel model, Direction side) {*/
     //?}
         //? if >=26.1 {
         List<BlockStateModelPart> parts = new ArrayList<>();
@@ -402,8 +407,13 @@ public class FacadeDeduplicator {
         }
         return result;*/
         //?} else {
-        /*// 1.21.1: BakedModel exposes quads directly; SimpleBakedModel ignores the (null) state.
-        return model.getQuads(null, side, RANDOM);*/
+        /*// 1.21.1: BakedModel.getQuads needs the REAL block state, not null. Vanilla SimpleBakedModel
+        // ignores it, but (a) multipart models evaluate their selectors against it and (b) third-party
+        // IDynamicBakedModels may dereference it without a null-check — e.g. Modular Machinery Reborn's
+        // hatch model NPEs on state.hasProperty(...) and log-spams once per face per hatch block at every
+        // world join (issue #24). The state is on hand at both call sites; forward it, mirroring
+        // PlugBakerFacade.getQuadsFromModel which already fixed this for facade rendering.
+        return model.getQuads(state, side, RANDOM);*/
         //?}
     }
 }

@@ -8,9 +8,10 @@ import net.minecraft.world.entity.player.Player;
 
 
 import net.neoforged.bus.api.Event;
+import net.neoforged.bus.api.ICancellableEvent;
 
-/*@Cancelable*/
-public class RobotPlacementEvent extends Event {
+/** Fired when a robot program is about to be deployed; cancel to veto the placement. */
+public class RobotPlacementEvent extends Event implements ICancellableEvent {
     public Player player;
     public String robotProgram;
 

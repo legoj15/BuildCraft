@@ -9,6 +9,7 @@ import net.minecraft.world.item.ItemStack;
 
 
 import net.neoforged.bus.api.Event;
+import net.neoforged.bus.api.ICancellableEvent;
 
 import buildcraft.api.robots.EntityRobotBase;
 
@@ -19,8 +20,8 @@ public abstract class RobotEvent extends Event {
         this.robot = robot;
     }
 
-    /*@Cancelable*/
-    public static class Place extends RobotEvent {
+    /** Cancel to veto a robot being placed into the world from its item. */
+    public static class Place extends RobotEvent implements ICancellableEvent {
         public final Player player;
 
         public Place(EntityRobotBase robot, Player player) {
@@ -29,8 +30,8 @@ public abstract class RobotEvent extends Event {
         }
     }
 
-    /*@Cancelable*/
-    public static class Interact extends RobotEvent {
+    /** Cancel to suppress the default right-click interaction handling on a robot. */
+    public static class Interact extends RobotEvent implements ICancellableEvent {
         public final Player player;
         public final ItemStack item;
 
@@ -41,8 +42,8 @@ public abstract class RobotEvent extends Event {
         }
     }
 
-    /*@Cancelable*/
-    public static class Dismantle extends RobotEvent {
+    /** Cancel to prevent a robot from being dismantled back into its item. */
+    public static class Dismantle extends RobotEvent implements ICancellableEvent {
         public final Player player;
 
         public Dismantle(EntityRobotBase robot, Player player) {

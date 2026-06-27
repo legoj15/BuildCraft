@@ -225,8 +225,12 @@ public class ListTester {
         assertFalse(matcher.matches(Type.MATERIAL, pumpkin, brick, false),
                 "pumpkin MATERIAL must NOT match baked brick");
 
-        // With no real material, cobblestone is no longer a MATERIAL exemplar at all (its only
-        // structured tag was c:cobblestones/normal) — it falls through to identity matching.
+        // With no real material, cobblestone is not a MATERIAL exemplar — it falls through to
+        // identity matching. Its only convention material tag is c:cobblestones/normal (the "normal"
+        // form qualifier is dropped). On MC 26.2 cobblestone ALSO carries the vanilla gameplay tag
+        // minecraft:sulfur_cube_archetype/slow_bouncy, whose "/" is NOT a c: family/material split,
+        // so it's correctly ignored (see ListMatchHandlerTags.partOf) rather than read as material
+        // "slow_bouncy" — without that, cobblestone would wrongly become a material source on 26.2.
         assertFalse(matcher.isValidSource(Type.MATERIAL, cobblestone),
                 "cobblestone has no real material part, so it is not a MATERIAL source");
 

@@ -26,9 +26,12 @@ import net.minecraft.world.item.ItemStack;
 
 import buildcraft.api.lists.ListMatchHandler;
 
-/** Replaces the 1.12.2 OreDictionary handler. Splits each item tag's path on {@code /} into
- * a (type, material) pair so a tag like {@code c:ingots/iron} contributes type=ingots and
- * material=iron. Single-segment tags like {@code minecraft:planks} contribute type only. */
+/** Replaces the 1.12.2 OreDictionary handler. Splits a {@code c:} convention tag's path on
+ * {@code /} into a (type, material) pair so a tag like {@code c:ingots/iron} contributes
+ * type=ingots and material=iron. A slash in any OTHER namespace is not a family/material split
+ * (e.g. vanilla {@code minecraft:sulfur_cube_archetype/slow_bouncy} is a gameplay tag, not a
+ * material family); such tags are taken whole. Single-segment tags like {@code minecraft:planks}
+ * act as a material fallback when no {@code c:} family is present. */
 public class ListMatchHandlerTags extends ListMatchHandler {
 
     /** Vanilla grouping tags that lump otherwise-unrelated items together for reasons that have
@@ -137,19 +140,37 @@ public class ListMatchHandlerTags extends ListMatchHandler {
         //?}
     }
 
+    /** A NeoForge convention structured tag: {@code c:<family>/<variant>} (namespace {@code c} with
+     * a slash). Only these carry the family/variant semantic the MATERIAL/TYPE split relies on;
+     * vanilla {@code minecraft:.../...} slashed tags (e.g. {@code sulfur_cube_archetype/slow_bouncy}
+     * on MC 26.2) are gameplay groupings, not material families. */
+    private static boolean isConventionStructured(TagKey<Item> tag) {
+        return "c".equals(tag.location().getNamespace()) && tag.location().getPath().indexOf('/') >= 0;
+    }
+
     /** Type-parts or material-parts of every tag on {@code stack}. For MATERIAL, single-segment
      * tags (no slash) are a fallback only — {@code c:ingots} is a type umbrella, not a material,
-     * and counting it would make every ingot share material "ingots". A stack with any slashed
-     * tag ({@code c:ingots/iron}) is pinned by those alone; single-segment tags feed MATERIAL
-     * only when no slashed tag exists (e.g. planks, sole tag {@code minecraft:planks}). */
+     * and counting it would make every ingot share material "ingots". A stack with any {@code c:}
+     * family tag ({@code c:ingots/iron}) is pinned by those alone; single-segment tags feed MATERIAL
+     * only when no such family exists (e.g. planks, sole tag {@code minecraft:planks}). A non-{@code c:}
+     * slashed tag is neither a family nor a fallback and contributes nothing. */
     private static Set<String> collectParts(ItemStack stack, Type type) {
         List<TagKey<Item>> tags = tagsOf(stack).toList();
         Set<String> parts = new HashSet<>();
         if (type == Type.MATERIAL) {
-            boolean hasSlashed = tags.stream().anyMatch(t -> t.location().getPath().indexOf('/') >= 0);
+            boolean hasStructured = tags.stream().anyMatch(ListMatchHandlerTags::isConventionStructured);
             for (TagKey<Item> tag : tags) {
-                boolean slashed = tag.location().getPath().indexOf('/') >= 0;
-                if (hasSlashed && !slashed) {
+                boolean structured = isConventionStructured(tag);
+                boolean singleSegment = tag.location().getPath().indexOf('/') < 0;
+                // A non-c: slashed tag (e.g. vanilla minecraft:sulfur_cube_archetype/slow_bouncy on
+                // MC 26.2) is a gameplay grouping — not a material family and not a single-segment
+                // fallback — so it never names a material. Drop it entirely.
+                if (!structured && !singleSegment) {
+                    continue;
+                }
+                // When the stack has a real convention family (c:.../...), single-segment umbrella
+                // tags (c:ingots, minecraft:planks) are too broad to be the material — the family pins it.
+                if (hasStructured && !structured) {
                     continue;
                 }
                 String part = partOf(tag, type);
@@ -168,16 +189,20 @@ public class ListMatchHandlerTags extends ListMatchHandler {
         return parts;
     }
 
-    /** Extracts the type-part or material-part of a tag's path. For structured tags like
+    /** Extracts the type-part or material-part of a tag's path. For {@code c:} convention tags like
      * {@code c:ingots/iron}, TYPE returns {@code "ingots"} and MATERIAL returns {@code "iron"}.
-     * For single-segment tags like {@code minecraft:planks}, both return the full path
-     * ({@code "planks"}) — vanilla single-segment tags don't distinguish type from material,
-     * so we treat them as contributing to both modes. */
+     * For single-segment tags like {@code minecraft:planks} — and for slashed tags OUTSIDE the
+     * {@code c:} namespace (vanilla gameplay tags like {@code minecraft:sulfur_cube_archetype/slow_bouncy},
+     * whose slash is not a family/material boundary) — both modes return the full path, so the
+     * non-material "variant" never leaks in as a bogus material or type. */
     @Nonnull
     private static String partOf(TagKey<Item> tag, Type type) {
         String path = tag.location().getPath();
         int slash = path.indexOf('/');
-        if (slash < 0) return path;
+        // Only the NeoForge `c:` convention uses path slashes as a family/variant boundary.
+        if (slash < 0 || !"c".equals(tag.location().getNamespace())) {
+            return path;
+        }
         if (type == Type.TYPE) {
             return path.substring(0, slash);
         }

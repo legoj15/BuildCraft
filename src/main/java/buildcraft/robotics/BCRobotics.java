@@ -8,6 +8,8 @@ import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import buildcraft.api.boards.RedstoneBoardRegistry;
+import buildcraft.api.robots.RobotManager;
 import buildcraft.core.BCCore;
 
 /**
@@ -18,6 +20,12 @@ public class BCRobotics {
     private static final Logger LOGGER = LoggerFactory.getLogger(BCRobotics.class);
 
     public static void init(IEventBus modEventBus) {
+        // Un-orphan the robotics API: wire the registry provider and board registry the rest of the
+        // robotics system (DockingStation, boards) reaches through these statics. Harmless without any
+        // robots present, and required the moment a docking station or board is created.
+        RobotManager.registryProvider = new RobotRegistryProvider();
+        RedstoneBoardRegistry.instance = new ImplRedstoneBoardRegistry();
+
         // Register all deferred registries
         BCRoboticsBlocks.init(modEventBus);
         BCRoboticsItems.init(modEventBus);

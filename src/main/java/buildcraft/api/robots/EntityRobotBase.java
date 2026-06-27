@@ -78,6 +78,9 @@ public abstract class EntityRobotBase extends LivingEntity implements IFluidHand
 
     public abstract long getRobotId();
 
+    /** Assigns this robot's persistent id; called by the registry the first time an un-IDed robot registers. */
+    public abstract void setUniqueRobotId(long robotId);
+
     public abstract IRobotRegistry getRegistry();
 
     public abstract void releaseResources();

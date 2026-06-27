@@ -574,6 +574,11 @@ public class BuildCraftGameTests {
         // cube, so closely-packed lasers stay clickable-between (issue #22). Pins per-facing orientation.
         reg.accept("buildcraftunofficial:laser_collision_matches_model", () -> buildcraft.silicon.LaserShapeTester::testCollisionShapeMatchesModel);
 
+        // Laser Targeting Behavior config (issue #22): BOX scan reaches sideways/own-level and
+        // through-wall tables the LOS_CONE deliberately misses; the cone still finds clear front targets.
+        reg.accept("buildcraftunofficial:laser_box_reaches_where_cone_cannot", () -> buildcraft.silicon.tile.LaserTargetingTester::testBoxReachesWhereConeCannot);
+        reg.accept("buildcraftunofficial:laser_cone_finds_clear_front_target", () -> buildcraft.silicon.tile.LaserTargetingTester::testConeFindsClearFrontTarget);
+
         // Gate modifier recipes must match the input gate by data-component variant, not just the
         // PLUG_GATE Item — see GateRecipeVariantTester for the regression context.
         reg.accept("buildcraftunofficial:gate_modifier_recipe_accepts_correct_variant", () -> buildcraft.silicon.GateRecipeVariantTester::testGoldLapisRecipeAcceptsGoldPlainGate);

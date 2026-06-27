@@ -47,10 +47,15 @@ import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.api.tiles.IDebuggable;
 import buildcraft.silicon.BCSiliconBlockEntities;
 import buildcraft.silicon.BCSiliconBlocks;
+import buildcraft.silicon.BCSiliconConfig;
 import buildcraft.silicon.block.BlockLaser;
 
 public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscriber, IDebuggable, IAdvDebugTarget {
-    private static final int TARGETING_RANGE = 6;
+    /** Forward range of the modern line-of-sight cone (LOS_CONE mode). Package-private so the tester
+     *  can pass the production value rather than a literal. */
+    static final int TARGETING_RANGE = 6;
+    /** Radius of the legacy axis-aligned box (BOX mode); deliberately 5, not {@link #TARGETING_RANGE}. */
+    static final int BOX_RADIUS = 5;
 
     private final SafeTimeTracker clientLaserMoveInterval = new SafeTimeTracker(5, 10);
     private final SafeTimeTracker serverTargetMoveInterval = new SafeTimeTracker(10, 20);
@@ -108,7 +113,26 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
         }
         Direction face = state.getValue(BlockLaser.FACING);
 
-        VolumeUtil.iterateCone(level, worldPosition, face, TARGETING_RANGE, true, (w, s, p, visible) -> {
+        // Config picks the scan shape; default LOS_CONE preserves modern behaviour. The field is null
+        // only in headless contexts where the config spec isn't booted (e.g. unit tests).
+        BCSiliconConfig.LaserTargetingMode mode = BCSiliconConfig.laserTargetingBehavior != null
+                ? BCSiliconConfig.laserTargetingBehavior.get()
+                : BCSiliconConfig.LaserTargetingMode.LOS_CONE;
+        if (mode == BCSiliconConfig.LaserTargetingMode.BOX) {
+            targetPositions.addAll(scanBox(level, worldPosition, face, BOX_RADIUS));
+        } else {
+            targetPositions.addAll(scanCone(level, worldPosition, face, TARGETING_RANGE));
+        }
+    }
+
+    /**
+     * Modern (8.0.x) targeting: a square cone of {@code range} blocks projecting from the laser
+     * {@code face}, gated by line-of-sight — any solid block on the path to a candidate hides it.
+     * Package-private + static so {@code LaserTargetingTester} can exercise it without a live tile.
+     */
+    static List<BlockPos> scanCone(Level level, BlockPos origin, Direction face, int range) {
+        List<BlockPos> found = new ArrayList<>();
+        VolumeUtil.iterateCone(level, origin, face, range, true, (w, s, p, visible) -> {
             if (!visible) {
                 return;
             }
@@ -116,10 +140,43 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
             if (stateAt.getBlock() instanceof ILaserTargetBlock) {
                 BlockEntity tileAt = level.getBlockEntity(p);
                 if (tileAt instanceof ILaserTarget) {
-                    targetPositions.add(p);
+                    found.add(p);
                 }
             }
         });
+        return found;
+    }
+
+    /**
+     * Legacy (BuildCraft 7.x) targeting: an axis-aligned box of {@code radius} blocks, clipped to the
+     * half-space the laser {@code face}s into (including the laser's own slice), with NO line-of-sight
+     * — a table off to the side at the laser's own level, or one tucked behind a wall, is still reached.
+     */
+    static List<BlockPos> scanBox(Level level, BlockPos origin, Direction face, int radius) {
+        List<BlockPos> found = new ArrayList<>();
+        int x = origin.getX(), y = origin.getY(), z = origin.getZ();
+        int minX = x - radius, minY = y - radius, minZ = z - radius;
+        int maxX = x + radius, maxY = y + radius, maxZ = z + radius;
+        // Collapse the bound behind the laser to its own coordinate so only the faced hemisphere is
+        // scanned. 1:1 with BuildCraft 7.x's ForgeDirection switch — Direction axis dirs are identical.
+        switch (face) {
+            case WEST -> maxX = x;  // faces -X
+            case EAST -> minX = x;  // faces +X
+            case DOWN -> maxY = y;  // faces -Y
+            case UP -> minY = y;    // faces +Y
+            case NORTH -> maxZ = z; // faces -Z
+            case SOUTH -> minZ = z; // faces +Z
+        }
+        for (BlockPos p : BlockPos.betweenClosed(minX, minY, minZ, maxX, maxY, maxZ)) {
+            BlockState stateAt = level.getBlockState(p);
+            if (stateAt.getBlock() instanceof ILaserTargetBlock) {
+                BlockEntity tileAt = level.getBlockEntity(p);
+                if (tileAt instanceof ILaserTarget) {
+                    found.add(p.immutable()); // betweenClosed reuses one MutableBlockPos cursor
+                }
+            }
+        }
+        return found;
     }
 
     private void randomlyChooseTargetPos() {

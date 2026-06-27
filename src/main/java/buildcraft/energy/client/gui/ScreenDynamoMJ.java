@@ -78,7 +78,9 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
                     // "Converts X.XX MJ/s\nto Y RF/s"
                     long mjPerTick = menu.dynamo.getMjPerTick();
                     int rfPerTick = menu.dynamo.getFeProductionRate(mjPerTick);
-                    String mj = LocaleUtil.localizeMjFlow(mjPerTick);
+                    // Forced MJ: this is the MJ side of the explicit "Converts X MJ → Y RF" label,
+                    // so it must stay MJ even under powerMode == DISPLAY_RF.
+                    String mj = LocaleUtil.localizeMjFlowForcedMj(mjPerTick);
                     String rf = LocaleUtil.localizeRfFlow(rfPerTick);
                     String conversion = LocaleUtil.localize(
                         buildcraft.energy.BCEnergyConfig.rfFeKey("buildcraft.help.dynamo.battery"), mj, rf);

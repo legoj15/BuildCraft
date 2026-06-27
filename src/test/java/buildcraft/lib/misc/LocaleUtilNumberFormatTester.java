@@ -3,6 +3,8 @@ package buildcraft.lib.misc;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import buildcraft.api.mj.MjAPI;
+import buildcraft.api.mj.MjRfConversion;
 import buildcraft.lib.BCLibConfig.DecimalSeparator;
 import buildcraft.lib.BCLibConfig.FlowDisplay;
 import buildcraft.lib.BCLibConfig.ThousandsSeparator;
@@ -244,6 +246,60 @@ public class LocaleUtilNumberFormatTester {
                 LocaleUtil.formatRfFlow(100, FlowDisplay.PER_TICK, "Forge Energy", true));
         Assertions.assertEquals("2,000 Redstone Flux per second (100 Redstone Flux per tick)",
                 LocaleUtil.formatRfFlow(100, FlowDisplay.BOTH, "Redstone Flux", true));
+    }
+
+    // -- DISPLAY_RF power-mode conversion (MJ readouts rendered as FE/RF) -----
+
+    /** Default 0.1 MJ-per-RF ratio: micro-MJ per 1 RF = MjAPI.MJ / 10. The whole DISPLAY_RF feature
+     *  hangs off this figure, so pin it. */
+    private static final long DEFAULT_MJ_PER_RF = MjRfConversion.createParsed(0.1).mjPerRf;
+
+    @Test
+    public void displayRf_ratioConstant_isMjOverTen() {
+        Assertions.assertEquals(MjAPI.MJ / 10, DEFAULT_MJ_PER_RF);
+    }
+
+    @Test
+    public void displayRf_flow_issueHeadlineExample_80MjPerSecondBecomes800RfPerSecond() {
+        // The exact scenario from issue #23: an 80 MJ/s pipe = 4 MJ/tick, default 0.1 ratio.
+        long microMjPerTick = 4 * MjAPI.MJ;
+        Assertions.assertEquals("800 RF/s",
+                LocaleUtil.formatMjFlowAsRf(microMjPerTick, DEFAULT_MJ_PER_RF, FlowDisplay.PER_SECOND, "RF", false));
+        Assertions.assertEquals("40 RF/t",
+                LocaleUtil.formatMjFlowAsRf(microMjPerTick, DEFAULT_MJ_PER_RF, FlowDisplay.PER_TICK, "RF", false));
+        Assertions.assertEquals("800 RF/s (40 RF/t)",
+                LocaleUtil.formatMjFlowAsRf(microMjPerTick, DEFAULT_MJ_PER_RF, FlowDisplay.BOTH, "RF", false));
+    }
+
+    @Test
+    public void displayRf_flow_fullSuffixAndUnitName() {
+        long microMjPerTick = 4 * MjAPI.MJ;
+        Assertions.assertEquals("800 Redstone Flux per second",
+                LocaleUtil.formatMjFlowAsRf(microMjPerTick, DEFAULT_MJ_PER_RF, FlowDisplay.PER_SECOND,
+                        "Redstone Flux", true));
+        Assertions.assertEquals("800 Forge Energy per second (40 Forge Energy per tick)",
+                LocaleUtil.formatMjFlowAsRf(microMjPerTick, DEFAULT_MJ_PER_RF, FlowDisplay.BOTH,
+                        "Forge Energy", true));
+    }
+
+    @Test
+    public void displayRf_flow_perSecondAndPerTickRoundIndependently_noTwentyDrift() {
+        // 1 micro-MJ/tick at the default ratio is 1e-5 RF/tick → rounds to 0 RF/t, but ×20 then rounds
+        // to 0 too here; pick a value where the two sides genuinely differ to prove they're each
+        // rounded from the source rather than one re-derived from the other. 0.55 RF/tick:
+        // per-tick rounds to 1, per-second (×20 = 11) rounds to 11 — not 20×1.
+        long microMjPerTick = Math.round(0.55 * DEFAULT_MJ_PER_RF);
+        Assertions.assertEquals("11 RF/s (1 RF/t)",
+                LocaleUtil.formatMjFlowAsRf(microMjPerTick, DEFAULT_MJ_PER_RF, FlowDisplay.BOTH, "RF", false));
+    }
+
+    @Test
+    public void displayRf_amount_convertsAndGroups() {
+        Assertions.assertEquals("800 RF", LocaleUtil.formatMjAsRf(80 * MjAPI.MJ, DEFAULT_MJ_PER_RF, "RF"));
+        // Crosses the thousands grouping threshold (config null → COMMA default).
+        Assertions.assertEquals("20,000 Forge Energy",
+                LocaleUtil.formatMjAsRf(2000 * MjAPI.MJ, DEFAULT_MJ_PER_RF, "Forge Energy"));
+        Assertions.assertEquals("0 RF", LocaleUtil.formatMjAsRf(0, DEFAULT_MJ_PER_RF, "RF"));
     }
 
     // -- Fluid flow ----------------------------------------------------------

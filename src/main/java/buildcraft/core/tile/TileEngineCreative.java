@@ -23,7 +23,9 @@ import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.MathUtil;
+import buildcraft.lib.misc.MessageUtil;
 
 public class TileEngineCreative extends TileEngineBase_BC8 {
     public static final long[] OUTPUTS = { 1, 2, 4, 8, 16, 32, 64, 128, 256 };
@@ -104,8 +106,11 @@ public class TileEngineCreative extends TileEngineBase_BC8 {
     public boolean onWrenchInteract(Player player) {
         if (level == null || level.isClientSide()) return false;
         currentOutputIndex = (currentOutputIndex + 1) % OUTPUTS.length;
-        buildcraft.lib.misc.MessageUtil.sendOverlayMessage(player,
-            Component.translatable("chat.pipe.power.iron.mode", OUTPUTS[currentOutputIndex]));
+        // Render the output through localizeMjFlow so the overlay follows the player's flow-display
+        // format and switches MJ -> FE/RF under powerMode == DISPLAY_RF, matching the engine's ledger
+        // and every other power readout. getCurrentOutput() is already micro-MJ/tick.
+        MessageUtil.sendOverlayMessage(player,
+            Component.translatable("chat.engine.creative.mode", LocaleUtil.localizeMjFlow(getCurrentOutput())));
         setChanged();
         // Sync to client so animation speed updates immediately
         BlockState state = getBlockState();

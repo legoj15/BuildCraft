@@ -79,7 +79,9 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
                     int rfPerTick = menu.engine.getFeConsumptionRate();
                     long mjPerTick = menu.engine.getMjPerTick();
                     String rf = LocaleUtil.localizeRfFlow(rfPerTick);
-                    String mj = LocaleUtil.localizeMjFlow(mjPerTick);
+                    // Forced MJ: this is the MJ side of the explicit "Converts X RF → Y MJ" label,
+                    // so it must stay MJ even under powerMode == DISPLAY_RF.
+                    String mj = LocaleUtil.localizeMjFlowForcedMj(mjPerTick);
                     String conversion = LocaleUtil.localize(
                         buildcraft.energy.BCEnergyConfig.rfFeKey("buildcraft.help.rf_engine.battery"), rf, mj);
                     ElementHelpInfo help = ElementHelpInfo

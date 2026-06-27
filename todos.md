@@ -28,6 +28,7 @@ Last audited: 2026-05-31 (final pre-rc review — removed dev scaffolding, swept
 - [ ] Unify button implementation (native over custom button background images)
 - [ ] Buttons to allow for alternate recipe inputs (i.e. different woods and stones) and outputs (different stairs or doors) for the advanced crafting table
 - [ ] Enchantable Quarry and miner
+- [ ] **Migrate off deprecated `FluidUtil.getFluidContained`.** [PipeBehaviourWoodDiamond.java:230](src/main/java/buildcraft/transport/pipe/behaviour/PipeBehaviourWoodDiamond.java#L230) calls `net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(ItemStack)`, which NeoForge has marked deprecated-for-removal (2 build warnings surfaced on the 26.2 node). Swap to the fluid-handler item capability (`Capabilities.FluidHandler.ITEM` → `getFluidInTank(0)`) before NeoForge drops the helper.
 
 ---
 

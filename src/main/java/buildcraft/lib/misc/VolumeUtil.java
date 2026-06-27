@@ -19,9 +19,8 @@ import net.minecraft.world.level.Level;
 
 /** Provides methods for iterating over a specific volume in a world. */
 public class VolumeUtil {
-    public static void iterateCone(Level level, BlockPos start, Direction direction, int distance, boolean edges, VolumeIterator iter) {
-        Cone cone = edges ? Cone.SQUARE : Cone.SQUARE;
-        iterateVolume(level, start, direction, distance, cone, iter);
+    public static void iterateCone(Level level, BlockPos start, Direction direction, int distance, VolumeIterator iter) {
+        iterateVolume(level, start, direction, distance, Cone.SQUARE, iter);
     }
 
     public static void iterateVolume(Level level, BlockPos start, Direction direction, int distance, VolumeProducer producer, VolumeIterator iter) {
@@ -59,14 +58,7 @@ public class VolumeUtil {
     }
 
     public enum Cone implements VolumeProducer {
-        SQUARE(true),
-        PYRAMID(false);
-
-        private final boolean edges;
-
-        Cone(boolean edges) {
-            this.edges = edges;
-        }
+        SQUARE;
 
         @Override
         public List<VisiblePos> getVolume(Level level, BlockPos start, Direction direction, int distance) {
@@ -95,12 +87,6 @@ public class VolumeUtil {
                 coneCenter = coneCenter.relative(direction);
                 for (int i = -d; i <= d; i++) {
                     for (int j = -d; j <= d; j++) {
-                        if (!edges) {
-                            int dist = Math.abs(i) + Math.abs(j);
-                            if (dist > d) {
-                                continue;
-                            }
-                        }
                         BlockPos posAt = coneCenter.relative(faceI, i).relative(faceJ, j);
                         list.add(new VisiblePos(posAt, start));
                     }

@@ -49,7 +49,7 @@ public final class AdvDebuggerLaser {
             return;
         }
         Direction face = state.getValue(BlockLaser.FACING);
-        VolumeUtil.iterateCone(level, tile.getBlockPos(), face, DISTANCE, true, (w, start, p, visible) -> {
+        VolumeUtil.iterateCone(level, tile.getBlockPos(), face, DISTANCE, (w, start, p, visible) -> {
             AABB box = new AABB(
                 p.getX() + 0.5 - CUBE_RADIUS, p.getY() + 0.5 - CUBE_RADIUS, p.getZ() + 0.5 - CUBE_RADIUS,
                 p.getX() + 0.5 + CUBE_RADIUS, p.getY() + 0.5 + CUBE_RADIUS, p.getZ() + 0.5 + CUBE_RADIUS

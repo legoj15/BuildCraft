@@ -43,6 +43,7 @@ logs
 
 # AntiGravity Temporary scripts and workspaces
 .agents/
+.qwen/
 .clinerules/
 .vscode/
 *_replace*.py

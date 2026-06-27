@@ -132,7 +132,7 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
      */
     static List<BlockPos> scanCone(Level level, BlockPos origin, Direction face, int range) {
         List<BlockPos> found = new ArrayList<>();
-        VolumeUtil.iterateCone(level, origin, face, range, true, (w, s, p, visible) -> {
+        VolumeUtil.iterateCone(level, origin, face, range, (w, s, p, visible) -> {
             if (!visible) {
                 return;
             }

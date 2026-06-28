@@ -327,6 +327,12 @@ public class BuildCraftGameTests {
         // instead of overheating while topping off a 24k buffer that's about to be torn down.
         reg.accept("buildcraftunofficial:quarry_idle_requests_no_power", () -> buildcraft.builders.tile.TileQuarryIdlePowerTester::testIdleQuarryRequestsNoPower);
 
+        // Per-tick cost gates: a finished quarry must go inactive (frame-scan loop + chunk tickets shut
+        // off) and updateRigs() must no-op while the drill is stationary — the "massive performance
+        // drain" report was a finished quarry ticking + force-loading its footprint forever.
+        reg.accept("buildcraftunofficial:quarry_finished_goes_inactive", () -> buildcraft.builders.tile.TileQuarryPerfGatingTester::testFinishedQuarryGoesInactive);
+        reg.accept("buildcraftunofficial:quarry_update_rigs_skips_when_stationary", () -> buildcraft.builders.tile.TileQuarryPerfGatingTester::testUpdateRigsSkipsWhenStationary);
+
         // Owner-on-placement contract — load-bearing for both quarry advancements
         reg.accept("buildcraftunofficial:quarry_on_placed_by_records_owner", () -> buildcraft.builders.tile.TileQuarryOwnerTester::onPlacedByRecordsOwner);
 

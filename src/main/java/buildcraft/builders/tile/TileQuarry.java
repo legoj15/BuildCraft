@@ -115,7 +115,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     private int frameBoxPosesCount = 0;
     private final LinkedList<BlockPos> toCheck = new LinkedList<>();
     private final Set<BlockPos> firstCheckedPoses = new HashSet<>();
-    private boolean firstChecked = false;
+    // package-private so the perf-gating tests can drive the frame-scan / chunk-loading lifecycle.
+    boolean firstChecked = false;
     private final Set<BlockPos> frameBreakBlockPoses = new TreeSet<>(
         BlockUtil.uniqueBlockPosComparator(Comparator.comparingDouble(p -> getBlockPos().distSqr(p)))
     );
@@ -137,6 +138,18 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
 
     private List<AABB> collisionBoxes = ImmutableList.of();
     private Vec3 collisionDrillPos;
+
+    /** Whether this quarry currently holds its HARD chunk-loading tickets. Tracked so the per-tick
+     *  {@link #refreshChunkLoading()} only calls into {@link ChunkLoaderManager} on a transition
+     *  (active&lt;-&gt;finished) instead of re-issuing force/release every tick. */
+    private boolean chunksForced = false;
+
+    /** Last drill position + phasing state the rig entities were rebuilt for, so {@link #updateRigs()}
+     *  can no-op when the drill is stationary (see {@link #getCollisionBoxes()}, which is cached the
+     *  same way). package-private rebuild counter lets the test assert the stationary no-op. */
+    private Vec3 lastRigDrillPos;
+    private boolean lastRigPhasing;
+    int rigRebuildCount = 0;
 
     /** The collision rig entities. Each moving arm (2 horizontal beams + 1 vertical column) is split
      *  into section-aligned segment entities so a player anywhere along it lands in a section the
@@ -402,6 +415,11 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         return fluid != null && fluid.getFluidType().getViscosity() <= 1000;
     }
 
+    // NB: this O(column-height) scan is deliberately NOT cached/memoized. It is the lava/oil-cascade
+    // guard — it must see the live column above the target every time (canMoveThrough blocks on
+    // high-viscosity fluid). A per-tick cache would go stale the moment the quarry breaks a block this
+    // tick, and a cross-tick cache would miss fluid that flowed into the already-cleared column. The
+    // measured cost is warm chunk-array reads (~maxTasks per tick); leave it scanning.
     private boolean canMoveDownTo(BlockPos blockPos) {
         for (int y = miningBox.max().getY(); y > blockPos.getY(); y--) {
             if (!canMoveThrough(VecUtil.replaceValue(blockPos, Axis.Y, y))) {
@@ -453,6 +471,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         BCBuildersEventDist.INSTANCE.invalidateQuarry(this);
         if (level != null && !level.isClientSide()) {
             ChunkLoaderManager.releaseChunksFor(this);
+            chunksForced = false;
             discardRigs();
         }
     }
@@ -510,8 +529,10 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             frameBoxPosesCount = blocksInArea.size();
             toCheck.addAll(blocksInArea);
             framePoses.addAll(getFramePositions());
-            ChunkLoaderManager.loadChunksForTile(this);
         }
+        // Acquire (placement / reload with work) or release (box was reset) the chunk tickets to match
+        // the new state. firstChecked was just reset above, so a quarry with a valid box re-acquires here.
+        refreshChunkLoading();
     }
 
     public boolean hasPower() {
@@ -534,6 +555,48 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             || !frameBreakBlockPoses.isEmpty()
             || !framePlaceFramePoses.isEmpty()
             || (boxIterator != null && boxIterator.hasNext());
+    }
+
+    /**
+     * True while the quarry is still bootstrapping ({@code !firstChecked}: its frame box hasn't been
+     * scanned once yet) or still has real work to do ({@link #hasPendingWork()}). Gates BOTH the
+     * per-tick frame re-scan loop and the chunk-loading tickets so a <em>finished</em> quarry stops
+     * re-scanning its whole frame box every tick AND releases its force-load tickets — instead of
+     * ticking and force-loading its footprint forever after the job is done (the "an idle quarry I
+     * forgot about is still eating TPS" report).
+     * <p>
+     * Trade-off vs the old always-on poll: a finished quarry no longer notices (and rebuilds) a frame
+     * block a player breaks <em>after</em> completion. That's acceptable — the frame is decorative once
+     * mining is done — and a full re-scan still runs on chunk reload (onLoad &rarr; {@link #updatePoses()}
+     * resets {@code firstChecked}). Self-heal <em>during</em> active mining is unchanged, because the
+     * quarry has pending work the whole time it is operating.
+     * <p>package-private for the perf-gating test.
+     */
+    boolean isActive() {
+        return !firstChecked || hasPendingWork();
+    }
+
+    /**
+     * Acquire the HARD chunk-loading tickets while the quarry {@link #isActive()}, release them once it
+     * finishes. Idempotent and transition-gated via {@link #chunksForced}, so it's a cheap no-op on the
+     * ticks where nothing changed. Releasing on completion lets the quarry's footprint (up to 25 chunks
+     * for a 64x64) unload and stop ticking; it re-acquires the instant {@link #updatePoses()} (placement
+     * or reload) finds work again.
+     */
+    private void refreshChunkLoading() {
+        if (!(level instanceof ServerLevel)) {
+            return;
+        }
+        boolean want = miningBox.isInitialized() && isActive();
+        if (want == chunksForced) {
+            return;
+        }
+        if (want) {
+            ChunkLoaderManager.loadChunksForTile(this);
+        } else {
+            ChunkLoaderManager.releaseChunksFor(this);
+        }
+        chunksForced = want;
     }
 
     /** Called once per tick by the BlockEntityTicker. */
@@ -569,7 +632,11 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             boxIterator = null;
         }
 
-        if (!toCheck.isEmpty()) {
+        // Re-validate the frame box only while the quarry is still bootstrapping or has work left.
+        // toCheck never empties (each polled cell is re-queued), so without the isActive() gate this
+        // loop runs ~10 getBlockState lookups every tick for the quarry's entire life — including long
+        // after it has finished mining. Gating it lets a finished quarry go quiet. See isActive().
+        if (isActive() && !toCheck.isEmpty()) {
             for (int i = 0; i < (firstChecked ? 10 : 500); i++) {
                 BlockPos blockPos = toCheck.pollFirst();
                 check(blockPos);
@@ -751,19 +818,39 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         }
 
         updateRigs();
+
+        // Drop the chunk tickets once the job is done (and re-take them if work resumed). Runs after
+        // the power loop so hasPendingWork()/the boxIterator reflect this tick's progress. The
+        // !firstChecked early-return above skips this during the initial scan, where the tickets taken
+        // in updatePoses() are still wanted (isActive() is true the whole time firstChecked is false).
+        refreshChunkLoading();
     }
 
-    private void updateRigs() {
+    // package-private so the rig-gating test can call it directly and assert the stationary no-op.
+    void updateRigs() {
         if (level == null || level.isClientSide()) return;
 
         if (drillPos == null || !frameBox.isInitialized()) {
             discardRigs();
+            lastRigDrillPos = null;
             return;
         }
+
+        boolean isDrillMoving = (currentTask instanceof TaskMoveDrill);
+        // Skip the per-tick rebuild when nothing the rig geometry depends on changed: same drill
+        // position and same phasing, with the entities already built. drillPos is immutable and
+        // replaced wholesale each move tick, so a stationary drill keeps the same Vec3 — and
+        // getCollisionBoxes() is itself cached on it, so otherwise we'd recompute identical segments
+        // and re-apply identical boxes to every segment entity every tick for nothing.
+        if (drillPos.equals(lastRigDrillPos) && isDrillMoving == lastRigPhasing && !rigs.isEmpty()) {
+            return;
+        }
+        rigRebuildCount++;
 
         List<AABB> boxes = getCollisionBoxes();
         if (boxes.size() != 3) {
             discardRigs();
+            lastRigDrillPos = null;
             return;
         }
 
@@ -779,7 +866,6 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         List<AABB> columnSegments = new ArrayList<>();
         QuarryRigGeometry.splitBySection(columnSegments, boxes.get(2), Axis.Y); // vertical column runs along Y
 
-        boolean isDrillMoving = (currentTask instanceof TaskMoveDrill);
         int total = beamSegments.size() + columnSegments.size();
 
         // Resize the rig list to match the segment count, discarding any now-surplus entities (the
@@ -808,6 +894,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             // mast doesn't shove anyone; the beams stay solid to be walked on.
             rig.setPhasing(isColumn && isDrillMoving);
         }
+        lastRigDrillPos = drillPos;
+        lastRigPhasing = isDrillMoving;
     }
 
     private void discardRigs() {

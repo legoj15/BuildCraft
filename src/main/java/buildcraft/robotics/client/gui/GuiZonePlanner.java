@@ -14,6 +14,9 @@ import net.minecraft.world.entity.player.Inventory;
 import buildcraft.robotics.container.ContainerZonePlanner;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.help.ElementHelpInfo;
+import buildcraft.lib.gui.pos.GuiRectangle;
 
 //? if >=1.21.10 {
 import net.minecraft.client.Minecraft;
@@ -44,8 +47,9 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     private static final int SIZE_X = 256, SIZE_Y = 228;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
 
-    /** Map viewport window within the GUI texture (GUI-local coords). */
-    private static final int MAP_X = 17, MAP_Y = 17, MAP_W = 213, MAP_H = 119;
+    /** Map viewport window within the GUI texture (GUI-local coords) — the recessed frame the BC8
+     *  layout reserves for the map ({@code offsetX=8, offsetY=9, sizeX=213, sizeY=100}). */
+    private static final int MAP_X = 8, MAP_Y = 9, MAP_W = 213, MAP_H = 100;
 
     //? if >=1.21.10 {
     /** Zoom step per scroll notch. */
@@ -84,16 +88,16 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         //? if >=1.21.10 {
         // Terrain is rebuilt from the player's current surroundings each time the screen opens.
         ZonePlannerMapDataClient.INSTANCE.clear();
-        // The viewport is drawn directly in drawBackgroundTexture via the PiP pipeline, so no GUI element
-        // is needed; the auto-attached help ledger still documents the screen.
-        //?} else {
-        /*// 1.21.1: no PiP pipeline — keep the non-rendered placeholder map panel + its help text.
-        mainGui.shownElements.add(new buildcraft.lib.gui.help.DummyHelpElement(
-                new buildcraft.lib.gui.pos.GuiRectangle(MAP_X, MAP_Y, MAP_W, MAP_H).offset(mainGui.rootElement),
-                new buildcraft.lib.gui.help.ElementHelpInfo("buildcraft.help.zone_planner.map.title", 0xFF_88_CC_88,
-                        "buildcraft.help.zone_planner.map.desc1",
-                        "buildcraft.help.zone_planner.map.desc2")));*/
         //?}
+        // Invisible help region over the map window: documents the screen in the help ledger and keeps the
+        // ledger's hover highlight aligned with the viewport. It is not an IInteractionElement, so it never
+        // intercepts the viewport's drag/paint mouse input (and on 1.21.1, where there is no live viewport,
+        // it's the placeholder map panel's help).
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(MAP_X, MAP_Y, MAP_W, MAP_H).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.zone_planner.map.title", 0xFF_88_CC_88,
+                        "buildcraft.help.zone_planner.map.desc1",
+                        "buildcraft.help.zone_planner.map.desc2")));
     }
 
     //? if >=1.21.10 {

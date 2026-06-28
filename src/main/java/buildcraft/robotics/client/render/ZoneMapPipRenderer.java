@@ -294,8 +294,8 @@ public class ZoneMapPipRenderer extends PictureInPictureRenderer<ZoneMapPipRende
 
     private void putVertex(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam,
                            double wx, double wy, double wz, int r, int g, int b, int a) {
-        float ex = (float) cam.canvasX(wx, wz);
-        float ey = (float) (-cam.canvasY(wx, wy, wz)); // canvas Y is up-positive; texture Y is down-positive
+        float ex = (float) cam.canvasX(wx, wy, wz);
+        float ey = (float) cam.canvasY(wx, wy, wz); // canvasY is already down-positive (texture convention)
         float ez = (float) cam.depth(wx, wy, wz);
         vc.addVertex(mat, ex, ey, ez).setColor(r, g, b, a);
     }

@@ -9,10 +9,11 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 /**
- * Pure-JUnit characterization of {@link ZoneMapCamera}, the Zone Planner viewport's isometric projection.
- * It pulls in no Minecraft types, so it exercises the exact math the renderer draws with and the GUI picks
- * with — the two must agree or the hover/paint cursor drifts off the terrain. Covers the projection&harr;pick
- * round-trip (the load-bearing invariant), grab-and-drag panning, and zoom clamping.
+ * Pure-JUnit characterization of {@link ZoneMapCamera}, the Zone Planner viewport's top-down perspective
+ * projection. It pulls in no Minecraft types, so it exercises the exact math the renderer draws with and
+ * the GUI picks with — the two must agree or the hover/paint cursor drifts off the terrain. Covers the
+ * ground-plane projection&harr;pick round-trip (the load-bearing invariant), grab-and-drag panning, the
+ * perspective magnification of taller terrain, and zoom clamping.
  */
 public class ZoneMapCameraTest {
 
@@ -20,9 +21,9 @@ public class ZoneMapCameraTest {
 
     /** Forward-project a ground point to a viewport-centre-relative pixel offset, the inverse of pickGround. */
     private static double[] projectGround(ZoneMapCamera cam, double wx, double wz) {
-        double canvasX = cam.canvasX(wx, wz);
-        double canvasY = cam.canvasY(wx, cam.camY, wz); // ground level: height term is zero
-        return new double[]{canvasX * cam.pxPerBlock, -canvasY * cam.pxPerBlock};
+        double canvasX = cam.canvasX(wx, cam.camY, wz); // ground level: magnification is exactly 1
+        double canvasY = cam.canvasY(wx, cam.camY, wz);
+        return new double[]{canvasX * cam.pxPerBlock, canvasY * cam.pxPerBlock};
     }
 
     @Test
@@ -51,7 +52,7 @@ public class ZoneMapCameraTest {
 
     @Test
     void grabAndDragKeepsWorldPointUnderCursor() {
-        // Press at one pixel, note the world point there; after dragging by the delta, that same world
+        // Press at one pixel, note the ground point there; after dragging by the delta, that same world
         // point must sit under the new cursor pixel.
         ZoneMapCamera cam = new ZoneMapCamera(0.0, 64, 0.0);
         cam.pxPerBlock = 4.0;
@@ -79,21 +80,38 @@ public class ZoneMapCameraTest {
     }
 
     @Test
-    void tallerColumnsProjectHigherAndSortInFront() {
+    void groundColumnsAreUnmagnified() {
+        // At the reference plane the magnification is exactly 1, so canvas == world offset (in blocks).
         ZoneMapCamera cam = new ZoneMapCamera(0, 64, 0);
-        // Same column, two heights: the taller one sits higher on the canvas (up-positive) and sorts in front
-        // (smaller depth), so it occludes correctly.
-        double low = cam.canvasY(5, 64, 5);
-        double high = cam.canvasY(5, 90, 5);
-        Assertions.assertTrue(high > low, "taller column projects higher on canvas");
-        Assertions.assertTrue(cam.depth(5, 90, 5) < cam.depth(5, 64, 5), "taller column sorts in front");
+        Assertions.assertEquals(10.0, cam.canvasX(10, 64, 5), EPS);
+        Assertions.assertEquals(5.0, cam.canvasY(10, 64, 5), EPS);
+    }
+
+    @Test
+    void tallerColumnsMagnifyAndSortInFront() {
+        ZoneMapCamera cam = new ZoneMapCamera(0, 64, 0);
+        // An off-centre column drawn taller projects FARTHER from centre (perspective swell) and sorts in
+        // front (smaller depth) so it occludes lower terrain.
+        double groundX = cam.canvasX(10, 64, 10);
+        double highX = cam.canvasX(10, 90, 10);
+        Assertions.assertTrue(Math.abs(highX) > Math.abs(groundX), "taller column magnifies outward");
+        Assertions.assertTrue(cam.depth(10, 90, 10) < cam.depth(10, 64, 10), "taller column sorts in front");
+    }
+
+    @Test
+    void centreColumnStaysCentredAtAnyHeight() {
+        // A column directly under the camera projects to the centre no matter how tall (top-down nadir).
+        ZoneMapCamera cam = new ZoneMapCamera(50, 64, -20);
+        Assertions.assertEquals(0.0, cam.canvasX(50, 64, -20), EPS);
+        Assertions.assertEquals(0.0, cam.canvasX(50, 120, -20), EPS, "tall centre column still centred in X");
+        Assertions.assertEquals(0.0, cam.canvasY(50, 120, -20), EPS, "tall centre column still centred in Y");
     }
 
     @Test
     void visibleBoundsContainCameraCentre() {
         ZoneMapCamera cam = new ZoneMapCamera(200.0, 64, -300.0);
         cam.pxPerBlock = 3.0;
-        double[] b = cam.visibleWorldBounds(213, 119, 64);
+        double[] b = cam.visibleWorldBounds(213, 100, 64);
         Assertions.assertTrue(b[0] <= cam.camX && cam.camX <= b[2], "camX within bounds");
         Assertions.assertTrue(b[1] <= cam.camZ && cam.camZ <= b[3], "camZ within bounds");
         Assertions.assertTrue(b[2] - b[0] > 0 && b[3] - b[1] > 0, "non-empty bounds");

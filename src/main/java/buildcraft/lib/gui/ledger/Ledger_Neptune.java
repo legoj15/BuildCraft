@@ -66,8 +66,13 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
     protected double interpWidth = lastWidth;
     protected double interpHeight = lastHeight;
 
-    /** Computed upward Y shift when ledger hits the bottom of the screen. */
-    private double yShift = 0;
+    /** Per-frame upward Y shift that keeps an overflowing ledger on screen.
+     *  Recomputed every {@link #drawBackground} from the live drawn height (not the cached
+     *  max height), and subtracted by EVERY coordinate system — background panel, icon, text,
+     *  scissor clip and the {@link #getY()} hit-box — so the whole ledger moves as one rigid
+     *  unit and the shift relaxes to 0 as the panel collapses (it glides back to its anchor
+     *  instead of detaching). 0 whenever the ledger fits or is closed. */
+    private double currentShift = 0;
 
     protected String title = "unknown";
 
@@ -215,16 +220,20 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
             textHeight += (font.lineHeight + 3) * lineCount;
         }
         maxHeight = Math.max(CLOSED_HEIGHT, LEDGER_GAP + textHeight + LEDGER_GAP);
+        // The on-screen shift is no longer derived here (from the static max height) — it is
+        // recomputed every frame from the live drawn height in drawBackground(), via
+        // computeUpShift(), so it stays correct throughout the open/collapse animation.
+    }
 
-        // Upward shift: if the ledger bottom would extend past the screen, push it up
-        double normalY = positionLedgerStart.getY();
-        int screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
-        double bottomEdge = normalY + maxHeight;
-        if (bottomEdge > screenHeight) {
-            yShift = bottomEdge - screenHeight;
-        } else {
-            yShift = 0;
-        }
+    /** Compute the upward shift that keeps a ledger of the given drawn height on screen.
+     *  Returns 0 when the ledger fits within the screen below its anchor; otherwise the
+     *  number of pixels it overflows past the screen bottom, CLAMPED so the top never rises
+     *  above the screen (content taller than the whole screen still overflows downward — the
+     *  intended/accepted behaviour). Pure function of its inputs so it is unit-testable. */
+    static double computeUpShift(double anchorY, double drawnHeight, int screenHeight) {
+        double overflow = (anchorY + drawnHeight) - screenHeight;
+        if (overflow <= 0) return 0;
+        return Math.min(overflow, Math.max(0, anchorY));
     }
 
     @Override
@@ -292,6 +301,16 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         interpWidth = interp(lastWidth, currentWidth, partialTicks);
         interpHeight = interp(lastHeight, currentHeight, partialTicks);
 
+        // Keep an overflowing ledger on screen by shifting the WHOLE ledger up by one shared
+        // amount, derived from the height we're actually drawing this frame (interpHeight) and
+        // the live screen height. Background, icon, text, scissor and the getY() hit-box all
+        // subtract this same value, so they move rigidly together; and because it tracks the
+        // animated height it relaxes to 0 as the ledger collapses. anchorY is the raw, unshifted
+        // anchor (positionLedgerStart never routes through our shifted getY()).
+        currentShift = computeUpShift(
+            positionLedgerStart.getY(), interpHeight,
+            Minecraft.getInstance().getWindow().getGuiScaledHeight());
+
         // Compute draw X directly from interpWidth (not via getX()→getWidth()) to
         // guarantee both rawX and w use the same interpolation value.
         // If getX() were used, it calls getWidth()→gui.getLastPartialTicks() which can
@@ -334,14 +353,14 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
         // Scissor clip all content (icon + text) to the ledger's current animated bounds.
         // Matches 1.12.2's GuiUtil.scissor() which masked content during expand/contract.
         int scissorX = (int) positionLedgerIconStart.getX();
-        int scissorY = (int) positionLedgerIconStart.getY();
+        int scissorY = (int) (positionLedgerIconStart.getY() - currentShift);
         int scissorW = (int) (interpWidth - LEDGER_GAP);
         int scissorH = (int) (interpHeight - LEDGER_GAP * 2);
         graphics.enableScissor(scissorX, scissorY, scissorX + scissorW, scissorY + scissorH);
 
         // Draw icon (always visible)
         double iconX = positionLedgerIconStart.getX();
-        double iconY = positionLedgerIconStart.getY();
+        double iconY = positionLedgerIconStart.getY() - currentShift;
         drawIcon(iconX, iconY, graphics);
 
         // Draw text content if expanded enough
@@ -415,10 +434,10 @@ public class Ledger_Neptune implements IGuiElement, IInteractionElement {
 
     @Override
     public double getY() {
-        // Apply upward shift when ledger would extend past screen bottom.
-        // Only shift when actually expanding (not when closed).
-        double shift = (currentDifference != 0 || currentHeight > CLOSED_HEIGHT) ? yShift : 0;
-        return positionLedgerStart.getY() - shift;
+        // Subtract the same per-frame shift the panel/icon/text use (see drawBackground), so the
+        // hit-box always coincides with the visible ledger. currentShift is naturally 0 when the
+        // ledger fits or is closed, so no animation-phase guard is needed.
+        return positionLedgerStart.getY() - currentShift;
     }
 
     @Override

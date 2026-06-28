@@ -1,5 +1,6 @@
 ###### Changes since 2026.1.1:
 
+- Fixed the collapsible info/help ledgers (the side panels in machine GUIs) flying up off the top of the screen when collapsed, if their text was too long to fit — which left a stray icon behind with no panel. Overflowing ledgers now slide up to stay on screen while open and glide smoothly back into place when closed.
 - Fixed a "Network Protocol Error" disconnect when right-clicking certain machines while in spectator mode. Spectators can now open those GUIs read-only — the way vanilla lets them peek into chests and furnaces — instead of being kicked. Affected the Zone Planner, Filtered Buffer, Tank, Chute, Distiller, and Heat Exchanger.
 - The Zone Planner block now shows a live top-down map of the surrounding terrain right on its front face, like a little screen — no need to open it to glance at the area around it.
 - The Zone Planner's interactive 3D map now works on the 1.21.1 build too (it was previously a static placeholder there). Same controls everywhere: pan with an empty hand, scroll to zoom, drag a coloured paintbrush to mark or erase zones.

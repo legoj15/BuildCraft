@@ -1,15 +1,24 @@
 package buildcraft.robotics.client;
 
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 
+import buildcraft.robotics.BCRoboticsBlockEntities;
 import buildcraft.robotics.BCRoboticsMenuTypes;
 import buildcraft.robotics.client.gui.GuiZonePlanner;
+import buildcraft.robotics.client.render.RenderZonePlanner;
 
 public class BCRoboticsClient {
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(BCRoboticsMenuTypes.ZONE_PLANNER.get(), GuiZonePlanner::new);
+    }
+
+    /** Registers the Zone Planner's in-world face preview renderer (the live terrain "screen"). */
+    @SubscribeEvent
+    public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerBlockEntityRenderer(BCRoboticsBlockEntities.ZONE_PLANNER.get(), RenderZonePlanner::new);
     }
 
     /**

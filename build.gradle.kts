@@ -354,6 +354,13 @@ neoForge {
             // Mirrors 1.12.2's VERSION.startsWith("$") fallback: any dev workspace is "DEV".
             // Enables BCLib.DEV-gated affordances (Power Tester block, /bcsoundtest command, ...).
             systemProperty("buildcraft.dev", "true")
+            // Optional quick-play: boot straight into a saved world for headless in-client checks.
+            // `./gradlew :26.1.2:runClient -PbcQuickPlay=<saveFolderName>`. Inert without the property
+            // (moddev's --args does not forward, so it must be wired here). Revert needs nothing — gated.
+            if (project.hasProperty("bcQuickPlay")) {
+                programArguments.add("--quickPlaySingleplayer")
+                programArguments.add(project.property("bcQuickPlay").toString())
+            }
         }
         register("server") {
             server()

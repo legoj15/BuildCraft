@@ -1,5 +1,6 @@
 ###### Changes since 2026.1.1:
 
+- The Zone Planner block now shows a live top-down map of the surrounding terrain right on its front face, like a little screen — no need to open it to glance at the area around it.
 - The Zone Planner's interactive 3D map now works on the 1.21.1 build too (it was previously a static placeholder there). Same controls everywhere: pan with an empty hand, scroll to zoom, drag a coloured paintbrush to mark or erase zones.
 - Blueprint, Template, and Architect Table 3D previews now draw each block in its real placed shape and orientation — logs along their axis, stairs/slabs/fences/doors correctly formed, and sugar cane, levers, torches, and rails as their in-world models instead of flat item icons. Engines in a preview now point the way they'll be placed instead of always standing upright. (Previously every cell was drawn from its flat inventory icon, which lost shape and facing.)
 - The Zone Planner now has a working interactive 3D map. Open it to see a top-down view of the surrounding terrain: drag with an empty hand to pan, scroll to zoom, and drag a coloured paintbrush across the map to mark (or right-drag to erase) that colour's zone. Hovering a spot shows its world coordinates, and progress bars track the paintbrush↔Map Location transfers. Zones can be copied to and from a Map Location using the side slots.

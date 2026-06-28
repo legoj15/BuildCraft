@@ -945,15 +945,18 @@ public enum BCBuildersEventDist {
     }
     //?}
 
-    // ── 1.21.11 place-task throwing animation ────────────────────────────────────────────────
+    // ── place-task throwing animation (<26.1) ────────────────────────────────────────────────
     // SubmitCustomGeometryEvent (the 26.1 per-frame custom-geometry submit that hands you a
-    // SubmitNodeCollector) doesn't exist on 1.21.11, and its 1.21.5+ item render-state pipeline
-    // only draws items through a collector driven by the level/entity render pass — there's no
-    // MultiBufferSource entry point for a full item model at RenderLevelStageEvent. So the flying
-    // place-task items are drawn as small cubes textured with the item's particle sprite, via the
-    // same MultiBufferSource machinery as the robot doodad. For block items — the overwhelmingly
-    // common builder/filler case — this reads as a small flying block. Called from
-    // renderAllBuilders / renderAllFillers (both already on RenderLevelStageEvent).
+    // SubmitNodeCollector) doesn't exist below 26.1, so the animation runs from renderAllBuilders /
+    // renderAllFillers (both already on RenderLevelStageEvent), which fetch a MultiBufferSource via
+    // mc.renderBuffers().bufferSource() themselves. PlaceTaskCubeRenderer draws BLOCK items — the
+    // overwhelmingly common builder/filler case — as their real block model
+    // (BlockRenderDispatcher.renderSingleBlock); only non-block items fall back to a particle-sprite
+    // cube. That fallback is NOT for lack of a MultiBufferSource: it's because a fully-resolved
+    // ItemStackRenderState can only be drawn via submit(..., SubmitNodeCollector, ...) (no collector at
+    // RenderLevelStageEvent) and the high-level ItemRenderer.renderStatic was removed on 1.21.10/1.21.11,
+    // leaving no clean public path to a full item model here. (On 1.21.1, renderStatic still exists —
+    // see the ItemRenderUtil/PlaceTaskCubeRenderer <1.21.10 branches.)
     //? if <26.1 {
     /*private static <T extends buildcraft.builders.snapshot.ITileForSnapshotBuilder> void renderPlaceTaskCubes(
             buildcraft.builders.snapshot.SnapshotBuilder<T> active, Vec3 cameraPos,

@@ -15,8 +15,11 @@ public class BCRoboticsClient {
     /**
      * Registers the PictureInPicture renderer that paints the Zone Planner's isometric terrain map into
      * an offscreen texture. Without it, the {@code ZoneMapPipRenderState} the GUI submits each frame is
-     * silently dropped (no matching renderer). The 1.21.1 line has no PiP pipeline, so the viewport (and
-     * this registration) is gated out there — the planner keeps its placeholder map panel.
+     * silently dropped (no matching renderer). The 1.21.1 line lacks the vanilla picture-in-picture
+     * class, so the viewport (and this registration) is gated out there — the planner keeps its
+     * placeholder map panel. A 1.21.1 viewport is achievable via a direct-GUI renderer (as
+     * {@code BlueprintGuiRenderer} does for the blueprint preview); it is a deferred follow-up, not a
+     * hard limit (see todos.md).
      */
     //? if >=1.21.10 {
     @SubscribeEvent

@@ -46,6 +46,7 @@ import net.minecraft.world.level.material.FluidState;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.schematics.ISchematicBlock;
+import buildcraft.builders.client.render.pip.PreviewBlockModelRenderer;
 import buildcraft.builders.client.render.pip.PipePreviewModel;
 import buildcraft.builders.client.render.pip.PipePreviewPluggables;
 import buildcraft.builders.client.render.pip.TemplateGhostGeometry;
@@ -199,6 +200,23 @@ public final class BlueprintGuiRenderer {
                         continue;
                     }
 
+                    // Render the real block-state model first so facing/axis/shape are honoured —
+                    // fixes flat-sprite cells (sugar cane, levers, torches) and lost orientation
+                    // (logs, stairs, furnaces). Engines are excluded (empty block model → BER-drawn)
+                    // and fall to the item path below, rotated to the captured facing. On 1.21.1 the
+                    // helper draws via BlockRenderDispatcher.renderSingleBlock.
+                    float[] engineRot = PreviewBlockModelRenderer.engineItemRotation(state);
+                    if (engineRot == null) {
+                        pose.pushPose();
+                        pose.translate(x, y, z);
+                        boolean drewBlockModel = PreviewBlockModelRenderer.renderBlock(
+                                state, pose, buffers, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+                        pose.popPose();
+                        if (drewBlockModel) {
+                            continue;
+                        }
+                    }
+
                     ItemStack stack = stackCache.get(state);
                     if (stack == null) {
                         stack = new ItemStack(state.getBlock());
@@ -213,6 +231,13 @@ public final class BlueprintGuiRenderer {
                     // -0.5 translate inside the item transform), so a cell submitted at pose-origin would
                     // occupy [-0.5,0.5]; shift it to the cell centre so the structure rotates about itself.
                     pose.translate(x + 0.5f, y + 0.5f, z + 0.5f);
+                    // Engines: rotate the upright item model to the captured facing. X tilts the trunk
+                    // horizontal, then Y (negated, OUTER — see BlueprintPipRenderer) yaws it to the
+                    // facing; X must apply first or every horizontal facing collapses to south.
+                    if (engineRot != null) {
+                        pose.mulPose(Axis.YP.rotationDegrees(-engineRot[1]));
+                        pose.mulPose(Axis.XP.rotationDegrees(engineRot[0]));
+                    }
                     itemRenderer.renderStatic(stack, ItemDisplayContext.NONE, FULL_BRIGHT,
                             OverlayTexture.NO_OVERLAY, pose, buffers, mc.level, 0);
                     pose.popPose();

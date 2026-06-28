@@ -498,6 +498,29 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                         continue;
                     }
 
+                    // Render the real block-state model first so facing/axis/shape are honoured —
+                    // fixes flat-sprite cells (sugar cane, levers, torches, rails, redstone) and lost
+                    // orientation (logs, stairs, furnaces, every directional block). Engines are
+                    // excluded: their block model is empty (body drawn by the BER), so the helper
+                    // returns false and they fall to the item path below, rotated to the captured
+                    // facing.
+                    float[] engineRot = PreviewBlockModelRenderer.engineItemRotation(state);
+                    if (engineRot == null) {
+                        poseStack.pushPose();
+                        poseStack.translate(x, y, z);
+                        boolean drewBlockModel;
+                        //? if >=26.2 {
+                        /*drewBlockModel = PreviewBlockModelRenderer.renderBlock(state, poseStack, collector, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);*/
+                        //?} else {
+                        drewBlockModel = PreviewBlockModelRenderer.renderBlock(state, poseStack, this.bufferSource, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+                        //?}
+                        poseStack.popPose();
+                        if (drewBlockModel) {
+                            submitted++;
+                            continue;
+                        }
+                    }
+
                     TrackingItemStackRenderState itemRenderState = stateCache.get(state);
                     if (itemRenderState == null) {
                         ItemStack stack = new ItemStack(state.getBlock());
@@ -534,6 +557,15 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                     // compared to the overall extent. Fluid cubes don't need this (submitFluidCube
                     // emits vertices in [0, 1]^3 directly without going through ItemTransform).
                     poseStack.translate(x + 0.5f, y + 0.5f, z + 0.5f);
+                    // Engines reach the item path with an empty block model; rotate the upright item
+                    // model to the captured facing. X tilts the trunk to horizontal, then Y yaws it to
+                    // the compass facing; Y is negated (vanilla blockstate y is the opposite sense to
+                    // JOML YP) and is the OUTER mulPose so X applies to the model first (else every
+                    // horizontal facing collapses to south). Non-engine cells have engineRot == null.
+                    if (engineRot != null) {
+                        poseStack.mulPose(Axis.YP.rotationDegrees(-engineRot[1]));
+                        poseStack.mulPose(Axis.XP.rotationDegrees(engineRot[0]));
+                    }
                     //? if >=26.2 {
                     /*itemRenderState.submit(poseStack, collector, FULL_BRIGHT,
                             OverlayTexture.NO_OVERLAY, 0);*/

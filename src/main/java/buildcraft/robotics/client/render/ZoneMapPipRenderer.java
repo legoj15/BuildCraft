@@ -5,10 +5,12 @@
  */
 package buildcraft.robotics.client.render;
 
-// Whole-file >=1.21.10: built on the 1.21.5+ offscreen PiP pipeline, which doesn't exist on 1.21.1
-// (where the Zone Planner keeps a non-rendered placeholder). Cross-node plumbing mirrors
-// BlueprintPipRenderer: a 26.2 sub-cliff swaps the BufferSource constructor + endBatch flush for the
-// SubmitNodeCollector "submit" model.
+// Whole-file >=1.21.10: this renderer is built on the 1.21.5+ offscreen PiP pipeline, which doesn't
+// exist on 1.21.1 — so the class is gated out there and the Zone Planner keeps a non-rendered
+// placeholder. That is a deferred follow-up, not a hard limit: a 1.21.1 viewport could be drawn
+// straight into the GUI the way BlueprintGuiRenderer draws the blueprint preview (see todos.md).
+// Cross-node plumbing mirrors BlueprintPipRenderer: a 26.2 sub-cliff swaps the BufferSource
+// constructor + endBatch flush for the SubmitNodeCollector "submit" model.
 //? if >=1.21.10 {
 import org.joml.Matrix4f;
 

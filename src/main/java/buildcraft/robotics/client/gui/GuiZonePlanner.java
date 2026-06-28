@@ -38,8 +38,11 @@ import buildcraft.robotics.zone.ZonePlan;
  * The Zone Planner screen. On the modern lines (&gt;=1.21.10) it hosts an interactive isometric 3D map of
  * the surrounding terrain rendered through the picture-in-picture pipeline ({@link ZoneMapPipRenderState}
  * / {@code ZoneMapPipRenderer}): drag an empty hand to pan, scroll to zoom, and drag a coloured
- * paintbrush to mark/erase that colour's zone. The 1.21.1 line has no PiP pipeline, so it keeps a
- * non-rendered placeholder map panel (the slot-based paintbrush&harr;map-location transfer still works).
+ * paintbrush to mark/erase that colour's zone. The 1.21.1 line lacks the vanilla picture-in-picture
+ * <i>class</i>, so this viewport is gated out there and the planner keeps a non-rendered placeholder map
+ * panel (the slot-based paintbrush&harr;map-location transfer still works). That is a deferred follow-up,
+ * not a hard limit: the same map could be drawn straight into the GUI on 1.21.1 the way
+ * {@code BlueprintGuiRenderer} draws the blueprint preview there (see todos.md).
  */
 public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     private static final Identifier TEXTURE =

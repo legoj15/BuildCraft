@@ -31,7 +31,6 @@ import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.phys.Vec3;
 
 import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.engine.TileEngineBase_BC8;
@@ -69,14 +68,8 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
         ProfilerFiller _profiler = Profiler.get();
         _profiler.push("buildcraft:engine_submit");
         try {
-        Vec3 camPos = cameraState.pos;
-        if (camPos == null) return;
-        org.joml.Vector3f t = new org.joml.Vector3f();
-        poseStack.last().pose().getTranslation(t);
-        BlockPos pos = new BlockPos(
-                Math.round((float)(camPos.x + t.x)),
-                Math.round((float)(camPos.y + t.y)),
-                Math.round((float)(camPos.z + t.z)));
+        // The render state already carries the world pos — no camera-pos reconstruction needed.
+        BlockPos pos = state.blockPos;
 
         Level level = Minecraft.getInstance().level;
         if (level == null) return;

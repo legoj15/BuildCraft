@@ -98,15 +98,8 @@ public class RenderFiller implements BlockEntityRenderer<TileFiller, FillerRende
     @Override
     public void submit(FillerRenderState renderState, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
-        net.minecraft.world.phys.Vec3 camPos = cameraState.pos;
-        if (camPos == null) return;
-
-        org.joml.Vector3f t = new org.joml.Vector3f();
-        poseStack.last().pose().getTranslation(t);
-        BlockPos pos = new BlockPos(
-                Math.round((float) (camPos.x + t.x)),
-                Math.round((float) (camPos.y + t.y)),
-                Math.round((float) (camPos.z + t.z)));
+        // The render state already carries the world pos — no camera-pos reconstruction needed.
+        BlockPos pos = renderState.blockPos;
 
         Level level = Minecraft.getInstance().level;
         if (level == null) return;

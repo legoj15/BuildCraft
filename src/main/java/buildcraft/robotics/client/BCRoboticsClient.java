@@ -12,6 +12,22 @@ public class BCRoboticsClient {
         event.register(BCRoboticsMenuTypes.ZONE_PLANNER.get(), GuiZonePlanner::new);
     }
 
+    /**
+     * Registers the PictureInPicture renderer that paints the Zone Planner's isometric terrain map into
+     * an offscreen texture. Without it, the {@code ZoneMapPipRenderState} the GUI submits each frame is
+     * silently dropped (no matching renderer). The 1.21.1 line has no PiP pipeline, so the viewport (and
+     * this registration) is gated out there — the planner keeps its placeholder map panel.
+     */
+    //? if >=1.21.10 {
+    @SubscribeEvent
+    public static void registerPipRenderers(
+            net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEvent event) {
+        event.register(
+                buildcraft.robotics.client.render.ZoneMapPipRenderState.class,
+                buildcraft.robotics.client.render.ZoneMapPipRenderer::new);
+    }
+    //?}
+
     public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
         modEventBus.register(BCRoboticsClient.class);
     }

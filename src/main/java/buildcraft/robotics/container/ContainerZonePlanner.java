@@ -6,15 +6,23 @@
 
 package buildcraft.robotics.container;
 
+import java.util.Arrays;
+
+import io.netty.buffer.Unpooled;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import buildcraft.robotics.BCRoboticsMenuTypes;
 import buildcraft.robotics.tile.TileZonePlanner;
+import buildcraft.robotics.zone.ZonePlan;
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.slot.SlotOutput;
+import buildcraft.lib.net.PacketBufferBC;
 
 @SuppressWarnings("this-escape")
 public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
@@ -63,4 +71,80 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
     // Shift-click transfer is inherited from ContainerBC_Neptune.quickMoveStack — the generic
     // container<->player-inventory move that respects each slot's mayPlace() filter. (The old
     // override here returned ItemStack.EMPTY, which silently disabled shift-click entirely.)
+
+    // ── Zone-layer sync ──────────────────────────────────────────────────────────────────
+    // The viewport edits zone layers client-side; the server tile owns them (the slot I/O reads
+    // them) and persists them. NET_PAINT_LAYER carries an edit up; the server's per-tick diff
+    // (broadcastChanges) pushes any changed layer back down via NET_SYNC_LAYER — covering both
+    // viewport paints and the paintbrush/map-location slot transfer.
+    private static final int NET_PAINT_LAYER = 10;
+    private static final int NET_SYNC_LAYER = 11;
+
+    /** Per-viewer snapshot of the last layer bytes pushed to this menu's client, for change detection. */
+    private byte[][] lastSentLayers;
+
+    /** Client → server: a painted/erased layer. */
+    public void sendPaint(int index, ZonePlan layer) {
+        sendMessage(NET_PAINT_LAYER, buf -> {
+            buf.writeByte(index);
+            layer.writeToByteBuf(buf);
+        });
+    }
+
+    @Override
+    public void broadcastChanges() {
+        super.broadcastChanges();
+        if (tile == null || tile.getLevel() == null || tile.getLevel().isClientSide()) {
+            return;
+        }
+        ZonePlan[] layers = tile.layers;
+        if (lastSentLayers == null) {
+            lastSentLayers = new byte[layers.length][];
+        }
+        for (int i = 0; i < layers.length; i++) {
+            byte[] current = serialize(layers[i]);
+            if (!Arrays.equals(current, lastSentLayers[i])) {
+                lastSentLayers[i] = current;
+                final int idx = i;
+                final ZonePlan layer = layers[i];
+                sendMessage(NET_SYNC_LAYER, buf -> {
+                    buf.writeByte(idx);
+                    layer.writeToByteBuf(buf);
+                });
+            }
+        }
+    }
+
+    private static byte[] serialize(ZonePlan layer) {
+        PacketBufferBC tmp = new PacketBufferBC(Unpooled.buffer());
+        layer.writeToByteBuf(tmp);
+        byte[] out = new byte[tmp.readableBytes()];
+        tmp.readBytes(out);
+        tmp.release();
+        return out;
+    }
+
+    @Override
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+        if (id == NET_PAINT_LAYER && !isClient) {
+            int idx = buffer.readUnsignedByte();
+            if (tile != null && idx >= 0 && idx < tile.layers.length) {
+                ZonePlan plan = new ZonePlan();
+                plan.readFromByteBuf(buffer);
+                tile.layers[idx] = plan;
+                tile.setChanged();
+            }
+            return;
+        }
+        if (id == NET_SYNC_LAYER && isClient) {
+            int idx = buffer.readUnsignedByte();
+            if (tile != null && idx >= 0 && idx < tile.layers.length) {
+                ZonePlan plan = new ZonePlan();
+                plan.readFromByteBuf(buffer);
+                tile.layers[idx] = plan;
+            }
+            return;
+        }
+        super.readMessage(id, buffer, isClient, ctx);
+    }
 }

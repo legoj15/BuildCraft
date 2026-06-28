@@ -73,6 +73,20 @@ public class TileZonePlanner extends TileBC_Neptune implements MenuProvider {
     /** Ticks to complete one input/output transfer — 10 s, matching 1.12.2. */
     private static final int PROGRESS = 200;
 
+    /** Raw input/output progress (−1 idle, else 0..{@link #PROGRESS}); read by the container to drive the
+     *  GUI progress bars. */
+    public int getProgressInput() {
+        return progressInput;
+    }
+
+    public int getProgressOutput() {
+        return progressOutput;
+    }
+
+    public static int getProgressMax() {
+        return PROGRESS;
+    }
+
     public void serverTick() {
         if (level == null || level.isClientSide()) {
             return;

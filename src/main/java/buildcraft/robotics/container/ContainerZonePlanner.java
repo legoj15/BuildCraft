@@ -13,6 +13,8 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.inventory.SimpleContainerData;
 
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -26,6 +28,9 @@ import buildcraft.lib.net.PacketBufferBC;
 
 @SuppressWarnings("this-escape")
 public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
+
+    /** Two synced ints (input, output transfer progress, raw −1..PROGRESS) driving the GUI bars. */
+    private final ContainerData progressData;
 
     // Client-side constructor (from network)
     public ContainerZonePlanner(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
@@ -55,6 +60,43 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
         addSlot(new SlotBase(tile.invOutputPaintbrush, 0, 233, 9));
         addSlot(new SlotBase(tile.invOutputMapLocation, 0, 233, 27));
         addSlot(new SlotOutput(tile.invOutputResult, 0, 233, 75));
+
+        // Sync the two transfer-progress counters to the client for the furnace-style GUI bars.
+        if (tile != null && tile.getLevel() != null && !tile.getLevel().isClientSide()) {
+            this.progressData = new ContainerData() {
+                @Override
+                public int get(int index) {
+                    return index == 0 ? tile.getProgressInput() : tile.getProgressOutput();
+                }
+
+                @Override
+                public void set(int index, int value) {
+                    // read-only on the client
+                }
+
+                @Override
+                public int getCount() {
+                    return 2;
+                }
+            };
+        } else {
+            this.progressData = new SimpleContainerData(2);
+        }
+        addDataSlots(this.progressData);
+    }
+
+    /** Input transfer progress as a 0..1 fraction (0 when idle), for the GUI's horizontal bar. */
+    public float getProgressInputFraction() {
+        return fraction(progressData.get(0));
+    }
+
+    /** Output transfer progress as a 0..1 fraction (0 when idle), for the GUI's vertical bar. */
+    public float getProgressOutputFraction() {
+        return fraction(progressData.get(1));
+    }
+
+    private static float fraction(int raw) {
+        return raw < 0 ? 0f : Math.min(1f, raw / (float) TileZonePlanner.getProgressMax());
     }
 
     private static TileZonePlanner getTile(Inventory playerInv, FriendlyByteBuf buf) {

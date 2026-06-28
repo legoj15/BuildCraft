@@ -35,6 +35,9 @@ public class ZoneMapCamera {
     /** Floor on the camera-to-point distance so terrain at or above the camera can't blow up the
      *  magnification (divide-by-near-zero). */
     private static final double MIN_DIST = 8.0;
+    /** Raymarch budget for terrain picking, and how far below the reference plane to keep searching. */
+    private static final int PICK_MAX_STEPS = 768;
+    private static final int PICK_SEARCH_DOWN = 80;
     /** Depth-ordering weight for height: negative so taller terrain (nearer the overhead camera) sorts
      *  in front. Kept small so {@code depth * poseScale} stays within the PiP ortho clip. Sign verified
      *  in-client. */
@@ -91,6 +94,49 @@ public class ZoneMapCamera {
     public void pickGround(double dxPixels, double dyPixels, double[] out) {
         out[0] = camX + dxPixels / pxPerBlock;
         out[1] = camZ + dyPixels / pxPerBlock;
+    }
+
+    /** Supplies the surface Y of a world column for terrain picking, or {@link Integer#MIN_VALUE} if the
+     *  column has no data (unloaded / off-map). */
+    @FunctionalInterface
+    public interface SurfaceQuery {
+        int surfaceAt(int worldX, int worldZ);
+    }
+
+    /**
+     * Picks the actual terrain column under a viewport-centre-relative pixel offset by marching the view
+     * ray through the height field — the perspective-correct inverse the ground-plane {@link #pickGround}
+     * can't give (under perspective, a column drawn at its surface height projects to a different pixel
+     * than its ground-plane footprint, so a flat-plane pick drifts from the cursor off-centre). Mirrors
+     * BC8's {@code rayTrace}. Returns {@code [worldX, surfaceY, worldZ]} of the first column the ray dips
+     * into, or {@code null} if it hits nothing.
+     */
+    public int[] pickTerrain(double dxPixels, double dyPixels, SurfaceQuery query) {
+        // The cursor ray runs from the camera (camX, camY+CAM_HEIGHT, camZ) through the ground-plane point
+        // it would hit at magnification 1, i.e. (camX + dx/px, camY, camZ + dy/px).
+        double gx = dxPixels / pxPerBlock;
+        double gz = dyPixels / pxPerBlock;
+        double dirX = gx, dirY = -CAM_HEIGHT, dirZ = gz;
+        double len = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+        dirX /= len;
+        dirY /= len;
+        dirZ /= len;
+
+        double x = camX, y = camY + CAM_HEIGHT, z = camZ;
+        double floorY = camY - PICK_SEARCH_DOWN;
+        for (int i = 0; i < PICK_MAX_STEPS && y > floorY; i++) {
+            x += dirX;
+            y += dirY;
+            z += dirZ;
+            int wx = (int) Math.floor(x);
+            int wz = (int) Math.floor(z);
+            int sy = query.surfaceAt(wx, wz);
+            // The column's top face sits at sy + 1; the ray has hit once it descends to/through it.
+            if (sy != Integer.MIN_VALUE && y <= sy + 1) {
+                return new int[]{wx, sy, wz};
+            }
+        }
+        return null;
     }
 
     // ── Zoom / pan helpers ──────────────────────────────────────────────────────────────

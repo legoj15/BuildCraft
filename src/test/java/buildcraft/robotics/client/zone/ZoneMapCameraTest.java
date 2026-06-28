@@ -108,6 +108,35 @@ public class ZoneMapCameraTest {
     }
 
     @Test
+    void terrainPickInvertsProjectionAtSurfaceHeight() {
+        // The load-bearing fix for cursor/highlight detachment: a column drawn at its real surface height
+        // must ray-pick back to itself. (A ground-plane pick drifts here because the surface is above the
+        // reference plane, so perspective shifts its projected pixel away from its footprint — worst at the
+        // off-centre, zoomed-out corners exercised below.)
+        ZoneMapCamera cam = new ZoneMapCamera(0, 64, 0);
+        cam.pxPerBlock = 3.0;
+        int h = 84; // 20 above the reference plane → magnification clearly != 1
+        ZoneMapCamera.SurfaceQuery flat = (x, z) -> h;
+        for (int wx = -24; wx <= 24; wx += 8) {
+            for (int wz = -24; wz <= 24; wz += 8) {
+                double sx = cam.canvasX(wx, h, wz) * cam.pxPerBlock;
+                double sy = cam.canvasY(wx, h, wz) * cam.pxPerBlock;
+                int[] hit = cam.pickTerrain(sx, sy, flat);
+                Assertions.assertNotNull(hit, "ray hit at " + wx + "," + wz);
+                Assertions.assertEquals(wx, hit[0], 1, "picked X near " + wx + "," + wz);
+                Assertions.assertEquals(wz, hit[2], 1, "picked Z near " + wx + "," + wz);
+                Assertions.assertEquals(h, hit[1], "picked surface height");
+            }
+        }
+    }
+
+    @Test
+    void terrainPickMissesOverEmptyColumns() {
+        ZoneMapCamera cam = new ZoneMapCamera(0, 64, 0);
+        Assertions.assertNull(cam.pickTerrain(20, 15, (x, z) -> Integer.MIN_VALUE), "no data → no hit");
+    }
+
+    @Test
     void visibleBoundsContainCameraCentre() {
         ZoneMapCamera cam = new ZoneMapCamera(200.0, 64, -300.0);
         cam.pxPerBlock = 3.0;

@@ -51,6 +51,13 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
      *  layout reserves for the map ({@code offsetX=8, offsetY=9, sizeX=213, sizeY=100}). */
     private static final int MAP_X = 8, MAP_Y = 9, MAP_W = 213, MAP_H = 100;
 
+    // Furnace-style transfer progress bars: fill sprites live at v=228 in the texture (off the GUI panel),
+    // blitted partially over the arrow outlines baked into the background. Coords match the BC8 layout.
+    private static final GuiIcon ICON_PROGRESS_INPUT = new GuiIcon(TEXTURE, 9, 228, 28, 9);
+    private static final GuiIcon ICON_PROGRESS_OUTPUT = new GuiIcon(TEXTURE, 0, 228, 9, 28);
+    private static final GuiRectangle RECT_PROGRESS_INPUT = new GuiRectangle(44, 128, 28, 9);
+    private static final GuiRectangle RECT_PROGRESS_OUTPUT = new GuiRectangle(236, 45, 9, 28);
+
     //? if >=1.21.10 {
     /** Zoom step per scroll notch. */
     private static final double ZOOM_STEP = 1.15;
@@ -81,7 +88,37 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         //? if >=1.21.10 {
         submitViewport(graphics);
         //?}
+        drawProgressBars();
     }
+
+    /** Draws the two transfer-progress bars over their baked arrow outlines: input fills left→right,
+     *  output fills top→bottom (furnace style). Works on every node — independent of the viewport. */
+    private void drawProgressBars() {
+        float in = menu.getProgressInputFraction();
+        if (in > 0) {
+            ICON_PROGRESS_INPUT.drawCutInside(new GuiRectangle(
+                    RECT_PROGRESS_INPUT.x, RECT_PROGRESS_INPUT.y,
+                    RECT_PROGRESS_INPUT.width * in, RECT_PROGRESS_INPUT.height).offset(mainGui.rootElement));
+        }
+        float out = menu.getProgressOutputFraction();
+        if (out > 0) {
+            ICON_PROGRESS_OUTPUT.drawCutInside(new GuiRectangle(
+                    RECT_PROGRESS_OUTPUT.x, RECT_PROGRESS_OUTPUT.y,
+                    RECT_PROGRESS_OUTPUT.width, RECT_PROGRESS_OUTPUT.height * out).offset(mainGui.rootElement));
+        }
+    }
+
+    //? if >=1.21.10 {
+    /** Shows the world coordinates of the column under the cursor (BC8 parity), drawn over the map. */
+    @Override
+    protected void drawForegroundLayer() {
+        if (hoverPos != null) {
+            BCGraphics g = GuiIcon.getGuiGraphics();
+            String txt = "X: " + hoverPos.getX() + "  Y: " + hoverPos.getY() + "  Z: " + hoverPos.getZ();
+            g.text(font, txt, MAP_X + 3, MAP_Y + MAP_H - 11, 0xFF_FF_FF_FF, true);
+        }
+    }
+    //?}
 
     @Override
     protected void initGuiElements() {
@@ -119,7 +156,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         graphics.raw.submitPictureInPictureRenderState(state);
     }
 
-    /** Maps the live cursor position to the world ground column it sits over, or null if outside the map. */
+    /** The terrain column under the live cursor (perspective ray-pick), or null if outside the map / a miss. */
     private BlockPos computeHover() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) {
@@ -130,12 +167,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         if (!inMap(mx, my)) {
             return null;
         }
-        BlockPos col = groundColumn(mx, my);
-        int surf = surfaceAt(col.getX(), col.getZ());
-        if (surf == ZonePlannerMapChunk.NO_DATA) {
-            return null;
-        }
-        return new BlockPos(col.getX(), surf, col.getZ());
+        return pickColumn(mx, my);
     }
 
     private boolean inMap(double mx, double my) {
@@ -143,13 +175,14 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
                 && my >= topPos + MAP_Y && my < topPos + MAP_Y + MAP_H;
     }
 
-    /** World column (X/Z; Y unused) under a screen pixel, via ground-plane projection. */
-    private BlockPos groundColumn(double mx, double my) {
+    /** Terrain column under a screen pixel via the perspective ray-pick, as {@code (worldX, surfaceY,
+     *  worldZ)}, or null on a miss. Used for both the hover box and painting so the cursor, the highlight,
+     *  and the painted cell all agree even at the zoomed-out edges where a flat-plane pick drifts. */
+    private BlockPos pickColumn(double mx, double my) {
         double cx = leftPos + MAP_X + MAP_W / 2.0;
         double cy = topPos + MAP_Y + MAP_H / 2.0;
-        double[] world = new double[2];
-        camera.pickGround(mx - cx, my - cy, world);
-        return new BlockPos((int) Math.floor(world[0]), 0, (int) Math.floor(world[1]));
+        int[] hit = camera.pickTerrain(mx - cx, my - cy, this::surfaceAt);
+        return hit == null ? null : new BlockPos(hit[0], hit[1], hit[2]);
     }
 
     private int surfaceAt(int wx, int wz) {
@@ -193,10 +226,13 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         if (menu.tile != null && inMap(mx, my)) {
             ItemStack carried = menu.getCarried();
             if (isColouredBrush(carried)) {
-                paintButton = event.button() == 1 ? 1 : 0;
-                bufferColorIndex = brushColour(carried).ordinal();
-                paintStart = groundColumn(mx, my);
-                applyPaintRect(paintStart, paintStart);
+                BlockPos start = pickColumn(mx, my);
+                if (start != null) {
+                    paintButton = event.button() == 1 ? 1 : 0;
+                    bufferColorIndex = brushColour(carried).ordinal();
+                    paintStart = start;
+                    applyPaintRect(paintStart, paintStart);
+                }
                 return true;
             } else if (carried.isEmpty() && event.button() == 0) {
                 panning = true;
@@ -218,7 +254,10 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
             return true;
         }
         if (bufferLayer != null && paintStart != null) {
-            applyPaintRect(paintStart, groundColumn(mx, my));
+            BlockPos cur = pickColumn(mx, my);
+            if (cur != null) {
+                applyPaintRect(paintStart, cur);
+            }
             return true;
         }
         return super.mouseDragged(event, dragX, dragY);

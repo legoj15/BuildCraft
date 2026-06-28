@@ -6,7 +6,7 @@
 package buildcraft.robotics.client.render;
 
 // Whole-file >=1.21.10: PictureInPictureRenderState is the 1.21.5+ GUI PiP pipeline, absent on 1.21.1
-// (where the Zone Planner keeps its non-rendered placeholder). Mirrors BlueprintPipRenderState.
+// (which draws the same map straight into the GUI via ZoneMapGuiRenderer instead). Mirrors BlueprintPipRenderState.
 //? if >=1.21.10 {
 import javax.annotation.Nullable;
 

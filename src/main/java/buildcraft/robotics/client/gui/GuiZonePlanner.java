@@ -11,7 +11,17 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemStack;
+
+import buildcraft.core.item.ItemPaintbrush_BC8;
 import buildcraft.robotics.container.ContainerZonePlanner;
+import buildcraft.robotics.client.zone.ZoneMapCamera;
+import buildcraft.robotics.client.zone.ZonePlannerMapChunk;
+import buildcraft.robotics.client.zone.ZonePlannerMapDataClient;
+import buildcraft.robotics.zone.ZonePlan;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.help.DummyHelpElement;
@@ -19,30 +29,22 @@ import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
 //? if >=1.21.10 {
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.item.ItemStack;
 
-import buildcraft.core.item.ItemPaintbrush_BC8;
 import buildcraft.robotics.client.render.ZoneMapPipRenderState;
-import buildcraft.robotics.client.zone.ZoneMapCamera;
-import buildcraft.robotics.client.zone.ZonePlannerMapChunk;
-import buildcraft.robotics.client.zone.ZonePlannerMapDataClient;
-import buildcraft.robotics.zone.ZonePlan;
+//?} else {
+/*import buildcraft.robotics.client.render.ZoneMapGuiRenderer;*/
 //?}
 
 /**
- * The Zone Planner screen. On the modern lines (&gt;=1.21.10) it hosts an interactive isometric 3D map of
- * the surrounding terrain rendered through the picture-in-picture pipeline ({@link ZoneMapPipRenderState}
- * / {@code ZoneMapPipRenderer}): drag an empty hand to pan, scroll to zoom, and drag a coloured
- * paintbrush to mark/erase that colour's zone. The 1.21.1 line lacks the vanilla picture-in-picture
- * <i>class</i>, so this viewport is gated out there and the planner keeps a non-rendered placeholder map
- * panel (the slot-based paintbrush&harr;map-location transfer still works). That is a deferred follow-up,
- * not a hard limit: the same map could be drawn straight into the GUI on 1.21.1 the way
- * {@code BlueprintGuiRenderer} draws the blueprint preview there (see todos.md).
+ * The Zone Planner screen. It hosts an interactive top-down 3D map of the surrounding terrain: drag an
+ * empty hand to pan, scroll to zoom, and drag a coloured paintbrush to mark (right-drag to erase) that
+ * colour's zone. On the modern lines (&gt;=1.21.10) the map is painted through the picture-in-picture
+ * pipeline ({@link ZoneMapPipRenderState} / {@code ZoneMapPipRenderer}); on 1.21.1, which lacks that
+ * pipeline, the same map is drawn straight into the GUI by {@code ZoneMapGuiRenderer} (both share
+ * {@code ZoneMapGeometry}). The interaction layer — camera, pan/zoom, paint, ray-pick hover — is shared
+ * across all lines.
  */
 public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     private static final Identifier TEXTURE =
@@ -61,7 +63,6 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     private static final GuiRectangle RECT_PROGRESS_INPUT = new GuiRectangle(44, 128, 28, 9);
     private static final GuiRectangle RECT_PROGRESS_OUTPUT = new GuiRectangle(236, 45, 9, 28);
 
-    //? if >=1.21.10 {
     /** Zoom step per scroll notch. */
     private static final double ZOOM_STEP = 1.15;
 
@@ -75,22 +76,17 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     private int paintButton = -1;
     private BlockPos paintStart = null;
     private BlockPos hoverPos = null;
-    //?}
 
     public GuiZonePlanner(ContainerZonePlanner menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title, SIZE_X, SIZE_Y);
-        //? if >=1.21.10 {
         BlockPos p = menu.tile != null ? menu.tile.getBlockPos() : BlockPos.ZERO;
         camera = new ZoneMapCamera(p.getX() + 0.5, p.getY(), p.getZ() + 0.5);
-        //?}
     }
 
     @Override
     protected void drawBackgroundTexture(BCGraphics graphics) {
         ICON_GUI.drawAt(mainGui.rootElement);
-        //? if >=1.21.10 {
         submitViewport(graphics);
-        //?}
         drawProgressBars();
     }
 
@@ -111,7 +107,6 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         }
     }
 
-    //? if >=1.21.10 {
     /** Shows the world coordinates of the column under the cursor, at the 1.12.2 position — GUI-local
      *  (130, 130), dark grey, no drop shadow — matching BC8's {@code GuiZonePlanner}. */
     @Override
@@ -122,18 +117,14 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
             g.text(font, txt, 130, 130, 0xFF_40_40_40, false);
         }
     }
-    //?}
 
     @Override
     protected void initGuiElements() {
-        //? if >=1.21.10 {
         // Terrain is rebuilt from the player's current surroundings each time the screen opens.
         ZonePlannerMapDataClient.INSTANCE.clear();
-        //?}
         // Invisible help region over the map window: documents the screen in the help ledger and keeps the
         // ledger's hover highlight aligned with the viewport. It is not an IInteractionElement, so it never
-        // intercepts the viewport's drag/paint mouse input (and on 1.21.1, where there is no live viewport,
-        // it's the placeholder map panel's help).
+        // intercepts the viewport's drag/paint mouse input.
         mainGui.shownElements.add(new DummyHelpElement(
                 new GuiRectangle(MAP_X, MAP_Y, MAP_W, MAP_H).offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.zone_planner.map.title", 0xFF_88_CC_88,
@@ -141,8 +132,9 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
                         "buildcraft.help.zone_planner.map.desc2")));
     }
 
-    //? if >=1.21.10 {
-
+    /** Draws the live map for this frame. On &gt;=1.21.10 it submits a PiP render state (painted into an
+     *  offscreen texture and blitted); on 1.21.1 it draws straight into the GUI. Both sample the camera,
+     *  zones, and hovered column fresh each frame. */
     private void submitViewport(BCGraphics graphics) {
         if (menu.tile == null) {
             return;
@@ -150,6 +142,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         hoverPos = computeHover();
         int x0 = leftPos + MAP_X;
         int y0 = topPos + MAP_Y;
+        //? if >=1.21.10 {
         int x1 = x0 + MAP_W;
         int y1 = y0 + MAP_H;
         ScreenRectangle scissor = new ScreenRectangle(x0, y0, MAP_W, MAP_H);
@@ -158,6 +151,10 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
                 menu.tile.getBlockPos(), camera, menu.tile.layers,
                 bufferLayer, bufferColorIndex, hoverPos);
         graphics.raw.submitPictureInPictureRenderState(state);
+        //?} else {
+        /*ZoneMapGuiRenderer.render(graphics, camera, menu.tile.getBlockPos(), menu.tile.layers,
+                bufferLayer, bufferColorIndex, hoverPos, x0, y0, MAP_W, MAP_H);*/
+        //?}
     }
 
     /** The terrain column under the live cursor (perspective ray-pick), or null if outside the map / a miss. */
@@ -224,33 +221,33 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         }
     }
 
-    @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        double mx = event.x(), my = event.y();
+    // ── Map interaction (shared logic; the per-node mouse overrides below delegate here) ──────────
+
+    /** @return true if the click started a paint or pan on the map (caller should not pass it on). */
+    private boolean onMapClicked(double mx, double my, int button) {
         if (menu.tile != null && inMap(mx, my)) {
             ItemStack carried = menu.getCarried();
             if (isColouredBrush(carried)) {
                 BlockPos start = pickColumn(mx, my);
                 if (start != null) {
-                    paintButton = event.button() == 1 ? 1 : 0;
+                    paintButton = button == 1 ? 1 : 0;
                     bufferColorIndex = brushColour(carried).ordinal();
                     paintStart = start;
                     applyPaintRect(paintStart, paintStart);
                 }
                 return true;
-            } else if (carried.isEmpty() && event.button() == 0) {
+            } else if (carried.isEmpty() && button == 0) {
                 panning = true;
                 lastDragX = mx;
                 lastDragY = my;
                 return true;
             }
         }
-        return super.mouseClicked(event, doubleClick);
+        return false;
     }
 
-    @Override
-    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
-        double mx = event.x(), my = event.y();
+    /** @return true if the drag is panning or painting the map. */
+    private boolean onMapDragged(double mx, double my) {
         if (panning) {
             camera.panByPixels(mx - lastDragX, my - lastDragY);
             lastDragX = mx;
@@ -264,11 +261,11 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
             }
             return true;
         }
-        return super.mouseDragged(event, dragX, dragY);
+        return false;
     }
 
-    @Override
-    public boolean mouseReleased(MouseButtonEvent event) {
+    /** @return true if a pan ended or a paint was committed to its layer. */
+    private boolean onMapReleased() {
         if (panning) {
             panning = false;
             return true;
@@ -282,7 +279,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
             paintButton = -1;
             return true;
         }
-        return super.mouseReleased(event);
+        return false;
     }
 
     @Override
@@ -293,6 +290,55 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
+
+    //? if >=1.21.10 {
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (onMapClicked(event.x(), event.y(), event.button())) {
+            return true;
+        }
+        return super.mouseClicked(event, doubleClick);
+    }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        if (onMapDragged(event.x(), event.y())) {
+            return true;
+        }
+        return super.mouseDragged(event, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        if (onMapReleased()) {
+            return true;
+        }
+        return super.mouseReleased(event);
+    }
+    //?} else {
+    /*@Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (onMapClicked(mouseX, mouseY, button)) {
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (onMapDragged(mouseX, mouseY)) {
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (onMapReleased()) {
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }*/
     //?}
 
 }

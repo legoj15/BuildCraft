@@ -692,5 +692,10 @@ public class BuildCraftGameTests {
         // Backwards-compat registry aliases (LegacyAliases) — every legacy block/item/BE/fluid ID
         // must resolve to a live current entry, so old worlds and inventories keep their content.
         reg.accept("buildcraftunofficial:legacy_aliases_resolve", () -> buildcraft.lib.registry.LegacyAliasTester::testAliasesResolve);
+
+        // Robotics — Zone Planner slot transfer: a ZONE map location <-> tile layer round trip
+        // through serverTick (input read + output write), with the world<->tile-relative offset and
+        // ItemMapLocation.setZone/getZone. Needs ItemStack/components, so it is a game test.
+        reg.accept("buildcraftunofficial:zone_planner_transfer", () -> buildcraft.robotics.ZonePlannerTransferTester::transferRoundTrip);
     }
 }

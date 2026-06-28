@@ -43,6 +43,7 @@ import buildcraft.api.items.IMapLocation;
 
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.data.Box;
+import buildcraft.robotics.zone.ZonePlan;
 
 @SuppressWarnings("deprecation")
 public class ItemMapLocation extends Item implements IMapLocation {
@@ -413,9 +414,11 @@ public class ItemMapLocation extends Item implements IMapLocation {
     public IZone getZone(@Nonnull ItemStack item) {
         MapLocationType type = getTypeFromStack(item);
         switch (type) {
-            case ZONE:
-                // ZonePlan is part of buildcraft-robotics which is not yet ported
-                return null;
+            case ZONE: {
+                ZonePlan plan = new ZonePlan();
+                plan.readFromNBT(getCustomTag(item));
+                return plan;
+            }
             case AREA:
                 return getBox(item);
             case PATH:
@@ -424,6 +427,19 @@ public class ItemMapLocation extends Item implements IMapLocation {
             default:
                 return null;
         }
+    }
+
+    /**
+     * Stamps a {@link ZonePlan} onto a map-location stack: writes the plan's {@code "chunkMapping"} into the
+     * CUSTOM_DATA tag, flips the map type to {@link MapLocationType#ZONE}, and updates the model selector. The
+     * inverse of {@link #getZone}'s ZONE branch; used by the Zone Planner's output slot.
+     */
+    public static void setZone(@Nonnull ItemStack stack, ZonePlan plan) {
+        CompoundTag cpt = getCustomTag(stack);
+        plan.writeToNBT(cpt);
+        cpt.putString(TAG_MAP_TYPE, MapLocationType.ZONE.name());
+        setCustomTag(stack, cpt);
+        updateModelData(stack, MapLocationType.ZONE);
     }
 
     @Override

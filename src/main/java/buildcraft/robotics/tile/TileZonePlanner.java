@@ -18,7 +18,12 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+
+import buildcraft.core.item.ItemMapLocation;
+import buildcraft.core.item.ItemPaintbrush_BC8;
 
 import buildcraft.robotics.BCRoboticsBlockEntities;
 import buildcraft.robotics.container.ContainerZonePlanner;
@@ -55,19 +60,123 @@ public class TileZonePlanner extends TileBC_Neptune implements MenuProvider {
         for (int i = 0; i < layers.length; i++) {
             layers[i] = new ZonePlan();
         }
+        // Slot filters: paintbrush slots take only paintbrushes; the map slots only map locations.
+        // (Result slots stay open here — the container's SlotOutput blocks player placement, and the
+        // tick writes results via setStackInSlot, which bypasses the checker.)
+        invPaintbrushes.setChecker((slot, stack) -> stack.getItem() instanceof ItemPaintbrush_BC8);
+        invInputPaintbrush.setChecker((slot, stack) -> stack.getItem() instanceof ItemPaintbrush_BC8);
+        invOutputPaintbrush.setChecker((slot, stack) -> stack.getItem() instanceof ItemPaintbrush_BC8);
+        invInputMapLocation.setChecker((slot, stack) -> stack.getItem() instanceof ItemMapLocation);
+        invOutputMapLocation.setChecker((slot, stack) -> stack.getItem() instanceof ItemMapLocation);
     }
+
+    /** Ticks to complete one input/output transfer — 10 s, matching 1.12.2. */
+    private static final int PROGRESS = 200;
 
     public void serverTick() {
         if (level == null || level.isClientSide()) {
             return;
         }
-        // Input processing: read a map location + paintbrush → store the zone in the tile
-        // Output processing: write the zone for a paintbrush colour to a map location
-        // Both use 200-tick progress timers matching 1.12.2 behavior.
-        // The actual paintbrush/map location item validation and zone transfer logic
-        // requires ItemMapLocation and ItemPaintbrush_BC8 from buildcraftcore.
-        // For now this is a no-op tick — the slot processing will be wired once
-        // the items are fully validated.
+
+        // INPUT (map location + paintbrush -> store the zone in the paintbrush-colour's layer).
+        // It has priority: while it is mid-progress the OUTPUT side is held off, matching 1.12.2.
+        if (isInputValid()) {
+            if (progressInput < 0) {
+                progressInput = 0;
+            }
+            if (progressInput < PROGRESS) {
+                progressInput++;
+                setChanged();
+                return;
+            }
+            completeInput();
+            progressInput = 0;
+            setChanged();
+            return;
+        } else if (progressInput != -1) {
+            progressInput = -1;
+            setChanged();
+        }
+
+        // OUTPUT (paintbrush colour's layer -> write the zone onto a map location).
+        if (isOutputValid()) {
+            if (progressOutput < 0) {
+                progressOutput = 0;
+            }
+            if (progressOutput < PROGRESS) {
+                progressOutput++;
+                setChanged();
+                return;
+            }
+            completeOutput();
+            progressOutput = 0;
+            setChanged();
+        } else if (progressOutput != -1) {
+            progressOutput = -1;
+            setChanged();
+        }
+    }
+
+    private boolean isInputValid() {
+        return paintbrushColour(invInputPaintbrush.getStackInSlot(0)) != null
+                && readZone(invInputMapLocation.getStackInSlot(0)) != null
+                && invInputResult.getStackInSlot(0).isEmpty();
+    }
+
+    private void completeInput() {
+        ItemStack map = invInputMapLocation.getStackInSlot(0);
+        DyeColor colour = paintbrushColour(invInputPaintbrush.getStackInSlot(0));
+        ZonePlan worldZone = readZone(map);
+        if (colour == null || worldZone == null) {
+            return;
+        }
+        // Layers are stored tile-relative; the map carries absolute world coords.
+        layers[colour.ordinal()] = worldZone.getWithOffset(-getBlockPos().getX(), -getBlockPos().getZ());
+
+        // Hand back a blank map location of the same item and consume one input.
+        invInputResult.setStackInSlot(0, new ItemStack(map.getItem()));
+        map.shrink(1);
+        invInputMapLocation.setStackInSlot(0, map.isEmpty() ? ItemStack.EMPTY : map);
+    }
+
+    private boolean isOutputValid() {
+        return paintbrushColour(invOutputPaintbrush.getStackInSlot(0)) != null
+                && invOutputMapLocation.getStackInSlot(0).getItem() instanceof ItemMapLocation
+                && invOutputResult.getStackInSlot(0).isEmpty();
+    }
+
+    private void completeOutput() {
+        ItemStack map = invOutputMapLocation.getStackInSlot(0);
+        DyeColor colour = paintbrushColour(invOutputPaintbrush.getStackInSlot(0));
+        if (colour == null || !(map.getItem() instanceof ItemMapLocation)) {
+            return;
+        }
+        ItemStack written = map.copy();
+        written.setCount(1);
+        // Tile-relative layer back to absolute world coords for the item.
+        ItemMapLocation.setZone(written,
+                layers[colour.ordinal()].getWithOffset(getBlockPos().getX(), getBlockPos().getZ()));
+        invOutputResult.setStackInSlot(0, written);
+        map.shrink(1);
+        invOutputMapLocation.setStackInSlot(0, map.isEmpty() ? ItemStack.EMPTY : map);
+    }
+
+    /** The brush's dye colour, or null if the stack is not a coloured paintbrush. */
+    @Nullable
+    private static DyeColor paintbrushColour(ItemStack stack) {
+        if (stack.getItem() instanceof ItemPaintbrush_BC8 brush) {
+            return brush.getBrushFromStack(stack).colour;
+        }
+        return null;
+    }
+
+    /** The zone stored on a map-location stack (absolute coords), or null if it is not a ZONE map. */
+    @Nullable
+    private static ZonePlan readZone(ItemStack stack) {
+        if (stack.getItem() instanceof ItemMapLocation map && map.getZone(stack) instanceof ZonePlan zone) {
+            return zone;
+        }
+        return null;
     }
 
     @Override

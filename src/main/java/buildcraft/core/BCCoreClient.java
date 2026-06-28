@@ -126,7 +126,6 @@ public class BCCoreClient {
                         if (buildcraft.lib.BCLib.DEV) {
                                 buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.POWER_TESTER.get());
                                 buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.GOGGLES.get());
-                                buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.MAP_LOCATION.get());
                                 buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.DECORATED_DESTROY.get());
                                 buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.DECORATED_BLUEPRINT.get());
                                 buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.DECORATED_TEMPLATE.get());

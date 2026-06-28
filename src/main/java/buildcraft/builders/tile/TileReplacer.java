@@ -12,7 +12,6 @@ import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -23,6 +22,7 @@ import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.enums.EnumSnapshotType;
 import buildcraft.api.schematics.ISchematicBlock;
 
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.tile.TileBC_Neptune;
@@ -38,7 +38,7 @@ import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.GlobalSavedDataSnapshots;
 import buildcraft.builders.snapshot.Snapshot;
 
-public class TileReplacer extends TileBC_Neptune implements MenuProvider {
+public class TileReplacer extends TileBC_Neptune implements IBCMenuProvider {
 
     /** Accepts a used blueprint item. */
     public final ItemHandlerSimple invSnapshot = itemManager.addInvHandler(

@@ -12,7 +12,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -41,12 +40,13 @@ import buildcraft.core.BCCoreItems;
 import buildcraft.energy.BCEnergyBlockEntities;
 import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.engine.TileEngineBase_BC8;
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.mj.MjBatteryReceiver;
 
 @SuppressWarnings("this-escape")
-public class TileDynamoMJ extends TileEngineBase_BC8 implements MenuProvider {
+public class TileDynamoMJ extends TileEngineBase_BC8 implements IBCMenuProvider {
     public static final int MAX_FE = 10_000;
     public static final long MAX_MJ = 1000 * MjAPI.MJ;
 

@@ -16,7 +16,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -42,6 +41,7 @@ import buildcraft.api.mj.MjBattery;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.block.BlockChute;
 import buildcraft.factory.container.ContainerChute;
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
@@ -57,7 +57,7 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
  * inserts them into adjacent inventories. Powered by MJ.
  * Ported from 1.12.2 TileChute.
  */
-public class TileChute extends TileBC_Neptune implements MenuProvider {
+public class TileChute extends TileBC_Neptune implements IBCMenuProvider {
 
     private static final int PICKUP_MAX = 3;
     private static final long PROGRESS_TARGET = 100_000;

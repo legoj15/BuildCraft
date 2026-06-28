@@ -21,7 +21,6 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -52,6 +51,7 @@ import buildcraft.factory.BCFactoryAttachments;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.container.ContainerDistiller;
 import buildcraft.lib.mj.MjBatteryReceiver;
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
@@ -64,7 +64,7 @@ import buildcraft.lib.misc.MessageUtil;
  * Ported from 1.12.2 TileDistiller_BC8.
  */
 @SuppressWarnings("this-escape")
-public class TileDistiller_BC8 extends BlockEntity implements MenuProvider, IDebuggable {
+public class TileDistiller_BC8 extends BlockEntity implements IBCMenuProvider, IDebuggable {
 
     public static final long MAX_MJ_PER_TICK = 6 * MjAPI.MJ;
 

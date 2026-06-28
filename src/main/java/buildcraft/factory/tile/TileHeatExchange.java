@@ -22,7 +22,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -59,6 +58,7 @@ import buildcraft.factory.block.BlockHeatExchange.EnumExchangePart;
 import buildcraft.factory.container.ContainerHeatExchange;
 import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.fluid.FluidSmoother;
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.FluidUtilBC;
@@ -71,7 +71,7 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
  * rendering state. Ported from 1.12.2 TileHeatExchange.
  */
 @SuppressWarnings("this-escape")
-public class TileHeatExchange extends BlockEntity implements MenuProvider, IDebuggable {
+public class TileHeatExchange extends BlockEntity implements IBCMenuProvider, IDebuggable {
 
     /** Maximum fluid transfer per tick for each number of middle sections (1-3 middles).
      * Numbers should be divisors of 1000. */

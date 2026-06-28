@@ -15,7 +15,6 @@ import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -27,6 +26,7 @@ import buildcraft.api.core.BCLog;
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.enums.EnumSnapshotType;
 
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.nbt.NbtSquisher;
@@ -41,7 +41,7 @@ import buildcraft.builders.item.ItemSnapshot;
 import buildcraft.builders.snapshot.GlobalSavedDataSnapshots;
 import buildcraft.builders.snapshot.Snapshot;
 
-public class TileElectronicLibrary extends TileBC_Neptune implements MenuProvider {
+public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProvider {
 
     /** Accepts used snapshot items for downloading (copying snapshot from server DB to client library). */
     public final ItemHandlerSimple invDownIn = itemManager.addInvHandler(

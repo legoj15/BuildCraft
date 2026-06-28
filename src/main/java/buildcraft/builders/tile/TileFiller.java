@@ -25,7 +25,6 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -51,6 +50,7 @@ import buildcraft.api.statements.containers.IFillerStatementContainer;
 import buildcraft.api.tiles.IControllable;
 import buildcraft.api.tiles.IDebuggable;
 
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
@@ -80,7 +80,7 @@ import buildcraft.core.marker.volume.VolumeBox;
 import buildcraft.builders.BCBuildersEventDist;
 
 public class TileFiller extends TileBC_Neptune
-        implements IDebuggable, IFillerStatementContainer, IControllable, ITileForTemplateBuilder, MenuProvider {
+        implements IDebuggable, IFillerStatementContainer, IControllable, ITileForTemplateBuilder, IBCMenuProvider {
 
     public static final int INV_SIZE = 27;
 

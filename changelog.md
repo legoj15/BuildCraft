@@ -1,5 +1,6 @@
 ###### Changes since 2026.1.1:
 
+- Fixed a "Network Protocol Error" disconnect when right-clicking certain machines while in spectator mode. Spectators can now open those GUIs read-only — the way vanilla lets them peek into chests and furnaces — instead of being kicked. Affected the Zone Planner, Filtered Buffer, Tank, Chute, Distiller, and Heat Exchanger.
 - The Zone Planner block now shows a live top-down map of the surrounding terrain right on its front face, like a little screen — no need to open it to glance at the area around it.
 - The Zone Planner's interactive 3D map now works on the 1.21.1 build too (it was previously a static placeholder there). Same controls everywhere: pan with an empty hand, scroll to zoom, drag a coloured paintbrush to mark or erase zones.
 - Blueprint, Template, and Architect Table 3D previews now draw each block in its real placed shape and orientation — logs along their axis, stairs/slabs/fences/doors correctly formed, and sugar cane, levers, torches, and rails as their in-world models instead of flat item icons. Engines in a preview now point the way they'll be placed instead of always standing upright. (Previously every cell was drawn from its flat inventory icon, which lost shape and facing.)

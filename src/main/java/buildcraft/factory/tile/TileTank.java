@@ -22,7 +22,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.profiling.Profiler;
 //?}
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -38,6 +37,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.container.ContainerTank;
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.FluidUtilBC;
@@ -53,7 +53,7 @@ import buildcraft.api.tiles.IDebuggable;
  * Ported from 1.12.2 TileTank.
  */
 @SuppressWarnings("deprecation")
-public class TileTank extends BlockEntity implements MenuProvider, IDebuggable {
+public class TileTank extends BlockEntity implements IBCMenuProvider, IDebuggable {
 
     public final BCFluidTank tank = new BCFluidTank(1, 16_000); // 16 buckets
     public final FluidSmoother smoothedTank = new FluidSmoother(tank);

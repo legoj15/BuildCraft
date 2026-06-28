@@ -14,7 +14,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -29,6 +28,7 @@ import buildcraft.robotics.BCRoboticsBlockEntities;
 import buildcraft.robotics.container.ContainerZonePlanner;
 import buildcraft.robotics.zone.ZonePlan;
 
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.tile.TileBC_Neptune;
@@ -40,7 +40,7 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
  * zone reading/writing operations.
  * Ported from 1.12.2 TileZonePlanner.
  */
-public class TileZonePlanner extends TileBC_Neptune implements MenuProvider {
+public class TileZonePlanner extends TileBC_Neptune implements IBCMenuProvider {
     // 7 inventories matching 1.12.2 layout, using ItemHandlerSimple for SlotBase compatibility
     public final ItemHandlerSimple invPaintbrushes = new ItemHandlerSimple(16, null);
     public final ItemHandlerSimple invInputPaintbrush = new ItemHandlerSimple(1, null);

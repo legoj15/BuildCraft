@@ -18,7 +18,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
@@ -39,6 +38,7 @@ import buildcraft.api.schematics.SchematicBlockContext;
 import buildcraft.api.schematics.SchematicEntityContext;
 import buildcraft.api.tiles.IDebuggable;
 
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
@@ -64,7 +64,7 @@ import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
 import buildcraft.core.marker.volume.Lock;
 import buildcraft.core.marker.volume.VolumeBox;
 
-public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, MenuProvider {
+public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, IBCMenuProvider {
 
     private static final net.minecraft.resources.Identifier ADVANCEMENT
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:architect");

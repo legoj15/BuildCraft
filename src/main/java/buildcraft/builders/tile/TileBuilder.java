@@ -22,7 +22,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -56,6 +55,7 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
 import buildcraft.api.tiles.IDebuggable;
 
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
@@ -83,7 +83,7 @@ import buildcraft.builders.snapshot.Template;
 import buildcraft.builders.snapshot.TemplateBuilder;
 
 public class TileBuilder extends TileBC_Neptune
-    implements IDebuggable, ITileForTemplateBuilder, ITileForBlueprintBuilder, MenuProvider {
+    implements IDebuggable, ITileForTemplateBuilder, ITileForBlueprintBuilder, IBCMenuProvider {
 
     public static final int RESOURCE_SLOTS = 27;
     public static final int TANK_COUNT = 4;

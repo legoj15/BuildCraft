@@ -11,7 +11,6 @@ import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -19,6 +18,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.core.EnumPipePart;
 
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 
@@ -35,7 +35,7 @@ import buildcraft.transport.container.ContainerFilteredBuffer;
  * contains a matching item sample.
  * Ported from 1.12.2 TileFilteredBuffer.
  */
-public class TileFilteredBuffer extends TileBC_Neptune implements MenuProvider {
+public class TileFilteredBuffer extends TileBC_Neptune implements IBCMenuProvider {
     public final ItemHandlerSimple invFilter;
     public final ItemHandlerFiltered invMain;
 

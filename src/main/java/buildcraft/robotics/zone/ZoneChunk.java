@@ -53,7 +53,10 @@ public class ZoneChunk {
         } else {
             if (fullSet) {
                 property = new BitSet(16 * 16);
-                property.flip(0, 16 * 16 - 1);
+                // BitSet.flip's upper bound is EXCLUSIVE: to set all 256 bits we flip [0, 256), not [0, 255).
+                // The old `16 * 16 - 1` left bit 255 unset, so demoting a full chunk and clearing one cell left
+                // 254 cells instead of 255 (and silently dropped the corner column at chunk-local (15, 15)).
+                property.flip(0, 16 * 16);
                 fullSet = false;
             } else if (property == null) {
                 // Note - ZonePlan should usually destroy such chunks

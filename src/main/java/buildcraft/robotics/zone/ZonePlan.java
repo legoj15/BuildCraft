@@ -17,68 +17,80 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.IZone;
 import buildcraft.lib.misc.NBTUtilBC;
 
+/**
+ * One dye layer of a Zone Planner: a sparse mosaic of {@link ZoneChunk}s keyed by chunk coordinate.
+ *
+ * <p>Chunks are keyed by a packed {@code long} ({@code chunkX} in the low 32 bits, {@code chunkZ} in the high
+ * 32 — the same layout vanilla uses for its chunk maps) rather than a {@code ChunkPos} object. That keeps the
+ * set/get hot path (hit once per painted column) allocation-free, and — because this class is then free of any
+ * vanilla type whose static init needs the registries up — lets the pure zone-math be exercised by cheap JUnit
+ * on every node. The on-disk / on-wire form is unchanged: each chunk still serialises its {@code chunkX} /
+ * {@code chunkZ} as plain ints (the {@code "chunkMapping"} contract shared with {@code ItemMapLocation}).
+ */
 public class ZonePlan implements IZone {
-    private final HashMap<ChunkPos, ZoneChunk> chunkMapping = new HashMap<>();
+    private final HashMap<Long, ZoneChunk> chunkMapping = new HashMap<>();
 
     public ZonePlan() {}
 
     public ZonePlan(ZonePlan old) {
-        for (Map.Entry<ChunkPos, ZoneChunk> entry : old.chunkMapping.entrySet()) {
+        for (Map.Entry<Long, ZoneChunk> entry : old.chunkMapping.entrySet()) {
             chunkMapping.put(entry.getKey(), new ZoneChunk(entry.getValue()));
         }
     }
 
-    public boolean get(int x, int z) {
-        int xChunk = x >> 4;
-        int zChunk = z >> 4;
-        ChunkPos chunkId = new ChunkPos(xChunk, zChunk);
-        ZoneChunk property;
+    /** Packs a chunk coordinate into the map key: {@code chunkX} low, {@code chunkZ} high. */
+    public static long packChunkKey(int chunkX, int chunkZ) {
+        return (chunkX & 0xFFFF_FFFFL) | ((long) chunkZ << 32);
+    }
 
-        if (!chunkMapping.containsKey(chunkId)) {
+    public static int unpackChunkX(long key) {
+        return (int) (key & 0xFFFF_FFFFL);
+    }
+
+    public static int unpackChunkZ(long key) {
+        return (int) (key >> 32);
+    }
+
+    public boolean get(int x, int z) {
+        long key = packChunkKey(x >> 4, z >> 4);
+        ZoneChunk property = chunkMapping.get(key);
+        if (property == null) {
             return false;
-        } else {
-            property = chunkMapping.get(chunkId);
-            return property.get(x & 0xF, z & 0xF);
         }
+        return property.get(x & 0xF, z & 0xF);
     }
 
     public void set(int x, int z, boolean val) {
-        int xChunk = x >> 4;
-        int zChunk = z >> 4;
-        ChunkPos chunkId = new ChunkPos(xChunk, zChunk);
-        ZoneChunk property;
+        long key = packChunkKey(x >> 4, z >> 4);
+        ZoneChunk property = chunkMapping.get(key);
 
-        if (!chunkMapping.containsKey(chunkId)) {
+        if (property == null) {
             if (val) {
                 property = new ZoneChunk();
-                chunkMapping.put(chunkId, property);
+                chunkMapping.put(key, property);
             } else {
                 return;
             }
-        } else {
-            property = chunkMapping.get(chunkId);
         }
 
         property.set(x & 0xF, z & 0xF, val);
 
         if (property.isEmpty()) {
-            chunkMapping.remove(chunkId);
+            chunkMapping.remove(key);
         }
     }
 
     public List<int[]> getAll() {
         List<int[]> result = new ArrayList<>();
-        chunkMapping.forEach((chunkPos, zoneChunk) -> {
-            List<int[]> zoneChunkAll = zoneChunk.getAll();
-            int startX = chunkPos.getMinBlockX();
-            int startZ = chunkPos.getMinBlockZ();
-            for (int[] p : zoneChunkAll) {
+        chunkMapping.forEach((key, zoneChunk) -> {
+            int startX = unpackChunkX(key) << 4;
+            int startZ = unpackChunkZ(key) << 4;
+            for (int[] p : zoneChunk.getAll()) {
                 result.add(new int[]{p[0] + startX, p[1] + startZ});
             }
         });
@@ -91,25 +103,26 @@ public class ZonePlan implements IZone {
         return zonePlan;
     }
 
-    public boolean hasChunk(ChunkPos chunkPos) {
-        return chunkMapping.containsKey(chunkPos);
+    public boolean hasChunk(int chunkX, int chunkZ) {
+        return chunkMapping.containsKey(packChunkKey(chunkX, chunkZ));
     }
 
-    public Set<ChunkPos> getChunkPoses() {
+    /** The packed chunk keys currently occupied — decode with {@link #unpackChunkX}/{@link #unpackChunkZ}. */
+    public Set<Long> getChunkKeys() {
         return chunkMapping.keySet();
     }
 
-    public HashMap<ChunkPos, ZoneChunk> getChunkMapping() {
+    public HashMap<Long, ZoneChunk> getChunkMapping() {
         return chunkMapping;
     }
 
     public void writeToNBT(CompoundTag nbt) {
         ListTag list = new ListTag();
-        for (Map.Entry<ChunkPos, ZoneChunk> entry : chunkMapping.entrySet()) {
+        for (Map.Entry<Long, ZoneChunk> entry : chunkMapping.entrySet()) {
             CompoundTag zoneChunkTag = new CompoundTag();
             entry.getValue().writeToNBT(zoneChunkTag);
-            zoneChunkTag.putInt("chunkX", buildcraft.lib.misc.PositionUtil.chunkX(entry.getKey()));
-            zoneChunkTag.putInt("chunkZ", buildcraft.lib.misc.PositionUtil.chunkZ(entry.getKey()));
+            zoneChunkTag.putInt("chunkX", unpackChunkX(entry.getKey()));
+            zoneChunkTag.putInt("chunkZ", unpackChunkZ(entry.getKey()));
             list.add(zoneChunkTag);
         }
         nbt.put("chunkMapping", list);
@@ -123,7 +136,7 @@ public class ZonePlan implements IZone {
             ZoneChunk chunk = new ZoneChunk();
             chunk.readFromNBT(zoneChunkTag);
             chunkMapping.put(
-                new ChunkPos(
+                packChunkKey(
                     NBTUtilBC.getInt(zoneChunkTag, "chunkX", 0),
                     NBTUtilBC.getInt(zoneChunkTag, "chunkZ", 0)
                 ),
@@ -141,9 +154,9 @@ public class ZonePlan implements IZone {
     public double distanceToSquared(BlockPos pos) {
         double maxSqrDistance = Double.MAX_VALUE;
 
-        for (Map.Entry<ChunkPos, ZoneChunk> e : chunkMapping.entrySet()) {
-            double dx = (buildcraft.lib.misc.PositionUtil.chunkX(e.getKey()) << 4) + 8 - pos.getX();
-            double dz = (buildcraft.lib.misc.PositionUtil.chunkZ(e.getKey()) << 4) + 8 - pos.getZ();
+        for (Map.Entry<Long, ZoneChunk> e : chunkMapping.entrySet()) {
+            double dx = (unpackChunkX(e.getKey()) << 4) + 8 - pos.getX();
+            double dz = (unpackChunkZ(e.getKey()) << 4) + 8 - pos.getZ();
 
             double sqrDistance = dx * dx + dz * dz;
 
@@ -171,11 +184,11 @@ public class ZonePlan implements IZone {
 
         int chunkId = rand.nextInt(chunkMapping.size());
 
-        for (Map.Entry<ChunkPos, ZoneChunk> e : chunkMapping.entrySet()) {
+        for (Map.Entry<Long, ZoneChunk> e : chunkMapping.entrySet()) {
             if (chunkId == 0) {
                 BlockPos i = e.getValue().getRandomBlockPos(rand);
-                int x = (buildcraft.lib.misc.PositionUtil.chunkX(e.getKey()) << 4) + i.getX();
-                int z = (buildcraft.lib.misc.PositionUtil.chunkZ(e.getKey()) << 4) + i.getZ();
+                int x = (unpackChunkX(e.getKey()) << 4) + i.getX();
+                int z = (unpackChunkZ(e.getKey()) << 4) + i.getZ();
 
                 return new BlockPos(x, i.getY(), z);
             }
@@ -190,7 +203,7 @@ public class ZonePlan implements IZone {
         chunkMapping.clear();
         int size = buf.readInt();
         for (int i = 0; i < size; i++) {
-            ChunkPos key = new ChunkPos(buf.readInt(), buf.readInt());
+            long key = packChunkKey(buf.readInt(), buf.readInt());
             ZoneChunk value = new ZoneChunk();
             value.readFromByteBuf(buf);
             chunkMapping.put(key, value);
@@ -200,9 +213,9 @@ public class ZonePlan implements IZone {
 
     public void writeToByteBuf(FriendlyByteBuf buf) {
         buf.writeInt(chunkMapping.size());
-        for (Map.Entry<ChunkPos, ZoneChunk> e : chunkMapping.entrySet()) {
-            buf.writeInt(buildcraft.lib.misc.PositionUtil.chunkX(e.getKey()));
-            buf.writeInt(buildcraft.lib.misc.PositionUtil.chunkZ(e.getKey()));
+        for (Map.Entry<Long, ZoneChunk> e : chunkMapping.entrySet()) {
+            buf.writeInt(unpackChunkX(e.getKey()));
+            buf.writeInt(unpackChunkZ(e.getKey()));
             e.getValue().writeToByteBuf(buf);
         }
     }

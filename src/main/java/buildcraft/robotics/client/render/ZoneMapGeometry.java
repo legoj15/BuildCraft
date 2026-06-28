@@ -44,10 +44,16 @@ public final class ZoneMapGeometry {
 
     /** Alpha (0-255) of a painted-zone tint laid over the terrain. */
     private static final int ZONE_ALPHA = 0x88;
-    /** Alpha of the hover highlight. */
-    private static final int HOVER_ALPHA = 0x99;
-    /** Lift the zone/hover overlay quads this far above the surface so they don't z-fight the top face. */
+    /** Lift the zone overlay quads this far above the surface so they don't z-fight the top face. */
     private static final float OVERLAY_LIFT = 0.05f;
+    /** Depth-only bias for the hover highlight, in blocks "up" toward the overhead camera. Its screen
+     *  position stays on the surface, but its depth is computed as if it were this much taller, so it
+     *  sorts cleanly in front of the column top and normal relief instead of z-fighting them (which
+     *  left only a thin edge sliver visible). Small enough to stay inside both the GUI and PiP depth
+     *  ranges; large enough (≈8 blocks ≫ the sub-precision world-Y lift) to clear the z-fight. */
+    private static final float HOVER_DEPTH_BIAS = 8.0f;
+    /** Inset of the hover highlight's bright centre, leaving a dark contrast frame around it. */
+    private static final float HOVER_BORDER = 0.16f;
     /** How far a map-edge column's skirt drops when it has no neighbour to step down to. */
     private static final int EDGE_SKIRT = 2;
     /** Safety cap on the chunk grid scanned per frame (low zoom shows a lot of world). */
@@ -192,8 +198,48 @@ public final class ZoneMapGeometry {
         }
 
         if (hover != null) {
-            overlayQuad(vc, mat, cam, 1f, 1f, 1f, HOVER_ALPHA, hover.getX(), hover.getZ(), hover.getY());
+            hoverHighlight(vc, mat, cam, hover.getX(), hover.getZ(), hover.getY());
         }
+    }
+
+    /** Bold, opaque highlight for the hovered column — a bright centre inside a dark frame, lifted above
+     *  the zone tints. The dark frame reads on light terrain (sand), the bright centre on dark terrain
+     *  (water/forest), so the cursor cell is unmistakable over any colour. Replaces the old faint 60%
+     *  white tile that washed out over light terrain (and read only on a glancing edge). */
+    private static void hoverHighlight(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam,
+                                       int wx, int wz, int surf) {
+        double posY = surf + 1 + OVERLAY_LIFT;            // screen position: just above the surface
+        double dFrame = surf + 1 + HOVER_DEPTH_BIAS;      // depth: biased in front of the terrain top
+        double dFill = dFrame + 1.0;                      // centre one step more in front than the frame
+        // Dark frame: the full cell.
+        hoverQuad(vc, mat, cam, 0, 0, 0, 255, wx, wz, wx + 1, wz + 1, posY, dFrame);
+        // Bright centre, inset so the dark frame shows around it.
+        double m = HOVER_BORDER;
+        hoverQuad(vc, mat, cam, 255, 255, 255, 255, wx + m, wz + m, wx + 1 - m, wz + 1 - m, posY, dFill);
+    }
+
+    /** Flat, double-wound (cull-immune) quad for the hover highlight. Screen position uses {@code posY}
+     *  (on the surface) but depth uses the raised {@code depthY}, so it draws in front of nearby terrain
+     *  without floating out of place. */
+    private static void hoverQuad(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam, int r, int g, int b, int a,
+                                  double x0, double z0, double x1, double z1, double posY, double depthY) {
+        hoverVertex(vc, mat, cam, x0, posY, z0, depthY, r, g, b, a);
+        hoverVertex(vc, mat, cam, x1, posY, z0, depthY, r, g, b, a);
+        hoverVertex(vc, mat, cam, x1, posY, z1, depthY, r, g, b, a);
+        hoverVertex(vc, mat, cam, x0, posY, z1, depthY, r, g, b, a);
+        hoverVertex(vc, mat, cam, x0, posY, z1, depthY, r, g, b, a);
+        hoverVertex(vc, mat, cam, x1, posY, z1, depthY, r, g, b, a);
+        hoverVertex(vc, mat, cam, x1, posY, z0, depthY, r, g, b, a);
+        hoverVertex(vc, mat, cam, x0, posY, z0, depthY, r, g, b, a);
+    }
+
+    /** Vertex whose canvas X/Y come from {@code posY} but whose depth comes from {@code depthY}. */
+    private static void hoverVertex(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam,
+                                    double wx, double posY, double wz, double depthY, int r, int g, int b, int a) {
+        float ex = (float) cam.canvasX(wx, posY, wz);
+        float ey = (float) cam.canvasY(wx, posY, wz);
+        float ez = (float) cam.depth(wx, depthY, wz);
+        vc.addVertex(mat, ex, ey, ez).setColor(r, g, b, a);
     }
 
     /** A flat translucent tile sitting just above the surface of one column. */

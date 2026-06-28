@@ -9,8 +9,6 @@ package buildcraft.robotics.container;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 
 import buildcraft.robotics.BCRoboticsMenuTypes;
 import buildcraft.robotics.tile.TileZonePlanner;
@@ -62,9 +60,7 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
         return null;
     }
 
-    @Override
-    public ItemStack quickMoveStack(Player player, int slotIndex) {
-        // TODO: implement shift-click transfer
-        return ItemStack.EMPTY;
-    }
+    // Shift-click transfer is inherited from ContainerBC_Neptune.quickMoveStack — the generic
+    // container<->player-inventory move that respects each slot's mayPlace() filter. (The old
+    // override here returned ItemStack.EMPTY, which silently disabled shift-click entirely.)
 }

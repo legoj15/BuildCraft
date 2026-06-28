@@ -109,13 +109,14 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     }
 
     //? if >=1.21.10 {
-    /** Shows the world coordinates of the column under the cursor (BC8 parity), drawn over the map. */
+    /** Shows the world coordinates of the column under the cursor, at the 1.12.2 position — GUI-local
+     *  (130, 130), dark grey, no drop shadow — matching BC8's {@code GuiZonePlanner}. */
     @Override
     protected void drawForegroundLayer() {
         if (hoverPos != null) {
             BCGraphics g = GuiIcon.getGuiGraphics();
-            String txt = "X: " + hoverPos.getX() + "  Y: " + hoverPos.getY() + "  Z: " + hoverPos.getZ();
-            g.text(font, txt, MAP_X + 3, MAP_Y + MAP_H - 11, 0xFF_FF_FF_FF, true);
+            String txt = "X: " + hoverPos.getX() + " Y: " + hoverPos.getY() + " Z: " + hoverPos.getZ();
+            g.text(font, txt, 130, 130, 0xFF_40_40_40, false);
         }
     }
     //?}

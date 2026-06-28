@@ -5,7 +5,11 @@
  */
 package buildcraft.lib.client.render.tile;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * Shared constants and helpers for the small status-LED cubes rendered on the
@@ -61,6 +65,26 @@ public final class LedRenderUtil {
             ledZ = (face == Direction.SOUTH) ? 1.0 - insetBlocks : insetBlocks;
         }
         led.center.positiond(ledX + dX * sideOffset, y, ledZ + dZ * sideOffset);
+    }
+
+    /**
+     * Whether the {@code face} of the block at {@code pos} is visible — i.e. not hidden by the
+     * neighbouring block. Delegates to vanilla's {@link Block#shouldRenderFace} so a block-entity-drawn
+     * decal (an LED, the zone planner's screen) appears under <em>exactly</em> the same condition the
+     * block model's own face does: shown when the face is exposed, culled when an opaque neighbour
+     * buries it. Without this a BER draws unconditionally, leaving a decal floating on a face the chunk
+     * mesher has already culled (e.g. a planner stacked against another block).
+     *
+     * <p>Call once per face per frame before emitting that face's decal; it's a single neighbour lookup
+     * plus vanilla's cached occlusion-shape test, the same work the mesher already does.
+     */
+    public static boolean isFaceVisible(BlockGetter level, BlockPos pos, BlockState state, Direction face) {
+        BlockPos neighbourPos = pos.relative(face);
+        //? if >=1.21.10 {
+        return Block.shouldRenderFace(level, pos, state, level.getBlockState(neighbourPos), face);
+        //?} else {
+        /*return Block.shouldRenderFace(state, level, pos, face, neighbourPos);*/
+        //?}
     }
 
     private LedRenderUtil() {}

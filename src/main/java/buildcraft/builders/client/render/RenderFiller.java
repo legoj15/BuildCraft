@@ -27,6 +27,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.tiles.IControllable.Mode;
 
@@ -136,6 +137,11 @@ public class RenderFiller implements BlockEntityRenderer<TileFiller, FillerRende
     }
 
     private void renderLEDs(TileFiller tile, PoseStack.Pose pose, VertexConsumer consumer) {
+        Level level = tile.getLevel();
+        if (level == null) return;
+        BlockPos pos = tile.getBlockPos();
+        BlockState state = level.getBlockState(pos);
+
         Mode controlMode = tile.getControlMode();
         boolean hasPower = tile.hasPower();
         boolean finished = tile.isFinished();
@@ -165,6 +171,7 @@ public class RenderFiller implements BlockEntityRenderer<TileFiller, FillerRende
 
         for (int i = 0; i < 4; i++) {
             Direction dir = Direction.from2DDataValue(i);
+            if (!LedRenderUtil.isFaceVisible(level, pos, state, dir)) continue; // face buried → no LEDs
 
             LED_GREEN[i].center.colouri(greenColour);
             LED_RED[i].center.colouri(redColour);

@@ -140,6 +140,11 @@ public class RenderQuarry implements BlockEntityRenderer<TileQuarry, QuarryRende
 
     private void renderLEDs(TileQuarry tile, Direction rear,
                             PoseStack.Pose pose, VertexConsumer consumer) {
+        Level level = tile.getLevel();
+        if (level == null) return;
+        BlockPos pos = tile.getBlockPos();
+        BlockState state = level.getBlockState(pos);
+
         boolean hasPower = tile.hasPower();
         boolean hasTask = tile.isMining();
 
@@ -159,6 +164,7 @@ public class RenderQuarry implements BlockEntityRenderer<TileQuarry, QuarryRende
         for (int i = 0; i < 4; i++) {
             Direction dir = Direction.from2DDataValue(i);
             if (dir == rear) continue; // omit LEDs on the rear face
+            if (!LedRenderUtil.isFaceVisible(level, pos, state, dir)) continue; // face buried → no LEDs
 
             LED_GREEN[i].center.colouri(greenColour);
             LED_RED[i].center.colouri(redColour);

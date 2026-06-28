@@ -151,6 +151,9 @@ public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, Min
                 ? state.getValue(BuildCraftProperties.BLOCK_FACING)
                 : Direction.NORTH;
 
+        // Skip the LEDs when their front face is buried by a neighbour (it's culled from the model too).
+        if (!LedRenderUtil.isFaceVisible(level, pos, state, facing)) return;
+
         float percentFilled = tile.getPercentFilledForRender();
         int powerColour = COLOUR_POWER[(int) (percentFilled * (COLOUR_POWER.length - 1))];
 

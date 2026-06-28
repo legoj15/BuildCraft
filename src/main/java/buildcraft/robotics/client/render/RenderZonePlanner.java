@@ -31,6 +31,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.lib.client.render.BCLibRenderTypes;
+import buildcraft.lib.client.render.tile.LedRenderUtil;
 
 import buildcraft.robotics.block.BlockZonePlanner;
 import buildcraft.robotics.client.zone.ZoneFacePreview;
@@ -66,8 +67,15 @@ public class RenderZonePlanner implements BlockEntityRenderer<TileZonePlanner, Z
     private static final double RECT_H0 = 3.0 / 16.0;  // horizontal start across the face
     private static final double RECT_V0 = 5.0 / 16.0;  // vertical start (up from the block bottom)
     private static final double CELL = 1.0 / 16.0;
-    /** How far the cells sit proud of the face, so they read in front of the block texture. */
-    private static final double PROUD = 0.002;
+    /**
+     * How far the cells sit proud of the face. Kept at {@code 0} — flush with the block face — so there
+     * is no air gap between the floating map plane and the block (the cells are zero-thickness quads with
+     * no sides to hide such a gap, unlike the architect's LED cubes). The {@link BCLibRenderTypes#led()}
+     * render type's {@code VIEW_OFFSET_Z} depth layering keeps the coplanar map in front of the face
+     * without z-fighting, so no physical offset is needed. 1.12.2 used {@code 0.001} here, which is why
+     * its screen showed a faint gap too.
+     */
+    private static final double PROUD = 0.0;
 
     public RenderZonePlanner(BlockEntityRendererProvider.Context context) {
     }
@@ -111,6 +119,10 @@ public class RenderZonePlanner implements BlockEntityRenderer<TileZonePlanner, Z
         if (!state.hasProperty(BlockZonePlanner.FACING)) return;
         Direction facing = state.getValue(BlockZonePlanner.FACING);
 
+        // Don't paint the screen on a face the chunk mesher has culled (e.g. a planner buried against
+        // a neighbouring block) — the model's front face is gone, so the screen must go with it.
+        if (!LedRenderUtil.isFaceVisible(level, pos, state, facing)) return;
+
         poseStack.pushPose();
 
         //? if >=1.21.10 {
@@ -145,7 +157,7 @@ public class RenderZonePlanner implements BlockEntityRenderer<TileZonePlanner, Z
         }
     }
 
-    /** A single double-wound (cull-immune) coloured quad for one grid cell, laid on the front face. */
+    /** A single front-facing coloured quad for one grid cell, laid on the front face. */
     private void emitCell(Matrix4f mat, VertexConsumer vc, Direction facing, int sx, int sy,
                           int r, int g, int b) {
         double h0 = RECT_H0 + sx * CELL, h1 = h0 + CELL;
@@ -154,16 +166,13 @@ public class RenderZonePlanner implements BlockEntityRenderer<TileZonePlanner, Z
         double[] p10 = facePoint(facing, h1, v0);
         double[] p11 = facePoint(facing, h1, v1);
         double[] p01 = facePoint(facing, h0, v1);
-        // Front winding, then reversed — so back-face culling can't drop the cell whichever way the
-        // outward normal lands (the faces are opaque and coplanar, so double-emitting is harmless).
+        // Single winding wound so its outward normal points away from the block face (verified for all
+        // four facings). The led() render type culls back faces, so this shows from the front and is
+        // dropped when viewed from behind the block — no rear-visible flat quad.
         vertex(mat, vc, p00, r, g, b);
         vertex(mat, vc, p10, r, g, b);
         vertex(mat, vc, p11, r, g, b);
         vertex(mat, vc, p01, r, g, b);
-        vertex(mat, vc, p01, r, g, b);
-        vertex(mat, vc, p11, r, g, b);
-        vertex(mat, vc, p10, r, g, b);
-        vertex(mat, vc, p00, r, g, b);
     }
 
     private static void vertex(Matrix4f mat, VertexConsumer vc, double[] p, int r, int g, int b) {

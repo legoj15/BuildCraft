@@ -27,6 +27,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.lib.client.render.BCLibRenderTypes;
@@ -150,6 +151,11 @@ public class RenderPump implements BlockEntityRenderer<TilePump, PumpRenderState
     }
 
     private void renderLEDs(TilePump tile, PoseStack.Pose pose, VertexConsumer consumer) {
+        Level level = tile.getLevel();
+        if (level == null) return;
+        BlockPos pos = tile.getBlockPos();
+        BlockState state = level.getBlockState(pos);
+
         float percentFilled = tile.getPercentFilledForRender();
         int powerColour = COLOUR_POWER[(int) (percentFilled * (COLOUR_POWER.length - 1))];
 
@@ -158,6 +164,7 @@ public class RenderPump implements BlockEntityRenderer<TilePump, PumpRenderState
 
         for (int i = 0; i < 4; i++) {
             Direction dir = Direction.from2DDataValue(i);
+            if (!LedRenderUtil.isFaceVisible(level, pos, state, dir)) continue; // face buried → no LEDs
 
             LED_POWER[i].center.colouri(powerColour);
             LED_STATUS[i].center.colouri(statusColour);

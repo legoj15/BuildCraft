@@ -115,6 +115,10 @@ public class RenderArchitectTable implements BlockEntityRenderer<TileArchitectTa
         if (!state.hasProperty(HorizontalDirectionalBlock.FACING)) return;
         Direction facing = state.getValue(HorizontalDirectionalBlock.FACING);
 
+        // Skip the LEDs when their face is hidden by a neighbour — they sit on the front face, which the
+        // chunk mesher culls when buried, so the LEDs must cull with it.
+        if (!LedRenderUtil.isFaceVisible(level, pos, state, facing)) return;
+
         poseStack.pushPose();
 
         //? if >=1.21.10 {

@@ -6,15 +6,12 @@ package buildcraft.core.tile;
 
 import java.util.List;
 
-import javax.annotation.Nonnull;
-
 import com.google.common.collect.ImmutableList;
 
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.Direction;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -77,12 +74,6 @@ public class TileMarkerVolume extends TileMarker<VolumeConnection> implements IT
             showSignals = !showSignals;
             setChanged();
         }
-    }
-
-    @Nonnull
-    public AABB getRenderBoundingBox() {
-        return new AABB(Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY,
-                Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
     }
 
     public void onManualConnectionAttempt(Player player) {

@@ -607,22 +607,4 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, M
     public boolean getIsValid() {
         return isValid;
     }
-
-    // Rendering
-
-    public AABB getRenderBoundingBox() {
-        if (box.isInitialized()) {
-            BlockPos min = box.min();
-            BlockPos max = box.max();
-            return new AABB(
-                Math.min(worldPosition.getX(), min.getX()),
-                Math.min(worldPosition.getY(), min.getY()),
-                Math.min(worldPosition.getZ(), min.getZ()),
-                Math.max(worldPosition.getX() + 1, max.getX() + 1),
-                Math.max(worldPosition.getY() + 1, max.getY() + 1),
-                Math.max(worldPosition.getZ() + 1, max.getZ() + 1)
-            );
-        }
-        return new AABB(worldPosition);
-    }
 }

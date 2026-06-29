@@ -57,6 +57,7 @@ import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
+import buildcraft.lib.tile.AbstractBCBlockEntity;
 
 /**
  * Distiller tile entity. Takes fluid input, consumes MJ power, and produces
@@ -64,7 +65,7 @@ import buildcraft.lib.misc.MessageUtil;
  * Ported from 1.12.2 TileDistiller_BC8.
  */
 @SuppressWarnings("this-escape")
-public class TileDistiller_BC8 extends BlockEntity implements IBCMenuProvider, IDebuggable {
+public class TileDistiller_BC8 extends AbstractBCBlockEntity implements IBCMenuProvider, IDebuggable {
 
     public static final long MAX_MJ_PER_TICK = 6 * MjAPI.MJ;
 
@@ -564,33 +565,8 @@ public class TileDistiller_BC8 extends BlockEntity implements IBCMenuProvider, I
 
     // --- Save / Load ---
 
-    // Platform bridge — TileDistiller_BC8 extends BlockEntity directly (not TileBC_Neptune), so it carries
-    // its own copy of the load/save signature directive (see TileBC_Neptune for the rationale).
-    //? if >=1.21.10 {
-    @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        writeData(new BCValueOutput(output));
-    }
-
-    @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        readData(new BCValueInput(input));
-    }
-    //?} else {
-    /*@Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        writeData(new BCValueOutput(tag));
-    }
-
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        readData(new BCValueInput(tag));
-    }*/
-    //?}
+    // The saveAdditional/loadAdditional signature directive lives once in AbstractBCBlockEntity;
+    // here we only override the version-neutral writeData/readData hooks it dispatches to.
 
     protected void writeData(BCValueOutput output) {
         if (owner != null && GameProfileUtil.getId(owner) != null) {

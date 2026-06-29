@@ -58,13 +58,14 @@ import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
+import buildcraft.lib.tile.AbstractBCBlockEntity;
 
 /**
  * Flood Gate tile entity. Receives fluid via pipes and uses BFS flood-fill to
  * place source blocks into the world. Power-free.
  * Ported from 1.12.2 TileFloodGate.
  */
-public class TileFloodGate extends BlockEntity implements IDebuggable {
+public class TileFloodGate extends AbstractBCBlockEntity implements IDebuggable {
 
     private static final Direction[] SEARCH_NORMAL = new Direction[] {
         Direction.DOWN, Direction.NORTH, Direction.SOUTH,
@@ -316,33 +317,8 @@ public class TileFloodGate extends BlockEntity implements IDebuggable {
 
     // --- Save / Load ---
 
-    // Platform bridge — TileFloodGate extends BlockEntity directly (not TileBC_Neptune), so it carries
-    // its own copy of the load/save signature directive (see TileBC_Neptune for the rationale).
-    //? if >=1.21.10 {
-    @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        writeData(new BCValueOutput(output));
-    }
-
-    @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        readData(new BCValueInput(input));
-    }
-    //?} else {
-    /*@Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        writeData(new BCValueOutput(tag));
-    }
-
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        readData(new BCValueInput(tag));
-    }*/
-    //?}
+    // The saveAdditional/loadAdditional signature directive lives once in AbstractBCBlockEntity;
+    // here we only override the version-neutral writeData/readData hooks it dispatches to.
 
     protected void writeData(BCValueOutput output) {
         if (owner != null && GameProfileUtil.getId(owner) != null) {

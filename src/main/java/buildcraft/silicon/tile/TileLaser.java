@@ -42,6 +42,7 @@ import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.VolumeUtil;
 import buildcraft.lib.misc.data.AverageLong;
+import buildcraft.lib.tile.AbstractBCBlockEntity;
 import buildcraft.lib.mj.MjBatteryReceiver;
 
 import buildcraft.api.tiles.IDebuggable;
@@ -50,7 +51,7 @@ import buildcraft.silicon.BCSiliconBlocks;
 import buildcraft.silicon.BCSiliconConfig;
 import buildcraft.silicon.block.BlockLaser;
 
-public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscriber, IDebuggable, IAdvDebugTarget {
+public class TileLaser extends AbstractBCBlockEntity implements ILocalBlockUpdateSubscriber, IDebuggable, IAdvDebugTarget {
     /** Forward range of the modern line-of-sight cone (LOS_CONE mode). Package-private so the tester
      *  can pass the production value rather than a literal. */
     static final int TARGETING_RANGE = 6;
@@ -291,34 +292,8 @@ public class TileLaser extends BlockEntity implements ILocalBlockUpdateSubscribe
 
     // --- Save / Load (ValueOutput / ValueInput API) ---
 
-    // Platform bridge — TileLaser extends BlockEntity directly (not TileBC_Neptune), so it carries
-    // its own copy of the load/save signature directive (see TileBC_Neptune for the rationale). Subclasses
-    // override writeData/readData (NOT the platform methods).
-    //? if >=1.21.10 {
-    @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        writeData(new BCValueOutput(output));
-    }
-
-    @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        readData(new BCValueInput(input));
-    }
-    //?} else {
-    /*@Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        writeData(new BCValueOutput(tag));
-    }
-
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        readData(new BCValueInput(tag));
-    }*/
-    //?}
+    // The saveAdditional/loadAdditional signature directive lives once in AbstractBCBlockEntity;
+    // here we only override the version-neutral writeData/readData hooks it dispatches to.
 
     protected void writeData(BCValueOutput output) {
         output.store("battery", CompoundTag.CODEC, battery.serializeNBT());

@@ -63,6 +63,7 @@ import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.tile.AbstractBCBlockEntity;
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
@@ -73,7 +74,7 @@ import buildcraft.transport.wire.WireManager;
 import buildcraft.transport.pipe.PipeEventBus;
 
 @SuppressWarnings("this-escape")
-public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebuggable {
+public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder, IDebuggable {
     private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_DREAM
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_dream");
     private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_DIVERSIFICATION
@@ -121,34 +122,8 @@ public class TilePipeHolder extends BlockEntity implements IPipeHolder, IDebugga
 
     // --- Read / Write ---
 
-    // Platform bridge: TilePipeHolder extends BlockEntity directly (not TileBC_Neptune), so it carries its
-    // own save/load bridge. 1.21.10+ uses the ValueOutput/ValueInput API; 1.21.1 uses CompoundTag + provider.
-    // The actual serialization lives in the version-neutral writeData/readData hooks below.
-    //? if >=1.21.10 {
-    @Override
-    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
-        super.saveAdditional(output);
-        writeData(new BCValueOutput(output));
-    }
-
-    @Override
-    public void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
-        super.loadAdditional(input);
-        readData(new BCValueInput(input));
-    }
-    //?} else {
-    /*@Override
-    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        writeData(new BCValueOutput(tag));
-    }
-
-    @Override
-    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        readData(new BCValueInput(tag));
-    }*/
-    //?}
+    // The saveAdditional/loadAdditional signature directive lives once in AbstractBCBlockEntity;
+    // here we only override the version-neutral writeData/readData hooks it dispatches to.
 
     protected void writeData(BCValueOutput output) {
         if (owner != null && GameProfileUtil.getId(owner) != null) {

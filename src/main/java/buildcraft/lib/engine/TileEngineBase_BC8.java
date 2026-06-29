@@ -49,6 +49,7 @@ import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.lib.tile.AbstractBCBlockEntity;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
 //? if >=1.21.10 {
@@ -62,7 +63,7 @@ import net.neoforged.neoforge.transfer.energy.EnergyHandler;
  * Provides tick logic, heat management, MJ power accumulation,
  * piston animation state, redstone sensitivity, and NBT persistence.
  */
-public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebuggable {
+public abstract class TileEngineBase_BC8 extends AbstractBCBlockEntity implements IDebuggable {
 
     public static final Identifier ADVANCEMENT_TO_MUCH_POWER =
         Identifier.parse("buildcraftunofficial:to_much_power");
@@ -728,35 +729,9 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
 
     // --- NBT ---
 
-    // Platform bridge — TileEngineBase_BC8 extends BlockEntity directly (not TileBC_Neptune), so it carries
-    // its own copy of the load/save signature directive (see TileBC_Neptune for the rationale). Subclasses
-    // override writeData/readData (NOT the platform methods).
-    //? if >=1.21.10 {
+    // The saveAdditional/loadAdditional signature directive lives once in AbstractBCBlockEntity;
+    // here we only override the version-neutral writeData/readData hooks it dispatches to.
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        writeData(new BCValueOutput(output));
-    }
-
-    @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        readData(new BCValueInput(input));
-    }
-    //?} else {
-    /*@Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        writeData(new BCValueOutput(tag));
-    }
-
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        readData(new BCValueInput(tag));
-    }*/
-    //?}
-
     protected void writeData(BCValueOutput output) {
         output.putByte("orientation", (byte) orientation.ordinal());
         output.putLong("power", power);
@@ -775,6 +750,7 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
         }
     }
 
+    @Override
     protected void readData(BCValueInput input) {
         int ord = input.getByteOr("orientation", (byte) Direction.UP.ordinal());
         orientation = Direction.values()[Math.min(ord, 5)];

@@ -23,7 +23,7 @@ import buildcraft.lib.marker.MarkerCache;
 import buildcraft.lib.marker.MarkerConnection;
 import buildcraft.lib.marker.MarkerSubCache;
 
-public abstract class TileMarker<C extends MarkerConnection<C>> extends BlockEntity implements IDebuggable {
+public abstract class TileMarker<C extends MarkerConnection<C>> extends AbstractBCBlockEntity implements IDebuggable {
     /** Set to true when this BE is being removed due to chunk unload, not block breaking. */
     private boolean chunkUnloading = false;
 
@@ -33,38 +33,13 @@ public abstract class TileMarker<C extends MarkerConnection<C>> extends BlockEnt
 
     // --- NBT ---
 
-    // Platform bridge — TileMarker extends BlockEntity directly (not TileBC_Neptune), so it carries
-    // its own copy of the load/save signature directive (see TileBC_Neptune for the rationale). Subclasses
-    // override writeData/readData (NOT the platform methods).
-    //? if >=1.21.10 {
+    // The saveAdditional/loadAdditional signature directive lives once in AbstractBCBlockEntity;
+    // subclasses override the version-neutral writeData/readData hooks it dispatches to.
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        writeData(new BCValueOutput(output));
-    }
-
-    @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        readData(new BCValueInput(input));
-    }
-    //?} else {
-    /*@Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        writeData(new BCValueOutput(tag));
-    }
-
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        readData(new BCValueInput(tag));
-    }*/
-    //?}
-
     protected void writeData(BCValueOutput output) {
     }
 
+    @Override
     protected void readData(BCValueInput input) {
     }
 

@@ -242,3 +242,110 @@ The 16 items in the quick-wins list — most importantly the **engine `setChange
 Stonecutter version directives anywhere; the COMMON/CLIENT config split; the `StatementManager` static registry; the two container→screen sync mechanisms; VolumeBox's editing/addon/lock model; `PipeFlowPower`'s intentionally-inert `powerLoss` scaffolding; `TileDynamoMJ`'s deliberate engine-base scaffolding reuse; the raw-tiles' choice to skip the heavyweight `TileBC_Neptune` (only the *re-copying* is the problem, not the choice).
 
 > **Risk posture:** the mod is mid-major-version (robots revival in flight). None of the staged refactors are urgent; none should be done as churn-for-churn. Sequence them so each lands green and committed before the next (the memory note on a subagent wiping ~50 files via `git checkout` is a real hazard — commit green states immediately, never node-switch on uncommitted work).
+
+---
+
+## Duality Catalog (follow-up sweep)
+
+This sweep re-read and count-verified 59 candidate forks across nine axes (tile-base, block-base, menu/container, screen/GUI, networking, capability exposure, item-movement, MJ/energy, render, recipes/JEI, config/registration, markers/schematic/flow) plus a dedicated completeness critic. It deliberately reverses the first audit's mistake of downweighting "justified" forks: a fork that is justified *only* because another fixable split forces it is the **highest**-value unification, because one root fix collapses several forks at once.
+
+### Headline
+
+- **~50 distinct forks** remain after de-duping cross-axis views of the same split (e.g. the menu-bind fork and the server-side open-path fork are two faces of one tile-base split).
+- **300+ class memberships** live in two-or-more parallel systems.
+- **~18 forks collapse from just 5 fixable roots.** The biggest single root — finishing the `AbstractBCBlockEntity` tile re-root and re-rooting `ContainerBCTile`'s generic bound onto it — collapses **8** forks by itself.
+- The completeness sweep surfaced the catalog's **largest population** (33 wrapper-serialized tiles vs **62** raw-`CompoundTag` non-BE objects) and a **previously-unnamed** soft-start power-ramp duality (5 sites, 3 divergent formulas).
+
+### Root-cause map (the key artifact)
+
+| Root fix | Forks it collapses |
+|---|---|
+| **Complete the `AbstractBCBlockEntity` re-root** (migrate `TileSpringOil`) **+ re-root `ContainerBCTile`'s bound** onto it + have raw-tile machines adopt `IBCMenuProvider`/shared sync/`setPlacedBy` | Menu/container bind (7 of 13 collapse); spectator-safe open path (5); container-open-call view (5 + DynamoMJ double-write); standard sync pair (7 copies); 1.21.1 `onDataPacket` workaround; `setPlacedBy` forward (17); item-cap engine fuel (System C); render-state empty stubs (10→1); partially the non-BE NBT serialization tail |
+| **Add a `markForRenderUpdate()` push helper to `AbstractBCBlockEntity`** (calls `sendUpdateToTrackingPlayers`, no re-mesh) | Tile client-state push fork (~11 `sendBlockUpdated` sites move off the re-mesh path) |
+| **Route MJ-battery receivers through `MjBatteryReceiver` + migrate `TileAutoWorkbenchBase.powerStored` to a real `MjBattery`** | MJ receiver-over-battery (MiningWell + Stripes inline copies); non-tile pipe-layer receiver duplication; FE-exposure gap (Auto Workbench gains the Energy cap for free) |
+| **Flesh out the empty `FluidRenderer` stub into the shared quad-kit** | Fluid-box quad emitter (3 private copies → 1) |
+| **Extract one `lib.client.model` block-quad helper** (the `collectParts` directive ladder) | Baked-quad extraction (3 copies; two byte-identical) |
+| **Make the `BCTransportPipes` `PipeDefinition` set iterable** | Pipe BlockItem registration (46 hand-written lines → 1 loop) |
+| **Generic-flow base for the kinesis power clone** (`AbstractPipeFlowPower<E>` + renderer) | Power-flow distribution + renderer clone (also fixes the FE overload invisible-stem bug) |
+| **Leaf-level standalone cleanups** (no shared root) | LedgerEngine/EngineFE 1-line drift; `TileSpringOil` directive; 5 redundant `getUpdateTag` overrides; 5 dead `lib.net` stubs + 5 empty `lib.gui.recipe` stubs; `DetailedConfigOption`; duplicate JEI plugin UID (bug); duplicate `NET_JEI_RECIPE_TRANSFER` constant; 7 redundant `registerStatement` calls; `mjPerRf` re-parse; 2 duplicate REI plugins; marker SavedData/cache boilerplate; schematic block/entity twins; **the newly-found soft-start ramp duality** |
+
+### Ranked catalog (by systemicness: even split × large population × player-invisible = highest)
+
+**High systemicness**
+1. **BE base** — 16 `TileBC_Neptune` / 14 `AbstractBCBlockEntity`-direct / 1 raw vanilla. *Load-bearing* (A/B real semantics; C drift). The ROOT under most of the catalog.
+2. **Menu/container bind** — 12 `ContainerBCTile` / 13 `ContainerBC_Neptune`-direct (7 tile-backed). *Collapses-when-root-fixed.*
+3. **Spectator-safe menu open path** — 12 `IBCMenuProvider` / 5 lambda / 5 anonymous. *Collapses-when-root-fixed*, player-visible (spectator NPE).
+4. **Non-BE NBT persistence** — 33 `writeData/readData` / **62** raw-`CompoundTag`. *Load-bearing* but the largest population in the catalog.
+5. **Block-hosting base** — 11 `BaseEntityBlock` / 6 `HorizontalDirectionalBlock` / 5 plain `Block` / 7 BC-abstract. *Collapses-when-root-fixed.*
+6. **getTicker** — 10 `createTickerHelper` / 10 hand-rolled lambda. *Collapses-when-root-fixed.*
+7. **BE client-sync (sub-object addressing)** — 14 full-NBT / 19 id-delta `writePayload` (+ markers' own channel). *Load-bearing.*
+8. **Tile client-state push** — 10 no-re-mesh / ~11 `sendBlockUpdated`. *Collapses-when-root-fixed*, player-visible (FPS near re-meshing tiles).
+9. **`BlockEntityRenderState`** — 10 empty stubs / 1 correct (PipeHolder) / 2 PiP records. *Collapses-when-root-fixed.*
+10. **Power-flow distribution** — `PipeFlowPower` / `PipeFlowRedstoneFlux`. *Load-bearing* (two energy type systems).
+11. **Power-flow renderer** — `PipeFlowRendererPower` / `...FE`. *Collapses-when-root-fixed*; ACTIVE drift: FE overload shows invisible stems.
+12. **Schematic block/entity pipeline** — 5 / 5 twins. *Pure-accidental-drift* (genericize).
+13. **Tile inventory backing** — 11 `ItemHandlerSimple` / 1 hand-rolled (`TileBuilder`, ~205 lines). *Collapses-when-root-fixed.*
+14. **Pipe BlockItem registration** — 46 hand-written / 1 wire loop. *Collapses-when-root-fixed.*
+
+**Medium systemicness**
+15. **`setPlacedBy` forward** — 17 hand-copies / 9 none (+ 3 unguarded vs 14 guarded). *Collapses-when-root-fixed.*
+16. **Event-handler registration** — 2 `@EventBusSubscriber` / 14 `@SubscribeEvent` / 10 lambda. *Pure-accidental-drift* (1 BreakEventCompat lambda load-bearing).
+17. **Item-cap exposure** — 11 framework / 1 hand-rolled / 1 engine / 2 Empty. *Collapses-when-root-fixed.*
+18. **Standard sync pair** — 7 re-copies (+5 redundant in-subtree overrides). *Collapses-when-root-fixed* / those 5 are drift.
+19. **Recipe-viewer integration** — 4 JEI / 4 REI (asymmetric; 2 REI plugins copy-paste). *Collapses-when-root-fixed* (intra-REI).
+20. **BER geometry submit** — ~27 sites across 3 version gates. *Load-bearing* (two cliffs, not one).
+21. **Capability registration body** — 6 hand-written listeners (preamble in 3 shapes). *Pure-accidental-drift.*
+22. **Screen mouse-event handling** — 12 delegate / 13 override. *Collapses-when-root-fixed.*
+23. **1.21.1 `onDataPacket` workaround** — 1 re-copy / 4 invariant-dependent. *Collapses-when-root-fixed* (1.21.1-node only).
+24. **MJ receiver over battery** — 8 reuse / 3 hand-rolled. *Pure-accidental-drift.*
+25. **Container open-call view** — 11 clean + 1 double-write / 5 SimpleMenuProvider / 5 anonymous + 1 addon. *Collapses-when-root-fixed.*
+26. **Fluid-cap exposure** — 2 direct / 1 column / 2 inline restricted / 2 fan-out. *Pure-accidental-drift.*
+27. **Soft-start power ramp** *(NEWLY FOUND)* — 2 identical + 1 variant + 2 divergent-curve. *Pure-accidental-drift* (likely a curve bug).
+28. **Recipe-book menu surface** — 2 real / 23 dead-inherited. *Load-bearing* (but over-engineered base).
+29. **Payload content carriage** — 13 schema / 2 byte[] tunnels. *Load-bearing.*
+30. **Item-eject 6-face shuffle** — 5 canonical / 2 inline. *Load-bearing* params, triplicated directive.
+31. **Marker cache family** — 4 Path / 4 Volume. *Load-bearing* at Connection layer; boilerplate collapsible.
+32. **JEI '+' recipe transfer** — 3 bespoke / 1 generic. *Collapses-when-root-fixed* (the 2 bucket handlers).
+33. **Volume region** — `VolumeConnection` / `VolumeBox`. *Load-bearing* (different features); broadcast drift.
+34. **Fluid-box quad emitter** — 3 private kits. *Pure-accidental-drift* (empty `FluidRenderer`).
+35. **BlockItem call form** — 17 holder / 20 id-string. *Pure-accidental-drift.*
+
+**Low systemicness** (mostly standalone cleanups, several real bugs)
+36. **Block-quad extraction** — 3 ladders (2 byte-identical). *Pure-accidental-drift.*
+37. **Marker SavedData** — `PathSavedData`/`VolumeSavedData` byte-identical. *Pure-accidental-drift.*
+38. **Status ledger** — LedgerEngine/EngineFE 1-line drift. *Pure-accidental-drift.*
+39. **Engine chain-walk** — `getReceiverToPower`/`getFeReceiver`. *Load-bearing*; dedup candidate.
+40. **Mode button** — 6 `BCButton` / 2 vanilla. *Pure-accidental-drift.*
+41. **Recipe-book component** — 2 verbatim duplicates. *Pure-accidental-drift* (+5 dead stubs).
+42. **Text input** — 4 `EditBox` / 0 BC widget. *Collapses-when-root-fixed.*
+43. **Non-tile pipe-layer MJ receiver** — 2 inline copies. *Collapses-when-root-fixed.*
+44. **Stateless CustomRecipe serializer** — 4 × 3 branches. *Load-bearing* cross-version; intra-line micro-fork.
+45. **Tag→Ingredient** — 1 site, 2 branches, centralized. *Load-bearing.*
+46. **Custom-subclass item registration** — `RegistrationUtilBC` shim / direct. *Load-bearing* (1.21.2 cliff).
+47. **FE-exposure gap** — 8 `createIfRfEnabled` / Auto Workbench none. *Collapses-when-root-fixed*; player-visible (dead on FE).
+48. **`mjPerRf` ratio read** — 4 direct / 7 via `MjAPI`. *Pure-accidental-drift.*
+49. **Network-packet framework** — 15 live / 5 dead stubs. *Pure-accidental-drift.*
+50. **Tunable-value read** — ~25 real / 1 fake `DetailedConfigOption`. *Pure-accidental-drift.*
+51. **`IStatement` registration** — 3 ctor-only / 1 with 7 redundant calls. *Pure-accidental-drift* (7-line delete).
+52. **JEI transfer-id constant** — 1 canonical / 1 duplicate. *Pure-accidental-drift.*
+53. **JEI plugin UID** — 3 colliding / 1 distinct. *Pure-accidental-drift — **REAL BUG** (UID collision).*
+
+### Newly found — the answer to "what else is hiding"
+
+The per-dimension passes each saw only half of several forks; the completeness critic named the rest:
+
+- **Soft-start power-ramp duality** — the first audit declared this "exactly one implementation." It is actually 5 copy-pasted sites in 3 formulas, and `SnapshotBuilder` (driving Builder+Filler) uses `capacity*2` where Distiller/Laser/Quarry use `capacity/2` — a near-certain latent bug.
+- **`TileMarkerPath`** was missing from the BE-base System-B enumeration (`TileMarker` has two concrete subclasses).
+- **`PlugBakerFacade.getQuadsFromModel`** — a third byte-identical copy of the block-quad extraction ladder (audit named only two).
+- **`sendBlockUpdated` is ~11 tiles**, not the lone engine; `TileAutoWorkbenchBase`/`TileAdvancedCraftingTable` were mis-filed as passive no-sync.
+- **The 33-vs-62 non-BE serialization split** — largest parallel-system population, invisible to per-dimension passes.
+- **Systemic menu-open pos double-write** — `BlockDynamoMJ` (and likely all 11 "clean" `openMenu(tile,pos)` sites) write the BlockPos twice; deserves its own audit.
+- **6th menu-open writer** (`openFillerPlannerGUI`, addon-backed) and **two duplicate byte[]-tunnel writer interfaces** (`IPayloadWriter` / `IPipeHolder.IWriter`).
+- **REI re-sends `NET_JEI_RECIPE_TRANSFER` inline** instead of reusing `BlueprintTransferHandler`.
+- **5 redundant in-subtree `getUpdateTag` overrides** deletable today regardless of any root.
+- **A third tile-sync approach** (markers via `MarkerCache`/SavedData) using neither system.
+- **5 empty `lib.gui.recipe` "phantom" stubs** the audit mistook for shared infra; the real base is vanilla `RecipeBookComponent`.
+
+### What to leave alone (load-bearing, with reason)
+
+Tagged so they are not "simplified" into regressions: BE-base A/B (real Neptune-machinery vs bespoke-state semantics); BE client-sync delta channel (pipe sub-objects have no BE identity); power-flow distribution (two incompatible energy type systems); all Stonecutter `//?` directives (BER submit two-cliff split, tag→Ingredient, stateless CustomRecipe serializer, custom-subclass item Properties cliff); byte[] payload tunnels (genuinely polymorphic content); JEI-vs-REI (two third-party APIs); `VolumeConnection` vs `VolumeBox` (different player-facing features); marker Connection geometry (ordered chain vs axis box).

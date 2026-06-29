@@ -16,7 +16,6 @@ import buildcraft.api.enums.EnumSpring;
 import buildcraft.core.BCCore;
 import buildcraft.energy.client.BCEnergyFluidsClient;
 import buildcraft.energy.tile.TileSpringOil;
-import buildcraft.lib.misc.MultiTankResourceHandler;
 
 /**
  * BuildCraft Energy initializer. No longer a separate @Mod — called from BCCore.

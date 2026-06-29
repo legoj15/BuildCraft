@@ -27,7 +27,6 @@ import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.mj.IMjConnector;
-import buildcraft.api.mj.IMjPassiveProvider;
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.tiles.IDebuggable;
@@ -224,23 +223,6 @@ public class PipeFlowPower extends PipeFlow implements IFlowPower, IDebuggable {
         } else if (powerResistance < 0) {
             powerResistance = powerLoss * MjAPI.MJ / maxPower;
         }
-    }
-
-    @Override
-    public long tryExtractPower(long maxExtracted, Direction from) {
-        if (!isReceiver || disabled) {
-            return 0;
-        }
-        BlockEntity tile = pipe.getConnectedTile(from);
-        if (tile == null || tile.getLevel() == null) {
-            return 0;
-        }
-        IMjPassiveProvider provider = tile.getLevel().getCapability(
-            MjAPI.CAP_PASSIVE_PROVIDER, tile.getBlockPos(), from.getOpposite());
-        if (provider == null) {
-            return 0;
-        }
-        return provider.extractPower(0, maxExtracted, false);
     }
 
     @Override

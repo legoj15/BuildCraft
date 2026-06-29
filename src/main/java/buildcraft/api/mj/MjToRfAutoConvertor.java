@@ -24,9 +24,9 @@ public class MjToRfAutoConvertor implements IMjReadable {
     /*final IEnergyStorage fe;*/
     //?}
 
-    /** @return An {@link MjToRfAutoConvertor} that may implement {@link IMjPassiveProvider} and/or {@link IMjReceiver}
-     *         if the given handler can provide/receive energy, or null if the given handler is null, or if
-     *         RF&lt;-&gt;MJ autoconversion is not enabled ( {@link MjAPI#isRfAutoConversionEnabled()} ) */
+    /** @return An {@link MjToRfAutoConvertor} that implements {@link IMjReceiver} if the given handler can receive
+     *         energy, or null if the given handler is null, or if RF&lt;-&gt;MJ autoconversion is not enabled
+     *         ( {@link MjAPI#isRfAutoConversionEnabled()} ) */
     //? if >=1.21.10 {
     public static MjToRfAutoConvertor create(EnergyHandler fe) {
     //?} else {
@@ -53,21 +53,6 @@ public class MjToRfAutoConvertor implements IMjReadable {
         MjToRfAutoConvertor convertor = create(fe);
         if (convertor instanceof IMjReceiver) {
             return (IMjReceiver) convertor;
-        } else {
-            return null;
-        }
-    }
-
-    /** @return An {@link MjToRfAutoConvertor} that implements {@link IMjPassiveProvider}
-     *         if autoconversion is enabled, or null otherwise. */
-    //? if >=1.21.10 {
-    public static IMjPassiveProvider createProvider(EnergyHandler fe) {
-    //?} else {
-    /*public static IMjPassiveProvider createProvider(IEnergyStorage fe) {*/
-    //?}
-        MjToRfAutoConvertor convertor = create(fe);
-        if (convertor instanceof IMjPassiveProvider) {
-            return (IMjPassiveProvider) convertor;
         } else {
             return null;
         }
@@ -114,21 +99,6 @@ public class MjToRfAutoConvertor implements IMjReadable {
         //?}
     }
 
-    /** Extract up to {@code rf} from the handler; returns the amount actually extracted. */
-    private int feExtract(int rf, boolean simulate) {
-        //? if >=1.21.10 {
-        try (Transaction tx = Transaction.openRoot()) {
-            int extracted = fe.extract(rf, tx);
-            if (!simulate) {
-                tx.commit();
-            }
-            return extracted;
-        }
-        //?} else {
-        /*return fe.extractEnergy(rf, simulate);*/
-        //?}
-    }
-
     /** @return true. (Redstone-like engines are expected to not connect due to this class never implementing
      *         {@link IMjRedstoneReceiver}) */
     @Override
@@ -160,28 +130,9 @@ public class MjToRfAutoConvertor implements IMjReadable {
         int received = feInsert(maxRf, simulate);
         return microJoules - received * mjPerRf;
     }
-
-    long implExtractPower(long min, long max, boolean simulate) {
-        long mjPerRf = MjAPI.getRfConversion().mjPerRf;
-        int maxRf = (int) (max / mjPerRf);
-        if (maxRf <= 0) {
-            return 0;
-        }
-
-        // Simulate first to check if we meet the minimum.
-        long extractedMJ = feExtract(maxRf, true) * mjPerRf;
-        if (extractedMJ < min) {
-            return 0;
-        }
-
-        if (!simulate) {
-            return feExtract(maxRf, false) * mjPerRf;
-        }
-        return extractedMJ;
-    }
 }
 
-final class OfBoth extends MjToRfAutoConvertor implements IMjReceiver, IMjPassiveProvider {
+final class OfBoth extends MjToRfAutoConvertor implements IMjReceiver {
 
     //? if >=1.21.10 {
     OfBoth(net.neoforged.neoforge.transfer.energy.EnergyHandler handler) {
@@ -204,10 +155,5 @@ final class OfBoth extends MjToRfAutoConvertor implements IMjReceiver, IMjPassiv
     @Override
     public long receivePower(long microJoules, boolean simulate) {
         return implReceivePower(microJoules, simulate);
-    }
-
-    @Override
-    public long extractPower(long min, long max, boolean simulate) {
-        return implExtractPower(min, max, simulate);
     }
 }

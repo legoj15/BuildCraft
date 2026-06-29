@@ -187,35 +187,6 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
     }
 
     @Override
-    public int tryExtractPower(int maxExtracted, Direction from) {
-        if (!isReceiver || disabled) {
-            return 0;
-        }
-        //? if >=1.21.10 {
-        EnergyHandler source = pipe.getHolder().getCapabilityFromPipe(
-            from, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK
-        );
-        if (source == null) {
-            return 0;
-        }
-        try (net.neoforged.neoforge.transfer.transaction.Transaction transaction =
-                net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
-            int extracted = source.extract(maxExtracted, transaction);
-            transaction.commit();
-            return extracted;
-        }
-        //?} else {
-        /*net.neoforged.neoforge.energy.IEnergyStorage source = pipe.getHolder().getCapabilityFromPipe(
-            from, net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK
-        );
-        if (source == null) {
-            return 0;
-        }
-        return source.extractEnergy(maxExtracted, false);*/
-        //?}
-    }
-
-    @Override
     public boolean onFlowActivate(Player player, HitResult trace, float hitX, float hitY, float hitZ,
         EnumPipePart part) {
         return super.onFlowActivate(player, trace, hitX, hitY, hitZ, part);

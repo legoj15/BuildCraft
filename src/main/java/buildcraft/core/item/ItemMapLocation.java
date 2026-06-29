@@ -116,24 +116,6 @@ public class ItemMapLocation extends Item implements IMapLocation {
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
     }
 
-    // --- BlockPos NBT helpers (replacing NbtUtils which changed in 1.21) ---
-
-    private static CompoundTag writeBlockPosNbt(BlockPos pos) {
-        CompoundTag tag = new CompoundTag();
-        tag.putInt("X", pos.getX());
-        tag.putInt("Y", pos.getY());
-        tag.putInt("Z", pos.getZ());
-        return tag;
-    }
-
-    private static BlockPos readBlockPosNbt(CompoundTag tag) {
-        return new BlockPos(
-            NBTUtilBC.getInt(tag, "X", 0),
-            NBTUtilBC.getInt(tag, "Y", 0),
-            NBTUtilBC.getInt(tag, "Z", 0)
-        );
-    }
-
     // --- Tooltip ---
 
     @Override
@@ -190,7 +172,7 @@ public class ItemMapLocation extends Item implements IMapLocation {
                 if (pathNBT != null && pathNBT.size() > 0) {
                     CompoundTag firstTag = NBTUtilBC.getCompoundOrNull(pathNBT, 0);
                     if (firstTag != null) {
-                        BlockPos first = readBlockPosNbt(firstTag);
+                        BlockPos first = NBTUtilBC.readBlockPos(firstTag);
                         tooltip.accept(Component.literal(
                             "{" + first.getX() + ", " + first.getY() + ", " + first.getZ()
                                 + "}, (+" + (pathNBT.size() - 1) + " elements)"));
@@ -294,7 +276,7 @@ public class ItemMapLocation extends Item implements IMapLocation {
 
             ListTag pathNBT = new ListTag();
             for (BlockPos posInPath : path) {
-                pathNBT.add(writeBlockPosNbt(posInPath));
+                pathNBT.add(NBTUtilBC.writeBlockPos(posInPath));
             }
             cpt.put("path", pathNBT);
         } else if (tile instanceof IAreaProvider) {
@@ -455,7 +437,7 @@ public class ItemMapLocation extends Item implements IMapLocation {
                     for (int i = 0; i < pathNBT.size(); i++) {
                         CompoundTag posTag = NBTUtilBC.getCompoundOrNull(pathNBT, i);
                         if (posTag != null) {
-                            indexList.add(readBlockPosNbt(posTag));
+                            indexList.add(NBTUtilBC.readBlockPos(posTag));
                         }
                     }
                 }

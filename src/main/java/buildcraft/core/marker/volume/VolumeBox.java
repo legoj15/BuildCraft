@@ -61,21 +61,15 @@ public class VolumeBox {
         oldPlayer = nbt.contains("oldPlayer") ? UUID.fromString(NBTUtilBC.getString(nbt, "oldPlayer", "")) : null;
 
         if (nbt.contains("held")) {
-            CompoundTag heldTag = NBTUtilBC.getCompound(nbt, "held");
-            held = new BlockPos(NBTUtilBC.getInt(heldTag, "X", 0), NBTUtilBC.getInt(heldTag, "Y", 0),
-                    NBTUtilBC.getInt(heldTag, "Z", 0));
+            held = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "held"));
         }
         dist = NBTUtilBC.getDouble(nbt, "dist", 0.0);
 
         if (nbt.contains("oldMin")) {
-            CompoundTag oldMinTag = NBTUtilBC.getCompound(nbt, "oldMin");
-            oldMin = new BlockPos(NBTUtilBC.getInt(oldMinTag, "X", 0), NBTUtilBC.getInt(oldMinTag, "Y", 0),
-                    NBTUtilBC.getInt(oldMinTag, "Z", 0));
+            oldMin = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "oldMin"));
         }
         if (nbt.contains("oldMax")) {
-            CompoundTag oldMaxTag = NBTUtilBC.getCompound(nbt, "oldMax");
-            oldMax = new BlockPos(NBTUtilBC.getInt(oldMaxTag, "X", 0), NBTUtilBC.getInt(oldMaxTag, "Y", 0),
-                    NBTUtilBC.getInt(oldMaxTag, "Z", 0));
+            oldMax = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "oldMax"));
         }
 
         if (nbt.contains("addons")) {
@@ -196,26 +190,14 @@ public class VolumeBox {
             nbt.putString("oldPlayer", oldPlayer.toString());
         }
         if (held != null) {
-            CompoundTag heldTag = new CompoundTag();
-            heldTag.putInt("X", held.getX());
-            heldTag.putInt("Y", held.getY());
-            heldTag.putInt("Z", held.getZ());
-            nbt.put("held", heldTag);
+            nbt.put("held", NBTUtilBC.writeBlockPos(held));
         }
         nbt.putDouble("dist", dist);
         if (oldMin != null) {
-            CompoundTag oldMinTag = new CompoundTag();
-            oldMinTag.putInt("X", oldMin.getX());
-            oldMinTag.putInt("Y", oldMin.getY());
-            oldMinTag.putInt("Z", oldMin.getZ());
-            nbt.put("oldMin", oldMinTag);
+            nbt.put("oldMin", NBTUtilBC.writeBlockPos(oldMin));
         }
         if (oldMax != null) {
-            CompoundTag oldMaxTag = new CompoundTag();
-            oldMaxTag.putInt("X", oldMax.getX());
-            oldMaxTag.putInt("Y", oldMax.getY());
-            oldMaxTag.putInt("Z", oldMax.getZ());
-            nbt.put("oldMax", oldMaxTag);
+            nbt.put("oldMax", NBTUtilBC.writeBlockPos(oldMax));
         }
 
         ListTag addonsList = new ListTag();

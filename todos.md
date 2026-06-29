@@ -53,7 +53,6 @@ Full report: [docs/unification-audit.md](docs/unification-audit.md). Two codebas
 - [ ] `StatementParameterItemStackExact` dead (only a gametest refs it) — delete-or-finish.
 
 #### Needs a decision first (not a silent refactor)
-- [ ] **`CAP_PASSIVE_PROVIDER` / `CAP_READABLE`** declared + consumed but never registered — wooden-pipe MJ *pull* is dead. Wire (register on sources + FE-autoconvert fallback) or delete.
 - [ ] **`buildcraft.api` NBT-method renames** (uppercase `writeToNBT`/`serializeNBT` → lowercase) — breaking if the API jar ships; defer to the API-redistribution decision.
 - [ ] **Non-BE NBT serialization** — 33 tiles on the `BCValueInput/Output` wrapper vs **62 non-BlockEntity objects on raw `CompoundTag`** (the catalog's largest population). Extending the wrapper to the object graph is the natural finish but is its own large project — scope before starting.
 

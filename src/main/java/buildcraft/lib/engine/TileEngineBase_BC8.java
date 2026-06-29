@@ -166,6 +166,9 @@ public abstract class TileEngineBase_BC8 extends BlockEntity implements IDebugga
     public void onPlacedBy(@Nullable LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
         if (placer instanceof net.minecraft.world.entity.player.Player player) {
             owner = player.getGameProfile();
+            // Mark the chunk dirty so the owner persists even if the engine is never mutated
+            // again before the chunk unloads (matches TileBC_Neptune.onPlacedBy).
+            setChanged();
         }
     }
 

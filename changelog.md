@@ -1,5 +1,8 @@
 ###### Changes since 2026.1.1:
 
+- Quarries, Fillers, and Builders now correctly advertise themselves as power connectors, so kinesis (power) pipes reliably route MJ and RF power into them — matching every other powered machine.
+- Fixed Redstone Flux (RF) kinesis pipes drawing no flow animation on straight runs after a chunk reloaded — the power was still moving, it was just invisible. (Same fix the MJ pipes already received.)
+- Fixed engines occasionally forgetting their recorded owner if they were placed and then never interacted with before their area unloaded.
 - Fixed the collapsible info/help ledgers (the side panels in machine GUIs) flying up off the top of the screen when collapsed, if their text was too long to fit — which left a stray icon behind with no panel. Overflowing ledgers now slide up to stay on screen while open and glide smoothly back into place when closed.
 - Fixed a "Network Protocol Error" disconnect when right-clicking certain machines while in spectator mode. Spectators can now open those GUIs read-only — the way vanilla lets them peek into chests and furnaces — instead of being kicked. Affected the Zone Planner, Filtered Buffer, Tank, Chute, Distiller, and Heat Exchanger.
 - The Zone Planner block now shows a live top-down map of the surrounding terrain right on its front face, like a little screen — no need to open it to glance at the area around it.

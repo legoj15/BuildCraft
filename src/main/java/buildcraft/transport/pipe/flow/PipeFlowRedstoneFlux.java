@@ -75,18 +75,53 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
 
     public PipeFlowRedstoneFlux(IPipe pipe, CompoundTag nbt) {
         super(pipe, nbt);
-        isReceiver = NBTUtilBC.getBoolean(nbt, "isReceiver", false);
         sections = new EnumMap<>(Direction.class);
         for (Direction face : Direction.values()) {
             sections.put(face, new Section(face));
         }
+        // The client's first-sync / relog path rebuilds the pipe through THIS constructor
+        // (TilePipeHolder.readData -> new Pipe -> loadFlow -> PipeFlowRedstoneFlux::new), NOT
+        // through readFromNbt (which only runs for an already-existing pipe). So the display state
+        // serialized into the update tag must be applied here too. Without it, a steady-state
+        // straight pipe — which never re-sends a NET_POWER_AMOUNTS delta because didChange stays
+        // false — renders its RF flow invisibly on the client until something forces a change.
+        // (Same fix PipeFlowPower received for the equivalent MJ bug.)
+        readFromNbt(nbt);
     }
 
     @Override
     public CompoundTag writeToNbt() {
         CompoundTag nbt = super.writeToNbt();
         nbt.putBoolean("isReceiver", isReceiver);
+        // Include display data for initial chunk-load sync (NBT path); the custom networking
+        // above handles incremental updates after this.
+        int[] powers = new int[6];
+        int[] flows = new int[6];
+        for (Direction face : Direction.values()) {
+            Section s = sections.get(face);
+            powers[face.ordinal()] = s.displayPower;
+            flows[face.ordinal()] = s.displayFlow.ordinal();
+        }
+        nbt.putIntArray("displayPower", powers);
+        nbt.putIntArray("displayFlow", flows);
         return nbt;
+    }
+
+    @Override
+    public void readFromNbt(CompoundTag nbt) {
+        isReceiver = NBTUtilBC.getBoolean(nbt, "isReceiver", false);
+        int[] powers = NBTUtilBC.getIntArray(nbt, "displayPower", new int[6]);
+        int[] flows = NBTUtilBC.getIntArray(nbt, "displayFlow", new int[6]);
+        for (Direction face : Direction.values()) {
+            int i = face.ordinal();
+            Section s = sections.get(face);
+            if (i < powers.length) s.displayPower = powers[i];
+            if (i < flows.length) {
+                int flowIdx = flows[i];
+                EnumFlow[] vals = EnumFlow.values();
+                s.displayFlow = (flowIdx >= 0 && flowIdx < vals.length) ? vals[flowIdx] : EnumFlow.STATIONARY;
+            }
+        }
     }
 
     @Override

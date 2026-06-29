@@ -98,6 +98,10 @@ public class BCBuilders {
         // Quarry
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCBuildersBlockEntities.QUARRY.get(),
             (quarry, direction) -> quarry.getMjReceiver());
+        // Advertise as an MJ connector too, so kinesis pipes route power to it — matches every
+        // factory/silicon machine. A receiver IS a connector (IMjReceiver extends IMjConnector).
+        event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCBuildersBlockEntities.QUARRY.get(),
+            (quarry, direction) -> quarry.getMjReceiver());
         event.registerBlockEntity(energyCap, BCBuildersBlockEntities.QUARRY.get(),
             // Gate FE insertion on the same "has work" predicate as the MJ receiver, so a finished
             // quarry refuses FE pushes too instead of topping its battery off (MJ/FE parity).
@@ -113,6 +117,8 @@ public class BCBuilders {
         // Filler
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCBuildersBlockEntities.FILLER.get(),
             (filler, direction) -> filler.getMjReceiver());
+        event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCBuildersBlockEntities.FILLER.get(),
+            (filler, direction) -> filler.getMjReceiver());
         event.registerBlockEntity(energyCap, BCBuildersBlockEntities.FILLER.get(),
             (filler, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(filler.getBattery()));
         event.registerBlockEntity(itemCap, BCBuildersBlockEntities.FILLER.get(),
@@ -122,6 +128,8 @@ public class BCBuilders {
         // engines push power into the battery, pipes push resources into the 27-slot grid, and
         // fluid pipes can top off the 4 tanks for fluid-block placement.
         event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCBuildersBlockEntities.BUILDER.get(),
+            (builder, direction) -> builder.getMjReceiver());
+        event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCBuildersBlockEntities.BUILDER.get(),
             (builder, direction) -> builder.getMjReceiver());
         event.registerBlockEntity(energyCap, BCBuildersBlockEntities.BUILDER.get(),
             (builder, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(builder.getBattery()));

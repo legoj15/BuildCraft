@@ -218,14 +218,10 @@ public class TileAssemblyTable extends TileLaserTableBase {
             CompoundTag entryTag = new CompoundTag();
             entryTag.putString("recipe", instruction.recipe.getRegistryName());
             entryTag.putInt("state", state.ordinal());
-            // Serialize the output ItemStack so the client can reconstruct the correct variant
-            CompoundTag outputTag = NBTUtilBC.itemStackToNBT(instruction.output);
-            // Also save the custom data component (for facades, this contains the blockstate info)
-            CompoundTag customData = NBTUtilBC.getItemData(instruction.output);
-            if (!customData.isEmpty()) {
-                outputTag.put("customData", customData);
-            }
-            entryTag.put("output", outputTag);
+            // Persist the full output ItemStack (all components, incl. the facade blockstate held in
+            // custom_data) via codec — supersedes the old id+count helper + manual customData patch.
+            ItemStack.CODEC.encodeStart(NBTUtilBC.registryAwareOps(), instruction.output)
+                .result().ifPresent(t -> entryTag.put("output", t));
             recipesStatesTag.add(entryTag);
         });
         wrapper.put("entries", recipesStatesTag);
@@ -252,14 +248,16 @@ public class TileAssemblyTable extends TileLaserTableBase {
                                 int stateOrdinal = NBTUtilBC.getInt(entryTag, "state", 0);
                                 EnumAssemblyRecipeState[] values = EnumAssemblyRecipeState.values();
                                 if (stateOrdinal >= 0 && stateOrdinal < values.length) {
-                                    // Try to load the specific output ItemStack from saved data
+                                    // Load the full output ItemStack (all components) via codec; fall
+                                    // back to the legacy id+count + separate "customData" block for
+                                    // pre-codec saves so old facade instructions keep their variant.
                                     ItemStack outputStack = ItemStack.EMPTY;
                                     CompoundTag outputTag = NBTUtilBC.getCompoundOrNull(entryTag, "output");
                                     if (outputTag != null) {
-                                        outputStack = NBTUtilBC.itemStackFromNBT(outputTag);
-                                        // Restore custom data component if present
+                                        outputStack = ItemStack.CODEC.parse(NBTUtilBC.registryAwareOps(), outputTag)
+                                            .result().orElse(ItemStack.EMPTY);
                                         CompoundTag cd = NBTUtilBC.getCompoundOrNull(outputTag, "customData");
-                                        if (cd != null) {
+                                        if (cd != null && !cd.isEmpty()) {
                                             NBTUtilBC.setItemData(outputStack, cd);
                                         }
                                     }

@@ -1,5 +1,7 @@
 ###### Changes since 2026.1.1:
 
+- Items travelling through pipes no longer lose their enchantments, custom names, or damage when the chunk is saved and reloaded — an enchanted or named tool in transit now arrives intact instead of coming back as a plain item. The Assembly Table likewise now preserves the full components of an in-progress output (not just facade variants).
+
 - Builders and Fillers now reach their full building speed once their internal power buffer is half full, instead of permanently topping out at half speed even on a completely full buffer. They now ramp up the same way the Quarry, Refinery, and Laser do — so a fully-powered Builder/Filler is about twice as fast as before.
 - Fixed three of BuildCraft's four JEI plugins sharing one identifier, which could cause JEI to drop some of the mod's recipe categories or info. Each subsystem's JEI plugin now has a unique id.
 - Quarries, Fillers, and Builders now correctly advertise themselves as power connectors, so kinesis (power) pipes reliably route MJ and RF power into them — matching every other powered machine.

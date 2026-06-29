@@ -226,7 +226,10 @@ public class NBTUtilBC {
 
     // ItemStack serialization helpers
 
-    /** Saves an ItemStack to a CompoundTag using the item's registry name, count, and components.
+    /** LOSSY: saves only the item's registry id + count — it does NOT save components (enchantments,
+     * custom name, damage, custom_data, …). Use {@code ItemStack.CODEC} (via the registry-aware ops)
+     * for any disk-persisted stack that must keep full fidelity. This helper is retained only for the
+     * lightweight JEI/network transfer paths that intentionally need just id+count.
      * Returns an empty CompoundTag if the stack is empty. */
     @Nonnull
     public static CompoundTag itemStackToNBT(@Nonnull net.minecraft.world.item.ItemStack stack) {

@@ -129,6 +129,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:power_pipe_engine_to_tester", () -> buildcraft.transport.pipe.flow.PipeFlowPowerTester::testEngineThroughDiamondPipesPowersTester);
         reg.accept("buildcraftunofficial:power_display_survives_client_resync", () -> buildcraft.transport.pipe.flow.PipeFlowPowerTester::testPowerDisplaySurvivesClientResync);
 
+        // Pipe cargo must keep item components (enchantments/custom name/damage) across save-reload —
+        // the in-transit ItemStack used to round-trip through a lossy id+count helper.
+        reg.accept("buildcraftunofficial:pipe_cargo_preserves_components", () -> buildcraft.transport.pipe.flow.TravellingItemNbtTester::testCargoPreservesComponentsAcrossSaveLoad);
+
         // FE pipes must size a receiver's demand by a simulated insert, not buffer headroom —
         // otherwise bufferless pass-through sinks (AE2's Energy Acceptor) are never fed.
         reg.accept("buildcraftunofficial:fe_pipe_bufferless_receiver_demand", () -> buildcraft.transport.pipe.flow.PipeFlowRedstoneFluxDemandTester::testBufferlessReceiverReportsDemand);

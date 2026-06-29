@@ -1,5 +1,6 @@
 ###### Changes since 2026.1.1:
 
+- Fixed three of BuildCraft's four JEI plugins sharing one identifier, which could cause JEI to drop some of the mod's recipe categories or info. Each subsystem's JEI plugin now has a unique id.
 - Quarries, Fillers, and Builders now correctly advertise themselves as power connectors, so kinesis (power) pipes reliably route MJ and RF power into them — matching every other powered machine.
 - Fixed Redstone Flux (RF) kinesis pipes drawing no flow animation on straight runs after a chunk reloaded — the power was still moving, it was just invisible. (Same fix the MJ pipes already received.)
 - Fixed engines occasionally forgetting their recorded owner if they were placed and then never interacted with before their area unloaded.

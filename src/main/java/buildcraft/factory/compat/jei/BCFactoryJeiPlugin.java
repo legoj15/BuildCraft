@@ -43,7 +43,7 @@ import buildcraft.lib.compat.jei.BlueprintTransferHandler;
  */
 @JeiPlugin
 public class BCFactoryJeiPlugin implements IModPlugin {
-    private static final Identifier UID = Identifier.parse("buildcraftunofficial:jei_plugin");
+    private static final Identifier UID = Identifier.parse("buildcraftunofficial:factory_jei_plugin");
 
     @Override
     public Identifier getPluginUid() {

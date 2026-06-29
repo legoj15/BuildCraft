@@ -50,7 +50,7 @@ import buildcraft.silicon.item.ItemPluggableLens;
  */
 @JeiPlugin
 public class BCSiliconJeiPlugin implements IModPlugin {
-    private static final Identifier UID = Identifier.parse("buildcraftunofficial:jei_plugin");
+    private static final Identifier UID = Identifier.parse("buildcraftunofficial:silicon_jei_plugin");
 
     @Override
     public Identifier getPluginUid() {

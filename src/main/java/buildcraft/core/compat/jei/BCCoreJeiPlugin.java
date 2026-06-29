@@ -25,7 +25,7 @@ import buildcraft.lib.gui.GuiBC8;
  */
 @JeiPlugin
 public class BCCoreJeiPlugin implements IModPlugin {
-    private static final Identifier UID = Identifier.parse("buildcraftunofficial:jei_plugin");
+    private static final Identifier UID = Identifier.parse("buildcraftunofficial:core_jei_plugin");
 
     @Override
     public Identifier getPluginUid() {

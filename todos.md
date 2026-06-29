@@ -2,35 +2,64 @@ Last audited: 2026-06-28 (robotics Ph1 Zone Planner COMPLETE — interactive 3D 
 
 ## 🔧 Outstanding work
 
-### Unification audit follow-ups (2026-06-28 codebase-wide sweep)
-The headline block-entity split is now fronted by `lib.tile.AbstractBCBlockEntity` (holds the one save/load directive; ~10 copies collapsed). Remaining, in rough dependency order:
+### Unification follow-ups — grouped by ROOT CAUSE (2026-06-28 audit + duality sweeps)
+Full report: [docs/unification-audit.md](docs/unification-audit.md). Two codebase-wide sweeps found ~50 distinct parallel-implementation forks (300+ class memberships); ~18 collapse from 5 roots. **Already done:** `AbstractBCBlockEntity` (save/load directive consolidated, 9 tiles), 3 latent bugs, JEI UID 3-way collision, 11 dead files, CLAUDE.md drift. The verify lens matters: list every fork but distinguish *load-bearing* (leave) from *collapses-when-root-fixed*. Counts below are from the catalog.
 
-- [ ] **Finish the tile-base migration.** `TileSpringOil` still extends `BlockEntity` directly — it inlines its save/load across the `//?` directive boundary, so adopting `AbstractBCBlockEntity` needs a real refactor into `writeData`/`readData` hooks (not a deletion). Keys: `totalSources`, `pumpCount`, `pump_N_*`.
-- [ ] **Dedup the BE client-sync pairs.** `getUpdateTag`/`getUpdatePacket` (+ the `<1.21.10 onDataPacket` empty-tag fix) are still copy-pasted across the 6 machine tiles; the `onDataPacket` fix is present on only ~2, leaving the rest unprotected on the 1.21.1 node. Move the *standard* pair into a mix-in/base method — but do NOT impose it on `TileMarker`/`TileSpringOil` (no auto-sync by design) or override `TilePipeHolder`'s custom sync.
-- [ ] **`OwnerData` helper.** The `ownerUUID`/`ownerName` NBT block is hand-copied in `TileBC_Neptune`, `TileEngineBase_BC8`, `TileFloodGate`, `TileDistiller_BC8`, `TilePipeHolder`. Extract a static read/write helper (keys unchanged).
-- [ ] **`BlockBCTile_Neptune<T>` base** (+ a `HorizontalDirectionalBlock` facing variant) to absorb the ~14 machine blocks' repeated `codec`/`newBlockEntity`/`getTicker`/`setPlacedBy`/`useWithoutItem`/drops + the `<1.21.10 onRemove` directive. `BlockPipeHolder` is the one exception (uses `dropPipeCargo`). Quick sub-win: make `BlockDynamoMJ` extend `BlockEngineBase_BC8` (drops ~40 verbatim lines).
-- [ ] **`ContainerBC_Neptune` helpers.** Extract `withinReach(player,pos)` + `resolveTile(inv,buf,Class)` — the `distanceToSqr<=64` `stillValid` is duplicated 4× and has already drifted (factory uses a staleness check, engines use `isRemoved`).
-- [ ] **`MjBatteryComponent` + `registerMjConsumer` helper.** MJ-consumer scaffolding (battery+receiver+FE handler, 3 caps) is copy-pasted across ~10 machines; collapses ~120 lines and structurally prevents the missing-cap class of bug just fixed for builders.
-- [ ] **Generic kinesis flow base** from `PipeFlowPower`/`PipeFlowRedstoneFlux` (near-clones; RF NBT bug already fixed). Parameterise over unit arithmetic + capability; keep the directive seams + the inert `powerLoss` scaffolding.
-- [ ] **Generic schematic system.** `SchematicBlock*` vs `SchematicEntity*` managers/factories/registries are verbatim twins → `SchematicManager<C,S>` etc. with thin `api` facades (preserve public signatures). Start with the non-api manager NBT codec (zero addon-surface risk). The throw-vs-null on-miss policy is load-bearing — parameterise, don't unify away.
-- [ ] **Registration bundle helper.** No block+item+BE triple helper — id strings are typed 3× (already desynced once: `engine_rf` literal for the `ENGINE_FE` field). Add opt-in `registerMachine(...)`; make the ~50 hand-written pipe-item registrations table-driven (keep the named public fields).
-- [ ] **Fluid-box `FluidRenderer`.** The ~250-line fluid-box render kit is triplicated across `RenderTank`/`RenderDistiller`/`RenderHeatExchange`; lift into the dead `lib.client.render.fluid.FluidRenderer` stub. Client→client (safe) but **requires in-client visual verification** (compile can't catch UV/winding regressions).
-- [ ] **`TileBuilder.invResources` → `ItemHandlerSimple`.** Hand-rolls ~210 lines of transactor code its sibling `TileFiller` gets free; needs a one-time `invRes_N` NBT migration + cache-callback rewire.
-- [ ] **Marker SavedData + render callback.** Collapse `PathSavedData`/`VolumeSavedData` into a generic base (the empty `lib.marker.MarkerSavedData` stub was meant for this); drop `MarkerRenderer`'s `volumeBoxRenderCallback` indirection (justified by a "BCCore module boundary" that doesn't exist in this single mod — call `VolumeBoxRenderer` directly).
-- [ ] **Statement-trigger dedup.** Inventory vs fluid "container content" triggers re-roll the same scan loop + duplicate `State`/`TriggerType` enums → `AbstractContainerContentTrigger<R>` with per-type probes. Delete silicon's 7 redundant `StatementManager.registerStatement` calls (the `BCStatement` ctor already self-registers). Rename the shared `buildcraft:fluid.` trigger prefix (collision-prone) with a legacy alias.
+#### ROOT 1 — finish the tile re-root + re-root `ContainerBCTile` (collapses ~9 forks; highest leverage = the "two GUI systems" refactor)
+- [ ] Migrate `TileSpringOil` onto `AbstractBCBlockEntity` (it inlines save/load across the `//?` boundary → real `writeData`/`readData` refactor; keys `totalSources`/`pumpCount`/`pump_N_*`).
+- [ ] Re-root `ContainerBCTile<T extends TileBC_Neptune>` onto `AbstractBCBlockEntity` (move `onPlayerOpen`/`Close` + a `canInteractWith` down). Then the **7 tile-backed System-B containers** (Tank, Distiller, HeatExchange, Engine×3, DynamoMJ) collapse into System A and drop their re-rolled `tile`/`getTile(buf)`/drifted `stillValid`. The other 6 stay System B (pipes/gate — genuinely non-tile). **12 vs 12 split.**
+- [ ] Hoist the standard `getUpdateTag`/`getUpdatePacket` pair + the `<1.21.10 onDataPacket` fix into `AbstractBCBlockEntity` (7 raw-tile copies → inheritance; gives the ~5 tiles missing it the 1.21.1 fix). Keep `TilePipeHolder`'s custom sync; do NOT impose on `TileMarker`/`TileSpringOil` (sync via own channels).
+- [ ] Delete 5 in-subtree redundant `getUpdateTag` overrides (`TileMiner`/`TileAutoWorkbenchBase`/`TileLaserTableBase`/`TileAdvancedCraftingTable`/`TileQuarry`) — already inherited, zero behaviour change. **(do anytime, independent)**
+- [ ] `OwnerData` helper for `ownerUUID`/`ownerName` + one `setPlacedBy` base method (**17 hand-copies**, 3 with guard drift) against `AbstractBCBlockEntity.onPlacedBy`.
+- [ ] Adopt `IBCMenuProvider` on the 5 System-B tiles (closes the latent spectator-NPE on their open path); audit the `BlockPos` double-write (`writeClientSideData` + the `openMenu(provider,pos)` overload both write it).
+- [ ] Shared base BER / `AbstractBCRenderState` — **10 identical empty render-state stubs → 1**.
 
-### Small leftover cleanups (audit quick-wins, low risk)
-- [ ] **`DetailedConfigOption` is a fake config** (parses its default String, never reads a file). Inline the hard-coded `0.725f` at [PipeBaseModelGenStandard.java:377](src/main/java/buildcraft/transport/client/model/PipeBaseModelGenStandard.java) (client render) and delete the class.
-- [ ] **`RenderUtil.swapARGBforABGR`** is byte-identical to `ColourUtil.swapArgbToAbgr` — redirect its 2 call sites (`VariablePartCuboidBase`, `VariablePartTextureExpand`) and delete it (verify visually).
-- [ ] **`PipeFlowItems` modern TILE-insert uses bare `insert()`** while every other BC ejector (incl. its own `<1.21.10` branch) uses `ResourceHandlerUtil.insertStacking` — switch for parity.
-- [ ] **`BCEnergyConfig`** has 7 near-identical `list→Set<Identifier>` getters — extract one `toIdSet` helper.
-- [ ] **Orphan lang key `bptStoreExternalThreshold`** (en_us.json) whose option was removed — delete the line.
-- [ ] **`StatementParameterItemStackExact` is dead** (never registered; only its own gametest refs it; `getParameterReader("buildcraft:stackExact")` returns null) — delete-or-finish.
+#### ROOT 2 — block base
+- [ ] `BlockBCTile_Neptune<T>` (+ facing variant) absorbing `codec`/`newBlockEntity`/`getTicker`/`setPlacedBy`/`useWithoutItem`/drops/`<1.21.10 onRemove` (**11 BaseEntityBlock + 6 HorizontalDirectionalBlock + 5 plain Block**; `BlockPipeHolder` excepted — `dropPipeCargo`). Sub-win: `BlockDynamoMJ` → extend `BlockEngineBase_BC8` (~40 verbatim lines). Standardise `getTicker` (10 `createTickerHelper` vs 10 hand-rolled lambdas).
 
-### Audit items needing a decision (not a silent refactor)
-- [ ] **VolumeConnection vs VolumeBox.** Two parallel box-region systems driven by the same item; VolumeBox's edit/lock/addon model is richer. Decide whether both ship; if VolumeBox stays, at minimum fix `MessageVolumeBoxes` to send deltas not a full-replace. Retiring VolumeConnection is player-facing + save-compat (`TileQuarry` still reads `TileMarkerVolume`).
-- [ ] **`CAP_PASSIVE_PROVIDER` / `CAP_READABLE` are declared + consumed but never registered** — wooden-pipe MJ *pull* is dead. Wire them (register on sources + add the FE-autoconvert fallback the engine path has) or delete the dead path.
-- [ ] **`buildcraft.api` NBT-method renames** (uppercase `writeToNBT`/`serializeNBT` → lowercase) — a breaking change if the API jar ever ships; defer to the API-redistribution decision.
+#### ROOT 3 — MJ battery component
+- [ ] `MjBatteryComponent` + `registerMjConsumer` helper (scaffolding copy-pasted across ~10 machines). Route `TileMiningWell` + `PipeBehaviourStripes` inline receivers through `MjBatteryReceiver`. Migrate `TileAutoWorkbenchBase`'s `long powerStored` to a real `MjBattery` — **gives the Auto Workbench the FE/Energy cap it currently lacks (player-visible dead-on-FE-cable gap).** Extract the engine chain-walk (`getReceiverToPower`/`getFeReceiver`).
+
+#### ROOT 4 — client render/state push
+- [ ] `markForRenderUpdate`/`markForGuiUpdate` helper on `AbstractBCBlockEntity` (→ `MessageUtil.sendUpdateToTrackingPlayers`, no chunk re-mesh). Move the **~11 `sendBlockUpdated` data-change sites** (incl. engine, assembly/adv-crafting/auto-workbench recurring pushes) off the re-mesh path.
+
+#### ROOT 5 — client render kits
+- [ ] Flesh out the dead `lib.client.render.fluid.FluidRenderer` stub into the shared quad-kit (`RenderTank`/`RenderDistiller`/`RenderHeatExchange` — 3 copies, ~250 lines). **In-client visual verification required.**
+- [ ] One `lib.client.model` block-quad helper for the `collectParts`/`SimpleModelWrapper` ladder (`PreviewBlockModelRenderer`/`FacadeDeduplicator`/`PlugBakerFacade` — **3 byte-identical copies**).
+
+#### ROOT 6 — pipe registration + flow
+- [ ] Make `PipeDefinition` set iterable (a data table) → the **46 hand-written `ItemPipeHolder` registrations** loop like `WIRE_ITEMS`.
+- [ ] Generic kinesis-flow base (`AbstractPipeFlowPower<E>` + renderer) from `PipeFlowPower`/`PipeFlowRedstoneFlux`. Keep the energy-boundary directive seams; **fixes the `PipeFlowRendererFE` invisible-stem render drift** (FE overload renders invisible).
+
+#### Independent refactors (no shared root)
+- [ ] Genericise the schematic twins → `SchematicManager<C,S>` (5 `SchematicBlock*` vs 5 `SchematicEntity*`; on-miss policy + matcher are the only real differences). Start with the non-api manager NBT codec.
+- [ ] `TileBuilder.invResources` → `ItemHandlerSimple` (~205 hand-rolled lines; sibling `TileFiller` does it in one line; needs `invRes_N` NBT migration).
+- [ ] Marker SavedData: `PathSavedData`/`VolumeSavedData` are byte-identical → fill the empty `MarkerSavedData` base; collapse the Path/Volume Cache/SubCache boilerplate (Connection geometry genuinely differs — leave). Drop `MarkerRenderer`'s `volumeBoxRenderCallback` (justified by a non-existent "BCCore module boundary" — call `VolumeBoxRenderer` directly).
+- [ ] Statement-trigger base `AbstractContainerContentTrigger<R>` (inventory vs fluid re-roll the scan loop + duplicate enums). Delete silicon's **7 redundant `registerStatement`** calls (ctor self-registers). Rename the collision-prone shared `buildcraft:fluid.` trigger prefix (legacy alias).
+- [ ] `registerSimpleBlockItem`: standardise on the holder-only form (**17 holder vs 20 redundant-id-string**).
+- [ ] Generic `BCRecipeBookComponent<M>` (`AWRecipeBookComponent`/`ACTRecipeBookComponent` are verbatim dupes); delete the 5 dead `lib.gui.recipe` phantom stubs.
+- [ ] Fold the 2 near-identical JEI bucket transfer handlers into a parameterised base; reference the canonical `ContainerBC_Neptune.NET_JEI_RECIPE_TRANSFER` (duplicated in `BlueprintTransferHandler`). REI: hoist the 2 ~95% copy-paste machine plugins into a shared `lib.compat.rei` helper.
+- [ ] Route the 4 direct `mjPerRf` config reads through `MjAPI.getRfConversion` (7 already do).
+
+#### Confirmed bugs from the catalog (need a fix, not just a refactor)
+- [ ] **Soft-start power-ramp divergence.** `SnapshotBuilder` (Builder + Filler) scales by `getCapacity()*2` while Distiller/Laser/Quarry use `capacity/2` — a 4× difference that likely caps Builder/Filler at ~half speed forever. Decide the correct curve, extract `MjBattery.rampedExtractLimit()`, add a test. **(verified divergence; tuning decision needed)**
+- [ ] (`PipeFlowRendererFE` invisible-stem + AutoWorkbench no-FE-cap are folded into ROOT 6 / ROOT 3 above.)
+
+#### Small leaf cleanups (low risk, no behaviour change)
+- [ ] `DetailedConfigOption` fake config — inline `0.725f` at [PipeBaseModelGenStandard.java:377](src/main/java/buildcraft/transport/client/model/PipeBaseModelGenStandard.java), delete the class.
+- [ ] `RenderUtil.swapARGBforABGR` == `ColourUtil.swapArgbToAbgr` — redirect 2 sites (`VariablePartCuboidBase`/`VariablePartTextureExpand`), delete (verify visually).
+- [ ] 5 dead `lib.net` `MessageManager`-family stub files + 2 dead imports — `git-rm`.
+- [ ] `PipeFlowItems` modern TILE-insert: bare `insert()` → `ResourceHandlerUtil.insertStacking` (parity with every other ejector).
+- [ ] `BCEnergyConfig`: 7 `list→Set<Identifier>` getters → one `toIdSet` helper.
+- [ ] Orphan lang key `bptStoreExternalThreshold` — delete.
+- [ ] `StatementParameterItemStackExact` dead (only a gametest refs it) — delete-or-finish.
+
+#### Needs a decision first (not a silent refactor)
+- [ ] **VolumeConnection vs VolumeBox** — two parallel box-region systems from the same item; VolumeBox's edit/lock/addon model is richer. Decide whether both ship; at minimum fix `MessageVolumeBoxes` full-set broadcast → deltas. Retiring VolumeConnection is player-facing + save-compat (`TileQuarry` reads `TileMarkerVolume`).
+- [ ] **`CAP_PASSIVE_PROVIDER` / `CAP_READABLE`** declared + consumed but never registered — wooden-pipe MJ *pull* is dead. Wire (register on sources + FE-autoconvert fallback) or delete.
+- [ ] **`RecipeBookMenu` as universal container base** — 23 of 25 containers inherit it dead (only AutoCraft/AdvancedCrafting use it). Decide whether to narrow the base off `ContainerBC_Neptune`.
+- [ ] **`buildcraft.api` NBT-method renames** (uppercase `writeToNBT`/`serializeNBT` → lowercase) — breaking if the API jar ships; defer to the API-redistribution decision.
+- [ ] **Non-BE NBT serialization** — 33 tiles on the `BCValueInput/Output` wrapper vs **62 non-BlockEntity objects on raw `CompoundTag`** (the catalog's largest population). Extending the wrapper to the object graph is the natural finish but is its own large project — scope before starting.
 
 ## 🆕 New Features (version 2026.2)
 

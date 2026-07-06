@@ -19,6 +19,7 @@ import javax.annotation.Nullable;
 import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -30,6 +31,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
@@ -90,6 +92,27 @@ public class BlockUtil {
         };
     }*/
     //?}
+
+    /**
+     * Reads a {@link Direction} facing property off a block state, returning {@code null} when the
+     * state does not carry that property instead of throwing.
+     * <p>
+     * Block-entity renderers run for one more frame after their block is destroyed or replaced. In
+     * that frame {@code level.getBlockState(pos)} at the old position has already become
+     * {@code minecraft:air} (or some other block), so a bare {@link BlockState#getValue} throws
+     * {@code IllegalArgumentException: Cannot get property ... as it does not exist in
+     * Block{minecraft:air}}. Routing every facing-dependent render read through this guard turns that
+     * crash into a clean skip — callers {@code return} early on {@code null} — instead of repeating an
+     * ad-hoc {@code state.hasProperty(prop) ? state.getValue(prop) : fallback} at each site.
+     *
+     * @param state          the block state to read (typically a live {@code level.getBlockState(pos)})
+     * @param facingProperty the direction property, e.g. {@code BlockStateProperties.HORIZONTAL_FACING}
+     * @return the facing, or {@code null} when {@code state} lacks {@code facingProperty}
+     */
+    @Nullable
+    public static Direction facingOrNull(BlockState state, Property<Direction> facingProperty) {
+        return state.hasProperty(facingProperty) ? state.getValue(facingProperty) : null;
+    }
 
     /**
      * Drives an {@link buildcraft.api.blocks.ICustomRotationHandler} rotation on behalf of a

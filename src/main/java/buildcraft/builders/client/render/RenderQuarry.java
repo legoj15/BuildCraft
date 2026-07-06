@@ -33,6 +33,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.lib.client.render.tile.LedRenderUtil;
 import buildcraft.lib.client.render.tile.RenderPartCube;
+import buildcraft.lib.misc.BlockUtil;
 
 import buildcraft.builders.tile.TileQuarry;
 
@@ -111,9 +112,8 @@ public class RenderQuarry implements BlockEntityRenderer<TileQuarry, QuarryRende
         if (level == null) return;*/
     //?}
         BlockState state = level.getBlockState(pos);
-        Direction front = state.hasProperty(HorizontalDirectionalBlock.FACING)
-                ? state.getValue(HorizontalDirectionalBlock.FACING)
-                : Direction.NORTH;
+        Direction front = BlockUtil.facingOrNull(state, HorizontalDirectionalBlock.FACING);
+        if (front == null) return;
         Direction rear = front.getOpposite();
 
         poseStack.pushPose();

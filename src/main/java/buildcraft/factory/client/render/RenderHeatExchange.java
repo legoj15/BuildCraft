@@ -56,6 +56,7 @@ import buildcraft.factory.tile.TileHeatExchange.EnumProgressState;
 import buildcraft.factory.tile.TileHeatExchange.ExchangeSectionEnd;
 import buildcraft.factory.tile.TileHeatExchange.ExchangeSectionStart;
 import buildcraft.lib.fluid.FluidSmoother;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 
 /**
@@ -130,8 +131,9 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         // and trigger the tile to re-check neighbors for permanent linkage
         if (sectionEnd == null) {
             BlockState st = tile.getBlockState();
-            if (st.getBlock() instanceof BlockHeatExchange) {
-                Direction dir = st.getValue(BlockHeatExchange.FACING).getCounterClockWise();
+            Direction stFacing = BlockUtil.facingOrNull(st, BlockHeatExchange.FACING);
+            if (stFacing != null) {
+                Direction dir = stFacing.getCounterClockWise();
                 for (int i = 1; i < 6; i++) {
                     BlockEntity neighbor = level.getBlockEntity(pos.relative(dir, i));
                     if (neighbor instanceof TileHeatExchange other && other.isEnd()) {
@@ -145,9 +147,8 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         }
 
         BlockState state = tile.getBlockState();
-        if (!(state.getBlock() instanceof BlockHeatExchange)) return;
-
-        Direction facing = state.getValue(BlockHeatExchange.FACING);
+        Direction facing = BlockUtil.facingOrNull(state, BlockHeatExchange.FACING);
+        if (facing == null) return;
         Direction face = facing.getCounterClockWise();
         TankSideData sideTank = TANK_SIDES.get(face);
         if (sideTank == null) return;

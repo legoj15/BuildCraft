@@ -39,8 +39,8 @@ import buildcraft.lib.client.render.tile.LedRenderUtil;
 import buildcraft.lib.client.render.tile.RenderPartCube;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
+import buildcraft.lib.misc.BlockUtil;
 
-import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.tile.TileMiningWell;
 
 /**
@@ -140,9 +140,8 @@ public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, Min
     private void renderLEDs(TileMiningWell tile, BlockPos pos, Level level,
                             PoseStack.Pose pose, VertexConsumer consumer) {
         BlockState state = level.getBlockState(pos);
-        Direction facing = state.is(BCFactoryBlocks.MINING_WELL.get())
-                ? state.getValue(BuildCraftProperties.BLOCK_FACING)
-                : Direction.NORTH;
+        Direction facing = BlockUtil.facingOrNull(state, BuildCraftProperties.BLOCK_FACING);
+        if (facing == null) return;
 
         // Skip the LEDs when their front face is buried by a neighbour (it's culled from the model too).
         if (!LedRenderUtil.isFaceVisible(level, pos, state, facing)) return;

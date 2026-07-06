@@ -15,9 +15,9 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.lib.debug.DebugRenderHelper;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.VolumeUtil;
 
-import buildcraft.silicon.BCSiliconBlocks;
 import buildcraft.silicon.block.BlockLaser;
 import buildcraft.silicon.tile.TileLaser;
 
@@ -45,10 +45,10 @@ public final class AdvDebuggerLaser {
             return;
         }
         BlockState state = level.getBlockState(tile.getBlockPos());
-        if (state.getBlock() != BCSiliconBlocks.LASER.get()) {
+        Direction face = BlockUtil.facingOrNull(state, BlockLaser.FACING);
+        if (face == null) {
             return;
         }
-        Direction face = state.getValue(BlockLaser.FACING);
         VolumeUtil.iterateCone(level, tile.getBlockPos(), face, DISTANCE, (w, start, p, visible) -> {
             AABB box = new AABB(
                 p.getX() + 0.5 - CUBE_RADIUS, p.getY() + 0.5 - CUBE_RADIUS, p.getZ() + 0.5 - CUBE_RADIUS,

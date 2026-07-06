@@ -46,6 +46,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.factory.tile.TileDistiller_BC8;
 import buildcraft.lib.fluid.FluidSmoother;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 
 /**
@@ -143,7 +144,10 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
     //?}
 
         BlockState state = level.getBlockState(pos);
-        Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
+        // The block may have been destroyed/replaced the frame before this render runs, leaving air (no
+        // facing property) at pos — reading it directly would throw (issue #25). Skip the stale render.
+        Direction facing = BlockUtil.facingOrNull(state, BlockStateProperties.HORIZONTAL_FACING);
+        if (facing == null) return;
         TankSizes sizes = TANK_SIZES.get(facing);
         if (sizes == null) return;
 

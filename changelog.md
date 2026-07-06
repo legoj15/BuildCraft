@@ -1,5 +1,6 @@
 ###### Changes since 2026.1.1:
 
+- Fixed a crash when breaking a Distiller (its block renderer read the block's orientation for one frame after the block was already gone, tripping over the empty space left behind). The same guard now shields every BuildCraft machine renderer — Distiller, Quarry, Mining Well, Architect Table, Zone Planner, and Heat Exchanger — against that whole class of destroy-while-rendering crash.
 - Items travelling through pipes no longer lose their enchantments, custom names, or damage when the chunk is saved and reloaded — an enchanted or named tool in transit now arrives intact instead of coming back as a plain item. The Assembly Table likewise now preserves the full components of an in-progress output (not just facade variants).
 
 - Builders and Fillers now reach their full building speed once their internal power buffer is half full, instead of permanently topping out at half speed even on a completely full buffer. They now ramp up the same way the Quarry, Refinery, and Laser do — so a fully-powered Builder/Filler is about twice as fast as before.

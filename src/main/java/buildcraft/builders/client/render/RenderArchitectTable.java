@@ -33,6 +33,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.lib.client.render.tile.LedRenderUtil;
 import buildcraft.lib.client.render.tile.RenderPartCube;
+import buildcraft.lib.misc.BlockUtil;
 
 import buildcraft.builders.tile.TileArchitectTable;
 
@@ -105,8 +106,8 @@ public class RenderArchitectTable implements BlockEntityRenderer<TileArchitectTa
         if (level == null) return;*/
     //?}
         BlockState state = level.getBlockState(pos);
-        if (!state.hasProperty(HorizontalDirectionalBlock.FACING)) return;
-        Direction facing = state.getValue(HorizontalDirectionalBlock.FACING);
+        Direction facing = BlockUtil.facingOrNull(state, HorizontalDirectionalBlock.FACING);
+        if (facing == null) return;
 
         // Skip the LEDs when their face is hidden by a neighbour — they sit on the front face, which the
         // chunk mesher culls when buried, so the LEDs must cull with it.

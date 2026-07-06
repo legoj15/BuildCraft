@@ -32,6 +32,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.lib.client.render.tile.LedRenderUtil;
+import buildcraft.lib.misc.BlockUtil;
 
 import buildcraft.robotics.block.BlockZonePlanner;
 import buildcraft.robotics.client.zone.ZoneFacePreview;
@@ -109,8 +110,8 @@ public class RenderZonePlanner implements BlockEntityRenderer<TileZonePlanner, Z
         if (level == null) return;*/
     //?}
         BlockState state = level.getBlockState(pos);
-        if (!state.hasProperty(BlockZonePlanner.FACING)) return;
-        Direction facing = state.getValue(BlockZonePlanner.FACING);
+        Direction facing = BlockUtil.facingOrNull(state, BlockZonePlanner.FACING);
+        if (facing == null) return;
 
         // Don't paint the screen on a face the chunk mesher has culled (e.g. a planner buried against
         // a neighbouring block) — the model's front face is gone, so the screen must go with it.

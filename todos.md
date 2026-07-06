@@ -25,7 +25,6 @@ Full report: [docs/unification-audit.md](docs/unification-audit.md). Two codebas
 - [ ] `markForRenderUpdate`/`markForGuiUpdate` helper on `AbstractBCBlockEntity` (→ `MessageUtil.sendUpdateToTrackingPlayers`, no chunk re-mesh). Move the **~11 `sendBlockUpdated` data-change sites** (incl. engine, assembly/adv-crafting/auto-workbench recurring pushes) off the re-mesh path.
 
 #### ROOT 5 — client render kits
-- [ ] In-client visual-verify the shared `FluidRenderer` quad-kit — code landed (byte-identical extraction of `quad`/`quadHorizontal`/`posU`/`posV` + unified `fluidBox`; `RenderTank`/`RenderDistiller`/`RenderHeatExchange` now delegate). Confirm tank/distiller/heat-exchanger fluid still renders correctly; output is identical by construction so this is a sanity glance.
 - [ ] One `lib.client.model` block-quad helper for the `collectParts`/`SimpleModelWrapper` ladder (`PreviewBlockModelRenderer`/`FacadeDeduplicator`/`PlugBakerFacade` — **3 byte-identical copies**).
 
 #### ROOT 6 — pipe registration + flow

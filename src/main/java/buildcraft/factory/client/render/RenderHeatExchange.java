@@ -55,6 +55,7 @@ import buildcraft.factory.tile.TileHeatExchange;
 import buildcraft.factory.tile.TileHeatExchange.EnumProgressState;
 import buildcraft.factory.tile.TileHeatExchange.ExchangeSectionEnd;
 import buildcraft.factory.tile.TileHeatExchange.ExchangeSectionStart;
+import buildcraft.lib.client.render.fluid.FluidRenderer;
 import buildcraft.lib.fluid.FluidSmoother;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
@@ -306,45 +307,15 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         collector.submitCustomGeometry(poseStack,
                 FluidUtilBC.shouldRenderTranslucent(fluid)
                     ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS),
-                (pose, buffer) -> drawTankFluid(pose, buffer, sprite,
+                (pose, buffer) -> FluidRenderer.fluidBox(pose, buffer, sprite,
                         minX, minZ, maxX, maxZ, fluidTop, fluidBottom, r, g, b, fa, light));
         //?} else {
         /*VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
                     ? net.minecraft.client.renderer.RenderType.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
-        drawTankFluid(poseStack.last(), buffer, sprite,
+        FluidRenderer.fluidBox(poseStack.last(), buffer, sprite,
                 minX, minZ, maxX, maxZ, fluidTop, fluidBottom, r, g, b, a, light);*/
         //?}
-    }
-
-    /** Node-agnostic core: draws the six faces of a tank's fluid box into {@code buffer}. */
-    private static void drawTankFluid(PoseStack.Pose pose, VertexConsumer buffer, TextureAtlasSprite sprite,
-            float minX, float minZ, float maxX, float maxZ, float fluidTop, float fluidBottom,
-            float r, float g, float b, float a, int light) {
-        int overlay = OverlayTexture.NO_OVERLAY;
-
-        // North face (-Z)
-        quad(pose, buffer, sprite, minX, fluidTop, minZ, maxX, fluidTop, minZ,
-                maxX, fluidBottom, minZ, minX, fluidBottom, minZ,
-                0, 0, -1, r, g, b, a, light, overlay);
-        // South face (+Z)
-        quad(pose, buffer, sprite, minX, fluidBottom, maxZ, maxX, fluidBottom, maxZ,
-                maxX, fluidTop, maxZ, minX, fluidTop, maxZ,
-                0, 0, 1, r, g, b, a, light, overlay);
-        // West face (-X)
-        quad(pose, buffer, sprite, minX, fluidBottom, minZ, minX, fluidBottom, maxZ,
-                minX, fluidTop, maxZ, minX, fluidTop, minZ,
-                -1, 0, 0, r, g, b, a, light, overlay);
-        // East face (+X)
-        quad(pose, buffer, sprite, maxX, fluidTop, minZ, maxX, fluidTop, maxZ,
-                maxX, fluidBottom, maxZ, maxX, fluidBottom, minZ,
-                1, 0, 0, r, g, b, a, light, overlay);
-        // Top face
-        quadHorizontal(pose, buffer, sprite, minX, maxX, maxZ, minZ, fluidTop,
-                0, 1, 0, r, g, b, a, light, overlay);
-        // Bottom face
-        quadHorizontal(pose, buffer, sprite, minX, maxX, maxZ, minZ, fluidBottom,
-                0, -1, 0, r, g, b, a, light, overlay);
     }
 
     // --- Flow Rendering ---
@@ -473,80 +444,33 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
 
         // Render all visible faces
         if (sides[Direction.NORTH.ordinal()]) {
-            quad(pose, buffer, sprite, flowMinX, flowMaxY, flowMinZ, flowMaxX, flowMaxY, flowMinZ,
+            FluidRenderer.quad(pose, buffer, sprite, flowMinX, flowMaxY, flowMinZ, flowMaxX, flowMaxY, flowMinZ,
                     flowMaxX, flowMinY, flowMinZ, flowMinX, flowMinY, flowMinZ,
                     0, 0, -1, r, g, b, a, light, overlay);
         }
         if (sides[Direction.SOUTH.ordinal()]) {
-            quad(pose, buffer, sprite, flowMinX, flowMinY, flowMaxZ, flowMaxX, flowMinY, flowMaxZ,
+            FluidRenderer.quad(pose, buffer, sprite, flowMinX, flowMinY, flowMaxZ, flowMaxX, flowMinY, flowMaxZ,
                     flowMaxX, flowMaxY, flowMaxZ, flowMinX, flowMaxY, flowMaxZ,
                     0, 0, 1, r, g, b, a, light, overlay);
         }
         if (sides[Direction.WEST.ordinal()]) {
-            quad(pose, buffer, sprite, flowMinX, flowMinY, flowMinZ, flowMinX, flowMinY, flowMaxZ,
+            FluidRenderer.quad(pose, buffer, sprite, flowMinX, flowMinY, flowMinZ, flowMinX, flowMinY, flowMaxZ,
                     flowMinX, flowMaxY, flowMaxZ, flowMinX, flowMaxY, flowMinZ,
                     -1, 0, 0, r, g, b, a, light, overlay);
         }
         if (sides[Direction.EAST.ordinal()]) {
-            quad(pose, buffer, sprite, flowMaxX, flowMaxY, flowMinZ, flowMaxX, flowMaxY, flowMaxZ,
+            FluidRenderer.quad(pose, buffer, sprite, flowMaxX, flowMaxY, flowMinZ, flowMaxX, flowMaxY, flowMaxZ,
                     flowMaxX, flowMinY, flowMaxZ, flowMaxX, flowMinY, flowMinZ,
                     1, 0, 0, r, g, b, a, light, overlay);
         }
         if (sides[Direction.UP.ordinal()]) {
-            quadHorizontal(pose, buffer, sprite, flowMinX, flowMaxX, flowMaxZ, flowMinZ, flowMaxY,
+            FluidRenderer.quadHorizontal(pose, buffer, sprite, flowMinX, flowMaxX, flowMaxZ, flowMinZ, flowMaxY,
                     0, 1, 0, r, g, b, a, light, overlay);
         }
         if (sides[Direction.DOWN.ordinal()]) {
-            quadHorizontal(pose, buffer, sprite, flowMinX, flowMaxX, flowMaxZ, flowMinZ, flowMinY,
+            FluidRenderer.quadHorizontal(pose, buffer, sprite, flowMinX, flowMaxX, flowMaxZ, flowMinZ, flowMinY,
                     0, -1, 0, r, g, b, a, light, overlay);
         }
-    }
-
-    // --- Quad helpers (same pattern as RenderDistiller) ---
-
-    private static void quad(PoseStack.Pose pose, VertexConsumer builder, TextureAtlasSprite sprite,
-            float x1, float y1, float z1, float x2, float y2, float z2,
-            float x3, float y3, float z3, float x4, float y4, float z4,
-            float nx, float ny, float nz,
-            float r, float g, float b, float a, int light, int overlay) {
-        builder.addVertex(pose, x1, y1, z1).setColor(r, g, b, a)
-                .setUv(posU(sprite, nx, x1, z1), posV(sprite, y1))
-                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x2, y2, z2).setColor(r, g, b, a)
-                .setUv(posU(sprite, nx, x2, z2), posV(sprite, y2))
-                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x3, y3, z3).setColor(r, g, b, a)
-                .setUv(posU(sprite, nx, x3, z3), posV(sprite, y3))
-                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x4, y4, z4).setColor(r, g, b, a)
-                .setUv(posU(sprite, nx, x4, z4), posV(sprite, y4))
-                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-    }
-
-    private static void quadHorizontal(PoseStack.Pose pose, VertexConsumer builder, TextureAtlasSprite sprite,
-            float x1, float x2, float z1, float z2, float y,
-            float nx, float ny, float nz,
-            float r, float g, float b, float a, int light, int overlay) {
-        builder.addVertex(pose, x1, y, z1).setColor(r, g, b, a)
-                .setUv(sprite.getU(x1), sprite.getV(z1))
-                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x2, y, z1).setColor(r, g, b, a)
-                .setUv(sprite.getU(x2), sprite.getV(z1))
-                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x2, y, z2).setColor(r, g, b, a)
-                .setUv(sprite.getU(x2), sprite.getV(z2))
-                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x1, y, z2).setColor(r, g, b, a)
-                .setUv(sprite.getU(x1), sprite.getV(z2))
-                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-    }
-
-    private static float posU(TextureAtlasSprite sprite, float nx, float x, float z) {
-        return sprite.getU(nx != 0 ? z : x);
-    }
-
-    private static float posV(TextureAtlasSprite sprite, float y) {
-        return sprite.getV(1.0f - y);
     }
 
     // --- Inner classes ---

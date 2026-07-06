@@ -45,6 +45,7 @@ import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtension
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.factory.tile.TileDistiller_BC8;
+import buildcraft.lib.client.render.fluid.FluidRenderer;
 import buildcraft.lib.fluid.FluidSmoother;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
@@ -243,45 +244,15 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
                     ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);
         final float fa = a; // 'a' is reassigned above, so capture an effectively-final copy for the lambda
         collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) ->
-                drawFluidBox(pose, buffer, sprite, minX, maxX, minZ, maxZ, fluidTop, fluidBottom,
+                FluidRenderer.fluidBox(pose, buffer, sprite, minX, minZ, maxX, maxZ, fluidTop, fluidBottom,
                         r, g, b, fa, light));
         //?} else {
         /*VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
                     ? net.minecraft.client.renderer.RenderType.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
-        drawFluidBox(poseStack.last(), buffer, sprite, minX, maxX, minZ, maxZ, fluidTop, fluidBottom,
+        FluidRenderer.fluidBox(poseStack.last(), buffer, sprite, minX, minZ, maxX, maxZ, fluidTop, fluidBottom,
                 r, g, b, a, light);*/
         //?}
-    }
-
-    /** Emit the six quads of one fluid box into the given pose/buffer. */
-    private static void drawFluidBox(PoseStack.Pose pose, VertexConsumer buffer, TextureAtlasSprite sprite,
-            float minX, float maxX, float minZ, float maxZ, float fluidTop, float fluidBottom,
-            float r, float g, float b, float a, int light) {
-        int overlay = OverlayTexture.NO_OVERLAY;
-
-        // North face (-Z)
-        quad(pose, buffer, sprite, minX, fluidTop, minZ, maxX, fluidTop, minZ,
-                maxX, fluidBottom, minZ, minX, fluidBottom, minZ,
-                0, 0, -1, r, g, b, a, light, overlay);
-        // South face (+Z)
-        quad(pose, buffer, sprite, minX, fluidBottom, maxZ, maxX, fluidBottom, maxZ,
-                maxX, fluidTop, maxZ, minX, fluidTop, maxZ,
-                0, 0, 1, r, g, b, a, light, overlay);
-        // West face (-X)
-        quad(pose, buffer, sprite, minX, fluidBottom, minZ, minX, fluidBottom, maxZ,
-                minX, fluidTop, maxZ, minX, fluidTop, minZ,
-                -1, 0, 0, r, g, b, a, light, overlay);
-        // East face (+X)
-        quad(pose, buffer, sprite, maxX, fluidTop, minZ, maxX, fluidTop, maxZ,
-                maxX, fluidBottom, maxZ, maxX, fluidBottom, minZ,
-                1, 0, 0, r, g, b, a, light, overlay);
-        // Top face
-        quadHorizontal(pose, buffer, sprite, minX, maxX, maxZ, minZ, fluidTop,
-                0, 1, 0, r, g, b, a, light, overlay);
-        // Bottom face
-        quadHorizontal(pose, buffer, sprite, minX, maxX, maxZ, minZ, fluidBottom,
-                0, -1, 0, r, g, b, a, light, overlay);
     }
 
     // --- Power Cube Rendering ---
@@ -466,64 +437,6 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
     }
 
     // --- Quad helpers ---
-
-    /** Emit a vertical quad with position-based UV mapping.
-     *  UV is derived from the vertex's block-space position, so the texture
-     *  renders at natural 1:1 scale and clips at face edges — matching the
-     *  1.12.2 FluidRenderer.TexMap behavior. For N/S faces U comes from X
-     *  and V from Y; for E/W faces U comes from Z and V from Y. */
-    private static void quad(PoseStack.Pose pose, VertexConsumer builder, TextureAtlasSprite sprite,
-            float x1, float y1, float z1, float x2, float y2, float z2,
-            float x3, float y3, float z3, float x4, float y4, float z4,
-            float nx, float ny, float nz,
-            float r, float g, float b, float a, int light, int overlay) {
-        // Determine which axes map to U and V based on the face normal.
-        // N/S faces (nz != 0): U = X, V = Y  (TexMap.XY)
-        // E/W faces (nx != 0): U = Z, V = Y  (TexMap.ZY)
-        builder.addVertex(pose, x1, y1, z1).setColor(r, g, b, a)
-                .setUv(posU(sprite, nx, x1, z1), posV(sprite, y1))
-                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x2, y2, z2).setColor(r, g, b, a)
-                .setUv(posU(sprite, nx, x2, z2), posV(sprite, y2))
-                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x3, y3, z3).setColor(r, g, b, a)
-                .setUv(posU(sprite, nx, x3, z3), posV(sprite, y3))
-                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x4, y4, z4).setColor(r, g, b, a)
-                .setUv(posU(sprite, nx, x4, z4), posV(sprite, y4))
-                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-    }
-
-    /** Emit a horizontal quad with position-based UV mapping.
-     *  U derives from X position, V from Z position — matching TexMap.XZ. */
-    private static void quadHorizontal(PoseStack.Pose pose, VertexConsumer builder, TextureAtlasSprite sprite,
-            float x1, float x2, float z1, float z2, float y,
-            float nx, float ny, float nz,
-            float r, float g, float b, float a, int light, int overlay) {
-        builder.addVertex(pose, x1, y, z1).setColor(r, g, b, a)
-                .setUv(sprite.getU(x1), sprite.getV(z1))
-                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x2, y, z1).setColor(r, g, b, a)
-                .setUv(sprite.getU(x2), sprite.getV(z1))
-                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x2, y, z2).setColor(r, g, b, a)
-                .setUv(sprite.getU(x2), sprite.getV(z2))
-                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-        builder.addVertex(pose, x1, y, z2).setColor(r, g, b, a)
-                .setUv(sprite.getU(x1), sprite.getV(z2))
-                .setOverlay(overlay).setLight(light).setNormal(pose, nx, ny, nz);
-    }
-
-    /** Compute U coordinate from position. For N/S faces (nx==0) U comes from X;
-     *  for E/W faces (nx!=0) U comes from Z. */
-    private static float posU(TextureAtlasSprite sprite, float nx, float x, float z) {
-        return sprite.getU(nx != 0 ? z : x);
-    }
-
-    /** Compute V coordinate from Y position (1-y to flip top-to-bottom). */
-    private static float posV(TextureAtlasSprite sprite, float y) {
-        return sprite.getV(1.0f - y);
-    }
 
     /** Quad with fully custom UV coordinates per vertex. */
     private static void quadUV(PoseStack.Pose pose, VertexConsumer builder,

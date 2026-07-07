@@ -12,7 +12,18 @@ import net.minecraft.resources.ResourceKey;
 
 import buildcraft.integration.pipes.PipeRoutingTest;
 
+// The bus the @SubscribeEvent registrar methods below land on. On 1.21.10+ the FML annotation
+// auto-detects the bus from each method's event type (no `bus` element exists), so a bare
+// annotation routes onRegister(RegisterEvent) to the mod bus correctly. On 1.21.1 (FML loader
+// 4.0.x) the annotation still carries `bus()` defaulting to Bus.GAME — and onRegisterGameTests
+// takes RegisterGameTestsEvent, an IModBusEvent — so it MUST declare bus = Bus.MOD or FML rejects
+// the mod-bus event on the common bus at load. Split per branch: referencing EventBusSubscriber.Bus
+// on 1.21.10+ would not even compile (the enum was removed).
+//? if >=1.21.10 {
 @EventBusSubscriber(modid = "buildcraftunofficial")
+//?} else {
+/*@EventBusSubscriber(modid = "buildcraftunofficial", bus = EventBusSubscriber.Bus.MOD)*/
+//?}
 public class BuildCraftGameTests {
 
     // Game-test registration. 1.21.5+ uses the dynamic Registries.TEST_FUNCTION registry + JSON

@@ -20,10 +20,17 @@ updateJSONURL="https://raw.githubusercontent.com/legoj15/BuildCraft/${update_bra
 [[dependencies.buildcraftunofficial]]
     modId="neoforge"
     type="required"
-    # Range is per Stonecutter node (see gradle.properties / versions/<node>/gradle.properties).
-    # On the 26.1.2 node the floor is 26.1.2.21-beta, where BreakBlockEvent (used by
-    # BlockUtil/LocalBlockUpdateNotifier) was added; the 26.1.x node uses BlockEvent.BreakEvent
-    # and a [26.1.0,26.1.2) range instead.
+    # Range is per Stonecutter node (versions/<node>/gradle.properties -> neo_dep_range). Each floor is
+    # the EMPIRICAL minimum that node's jar compiles + boots against (compile-bisect + a headless server
+    # boot), not a guess: set too high it needlessly gates users, too low it loads then crashes on boot.
+    #   26.1.2  -> [26.1.0,26.2)    whole line — BreakBlockEvent is resolved reflectively (lib.misc.
+    #                               BreakEventCompat) + GUI getters use line-wide aliases, so nothing
+    #                               binds above the line's first build (369 game tests pass on 26.1.0.1)
+    #   26.2    -> [26.2.0,26.3)    whole line — all 26.2 API landed atomically at 26.2.0.0-beta
+    #   1.21.11 -> [21.11.42,...)   the only published build on the line
+    #   1.21.10 -> [21.10.63,...)   earliest published build (one below the pin; same MC 1.21.10)
+    #   1.21.1  -> [21.1.151,...)   IBCMenuProvider needs MenuProvider#writeClientSideData(menu, buf),
+    #                               backported at 21.1.151 (#2138) — NOT the bottom of the 21.1 line
     versionRange="${neo_dep_range}"
     ordering="NONE"
     side="BOTH"

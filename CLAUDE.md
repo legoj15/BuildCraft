@@ -108,11 +108,11 @@ Initialization order: `BCLib` → core registries → per-subsystem registries �
 
 ## NeoForge Version Tracking
 
-NeoForge for Minecraft 26.1 is pre-release — new beta builds land daily, sometimes hourly. `neo_version` is the pin — now **per-node** (`versions/<node>/gradle.properties`); root [gradle.properties](gradle.properties) keeps the active-node (26.1.2) value, which is what the version-check hook below reads. Two scripts under `scripts/` keep the project aware of upstream and able to cross-reference the right sources.
+NeoForge for Minecraft 26.1 is pre-release — new beta builds land daily, sometimes hourly. `neo_version` is the pin, and it is **per-node** (`versions/<node>/gradle.properties`) — each node tracks its own line independently. The version-check hook below reads every node's pin directly (it no longer depends on the root [gradle.properties](gradle.properties) mirror). Two scripts under `scripts/` keep the project aware of upstream and able to cross-reference the right sources.
 
 ### Awareness — the SessionStart hook
 
-`.claude/settings.json` registers a `SessionStart` hook that runs `scripts/neoforge-version-check.sh`: it reads `neo_version`, fetches NeoForge's `maven-metadata.xml`, filters to the `minecraft_version` line (ignoring the unrelated 21.1.x LTS line), and — only when the pin is behind — injects a one-line notice into the session. Silent when current; fails silently when offline. Check manually anytime with `bash scripts/neoforge-version-check.sh --plain`.
+`.claude/settings.json` registers a `SessionStart` hook that runs `scripts/neoforge-version-check.sh`: it enumerates every `versions/<node>/gradle.properties` and checks each node independently. For each node it derives that node's NeoForge line from its pinned `neo_version` by stripping the trailing `.<build>` (deriving the line from `minecraft_version` would only line up for the 26.1.2 node — the MC→NeoForge mapping is non-uniform across the CalVer cliff: MC `1.21.1`→NeoForge `21.1.x`, MC `26.2`→NeoForge `26.2.0.x`), fetches NeoForge's `maven-metadata.xml` once, and — only when one or more nodes are behind — injects a notice listing each behind node into the session. Silent when all nodes are current; fails silently when offline. Check manually anytime with `bash scripts/neoforge-version-check.sh --plain`.
 
 ### When behind — review, classify, offer a bump
 

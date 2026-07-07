@@ -1,11 +1,12 @@
 ## BuildCraft **UNOFFICIAL**
-#### For Minecraft 1.21.1, 1.21.10, 1.21.11, and 26.1.2 on NeoForge
+#### For Minecraft 1.21.1, 1.21.10, 1.21.11, 26.1.2, and 26.2 on NeoForge
 
 ### Reporting an issue
 
 | MC Version | Support | Notes |
 |---|---|---|
-| 26.1.2 | ✔️ | Latest version (primary support) |
+| 26.2 | ✔️ | Latest version (primary support) |
+| 26.1.2 | ✔️ | Currently supported |
 | 26.1.1 | ⚠️ | Not directly supported (may not run) |
 | 26.1 | ⚠️ | Not directly supported (may not run) |
 | 1.21.11 | ✔️ | Currently supported (low priority) |

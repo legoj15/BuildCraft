@@ -1,19 +1,14 @@
 ###### Changes since 2026.1.1:
 
-- Fixed a crash when breaking a Distiller (its block renderer read the block's orientation for one frame after the block was already gone, tripping over the empty space left behind). The same guard now shields every BuildCraft machine renderer — Distiller, Quarry, Mining Well, Architect Table, Zone Planner, and Heat Exchanger — against that whole class of destroy-while-rendering crash.
-- Items travelling through pipes no longer lose their enchantments, custom names, or damage when the chunk is saved and reloaded — an enchanted or named tool in transit now arrives intact instead of coming back as a plain item. The Assembly Table likewise now preserves the full components of an in-progress output (not just facade variants).
-
-- Builders and Fillers now reach their full building speed once their internal power buffer is half full, instead of permanently topping out at half speed even on a completely full buffer. They now ramp up the same way the Quarry, Refinery, and Laser do — so a fully-powered Builder/Filler is about twice as fast as before.
-- Fixed three of BuildCraft's four JEI plugins sharing one identifier, which could cause JEI to drop some of the mod's recipe categories or info. Each subsystem's JEI plugin now has a unique id.
-- Quarries, Fillers, and Builders now correctly advertise themselves as power connectors, so kinesis (power) pipes reliably route MJ and RF power into them — matching every other powered machine.
-- Fixed Redstone Flux (RF) kinesis pipes drawing no flow animation on straight runs after a chunk reloaded — the power was still moving, it was just invisible. (Same fix the MJ pipes already received.)
-- Fixed engines occasionally forgetting their recorded owner if they were placed and then never interacted with before their area unloaded.
-- Fixed the collapsible info/help ledgers (the side panels in machine GUIs) flying up off the top of the screen when collapsed, if their text was too long to fit — which left a stray icon behind with no panel. Overflowing ledgers now slide up to stay on screen while open and glide smoothly back into place when closed.
-- Fixed a "Network Protocol Error" disconnect when right-clicking certain machines while in spectator mode. Spectators can now open those GUIs read-only — the way vanilla lets them peek into chests and furnaces — instead of being kicked. Affected the Zone Planner, Filtered Buffer, Tank, Chute, Distiller, and Heat Exchanger.
-- The Zone Planner block now shows a live top-down map of the surrounding terrain right on its front face, like a little screen — no need to open it to glance at the area around it.
-- Block-face indicators no longer draw through a neighbouring block. The status LEDs on the Pump, Mining Well, Quarry, Filler, and Architect Table — and the Zone Planner's on-block map screen — are now hidden on any face that's buried against an adjacent block, the same way the block's own face is hidden there (previously they kept drawing on a covered face, leaving an indicator floating against the neighbour).
-- The Zone Planner's interactive 3D map now works on the 1.21.1 build too (it was previously a static placeholder there). Same controls everywhere: pan with an empty hand, scroll to zoom, drag a coloured paintbrush to mark or erase zones.
-- Blueprint, Template, and Architect Table 3D previews now draw each block in its real placed shape and orientation — logs along their axis, stairs/slabs/fences/doors correctly formed, and sugar cane, levers, torches, and rails as their in-world models instead of flat item icons. Engines in a preview now point the way they'll be placed instead of always standing upright. (Previously every cell was drawn from its flat inventory icon, which lost shape and facing.)
-- The Zone Planner now has a working interactive 3D map. Open it to see a top-down view of the surrounding terrain: drag with an empty hand to pan, scroll to zoom, and drag a coloured paintbrush across the map to mark (or right-drag to erase) that colour's zone. Hovering a spot shows its world coordinates, and progress bars track the paintbrush↔Map Location transfers. Zones can be copied to and from a Map Location using the side slots.
-- The Map Location is now a survival item (craftable from 8 paper around a yellow dye) and the Zone Planner has a crafting recipe (iron, redstone, gold & diamond gears, and a map). Both were previously creative/dev only.
-- Fixed quarries draining server performance (TPS) long after they finish mining. A completed quarry now goes fully idle: it stops re-scanning its frame every tick and releases the chunks it was force-loading, so a forgotten quarry no longer keeps its work area loaded and ticking. The drill rig also no longer rebuilds its collision shape every tick while stationary.
+- Fixed a crash when breaking a Distiller. Thank you for your report, [Ryk7039](https://github.com/Ryk7039)!
+- **Items travelling through pipes no longer lose their enchantments, custom names, or damage when the chunk is saved and reloaded**
+- Builders and Fillers now reach their full building speed once their internal power buffer is half full, instead of permanently topping out at half speed even on a completely full buffer
+- Fixed three of BuildCraft's four JEI plugins sharing one identifier, which could cause JEI to drop some of the mod's recipes
+- Fixed FE/RF pipes not rendering their power sometimes (MJ was fixed the same way previous update)
+- Fixed engines occasionally forgetting their recorded owner if they were placed and then never interacted with before their area unloaded
+- Fixed the collapsible info/help ledgers flying up off the top of the screen when collapsed
+- Fixed a "Network Protocol Error" disconnect when right-clicking certain machines while in spectator mode
+- Blocks with status lights now stop rendering those lights when obscured by another block
+- Improvements to the 3D preview of blueprints
+- "Map Location" item and "Zone Planner" block are now available in survival. They don't really do all that much yet.
+- Idle quarries no longer are a performance hog

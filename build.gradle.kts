@@ -469,19 +469,7 @@ tasks.register<Copy>("buildAndCollect") {
 }
 
 // ─── Full pre-release verification ───────────────────────────────────────────
-// One command for the lot: JUnit unit tests + headless NeoForge game tests (this node) + the production
-// boot+connect matrix. The matrix is the single root task `runReleaseMatrix`, so it runs ONCE even when
-// `gradlew fullTestSuite` cascades across nodes — and it auto-skips when the (gitignored, machine-specific)
-// testing/ harness isn't present, so third-party clones just run test + game tests.
-tasks.register("fullTestSuite") {
-    group = "verification"
-    description = "Unit tests + headless game tests + production boot/connect matrix (matrix auto-skips if the testing/ harness is absent)."
-    // buildAndCollect produces the fresh +mc jars the matrix stages onto the server/client. It's listed
-    // here (not left to the script) so the OUTER Gradle builds them — the matrix runs with -SkipBuild so it
-    // never starts a nested `gradlew buildAndCollect`, which would deadlock on this build's project lock.
-    dependsOn("test", "runGameTestServer", "buildAndCollect", rootProject.tasks.named("runReleaseMatrix"))
-    // Build fresh jars + run cheap in-dev checks first; the long production matrix runs last.
-    rootProject.tasks.named("runReleaseMatrix").configure {
-        mustRunAfter(tasks.named("test"), tasks.named("runGameTestServer"), tasks.named("buildAndCollect"))
-    }
-}
+// `fullTestSuite` is defined ONCE on the ROOT (stonecutter.gradle.kts), NOT per-node: it enumerates
+// every node from the tree and depends on each one's `test` + `runGameTestServer` + `buildAndCollect`
+// so coverage can't silently narrow to a single line. Run it with `./gradlew fullTestSuite`. For a
+// single node during development, run that node's tasks directly, e.g. `:1.21.1:test :1.21.1:runGameTestServer`.

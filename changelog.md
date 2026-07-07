@@ -1,6 +1,6 @@
 ###### Changes since 2026.1.1:
 
-- Fixed a crash when breaking a Distiller. Thank you for your report, [Ryk7039](https://github.com/Ryk7039)!
+- {1.21.1} Fixed a crash when breaking a Distiller. Thank you for your report, [Ryk7039](https://github.com/Ryk7039)!
 - **Items travelling through pipes no longer lose their enchantments, custom names, or damage when the chunk is saved and reloaded**
 - Builders and Fillers now reach their full building speed once their internal power buffer is half full, instead of permanently topping out at half speed even on a completely full buffer
 - Fixed three of BuildCraft's four JEI plugins sharing one identifier, which could cause JEI to drop some of the mod's recipes

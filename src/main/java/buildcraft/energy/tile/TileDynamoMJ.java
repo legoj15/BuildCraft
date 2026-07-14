@@ -17,7 +17,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -27,7 +26,6 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 //?} else {
 /*import net.neoforged.neoforge.energy.IEnergyStorage;*/
 //?}
-import buildcraft.api.mj.MjRfConversion;
 
 import buildcraft.lib.mj.BCFeStorage;
 
@@ -38,7 +36,6 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
 import buildcraft.core.BCCoreItems;
 import buildcraft.energy.BCEnergyBlockEntities;
-import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.BCValueInput;
@@ -132,7 +129,7 @@ public class TileDynamoMJ extends TileEngineBase_BC8 implements IBCMenuProvider 
     }
 
     public int getFeProductionRate(long mjInput) {
-        long mjPerRf = MjRfConversion.createParsed(BCLibConfig.mjRfConversionAmount.get()).mjPerRf;
+        long mjPerRf = MjAPI.getRfConversion().mjPerRf;
         if (mjPerRf == 0) return 0;
         return (int) (mjInput / mjPerRf);
     }
@@ -148,7 +145,7 @@ public class TileDynamoMJ extends TileEngineBase_BC8 implements IBCMenuProvider 
         if (mjStored <= 0) return;
 
         if (isRedstonePowered) {
-            long mjPerRf = MjRfConversion.createParsed(BCLibConfig.mjRfConversionAmount.get()).mjPerRf;
+            long mjPerRf = MjAPI.getRfConversion().mjPerRf;
             if (mjPerRf == 0) return;
 
             int genFe = getFeProductionRate(getMjPerTick());
@@ -203,32 +200,16 @@ public class TileDynamoMJ extends TileEngineBase_BC8 implements IBCMenuProvider 
     //?} else {
     /*public net.neoforged.neoforge.energy.IEnergyStorage getFeReceiver(Direction side) {*/
     //?}
-        if (level == null) return null;
-        // Engine chaining (1.12.2 parity): hop through up to getMaxChainLength() further Dynamos
-        // facing this same way to reach the FE receiver at the end of the line.
-        BlockPos pos = getBlockPos();
-        for (int len = 0; len <= getMaxChainLength(); len++) {
-            BlockPos targetPos = pos.relative(side);
-            BlockEntity tile = level.getBlockEntity(targetPos);
-            if (tile == null) {
-                return null;
-            }
-            if (tile.getClass() == getClass()) {
-                // A chained Dynamo must face the same direction; step through it.
-                if (((TileDynamoMJ) tile).orientation != side) {
-                    return null;
-                }
-                pos = targetPos;
-                continue;
-            }
-            // Any other tile — the FE receiver at the end of the chain.
+        // Engine chaining (1.12.2 parity): hop through up to getMaxChainLength() further Dynamos facing this
+        // same way to reach the FE receiver at the end of the line. Same walk as the base engine's MJ
+        // getReceiverToPower — only the terminus lookup differs (raw FE handler, no canConnect check).
+        return walkChain(side, targetPos -> {
             //? if >=1.21.10 {
             return level.getCapability(Capabilities.Energy.BLOCK, targetPos, side.getOpposite());
             //?} else {
             /*return level.getCapability(Capabilities.EnergyStorage.BLOCK, targetPos, side.getOpposite());*/
             //?}
-        }
-        return null;
+        });
     }
 
     @Nullable

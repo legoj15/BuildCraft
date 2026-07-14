@@ -19,7 +19,6 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 //?} else {
 /*import net.neoforged.neoforge.energy.IEnergyStorage;*/
 //?}
-import buildcraft.api.mj.MjRfConversion;
 
 import buildcraft.lib.mj.BCFeStorage;
 
@@ -27,7 +26,6 @@ import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.core.BCCoreItems;
 import buildcraft.energy.BCEnergyBlockEntities;
-import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.BCValueInput;
@@ -101,7 +99,7 @@ public class TileEngineFE extends TileEngineBase_BC8 {
 
     public int getFeConsumptionRate() {
         final long mjPerTick = getMjPerTick();
-        long mjPerRf = MjRfConversion.createParsed(BCLibConfig.mjRfConversionAmount.get()).mjPerRf;
+        long mjPerRf = MjAPI.getRfConversion().mjPerRf;
         if (mjPerRf == 0) return 0;
         return (int) (mjPerTick / mjPerRf);
     }
@@ -115,7 +113,7 @@ public class TileEngineFE extends TileEngineBase_BC8 {
         if (currentFe <= 0) return;
 
         if (isRedstonePowered) {
-            long mjPerRf = MjRfConversion.createParsed(BCLibConfig.mjRfConversionAmount.get()).mjPerRf;
+            long mjPerRf = MjAPI.getRfConversion().mjPerRf;
             int maxFe = getFeConsumptionRate();
 
             int feConsumed = Math.min(currentFe, maxFe);

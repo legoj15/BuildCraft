@@ -19,14 +19,10 @@ import java.util.Comparator;
 
 //? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.BakedQuad;
-import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
-import net.minecraft.client.resources.model.geometry.QuadCollection;
 //?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.BlockModelPart;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
-import net.minecraft.client.resources.model.QuadCollection;*/
+import net.minecraft.client.renderer.block.model.BlockStateModel;*/
 //?} else {
 /*import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.resources.model.BakedModel;*/
@@ -38,6 +34,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import buildcraft.api.core.BCDebugging;
 import buildcraft.api.core.BCLog;
 
+import buildcraft.lib.client.model.BlockModelQuadExtractor;
 import buildcraft.lib.misc.ItemStackKey;
 
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
@@ -328,7 +325,7 @@ public class FacadeDeduplicator {
      * <p>{@code state} is the blockstate the {@code model} was looked up for. On the modern
      * ({@code >=1.21.10}) nodes the model is already state-resolved and {@code collectParts}
      * needs no state, so it is unused there; on 1.21.1 it is forwarded into the legacy
-     * {@code BakedModel.getQuads(state, ...)} call — see {@link #getQuadsFromModel}.
+     * {@code BakedModel.getQuads(state, ...)} call — see {@link BlockModelQuadExtractor#getQuadsFromModel}.
      */
     //? if >=1.21.10 {
     private static String computeTextureFingerprint(BlockState state, BlockStateModel model) {
@@ -339,7 +336,7 @@ public class FacadeDeduplicator {
             Set<String> textures = new LinkedHashSet<>();
 
             for (Direction dir : Direction.values()) {
-                List<BakedQuad> quads = getQuadsFromModel(state, model, dir);
+                List<BakedQuad> quads = BlockModelQuadExtractor.getQuadsFromModel(state, model, dir, RANDOM);
                 for (BakedQuad quad : quads) {
                     //? if >=26.1 {
                     textures.add(dir.name() + ":" + quad.materialInfo().sprite().contents().name().toString());
@@ -351,7 +348,7 @@ public class FacadeDeduplicator {
                 }
             }
             // Also check null-direction (general/unculled quads)
-            List<BakedQuad> generalQuads = getQuadsFromModel(state, model, null);
+            List<BakedQuad> generalQuads = BlockModelQuadExtractor.getQuadsFromModel(state, model, null, RANDOM);
             for (BakedQuad quad : generalQuads) {
                 //? if >=26.1 {
                 textures.add("GENERAL:" + quad.materialInfo().sprite().contents().name().toString());
@@ -375,45 +372,4 @@ public class FacadeDeduplicator {
         }
     }
 
-    /**
-     * Extracts BakedQuads for a given face from a BlockStateModel using the
-     * NeoForge 1.21.11 collectParts/SimpleModelWrapper API.
-     */
-    //? if >=1.21.10 {
-    private static List<BakedQuad> getQuadsFromModel(BlockState state, BlockStateModel model, Direction side) {
-    //?} else {
-    /*private static List<BakedQuad> getQuadsFromModel(BlockState state, net.minecraft.client.resources.model.BakedModel model, Direction side) {*/
-    //?}
-        //? if >=26.1 {
-        List<BlockStateModelPart> parts = new ArrayList<>();
-        model.collectParts(RANDOM, parts);
-        List<BakedQuad> result = new ArrayList<>();
-        for (BlockStateModelPart part : parts) {
-            if (part instanceof net.minecraft.client.resources.model.SimpleModelWrapper smw) {
-                QuadCollection qc = smw.quads();
-                result.addAll(qc.getQuads(side));
-            }
-        }
-        return result;
-        //?} elif >=1.21.10 {
-        /*List<BlockModelPart> parts = new ArrayList<>();
-        model.collectParts(RANDOM, parts);
-        List<BakedQuad> result = new ArrayList<>();
-        for (BlockModelPart part : parts) {
-            if (part instanceof net.minecraft.client.renderer.block.model.SimpleModelWrapper smw) {
-                QuadCollection qc = smw.quads();
-                result.addAll(qc.getQuads(side));
-            }
-        }
-        return result;*/
-        //?} else {
-        /*// 1.21.1: BakedModel.getQuads needs the REAL block state, not null. Vanilla SimpleBakedModel
-        // ignores it, but (a) multipart models evaluate their selectors against it and (b) third-party
-        // IDynamicBakedModels may dereference it without a null-check — e.g. Modular Machinery Reborn's
-        // hatch model NPEs on state.hasProperty(...) and log-spams once per face per hatch block at every
-        // world join (issue #24). The state is on hand at both call sites; forward it, mirroring
-        // PlugBakerFacade.getQuadsFromModel which already fixed this for facade rendering.
-        return model.getQuads(state, side, RANDOM);*/
-        //?}
-    }
 }

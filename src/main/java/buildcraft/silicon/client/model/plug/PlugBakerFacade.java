@@ -18,14 +18,10 @@ import org.apache.commons.lang3.tuple.Pair;
 import net.minecraft.client.Minecraft;
 //? if >=26.1 {
 import net.minecraft.client.resources.model.geometry.BakedQuad;
-import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
-import net.minecraft.client.resources.model.geometry.QuadCollection;
 //?} elif >=1.21.10 {
 /*import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.BlockModelPart;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
-import net.minecraft.client.resources.model.QuadCollection;*/
+import net.minecraft.client.renderer.block.model.BlockStateModel;*/
 //?} else {
 /*import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.resources.model.BakedModel;*/
@@ -37,6 +33,7 @@ import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.transport.pluggable.IPluggableStaticBaker;
 
+import buildcraft.lib.client.model.BlockModelQuadExtractor;
 import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.client.model.MutableVertex;
@@ -72,44 +69,6 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
     private static final int[] ROTATIONS = { ROT_NONE, ROT_CW90, ROT_CW180, ROT_CCW90 };
 
     private static final RandomSource RANDOM = RandomSource.create();
-
-    /** Extract BakedQuads for a given face from a BlockStateModel.
-     * NeoForge 1.21.11 no longer has BakedModel.getQuads() — we must use
-     * collectParts() to get BlockModelParts, then extract quads from each part's QuadCollection. */
-    //? if >=1.21.10 {
-    private static List<BakedQuad> getQuadsFromModel(BlockState state, BlockStateModel model, Direction side) {
-    //?} else {
-    /*private static List<BakedQuad> getQuadsFromModel(BlockState state, net.minecraft.client.resources.model.BakedModel model, Direction side) {*/
-    //?}
-        //? if >=26.1 {
-        List<BlockStateModelPart> parts = new ArrayList<>();
-        model.collectParts(RANDOM, parts);
-        List<BakedQuad> result = new ArrayList<>();
-        for (BlockStateModelPart part : parts) {
-            if (part instanceof net.minecraft.client.resources.model.SimpleModelWrapper smw) {
-                QuadCollection qc = smw.quads();
-                result.addAll(qc.getQuads(side));
-            }
-        }
-        return result;
-        //?} elif >=1.21.10 {
-        /*List<BlockModelPart> parts = new ArrayList<>();
-        model.collectParts(RANDOM, parts);
-        List<BakedQuad> result = new ArrayList<>();
-        for (BlockModelPart part : parts) {
-            if (part instanceof net.minecraft.client.renderer.block.model.SimpleModelWrapper smw) {
-                QuadCollection qc = smw.quads();
-                result.addAll(qc.getQuads(side));
-            }
-        }
-        return result;*/
-        //?} else {
-        /*// 1.21.1: BakedModel.getQuads needs the real block state so MULTIPART models (mushroom
-        // blocks etc.) can evaluate their multipart selectors — passing null matched no parts and
-        // returned zero quads, so a mushroom-block facade rendered invisible.
-        return model.getQuads(state, side, RANDOM);*/
-        //?}
-    }
 
     private int getVertexIndex(List<Vec3> positions,
                                Direction.Axis axis,
@@ -157,7 +116,7 @@ public enum PlugBakerFacade implements IPluggableStaticBaker<KeyPlugFacade> {
                                                   //?}
                                                   Direction side,
                                                   Vec3 pos0, Vec3 pos1, Vec3 pos2, Vec3 pos3) {
-        return getQuadsFromModel(state, model, side).stream()
+        return BlockModelQuadExtractor.getQuadsFromModel(state, model, side, RANDOM).stream()
             .map(quad -> {
                 MutableQuad mutableQuad = new MutableQuad().fromBakedItem(quad);
                 boolean positive = side.getAxisDirection() == Direction.AxisDirection.POSITIVE;

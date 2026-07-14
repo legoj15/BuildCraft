@@ -455,17 +455,8 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
 
         // Execute tasks.
         // Ramp the per-tick power budget up to the rated MAX_POWER_PER_TICK as the battery fills,
-        // reaching full rate at half charge (capacity/2 divisor) — the same curve the Quarry,
-        // Distiller, and Laser use. (Was capacity*2, a level the battery can never reach, so the
-        // Builder/Filler were clipped to half their rated speed and only at a completely full battery.)
-        long max = Math.min(
-            (long) (
-                MAX_POWER_PER_TICK *
-                    (double) (tile.getBattery().getStored() + MAX_POWER_PER_TICK / 10) /
-                    (tile.getBattery().getCapacity() / 2)
-            ),
-            MAX_POWER_PER_TICK
-        );
+        // reaching full rate at half charge — the same soft-start curve every powered machine uses.
+        long max = tile.getBattery().rampedExtractLimit(MAX_POWER_PER_TICK);
 
         // Break tasks
         if (!breakTasks.isEmpty()) {
@@ -569,15 +560,8 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      */
     public void clientTick() {
         long stored = tile.getBattery().getStored();
-        // Mirror the server-side ramp curve exactly (capacity/2 divisor; see serverTick).
-        long max = Math.min(
-            (long) (
-                MAX_POWER_PER_TICK *
-                    (double) (stored + MAX_POWER_PER_TICK / 10) /
-                    (tile.getBattery().getCapacity() / 2)
-            ),
-            MAX_POWER_PER_TICK
-        );
+        // Mirror the server-side ramp curve exactly (see serverTick).
+        long max = tile.getBattery().rampedExtractLimit(MAX_POWER_PER_TICK);
 
         prevClientBreakTasks.clear();
         for (BreakTask task : clientBreakTasks) {

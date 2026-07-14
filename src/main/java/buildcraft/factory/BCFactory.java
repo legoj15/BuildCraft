@@ -10,7 +10,6 @@ import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import buildcraft.api.mj.MjAPI;
 import buildcraft.core.BCCore;
 import buildcraft.lib.mj.MjBatteryEnergyHandler;
 //? if >=1.21.10 {
@@ -75,18 +74,16 @@ public class BCFactory {
         var fluidCap = Capabilities.FluidHandler.BLOCK;
         var energyCap = Capabilities.EnergyStorage.BLOCK;*/
         //?}
-        event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
-            (workbench, direction) -> workbench.getMjReceiver());
-        event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
-            (workbench, direction) -> workbench.getMjReceiver());
+        // The Auto Workbench now backs its craft progress with a real MjBattery, so it exposes the
+        // Forge-Energy cap (rf_enabled-gated) like every other machine — previously it was dead on FE cables.
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
+            workbench -> workbench.getMjReceiver(), energyCap,
+            workbench -> MjBatteryEnergyHandler.createIfRfEnabled(workbench.getBattery()));
         event.registerBlockEntity(itemCap, BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
             (workbench, direction) -> workbench.getItemHandler(direction));
-        event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCFactoryBlockEntities.MINING_WELL.get(),
-            (miner, direction) -> miner.getMjReceiver());
-        event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCFactoryBlockEntities.MINING_WELL.get(),
-            (miner, direction) -> miner.getMjReceiver());
-        event.registerBlockEntity(energyCap, BCFactoryBlockEntities.MINING_WELL.get(),
-            (miner, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(miner.getBattery()));
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.MINING_WELL.get(),
+            miner -> miner.getMjReceiver(), energyCap,
+            miner -> MjBatteryEnergyHandler.createIfRfEnabled(miner.getBattery()));
         // Mining Well has no internal item buffer — it pushes mined drops straight into adjacent
         // pipes via InventoryUtil.addToBestAcceptor. Expose an empty item handler (like the Quarry)
         // purely so item pipes render a connection to it; in 1.12.2 the AutomaticProvidingTransactor
@@ -98,12 +95,9 @@ public class BCFactory {
         /*event.registerBlockEntity(itemCap, BCFactoryBlockEntities.MINING_WELL.get(),
             (miner, direction) -> net.neoforged.neoforge.items.wrapper.EmptyItemHandler.INSTANCE);*/
         //?}
-        event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCFactoryBlockEntities.PUMP.get(),
-            (pump, direction) -> pump.getMjReceiver());
-        event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCFactoryBlockEntities.PUMP.get(),
-            (pump, direction) -> pump.getMjReceiver());
-        event.registerBlockEntity(energyCap, BCFactoryBlockEntities.PUMP.get(),
-            (pump, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(pump.getBattery()));
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.PUMP.get(),
+            pump -> pump.getMjReceiver(), energyCap,
+            pump -> MjBatteryEnergyHandler.createIfRfEnabled(pump.getBattery()));
         event.registerBlockEntity(fluidCap, BCFactoryBlockEntities.TANK.get(),
             (tank, direction) -> new buildcraft.factory.tile.TankColumnResourceHandler(tank));
         //? if >=1.21.10 {
@@ -134,20 +128,14 @@ public class BCFactory {
         //?}
         event.registerBlockEntity(fluidCap, BCFactoryBlockEntities.FLOOD_GATE.get(),
             (floodGate, direction) -> floodGate.getTank());
-        event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCFactoryBlockEntities.CHUTE.get(),
-            (chute, direction) -> chute.getMjReceiver());
-        event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCFactoryBlockEntities.CHUTE.get(),
-            (chute, direction) -> chute.getMjReceiver());
-        event.registerBlockEntity(energyCap, BCFactoryBlockEntities.CHUTE.get(),
-            (chute, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(chute.getBattery()));
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.CHUTE.get(),
+            chute -> chute.getMjReceiver(), energyCap,
+            chute -> MjBatteryEnergyHandler.createIfRfEnabled(chute.getBattery()));
         event.registerBlockEntity(itemCap, BCFactoryBlockEntities.CHUTE.get(),
             (chute, direction) -> chute.getItemHandler(direction));
-        event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCFactoryBlockEntities.DISTILLER.get(),
-            (distiller, direction) -> distiller.getMjReceiver());
-        event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCFactoryBlockEntities.DISTILLER.get(),
-            (distiller, direction) -> distiller.getMjReceiver());
-        event.registerBlockEntity(energyCap, BCFactoryBlockEntities.DISTILLER.get(),
-            (distiller, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(distiller.getBattery()));
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.DISTILLER.get(),
+            distiller -> distiller.getMjReceiver(), energyCap,
+            distiller -> MjBatteryEnergyHandler.createIfRfEnabled(distiller.getBattery()));
         //? if >=1.21.10 {
         event.registerBlockEntity(fluidCap, BCFactoryBlockEntities.DISTILLER.get(),
             (distiller, direction) -> {

@@ -16,7 +16,6 @@ import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import buildcraft.api.filler.FillerManager;
-import buildcraft.api.mj.MjAPI;
 import buildcraft.api.template.TemplateApi;
 import buildcraft.builders.gui.GuiArchitectTable;
 import buildcraft.builders.gui.GuiElectronicLibrary;
@@ -95,17 +94,12 @@ public class BCBuilders {
         var fluidCap = Capabilities.FluidHandler.BLOCK;
         var energyCap = Capabilities.EnergyStorage.BLOCK;*/
         //?}
-        // Quarry
-        event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCBuildersBlockEntities.QUARRY.get(),
-            (quarry, direction) -> quarry.getMjReceiver());
-        // Advertise as an MJ connector too, so kinesis pipes route power to it — matches every
-        // factory/silicon machine. A receiver IS a connector (IMjReceiver extends IMjConnector).
-        event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCBuildersBlockEntities.QUARRY.get(),
-            (quarry, direction) -> quarry.getMjReceiver());
-        event.registerBlockEntity(energyCap, BCBuildersBlockEntities.QUARRY.get(),
-            // Gate FE insertion on the same "has work" predicate as the MJ receiver, so a finished
-            // quarry refuses FE pushes too instead of topping its battery off (MJ/FE parity).
-            (quarry, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(quarry.getBattery(), quarry::hasPendingWork));
+        // Quarry — advertises as an MJ connector too so kinesis pipes route power to it (a receiver IS a
+        // connector), and gates FE insertion on the same "has work" predicate as the MJ receiver, so a
+        // finished quarry refuses FE pushes instead of topping its battery off (MJ/FE parity).
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCBuildersBlockEntities.QUARRY.get(),
+            quarry -> quarry.getMjReceiver(), energyCap,
+            quarry -> MjBatteryEnergyHandler.createIfRfEnabled(quarry.getBattery(), quarry::hasPendingWork));
         //? if >=1.21.10 {
         event.registerBlockEntity(itemCap, BCBuildersBlockEntities.QUARRY.get(),
             (quarry, direction) -> net.neoforged.neoforge.transfer.EmptyResourceHandler.instance());
@@ -115,24 +109,18 @@ public class BCBuilders {
         //?}
 
         // Filler
-        event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCBuildersBlockEntities.FILLER.get(),
-            (filler, direction) -> filler.getMjReceiver());
-        event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCBuildersBlockEntities.FILLER.get(),
-            (filler, direction) -> filler.getMjReceiver());
-        event.registerBlockEntity(energyCap, BCBuildersBlockEntities.FILLER.get(),
-            (filler, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(filler.getBattery()));
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCBuildersBlockEntities.FILLER.get(),
+            filler -> filler.getMjReceiver(), energyCap,
+            filler -> MjBatteryEnergyHandler.createIfRfEnabled(filler.getBattery()));
         event.registerBlockEntity(itemCap, BCBuildersBlockEntities.FILLER.get(),
             (filler, direction) -> filler.getItemHandler(direction));
 
         // Builder — wires it into the same pipe/engine capability surfaces as the Filler so MJ
         // engines push power into the battery, pipes push resources into the 27-slot grid, and
         // fluid pipes can top off the 4 tanks for fluid-block placement.
-        event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCBuildersBlockEntities.BUILDER.get(),
-            (builder, direction) -> builder.getMjReceiver());
-        event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCBuildersBlockEntities.BUILDER.get(),
-            (builder, direction) -> builder.getMjReceiver());
-        event.registerBlockEntity(energyCap, BCBuildersBlockEntities.BUILDER.get(),
-            (builder, direction) -> MjBatteryEnergyHandler.createIfRfEnabled(builder.getBattery()));
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCBuildersBlockEntities.BUILDER.get(),
+            builder -> builder.getMjReceiver(), energyCap,
+            builder -> MjBatteryEnergyHandler.createIfRfEnabled(builder.getBattery()));
         event.registerBlockEntity(itemCap, BCBuildersBlockEntities.BUILDER.get(),
             (builder, direction) -> builder.getItemHandler(direction));
         event.registerBlockEntity(fluidCap, BCBuildersBlockEntities.BUILDER.get(),

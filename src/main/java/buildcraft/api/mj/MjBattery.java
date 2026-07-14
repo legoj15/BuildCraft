@@ -107,6 +107,34 @@ public class MjBattery  {
         return extracting;
     }
 
+    /** Soft-start extraction throttle. Returns the maximum micro-joules a machine should draw from this
+     * battery this tick, ramping linearly from a small floor while near-empty up to {@code maxPerTick}
+     * once the battery reaches half charge (and holding {@code maxPerTick} above that). Machines that
+     * want to spin up smoothly as their buffer fills — rather than dumping the whole battery the instant
+     * power arrives — call this and then {@code extractPower(0, limit)} (optionally {@code min}'d against
+     * what they actually need this tick). Does not itself extract anything.
+     *
+     * <p>The floor term ({@code maxPerTick / 10}) only shifts the very bottom of the ramp: it keeps a
+     * near-empty battery from stalling in the integer-truncation dead-zone. It is under 0.5% of half
+     * capacity for every BuildCraft machine, so above a sliver of charge the curve is just the plain
+     * {@code maxPerTick * stored / (capacity/2)} line, reaching {@code maxPerTick} at half charge.
+     *
+     * @param maxPerTick the machine's rated full-speed draw per tick, in micro-joules.
+     * @return the throttled extraction budget for this tick, clamped to {@code [0, maxPerTick]}. */
+    public long rampedExtractLimit(long maxPerTick) {
+        long halfCapacity = capacity / 2;
+        // At/above half charge the ramp is saturated. Returning maxPerTick directly here also caps the
+        // operand of the multiply below at (capacity/2), so maxPerTick * (stored + floor) cannot overflow
+        // a long at any sane capacity — the quarry's 24000-MJ buffer would overflow the FULL-charge product
+        // (2.4e10 * 5.12e8 > Long.MAX) without this guard, which is why the quarry previously carried a
+        // hand-rolled BigInteger fallback. Bounded to half capacity, the quarry's product is ~6.2e18 < Long.MAX.
+        if (halfCapacity <= 0 || microJoules >= halfCapacity) {
+            return maxPerTick;
+        }
+        long limit = maxPerTick * (microJoules + maxPerTick / 10) / halfCapacity;
+        return Math.min(limit, maxPerTick);
+    }
+
     public boolean isFull() {
         return microJoules >= capacity;
     }

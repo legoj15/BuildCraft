@@ -5,6 +5,7 @@
  */
 package buildcraft.lib.engine;
 
+import java.util.function.Function;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -347,13 +348,23 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
      * candidate and looked up through the NeoForge MJ capability, with an FE/RF auto-convert
      * fallback for cross-mod compatibility.
      */
+    /**
+     * Walks the chain of same-type engines facing {@code side} — hopping through up to
+     * {@link #getMaxChainLength()} further engines (each must face the same way) — and resolves the
+     * first non-engine tile at the end of the line through {@code terminusResolver}. Returns null if the
+     * walk hits an empty position, meets a same-type engine facing a different way, or exhausts the chain
+     * length without reaching a non-engine tile.
+     *
+     * <p>Shared by {@link #getReceiverToPower} (MJ receiver + FE auto-convert fallback) and
+     * {@link buildcraft.energy.tile.TileDynamoMJ#getFeReceiver} (raw FE handler) — the walk is byte-for-byte
+     * identical, only the terminus lookup differs.
+     */
     @Nullable
-    public IMjReceiver getReceiverToPower(Direction side) {
+    protected <R> R walkChain(Direction side, Function<BlockPos, R> terminusResolver) {
         if (level == null) return null;
 
-        // Walk the chain: hop through same-type engines facing `side` until some other tile (the
-        // receiver) is reached. Each engine costs one hop, so up to getMaxChainLength() engines
-        // may sit between this engine and the receiver.
+        // Hop through same-type engines facing `side` until some other tile (the receiver) is reached.
+        // Each engine costs one hop, so up to getMaxChainLength() engines may sit between this engine and it.
         BlockPos pos = getBlockPos();
         for (int len = 0; len <= getMaxChainLength(); len++) {
             BlockPos targetPos = pos.relative(side);
@@ -369,8 +380,16 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
                 pos = targetPos;
                 continue;
             }
-
             // Any other tile is the receiver at the end of the chain.
+            return terminusResolver.apply(targetPos);
+        }
+        // Ran out of chain length while still on engines — no receiver within reach.
+        return null;
+    }
+
+    @Nullable
+    public IMjReceiver getReceiverToPower(Direction side) {
+        return walkChain(side, targetPos -> {
             // 1. Try the native MJ capability.
             IMjReceiver receiver = level.getCapability(MjAPI.CAP_RECEIVER, targetPos, side.getOpposite());
             if (receiver != null && receiver.canConnect(getMjConnector()) && getMjConnector().canConnect(receiver)) {
@@ -389,9 +408,7 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
                 }
             }
             return null;
-        }
-        // Ran out of chain length while still on engines — no receiver within reach.
-        return null;
+        });
     }
 
     /**

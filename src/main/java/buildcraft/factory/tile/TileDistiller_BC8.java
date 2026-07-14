@@ -426,10 +426,7 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
             isStuck = !canFillLiquid || !canFillGas;
 
             if (canExtract && canFillLiquid && canFillGas) {
-                long max = MAX_MJ_PER_TICK;
-                max *= mjBattery.getStored() + max;
-                max /= mjBattery.getCapacity() / 2;
-                max = Math.min(max, MAX_MJ_PER_TICK);
+                long max = mjBattery.rampedExtractLimit(MAX_MJ_PER_TICK);
                 long power = mjBattery.extractPower(0, max);
                 // Feed into EWMA (alpha ≈ 0.05 for ~20-tick smoothing)
                 powerAvgSmoothed += (long) ((max - powerAvgSmoothed) * 0.05);

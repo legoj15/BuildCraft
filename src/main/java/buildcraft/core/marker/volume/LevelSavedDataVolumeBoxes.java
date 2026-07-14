@@ -7,7 +7,9 @@
 package buildcraft.core.marker.volume;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -44,6 +46,12 @@ public class LevelSavedDataVolumeBoxes extends SavedData {
     // we store only the NBT and load it lazily per-level.
     public Level world;
     public final List<VolumeBox> volumeBoxes = new ArrayList<>();
+
+    /**
+     * Snapshot (box id → serialized tag) of what dimension clients were last told, so
+     * {@link #broadcastToDimension} can send only what changed. Server-side baseline; not persisted.
+     */
+    private final Map<UUID, CompoundTag> lastBroadcast = new HashMap<>();
 
     // The SavedDataType uses CompoundTag.CODEC to persist the raw tag, and we
     // decode it manually because VolumeBox needs a Level reference.
@@ -125,17 +133,42 @@ public class LevelSavedDataVolumeBoxes extends SavedData {
         broadcastToDimension();
     }
 
-    /** Sends the full current set of VolumeBoxes to every player in this dimension. Server-side only. */
+    /**
+     * Diffs the current VolumeBox set against {@link #lastBroadcast} and sends only the changed boxes
+     * (add-or-update) plus the ids of any that vanished, instead of re-broadcasting the whole set on
+     * every mutation. No packet is sent when nothing changed. Server-side only.
+     */
     public void broadcastToDimension() {
         if (!(world instanceof ServerLevel sl)) return;
-        List<CompoundTag> tags = volumeBoxes.stream().map(VolumeBox::writeToNBT).toList();
-        PacketDistributor.sendToPlayersInDimension(sl, new MessageVolumeBoxes(tags));
+
+        Map<UUID, CompoundTag> current = new HashMap<>();
+        List<CompoundTag> upserts = new ArrayList<>();
+        for (VolumeBox volumeBox : volumeBoxes) {
+            CompoundTag tag = volumeBox.writeToNBT();
+            current.put(volumeBox.id, tag);
+            CompoundTag previous = lastBroadcast.get(volumeBox.id);
+            if (previous == null || !previous.equals(tag)) {
+                upserts.add(tag);
+            }
+        }
+        List<UUID> removed = new ArrayList<>();
+        for (UUID id : lastBroadcast.keySet()) {
+            if (!current.containsKey(id)) {
+                removed.add(id);
+            }
+        }
+
+        lastBroadcast.clear();
+        lastBroadcast.putAll(current);
+
+        if (upserts.isEmpty() && removed.isEmpty()) return;
+        PacketDistributor.sendToPlayersInDimension(sl, MessageVolumeBoxes.delta(upserts, removed));
     }
 
-    /** Sends the full current set of VolumeBoxes to one specific player. Server-side only. */
+    /** Sends the full current set of VolumeBoxes to one specific player (initial tracking). Server-side only. */
     public void sendTo(ServerPlayer player) {
         List<CompoundTag> tags = volumeBoxes.stream().map(VolumeBox::writeToNBT).toList();
-        PacketDistributor.sendToPlayer(player, new MessageVolumeBoxes(tags));
+        PacketDistributor.sendToPlayer(player, MessageVolumeBoxes.fullReplace(tags));
     }
 
     /**

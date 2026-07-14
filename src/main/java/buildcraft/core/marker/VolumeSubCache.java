@@ -1,5 +1,5 @@
 /* Copyright (c) 2016 SpaceToad and the BuildCraft team
- * 
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.core.marker;
@@ -18,7 +18,6 @@ import net.minecraft.world.level.Level;
 
 import buildcraft.lib.marker.MarkerCache;
 import buildcraft.lib.marker.MarkerSubCache;
-import buildcraft.lib.net.MessageMarker;
 
 import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
 
@@ -27,7 +26,6 @@ import buildcraft.core.client.BuildCraftLaserManager;
 
 @SuppressWarnings("this-escape")
 public class VolumeSubCache extends MarkerSubCache<VolumeConnection> {
-    private VolumeSavedData savedData;
 
     @Override
     public LaserType getPossibleLaserType() {
@@ -36,25 +34,12 @@ public class VolumeSubCache extends MarkerSubCache<VolumeConnection> {
 
     public VolumeSubCache(Level world) {
         super(world, MarkerCache.CACHES.indexOf(VolumeCache.INSTANCE));
-        VolumeSavedData data = VolumeSavedData.getOrCreate(world);
-        this.savedData = data;
-        for (BlockPos pos : data.markerPositions) {
-            loadMarker(pos, null);
-        }
-        for (java.util.List<BlockPos> connectionPositions : data.markerConnections) {
-            if (connectionPositions.size() >= 2) {
-                addConnection(new VolumeConnection(this, connectionPositions));
-            }
-        }
-        data.setSubCache(this);
-        data.setDirty();
+        initFromSavedData(VolumeSavedData.getOrCreate(world));
     }
 
     @Override
-    protected void markSavedDataDirty() {
-        if (savedData != null) {
-            savedData.setDirty();
-        }
+    protected VolumeConnection createConnection(List<BlockPos> positions) {
+        return new VolumeConnection(this, positions);
     }
 
     @Override
@@ -116,29 +101,5 @@ public class VolumeSubCache extends MarkerSubCache<VolumeConnection> {
             }
         }
         return valids.build();
-    }
-
-    @Override
-    protected boolean handleMessage(MessageMarker message) {
-        List<BlockPos> positions = message.positions();
-        if (message.connection()) {
-            if (message.add()) {
-                for (BlockPos p : positions) {
-                    VolumeConnection existing = this.getConnection(p);
-                    destroyConnection(existing);
-                }
-                VolumeConnection con = new VolumeConnection(this, positions);
-                addConnection(con);
-            } else { // removing from a connection
-                for (BlockPos p : positions) {
-                    VolumeConnection existing = this.getConnection(p);
-                    if (existing != null) {
-                        existing.removeMarker(p);
-                        refreshConnection(existing);
-                    }
-                }
-            }
-        }
-        return false;
     }
 }

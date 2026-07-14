@@ -150,25 +150,16 @@ public class MarkerRenderer {
     }
 
     /**
-     * Renders all volume boxes from ClientVolumeBoxes.
-     * Uses reflection-free approach: the BCCore module calls this via the public API.
+     * Renders all client-side volume boxes. BuildCraft is one mod (the old cross-module boundary that
+     * justified a callback here does not exist), and lib already references buildcraft.core elsewhere,
+     * so call the core renderer directly.
      */
     private static void renderVolumeBoxes() {
-        if (volumeBoxRenderCallback != null) {
-            volumeBoxRenderCallback.run();
-        }
+        buildcraft.core.client.VolumeBoxRenderer.renderAll();
     }
-
-    /** Callback for rendering volume boxes, set by buildcraft-core */
-    private static Runnable volumeBoxRenderCallback;
 
     /** Callback for checking if the player holds a marker connector, set by buildcraft-core */
     private static Predicate<Player> holdingConnectorCheck;
-
-    /** Called by buildcraft-core to register the volume box rendering callback */
-    public static void setVolumeBoxRenderCallback(Runnable callback) {
-        volumeBoxRenderCallback = callback;
-    }
 
     /** Called by buildcraft-core to register the held-connector check */
     public static void setHoldingConnectorCheck(Predicate<Player> check) {

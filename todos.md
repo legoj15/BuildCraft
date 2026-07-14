@@ -24,29 +24,11 @@ Full report: [docs/unification-audit.md](docs/unification-audit.md). Two codebas
 #### ROOT 5 — client render kits
 - [ ] One `lib.client.model` block-quad helper for the `collectParts`/`SimpleModelWrapper` ladder (`PreviewBlockModelRenderer`/`FacadeDeduplicator`/`PlugBakerFacade` — **3 byte-identical copies**).
 
-#### ROOT 6 — pipe registration + flow
-- [ ] Make `PipeDefinition` set iterable (a data table) → the **46 hand-written `ItemPipeHolder` registrations** loop like `WIRE_ITEMS`.
-- [ ] Generic kinesis-flow base (`AbstractPipeFlowPower<E>` + renderer) from `PipeFlowPower`/`PipeFlowRedstoneFlux`. Keep the energy-boundary directive seams; **fixes the `PipeFlowRendererFE` invisible-stem render drift** (FE overload renders invisible).
-
 #### Independent refactors (no shared root)
-- [ ] Genericise the schematic twins → `SchematicManager<C,S>` (5 `SchematicBlock*` vs 5 `SchematicEntity*`; on-miss policy + matcher are the only real differences). Start with the non-api manager NBT codec.
-- [ ] `TileBuilder.invResources` → `ItemHandlerSimple` (~205 hand-rolled lines; sibling `TileFiller` does it in one line; needs `invRes_N` NBT migration).
-- [ ] **Marker/volume plumbing dedup.** DECIDED (2026-06-29): keep the survival-ephemeral (`VolumeConnection` + `IAreaProvider.removeFromWorld`) vs creative-persistent (`VolumeBox` + `Lock`/addons) split — it's deliberate balance, woven through Quarry/Filler/Architect via the `markerBox` flag; do NOT merge the two region concepts (a unified lifecycle-flag class relocates complexity, it doesn't remove it). Dedupe ONLY the plumbing: `PathSavedData`/`VolumeSavedData` are byte-identical → fill the empty `MarkerSavedData` base; collapse the Path/Volume `Cache`/`SubCache` boilerplate (Connection geometry genuinely differs — leave); fix `MessageVolumeBoxes` full-replace broadcast → incremental deltas (perf); drop `MarkerRenderer`'s `volumeBoxRenderCallback` (non-existent "BCCore module boundary" — call `VolumeBoxRenderer` directly). Zero gameplay/save-compat change.
-- [ ] Statement-trigger base `AbstractContainerContentTrigger<R>` (inventory vs fluid re-roll the scan loop + duplicate enums). Delete silicon's **7 redundant `registerStatement`** calls (ctor self-registers). Rename the collision-prone shared `buildcraft:fluid.` trigger prefix (legacy alias).
-- [ ] `registerSimpleBlockItem`: standardise on the holder-only form (**17 holder vs 20 redundant-id-string**).
 - [ ] Generic `BCRecipeBookComponent<M>` (`AWRecipeBookComponent`/`ACTRecipeBookComponent` are verbatim dupes); delete the 5 dead `lib.gui.recipe` phantom stubs.
 - [ ] Fold the 2 near-identical JEI bucket transfer handlers into a parameterised base; reference the canonical `ContainerBC_Neptune.NET_JEI_RECIPE_TRANSFER` (duplicated in `BlueprintTransferHandler`). REI: hoist the 2 ~95% copy-paste machine plugins into a shared `lib.compat.rei` helper.
 - [ ] Route the 4 direct `mjPerRf` config reads through `MjAPI.getRfConversion` (7 already do).
 - [ ] Extract `MjBattery.rampedExtractLimit()` — the soft-start ramp is now consistent (`capacity/2`, full rate at half charge) across `SnapshotBuilder`/`TileDistiller_BC8`/`TileLaser`/`TileQuarry`, but the curve is still copy-pasted in 4 sites (the `*2` divergence that clipped Builder/Filler to half speed is fixed). Reconcile the minor floor terms (`+MAX` vs `+MAX/10` vs `+MJ/2`) when extracting.
-
-#### Small leaf cleanups (low risk, no behaviour change)
-- [ ] `DetailedConfigOption` fake config — inline `0.725f` at [PipeBaseModelGenStandard.java:377](src/main/java/buildcraft/transport/client/model/PipeBaseModelGenStandard.java), delete the class.
-- [ ] `RenderUtil.swapARGBforABGR` == `ColourUtil.swapArgbToAbgr` — redirect 2 sites (`VariablePartCuboidBase`/`VariablePartTextureExpand`), delete (verify visually).
-- [ ] 5 dead `lib.net` `MessageManager`-family stub files + 2 dead imports — `git-rm`.
-- [ ] `PipeFlowItems` modern TILE-insert: bare `insert()` → `ResourceHandlerUtil.insertStacking` (parity with every other ejector).
-- [ ] `BCEnergyConfig`: 7 `list→Set<Identifier>` getters → one `toIdSet` helper.
-- [ ] Orphan lang key `bptStoreExternalThreshold` — delete.
-- [ ] `StatementParameterItemStackExact` dead (only a gametest refs it) — delete-or-finish.
 
 #### Needs a decision first (not a silent refactor)
 - [ ] **`buildcraft.api` NBT-method renames** (uppercase `writeToNBT`/`serializeNBT` → lowercase) — breaking if the API jar ships; defer to the API-redistribution decision.

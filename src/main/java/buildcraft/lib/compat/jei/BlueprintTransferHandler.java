@@ -27,7 +27,7 @@ import mezz.jei.api.recipe.types.IRecipeType;
 /*import mezz.jei.api.recipe.RecipeType;*/
 //?}
 
-import buildcraft.lib.gui.ContainerBC_Neptune;
+import buildcraft.lib.gui.BCContainer;
 import buildcraft.lib.misc.RegistryKeyUtil;
 
 /**
@@ -91,9 +91,9 @@ public class BlueprintTransferHandler<C extends AbstractContainerMenu>
             return null;
         }
 
-        if (container instanceof ContainerBC_Neptune bcContainer) {
+        if (container instanceof BCContainer bcContainer) {
             // Send a custom container message with the recipe's resource location.
-            // The server-side handler in ContainerBC_Neptune will look up the recipe
+            // The server-side handler in ContainerBCCrafting will look up the recipe
             // and call CraftingUtil.placeRecipeInBlueprint().
             String recipeIdStr = RegistryKeyUtil.id(recipe.id()).toString();
             bcContainer.sendMessage(NET_JEI_RECIPE_TRANSFER, buf -> {

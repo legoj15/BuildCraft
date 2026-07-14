@@ -109,7 +109,7 @@ public class BCSiliconReiPlugin implements REIClientPlugin {
         public Stream<BoundsProvider> getDraggableAcceptingBounds(
                 DraggingContext<GuiAdvancedCraftingTable> context, DraggableStack stack) {
             GuiAdvancedCraftingTable gui = context.getScreen();
-            ContainerBC_Neptune container = gui.getMenu();
+            ContainerAdvancedCraftingTable container = gui.getMenu();
             List<BoundsProvider> targets = new ArrayList<>();
 
             for (int i = 0; i < container.slots.size(); i++) {
@@ -127,7 +127,7 @@ public class BCSiliconReiPlugin implements REIClientPlugin {
         public DraggedAcceptorResult acceptDraggedStack(
                 DraggingContext<GuiAdvancedCraftingTable> context, DraggableStack stack) {
             GuiAdvancedCraftingTable gui = context.getScreen();
-            ContainerBC_Neptune container = gui.getMenu();
+            ContainerAdvancedCraftingTable container = gui.getMenu();
 
             Object value = stack.getStack().getValue();
             if (!(value instanceof ItemStack itemStack) || itemStack.isEmpty()) {

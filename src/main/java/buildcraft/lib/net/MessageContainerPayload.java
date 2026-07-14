@@ -17,7 +17,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.api.core.BCLog;
-import buildcraft.lib.gui.ContainerBC_Neptune;
+import buildcraft.lib.gui.BCContainer;
 
 /**
  * Network payload for sending arbitrary container-scoped messages between client and server.
@@ -26,7 +26,7 @@ import buildcraft.lib.gui.ContainerBC_Neptune;
  * Each message carries:
  * <ul>
  *   <li>{@code containerId} — must match the player's currently open container</li>
- *   <li>{@code messageId} — dispatched by {@link ContainerBC_Neptune#readMessage}</li>
+ *   <li>{@code messageId} — dispatched by {@link BCContainer#readMessage}</li>
  *   <li>{@code payload} — arbitrary bytes written by the sender</li>
  * </ul>
  */
@@ -63,7 +63,7 @@ public record MessageContainerPayload(
     /**
      * Bidirectional handler — works on both client and server.
      * Validates the player's open container matches, then dispatches to
-     * {@link ContainerBC_Neptune#readMessage}.
+     * {@link BCContainer#readMessage}.
      */
     public static void handle(MessageContainerPayload message, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
@@ -77,8 +77,8 @@ public record MessageContainerPayload(
                 // Stale or mismatched packet — silently discard
                 return;
             }
-            if (!(openContainer instanceof ContainerBC_Neptune bcContainer)) {
-                BCLog.logger.warn("[lib.net] Received container message but open container is not a ContainerBC_Neptune"
+            if (!(openContainer instanceof BCContainer bcContainer)) {
+                BCLog.logger.warn("[lib.net] Received container message but open container is not a BCContainer"
                     + " (got " + openContainer.getClass().getName() + ")");
                 return;
             }

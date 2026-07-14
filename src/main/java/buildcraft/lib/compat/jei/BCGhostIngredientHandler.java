@@ -16,6 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import mezz.jei.api.gui.handlers.IGhostIngredientHandler;
 import mezz.jei.api.ingredients.ITypedIngredient;
 
+import buildcraft.lib.gui.BCContainer;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.slot.IPhantomSlot;
@@ -43,7 +44,9 @@ public class BCGhostIngredientHandler<T extends GuiBC8<?>> implements IGhostIngr
             return targets;
         }
 
-        ContainerBC_Neptune container = gui.getMenu();
+        // gui.getMenu() captures the GuiBC8 bound (AbstractContainerMenu & BCContainer): `slots` comes
+        // from the menu, sendMessage from BCContainer — so the target below stores it as a BCContainer.
+        var container = gui.getMenu();
         for (int i = 0; i < container.slots.size(); i++) {
             Slot slot = container.slots.get(i);
             if (slot instanceof IPhantomSlot) {
@@ -68,11 +71,11 @@ public class BCGhostIngredientHandler<T extends GuiBC8<?>> implements IGhostIngr
      * a network message is sent to the server to set the slot contents.
      */
     private static class PhantomSlotTarget<I> implements Target<I> {
-        private final ContainerBC_Neptune container;
+        private final BCContainer container;
         private final int slotIndex;
         private final Rect2i area;
 
-        PhantomSlotTarget(ContainerBC_Neptune container, int slotIndex, int x, int y) {
+        PhantomSlotTarget(BCContainer container, int slotIndex, int x, int y) {
             this.container = container;
             this.slotIndex = slotIndex;
             // Standard slot size is 16x16, positioned 1px inside the 18x18 slot border

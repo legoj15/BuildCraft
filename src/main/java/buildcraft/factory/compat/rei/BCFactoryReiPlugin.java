@@ -108,7 +108,7 @@ public class BCFactoryReiPlugin implements REIClientPlugin {
         public Stream<BoundsProvider> getDraggableAcceptingBounds(
                 DraggingContext<GuiAutoCraftItems> context, DraggableStack stack) {
             GuiAutoCraftItems gui = context.getScreen();
-            ContainerBC_Neptune container = gui.getMenu();
+            ContainerAutoCraftItems container = gui.getMenu();
             List<BoundsProvider> targets = new ArrayList<>();
 
             for (int i = 0; i < container.slots.size(); i++) {
@@ -126,7 +126,7 @@ public class BCFactoryReiPlugin implements REIClientPlugin {
         public DraggedAcceptorResult acceptDraggedStack(
                 DraggingContext<GuiAutoCraftItems> context, DraggableStack stack) {
             GuiAutoCraftItems gui = context.getScreen();
-            ContainerBC_Neptune container = gui.getMenu();
+            ContainerAutoCraftItems container = gui.getMenu();
 
             Object value = stack.getStack().getValue();
             if (!(value instanceof ItemStack itemStack) || itemStack.isEmpty()) {

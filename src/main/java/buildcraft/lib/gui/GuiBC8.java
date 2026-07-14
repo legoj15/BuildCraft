@@ -8,6 +8,7 @@ package buildcraft.lib.gui;
 
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 //? if >=1.21.10 {
 import net.minecraft.client.input.MouseButtonEvent;
 //?}
@@ -25,7 +26,7 @@ import buildcraft.lib.gui.pos.IGuiArea;
  * imageWidth/imageHeight are now final — pass through super constructor.
  */
 @SuppressWarnings("this-escape")
-public abstract class GuiBC8<C extends ContainerBC_Neptune> extends AbstractContainerScreen<C> {
+public abstract class GuiBC8<C extends AbstractContainerMenu & BCContainer> extends AbstractContainerScreen<C> {
 
     public final BuildCraftGui mainGui;
 

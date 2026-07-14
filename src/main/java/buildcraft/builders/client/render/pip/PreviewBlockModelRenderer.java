@@ -6,7 +6,6 @@
 package buildcraft.builders.client.render.pip;
 
 //? if >=26.1 {
-import java.util.ArrayList;
 import java.util.List;
 
 import com.mojang.blaze3d.vertex.QuadInstance;
@@ -15,11 +14,10 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.color.block.BlockColors;
 import net.minecraft.client.color.block.BlockTintSource;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
-import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
-import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 
+import buildcraft.lib.client.model.BlockModelQuadExtractor;
 import buildcraft.lib.client.render.BCLibRenderTypes;
 //?}
 
@@ -91,15 +89,7 @@ public final class PreviewBlockModelRenderer {
     //?}
         //? if >=26.1 {
         BlockStateModel model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(state);
-        List<BlockStateModelPart> parts = new ArrayList<>();
-        model.collectParts(RANDOM, parts);
-        List<BakedQuad> quads = new ArrayList<>();
-        for (BlockStateModelPart part : parts) {
-            for (Direction dir : Direction.values()) {
-                quads.addAll(part.getQuads(dir));
-            }
-            quads.addAll(part.getQuads(null));
-        }
+        List<BakedQuad> quads = BlockModelQuadExtractor.getAllQuads(model, RANDOM);
         if (quads.isEmpty()) {
             return false;
         }

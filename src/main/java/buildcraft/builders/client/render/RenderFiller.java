@@ -32,6 +32,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import buildcraft.api.tiles.IControllable.Mode;
 
 import buildcraft.lib.client.render.BCLibRenderTypes;
+//? if >=1.21.10 {
+import buildcraft.lib.client.render.tile.BCRenderState;
+//?}
 import buildcraft.lib.client.render.tile.LedRenderUtil;
 import buildcraft.lib.client.render.tile.RenderPartCube;
 
@@ -60,7 +63,7 @@ import buildcraft.builders.tile.TileFiller;
  * </ul>
  */
 //? if >=1.21.10 {
-public class RenderFiller implements BlockEntityRenderer<TileFiller, FillerRenderState> {
+public class RenderFiller implements BlockEntityRenderer<TileFiller, BCRenderState> {
 //?} else {
 /*public class RenderFiller implements BlockEntityRenderer<TileFiller> {*/
 //?}
@@ -91,12 +94,12 @@ public class RenderFiller implements BlockEntityRenderer<TileFiller, FillerRende
 
     //? if >=1.21.10 {
     @Override
-    public FillerRenderState createRenderState() {
-        return new FillerRenderState();
+    public BCRenderState createRenderState() {
+        return new BCRenderState();
     }
 
     @Override
-    public void submit(FillerRenderState renderState, PoseStack poseStack,
+    public void submit(BCRenderState renderState, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
         // The render state already carries the world pos — no camera-pos reconstruction needed.
         BlockPos pos = renderState.blockPos;

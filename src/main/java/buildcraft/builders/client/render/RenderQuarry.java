@@ -31,6 +31,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.lib.client.render.BCLibRenderTypes;
+//? if >=1.21.10 {
+import buildcraft.lib.client.render.tile.BCRenderState;
+//?}
 import buildcraft.lib.client.render.tile.LedRenderUtil;
 import buildcraft.lib.client.render.tile.RenderPartCube;
 import buildcraft.lib.misc.BlockUtil;
@@ -54,7 +57,7 @@ import buildcraft.builders.tile.TileQuarry;
  * because those cross block boundaries; this BER only covers the block-local LEDs.
  */
 //? if >=1.21.10 {
-public class RenderQuarry implements BlockEntityRenderer<TileQuarry, QuarryRenderState> {
+public class RenderQuarry implements BlockEntityRenderer<TileQuarry, BCRenderState> {
 //?} else {
 /*public class RenderQuarry implements BlockEntityRenderer<TileQuarry> {*/
 //?}
@@ -85,12 +88,12 @@ public class RenderQuarry implements BlockEntityRenderer<TileQuarry, QuarryRende
 
     //? if >=1.21.10 {
     @Override
-    public QuarryRenderState createRenderState() {
-        return new QuarryRenderState();
+    public BCRenderState createRenderState() {
+        return new BCRenderState();
     }
 
     @Override
-    public void submit(QuarryRenderState renderState, PoseStack poseStack,
+    public void submit(BCRenderState renderState, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
         // The render state already carries the world pos — no camera-pos reconstruction needed.
         BlockPos pos = renderState.blockPos;

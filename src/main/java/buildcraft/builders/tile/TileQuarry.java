@@ -28,13 +28,9 @@ import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -1019,22 +1015,6 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         }
         output.putBoolean("firstChecked", firstChecked);
         output.putBoolean("advancementGranted", advancementGranted);
-    }
-
-    // Network sync — sends all data to client for rendering
-    // In 1.21.11, getUpdateTag(HolderLookup.Provider) is called by
-    // ClientboundBlockEntityDataPacket.create(this) to serialize data for the client.
-    // We delegate to saveCustomOnly() which calls saveAdditional(ValueOutput),
-    // ensuring all frame/mining box data is included in the network packet.
-
-    @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return this.saveCustomOnly(registries);
-    }
-
-    @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
     }
 
     @Override

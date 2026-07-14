@@ -10,9 +10,6 @@ import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -179,19 +176,6 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
     /** @return The internal MJ battery, for Forge-Energy capability registration. */
     public MjBattery getBattery() {
         return battery;
-    }
-
-    // --- Client Sync ---
-
-    @Override
-    public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
-        // Default returns empty CompoundTag in 1.21.11 — must include our data!
-        return this.saveCustomOnly(registries);
-    }
-
-    @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
     }
 
     //? if >=1.21.10 {

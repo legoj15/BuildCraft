@@ -11,12 +11,8 @@ import java.util.Arrays;
 import javax.annotation.Nonnull;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -333,18 +329,6 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
         powerStored = input.getLongOr("powerStored", 0L);
         resultClient = input.read("resultClient", ItemStack.CODEC).orElse(ItemStack.EMPTY);
         crafting.setPendingSelectedRecipeId(input.getStringOr("selectedRecipe", ""));
-    }
-    // endregion
-
-    // region Network Sync
-    @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return this.saveCustomOnly(registries);
-    }
-
-    @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
     }
     // endregion
 }

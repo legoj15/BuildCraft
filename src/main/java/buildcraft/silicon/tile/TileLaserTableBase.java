@@ -13,10 +13,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -108,18 +104,6 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
         power = input.getLongOr("power", 0L);
         avgPowerClient = input.getLongOr("avg_power", 0L);
         input.read("items", CompoundTag.CODEC).ifPresent(tag -> itemManager.deserializeNBT(tag));
-    }
-
-    // --- Network Sync ---
-
-    @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return this.saveCustomOnly(registries);
-    }
-
-    @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
     }
 
     // --- Debug ---

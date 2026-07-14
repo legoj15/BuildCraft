@@ -8,15 +8,11 @@ import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-//? if >=1.21.10 {
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
-//?}
 
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.tile.AbstractBCBlockEntity;
 import buildcraft.core.tile.ITileOilSpring;
 import buildcraft.energy.BCEnergyBlockEntities;
 import buildcraft.lib.misc.AdvancementUtil;
@@ -26,7 +22,7 @@ import buildcraft.lib.misc.GameProfileUtil;
  * Block entity for oil springs (at bedrock level in large oil wells).
  * Tracks per-player pump progress.
  */
-public class TileSpringOil extends BlockEntity implements ITileOilSpring {
+public class TileSpringOil extends AbstractBCBlockEntity implements ITileOilSpring {
 
     private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:black_gold");
 
@@ -58,17 +54,9 @@ public class TileSpringOil extends BlockEntity implements ITileOilSpring {
         }
     }
 
-    //? if >=1.21.10 {
     @Override
-    public void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        BCValueInput in = new BCValueInput(input);
-    //?} else {
-    /*@Override
-    protected void loadAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        BCValueInput in = new BCValueInput(tag);*/
-    //?}
+    protected void readData(BCValueInput in) {
+        super.readData(in);
         totalSources = in.getIntOr("totalSources", 0);
         int pumpCount = in.getIntOr("pumpCount", 0);
         for (int i = 0; i < pumpCount; i++) {
@@ -89,17 +77,9 @@ public class TileSpringOil extends BlockEntity implements ITileOilSpring {
         }
     }
 
-    //? if >=1.21.10 {
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        BCValueOutput out = new BCValueOutput(output);
-    //?} else {
-    /*@Override
-    protected void saveAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        BCValueOutput out = new BCValueOutput(tag);*/
-    //?}
+    protected void writeData(BCValueOutput out) {
+        super.writeData(out);
         out.putInt("totalSources", totalSources);
         out.putInt("pumpCount", pumpProgress.size());
         int i = 0;

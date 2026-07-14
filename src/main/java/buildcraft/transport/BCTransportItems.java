@@ -1,8 +1,12 @@
 package buildcraft.transport;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
@@ -11,6 +15,8 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import buildcraft.lib.misc.RegistrationUtilBC;
+
+import buildcraft.api.transport.pipe.PipeDefinition;
 
 import buildcraft.transport.item.ItemPluggableSimple;
 import buildcraft.transport.item.ItemWire;
@@ -52,167 +58,102 @@ public class BCTransportItems {
                     PluggablePowerAdaptor::boundingBoxFor));
 
     // -- Wire Items (one per DyeColor) --
-    public static final java.util.Map<DyeColor, DeferredItem<ItemWire>> WIRE_ITEMS;
+    public static final Map<DyeColor, DeferredItem<ItemWire>> WIRE_ITEMS;
     static {
-        java.util.Map<DyeColor, DeferredItem<ItemWire>> map = new java.util.EnumMap<>(DyeColor.class);
+        Map<DyeColor, DeferredItem<ItemWire>> map = new java.util.EnumMap<>(DyeColor.class);
         for (DyeColor color : DyeColor.values()) {
             DyeColor c = color; // effectively final for lambda
             map.put(color, RegistrationUtilBC.registerItem(ITEMS,"wire_" + color.getName(),
                     props -> new ItemWire(props, c)));
         }
-        WIRE_ITEMS = java.util.Collections.unmodifiableMap(map);
+        WIRE_ITEMS = Collections.unmodifiableMap(map);
     }
 
-    // PIPE_WOOD_ITEM uses ItemPipeHolder to tie the item to the pipe_holder block + pipe definition.
-    // Other pipes remain simple Item stubs until they are individually ported.
+    // -- Pipe Items --
+    // Every pipe is the same ItemPipeHolder registration differing only by (registry id, PipeDefinition).
+    // The named DeferredItem fields below are the public API — recipes (DyedPipeRecipe passes the holder
+    // itself), the guide, creative tabs, and tests all reference them by name — so they stay, but the
+    // repeated 3-line lambda body collapses into the pipe(id, def) helper. Registration order is preserved,
+    // and each holder is recorded in PIPE_ITEMS so callers can look one up from its PipeDefinition (the
+    // WIRE_ITEMS precedent, keyed by definition instead of DyeColor). Item ids do NOT match the definition
+    // identifiers (e.g. item "pipe_cobble_item" vs definition "cobblestone_item"), so the id stays explicit.
+    private static final Map<PipeDefinition, DeferredItem<ItemPipeHolder>> PIPE_ITEMS = new LinkedHashMap<>();
 
     // Structure
-    public static final DeferredItem<ItemPipeHolder> PIPE_STRUCTURE = RegistrationUtilBC.registerItem(ITEMS,"pipe_structure",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.structure, props).registerWithPipeApi());
+    public static final DeferredItem<ItemPipeHolder> PIPE_STRUCTURE = pipe("pipe_structure", BCTransportPipes.structure);
 
     // Item transport pipes
-    public static final DeferredItem<ItemPipeHolder> PIPE_WOOD_ITEM = RegistrationUtilBC.registerItem(ITEMS,"pipe_wood_item",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.woodItem, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_COBBLE_ITEM = RegistrationUtilBC.registerItem(ITEMS,"pipe_cobble_item",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.cobbleItem, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_STONE_ITEM = RegistrationUtilBC.registerItem(ITEMS,"pipe_stone_item",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.stoneItem, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_QUARTZ_ITEM = RegistrationUtilBC.registerItem(ITEMS,"pipe_quartz_item",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.quartzItem, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_IRON_ITEM = RegistrationUtilBC.registerItem(ITEMS,"pipe_iron_item",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.ironItem, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_GOLD_ITEM = RegistrationUtilBC.registerItem(ITEMS,"pipe_gold_item",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.goldItem, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_CLAY_ITEM = RegistrationUtilBC.registerItem(ITEMS,"pipe_clay_item",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.clayItem, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_SANDSTONE_ITEM = RegistrationUtilBC.registerItem(ITEMS,"pipe_sandstone_item",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.sandstoneItem, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_VOID_ITEM = RegistrationUtilBC.registerItem(ITEMS,"pipe_void_item",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.voidItem, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_OBSIDIAN_ITEM = RegistrationUtilBC.registerItem(ITEMS,"pipe_obsidian_item",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.obsidianItem, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_ITEM = RegistrationUtilBC.registerItem(ITEMS,"pipe_diamond_item",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.diamondItem, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_WOOD_ITEM = RegistrationUtilBC.registerItem(ITEMS,"pipe_diamond_wood_item",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.diaWoodItem, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_LAPIS_ITEM = RegistrationUtilBC.registerItem(ITEMS,"pipe_lapis_item",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.lapisItem, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_DAIZULI_ITEM = RegistrationUtilBC.registerItem(ITEMS,"pipe_daizuli_item",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.daizuliItem, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_EMZULI_ITEM = RegistrationUtilBC.registerItem(ITEMS,"pipe_emzuli_item",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.emzuliItem, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_STRIPES_ITEM = RegistrationUtilBC.registerItem(ITEMS,"pipe_stripes_item",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.stripesItem, props).registerWithPipeApi());
+    public static final DeferredItem<ItemPipeHolder> PIPE_WOOD_ITEM = pipe("pipe_wood_item", BCTransportPipes.woodItem);
+    public static final DeferredItem<ItemPipeHolder> PIPE_COBBLE_ITEM = pipe("pipe_cobble_item", BCTransportPipes.cobbleItem);
+    public static final DeferredItem<ItemPipeHolder> PIPE_STONE_ITEM = pipe("pipe_stone_item", BCTransportPipes.stoneItem);
+    public static final DeferredItem<ItemPipeHolder> PIPE_QUARTZ_ITEM = pipe("pipe_quartz_item", BCTransportPipes.quartzItem);
+    public static final DeferredItem<ItemPipeHolder> PIPE_IRON_ITEM = pipe("pipe_iron_item", BCTransportPipes.ironItem);
+    public static final DeferredItem<ItemPipeHolder> PIPE_GOLD_ITEM = pipe("pipe_gold_item", BCTransportPipes.goldItem);
+    public static final DeferredItem<ItemPipeHolder> PIPE_CLAY_ITEM = pipe("pipe_clay_item", BCTransportPipes.clayItem);
+    public static final DeferredItem<ItemPipeHolder> PIPE_SANDSTONE_ITEM = pipe("pipe_sandstone_item", BCTransportPipes.sandstoneItem);
+    public static final DeferredItem<ItemPipeHolder> PIPE_VOID_ITEM = pipe("pipe_void_item", BCTransportPipes.voidItem);
+    public static final DeferredItem<ItemPipeHolder> PIPE_OBSIDIAN_ITEM = pipe("pipe_obsidian_item", BCTransportPipes.obsidianItem);
+    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_ITEM = pipe("pipe_diamond_item", BCTransportPipes.diamondItem);
+    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_WOOD_ITEM = pipe("pipe_diamond_wood_item", BCTransportPipes.diaWoodItem);
+    public static final DeferredItem<ItemPipeHolder> PIPE_LAPIS_ITEM = pipe("pipe_lapis_item", BCTransportPipes.lapisItem);
+    public static final DeferredItem<ItemPipeHolder> PIPE_DAIZULI_ITEM = pipe("pipe_daizuli_item", BCTransportPipes.daizuliItem);
+    public static final DeferredItem<ItemPipeHolder> PIPE_EMZULI_ITEM = pipe("pipe_emzuli_item", BCTransportPipes.emzuliItem);
+    public static final DeferredItem<ItemPipeHolder> PIPE_STRIPES_ITEM = pipe("pipe_stripes_item", BCTransportPipes.stripesItem);
 
     // Fluid transport pipes
-    public static final DeferredItem<ItemPipeHolder> PIPE_WOOD_FLUID = RegistrationUtilBC.registerItem(ITEMS,"pipe_wood_fluid",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.woodFluid, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_COBBLE_FLUID = RegistrationUtilBC.registerItem(ITEMS,"pipe_cobble_fluid",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.cobbleFluid, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_STONE_FLUID = RegistrationUtilBC.registerItem(ITEMS,"pipe_stone_fluid",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.stoneFluid, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_QUARTZ_FLUID = RegistrationUtilBC.registerItem(ITEMS,"pipe_quartz_fluid",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.quartzFluid, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_GOLD_FLUID = RegistrationUtilBC.registerItem(ITEMS,"pipe_gold_fluid",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.goldFluid, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_IRON_FLUID = RegistrationUtilBC.registerItem(ITEMS,"pipe_iron_fluid",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.ironFluid, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_CLAY_FLUID = RegistrationUtilBC.registerItem(ITEMS,"pipe_clay_fluid",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.clayFluid, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_SANDSTONE_FLUID = RegistrationUtilBC.registerItem(ITEMS,"pipe_sandstone_fluid",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.sandstoneFluid, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_VOID_FLUID = RegistrationUtilBC.registerItem(ITEMS,"pipe_void_fluid",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.voidFluid, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_FLUID = RegistrationUtilBC.registerItem(ITEMS,"pipe_diamond_fluid",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.diamondFluid, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_WOOD_FLUID = RegistrationUtilBC.registerItem(ITEMS,"pipe_diamond_wood_fluid",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.diaWoodFluid, props).registerWithPipeApi());
+    public static final DeferredItem<ItemPipeHolder> PIPE_WOOD_FLUID = pipe("pipe_wood_fluid", BCTransportPipes.woodFluid);
+    public static final DeferredItem<ItemPipeHolder> PIPE_COBBLE_FLUID = pipe("pipe_cobble_fluid", BCTransportPipes.cobbleFluid);
+    public static final DeferredItem<ItemPipeHolder> PIPE_STONE_FLUID = pipe("pipe_stone_fluid", BCTransportPipes.stoneFluid);
+    public static final DeferredItem<ItemPipeHolder> PIPE_QUARTZ_FLUID = pipe("pipe_quartz_fluid", BCTransportPipes.quartzFluid);
+    public static final DeferredItem<ItemPipeHolder> PIPE_GOLD_FLUID = pipe("pipe_gold_fluid", BCTransportPipes.goldFluid);
+    public static final DeferredItem<ItemPipeHolder> PIPE_IRON_FLUID = pipe("pipe_iron_fluid", BCTransportPipes.ironFluid);
+    public static final DeferredItem<ItemPipeHolder> PIPE_CLAY_FLUID = pipe("pipe_clay_fluid", BCTransportPipes.clayFluid);
+    public static final DeferredItem<ItemPipeHolder> PIPE_SANDSTONE_FLUID = pipe("pipe_sandstone_fluid", BCTransportPipes.sandstoneFluid);
+    public static final DeferredItem<ItemPipeHolder> PIPE_VOID_FLUID = pipe("pipe_void_fluid", BCTransportPipes.voidFluid);
+    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_FLUID = pipe("pipe_diamond_fluid", BCTransportPipes.diamondFluid);
+    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_WOOD_FLUID = pipe("pipe_diamond_wood_fluid", BCTransportPipes.diaWoodFluid);
 
     // Power transport pipes
-    public static final DeferredItem<ItemPipeHolder> PIPE_WOOD_POWER = RegistrationUtilBC.registerItem(ITEMS,"pipe_wood_power",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.woodPower, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_COBBLE_POWER = RegistrationUtilBC.registerItem(ITEMS,"pipe_cobble_power",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.cobblePower, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_STONE_POWER = RegistrationUtilBC.registerItem(ITEMS,"pipe_stone_power",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.stonePower, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_QUARTZ_POWER = RegistrationUtilBC.registerItem(ITEMS,"pipe_quartz_power",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.quartzPower, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_IRON_POWER = RegistrationUtilBC.registerItem(ITEMS,"pipe_iron_power",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.ironPower, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_GOLD_POWER = RegistrationUtilBC.registerItem(ITEMS,"pipe_gold_power",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.goldPower, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_SANDSTONE_POWER = RegistrationUtilBC.registerItem(ITEMS,"pipe_sandstone_power",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.sandstonePower, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_POWER = RegistrationUtilBC.registerItem(ITEMS,"pipe_diamond_power",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.diamondPower, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_WOOD_POWER = RegistrationUtilBC.registerItem(ITEMS,"pipe_diamond_wood_power",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.diaWoodPower, props).registerWithPipeApi());
+    public static final DeferredItem<ItemPipeHolder> PIPE_WOOD_POWER = pipe("pipe_wood_power", BCTransportPipes.woodPower);
+    public static final DeferredItem<ItemPipeHolder> PIPE_COBBLE_POWER = pipe("pipe_cobble_power", BCTransportPipes.cobblePower);
+    public static final DeferredItem<ItemPipeHolder> PIPE_STONE_POWER = pipe("pipe_stone_power", BCTransportPipes.stonePower);
+    public static final DeferredItem<ItemPipeHolder> PIPE_QUARTZ_POWER = pipe("pipe_quartz_power", BCTransportPipes.quartzPower);
+    public static final DeferredItem<ItemPipeHolder> PIPE_IRON_POWER = pipe("pipe_iron_power", BCTransportPipes.ironPower);
+    public static final DeferredItem<ItemPipeHolder> PIPE_GOLD_POWER = pipe("pipe_gold_power", BCTransportPipes.goldPower);
+    public static final DeferredItem<ItemPipeHolder> PIPE_SANDSTONE_POWER = pipe("pipe_sandstone_power", BCTransportPipes.sandstonePower);
+    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_POWER = pipe("pipe_diamond_power", BCTransportPipes.diamondPower);
+    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_WOOD_POWER = pipe("pipe_diamond_wood_power", BCTransportPipes.diaWoodPower);
 
     // RF/FE transport pipes
-    public static final DeferredItem<ItemPipeHolder> PIPE_WOOD_RF = RegistrationUtilBC.registerItem(ITEMS,"pipe_wood_rf",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.woodRf, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_COBBLE_RF = RegistrationUtilBC.registerItem(ITEMS,"pipe_cobble_rf",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.cobbleRf, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_STONE_RF = RegistrationUtilBC.registerItem(ITEMS,"pipe_stone_rf",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.stoneRf, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_QUARTZ_RF = RegistrationUtilBC.registerItem(ITEMS,"pipe_quartz_rf",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.quartzRf, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_IRON_RF = RegistrationUtilBC.registerItem(ITEMS,"pipe_iron_rf",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.ironRf, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_GOLD_RF = RegistrationUtilBC.registerItem(ITEMS,"pipe_gold_rf",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.goldRf, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_SANDSTONE_RF = RegistrationUtilBC.registerItem(ITEMS,"pipe_sandstone_rf",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.sandstoneRf, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_RF = RegistrationUtilBC.registerItem(ITEMS,"pipe_diamond_rf",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.diamondRf, props).registerWithPipeApi());
-    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_WOOD_RF = RegistrationUtilBC.registerItem(ITEMS,"pipe_diamond_wood_rf",
-            props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(),
-                    BCTransportPipes.diaWoodRf, props).registerWithPipeApi());
+    public static final DeferredItem<ItemPipeHolder> PIPE_WOOD_RF = pipe("pipe_wood_rf", BCTransportPipes.woodRf);
+    public static final DeferredItem<ItemPipeHolder> PIPE_COBBLE_RF = pipe("pipe_cobble_rf", BCTransportPipes.cobbleRf);
+    public static final DeferredItem<ItemPipeHolder> PIPE_STONE_RF = pipe("pipe_stone_rf", BCTransportPipes.stoneRf);
+    public static final DeferredItem<ItemPipeHolder> PIPE_QUARTZ_RF = pipe("pipe_quartz_rf", BCTransportPipes.quartzRf);
+    public static final DeferredItem<ItemPipeHolder> PIPE_IRON_RF = pipe("pipe_iron_rf", BCTransportPipes.ironRf);
+    public static final DeferredItem<ItemPipeHolder> PIPE_GOLD_RF = pipe("pipe_gold_rf", BCTransportPipes.goldRf);
+    public static final DeferredItem<ItemPipeHolder> PIPE_SANDSTONE_RF = pipe("pipe_sandstone_rf", BCTransportPipes.sandstoneRf);
+    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_RF = pipe("pipe_diamond_rf", BCTransportPipes.diamondRf);
+    public static final DeferredItem<ItemPipeHolder> PIPE_DIAMOND_WOOD_RF = pipe("pipe_diamond_wood_rf", BCTransportPipes.diaWoodRf);
+
+    /** Registers one pipe BlockItem tying {@code def} to the shared pipe-holder block, records it in
+     *  {@link #PIPE_ITEMS} for definition&rarr;item lookup, and returns the holder so the named field keeps
+     *  its public identity. */
+    private static DeferredItem<ItemPipeHolder> pipe(String id, PipeDefinition def) {
+        DeferredItem<ItemPipeHolder> item = RegistrationUtilBC.registerItem(ITEMS, id,
+                props -> new ItemPipeHolder(BCTransportBlocks.PIPE_HOLDER.get(), def, props).registerWithPipeApi());
+        PIPE_ITEMS.put(def, item);
+        return item;
+    }
+
+    /** @return the registered pipe item for {@code def}, or {@code null} if {@code def} has no item. */
+    public static DeferredItem<ItemPipeHolder> getPipeItem(PipeDefinition def) {
+        return PIPE_ITEMS.get(def);
+    }
+
+    /** All registered pipe items, in registration order. */
+    public static Collection<DeferredItem<ItemPipeHolder>> allPipeItems() {
+        return Collections.unmodifiableCollection(PIPE_ITEMS.values());
+    }
 
     public static void init(IEventBus modEventBus) {
         ITEMS.register(modEventBus);

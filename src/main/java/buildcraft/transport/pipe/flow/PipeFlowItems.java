@@ -502,14 +502,16 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
                             Capabilities.Item.BLOCK, neighborPos, oppositeSide);
                         if (tileHandler != null) {
                             ItemResource resource = ItemResource.of(excess);
-                            try (Transaction tx = Transaction.openRoot()) {
-                                int inserted = tileHandler.insert(resource, excess.getCount(), tx);
-                                if (inserted > 0) {
-                                    tx.commit();
-                                    excess.shrink(inserted);
-                                    if (excess.isEmpty()) {
-                                        excess = ItemStack.EMPTY;
-                                    }
+                            // insertStacking fills partially-filled slots before empty ones — parity with the
+                            // <1.21.10 ItemHandlerHelper.insertItemStacked branch below and every other BC ejector
+                            // (InventoryUtil.addToRandomInventory, TileChute). Passing null opens+auto-commits a
+                            // transaction. Bare insert() used plain index order and fragmented target stacks.
+                            int inserted = net.neoforged.neoforge.transfer.ResourceHandlerUtil.insertStacking(
+                                    tileHandler, resource, excess.getCount(), null);
+                            if (inserted > 0) {
+                                excess.shrink(inserted);
+                                if (excess.isEmpty()) {
+                                    excess = ItemStack.EMPTY;
                                 }
                             }
                         }

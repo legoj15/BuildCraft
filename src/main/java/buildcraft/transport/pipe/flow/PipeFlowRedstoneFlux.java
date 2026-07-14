@@ -6,23 +6,11 @@
 
 package buildcraft.transport.pipe.flow;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.function.ToIntFunction;
-
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Direction.AxisDirection;
-import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.phys.Vec3;
 
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
@@ -32,120 +20,38 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 /*import net.neoforged.neoforge.energy.IEnergyStorage;*/
 //?}
 
-import buildcraft.api.core.EnumPipePart;
-import buildcraft.api.mj.MjAPI;
-import buildcraft.api.tiles.IDebuggable;
 import buildcraft.api.transport.pipe.IFlowRedstoneFlux;
 import buildcraft.api.transport.pipe.IPipe;
-import buildcraft.api.transport.pipe.IPipe.ConnectedType;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeApi.RedstoneFluxTransferInfo;
 import buildcraft.api.transport.pipe.PipeEventRedstoneFlux;
 import buildcraft.api.transport.pipe.PipeFlow;
 
 import buildcraft.lib.misc.CapUtil;
-import buildcraft.lib.misc.NBTUtilBC;
-import buildcraft.lib.misc.VecUtil;
-import buildcraft.lib.misc.data.AverageInt;
 
-@SuppressWarnings("this-escape")
-public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux, IDebuggable {
+/** Forge Energy / RF ({@code int}) kinesis flow. See {@link AbstractPipeFlowPower} for the shared
+ *  distribution engine; this subclass supplies the FE boundary (the version-gated NeoForge energy
+ *  handler / {@code IEnergyStorage} capability) and demand sizing via a rolled-back simulated insert
+ *  ({@link #queryEnergyDemand}). RF has no loss scaffolding (kinesis is lossless either way). */
+public class PipeFlowRedstoneFlux extends AbstractPipeFlowPower implements IFlowRedstoneFlux {
     private static final int DEFAULT_MAX_POWER = 100;
-    public static final int NET_POWER_AMOUNTS = 2;
-
-    public Vec3 clientDisplayFlowCentre = VecUtil.VEC_HALF;
-    public Vec3 clientDisplayFlowCentreLast = VecUtil.VEC_HALF;
-    public long clientLastDisplayTime = 0;
-
-    private int maxPower = -1;
-    private boolean disabled = false;
-
-    private long currentWorldTime;
-
-    private boolean isReceiver = false;
-    private final EnumMap<Direction, Section> sections;
 
     public PipeFlowRedstoneFlux(IPipe pipe) {
         super(pipe);
-        sections = new EnumMap<>(Direction.class);
-        for (Direction face : Direction.values()) {
-            sections.put(face, new Section(face));
-        }
     }
 
     public PipeFlowRedstoneFlux(IPipe pipe, CompoundTag nbt) {
         super(pipe, nbt);
-        sections = new EnumMap<>(Direction.class);
-        for (Direction face : Direction.values()) {
-            sections.put(face, new Section(face));
-        }
-        // The client's first-sync / relog path rebuilds the pipe through THIS constructor
-        // (TilePipeHolder.readData -> new Pipe -> loadFlow -> PipeFlowRedstoneFlux::new), NOT
-        // through readFromNbt (which only runs for an already-existing pipe). So the display state
-        // serialized into the update tag must be applied here too. Without it, a steady-state
-        // straight pipe — which never re-sends a NET_POWER_AMOUNTS delta because didChange stays
-        // false — renders its RF flow invisibly on the client until something forces a change.
-        // (Same fix PipeFlowPower received for the equivalent MJ bug.)
-        readFromNbt(nbt);
     }
 
     @Override
-    public CompoundTag writeToNbt() {
-        CompoundTag nbt = super.writeToNbt();
-        nbt.putBoolean("isReceiver", isReceiver);
-        // Include display data for initial chunk-load sync (NBT path); the custom networking
-        // above handles incremental updates after this.
-        int[] powers = new int[6];
-        int[] flows = new int[6];
-        for (Direction face : Direction.values()) {
-            Section s = sections.get(face);
-            powers[face.ordinal()] = s.displayPower;
-            flows[face.ordinal()] = s.displayFlow.ordinal();
-        }
-        nbt.putIntArray("displayPower", powers);
-        nbt.putIntArray("displayFlow", flows);
-        return nbt;
+    protected Section createSection(Direction side) {
+        return new Section(side);
     }
 
     @Override
-    public void readFromNbt(CompoundTag nbt) {
-        isReceiver = NBTUtilBC.getBoolean(nbt, "isReceiver", false);
-        int[] powers = NBTUtilBC.getIntArray(nbt, "displayPower", new int[6]);
-        int[] flows = NBTUtilBC.getIntArray(nbt, "displayFlow", new int[6]);
-        for (Direction face : Direction.values()) {
-            int i = face.ordinal();
-            Section s = sections.get(face);
-            if (i < powers.length) s.displayPower = powers[i];
-            if (i < flows.length) {
-                int flowIdx = flows[i];
-                EnumFlow[] vals = EnumFlow.values();
-                s.displayFlow = (flowIdx >= 0 && flowIdx < vals.length) ? vals[flowIdx] : EnumFlow.STATIONARY;
-            }
-        }
-    }
-
-    @Override
-    public void writePayload(int id, FriendlyByteBuf buffer, Object side) {
-        super.writePayload(id, buffer, side);
-        if (id == NET_POWER_AMOUNTS || id == NET_ID_FULL_STATE) {
-            for (Direction face : Direction.values()) {
-                Section s = sections.get(face);
-                buffer.writeInt(s.displayPower);
-                buffer.writeEnum(s.displayFlow);
-            }
-        }
-    }
-
-    @Override
-    public void readPayload(int id, FriendlyByteBuf buffer, Object side) throws IOException {
-        super.readPayload(id, buffer, side);
-        if (id == NET_POWER_AMOUNTS || id == NET_ID_FULL_STATE) {
-            for (Direction face : Direction.values()) {
-                Section s = sections.get(face);
-                s.displayPower = buffer.readInt();
-                s.displayFlow = buffer.readEnum(EnumFlow.class);
-            }
-        }
+    public Section getSection(Direction side) {
+        return (Section) super.getSection(side);
     }
 
     @Override
@@ -187,13 +93,8 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
     }
 
     @Override
-    public boolean onFlowActivate(Player player, HitResult trace, float hitX, float hitY, float hitZ,
-        EnumPipePart part) {
-        return super.onFlowActivate(player, trace, hitX, hitY, hitZ, part);
-    }
-
-    public Section getSection(Direction side) {
-        return sections.get(side);
+    protected String formatMaxPower() {
+        return String.valueOf(maxPower);
     }
 
     @Override
@@ -218,228 +119,57 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
     }
 
     @Override
-    public void getDebugInfo(List<String> left, List<String> right, Direction side) {
-        left.add("maxPower = " + maxPower);
-        left.add("isReceiver = " + isReceiver);
-        left.add(
-            "internalPower = " + arrayToString(s -> s.internalPower) + " <- " + arrayToString(s -> s.internalNextPower)
+    protected long transferToExternalTile(Direction to, long watts) {
+        //? if >=1.21.10 {
+        EnergyHandler receiver = pipe.getHolder().getCapabilityFromPipe(
+            to, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK
         );
-        left.add("- powerQuery: " + arrayToString(s -> s.powerQuery) + " <- " + arrayToString(s -> s.nextPowerQuery));
-        left.add("- power: OUT " + arrayToString(s -> s.debugPowerOutput));
-        left.add("- power: OFFERED " + arrayToString(s -> s.debugPowerOffered));
-    }
-
-    private String arrayToString(ToIntFunction<Section> getter) {
-        long[] arr = new long[6];
-        for (Direction face : Direction.values()) {
-            arr[face.ordinal()] = getter.applyAsInt(sections.get(face));
+        if (receiver != null) {
+            try (net.neoforged.neoforge.transfer.transaction.Transaction transaction = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+                int accepted = receiver.insert((int) watts, transaction);
+                transaction.commit();
+                return watts - accepted;
+            }
         }
-        return Arrays.toString(arr);
+        //?} else {
+        /*net.neoforged.neoforge.energy.IEnergyStorage receiver = pipe.getHolder().getCapabilityFromPipe(
+            to, net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK
+        );
+        if (receiver != null) {
+            int accepted = receiver.receiveEnergy((int) watts, false);
+            return watts - accepted;
+        }
+        *///?}
+        return watts;
     }
 
     @Override
-    public void onTick() {
-        if (maxPower == -1) {
-            reconfigure();
+    protected long queryTileDemand(Direction face) {
+        // We ASK each receiver how much it will actually take (via a rolled-back simulated insert in
+        // queryEnergyDemand) rather than inferring demand from buffer headroom (capacity - stored).
+        // NeoForge's EnergyHandler contract is explicit that the capacity hint can read 0 — or even below
+        // the current amount — while the handler still accepts power: "the only way to know if a handler
+        // will accept a resource is to try to insert it." AE2's Energy Acceptor is exactly that case — a
+        // bufferless FE->AE converter (internalMaxPower 0) that funnels straight into the ME grid, so
+        // capacity-stored was always 0 and the pipe never fed it (whereas the ME Controller, which carries
+        // an 8000 AE buffer, worked).
+        //? if >=1.21.10 {
+        EnergyHandler recv = pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK);
+        //?} else {
+        /*net.neoforged.neoforge.energy.IEnergyStorage recv = pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK);*/
+        //?}
+        if (recv != null) {
+            return queryEnergyDemand(recv, (int) maxPower);
         }
-        if (pipe.getHolder().getPipeWorld().isClientSide()) {
-            clientDisplayFlowCentreLast = clientDisplayFlowCentre;
-            for (Direction face : Direction.values()) {
-                Section s = sections.get(face);
-                s.clientDisplayFlowLast = s.clientDisplayFlow;
-                double diff = s.displayFlow.value * 2.4 * face.getAxisDirection().getStep();
-                s.clientDisplayFlow += 16 + diff;
-                s.clientDisplayFlow %= 16;
-
-                double cVal = VecUtil.getValue(clientDisplayFlowCentre, face.getAxis());
-                cVal += 16 + diff / 2;
-                cVal %= 16;
-                clientDisplayFlowCentre = VecUtil.replaceValue(clientDisplayFlowCentre, face.getAxis(), cVal);
-            }
-            return;
-        }
-
-        EnumFlow[] lastFlows = new EnumFlow[6];
-        int[] lastDisplayPower = new int[6];
-
-        for (Direction face : Direction.values()) {
-            Section s = sections.get(face);
-            int i = face.ordinal();
-            lastFlows[i] = s.displayFlow;
-            lastDisplayPower[i] = s.displayPower;
-        }
-
-        step();
-
-        for (Direction face : Direction.values()) {
-            Section s = sections.get(face);
-            if (s.internalPower > 0) {
-                int totalPowerQuery = 0;
-                for (Direction face2 : Direction.values()) {
-                    if (face != face2) {
-                        totalPowerQuery += sections.get(face2).powerQuery;
-                    }
-                }
-
-                boolean returnPower = false;
-                if (totalPowerQuery <= 0 && s.powerQuery > 0) {
-                    totalPowerQuery = s.powerQuery;
-                    returnPower = true;
-                }
-
-                if (totalPowerQuery > 0) {
-                    int unusedPowerQuery = totalPowerQuery;
-                    for (Direction face2 : Direction.values()) {
-                        if (face == face2 && !returnPower) {
-                            continue;
-                        }
-                        Section s2 = sections.get(face2);
-                        if (s2.powerQuery > 0) {
-                            int watts = (int) Math.min(s.internalPower * (long) s2.powerQuery / unusedPowerQuery, s.internalPower);
-                            unusedPowerQuery -= s2.powerQuery;
-                            IPipe neighbour = pipe.getConnectedPipe(face2);
-                            int leftover = watts;
-                            if (
-                                neighbour != null && neighbour.getFlow() instanceof PipeFlowRedstoneFlux && neighbour
-                                    .isConnected(face2.getOpposite())
-                            ) {
-                                PipeFlowRedstoneFlux oFlow = (PipeFlowRedstoneFlux) neighbour.getFlow();
-                                leftover = oFlow.sections.get(face2.getOpposite()).receivePowerInternal(watts);
-                            } else {
-                                //? if >=1.21.10 {
-                                EnergyHandler receiver = pipe.getHolder().getCapabilityFromPipe(
-                                    face2, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK
-                                );
-                                if (receiver != null) {
-                                    try (net.neoforged.neoforge.transfer.transaction.Transaction transaction = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
-                                        int accepted = receiver.insert(watts, transaction);
-                                        leftover = watts - accepted;
-                                        transaction.commit();
-                                    }
-                                }
-                                //?} else {
-                                /*net.neoforged.neoforge.energy.IEnergyStorage receiver = pipe.getHolder().getCapabilityFromPipe(
-                                    face2, net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK
-                                );
-                                if (receiver != null) {
-                                    int accepted = receiver.receiveEnergy(watts, false);
-                                    leftover = watts - accepted;
-                                }
-                                *///?}
-                            }
-                            int used = watts - leftover;
-                            s.internalPower -= used;
-                            s2.debugPowerOutput += used;
-
-                            s.powerAverage.push(used);
-                            s2.powerAverage.push(used);
-
-                            s.displayFlow = EnumFlow.OUT;
-                            s2.displayFlow = EnumFlow.IN;
-                        }
-                    }
-                }
-            }
-        }
-        // Render compute goes here
-        for (Section s : sections.values()) {
-            s.powerAverage.tick();
-            double value = s.powerAverage.getAverage() / maxPower;
-            value = Math.sqrt(value);
-            s.displayPower = (int) (value * MjAPI.MJ);
-        }
-
-        // Compute the power that connected non-pipe tiles are willing to accept this tick.
-        // We ASK each receiver how much it will actually take (via a rolled-back simulated
-        // insert in queryEnergyDemand) rather than inferring demand from buffer headroom
-        // (capacity - stored). NeoForge's EnergyHandler contract is explicit that the capacity
-        // hint can read 0 — or even below the current amount — while the handler still accepts
-        // power: "the only way to know if a handler will accept a resource is to try to insert
-        // it." AE2's Energy Acceptor is exactly that case — a bufferless FE->AE converter
-        // (internalMaxPower 0) that funnels straight into the ME grid, so capacity-stored was
-        // always 0 and the pipe never fed it (whereas the ME Controller, which carries an
-        // 8000 AE buffer, worked).
-        for (Direction face : Direction.values()) {
-            if (pipe.getConnectedType(face) != ConnectedType.TILE) {
-                continue;
-            }
-            //? if >=1.21.10 {
-            EnergyHandler recv = pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK);
-            //?} else {
-            /*net.neoforged.neoforge.energy.IEnergyStorage recv = pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK);*/
-            //?}
-            if (recv != null) {
-                int demand = queryEnergyDemand(recv, maxPower);
-                if (demand > 0) {
-                    requestPower(face, demand);
-                }
-            }
-        }
-
-        // Sum the amount of power requested on each side
-        int[] transferQueryTemp = new int[6];
-        for (Direction face : Direction.values()) {
-            if (!pipe.isConnected(face)) {
-                continue;
-            }
-            int query = 0;
-            for (Direction face2 : Direction.values()) {
-                if (face != face2) {
-                    query += sections.get(face2).powerQuery;
-                }
-            }
-            transferQueryTemp[face.ordinal()] = query;
-        }
-
-        // Transfer requested power to neighbouring pipes
-        for (Direction face : Direction.values()) {
-            if (disabled) {
-                continue;
-            }
-            if (transferQueryTemp[face.ordinal()] <= 0 || !pipe.isConnected(face)) {
-                continue;
-            }
-            IPipe oPipe = pipe.getHolder().getNeighbourPipe(face);
-            if (oPipe == null || !(oPipe.getFlow() instanceof PipeFlowRedstoneFlux)) {
-                continue;
-            }
-            PipeFlowRedstoneFlux oFlow = (PipeFlowRedstoneFlux) oPipe.getFlow();
-            oFlow.requestPower(face.getOpposite(), transferQueryTemp[face.ordinal()]);
-        }
-        // Networking
-        boolean didChange = false;
-        for (Direction face : Direction.values()) {
-            Section s = sections.get(face);
-            int i = face.ordinal();
-            if (lastFlows[i] != s.displayFlow || lastDisplayPower[i] != s.displayPower) {
-                didChange = true;
-                break;
-            }
-        }
-
-        if (didChange) {
-            sendPayload(NET_POWER_AMOUNTS);
-        }
+        return 0;
     }
 
-    private void step() {
-        long now = pipe.getHolder().getPipeWorld().getGameTime();
-        if (currentWorldTime != now) {
-            currentWorldTime = now;
-            sections.values().forEach(Section::step);
+    @Override
+    protected long applyRequestHook(Direction from, long amount) {
+        if (pipe.getBehaviour() instanceof IPipeTransportRfHook hook) {
+            return hook.requestPower(from, (int) amount);
         }
-    }
-
-    private void requestPower(Direction from, int amount) {
-        step();
-
-        Section s = sections.get(from);
-        if (pipe.getBehaviour() instanceof IPipeTransportRfHook) {
-            s.nextPowerQuery += ((IPipeTransportRfHook) pipe.getBehaviour()).requestPower(from, amount);
-        } else {
-            s.nextPowerQuery += amount;
-        }
-        s.nextPowerQuery = Math.min(s.nextPowerQuery, maxPower);
+        return amount;
     }
 
     /** Measures how much power {@code recv} will actually accept right now by performing a
@@ -462,60 +192,24 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
     }*/
     //?}
 
-    public int getPowerRequested(@Nullable Direction side) {
-        int req = 0;
-        for (Direction face : Direction.values()) {
-            if (side == null || face != side) {
-                req += sections.get(face).powerQuery;
-            }
-        }
-        return req;
-    }
-
     //? if >=1.21.10 {
-    public class Section implements EnergyHandler {
+    public class Section extends AbstractPipeFlowPower.Section implements EnergyHandler {
     //?} else {
-    /*public class Section implements net.neoforged.neoforge.energy.IEnergyStorage {*/
+    /*public class Section extends AbstractPipeFlowPower.Section implements net.neoforged.neoforge.energy.IEnergyStorage {*/
     //?}
-        public final Direction side;
-
-        public double clientDisplayFlow, clientDisplayFlowLast;
-
-        /** Range: 0 to {@link MjAPI#MJ} */
-        public int displayPower;
-        public EnumFlow displayFlow = EnumFlow.STATIONARY;
-        public int nextPowerQuery;
-        public int internalNextPower;
-        public final AverageInt powerAverage = new AverageInt(1);
-
-        int powerQuery;
-        int internalPower;
-
-        /** Debugging fields */
-        int debugPowerOutput, debugPowerOffered;
-
         public Section(Direction side) {
-            this.side = side;
-            clientDisplayFlow = (side.getAxisDirection() == AxisDirection.POSITIVE ? 7 : 1) / 8.0;
-        }
-
-        void step() {
-            powerQuery = nextPowerQuery;
-            nextPowerQuery = 0;
-
-            internalPower += internalNextPower;
-            internalNextPower = 0;
+            super(side);
         }
 
         //? if >=1.21.10 {
-        private final net.neoforged.neoforge.transfer.transaction.SnapshotJournal<Integer> powerJournal = new net.neoforged.neoforge.transfer.transaction.SnapshotJournal<Integer>() {
+        private final net.neoforged.neoforge.transfer.transaction.SnapshotJournal<Long> powerJournal = new net.neoforged.neoforge.transfer.transaction.SnapshotJournal<Long>() {
             @Override
-            protected Integer createSnapshot() {
+            protected Long createSnapshot() {
                 return internalNextPower;
             }
 
             @Override
-            protected void revertToSnapshot(Integer snapshot) {
+            protected void revertToSnapshot(Long snapshot) {
                 internalNextPower = snapshot;
             }
         };
@@ -523,11 +217,11 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         @Override
         public int insert(int maxReceive, TransactionContext transaction) {
             if (isReceiver && maxReceive > 0) {
-                PipeFlowRedstoneFlux.this.step();
-                int maxCanAccept = maxPower - (internalPower + internalNextPower);
+                stepSections();
+                long maxCanAccept = maxPower - (internalPower + internalNextPower);
                 if (maxCanAccept <= 0) return 0;
 
-                int accepted = Math.min(maxCanAccept, maxReceive);
+                int accepted = (int) Math.min(maxCanAccept, maxReceive);
                 if (accepted > 0) {
                     powerJournal.updateSnapshots(transaction);
                     debugPowerOffered += accepted;
@@ -556,11 +250,11 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         /*@Override
         public int receiveEnergy(int maxReceive, boolean simulate) {
             if (isReceiver && maxReceive > 0) {
-                PipeFlowRedstoneFlux.this.step();
-                int maxCanAccept = maxPower - (internalPower + internalNextPower);
+                stepSections();
+                long maxCanAccept = maxPower - (internalPower + internalNextPower);
                 if (maxCanAccept <= 0) return 0;
 
-                int accepted = Math.min(maxCanAccept, maxReceive);
+                int accepted = (int) Math.min(maxCanAccept, maxReceive);
                 if (accepted > 0) {
                     if (!simulate) {
                         debugPowerOffered += accepted;
@@ -579,12 +273,12 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
 
         @Override
         public int getEnergyStored() {
-            return internalPower + internalNextPower;
+            return (int) (internalPower + internalNextPower);
         }
 
         @Override
         public int getMaxEnergyStored() {
-            return maxPower;
+            return (int) maxPower;
         }
 
         @Override
@@ -598,31 +292,20 @@ public class PipeFlowRedstoneFlux extends PipeFlow implements IFlowRedstoneFlux,
         }
         *///?}
 
-        int receivePowerInternal(int sent) {
+        @Override
+        long receivePowerInternal(long sent) {
             if (sent > 0) {
-                PipeFlowRedstoneFlux.this.step();
-                int max = maxPower - (internalPower + internalNextPower);
+                stepSections();
+                long max = maxPower - (internalPower + internalNextPower);
                 if (max <= 0) {
                     return sent;
                 }
-                int accepted = Math.min(max, sent);
+                long accepted = Math.min(max, sent);
                 debugPowerOffered += accepted;
                 internalNextPower += accepted;
                 return sent - accepted;
             }
             return sent;
-        }
-    }
-
-    public enum EnumFlow {
-        IN(-1),
-        OUT(1),
-        STATIONARY(0);
-
-        public final int value;
-
-        private EnumFlow(int value) {
-            this.value = value;
         }
     }
 }

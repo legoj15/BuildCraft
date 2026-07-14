@@ -32,10 +32,6 @@ public class BCCoreClient {
                 //?}
                 event -> buildcraft.lib.client.render.MarkerRenderer.onRenderLevelStage(event)
         );
-        // Register volume box rendering callback
-        buildcraft.lib.client.render.MarkerRenderer.setVolumeBoxRenderCallback(
-                buildcraft.core.client.VolumeBoxRenderer::renderAll
-        );
         // Register held-connector check for preview beams
         buildcraft.lib.client.render.MarkerRenderer.setHoldingConnectorCheck(
                 player -> player.getMainHandItem().getItem() instanceof buildcraft.core.item.ItemMarkerConnector

@@ -44,10 +44,33 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
     private final Map<C, Set<BlockPos>> connectionToPos = new ConcurrentHashMap<>();
     private final Map<BlockPos, Optional<TileMarker<C>>> tileCache = new ConcurrentHashMap<>();
 
+    /** The backing on-disk persistence, set via {@link #initFromSavedData}. Null on the client. */
+    protected MarkerSavedData savedData;
+
     public MarkerSubCache(Level level, int cacheId) {
         this.isServer = !level.isClientSide();
         this.dimensionId = level.dimension();
         this.cacheId = cacheId;
+    }
+
+    /**
+     * Seeds this sub-cache from its persisted {@link MarkerSavedData} and wires the two together so
+     * later mutations mark it dirty. Call once from the concrete constructor after {@code super(...)}.
+     * The load boilerplate (markers, then connections) is identical for every marker type; only the
+     * connection reconstruction differs, delegated to {@link #createConnection}.
+     */
+    protected final void initFromSavedData(MarkerSavedData data) {
+        this.savedData = data;
+        for (BlockPos pos : data.markerPositions) {
+            loadMarker(pos, null);
+        }
+        for (java.util.List<BlockPos> connectionPositions : data.markerConnections) {
+            if (connectionPositions.size() >= 2) {
+                addConnection(createConnection(connectionPositions));
+            }
+        }
+        data.setSubCache(this);
+        data.setDirty();
     }
 
     public void onPlayerJoinWorld(ServerPlayer player) {
@@ -283,8 +306,19 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
         return ImmutableList.copyOf(connectionToPos.keySet());
     }
 
-    /** Called to flag the associated SavedData as dirty so changes persist to disk. */
-    protected abstract void markSavedDataDirty();
+    /** Flags the associated SavedData as dirty so changes persist to disk. No-op on the client. */
+    protected void markSavedDataDirty() {
+        if (savedData != null) {
+            savedData.setDirty();
+        }
+    }
+
+    /**
+     * Reconstructs a connection of this marker type from a bare position list. This is the one place
+     * the two families genuinely diverge (ordered path chain vs axis-aligned volume box), so it stays
+     * abstract while the surrounding load/sync boilerplate is shared.
+     */
+    protected abstract C createConnection(java.util.List<BlockPos> positions);
 
     public abstract boolean tryConnect(BlockPos from, BlockPos to);
 
@@ -317,5 +351,30 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
         }
     }
 
-    protected abstract boolean handleMessage(MessageMarker message);
+    /**
+     * Applies a connection add/remove message. Identical for every marker type — the only per-type
+     * step (building the new connection) goes through {@link #createConnection}. Returns false so
+     * {@link #handleMessageMain} still runs the marker load/remove pass. Kept overridable for any
+     * future type that needs bespoke handling.
+     */
+    protected boolean handleMessage(MessageMarker message) {
+        List<BlockPos> positions = message.positions();
+        if (message.connection()) {
+            if (message.add()) {
+                for (BlockPos p : positions) {
+                    destroyConnection(getConnection(p));
+                }
+                addConnection(createConnection(positions));
+            } else { // removing from a connection
+                for (BlockPos p : positions) {
+                    C existing = getConnection(p);
+                    if (existing != null) {
+                        existing.removeMarker(p);
+                        refreshConnection(existing);
+                    }
+                }
+            }
+        }
+        return false;
+    }
 }

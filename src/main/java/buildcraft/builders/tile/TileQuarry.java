@@ -5,8 +5,6 @@
  */
 
 package buildcraft.builders.tile;
-
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -65,7 +63,6 @@ import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.BoundingBoxUtil;
 import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.LocaleUtil;
-import buildcraft.lib.misc.MathUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.VecUtil;
@@ -652,19 +649,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         // up to MAX_POWER_PER_TICK from the battery, which can cross the half-capacity
         // threshold downward and falsely look "not at full speed" by the time we stamp.
         boolean atFullSpeedThisTick = battery.getStored() > battery.getCapacity() / 2;
-        long max;
-        if (atFullSpeedThisTick) {
-            max = MAX_POWER_PER_TICK;
-        } else {
-            long roundedUp = battery.getStored() + MjAPI.MJ / 2;
-            if (roundedUp > Long.MAX_VALUE / MAX_POWER_PER_TICK) {
-                max = BigInteger.valueOf(roundedUp).multiply(BigInteger.valueOf(MAX_POWER_PER_TICK))
-                    .divide(BigInteger.valueOf(battery.getCapacity() / 2)).longValue();
-            } else {
-                max = MAX_POWER_PER_TICK * roundedUp / (battery.getCapacity() / 2);
-            }
-            max = MathUtil.clamp(max, 0, MAX_POWER_PER_TICK);
-        }
+        long max = battery.rampedExtractLimit(MAX_POWER_PER_TICK);
         debugPowerRate = max;
         blockPercentSoFar = 0;
         moveDistanceSoFar = 0;

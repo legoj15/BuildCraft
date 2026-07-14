@@ -267,10 +267,7 @@ public class TileLaser extends AbstractBCBlockEntity implements ILocalBlockUpdat
 
         ILaserTarget target = getTarget();
         if (target != null) {
-            long max = getMaxPowerPerTick();
-            max *= battery.getStored() + max;
-            max /= battery.getCapacity() / 2;
-            max = Math.min(Math.min(max, getMaxPowerPerTick()), target.getRequiredLaserPower());
+            long max = Math.min(battery.rampedExtractLimit(getMaxPowerPerTick()), target.getRequiredLaserPower());
             long power = battery.extractPower(0, max);
             long excess = target.receiveLaserPower(power);
             if (excess > 0) {

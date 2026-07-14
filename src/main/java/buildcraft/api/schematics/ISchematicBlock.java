@@ -18,7 +18,8 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.core.InvalidInputDataException;
 
-public interface ISchematicBlock {
+public interface ISchematicBlock extends ISchematic<SchematicBlockContext> {
+    @Override
     void init(SchematicBlockContext context);
 
     default boolean isAir() {

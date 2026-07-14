@@ -663,7 +663,6 @@
     "buildcraftunofficial.configuration.oilIsSticky": "Oil is Sticky",
     "buildcraftunofficial.configuration.searingFluidSteam": "Searing Fluids Emit Steam",
     "buildcraftunofficial.configuration.laserTargetingBehavior": "Laser Targeting Behavior",
-    "buildcraftunofficial.configuration.bptStoreExternalThreshold": "Blueprint External Storage Threshold",
     "buildcraftunofficial.configuration.quarryFrameMinHeight": "Quarry Frame Min Height",
     "buildcraftunofficial.configuration.quarryMaxTasksPerTick": "Quarry Max Tasks Per Tick",
     "buildcraftunofficial.configuration.quarryTaskPowerDivisor": "Quarry Task Power Divisor",

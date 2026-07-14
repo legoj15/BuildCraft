@@ -19,14 +19,11 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import buildcraft.api.transport.pipe.PipeDefinition;
 
 import buildcraft.lib.client.model.MutableQuad;
-import buildcraft.lib.config.DetailedConfigOption;
 
 import buildcraft.transport.client.model.PipeModelCacheBase.PipeBaseCutoutKey;
 import buildcraft.transport.client.model.PipeModelCacheBase.PipeBaseTranslucentKey;
 
 public interface IPipeBaseModelGen {
-    DetailedConfigOption OPTION_INSIDE_COLOUR_MULT = new DetailedConfigOption("render.pipe.misc.inside.shade", "0.725");
-
     List<BakedQuad> generateCutout(PipeBaseCutoutKey key);
 
     List<BakedQuad> generateTranslucent(PipeBaseTranslucentKey key);

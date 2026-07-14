@@ -374,7 +374,7 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
 
     private static void dupDarker(MutableQuad[] quads) {
         int halfLength = quads.length / 2;
-        float mult = OPTION_INSIDE_COLOUR_MULT.getAsFloat();
+        float mult = 0.725f;
         for (int i = 0; i < halfLength; i++) {
             int n = i + halfLength;
             MutableQuad from = quads[i];

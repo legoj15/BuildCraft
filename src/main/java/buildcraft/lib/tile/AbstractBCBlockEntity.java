@@ -6,6 +6,9 @@
 
 package buildcraft.lib.tile;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import javax.annotation.Nullable;
 
 import com.mojang.authlib.GameProfile;
@@ -120,5 +123,39 @@ public abstract class AbstractBCBlockEntity extends BlockEntity {
     /** Convenience for blocks whose {@code setPlacedBy} doesn't forward the placed stack. */
     public void onPlacedBy(@Nullable LivingEntity placer) {
         onPlacedBy(placer, ItemStack.EMPTY);
+    }
+
+    // --- Player tracking + GUI reach (used by ContainerBCTile / ContainerBCCrafting) ---
+    // Lives here (not on TileBC_Neptune) so the container base can bind its generic to
+    // AbstractBCBlockEntity — the raw machine tiles (engines, fluid machines, dynamo) that skip the
+    // heavyweight TileBC_Neptune still get a menu that tracks openers and validates reach.
+
+    private final Set<Player> usingPlayers = new HashSet<>();
+
+    public void onPlayerOpen(Player player) {
+        usingPlayers.add(player);
+    }
+
+    public void onPlayerClose(Player player) {
+        usingPlayers.remove(player);
+    }
+
+    /**
+     * Whether {@code player} may keep this tile's menu open: the tile must still be the live block
+     * entity at its position AND within reach (8 blocks). This unifies the two staleness checks that
+     * had drifted apart across the raw-tile menus — the fluid machines only checked
+     * {@code getBlockEntity(pos) != this}; the engines only checked {@code isRemoved()} — onto the
+     * stronger combined guard (both, plus the reach test), so a menu closes whether the tile is
+     * removed, replaced by a different BE at the same position, or the player walked out of range.
+     */
+    public boolean canInteractWith(Player player) {
+        if (isRemoved() || level == null || level.getBlockEntity(worldPosition) != this) {
+            return false;
+        }
+        return player.distanceToSqr(
+            worldPosition.getX() + 0.5,
+            worldPosition.getY() + 0.5,
+            worldPosition.getZ() + 0.5
+        ) <= 64.0;
     }
 }

@@ -29,9 +29,9 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
 
     @Override
     protected void initGuiElements() {
-        if (menu.dynamo != null) {
+        if (menu.tile != null) {
             mainGui.shownElements.add(new LedgerOwnership(mainGui,
-                () -> menu.dynamo != null ? menu.dynamo.getOwner() : null,
+                () -> menu.tile != null ? menu.tile.getOwner() : null,
                 true
             ));
 
@@ -76,8 +76,8 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
                 public void addHelpElements(java.util.List<ElementHelpInfo.HelpPosition> elements) {
                     // Dynamic help text showing current conversion rate based on installed gears
                     // "Converts X.XX MJ/s\nto Y RF/s"
-                    long mjPerTick = menu.dynamo.getMjPerTick();
-                    int rfPerTick = menu.dynamo.getFeProductionRate(mjPerTick);
+                    long mjPerTick = menu.tile.getMjPerTick();
+                    int rfPerTick = menu.tile.getFeProductionRate(mjPerTick);
                     // Forced MJ: this is the MJ side of the explicit "Converts X MJ → Y RF" label,
                     // so it must stay MJ even under powerMode == DISPLAY_RF.
                     String mj = LocaleUtil.localizeMjFlowForcedMj(mjPerTick);

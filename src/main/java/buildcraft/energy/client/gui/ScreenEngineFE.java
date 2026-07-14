@@ -29,9 +29,9 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
 
     @Override
     protected void initGuiElements() {
-        if (menu.engine != null) {
+        if (menu.tile != null) {
             mainGui.shownElements.add(new LedgerOwnership(mainGui,
-                () -> menu.engine != null ? menu.engine.getOwner() : null,
+                () -> menu.tile != null ? menu.tile.getOwner() : null,
                 true
             ));
 
@@ -76,8 +76,8 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
                 public void addHelpElements(java.util.List<ElementHelpInfo.HelpPosition> elements) {
                     // Dynamic help text showing current conversion rate based on installed gears
                     // Matches 1.12.2: "Converts X RF to Y.YY MJ/s"
-                    int rfPerTick = menu.engine.getFeConsumptionRate();
-                    long mjPerTick = menu.engine.getMjPerTick();
+                    int rfPerTick = menu.tile.getFeConsumptionRate();
+                    long mjPerTick = menu.tile.getMjPerTick();
                     String rf = LocaleUtil.localizeRfFlow(rfPerTick);
                     // Forced MJ: this is the MJ side of the explicit "Converts X RF → Y MJ" label,
                     // so it must stay MJ even under powerMode == DISPLAY_RF.

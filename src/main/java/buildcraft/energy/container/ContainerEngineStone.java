@@ -4,7 +4,6 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.energy.container;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -15,12 +14,12 @@ import net.minecraft.world.item.ItemStack;
 
 import buildcraft.energy.BCEnergyMenuTypes;
 import buildcraft.energy.tile.TileEngineStone_BC8;
-import buildcraft.lib.gui.ContainerBC_Neptune;
+import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 
 @SuppressWarnings("this-escape")
-public class ContainerEngineStone extends ContainerBC_Neptune {
-    public final TileEngineStone_BC8 engine;
+public class ContainerEngineStone extends ContainerBCTile<TileEngineStone_BC8> {
+    // The engine tile is the inherited `tile` field (ContainerBCTile). Screens read it via menu.tile.
     private final ContainerData data;
 
     // Data indices — ContainerData only supports int, so longs are split into hi/lo
@@ -37,13 +36,12 @@ public class ContainerEngineStone extends ContainerBC_Neptune {
 
     // Client-side constructor (from network)
     public ContainerEngineStone(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
-        this(containerId, playerInv, getTile(playerInv, buf));
+        this(containerId, playerInv, resolveTile(playerInv, buf, TileEngineStone_BC8.class));
     }
 
     // Server-side constructor
     public ContainerEngineStone(int containerId, Inventory playerInv, TileEngineStone_BC8 engine) {
-        super(BCEnergyMenuTypes.ENGINE_STONE.get(), containerId, playerInv.player);
-        this.engine = engine;
+        super(BCEnergyMenuTypes.ENGINE_STONE.get(), containerId, playerInv.player, engine);
 
         // Create container data for syncing engine state to client
         if (engine != null && engine.getLevel() != null && !engine.getLevel().isClientSide()) {
@@ -94,17 +92,6 @@ public class ContainerEngineStone extends ContainerBC_Neptune {
         addFullPlayerInventory(8, 84, playerInv);
     }
 
-    private static TileEngineStone_BC8 getTile(Inventory playerInv, FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        if (playerInv.player.level() != null) {
-            var be = playerInv.player.level().getBlockEntity(pos);
-            if (be instanceof TileEngineStone_BC8 engine) {
-                return engine;
-            }
-        }
-        return null;
-    }
-
     // --- Accessors for the screen (use synced ContainerData, not direct tile access) ---
 
     public int getBurnTime() {
@@ -151,18 +138,6 @@ public class ContainerEngineStone extends ContainerBC_Neptune {
     /** Synced current output in micro-MJ/tick (reconstructed from hi/lo ints). */
     public long getSyncedCurrentOutput() {
         return ((long) data.get(DATA_OUTPUT_HI) << 32) | (data.get(DATA_OUTPUT_LO) & 0xFFFFFFFFL);
-    }
-
-    // --- Standard menu overrides ---
-
-    @Override
-    public boolean stillValid(Player player) {
-        if (engine == null || engine.isRemoved()) return false;
-        return player.distanceToSqr(
-            engine.getBlockPos().getX() + 0.5,
-            engine.getBlockPos().getY() + 0.5,
-            engine.getBlockPos().getZ() + 0.5
-        ) <= 64.0;
     }
 
     // --- Fuel slot that delegates to the tile entity's fuel stack ---

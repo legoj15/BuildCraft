@@ -1,9 +1,7 @@
 package buildcraft.energy.container;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.SimpleContainerData;
 
@@ -12,11 +10,11 @@ import net.minecraft.world.inventory.SimpleContainerData;
 import buildcraft.energy.BCEnergyMenuTypes;
 import buildcraft.energy.tile.TileEngineFE;
 import buildcraft.lib.engine.TileEngineBase_BC8;
-import buildcraft.lib.gui.ContainerBC_Neptune;
+import buildcraft.lib.gui.ContainerBCTile;
 
 @SuppressWarnings("this-escape")
-public class ContainerEngineFE extends ContainerBC_Neptune {
-    public final TileEngineFE engine;
+public class ContainerEngineFE extends ContainerBCTile<TileEngineFE> {
+    // The engine tile is the inherited `tile` field (ContainerBCTile). Screens read it via menu.tile.
     private final ContainerData data;
 
     private static final int DATA_POWER_HI = 0;
@@ -30,12 +28,11 @@ public class ContainerEngineFE extends ContainerBC_Neptune {
     private static final int DATA_COUNT = 8;
 
     public ContainerEngineFE(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
-        this(containerId, playerInv, getTile(playerInv, buf));
+        this(containerId, playerInv, resolveTile(playerInv, buf, TileEngineFE.class));
     }
 
     public ContainerEngineFE(int containerId, Inventory playerInv, TileEngineFE engine) {
-        super(BCEnergyMenuTypes.ENGINE_FE.get(), containerId, playerInv.player);
-        this.engine = engine;
+        super(BCEnergyMenuTypes.ENGINE_FE.get(), containerId, playerInv.player, engine);
 
         if (engine != null && engine.getLevel() != null && !engine.getLevel().isClientSide()) {
             this.data = new ContainerData() {
@@ -87,15 +84,6 @@ public class ContainerEngineFE extends ContainerBC_Neptune {
         addFullPlayerInventory(8, 95, playerInv);
     }
 
-    private static TileEngineFE getTile(Inventory playerInv, FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        if (playerInv.player.level() != null) {
-            var be = playerInv.player.level().getBlockEntity(pos);
-            if (be instanceof TileEngineFE eng) return eng;
-        }
-        return null;
-    }
-
     public long getSyncedPower() {
         return ((long) data.get(DATA_POWER_HI) << 32) | (data.get(DATA_POWER_LO) & 0xFFFFFFFFL);
     }
@@ -121,15 +109,5 @@ public class ContainerEngineFE extends ContainerBC_Neptune {
 
     public int getSyncedFeStored() {
         return data.get(DATA_FE_STORED);
-    }
-
-    @Override
-    public boolean stillValid(Player player) {
-        if (engine == null || engine.isRemoved()) return false;
-        return player.distanceToSqr(
-            engine.getBlockPos().getX() + 0.5,
-            engine.getBlockPos().getY() + 0.5,
-            engine.getBlockPos().getZ() + 0.5
-        ) <= 64.0;
     }
 }

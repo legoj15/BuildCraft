@@ -6,7 +6,6 @@
 
 package buildcraft.factory.container;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.Identifier;
@@ -20,26 +19,24 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.tile.TileDistiller_BC8;
 import buildcraft.lib.compat.jei.JeiTransferUtil;
-import buildcraft.lib.gui.ContainerBC_Neptune;
+import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
 import buildcraft.lib.net.PacketBufferBC;
 
 @SuppressWarnings("this-escape")
-public class ContainerDistiller extends ContainerBC_Neptune {
-    public final TileDistiller_BC8 tile;
+public class ContainerDistiller extends ContainerBCTile<TileDistiller_BC8> {
     public final WidgetFluidTank widgetTankIn;
     public final WidgetFluidTank widgetTankGasOut;
     public final WidgetFluidTank widgetTankLiquidOut;
 
     // Client-side constructor (from network)
     public ContainerDistiller(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
-        this(containerId, playerInv, getTile(playerInv, buf));
+        this(containerId, playerInv, resolveTile(playerInv, buf, TileDistiller_BC8.class));
     }
 
     // Server-side constructor
     public ContainerDistiller(int containerId, Inventory playerInv, TileDistiller_BC8 tile) {
-        super(BCFactoryMenuTypes.DISTILLER.get(), containerId, playerInv.player);
-        this.tile = tile;
+        super(BCFactoryMenuTypes.DISTILLER.get(), containerId, playerInv.player, tile);
 
         if (tile != null) {
             addSlot(new buildcraft.lib.gui.slot.SlotBase(tile.containerSlots, 0, 8, 35));
@@ -68,30 +65,6 @@ public class ContainerDistiller extends ContainerBC_Neptune {
             return;
         }
         super.readMessage(id, buffer, isClient, ctx);
-    }
-
-    private static TileDistiller_BC8 getTile(Inventory playerInv, FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        if (playerInv.player.level() != null) {
-            var be = playerInv.player.level().getBlockEntity(pos);
-            if (be instanceof TileDistiller_BC8 distiller) {
-                return distiller;
-            }
-        }
-        return null;
-    }
-
-    @Override
-    public boolean stillValid(Player player) {
-        if (tile == null) return false;
-        if (tile.getLevel() == null || tile.getLevel().getBlockEntity(tile.getBlockPos()) != tile) {
-            return false;
-        }
-        return player.distanceToSqr(
-            tile.getBlockPos().getX() + 0.5,
-            tile.getBlockPos().getY() + 0.5,
-            tile.getBlockPos().getZ() + 0.5
-        ) <= 64.0;
     }
 
     @Override

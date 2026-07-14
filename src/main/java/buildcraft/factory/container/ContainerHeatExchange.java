@@ -26,17 +26,15 @@ import buildcraft.factory.tile.TileHeatExchange.ExchangeSection;
 import buildcraft.factory.tile.TileHeatExchange.ExchangeSectionEnd;
 import buildcraft.factory.tile.TileHeatExchange.ExchangeSectionStart;
 import buildcraft.lib.compat.jei.JeiTransferUtil;
-import buildcraft.lib.gui.ContainerBC_Neptune;
+import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
 import buildcraft.lib.net.PacketBufferBC;
 
 @SuppressWarnings("this-escape")
-public class ContainerHeatExchange extends ContainerBC_Neptune {
-    /** The START tile of the heat exchanger multi-block, or {@code null} if the
-     * structure is missing/incomplete. The end tanks are reached via this. */
-    @Nullable
-    public final TileHeatExchange tile;
+public class ContainerHeatExchange extends ContainerBCTile<TileHeatExchange> {
+    // The `tile` field (nullable START tile of the multi-block; end tanks reached via it) is provided
+    // by ContainerBCTile. The client-side resolver below returns the START tile, not the clicked one.
 
     public final WidgetFluidTank widgetTankStartInput;
     public final WidgetFluidTank widgetTankStartOutput;
@@ -50,8 +48,7 @@ public class ContainerHeatExchange extends ContainerBC_Neptune {
 
     // Server-side constructor
     public ContainerHeatExchange(int containerId, Inventory playerInv, @Nullable TileHeatExchange tile) {
-        super(BCFactoryMenuTypes.HEAT_EXCHANGE.get(), containerId, playerInv.player);
-        this.tile = tile;
+        super(BCFactoryMenuTypes.HEAT_EXCHANGE.get(), containerId, playerInv.player, tile);
 
         // Bucket / fluid-shard slots (1.12.2 layout: top-left, mid-left, top-right, mid-right
         // — paired geometrically with the four tanks).
@@ -115,19 +112,6 @@ public class ContainerHeatExchange extends ContainerBC_Neptune {
         BlockEntity be = playerInv.player.level().getBlockEntity(pos);
         if (!(be instanceof TileHeatExchange exchange)) return null;
         return exchange.findStart();
-    }
-
-    @Override
-    public boolean stillValid(Player player) {
-        if (tile == null) return false;
-        if (tile.getLevel() == null || tile.getLevel().getBlockEntity(tile.getBlockPos()) != tile) {
-            return false;
-        }
-        return player.distanceToSqr(
-            tile.getBlockPos().getX() + 0.5,
-            tile.getBlockPos().getY() + 0.5,
-            tile.getBlockPos().getZ() + 0.5
-        ) <= 64.0;
     }
 
     @Override

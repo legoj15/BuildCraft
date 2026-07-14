@@ -51,10 +51,10 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
 
     @Override
     protected void initGuiElements() {
-        if (menu.engine != null) {
+        if (menu.tile != null) {
             // Ownership ledger on the right side (on top, matching 1.12.2 standardLedgerInit order)
             mainGui.shownElements.add(new LedgerOwnership(mainGui,
-                () -> menu.engine != null ? menu.engine.getOwner() : null,
+                () -> menu.tile != null ? menu.tile.getOwner() : null,
                 true
             ));
 

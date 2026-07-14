@@ -8,7 +8,6 @@ package buildcraft.energy.container;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.inventory.ContainerData;
@@ -18,7 +17,7 @@ import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.energy.BCEnergyMenuTypes;
 import buildcraft.energy.tile.TileEngineIron_BC8;
 import buildcraft.lib.engine.TileEngineBase_BC8;
-import buildcraft.lib.gui.ContainerBC_Neptune;
+import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
 
 /**
@@ -26,8 +25,8 @@ import buildcraft.lib.gui.widget.WidgetFluidTank;
  * Syncs engine state + fluid tank levels to the client via ContainerData.
  */
 @SuppressWarnings("this-escape")
-public class ContainerEngineIron extends ContainerBC_Neptune {
-    public final TileEngineIron_BC8 engine;
+public class ContainerEngineIron extends ContainerBCTile<TileEngineIron_BC8> {
+    // The engine tile is the inherited `tile` field (ContainerBCTile). Screens read it via menu.tile.
     private final ContainerData data;
 
     // Widget indices (in registration order) for screen to reference
@@ -53,8 +52,7 @@ public class ContainerEngineIron extends ContainerBC_Neptune {
 
     /** Server constructor */
     public ContainerEngineIron(int containerId, Inventory playerInv, TileEngineIron_BC8 engine) {
-        super(BCEnergyMenuTypes.ENGINE_IRON.get(), containerId, playerInv.player);
-        this.engine = engine;
+        super(BCEnergyMenuTypes.ENGINE_IRON.get(), containerId, playerInv.player, engine);
 
         // Server side: read live values from the tile entity
         // Client side: use SimpleContainerData so set() actually stores values
@@ -111,25 +109,17 @@ public class ContainerEngineIron extends ContainerBC_Neptune {
         // Player inventory — positioned at standard location
         addFullPlayerInventory(8, 95);
 
-        // Register fluid tank widgets for in-GUI bucket interaction
-        widgetFuel = addWidget(new WidgetFluidTank(this, engine.tankFuel));
-        widgetCoolant = addWidget(new WidgetFluidTank(this, engine.tankCoolant));
-        widgetResidue = addWidget(new WidgetFluidTank(this, engine.tankResidue));
+        // Register fluid tank widgets for in-GUI bucket interaction. Guarded for a null tile (the
+        // client resolver returns null if the block entity isn't present — the menu then closes via
+        // stillValid); previously the client resolver threw instead of admitting a null engine.
+        widgetFuel = addWidget(new WidgetFluidTank(this, engine != null ? engine.tankFuel : null));
+        widgetCoolant = addWidget(new WidgetFluidTank(this, engine != null ? engine.tankCoolant : null));
+        widgetResidue = addWidget(new WidgetFluidTank(this, engine != null ? engine.tankResidue : null));
     }
 
     /** Client constructor (from network buffer) */
     public ContainerEngineIron(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
-        this(containerId, playerInv, getTile(playerInv, buf));
-    }
-
-    private static TileEngineIron_BC8 getTile(Inventory playerInv, FriendlyByteBuf buf) {
-        var pos = buf.readBlockPos();
-        var level = playerInv.player.level();
-        var be = level.getBlockEntity(pos);
-        if (be instanceof TileEngineIron_BC8 engine) {
-            return engine;
-        }
-        throw new IllegalStateException("Expected TileEngineIron_BC8 at " + pos);
+        this(containerId, playerInv, resolveTile(playerInv, buf, TileEngineIron_BC8.class));
     }
 
     // --- Data accessors for the screen ---
@@ -193,15 +183,5 @@ public class ContainerEngineIron extends ContainerBC_Neptune {
         if (id < 0) return Fluids.EMPTY;
         Fluid fluid = BuiltInRegistries.FLUID.byId(id);
         return fluid != null ? fluid : Fluids.EMPTY;
-    }
-
-    @Override
-    public boolean stillValid(Player player) {
-        if (engine == null || engine.isRemoved()) return false;
-        return player.distanceToSqr(
-            engine.getBlockPos().getX() + 0.5,
-            engine.getBlockPos().getY() + 0.5,
-            engine.getBlockPos().getZ() + 0.5
-        ) <= 64.0;
     }
 }

@@ -7,14 +7,10 @@
 
 package buildcraft.lib.tile;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -40,8 +36,6 @@ public abstract class TileBC_Neptune extends AbstractBCSyncedBlockEntity {
         (handler, slot, before, after) -> this.setChanged()
     );
 
-    private final Set<Player> usingPlayers = new HashSet<>();
-
     /** Set once this tile's contents have been spilled for the current removal, so the non-player
      *  {@link #dropContentsOnRemoval} fallback can't drop them twice — the player-break path drops
      *  in playerWillDestroy, which the subsequent level.removeBlock re-triggers this hook after. */
@@ -52,22 +46,8 @@ public abstract class TileBC_Neptune extends AbstractBCSyncedBlockEntity {
         super(type, pos, state);
     }
 
-    // --- Player tracking (used by ContainerBCTile) ---
-
-    public void onPlayerOpen(Player player) {
-        usingPlayers.add(player);
-    }
-
-    public void onPlayerClose(Player player) {
-        usingPlayers.remove(player);
-    }
-
-    public boolean canInteractWith(Player player) {
-        if (level == null || level.getBlockEntity(worldPosition) != this) {
-            return false;
-        }
-        return player.distanceToSqr(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5) <= 64.0;
-    }
+    // Player tracking (onPlayerOpen/onPlayerClose) + canInteractWith now live on AbstractBCBlockEntity
+    // so the container base can bind to it and the raw machine tiles share the same reach/staleness guard.
 
     // --- Owner persistence ---
     // The owner field, getOwner/setOwner and onPlacedBy live on AbstractBCBlockEntity; here we only

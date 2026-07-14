@@ -1,30 +1,25 @@
 package buildcraft.api.schematics;
 
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableList;
-
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
-
 
 import buildcraft.api.core.BuildCraftAPI;
 
 public class SchematicBlockFactoryRegistry {
-    private static final Set<SchematicBlockFactory<?>> FACTORIES = new TreeSet<>();
+    private static final SchematicFactoryRegistry<SchematicBlockContext, SchematicBlockFactory<?>> REGISTRY =
+        new SchematicFactoryRegistry<>();
 
     public static <S extends ISchematicBlock> void registerFactory(String name,
                                                                    int priority,
                                                                    Predicate<SchematicBlockContext> predicate,
                                                                    Supplier<S> supplier) {
-        FACTORIES.add(new SchematicBlockFactory<>(
+        REGISTRY.register(new SchematicBlockFactory<>(
             BuildCraftAPI.nameToResourceLocation(name),
             priority,
             predicate,
@@ -45,36 +40,17 @@ public class SchematicBlockFactoryRegistry {
     }
 
     public static List<SchematicBlockFactory<?>> getFactories() {
-        return ImmutableList.copyOf(FACTORIES);
+        return REGISTRY.getFactories();
     }
 
     @Nonnull
     @SuppressWarnings("unchecked")
     public static <S extends ISchematicBlock> SchematicBlockFactory<S> getFactoryByInstance(S instance) {
-        return (SchematicBlockFactory<S>) FACTORIES.stream()
-            .filter(schematicBlockFactory -> schematicBlockFactory.clazz == instance.getClass())
-            .findFirst()
-            .orElseThrow(() -> new IllegalStateException("Didn't find a factory for " + instance.getClass()));
+        return (SchematicBlockFactory<S>) REGISTRY.getFactoryByInstance(instance);
     }
 
-    /**
-     * Look up a factory by its registered id. Tolerates either an {@link Identifier} or a
-     * {@code String} with "namespace:path"; strings are parsed through
-     * {@link BuildCraftAPI#nameToResourceLocation(String)} so the comparison below is always
-     * {@code Identifier.equals(Identifier)}. This defends against the old bug where factories
-     * were keyed by {@code String} and the caller passed {@code Identifier} — the two types are
-     * never equal, which silently broke every deserialization path.
-     */
     @Nullable
     public static SchematicBlockFactory<?> getFactoryByName(Object name) {
-        Identifier id = name instanceof Identifier i ? i
-                : name instanceof String s ? BuildCraftAPI.nameToResourceLocation(s)
-                : null;
-        if (id == null) return null;
-        return FACTORIES.stream()
-            .filter(schematicBlockFactory -> id.equals(schematicBlockFactory.name))
-            .findFirst()
-            .orElse(null);
+        return REGISTRY.getFactoryByName(name);
     }
 }
-

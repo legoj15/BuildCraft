@@ -5,36 +5,16 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
 
-
-
-public class SchematicBlockFactory<S extends ISchematicBlock> implements Comparable<SchematicBlockFactory<?>> {
-    @Nonnull
-    public final Object name;
-    public final int priority;
-    @Nonnull
-    public final Predicate<SchematicBlockContext> predicate;
-    @Nonnull
-    public final Supplier<S> supplier;
-    @Nonnull
-    public final Class<S> clazz;
-
-    @SuppressWarnings("unchecked")
+/**
+ * Thin block-scoped view over {@link SchematicFactory}. Kept as a named subclass (rather than a bare
+ * {@code SchematicFactory<SchematicBlockContext, S>}) so addon-facing signatures and the
+ * {@code getFactories() : List<SchematicBlockFactory<?>>} contract stay unchanged.
+ */
+public class SchematicBlockFactory<S extends ISchematicBlock> extends SchematicFactory<SchematicBlockContext, S> {
     public SchematicBlockFactory(@Nonnull Object name,
                                  int priority,
                                  @Nonnull Predicate<SchematicBlockContext> predicate,
                                  @Nonnull Supplier<S> supplier) {
-        this.name = name;
-        this.priority = priority;
-        this.predicate = predicate;
-        this.supplier = supplier;
-        clazz = (Class<S>) supplier.get().getClass();
-    }
-
-    @Override
-    public int compareTo(@Nonnull SchematicBlockFactory<?> o) {
-        return priority != o.priority
-                ? Integer.compare(priority, o.priority)
-                : name.toString().compareTo(o.name.toString());
+        super(name, priority, predicate, supplier);
     }
 }
-

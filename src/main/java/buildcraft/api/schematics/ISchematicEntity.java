@@ -17,7 +17,8 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.core.InvalidInputDataException;
 
-public interface ISchematicEntity {
+public interface ISchematicEntity extends ISchematic<SchematicEntityContext> {
+    @Override
     void init(SchematicEntityContext context);
 
     Vec3 getPos();

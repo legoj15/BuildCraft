@@ -6,7 +6,14 @@
 
 package buildcraft.lib.tile;
 
+import javax.annotation.Nullable;
+
+import com.mojang.authlib.GameProfile;
+
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -78,4 +85,40 @@ public abstract class AbstractBCBlockEntity extends BlockEntity {
 
     /** Version-neutral read hook. Subclasses override this (NOT loadAdditional) and call {@code super.readData(in)}. */
     protected void readData(BCValueInput in) {}
+
+    // --- Owner tracking ---
+    // The owner field + placement entry point shared by TileBC_Neptune and the raw machine tiles. The
+    // ownerUUID/ownerName NBT itself is handled by OwnerData, which owner-bearing subclasses call from
+    // their writeData/readData — this base deliberately does NOT serialize owner, so ownerless tiles
+    // (markers, TileSpringOil) stay byte-identical. Tiles with a bespoke placement flow
+    // (e.g. TilePipeHolder) keep their own owner storage.
+
+    @Nullable
+    protected GameProfile owner;
+
+    @Nullable
+    public GameProfile getOwner() {
+        return owner;
+    }
+
+    public void setOwner(@Nullable GameProfile owner) {
+        this.owner = owner;
+    }
+
+    /**
+     * Records the placing player as this tile's owner (called by block classes from {@code setPlacedBy}).
+     * Marks the chunk dirty so the owner persists even if the tile is never otherwise mutated before the
+     * chunk unloads (the setChanged() guard added in commit 9176336eb).
+     */
+    public void onPlacedBy(@Nullable LivingEntity placer, ItemStack stack) {
+        if (placer instanceof Player player) {
+            setOwner(player.getGameProfile());
+            setChanged();
+        }
+    }
+
+    /** Convenience for blocks whose {@code setPlacedBy} doesn't forward the placed stack. */
+    public void onPlacedBy(@Nullable LivingEntity placer) {
+        onPlacedBy(placer, ItemStack.EMPTY);
+    }
 }

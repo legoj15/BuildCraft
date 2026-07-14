@@ -15,22 +15,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
-import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -56,6 +51,7 @@ import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.tile.AbstractBCSyncedBlockEntity;
+import buildcraft.lib.tile.OwnerData;
 
 /**
  * Flood Gate tile entity. Receives fluid via pipes and uses BFS flood-fill to
@@ -89,10 +85,6 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
     private int delayIndex = 0;
     private int tick = 0;
     private int lastSyncedAmount = 0;
-
-    /** Player who placed this flood gate — granted the "Flooding the world" advancement each
-     *  time the gate places a fluid block. Persisted to NBT; null until {@link #onPlacedBy} runs. */
-    private GameProfile owner;
 
     public TileFloodGate(BlockPos pos, BlockState state) {
         super(BCFactoryBlockEntities.FLOOD_GATE.get(), pos, state);
@@ -133,23 +125,8 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
     }
     //?}
 
-    /** @return the profile of the player who placed this flood gate, or {@code null} if unknown. */
-    @Nullable
-    public GameProfile getOwner() {
-        return owner;
-    }
-
-    /**
-     * Records the placing player as the owner. Called from
-     * {@link buildcraft.factory.block.BlockFloodGate#setPlacedBy}; the owner is granted the
-     * "Flooding the world" advancement whenever this gate floods a block.
-     */
-    public void onPlacedBy(@Nullable LivingEntity placer) {
-        if (placer instanceof Player player) {
-            owner = player.getGameProfile();
-            setChanged();
-        }
-    }
+    // Owner tracking (field, getOwner, onPlacedBy) lives on AbstractBCBlockEntity; the placing player
+    // is granted the "Flooding the world" advancement whenever this gate floods a block.
 
     private int getCurrentDelay() {
         return REBUILD_DELAYS[delayIndex];
@@ -318,12 +295,7 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
     // here we only override the version-neutral writeData/readData hooks it dispatches to.
 
     protected void writeData(BCValueOutput output) {
-        if (owner != null && GameProfileUtil.getId(owner) != null) {
-            output.putString("ownerUUID", GameProfileUtil.getId(owner).toString());
-            if (GameProfileUtil.getName(owner) != null) {
-                output.putString("ownerName", GameProfileUtil.getName(owner));
-            }
-        }
+        OwnerData.writeOwner(output, owner);
         byte sides = 0;
         for (Direction face : Direction.values()) {
             if (openSides.contains(face)) {
@@ -337,14 +309,7 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
     }
 
     protected void readData(BCValueInput input) {
-        String ownerUuid = input.getStringOr("ownerUUID", "");
-        if (!ownerUuid.isEmpty()) {
-            try {
-                owner = new GameProfile(UUID.fromString(ownerUuid), input.getStringOr("ownerName", "Unknown"));
-            } catch (IllegalArgumentException e) {
-                owner = null;
-            }
-        }
+        owner = OwnerData.readOwner(input);
         byte sides = input.getByteOr("openSides", (byte) 0b011111);
         openSides.clear();
         for (Direction face : Direction.values()) {

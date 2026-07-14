@@ -6,11 +6,9 @@
 
 package buildcraft.factory.tile;
 
-import java.util.UUID;
 
 import javax.annotation.Nullable;
 
-import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -55,6 +53,7 @@ import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.tile.AbstractBCSyncedBlockEntity;
+import buildcraft.lib.tile.OwnerData;
 
 /**
  * Distiller tile entity. Takes fluid input, consumes MJ power, and produces
@@ -96,9 +95,6 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
     /** True when a recipe exists for the input fluid but at least one output tank can't accept the recipe's output. */
     private boolean isStuck = false;
 
-    /** Player who placed this distiller — shown in the GUI ownership ledger and granted the
-     *  Heating and Distilling advancement. Persisted to NBT; null until {@link #onPlacedBy} runs. */
-    private GameProfile owner;
 
     /** Edge-detect latch for the Heating and Distilling advancement: true while the distiller was
      *  actively working a recipe last tick, so the grant check fires only on the rising edge. */
@@ -178,23 +174,13 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         return mjBattery;
     }
 
-    /** @return the profile of the player who placed this distiller, or {@code null} if unknown. */
-    @Nullable
-    public GameProfile getOwner() {
-        return owner;
-    }
-
-    /**
-     * Records the placing player as the owner and syncs it to tracking clients so the GUI
-     * ownership ledger renders. Called from {@link buildcraft.factory.block.BlockDistiller#setPlacedBy}.
-     */
+    // Owner field, getOwner and the base placement logic live on AbstractBCBlockEntity. This override
+    // adds the extra tracking-client sync so the GUI ownership ledger renders immediately on placement.
+    @Override
     public void onPlacedBy(@Nullable LivingEntity placer) {
-        if (placer instanceof Player player) {
-            owner = player.getGameProfile();
-            setChanged();
-            if (level != null && !level.isClientSide()) {
-                MessageUtil.sendUpdateToTrackingPlayers(this);
-            }
+        super.onPlacedBy(placer);
+        if (getOwner() != null && level != null && !level.isClientSide()) {
+            MessageUtil.sendUpdateToTrackingPlayers(this);
         }
     }
 
@@ -566,12 +552,7 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
     // here we only override the version-neutral writeData/readData hooks it dispatches to.
 
     protected void writeData(BCValueOutput output) {
-        if (owner != null && GameProfileUtil.getId(owner) != null) {
-            output.putString("ownerUUID", GameProfileUtil.getId(owner).toString());
-            if (GameProfileUtil.getName(owner) != null) {
-                output.putString("ownerName", GameProfileUtil.getName(owner));
-            }
-        }
+        OwnerData.writeOwner(output, owner);
         // Save each tank's fluid contents directly
         if (!tankIn.isTankEmpty(0)) {
             output.store("fluidIn", FluidStack.CODEC, tankIn.getFluidStack(0));
@@ -591,14 +572,7 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
     }
 
     protected void readData(BCValueInput input) {
-        String ownerUuid = input.getStringOr("ownerUUID", "");
-        if (!ownerUuid.isEmpty()) {
-            try {
-                owner = new GameProfile(UUID.fromString(ownerUuid), input.getStringOr("ownerName", "Unknown"));
-            } catch (IllegalArgumentException e) {
-                owner = null;
-            }
-        }
+        owner = OwnerData.readOwner(input);
         loadTank(tankIn, input, "fluidIn");
         loadTank(tankGasOut, input, "fluidGasOut");
         loadTank(tankLiquidOut, input, "fluidLiquidOut");

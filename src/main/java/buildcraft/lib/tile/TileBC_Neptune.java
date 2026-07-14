@@ -9,15 +9,11 @@ package buildcraft.lib.tile;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
 import javax.annotation.Nullable;
 
-import com.mojang.authlib.GameProfile;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -30,7 +26,6 @@ import net.minecraft.world.level.storage.ValueOutput;
 
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
-import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.tile.item.IBCItemHandler;
 import buildcraft.lib.tile.item.ItemHandlerManager;
 
@@ -46,8 +41,6 @@ public abstract class TileBC_Neptune extends AbstractBCSyncedBlockEntity {
     );
 
     private final Set<Player> usingPlayers = new HashSet<>();
-    @Nullable
-    private GameProfile owner;
 
     /** Set once this tile's contents have been spilled for the current removal, so the non-player
      *  {@link #dropContentsOnRemoval} fallback can't drop them twice — the player-break path drops
@@ -76,59 +69,20 @@ public abstract class TileBC_Neptune extends AbstractBCSyncedBlockEntity {
         return player.distanceToSqr(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5) <= 64.0;
     }
 
-    // --- Owner tracking ---
-
-    @Nullable
-    public GameProfile getOwner() {
-        return owner;
-    }
-
-    public void setOwner(@Nullable GameProfile owner) {
-        this.owner = owner;
-    }
-
-    /**
-     * Called by block classes from setPlacedBy() to record the placing player.
-     * Matches the 1.12.2 TileBC_Neptune.onPlacedBy() pattern.
-     */
-    public void onPlacedBy(@Nullable LivingEntity placer, ItemStack stack) {
-        if (placer instanceof Player player) {
-            setOwner(player.getGameProfile());
-            // Mark the chunk dirty so the owner persists even if the block is never
-            // mutated again before the chunk unloads.
-            setChanged();
-        }
-    }
-
     // --- Owner persistence ---
-
-    // The saveAdditional/loadAdditional signature directive lives once in AbstractBCBlockEntity;
-    // here we only override the version-neutral writeData/readData hooks it dispatches to.
+    // The owner field, getOwner/setOwner and onPlacedBy live on AbstractBCBlockEntity; here we only
+    // persist it via OwnerData. The saveAdditional/loadAdditional signature directive lives once in
+    // AbstractBCBlockEntity too, so we override the version-neutral writeData/readData hooks.
     @Override
     protected void writeData(BCValueOutput out) {
         super.writeData(out);
-        if (owner != null && GameProfileUtil.getId(owner) != null) {
-            out.putString("ownerUUID", GameProfileUtil.getId(owner).toString());
-            if (GameProfileUtil.getName(owner) != null) {
-                out.putString("ownerName", GameProfileUtil.getName(owner));
-            }
-        }
+        OwnerData.writeOwner(out, owner);
     }
 
-    /** Version-neutral read hook. Subclasses override this (NOT loadAdditional) and call {@code super.readData(in)}. */
     @Override
     protected void readData(BCValueInput in) {
         super.readData(in);
-        String uuidStr = in.getStringOr("ownerUUID", "");
-        if (!uuidStr.isEmpty()) {
-            try {
-                UUID uuid = UUID.fromString(uuidStr);
-                String name = in.getStringOr("ownerName", "Unknown");
-                owner = new GameProfile(uuid, name);
-            } catch (IllegalArgumentException e) {
-                owner = null;
-            }
-        }
+        owner = OwnerData.readOwner(in);
     }
 
     // --- Item drops ---

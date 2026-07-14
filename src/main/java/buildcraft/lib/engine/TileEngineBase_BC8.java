@@ -5,19 +5,16 @@
  */
 package buildcraft.lib.engine;
 
-import java.util.UUID;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 //? if >=1.21.10 {
 import net.minecraft.util.profiling.Profiler;
@@ -44,9 +41,9 @@ import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
-import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.tile.AbstractBCSyncedBlockEntity;
+import buildcraft.lib.tile.OwnerData;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
 //? if >=1.21.10 {
@@ -67,10 +64,6 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
 
     public static final float MIN_HEAT = 20f;
     public static final float MAX_HEAT = 250f;
-
-    // --- Owner tracking (ported from 1.12.2 TileBC_Neptune) ---
-    @Nullable
-    private GameProfile owner;
 
     // --- Engine state ---
     protected Direction orientation = Direction.UP;
@@ -154,30 +147,7 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
     @Nonnull
     protected abstract IMjConnector createConnector();
 
-    // --- Owner tracking ---
-
-    /**
-     * Called when the block is placed by a living entity.
-     * Sets the owner to the placing player's GameProfile.
-     * Matches 1.12.2 TileBC_Neptune.onPlacedBy() behavior.
-     */
-    public void onPlacedBy(@Nullable LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
-        if (placer instanceof net.minecraft.world.entity.player.Player player) {
-            owner = player.getGameProfile();
-            // Mark the chunk dirty so the owner persists even if the engine is never mutated
-            // again before the chunk unloads (matches TileBC_Neptune.onPlacedBy).
-            setChanged();
-        }
-    }
-
-    @Nullable
-    public GameProfile getOwner() {
-        return owner;
-    }
-
-    public void setOwner(@Nullable GameProfile owner) {
-        this.owner = owner;
-    }
+    // Owner tracking (field, getOwner/setOwner, onPlacedBy) lives on AbstractBCBlockEntity.
 
     // --- Overridable methods ---
 
@@ -730,13 +700,7 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
         output.putBoolean("isPumping", isPumping);
         output.putBoolean("isRedstonePowered", isRedstonePowered);
         output.putByte("powerStage", (byte) powerStage.ordinal());
-        // Owner persistence (matches 1.12.2 TileBC_Neptune)
-        if (owner != null && GameProfileUtil.getId(owner) != null) {
-            output.putString("ownerUUID", GameProfileUtil.getId(owner).toString());
-            if (GameProfileUtil.getName(owner) != null) {
-                output.putString("ownerName", GameProfileUtil.getName(owner));
-            }
-        }
+        OwnerData.writeOwner(output, owner);
     }
 
     @Override
@@ -751,16 +715,6 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
         isRedstonePowered = input.getBooleanOr("isRedstonePowered", false);
         int ps = input.getByteOr("powerStage", (byte) 0);
         powerStage = EnumPowerStage.VALUES[Math.min(ps, EnumPowerStage.VALUES.length - 1)];
-        // Owner persistence (matches 1.12.2 TileBC_Neptune)
-        String uuidStr = input.getStringOr("ownerUUID", "");
-        if (!uuidStr.isEmpty()) {
-            try {
-                UUID uuid = UUID.fromString(uuidStr);
-                String name = input.getStringOr("ownerName", "Unknown");
-                owner = new GameProfile(uuid, name);
-            } catch (IllegalArgumentException e) {
-                owner = null;
-            }
-        }
+        owner = OwnerData.readOwner(input);
     }
 }

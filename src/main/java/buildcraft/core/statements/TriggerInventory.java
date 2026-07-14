@@ -20,33 +20,24 @@ import buildcraft.api.items.IList;
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
-import buildcraft.api.statements.ITriggerExternal;
-import buildcraft.api.statements.StatementParameterItemStack;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.LocaleUtil;
 
 import buildcraft.core.BCCoreSprites;
 import buildcraft.core.BCCoreStatements;
 
-public class TriggerInventory extends BCStatement implements ITriggerExternal {
-    public State state;
+public class TriggerInventory extends AbstractContainerStateTrigger {
 
     public TriggerInventory(State state) {
-        super(
+        super(state,
             "buildcraft:inventory." + state.name().toLowerCase(Locale.ROOT),
             "buildcraft.inventory." + state.name().toLowerCase(Locale.ROOT)
         );
-        this.state = state;
     }
 
     @Override
     public SpriteHolder getSprite() {
         return BCCoreSprites.TRIGGER_INVENTORY.get(state);
-    }
-
-    @Override
-    public int maxParameters() {
-        return state == State.CONTAINS || state == State.SPACE ? 1 : 0;
     }
 
     @Override
@@ -148,21 +139,7 @@ public class TriggerInventory extends BCStatement implements ITriggerExternal {
     }
 
     @Override
-    public IStatementParameter createParameter(int index) {
-        return new StatementParameterItemStack();
-    }
-
-    @Override
     public IStatement[] getPossible() {
         return BCCoreStatements.TRIGGER_INVENTORY_ALL;
-    }
-
-    public enum State {
-        EMPTY,
-        CONTAINS,
-        SPACE,
-        FULL;
-
-        public static final State[] VALUES = values();
     }
 }

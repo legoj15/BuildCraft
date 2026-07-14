@@ -24,33 +24,31 @@ import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
-import buildcraft.api.statements.ITriggerExternal;
-import buildcraft.api.statements.StatementParameterItemStack;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.LocaleUtil;
 
 import buildcraft.core.BCCoreSprites;
 import buildcraft.core.BCCoreStatements;
 
-public class TriggerFluidContainerLevel extends BCStatement implements ITriggerExternal {
-    public final TriggerType type;
+public class TriggerFluidContainerLevel extends AbstractContainerLevelTrigger {
 
     public TriggerFluidContainerLevel(TriggerType type) {
-        super(
+        // Primary UID uses the collision-free "fluidlevel." prefix (mirrors "inventorylevel." on the
+        // item side). The old "buildcraft:fluid." / "buildcraft.fluid." UIDs — which used to be the
+        // primary — are kept as LEGACY ALIASES so gates saved in existing worlds (and the guide's
+        // trigger cross-references) still resolve. The plain "buildcraft:fluid." prefix now belongs
+        // solely to TriggerFluidContainer (empty/contains/space/full); disjoint value names today,
+        // but a future FULL-style level value would otherwise silently collide.
+        super(type,
+            "buildcraft:fluidlevel." + type.name().toLowerCase(Locale.ROOT),
             "buildcraft:fluid." + type.name().toLowerCase(Locale.ROOT),
             "buildcraft.fluid." + type.name().toLowerCase(Locale.ROOT)
         );
-        this.type = type;
     }
 
     @Override
     public SpriteHolder getSprite() {
         return BCCoreSprites.TRIGGER_FLUID_LEVEL.get(type);
-    }
-
-    @Override
-    public int maxParameters() {
-        return 1;
     }
 
     @Override
@@ -162,26 +160,7 @@ public class TriggerFluidContainerLevel extends BCStatement implements ITriggerE
     //?}
 
     @Override
-    public IStatementParameter createParameter(int index) {
-        return new StatementParameterItemStack();
-    }
-
-    @Override
     public IStatement[] getPossible() {
         return BCCoreStatements.TRIGGER_FLUID_ALL;
-    }
-
-    public enum TriggerType {
-        BELOW25(0.25F),
-        BELOW50(0.5F),
-        BELOW75(0.75F);
-
-        TriggerType(float level) {
-            this.level = level;
-        }
-
-        public static final TriggerType[] VALUES = values();
-
-        public final float level;
     }
 }

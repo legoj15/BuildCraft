@@ -266,9 +266,9 @@ trigger "fluid" "fluid_empty"        "buildcraft:fluid.empty"
 trigger "fluid" "fluid_contains"     "buildcraft:fluid.contains"
 trigger "fluid" "fluid_space"        "buildcraft:fluid.space"
 trigger "fluid" "fluid_full"         "buildcraft:fluid.full"
-trigger "fluid" "fluid_below_25"     "buildcraft:fluid.below25"
-trigger "fluid" "fluid_below_50"     "buildcraft:fluid.below50"
-trigger "fluid" "fluid_below_75"     "buildcraft:fluid.below75"
+trigger "fluid" "fluid_below_25"     "buildcraft:fluidlevel.below25"
+trigger "fluid" "fluid_below_50"     "buildcraft:fluidlevel.below50"
+trigger "fluid" "fluid_below_75"     "buildcraft:fluidlevel.below75"
 
 // ---- Triggers / Fluid Transport (pipe_fluid) -----------------------------
 trigger "pipe_fluid" "fluids_traversing" "buildcraft:pipe_contains_fluids"

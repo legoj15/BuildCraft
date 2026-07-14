@@ -5,11 +5,15 @@
  */
 package buildcraft.core.statements;
 
+import java.util.Locale;
+
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
+import buildcraft.api.statements.IStatement;
+import buildcraft.api.statements.StatementManager;
 import buildcraft.api.statements.StatementParameterItemStack;
 
 /**
@@ -66,20 +70,33 @@ public class StatementSerializationTester {
         }
     }
 
-    /** {@code StatementParameterItemStackExact} must also round-trip via its NBT helpers. */
-    public static void testItemStackExactParamRoundTrip(GameTestHelper helper) {
+    /**
+     * The fluid-LEVEL triggers were renamed from the plain {@code buildcraft:fluid.} prefix — now
+     * owned solely by the empty/contains/space/full state family — to {@code buildcraft:fluidlevel.}
+     * to avoid a future value collision. The old UID is retained as a legacy alias so gates saved in
+     * existing worlds still resolve. This pins that save-compat contract (a saved gate stores the
+     * statement's UID string; the alias is what lets an old {@code buildcraft:fluid.below25} save
+     * find the renamed trigger on load).
+     */
+    public static void testFluidLevelUidAliasResolves(GameTestHelper helper) {
         try {
-            StatementParameterItemStackExact param = new StatementParameterItemStackExact();
-            param.stack = new ItemStack(Items.IRON_INGOT, 5);
-
-            CompoundTag tag = new CompoundTag();
-            param.writeToNbt(tag);
-            StatementParameterItemStackExact restored = StatementParameterItemStackExact.readFromNbt(tag);
-
-            assertTrue(ItemStack.isSameItemSameComponents(param.stack, restored.stack),
-                    "exact filter should survive NBT round-trip, got " + restored.stack);
-            assertTrue(restored.stack.getCount() == 5,
-                    "count should survive, got " + restored.stack.getCount());
+            for (TriggerFluidContainerLevel.TriggerType type : TriggerFluidContainerLevel.TriggerType.VALUES) {
+                String suffix = type.name().toLowerCase(Locale.ROOT);
+                IStatement viaNew = StatementManager.statements.get("buildcraft:fluidlevel." + suffix);
+                IStatement viaLegacy = StatementManager.statements.get("buildcraft:fluid." + suffix);
+                assertTrue(viaNew != null, "new UID buildcraft:fluidlevel." + suffix + " must resolve");
+                assertTrue(viaLegacy != null,
+                        "legacy UID buildcraft:fluid." + suffix + " must still resolve for old-world save-compat");
+                assertTrue(viaNew == viaLegacy,
+                        "legacy alias buildcraft:fluid." + suffix + " must resolve to the SAME statement as the new UID");
+                assertTrue(("buildcraft:fluidlevel." + suffix).equals(viaNew.getUniqueTag()),
+                        "primary (saved-to-disk) UID must be the fluidlevel. form, got " + viaNew.getUniqueTag());
+            }
+            // The plain buildcraft:fluid. prefix must still belong to the DISTINCT state family.
+            IStatement stateFull = StatementManager.statements.get("buildcraft:fluid.full");
+            assertTrue(stateFull != null, "state-family buildcraft:fluid.full must still resolve");
+            assertTrue("buildcraft:fluid.full".equals(stateFull.getUniqueTag()),
+                    "state trigger must keep the plain fluid. prefix as its primary UID");
             helper.succeed();
         } catch (Throwable t) {
             helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());

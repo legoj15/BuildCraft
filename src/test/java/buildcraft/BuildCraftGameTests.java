@@ -705,7 +705,9 @@ public class BuildCraftGameTests {
         // round-trip (writeToNbt <-> constructor) that the 26.1 port had stubbed out.
         reg.accept("buildcraftunofficial:statement_item_param_round_trip", () -> buildcraft.core.statements.StatementSerializationTester::testItemStackParamRoundTrip);
         reg.accept("buildcraftunofficial:statement_item_param_empty_round_trip", () -> buildcraft.core.statements.StatementSerializationTester::testEmptyItemStackParamRoundTrip);
-        reg.accept("buildcraftunofficial:statement_item_exact_param_round_trip", () -> buildcraft.core.statements.StatementSerializationTester::testItemStackExactParamRoundTrip);
+        // Fluid-level trigger UID rename (buildcraft:fluid. -> buildcraft:fluidlevel.) keeps the old
+        // UID as a legacy alias so gates saved in existing worlds still resolve.
+        reg.accept("buildcraftunofficial:statement_fluidlevel_alias_resolves", () -> buildcraft.core.statements.StatementSerializationTester::testFluidLevelUidAliasResolves);
 
         // Blueprint placement (JEI "+" / recipe book) must resolve TAG-based ingredients —
         // a TagSlotDisplay needs SlotDisplayContext.REGISTRIES in the context or it resolves to

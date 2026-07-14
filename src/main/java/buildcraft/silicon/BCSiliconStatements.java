@@ -34,13 +34,13 @@ public class BCSiliconStatements {
         ACTION_PULSAR = new ActionPowerPulsar[] { ACTION_PULSAR_CONSTANT, ACTION_PULSAR_SINGLE };
     }
 
-    public static void preInit() {
-        buildcraft.api.statements.StatementManager.registerStatement(TRIGGER_LIGHT_LOW);
-        buildcraft.api.statements.StatementManager.registerStatement(TRIGGER_LIGHT_HIGH);
-        buildcraft.api.statements.StatementManager.registerStatement(TRIGGER_TIMER_SHORT);
-        buildcraft.api.statements.StatementManager.registerStatement(TRIGGER_TIMER_MEDIUM);
-        buildcraft.api.statements.StatementManager.registerStatement(TRIGGER_TIMER_LONG);
-        buildcraft.api.statements.StatementManager.registerStatement(ACTION_PULSAR_CONSTANT);
-        buildcraft.api.statements.StatementManager.registerStatement(ACTION_PULSAR_SINGLE);
-    }
+    /**
+     * Called from {@link BCSilicon} at preInit. The body is intentionally empty: every statement
+     * above self-registers in its {@link buildcraft.core.statements.BCStatement} constructor, so the
+     * explicit {@code StatementManager.registerStatement(...)} calls this method used to make were
+     * redundant (silicon was the only module that duplicated them). This call is still what forces
+     * this class to load — which runs the static initialiser above, constructing (and thereby
+     * registering) the statements. Do not delete the call site.
+     */
+    public static void preInit() {}
 }

@@ -10,7 +10,6 @@ import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import buildcraft.api.mj.MjAPI;
 import buildcraft.core.BCCore;
 import buildcraft.lib.mj.MjBatteryEnergyHandler;
 //? if >=1.21.10 {
@@ -75,10 +74,11 @@ public class BCFactory {
         var fluidCap = Capabilities.FluidHandler.BLOCK;
         var energyCap = Capabilities.EnergyStorage.BLOCK;*/
         //?}
-        event.registerBlockEntity(MjAPI.CAP_RECEIVER, BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
-            (workbench, direction) -> workbench.getMjReceiver());
-        event.registerBlockEntity(MjAPI.CAP_CONNECTOR, BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
-            (workbench, direction) -> workbench.getMjReceiver());
+        // The Auto Workbench now backs its craft progress with a real MjBattery, so it exposes the
+        // Forge-Energy cap (rf_enabled-gated) like every other machine — previously it was dead on FE cables.
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
+            workbench -> workbench.getMjReceiver(), energyCap,
+            workbench -> MjBatteryEnergyHandler.createIfRfEnabled(workbench.getBattery()));
         event.registerBlockEntity(itemCap, BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
             (workbench, direction) -> workbench.getItemHandler(direction));
         buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.MINING_WELL.get(),

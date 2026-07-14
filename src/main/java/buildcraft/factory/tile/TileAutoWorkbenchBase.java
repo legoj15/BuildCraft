@@ -8,8 +8,6 @@ package buildcraft.factory.tile;
 
 import java.util.Arrays;
 
-import javax.annotation.Nonnull;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
@@ -28,10 +26,12 @@ import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 
 import buildcraft.api.core.EnumPipePart;
-import buildcraft.api.mj.IMjConnector;
-import buildcraft.api.mj.IMjRedstoneReceiver;
+import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.mj.MjBattery;
 import buildcraft.api.tiles.IHasWork;
+import buildcraft.lib.mj.MjBatteryComponent;
+import buildcraft.lib.mj.MjRedstoneBatteryReceiver;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.GameProfileUtil;
@@ -70,35 +70,15 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
     /** The recipe output, synced to clients for display in the GUI. */
     public ItemStack resultClient = ItemStack.EMPTY;
 
-    /** Accumulated MJ towards the current craft. */
-    private long powerStored;
+    /** Accumulated MJ towards the current craft, held in a real battery (capacity = POWER_REQUIRED) so the
+     *  workbench also exposes the Forge-Energy capability — previously it had none and sat dead on an FE
+     *  cable. Engines deliver pulsed power (at piston midpoint) rather than constant per-tick, matching
+     *  1.12.2 — hence the redstone receiver. */
+    private final MjBattery battery = new MjBattery(POWER_REQUIRED);
+    private final MjBatteryComponent mjPower = new MjBatteryComponent(battery, MjRedstoneBatteryReceiver::new);
 
-    /** Previous tick's powerStored, used for smooth client-side progress interpolation. */
+    /** Previous tick's stored power, used for smooth client-side progress interpolation. */
     private long powerStoredLast;
-
-    /** MJ redstone receiver — engines use pulsed power delivery (at piston midpoint)
-     *  rather than constant per-tick delivery, matching 1.12.2 behavior. */
-    private final IMjRedstoneReceiver mjReceiver = new IMjRedstoneReceiver() {
-        @Override
-        public long getPowerRequested() {
-            return POWER_REQUIRED - powerStored;
-        }
-
-        @Override
-        public long receivePower(long microJoules, boolean simulate) {
-            long req = getPowerRequested();
-            long taken = Math.min(req, microJoules);
-            if (!simulate) {
-                powerStored += taken;
-            }
-            return microJoules - taken;
-        }
-
-        @Override
-        public boolean canConnect(@Nonnull IMjConnector other) {
-            return true;
-        }
-    };
 
     public TileAutoWorkbenchBase(BlockEntityType<?> type, BlockPos pos, BlockState state, int width, int height) {
         super(type, pos, state);
@@ -130,7 +110,7 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
     // region IHasWork
     @Override
     public boolean hasWork() {
-        return powerStored > 0;
+        return battery.getStored() > 0;
     }
     // endregion
 
@@ -172,31 +152,36 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
     // endregion
 
     // region MJ
-    /** @return The IMjRedstoneReceiver for capability registration. */
-    public IMjRedstoneReceiver getMjReceiver() {
-        return mjReceiver;
+    /** @return this workbench's MJ receiver (a redstone receiver) for capability registration. */
+    public IMjReceiver getMjReceiver() {
+        return mjPower.getMjReceiver();
+    }
+
+    /** @return The internal MJ battery, for Forge-Energy capability registration. */
+    public MjBattery getBattery() {
+        return battery;
     }
     // endregion
 
     // region Progress
     /** @return The crafting progress as a 0.0–1.0 value, interpolated for smooth rendering. */
     public double getProgress(float partialTicks) {
-        double interp = powerStoredLast + (powerStored - powerStoredLast) * partialTicks;
+        double interp = powerStoredLast + (battery.getStored() - powerStoredLast) * partialTicks;
         return interp / POWER_REQUIRED;
     }
 
     /** @return The current power stored (for container data slot sync). */
     public long getPowerStored() {
-        return powerStored;
+        return battery.getStored();
     }
 
-    /** Sets powerStored from the client-side container sync. */
+    /** Sets the stored power from the client-side container sync. */
     public void setPowerStored(long value) {
-        this.powerStoredLast = this.powerStored;
-        this.powerStored = value;
-        if (powerStored < 10) {
+        this.powerStoredLast = battery.getStored();
+        battery.setStored(value);
+        if (battery.getStored() < 10) {
             // Properly handle crafting finishes — avoid stuttering interpolation
-            powerStoredLast = powerStored;
+            powerStoredLast = battery.getStored();
         }
     }
     // endregion
@@ -212,22 +197,22 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
         }
 
         if (crafting.canCraft()) {
-            if (powerStored >= POWER_REQUIRED) {
+            if (battery.getStored() >= POWER_REQUIRED) {
                 if (crafting.craft()) {
                     // Keep 1 if more crafts are possible, else reset to 0
-                    powerStored = crafting.canCraft() ? 1 : 0;
+                    battery.setStored(crafting.canCraft() ? 1 : 0);
                     if (getOwner() != null) {
                         AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT);
                     }
                 }
             } else {
                 // Passive power generation — allows crafting without engines (slowly)
-                powerStored += POWER_GEN_PASSIVE;
+                battery.addPower(POWER_GEN_PASSIVE, false);
             }
-        } else if (powerStored >= POWER_LOST) {
-            powerStored -= POWER_LOST;
+        } else if (battery.getStored() >= POWER_LOST) {
+            battery.extractPower(POWER_LOST, POWER_LOST);
         } else {
-            powerStored = 0;
+            battery.setStored(0);
         }
 
         // Sync to clients when recipe result changes
@@ -319,7 +304,7 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
     protected void writeData(BCValueOutput output) {
         super.writeData(output);
         output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
-        output.putLong("powerStored", powerStored);
+        output.putLong("mjStored", battery.getStored());
         if (!resultClient.isEmpty()) {
             output.store("resultClient", ItemStack.CODEC, resultClient);
         }
@@ -330,7 +315,9 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
     protected void readData(BCValueInput input) {
         super.readData(input);
         input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
-        powerStored = input.getLongOr("powerStored", 0L);
+        // Read the new key, falling back to the legacy "powerStored" long so mid-craft workbenches
+        // saved before the MjBattery migration keep their accumulated charge.
+        battery.setStored(input.getLongOr("mjStored", input.getLongOr("powerStored", 0L)));
         resultClient = input.read("resultClient", ItemStack.CODEC).orElse(ItemStack.EMPTY);
         crafting.setPendingSelectedRecipeId(input.getStringOr("selectedRecipe", ""));
     }

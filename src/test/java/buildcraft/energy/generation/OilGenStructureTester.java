@@ -73,6 +73,42 @@ public class OilGenStructureTester {
     }
 
     /**
+     * Worldgen-deadlock guard #3 (the leaf that survived the second fix): placing an oil FLUID block runs
+     * {@code LiquidBlock.onPlace -> FluidInteractionRegistry.canInteract}, which reads the fluid state of the
+     * block's HORIZONTAL neighbours. {@code Level.getFluidState} force-loads via
+     * {@code getChunkAt(requireChunk=true)} — an UNCONDITIONAL force-load, unlike the {@code load=false}
+     * biome read — so an oil block on a chunk edge whose neighbour is ungenerated force-loads that neighbour
+     * and parks the server thread; and because the force-loaded neighbour runs its OWN oil-gen (placing oil
+     * that reads ITS neighbour) the {@code managedBlock}s nest and cascade into a hard freeze (reproduced live
+     * on 1.21.1 with Biomes O'Plenty; GitHub issue #26). {@code setWorldgenBlock} skips a fluid placement
+     * whose horizontal neighbour chunk isn't generated. This force-loads ONE isolated chunk (its neighbours
+     * stay ungenerated), places oil on its east edge, and asserts the east neighbour is NOT force-loaded —
+     * without the guard, {@code canInteract}'s {@code getFluidState} would generate it.
+     */
+    public static void testSetOilSkipsUnloadedHorizontalNeighbour(GameTestHelper helper) {
+        net.minecraft.server.level.ServerLevel level = helper.getLevel();
+        BlockPos arena = helper.absolutePos(new BlockPos(0, 0, 0));
+        // An isolated chunk far from the arena/spawn (and from other tests' far-chunk references): force-load
+        // ONLY it, so its four neighbours stay ungenerated.
+        int cx = (arena.getX() >> 4) + 777;
+        int cz = (arena.getZ() >> 4) + 777;
+        level.setChunkForced(cx, cz, true);
+        helper.assertTrue(level.getChunkSource().getChunkNow(cx, cz) != null,
+                "Precondition: the isolated chunk must be force-generated to FULL");
+        helper.assertTrue(level.getChunkSource().getChunkNow(cx + 1, cz) == null,
+                "Precondition: its east neighbour must stay ungenerated (not present at FULL)");
+        // Oil on the east edge (local x = 15) — its east neighbour is the ungenerated chunk (cx+1, cz).
+        BlockPos edge = new BlockPos(cx * 16 + 15, level.getMinY() + 40, cz * 16 + 8);
+        OilGenStructure.setOil(level, edge);
+        boolean neighbourStillUnloaded = level.getChunkSource().getChunkNow(cx + 1, cz) == null;
+        level.setChunkForced(cx, cz, false); // release the ticket before asserting
+        helper.assertTrue(neighbourStillUnloaded,
+                "setOil must NOT force-load an ungenerated horizontal neighbour via LiquidBlock.onPlace -> "
+                        + "FluidInteractionRegistry.canInteract (the fluid-interaction worldgen-deadlock guard)");
+        helper.succeed();
+    }
+
+    /**
      * SurfacePool produces a roughly-circular oil footprint with mild radial noise:
      * centre cell is oil, far corners are unchanged. Exercises the new disc-with-noise
      * pattern.

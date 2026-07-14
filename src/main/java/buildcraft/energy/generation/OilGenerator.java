@@ -11,6 +11,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.core.Holder;
+import net.minecraft.core.QuartPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -142,7 +143,10 @@ public class OilGenerator {
         Random rand = RandUtil.createRandomForChunk(level, cx, cz, MAGIC_GEN_NUMBER);
         int x = cx * 16 + 8 + rand.nextInt(16);
         int z = cz * 16 + 8 + rand.nextInt(16);
-        return Identifier.parse(level.getBiome(new BlockPos(x, 64, z)).getRegisteredName());
+        // getUncachedNoiseBiome (biome-source sample, never loads a chunk) NOT level.getBiome: getBiome
+        // force-load-parks the server thread on an ungenerated neighbour during ChunkEvent.Load (GitHub #26).
+        return Identifier.parse(level.getUncachedNoiseBiome(
+                QuartPos.fromBlock(x), QuartPos.fromBlock(64), QuartPos.fromBlock(z)).getRegisteredName());
     }
 
     /** Convenience: {@code isOilDesignBiome} applied to the biome
@@ -224,7 +228,12 @@ public class OilGenerator {
         int x = cx * 16 + 8 + rand.nextInt(16);
         int z = cz * 16 + 8 + rand.nextInt(16);
 
-        Holder<Biome> biomeHolder = level.getBiome(new BlockPos(x, 64, z));
+        // getUncachedNoiseBiome (biome-source sample, never loads a chunk) NOT level.getBiome: getBiome ->
+        // getNoiseBiome -> getChunk(...,BIOMES,false) still managedBlock-parks the server thread on a
+        // ticket-eligible-but-ungenerated neighbour during the ChunkEvent.Load worldgen storm (GitHub #26).
+        // This IS getBiome's own fallback when the chunk is absent, so the sampled biome is unchanged.
+        Holder<Biome> biomeHolder = level.getUncachedNoiseBiome(
+                QuartPos.fromBlock(x), QuartPos.fromBlock(64), QuartPos.fromBlock(z));
         // Get the biome's Identifier from the holder's registered name
         String registeredName = biomeHolder.getRegisteredName();
         Identifier biomeId = Identifier.parse(registeredName);

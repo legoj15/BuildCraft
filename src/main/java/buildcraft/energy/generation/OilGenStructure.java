@@ -130,6 +130,18 @@ public abstract class OilGenStructure {
      *       {@code hasChunkAt} guard there passes, then the follow-up {@code getBlockState} upgrades it to
      *       FULL and parks. Same deadlock, reached via a comparator update instead of a direct
      *       cross-chunk write — this is the leaf that survived the first (write-only) fix.</li>
+     *   <li><b>Placing a fluid block (the oil itself):</b> {@code LiquidBlock.onPlace} unconditionally runs
+     *       NeoForge's {@code FluidInteractionRegistry.canInteract}, which reads the fluid state of the
+     *       block's HORIZONTAL neighbours (the horizontal half of {@code LiquidBlock.POSSIBLE_FLOW_DIRECTIONS}).
+     *       {@code Level.getFluidState} force-loads via {@code getChunkAt(requireChunk=true)} — unlike the
+     *       {@code load=false} biome read elsewhere, this force-load is UNCONDITIONAL — so a neighbour in an
+     *       ungenerated chunk parks the server thread; and because that force-loaded neighbour runs its OWN
+     *       oil-gen (placing oil that reads ITS neighbour) the {@code managedBlock}s NEST and cascade into a
+     *       hard freeze. Guarded by {@link #areHorizontalNeighboursLoaded}: an oil block whose horizontal
+     *       neighbour is ungenerated is skipped (at worst a 1-block frontier gap that fluid flow fills — the
+     *       spring's tile also re-places its oil on tick). Vertical neighbours share (x,z) so are always
+     *       same-chunk. This is the leaf that survived the second fix — reproduced on 1.21.1 with Biomes
+     *       O'Plenty (GitHub issue #26; watchdog "a single server tick took 45 s").</li>
      * </ol>
      * Skipping either case is behaviour-equivalent for the finished world: an unloaded slice is placed
      * when that chunk loads and runs its own generation, and worldgen leaving a rare buried block-entity
@@ -142,10 +154,36 @@ public abstract class OilGenStructure {
         if (!isChunkLoaded(level, pos.getX(), pos.getZ())) {
             return;
         }
+        // Hazard 3 (see the ordered list above): placing a FLUID block triggers LiquidBlock.onPlace ->
+        // FluidInteractionRegistry.canInteract, a force-loading read of the horizontal neighbours. Only fluid
+        // states run that read, and only a block ON a chunk boundary can have a horizontal neighbour in
+        // another chunk — so gate the (cheap, non-blocking) neighbour probe on both, then skip the placement
+        // rather than force-load an ungenerated neighbour.
+        if (!state.getFluidState().isEmpty() && isChunkEdge(pos) && !areHorizontalNeighboursLoaded(level, pos)) {
+            return;
+        }
         if (level.getBlockState(pos).hasBlockEntity()) {
             return;
         }
         level.setBlock(pos, state, WORLDGEN_FLAGS);
+    }
+
+    /** True if {@code pos} sits on a chunk boundary, i.e. at least one horizontal neighbour is in an adjacent
+     *  chunk. Interior blocks can never touch an unloaded neighbour, so they skip the neighbour probe. */
+    private static boolean isChunkEdge(BlockPos pos) {
+        int lx = pos.getX() & 15;
+        int lz = pos.getZ() & 15;
+        return lx == 0 || lx == 15 || lz == 0 || lz == 15;
+    }
+
+    /** Whether all four horizontal-neighbour chunks of {@code pos} are generated (present at FULL, via the
+     *  non-blocking {@link #isChunkLoaded} / {@code getChunkNow}). See {@link #setWorldgenBlock} hazard 3 for
+     *  why fluid placement must not touch an ungenerated horizontal neighbour. */
+    private static boolean areHorizontalNeighboursLoaded(LevelAccessor level, BlockPos pos) {
+        return isChunkLoaded(level, pos.getX() - 1, pos.getZ())
+            && isChunkLoaded(level, pos.getX() + 1, pos.getZ())
+            && isChunkLoaded(level, pos.getX(), pos.getZ() - 1)
+            && isChunkLoaded(level, pos.getX(), pos.getZ() + 1);
     }
 
     /**

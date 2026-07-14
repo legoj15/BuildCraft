@@ -155,6 +155,18 @@ public class PipeDropsTester {
         tile.replacePluggable(side, plug);
     }
 
+    /** Discards any item entities already inside the assertion search box. Test arenas are packed
+     *  in a tight grid and run concurrently; hardware legitimately dropped by a NEIGHBOURING pipe
+     *  test (or left behind by a previous occupant of a reused cell) can otherwise sit inside this
+     *  test's radius-4 search box and poison not-present / exact-count assertions. Call right
+     *  before the break/removal under test. */
+    private static void clearDroppedItemsAround(GameTestHelper helper, BlockPos relPos) {
+        AABB box = new AABB(helper.absolutePos(relPos)).inflate(4.0);
+        for (ItemEntity ie : helper.getLevel().getEntitiesOfClass(ItemEntity.class, box)) {
+            ie.discard();
+        }
+    }
+
     // ---------- Pluggable click-break ----------
 
     public static void testPluggableBreakDropsItemAndKeepsPipe(GameTestHelper helper) {
@@ -340,18 +352,24 @@ public class PipeDropsTester {
         // must spill the cargo but nothing else. (The loot-bearing removals — explosion, wither,
         // /…destroy — instead return the hardware via getDrops; see testCommandBreakDropsPipeViaLoot.)
         ServerLevel level = helper.getLevel();
+        clearDroppedItemsAround(helper, pipePos);
         level.removeBlock(helper.absolutePos(pipePos), false);
 
         helper.assertBlockPresent(Blocks.AIR, pipePos);
 
-        helper.runAfterDelay(10, () -> {
-            // The in-transit cargo spills...
-            helper.assertItemEntityPresent(Items.DIAMOND, pipePos, 4.0);
-            // ...but the pipe, pluggable and wire are destroyed with the block.
-            helper.assertItemEntityNotPresent(BCTransportItems.PIPE_WOOD_ITEM.get(), pipePos, 4.0);
-            helper.assertItemEntityNotPresent(BCTransportItems.PLUG_BLOCKER.get(), pipePos, 4.0);
+        // The pipe, pluggable and wire must NOT drop on a no-loot removal. Checked at tick 2
+        // with a tight radius: wrongly-dropped hardware spawns AT the pipe and has barely moved
+        // by then, while a neighbouring arena's legitimate pipe/plug/wire drops can never get
+        // this close this fast (a radius-4 check at tick 10 flaked exactly that way).
+        helper.runAfterDelay(2, () -> {
+            helper.assertItemEntityNotPresent(BCTransportItems.PIPE_WOOD_ITEM.get(), pipePos, 2.0);
+            helper.assertItemEntityNotPresent(BCTransportItems.PLUG_BLOCKER.get(), pipePos, 2.0);
             helper.assertItemEntityNotPresent(
-                    BCTransportItems.WIRE_ITEMS.get(DyeColor.YELLOW).get().asItem(), pipePos, 4.0);
+                    BCTransportItems.WIRE_ITEMS.get(DyeColor.YELLOW).get().asItem(), pipePos, 2.0);
+        });
+        helper.runAfterDelay(10, () -> {
+            // The in-transit cargo spills (radius 4: gravity margin, see the click-break tests).
+            helper.assertItemEntityPresent(Items.DIAMOND, pipePos, 4.0);
             helper.succeed();
         });
     }
@@ -365,15 +383,18 @@ public class PipeDropsTester {
         helper.assertTrue(inserted > 0, "Fluid pipe should accept water when empty");
 
         ServerLevel level = helper.getLevel();
+        clearDroppedItemsAround(helper, pipePos);
         level.removeBlock(helper.absolutePos(pipePos), false);
 
         helper.assertBlockPresent(Blocks.AIR, pipePos);
 
+        // Tick-2 / radius-2 for the not-present check — same neighbour-isolation reasoning as
+        // testNonPlayerBreakDropsCargoOnly.
+        helper.runAfterDelay(2, () -> {
+            helper.assertItemEntityNotPresent(BCTransportItems.PIPE_COBBLE_FLUID.get(), pipePos, 2.0);
+        });
         helper.runAfterDelay(10, () -> {
-            // Fluid cargo spills as fragile shards...
             helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pipePos, 4.0);
-            // ...but the fluid pipe itself is destroyed with the block.
-            helper.assertItemEntityNotPresent(BCTransportItems.PIPE_COBBLE_FLUID.get(), pipePos, 4.0);
             helper.succeed();
         });
     }
@@ -422,12 +443,16 @@ public class PipeDropsTester {
         BlockPos pipePos = new BlockPos(1, 2, 1);
         placeItemPipe(helper, pipePos);
 
+        clearDroppedItemsAround(helper, pipePos);
         breakAs(helper, pipePos, survivalPlayerWith(helper, new ItemStack(Items.WOODEN_PICKAXE)));
 
         helper.assertBlockPresent(Blocks.AIR, pipePos);
 
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityCountIs(BCTransportItems.PIPE_WOOD_ITEM.get(), pipePos, 4.0, 1);
+        // Tick-2 / radius-2: an exact-count assertion is poisoned by a neighbouring arena's wood
+        // pipe drop just like a not-present one; at tick 2 both copies of a double-drop are still
+        // at their spawn point while no neighbour item can have arrived.
+        helper.runAfterDelay(2, () -> {
+            helper.assertItemEntityCountIs(BCTransportItems.PIPE_WOOD_ITEM.get(), pipePos, 2.0, 1);
             helper.succeed();
         });
     }

@@ -35,6 +35,9 @@ import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.lib.client.render.laser.LaserData_BC8.LaserRow;
 import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
+//? if >=1.21.10 {
+import buildcraft.lib.client.render.tile.BCRenderState;
+//?}
 import buildcraft.lib.client.render.tile.LedRenderUtil;
 import buildcraft.lib.client.render.tile.RenderPartCube;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry;
@@ -49,7 +52,7 @@ import buildcraft.factory.tile.TileMiningWell;
  * Ported from 1.12.2 RenderMiningWell + RenderTube.
  */
 //? if >=1.21.10 {
-public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, MiningWellRenderState> {
+public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, BCRenderState> {
 //?} else {
 /*public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell> {*/
 //?}
@@ -87,8 +90,8 @@ public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, Min
 
     //? if >=1.21.10 {
     @Override
-    public MiningWellRenderState createRenderState() {
-        return new MiningWellRenderState();
+    public BCRenderState createRenderState() {
+        return new BCRenderState();
     }
     //?}
 
@@ -100,7 +103,7 @@ public class RenderMiningWell implements BlockEntityRenderer<TileMiningWell, Min
 
     //? if >=1.21.10 {
     @Override
-    public void submit(MiningWellRenderState renderState, PoseStack poseStack,
+    public void submit(BCRenderState renderState, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
         // The render state already carries the world pos — no camera-pos reconstruction needed.
         BlockPos pos = renderState.blockPos;

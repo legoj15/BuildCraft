@@ -41,7 +41,7 @@ import buildcraft.lib.engine.TileEngineBase_BC8;
  * The quad provider function is injected by the energy module to avoid circular dependencies.
  */
 //? if >=1.21.10 {
-public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8, EngineRenderState> {
+public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8, BCRenderState> {
 //?} else {
 /*public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8> {*/
 //?}
@@ -58,12 +58,12 @@ public class RenderEngine_BC8 implements BlockEntityRenderer<TileEngineBase_BC8,
 
     //? if >=1.21.10 {
     @Override
-    public EngineRenderState createRenderState() {
-        return new EngineRenderState();
+    public BCRenderState createRenderState() {
+        return new BCRenderState();
     }
 
     @Override
-    public void submit(EngineRenderState state, PoseStack poseStack,
+    public void submit(BCRenderState state, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
         ProfilerFiller _profiler = Profiler.get();
         _profiler.push("buildcraft:engine_submit");

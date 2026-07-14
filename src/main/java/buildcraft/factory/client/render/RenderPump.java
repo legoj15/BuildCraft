@@ -35,6 +35,9 @@ import buildcraft.lib.client.render.laser.LaserData_BC8;
 import buildcraft.lib.client.render.laser.LaserData_BC8.LaserRow;
 import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
 import buildcraft.lib.client.render.laser.LaserRenderer_BC8;
+//? if >=1.21.10 {
+import buildcraft.lib.client.render.tile.BCRenderState;
+//?}
 import buildcraft.lib.client.render.tile.LedRenderUtil;
 import buildcraft.lib.client.render.tile.RenderPartCube;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry;
@@ -48,7 +51,7 @@ import buildcraft.factory.tile.TilePump;
  * Ported from 1.12.2 RenderPump + RenderTube.
  */
 //? if >=1.21.10 {
-public class RenderPump implements BlockEntityRenderer<TilePump, PumpRenderState> {
+public class RenderPump implements BlockEntityRenderer<TilePump, BCRenderState> {
 //?} else {
 /*public class RenderPump implements BlockEntityRenderer<TilePump> {*/
 //?}
@@ -94,8 +97,8 @@ public class RenderPump implements BlockEntityRenderer<TilePump, PumpRenderState
 
     //? if >=1.21.10 {
     @Override
-    public PumpRenderState createRenderState() {
-        return new PumpRenderState();
+    public BCRenderState createRenderState() {
+        return new BCRenderState();
     }
     //?}
 
@@ -107,7 +110,7 @@ public class RenderPump implements BlockEntityRenderer<TilePump, PumpRenderState
 
     //? if >=1.21.10 {
     @Override
-    public void submit(PumpRenderState renderState, PoseStack poseStack,
+    public void submit(BCRenderState renderState, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
         // The render state already carries the world pos — no camera-pos reconstruction needed.
         BlockPos pos = renderState.blockPos;

@@ -45,6 +45,9 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.factory.tile.TileTank;
 import buildcraft.lib.client.render.fluid.FluidRenderer;
+//? if >=1.21.10 {
+import buildcraft.lib.client.render.tile.BCRenderState;
+//?}
 import buildcraft.lib.misc.FluidUtilBC;
 
 /**
@@ -54,7 +57,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  */
 @SuppressWarnings("deprecation")
 //? if >=1.21.10 {
-public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState> {
+public class RenderTank implements BlockEntityRenderer<TileTank, BCRenderState> {
 //?} else {
 /*public class RenderTank implements BlockEntityRenderer<TileTank> {*/
 //?}
@@ -71,12 +74,12 @@ public class RenderTank implements BlockEntityRenderer<TileTank, TankRenderState
 
     //? if >=1.21.10 {
     @Override
-    public TankRenderState createRenderState() {
-        return new TankRenderState();
+    public BCRenderState createRenderState() {
+        return new BCRenderState();
     }
 
     @Override
-    public void submit(TankRenderState renderState, PoseStack poseStack,
+    public void submit(BCRenderState renderState, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
         ProfilerFiller _profiler = Profiler.get();
         _profiler.push("buildcraft:tank_submit");

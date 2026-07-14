@@ -31,6 +31,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.lib.client.render.BCLibRenderTypes;
+//? if >=1.21.10 {
+import buildcraft.lib.client.render.tile.BCRenderState;
+//?}
 import buildcraft.lib.client.render.tile.LedRenderUtil;
 import buildcraft.lib.misc.BlockUtil;
 
@@ -58,7 +61,7 @@ import buildcraft.robotics.tile.TileZonePlanner;
  * degrades to gaps at the edges rather than blanking, matching the GUI viewport.
  */
 //? if >=1.21.10 {
-public class RenderZonePlanner implements BlockEntityRenderer<TileZonePlanner, ZonePlannerRenderState> {
+public class RenderZonePlanner implements BlockEntityRenderer<TileZonePlanner, BCRenderState> {
 //?} else {
 /*public class RenderZonePlanner implements BlockEntityRenderer<TileZonePlanner> {*/
 //?}
@@ -83,12 +86,12 @@ public class RenderZonePlanner implements BlockEntityRenderer<TileZonePlanner, Z
 
     //? if >=1.21.10 {
     @Override
-    public ZonePlannerRenderState createRenderState() {
-        return new ZonePlannerRenderState();
+    public BCRenderState createRenderState() {
+        return new BCRenderState();
     }
 
     @Override
-    public void submit(ZonePlannerRenderState renderState, PoseStack poseStack,
+    public void submit(BCRenderState renderState, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
         // The render state already carries the world pos — no camera-pos reconstruction needed.
         BlockPos pos = renderState.blockPos;

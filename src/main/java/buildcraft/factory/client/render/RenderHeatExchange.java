@@ -56,6 +56,9 @@ import buildcraft.factory.tile.TileHeatExchange.EnumProgressState;
 import buildcraft.factory.tile.TileHeatExchange.ExchangeSectionEnd;
 import buildcraft.factory.tile.TileHeatExchange.ExchangeSectionStart;
 import buildcraft.lib.client.render.fluid.FluidRenderer;
+//? if >=1.21.10 {
+import buildcraft.lib.client.render.tile.BCRenderState;
+//?}
 import buildcraft.lib.fluid.FluidSmoother;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
@@ -68,7 +71,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  */
 @SuppressWarnings("deprecation")
 //? if >=1.21.10 {
-public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange, HeatExchangeRenderState> {
+public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange, BCRenderState> {
 //?} else {
 /*public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange> {*/
 //?}
@@ -95,12 +98,12 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
 
     //? if >=1.21.10 {
     @Override
-    public HeatExchangeRenderState createRenderState() {
-        return new HeatExchangeRenderState();
+    public BCRenderState createRenderState() {
+        return new BCRenderState();
     }
 
     @Override
-    public void submit(HeatExchangeRenderState renderState, PoseStack poseStack,
+    public void submit(BCRenderState renderState, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
         // The render state already carries the world pos — no camera-pos reconstruction needed.
         BlockPos pos = renderState.blockPos;

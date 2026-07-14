@@ -46,6 +46,9 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.factory.tile.TileDistiller_BC8;
 import buildcraft.lib.client.render.fluid.FluidRenderer;
+//? if >=1.21.10 {
+import buildcraft.lib.client.render.tile.BCRenderState;
+//?}
 import buildcraft.lib.fluid.FluidSmoother;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
@@ -58,7 +61,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  */
 @SuppressWarnings("deprecation")
 //? if >=1.21.10 {
-public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, DistillerRenderState> {
+public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, BCRenderState> {
 //?} else {
 /*public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8> {*/
 //?}
@@ -117,12 +120,12 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, D
 
     //? if >=1.21.10 {
     @Override
-    public DistillerRenderState createRenderState() {
-        return new DistillerRenderState();
+    public BCRenderState createRenderState() {
+        return new BCRenderState();
     }
 
     @Override
-    public void submit(DistillerRenderState renderState, PoseStack poseStack,
+    public void submit(BCRenderState renderState, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
         // The render state already carries the world pos — no camera-pos reconstruction needed.
         BlockPos pos = renderState.blockPos;

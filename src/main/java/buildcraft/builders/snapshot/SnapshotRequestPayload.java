@@ -5,8 +5,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
-import buildcraft.lib.net.MessageManager;
-
 public record SnapshotRequestPayload(Snapshot.Key key) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<SnapshotRequestPayload> TYPE =
             new CustomPacketPayload.Type<>(Identifier.parse("buildcraftunofficial:snapshot_request"));

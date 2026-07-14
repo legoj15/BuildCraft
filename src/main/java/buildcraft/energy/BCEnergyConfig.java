@@ -259,31 +259,35 @@ public class BCEnergyConfig {
         return useRfNaming != null && useRfNaming.get() ? baseKey + ".rf" : baseKey;
     }
 
+    private static Set<Identifier> toIdSet(ModConfigSpec.ConfigValue<List<? extends String>> list) {
+        return list.get().stream().map(Identifier::parse).collect(Collectors.toSet());
+    }
+
     public static Set<Identifier> getForceExcessiveOilBiomes() {
-        return forceExcessiveOilBiomes.get().stream().map(Identifier::parse).collect(Collectors.toSet());
+        return toIdSet(forceExcessiveOilBiomes);
     }
 
     public static Set<Identifier> getSurfaceDepositBiomes() {
-        return surfaceDepositBiomes.get().stream().map(Identifier::parse).collect(Collectors.toSet());
+        return toIdSet(surfaceDepositBiomes);
     }
 
     public static Set<Identifier> getRichSurfaceDepositBiomes() {
-        return richSurfaceDepositBiomes.get().stream().map(Identifier::parse).collect(Collectors.toSet());
+        return toIdSet(richSurfaceDepositBiomes);
     }
 
     public static Set<Identifier> getStandardSurfaceDepositBiomes() {
-        return standardSurfaceDepositBiomes.get().stream().map(Identifier::parse).collect(Collectors.toSet());
+        return toIdSet(standardSurfaceDepositBiomes);
     }
 
     public static Set<Identifier> getMountainousSurfaceDepositBiomes() {
-        return mountainousSurfaceDepositBiomes.get().stream().map(Identifier::parse).collect(Collectors.toSet());
+        return toIdSet(mountainousSurfaceDepositBiomes);
     }
 
     public static Set<Identifier> getExcludedBiomes() {
-        return excludedBiomes.get().stream().map(Identifier::parse).collect(Collectors.toSet());
+        return toIdSet(excludedBiomes);
     }
 
     public static Set<Identifier> getExcludedDimensions() {
-        return excludedDimensions.get().stream().map(Identifier::parse).collect(Collectors.toSet());
+        return toIdSet(excludedDimensions);
     }
 }

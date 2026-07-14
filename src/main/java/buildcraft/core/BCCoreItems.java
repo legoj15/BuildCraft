@@ -58,22 +58,22 @@ public class BCCoreItems {
         public static final DeferredItem<Item> GEAR_DIAMOND = RegistrationUtilBC.registerItem(ITEMS,"gear_diamond", Item::new, p -> p);
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> ENGINE_REDSTONE = ITEMS
-                        .registerSimpleBlockItem("engine_redstone", BCCoreBlocks.ENGINE_REDSTONE);
+                        .registerSimpleBlockItem(BCCoreBlocks.ENGINE_REDSTONE);
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> ENGINE_CREATIVE = ITEMS
-                        .registerSimpleBlockItem("engine_creative", BCCoreBlocks.ENGINE_CREATIVE);
+                        .registerSimpleBlockItem(BCCoreBlocks.ENGINE_CREATIVE);
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> MARKER_VOLUME = ITEMS
-                        .registerSimpleBlockItem("marker_volume", BCCoreBlocks.MARKER_VOLUME);
+                        .registerSimpleBlockItem(BCCoreBlocks.MARKER_VOLUME);
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> MARKER_PATH = ITEMS
-                        .registerSimpleBlockItem("marker_path", BCCoreBlocks.MARKER_PATH);
+                        .registerSimpleBlockItem(BCCoreBlocks.MARKER_PATH);
 
         // Decorated block items — only LASER ships in public builds; the other five are
         // dev-gated mirrors of BCCoreBlocks.DECORATED_* and are wired up in the static {}
         // initializer below.
         public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_LASER = ITEMS
-                        .registerSimpleBlockItem("decorated_laser", BCCoreBlocks.DECORATED_LASER);
+                        .registerSimpleBlockItem(BCCoreBlocks.DECORATED_LASER);
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_DESTROY;
         public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_BLUEPRINT;
@@ -82,10 +82,10 @@ public class BCCoreItems {
         public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_LEATHER;
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> SPRING_WATER = ITEMS
-                        .registerSimpleBlockItem("spring_water", BCCoreBlocks.SPRING_WATER);
+                        .registerSimpleBlockItem(BCCoreBlocks.SPRING_WATER);
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> SPRING_OIL = ITEMS
-                        .registerSimpleBlockItem("spring_oil", BCCoreBlocks.SPRING_OIL);
+                        .registerSimpleBlockItem(BCCoreBlocks.SPRING_OIL);
 
         // ─── Dev-only items — gated behind -Dbuildcraft.dev=true ─────────────
         // Registered only in a dev workspace so unfinished/experimental content isn't lost,
@@ -111,22 +111,22 @@ public class BCCoreItems {
                                 : null;*/
                 //?}
                 POWER_TESTER = (BCLib.DEV && BCCoreBlocks.POWER_TESTER != null)
-                                ? ITEMS.registerSimpleBlockItem("power_tester", BCCoreBlocks.POWER_TESTER)
+                                ? ITEMS.registerSimpleBlockItem(BCCoreBlocks.POWER_TESTER)
                                 : null;
                 DECORATED_DESTROY = (BCLib.DEV && BCCoreBlocks.DECORATED_DESTROY != null)
-                                ? ITEMS.registerSimpleBlockItem("decorated_destroy", BCCoreBlocks.DECORATED_DESTROY)
+                                ? ITEMS.registerSimpleBlockItem(BCCoreBlocks.DECORATED_DESTROY)
                                 : null;
                 DECORATED_BLUEPRINT = (BCLib.DEV && BCCoreBlocks.DECORATED_BLUEPRINT != null)
-                                ? ITEMS.registerSimpleBlockItem("decorated_blueprint", BCCoreBlocks.DECORATED_BLUEPRINT)
+                                ? ITEMS.registerSimpleBlockItem(BCCoreBlocks.DECORATED_BLUEPRINT)
                                 : null;
                 DECORATED_TEMPLATE = (BCLib.DEV && BCCoreBlocks.DECORATED_TEMPLATE != null)
-                                ? ITEMS.registerSimpleBlockItem("decorated_template", BCCoreBlocks.DECORATED_TEMPLATE)
+                                ? ITEMS.registerSimpleBlockItem(BCCoreBlocks.DECORATED_TEMPLATE)
                                 : null;
                 DECORATED_PAPER = (BCLib.DEV && BCCoreBlocks.DECORATED_PAPER != null)
-                                ? ITEMS.registerSimpleBlockItem("decorated_paper", BCCoreBlocks.DECORATED_PAPER)
+                                ? ITEMS.registerSimpleBlockItem(BCCoreBlocks.DECORATED_PAPER)
                                 : null;
                 DECORATED_LEATHER = (BCLib.DEV && BCCoreBlocks.DECORATED_LEATHER != null)
-                                ? ITEMS.registerSimpleBlockItem("decorated_leather", BCCoreBlocks.DECORATED_LEATHER)
+                                ? ITEMS.registerSimpleBlockItem(BCCoreBlocks.DECORATED_LEATHER)
                                 : null;
         }
 

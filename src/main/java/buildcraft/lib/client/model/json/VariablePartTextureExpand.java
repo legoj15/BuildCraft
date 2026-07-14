@@ -21,7 +21,7 @@ import buildcraft.lib.expression.api.IExpressionNode.INodeLong;
 import buildcraft.lib.expression.api.IExpressionNode.INodeObject;
 import buildcraft.lib.expression.node.value.NodeConstantBoolean;
 import buildcraft.lib.expression.node.value.NodeConstantLong;
-import buildcraft.lib.misc.RenderUtil;
+import buildcraft.lib.misc.ColourUtil;
 
 public class VariablePartTextureExpand extends JsonVariableModelPart {
     public final INodeDouble[] from;
@@ -55,7 +55,7 @@ public class VariablePartTextureExpand extends JsonVariableModelPart {
             float sizeZ = t[2] - f[2];
             boolean s = shade.evaluate();
             int l = (int) (light.evaluate() & 15);
-            int rgba = RenderUtil.swapARGBforABGR((int) colour.evaluate());
+            int rgba = ColourUtil.swapArgbToAbgr((int) colour.evaluate());
 
             VariableFaceData data = faceUv.evaluate(spriteLookup);
             Direction evalFace = evaluateFace(this.face);

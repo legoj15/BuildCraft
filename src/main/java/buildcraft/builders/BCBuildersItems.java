@@ -21,25 +21,25 @@ public class BCBuildersItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCBuilders.MODID);
 
     public static final DeferredItem<BlockItem> FRAME = ITEMS
-            .registerSimpleBlockItem("frame", BCBuildersBlocks.FRAME);
+            .registerSimpleBlockItem(BCBuildersBlocks.FRAME);
 
     public static final DeferredItem<BlockItem> FILLER = ITEMS
-            .registerSimpleBlockItem("filler", BCBuildersBlocks.FILLER);
+            .registerSimpleBlockItem(BCBuildersBlocks.FILLER);
 
     public static final DeferredItem<BlockItem> BUILDER = ITEMS
-            .registerSimpleBlockItem("builder", BCBuildersBlocks.BUILDER);
+            .registerSimpleBlockItem(BCBuildersBlocks.BUILDER);
 
     public static final DeferredItem<BlockItem> ARCHITECT = ITEMS
-            .registerSimpleBlockItem("architect", BCBuildersBlocks.ARCHITECT);
+            .registerSimpleBlockItem(BCBuildersBlocks.ARCHITECT);
 
     public static final DeferredItem<BlockItem> LIBRARY = ITEMS
-            .registerSimpleBlockItem("library", BCBuildersBlocks.LIBRARY);
+            .registerSimpleBlockItem(BCBuildersBlocks.LIBRARY);
 
     public static final DeferredItem<BlockItem> REPLACER = ITEMS
-            .registerSimpleBlockItem("replacer", BCBuildersBlocks.REPLACER);
+            .registerSimpleBlockItem(BCBuildersBlocks.REPLACER);
 
     public static final DeferredItem<BlockItem> QUARRY = ITEMS
-            .registerSimpleBlockItem("quarry", BCBuildersBlocks.QUARRY);
+            .registerSimpleBlockItem(BCBuildersBlocks.QUARRY);
 
     public static final DeferredItem<ItemSnapshot> BLUEPRINT_CLEAN = RegistrationUtilBC.registerItem(ITEMS,
             "blueprint_clean",

@@ -18,6 +18,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BiomeTags;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
 
 import buildcraft.api.core.BCDebugging;
@@ -139,12 +140,14 @@ public class OilGenerator {
 
     /** Replays {@link #getStructures}'s sample-point derivation so the biome
      * checked here matches the biome the actual roll evaluates against. */
-    private static Identifier sampleBiomeForChunkRoll(Level level, int cx, int cz) {
+    private static Identifier sampleBiomeForChunkRoll(WorldGenLevel level, int cx, int cz) {
         Random rand = RandUtil.createRandomForChunk(level, cx, cz, MAGIC_GEN_NUMBER);
         int x = cx * 16 + 8 + rand.nextInt(16);
         int z = cz * 16 + 8 + rand.nextInt(16);
-        // getUncachedNoiseBiome (biome-source sample, never loads a chunk) NOT level.getBiome: getBiome
-        // force-load-parks the server thread on an ungenerated neighbour during ChunkEvent.Load (GitHub #26).
+        // getUncachedNoiseBiome (a pure biome-source noise sample, never touches a chunk) NOT
+        // level.getBiome: the noise sample works identically on a live ServerLevel and inside a
+        // WorldGenRegion, and on the live level getBiome can force-load an ungenerated neighbour
+        // (the historical GitHub #26 freeze, back when oil generated on ChunkEvent.Load).
         return Identifier.parse(level.getUncachedNoiseBiome(
                 QuartPos.fromBlock(x), QuartPos.fromBlock(64), QuartPos.fromBlock(z)).getRegisteredName());
     }
@@ -154,40 +157,41 @@ public class OilGenerator {
      * {@code fine_riches} handler to check whether the player's current chunk
      * is an oil-design biome, before scanning the 3×3 neighbourhood for an
      * actual rolled oil deposit. */
-    public static boolean isOilDesignBiomeAt(Level level, int chunkX, int chunkZ) {
+    public static boolean isOilDesignBiomeAt(WorldGenLevel level, int chunkX, int chunkZ) {
         return isOilDesignBiome(sampleBiomeForChunkRoll(level, chunkX, chunkZ));
     }
 
     /**
-     * Called from {@link buildcraft.energy.BCEnergyWorldGen} when a chunk is loaded for the first time.
-     * Generates oil structures that overlap with this chunk.
+     * Generates every oil-structure slice that overlaps the given chunk. Called from
+     * {@link OilFeature#place} with a {@link net.minecraft.server.level.WorldGenRegion} while the chunk
+     * is being generated (the normal path), and callable with a live {@link ServerLevel} (game tests).
+     *
+     * @return whether any origin chunk in range actually rolled an oil structure overlapping this chunk.
      */
-    public static void generateForChunk(ServerLevel level, int chunkX, int chunkZ) {
-        if (!canGenerateOilIn(level)) {
+    public static boolean generateForChunk(WorldGenLevel level, int chunkX, int chunkZ) {
+        if (!canGenerateOilIn(level.getLevel())) {
             if (DEBUG_OILGEN_BASIC) {
-                String reason = level.getChunkSource().getGenerator() instanceof net.minecraft.world.level.levelgen.FlatLevelSource
+                String reason = level.getLevel().getChunkSource().getGenerator() instanceof net.minecraft.world.level.levelgen.FlatLevelSource
                         ? "the world is FLAT" : "dimension is excluded";
                 BCLog.logger.info("[energy.oilgen] Not generating oil in chunk " + chunkX + ", " + chunkZ
                     + " because " + reason + ".");
             }
-            return;
+            return false;
         }
 
-        // Clip region = EXACTLY the chunk being loaded (chunk-aligned). This used to be offset by
-        // +8 (chunk centre .. centre+15), which made the box straddle the current chunk's second half
-        // AND the next chunk's first half. Oil generates on ChunkEvent.Load (server thread, mid
-        // FULL-status task); a read/write landing in that not-yet-loaded next chunk forces a synchronous
-        // ServerChunkCache.getChunk that parks the server thread forever (worldgen deadlock — the
-        // watchdog reports "a single server tick took 45 s"). Chunk-aligned, every structure slice that
-        // overlaps this chunk is generated here, and each neighbouring chunk generates its own slice when
-        // IT loads (the offset and aligned boxes both tile the world, so the union — the full structure —
-        // is identical; only which load event places a given block changes).
+        // Clip region = EXACTLY the chunk being generated (chunk-aligned). Every structure slice that
+        // overlaps this chunk is placed here; each neighbouring chunk places its own slice when ITS
+        // feature runs (the aligned boxes tile the world, so the union — the full structure — is
+        // complete, and writes never leave the feature step's allowed radius). The per-origin-chunk
+        // RNG below is seed-deterministic, so every chunk computes the same structures for a given
+        // origin regardless of which chunk generates first.
         int x = chunkX * 16;
         int z = chunkZ * 16;
         BlockPos min = new BlockPos(x, level.getMinY(), z);
         BlockPos maxPos = new BlockPos(x + 15, level.getMaxY(), z + 15);
         Box box = new Box(min, maxPos);
 
+        boolean generatedAny = false;
         for (int cdx = -MAX_CHUNK_RADIUS; cdx <= MAX_CHUNK_RADIUS; cdx++) {
             for (int cdz = -MAX_CHUNK_RADIUS; cdz <= MAX_CHUNK_RADIUS; cdz++) {
                 int cx = chunkX + cdx;
@@ -207,8 +211,10 @@ public class OilGenerator {
                     }
                     spring.generate(level, count);
                 }
+                generatedAny |= !structures.isEmpty();
             }
         }
+        return generatedAny;
     }
 
     /** Check if the dimension is excluded based on config. */
@@ -217,20 +223,20 @@ public class OilGenerator {
         return BCEnergyConfig.dimensionListMode.get() == BCEnergyConfig.ListMode.BLACKLIST ? inList : !inList;
     }
 
-    public static List<OilGenStructure> getStructures(Level level, int cx, int cz) {
+    public static List<OilGenStructure> getStructures(WorldGenLevel level, int cx, int cz) {
         return getStructures(level, cx, cz, false);
     }
 
-    private static List<OilGenStructure> getStructures(Level level, int cx, int cz, boolean log) {
+    private static List<OilGenStructure> getStructures(WorldGenLevel level, int cx, int cz, boolean log) {
         Random rand = RandUtil.createRandomForChunk(level, cx, cz, MAGIC_GEN_NUMBER);
 
         // shift to world coordinates
         int x = cx * 16 + 8 + rand.nextInt(16);
         int z = cz * 16 + 8 + rand.nextInt(16);
 
-        // getUncachedNoiseBiome (biome-source sample, never loads a chunk) NOT level.getBiome: getBiome ->
-        // getNoiseBiome -> getChunk(...,BIOMES,false) still managedBlock-parks the server thread on a
-        // ticket-eligible-but-ungenerated neighbour during the ChunkEvent.Load worldgen storm (GitHub #26).
+        // getUncachedNoiseBiome (a pure biome-source noise sample, never touches a chunk) NOT
+        // level.getBiome: works identically during generation (WorldGenRegion) and on the live level,
+        // where getBiome could force-load an ungenerated chunk (the historical GitHub #26 freeze).
         // This IS getBiome's own fallback when the chunk is absent, so the sampled biome is unchanged.
         Holder<Biome> biomeHolder = level.getUncachedNoiseBiome(
                 QuartPos.fromBlock(x), QuartPos.fromBlock(64), QuartPos.fromBlock(z));

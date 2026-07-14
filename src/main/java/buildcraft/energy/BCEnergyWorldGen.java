@@ -1,23 +1,12 @@
 package buildcraft.energy;
 
-import java.util.HashSet;
-import java.util.Set;
-
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
-
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.level.saveddata.SavedData;
-//? if >=1.21.10 {
-import net.minecraft.world.level.saveddata.SavedDataType;
-//?}
 
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 import buildcraft.api.core.BCLog;
@@ -26,8 +15,18 @@ import buildcraft.energy.generation.OilGenerator;
 import buildcraft.lib.misc.AdvancementUtil;
 
 /**
- * Hooks oil generation into NeoForge's chunk lifecycle.
- * Uses ChunkEvent.Load with persistent SavedData to ensure each chunk is generated exactly once.
+ * Live-level companion to the oil worldgen pipeline: the {@code fine_riches} advancement watcher.
+ *
+ * <p>Oil placement itself no longer lives here — it runs as a proper worldgen feature
+ * ({@link buildcraft.energy.generation.OilFeature}, registered in {@link BCEnergyFeatures} and
+ * attached to every biome by {@code AddOilBiomeModifier}) inside the chunk-generation pipeline.
+ * The old {@code ChunkEvent.Load} + SavedData model generated against the live {@code ServerLevel},
+ * where any stray read/write into an ungenerated neighbour chunk force-loaded it and parked the
+ * server thread forever (GitHub issue #26 and friends); a feature's {@code WorldGenRegion} cannot
+ * force-load at all, so that whole failure class is gone. Feature placement also runs exactly once
+ * per chunk by construction, which retires the per-dimension "generated chunks" SavedData
+ * (existing worlds' {@code buildcraft_oil_gen.dat} is simply ignored; the per-chunk RNG is
+ * unchanged, so old and new chunks tile seamlessly).
  */
 public class BCEnergyWorldGen {
 
@@ -40,28 +39,7 @@ public class BCEnergyWorldGen {
             return;
         }
         NeoForge.EVENT_BUS.register(BCEnergyWorldGen.class);
-        BCLog.logger.info("[energy.oilgen] Registered oil world generation on chunk load.");
-    }
-
-    @SubscribeEvent
-    public static void onChunkLoad(ChunkEvent.Load event) {
-        if (!(event.getLevel() instanceof ServerLevel serverLevel)) {
-            return;
-        }
-
-        ChunkPos chunkPos = event.getChunk().getPos();
-
-        // Check if we've already generated oil for this chunk
-        OilGenSavedData data = OilGenSavedData.getOrCreate(serverLevel);
-        if (data.hasGenerated(chunkPos)) {
-            return;
-        }
-
-        // Mark as generated BEFORE generating to prevent re-entrancy
-        data.markGenerated(chunkPos);
-
-        // Generate oil structures that overlap with this chunk
-        OilGenerator.generateForChunk(serverLevel, buildcraft.lib.misc.PositionUtil.chunkX(chunkPos), buildcraft.lib.misc.PositionUtil.chunkZ(chunkPos));
+        BCLog.logger.info("[energy.oilgen] Registered the fine_riches oil-biome watcher.");
     }
 
     /** Once-per-second check stride for {@link #onPlayerTick}. The advancement is
@@ -138,75 +116,6 @@ public class BCEnergyWorldGen {
                     return;
                 }
             }
-        }
-    }
-
-    /**
-     * SavedData that tracks which chunks have had oil generation applied.
-     * Stored per-dimension in the world save.
-     */
-    public static class OilGenSavedData extends SavedData {
-        private static final String DATA_NAME = "buildcraft_oil_gen";
-
-        private final Set<Long> generatedChunks;
-
-        public OilGenSavedData() {
-            this.generatedChunks = new HashSet<>();
-        }
-
-        private OilGenSavedData(java.util.List<Long> chunks) {
-            this.generatedChunks = new HashSet<>(chunks);
-        }
-
-        private static final Codec<OilGenSavedData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                Codec.LONG.listOf().optionalFieldOf("chunks", java.util.List.of())
-                        .forGetter(d -> new java.util.ArrayList<>(d.generatedChunks))
-        ).apply(instance, OilGenSavedData::new));
-
-        //? if >=26.1 {
-        public static final SavedDataType<OilGenSavedData> TYPE = new SavedDataType<>(
-                Identifier.withDefaultNamespace(DATA_NAME),
-                OilGenSavedData::new,
-                CODEC,
-                net.minecraft.util.datafix.DataFixTypes.LEVEL
-        );
-        //?} elif >=1.21.10 {
-        /*public static final SavedDataType<OilGenSavedData> TYPE = new SavedDataType<>(
-                DATA_NAME,
-                OilGenSavedData::new,
-                CODEC,
-                net.minecraft.util.datafix.DataFixTypes.LEVEL
-        );*/
-        //?} else {
-        /*// 1.21.1: SavedData.Factory (ctor, (tag,provider)->T via CODEC, DataFixTypes).
-        public static final SavedData.Factory<OilGenSavedData> TYPE = new SavedData.Factory<>(
-                OilGenSavedData::new,
-                (tag, provider) -> CODEC.parse(net.minecraft.nbt.NbtOps.INSTANCE, tag).result().orElseGet(OilGenSavedData::new),
-                net.minecraft.util.datafix.DataFixTypes.LEVEL
-        );
-
-        @Override
-        public net.minecraft.nbt.CompoundTag save(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
-            return (net.minecraft.nbt.CompoundTag) CODEC.encodeStart(net.minecraft.nbt.NbtOps.INSTANCE, this)
-                    .result().orElseGet(net.minecraft.nbt.CompoundTag::new);
-        }*/
-        //?}
-
-        public boolean hasGenerated(ChunkPos pos) {
-            return generatedChunks.contains(buildcraft.lib.misc.PositionUtil.chunkPack(pos));
-        }
-
-        public void markGenerated(ChunkPos pos) {
-            generatedChunks.add(buildcraft.lib.misc.PositionUtil.chunkPack(pos));
-            setDirty();
-        }
-
-        public static OilGenSavedData getOrCreate(ServerLevel level) {
-            //? if >=1.21.10 {
-            return level.getDataStorage().computeIfAbsent(TYPE);
-            //?} else {
-            /*return level.getDataStorage().computeIfAbsent(TYPE, DATA_NAME);*/
-            //?}
         }
     }
 }

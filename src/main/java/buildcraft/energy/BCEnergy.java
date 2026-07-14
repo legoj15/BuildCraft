@@ -27,6 +27,7 @@ public class BCEnergy {
     public static void init(IEventBus modEventBus) {
         // Register all deferred registries
         BCEnergyFluids.init(modEventBus);
+        BCEnergyFeatures.init(modEventBus);
         BCEnergyBlocks.init(modEventBus);
         BCEnergyItems.init(modEventBus);
         BCEnergyBlockEntities.init(modEventBus);

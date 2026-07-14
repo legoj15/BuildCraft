@@ -188,4 +188,36 @@ public class OilGenStructureTester {
             }
         });
     }
+
+    /**
+     * End-to-end wiring check for the feature-based oil pipeline (the {@code ChunkEvent.Load}
+     * replacement): the {@code buildcraftunofficial:add_oil} biome modifier must have attached the
+     * {@code buildcraftunofficial:oil} placed feature to EVERY biome at
+     * {@code top_layer_modification}. Reads the (arbitrary) arena biome's generation settings — if
+     * the feature/modifier registration, any of the three worldgen JSONs, or the modifier's
+     * every-biome application broke, the feature is absent here and no oil would generate anywhere.
+     */
+    public static void testOilFeatureAttachedToBiomes(GameTestHelper helper) {
+        net.minecraft.world.level.biome.Biome biome =
+                helper.getLevel().getBiome(helper.absolutePos(new BlockPos(0, 1, 0))).value();
+        int step = net.minecraft.world.level.levelgen.GenerationStep.Decoration.TOP_LAYER_MODIFICATION.ordinal();
+        java.util.List<net.minecraft.core.HolderSet<net.minecraft.world.level.levelgen.placement.PlacedFeature>> features =
+                biome.getGenerationSettings().features();
+        helper.assertTrue(features.size() > step,
+                "Biome has no feature list at top_layer_modification — the add_oil biome modifier did not apply");
+        boolean found = false;
+        for (net.minecraft.core.Holder<net.minecraft.world.level.levelgen.placement.PlacedFeature> holder
+                : features.get(step)) {
+            if (holder.unwrapKey()
+                    .map(key -> "buildcraftunofficial:oil".equals(buildcraft.lib.misc.RegistryKeyUtil.id(key).toString()))
+                    .orElse(false)) {
+                found = true;
+                break;
+            }
+        }
+        helper.assertTrue(found,
+                "buildcraftunofficial:oil placed feature missing from the biome's top_layer_modification step "
+                        + "— feature registration, a worldgen JSON, or the add_oil biome modifier is broken");
+        helper.succeed();
+    }
 }

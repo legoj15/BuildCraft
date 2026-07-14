@@ -7,7 +7,9 @@ import java.util.function.Predicate;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction.Axis;
+import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -29,16 +31,17 @@ import buildcraft.energy.tile.TileSpringOil;
 @SuppressWarnings("deprecation")
 public abstract class OilGenStructure {
     /**
-     * Block-update flags for all worldgen placement in this class. {@link Block#UPDATE_KNOWN_SHAPE}
-     * is the load-bearing bit: it tells {@code markAndNotifyBlock} to skip {@code updateNeighbourShapes},
-     * which otherwise reads neighbour {@link net.minecraft.world.level.block.state.BlockState}s. Because
-     * oil generates on {@code ChunkEvent.Load} (on the server thread, against the live {@code ServerLevel}),
-     * a block placed at a chunk edge would shape-update a neighbour in an UNLOADED chunk, forcing a
-     * synchronous {@code ServerChunkCache.getChunk} that blocks the server thread waiting for a chunk that
-     * is itself queued behind the current task — a worldgen deadlock (a single tick hangs indefinitely;
-     * the dedicated-server watchdog reports "a single server tick took 45 s"). {@link Block#UPDATE_CLIENTS}
-     * is kept so the placement still syncs when the chunk is later sent. Vanilla worldgen never runs shape
-     * updates either, so this is behaviour-equivalent for the generated world.
+     * Block-update flags for all worldgen placement in this class. Oil normally generates inside a
+     * {@link net.minecraft.server.level.WorldGenRegion} (via {@link OilFeature}), where these flags are
+     * mostly moot — region {@code setBlock} never runs shape/neighbour updates. They stay load-bearing
+     * for the live-{@code ServerLevel} path (game tests, and any future non-feature caller):
+     * {@link Block#UPDATE_KNOWN_SHAPE} tells {@code markAndNotifyBlock} to skip
+     * {@code updateNeighbourShapes}, which otherwise reads neighbour block states — on a live level a
+     * block placed at a chunk edge would shape-update a neighbour in an UNLOADED chunk, forcing a
+     * synchronous blocking {@code ServerChunkCache.getChunk} (the historical worldgen deadlock; watchdog
+     * "a single server tick took 45 s"). {@link Block#UPDATE_CLIENTS} keeps the placement syncing when
+     * the chunk is later sent. Vanilla worldgen never runs shape updates either, so this is
+     * behaviour-equivalent for the generated world.
      */
     protected static final int WORLDGEN_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
 
@@ -65,35 +68,41 @@ public abstract class OilGenStructure {
     protected abstract int countOilBlocks();
 
     /**
-     * Whether the chunk containing block-({@code blockX}, {@code blockZ}) is ACTUALLY present at
-     * {@code FULL} right now (or is the chunk currently being loaded, via NeoForge's
-     * {@code currentlyLoading} bypass) — a non-blocking, never-force-loading check, valid on the server
-     * thread where oil generates. The load-bearing primitive behind every oil-gen chunk guard.
+     * Whether the chunk containing block-({@code blockX}, {@code blockZ}) is safely accessible — a
+     * non-blocking, never-force-loading check. The load-bearing primitive behind every oil-gen chunk
+     * guard, with one branch per generation context:
      *
-     * <p><b>Why {@code getChunkNow} and not {@code hasChunk}:</b> {@code hasChunk}/{@code hasChunkAt} is a
-     * TICKET-LEVEL test (<em>"this chunk's ticket level is high enough that it COULD reach FULL"</em>), NOT
-     * a generated-status test. During the spawn-area generation storm a neighbour becomes ticket-eligible
-     * long before it is generated, so {@code hasChunk} returns {@code true} and the very next
-     * {@code getBlockState}/{@code setBlock} then force-loads it ({@code requireChunk=true} →
-     * {@code managedBlock}) → the server thread parks forever (the worldgen deadlock; a thread dump caught
-     * exactly this with a {@code hasChunk}-guarded {@code getBlockState} as the parking frame).
-     * {@code ServerChunkCache.getChunkNow} instead returns the chunk only if it is genuinely present at
-     * {@code FULL} (via {@code getChunkIfPresent(FULL)}), never scheduling or upgrading, and {@code null}
-     * otherwise — so we simply skip the ungenerated slice; it is placed when that chunk loads and runs its
-     * own generation.
+     * <p><b>Inside a {@link WorldGenRegion}</b> (the normal path — {@link OilFeature} at generation
+     * time): {@code region.hasChunk} is pure region-bounds arithmetic, never blocks, never loads. An
+     * out-of-bounds access through a region would CRASH loudly rather than park, but all oil writes are
+     * clipped to the generating chunk (±the tree-clear expansion), well inside the feature step's
+     * region, so this guard mainly keeps the tree-clear BFS honest at region edges. NOTE:
+     * {@code WorldGenRegion.getChunkSource()} delegates to the LIVE level's chunk cache — where the
+     * generating chunk is not yet a loaded {@code LevelChunk} — so the {@code getChunkNow} branch below
+     * would wrongly veto every write during generation; the region branch must come first.
+     *
+     * <p><b>On a live {@code ServerLevel}</b> (game tests, any future non-feature caller):
+     * {@code getChunkNow}, NOT {@code hasChunk}. {@code hasChunk}/{@code hasChunkAt} on a live level is
+     * a TICKET-LEVEL test (<em>"could reach FULL"</em>), not a generated-status test — during a
+     * generation storm a neighbour is ticket-eligible long before it is generated, so the very next
+     * {@code getBlockState}/{@code setBlock} force-loads it and parks the server thread forever (the
+     * historical worldgen deadlock; a thread dump caught exactly this frame).
+     * {@code ServerChunkCache.getChunkNow} returns the chunk only if genuinely present at {@code FULL},
+     * never scheduling or upgrading.
      */
     protected static boolean isChunkLoaded(LevelAccessor level, int blockX, int blockZ) {
+        if (level instanceof WorldGenRegion region) {
+            return region.hasChunk(blockX >> 4, blockZ >> 4);
+        }
         return level.getChunkSource().getChunkNow(blockX >> 4, blockZ >> 4) != null;
     }
 
     public void setOilIfCanReplace(LevelAccessor level, BlockPos pos) {
-        // Never touch a chunk that isn't actually generated yet. Oil generates on ChunkEvent.Load (server
-        // thread, mid FULL-status task); both Level.getBlockState (in canReplaceForOil) and Level.setBlock
-        // call getChunkAt, which parks the server thread forever waiting for an ungenerated neighbour to
-        // reach FULL (the worldgen deadlock — watchdog reports "a single server tick took 45 s"). A
-        // structure that spills past the loaded region (e.g. a wide spout tube near a chunk border) simply
-        // has that slice placed when the neighbour chunk loads and runs its own generation. This MUST be
-        // getChunkNow (actual presence), NOT hasChunk (ticket level) — see isChunkLoaded.
+        // Never touch a chunk that isn't safely accessible (region bounds during feature gen; actual
+        // FULL presence on a live level — see isChunkLoaded). On a live level, both getBlockState (in
+        // canReplaceForOil) and setBlock would otherwise force-load an ungenerated neighbour and park the
+        // server thread (the historical ChunkEvent.Load worldgen deadlock). A structure slice that falls
+        // outside is simply placed when that chunk generates and runs its own feature.
         if (!isChunkLoaded(level, pos.getX(), pos.getZ())) {
             return;
         }
@@ -107,15 +116,28 @@ public abstract class OilGenStructure {
     }
 
     public static void setOil(LevelAccessor level, BlockPos pos) {
-        setWorldgenBlock(level, pos, BCEnergyFluids.OIL_COOL.source().get().defaultFluidState().createLegacyBlock());
+        BlockState oil = BCEnergyFluids.OIL_COOL.source().get().defaultFluidState().createLegacyBlock();
+        if (setWorldgenBlock(level, pos, oil) && !(level instanceof Level)) {
+            // Worldgen-region path: region setBlock fires no onPlace, so nothing schedules the fluid
+            // tick that makes exposed oil start flowing once the chunk goes live (spout overflow,
+            // pool edges). Schedule it explicitly — the same thing vanilla's spring/lake features do;
+            // ticks land in the chunk's pending-tick list and run on load, no-op for enclosed sources.
+            // On a live Level, LiquidBlock.onPlace already schedules it.
+            level.scheduleTick(pos, oil.getFluidState().getType(), 0);
+        }
     }
 
     /**
-     * The single deadlock-safe block-write path for oil generation. Oil generates on
-     * {@code ChunkEvent.Load} (server thread, against the live {@code ServerLevel}, fired mid
-     * FULL-status task), where TWO distinct cross-chunk hazards each park the server thread forever
-     * (the worldgen deadlock — watchdog "a single server tick took 45 s"). This is the one place both
-     * are guarded:
+     * The single guarded block-write path for oil generation, shared by both generation contexts.
+     *
+     * <p>In the normal path — {@link OilFeature} inside a {@code WorldGenRegion} — region
+     * {@code setBlock} runs no neighbour updates, no {@code onPlace}, no comparator refresh, so the
+     * cross-chunk hazards below structurally cannot occur; the guards here are cheap defence-in-depth
+     * plus the block-entity-preservation rule (worldgen shouldn't bulldoze a structure chest).
+     *
+     * <p>On a live {@code ServerLevel} (game tests, any future non-feature caller) the hazards are
+     * real: each historically parked the server thread forever (the worldgen deadlock — watchdog "a
+     * single server tick took 45 s") back when oil generated on {@code ChunkEvent.Load}:
      * <ol>
      *   <li><b>Writing into an ungenerated chunk:</b> {@code Level.setBlock} → {@code getChunkAt} blocks
      *       waiting for a chunk that is itself queued behind the current task. (Guarded by
@@ -147,25 +169,28 @@ public abstract class OilGenStructure {
      * when that chunk loads and runs its own generation, and worldgen leaving a rare buried block-entity
      * (a structure chest, suspicious sand, a village block, …) intact instead of bulldozing it is correct
      * anyway. Identical on every MC line — both the {@code removeBlockEntity → updateNeighbourForOutputSignal}
-     * patch and the force-loading neighbour read are present on 1.21.1 and 26.1.x alike — so this is a
-     * shared latent-deadlock guard, not a 1.21.1 workaround.
+     * patch and the force-loading neighbour read are present on 1.21.1 and 26.1.x alike.
+     *
+     * @return whether the block was actually placed (false = a guard skipped it).
      */
-    protected static void setWorldgenBlock(LevelAccessor level, BlockPos pos, BlockState state) {
+    protected static boolean setWorldgenBlock(LevelAccessor level, BlockPos pos, BlockState state) {
         if (!isChunkLoaded(level, pos.getX(), pos.getZ())) {
-            return;
+            return false;
         }
-        // Hazard 3 (see the ordered list above): placing a FLUID block triggers LiquidBlock.onPlace ->
-        // FluidInteractionRegistry.canInteract, a force-loading read of the horizontal neighbours. Only fluid
-        // states run that read, and only a block ON a chunk boundary can have a horizontal neighbour in
-        // another chunk — so gate the (cheap, non-blocking) neighbour probe on both, then skip the placement
-        // rather than force-load an ungenerated neighbour.
+        // Hazard 3 (see the ordered list above): on a live level, placing a FLUID block triggers
+        // LiquidBlock.onPlace -> FluidInteractionRegistry.canInteract, a force-loading read of the
+        // horizontal neighbours. (Inside a WorldGenRegion onPlace never fires and in-region neighbours
+        // always pass this probe, so the guard costs nothing there.) Only fluid states run that read, and
+        // only a block ON a chunk boundary can have a horizontal neighbour in another chunk — so gate the
+        // (cheap, non-blocking) neighbour probe on both, then skip the placement rather than force-load an
+        // ungenerated neighbour.
         if (!state.getFluidState().isEmpty() && isChunkEdge(pos) && !areHorizontalNeighboursLoaded(level, pos)) {
-            return;
+            return false;
         }
         if (level.getBlockState(pos).hasBlockEntity()) {
-            return;
+            return false;
         }
-        level.setBlock(pos, state, WORLDGEN_FLAGS);
+        return level.setBlock(pos, state, WORLDGEN_FLAGS);
     }
 
     /** True if {@code pos} sits on a chunk boundary, i.e. at least one horizontal neighbour is in an adjacent
@@ -189,14 +214,13 @@ public abstract class OilGenStructure {
     /**
      * Finds the topmost non-air block in the column at (x, z). Mirrors what
      * {@link net.minecraft.world.level.levelgen.Heightmap.Types#WORLD_SURFACE}
-     * would return — but by direct downward scan, so it works when the heightmap
-     * hasn't been primed yet (which is the case for neighbour chunks scanned by
-     * the 5-chunk-radius oil generator firing on ChunkEvent.Load).
+     * would return — but by direct downward scan, so it works on a still-generating
+     * chunk (or a neighbour) whose heightmap hasn't been primed yet.
      */
     protected static BlockPos findWorldSurfaceTop(LevelAccessor level, int x, int z) {
         int minY = level.getMinY();
-        // Don't scan an unloaded chunk's column — getBlockState would block on getChunkAt and deadlock
-        // the chunk-load thread. The structure relying on this surface generates when (x,z)'s chunk loads.
+        // Don't scan a column outside the safely-accessible area (see isChunkLoaded). The structure
+        // relying on this surface generates when (x,z)'s own chunk runs its feature.
         if (!isChunkLoaded(level, x, z)) {
             return new BlockPos(x, minY, z);
         }
@@ -215,13 +239,11 @@ public abstract class OilGenStructure {
      * foliage, etc.) in the column at (x, z). Mirrors
      * {@link net.minecraft.world.level.levelgen.Heightmap.Types#OCEAN_FLOOR_WG}
      * — but by direct downward scan, avoiding the "Unprimed heightmap" error
-     * spam when the generator runs on ChunkEvent.Load and probes neighbour
-     * chunks whose heightmaps aren't yet built.
+     * spam on a still-generating chunk whose heightmaps aren't yet built.
      */
     protected static BlockPos findSolidSurfaceTop(LevelAccessor level, int x, int z) {
         int minY = level.getMinY();
-        // See findWorldSurfaceTop: don't scan an unloaded chunk (getBlockState would deadlock the
-        // chunk-load thread).
+        // See findWorldSurfaceTop: don't scan a column outside the safely-accessible area.
         if (!isChunkLoaded(level, x, z)) {
             return new BlockPos(x, minY, z);
         }
@@ -338,11 +360,11 @@ public abstract class OilGenStructure {
                         BlockPos n = pos.offset(dx, dy, dz);
                         if (n.getX() < minX || n.getX() > maxX || n.getZ() < minZ || n.getZ() > maxZ) continue;
                         if (!visited.add(n.asLong())) continue;
-                        // Skip neighbours in not-yet-loaded chunks: the BFS may reach
-                        // TREE_CLEAR_CHUNK_EXPANSION blocks past the chunk edge, and reading a block in an
-                        // unloaded chunk during ChunkEvent.Load would force a blocking getChunk (worldgen
-                        // deadlock). Tree-clearing across the boundary is cosmetic; that neighbour clears
-                        // its own overhang when it loads.
+                        // Skip neighbours outside the safely-accessible area: the BFS may reach
+                        // TREE_CLEAR_CHUNK_EXPANSION blocks past the chunk edge (in-region during feature
+                        // gen, so normally fine), and on a live level an unloaded chunk read would
+                        // force-load and park. Tree-clearing across the boundary is cosmetic; that
+                        // neighbour clears its own overhang when it generates.
                         if (!isChunkLoaded(level, n.getX(), n.getZ())) continue;
                         BlockState ns = level.getBlockState(n);
                         if (ns.is(BlockTags.LOGS) || ns.is(BlockTags.LEAVES)) {
@@ -588,11 +610,9 @@ public abstract class OilGenStructure {
         @Override
         protected void generateWithin(LevelAccessor level, Box intersect) {
             count = 0;
-            // The spout's height comes from the surface at its centre column; if that chunk isn't actually
-            // generated the scan below would force-load it and deadlock on getChunkAt. Skip — the spout
-            // fires when its centre chunk loads, and its tube cells are written into whichever neighbours
-            // are already present (cells over an ungenerated neighbour are skipped at the setWorldgenBlock
-            // leaf via isChunkLoaded). getChunkNow (actual presence), NOT hasChunk (ticket level).
+            // The spout's height comes from the surface at its centre column; skip if that column isn't
+            // safely accessible (see isChunkLoaded) — the spout fires when its centre chunk generates, and
+            // any stray cells are guarded at the setWorldgenBlock leaf.
             if (!isChunkLoaded(level, start.getX(), start.getZ())) {
                 return;
             }

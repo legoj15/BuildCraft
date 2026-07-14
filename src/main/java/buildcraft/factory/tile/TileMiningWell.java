@@ -6,8 +6,6 @@
 
 package buildcraft.factory.tile;
 
-import javax.annotation.Nonnull;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
@@ -16,12 +14,13 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 
-import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjReceiver;
+import buildcraft.api.mj.MjBattery;
 
 import buildcraft.core.BCCoreConfig;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.BCFactoryBlocks;
+import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.InventoryUtil;
 
@@ -33,9 +32,6 @@ import buildcraft.lib.misc.InventoryUtil;
 public class TileMiningWell extends TileMiner {
     private boolean shouldCheck = true;
     private int recheckCooldown = 0;
-
-    // Lazily created receiver to avoid caching issues
-    private IMjReceiver mjReceiver;
 
     public TileMiningWell(BlockPos pos, BlockState state) {
         super(BCFactoryBlockEntities.MINING_WELL.get(), pos, state);
@@ -188,25 +184,7 @@ public class TileMiningWell extends TileMiner {
     }
 
     @Override
-    protected IMjReceiver createMjReceiver() {
-        if (mjReceiver == null) {
-            mjReceiver = new IMjReceiver() {
-                @Override
-                public long getPowerRequested() {
-                    return battery.getCapacity() - battery.getStored();
-                }
-
-                @Override
-                public long receivePower(long microJoules, boolean simulate) {
-                    return battery.addPowerChecking(microJoules, simulate);
-                }
-
-                @Override
-                public boolean canConnect(@Nonnull IMjConnector other) {
-                    return true;
-                }
-            };
-        }
-        return mjReceiver;
+    protected IMjReceiver makeReceiver(MjBattery battery) {
+        return new MjBatteryReceiver(battery);
     }
 }

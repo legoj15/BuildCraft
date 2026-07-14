@@ -36,6 +36,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.mj.MjBattery;
 
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.BCCoreConfig;
@@ -139,7 +140,7 @@ public class TilePump extends TileMiner implements IDebuggable {
     }
 
     @Override
-    protected IMjReceiver createMjReceiver() {
+    protected IMjReceiver makeReceiver(MjBattery battery) {
         return new MjRedstoneBatteryReceiver(battery);
     }
 

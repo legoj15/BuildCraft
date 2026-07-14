@@ -27,6 +27,7 @@ import buildcraft.api.tiles.IHasWork;
 
 import buildcraft.core.BCCoreConfig;
 import buildcraft.factory.BCFactoryBlocks;
+import buildcraft.lib.mj.MjBatteryComponent;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.MessageUtil;
@@ -49,7 +50,9 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
     private int offset;
 
     protected boolean isComplete = false;
-    protected final MjBattery battery = new MjBattery(getBatteryCapacity());
+    protected final MjBatteryComponent mjPower = new MjBatteryComponent(getBatteryCapacity(), this::makeReceiver);
+    /** Alias for {@link #mjPower}'s battery, so hot-path mining code reads {@code battery.extractPower(...)}. */
+    protected final MjBattery battery = mjPower.getBattery();
 
     public TileMiner(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -57,7 +60,9 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
 
     protected abstract void mine();
 
-    protected abstract IMjReceiver createMjReceiver();
+    /** Builds this miner's MJ receiver over its battery: the mining well takes a plain battery receiver,
+     *  the pump a redstone one. Called once, when {@link #mjPower} is constructed. */
+    protected abstract IMjReceiver makeReceiver(MjBattery battery);
 
     // --- Ticking ---
 
@@ -173,7 +178,7 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
 
     /** @return The IMjReceiver for capability registration. */
     public IMjReceiver getMjReceiver() {
-        return createMjReceiver();
+        return mjPower.getMjReceiver();
     }
 
     /** @return The internal MJ battery, for Forge-Energy capability registration. */

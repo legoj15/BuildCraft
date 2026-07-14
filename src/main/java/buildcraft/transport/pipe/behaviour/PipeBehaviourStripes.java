@@ -33,6 +33,7 @@ import buildcraft.api.transport.pipe.PipeEventStatement;
 import buildcraft.api.transport.pipe.PipeFlow;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
+import buildcraft.lib.mj.MjRedstoneBatteryReceiver;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.NBTUtilBC;
@@ -42,6 +43,10 @@ import buildcraft.transport.BCTransportStatements;
 @SuppressWarnings("deprecation")
 public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActivator, IMjRedstoneReceiver {
     private final MjBattery battery = new MjBattery(256 * MjAPI.MJ);
+    // The behaviour must itself be an IMjRedstoneReceiver (the pulsar plug + power-adaptor placement test
+    // the pipe behaviour directly via getBehaviour() instanceof IMjRedstoneReceiver), so it can't extend
+    // the shared receiver — instead it holds one and delegates, single-sourcing the battery-receiver logic.
+    private final MjRedstoneBatteryReceiver mjReceiver = new MjRedstoneBatteryReceiver(battery);
 
     @Nullable
     public Direction direction = null;
@@ -121,21 +126,21 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
         }
     }
 
-    // IMjRedstoneReceiver
+    // IMjRedstoneReceiver — delegated to the shared MjRedstoneBatteryReceiver over this behaviour's battery.
 
     @Override
     public boolean canConnect(@Nonnull IMjConnector other) {
-        return true;
+        return mjReceiver.canConnect(other);
     }
 
     @Override
     public long getPowerRequested() {
-        return battery.getCapacity() - battery.getStored();
+        return mjReceiver.getPowerRequested();
     }
 
     @Override
     public long receivePower(long microJoules, boolean simulate) {
-        return battery.addPowerChecking(microJoules, simulate);
+        return mjReceiver.receivePower(microJoules, simulate);
     }
 
     // Pipe behaviour

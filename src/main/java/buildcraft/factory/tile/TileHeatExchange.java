@@ -19,9 +19,6 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -63,7 +60,7 @@ import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.MessageUtil;
-import buildcraft.lib.tile.AbstractBCBlockEntity;
+import buildcraft.lib.tile.AbstractBCSyncedBlockEntity;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 /**
@@ -72,7 +69,7 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
  * rendering state. Ported from 1.12.2 TileHeatExchange.
  */
 @SuppressWarnings("this-escape")
-public class TileHeatExchange extends AbstractBCBlockEntity implements IBCMenuProvider, IDebuggable {
+public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBCMenuProvider, IDebuggable {
 
     /** Maximum fluid transfer per tick for each number of middle sections (1-3 middles).
      * Numbers should be divisors of 1000. */
@@ -598,16 +595,8 @@ public class TileHeatExchange extends AbstractBCBlockEntity implements IBCMenuPr
     }
 
     // --- Network Sync ---
-
-    @Override
-    public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
-        return this.saveCustomOnly(registries);
-    }
-
-    @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
+    // The getUpdateTag/getUpdatePacket pair (+ the <1.21.10 onDataPacket fix) lives once in
+    // AbstractBCSyncedBlockEntity, which this class extends.
 
     // ========================================================================
     // Inner classes

@@ -28,9 +28,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -58,14 +55,14 @@ import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
-import buildcraft.lib.tile.AbstractBCBlockEntity;
+import buildcraft.lib.tile.AbstractBCSyncedBlockEntity;
 
 /**
  * Flood Gate tile entity. Receives fluid via pipes and uses BFS flood-fill to
  * place source blocks into the world. Power-free.
  * Ported from 1.12.2 TileFloodGate.
  */
-public class TileFloodGate extends AbstractBCBlockEntity implements IDebuggable {
+public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebuggable {
 
     private static final Direction[] SEARCH_NORMAL = new Direction[] {
         Direction.DOWN, Direction.NORTH, Direction.SOUTH,
@@ -361,16 +358,8 @@ public class TileFloodGate extends AbstractBCBlockEntity implements IDebuggable 
     }
 
     // --- Client Sync ---
-
-    @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return this.saveCustomOnly(registries);
-    }
-
-    @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
+    // The getUpdateTag/getUpdatePacket pair (+ the <1.21.10 onDataPacket fix) lives once in
+    // AbstractBCSyncedBlockEntity, which this class extends.
 
     // --- IDebuggable ---
 

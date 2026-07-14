@@ -16,7 +16,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.nbt.CompoundTag;
 //? if >=1.21.10 {
 import net.minecraft.util.profiling.Profiler;
@@ -42,7 +41,7 @@ import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.MessageUtil;
-import buildcraft.lib.tile.AbstractBCBlockEntity;
+import buildcraft.lib.tile.AbstractBCSyncedBlockEntity;
 import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.fluid.FluidSmoother;
 import buildcraft.api.tiles.IDebuggable;
@@ -54,7 +53,7 @@ import buildcraft.api.tiles.IDebuggable;
  * Ported from 1.12.2 TileTank.
  */
 @SuppressWarnings("deprecation")
-public class TileTank extends AbstractBCBlockEntity implements IBCMenuProvider, IDebuggable {
+public class TileTank extends AbstractBCSyncedBlockEntity implements IBCMenuProvider, IDebuggable {
 
     public final BCFluidTank tank = new BCFluidTank(1, 16_000); // 16 buckets
     public final FluidSmoother smoothedTank = new FluidSmoother(tank);
@@ -157,28 +156,8 @@ public class TileTank extends AbstractBCBlockEntity implements IBCMenuProvider, 
     }
 
     // --- Client Sync ---
-
-    @Override
-    public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
-        return this.saveCustomOnly(registries);
-    }
-
-    @Override
-    public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    //? if <1.21.10 {
-    /*// 1.21.1's onDataPacket only applies a NON-empty update tag, so a tank drained to empty (which
-    // serialises to an empty tag) would never clear on the client — it stays showing the last contents
-    // until reload. Apply unconditionally, matching 26.1.2. (TileTank doesn't extend TileBC_Neptune,
-    // so it needs its own copy of this override.) 1.21.1-only.
-    @Override
-    public void onDataPacket(net.minecraft.network.Connection net,
-            ClientboundBlockEntityDataPacket pkt, net.minecraft.core.HolderLookup.Provider registries) {
-        loadWithComponents(pkt.getTag(), registries);
-    }*/
-    //?}
+    // The getUpdateTag/getUpdatePacket pair (+ the <1.21.10 onDataPacket fix that clears a drained
+    // tank on the client) lives once in AbstractBCSyncedBlockEntity, which this class extends.
 
     // --- Tank Column Balancing ---
 

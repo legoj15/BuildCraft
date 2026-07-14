@@ -19,9 +19,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 //? if >=1.21.10 {
 import net.minecraft.util.profiling.Profiler;
 //?}
@@ -49,7 +46,7 @@ import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.LocaleUtil;
-import buildcraft.lib.tile.AbstractBCBlockEntity;
+import buildcraft.lib.tile.AbstractBCSyncedBlockEntity;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
 //? if >=1.21.10 {
@@ -63,7 +60,7 @@ import net.neoforged.neoforge.transfer.energy.EnergyHandler;
  * Provides tick logic, heat management, MJ power accumulation,
  * piston animation state, redstone sensitivity, and NBT persistence.
  */
-public abstract class TileEngineBase_BC8 extends AbstractBCBlockEntity implements IDebuggable {
+public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity implements IDebuggable {
 
     public static final Identifier ADVANCEMENT_TO_MUCH_POWER =
         Identifier.parse("buildcraftunofficial:to_much_power");
@@ -698,16 +695,8 @@ public abstract class TileEngineBase_BC8 extends AbstractBCBlockEntity implement
     }
 
     // --- Network sync ---
-
-    @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return this.saveCustomOnly(registries);
-    }
-
-    @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
+    // The getUpdateTag/getUpdatePacket pair (+ the <1.21.10 onDataPacket fix) lives once in
+    // AbstractBCSyncedBlockEntity, which this class extends.
 
     // --- IDebuggable ---
 

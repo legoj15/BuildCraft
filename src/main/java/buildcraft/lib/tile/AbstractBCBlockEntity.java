@@ -32,9 +32,11 @@ import buildcraft.lib.misc.BCValueOutput;
  * platform methods, so their serialization code carries no directives at all.
  *
  * <p>This base deliberately does NOT impose a client-sync pair ({@code getUpdateTag}/
- * {@code getUpdatePacket}) — some tiles (e.g. {@code TileMarker}) sync through their own channels and
- * must keep vanilla's no-auto-sync default. Tiles that want the standard BE sync declare it
- * themselves (as {@link TileBC_Neptune} and the machine tiles already do).
+ * {@code getUpdatePacket}) — some tiles (e.g. {@code TileMarker}, {@code TileSpringOil},
+ * {@code TilePipeHolder}) sync through their own channels or not at all, and must keep vanilla's
+ * no-auto-sync default. Tiles that want the standard BE sync extend the
+ * {@link AbstractBCSyncedBlockEntity} subclass, which adds that pair (plus the {@code <1.21.10}
+ * {@code onDataPacket} fix) in one place — {@link TileBC_Neptune} and the machine tiles do.
  */
 public abstract class AbstractBCBlockEntity extends BlockEntity {
 

@@ -17,9 +17,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
@@ -57,7 +54,7 @@ import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
-import buildcraft.lib.tile.AbstractBCBlockEntity;
+import buildcraft.lib.tile.AbstractBCSyncedBlockEntity;
 
 /**
  * Distiller tile entity. Takes fluid input, consumes MJ power, and produces
@@ -65,7 +62,7 @@ import buildcraft.lib.tile.AbstractBCBlockEntity;
  * Ported from 1.12.2 TileDistiller_BC8.
  */
 @SuppressWarnings("this-escape")
-public class TileDistiller_BC8 extends AbstractBCBlockEntity implements IBCMenuProvider, IDebuggable {
+public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IBCMenuProvider, IDebuggable {
 
     public static final long MAX_MJ_PER_TICK = 6 * MjAPI.MJ;
 
@@ -629,16 +626,8 @@ public class TileDistiller_BC8 extends AbstractBCBlockEntity implements IBCMenuP
     }
 
     // --- Network Sync ---
-
-    @Override
-    public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
-        return this.saveCustomOnly(registries);
-    }
-
-    @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
+    // The getUpdateTag/getUpdatePacket pair (+ the <1.21.10 onDataPacket fix) lives once in
+    // AbstractBCSyncedBlockEntity, which this class extends.
 
     /**
      * Input tank that gates external interactions to match 1.12.2's

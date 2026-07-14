@@ -15,9 +15,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -42,7 +39,7 @@ import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.VolumeUtil;
 import buildcraft.lib.misc.data.AverageLong;
-import buildcraft.lib.tile.AbstractBCBlockEntity;
+import buildcraft.lib.tile.AbstractBCSyncedBlockEntity;
 import buildcraft.lib.mj.MjBatteryReceiver;
 
 import buildcraft.api.tiles.IDebuggable;
@@ -51,7 +48,7 @@ import buildcraft.silicon.BCSiliconBlocks;
 import buildcraft.silicon.BCSiliconConfig;
 import buildcraft.silicon.block.BlockLaser;
 
-public class TileLaser extends AbstractBCBlockEntity implements ILocalBlockUpdateSubscriber, IDebuggable, IAdvDebugTarget {
+public class TileLaser extends AbstractBCSyncedBlockEntity implements ILocalBlockUpdateSubscriber, IDebuggable, IAdvDebugTarget {
     /** Forward range of the modern line-of-sight cone (LOS_CONE mode). Package-private so the tester
      *  can pass the production value rather than a literal. */
     static final int TARGETING_RANGE = 6;
@@ -338,16 +335,8 @@ public class TileLaser extends AbstractBCBlockEntity implements ILocalBlockUpdat
     }
 
     // --- Network Sync ---
-
-    @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return this.saveCustomOnly(registries);
-    }
-
-    @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
+    // The getUpdateTag/getUpdatePacket pair (+ the <1.21.10 onDataPacket fix) lives once in
+    // AbstractBCSyncedBlockEntity, which this class extends.
 
     // --- Lifecycle ---
 

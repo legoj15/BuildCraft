@@ -17,7 +17,6 @@ import com.google.common.collect.ImmutableList;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -38,16 +37,16 @@ import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.fluids.FluidStack;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 //?}
 
 import buildcraft.lib.fluid.BCFluidTank;
-import buildcraft.lib.tile.item.IBCItemHandler;
+import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
+import buildcraft.lib.tile.item.ItemHandlerSimple;
 
+import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.core.IPathProvider;
-import buildcraft.api.core.IStackFilter;
 import buildcraft.api.enums.EnumOptionalSnapshotType;
 import buildcraft.api.enums.EnumSnapshotType;
 import buildcraft.api.inventory.IItemTransactor;
@@ -137,13 +136,12 @@ public class TileBuilder extends TileBC_Neptune
     private boolean pavingTheWayGranted = false;
     private boolean startOfSomethingBigGranted = false;
 
-    // Inventory. invSnapshot is the blueprint/template slot (used snapshots only).
-    // invResources is a 27-slot grid (matches 1.12.2) that BlueprintBuilder pulls from via
-    // getInvResources(). Plain ItemStack fields rather than a DeferredRegister-backed handler
-    // because the 26.1 port hasn't landed a replacement for 1.12.2's ItemHandlerSimple yet and
-    // TileArchitectTable uses the same pattern.
+    // Inventory. invSnapshot is the blueprint/template slot (used snapshots only) and stays a loose
+    // ItemStack field. invResources is a 27-slot grid (matches 1.12.2) that BlueprintBuilder pulls
+    // from via getInvResources(); it is backed by an ItemHandlerSimple registered on the itemManager
+    // with EnumAccess.INSERT (pipes push in, can't pull out) — exactly the sibling TileFiller pattern.
     private ItemStack invSnapshot = ItemStack.EMPTY;
-    private final NonNullList<ItemStack> invResources = NonNullList.withSize(RESOURCE_SLOTS, ItemStack.EMPTY);
+    public final ItemHandlerSimple invResources;
 
     // Fluid tanks: 4 slots, 8 buckets each, matching 1.12.2. Each tank is a single-slot
     // BCFluidTank so WidgetFluidTank can bind to it directly in the GUI. The combined
@@ -264,226 +262,16 @@ public class TileBuilder extends TileBC_Neptune
     };*/
     //?}
 
-    /** Pipe-facing adapter: wraps {@link #invResources} as a NeoForge {@code ResourceHandler<ItemResource>}
-     *  so pipes can push items into the Builder. Insert tries matching slots first then empty slots.
-     *  Extract is intentionally disabled — 1.12.2 pipes also only inserted into the Builder's
-     *  resource inventory; pulling finished items out doesn't make sense. */
-    private final IBCItemHandler pipeItemHandler = new IBCItemHandler() {
-        //? if >=1.21.10 {
-        @Override
-        public int size() { return invResources.size(); }
-
-        @Override
-        public ItemResource getResource(int slot) {
-            if (slot < 0 || slot >= invResources.size()) return ItemResource.EMPTY;
-            ItemStack stack = invResources.get(slot);
-            return stack.isEmpty() ? ItemResource.EMPTY : ItemResource.of(stack);
-        }
-
-        @Override
-        public long getAmountAsLong(int slot) {
-            if (slot < 0 || slot >= invResources.size()) return 0;
-            return invResources.get(slot).getCount();
-        }
-
-        @Override
-        public long getCapacityAsLong(int slot, ItemResource resource) {
-            if (slot < 0 || slot >= invResources.size()) return 0;
-            // Standard 64-stack limit; honor the incoming resource's max stack size if specified
-            // (rare, but some items have custom smaller limits).
-            return resource == null || resource.isEmpty() ? 64 : resource.toStack(1).getMaxStackSize();
-        }
-
-        @Override
-        public boolean isValid(int slot, ItemResource resource) {
-            return slot >= 0 && slot < invResources.size();
-        }
-
-        @Override
-        public int insert(int slot, ItemResource resource, int amount, TransactionContext ctx) {
-            if (slot < 0 || slot >= invResources.size() || resource == null || resource.isEmpty() || amount <= 0) return 0;
-            ItemStack existing = invResources.get(slot);
-            int maxStack = getCapacityAsInt(resource);
-            if (existing.isEmpty()) {
-                int moved = Math.min(amount, maxStack);
-                ItemStack placed = resource.toStack(moved);
-                // Transactions: snapshot/rollback would be more correct, but the snapshot builders
-                // that drive the only extract path don't interleave with transactions, and the
-                // pipe flow does its own bookkeeping. Commit immediately.
-                invResources.set(slot, placed);
-                onResourcesChanged();
-                return moved;
-            }
-            if (!ItemStack.isSameItemSameComponents(existing, resource.toStack(1))) return 0;
-            int space = Math.min(maxStack, existing.getMaxStackSize()) - existing.getCount();
-            if (space <= 0) return 0;
-            int moved = Math.min(space, amount);
-            existing.grow(moved);
-            onResourcesChanged();
-            return moved;
-        }
-
-        @Override
-        public int extract(int slot, ItemResource resource, int amount, TransactionContext ctx) {
-            // Pipes can't pull items out of the Builder — matches 1.12.2 behavior.
-            return 0;
-        }
-
-        private int getCapacityAsInt(ItemResource resource) {
-            return (int) Math.min(Integer.MAX_VALUE, getCapacityAsLong(0, resource));
-        }
-        //?} else {
-        /*@Override
-        public int getSlots() { return invResources.size(); }
-
-        @Override
-        public ItemStack getStackInSlot(int slot) {
-            if (slot < 0 || slot >= invResources.size()) return ItemStack.EMPTY;
-            return invResources.get(slot);
-        }
-
-        @Override
-        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-            if (slot < 0 || slot >= invResources.size() || stack.isEmpty()) return stack;
-            ItemStack existing = invResources.get(slot);
-            int maxStack = Math.min(64, stack.getMaxStackSize());
-            if (existing.isEmpty()) {
-                int moved = Math.min(stack.getCount(), maxStack);
-                if (!simulate) {
-                    invResources.set(slot, stack.copyWithCount(moved));
-                    onResourcesChanged();
-                }
-                return moved >= stack.getCount() ? ItemStack.EMPTY : stack.copyWithCount(stack.getCount() - moved);
-            }
-            if (!ItemStack.isSameItemSameComponents(existing, stack)) return stack;
-            int space = Math.min(maxStack, existing.getMaxStackSize()) - existing.getCount();
-            if (space <= 0) return stack;
-            int moved = Math.min(space, stack.getCount());
-            if (!simulate) {
-                existing.grow(moved);
-                onResourcesChanged();
-            }
-            return moved >= stack.getCount() ? ItemStack.EMPTY : stack.copyWithCount(stack.getCount() - moved);
-        }
-
-        @Override
-        public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            // Pipes can't pull items out of the Builder — matches 1.12.2 behavior.
-            return ItemStack.EMPTY;
-        }
-
-        @Override
-        public int getSlotLimit(int slot) { return 64; }
-
-        @Override
-        public boolean isItemValid(int slot, ItemStack stack) {
-            return slot >= 0 && slot < invResources.size();
-        }*/
-        //?}
-    };
-
-    /** Bridges the legacy {@link IItemTransactor} API the snapshot builders call into to the
-     *  real {@link #invResources} list. Extract finds the first slot whose stack matches the
-     *  filter and pulls up to {@code max}; insert merges into existing stacks first, then empty
-     *  slots. Non-simulated mutations invalidate the builder's cached "has enough" results. */
-    private final IItemTransactor invResourcesTransactor = new IItemTransactor() {
-        @Override
-        public ItemStack insert(ItemStack stack, boolean allOrNone, boolean simulate) {
-            if (stack.isEmpty()) return ItemStack.EMPTY;
-
-            // Simulate first when allOrNone so we can bail before mutating anything.
-            ItemStack remaining = stack.copy();
-            NonNullList<ItemStack> scratch = simulate || allOrNone
-                ? copyInventory()
-                : invResources;
-
-            // First pass: merge with matching stacks.
-            for (int i = 0; i < scratch.size() && !remaining.isEmpty(); i++) {
-                ItemStack slot = scratch.get(i);
-                if (slot.isEmpty()) continue;
-                if (!ItemStack.isSameItemSameComponents(slot, remaining)) continue;
-                int max = Math.min(slot.getMaxStackSize(), remaining.getMaxStackSize());
-                int space = max - slot.getCount();
-                if (space <= 0) continue;
-                int moved = Math.min(space, remaining.getCount());
-                slot.grow(moved);
-                remaining.shrink(moved);
-                scratch.set(i, slot);
-            }
-
-            // Second pass: place into empty slots.
-            for (int i = 0; i < scratch.size() && !remaining.isEmpty(); i++) {
-                ItemStack slot = scratch.get(i);
-                if (!slot.isEmpty()) continue;
-                int moved = Math.min(remaining.getMaxStackSize(), remaining.getCount());
-                ItemStack placed = remaining.copyWithCount(moved);
-                scratch.set(i, placed);
-                remaining.shrink(moved);
-            }
-
-            if (allOrNone && !remaining.isEmpty()) {
-                return stack; // nothing fit; return the original untouched stack.
-            }
-
-            if (!simulate && (simulate || allOrNone)) {
-                // allOrNone path worked against scratch; commit it now.
-                for (int i = 0; i < scratch.size(); i++) {
-                    invResources.set(i, scratch.get(i));
-                }
-            }
-
-            if (!simulate) {
-                onResourcesChanged();
-            }
-            return remaining;
-        }
-
-        @Override
-        public ItemStack extract(IStackFilter filter, int min, int max, boolean simulate) {
-            if (max <= 0) return ItemStack.EMPTY;
-
-            // Always operate on a scratch copy so we can cleanly abort if we fail to meet
-            // the minimum — the IItemTransactor contract says nothing is extracted in that
-            // case, and we don't want to leave the inventory half-mutated.
-            ItemStack accumulated = ItemStack.EMPTY;
-            NonNullList<ItemStack> scratch = copyInventory();
-
-            for (int i = 0; i < scratch.size() && accumulated.getCount() < max; i++) {
-                ItemStack slot = scratch.get(i);
-                if (slot.isEmpty()) continue;
-                if (filter != null && !filter.matches(slot)) continue;
-
-                if (accumulated.isEmpty()) {
-                    int take = Math.min(max, slot.getCount());
-                    accumulated = slot.copyWithCount(take);
-                    slot.shrink(take);
-                    scratch.set(i, slot.isEmpty() ? ItemStack.EMPTY : slot);
-                } else if (ItemStack.isSameItemSameComponents(accumulated, slot)) {
-                    int want = max - accumulated.getCount();
-                    int take = Math.min(want, slot.getCount());
-                    accumulated.grow(take);
-                    slot.shrink(take);
-                    scratch.set(i, slot.isEmpty() ? ItemStack.EMPTY : slot);
-                }
-            }
-
-            if (accumulated.getCount() < min) {
-                return ItemStack.EMPTY;
-            }
-
-            if (!simulate) {
-                for (int i = 0; i < scratch.size(); i++) {
-                    invResources.set(i, scratch.get(i));
-                }
-                onResourcesChanged();
-            }
-            return accumulated;
-        }
-    };
-
     @SuppressWarnings("this-escape")
     public TileBuilder(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.BUILDER.get(), pos, state);
+        // Pipes push resources in but can't pull finished items out (EnumAccess.INSERT) — matches
+        // 1.12.2 and the sibling TileFiller. The itemManager exposes the INSERT-wrapped handler on
+        // every side via the inherited getItemHandler(facing); the snapshot builders read the raw
+        // handler (full transactor) through getInvResources().
+        invResources = itemManager.addInvHandler(
+            "resources", RESOURCE_SLOTS, EnumAccess.INSERT, EnumPipePart.VALUES);
+        invResources.setCallback((handler, slot, before, after) -> onResourcesChanged());
     }
 
     // The Builder keeps its snapshot, 27-slot resource grid and 4 fluid tanks as loose fields outside
@@ -502,15 +290,11 @@ public class TileBuilder extends TileBC_Neptune
 
     @Override
     protected void dropExtraContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {
+        // Only the loose snapshot slot needs manual spilling — the 27 resource slots now live in the
+        // itemManager and are dropped by the shared addDrops path in dropContentsOnRemoval.
         ItemStack snapshot = getSnapshot();
         if (!snapshot.isEmpty()) {
             net.minecraft.world.level.block.Block.popResource(level, pos, snapshot);
-        }
-        for (int i = 0; i < RESOURCE_SLOTS; i++) {
-            ItemStack stack = getResource(i);
-            if (!stack.isEmpty()) {
-                net.minecraft.world.level.block.Block.popResource(level, pos, stack);
-            }
         }
     }
 
@@ -528,12 +312,6 @@ public class TileBuilder extends TileBC_Neptune
 
     public MjBatteryReceiver getMjReceiver() {
         return mjReceiver;
-    }
-
-    /** Exposes {@link #invResources} to NeoForge capabilities so pipes can push items in. */
-    @Override
-    public IBCItemHandler getItemHandler(Direction facing) {
-        return pipeItemHandler;
     }
 
     public void onPlacedBy(@Nullable LivingEntity placer, ItemStack stack) {
@@ -792,25 +570,17 @@ public class TileBuilder extends TileBC_Neptune
     }
 
     public ItemStack getResource(int slot) {
-        return slot >= 0 && slot < invResources.size() ? invResources.get(slot) : ItemStack.EMPTY;
+        return slot >= 0 && slot < invResources.getSlots() ? invResources.getStackInSlot(slot) : ItemStack.EMPTY;
     }
 
     public void setResource(int slot, ItemStack stack) {
-        if (slot < 0 || slot >= invResources.size()) return;
-        invResources.set(slot, stack);
-        onResourcesChanged();
+        if (slot < 0 || slot >= invResources.getSlots()) return;
+        // setStackInSlot fires the change callback wired in the constructor -> onResourcesChanged().
+        invResources.setStackInSlot(slot, stack);
     }
 
     public BCFluidTank getTank(int i) {
         return (i >= 0 && i < tanks.length) ? tanks[i] : null;
-    }
-
-    private NonNullList<ItemStack> copyInventory() {
-        NonNullList<ItemStack> copy = NonNullList.withSize(invResources.size(), ItemStack.EMPTY);
-        for (int i = 0; i < invResources.size(); i++) {
-            copy.set(i, invResources.get(i).copy());
-        }
-        return copy;
     }
 
     // NBT
@@ -844,12 +614,9 @@ public class TileBuilder extends TileBC_Neptune
         if (!invSnapshot.isEmpty()) {
             output.store("invSnapshot", ItemStack.CODEC, invSnapshot);
         }
-        for (int i = 0; i < invResources.size(); i++) {
-            ItemStack stack = invResources.get(i);
-            if (!stack.isEmpty()) {
-                output.store("invRes_" + i, ItemStack.CODEC, stack);
-            }
-        }
+        // Resources: one blob via the itemManager (same key/shape as TileFiller). Legacy saves wrote
+        // per-slot invRes_N keys; those are migrated on read and never written again.
+        output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
         // Tanks: store fluid id + amount per tank (same shape as TileEngineIron_BC8).
         for (int i = 0; i < tanks.length; i++) {
             FluidStack fluid = tanks[i].getFluidStack(0);
@@ -930,8 +697,17 @@ public class TileBuilder extends TileBC_Neptune
         }
         // Inventory
         invSnapshot = input.read("invSnapshot", ItemStack.CODEC).orElse(ItemStack.EMPTY);
-        for (int i = 0; i < invResources.size(); i++) {
-            invResources.set(i, input.read("invRes_" + i, ItemStack.CODEC).orElse(ItemStack.EMPTY));
+        // Resources. New format is one "items" blob (itemManager). Absent "items" => a pre-migration
+        // save: read the legacy per-slot invRes_N keys ONCE (we only ever write the new format). On
+        // the client the update tag always carries "items", so this legacy branch is server-only —
+        // and there snapshotType is still null at this point, so the callback's getBuilder() is null.
+        Optional<CompoundTag> itemsTag = input.read("items", CompoundTag.CODEC);
+        if (itemsTag.isPresent()) {
+            itemManager.deserializeNBT(itemsTag.get());
+        } else {
+            for (int i = 0; i < RESOURCE_SLOTS; i++) {
+                invResources.setStackInSlot(i, input.read("invRes_" + i, ItemStack.CODEC).orElse(ItemStack.EMPTY));
+            }
         }
         // Tanks. loadAdditional is re-invoked every 5 ticks on the client via the periodic BE
         // update packet, so we MUST drain first before inserting — otherwise each sync adds
@@ -1170,7 +946,7 @@ public class TileBuilder extends TileBC_Neptune
 
     @Override
     public IItemTransactor getInvResources() {
-        return invResourcesTransactor;
+        return invResources;
     }
 
     @Override
@@ -1220,7 +996,7 @@ public class TileBuilder extends TileBC_Neptune
         if (!(level instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
         for (ItemStack stack : drops) {
             if (stack.isEmpty()) continue;
-            ItemStack remaining = invResourcesTransactor.insert(stack.copy(), false, false);
+            ItemStack remaining = invResources.insert(stack.copy(), false, false);
             if (!remaining.isEmpty()) {
                 net.minecraft.world.level.block.Block.popResource(serverLevel, brokenPos, remaining);
             }

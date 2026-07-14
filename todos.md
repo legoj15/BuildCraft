@@ -12,17 +12,12 @@ Full report: [docs/unification-audit.md](docs/unification-audit.md). Two codebas
 #### ROOT 2 — block base
 - [ ] `BlockBCTile_Neptune<T>` (+ facing variant) absorbing `codec`/`newBlockEntity`/`getTicker`/`setPlacedBy`/`useWithoutItem`/drops/`<1.21.10 onRemove` (**11 BaseEntityBlock + 6 HorizontalDirectionalBlock + 5 plain Block**; `BlockPipeHolder` excepted — `dropPipeCargo`). Sub-win: `BlockDynamoMJ` → extend `BlockEngineBase_BC8` (~40 verbatim lines). Standardise `getTicker` (10 `createTickerHelper` vs 10 hand-rolled lambdas).
 
-#### ROOT 3 — MJ battery component
-- [ ] `MjBatteryComponent` + `registerMjConsumer` helper (scaffolding copy-pasted across ~10 machines). Route `TileMiningWell` + `PipeBehaviourStripes` inline receivers through `MjBatteryReceiver`. Migrate `TileAutoWorkbenchBase`'s `long powerStored` to a real `MjBattery` — **gives the Auto Workbench the FE/Energy cap it currently lacks (player-visible dead-on-FE-cable gap).** Extract the engine chain-walk (`getReceiverToPower`/`getFeReceiver`).
-
 #### ROOT 4 — client render/state push
 - [ ] `markForRenderUpdate`/`markForGuiUpdate` helper on `AbstractBCBlockEntity` (→ `MessageUtil.sendUpdateToTrackingPlayers`, no chunk re-mesh). Move the **~11 `sendBlockUpdated` data-change sites** (incl. engine, assembly/adv-crafting/auto-workbench recurring pushes) off the re-mesh path.
 
 #### Independent refactors (no shared root)
 - [ ] Generic `BCRecipeBookComponent<M>` (`AWRecipeBookComponent`/`ACTRecipeBookComponent` are verbatim dupes); delete the 5 dead `lib.gui.recipe` phantom stubs.
 - [ ] Fold the 2 near-identical JEI bucket transfer handlers into a parameterised base; reference the canonical `ContainerBC_Neptune.NET_JEI_RECIPE_TRANSFER` (duplicated in `BlueprintTransferHandler`). REI: hoist the 2 ~95% copy-paste machine plugins into a shared `lib.compat.rei` helper.
-- [ ] Route the 4 direct `mjPerRf` config reads through `MjAPI.getRfConversion` (7 already do).
-- [ ] Extract `MjBattery.rampedExtractLimit()` — the soft-start ramp is now consistent (`capacity/2`, full rate at half charge) across `SnapshotBuilder`/`TileDistiller_BC8`/`TileLaser`/`TileQuarry`, but the curve is still copy-pasted in 4 sites (the `*2` divergence that clipped Builder/Filler to half speed is fixed). Reconcile the minor floor terms (`+MAX` vs `+MAX/10` vs `+MJ/2`) when extracting.
 
 #### Needs a decision first (not a silent refactor)
 - [ ] **`buildcraft.api` NBT-method renames** (uppercase `writeToNBT`/`serializeNBT` → lowercase) — breaking if the API jar ships; defer to the API-redistribution decision.

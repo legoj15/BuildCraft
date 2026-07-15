@@ -62,9 +62,10 @@ public class BlockFilteredBuffer extends BlockBCTile_Neptune<TileFilteredBuffer>
     public void setPlacedBy(Level level, BlockPos pos, BlockState state,
             @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
-        // Push the post-placement NBT (now carrying the owner) to clients immediately.
-        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof TileFilteredBuffer) {
-            level.sendBlockUpdated(pos, state, state, 3);
+        // Push the post-placement NBT (now carrying the owner) to clients immediately. No-re-mesh
+        // push: owner is GUI-only data, the placement itself already drew the block.
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof TileFilteredBuffer buffer) {
+            buffer.markForGuiUpdate();
         }
     }
 

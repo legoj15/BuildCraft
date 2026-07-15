@@ -254,8 +254,10 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
                 // The serverTick OVERHEAT branch early-returns before the tail sync, so without this the
                 // RED->OVERHEAT (black trunk) transition would never reach the client until an unrelated
                 // block update (e.g. a wrench rotation). Skip if overheat() just exploded the block away.
+                // No-re-mesh push: the engine body is drawn entirely by RenderEngine_BC8 from these tile
+                // fields (the block model is empty), so a chunk re-mesh would rebuild nothing visible.
                 if (!isRemoved()) {
-                    level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+                    markForRenderUpdate();
                 }
             }
         }
@@ -307,7 +309,7 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
         isPumping = false;
         setChanged();
         if (level != null && !level.isClientSide()) {
-            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+            markForRenderUpdate();
             if (player != null) {
                 AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_TO_MUCH_POWER);
             }
@@ -485,7 +487,9 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
                     level.setBlock(pos, state.setValue(
                             buildcraft.api.properties.BuildCraftProperties.BLOCK_FACING_6,
                             engine.orientation), 3);
-                    level.sendBlockUpdated(pos, state, state, 3);
+                    // setBlock already broadcast the facing blockstate (and the BE data) with a re-mesh;
+                    // this extra push only needs to re-sync the tile fields the BER reads — no re-mesh.
+                    engine.markForRenderUpdate();
                 }
             } else {
                 // Current orientation is valid, stop retrying
@@ -580,10 +584,11 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
         }
         // Power-stage changes are now synced inside getPowerStage() the moment they happen (1.12.2
         // parity), so they no longer ride this tail block — keep prevPowerStage current to avoid a
-        // stale comparison, but don't request a second redundant sendBlockUpdated for it here.
+        // stale comparison, but don't request a second redundant render update for it here.
         engine.prevPowerStage = engine.getPowerStage();
+        // No-re-mesh push: orientation/pumping drive the BER, not the (empty) block model.
         if (needsSync) {
-            level.sendBlockUpdated(pos, state, state, 3);
+            engine.markForRenderUpdate();
         }
         } finally {
             _profiler.pop();

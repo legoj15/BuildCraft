@@ -12,6 +12,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
+import buildcraft.lib.misc.MessageUtil;
+
 /**
  * The {@link AbstractBCBlockEntity} flavour that also carries the standard client-sync pair —
  * {@code getUpdateTag}/{@code getUpdatePacket} plus the {@code <1.21.10} {@code onDataPacket}
@@ -61,4 +63,43 @@ public abstract class AbstractBCSyncedBlockEntity extends AbstractBCBlockEntity 
         loadWithComponents(pkt.getTag(), registries);
     }*/
     //?}
+
+    // --- No-re-mesh client state push ---
+
+    /**
+     * Pushes this tile's current state to every client tracking its chunk WITHOUT re-meshing the chunk
+     * section, by sending only the {@link #getUpdatePacket() ClientboundBlockEntityDataPacket} via
+     * {@link MessageUtil#sendUpdateToTrackingPlayers}. This is the correct tool — <em>never</em>
+     * {@link net.minecraft.world.level.Level#sendBlockUpdated} — for a pure block-entity DATA change
+     * whose dynamic visuals are drawn by a {@code BlockEntityRenderer} (the engines, whose whole body is
+     * BER-drawn from tile fields; the quarry/architect/filler beams and LED overlays) rather than by the
+     * static baked block model. {@code sendBlockUpdated} broadcasts the same BE packet <em>plus</em> a
+     * blockstate change that makes every tracking client rebuild the whole chunk section's geometry —
+     * for these tiles that rebuild is pure waste (their block model never changes) and a severe FPS cost
+     * near a busy machine. When the baked model genuinely changes (a pipe's connections/pluggables, a
+     * facing/texture-swap blockstate) the re-mesh IS the product — keep {@code sendBlockUpdated} there.
+     *
+     * <p>The helper lives on <em>this</em> synced base, not the plain {@link AbstractBCBlockEntity}: it
+     * only does anything on a tile that produces an update packet, which is exactly what this class adds.
+     * On the plain base vanilla's {@code getUpdatePacket()} returns {@code null}, so the push would be a
+     * silent no-op — a footgun. Server-side only; {@code sendUpdateToTrackingPlayers} no-ops on the client.
+     *
+     * <p>{@link #markForRenderUpdate()} and {@link #markForGuiUpdate()} are mechanically IDENTICAL today —
+     * both push the full update tag to all chunk-tracking players. The two names exist only to record the
+     * call site's intent: a {@code BlockEntityRenderer} needing to redraw vs. a currently-open container
+     * menu needing fresh data. Keeping the split leaves room to narrow the GUI push to menu-openers later
+     * without churning call sites.
+     */
+    public void markForRenderUpdate() {
+        MessageUtil.sendUpdateToTrackingPlayers(this);
+    }
+
+    /**
+     * Push fresh block-entity data to tracking clients without a chunk re-mesh, for a data change that
+     * feeds an open container GUI (a recipe/progress readout, an owner ledger). Mechanically identical to
+     * {@link #markForRenderUpdate()} today — see that method for the full contract and rationale.
+     */
+    public void markForGuiUpdate() {
+        MessageUtil.sendUpdateToTrackingPlayers(this);
+    }
 }

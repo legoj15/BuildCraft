@@ -356,10 +356,11 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         miningBox.setMin(new BlockPos(min.getX() + 1, minY, min.getZ() + 1));
         miningBox.setMax(new BlockPos(max.getX() - 1, max.getY() - 1, max.getZ() - 1));
         updatePoses();
-        // Sync to client so beams render
+        // Sync to client so beams render. No-re-mesh push: the frame/mining box drives the quarry
+        // BER (drill + beams), not the block model.
         setChanged();
         if (level != null && !level.isClientSide()) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            markForRenderUpdate();
         }
     }
 

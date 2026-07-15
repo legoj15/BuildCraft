@@ -11,7 +11,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.core.EnumPipePart;
@@ -85,11 +84,12 @@ public class TileAdvancedCraftingTable extends TileLaserTableBase {
             }
         }
 
-        // Sync to clients when recipe result changes
+        // Sync to clients when recipe result changes. No-re-mesh push: the result preview feeds the
+        // GUI, not the block model.
         if (!ItemStack.matches(prevResult, resultClient)) {
             setChanged();
             if (level != null) {
-                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+                markForGuiUpdate();
             }
         }
     }
@@ -111,7 +111,7 @@ public class TileAdvancedCraftingTable extends TileLaserTableBase {
         if (crafting.cycleOutput(dir)) {
             resultClient = crafting.getAssumedResult().copy();
             setChanged();
-            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+            markForGuiUpdate();
         }
     }
 

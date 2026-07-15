@@ -91,7 +91,8 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
             setChanged();
             // Sync the tile entity update tag (which includes owner) to nearby clients so
             // the Owner ledger can display the placer's name/skin immediately on first open.
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            // No-re-mesh push: owner is GUI-only data, the block model is unchanged.
+            markForGuiUpdate();
         }
     }
 

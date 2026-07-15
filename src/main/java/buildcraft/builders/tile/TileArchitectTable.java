@@ -187,8 +187,10 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
         super.onPlacedBy(placer, stack);
 
         setChanged();
+        // No-re-mesh push: the scan box drives the architect BER and the owner feeds the GUI ledger;
+        // the block model is unchanged.
         if (level != null && !level.isClientSide()) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            markForRenderUpdate();
         }
     }
 
@@ -469,9 +471,9 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
         setChanged();
         // Push the slot-state change to clients so the architect BER picks up the
         // scanning → done transition (full → half-lit red LED) immediately, rather
-        // than waiting for the next chunk reload or GUI open.
+        // than waiting for the next chunk reload or GUI open. No chunk re-mesh needed.
         if (level != null && !level.isClientSide()) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            markForRenderUpdate();
         }
     }
 

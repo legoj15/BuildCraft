@@ -227,9 +227,9 @@ public class TileFiller extends TileBC_Neptune
 
         updateBuildingInfo();
         setChanged();
-        // Sync to client so the box data reaches the renderer
+        // Sync to client so the box data reaches the renderer (BER outline) — no chunk re-mesh needed.
         if (level != null && !level.isClientSide()) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            markForRenderUpdate();
         }
     }
 
@@ -292,8 +292,9 @@ public class TileFiller extends TileBC_Neptune
                 // Clear stale render cache so the client receives empty task lists
                 b.onNetworkSync();
                 // Sync immediately so the client sees the finished state
-                // (next tick's isFinished() early return will prevent further syncs)
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+                // (next tick's isFinished() early return will prevent further syncs).
+                // Same no-re-mesh path as the periodic sendUpdateToTrackingPlayers below.
+                markForRenderUpdate();
             }
             if (level.getGameTime() % 5 == 0) {
                 MessageUtil.sendUpdateToTrackingPlayers(this);
@@ -709,7 +710,7 @@ public class TileFiller extends TileBC_Neptune
         // BER would render the wrong LED pattern until the next chunk reload.
         setChanged();
         if (level != null && !level.isClientSide()) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            markForRenderUpdate();
         }
     }
 

@@ -112,9 +112,9 @@ public class TileEngineCreative extends TileEngineBase_BC8 {
         MessageUtil.sendOverlayMessage(player,
             Component.translatable("chat.engine.creative.mode", LocaleUtil.localizeMjFlow(getCurrentOutput())));
         setChanged();
-        // Sync to client so animation speed updates immediately
-        BlockState state = getBlockState();
-        level.sendBlockUpdated(getBlockPos(), state, state, 3);
+        // Sync to client so animation speed updates immediately. No-re-mesh push: the piston
+        // speed feeds RenderEngine_BC8, not the (empty) block model.
+        markForRenderUpdate();
         return true;
     }
 

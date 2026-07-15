@@ -12,7 +12,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -132,7 +131,7 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
         if (crafting.cycleOutput(dir)) {
             resultClient = crafting.getAssumedResult().copy();
             setChanged();
-            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+            markForGuiUpdate();
         }
     }
 
@@ -211,11 +210,12 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
             battery.setStored(0);
         }
 
-        // Sync to clients when recipe result changes
+        // Sync to clients when recipe result changes. No-re-mesh push: the result preview feeds the
+        // GUI, not the block model.
         if (!ItemStack.matches(prevResult, resultClient)) {
             setChanged();
             if (level != null) {
-                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+                markForGuiUpdate();
             }
         }
     }

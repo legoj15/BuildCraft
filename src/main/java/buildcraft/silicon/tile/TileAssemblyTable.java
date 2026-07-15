@@ -187,11 +187,12 @@ public class TileAssemblyTable extends TileLaserTableBase {
 
         updateRecipes();
 
-        // Sync to clients if recipe states changed
+        // Sync to clients if recipe states changed. No-re-mesh push: recipe states feed the GUI
+        // progress list, not the block model.
         if (recipesStates.size() != prevSize || recipesStates.hashCode() != prevHash) {
             setChanged();
             if (getLevel() != null) {
-                getLevel().sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+                markForGuiUpdate();
             }
         }
 

@@ -386,8 +386,9 @@ public class TileBuilder extends TileBC_Neptune
             wasDoneLastTick = isDone;
             if (isDone) {
                 // Push one immediate sync so the client sees the completion and stops the robot.
+                // Same no-re-mesh path as the periodic sendUpdateToTrackingPlayers below.
                 builder.onNetworkSync();
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+                markForRenderUpdate();
                 // Advancement grants run on the false→true completion edge — i.e. exactly once
                 // per base-pos finish, BEFORE we advance currentBasePosIndex (the paving check
                 // needs to see the still-current index pointing at the just-finished position).

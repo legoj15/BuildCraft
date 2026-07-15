@@ -93,13 +93,14 @@ public class BlockLaserTable extends Block implements ILaserTargetBlock, EntityB
             @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
         // Record the placing player on the tile so the Owner ledger has something to show.
-        // sendBlockUpdated pushes the post-placement NBT (which now includes the owner) to
-        // clients immediately — without it the owner only reaches the client on the first
-        // serverTick power-change sync, leaving the ledger blank if the GUI is opened first.
+        // markForGuiUpdate pushes the post-placement NBT (which now includes the owner) to clients
+        // immediately — without it the owner only reaches the client on the first serverTick
+        // power-change sync, leaving the ledger blank if the GUI is opened first. No-re-mesh push:
+        // owner is GUI-only data, the placement itself already drew the block.
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TileLaserTableBase table) {
             table.onPlacedBy(placer, stack);
-            level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
+            table.markForGuiUpdate();
         }
     }
 

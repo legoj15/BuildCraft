@@ -154,12 +154,30 @@ public enum XmlPageLoader implements IPageLoaderText {
 
     public static void putSimpleMultiPartType(String name, BooleanSupplier isVisible) {
         putMultiPartType(name, (tag, factories, prof) -> (gui) -> {
-            List<GuidePart> subParts = new ArrayList<>(factories.size());
-            for (GuidePartFactory factory : factories) {
-                subParts.add(factory.createNew(gui));
-            }
+            List<GuidePart> subParts = instantiateParts(factories, gui);
             return new GuidePartMulti(gui, subParts, isVisible);
         });
+    }
+
+    /** Instantiates each factory into a concrete part for {@code gui}, skipping any factory
+     *  whose {@link GuidePartFactory#createNew} returns null. A factory legitimately returns
+     *  null at render time when it can't resolve — most notably a deferred {@code <link>} whose
+     *  target page turned out not to exist (see {@link #loadLink}, whose category-link branch
+     *  returns {@code gui -> ... null}). Those nulls must never reach the
+     *  {@link buildcraft.lib.client.guide.parts.GuidePage} constructor, which copies the part
+     *  list into an {@link ImmutableList} and throws a NullPointerException on the first null —
+     *  the crash seen when clicking a contents entry whose page links to a missing target
+     *  (GH-27). Mirrors the null-skipping already done in GuidePageStandInRecipes and
+     *  GuideManager's category-page factory. */
+    static List<GuidePart> instantiateParts(List<GuidePartFactory> factories, GuiGuide gui) {
+        List<GuidePart> parts = new ArrayList<>(factories.size());
+        for (GuidePartFactory factory : factories) {
+            GuidePart part = factory.createNew(gui);
+            if (part != null) {
+                parts.add(part);
+            }
+        }
+        return parts;
     }
 
     public static void putCode(String name) {
@@ -234,10 +252,7 @@ public enum XmlPageLoader implements IPageLoaderText {
         ProfilerFiller prof) throws IOException, InvalidInputDataException {
         List<GuidePartFactory> factories = parsePartFactories(reader, prof);
         return (gui) -> {
-            List<GuidePart> parts = new ArrayList<>();
-            for (GuidePartFactory factory : factories) {
-                parts.add(factory.createNew(gui));
-            }
+            List<GuidePart> parts = instantiateParts(factories, gui);
             return new GuidePageEntry(gui, parts, entry, name);
         };
     }

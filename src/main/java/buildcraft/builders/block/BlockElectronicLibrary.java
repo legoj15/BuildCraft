@@ -79,7 +79,7 @@ public class BlockElectronicLibrary extends HorizontalDirectionalBlock implement
         if (!level.isClientSide()) {
             BlockEntity tile = level.getBlockEntity(pos);
             if (tile instanceof TileElectronicLibrary library) {
-                player.openMenu(library, pos);
+                player.openMenu(library);
             }
         }
         return InteractionResult.SUCCESS;

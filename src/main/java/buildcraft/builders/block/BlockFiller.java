@@ -86,7 +86,7 @@ public class BlockFiller extends HorizontalDirectionalBlock implements EntityBlo
         }
         if (!level.isClientSide()) {
             if (tile instanceof TileFiller filler) {
-                player.openMenu(filler, pos);
+                player.openMenu(filler);
             }
         }
         return InteractionResult.SUCCESS;

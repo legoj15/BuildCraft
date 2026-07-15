@@ -197,7 +197,7 @@ public class BlockDynamoMJ extends Block implements EntityBlock, ICustomRotation
         }
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TileDynamoMJ dynamo && player instanceof ServerPlayer serverPlayer) {
-            serverPlayer.openMenu(dynamo, buf -> buf.writeBlockPos(pos));
+            serverPlayer.openMenu(dynamo);
         }
         return InteractionResult.SUCCESS;
     }

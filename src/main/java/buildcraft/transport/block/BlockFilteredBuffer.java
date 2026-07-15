@@ -56,7 +56,7 @@ public class BlockFilteredBuffer extends BaseEntityBlock {
         if (!level.isClientSide()) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof TileFilteredBuffer) {
-                player.openMenu((TileFilteredBuffer) be, pos);
+                player.openMenu((TileFilteredBuffer) be);
             }
         }
         return InteractionResult.SUCCESS;

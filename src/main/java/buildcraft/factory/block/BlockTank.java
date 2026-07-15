@@ -175,7 +175,7 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
             return InteractionResult.PASS;
         }
         if (!level.isClientSide()) {
-            player.openMenu(tank, pos);
+            player.openMenu(tank);
         }
         return InteractionResult.SUCCESS;
     }
@@ -211,7 +211,7 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
         /*boolean isFluidContainer = stack.getCapability(Capabilities.FluidHandler.ITEM, null) != null;*/
         //?}
         if (!isFluidContainer && !level.isClientSide()) {
-            player.openMenu(tank, pos);
+            player.openMenu(tank);
         }
         return BlockUtil.itemUseSuccess();
     }

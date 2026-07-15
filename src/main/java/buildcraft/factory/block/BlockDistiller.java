@@ -128,7 +128,7 @@ public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHa
                 if (!level.isClientSide()) {
                     BlockEntity be = level.getBlockEntity(pos);
                     if (be instanceof TileDistiller_BC8 distiller) {
-                        player.openMenu(distiller, pos);
+                        player.openMenu(distiller);
                     }
                 }
                 return BlockUtil.itemUseSuccess();
@@ -168,7 +168,7 @@ public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHa
         }
         // No fluid interaction — open the GUI
         if (!level.isClientSide()) {
-            player.openMenu(distiller, pos);
+            player.openMenu(distiller);
         }
         return BlockUtil.itemUseSuccess();
     }
@@ -196,7 +196,7 @@ public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHa
         if (!level.isClientSide()) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof TileDistiller_BC8) {
-                player.openMenu((TileDistiller_BC8) be, pos);
+                player.openMenu((TileDistiller_BC8) be);
             }
         }
         return InteractionResult.SUCCESS;

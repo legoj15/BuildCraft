@@ -79,7 +79,7 @@ public class BlockReplacer extends HorizontalDirectionalBlock implements EntityB
         if (!level.isClientSide()) {
             BlockEntity tile = level.getBlockEntity(pos);
             if (tile instanceof TileReplacer replacer) {
-                player.openMenu(replacer, pos);
+                player.openMenu(replacer);
             }
         }
         return InteractionResult.SUCCESS;

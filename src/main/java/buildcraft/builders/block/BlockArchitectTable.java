@@ -79,7 +79,7 @@ public class BlockArchitectTable extends HorizontalDirectionalBlock implements E
         if (!level.isClientSide()) {
             BlockEntity tile = level.getBlockEntity(pos);
             if (tile instanceof TileArchitectTable architect) {
-                player.openMenu(architect, pos);
+                player.openMenu(architect);
             }
         }
         return InteractionResult.SUCCESS;

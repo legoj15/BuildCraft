@@ -247,7 +247,7 @@ public class BlockHeatExchange extends BaseEntityBlock implements ICustomRotatio
             return InteractionResult.PASS;
         }
         if (!level.isClientSide()) {
-            player.openMenu(start, start.getBlockPos());
+            player.openMenu(start);
         }
         return InteractionResult.SUCCESS;
     }

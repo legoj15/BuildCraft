@@ -90,7 +90,7 @@ public class BlockBuilder extends HorizontalDirectionalBlock implements EntityBl
         if (!level.isClientSide()) {
             BlockEntity tile = level.getBlockEntity(pos);
             if (tile instanceof TileBuilder builder) {
-                player.openMenu(builder, pos);
+                player.openMenu(builder);
             }
         }
         return InteractionResult.SUCCESS;

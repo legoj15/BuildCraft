@@ -183,7 +183,7 @@ public class BlockChute extends BaseEntityBlock {
         if (!level.isClientSide()) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof TileChute) {
-                player.openMenu((TileChute) be, pos);
+                player.openMenu((TileChute) be);
             }
         }
         return InteractionResult.SUCCESS;

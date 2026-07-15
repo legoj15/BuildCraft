@@ -361,10 +361,17 @@ neoForge {
                 programArguments.add("--quickPlaySingleplayer")
                 programArguments.add(project.property("bcQuickPlay").toString())
             }
+            // Opt-in BCDebugging tier: `-PbcDebug` (log tier) or `-PbcDebug=all` -> -Dbuildcraft.debug=<tier>.
+            if (project.hasProperty("bcDebug")) {
+                systemProperty("buildcraft.debug", project.property("bcDebug").toString().ifBlank { "log" })
+            }
         }
         register("server") {
             server()
             systemProperty("buildcraft.dev", "true")
+            if (project.hasProperty("bcDebug")) {
+                systemProperty("buildcraft.debug", project.property("bcDebug").toString().ifBlank { "log" })
+            }
         }
         register("gameTestServer") {
             type = "gameTestServer"

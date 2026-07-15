@@ -7,7 +7,6 @@ package buildcraft.energy.block;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -23,7 +22,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.api.transport.pipe.IItemPipe;
 import buildcraft.api.transport.pipe.PipeApi;
-import buildcraft.energy.BCEnergyConfig;
 import buildcraft.energy.tile.TileEngineFE;
 import buildcraft.lib.engine.BlockEngineBase_BC8;
 import buildcraft.lib.engine.TileEngineBase_BC8;
@@ -101,13 +99,7 @@ public class BlockEngineFE extends BlockEngineBase_BC8 {
         }
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TileEngineFE engine && player instanceof ServerPlayer serverPlayer) {
-            serverPlayer.openMenu(
-                new net.minecraft.world.SimpleMenuProvider(
-                    (containerId, playerInv, p) -> new buildcraft.energy.container.ContainerEngineFE(containerId, playerInv, engine),
-                    Component.translatable(BCEnergyConfig.rfFeKey(state.getBlock().getDescriptionId()))
-                ),
-                buf -> buf.writeBlockPos(pos)
-            );
+            serverPlayer.openMenu(engine);
         }
         return InteractionResult.SUCCESS;
     }

@@ -118,13 +118,7 @@ public class BlockEngineStone_BC8 extends BlockEngineBase_BC8 {
         }
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TileEngineStone_BC8 engine && player instanceof ServerPlayer serverPlayer) {
-            serverPlayer.openMenu(
-                new net.minecraft.world.SimpleMenuProvider(
-                    (containerId, playerInv, p) -> new buildcraft.energy.container.ContainerEngineStone(containerId, playerInv, engine),
-                    net.minecraft.network.chat.Component.translatable("tile.engineStone.name")
-                ),
-                buf -> buf.writeBlockPos(pos)
-            );
+            serverPlayer.openMenu(engine);
         }
         return InteractionResult.SUCCESS;
     }

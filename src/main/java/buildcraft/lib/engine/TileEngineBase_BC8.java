@@ -15,8 +15,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 //? if >=1.21.10 {
 import net.minecraft.util.profiling.Profiler;
 //?}
@@ -43,6 +46,7 @@ import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.tile.AbstractBCSyncedBlockEntity;
 import buildcraft.lib.tile.OwnerData;
 
@@ -58,7 +62,7 @@ import net.neoforged.neoforge.transfer.energy.EnergyHandler;
  * Provides tick logic, heat management, MJ power accumulation,
  * piston animation state, redstone sensitivity, and NBT persistence.
  */
-public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity implements IDebuggable {
+public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity implements IDebuggable, IBCMenuProvider {
 
     public static final Identifier ADVANCEMENT_TO_MUCH_POWER =
         Identifier.parse("buildcraftunofficial:to_much_power");
@@ -73,6 +77,22 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
 
     /** Getter for the stored power in micro-MJ. */
     public long getPower() { return power; }
+
+    // --- IBCMenuProvider (GUI) ---
+    // The engine tile is the sole MenuProvider for its GUI (so writeClientSideData supplies the pos on
+    // every open path, spectator-safe). The GUI-bearing engines (Stone / Iron / FE) override these; the
+    // GUI-less engines (Redstone / Creative) inherit the null-menu default and are never opened.
+
+    @Override
+    public Component getDisplayName() {
+        return getBlockState().getBlock().getName();
+    }
+
+    @Nullable
+    @Override
+    public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
+        return null;
+    }
     protected float heat = MIN_HEAT;
     protected float progress = 0;
     protected int progressPart = 0;

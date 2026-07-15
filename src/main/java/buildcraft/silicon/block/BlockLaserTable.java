@@ -8,11 +8,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -40,20 +37,12 @@ public class BlockLaserTable extends Block implements ILaserTargetBlock, EntityB
     /** The 1.12 bounding box: full width, 9/16 height. */
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 9, 16);
 
-    @FunctionalInterface
-    public interface ServerMenuFactory {
-        AbstractContainerMenu create(int containerId, Inventory playerInv, TileLaserTableBase tile);
-    }
-
     private final Supplier<? extends BlockEntityType<? extends TileLaserTableBase>> beTypeSupplier;
-    private final ServerMenuFactory menuFactory;
 
     public BlockLaserTable(BlockBehaviour.Properties properties,
-        Supplier<? extends BlockEntityType<? extends TileLaserTableBase>> beTypeSupplier,
-        ServerMenuFactory menuFactory) {
+        Supplier<? extends BlockEntityType<? extends TileLaserTableBase>> beTypeSupplier) {
         super(properties);
         this.beTypeSupplier = beTypeSupplier;
-        this.menuFactory = menuFactory;
     }
 
     @Override
@@ -93,13 +82,7 @@ public class BlockLaserTable extends Block implements ILaserTargetBlock, EntityB
         }
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TileLaserTableBase table && player instanceof ServerPlayer serverPlayer) {
-            serverPlayer.openMenu(
-                new SimpleMenuProvider(
-                    (containerId, inv, p) -> menuFactory.create(containerId, inv, table),
-                    be.getBlockState().getBlock().getName()
-                ),
-                buf -> buf.writeBlockPos(pos)
-            );
+            serverPlayer.openMenu(table);
             return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;

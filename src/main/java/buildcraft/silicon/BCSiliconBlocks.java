@@ -9,12 +9,6 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import buildcraft.lib.BCLib;
 import buildcraft.silicon.block.BlockLaser;
 import buildcraft.silicon.block.BlockLaserTable;
-import buildcraft.silicon.container.ContainerAssemblyTable;
-import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
-import buildcraft.silicon.container.ContainerIntegrationTable;
-import buildcraft.silicon.tile.TileAssemblyTable;
-import buildcraft.silicon.tile.TileAdvancedCraftingTable;
-import buildcraft.silicon.tile.TileIntegrationTable;
 
 public class BCSiliconBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCSilicon.MODID);
@@ -28,14 +22,12 @@ public class BCSiliconBlocks {
     public static final DeferredBlock<BlockLaserTable> ASSEMBLY_TABLE = RegistrationUtilBC.registerBlock(BLOCKS,
             "assembly_table",
             props -> new BlockLaserTable(props,
-                BCSiliconBlockEntities.ASSEMBLY_TABLE,
-                (id, inv, tile) -> new ContainerAssemblyTable(id, inv.player, (TileAssemblyTable) tile)), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
+                BCSiliconBlockEntities.ASSEMBLY_TABLE), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockLaserTable> ADVANCED_CRAFTING_TABLE = RegistrationUtilBC.registerBlock(BLOCKS,
             "advanced_crafting_table",
             props -> new BlockLaserTable(props,
-                BCSiliconBlockEntities.ADVANCED_CRAFTING_TABLE,
-                (id, inv, tile) -> new ContainerAdvancedCraftingTable(id, inv.player, (TileAdvancedCraftingTable) tile)), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
+                BCSiliconBlockEntities.ADVANCED_CRAFTING_TABLE), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     // Dev-only — the Integration Table has no registered integration recipes, so it is
     // non-functional in survival and should not ship in public builds. Gated behind
@@ -47,8 +39,7 @@ public class BCSiliconBlocks {
                 ? RegistrationUtilBC.registerBlock(BLOCKS,
                     "integration_table",
                     props -> new BlockLaserTable(props,
-                        BCSiliconBlockEntities.INTEGRATION_TABLE,
-                        (id, inv, tile) -> new ContainerIntegrationTable(id, inv.player, (TileIntegrationTable) tile)),
+                        BCSiliconBlockEntities.INTEGRATION_TABLE),
                     () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops())
                 : null;
     }

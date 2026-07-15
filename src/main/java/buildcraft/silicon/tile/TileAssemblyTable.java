@@ -19,6 +19,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.resources.Identifier;
@@ -33,6 +36,7 @@ import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.recipe.AssemblyRecipeRegistry;
+import buildcraft.silicon.container.ContainerAssemblyTable;
 import buildcraft.lib.tile.item.ItemHandlerManager;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
@@ -56,6 +60,11 @@ public class TileAssemblyTable extends TileLaserTableBase {
 
     public TileAssemblyTable(BlockPos pos, BlockState state) {
         super(BCSiliconBlockEntities.ASSEMBLY_TABLE.get(), pos, state);
+    }
+
+    @Override
+    public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
+        return new ContainerAssemblyTable(containerId, player, this);
     }
 
     private void updateRecipes() {

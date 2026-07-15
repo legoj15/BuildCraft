@@ -7,6 +7,9 @@
 package buildcraft.silicon.tile;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -21,6 +24,7 @@ import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 import buildcraft.silicon.BCSiliconBlockEntities;
+import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
 
 @SuppressWarnings("this-escape")
 public class TileAdvancedCraftingTable extends TileLaserTableBase {
@@ -139,4 +143,8 @@ public class TileAdvancedCraftingTable extends TileLaserTableBase {
         crafting.setPendingSelectedRecipeId(input.getStringOr("selectedRecipe", ""));
     }
 
+    @Override
+    public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
+        return new ContainerAdvancedCraftingTable(containerId, player, this);
+    }
 }

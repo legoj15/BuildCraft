@@ -13,6 +13,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -22,6 +26,7 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.recipes.IngredientStack;
 import buildcraft.api.tiles.IDebuggable;
 
+import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.MessageUtil;
@@ -29,7 +34,7 @@ import buildcraft.lib.misc.data.AverageLong;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
-public abstract class TileLaserTableBase extends TileBC_Neptune implements ILaserTarget, IDebuggable {
+public abstract class TileLaserTableBase extends TileBC_Neptune implements ILaserTarget, IDebuggable, IBCMenuProvider {
     private static final long MJ_FLOW_ROUND = MjAPI.MJ / 10;
     private final AverageLong avgPower = new AverageLong(120);
     public long avgPowerClient;
@@ -39,6 +44,19 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
     protected TileLaserTableBase(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
     }
+
+    // --- IBCMenuProvider (GUI) ---
+    // The tile is the sole MenuProvider (writeClientSideData supplies the pos on every open path). The
+    // display name matches the old block-side SimpleMenuProvider (the block's own name); each concrete
+    // table (Assembly / Advanced Crafting / Integration) builds its own container in createMenu.
+
+    @Override
+    public Component getDisplayName() {
+        return getBlockState().getBlock().getName();
+    }
+
+    @Override
+    public abstract AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player);
 
     // All real contents live in the itemManager (playerWillDestroy itself drops via addDrops), so the
     // central addDrops path spills them on a non-player removal (explosion / piston / command).

@@ -9,6 +9,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
@@ -26,6 +30,8 @@ import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.core.BCCoreItems;
 import buildcraft.energy.BCEnergyBlockEntities;
+import buildcraft.energy.BCEnergyConfig;
+import buildcraft.energy.container.ContainerEngineFE;
 import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.BCValueInput;
@@ -238,5 +244,17 @@ public class TileEngineFE extends TileEngineBase_BC8 {
         super.readData(input);
         setCurrentFe(input.getIntOr("currentFe", 0));
         upgrades.deserializeNBT(input.read("upgrades", net.minecraft.nbt.CompoundTag.CODEC).orElseGet(net.minecraft.nbt.CompoundTag::new));
+    }
+
+    // --- IBCMenuProvider (GUI) ---
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable(BCEnergyConfig.rfFeKey(getBlockState().getBlock().getDescriptionId()));
+    }
+
+    @Override
+    public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
+        return new ContainerEngineFE(containerId, playerInventory, this);
     }
 }

@@ -7,6 +7,10 @@ package buildcraft.energy.tile;
 import javax.annotation.Nonnull;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 //? if >=1.21.10 {
@@ -19,6 +23,7 @@ import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.MjAPI;
 
 import buildcraft.energy.BCEnergyBlockEntities;
+import buildcraft.energy.container.ContainerEngineStone;
 import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.AdvancementUtil;
@@ -333,5 +338,17 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
         } else {
             fuelStack = ItemStack.EMPTY;
         }
+    }
+
+    // --- IBCMenuProvider (GUI) ---
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable("tile.engineStone.name");
+    }
+
+    @Override
+    public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
+        return new ContainerEngineStone(containerId, playerInventory, this);
     }
 }

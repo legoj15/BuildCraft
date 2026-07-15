@@ -7,7 +7,6 @@ Full report: [docs/unification-audit.md](docs/unification-audit.md). Two codebas
 
 #### ROOT 1 — finish the tile re-root + re-root `ContainerBCTile` (collapses ~9 forks; highest leverage = the "two GUI systems" refactor)
 - [ ] The **17 block-side `setPlacedBy` forwards** (`tile.onPlacedBy(...)` in Block classes, 3 with guard drift) still hand-copied — absorb into the ROOT-2 block base (which already lists `setPlacedBy`). Tile-side owner storage + `onPlacedBy` entry point are now unified on `AbstractBCBlockEntity` via `OwnerData`.
-- [ ] Adopt `IBCMenuProvider` on the 5 System-B tiles (closes the latent spectator-NPE on their open path); audit the `BlockPos` double-write (`writeClientSideData` + the `openMenu(provider,pos)` overload both write it).
 
 #### ROOT 2 — block base
 - [ ] `BlockBCTile_Neptune<T>` (+ facing variant) absorbing `codec`/`newBlockEntity`/`getTicker`/`setPlacedBy`/`useWithoutItem`/drops/`<1.21.10 onRemove` (**11 BaseEntityBlock + 6 HorizontalDirectionalBlock + 5 plain Block**; `BlockPipeHolder` excepted — `dropPipeCargo`). Sub-win: `BlockDynamoMJ` → extend `BlockEngineBase_BC8` (~40 verbatim lines). Standardise `getTicker` (10 `createTickerHelper` vs 10 hand-rolled lambdas).

@@ -9,9 +9,12 @@ import javax.annotation.Nonnull;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -31,6 +34,7 @@ import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.MjAPI;
 
 import buildcraft.energy.BCEnergyBlockEntities;
+import buildcraft.energy.container.ContainerEngineIron;
 import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.fluid.BCFluidTank;
@@ -525,5 +529,17 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
                 }
             }
         }
+    }
+
+    // --- IBCMenuProvider (GUI) ---
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable("tile.engineIron.name");
+    }
+
+    @Override
+    public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
+        return new ContainerEngineIron(containerId, playerInventory, this);
     }
 }

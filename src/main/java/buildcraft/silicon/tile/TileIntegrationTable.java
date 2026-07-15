@@ -9,6 +9,9 @@ package buildcraft.silicon.tile;
 import com.google.common.collect.ImmutableList;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -24,6 +27,7 @@ import buildcraft.lib.tile.item.ItemHandlerManager;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 import buildcraft.silicon.BCSiliconBlockEntities;
+import buildcraft.silicon.container.ContainerIntegrationTable;
 
 public class TileIntegrationTable extends TileLaserTableBase {
     public final ItemHandlerSimple invTarget = itemManager.addInvHandler(
@@ -121,5 +125,10 @@ public class TileIntegrationTable extends TileLaserTableBase {
     protected void readData(BCValueInput input) {
         super.readData(input);
         recipe = null; // Will be updated on next tick
+    }
+
+    @Override
+    public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
+        return new ContainerIntegrationTable(containerId, player, this);
     }
 }

@@ -15,8 +15,7 @@ Full report: [docs/unification-audit.md](docs/unification-audit.md). Two codebas
 - [ ] `markForRenderUpdate`/`markForGuiUpdate` helper on `AbstractBCBlockEntity` (→ `MessageUtil.sendUpdateToTrackingPlayers`, no chunk re-mesh). Move the **~11 `sendBlockUpdated` data-change sites** (incl. engine, assembly/adv-crafting/auto-workbench recurring pushes) off the re-mesh path.
 
 #### Independent refactors (no shared root)
-- [ ] Generic `BCRecipeBookComponent<M>` (`AWRecipeBookComponent`/`ACTRecipeBookComponent` are verbatim dupes); delete the 5 dead `lib.gui.recipe` phantom stubs.
-- [ ] Fold the 2 near-identical JEI bucket transfer handlers into a parameterised base; reference the canonical `ContainerBC_Neptune.NET_JEI_RECIPE_TRANSFER` (duplicated in `BlueprintTransferHandler`). REI: hoist the 2 ~95% copy-paste machine plugins into a shared `lib.compat.rei` helper.
+- [ ] **Re-compile-verify `compat/rei` when a 26.1-compatible REI ships.** The whole REI tree is excluded from compilation (`build.gradle.kts` unconditional exclude; dependency commented out — "no compatible versions for MC 26.1 yet"), so the 2026-07 `ReiCraftingTableSupport` dedup is best-effort-unverified, and the old plugins had already rotted while frozen (called non-existent `getLeftPos`/`getTopPos` — fixed to `getGuiLeft`/`getGuiTop` in the rewrite). Expect `registerClickArea`/`DraggableStackVisitor`/`DraggingContext` API drift too.
 
 #### Needs a decision first (not a silent refactor)
 - [ ] **`buildcraft.api` NBT-method renames** (uppercase `writeToNBT`/`serializeNBT` → lowercase) — breaking if the API jar ships; defer to the API-redistribution decision.

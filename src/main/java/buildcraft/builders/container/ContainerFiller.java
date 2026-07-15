@@ -6,7 +6,6 @@
 
 package buildcraft.builders.container;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -121,7 +120,7 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
 
     // Client-side constructor (from network)
     public ContainerFiller(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
-        this(containerId, playerInv, getTile(playerInv, buf));
+        this(containerId, playerInv, resolveTile(playerInv, buf, TileFiller.class));
     }
 
     // Server-side constructor
@@ -172,17 +171,6 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
 
         // Player inventory at y=153 (aligned to the GUI texture's slot pockets)
         addFullPlayerInventory(8, 153, playerInv);
-    }
-
-    private static TileFiller getTile(Inventory playerInv, FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        if (playerInv.player.level() != null) {
-            var be = playerInv.player.level().getBlockEntity(pos);
-            if (be instanceof TileFiller filler) {
-                return filler;
-            }
-        }
-        return null;
     }
 
     // IContainerFilling

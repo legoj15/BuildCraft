@@ -6,7 +6,6 @@
  */
 package buildcraft.transport.container;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -23,7 +22,7 @@ public class ContainerFilteredBuffer extends ContainerBCTile<TileFilteredBuffer>
 
     // Client-side constructor (from network)
     public ContainerFilteredBuffer(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
-        this(containerId, playerInv, getTile(playerInv, buf));
+        this(containerId, playerInv, resolveTile(playerInv, buf, TileFilteredBuffer.class));
     }
 
     // Server-side constructor
@@ -42,17 +41,6 @@ public class ContainerFilteredBuffer extends ContainerBCTile<TileFilteredBuffer>
 
         // Player inventory at y=86 (matching 1.12.2 layout)
         addFullPlayerInventory(8, 86);
-    }
-
-    private static TileFilteredBuffer getTile(Inventory playerInv, FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        if (playerInv.player.level() != null) {
-            var be = playerInv.player.level().getBlockEntity(pos);
-            if (be instanceof TileFilteredBuffer filtered) {
-                return filtered;
-            }
-        }
-        return null;
     }
 
 }

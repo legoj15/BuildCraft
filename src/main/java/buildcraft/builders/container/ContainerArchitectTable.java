@@ -6,7 +6,6 @@
 
 package buildcraft.builders.container;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
@@ -38,7 +37,7 @@ public class ContainerArchitectTable extends ContainerBCTile<TileArchitectTable>
 
     // Client-side constructor (from network)
     public ContainerArchitectTable(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
-        this(containerId, playerInv, getTile(playerInv, buf));
+        this(containerId, playerInv, resolveTile(playerInv, buf, TileArchitectTable.class));
     }
 
     // Server-side constructor
@@ -90,17 +89,6 @@ public class ContainerArchitectTable extends ContainerBCTile<TileArchitectTable>
 
         // Player inventory layout
         addFullPlayerInventory(8, 158, playerInv);
-    }
-
-    private static TileArchitectTable getTile(Inventory playerInv, FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        if (playerInv.player.level() != null) {
-            var be = playerInv.player.level().getBlockEntity(pos);
-            if (be instanceof TileArchitectTable architect) {
-                return architect;
-            }
-        }
-        return null;
     }
 
     // Synced accessors

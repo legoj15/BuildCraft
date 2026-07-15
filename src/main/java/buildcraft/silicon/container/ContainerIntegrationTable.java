@@ -6,7 +6,6 @@
 
 package buildcraft.silicon.container;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -24,7 +23,7 @@ public class ContainerIntegrationTable extends ContainerBCTile<TileIntegrationTa
 
     // Client-side constructor (from network)
     public ContainerIntegrationTable(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
-        this(containerId, playerInv.player, getTile(playerInv, buf));
+        this(containerId, playerInv.player, resolveTile(playerInv, buf, TileIntegrationTable.class));
     }
 
     // Server-side constructor
@@ -51,11 +50,5 @@ public class ContainerIntegrationTable extends ContainerBCTile<TileIntegrationTa
         addSlot(new SlotOutput(tile.invResult, 0, 138, 49));
 
         addFullPlayerInventory(8, 109);
-    }
-
-    private static TileIntegrationTable getTile(Inventory inv, FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        var be = inv.player.level().getBlockEntity(pos);
-        return be instanceof TileIntegrationTable t ? t : null;
     }
 }

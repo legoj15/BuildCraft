@@ -10,7 +10,6 @@ import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -58,7 +57,7 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
 
     // Client-side constructor (from network)
     public ContainerElectronicLibrary(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
-        this(containerId, playerInv, getTile(playerInv, buf));
+        this(containerId, playerInv, resolveTile(playerInv, buf, TileElectronicLibrary.class));
     }
 
     // Server-side constructor
@@ -96,18 +95,6 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
         addSlot(new SlotOutput(tile.invUpOut, 0, 219, 79));
 
         addFullPlayerInventory(8, 138, playerInv);
-    }
-
-    private static TileElectronicLibrary getTile(Inventory playerInv, FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        var level = playerInv.player.level();
-        if (level != null) {
-            var be = level.getBlockEntity(pos);
-            if (be instanceof TileElectronicLibrary lib) {
-                return lib;
-            }
-        }
-        return null;
     }
 
     // --- Synced accessors for GUI ---

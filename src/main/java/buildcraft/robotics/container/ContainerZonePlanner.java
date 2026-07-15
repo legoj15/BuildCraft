@@ -10,7 +10,6 @@ import java.util.Arrays;
 
 import io.netty.buffer.Unpooled;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.ContainerData;
@@ -34,7 +33,7 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
 
     // Client-side constructor (from network)
     public ContainerZonePlanner(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
-        this(containerId, playerInv, getTile(playerInv, buf));
+        this(containerId, playerInv, resolveTile(playerInv, buf, TileZonePlanner.class));
     }
 
     // Server-side constructor
@@ -97,17 +96,6 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
 
     private static float fraction(int raw) {
         return raw < 0 ? 0f : Math.min(1f, raw / (float) TileZonePlanner.getProgressMax());
-    }
-
-    private static TileZonePlanner getTile(Inventory playerInv, FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        if (playerInv.player.level() != null) {
-            var be = playerInv.player.level().getBlockEntity(pos);
-            if (be instanceof TileZonePlanner planner) {
-                return planner;
-            }
-        }
-        return null;
     }
 
     // Shift-click transfer is inherited from ContainerBC_Neptune.quickMoveStack — the generic

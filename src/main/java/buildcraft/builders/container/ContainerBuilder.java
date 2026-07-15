@@ -9,7 +9,6 @@ package buildcraft.builders.container;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -90,7 +89,7 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
 
     // Client-side constructor (from network)
     public ContainerBuilder(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
-        this(containerId, playerInv, getTile(playerInv, buf));
+        this(containerId, playerInv, resolveTile(playerInv, buf, TileBuilder.class));
     }
 
     // Server-side constructor
@@ -164,17 +163,6 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
 
         // Player inventory at y=140 (matches 1.12.2 layout)
         addFullPlayerInventory(8, 140, playerInv);
-    }
-
-    private static TileBuilder getTile(Inventory playerInv, FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        if (playerInv.player.level() != null) {
-            var be = playerInv.player.level().getBlockEntity(pos);
-            if (be instanceof TileBuilder builder) {
-                return builder;
-            }
-        }
-        return null;
     }
 
     private ItemStack getDisplay(int index) {

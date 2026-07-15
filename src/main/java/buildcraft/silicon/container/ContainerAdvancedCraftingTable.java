@@ -9,7 +9,6 @@ package buildcraft.silicon.container;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Inventory;
@@ -25,6 +24,7 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.lib.gui.ContainerBCCrafting;
+import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.recipe.IBCRecipeBookMenu;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.slot.SlotOutput;
@@ -48,7 +48,7 @@ public class ContainerAdvancedCraftingTable extends ContainerBCCrafting<TileAdva
 
     // Client-side constructor (from network)
     public ContainerAdvancedCraftingTable(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
-        this(containerId, playerInv.player, getTile(playerInv, buf));
+        this(containerId, playerInv.player, ContainerBCTile.resolveTile(playerInv, buf, TileAdvancedCraftingTable.class));
     }
 
     // Server-side constructor
@@ -203,11 +203,5 @@ public class ContainerAdvancedCraftingTable extends ContainerBCCrafting<TileAdva
     @Override
     public RecipeBookType getRecipeBookType() {
         return RecipeBookType.CRAFTING;
-    }
-
-    private static TileAdvancedCraftingTable getTile(Inventory inv, FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        var be = inv.player.level().getBlockEntity(pos);
-        return be instanceof TileAdvancedCraftingTable t ? t : null;
     }
 }

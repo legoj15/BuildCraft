@@ -9,7 +9,6 @@ package buildcraft.factory.container;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Inventory;
@@ -28,6 +27,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
 import buildcraft.lib.gui.ContainerBCCrafting;
+import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.recipe.IBCRecipeBookMenu;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.slot.SlotDisplay;
@@ -50,7 +50,7 @@ public class ContainerAutoCraftItems extends ContainerBCCrafting<TileAutoWorkben
 
     // Client-side constructor (from network)
     public ContainerAutoCraftItems(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
-        this(containerId, playerInv, getTile(playerInv, buf));
+        this(containerId, playerInv, ContainerBCTile.resolveTile(playerInv, buf, TileAutoWorkbenchItems.class));
     }
 
     // Server-side constructor
@@ -222,17 +222,6 @@ public class ContainerAutoCraftItems extends ContainerBCCrafting<TileAutoWorkben
     @Override
     public RecipeBookType getRecipeBookType() {
         return RecipeBookType.CRAFTING;
-    }
-
-    private static TileAutoWorkbenchItems getTile(Inventory playerInv, FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        if (playerInv.player.level() != null) {
-            var be = playerInv.player.level().getBlockEntity(pos);
-            if (be instanceof TileAutoWorkbenchItems workbench) {
-                return workbench;
-            }
-        }
-        return null;
     }
 }
 

@@ -44,9 +44,12 @@ public abstract class ContainerBCTile<T extends AbstractBCBlockEntity> extends C
      * Shared client-side tile resolver: reads a {@link BlockPos} off the buffer (written by
      * {@code IBCMenuProvider.writeClientSideData}) and returns the block entity at that position if it
      * matches {@code clazz}, else {@code null}. Replaces the per-container {@code getTile} statics.
+     *
+     * <p>{@code public} so the sibling base {@link ContainerBCCrafting} (which can't inherit this via
+     * single-inheritance) and its subclasses can resolve through the same one home.
      */
     @Nullable
-    protected static <T extends AbstractBCBlockEntity> T resolveTile(Inventory playerInv, FriendlyByteBuf buf, Class<T> clazz) {
+    public static <T extends AbstractBCBlockEntity> T resolveTile(Inventory playerInv, FriendlyByteBuf buf, Class<T> clazz) {
         BlockPos pos = buf.readBlockPos();
         Level level = playerInv.player.level();
         if (level != null) {

@@ -7,7 +7,6 @@ package buildcraft.lib.client.render;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -83,7 +82,7 @@ public class MarkerRenderer {
         }
 
         // Render preview beams for potential connections when holding a marker connector
-        if (holdingConnectorCheck != null && holdingConnectorCheck.test(player)) {
+        if (isHoldingConnector(player)) {
             renderPossibleConnections(player);
         }
 
@@ -158,12 +157,12 @@ public class MarkerRenderer {
         buildcraft.core.client.VolumeBoxRenderer.renderAll();
     }
 
-    /** Callback for checking if the player holds a marker connector, set by buildcraft-core */
-    private static Predicate<Player> holdingConnectorCheck;
-
-    /** Called by buildcraft-core to register the held-connector check */
-    public static void setHoldingConnectorCheck(Predicate<Player> check) {
-        holdingConnectorCheck = check;
+    /** True if the player holds a marker connector in either hand (drives the possible-connection preview
+     *  beams). BuildCraft is one mod, so lib references the core item directly rather than through an
+     *  injected callback (mirrors {@link #renderVolumeBoxes()} calling {@code VolumeBoxRenderer} directly). */
+    private static boolean isHoldingConnector(Player player) {
+        return player.getMainHandItem().getItem() instanceof buildcraft.core.item.ItemMarkerConnector
+            || player.getOffhandItem().getItem() instanceof buildcraft.core.item.ItemMarkerConnector;
     }
 
     /** Called by connection renderInWorld() implementations to get the current PoseStack */

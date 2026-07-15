@@ -5,7 +5,6 @@
  */
 package buildcraft.builders.container;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -30,7 +29,7 @@ public class ContainerReplacer extends ContainerBCTile<TileReplacer> {
 
     // Client-side constructor (from network)
     public ContainerReplacer(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
-        this(containerId, playerInv, getTile(playerInv, buf));
+        this(containerId, playerInv, resolveTile(playerInv, buf, TileReplacer.class));
     }
 
     // Server-side constructor
@@ -45,17 +44,6 @@ public class ContainerReplacer extends ContainerBCTile<TileReplacer> {
 
         // Player inventory at y=159 (matches 1.12.2 layout)
         addFullPlayerInventory(8, 159, playerInv);
-    }
-
-    private static TileReplacer getTile(Inventory playerInv, FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        if (playerInv.player.level() != null) {
-            var be = playerInv.player.level().getBlockEntity(pos);
-            if (be instanceof TileReplacer replacer) {
-                return replacer;
-            }
-        }
-        return null;
     }
 
     /**

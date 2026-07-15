@@ -32,11 +32,6 @@ public class BCCoreClient {
                 //?}
                 event -> buildcraft.lib.client.render.MarkerRenderer.onRenderLevelStage(event)
         );
-        // Register held-connector check for preview beams
-        buildcraft.lib.client.render.MarkerRenderer.setHoldingConnectorCheck(
-                player -> player.getMainHandItem().getItem() instanceof buildcraft.core.item.ItemMarkerConnector
-                       || player.getOffhandItem().getItem() instanceof buildcraft.core.item.ItemMarkerConnector
-        );
         // Register engine BERs on the mod bus
         modEventBus.addListener(
                 net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterRenderers.class,

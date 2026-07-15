@@ -8,7 +8,6 @@ package buildcraft.silicon.container;
 
 import java.util.ArrayList;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -33,7 +32,7 @@ public class ContainerAssemblyTable extends ContainerBCTile<TileAssemblyTable> {
 
     // Client-side constructor (from network)
     public ContainerAssemblyTable(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
-        this(containerId, playerInv.player, getTile(playerInv, buf));
+        this(containerId, playerInv.player, resolveTile(playerInv, buf, TileAssemblyTable.class));
     }
 
     // Server-side constructor
@@ -104,12 +103,6 @@ public class ContainerAssemblyTable extends ContainerBCTile<TileAssemblyTable> {
         return index < tile.recipesStates.size()
                 ? new ArrayList<>(tile.recipesStates.keySet()).get(index).output
                 : ItemStack.EMPTY;
-    }
-
-    private static TileAssemblyTable getTile(Inventory inv, FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        var be = inv.player.level().getBlockEntity(pos);
-        return be instanceof TileAssemblyTable t ? t : null;
     }
 }
 

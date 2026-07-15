@@ -6,7 +6,6 @@
 
 package buildcraft.factory.container;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 
@@ -20,7 +19,7 @@ public class ContainerChute extends ContainerBCTile<TileChute> {
 
     // Client-side constructor (from network)
     public ContainerChute(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
-        this(containerId, playerInv, getTile(playerInv, buf));
+        this(containerId, playerInv, resolveTile(playerInv, buf, TileChute.class));
     }
 
     // Server-side constructor
@@ -35,16 +34,5 @@ public class ContainerChute extends ContainerBCTile<TileChute> {
 
         // Player inventory at y=71 (matching 1.12.2)
         addFullPlayerInventory(8, 71);
-    }
-
-    private static TileChute getTile(Inventory playerInv, FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        if (playerInv.player.level() != null) {
-            var be = playerInv.player.level().getBlockEntity(pos);
-            if (be instanceof TileChute chute) {
-                return chute;
-            }
-        }
-        return null;
     }
 }

@@ -28,6 +28,7 @@ import mezz.jei.api.recipe.types.IRecipeType;
 //?}
 
 import buildcraft.lib.gui.BCContainer;
+import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.misc.RegistryKeyUtil;
 
 /**
@@ -44,9 +45,6 @@ import buildcraft.lib.misc.RegistryKeyUtil;
  */
 public class BlueprintTransferHandler<C extends AbstractContainerMenu>
         implements IRecipeTransferHandler<C, RecipeHolder<CraftingRecipe>> {
-
-    /** Container message ID for JEI recipe transfer. */
-    public static final int NET_JEI_RECIPE_TRANSFER = 100;
 
     private final Class<? extends C> containerClass;
     private final MenuType<C> menuType;
@@ -96,7 +94,7 @@ public class BlueprintTransferHandler<C extends AbstractContainerMenu>
             // The server-side handler in ContainerBCCrafting will look up the recipe
             // and call CraftingUtil.placeRecipeInBlueprint().
             String recipeIdStr = RegistryKeyUtil.id(recipe.id()).toString();
-            bcContainer.sendMessage(NET_JEI_RECIPE_TRANSFER, buf -> {
+            bcContainer.sendMessage(ContainerBC_Neptune.NET_JEI_RECIPE_TRANSFER, buf -> {
                 buf.writeUtf(recipeIdStr);
             });
         }

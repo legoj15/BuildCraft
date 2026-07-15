@@ -11,11 +11,7 @@ import com.mojang.serialization.MapCodec;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -23,12 +19,12 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.BlockHitResult;
 
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
+import buildcraft.lib.block.BlockBCTile_Neptune;
 
-public class BlockAutoWorkbenchItems extends BaseEntityBlock {
+public class BlockAutoWorkbenchItems extends BlockBCTile_Neptune<TileAutoWorkbenchItems> {
     public static final MapCodec<BlockAutoWorkbenchItems> CODEC =
             simpleCodec(BlockAutoWorkbenchItems::new);
 
@@ -47,40 +43,14 @@ public class BlockAutoWorkbenchItems extends BaseEntityBlock {
         return new TileAutoWorkbenchItems(pos, state);
     }
 
-    @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
-            BlockEntityType<T> type) {
-        if (level.isClientSide()) {
-            return null;
-        }
-        return createTickerHelper(type, BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
-                (lvl, pos, st, tile) -> tile.serverTick());
+    protected BlockEntityType<?> getBlockEntityType() {
+        return BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get();
     }
 
     @Override
-    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
-            @org.jetbrains.annotations.Nullable LivingEntity placer, ItemStack stack) {
-        super.setPlacedBy(level, pos, state, placer, stack);
-        if (!level.isClientSide()) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TileAutoWorkbenchItems workbench) {
-                workbench.onPlacedBy(placer, stack);
-            }
-        }
-    }
-
-    @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
-            Player player, BlockHitResult hitResult) {
-        if (level.isClientSide()) {
-            return InteractionResult.SUCCESS;
-        }
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof TileAutoWorkbenchItems workbench && player instanceof ServerPlayer serverPlayer) {
-            serverPlayer.openMenu(workbench);
-        }
-        return InteractionResult.SUCCESS;
+    protected BlockEntityTicker<TileAutoWorkbenchItems> getServerTicker() {
+        return (lvl, pos, st, tile) -> tile.serverTick();
     }
 
     @Override
@@ -100,17 +70,4 @@ public class BlockAutoWorkbenchItems extends BaseEntityBlock {
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
-
-    // Non-player removal catch-all for the pre-1.21.10 API (explosion, piston, /setblock, mod tools):
-    // spill contents while the BlockEntity is alive in onRemove. On >=1.21.10 this is handled centrally
-    // by TileBC_Neptune#preRemoveSideEffects. The player path set the guard in playerWillDestroy.
-    //? if <1.21.10 {
-    /*@Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof buildcraft.lib.tile.TileBC_Neptune tile) {
-            tile.dropContentsOnRemoval(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }*/
-    //?}
 }

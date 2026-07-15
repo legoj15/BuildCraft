@@ -11,8 +11,6 @@ import com.mojang.serialization.MapCodec;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -24,13 +22,14 @@ import net.minecraft.world.level.block.state.BlockState;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileMiner;
 import buildcraft.factory.tile.TilePump;
+import buildcraft.lib.block.BlockBCTile_Neptune;
 
 /**
  * The pump block. Unlike the mining well, the pump has no directional facing —
  * it simply pumps fluids from below.
  * Ported from 1.12.2 BlockPump.
  */
-public class BlockPump extends BaseEntityBlock {
+public class BlockPump extends BlockBCTile_Neptune<TilePump> {
     public static final MapCodec<BlockPump> CODEC =
             simpleCodec(BlockPump::new);
 
@@ -49,33 +48,24 @@ public class BlockPump extends BaseEntityBlock {
         return new TilePump(pos, state);
     }
 
-    @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
-            BlockEntityType<T> type) {
-        if (level.isClientSide()) {
-            return createTickerHelper(type, BCFactoryBlockEntities.PUMP.get(),
-                    (lvl, pos, st, tile) -> tile.clientTick());
-        }
-        return createTickerHelper(type, BCFactoryBlockEntities.PUMP.get(),
-                (lvl, pos, st, tile) -> tile.serverTick());
+    protected BlockEntityType<?> getBlockEntityType() {
+        return BCFactoryBlockEntities.PUMP.get();
+    }
+
+    @Override
+    protected BlockEntityTicker<TilePump> getServerTicker() {
+        return (lvl, pos, st, tile) -> tile.serverTick();
+    }
+
+    @Override
+    protected BlockEntityTicker<TilePump> getClientTicker() {
+        return (lvl, pos, st, tile) -> tile.clientTick();
     }
 
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
-    }
-
-    @Override
-    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
-            @Nullable LivingEntity placer, ItemStack stack) {
-        super.setPlacedBy(level, pos, state, placer, stack);
-        if (!level.isClientSide()) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TilePump pump) {
-                pump.onPlacedBy(placer, stack);
-            }
-        }
     }
 
     @Override
@@ -96,17 +86,4 @@ public class BlockPump extends BaseEntityBlock {
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
-
-    // Non-player removal catch-all for the pre-1.21.10 API (explosion, piston, /setblock, mod tools):
-    // spill the pump's tank while the BlockEntity is alive in onRemove. On >=1.21.10 this is handled
-    // centrally by TileBC_Neptune#preRemoveSideEffects. The player path set the guard in playerWillDestroy.
-    //? if <1.21.10 {
-    /*@Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof buildcraft.lib.tile.TileBC_Neptune tile) {
-            tile.dropContentsOnRemoval(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }*/
-    //?}
 }

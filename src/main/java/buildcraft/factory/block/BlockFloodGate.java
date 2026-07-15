@@ -19,7 +19,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -38,6 +37,7 @@ import buildcraft.api.properties.BuildCraftProperties;
 
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileFloodGate;
+import buildcraft.lib.block.BlockBCTile_Neptune;
 import buildcraft.lib.misc.BlockUtil;
 
 /**
@@ -46,7 +46,7 @@ import buildcraft.lib.misc.BlockUtil;
  * Ported from 1.12.2 BlockFloodGate.
  */
 @SuppressWarnings("this-escape")
-public class BlockFloodGate extends BaseEntityBlock {
+public class BlockFloodGate extends BlockBCTile_Neptune<TileFloodGate> {
     public static final MapCodec<BlockFloodGate> CODEC =
             simpleCodec(BlockFloodGate::new);
 
@@ -84,28 +84,14 @@ public class BlockFloodGate extends BaseEntityBlock {
         return new TileFloodGate(pos, state);
     }
 
-    /**
-     * Record the placing player as the owner so the flood gate can grant them the
-     * "Flooding the world" advancement. Forwards to {@link TileFloodGate#onPlacedBy}.
-     */
     @Override
-    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
-            @Nullable LivingEntity placer, ItemStack stack) {
-        super.setPlacedBy(level, pos, state, placer, stack);
-        if (level.getBlockEntity(pos) instanceof TileFloodGate floodGate) {
-            floodGate.onPlacedBy(placer);
-        }
+    protected BlockEntityType<?> getBlockEntityType() {
+        return BCFactoryBlockEntities.FLOOD_GATE.get();
     }
 
-    @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
-            BlockEntityType<T> type) {
-        if (level.isClientSide()) {
-            return null;
-        }
-        return createTickerHelper(type, BCFactoryBlockEntities.FLOOD_GATE.get(),
-                (lvl, pos, st, tile) -> tile.serverTick());
+    protected BlockEntityTicker<TileFloodGate> getServerTicker() {
+        return (lvl, pos, st, tile) -> tile.serverTick();
     }
 
     @Override
@@ -188,17 +174,4 @@ public class BlockFloodGate extends BaseEntityBlock {
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
-
-    // Non-player removal catch-all for the pre-1.21.10 API (explosion, piston, /setblock, mod tools):
-    // spill the gate's tank while the BlockEntity is alive in onRemove. On >=1.21.10 this runs from
-    // TileFloodGate#preRemoveSideEffects. The player path set the guard in playerWillDestroy.
-    //? if <1.21.10 {
-    /*@Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof buildcraft.factory.tile.TileFloodGate floodGate) {
-            floodGate.dropContentsOnRemoval(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }*/
-    //?}
 }

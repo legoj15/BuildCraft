@@ -11,15 +11,18 @@ import com.mojang.serialization.MapCodec;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.BlockHitResult;
 
+import buildcraft.lib.block.BlockBCTile_Neptune;
+import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.tile.TileFilteredBuffer;
 
 /**
@@ -27,7 +30,7 @@ import buildcraft.transport.tile.TileFilteredBuffer;
  * Items can only be inserted into a slot if the corresponding filter slot contains a matching item.
  * Ported from 1.12.2 BlockFilteredBuffer.
  */
-public class BlockFilteredBuffer extends BaseEntityBlock {
+public class BlockFilteredBuffer extends BlockBCTile_Neptune<TileFilteredBuffer> {
     public static final MapCodec<BlockFilteredBuffer> CODEC = simpleCodec(BlockFilteredBuffer::new);
 
     public BlockFilteredBuffer(Properties properties) {
@@ -46,20 +49,23 @@ public class BlockFilteredBuffer extends BaseEntityBlock {
     }
 
     @Override
+    protected BlockEntityType<?> getBlockEntityType() {
+        return BCTransportBlockEntities.FILTERED_BUFFER.get();
+    }
+
+    @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
-            Player player, BlockHitResult hitResult) {
-        if (!level.isClientSide()) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TileFilteredBuffer) {
-                player.openMenu((TileFilteredBuffer) be);
-            }
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
+            @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        // Push the post-placement NBT (now carrying the owner) to clients immediately.
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof TileFilteredBuffer) {
+            level.sendBlockUpdated(pos, state, state, 3);
         }
-        return InteractionResult.SUCCESS;
     }
 
     /** Drops the 9-slot main inventory regardless of the tool used to break the block.
@@ -75,31 +81,5 @@ public class BlockFilteredBuffer extends BaseEntityBlock {
             buffer.markDropsHandled();
         }
         return super.playerWillDestroy(level, pos, state, player);
-    }
-
-    // Non-player removal catch-all for the pre-1.21.10 API (explosion, piston, /setblock, mod tools):
-    // spill contents while the BlockEntity is alive in onRemove. On >=1.21.10 this is handled centrally
-    // by TileBC_Neptune#preRemoveSideEffects. The player path set the guard in playerWillDestroy.
-    //? if <1.21.10 {
-    /*@Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof buildcraft.lib.tile.TileBC_Neptune tile) {
-            tile.dropContentsOnRemoval(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }*/
-    //?}
-
-    @Override
-    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
-            @org.jetbrains.annotations.Nullable net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
-        super.setPlacedBy(level, pos, state, placer, stack);
-        if (!level.isClientSide()) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TileFilteredBuffer buffer) {
-                buffer.onPlacedBy(placer, stack);
-                level.sendBlockUpdated(pos, state, state, 3);
-            }
-        }
     }
 }

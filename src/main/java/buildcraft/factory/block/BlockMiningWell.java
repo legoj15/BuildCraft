@@ -12,8 +12,6 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -33,9 +31,9 @@ import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileMiner;
 import buildcraft.factory.tile.TileMiningWell;
+import buildcraft.lib.block.BlockBCTile_Neptune;
 
-@SuppressWarnings("this-escape")
-public class BlockMiningWell extends BaseEntityBlock {
+public class BlockMiningWell extends BlockBCTile_Neptune<TileMiningWell> {
     public static final Property<Direction> FACING = BuildCraftProperties.BLOCK_FACING;
 
     public static final MapCodec<BlockMiningWell> CODEC =
@@ -67,33 +65,24 @@ public class BlockMiningWell extends BaseEntityBlock {
         return new TileMiningWell(pos, state);
     }
 
-    @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
-            BlockEntityType<T> type) {
-        if (level.isClientSide()) {
-            return createTickerHelper(type, BCFactoryBlockEntities.MINING_WELL.get(),
-                    (lvl, pos, st, tile) -> tile.clientTick());
-        }
-        return createTickerHelper(type, BCFactoryBlockEntities.MINING_WELL.get(),
-                (lvl, pos, st, tile) -> tile.serverTick());
+    protected BlockEntityType<?> getBlockEntityType() {
+        return BCFactoryBlockEntities.MINING_WELL.get();
+    }
+
+    @Override
+    protected BlockEntityTicker<TileMiningWell> getServerTicker() {
+        return (lvl, pos, st, tile) -> tile.serverTick();
+    }
+
+    @Override
+    protected BlockEntityTicker<TileMiningWell> getClientTicker() {
+        return (lvl, pos, st, tile) -> tile.clientTick();
     }
 
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
-    }
-
-    @Override
-    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
-            @Nullable LivingEntity placer, ItemStack stack) {
-        super.setPlacedBy(level, pos, state, placer, stack);
-        if (!level.isClientSide()) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TileMiningWell well) {
-                well.onPlacedBy(placer, stack);
-            }
-        }
     }
 
     @Override

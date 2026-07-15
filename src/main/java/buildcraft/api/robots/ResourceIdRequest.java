@@ -40,15 +40,15 @@ public class ResourceIdRequest extends ResourceIdBlock {
     }
 
     @Override
-    public void writeToNBT(CompoundTag nbt) {
-        super.writeToNBT(nbt);
+    public void writeToNbt(CompoundTag nbt) {
+        super.writeToNbt(nbt);
 
         nbt.putInt("localId", slot);
     }
 
     @Override
-    protected void readFromNBT(CompoundTag nbt) {
-        super.readFromNBT(nbt);
+    protected void readFromNbt(CompoundTag nbt) {
+        super.readFromNbt(nbt);
 
         slot = NbtApiUtil.getInt(nbt, "localId", 0);
     }

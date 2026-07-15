@@ -28,7 +28,7 @@ import buildcraft.api.statements.StatementSlot;
  * reservation maps and their reverse indices, exercised without a live robot entity. The entity-gated paths
  * ({@code robotIdTaking}/{@code isTaken} loaded-and-alive checks, {@code killRobot} death-frees-all) are
  * deferred to Ph3 game tests; here we drive the id-keyed core through {@code take}/{@code release}, the
- * package-private raw inspectors, and the decoupled {@code writeToNBT}/{@code readFromNBT} (seam c).
+ * package-private raw inspectors, and the decoupled {@code writeToNbt}/{@code readFromNbt} (seam c).
  */
 public class RobotRegistryTest {
 
@@ -153,15 +153,15 @@ public class RobotRegistryTest {
         long expectedNext = before.nextRobotIdPeek();
 
         CompoundTag tag = new CompoundTag();
-        before.writeToNBT(tag);
+        before.writeToNbt(tag);
 
         RobotRegistry after = new RobotRegistry(null);
-        after.readFromNBT(tag);
+        after.readFromNbt(tag);
 
         Assertions.assertEquals(expectedNext, after.nextRobotIdPeek(), "nextRobotID persists");
         Assertions.assertEquals(ROBOT_A, after.rawHolderOf(idA), "resource A's holder persists");
         Assertions.assertEquals(ROBOT_B, after.rawHolderOf(idB), "resource B's holder persists");
-        // The reverse index is not persisted directly; readFromNBT must rebuild it via take().
+        // The reverse index is not persisted directly; readFromNbt must rebuild it via take().
         Assertions.assertTrue(after.resourcesReservedBy(ROBOT_A).contains(idA), "reverse index rebuilt for A");
         Assertions.assertTrue(after.resourcesReservedBy(ROBOT_B).contains(idB), "reverse index rebuilt for B");
     }
@@ -175,20 +175,20 @@ public class RobotRegistryTest {
         // hand-build the NBT so the load path's `if linkedId != NULL -> take(station, linkedId)` is exercised.
         TestDockingStation seed = new TestDockingStation(pos, side);
         CompoundTag stationTag = new CompoundTag();
-        seed.writeToNBT(stationTag);
+        seed.writeToNbt(stationTag);
         stationTag.putLong("robotId", ROBOT_A);
         TestDockingStation linked = new TestDockingStation();
-        linked.readFromNBT(stationTag);
+        linked.readFromNbt(stationTag);
         Assertions.assertEquals(ROBOT_A, linked.linkedId(), "precondition: the crafted station reads back as linked");
 
         RobotRegistry before = new RobotRegistry(null);
         before.registerStation(linked);
 
         CompoundTag tag = new CompoundTag();
-        before.writeToNBT(tag);
+        before.writeToNbt(tag);
 
         RobotRegistry after = new RobotRegistry(null);
-        after.readFromNBT(tag);
+        after.readFromNbt(tag);
 
         DockingStation reloaded = after.getStation(pos, side);
         Assertions.assertNotNull(reloaded, "the station persists and reloads at its pos+side");

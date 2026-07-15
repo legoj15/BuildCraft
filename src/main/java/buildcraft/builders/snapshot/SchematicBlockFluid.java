@@ -131,7 +131,7 @@ public class SchematicBlockFluid implements ISchematicBlock {
     }
 
     @Override
-    public CompoundTag serializeNBT() {
+    public CompoundTag serializeNbt() {
         CompoundTag nbt = new CompoundTag();
         nbt.put("blockState", NbtUtils.writeBlockState(blockState));
         nbt.putBoolean("isFlowing", isFlowing);
@@ -139,7 +139,7 @@ public class SchematicBlockFluid implements ISchematicBlock {
     }
 
     @Override
-    public void deserializeNBT(CompoundTag nbt) throws InvalidInputDataException {
+    public void deserializeNbt(CompoundTag nbt) throws InvalidInputDataException {
         blockState = NbtUtils.readBlockState(
             buildcraft.lib.misc.RegistryUtilBC.blockLookup(),
             NBTUtilBC.getCompound(nbt, "blockState")

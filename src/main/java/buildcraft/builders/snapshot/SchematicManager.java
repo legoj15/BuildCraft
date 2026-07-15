@@ -82,7 +82,7 @@ public class SchematicManager<C, S extends ISchematic<C>> {
     public CompoundTag writeToNBT(S schematic) {
         CompoundTag schematicTag = new CompoundTag();
         schematicTag.putString("name", byInstance.apply(schematic).name.toString());
-        schematicTag.put("data", schematic.serializeNBT());
+        schematicTag.put("data", schematic.serializeNbt());
         return schematicTag;
     }
 
@@ -96,7 +96,7 @@ public class SchematicManager<C, S extends ISchematic<C>> {
         ISchematic<C> schematic = factory.supplier.get();
         CompoundTag data = NBTUtilBC.getCompound(schematicTag, "data");
         try {
-            schematic.deserializeNBT(data);
+            schematic.deserializeNbt(data);
             @SuppressWarnings("unchecked")
             S result = (S) schematic;
             return result;

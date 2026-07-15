@@ -17,8 +17,8 @@ import buildcraft.api.core.InvalidInputDataException;
 public interface ISchematic<C> {
     void init(C context);
 
-    CompoundTag serializeNBT();
+    CompoundTag serializeNbt();
 
     /** @throws InvalidInputDataException If the input data wasn't correct or didn't make sense. */
-    void deserializeNBT(CompoundTag nbt) throws InvalidInputDataException;
+    void deserializeNbt(CompoundTag nbt) throws InvalidInputDataException;
 }

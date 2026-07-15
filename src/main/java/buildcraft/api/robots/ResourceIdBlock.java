@@ -53,21 +53,21 @@ public class ResourceIdBlock extends ResourceId {
     }
 
     @Override
-    public void writeToNBT(CompoundTag nbt) {
-        super.writeToNBT(nbt);
+    public void writeToNbt(CompoundTag nbt) {
+        super.writeToNbt(nbt);
 
         int[] arr = new int[] { pos.getX(), pos.getY(), pos.getZ() };
         nbt.putIntArray("pos", arr);
 
-        nbt.put("side", side.writeToNBT());
+        nbt.put("side", side.writeToNbt());
     }
 
     @Override
-    protected void readFromNBT(CompoundTag nbt) {
-        super.readFromNBT(nbt);
+    protected void readFromNbt(CompoundTag nbt) {
+        super.readFromNbt(nbt);
         int[] arr = NbtApiUtil.getIntArray(nbt, "pos", new int[0]);
         pos = new BlockPos(arr[0], arr[1], arr[2]);
 
-        side = EnumPipePart.readFromNBT(nbt.get("side"));
+        side = EnumPipePart.readFromNbt(nbt.get("side"));
     }
 }

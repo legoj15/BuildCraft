@@ -13,11 +13,11 @@ public abstract class ResourceId {
 
     protected ResourceId() {}
 
-    public void writeToNBT(CompoundTag nbt) {
+    public void writeToNbt(CompoundTag nbt) {
         nbt.putString("resourceName", RobotManager.getResourceIdName(getClass()));
     }
 
-    protected void readFromNBT(CompoundTag nbt) {}
+    protected void readFromNbt(CompoundTag nbt) {}
 
     public static ResourceId load(CompoundTag nbt) {
         try {
@@ -30,7 +30,7 @@ public abstract class ResourceId {
             }
 
             ResourceId id = (ResourceId) cls.getDeclaredConstructor().newInstance();
-            id.readFromNBT(nbt);
+            id.readFromNbt(nbt);
 
             return id;
         } catch (Throwable e) {

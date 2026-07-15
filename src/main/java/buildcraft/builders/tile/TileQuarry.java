@@ -1040,7 +1040,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         long stored = input.getLongOr("battery_mj", 0L);
         CompoundTag mjTag = new CompoundTag();
         mjTag.putLong("stored", stored);
-        battery.deserializeNBT(mjTag);
+        battery.deserializeNbt(mjTag);
 
         // Task
         int taskId = input.getByteOr("currentTaskId", (byte) -1);

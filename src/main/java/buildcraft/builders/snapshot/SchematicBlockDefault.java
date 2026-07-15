@@ -116,7 +116,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
     /**
      * Class-based requiredBlockOffsets, separate from the JSON rule path so they apply both at
      * scan time (via {@link #setRequiredBlockOffsets}) and at load time for old saved
-     * schematics (via {@link #deserializeNBT} re-running the migration).
+     * schematics (via {@link #deserializeNbt} re-running the migration).
      * <ul>
      *   <li>{@link FallingBlock}: requires the block below (gravel, sand, anvil, concrete
      *       powder, etc.) — preserves the existing behaviour from before this refactor.</li>
@@ -809,7 +809,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
     }
 
     @Override
-    public CompoundTag serializeNBT() {
+    public CompoundTag serializeNbt() {
         CompoundTag nbt = new CompoundTag();
         nbt.put(
             "requiredBlockOffsets",
@@ -850,7 +850,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
     }
 
     @Override
-    public void deserializeNBT(CompoundTag nbt) throws InvalidInputDataException {
+    public void deserializeNbt(CompoundTag nbt) throws InvalidInputDataException {
         NBTUtilBC.readCompoundList(nbt.get("requiredBlockOffsets"))
             .map(NBTUtilBC::readBlockPos)
             .forEach(requiredBlockOffsets::add);
@@ -883,7 +883,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
         // Migrate old schematics to current JSON rules. Schematics saved before a rule was added
         // (e.g. before walls/leaves got their connection/persistent properties listed in
         // multiple_variants.json) have empty/incomplete ignoredProperties baked in — and since
-        // deserializeNBT, not init(), is what runs at load time, the old data would otherwise be
+        // deserializeNbt, not init(), is what runs at load time, the old data would otherwise be
         // authoritative forever. Re-derive ignoredProperties from the current rules so old
         // blueprints pick up new ignored-property carve-outs without requiring a re-scan.
         // Only ignoredProperties is migrated this way: the others are either rotation-baked

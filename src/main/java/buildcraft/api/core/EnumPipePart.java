@@ -112,7 +112,7 @@ public enum EnumPipePart implements StringRepresentable {
         return fromFacing(face.getOpposite());
     }
 
-    public static EnumPipePart readFromNBT(Tag base) {
+    public static EnumPipePart readFromNbt(Tag base) {
         if (base == null) {
             return CENTER;
         }
@@ -123,7 +123,7 @@ public enum EnumPipePart implements StringRepresentable {
         }
     }
 
-    public Tag writeToNBT() {
+    public Tag writeToNbt() {
         return net.minecraft.nbt.StringTag.valueOf(name());
     }
 }

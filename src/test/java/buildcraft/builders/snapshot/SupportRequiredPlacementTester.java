@@ -285,9 +285,9 @@ public class SupportRequiredPlacementTester {
     /**
      * Schematics saved before a JSON rule modernization (e.g. before walls/leaves got their
      * connection/persistent properties listed in `multiple_variants.json`) have empty
-     * ignoredProperties baked into their NBT. Loading them later goes through deserializeNBT
+     * ignoredProperties baked into their NBT. Loading them later goes through deserializeNbt
      * (NOT init), so without an explicit migration the old data wins forever and the user has
-     * to re-scan every blueprint after every rule update. Verifies that deserializeNBT re-
+     * to re-scan every blueprint after every rule update. Verifies that deserializeNbt re-
      * derives ignoredProperties from the current rules so old blueprints transparently pick up
      * new carve-outs.
      */
@@ -300,13 +300,13 @@ public class SupportRequiredPlacementTester {
             original.placeBlock = Blocks.COBBLESTONE_WALL;
             // Deliberately do NOT add anything to original.ignoredProperties — that's exactly
             // the pre-fix state we're guarding against.
-            net.minecraft.nbt.CompoundTag nbt = original.serializeNBT();
+            net.minecraft.nbt.CompoundTag nbt = original.serializeNbt();
 
             SchematicBlockDefault loaded = new SchematicBlockDefault();
             try {
-                loaded.deserializeNBT(nbt);
+                loaded.deserializeNbt(nbt);
             } catch (buildcraft.api.core.InvalidInputDataException e) {
-                throw new IllegalStateException("deserializeNBT should not throw on round-trip data: " + e.getMessage(), e);
+                throw new IllegalStateException("deserializeNbt should not throw on round-trip data: " + e.getMessage(), e);
             }
 
             boolean hasNorth = loaded.ignoredProperties.stream()
@@ -332,13 +332,13 @@ public class SupportRequiredPlacementTester {
             SchematicBlockDefault original = new SchematicBlockDefault();
             original.blockState = Blocks.OAK_LEAVES.defaultBlockState();
             original.placeBlock = Blocks.OAK_LEAVES;
-            net.minecraft.nbt.CompoundTag nbt = original.serializeNBT();
+            net.minecraft.nbt.CompoundTag nbt = original.serializeNbt();
 
             SchematicBlockDefault loaded = new SchematicBlockDefault();
             try {
-                loaded.deserializeNBT(nbt);
+                loaded.deserializeNbt(nbt);
             } catch (buildcraft.api.core.InvalidInputDataException e) {
-                throw new IllegalStateException("deserializeNBT should not throw on round-trip data: " + e.getMessage(), e);
+                throw new IllegalStateException("deserializeNbt should not throw on round-trip data: " + e.getMessage(), e);
             }
 
             boolean hasPersistent = loaded.ignoredProperties.stream()

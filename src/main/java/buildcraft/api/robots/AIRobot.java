@@ -158,7 +158,7 @@ public class AIRobot {
         return delegateAI;
     }
 
-    public final void writeToNBT(CompoundTag nbt) {
+    public final void writeToNbt(CompoundTag nbt) {
         nbt.putString("aiName", RobotManager.getAIRobotName(getClass()));
 
         CompoundTag data = new CompoundTag();
@@ -168,7 +168,7 @@ public class AIRobot {
         if (delegateAI != null && delegateAI.canLoadFromNBT()) {
             CompoundTag sub = new CompoundTag();
 
-            delegateAI.writeToNBT(sub);
+            delegateAI.writeToNbt(sub);
             nbt.put("delegateAI", sub);
         }
     }

@@ -300,7 +300,7 @@ public class TileDynamoMJ extends TileEngineBase_BC8 implements IBCMenuProvider 
 
         CompoundTag mjTag = new CompoundTag();
         mjTag.putLong("stored", input.getLongOr("mjStored", 0L));
-        mjBattery.deserializeNBT(mjTag);
+        mjBattery.deserializeNbt(mjTag);
     }
 
     @Override

@@ -48,9 +48,9 @@ public interface IRobotRegistry {
 
     void release(DockingStation station, long robotId);
 
-    void writeToNBT(CompoundTag nbt);
+    void writeToNbt(CompoundTag nbt);
 
-    void readFromNBT(CompoundTag nbt);
+    void readFromNbt(CompoundTag nbt);
 
     void registryMarkDirty();
 }

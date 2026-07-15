@@ -50,7 +50,7 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>The cross-node {@code SavedData} registration boilerplate (the {@code TYPE} declaration and the 1.21.1
  * {@code save} override) mirrors the proven {@code SavedDataWireSystems} template verbatim — only the body is
- * BuildCraft-specific. The interface's {@link #writeToNBT}/{@link #readFromNBT} are the decoupled NBT
+ * BuildCraft-specific. The interface's {@link #writeToNbt}/{@link #readFromNbt} are the decoupled NBT
  * serializers (seam c): they touch no {@link Level}, so the full reservation + reverse-index round-trip is
  * exercised as pure JUnit without bootstrapping the game.
  */
@@ -119,12 +119,12 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
 
     public CompoundTag writeToTag() {
         CompoundTag nbt = new CompoundTag();
-        writeToNBT(nbt);
+        writeToNbt(nbt);
         return nbt;
     }
 
     public void readFromTag(CompoundTag nbt) {
-        readFromNBT(nbt);
+        readFromNbt(nbt);
     }
 
     @Override
@@ -359,14 +359,14 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
     }
 
     @Override
-    public synchronized void writeToNBT(CompoundTag nbt) {
+    public synchronized void writeToNbt(CompoundTag nbt) {
         nbt.putLong("nextRobotID", nextRobotID);
 
         ListTag resourceList = new ListTag();
         for (Map.Entry<ResourceId, Long> e : resourcesTaken.entrySet()) {
             CompoundTag cpt = new CompoundTag();
             CompoundTag resourceId = new CompoundTag();
-            e.getKey().writeToNBT(resourceId);
+            e.getKey().writeToNbt(resourceId);
             cpt.put("resourceId", resourceId);
             cpt.putLong("robotId", e.getValue());
             resourceList.add(cpt);
@@ -382,7 +382,7 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
                 continue;
             }
             CompoundTag cpt = new CompoundTag();
-            station.writeToNBT(cpt);
+            station.writeToNbt(cpt);
             cpt.putString("stationType", type);
             stationList.add(cpt);
         }
@@ -390,7 +390,7 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
     }
 
     @Override
-    public synchronized void readFromNBT(CompoundTag nbt) {
+    public synchronized void readFromNbt(CompoundTag nbt) {
         nextRobotID = NBTUtilBC.getLong(nbt, "nextRobotID", Long.MIN_VALUE);
 
         resourcesTaken.clear();
@@ -423,7 +423,7 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
             }
             try {
                 DockingStation station = cls.getDeclaredConstructor().newInstance();
-                station.readFromNBT(cpt);
+                station.readFromNbt(cpt);
                 station.world = world;
                 registerStation(station);
                 if (station.linkedId() != EntityRobotBase.NULL_ROBOT_ID) {

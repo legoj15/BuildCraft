@@ -290,7 +290,7 @@ public class TileLaser extends AbstractBCSyncedBlockEntity implements ILocalBloc
     // here we only override the version-neutral writeData/readData hooks it dispatches to.
 
     protected void writeData(BCValueOutput output) {
-        output.store("battery", CompoundTag.CODEC, battery.serializeNBT());
+        output.store("battery", CompoundTag.CODEC, battery.serializeNbt());
         if (laserPos != null) {
             output.putDouble("laser_x", laserPos.x);
             output.putDouble("laser_y", laserPos.y);
@@ -308,7 +308,7 @@ public class TileLaser extends AbstractBCSyncedBlockEntity implements ILocalBloc
     }
 
     protected void readData(BCValueInput input) {
-        input.read("battery", CompoundTag.CODEC).ifPresent(batteryTag -> battery.deserializeNBT(batteryTag));
+        input.read("battery", CompoundTag.CODEC).ifPresent(batteryTag -> battery.deserializeNbt(batteryTag));
         if (input.getBooleanOr("has_target", false)) {
             targetPos = new BlockPos(
                 input.getIntOr("target_x", 0),

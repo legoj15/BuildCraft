@@ -58,14 +58,14 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
 
     public PipeBehaviourStripes(IPipe pipe, CompoundTag nbt) {
         super(pipe, nbt);
-        battery.deserializeNBT(NBTUtilBC.getCompound(nbt, "battery"));
+        battery.deserializeNbt(NBTUtilBC.getCompound(nbt, "battery"));
         direction = NBTUtilBC.readEnum(nbt.get("direction"), Direction.class);
     }
 
     @Override
     public CompoundTag writeToNbt() {
         CompoundTag nbt = super.writeToNbt();
-        nbt.put("battery", battery.serializeNBT());
+        nbt.put("battery", battery.serializeNbt());
         if (direction != null) {
             nbt.put("direction", NBTUtilBC.writeEnum(direction));
         }
@@ -75,7 +75,7 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
     @Override
     public void readFromNbt(CompoundTag nbt) {
         super.readFromNbt(nbt);
-        battery.deserializeNBT(NBTUtilBC.getCompound(nbt, "battery"));
+        battery.deserializeNbt(NBTUtilBC.getCompound(nbt, "battery"));
         direction = NBTUtilBC.readEnum(nbt.get("direction"), Direction.class);
     }
 

@@ -39,9 +39,9 @@ public interface ISchematicEntity extends ISchematic<SchematicEntityContext> {
 
     Entity buildWithoutChecks(Level world, BlockPos basePos);
 
-    CompoundTag serializeNBT();
+    CompoundTag serializeNbt();
 
     /** @throws InvalidInputDataException If the input data wasn't correct or didn't make sense. */
-    void deserializeNBT(CompoundTag nbt) throws InvalidInputDataException;
+    void deserializeNbt(CompoundTag nbt) throws InvalidInputDataException;
 }
 

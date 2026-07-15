@@ -78,10 +78,10 @@ No shared BC block base exists (`lib.block.BlockBCBase_Neptune` is a 2-line empt
 
 **Severity: low · Effort: medium · Partly JUSTIFIED**
 
-The object↔NBT concept is spelled ≥5 ways: `writeData/readData` (tiles), `writeToNbt/readFromNbt` (transport/lib), `writeToNBT/readFromNBT` (robotics api), `serializeNBT/deserializeNBT` (schematics/MjBattery), vanilla `save/load` (SavedData). Read side has 3 shapes (instance / static factory / `CompoundTag` constructor). Clusters map cleanly to the old 1.12.2 submodules — history, not design.
+The object↔NBT concept is spelled several ways: `writeData/readData` (tiles), `writeToNbt/readFromNbt` (transport/lib, robotics api, snapshot/marker internals), `serializeNbt/deserializeNbt` (api schematics + `MjBattery`), the still-uppercase `serializeNBT/deserializeNBT` (BC's `INBTSerializable` compat stub + NeoForge `AttachmentType` overrides — deliberately kept), and vanilla `save/load` (SavedData). Read side has 3 shapes (instance / static factory / `CompoundTag` constructor). Clusters map cleanly to the old 1.12.2 submodules — history, not design.
 
 - **Internal** (non-api) renames to one casing (`writeToNbt`/`readFromNbt`) and one read shape are mechanically IDE-safe **now**.
-- **`buildcraft.api` uppercase-NBT + `serializeNBT` renames are a breaking change** if the API-jar redistribution ever ships — **DEFER** until that decision (per the demand-gated `project_api_redistribution` plan).
+- **`buildcraft.api` uppercase-NBT + `serializeNBT` renames — DONE (2026-07-14).** The api families (`EnumPipePart`, `api/robots/*`, `api/schematics/*`, `MjBattery`) were normalized to lowercase `writeToNbt`/`readFromNbt`/`serializeNbt`/`deserializeNbt` together with every implementor + call site; the demand-gated API-redistribution window was still open (no addon consumes the jar). Remaining uppercase method *names* are internal-only (Snapshot/SchematicManager/marker `writeToNBT`, the `INBTSerializable` compat stub) — a separate, non-breaking internal-casing cleanup, not this bullet.
 - Leave vanilla `SavedData.save/load` alone (MC-imposed).
 
 ---

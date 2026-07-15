@@ -21,13 +21,13 @@ public class MjBattery  {
         this.capacity = capacity;
     }
 
-    public CompoundTag serializeNBT() {
+    public CompoundTag serializeNbt() {
         CompoundTag nbt = new CompoundTag();
         nbt.putLong("stored", microJoules);
         return nbt;
     }
 
-    public void deserializeNBT(CompoundTag nbt) {
+    public void deserializeNbt(CompoundTag nbt) {
         setStored(NbtApiUtil.getLong(nbt, "stored", 0L));
     }
 

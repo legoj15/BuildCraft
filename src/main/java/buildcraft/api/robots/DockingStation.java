@@ -126,14 +126,14 @@ public abstract class DockingStation {
         }
     }
 
-    public void writeToNBT(CompoundTag nbt) {
+    public void writeToNbt(CompoundTag nbt) {
         nbt.putIntArray("pos", new int[] { getPos().getX(), getPos().getY(), getPos().getZ() });
         nbt.putByte("side", (byte) side.ordinal());
         nbt.putBoolean("isMain", linkIsMain);
         nbt.putLong("robotId", robotTakingId);
     }
 
-    public void readFromNBT(CompoundTag nbt) {
+    public void readFromNbt(CompoundTag nbt) {
         if (nbt.contains("index")) {
             // For compatibility with older versions of minecraft and buildcraft
             CompoundTag indexNBT = NbtApiUtil.getCompound(nbt, "index");

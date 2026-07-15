@@ -56,12 +56,12 @@ public final class SchematicBlockAir implements ISchematicBlock {
     }
 
     @Override
-    public CompoundTag serializeNBT() {
+    public CompoundTag serializeNbt() {
         return new CompoundTag();
     }
 
     @Override
-    public void deserializeNBT(CompoundTag nbt) throws InvalidInputDataException {
+    public void deserializeNbt(CompoundTag nbt) throws InvalidInputDataException {
     }
 
     @Override

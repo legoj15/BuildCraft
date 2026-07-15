@@ -207,7 +207,7 @@ public class SchematicEntityDefault implements ISchematicEntity {
     }
 
     @Override
-    public CompoundTag serializeNBT() {
+    public CompoundTag serializeNbt() {
         CompoundTag nbt = new CompoundTag();
         nbt.put("entityNbt", entityNbt);
         nbt.put("pos", NBTUtilBC.writeVec3(pos));
@@ -218,7 +218,7 @@ public class SchematicEntityDefault implements ISchematicEntity {
     }
 
     @Override
-    public void deserializeNBT(CompoundTag nbt) throws InvalidInputDataException {
+    public void deserializeNbt(CompoundTag nbt) throws InvalidInputDataException {
         entityNbt = NBTUtilBC.getCompound(nbt, "entityNbt");
         pos = NBTUtilBC.readVec3(nbt.get("pos"));
         if (pos == null) {

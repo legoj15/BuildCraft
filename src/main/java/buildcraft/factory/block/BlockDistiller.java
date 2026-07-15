@@ -14,7 +14,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -39,6 +38,7 @@ import buildcraft.api.items.FluidItemDrops;
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileDistiller_BC8;
+import buildcraft.lib.block.BlockBCTile_Neptune;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 
@@ -48,7 +48,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  * Ported from 1.12.2 BlockDistiller.
  */
 @SuppressWarnings("this-escape")
-public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHandler {
+public class BlockDistiller extends BlockBCTile_Neptune<TileDistiller_BC8> implements ICustomRotationHandler {
     public static final MapCodec<BlockDistiller> CODEC = simpleCodec(BlockDistiller::new);
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
@@ -72,37 +72,25 @@ public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHa
         return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
     }
 
-    /**
-     * Record the placing player as the owner so the GUI ownership ledger has a profile to show
-     * and the Heating and Distilling advancement has someone to grant. Forwards to
-     * {@link TileDistiller_BC8#onPlacedBy}, which handles the {@code Player} → {@code GameProfile}
-     * conversion and syncs the change to tracking clients.
-     */
-    @Override
-    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
-            @Nullable LivingEntity placer, ItemStack stack) {
-        super.setPlacedBy(level, pos, state, placer, stack);
-        if (level.getBlockEntity(pos) instanceof TileDistiller_BC8 distiller) {
-            distiller.onPlacedBy(placer);
-        }
-    }
-
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new TileDistiller_BC8(pos, state);
     }
 
-    @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
-            BlockEntityType<T> type) {
-        if (level.isClientSide()) {
-            return createTickerHelper(type, BCFactoryBlockEntities.DISTILLER.get(),
-                    (lvl, pos, st, tile) -> tile.clientTick());
-        }
-        return createTickerHelper(type, BCFactoryBlockEntities.DISTILLER.get(),
-                (lvl, pos, st, tile) -> tile.serverTick());
+    protected BlockEntityType<?> getBlockEntityType() {
+        return BCFactoryBlockEntities.DISTILLER.get();
+    }
+
+    @Override
+    protected BlockEntityTicker<TileDistiller_BC8> getServerTicker() {
+        return (lvl, pos, st, tile) -> tile.serverTick();
+    }
+
+    @Override
+    protected BlockEntityTicker<TileDistiller_BC8> getClientTicker() {
+        return (lvl, pos, st, tile) -> tile.clientTick();
     }
 
     @Override
@@ -190,18 +178,6 @@ public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHa
         return InteractionResult.SUCCESS;
     }
 
-    @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
-            Player player, BlockHitResult hitResult) {
-        if (!level.isClientSide()) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TileDistiller_BC8) {
-                player.openMenu((TileDistiller_BC8) be);
-            }
-        }
-        return InteractionResult.SUCCESS;
-    }
-
     // --- Block removal: drop fluid shards ---
 
     @Override
@@ -221,15 +197,4 @@ public class BlockDistiller extends BaseEntityBlock implements ICustomRotationHa
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
-
-    // Non-player removal catch-all for the pre-1.21.10 API; >=1.21.10 uses TileDistiller_BC8#preRemoveSideEffects.
-    //? if <1.21.10 {
-    /*@Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof buildcraft.factory.tile.TileDistiller_BC8 tile) {
-            tile.dropContentsOnRemoval(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }*/
-    //?}
 }

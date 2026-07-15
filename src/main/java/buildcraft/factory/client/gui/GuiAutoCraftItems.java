@@ -24,6 +24,7 @@ import buildcraft.factory.container.ContainerAutoCraftItems;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.button.CycleOutputButton;
+import buildcraft.lib.gui.recipe.BCRecipeBookComponent;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.misc.StackUtil;
@@ -40,7 +41,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     private static final GuiIcon ICON_FILTER_OVERLAY_SAME = new GuiIcon(TEXTURE_MISC, 54, 0, 18, 18);
     private static final GuiIcon ICON_FILTER_OVERLAY_DIFFERENT = new GuiIcon(TEXTURE_MISC, 72, 0, 18, 18);
 
-    private AWRecipeBookComponent recipeBookComponent;
+    private BCRecipeBookComponent<ContainerAutoCraftItems> recipeBookComponent;
     private ImageButton recipeBookButton;
     private boolean widthTooNarrow;
     private CycleOutputButton cycleButton;
@@ -73,7 +74,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
         this.widthTooNarrow = this.width < 379;
 
         //? if >=1.21.10 {
-        this.recipeBookComponent = new AWRecipeBookComponent(this.menu);
+        this.recipeBookComponent = new BCRecipeBookComponent<ContainerAutoCraftItems>(this.menu);
         this.recipeBookComponent.init(this.width, this.height, this.minecraft, this.widthTooNarrow);
 
         // Shift GUI right when recipe book is open
@@ -95,9 +96,9 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
         addRenderableWidget(this.recipeBookComponent);
         //?} else {
         /*// 1.21.1: RecipeBookComponent is a concrete vanilla class (CraftingScreen uses it directly), so
-        // AWRecipeBookComponent is just a thin alias — instantiate no-arg and pass the menu to the 5-arg
+        // BCRecipeBookComponent is just a thin alias — instantiate no-arg and pass the menu to the 5-arg
         // init (modern passes the menu via the constructor + a 4-arg init instead).
-        this.recipeBookComponent = new AWRecipeBookComponent();
+        this.recipeBookComponent = new BCRecipeBookComponent<ContainerAutoCraftItems>();
         this.recipeBookComponent.init(this.width, this.height, this.minecraft, this.widthTooNarrow, this.menu);
         this.leftPos = this.recipeBookComponent.updateScreenPosition(this.width, this.imageWidth);
         ScreenPosition buttonPos = getRecipeBookButtonPosition();
@@ -305,7 +306,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     }
 
     // No extractGhostRecipe() call: this machine fills real designated-material ghost
-    // slots via AWRecipeBookComponent.fillGhostRecipe when a recipe is picked, so the
+    // slots via BCRecipeBookComponent.fillGhostRecipe when a recipe is picked, so the
     // vanilla transient grid overlay does not apply.
 }
 

@@ -25,6 +25,7 @@ import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.button.CycleOutputButton;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.gui.pos.GuiRectangle;
+import buildcraft.lib.gui.recipe.BCRecipeBookComponent;
 
 import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
 
@@ -35,7 +36,7 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     private static final GuiIcon ICON_PROGRESS = new GuiIcon(TEXTURE_BASE, SIZE_X, 0, 4, 70);
     private static final GuiRectangle RECT_PROGRESS = new GuiRectangle(164, 7, 4, 70);
 
-    private ACTRecipeBookComponent recipeBookComponent;
+    private BCRecipeBookComponent<ContainerAdvancedCraftingTable> recipeBookComponent;
     private ImageButton recipeBookButton;
     private boolean widthTooNarrow;
     private CycleOutputButton cycleButton;
@@ -69,7 +70,7 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
         this.widthTooNarrow = this.width < 379;
 
         //? if >=1.21.10 {
-        this.recipeBookComponent = new ACTRecipeBookComponent(this.menu);
+        this.recipeBookComponent = new BCRecipeBookComponent<ContainerAdvancedCraftingTable>(this.menu);
         this.recipeBookComponent.init(this.width, this.height, this.minecraft, this.widthTooNarrow);
 
         // Compute position — shift right when recipe book is open
@@ -91,9 +92,9 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
         addRenderableWidget(this.recipeBookButton);
         addRenderableWidget(this.recipeBookComponent);
         //?} else {
-        /*// 1.21.1: RecipeBookComponent is a concrete vanilla class, so ACTRecipeBookComponent is a thin
+        /*// 1.21.1: RecipeBookComponent is a concrete vanilla class, so BCRecipeBookComponent is a thin
         // alias — instantiate no-arg and pass the menu to the 5-arg init (modern uses ctor-menu + 4-arg).
-        this.recipeBookComponent = new ACTRecipeBookComponent();
+        this.recipeBookComponent = new BCRecipeBookComponent<ContainerAdvancedCraftingTable>();
         this.recipeBookComponent.init(this.width, this.height, this.minecraft, this.widthTooNarrow, this.menu);
         this.leftPos = this.recipeBookComponent.updateScreenPosition(this.width, this.imageWidth);
         ScreenPosition buttonPos = getRecipeBookButtonPosition();
@@ -261,6 +262,6 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
 
 
     // No extractGhostRecipe() call: this machine fills real designated-material ghost
-    // slots via ACTRecipeBookComponent.fillGhostRecipe when a recipe is picked, so the
+    // slots via BCRecipeBookComponent.fillGhostRecipe when a recipe is picked, so the
     // vanilla transient grid overlay does not apply.
 }

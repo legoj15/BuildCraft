@@ -25,6 +25,7 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.lib.gui.ContainerBCCrafting;
+import buildcraft.lib.gui.recipe.IBCRecipeBookMenu;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.slot.SlotOutput;
 import buildcraft.lib.gui.slot.SlotPhantom;
@@ -35,7 +36,7 @@ import buildcraft.silicon.BCSiliconMenuTypes;
 import buildcraft.silicon.tile.TileAdvancedCraftingTable;
 
 @SuppressWarnings("this-escape")
-public class ContainerAdvancedCraftingTable extends ContainerBCCrafting<TileAdvancedCraftingTable> {
+public class ContainerAdvancedCraftingTable extends ContainerBCCrafting<TileAdvancedCraftingTable> implements IBCRecipeBookMenu {
 
     private final List<Slot> blueprintSlots = new ArrayList<>();
 

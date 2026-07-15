@@ -9,48 +9,28 @@ import com.mojang.serialization.MapCodec;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.phys.BlockHitResult;
 
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.tile.TileElectronicLibrary;
+import buildcraft.lib.block.BlockBCTile_Directional;
 
-@SuppressWarnings("this-escape")
-public class BlockElectronicLibrary extends HorizontalDirectionalBlock implements EntityBlock {
+public class BlockElectronicLibrary extends BlockBCTile_Directional<TileElectronicLibrary> {
     public static final MapCodec<BlockElectronicLibrary> CODEC = simpleCodec(BlockElectronicLibrary::new);
 
     public BlockElectronicLibrary(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
     @Override
     protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
         return CODEC;
-    }
-
-    @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
-    }
-
-    @Override
-    public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
     }
 
     @Nullable
@@ -59,42 +39,19 @@ public class BlockElectronicLibrary extends HorizontalDirectionalBlock implement
         return new TileElectronicLibrary(pos, state);
     }
 
-    @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
-            BlockEntityType<T> blockEntityType) {
-        if (blockEntityType != BCBuildersBlockEntities.LIBRARY.get()) {
-            return null;
-        }
-        return (lvl, pos, st, be) -> {
-            if (be instanceof TileElectronicLibrary tile) {
-                tile.tick();
-            }
-        };
+    protected BlockEntityType<?> getBlockEntityType() {
+        return BCBuildersBlockEntities.LIBRARY.get();
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
-            Player player, BlockHitResult hitResult) {
-        if (!level.isClientSide()) {
-            BlockEntity tile = level.getBlockEntity(pos);
-            if (tile instanceof TileElectronicLibrary library) {
-                player.openMenu(library);
-            }
-        }
-        return InteractionResult.SUCCESS;
+    protected BlockEntityTicker<TileElectronicLibrary> getServerTicker() {
+        return (lvl, pos, st, tile) -> tile.tick();
     }
 
     @Override
-    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
-            @Nullable LivingEntity placer, ItemStack stack) {
-        super.setPlacedBy(level, pos, state, placer, stack);
-        if (!level.isClientSide()) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TileElectronicLibrary library) {
-                library.onPlacedBy(placer, stack);
-            }
-        }
+    protected BlockEntityTicker<TileElectronicLibrary> getClientTicker() {
+        return (lvl, pos, st, tile) -> tile.tick();
     }
 
     /** Drops the download in/out and upload in/out slots — 4 real inventories registered
@@ -109,17 +66,4 @@ public class BlockElectronicLibrary extends HorizontalDirectionalBlock implement
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
-
-    // Non-player removal catch-all for the pre-1.21.10 API (explosion, piston, /setblock, mod tools):
-    // spill contents while the BlockEntity is alive in onRemove. On >=1.21.10 this is handled centrally
-    // by TileBC_Neptune#preRemoveSideEffects. The player path set the guard in playerWillDestroy.
-    //? if <1.21.10 {
-    /*@Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof buildcraft.lib.tile.TileBC_Neptune tile) {
-            tile.dropContentsOnRemoval(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }*/
-    //?}
 }

@@ -9,48 +9,30 @@ import com.mojang.serialization.MapCodec;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.phys.BlockHitResult;
 
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.tile.TileArchitectTable;
+import buildcraft.lib.block.BlockBCTile_Directional;
 
-@SuppressWarnings("this-escape")
-public class BlockArchitectTable extends HorizontalDirectionalBlock implements EntityBlock {
+public class BlockArchitectTable extends BlockBCTile_Directional<TileArchitectTable> {
     public static final MapCodec<BlockArchitectTable> CODEC = simpleCodec(BlockArchitectTable::new);
 
     public BlockArchitectTable(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
     @Override
     protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
         return CODEC;
-    }
-
-    @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
-    }
-
-    @Override
-    public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
     }
 
     @Nullable
@@ -59,40 +41,19 @@ public class BlockArchitectTable extends HorizontalDirectionalBlock implements E
         return new TileArchitectTable(pos, state);
     }
 
-    @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
-            BlockEntityType<T> blockEntityType) {
-        if (blockEntityType != BCBuildersBlockEntities.ARCHITECT.get()) {
-            return null;
-        }
-        return (lvl, pos, st, be) -> {
-            if (be instanceof TileArchitectTable architect) {
-                architect.tick();
-            }
-        };
+    protected BlockEntityType<?> getBlockEntityType() {
+        return BCBuildersBlockEntities.ARCHITECT.get();
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
-            Player player, BlockHitResult hitResult) {
-        if (!level.isClientSide()) {
-            BlockEntity tile = level.getBlockEntity(pos);
-            if (tile instanceof TileArchitectTable architect) {
-                player.openMenu(architect);
-            }
-        }
-        return InteractionResult.SUCCESS;
+    protected BlockEntityTicker<TileArchitectTable> getServerTicker() {
+        return (lvl, pos, st, tile) -> tile.tick();
     }
 
     @Override
-    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
-            @Nullable LivingEntity placer, ItemStack stack) {
-        super.setPlacedBy(level, pos, state, placer, stack);
-        BlockEntity tile = level.getBlockEntity(pos);
-        if (tile instanceof TileArchitectTable architect) {
-            architect.onPlacedBy(placer, stack);
-        }
+    protected BlockEntityTicker<TileArchitectTable> getClientTicker() {
+        return (lvl, pos, st, tile) -> tile.tick();
     }
 
     /** Drops whatever is left in the snapshot in/out slots when the block is broken so a used
@@ -116,15 +77,4 @@ public class BlockArchitectTable extends HorizontalDirectionalBlock implements E
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
-
-    // Non-player removal catch-all for the pre-1.21.10 API; >=1.21.10 uses TileBC_Neptune#preRemoveSideEffects.
-    //? if <1.21.10 {
-    /*@Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof buildcraft.lib.tile.TileBC_Neptune tile) {
-            tile.dropContentsOnRemoval(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }*/
-    //?}
 }

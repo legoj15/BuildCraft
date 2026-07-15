@@ -10,14 +10,11 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -25,15 +22,14 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import net.minecraft.world.phys.BlockHitResult;
 
 import buildcraft.api.enums.EnumOptionalSnapshotType;
 
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.tile.TileBuilder;
+import buildcraft.lib.block.BlockBCTile_Directional;
 
-@SuppressWarnings("this-escape")
-public class BlockBuilder extends HorizontalDirectionalBlock implements EntityBlock {
+public class BlockBuilder extends BlockBCTile_Directional<TileBuilder> {
     public static final MapCodec<BlockBuilder> CODEC = simpleCodec(BlockBuilder::new);
     /** Drives the front-face "door" submodel: NONE = closed empty door, TEMPLATE / BLUEPRINT =
      *  matching door variant. TileBuilder pushes this whenever its loaded snapshot changes. */
@@ -70,40 +66,19 @@ public class BlockBuilder extends HorizontalDirectionalBlock implements EntityBl
         return new TileBuilder(pos, state);
     }
 
-    @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
-            BlockEntityType<T> blockEntityType) {
-        if (blockEntityType != BCBuildersBlockEntities.BUILDER.get()) {
-            return null;
-        }
-        return (lvl, pos, st, be) -> {
-            if (be instanceof TileBuilder builder) {
-                builder.tick();
-            }
-        };
+    protected BlockEntityType<?> getBlockEntityType() {
+        return BCBuildersBlockEntities.BUILDER.get();
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
-            Player player, BlockHitResult hitResult) {
-        if (!level.isClientSide()) {
-            BlockEntity tile = level.getBlockEntity(pos);
-            if (tile instanceof TileBuilder builder) {
-                player.openMenu(builder);
-            }
-        }
-        return InteractionResult.SUCCESS;
+    protected BlockEntityTicker<TileBuilder> getServerTicker() {
+        return (lvl, pos, st, tile) -> tile.tick();
     }
 
     @Override
-    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
-            @Nullable LivingEntity placer, ItemStack stack) {
-        super.setPlacedBy(level, pos, state, placer, stack);
-        BlockEntity tile = level.getBlockEntity(pos);
-        if (tile instanceof TileBuilder builder) {
-            builder.onPlacedBy(placer, stack);
-        }
+    protected BlockEntityTicker<TileBuilder> getClientTicker() {
+        return (lvl, pos, st, tile) -> tile.tick();
     }
 
     /**
@@ -140,15 +115,4 @@ public class BlockBuilder extends HorizontalDirectionalBlock implements EntityBl
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
-
-    // Non-player removal catch-all for the pre-1.21.10 API; >=1.21.10 uses TileBC_Neptune#preRemoveSideEffects.
-    //? if <1.21.10 {
-    /*@Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof buildcraft.lib.tile.TileBC_Neptune tile) {
-            tile.dropContentsOnRemoval(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }*/
-    //?}
 }

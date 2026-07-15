@@ -10,47 +10,27 @@ import com.mojang.serialization.MapCodec;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.phys.BlockHitResult;
 
-import buildcraft.lib.tile.TileBC_Neptune;
-
+import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.tile.TileReplacer;
+import buildcraft.lib.block.BlockBCTile_Directional;
 
-@SuppressWarnings("this-escape")
-public class BlockReplacer extends HorizontalDirectionalBlock implements EntityBlock {
+public class BlockReplacer extends BlockBCTile_Directional<TileReplacer> {
     public static final MapCodec<BlockReplacer> CODEC = simpleCodec(BlockReplacer::new);
 
     public BlockReplacer(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
     @Override
     protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
         return CODEC;
-    }
-
-    @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
-    }
-
-    @Override
-    public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
     }
 
     @Nullable
@@ -59,30 +39,9 @@ public class BlockReplacer extends HorizontalDirectionalBlock implements EntityB
         return new TileReplacer(pos, state);
     }
 
-    /**
-     * Record the placing player as the owner so {@link buildcraft.lib.gui.ledger.LedgerOwnership}
-     * has a profile to display. Forwards to {@link TileBC_Neptune#onPlacedBy} which handles the
-     * {@code Player} -> {@code GameProfile} conversion.
-     */
     @Override
-    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
-                            @Nullable LivingEntity placer, ItemStack stack) {
-        super.setPlacedBy(level, pos, state, placer, stack);
-        if (level.getBlockEntity(pos) instanceof TileBC_Neptune tile) {
-            tile.onPlacedBy(placer, stack);
-        }
-    }
-
-    @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
-            Player player, BlockHitResult hitResult) {
-        if (!level.isClientSide()) {
-            BlockEntity tile = level.getBlockEntity(pos);
-            if (tile instanceof TileReplacer replacer) {
-                player.openMenu(replacer);
-            }
-        }
-        return InteractionResult.SUCCESS;
+    protected BlockEntityType<?> getBlockEntityType() {
+        return BCBuildersBlockEntities.REPLACER.get();
     }
 
     /** Drops the snapshot in/out and the two schematic match-pattern slots. None of the

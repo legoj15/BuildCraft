@@ -125,6 +125,16 @@ public abstract class AbstractBCBlockEntity extends BlockEntity {
         onPlacedBy(placer, ItemStack.EMPTY);
     }
 
+    // --- Non-player-removal drop hook ---
+    // The block base's <1.21.10 onRemove catch-all (and, on >=1.21.10, TileBC_Neptune's
+    // preRemoveSideEffects) call this polymorphically on a non-player removal (explosion / piston /
+    // /setblock / mod tools). Default no-op — TileBC_Neptune (gated on spillsContentsOnRemoval) and the
+    // raw fluid/engine tiles override it with their own spill logic; tiles that never spill inherit this
+    // no-op, so the base's catch-all is safe to add uniformly (byte-identical for non-spilling tiles).
+
+    /** Spills this tile's contents on a non-player removal. Default no-op. */
+    public void dropContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {}
+
     // --- Player tracking + GUI reach (used by ContainerBCTile / ContainerBCCrafting) ---
     // Lives here (not on TileBC_Neptune) so the container base can bind its generic to
     // AbstractBCBlockEntity — the raw machine tiles (engines, fluid machines, dynamo) that skip the

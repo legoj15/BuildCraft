@@ -4,12 +4,13 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
 
-package buildcraft.silicon.gui;
+package buildcraft.lib.gui.recipe;
 
 import java.util.List;
 
 import net.minecraft.client.gui.components.WidgetSprites;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
+import net.minecraft.world.inventory.RecipeBookMenu;
 //? if >=1.21.10 {
 import net.minecraft.client.gui.screens.recipebook.GhostSlots;
 import net.minecraft.client.gui.screens.recipebook.RecipeCollection;
@@ -25,16 +26,22 @@ import net.minecraft.world.item.crafting.RecipeBookCategories;
 import net.minecraft.world.item.crafting.display.RecipeDisplay;
 import net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay;
 import net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay;
-
-import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
 //?}
 
 /**
- * Recipe book component for the Advanced Crafting Table.
- * Mirrors vanilla CraftingRecipeBookComponent but works with our container.
+ * Recipe-book component shared by BuildCraft's two crafting tables — the Auto Workbench
+ * ({@code ContainerAutoCraftItems}) and the Advanced Crafting Table ({@code ContainerAdvancedCraftingTable}).
+ * Both drive a real vanilla recipe book over a {@link buildcraft.lib.gui.ContainerBCCrafting} menu that
+ * exposes its phantom blueprint grid through {@link IBCRecipeBookMenu}. The two used to be verbatim-
+ * duplicate subclasses; they are folded here and parameterised over the menu type {@code M}.
+ *
+ * <p>Mirrors vanilla's CraftingRecipeBookComponent but fills a PHANTOM grid (via {@code fillGhostRecipe})
+ * rather than moving real items — recipe clicks land in the menu's {@code handlePlacement}.
+ *
+ * @param <M> the crafting menu type (Auto Workbench / Advanced Crafting Table container)
  */
 //? if >=1.21.10 {
-public class ACTRecipeBookComponent extends RecipeBookComponent<ContainerAdvancedCraftingTable> {
+public class BCRecipeBookComponent<M extends RecipeBookMenu & IBCRecipeBookMenu> extends RecipeBookComponent<M> {
     private static final WidgetSprites FILTER_BUTTON_SPRITES = new WidgetSprites(
         Identifier.withDefaultNamespace("recipe_book/filter_enabled"),
         Identifier.withDefaultNamespace("recipe_book/filter_disabled"),
@@ -50,7 +57,7 @@ public class ACTRecipeBookComponent extends RecipeBookComponent<ContainerAdvance
         new RecipeBookComponent.TabInfo(Items.REDSTONE, RecipeBookCategories.CRAFTING_REDSTONE)
     );
 
-    public ACTRecipeBookComponent(ContainerAdvancedCraftingTable menu) {
+    public BCRecipeBookComponent(M menu) {
         super(menu, TABS);
     }
 
@@ -126,10 +133,12 @@ public class ACTRecipeBookComponent extends RecipeBookComponent<ContainerAdvance
 //?} else {
 /*// 1.21.1: vanilla RecipeBookComponent is a CONCRETE class that already implements the whole widget
 // (layout, search/browse, ghost-recipe display) and drives it from the RecipeBookMenu container, so this
-// thin no-arg alias needs no overrides. It IS instantiated by the screen (new ACTRecipeBookComponent()
-// then the 5-arg init that passes the menu). The modern >=1.21.10 branch above must instead subclass the
-// abstract generic RecipeBookComponent<M> and supply fillGhostRecipe/selectMatchingRecipes by hand, hence
-// the shared name. Recipe clicks land in ContainerAdvancedCraftingTable.handlePlacement (phantom grid).
-public class ACTRecipeBookComponent extends RecipeBookComponent {
+// thin generic alias needs no overrides. It IS instantiated by the screens (new BCRecipeBookComponent<>()
+// then the 5-arg init that passes the menu). The modern >=1.21.10 branch above instead subclasses the
+// abstract generic RecipeBookComponent<M> and supplies fillGhostRecipe/selectMatchingRecipes by hand.
+// Recipe clicks land in the menu's handlePlacement (phantom grid). M is unused in this branch, bounded
+// to IBCRecipeBookMenu only so the screens can carry the same ContainerAutoCraftItems /
+// ContainerAdvancedCraftingTable type argument across the version cliff.
+public class BCRecipeBookComponent<M extends IBCRecipeBookMenu> extends RecipeBookComponent {
 }*/
 //?}

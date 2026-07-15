@@ -28,6 +28,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
 import buildcraft.lib.gui.ContainerBCCrafting;
+import buildcraft.lib.gui.recipe.IBCRecipeBookMenu;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.slot.SlotDisplay;
 import buildcraft.lib.gui.slot.SlotOutput;
@@ -36,7 +37,7 @@ import buildcraft.lib.misc.CraftingUtil;
 import buildcraft.lib.net.PacketBufferBC;
 
 @SuppressWarnings("this-escape")
-public class ContainerAutoCraftItems extends ContainerBCCrafting<TileAutoWorkbenchItems> {
+public class ContainerAutoCraftItems extends ContainerBCCrafting<TileAutoWorkbenchItems> implements IBCRecipeBookMenu {
 
     private final List<Slot> blueprintSlots = new ArrayList<>();
     public final SlotBase[] materialSlots;

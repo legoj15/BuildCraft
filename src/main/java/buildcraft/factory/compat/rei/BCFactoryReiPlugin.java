@@ -6,155 +6,41 @@
 
 package buildcraft.factory.compat.rei;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Stream;
-
-import me.shedaniel.math.Rectangle;
-import me.shedaniel.rei.api.client.gui.drag.DraggableStack;
-import me.shedaniel.rei.api.client.gui.drag.DraggableStackVisitor;
-import me.shedaniel.rei.api.client.gui.drag.DraggedAcceptorResult;
-import me.shedaniel.rei.api.client.gui.drag.DraggingContext;
 import me.shedaniel.rei.api.client.plugins.REIClientPlugin;
 import me.shedaniel.rei.api.client.registry.category.CategoryRegistry;
 import me.shedaniel.rei.api.client.registry.screen.ScreenRegistry;
-import me.shedaniel.rei.api.client.registry.transfer.TransferHandler;
 import me.shedaniel.rei.api.client.registry.transfer.TransferHandlerRegistry;
-import me.shedaniel.rei.api.common.category.CategoryIdentifier;
-import me.shedaniel.rei.api.common.display.Display;
-import me.shedaniel.rei.api.common.util.EntryStacks;
 import me.shedaniel.rei.forge.REIPluginClient;
-
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.ItemStack;
 
 import buildcraft.factory.BCFactoryItems;
 import buildcraft.factory.client.gui.GuiAutoCraftItems;
 import buildcraft.factory.container.ContainerAutoCraftItems;
-import buildcraft.lib.gui.ContainerBC_Neptune;
-import buildcraft.lib.gui.slot.IPhantomSlot;
+import buildcraft.lib.compat.rei.ReiCraftingTableSupport;
 
 /**
- * REI integration plugin for BuildCraft Factory.
- * Registers the Auto Workbench with recipe transfer, click area,
- * catalyst, and ghost drag-and-drop support.
+ * REI integration plugin for BuildCraft Factory: registers the Auto Workbench with recipe transfer,
+ * click area, catalyst, and ghost drag-and-drop. The shared logic lives in {@link ReiCraftingTableSupport}.
  */
 @REIPluginClient
 public class BCFactoryReiPlugin implements REIClientPlugin {
 
-    private static final CategoryIdentifier<?> CRAFTING =
-            CategoryIdentifier.of("minecraft", "plugins/crafting");
+    // Click area: the progress arrow, left of the 3x3 blueprint grid, aligned with row 2.
+    private static final ReiCraftingTableSupport<GuiAutoCraftItems, ContainerAutoCraftItems> SUPPORT =
+            new ReiCraftingTableSupport<>(GuiAutoCraftItems.class, BCFactoryItems.AUTOWORKBENCH_ITEM::get,
+                    90, 47, 23, 10);
 
     @Override
     public void registerTransferHandlers(TransferHandlerRegistry registry) {
-        registry.register(context -> {
-            var containerScreen = context.getContainerScreen();
-            if (!(containerScreen instanceof GuiAutoCraftItems gui)) {
-                return TransferHandler.Result.createNotApplicable();
-            }
-
-            Display display = context.getDisplay();
-            if (!display.getCategoryIdentifier().equals(CRAFTING)) {
-                return TransferHandler.Result.createNotApplicable();
-            }
-
-            if (!context.isActuallyCrafting()) {
-                return TransferHandler.Result.createSuccessful().blocksFurtherHandling();
-            }
-
-            if (display.getDisplayLocation().isPresent()) {
-                String recipeIdStr = display.getDisplayLocation().get().toString();
-                ContainerAutoCraftItems container = gui.getMenu();
-                container.sendMessage(ContainerBC_Neptune.NET_JEI_RECIPE_TRANSFER, buf -> {
-                    buf.writeUtf(recipeIdStr);
-                });
-            }
-
-            return TransferHandler.Result.createSuccessful().blocksFurtherHandling();
-        });
+        SUPPORT.registerTransferHandlers(registry);
     }
 
     @Override
     public void registerScreens(ScreenRegistry registry) {
-        // Click the progress arrow to view crafting recipes
-        registry.registerClickArea(
-                screen -> new Rectangle(
-                        screen.getLeftPos() + 90,
-                        screen.getTopPos() + 47,
-                        23, 10),
-                GuiAutoCraftItems.class,
-                CRAFTING);
-
-        // Ghost drag-and-drop onto phantom slots
-        registry.registerDraggableStackVisitor(new PhantomSlotDragVisitor());
+        SUPPORT.registerScreens(registry);
     }
 
     @Override
     public void registerCategories(CategoryRegistry registry) {
-        registry.addWorkstations(CRAFTING, EntryStacks.of(BCFactoryItems.AUTOWORKBENCH_ITEM.get()));
-    }
-
-    /** Handles drag-and-drop from REI's ingredient list onto phantom slots. */
-    private static class PhantomSlotDragVisitor
-            implements DraggableStackVisitor<GuiAutoCraftItems> {
-
-        @Override
-        public <R extends Screen> boolean isHandingScreen(R screen) {
-            return screen instanceof GuiAutoCraftItems;
-        }
-
-        @Override
-        public Stream<BoundsProvider> getDraggableAcceptingBounds(
-                DraggingContext<GuiAutoCraftItems> context, DraggableStack stack) {
-            GuiAutoCraftItems gui = context.getScreen();
-            ContainerAutoCraftItems container = gui.getMenu();
-            List<BoundsProvider> targets = new ArrayList<>();
-
-            for (int i = 0; i < container.slots.size(); i++) {
-                Slot slot = container.slots.get(i);
-                if (slot instanceof IPhantomSlot) {
-                    int x = gui.getLeftPos() + slot.x;
-                    int y = gui.getTopPos() + slot.y;
-                    targets.add(BoundsProvider.ofRectangle(new Rectangle(x, y, 16, 16)));
-                }
-            }
-            return targets.stream();
-        }
-
-        @Override
-        public DraggedAcceptorResult acceptDraggedStack(
-                DraggingContext<GuiAutoCraftItems> context, DraggableStack stack) {
-            GuiAutoCraftItems gui = context.getScreen();
-            ContainerAutoCraftItems container = gui.getMenu();
-
-            Object value = stack.getStack().getValue();
-            if (!(value instanceof ItemStack itemStack) || itemStack.isEmpty()) {
-                return DraggedAcceptorResult.PASS;
-            }
-
-            double mouseX = context.getCurrentPosition().x;
-            double mouseY = context.getCurrentPosition().y;
-
-            for (int i = 0; i < container.slots.size(); i++) {
-                Slot slot = container.slots.get(i);
-                if (slot instanceof IPhantomSlot) {
-                    int x = gui.getLeftPos() + slot.x;
-                    int y = gui.getTopPos() + slot.y;
-                    if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
-                        String itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM
-                                .getKey(itemStack.getItem()).toString();
-                        final int slotIdx = i;
-                        container.sendMessage(ContainerBC_Neptune.NET_GHOST_SLOT_SET, buf -> {
-                            buf.writeShort(slotIdx);
-                            buf.writeUtf(itemId);
-                        });
-                        return DraggedAcceptorResult.ACCEPTED;
-                    }
-                }
-            }
-
-            return DraggedAcceptorResult.PASS;
-        }
+        SUPPORT.registerCategories(registry);
     }
 }

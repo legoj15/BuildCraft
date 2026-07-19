@@ -289,6 +289,9 @@ public class TileLaser extends AbstractBCSyncedBlockEntity implements ILocalBloc
     // The saveAdditional/loadAdditional signature directive lives once in AbstractBCBlockEntity;
     // here we only override the version-neutral writeData/readData hooks it dispatches to.
 
+    // Owner is deliberately NOT persisted here — see the same note on TileTank#writeData. The block
+    // records a placing owner since the BlockBCTile_Neptune migration, but the laser has no GUI at
+    // all, so nothing can read it. Add the OwnerData calls if that ever changes.
     protected void writeData(BCValueOutput output) {
         output.store("battery", CompoundTag.CODEC, battery.serializeNbt());
         if (laserPos != null) {

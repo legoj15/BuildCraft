@@ -12,7 +12,6 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
@@ -26,8 +25,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import net.minecraft.world.phys.BlockHitResult;
 
+import buildcraft.lib.block.BlockBCTile_Neptune;
 import buildcraft.robotics.BCRoboticsBlockEntities;
 import buildcraft.robotics.tile.TileZonePlanner;
 
@@ -37,7 +36,7 @@ import buildcraft.robotics.tile.TileZonePlanner;
  * Ported from 1.12.2 BlockZonePlanner.
  */
 @SuppressWarnings("this-escape")
-public class BlockZonePlanner extends BaseEntityBlock {
+public class BlockZonePlanner extends BlockBCTile_Neptune<TileZonePlanner> {
     public static final MapCodec<BlockZonePlanner> CODEC = simpleCodec(BlockZonePlanner::new);
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
@@ -67,33 +66,29 @@ public class BlockZonePlanner extends BaseEntityBlock {
         return new TileZonePlanner(pos, state);
     }
 
-    @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
-            BlockEntityType<T> type) {
-        if (level.isClientSide()) {
-            return null;
-        }
-        return createTickerHelper(type, BCRoboticsBlockEntities.ZONE_PLANNER.get(),
-                (lvl, pos, st, tile) -> tile.serverTick());
+    protected BlockEntityType<?> getBlockEntityType() {
+        return BCRoboticsBlockEntities.ZONE_PLANNER.get();
     }
 
+    /** Server-only ticker; the client ticker stays null (the base's default), matching the old body. */
+    @Nullable
+    @Override
+    protected BlockEntityTicker<TileZonePlanner> getServerTicker() {
+        return (lvl, pos, st, tile) -> tile.serverTick();
+    }
+
+    // Load-bearing: BaseEntityBlock defaults getRenderShape to INVISIBLE on the 1.21.1 node (the
+    // override was dropped at 1.21.10). Every BlockBCTile_Neptune subclass must declare MODEL itself
+    // or it compiles clean, looks right on 26.1.x, and renders nothing on 1.21.1.
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
-    @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
-            Player player, BlockHitResult hitResult) {
-        if (!level.isClientSide()) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TileZonePlanner) {
-                player.openMenu((TileZonePlanner) be);
-            }
-        }
-        return InteractionResult.SUCCESS;
-    }
+    // useWithoutItem is inherited (BlockBCTileSupport.openTileMenu). The one delta from the old body:
+    // a missing/wrong block entity now returns PASS instead of SUCCESS — unreachable in normal play,
+    // and PASS is the more correct value (it lets item use fall through instead of swallowing it).
 
     /** Drops the 16-slot paintbrush bank and the 6 in/out slots. All hold real items —
      *  the planner has no ghost/template slots; zone data is stored in level data, not on

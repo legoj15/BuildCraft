@@ -4,28 +4,30 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import com.mojang.serialization.MapCodec;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.PathComputationType;
-import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import buildcraft.api.mj.ILaserTargetBlock;
+import buildcraft.lib.block.BlockBCTile_Neptune;
+import buildcraft.silicon.BCSiliconBlockEntities;
 import buildcraft.silicon.tile.TileLaserTableBase;
 
 /**
@@ -33,9 +35,16 @@ import buildcraft.silicon.tile.TileLaserTableBase;
  * Implements ILaserTargetBlock so lasers can find and target it, and EntityBlock
  * so each variant creates the correct block entity.
  */
-public class BlockLaserTable extends Block implements ILaserTargetBlock, EntityBlock {
+public class BlockLaserTable extends BlockBCTile_Neptune<TileLaserTableBase> implements ILaserTargetBlock {
     /** The 1.12 bounding box: full width, 9/16 height. */
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 9, 16);
+
+    /** Only needed to satisfy {@code BaseEntityBlock#codec}. It is unreachable at runtime — the sole
+     *  consumer is {@code BlockTypes.CODEC} via the datagen block-list report, and BuildCraft neither
+     *  registers into {@code Registries.BLOCK_TYPE} nor runs datagen — so the variant it reconstructs
+     *  is irrelevant, as it is for every other BC block codec. */
+    public static final MapCodec<BlockLaserTable> CODEC =
+        simpleCodec(props -> new BlockLaserTable(props, BCSiliconBlockEntities.ASSEMBLY_TABLE));
 
     private final Supplier<? extends BlockEntityType<? extends TileLaserTableBase>> beTypeSupplier;
 
@@ -43,6 +52,19 @@ public class BlockLaserTable extends Block implements ILaserTargetBlock, EntityB
         Supplier<? extends BlockEntityType<? extends TileLaserTableBase>> beTypeSupplier) {
         super(properties);
         this.beTypeSupplier = beTypeSupplier;
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
+    // Load-bearing: this block was a plain Block (MODEL default) before the migration. Rooting it on
+    // BaseEntityBlock makes it INVISIBLE on the 1.21.1 node (that override was dropped at 1.21.10),
+    // so the explicit MODEL is what keeps the three tables rendering there.
+    @Override
+    protected RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
     }
 
     @Override
@@ -61,45 +83,36 @@ public class BlockLaserTable extends Block implements ILaserTargetBlock, EntityB
         return beTypeSupplier.get().create(pos, state);
     }
 
+    @Override
+    protected BlockEntityType<?> getBlockEntityType() {
+        return beTypeSupplier.get();
+    }
+
+    /** Server-only ticker. Note this is now type-<em>matched</em> against the block's own BE type by
+     *  {@code BlockBCTileSupport.ticker}; the pre-migration body was type-unchecked (it handed back a
+     *  ticker for any BE type and filtered with an {@code instanceof} inside the lambda). */
     @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        if (level.isClientSide()) {
-            return null;
-        }
-        return (lvl, pos, st, be) -> {
-            if (be instanceof TileLaserTableBase table) {
-                table.serverTick();
-            }
-        };
+    protected BlockEntityTicker<TileLaserTableBase> getServerTicker() {
+        return (lvl, pos, st, tile) -> tile.serverTick();
     }
 
-    @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
-        Player player, BlockHitResult hitResult) {
-        if (level.isClientSide()) {
-            return InteractionResult.SUCCESS;
-        }
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof TileLaserTableBase table && player instanceof ServerPlayer serverPlayer) {
-            serverPlayer.openMenu(table);
-            return InteractionResult.SUCCESS;
-        }
-        return InteractionResult.PASS;
-    }
+    // useWithoutItem is inherited (BlockBCTileSupport.openTileMenu) — equivalent to the old body.
 
+    /**
+     * Trimmed override: {@code super} now performs the owner forward (via
+     * {@code BlockBCTileSupport.placeOwner}), but the base deliberately does <em>not</em>
+     * {@code markForGuiUpdate}. That push is still needed here specifically, because
+     * {@code GuiAssemblyTable} and {@code GuiAdvancedCraftingTable} are two of the few BC GUIs that
+     * carry a {@code LedgerOwnership} — without it the owner only reaches the client on the first
+     * power-change sync, so a GUI opened immediately after placement reads "Unknown". No-re-mesh
+     * push: owner is GUI-only data, the placement itself already drew the block.
+     */
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state,
             @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
-        // Record the placing player on the tile so the Owner ledger has something to show.
-        // markForGuiUpdate pushes the post-placement NBT (which now includes the owner) to clients
-        // immediately — without it the owner only reaches the client on the first serverTick
-        // power-change sync, leaving the ledger blank if the GUI is opened first. No-re-mesh push:
-        // owner is GUI-only data, the placement itself already drew the block.
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof TileLaserTableBase table) {
-            table.onPlacedBy(placer, stack);
+        if (level.getBlockEntity(pos) instanceof TileLaserTableBase table) {
             table.markForGuiUpdate();
         }
     }
@@ -123,14 +136,6 @@ public class BlockLaserTable extends Block implements ILaserTargetBlock, EntityB
         return super.playerWillDestroy(level, pos, state, player);
     }
 
-    // Non-player removal catch-all for the pre-1.21.10 API; >=1.21.10 uses TileBC_Neptune#preRemoveSideEffects.
-    //? if <1.21.10 {
-    /*@Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof buildcraft.lib.tile.TileBC_Neptune tile) {
-            tile.dropContentsOnRemoval(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }*/
-    //?}
+    // The <1.21.10 non-player-removal catch-all is inherited from BlockBCTile_Neptune
+    // (>=1.21.10 uses TileBC_Neptune#preRemoveSideEffects).
 }

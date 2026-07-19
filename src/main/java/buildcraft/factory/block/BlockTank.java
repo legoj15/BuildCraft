@@ -46,6 +46,7 @@ import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileTank;
 import net.neoforged.neoforge.capabilities.Capabilities;
 
+import buildcraft.lib.block.BlockBCTile_Neptune;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
@@ -57,7 +58,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  * Ported from 1.12.2 BlockTank.
  */
 @SuppressWarnings("this-escape")
-public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
+public class BlockTank extends BlockBCTile_Neptune<TileTank> implements ITankBlockConnector {
     public static final MapCodec<BlockTank> CODEC = simpleCodec(BlockTank::new);
     public static final BooleanProperty JOINED_BELOW = BooleanProperty.create("joined_below");
     private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:fluid_storage");
@@ -85,18 +86,26 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
         return new TileTank(pos, state);
     }
 
-    @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
-            BlockEntityType<T> type) {
-        if (level.isClientSide()) {
-            return createTickerHelper(type, BCFactoryBlockEntities.TANK.get(),
-                    (lvl, pos, st, tile) -> tile.clientTick());
-        }
-        return createTickerHelper(type, BCFactoryBlockEntities.TANK.get(),
-                (lvl, pos, st, tile) -> tile.serverTick());
+    protected BlockEntityType<?> getBlockEntityType() {
+        return BCFactoryBlockEntities.TANK.get();
     }
 
+    @Nullable
+    @Override
+    protected BlockEntityTicker<TileTank> getServerTicker() {
+        return (lvl, pos, st, tile) -> tile.serverTick();
+    }
+
+    @Nullable
+    @Override
+    protected BlockEntityTicker<TileTank> getClientTicker() {
+        return (lvl, pos, st, tile) -> tile.clientTick();
+    }
+
+    // Load-bearing: BaseEntityBlock defaults getRenderShape to INVISIBLE on the 1.21.1 node (the
+    // override was dropped at 1.21.10). Every BlockBCTile_Neptune subclass must declare MODEL itself
+    // or it compiles clean, looks right on 26.1.x, and renders nothing on 1.21.1.
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
@@ -167,18 +176,9 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
 
     // --- Interaction ---
 
-    @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
-            Player player, BlockHitResult hitResult) {
-        BlockEntity be = level.getBlockEntity(pos);
-        if (!(be instanceof TileTank tank)) {
-            return InteractionResult.PASS;
-        }
-        if (!level.isClientSide()) {
-            player.openMenu(tank);
-        }
-        return InteractionResult.SUCCESS;
-    }
+    // useWithoutItem is inherited (BlockBCTileSupport.openTileMenu) — TileTank is an IBCMenuProvider,
+    // so the inherited body is equivalent: PASS on a missing tile, SUCCESS otherwise, opened through
+    // the one-arg openMenu so writeClientSideData still supplies the pos.
 
     @Override
     //? if >=1.21.10 {
@@ -235,14 +235,6 @@ public class BlockTank extends BaseEntityBlock implements ITankBlockConnector {
         return super.playerWillDestroy(level, pos, state, player);
     }
 
-    // Non-player removal catch-all for the pre-1.21.10 API; >=1.21.10 uses TileTank#preRemoveSideEffects.
-    //? if <1.21.10 {
-    /*@Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof buildcraft.factory.tile.TileTank tile) {
-            tile.dropContentsOnRemoval(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }*/
-    //?}
+    // The <1.21.10 non-player-removal catch-all is inherited from BlockBCTile_Neptune
+    // (>=1.21.10 uses TileTank#preRemoveSideEffects).
 }

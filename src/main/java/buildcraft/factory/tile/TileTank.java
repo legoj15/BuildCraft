@@ -251,6 +251,12 @@ public class TileTank extends AbstractBCSyncedBlockEntity implements IBCMenuProv
     // The saveAdditional/loadAdditional signature directive lives once in AbstractBCBlockEntity;
     // here we only override the version-neutral writeData/readData hooks it dispatches to.
 
+    // Owner is deliberately NOT persisted here. Since BlockTank moved onto BlockBCTile_Neptune the
+    // block records a placing owner, but this tile never calls OwnerData.writeOwner/readOwner, so the
+    // owner lives in memory only and is dropped on save. That is intentional: nothing reads a tank's
+    // owner (GuiTank carries no LedgerOwnership), and two NBT keys per tank in a tank farm buys
+    // nothing. If an ownership ledger is ever added to GuiTank, add the OwnerData calls at the same
+    // time — otherwise it would read correctly until the first chunk unload and then go blank.
     protected void writeData(BCValueOutput output) {
         tank.serialize(output.raw);
     }

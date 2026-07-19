@@ -516,6 +516,10 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
     // The saveAdditional/loadAdditional signature directive lives once in AbstractBCBlockEntity;
     // here we only override the version-neutral writeData/readData hooks it dispatches to.
 
+    // Owner is deliberately NOT persisted here — see the same note on TileTank#writeData. The block
+    // records a placing owner since the BlockBCTile_Neptune migration, but nothing reads it
+    // (GuiHeatExchange carries no LedgerOwnership), so it is memory-only. Add the OwnerData calls if
+    // an ownership ledger is ever added to this GUI.
     protected void writeData(BCValueOutput output) {
         output.store("containerSlots", CompoundTag.CODEC, containerSlots.serializeNBT());
         if (section != null) {

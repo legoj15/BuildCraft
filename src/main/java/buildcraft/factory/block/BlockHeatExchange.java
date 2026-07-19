@@ -49,6 +49,7 @@ import buildcraft.api.tools.IToolWrench;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.tile.TileHeatExchange;
+import buildcraft.lib.block.BlockBCTile_Neptune;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 
@@ -58,7 +59,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  * Ported from 1.12.2 BlockHeatExchange.
  */
 @SuppressWarnings("this-escape")
-public class BlockHeatExchange extends BaseEntityBlock implements ICustomRotationHandler {
+public class BlockHeatExchange extends BlockBCTile_Neptune<TileHeatExchange> implements ICustomRotationHandler {
     public static final MapCodec<BlockHeatExchange> CODEC = simpleCodec(BlockHeatExchange::new);
 
     public enum EnumExchangePart implements StringRepresentable {
@@ -145,18 +146,26 @@ public class BlockHeatExchange extends BaseEntityBlock implements ICustomRotatio
         return new TileHeatExchange(pos, state);
     }
 
-    @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
-            BlockEntityType<T> type) {
-        if (level.isClientSide()) {
-            return createTickerHelper(type, BCFactoryBlockEntities.HEAT_EXCHANGE.get(),
-                    (lvl, pos, st, tile) -> tile.clientTick());
-        }
-        return createTickerHelper(type, BCFactoryBlockEntities.HEAT_EXCHANGE.get(),
-                (lvl, pos, st, tile) -> tile.serverTick());
+    protected BlockEntityType<?> getBlockEntityType() {
+        return BCFactoryBlockEntities.HEAT_EXCHANGE.get();
     }
 
+    @Nullable
+    @Override
+    protected BlockEntityTicker<TileHeatExchange> getServerTicker() {
+        return (lvl, pos, st, tile) -> tile.serverTick();
+    }
+
+    @Nullable
+    @Override
+    protected BlockEntityTicker<TileHeatExchange> getClientTicker() {
+        return (lvl, pos, st, tile) -> tile.clientTick();
+    }
+
+    // Load-bearing: BaseEntityBlock defaults getRenderShape to INVISIBLE on the 1.21.1 node (the
+    // override was dropped at 1.21.10). Every BlockBCTile_Neptune subclass must declare MODEL itself
+    // or it compiles clean, looks right on 26.1.x, and renders nothing on 1.21.1.
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
@@ -214,6 +223,13 @@ public class BlockHeatExchange extends BaseEntityBlock implements ICustomRotatio
         return BlockUtil.itemUseFrom(openExchangeMenu(level, exchange, player));
     }
 
+    /**
+     * NOT absorbed by {@link BlockBCTile_Neptune} — deliberately overridden. The base opens the
+     * <em>clicked</em> tile's menu; a heat exchanger must open its <em>chain start</em>'s menu
+     * ({@link #openExchangeMenu} → {@code findStart()}), so that right-clicking a MIDDLE or END
+     * segment reaches the controller rather than that segment's own menu. Do not delete this as
+     * redundant boilerplate.
+     */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
             Player player, BlockHitResult hitResult) {
@@ -281,16 +297,8 @@ public class BlockHeatExchange extends BaseEntityBlock implements ICustomRotatio
         return super.playerWillDestroy(level, pos, state, player);
     }
 
-    // Non-player removal catch-all for the pre-1.21.10 API; >=1.21.10 uses TileHeatExchange#preRemoveSideEffects.
-    //? if <1.21.10 {
-    /*@Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof buildcraft.factory.tile.TileHeatExchange tile) {
-            tile.dropContentsOnRemoval(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }*/
-    //?}
+    // The <1.21.10 non-player-removal catch-all is inherited from BlockBCTile_Neptune
+    // (>=1.21.10 uses TileHeatExchange#preRemoveSideEffects).
 
     @Override
     //? if >=1.21.10 {

@@ -14,7 +14,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
@@ -29,6 +28,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
+import buildcraft.lib.block.BlockBCTile_Neptune;
 import buildcraft.silicon.BCSiliconBlockEntities;
 import buildcraft.silicon.tile.TileLaser;
 
@@ -38,7 +38,7 @@ import buildcraft.silicon.tile.TileLaser;
  * Ported from 1.12.2 BlockLaser.
  */
 @SuppressWarnings("this-escape")
-public class BlockLaser extends BaseEntityBlock {
+public class BlockLaser extends BlockBCTile_Neptune<TileLaser> {
     public static final MapCodec<BlockLaser> CODEC = simpleCodec(BlockLaser::new);
     public static final EnumProperty<Direction> FACING = BlockStateProperties.FACING;
 
@@ -85,18 +85,26 @@ public class BlockLaser extends BaseEntityBlock {
         return new TileLaser(pos, state);
     }
 
-    @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
-            BlockEntityType<T> type) {
-        if (level.isClientSide()) {
-            return createTickerHelper(type, BCSiliconBlockEntities.LASER.get(),
-                    (lvl, pos, st, tile) -> tile.clientTick());
-        }
-        return createTickerHelper(type, BCSiliconBlockEntities.LASER.get(),
-                (lvl, pos, st, tile) -> tile.serverTick());
+    protected BlockEntityType<?> getBlockEntityType() {
+        return BCSiliconBlockEntities.LASER.get();
     }
 
+    @Nullable
+    @Override
+    protected BlockEntityTicker<TileLaser> getServerTicker() {
+        return (lvl, pos, st, tile) -> tile.serverTick();
+    }
+
+    @Nullable
+    @Override
+    protected BlockEntityTicker<TileLaser> getClientTicker() {
+        return (lvl, pos, st, tile) -> tile.clientTick();
+    }
+
+    // Load-bearing: BaseEntityBlock defaults getRenderShape to INVISIBLE on the 1.21.1 node (the
+    // override was dropped at 1.21.10). Every BlockBCTile_Neptune subclass must declare MODEL itself
+    // or it compiles clean, looks right on 26.1.x, and renders nothing on 1.21.1.
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;

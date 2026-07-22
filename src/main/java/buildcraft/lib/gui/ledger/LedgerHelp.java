@@ -43,6 +43,9 @@ import buildcraft.lib.misc.LocaleUtil;
 @SuppressWarnings("this-escape")
 public class LedgerHelp extends Ledger_Neptune {
     private static final Identifier ICON_HELP = Identifier.parse("buildcraftunofficial:textures/icons/help.png");
+    /** Shown instead of {@link #ICON_HELP} when a screen registered no help entries at all. */
+    private static final Identifier ICON_WARNING =
+        Identifier.parse("buildcraftunofficial:textures/icons/warning_minor.png");
 
     /** Border thickness for the highlight overlays (in pixels). */
     private static final int BORDER = 2;
@@ -108,20 +111,16 @@ public class LedgerHelp extends Ledger_Neptune {
             foundAny = !elements.isEmpty();
             setWarningPresentation(!foundAny);
         }
-        // 1.12.2 swapped the sprite for BCLibSprites.WARNING_MINOR here; that texture was never
-        // ported. A colour tint can't stand in for it either — help.png is a PURE BLACK glyph on
-        // transparency, and a multiplicative tint of black is still black. So the warning is drawn
-        // as an amber badge BEHIND the glyph: black-on-amber reads unmistakably as a warning, and
-        // it needs no new art. fill() is node-uniform in BCGraphics, so it takes no directive.
-        if (!foundAny) {
-            graphics.fill((int) x, (int) y, (int) x + 16, (int) y + 16, COLOUR_WARNING);
-        }
-        // Draw the help icon
+        // Sprite swap, exactly as 1.12.2 did it — warning_minor.png is that same asset, restored from
+        // 8.0.x-1.12.2:buildcraft_resources/assets/buildcraftlib/textures/icons/. Do NOT substitute a
+        // colour tint on ICON_HELP: help.png is a pure-black glyph on transparency, so a multiplicative
+        // tint renders identically to the normal state — a silent no-op that reviews clean.
+        Identifier icon = foundAny ? ICON_HELP : ICON_WARNING;
         //? if >=1.21.10 {
-        graphics.blit(RenderPipelines.GUI_TEXTURED, ICON_HELP,
+        graphics.blit(RenderPipelines.GUI_TEXTURED, icon,
             (int) x, (int) y, 0f, 0f, 16, 16, 16, 16);
         //?} else {
-        /*graphics.blit(ICON_HELP,
+        /*graphics.blit(icon,
             (int) x, (int) y, 0f, 0f, 16, 16, 16, 16);*/
         //?}
     }

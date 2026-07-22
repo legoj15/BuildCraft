@@ -63,9 +63,12 @@ public class LocaleUtil {
     }
 
     /** Format heat level for display (e.g. "20.00 °C"), matching 1.12's format. The decimal
-     *  separator follows {@link BCLibConfig#decimalSeparator}. */
+     *  separator follows {@link BCLibConfig#decimalSeparator}. Unlike MJ/FE/RF/mB — which are
+     *  acronyms of English phrases — "°C" is a universal symbol, so the key exists to let a
+     *  translator control the spacing and order around it, not to rename the unit itself
+     *  (CJK conventionally writes "20°C" with no space). */
     public static String localizeHeat(double heat) {
-        return formatDouble(heat, 2) + " °C";
+        return String.format(unitText("buildcraft.unit.temperature", "%s °C"), formatDouble(heat, 2));
     }
 
     /** Format heat level for display from a float value. */
@@ -95,7 +98,9 @@ public class LocaleUtil {
      *  has been loaded at all (unit tests, and any dedicated-server path that formats a readout
      *  before {@code LanguageHook} populates the default map). In game the lang file always wins,
      *  so translating a unit is purely a lang-file edit. */
-    private static String unitText(String key, String fallbackEnglish) {
+    /** Package-private rather than private so {@code LocaleUtilUnitKeyTester} can pin the guard itself:
+     *  present key wins, absent key falls back. */
+    static String unitText(String key, String fallbackEnglish) {
         Language lang = Language.getInstance();
         return lang.has(key) ? lang.getOrDefault(key) : fallbackEnglish;
     }

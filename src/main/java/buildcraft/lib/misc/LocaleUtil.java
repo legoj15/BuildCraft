@@ -90,19 +90,35 @@ public class LocaleUtil {
         return formatRfFlow(rfPerTick, currentFlowDisplay(), energyUnit(), shouldUseFullNames());
     }
 
+    /** Resolves a unit label from the lang file, falling back to the built-in English when the key
+     *  isn't loaded. The fallback is not a second source of truth — it only fires where no language
+     *  has been loaded at all (unit tests, and any dedicated-server path that formats a readout
+     *  before {@code LanguageHook} populates the default map). In game the lang file always wins,
+     *  so translating a unit is purely a lang-file edit. */
+    private static String unitText(String key, String fallbackEnglish) {
+        Language lang = Language.getInstance();
+        return lang.has(key) ? lang.getOrDefault(key) : fallbackEnglish;
+    }
+
     /** Returns the FE-family unit label for the user's display preferences:
      *  full "Forge Energy"/"Redstone Flux" (default) or abbreviated "FE"/"RF"
-     *  when {@link BCEnergyConfig#useFullUnitNames} is off. */
+     *  when {@link BCEnergyConfig#useFullUnitNames} is off. The RF-named variants live under the
+     *  usual {@code .rf} sibling key (see {@link BCEnergyConfig#rfFeKey}). */
     public static String energyUnit() {
         boolean rf = BCEnergyConfig.useRfNaming != null && BCEnergyConfig.useRfNaming.get();
-        if (shouldUseFullNames()) return rf ? "Redstone Flux" : "Forge Energy";
-        return rf ? "RF" : "FE";
+        if (shouldUseFullNames()) {
+            return unitText(rf ? "buildcraft.unit.energy.full.rf" : "buildcraft.unit.energy.full",
+                    rf ? "Redstone Flux" : "Forge Energy");
+        }
+        return unitText(rf ? "buildcraft.unit.energy.rf" : "buildcraft.unit.energy", rf ? "RF" : "FE");
     }
 
     /** Returns "Minecraft Joules" (default) or "MJ" depending on
      *  {@link BCEnergyConfig#useFullUnitNames}. */
     public static String mjUnit() {
-        return shouldUseFullNames() ? "Minecraft Joules" : "MJ";
+        return shouldUseFullNames()
+                ? unitText("buildcraft.unit.mj.full", "Minecraft Joules")
+                : unitText("buildcraft.unit.mj", "MJ");
     }
 
     /** Reads {@link BCEnergyConfig#useFullUnitNames}, defaulting to {@code true} when the config
@@ -130,8 +146,8 @@ public class LocaleUtil {
      *  matches the RF formatter's overflow-safe widening (a pipe transferring near {@code
      *  Integer.MAX_VALUE/20} mB/tick would otherwise wrap to negative on the multiplication). */
     static String formatFluidFlow(int mbPerTick, BCLibConfig.FlowDisplay mode, boolean fullSuffix, boolean abbreviate) {
-        String perSec = formatFluidAmount(mbPerTick * 20L, fullSuffix, abbreviate) + perSecondSuffix(fullSuffix);
-        String perTick = formatFluidAmount(mbPerTick, fullSuffix, abbreviate) + perTickSuffix(fullSuffix);
+        String perSec = withPerSecondSuffix(formatFluidAmount(mbPerTick * 20L, fullSuffix, abbreviate), fullSuffix);
+        String perTick = withPerTickSuffix(formatFluidAmount(mbPerTick, fullSuffix, abbreviate), fullSuffix);
         return switch (mode) {
             case PER_SECOND -> perSec;
             case PER_TICK -> perTick;
@@ -224,8 +240,10 @@ public class LocaleUtil {
     }
 
     private static String fluidUnit(boolean fullSuffix, boolean singular) {
-        if (!fullSuffix) return "mB";
-        return singular ? "millibucket" : "millibuckets";
+        if (!fullSuffix) return unitText("buildcraft.unit.millibucket", "mB");
+        return singular
+                ? unitText("buildcraft.unit.millibucket.full.singular", "millibucket")
+                : unitText("buildcraft.unit.millibucket.full.plural", "millibuckets");
     }
 
     /** The fluid-volume unit label (plural) for the user's display preferences: "millibuckets" when
@@ -235,8 +253,10 @@ public class LocaleUtil {
     }
 
     private static String bucketsUnit(boolean fullSuffix, boolean singular) {
-        if (!fullSuffix) return "B";
-        return singular ? "bucket" : "buckets";
+        if (!fullSuffix) return unitText("buildcraft.unit.bucket", "B");
+        return singular
+                ? unitText("buildcraft.unit.bucket.full.singular", "bucket")
+                : unitText("buildcraft.unit.bucket.full.plural", "buckets");
     }
 
     /** Format a long with the configured thousands grouping separator. When
@@ -314,8 +334,8 @@ public class LocaleUtil {
      *  without depending on the {@code mjUnit()} / {@code useFullUnitNames} /
      *  {@code abbreviateLargeNumbers} defaults. */
     static String formatMjFlow(double mjPerTick, BCLibConfig.FlowDisplay mode, String unit, boolean fullSuffix, boolean abbreviate) {
-        String perSec = formatMjAmount(mjPerTick * 20.0, 2, abbreviate) + " " + unit + perSecondSuffix(fullSuffix);
-        String perTick = formatMjAmount(mjPerTick, 2, abbreviate) + " " + unit + perTickSuffix(fullSuffix);
+        String perSec = withPerSecondSuffix(formatMjAmount(mjPerTick * 20.0, 2, abbreviate) + " " + unit, fullSuffix);
+        String perTick = withPerTickSuffix(formatMjAmount(mjPerTick, 2, abbreviate) + " " + unit, fullSuffix);
         return switch (mode) {
             case PER_SECOND -> perSec;
             case PER_TICK -> perTick;
@@ -337,8 +357,8 @@ public class LocaleUtil {
     /** Package-visible test variant. The {@code rfPerTick * 20L} widening matches
      *  {@link #localizeRfFlow(int)}'s overflow-safe widening. */
     static String formatRfFlow(int rfPerTick, BCLibConfig.FlowDisplay mode, String unit, boolean fullSuffix) {
-        String perSec = formatLong(rfPerTick * 20L) + " " + unit + perSecondSuffix(fullSuffix);
-        String perTick = formatLong(rfPerTick) + " " + unit + perTickSuffix(fullSuffix);
+        String perSec = withPerSecondSuffix(formatLong(rfPerTick * 20L) + " " + unit, fullSuffix);
+        String perTick = withPerTickSuffix(formatLong(rfPerTick) + " " + unit, fullSuffix);
         return switch (mode) {
             case PER_SECOND -> perSec;
             case PER_TICK -> perTick;
@@ -364,8 +384,8 @@ public class LocaleUtil {
                                    String unit, boolean fullSuffix) {
         long rfPerTick = Math.round(microMjPerTick / (double) mjPerRf);
         long rfPerSecond = Math.round(microMjPerTick * 20.0 / mjPerRf);
-        String perSec = formatLong(rfPerSecond) + " " + unit + perSecondSuffix(fullSuffix);
-        String perTick = formatLong(rfPerTick) + " " + unit + perTickSuffix(fullSuffix);
+        String perSec = withPerSecondSuffix(formatLong(rfPerSecond) + " " + unit, fullSuffix);
+        String perTick = withPerTickSuffix(formatLong(rfPerTick) + " " + unit, fullSuffix);
         return switch (mode) {
             case PER_SECOND -> perSec;
             case PER_TICK -> perTick;
@@ -373,12 +393,20 @@ public class LocaleUtil {
         };
     }
 
-    private static String perSecondSuffix(boolean fullSuffix) {
-        return fullSuffix ? " per second" : "/s";
+    /** Wraps an already-formatted "&lt;amount&gt; &lt;unit&gt;" string in the per-second rate phrasing.
+     *  A format key rather than a bare appended suffix so languages that don't put the rate marker
+     *  after the quantity can still produce a natural reading. */
+    private static String withPerSecondSuffix(String amountWithUnit, boolean fullSuffix) {
+        String key = fullSuffix ? "buildcraft.unit.per_second.full" : "buildcraft.unit.per_second";
+        if (Language.getInstance().has(key)) return localize(key, amountWithUnit);
+        return amountWithUnit + (fullSuffix ? " per second" : "/s");
     }
 
-    private static String perTickSuffix(boolean fullSuffix) {
-        return fullSuffix ? " per tick" : "/t";
+    /** Per-tick counterpart of {@link #withPerSecondSuffix}. */
+    private static String withPerTickSuffix(String amountWithUnit, boolean fullSuffix) {
+        String key = fullSuffix ? "buildcraft.unit.per_tick.full" : "buildcraft.unit.per_tick";
+        if (Language.getInstance().has(key)) return localize(key, amountWithUnit);
+        return amountWithUnit + (fullSuffix ? " per tick" : "/t");
     }
 
     /** Walks {@code value} down through powers of 1000 and renders the result with one decimal

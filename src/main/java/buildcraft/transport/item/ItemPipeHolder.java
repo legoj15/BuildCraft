@@ -33,6 +33,10 @@ import buildcraft.transport.BCTransportItems;
 /** An item that, when placed, creates a pipe block with the associated {@link PipeDefinition}. */
 @SuppressWarnings("deprecation")
 public class ItemPipeHolder extends BlockItem implements IItemPipe {
+    /** Wraps an already-localized flow string ("20 MJ/s") with the per-face qualifier. Format key so
+     *  languages that don't put the qualifier last can reorder it. */
+    private static final String PER_FACE_KEY = "tip.pipe.flow.per_face";
+
     public final PipeDefinition definition;
 
     public ItemPipeHolder(Block block, PipeDefinition definition, Item.Properties props) {
@@ -112,19 +116,21 @@ public class ItemPipeHolder extends BlockItem implements IItemPipe {
 
         // Flow rate tooltip. Fluid pipes have a true per-segment cap (center-section
         // bottleneck), so no qualifier; power/RF pipes cap per-face per-tick on the pull
-        // side and can carry multi-face convergence above the listed number, so we suffix
-        // " per face" to set the right expectation.
+        // side and can carry multi-face convergence above the listed number, so we wrap the
+        // figure in the per-face qualifier to set the right expectation.
         if (definition.flowType == PipeApi.flowFluids) {
             PipeApi.FluidTransferInfo fti = PipeApi.getFluidTransferInfo(definition);
             tooltip.accept(Component.literal(LocaleUtil.localizeFluidFlow(fti.transferPerTick))
                     .withStyle(ChatFormatting.GRAY));
         } else if (definition.flowType == PipeApi.flowPower) {
             PipeApi.PowerTransferInfo pti = PipeApi.getPowerTransferInfo(definition);
-            tooltip.accept(Component.literal(LocaleUtil.localizeMjFlow(pti.transferPerTick) + " per face")
+            tooltip.accept(Component.literal(
+                    LocaleUtil.localize(PER_FACE_KEY, LocaleUtil.localizeMjFlow(pti.transferPerTick)))
                     .withStyle(ChatFormatting.GRAY));
         } else if (definition.flowType == PipeApi.flowRf) {
             PipeApi.RedstoneFluxTransferInfo rti = PipeApi.getRfTransferInfo(definition);
-            tooltip.accept(Component.literal(LocaleUtil.localizeRfFlow(rti.transferPerTick) + " per face")
+            tooltip.accept(Component.literal(
+                    LocaleUtil.localize(PER_FACE_KEY, LocaleUtil.localizeRfFlow(rti.transferPerTick)))
                     .withStyle(ChatFormatting.GRAY));
         }
     }

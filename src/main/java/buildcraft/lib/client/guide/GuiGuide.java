@@ -213,7 +213,9 @@ public class GuiGuide extends Screen {
     }
 
     private GuiGuide(@Nullable GuideBook book) {
-        super(Component.literal("BuildCraft Guide"));
+        // Screen title — narrated by the accessibility reader, so it has to be translated.
+        // Reuses the guide book item's own name rather than a second key for the same thing.
+        super(Component.translatable("item.buildcraftunofficial.guide"));
         this.book = book;
         this.bookData = book != null ? book.data : GuideManager.BOOK_ALL_DATA;
         openPage(new GuidePageContents(this));

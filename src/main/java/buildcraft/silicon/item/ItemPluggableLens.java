@@ -42,9 +42,16 @@ public class ItemPluggableLens extends Item implements IItemPluggable {
     public Component getName(ItemStack stack) {
         DyeColor colour = getColour(stack);
         boolean filter = isFilter(stack);
-        String colourName = colour == null ? "Clear" : ColourUtil.getTextFullTooltip(colour);
-        String typeName = filter ? "Filter" : "Lens";
-        return Component.literal(colourName + " " + typeName);
+        // Composed from a colour word and a kind word ("Clear Lens", "Red Filter"). The order lives in
+        // the ".name" format key rather than being concatenated here, so languages that put the colour
+        // after the noun can reorder it. The base key doubles as the "Lens" kind word.
+        // Object-typed so it accepts either the String or the Component form of the colour name —
+        // Component.translatable wraps a non-Component argument in a literal either way.
+        Object colourName = colour == null
+            ? Component.translatable(getDescriptionId() + ".clear")
+            : ColourUtil.getTextFullTooltip(colour);
+        Component typeName = Component.translatable(filter ? getDescriptionId() + ".filter" : getDescriptionId());
+        return Component.translatable(getDescriptionId() + ".name", colourName, typeName);
     }
 
     /** Creates a lens/filter item stack with the given colour and filter state. */

@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 
 import buildcraft.api.items.IItemFluidShard;
 import buildcraft.core.BCCore;
+import buildcraft.lib.misc.LocaleUtil;
 
 @SuppressWarnings("deprecation")
 public class ItemFragileFluidContainer extends Item implements IItemFluidShard {
@@ -56,7 +57,10 @@ public class ItemFragileFluidContainer extends Item implements IItemFluidShard {
     //?}
         FluidStack fluid = getFluid(stack);
         if (!fluid.isEmpty() && fluid.getAmount() > 0) {
-            tooltip.accept(Component.literal(fluid.getAmount() + " mB / " + MAX_FLUID_HELD + " mB"));
+            // Same "<amount> / <capacity> <unit>" formatter every other tank readout uses, so this
+            // honours useFullUnitNames, abbreviateLargeNumbers, and the separator settings instead of
+            // hardcoding "mB".
+            tooltip.accept(Component.literal(LocaleUtil.localizeFluidTank(fluid.getAmount(), MAX_FLUID_HELD)));
         }
     }
 

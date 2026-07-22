@@ -27,6 +27,7 @@ import buildcraft.lib.gui.statement.GuiElementStatement;
 import buildcraft.lib.gui.statement.GuiElementStatementParam;
 import buildcraft.lib.gui.statement.GuiElementStatementSource;
 import buildcraft.lib.gui.statement.GuiElementStatementDrag;
+import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.help.ElementHelpInfo.HelpPosition;
 import buildcraft.lib.misc.LocaleUtil;
@@ -84,6 +85,13 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
             }
         });
 
+        // Pattern slot help. The statement element itself is interactive (drag / popup), so the help
+        // info hangs off a non-drawing overlay on the same rect, matching GuiGate's statement slots.
+        mainGui.shownElements.add(new DummyHelpElement(patternArea,
+            new ElementHelpInfo("buildcraft.help.filler.pattern.title", 0xFF88CC88,
+                "buildcraft.help.filler.pattern.desc1",
+                "buildcraft.help.filler.pattern.desc2")));
+
         // Parameter slots
         buildcraft.api.statements.IStatementContainer fakeContainer = new buildcraft.api.statements.IStatementContainer() {
             @Override public net.minecraft.world.level.block.entity.BlockEntity getTile() { return null; }
@@ -94,6 +102,13 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
             IGuiArea paramArea = new GuiRectangle(53 + 18 * i, 39, 18, 18).offset(mainGui.rootElement);
             mainGui.shownElements.add(new GuiElementStatementParam(mainGui, paramArea, fakeContainer, menu.getPatternStatementClient(), i, true));
         }
+
+        // One help region framing the whole 4-slot parameter row (not one per slot), matching how
+        // GuiGate frames its trigger/action parameter runs.
+        mainGui.shownElements.add(new DummyHelpElement(
+            new GuiRectangle(53, 39, 4 * 18, 18).offset(mainGui.rootElement),
+            new ElementHelpInfo("buildcraft.help.filler.params.title", 0xFFDDAAFF,
+                "buildcraft.help.filler.params.desc")));
 
         // Excavate button tooltip element
         IGuiArea excavateArea = new GuiRectangle(130, 40, 16, 16).offset(mainGui.rootElement);
@@ -156,7 +171,9 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
             public void addToolTips(List<ToolTip> tooltips) {
                 if (contains(mainGui.mouse)) {
                     if (menu.getSyncedLocked()) {
-                        tooltips.add(new ToolTip("Locked"));
+                        // Same key as this element's help title below — the tooltip and the ledger
+                        // header name the same state, so they must never drift apart again.
+                        tooltips.add(new ToolTip(LocaleUtil.localize("buildcraft.help.filler.locked.title")));
                     }
                 }
             }

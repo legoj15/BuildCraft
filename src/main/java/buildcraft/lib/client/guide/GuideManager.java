@@ -383,8 +383,8 @@ public enum GuideManager {
                 PageEntry<?> stubEntry = mapEntry.getValue();
                 String title = stubEntry.title != null ? stubEntry.title : entryKey.getPath();
                 String stubContent =
-                    "<chapter name=\"" + title + " (WIP)\"/>\n"
-                        + "This guide book entry is a placeholder and has not been written yet.\n";
+                    "<chapter name=\"" + LocaleUtil.localize("buildcraft.guide.page.wip.title", title) + "\"/>\n"
+                        + LocaleUtil.localize("buildcraft.guide.page.wip.body") + "\n";
                 try (BufferedReader stubReader = new BufferedReader(new StringReader(stubContent))) {
                     GuidePageFactory factory = XmlPageLoader.INSTANCE.loadPage(
                         stubReader, entryKey, stubEntry,
@@ -618,9 +618,9 @@ public enum GuideManager {
         if (pageLinksAdded.add(page)) {
             quickSearcher.add(page, page.getSearchName());
         }
-        String chapterTitle = LocaleUtil.localize(chapterKey);
+        String chapterTitle = localizeChapter(chapterKey);
         String subtypeTitle = (subtypeKey == null || subtypeKey.isEmpty())
-            ? null : LocaleUtil.localize(subtypeKey);
+            ? null : localizeChapter(subtypeKey);
         // Every auto-iterated entry is BuildCraft's (this is a single mod); regular entries
         // build the same "BuildCraft" node via getOrdered(mod_type)[0], so the get-or-create
         // inside placeExtraEntryInOrder reuses it rather than making a second mod tab.
@@ -684,6 +684,24 @@ public enum GuideManager {
         }
     }
 
+    /** Localize a contents-tree chapter/subtype key, preferring its RF-naming sibling
+     *  ({@code key + ".rf"}) when the {@code useRfNaming} config is on <em>and</em> that variant
+     *  exists in the active language. Without this the authored
+     *  {@code buildcraft.guide.chapter.subtype.pipe_rf.rf} ("RF Transport") was unreachable, so
+     *  the contents page kept saying "FE Transport" while every pipe item name and machine GUI
+     *  said "RF". Same has()-guarded pattern as
+     *  {@link buildcraft.lib.client.BCTooltips#onItemTooltip}, so keys without an {@code .rf}
+     *  sibling are unaffected. Used by every site that turns a chapter key into a node title, so
+     *  the two builders ({@link #addChild} and {@link #fileExtraEntry}) can't disagree and split
+     *  one chapter into two. */
+    private static String localizeChapter(String key) {
+        String rfKey = buildcraft.energy.BCEnergyConfig.rfFeKey(key);
+        if (!rfKey.equals(key) && net.minecraft.locale.Language.getInstance().has(rfKey)) {
+            return LocaleUtil.localize(rfKey);
+        }
+        return LocaleUtil.localize(key);
+    }
+
     /** Build a category TOC entry plus the matching markdown-linkable {@link PageLink}.
      *  All categories share the same shape: an icon, a title, a description body parsed
      *  from a per-category {@code .md} file, and a {@link GuidePartGroup} that lists the
@@ -713,14 +731,21 @@ public enum GuideManager {
      *  insert between the description and the group listing — typically a manual
      *  {@code <link>}-style backlink to a related page that {@link GuideGroupManager}'s
      *  auto Linked-To/From machinery doesn't already cover. Evaluated per page open so
-     *  the parts can capture the live {@link GuiGuide}. */
+     *  the parts can capture the live {@link GuiGuide}.
+     *
+     *  <p>{@code titleKey} is a full localization key, same convention as
+     *  {@code chapterTagTypes} / {@code chapterSubtypes} — it's the TOC line, the tooltip, and
+     *  the opened page's header, so a raw English string here leaks into all three. Most
+     *  categories reuse their group's own {@code buildcraft.guide.group.to.<domain>.<group>}
+     *  heading, which is by definition the same words for the same concept. */
     private void registerCategory(IEntryLinkConsumer adder, String domain, String groupName,
         String[] chapterTagTypes, @Nullable String[] chapterSubtypes,
-        ISimpleDrawable icon, String title,
+        ISimpleDrawable icon, String titleKey,
         @Nullable java.util.function.Function<GuiGuide, List<GuidePart>> extraParts) {
         GuideGroupSet groupSet = GuideGroupManager.get(domain, groupName);
         if (groupSet == null) return;
 
+        String title = LocaleUtil.localize(titleKey);
         Identifier groupId = Identifier.fromNamespaceAndPath(domain, groupName);
         PageLine line = new PageLine(icon, icon, 2, title, true);
         GuidePageFactory factory = g -> {
@@ -776,7 +801,7 @@ public enum GuideManager {
             // subtype the filler itself sits under (Blocks > Automation).
             new String[] { "buildcraft.guide.chapter.subtype.automation" },
             icon,
-            "Filler Patterns",
+            "buildcraft.guide.group.to.buildcraft.filler_patterns",
             null);
     }
 
@@ -796,7 +821,10 @@ public enum GuideManager {
             new String[] { "buildcraft.guide.contents.actions" },
             new String[] { "buildcraft.guide.chapter.subtype.pipe_item" },
             icon,
-            "Emzuli Extraction Presets",
+            // Not the group's own heading ("Extraction Presets") — the TOC line needs the
+            // "Emzuli" qualifier to be findable, since the group heading only ever renders
+            // on the Emzuli pipe's own page where the context is already given.
+            "buildcraft.guide.category.extraction_presets",
             g -> {
                 ItemStack emzuliStack = new ItemStack(
                     buildcraft.transport.BCTransportItems.PIPE_EMZULI_ITEM.get());
@@ -835,7 +863,7 @@ public enum GuideManager {
                 "buildcraft.guide.chapter.subtype.pipe_plug",
             },
             icon,
-            "Pipe Signals",
+            "buildcraft.guide.group.to.buildcraft.pipe_signals",
             null);
     }
 
@@ -883,7 +911,7 @@ public enum GuideManager {
             new String[] { "buildcraft.guide.contents.actions" },
             new String[] { "buildcraft.guide.chapter.subtype.pipe_item" },
             icon,
-            "Set Pipe Direction",
+            "buildcraft.guide.group.to.buildcraft.set_pipe_direction",
             null);
     }
 
@@ -901,7 +929,7 @@ public enum GuideManager {
             new String[] { "buildcraft.guide.contents.actions" },
             new String[] { "buildcraft.guide.chapter.subtype.pipe_item" },
             icon,
-            "Paint Passing Items",
+            "buildcraft.guide.group.to.buildcraft.paint_pipe_colour",
             null);
     }
 
@@ -925,7 +953,7 @@ public enum GuideManager {
             new String[] { "buildcraft.guide.contents.actions" },
             new String[] { "buildcraft.guide.chapter.subtype.pipe_item" },
             icon,
-            "Set Power Limit",
+            "buildcraft.guide.group.to.buildcraft.set_power_limit",
             null);
     }
 
@@ -954,7 +982,7 @@ public enum GuideManager {
                 ContentsNode[] nodePath = new ContentsNode[ordered.length];
                 ContentsNode node = entry.getValue();
                 for (int i = 0; i < ordered.length; i++) {
-                    String title = LocaleUtil.localize(ordered[i]);
+                    String title = localizeChapter(ordered[i]);
                     IContentsNode subNode = node.getChild(title);
                     if (subNode instanceof ContentsNode) {
                         node = (ContentsNode) subNode;

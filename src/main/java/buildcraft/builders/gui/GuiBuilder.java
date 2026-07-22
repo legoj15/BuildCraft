@@ -190,18 +190,24 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
         graphics.text(font, titleStr, (SIZE_X - titleWidth) / 2, 6, 0xFF404040, false);
 
         // Progress readout — visible only while something is actively being broken/placed.
+        // gui.leftToBreak / gui.leftToPlace are bare labels that already ship translated, so we
+        // append ": <n>" here rather than minting %s-format siblings; that keeps every existing
+        // translation working untouched at the cost of an ASCII colon in locales that prefer a
+        // full-width one.
         int leftToBreak = menu.getSyncedLeftToBreak();
         int leftToPlace = menu.getSyncedLeftToPlace();
         int y = 50;
         if (leftToBreak > 0) {
             graphics.text(font,
-                    Component.literal("Break: " + leftToBreak).withStyle(ChatFormatting.DARK_GRAY),
+                    Component.translatable("gui.leftToBreak").append(": " + leftToBreak)
+                            .withStyle(ChatFormatting.DARK_GRAY),
                     10, y, 0xFF404040, false);
             y += 10;
         }
         if (leftToPlace > 0) {
             graphics.text(font,
-                    Component.literal("Place: " + leftToPlace).withStyle(ChatFormatting.DARK_GRAY),
+                    Component.translatable("gui.leftToPlace").append(": " + leftToPlace)
+                            .withStyle(ChatFormatting.DARK_GRAY),
                     10, y, 0xFF404040, false);
         }
     }

@@ -81,25 +81,21 @@ public class ColourUtil {
 
     /** Returns a display-friendly name for the given dye colour, wrapped in the matching
      *  {@link ChatFormatting} colour code (and trailing reset) so it renders coloured in
-     *  tooltips and gate labels — matching 1.12.2 behaviour. Returns "Clean" if null. */
+     *  tooltips and gate labels — matching 1.12.2 behaviour. The names come from vanilla's own
+     *  {@code color.minecraft.<name>} keys (the ones tropical fish and banner patterns use), which
+     *  ship translated for all 16 dyes in every language Minecraft supports — so coloured pipes,
+     *  wires and gate labels follow the player's language with no BuildCraft-side translation.
+     *  Returns the "Clean" label if null. */
     public static String getTextFullTooltip(@Nullable DyeColor colour) {
-        if (colour == null) return "Clean";
-        String name = colour.getName();
-        // Title-case each word (e.g. "light_blue" -> "Light Blue")
-        String[] parts = name.split("_");
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < parts.length; i++) {
-            if (i > 0) sb.append(' ');
-            sb.append(Character.toUpperCase(parts[i].charAt(0)));
-            sb.append(parts[i].substring(1));
-        }
+        if (colour == null) return LocaleUtil.localize("buildcraft.colour.clean");
+        String localized = LocaleUtil.localize("color.minecraft." + colour.getName());
         ChatFormatting format = COLOUR_TO_FORMAT[colour.ordinal()];
-        return format.toString() + sb + ChatFormatting.RESET;
+        return format.toString() + localized + ChatFormatting.RESET;
     }
 
     /** Returns a display-friendly name for the given direction. */
     public static String getTextFullTooltip(Direction direction) {
-        String localized = buildcraft.lib.misc.LocaleUtil.localize("direction." + direction.getName());
+        String localized = LocaleUtil.localize("direction." + direction.getName());
         ChatFormatting format = FACE_TO_FORMAT[direction.ordinal()];
         return format.toString() + localized + ChatFormatting.RESET;
     }

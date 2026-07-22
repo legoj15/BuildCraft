@@ -14,6 +14,7 @@ import buildcraft.lib.client.guide.entry.ItemStackValueFilter;
 import buildcraft.lib.client.guide.entry.PageEntryItemStack;
 import buildcraft.lib.client.guide.entry.PageValue;
 import buildcraft.lib.client.guide.parts.recipe.RecipeLookupHelper;
+import buildcraft.lib.misc.LocaleUtil;
 
 @Deprecated
 public class GuidePageStandInRecipes extends GuidePage {
@@ -28,7 +29,7 @@ public class GuidePageStandInRecipes extends GuidePage {
             // Try to find recipes that produce this item
             List<GuidePartFactory> recipes = RecipeLookupHelper.getAllRecipes(stack);
             if (!recipes.isEmpty()) {
-                parts.add(new GuideText(gui, "Recipes:"));
+                parts.add(new GuideText(gui, LocaleUtil.localize("buildcraft.guide.stand_in.recipes")));
                 for (GuidePartFactory factory : recipes) {
                     GuidePart part = factory.createNew(gui);
                     if (part != null) {
@@ -39,7 +40,7 @@ public class GuidePageStandInRecipes extends GuidePage {
             // Try to find recipes that use this item as an ingredient
             List<GuidePartFactory> usages = RecipeLookupHelper.getAllUsages(stack);
             if (!usages.isEmpty()) {
-                parts.add(new GuideText(gui, "Usages:"));
+                parts.add(new GuideText(gui, LocaleUtil.localize("buildcraft.guide.stand_in.usages")));
                 for (GuidePartFactory factory : usages) {
                     GuidePart part = factory.createNew(gui);
                     if (part != null) {
@@ -48,7 +49,7 @@ public class GuidePageStandInRecipes extends GuidePage {
                 }
             }
             if (parts.isEmpty()) {
-                parts.add(new GuideText(gui, "No recipes found."));
+                parts.add(new GuideText(gui, LocaleUtil.localize("buildcraft.guide.stand_in.no_recipes")));
             }
             return new GuidePageStandInRecipes(gui, parts, stack);
         };

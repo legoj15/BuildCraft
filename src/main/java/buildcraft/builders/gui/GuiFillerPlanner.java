@@ -22,6 +22,7 @@ import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiElementSimple;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.elem.ToolTip;
+import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.help.ElementHelpInfo.HelpPosition;
 import buildcraft.lib.gui.pos.GuiRectangle;
@@ -42,12 +43,10 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
         super(container, playerInv, Component.translatable("item.buildcraftunofficial.filler_planner"), 176, 81);
     }
 
-    /** The planner has no player inventory and no machine slots, so the left-side help ledger has
-     *  nothing meaningful to frame — opt out, matching GuiAdvancedCraftingTable / GuiAutoCraftItems. */
-    @Override
-    protected boolean shouldAddHelpLedger() {
-        return false;
-    }
+    // Keeps the inherited help ledger: the two opt-outs elsewhere exist because vanilla's recipe
+    // book slides out over the left-side ledger, which this screen has no trace of. Its five
+    // statement slots are exactly what the ledger is for, and the left ledger grows leftward out
+    // of the panel (anchored below the pattern-source list), so it cannot overlap the content.
 
     @Override
     protected void initGuiElements() {
@@ -74,6 +73,12 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
             }
         });
 
+        // Pattern slot help — non-drawing overlay, since the statement element itself is interactive.
+        mainGui.shownElements.add(new DummyHelpElement(patternArea,
+                new ElementHelpInfo("buildcraft.help.filler.pattern.title", 0xFF88CC88,
+                        "buildcraft.help.filler.pattern.desc1",
+                        "buildcraft.help.filler.pattern.desc2")));
+
         // 4 statement parameter slots.
         buildcraft.api.statements.IStatementContainer fakeContainer = new buildcraft.api.statements.IStatementContainer() {
             @Override public net.minecraft.world.level.block.entity.BlockEntity getTile() { return null; }
@@ -84,6 +89,12 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
             mainGui.shownElements.add(new GuiElementStatementParam(mainGui, paramArea, fakeContainer,
                     menu.getPatternStatementClient(), i, true));
         }
+
+        // One help region framing the whole parameter row, mirroring GuiFiller.
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(53, 39, 4 * 18, 18).offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.filler.params.title", 0xFFDDAAFF,
+                        "buildcraft.help.filler.params.desc")));
 
         // Invert button.
         IGuiArea invertArea = new GuiRectangle(152, 40, 16, 16).offset(mainGui.rootElement);

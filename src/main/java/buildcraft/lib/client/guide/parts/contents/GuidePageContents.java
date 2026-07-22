@@ -23,6 +23,10 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
+import net.neoforged.fml.ModList;
+import net.neoforged.neoforgespi.language.IModInfo;
+
+import buildcraft.core.BCCore;
 
 import buildcraft.lib.BCLib;
 import buildcraft.lib.client.guide.GuiGuide;
@@ -44,6 +48,12 @@ import buildcraft.lib.misc.search.ISuffixArray.SearchResult;
 public class GuidePageContents extends GuidePageBase {
     private static final int ORDER_OFFSET_X = -10;
     private static final int ORDER_OFFSET_Y = -10;
+
+    /** BuildCraft's own version string, read once from the loaded mod list and cached because
+     *  {@link #renderPage} runs every frame. This used to be a hardcoded "BuildCraft 26.1"
+     *  literal — which named the <em>Minecraft</em> line, not the mod, and went stale on every
+     *  port. {@code null} until the first read. */
+    private static String modVersion;
 
     private ContentsNodeGui contents;
     private final EditBox searchText;
@@ -142,20 +152,22 @@ public class GuidePageContents extends GuidePageBase {
         if (index == 0) {
             int xMiddle = x + width / 2;
             int _y = y;
-            String text = gui.book == null ? "Everything" : gui.book.title.getString();
+            String text = gui.book == null
+                ? LocaleUtil.localize("buildcraft.guide.contents.everything")
+                : gui.book.title.getString();
             _y += 3; // Shift down a bit
             f.drawString(text, xMiddle, _y, 0, false, true);
             _y += f.getFontHeight(text) + 5;
-            
-            String vers = "BuildCraft 26.1";
+
+            String vers = LocaleUtil.localize("buildcraft.guide.contents.version", getModVersion());
             f.drawString(vers, xMiddle, _y, 0, false, true);
 
             _y = y + height - 80;
             f.drawString(LocaleUtil.localize("options.title"), xMiddle, _y, 0, false, true, 2f);
             _y += 28;
-            f.drawString("Show Lore " + (XmlPageLoader.SHOW_LORE ? "[x]" : "[ ]"), xMiddle, _y, 0, false, true);
+            f.drawString(showLoreText(), xMiddle, _y, 0, false, true);
             _y += 14;
-            f.drawString("Show Hints " + (XmlPageLoader.SHOW_HINTS ? "[x]" : "[ ]"), xMiddle, _y, 0, false, true);
+            f.drawString(showHintsText(), xMiddle, _y, 0, false, true);
         } else if (index == 1) {
             int _height = gui.bookData.loadedMods.size() + 1;
             if (gui.bookData.loadedOther.size() > 0) {
@@ -167,7 +179,9 @@ public class GuidePageContents extends GuidePageBase {
             int _y = y + (height - _height) / 2;
 
             if (gui.bookData.loadedMods.size() > 0) {
-                drawCenteredText(ChatFormatting.BOLD + "Loaded Mods:", x, _y, width);
+                drawCenteredText(
+                    ChatFormatting.BOLD + LocaleUtil.localize("buildcraft.guide.contents.loaded_mods"),
+                    x, _y, width);
                 _y += perLineHeight;
                 for (String text : gui.bookData.loadedMods) {
                     drawCenteredText(text, x, _y, width);
@@ -175,7 +189,9 @@ public class GuidePageContents extends GuidePageBase {
                 }
             }
             if (gui.bookData.loadedOther.size() > 0) {
-                drawCenteredText(ChatFormatting.BOLD + "Loaded Resource Packs:", x, _y, width);
+                drawCenteredText(
+                    ChatFormatting.BOLD + LocaleUtil.localize("buildcraft.guide.contents.loaded_resource_packs"),
+                    x, _y, width);
                 _y += perLineHeight;
                 for (String text : gui.bookData.loadedOther) {
                     drawCenteredText(text, x, _y, width);
@@ -246,6 +262,36 @@ public class GuidePageContents extends GuidePageBase {
         super.renderPage(x, y, width, height, index);
     }
 
+    /** The "Show Lore [x]" / "Show Hints [ ]" toggle labels on the title spread. Shared by
+     *  {@link #renderPage} and {@link #handleMouseClick} — the latter measures the very same
+     *  string to build the click rect, so a single source keeps a translated label from being
+     *  drawn at one width and hit-tested at another. */
+    private static String showLoreText() {
+        return LocaleUtil.localize("buildcraft.guide.contents.show_lore")
+            + (XmlPageLoader.SHOW_LORE ? " [x]" : " [ ]");
+    }
+
+    private static String showHintsText() {
+        return LocaleUtil.localize("buildcraft.guide.contents.show_hints")
+            + (XmlPageLoader.SHOW_HINTS ? " [x]" : " [ ]");
+    }
+
+    /** BuildCraft's version, straight from the loaded mod list rather than a literal that has to
+     *  be remembered on every port. Falls back to "?" if the container somehow isn't present. */
+    private static String getModVersion() {
+        if (modVersion == null) {
+            String found = "?";
+            for (IModInfo info : ModList.get().getMods()) {
+                if (BCCore.MODID.equals(info.getModId())) {
+                    found = info.getVersion().toString();
+                    break;
+                }
+            }
+            modVersion = found;
+        }
+        return modVersion;
+    }
+
     private void drawCenteredText(String text, int x, int y, int width) {
         IFontRenderer f = getFontRenderer();
         int fWidth = f.getStringWidth(text);
@@ -278,7 +324,7 @@ public class GuidePageContents extends GuidePageBase {
         if (mouseButton == 0) {
             if (index == 0) {
                 IFontRenderer f = getFontRenderer();
-                String text = XmlPageLoader.SHOW_LORE ? "Show Lore [x]" : "Show Lore [ ]";
+                String text = showLoreText();
                 int fWidth = f.getStringWidth(text);
                 GuiRectangle rect;
                 rect = new GuiRectangle(x + (width - fWidth) / 2, y + height - 52, fWidth, f.getFontHeight(text));
@@ -286,7 +332,7 @@ public class GuidePageContents extends GuidePageBase {
                     XmlPageLoader.SHOW_LORE = !XmlPageLoader.SHOW_LORE;
                 }
 
-                text = XmlPageLoader.SHOW_HINTS ? "Show Hints [x]" : "Show Hints [ ]";
+                text = showHintsText();
                 fWidth = f.getStringWidth(text);
                 rect = new GuiRectangle(x + (width - fWidth) / 2, y + height - 38, fWidth, f.getFontHeight(text));
                 if (rect.contains(mouseX, mouseY)) {

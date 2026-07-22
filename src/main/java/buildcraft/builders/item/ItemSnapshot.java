@@ -101,10 +101,16 @@ public class ItemSnapshot extends Item {
         } else {
             tooltip.accept(Component.literal(header.name).withStyle(ChatFormatting.GRAY));
             if (flag.isAdvanced()) {
-                tooltip.accept(Component.literal("Hash: " + HashUtil.convertHashToString(header.key.hash))
+                // Advanced-only (F3+H) diagnostic lines. The values are raw identifiers, so only the
+                // labels are translatable — each key carries its own separator so locales that want a
+                // full-width colon can have one.
+                tooltip.accept(Component.translatable("item.snapshot.hash",
+                                HashUtil.convertHashToString(header.key.hash))
                         .withStyle(ChatFormatting.GRAY));
-                tooltip.accept(Component.literal("Date: " + header.created).withStyle(ChatFormatting.GRAY));
-                tooltip.accept(Component.literal("Owner UUID: " + header.owner).withStyle(ChatFormatting.GRAY));
+                tooltip.accept(Component.translatable("item.snapshot.date", String.valueOf(header.created))
+                        .withStyle(ChatFormatting.GRAY));
+                tooltip.accept(Component.translatable("item.snapshot.owner", String.valueOf(header.owner))
+                        .withStyle(ChatFormatting.GRAY));
             }
         }
     }

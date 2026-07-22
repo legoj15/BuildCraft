@@ -129,7 +129,12 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
         mainGui.shownElements.add(new DummyHelpElement(
                 new GuiRectangle(8, 137, 16, 16).offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.replacer.from.title", 0xFF_FF_88_88,
-                        "buildcraft.help.replacer.from.desc")));
+                        "buildcraft.help.replacer.from.desc",
+                        // Unlike 1.12.2, TileReplacer#doReplace deliberately does NOT eat either
+                        // schematic. Returning players expect the old behaviour and hoard hard-to-
+                        // capture schematics because of it, so the reassurance goes on the first
+                        // slot they fill and names both slots rather than being repeated on "to".
+                        "buildcraft.help.replacer.from.desc2")));
 
         mainGui.shownElements.add(new DummyHelpElement(
                 new GuiRectangle(56, 137, 16, 16).offset(mainGui.rootElement),

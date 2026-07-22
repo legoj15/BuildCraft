@@ -6,12 +6,12 @@ package buildcraft.builders.item;
 
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -184,25 +184,36 @@ public class ItemSchematicSingle extends Item {
                                     return InteractionResult.SUCCESS;
                                 }
                             } else {
+                                // Assemble the shortfall list out of Components rather than Strings:
+                                // this runs server-side, so getHoverName().getString() would bake the
+                                // *server's* language into a message the client then just displays.
+                                List<ItemStack> missing = StackUtil.mergeSameItems(requiredItems);
+                                MutableComponent list = Component.empty();
+                                for (int i = 0; i < missing.size(); i++) {
+                                    if (i > 0) {
+                                        list.append(", ");
+                                    }
+                                    ItemStack entry = missing.get(i);
+                                    list.append(Component.translatable("chat.schematicSingle.neededEntry",
+                                        entry.getHoverName(), entry.getCount()));
+                                }
                                 buildcraft.lib.misc.MessageUtil.sendOverlayMessage(player,
-                                    Component.literal(
-                                        "Not enough items. Total needed: " +
-                                            StackUtil.mergeSameItems(requiredItems).stream()
-                                                .map(s -> s.getHoverName().getString() + " x " + s.getCount())
-                                                .collect(Collectors.joining(", "))
-                                    )
+                                    Component.translatable("chat.schematicSingle.notEnoughItems", list)
                                 );
                             }
                         } else {
                             buildcraft.lib.misc.MessageUtil.sendOverlayMessage(player,
-                                Component.literal("Schematic requires fluids")
+                                Component.translatable("chat.schematicSingle.requiresFluids")
                             );
                         }
                     }
                 }
             } catch (InvalidInputDataException e) {
+                // The parser's own message is untranslatable by nature, so it rides along as a %s
+                // argument. String.valueOf keeps a null message from failing arg serialization —
+                // TranslatableContents only accepts Number/Boolean/String/Component arguments.
                 buildcraft.lib.misc.MessageUtil.sendOverlayMessage(player,
-                    Component.literal("Invalid schematic: " + e.getMessage())
+                    Component.translatable("chat.schematicSingle.invalid", String.valueOf(e.getMessage()))
                 );
                 BCLog.logger.warn("[builders.schematic] Player tried to use an invalid schematic", e);
             }

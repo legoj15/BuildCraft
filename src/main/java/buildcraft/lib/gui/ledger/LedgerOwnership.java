@@ -20,6 +20,7 @@ import net.minecraft.resources.Identifier;
 
 import buildcraft.lib.gui.BuildCraftGui;
 import buildcraft.lib.misc.GameProfileUtil;
+import buildcraft.lib.misc.LocaleUtil;
 
 /** Ledger that shows the owner (player who placed the block).
  *  Renders the owner's actual skin face, matching 1.12.2's SpriteUtil.getFaceSprite(). */
@@ -39,7 +40,7 @@ public class LedgerOwnership extends Ledger_Neptune {
         // 1.12.2 used colour 0 (black) for the owner name text
         appendText(() -> {
             GameProfile profile = ownerSupplier.get();
-            return profile != null ? GameProfileUtil.getName(profile) : "Unknown";
+            return profile != null ? GameProfileUtil.getName(profile) : LocaleUtil.localize("gui.owner.unknown");
         }, 0x000000);
 
         calculateMaxSize();

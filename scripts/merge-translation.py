@@ -50,6 +50,8 @@ EN = LANG_DIR / "en_us.json"
 
 # %s / %d including positional (%1$s) forms, matching how the game's formatter reads them.
 FORMAT_SPEC = re.compile(r"%(?:\d+\$)?[sd]")
+# The argument index of a positional placeholder, e.g. the "2" in %2$s.
+POSITIONAL_INDEX = re.compile(r"%(\d+)\$[sd]")
 # One "key": declaration at the start of a line — used to spot duplicates, which a parsed dict hides.
 KEY_LINE = re.compile(r'(?m)^\s*"((?:[^"\\]|\\.)+)"\s*:')
 # Values spliced into the guide book's XML; XmlPageLoader's attribute reader stops at the first quote.
@@ -95,6 +97,16 @@ def validate(incoming, incoming_text, english):
                 f"{key}: has {actual} format placeholder(s), English has {expected} "
                 f"(en={english[key]!r})"
             )
+
+        # Reordering requires positional syntax (%2$s), since plain %s is filled left to right.
+        # An index past the argument count throws MissingFormatArgumentException at render time,
+        # which the count check above cannot see: "%2$s %2$s" has the right count and still breaks.
+        for index in (int(m) for m in POSITIONAL_INDEX.findall(value)):
+            if index < 1 or index > expected:
+                problems.append(
+                    f"{key}: uses %{index}$ but the string only takes {expected} argument(s) — "
+                    f"positional indices are 1-based and numbered by the ENGLISH order"
+                )
 
         if "\\n" in value:
             problems.append(

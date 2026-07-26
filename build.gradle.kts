@@ -427,6 +427,16 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.test {
     useJUnitPlatform()
+
+    // CopyrightHeaderTester reads the .java files themselves off disk, so its real inputs are the
+    // source TEXT — not the compiled classes Gradle normally tracks. A header edit is comment-only,
+    // produces byte-identical bytecode, and would otherwise leave `test` UP-TO-DATE: the guard would
+    // silently stop guarding exactly when someone re-introduces a bad header. Declaring the trees as
+    // an input closes that hole. Path-insensitive because only the file CONTENTS matter.
+    inputs.files(
+        rootProject.fileTree("src/main/java") { include("**/*.java") },
+        rootProject.fileTree("src/test/java") { include("**/*.java") }
+    ).withPropertyName("sourceHeaders").withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 tasks.processResources {

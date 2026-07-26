@@ -1,4 +1,4 @@
-Last audited: 2026-07-19 (block-base migration product call RESOLVED and executed — 5 more blocks migrated, 2 closed won't-do; all 5 nodes green, 371/371 game tests. Only the REI-recompile follow-up remains from the unification project)
+Last audited: 2026-07-26 (licensing/copyright sweep EXECUTED — 1570 files lineage-audited against three upstream references; 149 ported notices restored, 216 false attributions corrected, 91 headerless new files stamped, LICENSE.API shipped, guard test added. Nothing outstanding from it. Prior: 2026-07-19 block-base migration executed; only the REI-recompile follow-up remains from the unification project)
 
 ## 🔧 Outstanding work
 

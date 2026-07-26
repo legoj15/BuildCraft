@@ -1,4 +1,5 @@
 ###### Changes since 2026.2.0-br2:
+- The mod jar now includes its license texts (`META-INF/LICENSE` and `META-INF/LICENSE.API`). The jar previously shipped with none, even though parts of the BuildCraft API it contains are distributed under the MIT license, which requires the notice to travel with the code.
 - Added the Robot Station pluggable: place it on a pipe to create a docking station (`buildcraftunofficial:robot_station`). A docked robot charges directly from the pipe network; the station's indicator shows available/reserved/linked. (First piece of the in-progress robotics restoration — no robots to dock yet.)
 - Spectators can now view Assembly Table, Advanced Crafting Table, and Integration Table interfaces
 - Added a complete Simplified Chinese (`zh_cn`) translation (AI/machine assisted), thank you [beizhou1](https://github.com/beizhou1)!  

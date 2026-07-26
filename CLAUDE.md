@@ -12,8 +12,9 @@ Java 25 is the project toolchain — used for compile, test, and the actual game
 
 ```bash
 # BuildCraft builds with Stonecutter: ONE source tree, one node per MC LINE.
-# Today there's a single node (26.1.2) that ships as the universal 26.1.x jar.
-# Tasks are per-node — qualify with :26.1.2:. Unqualified tasks run across all nodes.
+# Five nodes today: 1.21.1, 1.21.10, 1.21.11, 26.1.2, 26.2 (26.2 is the primary).
+# Tasks are per-node — qualify with :<node>:. Unqualified tasks run across all nodes.
+# `./gradlew fullTestSuite` (root) runs unit + game tests + jar for EVERY node.
 
 # Compile the node (fast feedback)
 ./gradlew :26.1.2:compileJava
@@ -32,7 +33,7 @@ Java 25 is the project toolchain — used for compile, test, and the actual game
 
 ## Multi-version builds (Stonecutter)
 
-BuildCraft targets multiple MC versions from ONE source tree via the [Stonecutter](https://stonecutter.kikugie.dev) Gradle plugin (Kotlin DSL). The unit is an MC **line** (a real Java/mapping cliff), not a patch — each line is a **node** under `versions/<id>/` whose `gradle.properties` carries its `minecraft_version`, `neo_version`, `jei_version`, and `neoforge.mods.toml` ranges. **Today there is one node, `26.1.2`, and it ships as a single jar covering all of 26.1 / 26.1.1 / 26.1.2.** The old branch-per-MC-line model is retired — these are nodes, not branches.
+BuildCraft targets multiple MC versions from ONE source tree via the [Stonecutter](https://stonecutter.kikugie.dev) Gradle plugin (Kotlin DSL). The unit is an MC **line** (a real Java/mapping cliff), not a patch — each line is a **node** under `versions/<id>/` whose `gradle.properties` carries its `minecraft_version`, `neo_version`, `jei_version`, and `neoforge.mods.toml` ranges. **Today there are five nodes — `1.21.1`, `1.21.10`, `1.21.11`, `26.1.2`, `26.2` — and `26.2` is the primary.** The `26.1.2` node still ships as a single jar covering all of 26.1 / 26.1.1 / 26.1.2. The old branch-per-MC-line model is retired — these are nodes, not branches.
 
 Two mechanisms handle version differences, chosen by *kind*:
 - **Within a line (patch deltas, e.g. 26.1.1 vs 26.1.2) → runtime, NOT directives.** The handful of diverged APIs are absorbed at load so one compiled jar runs on every patch: GUI getters use the old names 26.1.2 still keeps, and the block-break event is resolved reflectively (`lib.misc.BreakEventCompat`) because `BreakBlockEvent` (26.1.2) replaced `BlockEvent.BreakEvent` (26.1.1). Prefer this for small within-line deltas — it keeps the jar count at one.

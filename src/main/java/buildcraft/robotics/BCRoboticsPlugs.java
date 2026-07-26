@@ -15,11 +15,17 @@ public class BCRoboticsPlugs {
     public static PluggableDefinition robotStation;
 
     public static void preInit() {
-        robotStation = register("robot_station", RobotStationPluggable::new);
+        // Explicit reader + loader rather than the single-creator overload: the creator's default
+        // loadFromBuffer IGNORES the buffer, which would silently drop the synced indicator state
+        // (and leave the buffer unread) — see RobotStationPluggable's network constructor.
+        robotStation = register("robot_station",
+            (PluggableDefinition.IPluggableNbtReader) RobotStationPluggable::new,
+            (PluggableDefinition.IPluggableNetLoader) RobotStationPluggable::new);
     }
 
-    private static PluggableDefinition register(String name, PluggableDefinition.IPluggableCreator creator) {
-        PluggableDefinition def = new PluggableDefinition(idFor(name), creator);
+    private static PluggableDefinition register(String name, PluggableDefinition.IPluggableNbtReader reader,
+        PluggableDefinition.IPluggableNetLoader loader) {
+        PluggableDefinition def = new PluggableDefinition(idFor(name), reader, loader);
         PipeApi.pluggableRegistry.register(def);
         return def;
     }

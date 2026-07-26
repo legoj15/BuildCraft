@@ -20,7 +20,6 @@ import net.neoforged.neoforge.transfer.fluid.FluidResource;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.robots.DockingStation;
-import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.api.transport.IInjectable;
@@ -119,31 +118,12 @@ public class DockingStationPipe extends DockingStation {
         return getHolder() != null;
     }
 
-    @Override
-    public boolean take(EntityRobotBase robot) {
-        boolean result = super.take(robot);
-        if (result && getHolder() != null) {
-            getHolder().scheduleRenderUpdate();
-        }
-        return result;
-    }
-
-    @Override
-    public boolean takeAsMain(EntityRobotBase robot) {
-        boolean result = super.takeAsMain(robot);
-        if (result && getHolder() != null) {
-            getHolder().scheduleRenderUpdate();
-        }
-        return result;
-    }
-
-    @Override
-    public void unsafeRelease(EntityRobotBase robot) {
-        super.unsafeRelease(robot);
-        if (robotTaking() == null && getHolder() != null) {
-            getHolder().scheduleRenderUpdate();
-        }
-    }
+    // take/takeAsMain/unsafeRelease deliberately do NOT nudge the renderer. They used to call
+    // scheduleRenderUpdate(), which was doubly wrong: it forces a chunk re-mesh that
+    // KeyPlugRobotStation exists specifically to avoid (the indicator is a per-frame decal, not baked
+    // geometry), and it never actually reached the client anyway, since the indicator is derived from
+    // this server-side SavedData and appears in neither the pluggable's NBT nor its update tag.
+    // RobotStationPluggable.onTick() now detects the transition and pushes a single state byte.
 
     @Override
     public void onChunkUnload() {

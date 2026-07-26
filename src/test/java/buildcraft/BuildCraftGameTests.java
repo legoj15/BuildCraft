@@ -747,5 +747,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_station_docked_charges_losslessly", () -> buildcraft.robotics.RobotStationPluggableTester::testDockedRobotChargesLosslesslyFromMjReceiver);
         reg.accept("buildcraftunofficial:robot_station_reserved_not_docked_no_charge", () -> buildcraft.robotics.RobotStationPluggableTester::testReservedButNotDockedRobotDoesNotCharge);
         reg.accept("buildcraftunofficial:robot_station_item_output_injects", () -> buildcraft.robotics.RobotStationPluggableTester::testItemOutputInjectsIntoPipeNetwork);
+        reg.accept("buildcraftunofficial:robot_station_kinesis_charges_docked_robot", () -> buildcraft.robotics.RobotStationPluggableTester::testKinesisPipeChargesDockedRobot);
+        reg.accept("buildcraftunofficial:robot_station_render_state_network_round_trip", () -> buildcraft.robotics.RobotStationPluggableTester::testRenderStateSurvivesNetworkRoundTrip);
     }
 }

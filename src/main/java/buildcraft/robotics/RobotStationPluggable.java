@@ -7,6 +7,8 @@
 package buildcraft.robotics;
 
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
@@ -68,8 +70,60 @@ public class RobotStationPluggable extends PipePluggable implements IDockingStat
     private boolean isValid = false;
     private RobotStationState renderState;
 
+    /** Client-side mirror of {@link #getRenderState()}. The client never resolves a {@link #station}
+     *  ({@link #onTick()} is server-only), so without this the indicator is permanently
+     *  {@link RobotStationState#NONE} and {@code PlugRobotStationRenderer} draws nothing. */
+    private RobotStationState syncedState = RobotStationState.NONE;
+    /** Last state pushed to clients, so {@link #onTick()} only sends on an actual transition. */
+    private RobotStationState lastSentState = RobotStationState.NONE;
+
     public RobotStationPluggable(PluggableDefinition definition, IPipeHolder holder, Direction side) {
         super(definition, holder, side);
+    }
+
+    /** NBT path. The indicator is derived from the {@code RobotRegistry} server-side and re-sent to
+     *  clients, so there is deliberately nothing of it to persist. */
+    public RobotStationPluggable(PluggableDefinition definition, IPipeHolder holder, Direction side,
+        CompoundTag nbt) {
+        super(definition, holder, side);
+    }
+
+    /** Network path — this is the constructor the client actually gets. */
+    public RobotStationPluggable(PluggableDefinition definition, IPipeHolder holder, Direction side,
+        FriendlyByteBuf buffer) {
+        super(definition, holder, side);
+        readData(buffer);
+    }
+
+    private void writeData(FriendlyByteBuf buffer) {
+        buffer.writeByte(getRenderState().ordinal());
+    }
+
+    private void readData(FriendlyByteBuf buffer) {
+        int ordinal = buffer.readByte() & 0xFF;
+        RobotStationState[] values = RobotStationState.values();
+        syncedState = ordinal < values.length ? values[ordinal] : RobotStationState.NONE;
+    }
+
+    @Override
+    public void writeCreationPayload(FriendlyByteBuf buffer) {
+        super.writeCreationPayload(buffer);
+        writeData(buffer);
+    }
+
+    @Override
+    public void writePayload(FriendlyByteBuf buffer, Object side) {
+        super.writePayload(buffer, side);
+        writeData(buffer);
+    }
+
+    @Override
+    public void readPayload(FriendlyByteBuf buffer, Object side, Object ctx) throws java.io.IOException {
+        super.readPayload(buffer, side, ctx);
+        readData(buffer);
+        // Deliberately NO scheduleRenderUpdate() here, unlike PluggablePulsar: the indicator is drawn
+        // per-frame by PlugRobotStationRenderer and is kept OUT of the baked model key on purpose
+        // (see KeyPlugRobotStation), so a dock/undock must not trigger a chunk re-mesh.
     }
 
     /** Static lookup for the per-side {@linkplain #getBoundingBox() bounding box} — used by the
@@ -100,22 +154,29 @@ public class RobotStationPluggable extends PipePluggable implements IDockingStat
 
     @Override
     public void onTick() {
-        if (isValid) {
-            return;
-        }
         Level world = holder.getPipeWorld();
         if (world == null || world.isClientSide()) {
             return;
         }
-        DockingStationPipe existing =
-            (DockingStationPipe) RobotManager.registryProvider.getRegistry(world).getStation(holder.getPipePos(), side);
-        if (existing == null) {
-            station = new DockingStationPipe(holder, side);
-            RobotManager.registryProvider.getRegistry(world).registerStation(station);
-        } else {
-            station = existing;
+        if (!isValid) {
+            DockingStationPipe existing = (DockingStationPipe) RobotManager.registryProvider.getRegistry(world)
+                .getStation(holder.getPipePos(), side);
+            if (existing == null) {
+                station = new DockingStationPipe(holder, side);
+                RobotManager.registryProvider.getRegistry(world).registerStation(station);
+            } else {
+                station = existing;
+            }
+            isValid = true;
         }
-        isValid = true;
+        // Push the indicator colour on transition only. Cheap (one enum compare per tick) and the
+        // only way the client ever learns it — the station lives in a server-side SavedData that the
+        // client has no copy of, and none of it is written to the pluggable's NBT.
+        RobotStationState current = getRenderState();
+        if (current != lastSentState) {
+            lastSentState = current;
+            holder.sendMessage(IPipeHolder.PipeMessageReceiver.PLUGGABLES[side.ordinal()], this::writeData);
+        }
     }
 
     @Override
@@ -143,6 +204,7 @@ public class RobotStationPluggable extends PipePluggable implements IDockingStat
         return robot.getDockingStation() == station ? robot : null;
     }
 
+    /** Outward face: what a machine placed directly against this station queries. */
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getCapability(@Nonnull Object cap) {
@@ -155,9 +217,33 @@ public class RobotStationPluggable extends PipePluggable implements IDockingStat
         return null;
     }
 
+    /** Inward face: what the HOST PIPE queries, via {@code TilePipeHolder.getCapabilityFromPipe}.
+     * Without this a kinesis pipe can never deliver to a docked robot — {@code getCapability} above
+     * is only ever consulted from outside the pipe, so the pipe's own {@code PipeFlowPower} sees
+     * nothing here and the robot silently never charges. Note that lookup deliberately checks this
+     * method <em>before</em> short-circuiting on {@link #isBlocking()}, which is what lets a blocking
+     * pluggable still be a power destination.
+     *
+     * <p>Gated on {@link #dockedRobot()} exactly like {@link #getCapability}, so a robot that has
+     * merely reserved the station (but not arrived) still receives nothing. */
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T> T getInternalCapability(@Nonnull Object cap) {
+        if (cap == MjAPI.CAP_RECEIVER) {
+            EntityRobotBase robot = dockedRobot();
+            if (robot != null) {
+                return (T) new MjBatteryReceiver(robot.getBattery());
+            }
+        }
+        return null;
+    }
+
     private void refreshRenderState() {
         if (station == null) {
-            renderState = RobotStationState.NONE;
+            // No station resolved: either the client's copy (which never resolves one) or a
+            // server-side pluggable whose first onTick() hasn't run yet. Fall back to whatever the
+            // network last told us — NONE until the first push arrives.
+            renderState = syncedState;
             return;
         }
         renderState = station.isTaken()

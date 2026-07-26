@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import buildcraft.api.boards.RedstoneBoardRegistry;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.core.BCCore;
+import buildcraft.transport.BCTransportCreativeTabs;
 
 /**
  * BuildCraft Robotics initializer. No longer a separate @Mod — called from BCCore.
@@ -59,6 +60,11 @@ public class BCRobotics {
     }
 
     private static void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
-        event.accept(BCRoboticsItems.ROBOT_STATION.get());
+        // BuildCreativeModeTabContentsEvent fires once PER TAB — without this guard the Robot Station
+        // is injected into every tab in the game, vanilla ones included. It's a pipe pluggable, so it
+        // belongs in the Pluggables tab beside the blocker and power adaptor.
+        if (event.getTabKey() == BCTransportCreativeTabs.PLUGS_TAB_KEY) {
+            event.accept(BCRoboticsItems.ROBOT_STATION.get());
+        }
     }
 }

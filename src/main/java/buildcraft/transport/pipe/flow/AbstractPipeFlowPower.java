@@ -291,8 +291,24 @@ public abstract class AbstractPipeFlowPower extends PipeFlow implements IDebugga
         }
 
         // Ask each connected non-pipe tile how much power it wants this tick.
+        //
+        // Faces carrying a pluggable are also asked, even though they are never ConnectedType.TILE:
+        // Pipe.updateConnections skips any isBlocking() face outright, so a pluggable that is itself
+        // the power destination (the robot station, whose docked robot holds the battery) would
+        // otherwise never be offered power at all. BuildCraft 7.1.x's PipeTransportPower did the same
+        // thing — it hunted receiver pluggables on every face independently of pipe connections.
+        //
+        // This is self-limiting rather than a blanket relaxation: queryTileDemand resolves through
+        // TilePipeHolder.getCapabilityFromPipe, which returns null for any pluggable that does not
+        // override getInternalCapability (facade, gate, plug, lens, blocker, pulsar, timer, light
+        // sensor, power adaptor — all of them today except the robot station), yielding demand 0 and
+        // the same behaviour as before. Deliberately NOT done by making the station's face a real
+        // connection: that would grow rendered pipe geometry around the station, change its collision
+        // and hit-part resolution, and open the face to the item/fluid/wire paths — several of which
+        // reach the neighbour block directly without consulting isBlocking().
         for (Direction face : Direction.values()) {
-            if (pipe.getConnectedType(face) != ConnectedType.TILE) {
+            if (pipe.getConnectedType(face) != ConnectedType.TILE
+                && pipe.getHolder().getPluggable(face) == null) {
                 continue;
             }
             long demand = queryTileDemand(face);

@@ -7,15 +7,20 @@ package buildcraft.robotics;
 
 import java.util.List;
 
+import io.netty.buffer.Unpooled;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 //? if >=1.21.10 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -32,6 +37,9 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.RobotManager;
+import buildcraft.api.properties.BuildCraftProperties;
+import buildcraft.core.BCCoreBlocks;
+import buildcraft.core.tile.TileEngineCreative;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.pipe.flow.PipeFlowItems;
@@ -66,6 +74,17 @@ public class RobotStationPluggableTester {
         RobotStationPluggable plug = new RobotStationPluggable(BCRoboticsPlugs.robotStation, tile, side);
         tile.replacePluggable(side, plug);
         return plug;
+    }
+
+    private static TilePipeHolder placePowerPipe(GameTestHelper helper, BlockPos relPos, net.minecraft.world.item.Item pipeItem) {
+        helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
+        TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(relPos);*/
+        //?}
+        tile.onPlacedBy(null, new ItemStack(pipeItem));
+        return tile;
     }
 
     // ---------- Placement auto-registers / removal auto-deregisters ----------
@@ -224,6 +243,103 @@ public class RobotStationPluggableTester {
 
             IMjReceiver receiver = plug.getCapability(MjAPI.CAP_RECEIVER);
             helper.assertTrue(receiver == null, "reserving without docking must NOT expose a charger");
+            helper.succeed();
+        });
+    }
+
+    /** The end-to-end bookend the two tests above deliberately do not cover: they call
+     *  {@code plug.getCapability(...)} directly, which proves the battery hand-off but says nothing
+     *  about whether a kinesis pipe can actually FIND the station. That delivery path is
+     *  {@code PipeFlowPower.getReceiver} -> {@code TilePipeHolder.getCapabilityFromPipe} ->
+     *  {@code plug.getInternalCapability}, and it is additionally gated on the station's face being a
+     *  {@code ConnectedType.TILE} connection — which {@code Pipe.updateConnections} skips for any
+     *  {@code isBlocking()} pluggable. Both halves have to be right or a docked robot never charges,
+     *  and Ph4's {@code AIRobotRecharge} depends entirely on this working. */
+    public static void testKinesisPipeChargesDockedRobot(GameTestHelper helper) {
+        BlockPos redstonePos = new BlockPos(2, 1, 2);
+        BlockPos enginePos = new BlockPos(2, 2, 2);
+        BlockPos woodPipePos = new BlockPos(2, 3, 2);
+        BlockPos pipePos = new BlockPos(2, 4, 2);
+
+        if (BCCoreBlocks.ENGINE_CREATIVE == null) {
+            throw new IllegalStateException(
+                    "ENGINE_CREATIVE not registered — test JVM was launched without -Dbuildcraft.dev=true. "
+                            + "Check build.gradle gameTestServer run config.");
+        }
+
+        // Engine -> WOOD kinesis -> stone kinesis -> station. The wood pipe is load-bearing, not
+        // decoration: only wood/diaWood kinesis pipes accept power from an engine, so an engine
+        // feeding a stone pipe directly transfers nothing at all.
+        TilePipeHolder pipe = placePowerPipe(helper, pipePos, BCTransportItems.PIPE_STONE_POWER.get());
+        TilePipeHolder woodPipe = placePowerPipe(helper, woodPipePos, BCTransportItems.PIPE_WOOD_POWER.get());
+        RobotStationPluggable plug = install(pipe, Direction.WEST);
+
+        BlockState engineState = BCCoreBlocks.ENGINE_CREATIVE.get().defaultBlockState()
+                .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP);
+        helper.setBlock(enginePos, engineState);
+        helper.setBlock(redstonePos, Blocks.REDSTONE_BLOCK);
+
+        //? if >=1.21.10 {
+        TileEngineCreative engine = helper.getBlockEntity(enginePos, TileEngineCreative.class);
+        //?} else {
+        /*TileEngineCreative engine = helper.getBlockEntity(enginePos);*/
+        //?}
+        engine.currentOutputIndex = TileEngineCreative.OUTPUTS.length - 1; // 256 MJ/t
+
+        // Same reason as PipeFlowPowerTester: setBlock + onPlacedBy skips the neighbour-changed
+        // cascade a real placement triggers, so connections are never computed without this.
+        woodPipe.getPipe().markForUpdate();
+        pipe.getPipe().markForUpdate();
+
+        BlockPos absPipePos = helper.absolutePos(pipePos);
+        helper.runAfterDelay(2, () -> {
+            DockingStationPipe station = (DockingStationPipe) RobotManager.registryProvider
+                    .getRegistry(helper.getLevel()).getStation(absPipePos, Direction.WEST);
+            helper.assertTrue(station != null, "station must have registered by now");
+            TestRobot robot = new TestRobot(helper.getLevel());
+            station.takeAsMain(robot);
+            robot.dock(station);
+            helper.assertTrue(robot.getBattery().getStored() == 0, "fixture must start drained");
+
+            // Poll rather than assert once: engine warm-up plus the power flow's 2-tick
+            // request/transfer handshake means the first delivery lands a variable number of
+            // ticks out, exactly as in PipeFlowPowerTester.
+            helper.succeedWhen(() -> helper.assertTrue(robot.getBattery().getStored() > 0,
+                    "a robot docked on a station attached to a powered kinesis pipe has received no MJ — "
+                            + "the pipe cannot see the station as a power destination"));
+        });
+    }
+
+    /** The client never runs {@link RobotStationPluggable#onTick()} (it early-returns off-server), so
+     *  its copy of the pluggable has no {@code DockingStation} and can only learn the indicator colour
+     *  from the network. This pins that the state actually rides the payload: a fresh pluggable rebuilt
+     *  from the buffer — with no station attached, exactly like the client's — must still report LINKED.
+     *  Without the sync it reports NONE and {@code PlugRobotStationRenderer} draws nothing at all. */
+    public static void testRenderStateSurvivesNetworkRoundTrip(GameTestHelper helper) {
+        // Distinct from testRenderStateTransitions...'s (1,2,9): these tests share a
+        // test_environment, and RobotRegistry is a per-level SavedData keyed by (pos, side).
+        BlockPos relPos = new BlockPos(1, 2, 17);
+        TilePipeHolder tile = placeItemPipe(helper, relPos);
+        RobotStationPluggable server = install(tile, Direction.NORTH);
+        BlockPos absPos = helper.absolutePos(relPos);
+
+        helper.runAfterDelay(2, () -> {
+            DockingStationPipe station = (DockingStationPipe) RobotManager.registryProvider
+                    .getRegistry(helper.getLevel()).getStation(absPos, Direction.NORTH);
+            station.takeAsMain(new TestRobot(helper.getLevel()));
+            helper.assertTrue(server.getRenderState() == RobotStationPluggable.RobotStationState.LINKED,
+                    "server-side precondition: a main-station claim reads LINKED");
+
+            FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+            server.writeCreationPayload(buf);
+
+            RobotStationPluggable client =
+                    new RobotStationPluggable(BCRoboticsPlugs.robotStation, tile, Direction.NORTH, buf);
+            helper.assertTrue(client.getStation() == null,
+                    "fixture precondition: the rebuilt pluggable has no station, like the client's");
+            helper.assertTrue(client.getRenderState() == RobotStationPluggable.RobotStationState.LINKED,
+                    "render state must survive the network round-trip — otherwise the client always "
+                            + "reads NONE and the available/reserved/linked indicator never renders");
             helper.succeed();
         });
     }

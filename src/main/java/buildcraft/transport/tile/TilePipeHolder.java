@@ -347,19 +347,23 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
         }
         if (placer instanceof Player player && level != null && !level.isClientSide()) {
             owner = player.getGameProfile();
-            AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PIPE_DREAM);
+            // UUID overload, not the Player one: a pipe extended by a Stripes pipe (StripesHandlerPipes)
+            // or placed via the generic Stripes block-placement handler is placed by a transient
+            // owner-profiled FakePlayer — see AdvancementUtil's UUID-overload javadoc.
+            UUID placerId = player.getUUID();
+            AdvancementUtil.unlockAdvancement(placerId, level, ADVANCEMENT_PIPE_DREAM);
             if (pipe != null) {
                 PipeDefinition def = pipe.getDefinition();
                 // Pipe diversification: award criterion by flow type
                 String flowCriterion = getFlowTypeCriterion(def);
                 if (flowCriterion != null) {
-                    AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PIPE_DIVERSIFICATION, flowCriterion);
+                    AdvancementUtil.unlockAdvancement(placerId, level, ADVANCEMENT_PIPE_DIVERSIFICATION, flowCriterion);
                 }
                 // Pipe fanatic: award criterion by pipe identifier
-                AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_PIPE_FANATIC, def.identifier);
+                AdvancementUtil.unlockAdvancement(placerId, level, ADVANCEMENT_PIPE_FANATIC, def.identifier);
                 // Categorizing with colors: the Daizuli pipe is the one that sorts items by colour
                 if (pipe.behaviour instanceof PipeBehaviourDaizuli) {
-                    AdvancementUtil.unlockAdvancement(player, ADVANCEMENT_CATEGORIZING_WITH_COLORS);
+                    AdvancementUtil.unlockAdvancement(placerId, level, ADVANCEMENT_CATEGORIZING_WITH_COLORS);
                 }
             }
         }

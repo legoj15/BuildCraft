@@ -39,6 +39,16 @@ public class AdvancementUtil {
         }
     }
 
+    /**
+     * Prefer this over the {@link Player}-typed overload wherever the placer/actor might be a
+     * {@code net.neoforged.neoforge.common.util.FakePlayer} (e.g. a block placed via a Stripes pipe) —
+     * {@code FakePlayer} is itself a {@code ServerPlayer}, so the {@code Player}-typed overload doesn't
+     * skip it, and its {@code getAdvancements()} resolution is exactly the surface NeoForge has been
+     * actively changing (an owner-profiled fake player's UUID collides with the real owner's in
+     * {@code PlayerList.getPlayerAdvancements}). Looking the real, connected {@link ServerPlayer} up by
+     * UUID sidesteps that entirely and is correct regardless of which side of the NeoForge change you're
+     * on: it awards the real owner if they're online and cleanly no-ops (returns {@code false}) if not.
+     */
     public static boolean unlockAdvancement(UUID playerId, Level level, Identifier advancementName) {
         return unlockAdvancement(playerId, level, advancementName, "code_trigger");
     }

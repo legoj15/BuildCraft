@@ -67,7 +67,10 @@ public class BlockQuarry extends BlockBCTile_Directional<TileQuarry> {
             ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
         if (!level.isClientSide() && placer instanceof Player player) {
-            AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);
+            // UUID overload, not the Player one: a Quarry placed via a Stripes pipe's generic
+            // block-placement handler is placed by a transient owner-profiled FakePlayer, whose
+            // .getAdvancements() resolution NeoForge is actively changing (see AdvancementUtil).
+            AdvancementUtil.unlockAdvancement(player.getUUID(), level, ADVANCEMENT);
         }
     }
 

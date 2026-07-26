@@ -64,7 +64,6 @@ public class GuiGuide extends Screen {
     public static final Identifier RIGHT_PAGE_BACK = Identifier.parse("buildcraftunofficial:textures/gui/guide/right_page_back.png");
     public static final Identifier LEFT_PAGE_FIRST = Identifier.parse("buildcraftunofficial:textures/gui/guide/left_page_first.png");
     public static final Identifier RIGHT_PAGE_LAST = Identifier.parse("buildcraftunofficial:textures/gui/guide/right_page_last.png");
-    public static final Identifier NOTE = Identifier.parse("buildcraftunofficial:textures/gui/guide/note.png");
 
     // --- Book layout icons ---
     public static final GuiIcon BOOK_COVER = new GuiIcon(COVER, 0, 0, 202, 248);
@@ -134,10 +133,6 @@ public class GuiGuide extends Screen {
     public static final SpriteNineSliced CHAPTER_MARKER_9;
     public static final SpriteNineSliced CHAPTER_MARKER_9_LEFT;
     public static final SpriteNineSliced CHAPTER_MARKER_9_RIGHT;
-
-    public static final GuiIcon NOTE_PAGE = new GuiIcon(NOTE, 0, 0, 131, 164);
-    public static final GuiIcon NOTE_UNDERLAY = new GuiIcon(ICONS_2, 0, 1, 3, 4);
-    public static final GuiIcon NOTE_OVERLAY = new GuiIcon(ICONS_2, 0, 1, 2, 3);
 
     public static final GuiIcon SEARCH_ICON = new GuiIcon(ICONS_2, 26, 196, 12, 12);
     public static final GuiIcon SEARCH_TAB_CLOSED = new GuiIcon(ICONS_2, 58, 196, 14, 6);

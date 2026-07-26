@@ -42,8 +42,6 @@ public class BCCoreCreativeTabs {
                                 output.accept(BCLibItems.GUIDE_CONFIG.get());
                                 // Guide Book
                                 output.accept(BCLibItems.GUIDE.get());
-                                // Book Note
-                                output.accept(BCLibItems.GUIDE_NOTE.get());
                                 // Debugger
                                 output.accept(BCLibItems.DEBUGGER.get());
                                 // Dev-only Power Tester (only when launched with -Dbuildcraft.dev=true)

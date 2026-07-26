@@ -8,3 +8,4 @@
 - The Replacer's help now states that the single-block schematics are not consumed, which differs from older BuildCraft versions.
 - The help ledger shows a warning icon when a screen has no help available, instead of opening an empty panel that looked identical to a working one.
 - The Fragile Fluid Container's contents now follow your unit display settings rather than always showing raw millibuckets.
+- Removed the non-functional Guide Note item (a creative-only stub that never opened anything, in this port or 1.12.2).

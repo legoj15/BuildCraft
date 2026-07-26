@@ -11,7 +11,6 @@ import buildcraft.lib.misc.RegistrationUtilBC;
 
 import buildcraft.lib.item.ItemDebugger;
 import buildcraft.lib.item.ItemGuide;
-import buildcraft.lib.item.ItemGuideNote;
 
 import buildcraft.core.BCCore;
 
@@ -25,9 +24,6 @@ public class BCLibItems {
     public static final DeferredItem<ItemGuide> GUIDE_CONFIG = RegistrationUtilBC.registerItem(ITEMS,"guide_config",
             props -> new ItemGuide(props, "buildcraftunofficial:config"),
             props -> props.stacksTo(1));
-
-    public static final DeferredItem<ItemGuideNote> GUIDE_NOTE = RegistrationUtilBC.registerItem(ITEMS,"guide_note",
-            ItemGuideNote::new, props -> props.stacksTo(1));
 
     public static final DeferredItem<ItemDebugger> DEBUGGER = RegistrationUtilBC.registerItem(ITEMS,"debugger",
             ItemDebugger::new, props -> props.stacksTo(1));

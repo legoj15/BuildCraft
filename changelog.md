@@ -1,4 +1,5 @@
 ###### Changes since 2026.2.0-br2:
+- Added the Robot Station pluggable: place it on a pipe to create a docking station (`buildcraftunofficial:robot_station`). A docked robot charges directly from the pipe network; the station's indicator shows available/reserved/linked. (First piece of the in-progress robotics restoration — no robots to dock yet.)
 - Spectators can now view Assembly Table, Advanced Crafting Table, and Integration Table interfaces
 - Added a complete Simplified Chinese (`zh_cn`) translation (AI/machine assisted), thank you [beizhou1](https://github.com/beizhou1)!  
   - 如发现翻译不准确，请提交拉取请求或反馈问题

@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_station_placement_registers",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 100,
+    "setup_ticks": 0,
+    "required": true
+}

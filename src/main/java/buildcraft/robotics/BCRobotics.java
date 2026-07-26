@@ -25,6 +25,13 @@ public class BCRobotics {
         // robots present, and required the moment a docking station or board is created.
         RobotManager.registryProvider = new RobotRegistryProvider();
         RedstoneBoardRegistry.instance = new ImplRedstoneBoardRegistry();
+        // Miss this and RobotRegistry.writeToNbt silently drops every pipe-hosted station on save
+        // (unregistered docking station type -> logged warning, station skipped).
+        RobotManager.registerDockingStation(DockingStationPipe.class, "pipe");
+
+        // Initialize pluggable definitions BEFORE items register (BCTransport.init already ran, so
+        // PipeApi.pluggableRegistry is set — see BCRoboticsPlugs).
+        BCRoboticsPlugs.preInit();
 
         // Register all deferred registries
         BCRoboticsBlocks.init(modEventBus);
@@ -46,5 +53,6 @@ public class BCRobotics {
     }
 
     private static void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
+        event.accept(BCRoboticsItems.ROBOT_STATION.get());
     }
 }

@@ -1,15 +1,37 @@
 package buildcraft.robotics.client;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+
+import buildcraft.api.transport.pipe.PipeApiClient;
+import buildcraft.api.transport.pluggable.IPluggableStaticBaker;
+
+import buildcraft.lib.client.model.ModelHolderStatic;
+import buildcraft.lib.client.model.plug.PlugBakerSimple;
 
 import buildcraft.robotics.BCRoboticsBlockEntities;
 import buildcraft.robotics.BCRoboticsMenuTypes;
+import buildcraft.robotics.RobotStationPluggable;
 import buildcraft.robotics.client.gui.GuiZonePlanner;
+import buildcraft.robotics.client.model.key.KeyPlugRobotStation;
+import buildcraft.robotics.client.render.PlugRobotStationRenderer;
 import buildcraft.robotics.client.render.RenderZonePlanner;
 
 public class BCRoboticsClient {
+    private static final Logger LOGGER = LoggerFactory.getLogger(BCRoboticsClient.class);
+
+    // Static model holder + baker for the docking station's state-invariant plinth (the docking
+    // state indicator is rendered dynamically — see PlugRobotStationRenderer / KeyPlugRobotStation).
+    public static final ModelHolderStatic ROBOT_STATION =
+        new ModelHolderStatic("buildcraftunofficial:models/plugs/robot_station.json");
+    public static final IPluggableStaticBaker<KeyPlugRobotStation> BAKER_PLUG_ROBOT_STATION =
+        new PlugBakerSimple<>(ROBOT_STATION::getCutoutQuads);
+
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(BCRoboticsMenuTypes.ZONE_PLANNER.get(), GuiZonePlanner::new);
@@ -37,6 +59,22 @@ public class BCRoboticsClient {
                 buildcraft.robotics.client.render.ZoneMapPipRenderer::new);
     }
     //?}
+
+    /**
+     * Registers the docking-station baker and dynamic renderer. Fires after all models are baked and
+     * after {@link EntityRenderersEvent} has completed, so {@code PipeApiClient.registry} is
+     * guaranteed to be set by Transport — mirrors {@code BCSiliconClient}'s facade/gate registration.
+     */
+    @SubscribeEvent
+    public static void onModifyBakingResult(ModelEvent.ModifyBakingResult event) {
+        if (PipeApiClient.registry != null) {
+            PipeApiClient.registry.registerBaker(KeyPlugRobotStation.class, BAKER_PLUG_ROBOT_STATION);
+            PipeApiClient.registry.registerRenderer(RobotStationPluggable.class, PlugRobotStationRenderer.INSTANCE);
+        } else {
+            LOGGER.warn("[robotics.client] PipeApiClient.registry is null at ModifyBakingResult! "
+                + "Docking station in-world rendering will not work.");
+        }
+    }
 
     public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
         modEventBus.register(BCRoboticsClient.class);

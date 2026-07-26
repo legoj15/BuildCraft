@@ -728,5 +728,18 @@ public class BuildCraftGameTests {
         // through serverTick (input read + output write), with the world<->tile-relative offset and
         // ItemMapLocation.setZone/getZone. Needs ItemStack/components, so it is a game test.
         reg.accept("buildcraftunofficial:zone_planner_transfer", () -> buildcraft.robotics.ZonePlannerTransferTester::transferRoundTrip);
+
+        // Robotics Ph2 — docking station pluggable: placement auto-registers/removal auto-deregisters
+        // in the RobotRegistry, RobotUtils discovery through a real pipe holder, the take/release
+        // reservation lifecycle (undock -> release; physical dock/undock movement is Ph3), the MJ-charge
+        // handoff gated on actually-docked (not merely reserved), and an item-pipe handoff smoke test.
+        reg.accept("buildcraftunofficial:robot_station_placement_registers", () -> buildcraft.robotics.RobotStationPluggableTester::testPlacingRobotStationRegistersInRobotRegistry);
+        reg.accept("buildcraftunofficial:robot_station_removal_deregisters", () -> buildcraft.robotics.RobotStationPluggableTester::testRemovingPipeDeregistersStation);
+        reg.accept("buildcraftunofficial:robot_station_robotutils_discovery", () -> buildcraft.robotics.RobotStationPluggableTester::testRobotUtilsDiscoversStationThroughPipeHolder);
+        reg.accept("buildcraftunofficial:robot_station_release_frees_for_reclaim", () -> buildcraft.robotics.RobotStationPluggableTester::testReleaseFreesStationForReclaim);
+        reg.accept("buildcraftunofficial:robot_station_render_state_transitions", () -> buildcraft.robotics.RobotStationPluggableTester::testRenderStateTransitionsAvailableReservedLinked);
+        reg.accept("buildcraftunofficial:robot_station_docked_charges_losslessly", () -> buildcraft.robotics.RobotStationPluggableTester::testDockedRobotChargesLosslesslyFromMjReceiver);
+        reg.accept("buildcraftunofficial:robot_station_reserved_not_docked_no_charge", () -> buildcraft.robotics.RobotStationPluggableTester::testReservedButNotDockedRobotDoesNotCharge);
+        reg.accept("buildcraftunofficial:robot_station_item_output_injects", () -> buildcraft.robotics.RobotStationPluggableTester::testItemOutputInjectsIntoPipeNetwork);
     }
 }

@@ -260,6 +260,7 @@
     "gui.pipes.emzuli.nopaint": "Don't Paint Items",
     "item.buildcraftunofficial.plug_blocker": "Pipe Plug",
     "item.buildcraftunofficial.plug_power_adaptor": "Pipe Power Adaptor",
+    "item.buildcraftunofficial.robot_station": "Robot Station",
     "itemGroup.buildcraft.plugs": "BuildCraft Pluggables",
     "tip.pipe.structure": "Support pipe",
     "tip.pipe.wood_item": "Extraction pipe",

@@ -23,6 +23,10 @@ import buildcraft.core.tile.TilePowerConsumerTester;
  * Dev-only debug block that sinks MJ power and exposes the tally via {@code IDebuggable}.
  * Gated behind {@link buildcraft.lib.BCLib#DEV} in registration, so it is only present
  * when the JVM was launched with {@code -Dbuildcraft.dev=true}.
+ *
+ * <p>Deliberately NOT on {@link buildcraft.lib.block.BlockBCTile_Neptune} — this block has no
+ * owner/menu/render-shape/removal-drop behaviour to absorb, so migrating would add lines, not
+ * remove them. Won't-do, not not-yet.
  */
 public class BlockPowerConsumerTester extends Block implements EntityBlock {
 

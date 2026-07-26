@@ -17,6 +17,12 @@ import buildcraft.api.enums.EnumSpring;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.data.XorShift128Random;
 
+/**
+ * Deliberately NOT on {@link buildcraft.lib.block.BlockBCTile_Neptune} — that base requires a
+ * single {@code getBlockEntityType()}, but WATER has no BlockEntity at all and OIL's BE type
+ * lives in {@code buildcraft.energy}. Answering it would need the direct core→energy reference
+ * {@link #oilTileFactory}'s late binding exists specifically to avoid. Won't-do, not not-yet.
+ */
 public class BlockSpring extends Block implements EntityBlock {
     public static final XorShift128Random rand = new XorShift128Random();
 

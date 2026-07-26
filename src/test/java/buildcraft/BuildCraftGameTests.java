@@ -208,6 +208,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:list_end_to_end_both_flags_union", () -> buildcraft.lib.list.ListTester::testEndToEndBothFlagsUnion);
         reg.accept("buildcraftunofficial:list_precise_enchantment_round_trip", () -> buildcraft.lib.list.ListTester::testPreciseEnchantmentRoundTrip);
         
+        // Block-base regression guard: every BlockBCTile_Neptune subclass must declare its own
+        // getRenderShape -> RenderShape.MODEL, since BaseEntityBlock defaults it to INVISIBLE on the
+        // 1.21.1 node only (dropped at 1.21.10) — see BlockBCTile_Neptune's javadoc.
+        reg.accept("buildcraftunofficial:neptune_subclasses_declare_model_render_shape", () -> buildcraft.lib.block.BlockRenderShapeTester::testNeptuneSubclassesDeclareModelRenderShape);
+
         // Core Blocks
         reg.accept("buildcraftunofficial:core_spring_water", () -> buildcraft.core.block.SpringTester::testWaterSpring);
         reg.accept("buildcraftunofficial:core_spring_oil", () -> buildcraft.core.block.SpringTester::testOilSpring);

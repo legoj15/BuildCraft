@@ -36,6 +36,12 @@ import buildcraft.lib.tile.AbstractBCBlockEntity;
  * rooted on {@code HorizontalDirectionalBlock} (Java single inheritance forces the pair); both delegate
  * their shared bodies to {@link BlockBCTileSupport}.
  *
+ * <p><b>Every subclass must declare its own {@code getRenderShape -> RenderShape.MODEL}.</b> This base
+ * does not supply it, and {@code BaseEntityBlock} defaults it to {@code INVISIBLE} on the 1.21.1 node
+ * only (the override was dropped at 1.21.10) — omitting it compiles clean and looks correct on every
+ * other node while rendering nothing on that one. Enforced by
+ * {@code buildcraft.lib.block.BlockRenderShapeTester}, a game test that walks the live block registry.
+ *
  * @param <T> the tile type this block hosts.
  */
 public abstract class BlockBCTile_Neptune<T extends AbstractBCBlockEntity> extends BaseEntityBlock {

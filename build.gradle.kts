@@ -462,6 +462,13 @@ tasks.jar {
     // The tag IS the node's minecraft_version (e.g. +mc26.1.2), so there's no separate jar-tag
     // property to keep in sync — one variable drives both the build target and the filename.
     archiveVersion = "$modVersion+mc$minecraftVersion"
+
+    // Ship the licence texts inside the jar. Not cosmetic: the jar carries the buildcraft.api classes,
+    // which are MIT rather than MPL, and the MIT terms require the notice to be "included in all copies
+    // or substantial portions of the Software" — a jar with none was a distribution the licence did not
+    // permit. LICENSE.API is the text those ~70 api files already point at by name.
+    from(rootProject.file("LICENSE")) { into("META-INF") }
+    from(rootProject.file("LICENSE.API")) { into("META-INF") }
 }
 
 tasks.register<JavaExec>("dumpMethods") {

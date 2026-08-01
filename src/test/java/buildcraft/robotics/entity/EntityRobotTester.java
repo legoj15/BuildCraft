@@ -57,7 +57,13 @@ import buildcraft.transport.tile.TilePipeHolder;
  *     {@code RobotStationPluggableTester}'s, because a re-used arena origin would otherwise collide on
  *     {@code registerStation}.</li>
  * <li>Every test force-loads its arena's chunks ({@link EntityArenaUtil#forceLoadEntityArena}): an entity in a
- *     non-force-loaded chunk never ticks, and roughly every assertion here needs the robot to tick.</li>
+ *     non-force-loaded chunk never ticks, and roughly every assertion here needs the robot to tick. The same
+ *     applies to the docking-station pipes — a {@code RobotStationPluggable} only registers its station from
+ *     {@code onTick}, so an unloaded chunk means no station at all.</li>
+ * <li>Every relative position stays inside the arena's grid cell — with the {@code minecraft:empty} structure
+ *     the framework spaces arenas 6 blocks apart in X and 8 in Z, so anything beyond that lands in a
+ *     neighbouring test's arena, which is neither cleared between runs nor safe from being written over in the
+ *     same tick.</li>
  * <li>All phases are scheduled from the top of the test, never from inside another scheduled runnable —
  *     {@code GameTestInfo} runs its callbacks while iterating the very map {@code runAfterDelay} writes to.</li>
  * </ul>
@@ -297,7 +303,7 @@ public class EntityRobotTester {
         EntityArenaUtil.forceLoadEntityArena(helper);
         BlockPos pipeRel = new BlockPos(5, 2, 7);
         installStation(helper, pipeRel, Direction.UP);
-        EntityRobot robot = addRobot(helper, new BlockPos(7, 4, 7));
+        EntityRobot robot = addRobot(helper, new BlockPos(3, 4, 7));
 
         helper.runAfterDelay(5, () -> {
             DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
@@ -327,7 +333,7 @@ public class EntityRobotTester {
     public static void damageDebitsBatteryAndSetsHurtTime(GameTestHelper helper) {
         EntityArenaUtil.forceLoadEntityArena(helper);
         ServerLevel level = helper.getLevel();
-        EntityRobot robot = addRobot(helper, new BlockPos(5, 2, 9));
+        EntityRobot robot = addRobot(helper, new BlockPos(3, 2, 6));
 
         helper.runAfterDelay(5, () -> {
             long stored = 5000L * MjAPI.MJ;
@@ -364,8 +370,8 @@ public class EntityRobotTester {
     public static void batteryExhaustedHitConvertsToItems(GameTestHelper helper) {
         EntityArenaUtil.forceLoadEntityArena(helper);
         ServerLevel level = helper.getLevel();
-        BlockPos pipeRel = new BlockPos(5, 2, 11);
-        BlockPos robotRel = new BlockPos(5, 3, 11);
+        BlockPos pipeRel = new BlockPos(5, 2, 2);
+        BlockPos robotRel = new BlockPos(5, 3, 2);
         installStation(helper, pipeRel, Direction.UP);
         EntityRobot robot = addRobot(helper, robotRel);
         long[] robotId = { EntityRobotBase.NULL_ROBOT_ID };
@@ -429,13 +435,13 @@ public class EntityRobotTester {
     public static void dockedAndFilteredDamageDoesNothing(GameTestHelper helper) {
         EntityArenaUtil.forceLoadEntityArena(helper);
         ServerLevel level = helper.getLevel();
-        BlockPos pipeRel = new BlockPos(5, 2, 13);
+        BlockPos pipeRel = new BlockPos(5, 2, 4);
         installStation(helper, pipeRel, Direction.UP);
-        EntityRobot docked = addRobot(helper, new BlockPos(5, 3, 13));
-        EntityRobot airborne = addRobot(helper, new BlockPos(7, 3, 13));
+        EntityRobot docked = addRobot(helper, new BlockPos(5, 3, 4));
+        EntityRobot airborne = addRobot(helper, new BlockPos(3, 3, 4));
 
         // The mob only ever supplies a DamageSource; keep it inert so it cannot wander, burn or path.
-        BlockPos mobRel = new BlockPos(7, 3, 15);
+        BlockPos mobRel = new BlockPos(3, 3, 6);
         //? if >=26.2 {
         /*net.minecraft.world.entity.Mob mob =
                 helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, mobRel);*/
@@ -472,7 +478,7 @@ public class EntityRobotTester {
                     "a mob hit must not drain a robot's battery");
 
             FallingBlockEntity falling = FallingBlockEntity.fall(level,
-                    helper.absolutePos(new BlockPos(7, 6, 13)), Blocks.SAND.defaultBlockState());
+                    helper.absolutePos(new BlockPos(3, 6, 4)), Blocks.SAND.defaultBlockState());
             boolean hitByBlock = EntityArenaUtil.hurt(level, airborne,
                     level.damageSources().fallingBlock(falling), 4.0F);
             helper.assertFalse(hitByBlock, "falling-block damage must never reach a robot");
@@ -545,12 +551,12 @@ public class EntityRobotTester {
      *  charge through it), a simulated receive commits nothing, and a real one shows up on the robot's
      *  synched whole-MJ energy so the renderer's charge bar can track it.
      *
-     *  <p>Not asserted here: the {@code ticksCharging} latch (Decision 6) that must NOT move on a simulated
-     *  transfer. It has no public accessor on the Ph3 skeleton and reflecting at it would pin an
-     *  implementation detail; the honest fix is to expose a read-only accessor on
-     *  {@code RobotChargeReceiver}/{@code EntityRobot} when the latch lands and extend this test then. What
-     *  IS pinned below is the observable half — simulate must leave the battery, and everything downstream
-     *  of it, completely untouched. */
+     *  <p>The {@code ticksCharging} latch (Decision 6) is pinned here too, now that
+     *  {@code EntityRobot.getTicksCharging()} exposes it read-only — the skeleton had no accessor and this
+     *  test asked for one. It matters because the latch is what keeps a recharging robot LOOKING awake, and
+     *  the two in-repo callers that probe a receiver with {@code simulate == true} every tick (the obsidian
+     *  pipe behaviour and the pulsar pluggable) would otherwise pin every robot next to a pipe as "charging"
+     *  forever, whether or not a single MJ ever arrived. */
     public static void dockedRobotChargeIsReadableAndSimulateIsInert(GameTestHelper helper) {
         EntityArenaUtil.forceLoadEntityArena(helper);
         BlockPos pipeRel = new BlockPos(5, 4, 5);
@@ -571,11 +577,17 @@ public class EntityRobotTester {
                             + "the station's receiver to read a docked robot's charge, and a receiver-only "
                             + "wrapper kills that gate trigger with no other symptom");
 
+            int latchBefore = robot.getTicksCharging();
+
             long excess = receiver.receivePower(delivered, true);
             helper.assertTrue(excess == 0, "well under capacity: a simulated receive rejects nothing");
             helper.assertTrue(robot.getBattery().getStored() == 0,
                     "a SIMULATED receive must commit nothing — the obsidian pipe and the pulsar both probe "
                             + "with simulate == true every tick");
+            helper.assertTrue(robot.getTicksCharging() == latchBefore,
+                    "a SIMULATED receive must not move the ticksCharging latch either: the two in-repo "
+                            + "simulating callers probe every tick, so a latch that moved on a probe would "
+                            + "report every robot beside a pipe as permanently charging");
 
             helper.assertTrue(receiver.receivePower(delivered, false) == 0,
                     "a real receive well under capacity rejects nothing");
@@ -583,6 +595,9 @@ public class EntityRobotTester {
                     "the charge hand-off is lossless");
             helper.assertTrue(((IMjReadable) receiver).getStored() == delivered,
                     "the readable view must report the robot's live charge");
+            helper.assertTrue(robot.getTicksCharging() > latchBefore,
+                    "control: a REAL receive above the detection threshold must move the latch — otherwise "
+                            + "the simulate assertion above is satisfied by a latch that never moves at all");
         });
 
         helper.runAfterDelay(9, () -> {

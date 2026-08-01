@@ -15,10 +15,8 @@ import net.minecraft.world.level.Level;
 import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.core.IFluidHandlerAdv;
 import buildcraft.api.core.IZone;
-import buildcraft.api.mj.MjAPI;
+import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjBattery;
-
-import buildcraft.lib.mj.MjBatteryReceiver;
 
 /** Abstract robot entity — the registry/event/station-facing anchor type.
  *
@@ -35,16 +33,10 @@ import buildcraft.lib.mj.MjBatteryReceiver;
  * 7.1.x no-op'd health anyway this is the intended fix, not a regression. */
 public abstract class EntityRobotBase extends Entity implements IRobotAccess, IFluidHandlerAdv {
 
-    /** 7.1.x stored 100 000 RF. BuildCraft's canonical bridge was 1 MJ = 10 RF, so the modern capacity is
-     * 10 000 MJ. Chosen, not derived — 7.1.x 100 000 RF at 10 RF/MJ. (The old {@code 5000 * MJ} pin implied
-     * 1 RF = 0.05 MJ while {@code AIRobot.getPowerCost()} implies 1 RF = 0.1 MJ; a robot would have run half
-     * as long as its 7.1.x self.) Still comfortably larger than {@code Integer.MAX_VALUE}. */
-    public static final long MAX_POWER = 10_000 * MjAPI.MJ;
-    /** Chosen, not derived — 7.1.x 20 000 RF at 10 RF/MJ. */
-    public static final long SAFETY_POWER = MAX_POWER / 5;
-    /** Chosen, not derived — 7.1.x 0 RF. */
-    public static final long SHUTDOWN_POWER = 0;
-    public static final long NULL_ROBOT_ID = Long.MAX_VALUE;
+    // The energy scale (MAX_POWER / SAFETY_POWER / SHUTDOWN_POWER / NULL_ROBOT_ID / DAMAGE_ENERGY_PER_POINT)
+    // lives on IRobotAccess and is inherited here — see the comment on that interface for why reading a robot
+    // constant must not require class-loading Entity. Existing `EntityRobotBase.MAX_POWER` call sites are
+    // unaffected: they resolve through this inheritance.
 
     public EntityRobotBase(EntityType<? extends EntityRobotBase> type, Level level) {
         super(type, level);
@@ -59,22 +51,20 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
 
     /** The MJ receiver a docking station hands to whatever is charging this robot.
      *
-     * <p>Concrete so fixtures and subclasses compile; {@code EntityRobot} overrides it with a wrapper that also
-     * latches "am I charging right now" for the sleep indicator. Must stay an {@code IMjReadable} as well as an
-     * {@code IMjReceiver} — {@code TriggerPower} instanceof-checks the station's receiver to read a docked
-     * robot's charge, and a receiver-only wrapper would silently kill that gate trigger.
+     * <p>Abstract, and typed against {@code IMjReceiver} rather than a concrete wrapper, on purpose: the obvious
+     * convenience default ({@code new MjBatteryReceiver(getBattery())}) would be the first and only
+     * {@code buildcraft.api} -> {@code buildcraft.lib} import in the whole API tree, which the
+     * api-redistribution plan exists to prevent. Implementations supply their own.
      *
-     * <p>Null-tolerant: a robot mid-construction (or a fixture that supplies no battery) yields no receiver
-     * rather than an NPE inside a pipe tick.
+     * <p>Whatever is returned should ALSO be an {@code IMjReadable}: {@code TriggerPower} instanceof-checks the
+     * station's receiver in order to read a docked robot's stored charge, and a receiver-only wrapper silently
+     * kills that gate trigger with no other symptom. {@code EntityRobot} returns a {@code RobotChargeReceiver}
+     * (which extends {@code MjBatteryReceiver}, so it is readable) that additionally latches "this robot is
+     * being charged right now" for the sleep indicator.
      *
-     * <p><b>Note:</b> this is the one and only place {@code buildcraft.api} reaches into {@code buildcraft.lib}
-     * ({@code MjBatteryReceiver} lives there). If the API is ever split into its own jar, this method is what
-     * has to move or be re-expressed against {@code IMjReceiver} + {@code IMjReadable} — nothing else in
-     * {@code api/} carries a lib edge. */
-    public MjBatteryReceiver getChargeReceiver() {
-        MjBattery battery = getBattery();
-        return battery == null ? null : new MjBatteryReceiver(battery);
-    }
+     * <p>May return null — a robot mid-construction, or one with no battery, yields no receiver rather than an
+     * NPE inside a pipe tick. {@code RobotStationPluggable} null-guards the whole chain for that reason. */
+    public abstract IMjReceiver getChargeReceiver();
 
     public abstract void setItemInUse(ItemStack stack);
 

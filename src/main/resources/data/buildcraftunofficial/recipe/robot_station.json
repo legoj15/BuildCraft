@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "   ",
+    " I ",
+    "ICI"
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "C": "buildcraftunofficial:chipset_gold"
+  },
+  "result": {
+    "id": "buildcraftunofficial:robot_station"
+  }
+}

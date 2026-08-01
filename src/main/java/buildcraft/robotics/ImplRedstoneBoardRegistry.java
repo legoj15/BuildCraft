@@ -18,6 +18,8 @@ import buildcraft.api.boards.RedstoneBoardRegistry;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.core.NbtApiUtil;
 
+import buildcraft.robotics.boards.BoardRobotEmptyNBT;
+
 /**
  * Concrete {@link RedstoneBoardRegistry}, ported from 7.1.x {@code buildcraft.robotics.ImplRedstoneBoardRegistry}.
  * Maps board ids to their {@link RedstoneBoardNBT} factory and MJ cost. The 7.1.x {@code int} energy cost is now
@@ -33,6 +35,21 @@ public class ImplRedstoneBoardRegistry extends RedstoneBoardRegistry {
 
     private final Map<String, BoardFactory> boards = new HashMap<>();
     private RedstoneBoardRobotNBT emptyRobotBoardNBT;
+
+    /** Seeds the empty robot board.
+     *
+     * <p>Done here rather than from {@code BCRobotics.init} because the empty board is not optional content: an
+     * unknown or absent board id resolves to it, {@code EntityRobot.getBoard()} falls back to it, and the robot
+     * item records its id on every drop. A registry that could exist without one would just be a null waiting
+     * to be dereferenced on the first robot anyone places. It is registered as a normal board type as well, at
+     * zero cost, so it enumerates through {@link #getAllBoardNBTs()} like any other.
+     *
+     * <p>{@link #setEmptyRobotBoard} still overrides it — that is what {@code RedstoneBoardRegistryTest} does,
+     * and what an addon replacing the default would do. */
+    public ImplRedstoneBoardRegistry() {
+        emptyRobotBoardNBT = BoardRobotEmptyNBT.INSTANCE;
+        registerBoardType(BoardRobotEmptyNBT.INSTANCE, 0L);
+    }
 
     @Override
     public void registerBoardType(RedstoneBoardNBT<?> redstoneBoardNBT, long microJoules) {

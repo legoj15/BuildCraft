@@ -15,6 +15,7 @@ import net.minecraft.world.phys.AABB;
 
 import javax.annotation.Nonnull;
 
+import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
@@ -25,7 +26,6 @@ import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
 import buildcraft.api.transport.pluggable.PluggableModelKey;
 
-import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.robotics.client.model.key.KeyPlugRobotStation;
 
 import org.jspecify.annotations.Nullable;
@@ -210,7 +210,7 @@ public class RobotStationPluggable extends PipePluggable implements IDockingStat
      *  the way to the receiver, because an NPE on this path surfaces as a pipe-tick crash rather than
      *  anything that looks like a robot bug. Identity is not cached anywhere: every call site refetches. */
     @Nullable
-    private MjBatteryReceiver chargeReceiver() {
+    private IMjReceiver chargeReceiver() {
         EntityRobotBase robot = dockedRobot();
         return robot == null ? null : robot.getChargeReceiver();
     }
@@ -220,7 +220,7 @@ public class RobotStationPluggable extends PipePluggable implements IDockingStat
     @Override
     public <T> T getCapability(@Nonnull Object cap) {
         if (cap == MjAPI.CAP_RECEIVER) {
-            MjBatteryReceiver receiver = chargeReceiver();
+            IMjReceiver receiver = chargeReceiver();
             if (receiver != null) {
                 return (T) receiver;
             }
@@ -241,7 +241,7 @@ public class RobotStationPluggable extends PipePluggable implements IDockingStat
     @Override
     public <T> T getInternalCapability(@Nonnull Object cap) {
         if (cap == MjAPI.CAP_RECEIVER) {
-            MjBatteryReceiver receiver = chargeReceiver();
+            IMjReceiver receiver = chargeReceiver();
             if (receiver != null) {
                 return (T) receiver;
             }

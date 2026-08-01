@@ -6,13 +6,10 @@
 package buildcraft.robotics.entity;
 
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Constructor;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import net.minecraft.world.entity.Entity;
 
 /**
  * Pins {@link UnreachableEntityCache}'s expiry rule (robotics Ph3).
@@ -23,20 +20,14 @@ import net.minecraft.world.entity.Entity;
  * the entry" — checkable in pure JUnit. The clock here is an {@link AtomicLong} standing in for
  * {@code level::getGameTime}, driven forwards by hand.
  *
- * <p><b>On the fake entities.</b> The cache is keyed on {@code Entity}, and {@code Entity}'s constructor
- * needs a live {@code Level} on every node from 26.x up ({@code level.getNextEntityId()}), so there is no
- * way to build one in a unit test. These fakes are therefore allocated without running any constructor and
- * then given an id through the public {@code setId}. That matters because {@code Entity.equals}/
- * {@code hashCode} are both id-based: two constructor-free instances would otherwise both report id 0 and
- * collapse into a single map key, quietly turning every multi-entity assertion below into a tautology.
- * Nothing else about the fakes is touched — the cache only ever uses them as keys.
- *
- * <p><b>Environment note.</b> Every assertion that needs a key currently fails before it reaches the
- * cache, because {@code Entity} cannot be class-loaded at all in this test tree: {@code Entity} extends
- * NeoForge's {@code AttachmentHolder}, whose static initialiser calls {@code FMLEnvironment.isProduction()}
- * and throws "There is no current FML Loader" under the plain {@code test} task. The expiry rule below is
- * still the contract to implement against; making it runnable is a build change, not a test change — see
- * the Ph3 hand-off notes. {@link #expiryWindowIs1200Ticks()} needs no key and runs today.
+ * <p><b>On the keys.</b> The cache is generic over its key type precisely so this file does not need an
+ * {@code Entity}: {@code Entity} cannot be class-loaded in the plain {@code test} task at all (it extends
+ * NeoForge's {@code AttachmentHolder}, whose static initialiser asks {@code FMLEnvironment.isProduction()}
+ * and throws "There is no current FML Loader"), and an earlier draft of this file went as far as allocating
+ * constructor-free instances through {@code sun.reflect.ReflectionFactory} to get around it — a hack that
+ * bought nothing, because the cache never looks at a key beyond hashing it. Plain {@code Object}s hash and
+ * compare by identity, which is exactly the "these are two different things" property every assertion below
+ * needs.
  */
 public class UnreachableEntityCacheTest {
 
@@ -46,7 +37,7 @@ public class UnreachableEntityCacheTest {
     private static final long START_TICK = 5_000_000L;
 
     private final AtomicLong clock = new AtomicLong(START_TICK);
-    private final UnreachableEntityCache cache = new UnreachableEntityCache(clock::get);
+    private final UnreachableEntityCache<Object> cache = new UnreachableEntityCache<>(clock::get);
 
     // ── The constant ────────────────────────────────────────────────────────
 
@@ -61,13 +52,13 @@ public class UnreachableEntityCacheTest {
 
     @Test
     public void anEntityNeverSeenIsReachable() {
-        Assertions.assertFalse(cache.isKnownUnreachable(fakeEntity(1)),
+        Assertions.assertFalse(cache.isKnownUnreachable(new Object()),
                 "an entity the robot has never failed to reach must not be pre-blacklisted");
     }
 
     @Test
     public void aDetectedEntityIsImmediatelyUnreachable() {
-        Entity target = fakeEntity(1);
+        Object target = new Object();
         cache.unreachableDetected(target);
 
         Assertions.assertTrue(cache.isKnownUnreachable(target),
@@ -76,7 +67,7 @@ public class UnreachableEntityCacheTest {
 
     @Test
     public void theNoteHoldsForTheWholeWindow() {
-        Entity target = fakeEntity(1);
+        Object target = new Object();
         cache.unreachableDetected(target);
 
         clock.set(START_TICK + UnreachableEntityCache.EXPIRY_TICKS - 1);
@@ -86,7 +77,7 @@ public class UnreachableEntityCacheTest {
 
     @Test
     public void theNoteExpiresExactlyOnTheWindowBoundary() {
-        Entity target = fakeEntity(1);
+        Object target = new Object();
         cache.unreachableDetected(target);
 
         clock.set(START_TICK + UnreachableEntityCache.EXPIRY_TICKS);
@@ -96,7 +87,7 @@ public class UnreachableEntityCacheTest {
 
     @Test
     public void theNoteIsLongExpiredWellPastTheWindow() {
-        Entity target = fakeEntity(1);
+        Object target = new Object();
         cache.unreachableDetected(target);
 
         clock.set(START_TICK + UnreachableEntityCache.EXPIRY_TICKS * 10);
@@ -105,7 +96,7 @@ public class UnreachableEntityCacheTest {
 
     @Test
     public void reDetectingRestartsTheCountdown() {
-        Entity target = fakeEntity(1);
+        Object target = new Object();
         cache.unreachableDetected(target);
 
         clock.set(START_TICK + UnreachableEntityCache.EXPIRY_TICKS - 1);
@@ -123,7 +114,7 @@ public class UnreachableEntityCacheTest {
         // accumulate: after the expiring read, wind the clock BACK inside the original window. A cache that
         // still held the old deadline would answer "unreachable" again; one that dropped it answers
         // "reachable". Without the drop a long-lived robot's map grows for every entity it ever missed.
-        Entity target = fakeEntity(1);
+        Object target = new Object();
         cache.unreachableDetected(target);
 
         clock.set(START_TICK + UnreachableEntityCache.EXPIRY_TICKS);
@@ -136,8 +127,8 @@ public class UnreachableEntityCacheTest {
 
     @Test
     public void notesAreIndependentPerEntity() {
-        Entity noted = fakeEntity(1);
-        Entity other = fakeEntity(2);
+        Object noted = new Object();
+        Object other = new Object();
         cache.unreachableDetected(noted);
 
         Assertions.assertTrue(cache.isKnownUnreachable(noted));
@@ -147,8 +138,8 @@ public class UnreachableEntityCacheTest {
 
     @Test
     public void twoEntitiesExpireOnTheirOwnSchedules() {
-        Entity early = fakeEntity(1);
-        Entity late = fakeEntity(2);
+        Object early = new Object();
+        Object late = new Object();
 
         cache.unreachableDetected(early);
         clock.set(START_TICK + 600);
@@ -163,12 +154,12 @@ public class UnreachableEntityCacheTest {
 
     @Test
     public void theCacheDoesNotKeepItsKeysAlive() {
-        // A robot that pins every entity it ever failed to reach would keep unloaded chunks' entities
+        // A robot that pinned every entity it ever failed to reach would keep unloaded chunks' entities
         // resident for the lifetime of the robot. 7.1.x used a WeakHashMap for exactly this reason.
-        Entity target = fakeEntity(1);
+        Object target = new Object();
         cache.unreachableDetected(target);
 
-        WeakReference<Entity> ref = new WeakReference<>(target);
+        WeakReference<Object> ref = new WeakReference<>(target);
         target = null;
 
         for (int attempt = 0; attempt < 50 && ref.get() != null; attempt++) {
@@ -181,32 +172,5 @@ public class UnreachableEntityCacheTest {
         Assertions.assertNull(ref.get(),
                 "the cache must hold its entity keys weakly — a strong reference here leaks every entity a "
                         + "robot has ever failed to path to");
-    }
-
-    // ── Fake-entity plumbing ────────────────────────────────────────────────
-
-    /** Allocates an {@link EntityRobot} without running any constructor and stamps it with {@code id}.
-     *
-     * <p>{@code EntityRobot} is used purely because it is the concrete {@code Entity} subclass this cache
-     * actually serves; none of its state is initialised or read. The reflective factory is reached by name
-     * so this file carries no {@code sun.*} import. */
-    private static Entity fakeEntity(int id) {
-        try {
-            Class<?> factoryClass = Class.forName("sun.reflect.ReflectionFactory");
-            Object factory = factoryClass.getMethod("getReflectionFactory").invoke(null);
-            Constructor<?> allocator = (Constructor<?>) factoryClass
-                    .getMethod("newConstructorForSerialization", Class.class, Constructor.class)
-                    .invoke(factory, EntityRobot.class, Object.class.getDeclaredConstructor());
-            allocator.setAccessible(true);
-            Entity entity = (Entity) allocator.newInstance();
-            // Non-zero on purpose: getId() throws on an unassigned id from 26.x onwards, and equals/hashCode
-            // are id-based, so distinct ids are what keeps distinct fakes distinct map keys.
-            entity.setId(id);
-            return entity;
-        } catch (ReflectiveOperationException | LinkageError e) {
-            throw new AssertionError("could not allocate a constructor-free Entity for the cache test — if "
-                    + "this is a NoClassDefFoundError on Entity/AttachmentHolder the test tree has no FML "
-                    + "loader, which is an environment problem rather than a cache problem", e);
-        }
     }
 }

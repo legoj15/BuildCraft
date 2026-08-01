@@ -21,11 +21,13 @@ import buildcraft.lib.client.model.ModelHolderStatic;
 import buildcraft.lib.client.model.plug.PlugBakerSimple;
 
 import buildcraft.robotics.BCRoboticsBlockEntities;
+import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.BCRoboticsMenuTypes;
 import buildcraft.robotics.RobotStationPluggable;
 import buildcraft.robotics.client.gui.GuiZonePlanner;
 import buildcraft.robotics.client.model.key.KeyPlugRobotStation;
 import buildcraft.robotics.client.render.PlugRobotStationRenderer;
+import buildcraft.robotics.client.render.RenderRobot;
 import buildcraft.robotics.client.render.RenderZonePlanner;
 
 public class BCRoboticsClient {
@@ -43,10 +45,14 @@ public class BCRoboticsClient {
         event.register(BCRoboticsMenuTypes.ZONE_PLANNER.get(), GuiZonePlanner::new);
     }
 
-    /** Registers the Zone Planner's in-world face preview renderer (the live terrain "screen"). */
+    /** Registers the Zone Planner's in-world face preview renderer (the live terrain "screen") and the
+     *  robot entity renderer. {@code registerEntityRenderer} has the same signature on all five nodes, so
+     *  this line needs no directive — the two renderer generations are absorbed inside
+     *  {@link RenderRobot} itself. */
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(BCRoboticsBlockEntities.ZONE_PLANNER.get(), RenderZonePlanner::new);
+        event.registerEntityRenderer(BCRoboticsEntities.ROBOT.get(), RenderRobot::new);
     }
 
     /**

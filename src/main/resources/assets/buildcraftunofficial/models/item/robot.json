@@ -1,0 +1,23 @@
+{
+    "__comment": "The robot item is the entity's own cube: an 8x8x8 box centred in the model space, wrapped in the same 32x32 skin net RenderRobot uses. The uv numbers are model-space 0..16 units over a 32px texture, i.e. exactly half the texel coordinates in RenderRobot.UVS. Texture is the textures/item/ copy of robot_base.png so it lands on a listed atlas source (entity textures are bound as whole files and are not stitched).",
+    "parent": "block/block",
+    "textures": {
+        "all": "buildcraftunofficial:item/robot",
+        "particle": "buildcraftunofficial:item/robot"
+    },
+    "elements": [
+        {
+            "from": [4, 4, 4],
+            "to": [12, 12, 12],
+            "shade": true,
+            "faces": {
+                "up":    { "uv": [8, 0, 12, 4], "texture": "#all" },
+                "down":  { "uv": [4, 0, 8, 4], "texture": "#all" },
+                "north": { "uv": [4, 4, 8, 8], "texture": "#all" },
+                "south": { "uv": [12, 4, 16, 8], "texture": "#all" },
+                "west":  { "uv": [8, 4, 12, 8], "texture": "#all" },
+                "east":  { "uv": [0, 4, 4, 8], "texture": "#all" }
+            }
+        }
+    ]
+}

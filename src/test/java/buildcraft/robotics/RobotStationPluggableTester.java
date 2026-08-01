@@ -39,6 +39,8 @@ import buildcraft.api.robots.RobotManager;
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.tile.TileEngineCreative;
+import buildcraft.lib.mj.MjBatteryReceiver;
+import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.pipe.flow.PipeFlowItems;
@@ -55,10 +57,27 @@ import buildcraft.transport.tile.TilePipeHolder;
  * running arena in this batch — every assertion below is keyed to THIS test's own {@code (pos, side)},
  * never to {@code getStations().size()} or any other whole-registry state (see {@code MarkerTester} for
  * the same discipline applied via a private {@code test_environment} where a keyed lookup isn't enough).
+ *
+ * <p><b>Two rules about WHERE these tests build, both learned the hard way.</b> The game-test framework lays
+ * arenas out on a grid: with the {@code minecraft:empty} structure they are 6 blocks apart in X and 8 in Z,
+ * and the framework force-loads only the chunk(s) the (1x1x1) structure itself occupies. So:
+ * <ul>
+ * <li><b>Every test force-loads its own 3x3 chunk neighbourhood</b> ({@link EntityArenaUtil#forceLoadEntityArena}).
+ *     A pipe placed even a few blocks from the arena origin can land in a neighbouring chunk, and a block
+ *     entity in an unloaded chunk never ticks — which for this suite means {@code RobotStationPluggable.onTick}
+ *     never runs, no {@code DockingStation} is ever registered, and the test NPEs on a null station. That was
+ *     the exact failure mode of {@link #testRenderStateSurvivesNetworkRoundTrip} once a later batch of tests
+ *     re-packed the grid: its pipe sat 17 blocks out, in a chunk that until then had happened to be kept
+ *     loaded by a neighbouring arena.</li>
+ * <li><b>Every relative position stays inside the 6x8 cell</b> (x in 1..2, z in 1..6 here). Anything further
+ *     out lands in ANOTHER test's arena, where it is neither cleared between runs nor safe from being
+ *     overwritten in the same tick.</li>
+ * </ul>
  */
 public class RobotStationPluggableTester {
 
     private static TilePipeHolder placeItemPipe(GameTestHelper helper, BlockPos relPos) {
+        EntityArenaUtil.forceLoadEntityArena(helper);
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
         //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
@@ -76,6 +95,7 @@ public class RobotStationPluggableTester {
     }
 
     private static TilePipeHolder placePowerPipe(GameTestHelper helper, BlockPos relPos, net.minecraft.world.item.Item pipeItem) {
+        EntityArenaUtil.forceLoadEntityArena(helper);
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
         //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
@@ -103,7 +123,7 @@ public class RobotStationPluggableTester {
     }
 
     public static void testRemovingPipeDeregistersStation(GameTestHelper helper) {
-        BlockPos relPos = new BlockPos(1, 2, 3);
+        BlockPos relPos = new BlockPos(1, 2, 2);
         TilePipeHolder tile = placeItemPipe(helper, relPos);
         install(tile, Direction.DOWN);
 
@@ -133,7 +153,7 @@ public class RobotStationPluggableTester {
     // ---------- RobotUtils discovery through a real IPipeHolder ----------
 
     public static void testRobotUtilsDiscoversStationThroughPipeHolder(GameTestHelper helper) {
-        BlockPos relPos = new BlockPos(1, 2, 5);
+        BlockPos relPos = new BlockPos(1, 2, 3);
         TilePipeHolder tile = placeItemPipe(helper, relPos);
         install(tile, Direction.NORTH);
 
@@ -148,7 +168,7 @@ public class RobotStationPluggableTester {
     // ---------- Reservation lifecycle (take / takeAsMain / release) ----------
 
     public static void testReleaseFreesStationForReclaim(GameTestHelper helper) {
-        BlockPos relPos = new BlockPos(1, 2, 7);
+        BlockPos relPos = new BlockPos(1, 2, 4);
         TilePipeHolder tile = placeItemPipe(helper, relPos);
         install(tile, Direction.SOUTH);
         BlockPos absPos = helper.absolutePos(relPos);
@@ -173,7 +193,7 @@ public class RobotStationPluggableTester {
     }
 
     public static void testRenderStateTransitionsAvailableReservedLinked(GameTestHelper helper) {
-        BlockPos relPos = new BlockPos(1, 2, 9);
+        BlockPos relPos = new BlockPos(1, 2, 5);
         TilePipeHolder tile = placeItemPipe(helper, relPos);
         RobotStationPluggable plug = install(tile, Direction.EAST);
         BlockPos absPos = helper.absolutePos(relPos);
@@ -201,7 +221,7 @@ public class RobotStationPluggableTester {
     // ---------- MJ charge handoff: docked only, lossless ----------
 
     public static void testDockedRobotChargesLosslesslyFromMjReceiver(GameTestHelper helper) {
-        BlockPos relPos = new BlockPos(1, 2, 11);
+        BlockPos relPos = new BlockPos(1, 2, 6);
         TilePipeHolder tile = placeItemPipe(helper, relPos);
         RobotStationPluggable plug = install(tile, Direction.WEST);
         BlockPos absPos = helper.absolutePos(relPos);
@@ -227,7 +247,7 @@ public class RobotStationPluggableTester {
     }
 
     public static void testReservedButNotDockedRobotDoesNotCharge(GameTestHelper helper) {
-        BlockPos relPos = new BlockPos(1, 2, 13);
+        BlockPos relPos = new BlockPos(2, 2, 1);
         TilePipeHolder tile = placeItemPipe(helper, relPos);
         RobotStationPluggable plug = install(tile, Direction.UP);
         BlockPos absPos = helper.absolutePos(relPos);
@@ -255,10 +275,10 @@ public class RobotStationPluggableTester {
      *  {@code isBlocking()} pluggable. Both halves have to be right or a docked robot never charges,
      *  and Ph4's {@code AIRobotRecharge} depends entirely on this working. */
     public static void testKinesisPipeChargesDockedRobot(GameTestHelper helper) {
-        BlockPos redstonePos = new BlockPos(2, 1, 2);
-        BlockPos enginePos = new BlockPos(2, 2, 2);
-        BlockPos woodPipePos = new BlockPos(2, 3, 2);
-        BlockPos pipePos = new BlockPos(2, 4, 2);
+        BlockPos redstonePos = new BlockPos(2, 1, 5);
+        BlockPos enginePos = new BlockPos(2, 2, 5);
+        BlockPos woodPipePos = new BlockPos(2, 3, 5);
+        BlockPos pipePos = new BlockPos(2, 4, 5);
 
         if (BCCoreBlocks.ENGINE_CREATIVE == null) {
             throw new IllegalStateException(
@@ -315,9 +335,9 @@ public class RobotStationPluggableTester {
      *  from the buffer — with no station attached, exactly like the client's — must still report LINKED.
      *  Without the sync it reports NONE and {@code PlugRobotStationRenderer} draws nothing at all. */
     public static void testRenderStateSurvivesNetworkRoundTrip(GameTestHelper helper) {
-        // Distinct from testRenderStateTransitions...'s (1,2,9): these tests share a
-        // test_environment, and RobotRegistry is a per-level SavedData keyed by (pos, side).
-        BlockPos relPos = new BlockPos(1, 2, 17);
+        // Distinct from testRenderStateTransitions...'s (1,2,5): the RobotRegistry is a per-level
+        // SavedData keyed by (pos, side), and arena cells can be re-used between batches.
+        BlockPos relPos = new BlockPos(2, 2, 3);
         TilePipeHolder tile = placeItemPipe(helper, relPos);
         RobotStationPluggable server = install(tile, Direction.NORTH);
         BlockPos absPos = helper.absolutePos(relPos);
@@ -346,7 +366,7 @@ public class RobotStationPluggableTester {
     // ---------- Item pipe handoff smoke ----------
 
     public static void testItemOutputInjectsIntoPipeNetwork(GameTestHelper helper) {
-        BlockPos relPos = new BlockPos(1, 2, 15);
+        BlockPos relPos = new BlockPos(2, 2, 2);
         TilePipeHolder tile = placeItemPipe(helper, relPos);
         install(tile, Direction.DOWN);
         BlockPos absPos = helper.absolutePos(relPos);
@@ -377,6 +397,12 @@ public class RobotStationPluggableTester {
         private static long nextTestId = 1;
 
         private final MjBattery battery = new MjBattery(1_000_000L * MjAPI.MJ);
+        /** A plain battery receiver, not {@code EntityRobot}'s latching one: {@code getChargeReceiver} is
+         *  abstract on {@code EntityRobotBase} (typing it against {@code IMjReceiver} is what keeps
+         *  {@code buildcraft.api} free of any {@code buildcraft.lib} import), and this fixture has no sleep
+         *  indicator to keep awake. It is still an {@code IMjReadable} by inheritance, which is what the
+         *  {@code TriggerPower} path needs. */
+        private final MjBatteryReceiver chargeReceiver = new MjBatteryReceiver(battery);
         private long robotId = nextTestId++;
         private DockingStation dockingStation;
         private DockingStation mainStation;
@@ -451,6 +477,11 @@ public class RobotStationPluggableTester {
         @Override
         public MjBattery getBattery() {
             return battery;
+        }
+
+        @Override
+        public IMjReceiver getChargeReceiver() {
+            return chargeReceiver;
         }
 
         @Override

@@ -774,5 +774,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_item_rejected_when_station_taken", () -> buildcraft.robotics.item.ItemRobotPlacementTester::robotItemRejectedWhenStationAlreadyTaken);
         reg.accept("buildcraftunofficial:robot_item_place_event_cancellable", () -> buildcraft.robotics.item.ItemRobotPlacementTester::robotItemPlacementIsCancellableViaRobotEventPlace);
         reg.accept("buildcraftunofficial:robot_item_empty_board_places", () -> buildcraft.robotics.item.ItemRobotPlacementTester::emptyBoardRobotStillPlaces);
+
+        // Robotics Ph3 — the robot item's CUSTOM_DATA blob: the 7.1.x 'board'/'energy' key names, a bare
+        // stack reading as empty-board-at-zero, the two keys being independent, an id-less board compound
+        // surviving as "no board", and the charge staying a long past the int ceiling. A game test rather
+        // than JUnit because the plain test JVM cannot construct an ItemStack at all.
+        reg.accept("buildcraftunofficial:robot_item_component_pins", () -> buildcraft.robotics.item.ItemRobotComponentTester::robotItemComponentPins);
     }
 }

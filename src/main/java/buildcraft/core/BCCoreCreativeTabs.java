@@ -17,6 +17,11 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import buildcraft.api.boards.RedstoneBoardNBT;
+import buildcraft.api.boards.RedstoneBoardRegistry;
+import buildcraft.api.boards.RedstoneBoardRobotNBT;
+import buildcraft.api.robots.EntityRobotBase;
+
 import buildcraft.lib.BCLibItems;
 import buildcraft.core.item.ItemPaintbrush_BC8;
 import buildcraft.builders.BCBuildersBlocks;
@@ -26,6 +31,7 @@ import buildcraft.factory.BCFactoryItems;
 import buildcraft.energy.BCEnergyItems;
 import buildcraft.energy.BCEnergyFluids;
 import buildcraft.robotics.BCRoboticsItems;
+import buildcraft.robotics.item.ItemRobot;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.silicon.BCSiliconBlocks;
 import buildcraft.silicon.BCSiliconItems;
@@ -137,10 +143,30 @@ public class BCCoreCreativeTabs {
                                 output.accept(BCFactoryItems.GELLED_WATER.get());
                                 // Robotics
                                 output.accept(BCRoboticsItems.ZONE_PLANNER.get());
-                                // A bare robot stack carries no CUSTOM_DATA blob, which reads as
-                                // "empty board, no charge" — the Ph3 entry. Ph4 grows this into one 0-charge
-                                // and one full-charge entry per registered board.
-                                output.accept(BCRoboticsItems.ROBOT.get());
+                                // Robots: the empty-board chassis at flat charge, then a drained and a full
+                                // stack for every other registered board. Ph3 registers only the empty board,
+                                // so today that loop adds nothing — it grows on its own as Ph4/Ph5 land real
+                                // boards, with no edit needed here. The empty board is skipped inside the loop
+                                // so it can't appear twice.
+                                RedstoneBoardRegistry boardRegistry = RedstoneBoardRegistry.instance;
+                                RedstoneBoardRobotNBT emptyBoard =
+                                        boardRegistry == null ? null : boardRegistry.getEmptyRobotBoard();
+                                if (emptyBoard == null) {
+                                    // Nothing has registered an empty board (a partially-initialised or
+                                    // stripped-down build): fall back to the bare stack, which reads as
+                                    // "empty board, no charge" anyway.
+                                    output.accept(BCRoboticsItems.ROBOT.get());
+                                } else {
+                                    output.accept(ItemRobot.createRobotStack(emptyBoard.getID(), 0));
+                                    for (RedstoneBoardNBT<?> boardNBT : boardRegistry.getAllBoardNBTs()) {
+                                        if (boardNBT instanceof RedstoneBoardRobotNBT robotBoard
+                                                && robotBoard != emptyBoard) {
+                                            output.accept(ItemRobot.createRobotStack(robotBoard.getID(), 0));
+                                            output.accept(ItemRobot.createRobotStack(robotBoard.getID(),
+                                                    EntityRobotBase.MAX_POWER));
+                                        }
+                                    }
+                                }
                                 // Transport
                                 output.accept(BCTransportItems.FILTERED_BUFFER.get());
                                 output.accept(BCTransportItems.WATERPROOF.get());

@@ -113,7 +113,7 @@ Initialization order: `BCLib` → core registries → per-subsystem registries �
 - **Skim it before starting work.** If the task you're about to do covers a bullet on that list (in whole or in part), recognise it without the user having to point at the line number, and remove or trim the bullet as part of the same change. e.g. "we just wired the `goggles` advancement" → strike `goggles` from the advancement orphan list in the same commit.
 - **Only track what's planned, not what's done.** Finished items are removed entirely — the bullet AND its linked detail section — never crossed out or kept as historical record. The changelog already serves as the historical record (see [changelog.md](changelog.md)). If a bullet is partially done, trim the bullet and its detail section down to the remaining sub-scope.
 - **Add follow-ups you discover.** If implementing one item surfaces a related gap that's clearly out of scope for the current change (a bug spotted in passing, a feature the user hand-waved at, a finalization sweep), add a new one-line bullet under the appropriate section, with any context going into the linked docs per the rule above.
-- **Keep it readable.** Sections are: 🔧 Outstanding work → 🆕 New Features → 🚫 Blocked. Bullets are checkboxes (`- [ ]`). Don't reorganise without reason; the user edits this file by hand and stable structure matters.
+- **Keep it readable.** Sections are: 🔧 Outstanding work → 🆕 New Features → 🚫 Blocked. Bullets are plain `-` list items (the user dropped the checkbox syntax by hand in 2026-08; don't reintroduce `- [ ]`). Don't reorganise without reason; the user edits this file by hand and stable structure matters.
 - **Update the "Last audited" date** at the top whenever you make a substantive sweep (not for a single bullet edit).
 
 ## NeoForge Version Tracking
@@ -200,6 +200,14 @@ Adding a game test in MC 26.1+ takes **three** things, not two. If you do only t
    ```
 
    `structure` can point at a saved arena structure if the test needs a pre-built world; `minecraft:empty` gives you a void arena to `helper.setBlock(...)` into. `max_ticks` is the watchdog timeout — async tests with `succeedWhen*` need enough headroom; synchronous tests that throw or succeed immediately can use `20`.
+
+**Never assert on a fixed tick after placing blocks/entities** — even force-loaded chunks take a
+variable 1–3+ ticks to become block/entity-ticking (`setChunkForced` adds the ticket; promotion
+happens later), and the arena grid lands at a random world position every run, so the same test
+passes or flakes run to run. Gate on observed state (`EntityArenaUtil.tickUntil`/`tickUntilThen`,
+or poll for your own registration) instead of `runAfterDelay(N)`. Also keep ALL relative positions
+inside the test's own 6×8 arena grid cell — x beyond 6 or z beyond 8 writes into the NEXT test's
+arena. Full diagnosis: docs/robotics-ph3-design.md, amendment 4.
 
 **To verify your test is actually running** (not silently skipped): note the "N GAME TESTS COMPLETE" count before and after. Each new test should bump N by 1. If it doesn't, the manifest is missing or its `function` field doesn't match the registered ID. Confirm by temporarily making the test throw — if the failure shows up in the "required tests failed" list, it's wired correctly; if it doesn't, fix the manifest first before debugging the test logic.
 

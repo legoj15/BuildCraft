@@ -60,6 +60,12 @@ import buildcraft.transport.tile.TilePipeHolder;
  *     non-force-loaded chunk never ticks, and roughly every assertion here needs the robot to tick. The same
  *     applies to the docking-station pipes — a {@code RobotStationPluggable} only registers its station from
  *     {@code onTick}, so an unloaded chunk means no station at all.</li>
+ * <li>Force-loading is where the wait STARTS, not where it ends: the chunk is promoted to entity/block
+ *     ticking a variable number of ticks later (measured 0-2+, unbounded under load — see
+ *     {@link EntityArenaUtil#forceLoadEntityArena}). So no phase below fires on a hard-coded tick. Each one
+ *     is gated on the state it actually needs, via {@link EntityArenaUtil#tickUntil} for single-phase tests
+ *     and {@link EntityArenaUtil#tickUntilThen} where a second phase has to follow the first by a fixed
+ *     number of ticks.</li>
  * <li>Every relative position stays inside the arena's grid cell — with the {@code minecraft:empty} structure
  *     the framework spaces arenas 6 blocks apart in X and 8 in Z, so anything beyond that lands in a
  *     neighbouring test's arena, which is neither cleared between runs nor safe from being written over in the
@@ -108,6 +114,14 @@ public class EntityRobotTester {
         // forks three ways across the nodes and buys nothing here.
         helper.getLevel().addFreshEntity(robot);
         return robot;
+    }
+
+    /** Whether {@code robot} has ticked at least once, which is the only thing that gets it an id from the
+     *  {@link IRobotRegistry}. Every phase that claims a station has to wait for this: {@code takeAsMain}
+     *  stores {@code getRobotId()} verbatim, so a claim made with the {@code NULL_ROBOT_ID} sentinel leaves
+     *  {@code isTaken()} reading false and every assertion after it meaningless. */
+    private static boolean hasTicked(EntityRobot robot) {
+        return robot.getRobotId() != EntityRobotBase.NULL_ROBOT_ID;
     }
 
     /** The face-centre a docked robot must sit at: block centre pushed half a block out along the mounting
@@ -165,7 +179,10 @@ public class EntityRobotTester {
         helper.assertTrue(robot.shouldBeSaved(), "a robot must ride its chunk's entity save");
         helper.assertTrue(robot.isNoGravity(), "a robot flies — gravity would drag it off its station");
 
-        helper.runAfterDelay(60, () -> {
+        // Empty first phase on purpose: all it does is pin the start of the idle window to the robot's own
+        // first tick, so "60 ticks of idling" really is 60 ticks of TICKING rather than 60 ticks that may
+        // have begun before the arena's chunk started ticking at all.
+        EntityArenaUtil.tickUntilThen(helper, 120, () -> hasTicked(robot), () -> { }, 60, () -> {
             IRobotRegistry registry = RobotManager.registryProvider.getRegistry(helper.getLevel());
             helper.assertTrue(robot.isAlive(), "a robot must not despawn or expire while idling");
             helper.assertTrue(registry.getLoadedRobot(robot.getRobotId()) == robot,
@@ -175,7 +192,7 @@ public class EntityRobotTester {
                     "an idle robot with no AI must not drift or fall: expected " + spawnedAt
                             + " but was " + robot.position());
             helper.succeed();
-        });
+        }, "the robot never ticked, so the 60-tick idle window never even started");
     }
 
     // ---------- persistence ----------
@@ -192,12 +209,13 @@ public class EntityRobotTester {
         installStation(helper, dockRel, Direction.DOWN);
         EntityRobot robot = addRobot(helper, new BlockPos(5, 3, 4));
 
-        helper.runAfterDelay(5, () -> {
+        EntityArenaUtil.tickUntil(helper, 40,
+                () -> stationAt(helper, mainRel, Direction.UP) != null
+                        && stationAt(helper, dockRel, Direction.DOWN) != null
+                        && hasTicked(robot),
+                () -> {
             DockingStationPipe main = stationAt(helper, mainRel, Direction.UP);
             DockingStationPipe dock = stationAt(helper, dockRel, Direction.DOWN);
-            helper.assertTrue(main != null && dock != null, "precondition: both stations registered");
-            helper.assertTrue(robot.getRobotId() != EntityRobotBase.NULL_ROBOT_ID,
-                    "precondition: the robot registered and holds a real id");
 
             main.takeAsMain(robot);
             dock.take(robot);
@@ -259,7 +277,7 @@ public class EntityRobotTester {
             helper.assertTrue(NBTUtilBC.getByte(current, "side", (byte) -1) == (byte) Direction.DOWN.ordinal(),
                     "the docked station's mounting face must be saved as a side byte");
             helper.succeed();
-        });
+        }, "both stations must register and the robot must tick before the save can be set up");
     }
 
     /** A corrupt (or legacy {@code UNKNOWN} = 6) station side byte must read as "no station", never as an
@@ -305,17 +323,16 @@ public class EntityRobotTester {
         installStation(helper, pipeRel, Direction.UP);
         EntityRobot robot = addRobot(helper, new BlockPos(3, 4, 7));
 
-        helper.runAfterDelay(5, () -> {
+        EntityArenaUtil.tickUntilThen(helper, 60,
+                () -> stationAt(helper, pipeRel, Direction.UP) != null && hasTicked(robot),
+                () -> {
             DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-            helper.assertTrue(station != null, "precondition: the station registered");
             station.takeAsMain(robot);
             robot.dock(station);
             // Deliberately give it somewhere else to be: the snap has to WIN against live motion, not merely
             // happen to coincide with a stationary robot.
             robot.setDeltaMovement(new Vec3(0.4, 0.4, 0.4));
-        });
-
-        helper.runAfterDelay(9, () -> {
+        }, 4, () -> {
             Vec3 expected = faceCentre(helper, pipeRel, Direction.UP);
             helper.assertTrue(robot.position().distanceToSqr(expected) < 1.0E-6,
                     "a docked robot must snap to its station's face centre: expected " + expected
@@ -323,7 +340,7 @@ public class EntityRobotTester {
             helper.assertTrue(robot.getDeltaMovement().lengthSqr() < 1.0E-9,
                     "a docked robot's motion must be zeroed, or it fights the snap every tick");
             helper.succeed();
-        });
+        }, "the station never registered, or the robot never ticked");
     }
 
     // ---------- damage / death ----------
@@ -335,7 +352,7 @@ public class EntityRobotTester {
         ServerLevel level = helper.getLevel();
         EntityRobot robot = addRobot(helper, new BlockPos(3, 2, 6));
 
-        helper.runAfterDelay(5, () -> {
+        EntityArenaUtil.tickUntilThen(helper, 80, () -> hasTicked(robot), () -> {
             long stored = 5000L * MjAPI.MJ;
             robot.getBattery().addPower(stored, false);
             Player attacker = helper.makeMockPlayer(GameType.SURVIVAL);
@@ -354,14 +371,12 @@ public class EntityRobotTester {
                     "the hurt flash must be written to the synched accessor at damage time, not deferred to "
                             + "the next tick push — a 10-tick flash pushed a tick late is a frame of lie and "
                             + "can be missed entirely");
-        });
-
-        helper.runAfterDelay(30, () -> {
+        }, 25, () -> {
             helper.assertTrue(robot.getHurtTime() == 0,
                     "the hurt flash must decay back to 0 (one per tick from 10), or the robot stays red "
                             + "forever");
             helper.succeed();
-        });
+        }, "the robot never ticked, so it could never have been hit in the first place");
     }
 
     /** A hit the battery cannot cover converts the robot into items: the charged robot item plus its cargo
@@ -376,15 +391,14 @@ public class EntityRobotTester {
         EntityRobot robot = addRobot(helper, robotRel);
         long[] robotId = { EntityRobotBase.NULL_ROBOT_ID };
 
-        helper.runAfterDelay(5, () -> {
+        EntityArenaUtil.tickUntilThen(helper, 60,
+                () -> stationAt(helper, pipeRel, Direction.UP) != null && hasTicked(robot),
+                () -> {
             DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-            helper.assertTrue(station != null, "precondition: the station registered");
             // Linked but NOT docked: a docked robot is invulnerable by design, so this test needs the
             // reservation (to prove death frees it) without the immunity.
             station.takeAsMain(robot);
             robotId[0] = robot.getRobotId();
-            helper.assertTrue(robotId[0] != EntityRobotBase.NULL_ROBOT_ID,
-                    "precondition: the robot registered and holds a real id");
 
             robot.setInventoryStack(0, new ItemStack(Items.DIAMOND, 2));
             // Exactly the debit for a single damage point: 'stored - debit > 0' is strictly greater, so
@@ -393,9 +407,7 @@ public class EntityRobotTester {
 
             Player attacker = helper.makeMockPlayer(GameType.SURVIVAL);
             EntityArenaUtil.hurt(level, robot, level.damageSources().playerAttack(attacker), 1.0F);
-        });
-
-        helper.runAfterDelay(9, () -> {
+        }, 4, () -> {
             IRobotRegistry registry = RobotManager.registryProvider.getRegistry(level);
             helper.assertTrue(robot.isRemoved(),
                     "a robot that cannot pay for a hit converts to items and leaves the world");
@@ -427,7 +439,7 @@ public class EntityRobotTester {
             helper.assertTrue(cargoDropped,
                     "the four transfer slots must spill when the robot converts to items");
             helper.succeed();
-        });
+        }, "the station never registered, or the robot never ticked");
     }
 
     /** A docked robot is invulnerable, and mob / falling-block damage never touches a robot at all — a robot
@@ -452,9 +464,11 @@ public class EntityRobotTester {
         mob.setNoAi(true);
         mob.setNoGravity(true);
 
-        helper.runAfterDelay(5, () -> {
+        EntityArenaUtil.tickUntil(helper, 40,
+                () -> stationAt(helper, pipeRel, Direction.UP) != null
+                        && hasTicked(docked) && hasTicked(airborne),
+                () -> {
             DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-            helper.assertTrue(station != null, "precondition: the station registered");
             station.takeAsMain(docked);
             docked.dock(station);
 
@@ -497,7 +511,7 @@ public class EntityRobotTester {
             helper.assertTrue(airborne.getBattery().getStored() == charge - 4L * DAMAGE_DEBIT_PER_POINT,
                     "control: the player hit must debit 4 x 260 MJ");
             helper.succeed();
-        });
+        }, "the station never registered, or one of the two robots never ticked");
     }
 
     // ---------- synchronisation ----------
@@ -514,7 +528,7 @@ public class EntityRobotTester {
 
         // One scheduled block, no ticks in between: a tick could dirty an unrelated accessor (ENERGY_MJ,
         // SLEEPING, …) and make the dirty flag meaningless.
-        helper.runAfterDelay(5, () -> {
+        EntityArenaUtil.tickUntil(helper, 40, () -> hasTicked(robot), () -> {
             ItemStack stack = new ItemStack(Items.DIAMOND, 1);
             robot.setInventoryStack(0, stack);
             helper.assertTrue(ItemStack.matches(robot.getInventoryStack(0), new ItemStack(Items.DIAMOND, 1)),
@@ -541,7 +555,7 @@ public class EntityRobotTester {
                     "re-pushing an UNCHANGED stack must not dirty the accessor — an unconditional copy() "
                             + "every tick re-sends every slot at 20 Hz");
             helper.succeed();
-        });
+        }, "the robot never ticked");
     }
 
     // ---------- charging ----------
@@ -564,9 +578,10 @@ public class EntityRobotTester {
         EntityRobot robot = addRobot(helper, new BlockPos(5, 5, 5));
         long delivered = 1200L * MjAPI.MJ;
 
-        helper.runAfterDelay(5, () -> {
+        EntityArenaUtil.tickUntilThen(helper, 60,
+                () -> stationAt(helper, pipeRel, Direction.UP) != null && hasTicked(robot),
+                () -> {
             DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-            helper.assertTrue(station != null, "precondition: the station registered");
             station.takeAsMain(robot);
             robot.dock(station);
 
@@ -598,15 +613,13 @@ public class EntityRobotTester {
             helper.assertTrue(robot.getTicksCharging() > latchBefore,
                     "control: a REAL receive above the detection threshold must move the latch — otherwise "
                             + "the simulate assertion above is satisfied by a latch that never moves at all");
-        });
-
-        helper.runAfterDelay(9, () -> {
+        }, 4, () -> {
             int expectedMj = (int) (delivered / MjAPI.MJ);
             helper.assertTrue(robot.getEnergyMj() == expectedMj,
                     "the synched energy accessor carries WHOLE MJ (0.." + (EntityRobotBase.MAX_POWER / MjAPI.MJ)
                             + ") and must track the battery, or the renderer's charge overlay never fills: "
                             + "expected " + expectedMj + " got " + robot.getEnergyMj());
             helper.succeed();
-        });
+        }, "the station never registered, or the robot never ticked");
     }
 }

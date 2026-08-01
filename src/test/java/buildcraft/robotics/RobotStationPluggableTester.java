@@ -69,6 +69,10 @@ import buildcraft.transport.tile.TilePipeHolder;
  *     the exact failure mode of {@link #testRenderStateSurvivesNetworkRoundTrip} once a later batch of tests
  *     re-packed the grid: its pipe sat 17 blocks out, in a chunk that until then had happened to be kept
  *     loaded by a neighbouring arena.</li>
+ * <li><b>...and then waits for its station instead of guessing a tick</b>
+ *     ({@link #whenStationRegistered}). Force-loading gets the chunk ticking <em>eventually</em>, not
+ *     immediately -- see {@link EntityArenaUtil#forceLoadEntityArena} for the measured spread. Every test
+ *     below therefore polls for its own station rather than hard-coding {@code runAfterDelay(2)}.</li>
  * <li><b>Every relative position stays inside the 6x8 cell</b> (x in 1..2, z in 1..6 here). Anything further
  *     out lands in ANOTHER test's arena, where it is neither cleared between runs nor safe from being
  *     overwritten in the same tick.</li>
@@ -94,6 +98,26 @@ public class RobotStationPluggableTester {
         return plug;
     }
 
+    /** Runs {@code body} on the first tick at which this pipe face's {@link DockingStationPipe} is actually in
+     *  the {@link RobotRegistry}, instead of at a hard-coded tick.
+     *
+     * <p>{@link RobotStationPluggable#onTick()} is the ONLY place a station is ever registered (modern
+     * {@code PipePluggable} has no {@code validate()} hook to piggyback on), and a block entity only ticks
+     * once its chunk has been promoted to {@code BLOCK_TICKING} -- which happens a variable number of ticks
+     * after {@link EntityArenaUtil#forceLoadEntityArena} asks for it, not synchronously. Waiting a fixed two
+     * ticks was therefore a coin flip, and its losing side is not even a clean failure:
+     * {@code getRenderState()} falls back to the never-synced {@code NONE}, and a station lookup hands the
+     * next line a null to dereference. The production behaviour is correct, just not instantaneous. */
+    private static void whenStationRegistered(GameTestHelper helper, BlockPos absPos, Direction side,
+                                              Runnable body) {
+        EntityArenaUtil.tickUntil(helper, 40,
+                () -> RobotManager.registryProvider.getRegistry(helper.getLevel())
+                        .getStation(absPos, side) != null,
+                body,
+                "RobotStationPluggable.onTick() never registered a DockingStation for the " + side
+                        + " face of " + absPos + " -- its pipe's chunk never started block-ticking");
+    }
+
     private static TilePipeHolder placePowerPipe(GameTestHelper helper, BlockPos relPos, net.minecraft.world.item.Item pipeItem) {
         EntityArenaUtil.forceLoadEntityArena(helper);
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
@@ -114,7 +138,7 @@ public class RobotStationPluggableTester {
         install(tile, Direction.UP);
 
         BlockPos absPos = helper.absolutePos(relPos);
-        helper.runAfterDelay(2, () -> {
+        whenStationRegistered(helper, absPos, Direction.UP, () -> {
             IRobotRegistry registry = RobotManager.registryProvider.getRegistry(helper.getLevel());
             DockingStation station = registry.getStation(absPos, Direction.UP);
             helper.assertTrue(station instanceof DockingStationPipe, "onTick() must lazily register a DockingStationPipe");
@@ -129,7 +153,7 @@ public class RobotStationPluggableTester {
 
         BlockPos absPos = helper.absolutePos(relPos);
         ServerLevel level = helper.getLevel();
-        helper.runAfterDelay(2, () -> {
+        whenStationRegistered(helper, absPos, Direction.DOWN, () -> {
             IRobotRegistry registry = RobotManager.registryProvider.getRegistry(level);
             helper.assertTrue(registry.getStation(absPos, Direction.DOWN) != null, "precondition: registered");
 
@@ -156,8 +180,9 @@ public class RobotStationPluggableTester {
         BlockPos relPos = new BlockPos(1, 2, 3);
         TilePipeHolder tile = placeItemPipe(helper, relPos);
         install(tile, Direction.NORTH);
+        BlockPos absPos = helper.absolutePos(relPos);
 
-        helper.runAfterDelay(2, () -> {
+        whenStationRegistered(helper, absPos, Direction.NORTH, () -> {
             List<DockingStation> found = RobotUtils.getStations(tile);
             helper.assertTrue(found.size() == 1, "RobotUtils must discover exactly the one station on this pipe");
             helper.assertTrue(found.get(0) instanceof DockingStationPipe, "the discovered station must be a DockingStationPipe");
@@ -173,7 +198,7 @@ public class RobotStationPluggableTester {
         install(tile, Direction.SOUTH);
         BlockPos absPos = helper.absolutePos(relPos);
 
-        helper.runAfterDelay(2, () -> {
+        whenStationRegistered(helper, absPos, Direction.SOUTH, () -> {
             DockingStationPipe station =
                     (DockingStationPipe) RobotManager.registryProvider.getRegistry(helper.getLevel())
                             .getStation(absPos, Direction.SOUTH);
@@ -198,9 +223,16 @@ public class RobotStationPluggableTester {
         RobotStationPluggable plug = install(tile, Direction.EAST);
         BlockPos absPos = helper.absolutePos(relPos);
 
-        helper.runAfterDelay(2, () -> {
+        whenStationRegistered(helper, absPos, Direction.EAST, () -> {
             helper.assertTrue(plug.getRenderState() == RobotStationPluggable.RobotStationState.AVAILABLE,
-                    "a freshly registered, untaken station renders as available");
+                    // Name the observed value and whether THIS pluggable instance is still the installed
+                    // one: the two ways this can read wrong are a station that is somehow already taken,
+                    // and an orphaned copy whose onTick() never runs (its station stays null, so
+                    // getRenderState() silently falls back to the never-synced NONE).
+                    "a freshly registered, untaken station renders as available; was "
+                            + plug.getRenderState() + " (station=" + plug.getStation()
+                            + ", still the installed pluggable=" + (tile.getPluggable(Direction.EAST) == plug)
+                            + ")");
 
             DockingStationPipe station = (DockingStationPipe) RobotManager.registryProvider
                     .getRegistry(helper.getLevel()).getStation(absPos, Direction.EAST);
@@ -226,7 +258,7 @@ public class RobotStationPluggableTester {
         RobotStationPluggable plug = install(tile, Direction.WEST);
         BlockPos absPos = helper.absolutePos(relPos);
 
-        helper.runAfterDelay(2, () -> {
+        whenStationRegistered(helper, absPos, Direction.WEST, () -> {
             DockingStationPipe station = (DockingStationPipe) RobotManager.registryProvider
                     .getRegistry(helper.getLevel()).getStation(absPos, Direction.WEST);
             TestRobot robot = new TestRobot(helper.getLevel());
@@ -252,7 +284,7 @@ public class RobotStationPluggableTester {
         RobotStationPluggable plug = install(tile, Direction.UP);
         BlockPos absPos = helper.absolutePos(relPos);
 
-        helper.runAfterDelay(2, () -> {
+        whenStationRegistered(helper, absPos, Direction.UP, () -> {
             DockingStationPipe station = (DockingStationPipe) RobotManager.registryProvider
                     .getRegistry(helper.getLevel()).getStation(absPos, Direction.UP);
             TestRobot robot = new TestRobot(helper.getLevel());
@@ -311,7 +343,7 @@ public class RobotStationPluggableTester {
         pipe.getPipe().markForUpdate();
 
         BlockPos absPipePos = helper.absolutePos(pipePos);
-        helper.runAfterDelay(2, () -> {
+        whenStationRegistered(helper, absPipePos, Direction.WEST, () -> {
             DockingStationPipe station = (DockingStationPipe) RobotManager.registryProvider
                     .getRegistry(helper.getLevel()).getStation(absPipePos, Direction.WEST);
             helper.assertTrue(station != null, "station must have registered by now");
@@ -342,7 +374,7 @@ public class RobotStationPluggableTester {
         RobotStationPluggable server = install(tile, Direction.NORTH);
         BlockPos absPos = helper.absolutePos(relPos);
 
-        helper.runAfterDelay(2, () -> {
+        whenStationRegistered(helper, absPos, Direction.NORTH, () -> {
             DockingStationPipe station = (DockingStationPipe) RobotManager.registryProvider
                     .getRegistry(helper.getLevel()).getStation(absPos, Direction.NORTH);
             station.takeAsMain(new TestRobot(helper.getLevel()));
@@ -371,7 +403,7 @@ public class RobotStationPluggableTester {
         install(tile, Direction.DOWN);
         BlockPos absPos = helper.absolutePos(relPos);
 
-        helper.runAfterDelay(2, () -> {
+        whenStationRegistered(helper, absPos, Direction.DOWN, () -> {
             DockingStationPipe station = (DockingStationPipe) RobotManager.registryProvider
                     .getRegistry(helper.getLevel()).getStation(absPos, Direction.DOWN);
 

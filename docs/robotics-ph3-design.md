@@ -441,7 +441,38 @@ The skeleton/test phase falsified three details; these amendments SUPERSEDE the 
    (pre-existing Ph2 game test) now crashes — NPE, station null during `takeAsMain`. Introduced
    somewhere in the skeleton phase (fixture ctor/rebase suspected); diagnose properly, do not
    paper over. The implementation gate is the FULL game-test suite green, not just the 14 new ones.
-4. Noted for Ph4 (not Ph3 work): `AIRobot.writeToNbt` NPEs on an unregistered AI class name;
+4. **Force-loading an arena does NOT make it tick this tick** — the flake that survived the
+   implementation gate. `robot_station_render_state_transitions` failed on 26.1.2 with "a freshly
+   registered, untaken station renders as available"; `robot_item_rejected_when_station_taken` failed
+   with "the squatting robot ... holds a real id on tick 5". Same single cause, measured:
+   - `EntityArenaUtil.forceLoadEntityArena` calls `ServerLevel.setChunkForced`, which adds a `FORCED`
+     ticket and blocks until the chunk is FULL — but promotion to `BLOCK_TICKING`/`ENTITY_TICKING`
+     (levels 32/31, `ChunkLevel`) is applied later by the chunk source's own update pass. Instrumenting
+     the squatter's first tick over 10 consecutive 26.1.2 runs gave **1, 1, 3, 1, 2, 1, 1, 2, 1, 1** —
+     it varies per run, with no upper bound to rely on.
+   - It varies because `GameTestServer.startTests` (`:339`) drops the whole test grid at
+     `random.nextIntBetweenInclusive(±14 999 992)`, so a given test's blocks land in the arena's own
+     chunk on some runs and in a neighbouring one on others. `StructureGridSpawner` then lays arenas out
+     **8 per row, 6 apart in X and 8 in Z** (measured; matches `+5`/`+6` over a 1×1×1 structure), and
+     `TestInstanceBlockEntity:349` force-loads only the chunks the structure box itself touches.
+   - The production behaviour is correct, just not instantaneous: `RobotStationPluggable.onTick()` is
+     the ONLY place a station is registered, and a block entity does not tick until its chunk is
+     block-ticking. Nothing was changed in production for this.
+   - Fix: every robot game-test phase now gates on the state it needs instead of a hard-coded tick, via
+     `EntityArenaUtil.tickUntil` (single phase) and the new `tickUntilThen` (a second phase a fixed gap
+     *after the first one actually fired* — chaining a bare `runAfterDelay(9)` behind a polled phase
+     re-introduces the same race inverted). `RobotStationPluggableTester.whenStationRegistered` and
+     `ItemRobotPlacementTester.whenStationRegistered` are the shared gates.
+   - Fixed alongside: `ItemRobotPlacementTester` built at relative **x = 7**, one block outside its own
+     6-wide arena cell and therefore inside the NEXT test's arena — both a latent same-block collision
+     with `RobotStationPluggableTester`'s x = 1 column (they use identical z values) and the reason its
+     pipe and robot straddled a chunk border so often. Moved to x = 3.
+   - Not a defect but worth knowing: the game-test world (`run-gameTestServer/gametestserver/`) is
+     **not** wiped between runs, so `buildcraft_robot_registry.dat` accumulates the docking stations
+     every run leaks (19 after one run; nothing calls `onRemove` when the framework clears an arena).
+     Harmless today only because the arena origin is re-randomised each run, so a stale station never
+     shares a `(pos, side)` with a fresh one. Delete that directory if the registry ever needs a reset.
+5. Noted for Ph4 (not Ph3 work): `AIRobot.writeToNbt` NPEs on an unregistered AI class name;
    the `ticksCharging` latch needs a read-only accessor when it lands so the charge-receiver game
    test can pin "simulate does not bump the latch" directly (the test file asks for it in a
    comment).

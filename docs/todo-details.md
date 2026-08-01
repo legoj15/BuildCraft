@@ -4,7 +4,9 @@ Agent-facing background for the one-line bullets in [todos.md](../todos.md). Eac
 
 ## Skipped game tests on 1.21.1
 
-All five nodes register the same 379 tests (verified by diffing each node's generated `BuildCraftGameTests` — zero are Stonecutter-gated), but `:1.21.1:runGameTestServer` reports **355 COMPLETE** where every other node reports 380. Pre-existing, not a regression: 355 both before and after the 2026-07-26 licensing sweep. 1.21.1 has no dynamic `TEST_FUNCTION` registry, so it registers by reflecting into the private `GameTestRegistry.TEST_FUNCTIONS` field — the likely culprit, since a test that fails to land there is skipped with no error and the count still reads as a pass. Find which 24 by diffing the reported test IDs against the 379 registered.
+All five nodes register the same set of tests (verified by diffing each node's generated `BuildCraftGameTests` — zero are Stonecutter-gated), but `:1.21.1:runGameTestServer` reports **372 COMPLETE** where every other node reports 397. Pre-existing, not a regression: the gap was 24 (355 vs 379) before the 2026-07-26 licensing sweep and 25 after the robotics Ph3 tests landed, i.e. it tracks the total rather than being caused by any one change. 1.21.1 has no dynamic `TEST_FUNCTION` registry, so it registers by reflecting into the private `GameTestRegistry.TEST_FUNCTIONS` field — the likely culprit, since a test that fails to land there is skipped with no error and the count still reads as a pass. Find which 25 by diffing the reported test IDs against the registered set.
+
+Ruled out (2026-08-01): the robotics tests are **not** among the skipped ones. Probing the three Ph3 tester classes' shared fixtures showed all 10 `RobotStationPluggableTester` tests, all 4 `ItemRobotPlacementTester` tests and every `EntityRobotTester` gate executing on 1.21.1 exactly as on 26.1.2.
 
 ## Translation follow-ups
 

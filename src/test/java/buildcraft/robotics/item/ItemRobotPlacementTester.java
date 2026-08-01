@@ -55,6 +55,14 @@ import buildcraft.transport.tile.TilePipeHolder;
  * so copying that guard would make the item unplaceable and nothing here could ever pass — see
  * {@link #emptyBoardRobotStillPlaces}.
  *
+ * <p><b>Arena discipline, same as {@code RobotStationPluggableTester} and {@code EntityRobotTester}.</b> The
+ * framework spaces arenas 6 blocks apart in X and 8 in Z, so every relative position here stays inside that
+ * cell (x 3, z 1..7). These tests used to build at x=7, i.e. one block into the NEXT test's arena -- which
+ * both risked overwriting a neighbour's blocks outright and pushed the pipe and the robot into a chunk this
+ * test never force-loads the way it force-loads its own. And because force-loading only makes a chunk tick
+ * <em>eventually</em> ({@link EntityArenaUtil#forceLoadEntityArena}), every phase below is gated on the state
+ * it needs -- the station being registered, the robot having ticked at least once -- never on a fixed tick.
+ *
  * <p>Known limitation: {@code GameTestHelper.makeMockPlayer} returns a plain {@code Player}, not a
  * {@code ServerPlayer}, so anything the placement path gates on {@code instanceof ServerPlayer} (advancement
  * grants, stat increments) is invisible here. Everything asserted below is world state, which is observable.
@@ -100,6 +108,16 @@ public class ItemRobotPlacementTester {
                 abs.getZ() + 0.5 + side.getStepZ() * 0.5);
     }
 
+    /** Runs {@code body} on the first tick at which the pipe's UP face has a registered
+     *  {@link DockingStationPipe}, rather than at a hard-coded tick -- the station is only ever registered
+     *  from {@code RobotStationPluggable.onTick()}, and the arena's chunk starts block-ticking a variable
+     *  number of ticks after {@link EntityArenaUtil#forceLoadEntityArena} asks it to. */
+    private static void whenStationRegistered(GameTestHelper helper, BlockPos pipeRel, Runnable body) {
+        EntityArenaUtil.tickUntil(helper, 40, () -> stationAt(helper, pipeRel, Direction.UP) != null, body,
+                "RobotStationPluggable.onTick() never registered a DockingStation for the UP face of "
+                        + pipeRel + " -- its pipe's chunk never started block-ticking");
+    }
+
     /** Right-clicks {@code side} of the pipe at {@code relPos} with {@code stack} in the player's main hand. */
     private static Player clickStationWith(GameTestHelper helper, BlockPos relPos, Direction side,
                                            ItemStack stack) {
@@ -118,12 +136,11 @@ public class ItemRobotPlacementTester {
      *  it at the face centre with the stack's charge intact, and consumes the item. */
     public static void robotItemPlacesDockedRobotOnFreeStation(GameTestHelper helper) {
         EntityArenaUtil.forceLoadEntityArena(helper);
-        BlockPos pipeRel = new BlockPos(7, 2, 1);
+        BlockPos pipeRel = new BlockPos(3, 2, 1);
         installStation(helper, pipeRel, Direction.UP);
 
-        helper.runAfterDelay(5, () -> {
+        whenStationRegistered(helper, pipeRel, () -> {
             DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-            helper.assertTrue(station != null, "precondition: the station registered");
             helper.assertFalse(station.isTaken(), "precondition: the station starts free");
 
             RedstoneBoardRobotNBT board = RedstoneBoardRegistry.instance.getEmptyRobotBoard();
@@ -170,35 +187,41 @@ public class ItemRobotPlacementTester {
      *  player keeps the item. */
     public static void robotItemRejectedWhenStationAlreadyTaken(GameTestHelper helper) {
         EntityArenaUtil.forceLoadEntityArena(helper);
-        BlockPos pipeRel = new BlockPos(7, 2, 3);
+        BlockPos pipeRel = new BlockPos(3, 2, 3);
         installStation(helper, pipeRel, Direction.UP);
 
         EntityRobot squatter = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
-        Vec3 squatterPos = Vec3.atCenterOf(helper.absolutePos(new BlockPos(7, 4, 3)));
+        Vec3 squatterPos = Vec3.atCenterOf(helper.absolutePos(new BlockPos(3, 4, 3)));
         squatter.setPos(squatterPos.x, squatterPos.y, squatterPos.z);
         helper.getLevel().addFreshEntity(squatter);
 
-        helper.runAfterDelay(5, () -> {
-            DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-            helper.assertTrue(station != null, "precondition: the station registered");
-            helper.assertTrue(squatter.getRobotId() != EntityRobotBase.NULL_ROBOT_ID,
-                    "precondition: the squatting robot registered and holds a real id");
-            helper.assertTrue(station.takeAsMain(squatter), "precondition: the squatter claims the station");
-        });
+        // The squatter has to have TICKED before it can claim anything: a robot only gets its id from the
+        // registry on its first tick, and DockingStation#takeAsMain stores getRobotId() verbatim -- claiming
+        // with the NULL_ROBOT_ID sentinel leaves isTaken() reading false and the test asserting nonsense.
+        EntityArenaUtil.tickUntilThen(helper, 60,
+                () -> stationAt(helper, pipeRel, Direction.UP) != null
+                        && squatter.getRobotId() != EntityRobotBase.NULL_ROBOT_ID,
+                () -> {
+                    DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
+                    helper.assertTrue(station.takeAsMain(squatter),
+                            "precondition: the squatter claims the station");
+                },
+                4,
+                () -> {
+                    DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
+                    ItemStack stack = new ItemStack(BCRoboticsItems.ROBOT.get());
+                    Player player = clickStationWith(helper, pipeRel, Direction.UP, stack);
 
-        helper.runAfterDelay(9, () -> {
-            DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-            ItemStack stack = new ItemStack(BCRoboticsItems.ROBOT.get());
-            Player player = clickStationWith(helper, pipeRel, Direction.UP, stack);
-
-            helper.assertTrue(robotsNear(helper, pipeRel, 3.0).size() == 1,
-                    "a taken station must not accept a second robot — only the squatter may remain");
-            helper.assertTrue(station.robotIdTaking() == squatter.getRobotId(),
-                    "the original claimant must keep the station");
-            helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 1,
-                    "a rejected placement must not consume the item");
-            helper.succeed();
-        });
+                    helper.assertTrue(robotsNear(helper, pipeRel, 3.0).size() == 1,
+                            "a taken station must not accept a second robot — only the squatter may remain");
+                    helper.assertTrue(station.robotIdTaking() == squatter.getRobotId(),
+                            "the original claimant must keep the station");
+                    helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 1,
+                            "a rejected placement must not consume the item");
+                    helper.succeed();
+                },
+                "the station never registered, or the squatting robot never ticked and so never got an id "
+                        + "from the RobotRegistry");
     }
 
     /** {@code RobotEvent.Place} must be posted BEFORE anything is committed, and cancelling it must leave no
@@ -206,12 +229,11 @@ public class ItemRobotPlacementTester {
      *  what stops this passing vacuously against a {@code useOn} that does nothing at all. */
     public static void robotItemPlacementIsCancellableViaRobotEventPlace(GameTestHelper helper) {
         EntityArenaUtil.forceLoadEntityArena(helper);
-        BlockPos pipeRel = new BlockPos(7, 2, 5);
+        BlockPos pipeRel = new BlockPos(3, 2, 5);
         installStation(helper, pipeRel, Direction.UP);
 
-        helper.runAfterDelay(5, () -> {
+        whenStationRegistered(helper, pipeRel, () -> {
             DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-            helper.assertTrue(station != null, "precondition: the station registered");
 
             boolean[] posted = { false };
             Consumer<RobotEvent.Place> veto = event -> {
@@ -249,12 +271,11 @@ public class ItemRobotPlacementTester {
      *  permanently unplaceable. An empty-board robot places, docks and idles: that is the Ph3 MVP. */
     public static void emptyBoardRobotStillPlaces(GameTestHelper helper) {
         EntityArenaUtil.forceLoadEntityArena(helper);
-        BlockPos pipeRel = new BlockPos(7, 2, 7);
+        BlockPos pipeRel = new BlockPos(3, 2, 7);
         installStation(helper, pipeRel, Direction.UP);
 
-        helper.runAfterDelay(5, () -> {
+        whenStationRegistered(helper, pipeRel, () -> {
             DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-            helper.assertTrue(station != null, "precondition: the station registered");
 
             ItemStack bare = new ItemStack(BCRoboticsItems.ROBOT.get());
             helper.assertTrue(ItemRobot.getEnergy(bare) == 0,

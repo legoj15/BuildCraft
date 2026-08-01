@@ -35,10 +35,11 @@ import buildcraft.api.core.IFluidHandlerAdv;
  *     spawned at a relative position can land in a neighbouring chunk that is <em>not</em> force-loaded, and an
  *     entity in an unloaded chunk never ticks — the test then observes a frozen entity and flakes roughly one run
  *     in ten. {@link #forceLoadEntityArena} is the 3x3 chunk force-load that fixes it (the framework unforces
- *     everything it recorded at batch end, so this self-cleans).</li>
+ *     everything it recorded at batch end, so this self-cleans). <b>Force-loading is necessary but NOT
+ *     sufficient — see {@link #forceLoadEntityArena} for the timing rule that goes with it.</b></li>
  * <li><b>Waiting for something then doing more work.</b> {@code GameTestHelper.succeedWhen} polls, but it also
  *     ends the test, and it may be used only once. {@link #tickUntil} polls for a condition and then hands
- *     control back so the test can carry on.</li>
+ *     control back so the test can carry on; {@link #tickUntilThen} chains a second phase behind it.</li>
  * <li><b>Cross-node entity APIs.</b> Entity save/load and damage both cliff at 1.21.10
  *     ({@code CompoundTag} -> {@code ValueInput}/{@code ValueOutput}, {@code hurt} -> {@code hurtServer}) and
  *     fluid transfer cliffs there too. The forks are isolated in {@link #saveEntity}, {@link #loadEntity},
@@ -55,7 +56,24 @@ public final class EntityArenaUtil {
     private EntityArenaUtil() {}
 
     /** Force-loads the 3x3 chunk block centred on the arena origin, so entities anywhere in a small arena
-     *  actually tick. See the class javadoc for why this is not optional. */
+     *  actually tick. See the class javadoc for why this is not optional.
+     *
+     * <p><b>Necessary but not sufficient — never assert on a fixed tick after calling this.</b>
+     * {@code ServerLevel.setChunkForced} adds a {@code FORCED} ticket and blocks until the chunk is FULL, but
+     * the promotion of that chunk to {@code BLOCK_TICKING}/{@code ENTITY_TICKING} — which is what actually
+     * makes block entities and entities tick — is applied later, by the chunk source's own update pass. The
+     * first tick on which an arena's contents really tick was measured on the 26.1.2 node across 10 runs at
+     * <b>1, 1, 3, 1, 2, 1, 1, 2, 1, 1</b>: it varies per run, because {@code GameTestServer} drops the whole
+     * test grid at a random world position each run and so a given test's blocks land inside the arena's own
+     * chunk on some runs and in a neighbouring one on others. There is no upper bound to rely on.
+     *
+     * <p>So a {@code runAfterDelay(N)} that expects something to have ticked by tick N is a coin flip whose
+     * losing side is a confusing assertion failure (or an NPE on state that was never built). Gate on the
+     * state itself with {@link #tickUntil}/{@link #tickUntilThen} instead. This bit
+     * {@code robot_station_render_state_transitions} (read {@code NONE}: the pluggable's {@code onTick} had
+     * not run, so no {@code DockingStation} was registered) and
+     * {@code robot_item_rejected_when_station_taken} (a robot still carrying {@code NULL_ROBOT_ID} at tick 5,
+     * because it had not ticked yet). */
     public static void forceLoadEntityArena(GameTestHelper gth) {
         forceLoadEntityArena(gth, BlockPos.ZERO);
     }
@@ -95,6 +113,40 @@ public final class EntityArenaUtil {
                 } else if (tick == maxTicks) {
                     fired[0] = true;
                     gth.fail(failureMessage + " (waited " + maxTicks + " ticks)");
+                }
+            });
+        }
+    }
+
+    /** Two-phase {@link #tickUntil}: polls for {@code condition}, runs {@code first} on the tick it comes
+     *  true, then runs {@code second} {@code gapTicks} ticks after that.
+     *
+     * <p>This exists because the second phase must be scheduled relative to the FIRST phase, not to the test
+     * clock. A test that waits for a real precondition and then hard-codes {@code runAfterDelay(9)} for its
+     * follow-up has re-introduced the very race it just fixed — if phase one lands at tick 4 instead of tick
+     * 1, the "later" phase runs first. Every poll is scheduled up front for the reason given on
+     * {@link #tickUntil}. */
+    public static void tickUntilThen(GameTestHelper gth, int maxTicks, BooleanSupplier condition,
+                                     Runnable first, int gapTicks, Runnable second, String failureMessage) {
+        int[] firstFiredAt = { -1 };
+        boolean[] done = { false };
+        for (int t = 1; t <= maxTicks; t++) {
+            final int tick = t;
+            gth.runAfterDelay(tick, () -> {
+                if (done[0]) {
+                    return;
+                }
+                if (firstFiredAt[0] < 0) {
+                    if (condition.getAsBoolean()) {
+                        firstFiredAt[0] = tick;
+                        first.run();
+                    } else if (tick + gapTicks >= maxTicks) {
+                        done[0] = true;
+                        gth.fail(failureMessage + " (waited " + (maxTicks - gapTicks) + " ticks)");
+                    }
+                } else if (tick >= firstFiredAt[0] + gapTicks) {
+                    done[0] = true;
+                    second.run();
                 }
             });
         }

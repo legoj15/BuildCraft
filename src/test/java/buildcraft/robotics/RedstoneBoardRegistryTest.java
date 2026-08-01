@@ -19,7 +19,7 @@ import buildcraft.api.boards.RedstoneBoardNBT;
 import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.mj.MjAPI;
-import buildcraft.api.robots.EntityRobotBase;
+import buildcraft.api.robots.IRobotAccess;
 
 /**
  * Pure-JUnit characterization of {@link ImplRedstoneBoardRegistry}: id-keyed lookup, MJ power cost, the
@@ -120,7 +120,7 @@ public class RedstoneBoardRegistryTest {
         }
 
         @Override
-        public RedstoneBoardRobot create(EntityRobotBase robot) {
+        public RedstoneBoardRobot create(IRobotAccess robot) {
             return null;
         }
 

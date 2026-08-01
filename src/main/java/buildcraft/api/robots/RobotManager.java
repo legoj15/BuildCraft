@@ -50,7 +50,7 @@ public abstract class RobotManager {
 
         // Check if NBT-load constructor is present
         try {
-            aiRobot.getConstructor(EntityRobotBase.class);
+            aiRobot.getConstructor(IRobotAccess.class);
         } catch (NoSuchMethodException e) {
             throw new RuntimeException("AI class " + aiRobot.getName() + " lacks NBT load constructor! This is a bug!");
         }

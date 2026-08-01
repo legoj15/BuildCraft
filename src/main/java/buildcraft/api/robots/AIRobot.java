@@ -13,14 +13,14 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.core.NbtApiUtil;
 
 public class AIRobot {
-    public EntityRobotBase robot;
+    public IRobotAccess robot;
 
     private AIRobot delegateAI;
     private AIRobot parentAI;
 
     private boolean success;
 
-    public AIRobot(EntityRobotBase iRobot) {
+    public AIRobot(IRobotAccess iRobot) {
         robot = iRobot;
         success = true;
     }
@@ -188,7 +188,7 @@ public class AIRobot {
                     aiRobotClass = RobotManager.getAIRobotByName(NbtApiUtil.getString(sub, "aiName", ""));
                 }
                 if (aiRobotClass != null) {
-                    delegateAI = (AIRobot) aiRobotClass.getConstructor(EntityRobotBase.class).newInstance(robot);
+                    delegateAI = (AIRobot) aiRobotClass.getConstructor(IRobotAccess.class).newInstance(robot);
                     delegateAI.parentAI = this;
 
                     if (delegateAI.canLoadFromNBT()) {
@@ -201,7 +201,7 @@ public class AIRobot {
         }
     }
 
-    public static AIRobot loadAI(CompoundTag nbt, EntityRobotBase robot) {
+    public static AIRobot loadAI(CompoundTag nbt, IRobotAccess robot) {
         AIRobot ai = null;
 
         try {
@@ -213,7 +213,7 @@ public class AIRobot {
                 aiRobotClass = RobotManager.getAIRobotByName(NbtApiUtil.getString(nbt, "aiName", ""));
             }
             if (aiRobotClass != null) {
-                ai = (AIRobot) aiRobotClass.getConstructor(EntityRobotBase.class).newInstance(robot);
+                ai = (AIRobot) aiRobotClass.getConstructor(IRobotAccess.class).newInstance(robot);
                 ai.loadFromNBT(nbt);
             }
         } catch (Throwable e) {

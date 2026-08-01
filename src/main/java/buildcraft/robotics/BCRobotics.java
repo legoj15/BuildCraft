@@ -44,6 +44,7 @@ public class BCRobotics {
         BCRoboticsBlocks.init(modEventBus);
         BCRoboticsItems.init(modEventBus);
         BCRoboticsBlockEntities.init(modEventBus);
+        BCRoboticsEntities.init(modEventBus);
         BCRoboticsMenuTypes.init(modEventBus);
 
         // Register client-side extensions on the mod event bus

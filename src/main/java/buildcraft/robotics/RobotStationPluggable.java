@@ -204,14 +204,25 @@ public class RobotStationPluggable extends PipePluggable implements IDockingStat
         return robot.getDockingStation() == station ? robot : null;
     }
 
+    /** The docked robot's own charge receiver, or null if nothing is docked (or the robot declines to supply
+     *  one). Going through the robot rather than wrapping its battery here is what lets {@code EntityRobot}
+     *  latch "I am charging right now" for the sleep indicator — and the null-guard chain has to extend all
+     *  the way to the receiver, because an NPE on this path surfaces as a pipe-tick crash rather than
+     *  anything that looks like a robot bug. Identity is not cached anywhere: every call site refetches. */
+    @Nullable
+    private MjBatteryReceiver chargeReceiver() {
+        EntityRobotBase robot = dockedRobot();
+        return robot == null ? null : robot.getChargeReceiver();
+    }
+
     /** Outward face: what a machine placed directly against this station queries. */
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getCapability(@Nonnull Object cap) {
         if (cap == MjAPI.CAP_RECEIVER) {
-            EntityRobotBase robot = dockedRobot();
-            if (robot != null) {
-                return (T) new MjBatteryReceiver(robot.getBattery());
+            MjBatteryReceiver receiver = chargeReceiver();
+            if (receiver != null) {
+                return (T) receiver;
             }
         }
         return null;
@@ -230,9 +241,9 @@ public class RobotStationPluggable extends PipePluggable implements IDockingStat
     @Override
     public <T> T getInternalCapability(@Nonnull Object cap) {
         if (cap == MjAPI.CAP_RECEIVER) {
-            EntityRobotBase robot = dockedRobot();
-            if (robot != null) {
-                return (T) new MjBatteryReceiver(robot.getBattery());
+            MjBatteryReceiver receiver = chargeReceiver();
+            if (receiver != null) {
+                return (T) receiver;
             }
         }
         return null;

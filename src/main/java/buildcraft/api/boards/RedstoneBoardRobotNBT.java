@@ -7,18 +7,17 @@ package buildcraft.api.boards;
 import net.minecraft.nbt.CompoundTag;
 
 
-import buildcraft.api.robots.EntityRobotBase;
+import buildcraft.api.robots.IRobotAccess;
 
-public abstract class RedstoneBoardRobotNBT extends RedstoneBoardNBT<EntityRobotBase> {
+public abstract class RedstoneBoardRobotNBT extends RedstoneBoardNBT<IRobotAccess> {
 
     @Override
-    public RedstoneBoardRobot create(CompoundTag nbt, EntityRobotBase robot) {
+    public RedstoneBoardRobot create(CompoundTag nbt, IRobotAccess robot) {
         return create(robot);
     }
 
-    public abstract RedstoneBoardRobot create(EntityRobotBase robot);
+    public abstract RedstoneBoardRobot create(IRobotAccess robot);
 
     public abstract Object getRobotTexture();
 
 }
-

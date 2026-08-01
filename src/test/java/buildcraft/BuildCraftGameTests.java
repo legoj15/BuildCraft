@@ -749,5 +749,30 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_station_item_output_injects", () -> buildcraft.robotics.RobotStationPluggableTester::testItemOutputInjectsIntoPipeNetwork);
         reg.accept("buildcraftunofficial:robot_station_kinesis_charges_docked_robot", () -> buildcraft.robotics.RobotStationPluggableTester::testKinesisPipeChargesDockedRobot);
         reg.accept("buildcraftunofficial:robot_station_render_state_network_round_trip", () -> buildcraft.robotics.RobotStationPluggableTester::testRenderStateSurvivesNetworkRoundTrip);
+
+        // Robotics Ph3 — the live EntityRobot: registry lifecycle (register-on-first-tick with a unique id,
+        // world persistence with no despawn path), the full NBT round trip incl. both station records and the
+        // corrupt-side-byte guard, the docking snap, the damage/death rules (260 MJ per point, hurt flash,
+        // convert-to-items with the station reservation freed, docked/mob/falling-block immunity), the
+        // ItemStack identity trap on the synched inventory accessors, and the docked-robot charge hand-off.
+        reg.accept("buildcraftunofficial:robot_spawn_registers_with_unique_id", () -> buildcraft.robotics.entity.EntityRobotTester::robotSpawnRegistersWithUniqueId);
+        reg.accept("buildcraftunofficial:robot_persists_and_does_not_despawn", () -> buildcraft.robotics.entity.EntityRobotTester::robotPersistsAndDoesNotDespawn);
+        reg.accept("buildcraftunofficial:robot_nbt_round_trip", () -> buildcraft.robotics.entity.EntityRobotTester::robotNbtRoundTripPreservesState);
+        reg.accept("buildcraftunofficial:robot_nbt_corrupt_station_side_ignored", () -> buildcraft.robotics.entity.EntityRobotTester::robotNbtCorruptStationSideIsIgnored);
+        reg.accept("buildcraftunofficial:robot_docking_snaps_to_face_centre", () -> buildcraft.robotics.entity.EntityRobotTester::dockedRobotSnapsToStationFaceCentre);
+        reg.accept("buildcraftunofficial:robot_damage_debits_battery_and_hurt_time", () -> buildcraft.robotics.entity.EntityRobotTester::damageDebitsBatteryAndSetsHurtTime);
+        reg.accept("buildcraftunofficial:robot_battery_exhausted_converts_to_items", () -> buildcraft.robotics.entity.EntityRobotTester::batteryExhaustedHitConvertsToItems);
+        reg.accept("buildcraftunofficial:robot_docked_and_filtered_damage_does_nothing", () -> buildcraft.robotics.entity.EntityRobotTester::dockedAndFilteredDamageDoesNothing);
+        reg.accept("buildcraftunofficial:robot_inventory_in_place_mutation_syncs", () -> buildcraft.robotics.entity.EntityRobotTester::inPlaceInventoryMutationPropagatesToSynchedData);
+        reg.accept("buildcraftunofficial:robot_charge_readable_and_simulate_inert", () -> buildcraft.robotics.entity.EntityRobotTester::dockedRobotChargeIsReadableAndSimulateIsInert);
+
+        // Robotics Ph3 — ItemRobot.useOn: the only survival path a robot enters the world by. Free-station
+        // placement end to end (face-centre position, takeAsMain + dock, charge carried over, item consumed),
+        // the taken-station refusal, the cancellable RobotEvent.Place, and the deliberate DROP of 7.1.x's
+        // empty-board placement rejection.
+        reg.accept("buildcraftunofficial:robot_item_places_docked_robot", () -> buildcraft.robotics.item.ItemRobotPlacementTester::robotItemPlacesDockedRobotOnFreeStation);
+        reg.accept("buildcraftunofficial:robot_item_rejected_when_station_taken", () -> buildcraft.robotics.item.ItemRobotPlacementTester::robotItemRejectedWhenStationAlreadyTaken);
+        reg.accept("buildcraftunofficial:robot_item_place_event_cancellable", () -> buildcraft.robotics.item.ItemRobotPlacementTester::robotItemPlacementIsCancellableViaRobotEventPlace);
+        reg.accept("buildcraftunofficial:robot_item_empty_board_places", () -> buildcraft.robotics.item.ItemRobotPlacementTester::emptyBoardRobotStillPlaces);
     }
 }

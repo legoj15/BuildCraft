@@ -412,6 +412,40 @@ entity where possible), `RedstoneBoardRegistryTest.java` (TestEmptyBoardNBT rety
 `docs/robotics-resurrection.md` (Ph3 supersessions). **The rebase + api/boards retype + both
 test-fixture edits land in ONE commit** (a half-applied rebase leaves inactive nodes uncompilable).
 
+## Post-baseline amendments (2026-08-01, after the skeleton + red-test landing)
+
+The skeleton/test phase falsified three details; these amendments SUPERSEDE the sections above.
+
+1. **The plain `test` task cannot class-load `Entity` at all** (NeoForge `AttachmentHolder.<clinit>`
+   → `FMLEnvironment.isProduction()` → "no current FML Loader"; `Bootstrap.bootStrap()` is equally
+   dead, which is why `VanillaSetupBaseTester` — currently extended by nothing — silently rotted).
+   Consequences, chosen deliberately:
+   - **The four energy constants move to `IRobotAccess`** (interface fields; loads without Entity).
+     `EntityRobotBase` keeps compiling references via inheritance; JUnit reads
+     `IRobotAccess.MAX_POWER` directly. Addons stop needing an Entity class-load to read a constant.
+   - **`UnreachableEntityCache` becomes generic over its key** (weak-identity semantics don't need
+     Entity); `EntityRobot` instantiates it with Entity keys; the JUnit tests key on plain objects —
+     the `ReflectionFactory` fake-entity hack in UnreachableEntityCacheTest is DELETED, not kept.
+   - **`ItemRobotComponentTest`'s assertions convert to a game test** (ItemStacks cannot exist in
+     the plain test JVM — registry-dead). The JUnit file goes away; the same six pins land in an
+     `ItemRobotComponentTester` game test (+ manifest + registration).
+   - The full fix — moddev's `neoforge { unitTest }` FML-JUnit environment — is spun off as its own
+     scoped task, NOT part of Ph3.
+2. **`getChargeReceiver()` is `public abstract IMjReceiver getChargeReceiver()` on
+   `EntityRobotBase`** — the skeleton's concrete default (`new MjBatteryReceiver(...)`) created the
+   first-ever `buildcraft.api` → `buildcraft.lib` import, which Decision 5 exists to forbid.
+   Implementations: `EntityRobot` → `RobotChargeReceiver` (extends MjBatteryReceiver, so still
+   IMjReadable for the TriggerPower path); `TestRobot` fixture → plain `MjBatteryReceiver`.
+   `RobotStationPluggable.chargeReceiver()` types against `IMjReceiver`.
+3. **Known regression to fix in implementation:** `robot_station_render_state_network_round_trip`
+   (pre-existing Ph2 game test) now crashes — NPE, station null during `takeAsMain`. Introduced
+   somewhere in the skeleton phase (fixture ctor/rebase suspected); diagnose properly, do not
+   paper over. The implementation gate is the FULL game-test suite green, not just the 14 new ones.
+4. Noted for Ph4 (not Ph3 work): `AIRobot.writeToNbt` NPEs on an unregistered AI class name;
+   the `ticksCharging` latch needs a read-only accessor when it lands so the charge-receiver game
+   test can pin "simulate does not bump the latch" directly (the test file asks for it in a
+   comment).
+
 Copyright: EntityRobot and ItemRobot are PORTED files — carry the 7.1.x upstream notice verbatim
 (recover from upstream/7.1.x, not neighbours). The renderer is a NEW file: it is written from
 scratch against the modern submit model and takes only UV coordinates/pass ordering (facts, not

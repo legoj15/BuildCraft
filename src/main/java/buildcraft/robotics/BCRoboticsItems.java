@@ -11,6 +11,7 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.lib.misc.RegistrationUtilBC;
+import buildcraft.robotics.item.ItemRobot;
 import buildcraft.transport.item.ItemPluggableSimple;
 
 public class BCRoboticsItems {
@@ -25,11 +26,17 @@ public class BCRoboticsItems {
      *  is needed — matches {@code PLUG_BLOCKER}/{@code PLUG_POWER_ADAPTOR} in transport. */
     public static final DeferredItem<ItemPluggableSimple> ROBOT_STATION;
 
+    /** The robot itself. Never stacks: board and charge live in the stack's CUSTOM_DATA, so two robots are
+     *  almost never interchangeable. */
+    public static final DeferredItem<ItemRobot> ROBOT;
+
     static {
         ZONE_PLANNER = ITEMS.registerSimpleBlockItem(BCRoboticsBlocks.ZONE_PLANNER);
         ROBOT_STATION = RegistrationUtilBC.registerItem(ITEMS, "robot_station",
             props -> new ItemPluggableSimple(props, BCRoboticsPlugs.robotStation, null,
                 buildcraft.robotics.RobotStationPluggable::boundingBoxFor));
+        ROBOT = RegistrationUtilBC.registerItem(ITEMS, "robot", ItemRobot::new,
+            props -> props.stacksTo(1));
     }
 
     public static void init(IEventBus modEventBus) {

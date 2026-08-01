@@ -5,11 +5,11 @@
 package buildcraft.api.boards;
 
 import buildcraft.api.robots.AIRobot;
-import buildcraft.api.robots.EntityRobotBase;
+import buildcraft.api.robots.IRobotAccess;
 
-public abstract class RedstoneBoardRobot extends AIRobot implements IRedstoneBoard<EntityRobotBase> {
+public abstract class RedstoneBoardRobot extends AIRobot implements IRedstoneBoard<IRobotAccess> {
 
-    public RedstoneBoardRobot(EntityRobotBase iRobot) {
+    public RedstoneBoardRobot(IRobotAccess iRobot) {
         super(iRobot);
     }
 
@@ -17,7 +17,7 @@ public abstract class RedstoneBoardRobot extends AIRobot implements IRedstoneBoa
     public abstract RedstoneBoardRobotNBT getNBTHandler();
 
     @Override
-    public final void updateBoard(EntityRobotBase container) {
+    public final void updateBoard(IRobotAccess container) {
 
     }
 
@@ -27,4 +27,3 @@ public abstract class RedstoneBoardRobot extends AIRobot implements IRedstoneBoa
     }
 
 }
-

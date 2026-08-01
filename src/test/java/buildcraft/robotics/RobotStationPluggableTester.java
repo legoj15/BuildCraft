@@ -15,7 +15,6 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -383,7 +382,29 @@ public class RobotStationPluggableTester {
         private DockingStation mainStation;
 
         TestRobot(Level level) {
-            super(level);
+            // EntityRobotBase sits on bare Entity now, so it needs a real registered EntityType rather than
+            // the old hard-coded vanilla placeholder. Reusing the robot's own type keeps the fixture's
+            // dimensions and tracking identical to the entity these tests stand in for.
+            super(BCRoboticsEntities.ROBOT.get(), level);
+        }
+
+        @Override
+        public ItemStack getHeldItem() {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public int getInventorySize() {
+            return 0;
+        }
+
+        @Override
+        public ItemStack getInventoryStack(int slot) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public void setInventoryStack(int slot, ItemStack stack) {
         }
 
         @Override
@@ -497,10 +518,6 @@ public class RobotStationPluggableTester {
         }
 
         @Override
-        public void onChunkUnload() {
-        }
-
-        @Override
         public ItemStack receiveItem(net.minecraft.world.level.block.entity.BlockEntity tile, ItemStack stack) {
             return stack;
         }
@@ -508,11 +525,6 @@ public class RobotStationPluggableTester {
         @Override
         public void setMainStation(DockingStation station) {
             this.mainStation = station;
-        }
-
-        @Override
-        public HumanoidArm getMainArm() {
-            return HumanoidArm.RIGHT;
         }
 
         // EntityRobotBase implements IFluidHandlerAdv — none of these tests touch fluid transfer, so
@@ -614,11 +626,17 @@ public class RobotStationPluggableTester {
 
         @Override
         protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
-            // Overriding (not adding to) LivingEntity's own defineSynchedData left its fixed synced-data
-            // slots (health, flags, ...) undefined -> "has not defined synched data value N" at spawn.
-            super.defineSynchedData(builder);
+            // Bare Entity seeds its own synched-data entries before this hook runs and EntityRobotBase's
+            // own body is empty, so this fixture defines nothing and calls nothing. (Under the old
+            // LivingEntity base a super call was mandatory here — its fixed slots, health and flags among
+            // them, were otherwise left undefined and the entity threw "has not defined synched data
+            // value N" at spawn.)
         }
 
+        // Bare Entity declares BOTH of these protected abstract on every node, so both branches are
+        // required. (Under the old LivingEntity base the 1.21.1 branch was omitted, because LivingEntity
+        // there already supplied concrete PUBLIC CompoundTag overrides that a protected re-declaration
+        // would have illegally narrowed.)
         //? if >=1.21.10 {
         @Override
         protected void readAdditionalSaveData(ValueInput input) {
@@ -627,25 +645,13 @@ public class RobotStationPluggableTester {
         @Override
         protected void addAdditionalSaveData(ValueOutput output) {
         }
-        //?}
-        // On 1.21.1, LivingEntity itself already supplies concrete PUBLIC
-        // readAdditionalSaveData/addAdditionalSaveData(CompoundTag) overrides — Entity's protected
-        // abstract declaration is satisfied there already, and re-declaring them here at `protected`
-        // would illegally narrow that visibility. Nothing to override on that node.
-
-        //? if <1.21.10 {
+        //?} else {
         /*@Override
-        public Iterable<ItemStack> getArmorSlots() {
-            return java.util.Collections.emptyList();
+        protected void readAdditionalSaveData(CompoundTag input) {
         }
 
         @Override
-        public ItemStack getItemBySlot(net.minecraft.world.entity.EquipmentSlot slot) {
-            return ItemStack.EMPTY;
-        }
-
-        @Override
-        public void setItemSlot(net.minecraft.world.entity.EquipmentSlot slot, ItemStack stack) {
+        protected void addAdditionalSaveData(CompoundTag output) {
         }*/
         //?}
     }

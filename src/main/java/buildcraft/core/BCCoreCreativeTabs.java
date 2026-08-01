@@ -137,6 +137,10 @@ public class BCCoreCreativeTabs {
                                 output.accept(BCFactoryItems.GELLED_WATER.get());
                                 // Robotics
                                 output.accept(BCRoboticsItems.ZONE_PLANNER.get());
+                                // A bare robot stack carries no CUSTOM_DATA blob, which reads as
+                                // "empty board, no charge" — the Ph3 entry. Ph4 grows this into one 0-charge
+                                // and one full-charge entry per registered board.
+                                output.accept(BCRoboticsItems.ROBOT.get());
                                 // Transport
                                 output.accept(BCTransportItems.FILTERED_BUFFER.get());
                                 output.accept(BCTransportItems.WATERPROOF.get());

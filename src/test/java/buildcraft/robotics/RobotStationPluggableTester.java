@@ -14,12 +14,17 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 //? if >=1.21.10 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -415,6 +420,69 @@ public class RobotStationPluggableTester {
             // without also standing up a second connected pipe just to satisfy an unrelated gate.
             PipeFlowItems flow = (PipeFlowItems) output;
             flow.insertItemsForce(new ItemStack(Items.EMERALD, 4), Direction.DOWN.getOpposite(), null, 0.04);
+            helper.succeed();
+        });
+    }
+
+    // ---------- Placement BY A PLAYER (not programmatically) ----------
+
+    /**
+     * A player right-clicking a bare pipe face with the {@code robot_station} item must leave a
+     * {@link RobotStationPluggable} on that face, register its {@link DockingStationPipe}, and consume one
+     * item — the only route by which the station ever enters a survival world.
+     *
+     * <p><b>Why this test exists at all.</b> Every other test in this file (and in
+     * {@code ItemRobotPlacementTester}) installs the pluggable programmatically via
+     * {@link #install(TilePipeHolder, Direction)}, which constructs {@code RobotStationPluggable} directly and
+     * hands it to {@code replacePluggable}. That bypasses the entire item path, so a whole suite could be —
+     * and was — green while the item was inert in every player's hand: {@code ItemPluggableSimple.onPlace}
+     * returns null when its {@code PluggableDefinition} carries no {@code creator}, and
+     * {@code BlockPipeHolder.useItemOn} then silently falls through with no pluggable, no sound and no
+     * message. Nothing short of driving the real block-interaction entry point can see that.
+     *
+     * <p>{@code BlockState.useItemOn(stack, level, player, hand, hitResult)} is the exact method
+     * {@code ServerPlayerGameMode} calls first for a right-click on a block; it is public with the same
+     * parameter order on all five nodes and only its return type moved
+     * ({@code ItemInteractionResult} -> {@code InteractionResult}), so calling it as a statement needs no
+     * directive.
+     */
+    public static void testPlayerPlacesRobotStationByHand(GameTestHelper helper) {
+        BlockPos relPos = new BlockPos(2, 2, 4);
+        Direction side = Direction.UP;
+        TilePipeHolder tile = placeItemPipe(helper, relPos);
+        BlockPos absPos = helper.absolutePos(relPos);
+
+        helper.assertTrue(tile.getPluggable(side) == null,
+                "precondition: the pipe's " + side + " face starts bare");
+
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        ItemStack stack = new ItemStack(BCRoboticsItems.ROBOT_STATION.get(), 2);
+        player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+
+        // Aim at the centre of the clicked face. With no pipe connections there are no arms for
+        // BlockPipeHolder.resolveTargetFace to prefer, so the hit's own direction is the face that receives
+        // the pluggable — the same resolution a real click on a lone pipe gets.
+        Vec3 hit = new Vec3(
+                absPos.getX() + 0.5 + side.getStepX() * 0.5,
+                absPos.getY() + 0.5 + side.getStepY() * 0.5,
+                absPos.getZ() + 0.5 + side.getStepZ() * 0.5);
+        helper.getLevel().getBlockState(absPos)
+                .useItemOn(stack, helper.getLevel(), player, InteractionHand.MAIN_HAND,
+                        new BlockHitResult(hit, side, absPos, false));
+
+        helper.assertTrue(tile.getPluggable(side) instanceof RobotStationPluggable,
+                "right-clicking a bare pipe face with the robot station item must leave a "
+                        + "RobotStationPluggable on that face — found " + tile.getPluggable(side));
+        helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 1,
+                "a survival placement must consume exactly one robot station, "
+                        + player.getItemInHand(InteractionHand.MAIN_HAND).getCount() + " left of 2");
+
+        // ...and the hand-placed pluggable has to behave like an installed one, i.e. register its station.
+        whenStationRegistered(helper, absPos, side, () -> {
+            DockingStation station = RobotManager.registryProvider.getRegistry(helper.getLevel())
+                    .getStation(absPos, side);
+            helper.assertTrue(station instanceof DockingStationPipe,
+                    "a hand-placed station must register a DockingStationPipe like any other, got " + station);
             helper.succeed();
         });
     }

@@ -749,6 +749,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_station_item_output_injects", () -> buildcraft.robotics.RobotStationPluggableTester::testItemOutputInjectsIntoPipeNetwork);
         reg.accept("buildcraftunofficial:robot_station_kinesis_charges_docked_robot", () -> buildcraft.robotics.RobotStationPluggableTester::testKinesisPipeChargesDockedRobot);
         reg.accept("buildcraftunofficial:robot_station_render_state_network_round_trip", () -> buildcraft.robotics.RobotStationPluggableTester::testRenderStateSurvivesNetworkRoundTrip);
+        // ...and the one path none of the above touch: a PLAYER placing the pluggable with the item. Every
+        // test above installs it programmatically, which is why the item being inert in the hand went
+        // unnoticed through an entire green suite.
+        reg.accept("buildcraftunofficial:robot_station_placed_by_player_item", () -> buildcraft.robotics.RobotStationPluggableTester::testPlayerPlacesRobotStationByHand);
 
         // Robotics Ph3 — the live EntityRobot: registry lifecycle (register-on-first-tick with a unique id,
         // world persistence with no despawn path), the full NBT round trip incl. both station records and the

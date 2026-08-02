@@ -477,6 +477,70 @@ The skeleton/test phase falsified three details; these amendments SUPERSEDE the 
    test can pin "simulate does not bump the latch" directly (the test file asks for it in a
    comment).
 
+## Post-implementation amendments (2026-08-01, after in-client visual verification)
+
+In-client verification on 26.2 and 1.21.1 found three defects the 397-test suite could not see. All
+three are fixed; the root causes are recorded here because each is a trap that will recur.
+
+6. **The Robot Station pluggable could not be placed by a player, on any node** (latent since the Ph2
+   commit `22d061628`). `PluggableDefinition`'s three-argument constructor — the one that takes an
+   explicit reader and loader, which the station needs because it *does* write a creation payload —
+   nulls `creator`. `ItemPluggableSimple.onPlace` returns null when `creator` is null, and
+   `BlockPipeHolder.useItemOn` then falls through with no pluggable, no sound and no message: the
+   item is completely inert in the hand. The fix is a **four-argument
+   `PluggableDefinition(identifier, reader, loader, creator)`** so a pluggable can have real synced
+   state *and* be placeable from a plain item; the two existing constructors now document which half
+   they give up. `robot_station` was the only definition in the tree built with the three-argument
+   form *and* used through `ItemPluggableSimple` (silicon's facade/gate/pulsar/lens use it too, but
+   each of those has a bespoke item that constructs the pluggable itself, so they are correct).
+   The reason 397 green tests missed it: **every** test installed the pluggable programmatically via
+   `replacePluggable`. `RobotStationPluggableTester#testPlayerPlacesRobotStationByHand` now drives
+   `BlockState.useItemOn` — the exact method `ServerPlayerGameMode` calls — which is public with the
+   same parameter order on all five nodes (only the return type moved, so calling it as a statement
+   needs no directive). **Rule of thumb: a game test that constructs the thing under test bypasses
+   the registration path that makes it reachable.**
+
+7. **The charge overlay was invisible as a charge indicator.** Not an alpha bug — the alpha reached
+   the vertex fine. `robot_base.png` carries the *same* red LED texels as `overlay_side.png`, so the
+   overlay's only job is to make that LED brighter than the world-lit base. But every entity render
+   type on every node applies `core/entity`'s directional term
+   (`lightAccum = min(1, (max(0,n·L0)+max(0,n·L1)) * 0.6 + 0.4)`, `L0 = norm(0.2,1,-0.7)`,
+   `L1 = norm(-0.2,1,0.7)`), which for an axis-aligned face is **1.00 up / 0.74 north-south /
+   0.50 east-west / 0.40 down** — a ceiling `LightTexture.FULL_BRIGHT` cannot lift, because the
+   lightmap is a separate multiply. A "fullbright" overlay on a north face therefore maxed out at
+   `0.74 × 255 = 189`, which is *exactly* what the base skin's identical LED already renders at in
+   full daylight: the blend became a no-op and the LED measured the same at 0 % as at 100 %.
+   (Measured before the fix: 189 on 26.2 and 186 on 1.21.1 at every charge level. The verifier read
+   that as "alpha never reaches the vertex"; the arithmetic says otherwise, and the night screenshot
+   — LED still 188 with the body nearly black — already proved the overlay was drawing.)
+   8.0.x avoided all of this with `GL11.glDisable(GL_LIGHTING)` around its overlay passes. The modern
+   equivalent, with **no custom pipeline and no shader of our own**, is to emit the decal passes with
+   a straight-**up normal**: `n·L0 + n·L1 = 1.617` clamps `lightAccum` to 1.0 on all six faces. The
+   normal has no other job on these passes — culling is by winding, and nothing downstream of the
+   diffuse term reads it. Verified in-client: the LED now ramps 189→255 (north face) / 127→255 (east
+   face) in daylight and ~25→250 in a sealed dark room, linearly in charge, identically on 26.2 and
+   1.21.1.
+
+8. **`overlay_bottom` never drew on 26.x** (fine on 1.21.1). The body and the bottom decal are two
+   *exactly coplanar*, depth-writing, opaque `entityCutoutCull` submissions. 1.21.1's
+   `MultiBufferSource.BufferSource` ends the running batch whenever a different render type is asked
+   for, so they come out in call order and the decal wins the equal-depth tie. On 1.21.10+ they do
+   not: `SubmitNodeCollection.submitCustomGeometry` files non-blending geometry into the `solid`
+   phase, `CustomFeatureRenderer.Submit.batchKey()` **is the `RenderType`**, and
+   `SimpleFeatureRenderPhase.FeatureSubmits.batches` is a plain **`HashMap`** whose `values()`
+   iteration order is the identity-hash order of those `RenderType` objects — arbitrary, and
+   arbitrary *per JVM run*. Whichever batch happens to run second wins, and the body kept winning.
+   Fix: submit both decals through **`collector.order(1)`**. Order buckets live in an
+   `Int2ObjectAVLTreeMap` (`SubmitNodeStorage.submitsPerOrder`), so they are genuinely sorted, and
+   this is vanilla's own decal idiom — `EyesLayer`, `HorseMarkingLayer`, `WolfCollarLayer`,
+   `LivingEntityEmissiveLayer` and `SlimeOuterLayer` all use `order(1)` for exactly this. `order(int)`
+   exists with the same signature on all four modern nodes; the 1.21.1 branch takes the parameter and
+   ignores it. **The side overlay escaped this only by luck of being translucent** —
+   `renderType.hasBlending()` routes it to `translucentCustomGeometry`, which is drained after
+   `solid`. It is now at `order(1)` too, so it no longer depends on that.
+   General rule for this renderer and any future one: **on 26.x, coplanar passes are only ordered if
+   you order them.**
+
 Copyright: EntityRobot and ItemRobot are PORTED files — carry the 7.1.x upstream notice verbatim
 (recover from upstream/7.1.x, not neighbours). The renderer is a NEW file: it is written from
 scratch against the modern submit model and takes only UV coordinates/pass ordering (facts, not

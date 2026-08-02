@@ -45,6 +45,7 @@ import buildcraft.api.robots.EntityRobotBase;
 
 import buildcraft.core.client.BuildCraftLaserManager;
 import buildcraft.lib.client.model.ModelUtil;
+import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.lib.client.render.LightUtil;
 import buildcraft.lib.client.render.laser.LaserData_BC8;
@@ -140,6 +141,26 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
     private static final float SLOT_Y = 0.28F;
     private static final float SLOT_SCALE = 0.5F;
 
+    // ── Draw order ──────────────────────────────────────────────────────────
+
+    /** Submission bucket for the body itself — vanilla's default. */
+    private static final int ORDER_BODY = 0;
+    /**
+     * Submission bucket for the two overlay decals, which are <b>exactly coplanar</b> with the body.
+     *
+     * <p>On 1.21.10+ the collector does not draw in submission order. Custom geometry is bucketed by
+     * {@code renderType} into a plain {@code HashMap} inside {@code SimpleFeatureRenderPhase}, whose
+     * {@code values()} iteration order is the hash order of the {@code RenderType} objects — so the body's
+     * cutout batch and a decal's cutout batch come out in an arbitrary (and per-JVM-run arbitrary) order.
+     * With a depth-writing, equal-depth pair the batch that happens to run second wins, which is why
+     * {@code overlay_bottom} rendered on 1.21.1 (immediate mode, order preserved) but vanished on 26.x.
+     * The order buckets are an {@code Int2ObjectAVLTreeMap} and therefore genuinely sorted, so submitting
+     * the decals at 1 puts them after every order-0 batch — this is exactly vanilla's own decal idiom
+     * ({@code EyesLayer}, {@code HorseMarkingLayer}, {@code WolfCollarLayer} all use {@code order(1)}).
+     * Ignored on 1.21.1, where the buffer source already draws in call order.
+     */
+    private static final int ORDER_DECAL = 1;
+
     /** The active-use spin cycles through this many degrees... */
     private static final float SPIN_CYCLE_DEGREES = 45F;
     /** ...at this rate. 8.0.x advanced it by one degree per 10 ms of wall clock, i.e. 5 degrees per
@@ -153,14 +174,33 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
         return new ModelUtil.UvFaceData(u0 / 32F, v0 / 32F, u1 / 32F, v1 / 32F);
     }
 
-    /** Emits the six faces of the robot cube. Called from inside the deferred custom-geometry lambda on
-     *  the modern path, so it must only touch the {@code pose} snapshot it is handed and its own
-     *  primitive arguments — never the caller's live {@code PoseStack}. */
-    private static void emitCube(PoseStack.Pose pose, VertexConsumer buffer, int light,
+    /**
+     * Emits the six faces of the robot cube. Called from inside the deferred custom-geometry lambda on the
+     * modern path, so it must only touch the {@code pose} snapshot it is handed and its own primitive
+     * arguments — never the caller's live {@code PoseStack}.
+     *
+     * <p><b>{@code unlit} is not cosmetic — it is what makes the charge bar readable.</b> Every entity render
+     * type on every node runs the same directional term in {@code core/entity}:
+     * {@code lightAccum = min(1, (max(0,·n·L0) + max(0,·n·L1)) * 0.6 + 0.4)} with
+     * {@code L0 = norm(0.2, 1, -0.7)}, {@code L1 = norm(-0.2, 1, 0.7)}. For an axis-aligned face that comes
+     * out as 1.00 up, 0.74 north/south, 0.50 east/west, 0.40 down — a ceiling the lightmap cannot lift.
+     * So a "fullbright" overlay on a north face maxes out at 0.74&times;its texel, which is <em>exactly</em>
+     * what the base skin's identical red LED texel already renders at in full daylight: the two are
+     * numerically equal, the alpha blend between them is a no-op, and the charge indicator reads the same at
+     * 0&#37; as at 100&#37;. 8.0.x avoided this by wrapping its overlay passes in
+     * {@code GL11.glDisable(GL_LIGHTING)}. The modern equivalent, with no custom pipeline and no shader of
+     * our own, is to hand those passes a straight-up normal: {@code n·L0 + n·L1 = 1.617}, which clamps
+     * {@code lightAccum} to 1.0 on <em>all six</em> faces. The normal has no other job here — culling is by
+     * winding, and nothing downstream of the diffuse term reads it.
+     */
+    private static void emitCube(PoseStack.Pose pose, VertexConsumer buffer, boolean unlit, int light,
                                  float red, float green, float blue, float alpha) {
         for (Direction face : FACES) {
-            ModelUtil.createFace(face, CUBE_CENTRE, CUBE_RADIUS, UVS[face.ordinal()])
-                .lighti(light)
+            MutableQuad quad = ModelUtil.createFace(face, CUBE_CENTRE, CUBE_RADIUS, UVS[face.ordinal()]);
+            if (unlit) {
+                quad.normalf(0, 1, 0);
+            }
+            quad.lighti(light)
                 .colourf(red, green, blue, alpha)
                 .render(pose, buffer);
         }
@@ -208,11 +248,15 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
             poseStack.mulPose(Axis.ZP.rotationDegrees(hurtTime * 0.01F));
         }
 
-        cube(poseStack, sink, skin, false, light, red, green, blue, 1F);
+        cube(poseStack, sink, cubeType(skin, false), ORDER_BODY, false, light, red, green, blue, 1F);
 
         if (!sleeping) {
-            cube(poseStack, sink, TEX_OVERLAY_SIDE, true, LightUtil.FULL_BRIGHT, 1F, 1F, 1F, charge);
-            cube(poseStack, sink, TEX_OVERLAY_BOTTOM, false, LightUtil.FULL_BRIGHT, 1F, 1F, 1F, 1F);
+            // Both decals: drawn after the body (ORDER_DECAL) and with the diffuse term neutralised
+            // (unlit) — see cube/emitCube for why each is load-bearing rather than tidy.
+            cube(poseStack, sink, cubeType(TEX_OVERLAY_SIDE, true), ORDER_DECAL, true,
+                LightUtil.FULL_BRIGHT, 1F, 1F, 1F, charge);
+            cube(poseStack, sink, cubeType(TEX_OVERLAY_BOTTOM, false), ORDER_DECAL, true,
+                LightUtil.FULL_BRIGHT, 1F, 1F, 1F, 1F);
         }
 
         poseStack.popPose();
@@ -357,12 +401,13 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
         poseStack.popPose();
     }
 
-    /** Queues one textured pass over the cube. The collector snapshots {@code poseStack.last()} at
-     *  submit time, so the caller is free to pop afterwards. */
-    private static void cube(PoseStack poseStack, Object sink, Identifier texture, boolean translucent,
+    /** Queues one textured pass over the cube into the given {@link #ORDER_DECAL order bucket}. The
+     *  collector snapshots {@code poseStack.last()} at submit time, so the caller is free to pop
+     *  afterwards. */
+    private static void cube(PoseStack poseStack, Object sink, RenderType type, int order, boolean unlit,
                              int light, float red, float green, float blue, float alpha) {
-        ((SubmitNodeCollector) sink).submitCustomGeometry(poseStack, cubeType(texture, translucent),
-            (pose, buffer) -> emitCube(pose, buffer, light, red, green, blue, alpha));
+        ((SubmitNodeCollector) sink).order(order).submitCustomGeometry(poseStack, type,
+            (pose, buffer) -> emitCube(pose, buffer, unlit, light, red, green, blue, alpha));
     }
 
     private static ItemStack orEmpty(ItemStack stack) {
@@ -429,11 +474,13 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
     }
 
     // Immediate-mode cube pass. The buffer is fetched from the MultiBufferSource the engine handed us
-    // and flushed by the engine at the end of the entity batch, so there is no endBatch() here.
-    private static void cube(PoseStack poseStack, Object sink, Identifier texture, boolean translucent,
+    // and flushed by the engine at the end of the entity batch, so there is no endBatch() here. `order` is
+    // accepted and ignored: MultiBufferSource.BufferSource ends the running batch whenever a different
+    // render type is asked for, so passes already come out in the order they were queued.
+    private static void cube(PoseStack poseStack, Object sink, RenderType type, int order, boolean unlit,
                              int light, float red, float green, float blue, float alpha) {
-        VertexConsumer buffer = ((MultiBufferSource) sink).getBuffer(cubeType(texture, translucent));
-        emitCube(poseStack.last(), buffer, light, red, green, blue, alpha);
+        VertexConsumer buffer = ((MultiBufferSource) sink).getBuffer(type);
+        emitCube(poseStack.last(), buffer, unlit, light, red, green, blue, alpha);
     }*/
     //?}
 }

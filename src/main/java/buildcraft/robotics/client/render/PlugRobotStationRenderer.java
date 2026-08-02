@@ -41,8 +41,11 @@ import buildcraft.robotics.client.model.RobotStationModel;
 public enum PlugRobotStationRenderer implements IPlugDynamicRenderer<RobotStationPluggable> {
     INSTANCE;
 
-    /** Separation from the baked pedestal. 1/64 of a texel, so the UV projection ignores it. */
-    private static final float PROUD = 1f / 1024f;
+    /** Separation from the baked pedestal. 1/16 of a texel, so the UV projection ignores it — but
+     *  big enough to stay above the 24-bit depth buffer's quantum (≈ z²/(0.05·2²⁴), which crosses
+     *  1/1024 at ~28 blocks and would speckle the overlay against the baked art underneath; 1/256
+     *  holds to ~57 blocks, past which the pedestal is subpixel anyway). */
+    private static final float PROUD = 1f / 256f;
 
     private static final Map<RobotStationState, String> SPRITES = new EnumMap<>(Map.of(
         RobotStationState.RESERVED, "buildcraftunofficial:pipes/robot_station_reserved",
@@ -108,9 +111,11 @@ public enum PlugRobotStationRenderer implements IPlugDynamicRenderer<RobotStatio
             return;
         }
 
-        // The baked pedestal is not uniformly lit: the chunk builder samples the neighbouring block
-        // for the post's tip (the only face on the block boundary) and the pipe's own position for
-        // the other ten interior faces. Sampling both keeps the overlay matched face for face.
+        // The baked pedestal is not uniformly lit on 26.x: the enhanced lighter samples the
+        // neighbouring block for the post's tip (the only face on the block boundary) and the pipe's
+        // own position for the ten interior faces, so the overlay samples both to match face for
+        // face. (1.21.x lights the whole baked pedestal from the pipe's pos — see the
+        // TIP_QUAD_INDEX javadoc for why the residual tip delta there is accepted.)
         // Full-bright by default because the snapshot preview drives this renderer with a null world.
         int lightBody = LightUtil.FULL_BRIGHT;
         int lightTip = LightUtil.FULL_BRIGHT;

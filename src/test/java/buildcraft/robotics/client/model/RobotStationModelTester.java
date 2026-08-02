@@ -36,8 +36,10 @@ public class RobotStationModelTester {
 
     /** 7.1.x {@code zFightOffset}: the hull-ward extent of each box overshoots by this much. */
     private static final float ZF = 1f / 4096f;
-    /** The overlay's separation from the baked pedestal it re-emits over. */
-    private static final float PROUD = 1f / 1024f;
+    /** The overlay's separation from the baked pedestal it re-emits over. Kept equal to
+     *  {@code PlugRobotStationRenderer.PROUD} so the test exercises the production value, though the
+     *  pure function's contract holds for any offset. */
+    private static final float PROUD = 1f / 256f;
 
     private static final float LO = 0.4325f;
     private static final float HI = 0.5675f;

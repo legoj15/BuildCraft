@@ -61,10 +61,14 @@ public class RobotStationModel {
         Direction.DOWN, Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST
     };
 
-    /** Index of the post's outward tip face in {@link #buildGeometry}'s output. It is the one quad
-     *  that sits on the block boundary, so the chunk builder lights the baked copy of it from the
-     *  NEIGHBOURING block — the dynamic overlay has to sample the same place or the tip reads at a
-     *  different brightness from the pedestal it caps. */
+    /** Index of the post's outward tip face in {@link #buildGeometry}'s output — the one quad that
+     *  sits on the block boundary. On 26.x, NeoForge's enhanced lighter re-derives the rotated quads'
+     *  direction geometrically and lights the baked copy of this face from the NEIGHBOURING block, so
+     *  the dynamic overlay samples the same place to match. The 1.21.x nodes have no such lighter and
+     *  light the whole baked pedestal from the pipe's own position (the rotated quads keep their
+     *  WEST-canonical face field, so the boundary test never fires there) — the overlay's
+     *  neighbour-sampled tip can differ by a shade on those nodes when adjacent light differs.
+     *  Accepted: matching the primary node exactly wins. */
     public static final int TIP_QUAD_INDEX = 10;
 
     /** 1.7.10 drew both {@code None} and {@code Available} with this one sprite (its
@@ -79,8 +83,8 @@ public class RobotStationModel {
      *
      * @param proud outward expansion applied to POSITIONS only, on every axis. The overlay uses a
      *              small value to clear the baked pedestal underneath it; UVs stay projected from the
-     *              unexpanded box, since a 1/1024-block shift is 1/64 of a texel and would only add
-     *              float noise.
+     *              unexpanded box, since a shift that size is a small fraction of a texel and would
+     *              only add float noise.
      * @return 11 quads: the plate's 6 faces then the post's 5, in {@link #TIP_QUAD_INDEX} order.
      */
     public static MutableQuad[] buildGeometry(float proud) {
@@ -102,6 +106,7 @@ public class RobotStationModel {
         MutableQuad[] quads = buildGeometry(proud);
         for (MutableQuad q : quads) {
             q.texFromSprite(sprite);
+            q.setSprite(sprite);
             q.setTint(-1);
             q.setShade(true);
         }

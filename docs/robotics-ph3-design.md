@@ -430,7 +430,9 @@ The skeleton/test phase falsified three details; these amendments SUPERSEDE the 
      the plain test JVM — registry-dead). The JUnit file goes away; the same six pins land in an
      `ItemRobotComponentTester` game test (+ manifest + registration).
    - The full fix — moddev's `neoforge { unitTest }` FML-JUnit environment — is spun off as its own
-     scoped task, NOT part of Ph3.
+     scoped task, NOT part of Ph3. **LANDED 2026-08-01** (see amendment 9): the constraint this
+     amendment worked around no longer exists, but every design choice it produced stays on its own
+     merits (interface constants, generic cache keys, the game-test component pins).
 2. **`getChargeReceiver()` is `public abstract IMjReceiver getChargeReceiver()` on
    `EntityRobotBase`** — the skeleton's concrete default (`new MjBatteryReceiver(...)`) created the
    first-ever `buildcraft.api` → `buildcraft.lib` import, which Decision 5 exists to forbid.
@@ -540,6 +542,30 @@ three are fixed; the root causes are recorded here because each is a trap that w
    `solid`. It is now at `order(1)` too, so it no longer depends on that.
    General rule for this renderer and any future one: **on 26.x, coplanar passes are only ordered if
    you order them.**
+
+9. **The FML-JUnit unit-test environment landed 2026-08-01** (the task amendment 1 spun off).
+   `neoForge { unitTest { enable(); testedMod = mods["buildcraftunofficial"] } }` in the shared
+   build.gradle.kts covers all five nodes; the whole suite is green under it (26.1.2/26.2: 545,
+   1.21.11/1.21.10: 531, 1.21.1: 528 tests, 0 failures). The `test` task now boots a real FML loader
+   plus FULL mod loading (registries frozen, config loaded, BC subsystems initialized) before the
+   JUnit engine — `Entity` class-loads, so amendment 1's constraint is gone (its design outcomes
+   stay on their merits).
+   - **26.x-only trap: `new ItemStack(...)` still dies "Components not bound yet" out of the box.**
+     At 26.1 default item components moved off `Item` onto `Holder.Reference`, bound only during
+     server resource load / client registry sync (`BuiltInRegistries.DATA_COMPONENT_INITIALIZERS` →
+     `bindComponents`) — neither happens in a unit JVM. Fix: `VanillaSetupBaseTester` (revived with
+     this real job; the old Bootstrap-calling body is gone) binds them once per JVM in `@BeforeAll`
+     via `VanillaRegistries.createLookup()` — the same provider vanilla's `RegistryComponentsReport`
+     datagen hands to the same `build()` call. **ItemStack-touching unit tests must extend it.**
+     Sub-trap inside: NeoForge's `CommonHooks.validateComponent` (dev-only, gated on
+     `SharedConstants.IS_RUNNING_IN_IDE`) rejects the datagen lookup's anonymous tag HolderSets
+     (e.g. PROVIDES_BANNER_PATTERNS), so the bind runs with that flag temporarily false — the
+     production path, where the check does not exist.
+   - `FmlJunitEnvironmentTest` pins all of it loudly (Entity + EntityRobotBase class-load, ItemStack
+     construction on every node, mod present) — the tripwire that was missing while
+     VanillaSetupBaseTester rotted.
+   - `ItemRobotComponentTester` STAYS a game test — it works, and component fidelity under real
+     registry ops is still most honestly pinned there. No churn.
 
 Copyright: EntityRobot and ItemRobot are PORTED files — carry the 7.1.x upstream notice verbatim
 (recover from upstream/7.1.x, not neighbours). The renderer is a NEW file: it is written from

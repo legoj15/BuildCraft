@@ -177,6 +177,8 @@ Dir names are version-stamped (`sources-<neo>`, `vanilla-<mc>`). The sync reads 
 
 Unit tests use JUnit 5 and live under `src/test/`. NeoForge game tests are registered dynamically via `RegisterEvent` on `Registries.TEST_FUNCTION` and cover pipes, transport, fluids, inventory, shapes, markers, and engines.
 
+Unit tests run under moddev's FML-JUnit environment (`neoForge { unitTest }` in [build.gradle.kts](build.gradle.kts)): each node's `test` task boots a real FML loader plus full mod loading before the JUnit engine, so tests can freely use `Entity`, `ItemStack`, registries, and BC's own content. One 26.x-only trap: default item components bind only during server resource load, so **a unit test that constructs ItemStacks must extend `VanillaSetupBaseTester`** (binds them once per JVM; a bare test dies with "Components not bound yet" on 26.1/26.2 while passing on the 1.21.x nodes). `FmlJunitEnvironmentTest` pins the environment on every node and fails loudly if the wiring regresses — details in [docs/robotics-ph3-design.md](docs/robotics-ph3-design.md) amendment 9.
+
 ### Adding a new game test (read this — past agents kept getting it wrong)
 
 Adding a game test in MC 26.1+ takes **three** things, not two. If you do only the first two it silently skips — there is no error, no warning, and `runGameTestServer` keeps reporting "N GAME TESTS COMPLETE" without your test included in N. This footgun had silently disabled 34 registered tests until a manifest sweep caught them — it's easy to miss, so verify the count (below).

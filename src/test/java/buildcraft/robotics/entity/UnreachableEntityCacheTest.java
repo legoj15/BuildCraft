@@ -21,13 +21,13 @@ import org.junit.jupiter.api.Test;
  * {@code level::getGameTime}, driven forwards by hand.
  *
  * <p><b>On the keys.</b> The cache is generic over its key type precisely so this file does not need an
- * {@code Entity}: {@code Entity} cannot be class-loaded in the plain {@code test} task at all (it extends
- * NeoForge's {@code AttachmentHolder}, whose static initialiser asks {@code FMLEnvironment.isProduction()}
- * and throws "There is no current FML Loader"), and an earlier draft of this file went as far as allocating
- * constructor-free instances through {@code sun.reflect.ReflectionFactory} to get around it — a hack that
- * bought nothing, because the cache never looks at a key beyond hashing it. Plain {@code Object}s hash and
- * compare by identity, which is exactly the "these are two different things" property every assertion below
- * needs.
+ * {@code Entity}. When it was written the {@code test} task could not class-load {@code Entity} at all
+ * (no FML loader — see {@link buildcraft.FmlJunitEnvironmentTest}), and an earlier draft went as far as
+ * allocating constructor-free instances through {@code sun.reflect.ReflectionFactory} to get around it —
+ * a hack that bought nothing, because the cache never looks at a key beyond hashing it. The FML-JUnit
+ * environment has since removed the class-loading limit, but the generic design stays on its merits:
+ * plain {@code Object}s hash and compare by identity, which is exactly the "these are two different
+ * things" property every assertion below needs.
  */
 public class UnreachableEntityCacheTest {
 

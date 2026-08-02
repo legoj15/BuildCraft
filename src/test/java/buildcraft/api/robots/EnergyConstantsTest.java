@@ -34,12 +34,13 @@ import buildcraft.api.mj.MjAPI;
  * a full charge, and that is what decides how many hits a robot walks away from.
  *
  * <p><b>Why these read {@code IRobotAccess} and not {@code EntityRobotBase}.</b> The constants deliberately
- * live on the interface. Dereferencing one on the entity would class-load {@code EntityRobotBase} ->
- * {@code Entity} -> NeoForge's {@code AttachmentHolder}, whose static initialiser asks
- * {@code FMLEnvironment.isProduction()} and throws "There is no current FML Loader" — the plain
- * {@code test} task boots no loader, so every non-inlined assertion here used to fail with a
- * {@code NoClassDefFoundError} that had nothing to do with energy. {@code EntityRobotBase} inherits all of
- * them, so nothing about the entity's own surface changed.
+ * live on the interface. When this file was written the {@code test} task booted no FML loader, so
+ * dereferencing a constant on the entity class-loaded {@code EntityRobotBase} -> {@code Entity} ->
+ * NeoForge's {@code AttachmentHolder} and died with a {@code NoClassDefFoundError} that had nothing to do
+ * with energy. The FML-JUnit environment (see {@link buildcraft.FmlJunitEnvironmentTest}) has since made
+ * that class-load legal, but the constants stay on the interface: an addon should not need an Entity
+ * class-load to read a number, and {@code EntityRobotBase} inherits all of them, so nothing about the
+ * entity's own surface changed.
  */
 public class EnergyConstantsTest {
 

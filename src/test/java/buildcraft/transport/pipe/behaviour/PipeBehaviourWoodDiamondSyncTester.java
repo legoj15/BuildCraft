@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond.FilterMode;
-import buildcraft.VanillaSetupBaseTester;
 
 /**
  * Regression guard for emerald (wood-diamond) pipe state reaching the client via the BE update tag.

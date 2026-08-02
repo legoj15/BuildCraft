@@ -390,6 +390,14 @@ neoForge {
             sourceSet(sourceSets["test"])
         }
     }
+
+    // FML-JUnit unit tests: `test` boots a real FML loader before the JUnit engine, so tests can
+    // class-load game classes (Entity, ItemStack, registries) that a bare JVM cannot — NeoForge's
+    // AttachmentHolder.<clinit> asks FMLEnvironment.isProduction() and throws without a loader.
+    unitTest {
+        enable()
+        testedMod = mods["buildcraftunofficial"]
+    }
 }
 
 dependencies {

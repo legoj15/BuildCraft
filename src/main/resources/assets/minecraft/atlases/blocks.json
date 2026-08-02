@@ -35,16 +35,6 @@
             "source": "triggers",
             "prefix": "triggers/"
         },
-        {
-            "type": "minecraft:directory",
-            "source": "block/engine",
-            "prefix": "block/engine/"
-        },
-        {
-            "type": "minecraft:directory",
-            "source": "block/pump",
-            "prefix": "block/pump/"
-        },
 
         {
             "type": "buildcraftunofficial:dye_replace",

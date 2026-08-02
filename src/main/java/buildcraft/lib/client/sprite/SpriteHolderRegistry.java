@@ -55,10 +55,10 @@ public class SpriteHolderRegistry {
      *  {@code textures/block/**} of EVERY namespace (ours included, any subdirectory depth) is
      *  stitched onto the blocks atlas with no BuildCraft-side entry at all. Verified against the
      *  vanilla 1.21.1 / 1.21.11 / 26.1.2 client jars and in-client (the {@code block/robot}
-     *  doodad audit, 2026-08-01). Our own blocks.json therefore only needs to declare directories
-     *  OUTSIDE {@code textures/block/} ({@code pipes/}, {@code lasers/}, …); its
-     *  {@code block/engine/} and {@code block/pump/} entries are harmless leftovers vanilla
-     *  already covers. */
+     *  doodad audit, 2026-08-01, plus the NFRT-cached 1.21.10/26.2 client jars). Our own
+     *  blocks.json therefore declares ONLY directories outside {@code textures/block/}
+     *  ({@code pipes/}, {@code lasers/}, …) — never add a {@code block/…} source there;
+     *  vanilla already covers the whole tree on every supported line. */
     private static final class AtlasLookup {
         static final Identifier[] ORDER = {
             TextureAtlas.LOCATION_BLOCKS,

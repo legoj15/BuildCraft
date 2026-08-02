@@ -198,13 +198,15 @@ public enum PlugGateRenderer implements IPlugDynamicRenderer<PluggableGate> {
                        VertexConsumer bb, PoseStack ps) {
         initDynamicCache();
 
-        // Natural lightmap at the air block adjacent to the gate's outward side. We can't use
-        // LevelRenderer.getLightCoords here — it returns vanilla's `blockLight | (skyLight << 16)`
-        // format (raw values in low bits / bits 16-19), but MutableQuad.lighti(int combined)
-        // unpacks the LightTexture.pack format (block << 4 / sky << 20). The format mismatch
-        // produced lighti(0, 0) — full darkness — for any non-emissive lightmap. Using the
-        // explicit getBrightness API (the pattern RenderPump and RenderMiningWell already use)
+        // Natural lightmap at the air block adjacent to the gate's outward side, read through the
+        // explicit getBrightness API (the pattern RenderPump and RenderMiningWell already use), which
         // returns raw 0-15 values that lighti(int, int) consumes directly.
+        //
+        // LightUtil.getLightCoords + lighti(int combined) would work equally well here; an older
+        // comment on this block claimed otherwise, on the grounds that the vanilla getter returns
+        // `blockLight | (skyLight << 16)`. It does not — that shape is LightCoordsUtil.smoothPack.
+        // The getter returns `block << 4 | sky << 20` on every node, which is exactly what
+        // MutableVertex.lighti(int) decodes.
         //
         // Sampling at pipePos.relative(plug.side) instead of pipePos itself reads the lightmap
         // on the OUTSIDE of the pipe — where the gate's visible faces actually are — so the

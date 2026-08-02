@@ -2,11 +2,11 @@
     "textures": {
         "#all":"buildcraftunofficial:pipes/power_adapter"
     },
-    "shade": true,
     "elements": [
         {
            "from": [ 2, 4, 4 ],
             "to": [ 4.01, 12, 12 ],
+            "shade": true,
             "faces": {
                 "down":  { "uv": [ 2, 4, 4, 12 ], "texture": "#all" },
                 "up":    { "uv": [ 2, 4, 4, 12 ], "texture": "#all" },
@@ -19,6 +19,7 @@
         {
            "from": [ 0, 3, 3 ],
             "to": [ 2, 13, 13 ],
+            "shade": true,
             "faces": {
                 "down":  { "uv": [ 0, 3, 2, 13 ], "texture": "#all" },
                 "up":    { "uv": [ 0, 3, 2, 13 ], "texture": "#all" },

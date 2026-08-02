@@ -2,7 +2,7 @@
 
 Linked from [todos.md](../todos.md). This is the working plan for porting the robot system; update phase status here as work lands, and delete a phase's section only if the whole program is ever abandoned.
 
-**Status: Ph0 (seams b, c), Ph1, and Ph2 are complete. Next up: Ph3 — EntityRobot + renderer.**
+**Status: Ph0 (seams b, c), Ph1, Ph2, and Ph3 are complete. Next up: Ph4 — first boards + recharge AI (MVP completion).**
 
 ## Overview
 
@@ -47,19 +47,35 @@ Model is a state-invariant baked plinth (`KeyPlugRobotStation`/`PlugBakerSimple`
 
 _Tests:_ 8 GameTests (`RobotStationPluggableTester`) — placement auto-registers, player-break auto-deregisters, `RobotUtils.getStations` discovery through a real `IPipeHolder`, the take/release reservation lifecycle (standing in for "undock → release"), render-state transitions (available/reserved/linked), MJ-charge handoff lossless when docked, no charge when merely reserved, item-pipe output smoke. Plus JUnit: `RobotUtilsTest` (6 cases, mocked `IPipeHolder`/`IDockingStationProvider`) and `DockingStationPipeTest` (5 cases: `RobotManager` "pipe" registration, no-arg-ctor NBT reload, pos/side round-trip, the missing-`robotId`-defaults-to-`0L` characterization, the explicit unlinked sentinel). **Physical dock → position-snap is deferred to Ph3** — that's `EntityRobot`'s movement logic, and no concrete robot exists yet (same call `RobotRegistryTest` made for its own entity-gated paths).
 
+### Ph3 — EntityRobot + ItemRobot + renderer (COMPLETE 2026-08-01)
+
+The full worked design — every decision, its evidence, the traps it avoided, and the three
+post-implementation defect diagnoses — is [robotics-ph3-design.md](robotics-ph3-design.md);
+**read it before any Ph4+ work**. Landed across `bbb51478c` → `90a797f37`, tests-first (red
+baseline committed before implementation).
+
+What exists now: concrete `EntityRobot` on **bare `Entity`** (registry lifecycle with leak-proof
+kill/unload routing, docking snap, damage-drains-battery/death-drops, modern save format under
+7.1.x key names, `SynchedEntityData` networking with the ItemStack shadow-copy dirtiness gate,
+client yaw smoothing + energy particles); seam (a) **`IRobotAccess`** (AIs/boards type against the
+interface; the whole AI framework is now pure-JUnit-testable via a mock); `MAX_POWER` re-pinned to
+`10_000 * MjAPI.MJ` (canonical 10 RF/MJ, constants live on `IRobotAccess`); `isActive()` renamed
+`isSleeping()`; `RobotChargeReceiver` (ticksCharging latch, simulate-inert, still `IMjReadable`
+for gate triggers); `BoardRobotEmpty` registered so skins/placement resolve; `ItemRobot`
+(CUSTOM_DATA board+charge blob, hand-placement onto a free station, charge tooltip — deliberately
+recipe-less until Ph4 decides pricing incl. the Redstone Crystal question, Decision 8);
+`RenderRobot` across BOTH renderer generations (1.21.10 cliff; 26.1.2≡26.2) with the 8.0.x 32×32
+UV net, charge/bottom overlays, and the two hard-won render rules — decal passes need straight-up
+normals (the diffuse term caps "fullbright") and `order(1)` (coplanar same-pipeline submissions
+tie-break arbitrarily on 26.x); `robot_station` recipe (a Ph2 oversight) + the 4-arg
+`PluggableDefinition` ctor that made the station item-placeable at all.
+
+_Tests:_ 15 new game tests (suite 381→398, all five nodes green) + JUnit (energy pins,
+`UnreachableEntityCache`, 18-case AI-framework suite) + the shared `EntityArenaUtil` harness;
+in-client visual verification on 26.2 + 1.21.1 (53 + refix screenshot sets). Deferred by design:
+wearable acceptance/skull/armour render + melee (Ph9), zones (Ph6), requester residue (Ph8).
+
 ## Remaining phases
-
-### Ph3 — EntityRobot + renderer [MVP, biggest single item]
-
-The full worked design — every decision, its evidence and the traps it avoids — is [robotics-ph3-design.md](robotics-ph3-design.md); read that before touching Ph3 code. Summary: concrete `EntityRobot` (synched/spawn/save data, inventory, MJ battery via the RF→MJ conversion, AI host (seam (a): `IRobotAccess` lands here so `AIRobot.robot` types against an interface — its framework-delegation tests ride along), dock/undock) on bare `Entity`, not `LivingEntity`; register via new `BCRoboticsEntities`; one renderer class; `ItemRobot`.
-
-**Renderer: TWO entity-renderer API generations, not three.** 1.21.1 is the classic `EntityRenderer<T>` (`render(...)` + `getTextureLocation`); everything from 1.21.10 up is the render-state/`SubmitNodeCollector` generation — **26.1.2 and 26.2 are identical to 1.21.10 for entity rendering**, so no third branch exists. (The laser call is the one site that forks at 26.1 rather than at 1.21.10.) Still the only true from-scratch piece, and still wants **in-client visual verification**.
-
-**`ItemRobot` ships recipe-less in Ph3, on purpose.** Boards do not exist until Ph4, so a craftable robot would be an expensive do-nothing item; the pricing question — including whether 7.1.x's **Redstone Crystal** gate returns at all — is decided in Ph4, and the arguments for and against are recorded in Decision 8 of the design doc. The robot is creative-tab-only until then.
-
-`robot_station`'s missing recipe (a Ph2 oversight) **landed with Ph3**: `data/…/recipe/robot_station.json`, 7.1.x's shape — 3 iron ingots + 1 Golden Chipset.
-
-_Tests:_ **energy overflow tripwire** (`MAX_POWER = 10_000*MjAPI.MJ = 1e10 > Integer.MAX_VALUE` — the 7.1.x type was `int`; the capacity was re-pinned to the canonical 10 RF = 1 MJ bridge, see Decision 3) + MJ cost-ordering pins (FetchItem > Load > Goto > Main/Recharge=0; MJ constants are design decisions, comment "chosen, not derived"); battery-only NBT (JUnit+Boot) + full battery/inv/tank/wearable NBT (GameTest — serializes ItemStacks; this first entity GameTest brings the `forceLoadEntityArena`/`tickUntil` harness utils online); attack/charging conversions; spawn + persistence flags; framework delegation + **blanket AI NBT-round-trip + registration sweep** (now a real robot exists; covers single-arg-ctor AIs incl. the recursive-delegate reload); death-frees-all reservations end-to-end; SynchedEntityData 2-side sync. McDevBridge: renderer / energy particle FX / movement feel.
 
 ### Ph4 — First boards + recharge AI [MVP completion]
 

@@ -12,6 +12,9 @@ import net.minecraft.world.phys.AABB;
 
 import buildcraft.api.transport.IItemPluggable;
 
+import buildcraft.robotics.BCRoboticsItems;
+import buildcraft.robotics.RobotStationPluggable;
+
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.plug.PluggableFacade;
 import buildcraft.silicon.plug.PluggableLens;
@@ -54,6 +57,11 @@ public class PipePlacementHighlightTester {
     public static void testFacadePreviewMatchesPlacedBox(GameTestHelper helper) {
         assertMatches(helper, "Facade", (IItemPluggable) BCSiliconItems.PLUG_FACADE.get(),
             new ItemStack(BCSiliconItems.PLUG_FACADE.get()), PluggableFacade::boundingBoxFor);
+    }
+
+    public static void testRobotStationPreviewMatchesPlacedBox(GameTestHelper helper) {
+        assertMatches(helper, "Robot station", (IItemPluggable) BCRoboticsItems.ROBOT_STATION.get(),
+            new ItemStack(BCRoboticsItems.ROBOT_STATION.get()), RobotStationPluggable::boundingBoxFor);
     }
 
     private static void assertMatches(GameTestHelper helper, String label, IItemPluggable item,

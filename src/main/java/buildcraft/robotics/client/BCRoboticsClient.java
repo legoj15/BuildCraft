@@ -17,7 +17,6 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import buildcraft.api.transport.pipe.PipeApiClient;
 import buildcraft.api.transport.pluggable.IPluggableStaticBaker;
 
-import buildcraft.lib.client.model.ModelHolderStatic;
 import buildcraft.lib.client.model.plug.PlugBakerSimple;
 
 import buildcraft.robotics.BCRoboticsBlockEntities;
@@ -25,6 +24,7 @@ import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.BCRoboticsMenuTypes;
 import buildcraft.robotics.RobotStationPluggable;
 import buildcraft.robotics.client.gui.GuiZonePlanner;
+import buildcraft.robotics.client.model.RobotStationModel;
 import buildcraft.robotics.client.model.key.KeyPlugRobotStation;
 import buildcraft.robotics.client.render.PlugRobotStationRenderer;
 import buildcraft.robotics.client.render.RenderRobot;
@@ -33,12 +33,12 @@ import buildcraft.robotics.client.render.RenderZonePlanner;
 public class BCRoboticsClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(BCRoboticsClient.class);
 
-    // Static model holder + baker for the docking station's state-invariant plinth (the docking
-    // state indicator is rendered dynamically — see PlugRobotStationRenderer / KeyPlugRobotStation).
-    public static final ModelHolderStatic ROBOT_STATION =
-        new ModelHolderStatic("buildcraftunofficial:models/plugs/robot_station.json");
+    // Baker for the docking station's state-invariant pedestal, in the sprite 1.7.10 used for both
+    // its idle states (the reserved/linked ones are re-emitted per frame — see
+    // PlugRobotStationRenderer / KeyPlugRobotStation). Both paths build their quads from
+    // RobotStationModel, which is what keeps them pixel-identical.
     public static final IPluggableStaticBaker<KeyPlugRobotStation> BAKER_PLUG_ROBOT_STATION =
-        new PlugBakerSimple<>(ROBOT_STATION::getCutoutQuads);
+        new PlugBakerSimple<>(RobotStationModel::bakedQuads);
 
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
@@ -79,6 +79,11 @@ public class BCRoboticsClient {
      */
     @SubscribeEvent
     public static void onModifyBakingResult(ModelEvent.ModifyBakingResult event) {
+        // Both caches hold TextureAtlasSprite references, which a resource reload discards. The baked
+        // side is doubly load-bearing: PlugBakerSimple only re-bakes when the quad ARRAY's identity
+        // changes, so dropping the cache here is what makes the rebuilt array reach it.
+        RobotStationModel.onModelBake();
+        PlugRobotStationRenderer.onModelBake();
         if (PipeApiClient.registry != null) {
             PipeApiClient.registry.registerBaker(KeyPlugRobotStation.class, BAKER_PLUG_ROBOT_STATION);
             PipeApiClient.registry.registerRenderer(RobotStationPluggable.class, PlugRobotStationRenderer.INSTANCE);

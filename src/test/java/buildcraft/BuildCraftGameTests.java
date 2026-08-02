@@ -133,6 +133,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:placement_preview_power_adaptor_matches", () -> buildcraft.transport.client.render.PipePlacementHighlightTester::testPowerAdaptorPreviewMatchesPlacedBox);
         reg.accept("buildcraftunofficial:placement_preview_lens_matches", () -> buildcraft.transport.client.render.PipePlacementHighlightTester::testLensPreviewMatchesPlacedBox);
         reg.accept("buildcraftunofficial:placement_preview_facade_matches", () -> buildcraft.transport.client.render.PipePlacementHighlightTester::testFacadePreviewMatchesPlacedBox);
+        reg.accept("buildcraftunofficial:placement_preview_robot_station_matches", () -> buildcraft.transport.client.render.PipePlacementHighlightTester::testRobotStationPreviewMatchesPlacedBox);
 
         // Per-player oil/fuel production tracking gating the refine_and_redefine advancement
         reg.accept("buildcraftunofficial:refine_and_redefine_fresh_attachment_empty", () -> buildcraft.factory.OilAndFuelProductionTester::testFreshAttachmentEmpty);

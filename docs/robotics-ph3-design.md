@@ -356,8 +356,11 @@ the `lerpTo` snap override on the ENTITY (`EntityQuarryRig:170-182`) or movement
 
 **Assets — explicit move list, NOT a glob:** `git mv` from `misc/unused_textures/` into new
 `src/main/resources/assets/buildcraftunofficial/textures/entity/`: the **23** `robot_*.png` entity
-skins **EXCLUDING the four `robot_station*.png`** (those are stale 16×16 pipe-pluggable dupes of live
-textures — leave them), plus `overlay_side.png` + `overlay_bottom.png` (verify exact overlay
+skins **EXCLUDING the four `robot_station*.png`** (those are 16×16 pipe-pluggable copies, not entity
+skins — leave them). Three of the four still duplicate a live texture; `robot_station_base.png` no
+longer does, because the live copy was deleted once the pedestal moved to the `available` sprite
+1.7.10 actually drew, so the `misc/` copy is now the only one on disk. Plus
+`overlay_side.png` + `overlay_bottom.png` (verify exact overlay
 filenames on disk) = 25 files; rename `robot_fluidCarrier.png` → `robot_fluid_carrier.png` and
 `robot_leaveCutter.png` → `robot_leave_cutter.png` (uppercase rejected). Must NOT sit under
 `textures/block/` (atlas-stitching). MVP uses `robot_base.png` + two overlays; the other skins ship

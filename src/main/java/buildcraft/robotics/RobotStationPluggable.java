@@ -40,12 +40,14 @@ import org.jspecify.annotations.Nullable;
  */
 public class RobotStationPluggable extends PipePluggable implements IDockingStationProvider {
 
-    /** (min, max) lateral span, and (near, far) protrusion depth from the mounting face — a small
-     *  post distinct from {@code PluggablePowerAdaptor}'s wider slab. */
+    /** (min, max) lateral span, and (near, far) protrusion depth from the mounting face. Laterally
+     *  identical to {@code PluggableBlocker}'s and deeper — it wraps the pedestal's 8×8 plate. 7.1.x
+     *  boxed the plate alone, leaving the post unselectable; covering the whole pedestal instead is a
+     *  deliberate divergence, so a click anywhere on the visible shape hits the station. */
     private static final AABB[] BOXES = new AABB[6];
     static {
-        double min = 5 / 16.0;
-        double max = 11 / 16.0;
+        double min = 4 / 16.0;
+        double max = 12 / 16.0;
         double near = 0 / 16.0;
         double far = 4 / 16.0;
 
@@ -71,8 +73,9 @@ public class RobotStationPluggable extends PipePluggable implements IDockingStat
     private RobotStationState renderState;
 
     /** Client-side mirror of {@link #getRenderState()}. The client never resolves a {@link #station}
-     *  ({@link #onTick()} is server-only), so without this the indicator is permanently
-     *  {@link RobotStationState#NONE} and {@code PlugRobotStationRenderer} draws nothing. */
+     *  ({@link #onTick()} is server-only), so without this the state is permanently
+     *  {@link RobotStationState#NONE} and a reserved or linked station never looks any different from
+     *  a free one. */
     private RobotStationState syncedState = RobotStationState.NONE;
     /** Last state pushed to clients, so {@link #onTick()} only sends on an actual transition. */
     private RobotStationState lastSentState = RobotStationState.NONE;
@@ -121,9 +124,10 @@ public class RobotStationPluggable extends PipePluggable implements IDockingStat
     public void readPayload(FriendlyByteBuf buffer, Object side, Object ctx) throws java.io.IOException {
         super.readPayload(buffer, side, ctx);
         readData(buffer);
-        // Deliberately NO scheduleRenderUpdate() here, unlike PluggablePulsar: the indicator is drawn
-        // per-frame by PlugRobotStationRenderer and is kept OUT of the baked model key on purpose
-        // (see KeyPlugRobotStation), so a dock/undock must not trigger a chunk re-mesh.
+        // Deliberately NO scheduleRenderUpdate() here, unlike PluggablePulsar: the reserved/linked
+        // pedestal is re-emitted per-frame by PlugRobotStationRenderer and is kept OUT of the baked
+        // model key on purpose (see KeyPlugRobotStation), so a dock/undock must not trigger a chunk
+        // re-mesh.
     }
 
     /** Static lookup for the per-side {@linkplain #getBoundingBox() bounding box} — used by the

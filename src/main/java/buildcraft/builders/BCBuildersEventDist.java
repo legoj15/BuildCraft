@@ -527,9 +527,12 @@ public enum BCBuildersEventDist {
         //?}
     }
 
-    /** Standalone scan texture — bound via RenderType directly so we don't depend on the block
-     * atlas stitching picking it up (atlas/blocks.json sources are hit-or-miss for textures that
-     * aren't referenced by a block model). */
+    /** Standalone scan texture, bound via RenderType as a whole file rather than looked up as an
+     * atlas sprite. NOTE: the original rationale here ("atlas sources are hit-or-miss for textures
+     * not referenced by a block model") was wrong — vanilla's own atlases/blocks.json contributes a
+     * recursive, namespace-agnostic {@code block/} directory source, so everything under
+     * {@code textures/block/**} IS stitched (see the AtlasLookup javadoc in SpriteHolderRegistry).
+     * Direct binding still works and is kept to avoid render churn; a SpriteHolder would work too. */
     private static final net.minecraft.resources.Identifier SCAN_TEXTURE =
             net.minecraft.resources.Identifier.parse("buildcraftunofficial:textures/block/scan.png");
 

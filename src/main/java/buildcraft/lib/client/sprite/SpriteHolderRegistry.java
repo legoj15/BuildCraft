@@ -6,6 +6,10 @@
 
 package buildcraft.lib.client.sprite;
 
+import org.slf4j.Logger;
+
+import com.mojang.logging.LogUtils;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
@@ -22,6 +26,8 @@ import buildcraft.api.core.render.ISprite;
 // constants. Suppress here; revisit once NeoForge surfaces a stable replacement.
 @SuppressWarnings("deprecation")
 public class SpriteHolderRegistry {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     public void registerInitialSprites() {}
 
     /** Initialization-on-demand holder for the atlas lookup order. Kept out of
@@ -40,7 +46,19 @@ public class SpriteHolderRegistry {
      *  item models — e.g. paintbrush colour textures at {@code item/paintbrush/<colour>} — resolve
      *  without being declared a second time on the blocks atlas. GUI atlas last for the handful of
      *  sprites that live there. The fall-back lets each PNG live on exactly one atlas page (no GPU
-     *  duplication) while still being reachable from {@link SpriteHolder}. */
+     *  duplication) while still being reachable from {@link SpriteHolder}.
+     *
+     *  <p><b>Atlas coverage, before you "fix" a missing sprite:</b> atlas JSONs are appended
+     *  across resource packs (like tags), so the effective blocks atlas is VANILLA's
+     *  {@code atlases/blocks.json} plus ours. Vanilla's includes a {@code block/} directory
+     *  source, and directory sources are namespace-agnostic and recursive — every texture under
+     *  {@code textures/block/**} of EVERY namespace (ours included, any subdirectory depth) is
+     *  stitched onto the blocks atlas with no BuildCraft-side entry at all. Verified against the
+     *  vanilla 1.21.1 / 1.21.11 / 26.1.2 client jars and in-client (the {@code block/robot}
+     *  doodad audit, 2026-08-01). Our own blocks.json therefore only needs to declare directories
+     *  OUTSIDE {@code textures/block/} ({@code pipes/}, {@code lasers/}, …); its
+     *  {@code block/engine/} and {@code block/pump/} entries are harmless leftovers vanilla
+     *  already covers. */
     private static final class AtlasLookup {
         static final Identifier[] ORDER = {
             TextureAtlas.LOCATION_BLOCKS,
@@ -106,7 +124,10 @@ public class SpriteHolderRegistry {
          *  sprite as a real entry (i.e. {@code getSprite()} did not fall through to
          *  the missing-texture sprite). If every atlas misses, return the missing
          *  sprite from the first atlas we successfully queried so callers still get
-         *  a non-null {@link TextureAtlasSprite} to render. */
+         *  a non-null {@link TextureAtlasSprite} to render — but WARN, because the
+         *  purple-and-black fallback is otherwise completely silent (the 2026-08-01
+         *  {@code block/robot} audit burned a session proving a sprite that resolved
+         *  fine was "missing" precisely because a genuine miss would have said nothing). */
         private TextureAtlasSprite resolveSprite() {
             TextureManager tm = Minecraft.getInstance().getTextureManager();
             Identifier missingId = MissingTextureAtlasSprite.getLocation();
@@ -118,6 +139,13 @@ public class SpriteHolderRegistry {
                     return sprite;
                 }
                 if (firstMissing == null) firstMissing = sprite;
+            }
+            if (firstMissing != null) {
+                // Cached by getSprite(), so this fires once per resolution attempt, not per frame.
+                LOGGER.warn("[lib.sprite] SpriteHolder '{}' is not stitched onto any searched atlas "
+                    + "(blocks/items/gui) — it will render as the missing-texture checkerboard. "
+                    + "Check the texture path and the atlas sources in assets/minecraft/atlases/.",
+                    location);
             }
             return firstMissing;
         }

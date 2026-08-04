@@ -15,6 +15,7 @@ import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.core.IZone;
+import buildcraft.api.inventory.IItemTransactor;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
 
@@ -84,6 +85,17 @@ public interface IRobotAccess {
 
     AABB getBoundingBox();
 
+    /** Euclidean distance from the robot's current position to {@code (x, y, z)}. 7.1.x's AIs called this on
+     *  every movement frame to detect arrival; declared as a default over {@link #position()} so a test
+     *  {@code IRobotAccess} (which already supplies a position) never has to re-implement it. */
+    default double getDistance(double x, double y, double z) {
+        Vec3 pos = position();
+        double dx = x - pos.x;
+        double dy = y - pos.y;
+        double dz = z - pos.z;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
     // ── Energy ──
 
     MjBattery getBattery();
@@ -142,6 +154,14 @@ public interface IRobotAccess {
     ItemStack getInventoryStack(int slot);
 
     void setInventoryStack(int slot, ItemStack stack);
+
+    /** The robot's four transfer slots exposed as an {@link IItemTransactor}, the seam the load/unload AIs
+     *  insert and extract through. 7.1.x reached the same surface through {@code ITransactor.getTransactorFor},
+     *  which main has no equivalent of — the modern transactor interface already models the two operations the
+     *  AIs need ({@code insert} with its {@code allOrNone}/{@code simulate} flags, {@code extract} against an
+     *  {@code IStackFilter}). The concrete robot implements this over its live slot array, preserving 7.1.x's
+     *  in-place mutation semantics. */
+    IItemTransactor getTransactor();
 
     boolean containsItems();
 

@@ -159,7 +159,14 @@ public class AIRobot {
     }
 
     public final void writeToNbt(CompoundTag nbt) {
-        nbt.putString("aiName", RobotManager.getAIRobotName(getClass()));
+        String aiName = RobotManager.getAIRobotName(getClass());
+        if (aiName == null) {
+            // An unregistered AI class (a removed addon's board, say) must not crash the whole save: with no
+            // aiName the tag is unreadable and loadFromNBT yields nothing, which every consumer already
+            // null-guards. 7.1.x wrote null here and NPE'd on the very first save of such a robot.
+            return;
+        }
+        nbt.putString("aiName", aiName);
 
         CompoundTag data = new CompoundTag();
         writeSelfToNBT(data);

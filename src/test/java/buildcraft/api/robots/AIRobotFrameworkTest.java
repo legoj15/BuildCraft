@@ -19,6 +19,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
+import buildcraft.api.core.IStackFilter;
 import buildcraft.api.core.IZone;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
@@ -582,6 +583,24 @@ public class AIRobotFrameworkTest {
         @Override
         public ItemStack receiveItem(BlockEntity tile, ItemStack stack) {
             return stack;
+        }
+
+        /** The framework tests never touch the transactor; a bare inert one satisfies the interface. */
+        @Override
+        public buildcraft.api.inventory.IItemTransactor getTransactor() {
+            return new buildcraft.api.inventory.IItemTransactor() {
+                @Override
+                public net.minecraft.world.item.ItemStack insert(net.minecraft.world.item.ItemStack stack,
+                        boolean allOrNone, boolean simulate) {
+                    return stack;
+                }
+
+                @Override
+                public net.minecraft.world.item.ItemStack extract(IStackFilter filter, int min, int max,
+                        boolean simulate) {
+                    return ItemStack.EMPTY;
+                }
+            };
         }
 
         // -- pathing hints --

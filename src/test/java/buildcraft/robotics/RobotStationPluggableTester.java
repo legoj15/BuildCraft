@@ -619,6 +619,25 @@ public class RobotStationPluggableTester {
             return true;
         }
 
+        /** Inert transactor — this fixture carries no real cargo; the picker/carrier transfer AIs get their
+         *  integration coverage through EntityRobot-backed game tests instead. */
+        @Override
+        public buildcraft.api.inventory.IItemTransactor getTransactor() {
+            return new buildcraft.api.inventory.IItemTransactor() {
+                @Override
+                public net.minecraft.world.item.ItemStack insert(net.minecraft.world.item.ItemStack stack,
+                        boolean allOrNone, boolean simulate) {
+                    return stack;
+                }
+
+                @Override
+                public net.minecraft.world.item.ItemStack extract(buildcraft.api.core.IStackFilter filter,
+                        int min, int max, boolean simulate) {
+                    return net.minecraft.world.item.ItemStack.EMPTY;
+                }
+            };
+        }
+
         @Override
         public void unreachableEntityDetected(net.minecraft.world.entity.Entity entity) {
         }

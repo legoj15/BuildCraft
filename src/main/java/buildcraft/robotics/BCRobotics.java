@@ -17,6 +17,29 @@ import org.slf4j.LoggerFactory;
 import buildcraft.api.boards.RedstoneBoardRegistry;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.core.BCCore;
+import buildcraft.robotics.ai.AIRobotFetchItem;
+import buildcraft.robotics.ai.AIRobotGoto;
+import buildcraft.robotics.ai.AIRobotGotoBlock;
+import buildcraft.robotics.ai.AIRobotGotoSleep;
+import buildcraft.robotics.ai.AIRobotGotoStation;
+import buildcraft.robotics.ai.AIRobotGotoStationAndLoad;
+import buildcraft.robotics.ai.AIRobotGotoStationAndUnload;
+import buildcraft.robotics.ai.AIRobotGotoStationToLoad;
+import buildcraft.robotics.ai.AIRobotGotoStationToUnload;
+import buildcraft.robotics.ai.AIRobotLoad;
+import buildcraft.robotics.ai.AIRobotMain;
+import buildcraft.robotics.ai.AIRobotRecharge;
+import buildcraft.robotics.ai.AIRobotSearchAndGotoStation;
+import buildcraft.robotics.ai.AIRobotSearchStation;
+import buildcraft.robotics.ai.AIRobotShutdown;
+import buildcraft.robotics.ai.AIRobotSleep;
+import buildcraft.robotics.ai.AIRobotStraightMoveTo;
+import buildcraft.robotics.ai.AIRobotUnload;
+import buildcraft.robotics.boards.BoardRobotCarrier;
+import buildcraft.robotics.boards.BoardRobotCarrierNBT;
+import buildcraft.robotics.boards.BoardRobotEmpty;
+import buildcraft.robotics.boards.BoardRobotPicker;
+import buildcraft.robotics.boards.BoardRobotPickerNBT;
 import buildcraft.transport.BCTransportCreativeTabs;
 
 /**
@@ -57,6 +80,10 @@ public class BCRobotics {
             addCreativeTabItems(event);
         });
 
+        // Ph4: the AI tree + the first two real boards. Each AI (and board, which is itself an AIRobot) is
+        // registered by the name its NBT saves, with the 7.1.x legacy class name for old-save migration.
+        registerAIsAndBoards();
+
         LOGGER.info("BuildCraft Robotics initialized");
     }
 
@@ -67,5 +94,46 @@ public class BCRobotics {
         if (event.getTabKey() == BCTransportCreativeTabs.PLUGS_TAB_KEY) {
             event.accept(BCRoboticsItems.ROBOT_STATION.get());
         }
+    }
+
+    /** Registers the Ph4 AI tree and the picker/carrier boards. Board costs are 7.1.x's, chosen not derived
+     *  (8000 micro-MJ each, the two green boards); the empty board was already seeded by
+     *  {@code ImplRedstoneBoardRegistry}. */
+    private static void registerAIsAndBoards() {
+        RobotManager.registerAIRobot(AIRobotMain.class, "aiRobotMain", "buildcraft.core.robots.AIRobotMain");
+        RobotManager.registerAIRobot(AIRobotRecharge.class, "aiRobotRecharge", "buildcraft.core.robots.AIRobotRecharge");
+        RobotManager.registerAIRobot(AIRobotSleep.class, "aiRobotSleep", "buildcraft.core.robots.AIRobotSleep");
+        RobotManager.registerAIRobot(AIRobotShutdown.class, "aiRobotShutdown");
+        RobotManager.registerAIRobot(AIRobotGoto.class, "aiRobotGoto", "buildcraft.core.robots.AIRobotGoto");
+        RobotManager.registerAIRobot(AIRobotStraightMoveTo.class, "aiRobotStraightMoveTo",
+                "buildcraft.core.robots.AIRobotStraightMoveTo");
+        RobotManager.registerAIRobot(AIRobotGotoBlock.class, "aiRobotGotoBlock", "buildcraft.core.robots.AIRobotGotoBlock");
+        RobotManager.registerAIRobot(AIRobotGotoStation.class, "aiRobotGotoStation",
+                "buildcraft.core.robots.AIRobotGotoStation");
+        RobotManager.registerAIRobot(AIRobotGotoSleep.class, "aiRobotGotoSleep", "buildcraft.core.robots.AIRobotGotoSleep");
+        RobotManager.registerAIRobot(AIRobotSearchStation.class, "aiRobotSearchStation",
+                "buildcraft.core.robots.AIRobotSearchStation");
+        RobotManager.registerAIRobot(AIRobotSearchAndGotoStation.class, "aiRobotSearchAndGotoStation",
+                "buildcraft.core.robots.AIRobotSearchAndGotoStation");
+        RobotManager.registerAIRobot(AIRobotGotoStationToLoad.class, "aiRobotGotoStationToLoad",
+                "buildcraft.core.robots.AIRobotGotoStationToLoad");
+        RobotManager.registerAIRobot(AIRobotGotoStationToUnload.class, "aiRobotGotoStationToUnload",
+                "buildcraft.core.robots.AIRobotGotoStationToUnload");
+        RobotManager.registerAIRobot(AIRobotGotoStationAndLoad.class, "aiRobotGotoStationAndLoad",
+                "buildcraft.core.robots.AIRobotGotoStationAndLoad");
+        RobotManager.registerAIRobot(AIRobotGotoStationAndUnload.class, "aiRobotGotoStationAndUnload",
+                "buildcraft.core.robots.AIRobotGotoStationAndUnload");
+        RobotManager.registerAIRobot(AIRobotLoad.class, "aiRobotLoad", "buildcraft.core.robots.AIRobotLoad");
+        RobotManager.registerAIRobot(AIRobotUnload.class, "aiRobotUnload", "buildcraft.core.robots.AIRobotUnload");
+        RobotManager.registerAIRobot(AIRobotFetchItem.class, "aiRobotFetchItem", "buildcraft.core.robots.AIRobotFetchItem");
+
+        RobotManager.registerAIRobot(BoardRobotEmpty.class, "boardRobotEmpty");
+        RobotManager.registerAIRobot(BoardRobotPicker.class, "boardRobotPicker",
+                "buildcraft.core.robots.boards.BoardRobotPicker");
+        RobotManager.registerAIRobot(BoardRobotCarrier.class, "boardRobotCarrier",
+                "buildcraft.core.robots.boards.BoardRobotCarrier");
+
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotPickerNBT.INSTANCE, 8000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotCarrierNBT.INSTANCE, 8000L);
     }
 }

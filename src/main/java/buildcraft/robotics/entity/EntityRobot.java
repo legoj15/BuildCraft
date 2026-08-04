@@ -14,6 +14,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.Nonnull;
+
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
@@ -54,8 +56,10 @@ import buildcraft.api.boards.RedstoneBoardRegistry;
 import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.core.BCLog;
+import buildcraft.api.core.IStackFilter;
 import buildcraft.api.core.IZone;
 import buildcraft.api.events.RobotEvent;
+import buildcraft.api.inventory.IItemTransactor;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
 import buildcraft.api.robots.AIRobot;
@@ -65,12 +69,16 @@ import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.api.tiles.IDebuggable;
 
+import buildcraft.lib.inventory.AbstractInvItemTransactor;
+import buildcraft.lib.inventory.filter.StackFilter;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.EntityUtil;
+import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 import buildcraft.robotics.BCRoboticsEntities;
+import buildcraft.robotics.ai.AIRobotMain;
 import buildcraft.robotics.item.ItemRobot;
 
 /**
@@ -1246,6 +1254,14 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         board = robotBoard;
         if (robotBoard != null) {
             entityData.set(BOARD_ID, robotBoard.getNBTHandler().getID());
+            // Ph4: the board is driven by a top-level AIRobotMain that delegates to it every tick. A freshly
+            // placed robot has no AI tree yet, so create the controller the first time a board is set (the
+            // empty board counts). AIRobotMain.update() picks the board up as its delegate on the first cycle.
+            // Loaded robots keep whatever tree their save restored (mainAI is already non-null there).
+            if (mainAI == null && level() != null && !level().isClientSide()) {
+                mainAI = new AIRobotMain(this);
+                mainAI.start();
+            }
         }
     }
 
@@ -1306,6 +1322,78 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         }
         inv[slot] = stack == null ? ItemStack.EMPTY : stack;
         pushStack(INV.get(slot), inv[slot]);
+    }
+
+    /** The transactor the load/unload/fetch AIs insert and extract through (D2). It is a thin adapter over the
+     *  SAME {@link #inv} array the slot accessors already serve, so an AI mutating a stack it was handed stays
+     *  live in the inventory — that is the 7.1.x contract {@link #setInventoryStack} documents. One instance
+     *  per robot. */
+    private final IItemTransactor transactor = new RobotTransactor();
+
+    @Override
+    public IItemTransactor getTransactor() {
+        return transactor;
+    }
+
+    /** {@link AbstractInvItemTransactor} over {@link #inv}. Standard per-slot merge on insert and a plain
+     *  filter+count on extract; {@code setInventoryStack} pushes the mutated slot to clients on every real
+     *  change. */
+    private class RobotTransactor extends AbstractInvItemTransactor {
+
+        @Override
+        protected ItemStack insert(int slot, @Nonnull ItemStack stack, boolean simulate) {
+            ItemStack current = inv[slot];
+            if (current.isEmpty()) {
+                int max = Math.min(stack.getCount(), stack.getMaxStackSize());
+                ItemStack split = stack.split(max);
+                if (!simulate) {
+                    setInventoryStack(slot, split);
+                }
+                return stack;
+            }
+            if (StackUtil.canMerge(current, stack)) {
+                int amount = Math.min(stack.getCount(), current.getMaxStackSize() - current.getCount());
+                if (amount > 0) {
+                    ItemStack merged = current.copy();
+                    merged.grow(amount);
+                    stack.shrink(amount);
+                    if (!simulate) {
+                        setInventoryStack(slot, merged);
+                    }
+                }
+            }
+            return stack;
+        }
+
+        @Override
+        protected ItemStack extract(int slot, IStackFilter filter, int min, int max, boolean simulate) {
+            ItemStack current = inv[slot];
+            if (current.isEmpty() || !filter.matches(current)) {
+                return ItemStack.EMPTY;
+            }
+            int amount = Math.min(current.getCount(), max);
+            if (amount < min) {
+                return ItemStack.EMPTY;
+            }
+            ItemStack result = current.copy();
+            result.setCount(amount);
+            if (!simulate) {
+                ItemStack remaining = current.copy();
+                remaining.shrink(amount);
+                setInventoryStack(slot, remaining);
+            }
+            return result;
+        }
+
+        @Override
+        protected int size() {
+            return INVENTORY_SIZE;
+        }
+
+        @Override
+        protected boolean isEmpty(int slot) {
+            return inv[slot].isEmpty();
+        }
     }
 
     @Override

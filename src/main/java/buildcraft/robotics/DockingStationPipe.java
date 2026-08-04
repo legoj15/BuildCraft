@@ -88,6 +88,24 @@ public class DockingStationPipe extends DockingStation {
         return EnumPipePart.fromFacing(side().getOpposite());
     }
 
+    @Override
+    public net.minecraft.world.Container getItemInput() {
+        IPipeHolder h = getHolder();
+        if (h == null || h.getPipe() == null || !(h.getPipe().getFlow() instanceof IFlowItems)) {
+            return null;
+        }
+        // The inventory this station's pipe draws from: the block one cell out along the pipe's facing — the
+        // same discovery 7.1.x's PipeItemsWood made. A docked robot LOADS from here (D6).
+        Direction facing = side().getOpposite();
+        BlockEntity tile = world.getBlockEntity(getPos().relative(facing));
+        return tile instanceof net.minecraft.world.Container container ? container : null;
+    }
+
+    @Override
+    public EnumPipePart getItemInputSide() {
+        return EnumPipePart.fromFacing(side().getOpposite());
+    }
+
     //? if >=1.21.10 {
     @Override
     public ResourceHandler<FluidResource> getFluidOutput() {

@@ -10,6 +10,7 @@ import net.minecraft.world.Container;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.Direction;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 //? if >=1.21.10 {
@@ -20,6 +21,7 @@ import net.neoforged.neoforge.transfer.fluid.FluidResource;
 //?}
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.EnumPipePart;
+import buildcraft.api.core.IStackFilter;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.api.transport.IInjectable;
 
@@ -242,6 +244,38 @@ public abstract class DockingStation {
 
     public IRequestProvider getRequestProvider() {
         return null;
+    }
+
+    // ── Station access policy (the D1 seam) ────────────────────────────────
+    // These four answer whether a robot may interact with this station's item flow. In 7.1.x they were
+    // the gate-action helpers ActionStationProvideItems / ActionRobotFilter / ActionStationForbidRobot,
+    // each reading a statement the station's pipe held. Those statements are Ph6, so Ph4 carries the
+    // policy HERE with permissive defaults, and Ph6 overrides them to read the real gate actions. Every
+    // AI call site swapped the statement-helper call for one of these, so the AI logic is identical to
+    // 7.1.x's shape and Ph6 fills the gate-driven behaviour in a single place.
+
+    /** Whether a docked robot may EXTRACT {@code stack} from this station's item input (7.1.x:
+     *  {@code ActionStationProvideItems.canExtractItem}). */
+    public boolean canRobotExtractItem(ItemStack stack) {
+        return true;
+    }
+
+    /** Whether a docked robot may INSERT {@code stack} into this station's item output (7.1.x:
+     *  {@code ActionRobotFilter.canInteractWithItem(station, filter, ActionStationAcceptItems.class)}). */
+    public boolean canRobotAcceptItem(ItemStack stack) {
+        return true;
+    }
+
+    /** Whether {@code robot} is forbidden from using this station at all (7.1.x:
+     *  {@code ActionStationForbidRobot.isForbidden}). */
+    public boolean isRobotForbidden(IRobotAccess robot) {
+        return false;
+    }
+
+    /** The stack filter restricting what this station is willing to trade (7.1.x:
+     *  {@code ActionRobotFilter.getGateFilter}). Ph4: no gates, so every item matches. */
+    public IStackFilter getRobotItemFilter() {
+        return stack -> true;
     }
 
     public void onChunkUnload() {

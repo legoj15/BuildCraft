@@ -4,6 +4,7 @@ Last audited: 2026-08-01
 
 ## 🔧 Outstanding work
 
+- Important: Figure out if the 1.7.10 MMPL license attribution should remain, or if it should say MPL instead.
 - Find the 25 game tests that silently skip on Minecraft 1.21.1 — [notes](docs/todo-details.md#skipped-game-tests-on-1211)
 - Fix the last places English text leaks through translations — [list](docs/todo-details.md#translation-follow-ups)
 - Give the heat exchanger a better in-world look — [notes](docs/todo-details.md#heat-exchanger-visual-overhaul)
@@ -21,7 +22,7 @@ Last audited: 2026-08-01
 
 ## 🆕 New Features (version 2026.2)
 
-- Bring robots back — next: first boards + recharge AI — [plan](docs/robotics-resurrection.md)
+- Bring robots back — Picker/Carrier AIs done; still the board item, tests + in-client check — [plan](docs/robotics-resurrection.md)
 - Fuel heat changes engine output; the route to a Nether start — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - Oil spawns in the Nether — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - A Pump on top of a Mining Well or Quarry drains the fluid blocking the dig — [notes](docs/todo-details.md#pump-on-top-of-miners)

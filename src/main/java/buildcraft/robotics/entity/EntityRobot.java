@@ -79,6 +79,7 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.ai.AIRobotMain;
+import buildcraft.robotics.ai.AIRobotShutdown;
 import buildcraft.robotics.item.ItemRobot;
 
 /**
@@ -1217,27 +1218,38 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         }
     }
 
-    /** Ph3: logs once and leaves the robot idling. Ph4 replaces the body with
-     *  {@code mainAI.startDelegateAI(new AIRobotShutdown(this))}, which flies the robot home and converts it to
-     *  items. Logging is one-shot on purpose — this is reached from the tick loop, so an unguarded log line
-     *  would be 20 lines a second per orphaned robot. */
+    /** Starts {@link AIRobotShutdown}, which undocks the robot and lets it fall to the ground, parking it where
+     *  it stops. Reached from the tick loop for an orphaned or mis-stationed robot, so it is guarded against
+     *  re-starting once a shutdown AI is already running — that is what keeps the log line at one, not a
+     *  one-shot flag. With no controller (Ph3 state, no board yet) it falls back to logging once and idling. */
     public void shutdown(String reason) {
-        if (shutdownReported) {
-            return;
+        if (mainAI instanceof AIRobotMain main) {
+            if (!(main.getDelegateAI() instanceof AIRobotShutdown)) {
+                BCLog.logger.info("[robots] Shutting down robot " + robotId + " — " + reason);
+                main.startDelegateAI(new AIRobotShutdown(this));
+            }
+        } else if (!shutdownReported) {
+            shutdownReported = true;
+            BCLog.logger.info("[robots] Shutting down robot " + robotId + " — " + reason);
         }
-        shutdownReported = true;
-        BCLog.logger.info("[robots] Shutting down robot " + robotId + " — " + reason);
     }
 
     // ── AI (Ph4) ────────────────────────────────────────────────────────────
 
-    /** Ph4 — {@code AIRobotMain} owns the override slot. */
+    /** {@code AIRobotMain} owns the override slot; the entity just fronts it. */
     public AIRobot getOverridingAI() {
+        if (mainAI instanceof AIRobotMain main) {
+            return main.getOverridingAI();
+        }
         return null;
     }
 
-    /** Ph4 — see {@link #getOverridingAI()}. */
+    /** Hands an overriding AI to the controller. {@code AIRobotMain} starts it on the next cycle unless a
+     *  higher-priority shutdown or recharge has taken over. */
     public void overrideAI(AIRobot ai) {
+        if (mainAI instanceof AIRobotMain main) {
+            main.setOverridingAI(ai);
+        }
     }
 
     /** Never null once a board registry exists: an un-boarded robot lazily adopts the empty board, which is

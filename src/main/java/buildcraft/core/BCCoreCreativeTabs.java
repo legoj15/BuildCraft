@@ -31,6 +31,7 @@ import buildcraft.factory.BCFactoryItems;
 import buildcraft.energy.BCEnergyItems;
 import buildcraft.energy.BCEnergyFluids;
 import buildcraft.robotics.BCRoboticsItems;
+import buildcraft.robotics.item.ItemRedstoneBoard;
 import buildcraft.robotics.item.ItemRobot;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.silicon.BCSiliconBlocks;
@@ -158,12 +159,17 @@ public class BCCoreCreativeTabs {
                                     output.accept(BCRoboticsItems.ROBOT.get());
                                 } else {
                                     output.accept(ItemRobot.createRobotStack(emptyBoard.getID(), 0));
+                                    // The standalone board items sit beside the robot chassis stacks: each
+                                    // board appears as its own item (what the Ph7 programming table will
+                                    // consume) AND as a ready robot, drained and full.
+                                    output.accept(ItemRedstoneBoard.createStack(emptyBoard));
                                     for (RedstoneBoardNBT<?> boardNBT : boardRegistry.getAllBoardNBTs()) {
                                         if (boardNBT instanceof RedstoneBoardRobotNBT robotBoard
                                                 && robotBoard != emptyBoard) {
                                             output.accept(ItemRobot.createRobotStack(robotBoard.getID(), 0));
                                             output.accept(ItemRobot.createRobotStack(robotBoard.getID(),
                                                     EntityRobotBase.MAX_POWER));
+                                            output.accept(ItemRedstoneBoard.createStack(robotBoard));
                                         }
                                     }
                                 }

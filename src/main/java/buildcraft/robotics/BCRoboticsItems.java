@@ -11,6 +11,7 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.lib.misc.RegistrationUtilBC;
+import buildcraft.robotics.item.ItemRedstoneBoard;
 import buildcraft.robotics.item.ItemRobot;
 import buildcraft.transport.item.ItemPluggableSimple;
 
@@ -30,12 +31,18 @@ public class BCRoboticsItems {
      *  almost never interchangeable. */
     public static final DeferredItem<ItemRobot> ROBOT;
 
+    /** The standalone board item — the thing a programming table (Ph7) eventually turns into a robot. Never
+     *  stacks: the board id lives in the stack's CUSTOM_DATA. */
+    public static final DeferredItem<ItemRedstoneBoard> REDSTONE_BOARD;
+
     static {
         ZONE_PLANNER = ITEMS.registerSimpleBlockItem(BCRoboticsBlocks.ZONE_PLANNER);
         ROBOT_STATION = RegistrationUtilBC.registerItem(ITEMS, "robot_station",
             props -> new ItemPluggableSimple(props, BCRoboticsPlugs.robotStation, null,
                 buildcraft.robotics.RobotStationPluggable::boundingBoxFor));
         ROBOT = RegistrationUtilBC.registerItem(ITEMS, "robot", ItemRobot::new,
+            props -> props.stacksTo(1));
+        REDSTONE_BOARD = RegistrationUtilBC.registerItem(ITEMS, "redstone_board", ItemRedstoneBoard::new,
             props -> props.stacksTo(1));
     }
 

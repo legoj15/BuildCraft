@@ -126,8 +126,13 @@ public abstract class PipeBehaviourDirectional extends PipeBehaviour {
         return false;
     }
 
+    /** The face this pipe currently points at, or null if it points at nothing valid. Public because it is
+     *  read-only observable state that other subsystems legitimately depend on — the robotics docking
+     *  station reads a wooden pipe's extraction face to find the inventory a robot may load from, exactly
+     *  as 7.1.x read the pipe's block-metadata orientation. The setter stays protected: only the behaviour
+     *  itself may re-aim a pipe, since that has to schedule a network update. */
     @Nullable
-    protected Direction getCurrentDir() {
+    public Direction getCurrentDir() {
         return currentDir.face;
     }
 

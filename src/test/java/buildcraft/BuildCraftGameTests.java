@@ -794,5 +794,6 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_boards_every_registered_self_resolves", () -> buildcraft.robotics.boards.PickerCarrierTester::everyRegisteredBoardSelfResolves);
         reg.accept("buildcraftunofficial:robot_picker_picks_up_dropped_item", () -> buildcraft.robotics.boards.PickerCarrierTester::pickerRobotPicksUpDroppedItem);
         reg.accept("buildcraftunofficial:robot_carrier_loads_from_supply_chest", () -> buildcraft.robotics.boards.PickerCarrierTester::carrierRobotLoadsFromSupplyChest);
+        reg.accept("buildcraftunofficial:robot_supply_station_needs_wooden_pipe", () -> buildcraft.robotics.boards.PickerCarrierTester::supplyStationNeedsAWoodenPipePointedAtIt);
     }
 }

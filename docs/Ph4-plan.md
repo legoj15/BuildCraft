@@ -52,7 +52,7 @@ permissive answer until overridden):
 `getActiveActions` is Ph6). The AI call sites in `AIRobotLoad`/`AIRobotUnload`/`AIRobotSearchStation`/
 `BoardRobotPicker`/`BoardRobotCarrier` swap the statement-helper call for the station method — same
 shape, no statement dependency. `AIRobotSleep.preempt`'s `ActionRobotWakeUp` check becomes a no-op in
-Ph4 (the 20s sleep timer still wakes it; the wake-up *statement* is Ph6).
+Ph4 (the 60s sleep timer still wakes it; the wake-up *statement* is Ph6).
 
 This is chosen over porting the four `Action*` helper classes as stubs because those extend statement
 base classes that do not exist on main — porting them drags the statements API forward whole.
@@ -108,7 +108,7 @@ reads `getUUID()`, and the goto uses the item's block.
   `getDockingStation().providesPower()` unchanged.
 - `AIRobotRecharge` — release resources, zero motion, `SearchAndGotoStation(providesPower)`, terminate
   at `getPower() >= MAX_POWER - MAX_POWER/200` (Decision 3's headroom, not a hard 500).
-- `AIRobotSleep` — 20s timer + statement-wake (stubbed no-op); `getPowerCost` 0.1 RF/tick shape.
+- `AIRobotSleep` — 60s timer + statement-wake (stubbed no-op); `getPowerCost` 0.1 RF/tick shape.
 - `AIRobotShutdown` — undock, fall-and-park (`getCollidingBoundingBoxes`→`level.getCollisions` /
   `isUnobstructed`); Ph3's `EntityRobot.shutdown(String)`/`convertToItems` stub is the entry.
 - `AIRobotGoto` (abstract base) + `AIRobotStraightMoveTo` — movement via
@@ -199,7 +199,7 @@ unfulfilled. Pull only this — the requester-facing half (`IRequestProvider`) s
 **Pure JUnit** (extends `VanillaSetupBaseTester` where an ItemStack is built):
 - `AIRobotMain` preempt ladder against a mock `IRobotAccess` + real `MjBattery` (shutdown → recharge →
   override order; 0-cost Main/Recharge; recharge cooldown on failure).
-- `AIRobotRecharge`/`AIRobotSleep` thresholds (complete at `MAX_POWER - MAX_POWER/200`; sleep 20s + power-cost shape).
+- `AIRobotRecharge`/`AIRobotSleep` thresholds (complete at `MAX_POWER - MAX_POWER/200`; sleep 60s + power-cost shape).
 - Per-leaf cost table + relative ordering (FetchItem 15 > Unload 10 > Load 8 > Goto 3 > Recharge/Main 0 —
   MJ constants are decisions, pin with "chosen, not derived").
 - `AIRobotGotoBlock` "already there" short-circuit (no degenerate out-and-back when start==end).

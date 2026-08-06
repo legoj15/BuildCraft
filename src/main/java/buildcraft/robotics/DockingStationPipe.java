@@ -28,6 +28,7 @@ import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IFlowPower;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.lib.misc.CapUtil;
+import buildcraft.transport.pipe.behaviour.PipeBehaviourWood;
 
 import org.jspecify.annotations.Nullable;
 
@@ -90,20 +91,47 @@ public class DockingStationPipe extends DockingStation {
 
     @Override
     public net.minecraft.world.Container getItemInput() {
-        IPipeHolder h = getHolder();
-        if (h == null || h.getPipe() == null || !(h.getPipe().getFlow() instanceof IFlowItems)) {
+        Direction facing = extractionFacing();
+        if (facing == null) {
             return null;
         }
-        // The inventory this station's pipe draws from: the block one cell out along the pipe's facing — the
-        // same discovery 7.1.x's PipeItemsWood made. A docked robot LOADS from here (D6).
-        Direction facing = side().getOpposite();
+        // The inventory this station's pipe draws from: the block one cell out along the WOODEN pipe's own
+        // extraction face. A docked robot LOADS from here (D6).
         BlockEntity tile = world.getBlockEntity(getPos().relative(facing));
         return tile instanceof net.minecraft.world.Container container ? container : null;
     }
 
     @Override
     public EnumPipePart getItemInputSide() {
-        return EnumPipePart.fromFacing(side().getOpposite());
+        // The face of the INVENTORY that the pipe touches — the opposite of the direction we searched in.
+        // 7.1.x returned the same (`ForgeDirection.getOrientation(meta).getOpposite()`); an earlier port
+        // returned the search direction itself, which is the inward face, not the one to extract through.
+        Direction facing = extractionFacing();
+        return facing == null ? EnumPipePart.CENTER : EnumPipePart.fromFacing(facing.getOpposite());
+    }
+
+    /** The extraction face of the wooden pipe hosting this station, or null if the pipe is not an item
+     *  pipe, is not a wooden (extraction) pipe, or currently faces nothing.
+     *
+     * <p>Both halves of that check are load-bearing and were both missing until 2026-08-06. 7.1.x gated
+     * this on {@code getPipe().getPipe() instanceof PipeItemsWood} and read the pipe's own block-metadata
+     * orientation. The port instead accepted ANY {@code IFlowItems} pipe and searched along
+     * {@code side().getOpposite()} — the station's own face. That was wrong twice over, and in-client
+     * testing caught it: a robot station on a plain cobblestone pipe let a Carrier drain the chest below
+     * it, i.e. a robot station became a free, unpowered hopper on any pipe at all; and a wooden pipe
+     * wrenched to face a chest to the north with the station plugged on top read whatever sat below it
+     * instead of the chest it was pointed at. Requiring {@link PipeBehaviourWood} restores BuildCraft's
+     * standing rule that pulling out of an inventory takes an extraction pipe, and reading
+     * {@code getCurrentDir()} makes the wrench mean what it looks like it means.
+     *
+     * <p>{@code PipeBehaviourWoodDiamond} extends {@code PipeBehaviourWood}, so the filtered wooden pipe
+     * qualifies too — exactly as 7.1.x's {@code PipeItemsEmerald extends PipeItemsWood} did. */
+    private @Nullable Direction extractionFacing() {
+        IPipeHolder h = getHolder();
+        if (h == null || h.getPipe() == null || !(h.getPipe().getFlow() instanceof IFlowItems)) {
+            return null;
+        }
+        return h.getPipe().getBehaviour() instanceof PipeBehaviourWood wood ? wood.getCurrentDir() : null;
     }
 
     //? if >=1.21.10 {

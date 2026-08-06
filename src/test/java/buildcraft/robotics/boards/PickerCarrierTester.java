@@ -75,6 +75,19 @@ public class PickerCarrierTester {
         tile.replacePluggable(side, new RobotStationPluggable(BCRoboticsPlugs.robotStation, tile, side));
     }
 
+    /** As {@link #installStation} but on a plain COBBLESTONE item pipe — an ordinary transport pipe with no
+     *  extraction ability, used to pin that such a pipe is not a supply station. */
+    private static void installStationOnPlainPipe(GameTestHelper helper, BlockPos relPos, Direction side) {
+        helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
+        TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(relPos);*/
+        //?}
+        tile.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get()));
+        tile.replacePluggable(side, new RobotStationPluggable(BCRoboticsPlugs.robotStation, tile, side));
+    }
+
     /** The registered station for a pipe face, or null while {@code RobotStationPluggable.onTick()} has not
      *  yet lazily registered it. */
     private static DockingStationPipe stationAt(GameTestHelper helper, BlockPos relPos, Direction side) {
@@ -165,6 +178,59 @@ public class PickerCarrierTester {
             robot.discard();
             helper.succeed();
         }, "the picker robot never picked up the dropped diamond");
+    }
+
+    // ---------- supply-station discovery (D6) ----------
+
+    /** A robot station is only a SUPPLY station when its pipe is a wooden (extraction) pipe, and the
+     *  inventory it supplies is the one that pipe is pointed at — not merely whatever sits opposite the
+     *  station's own face.
+     *
+     * <p>Both halves regressed silently and only in-client testing caught it: a station on a plain
+     * cobblestone pipe let a Carrier drain the chest below it, making a robot station a free unpowered
+     * hopper on any pipe in the game; and the search ignored the wooden pipe's wrench-set face entirely.
+     * This pins both against the same chest, so a revert of either half fails here.
+     *
+     * <p>Deliberately asserts on {@code getItemInput()} directly rather than driving a live robot: the
+     * negative case ("the carrier never loads") is unprovable by waiting, since a passing run and a merely
+     * slow one look identical. */
+    public static void supplyStationNeedsAWoodenPipePointedAtIt(GameTestHelper helper) {
+        BlockPos plainRel = new BlockPos(1, 3, 1);
+        BlockPos plainChestRel = new BlockPos(1, 2, 1);
+        BlockPos woodRel = new BlockPos(4, 3, 1);
+        BlockPos woodChestRel = new BlockPos(4, 2, 1);
+
+        helper.setBlock(plainChestRel, Blocks.CHEST);
+        installStationOnPlainPipe(helper, plainRel, Direction.UP);
+        helper.setBlock(woodChestRel, Blocks.CHEST);
+        installStation(helper, woodRel, Direction.UP);
+
+        // The wooden pipe aims itself on its first server tick (PipeBehaviourDirectional.onTick advances to
+        // the first face carrying a TILE connection), so gate on the station existing AND the wooden one
+        // having resolved its chest — never on a fixed tick.
+        EntityArenaUtil.tickUntil(helper, 120,
+                () -> {
+                    DockingStationPipe wood = stationAt(helper, woodRel, Direction.UP);
+                    return wood != null && wood.getItemInput() != null
+                            && stationAt(helper, plainRel, Direction.UP) != null;
+                },
+                () -> {
+                    DockingStationPipe plain = stationAt(helper, plainRel, Direction.UP);
+                    helper.assertTrue(plain.getItemInput() == null,
+                            "a station on a plain cobblestone pipe must NOT supply the chest beneath it - "
+                                    + "extraction takes a wooden pipe, or every robot station is a free hopper");
+
+                    DockingStationPipe wood = stationAt(helper, woodRel, Direction.UP);
+                    helper.assertTrue(wood.getItemInput() != null,
+                            "a station on a wooden pipe pointed at a chest must supply that chest");
+                    // The input side is the face of the INVENTORY the pipe touches, i.e. the opposite of the
+                    // direction searched. Pipe faces DOWN at the chest, so the chest is entered from UP.
+                    helper.assertTrue(wood.getItemInputSide().face == Direction.UP,
+                            "the item input side must be the chest's own face (UP for a pipe facing DOWN), "
+                                    + "not the search direction: got " + wood.getItemInputSide());
+                    helper.succeed();
+                },
+                "the wooden supply station never resolved the chest below it");
     }
 
     // ---------- carrier E2E ----------

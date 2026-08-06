@@ -12,9 +12,10 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 
-/** Idles the robot at its station for 20 seconds, drawing a token 0.1 RF per tick. 7.1.x woke early on an
- *  {@code ActionRobotWakeUp} statement from the station's gates; those statements are Ph6, so in Ph4 the
- *  timer alone wakes it (the {@code preempt} wake-up check is a deliberate no-op). */
+/** Idles the robot at its station for 60 seconds ({@code SLEEPING_TIME} = 60*20 ticks, the 7.1.x value),
+ *  drawing a token 0.1 RF per tick. 7.1.x woke early on an {@code ActionRobotWakeUp} statement from the
+ *  station's gates; those statements are Ph6, so in Ph4 the timer alone wakes it (the {@code preempt}
+ *  wake-up check is a deliberate no-op). */
 public class AIRobotSleep extends AIRobot {
 
     private static final int SLEEPING_TIME = 60 * 20;

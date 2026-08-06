@@ -276,6 +276,11 @@ public class BCCore {
         buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.SUGAR_CANE);
         buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.CHORUS_FLOWER);
         buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.CHORUS_PLANT);
+        // Cactus was IPlantable upstream too (soft) but extends plain Block on every node — list it or
+        // robots detour around every cactus. Cocoa is NOT listed: it was never IPlantable upstream
+        // (checked 7.1.x and 8.0.x-1.12.2 — both register IPlantable wholesale, nothing more), so hard
+        // cocoa here is parity, not a gap.
+        buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.CACTUS);
         buildcraft.api.core.BuildCraftAPI.registerWorldProperty("soft", new WorldPropertyIsSoft());
 
         MarkerCache.registerCache(VolumeCache.INSTANCE);

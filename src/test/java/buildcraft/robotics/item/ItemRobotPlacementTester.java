@@ -98,6 +98,27 @@ public class ItemRobotPlacementTester {
                 AABB.ofSize(centre, radius * 2, radius * 2, radius * 2));
     }
 
+    /** Failure-message detail for an unexpected robot count: each robot's position, registry id, board and
+     *  docking state, so a stray leaked in from a neighbouring arena (failed tests skip the framework's
+     *  entity cleanup, and the {@code minecraft:empty} arena bounds only cover the origin block) names
+     *  itself instead of just inflating the count. */
+    private static String describe(List<EntityRobot> robots) {
+        StringBuilder sb = new StringBuilder(" [");
+        for (int i = 0; i < robots.size(); i++) {
+            EntityRobot robot = robots.get(i);
+            if (i > 0) {
+                sb.append(", ");
+            }
+            sb.append(robot.position())
+                    .append(" id=").append(robot.getRobotId())
+                    .append(" board=").append(robot.getBoard() == null ? "none"
+                            : robot.getBoard().getNBTHandler().getID())
+                    .append(robot.getDockingStation() != null ? " docked" : " undocked")
+                    .append(robot.isRemoved() ? " removed" : "");
+        }
+        return sb.append(']').toString();
+    }
+
     /** The face centre a placed robot must land on — block centre pushed half a block out along the clicked
      *  face, the same math the tick-time docking snap uses. */
     private static Vec3 faceCentre(GameTestHelper helper, BlockPos relPos, Direction side) {
@@ -154,10 +175,16 @@ public class ItemRobotPlacementTester {
 
             Player player = clickStationWith(helper, pipeRel, Direction.UP, stack);
 
+            // Count only robots docked to THIS station, never a bare proximity count: the arena grid packs
+            // concurrently-running tests 6 blocks apart in X and 7 in Z, and this pipe sits close enough to
+            // the cell edge that another test's robot (or a leaked one) can fall inside a radius-2 box
+            // without saying anything about this click. A robot THIS click spawned is always docked to the
+            // clicked station, and nothing else ever is.
             List<EntityRobot> placed = robotsNear(helper, pipeRel, 2.0);
+            placed.removeIf(r -> r.getDockingStation() != station);
             helper.assertTrue(placed.size() == 1,
                     "clicking a free station with a robot item must spawn exactly one robot, found "
-                            + placed.size());
+                            + placed.size() + describe(placed));
             EntityRobot robot = placed.get(0);
 
             Vec3 expected = faceCentre(helper, pipeRel, Direction.UP);
@@ -179,6 +206,10 @@ public class ItemRobotPlacementTester {
                             + robot.getBattery().getStored());
             helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).isEmpty(),
                     "a survival player must have the robot item consumed by a successful placement");
+            // The placed robot is outside the framework's pass-time cleanup bounds (the empty structure
+            // only covers the arena corner), so it survives into the NEXT batch's reuse of these very
+            // coordinates and inflates that test's robot count — discard it before succeeding.
+            robot.discard();
             helper.succeed();
         });
     }
@@ -212,12 +243,17 @@ public class ItemRobotPlacementTester {
                     ItemStack stack = new ItemStack(BCRoboticsItems.ROBOT.get());
                     Player player = clickStationWith(helper, pipeRel, Direction.UP, stack);
 
-                    helper.assertTrue(robotsNear(helper, pipeRel, 3.0).size() == 1,
-                            "a taken station must not accept a second robot — only the squatter may remain");
+                    List<EntityRobot> dockedHere = robotsNear(helper, pipeRel, 3.0);
+                    dockedHere.removeIf(r -> r.getDockingStation() != station);
+                    helper.assertTrue(dockedHere.isEmpty(),
+                            "a taken station must refuse the placement: the squatter claims it without "
+                                    + "docking (no board, no AI), so anything docked to it came from this "
+                                    + "click" + describe(dockedHere));
                     helper.assertTrue(station.robotIdTaking() == squatter.getRobotId(),
                             "the original claimant must keep the station");
                     helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 1,
                             "a rejected placement must not consume the item");
+                    squatter.discard(); // outside the framework's cleanup bounds — see the happy path
                     helper.succeed();
                 },
                 "the station never registered, or the squatting robot never ticked and so never got an id "
@@ -256,8 +292,11 @@ public class ItemRobotPlacementTester {
             helper.assertTrue(posted[0],
                     "ItemRobot.useOn must post the cancellable RobotEvent.Place before it commits anything — "
                             + "without it an addon has no way to veto a robot placement");
-            helper.assertTrue(robotsNear(helper, pipeRel, 2.0).isEmpty(),
-                    "a cancelled RobotEvent.Place must leave no robot in the world");
+            List<EntityRobot> dockedHere = robotsNear(helper, pipeRel, 2.0);
+            dockedHere.removeIf(r -> r.getDockingStation() != station);
+            helper.assertTrue(dockedHere.isEmpty(),
+                    "a cancelled RobotEvent.Place must leave no robot docked to the station"
+                            + describe(dockedHere));
             helper.assertFalse(station.isTaken(),
                     "a cancelled placement must not leave the station reserved");
             helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 1,
@@ -271,7 +310,9 @@ public class ItemRobotPlacementTester {
      *  permanently unplaceable. An empty-board robot places, docks and idles: that is the Ph3 MVP. */
     public static void emptyBoardRobotStillPlaces(GameTestHelper helper) {
         EntityArenaUtil.forceLoadEntityArena(helper);
-        BlockPos pipeRel = new BlockPos(3, 2, 7);
+        // z=6, not the old z=7: with the empty structure the grid rows are spaced 7 apart, so z=7 is
+        // already the NEXT row's first block — the pipe physically sat in a neighbour's arena.
+        BlockPos pipeRel = new BlockPos(4, 2, 6);
         installStation(helper, pipeRel, Direction.UP);
 
         whenStationRegistered(helper, pipeRel, () -> {
@@ -283,13 +324,16 @@ public class ItemRobotPlacementTester {
             Player player = clickStationWith(helper, pipeRel, Direction.UP, bare);
 
             List<EntityRobot> placed = robotsNear(helper, pipeRel, 2.0);
+            placed.removeIf(r -> r.getDockingStation() != station);
             helper.assertTrue(placed.size() == 1,
                     "an empty-board robot must PLACE — the 7.1.x empty-board rejection is deliberately "
-                            + "dropped in Ph3, found " + placed.size() + " robots");
+                            + "dropped in Ph3, found " + placed.size() + " robots docked to this station"
+                            + describe(placed));
             helper.assertTrue(placed.get(0).getDockingStation() == station,
                     "an empty-board robot docks like any other");
             helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).isEmpty(),
                     "a successful empty-board placement still consumes the item");
+            placed.get(0).discard(); // outside the framework's cleanup bounds — see the happy path
             helper.succeed();
         });
     }

@@ -209,7 +209,8 @@ variable 1–3+ ticks to become block/entity-ticking (`setChunkForced` adds the 
 happens later), and the arena grid lands at a random world position every run, so the same test
 passes or flakes run to run. Gate on observed state (`EntityArenaUtil.tickUntil`/`tickUntilThen`,
 or poll for your own registration) instead of `runAfterDelay(N)`. Also keep ALL relative positions
-inside the test's own 6×8 arena grid cell — x beyond 6 or z beyond 8 writes into the NEXT test's
+inside the test's own arena grid cell — with the `minecraft:empty` structure the framework spaces
+arenas 6 apart in X and 7 apart in Z, so x beyond 5 or z beyond 6 writes into the NEXT test's
 arena. Full diagnosis: docs/robotics-ph3-design.md, amendment 4.
 
 **To verify your test is actually running** (not silently skipped): note the "N GAME TESTS COMPLETE" count before and after. Each new test should bump N by 1. If it doesn't, the manifest is missing or its `function` field doesn't match the registered ID. Confirm by temporarily making the test throw — if the failure shows up in the "required tests failed" list, it's wired correctly; if it doesn't, fix the manifest first before debugging the test logic.

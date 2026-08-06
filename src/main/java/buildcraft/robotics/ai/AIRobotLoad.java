@@ -17,6 +17,7 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.lib.inventory.InventoryWrapper;
+import buildcraft.lib.misc.StackUtil;
 
 /** Pulls items from the docked station's item input into the robot's four slots. The 7.1.x slot-by-slot
  *  {@code InventoryIterator}/{@code ITransactor} scan becomes a D2 {@code IItemTransactor} exchange — the
@@ -90,8 +91,7 @@ public class AIRobotLoad extends AIRobot {
                 }
                 return false;
             }
-            // The robot transactor MUTATES the stack it is handed, so the taken count must come from the
-            // untouched original minus the leftover — reading it after the insert would always report 0.
+            // The transactor never mutates the offered stack, so taken = offered minus leftover is exact.
             // The simulate flag must be !doLoad (NOT doLoad): with doLoad=false this whole exchange is the
             // station-search dry-run, and a real insert would steal the chest's items into the robot while
             // the (simulated) extract leaves them in place — duplication with the robot never flying.
@@ -111,9 +111,20 @@ public class AIRobotLoad extends AIRobot {
                 break;
             }
             if (!station.canRobotExtractItem(extracted)) {
+                // Copy BEFORE the put-back: the station transactor (InventoryWrapper) drains the offered
+                // stack itself when it lands back in an emptied slot, so reading `extracted` after the
+                // insert can capture an EMPTY stack — and excluding "empty" excludes nothing, looping on
+                // the same refused stack forever.
+                ItemStack refused = extracted.copy();
                 if (doLoad) {
                     inputTransactor.insert(extracted, false, false);
                 }
+                // The station refused this stack: exclude it from the remaining attempts. 7.1.x advanced
+                // an InventoryIterator to the next slot here; the transactor API has no per-slot skip, and
+                // re-extracting with the same filter returns this same stack every time — a plain
+                // `continue` would spin forever the moment a real (Ph6) policy refuses anything.
+                IStackFilter previous = filter;
+                filter = stack -> !StackUtil.canMerge(stack, refused) && previous.matches(stack);
                 continue;
             }
             int before = extracted.getCount();

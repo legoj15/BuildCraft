@@ -64,7 +64,7 @@ import buildcraft.transport.tile.TilePipeHolder;
  * the same discipline applied via a private {@code test_environment} where a keyed lookup isn't enough).
  *
  * <p><b>Two rules about WHERE these tests build, both learned the hard way.</b> The game-test framework lays
- * arenas out on a grid: with the {@code minecraft:empty} structure they are 6 blocks apart in X and 8 in Z,
+ * arenas out on a grid: with the {@code minecraft:empty} structure they are 6 blocks apart in X and 7 in Z,
  * and the framework force-loads only the chunk(s) the (1x1x1) structure itself occupies. So:
  * <ul>
  * <li><b>Every test force-loads its own 3x3 chunk neighbourhood</b> ({@link EntityArenaUtil#forceLoadEntityArena}).
@@ -78,7 +78,7 @@ import buildcraft.transport.tile.TilePipeHolder;
  *     ({@link #whenStationRegistered}). Force-loading gets the chunk ticking <em>eventually</em>, not
  *     immediately -- see {@link EntityArenaUtil#forceLoadEntityArena} for the measured spread. Every test
  *     below therefore polls for its own station rather than hard-coding {@code runAfterDelay(2)}.</li>
- * <li><b>Every relative position stays inside the 6x8 cell</b> (x in 1..2, z in 1..6 here). Anything further
+ * <li><b>Every relative position stays inside the 6x7 cell</b> (x in 1..2, z in 1..6 here). Anything further
  *     out lands in ANOTHER test's arena, where it is neither cleared between runs nor safe from being
  *     overwritten in the same tick.</li>
  * </ul>

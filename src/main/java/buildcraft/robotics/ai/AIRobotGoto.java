@@ -11,9 +11,10 @@ package buildcraft.robotics.ai;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 
-/** Abstract movement AI: points the robot at a destination and drives its motion toward it one tenth of the
- *  remaining distance per tick, the 7.1.x exponential ease. Concrete subclasses supply the destination and
- *  decide when the move is done. */
+/** Abstract movement AI: points the robot at a destination and drives it at a constant 0.1 blocks per tick
+ *  along that direction (the direction vector is normalised, then scaled by 1/10 — 7.1.x did exactly this;
+ *  the speed does not ease as the robot closes in). Concrete subclasses supply the destination and decide
+ *  when the move is done. */
 public abstract class AIRobotGoto extends AIRobot {
 
     protected float nextX, nextY, nextZ;

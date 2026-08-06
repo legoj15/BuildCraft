@@ -2,7 +2,7 @@
 
 Linked from [todos.md](../todos.md). This is the working plan for porting the robot system; update phase status here as work lands, and delete a phase's section only if the whole program is ever abandoned.
 
-**Status: Ph0 (seams b, c), Ph1, Ph2, and Ph3 are complete. Next up: Ph4 — first boards + recharge AI (MVP completion).**
+**Status: Ph0 (seams b, c), Ph1, Ph2, Ph3, and Ph4 are complete — the MVP gate is met. Next up: Ph5 — the board catalog.**
 
 ## Overview
 
@@ -77,21 +77,29 @@ wearable acceptance/skull/armour render + melee (Ph9), zones (Ph6), requester re
 
 ## Remaining phases
 
-### Ph4 — First boards + recharge AI [MVP completion]
+### Ph4 — First boards + recharge AI [MVP completion] (COMPLETE 2026-08-06)
 
-~12 AIs (goto/straight-move/goto-station/goto-block, search/fetch, load/unload, `AIRobotMain`/`Recharge`/`Sleep`/`Shutdown`), each registered by name in `RobotManager` with NBT round-trip; goto-family AIs must short-circuit "already there" (the `PathFinding` start==end 3-cell out-and-back quirk pinned in Ph0's tests); **Picker + Carrier** boards; `ItemRedstoneBoard`; spawn+dock+recharge game test. ← MVP ends: a placeable, dockable, self-recharging robot that picks up / carries items.
+~18 AIs (goto/straight-move/goto-station/goto-block, search/fetch/load/unload, `AIRobotMain`/`Recharge`/`Sleep`/`Shutdown`), each registered by name with NBT round-trip; **Picker + Carrier** boards; `ItemRedstoneBoard`; recharge through the Ph2 MJ handoff. Design seams D1–D7 as planned in [Ph4-plan.md](Ph4-plan.md): station access policy lives on `DockingStation` with permissive defaults (D1 — the one deliberate divergence from 7.1.x, whose gateless default was *refuse*; see the Ph6 note below), synchronous `PathFinding.iterate(50)` on the server thread (D3), `Set<UUID> targettedItems` (D4), boards creative-tab-only (D5), supply-side discovery on `DockingStationPipe.getItemInput` (D6).
 
-_Tests:_ **[MVP gate]** registry-completeness sweep (every board instantiable + self-resolves); board-blob `DataComponent` (`CUSTOM_DATA`) round-trip; `AIRobotMain` preempt ladder (handle 0-cost Main/Recharge) + `Recharge`/`Sleep` thresholds; per-leaf cost table + relative ordering; **Picker + Carrier end-to-end**; `AIRobotFetchItem` (private `test_environment`; watch `targettedItems` int-id→UUID migration); recharge-over-ticks (needs chunk-force-load) + death/drops; `ItemRobot` energy round-trip + `getDrops` composition; partial wrench-dismantle (`makeMockPlayer` caps the server path — document the skip).
+Two real bugs were caught only by **in-client verification** (McDevBridge on 26.2), both then pinned by game tests: the board item's missing client model definition (`items/redstone_board.json`, the 1.21.4+ item-model split), and the station item-output/input fidelity pair — `getItemInput` accepted any item pipe and read the station's own face instead of requiring a wooden pipe's wrench-set face (a Carrier drained chests through plain cobblestone pipes: a free unpowered hopper), and `getItemOutput` exposed the raw `PipeFlowItems`, whose `canInjectItems = isConnected(from)` refused robot unload at every dead-end dock (7.1.x used a synthetic station-side `IInjectable` that never consulted the network; the port now synthesizes one over `insertItemsForce`). The double adversarial review (7 dimensions × 2 refutation lenses) plus completeness critic confirmed no other MVP-gate gaps; its 19 confirmed findings were then fixed tests-first (a latent fetch dupe on a removed target, partial-fit fetch targeting, the load-refusal put-back copy, goto-block/search-station/shutdown characterization pins, and the dropped-robot-item board identity).
+
+One intermittent placement-test flake surfaced across the fix runs and was diagnosed to two independent mechanisms, both fixed: success-path robots were never discarded (the framework's pass-time cleanup bounds only reach ~1 block past the 1×1 empty structure, so they leaked into the NEXT batch's reuse of the same arena coordinates), and proximity-count assertions caught robots of CONCURRENTLY-RUNNING same-batch neighbours (empty-structure grid rows are spaced 7 apart in Z, not 8 — a pipe at rel z=7 sits in the next row's cell). The discipline — discard every world-added entity before succeeding, assert by station identity, keep every position at x≤5/z≤6 — is written into `EntityRobotTester`'s javadoc.
+
+_Tests:_ suite 398→411 game tests: board registry sweep, picker fetch E2E (fly-to + consume, no dupe), carrier load E2E (fly-to + dock + load), carrier unload-cycle E2E (pins the D1-emergent loop below), low-power recharge E2E (search → fly → dock → charge past `SAFETY_POWER` against a live kinesis rig), the wooden-pipe supply gate, the dead-end unload regression, the three fetch-targeting pins, and death/drops extended to assert the dropped item's board — plus the Ph3 smoke test converted from an `insertItemsForce` dodge to the real `injectItem` contract. JUnit: `AIRobotMain` preempt ladder, per-leaf cost table, board NBT round-trips, goto-block/search-station/load units. In-client: picker fetch, dock+recharge, skins, board item render, 20-robot idle perf — all on 26.2.
 
 ### Ph5 — Board catalog
 
 Remaining work/break/harvest AIs + boards (Lumberjack, Harvester, Miner, Planter, Farmer, Pump, Knight, Butcher) + the 2 abstract generic-search/break bases.
+
+**Resolve the dead per-board item identity.** `RedstoneBoardNBT.getItemModelLocation()` has no consumer: every board item shares the single `redstone_board` model/icon (Ph4 shipped one texture, not the planned per-board `items/board_*.json` split). With ~8 more boards landing here, either wire per-board item models/icons (7.1.x had one per board — otherwise the creative tab is a row of identical chips) or delete the API method.
 
 _Tests:_ flat per-board predicate sweep (`isExpectedTool`/`isExpectedBlock` etc.); board `writeSelfToNBT`/`loadSelfFromNBT` round-trips; `AIRobotLoad`/`Unload`(`+Fluids`) move-math (conservation + qty cap); `SearchBlock`/`SearchAndGoto*` orchestration; Miner harvest-level clamp + ore key.
 
 ### Ph6 — Statements
 
 Port the 22 robot/station triggers+actions + the 2 parameter widgets (board-picker, zone-selector; atlas via `SpriteHolderRegistry`); wire the orphan `gate.action.robot.*` / `gate.trigger.robot.*` lang strings.
+
+**Reconcile the D1 defaults when the gate actions land.** Ph4's `DockingStation` policy defaults are permissive (`canRobotAcceptItem`/`canRobotExtractItem` true, `isRobotForbidden` false) where 7.1.x's gateless defaults *refused* interaction (`ActionRobotFilter.canInteractWithItem` → false with no gate actions; `ActionStationProvideItems.canExtractItem` → true is the exception). The observable consequence at Ph4: a Carrier at an isolated station that is both its supply and its only unload target loops load→unload-at-feet→sleep→reload (observed in-client on 26.2; pinned by `robot_carrier_unloads_at_loaded_station`), because `AIRobotSearchStation.start` short-circuits to the already-docked station when the filter matches it (verbatim 7.1.x) and the permissive accept-default lets the unload succeed. 7.1.x never exhibited it because the refuse-default made the same-station unload predicate fail. Decide per-policy which side of the gate-action port owns the default — and when that decision lands, update the pinning test; do not let the permissive default survive silently into a world with gates.
 
 _Tests:_ static filter predicates (`canInteractWithItem`/`canExtractItem`/`getGateFilter`) as JUnit if mockable, else GameTest (verify `StatementSlot`/`DockingStation` are constructible without a `Level` first); blanket statement+param registration & serialization sweep; `ActionRobotWorkInArea.getArea`; trigger / robot-param GameTests once a docked entity exists.
 
@@ -103,7 +111,7 @@ _Tests:_ board crafting-cost tiers (8k/32k/128k/512k — distinct from per-tick 
 
 ### Ph8 — Requester network
 
-`StackRequest`, Requester block (`IRequestProvider`), Delivery robot. Largest from-scratch server-side dependency. The reservation backend is **already done** (`RobotRegistry.take/release/isTaken` + `ResourceIdRequest` landed in Ph0/Ph2) — what is still stubbed is the *discovery* half: `DockingStation.getRequestProvider()` returns null and `DockingStationPipe` does not override it, so 7.1.x's six-neighbour scan of the host pipe (which is what finds an adjacent Requester) does not exist; `getItemInput()`/`getFluidInput()` are likewise unoverridden, so the wooden-pipe-facing-a-chest *supply* station has no modern equivalent.
+`StackRequest`, Requester block (`IRequestProvider`), Delivery robot. Largest from-scratch server-side dependency. The reservation backend is **already done** (`RobotRegistry.take/release/isTaken` + `ResourceIdRequest` landed in Ph0/Ph2) — what is still stubbed is the *discovery* half: `DockingStation.getRequestProvider()` returns null and `DockingStationPipe` does not override it, so 7.1.x's six-neighbour scan of the host pipe (which is what finds an adjacent Requester) does not exist; `getFluidInput()` is likewise unoverridden (`getItemInput()` landed in Ph4 with the wooden-pipe-facing-a-chest supply rule).
 
 **Hard-blocked on Ph6, not merely ordered after it:** 7.1.x's load/unload AIs require an *active* `Provide Items`/`Accept Items` gate action, and `DockingStationPipe.getActiveActions()` currently returns an empty list — a Ph8 built before Ph6 is untestable end to end.
 

@@ -14,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.boards.RedstoneBoardNBT;
@@ -21,9 +22,13 @@ import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.boards.RedstoneBoardRegistry;
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.api.robots.DockingStation;
+import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.RobotManager;
 
+import buildcraft.core.BCCoreBlocks;
+import buildcraft.core.tile.TileEngineCreative;
 import buildcraft.lib.test.EntityArenaUtil;
 
 import buildcraft.robotics.BCRoboticsEntities;
@@ -49,8 +54,9 @@ import buildcraft.transport.tile.TilePipeHolder;
  * class javadoc there), so the robots fall to sleep cleanly once there is nothing left to do instead of NPE.
  *
  * <p>Position discipline is the same as {@code EntityRobotTester}: every relative position stays inside the
- * 6x8 arena cell, the arena chunks are force-loaded, and nothing asserts on a fixed tick — each phase is
- * gated on observed state via {@link EntityArenaUtil#tickUntil}.
+ * 6x7 arena cell (with the {@code minecraft:empty} structure the framework spaces arenas 6 apart in X and 7
+ * in Z), the arena chunks are force-loaded, and nothing asserts on a fixed tick — each phase is gated on
+ * observed state via {@link EntityArenaUtil#tickUntil}.
  */
 public class PickerCarrierTester {
 
@@ -74,6 +80,18 @@ public class PickerCarrierTester {
     private static void installStation(GameTestHelper helper, BlockPos relPos, Direction side) {
         TilePipeHolder tile = placeItemPipe(helper, relPos);
         tile.replacePluggable(side, new RobotStationPluggable(BCRoboticsPlugs.robotStation, tile, side));
+    }
+
+    private static TilePipeHolder placePowerPipe(GameTestHelper helper, BlockPos relPos,
+                                                 net.minecraft.world.item.Item pipeItem) {
+        helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
+        TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(relPos);*/
+        //?}
+        tile.onPlacedBy(null, new ItemStack(pipeItem));
+        return tile;
     }
 
     /** As {@link #installStation} but on a plain COBBLESTONE item pipe — an ordinary transport pipe with no
@@ -329,5 +347,150 @@ public class PickerCarrierTester {
                     helper.succeed();
                 },
                 "the carrier robot never loaded the diamonds from the supply chest");
+    }
+
+    /** The unload half of the carrier loop, pinned against the behaviour the D1 permissive station
+     *  defaults produce today: a carrier that has just loaded is docked at its supply station, and that
+     *  station's {@code getItemOutput()} accepts everything regardless of pipe (the station-side
+     *  injectable never consults the pipe network — see {@link DockingStationPipe}), and the D1
+     *  {@code canRobotAcceptItem} default is true — so {@code AIRobotSearchStation}'s docked-station
+     *  early-exit (itself verbatim 7.1.x and 8.0.x) hands the unload right back to the SAME station.
+     *  The cargo goes back into the pipe it was pulled from and the cycle repeats: a carrier never
+     *  flies its cargo to a second station on its own.
+     *
+     * <p>7.1.x did NOT exhibit this loop: its gateless per-slot default REFUSED the unload
+     * ({@code ActionRobotFilter.canInteractWithItem} -> false with no gate actions), so a gateless
+     * carrier simply slept with its cargo. The loop is emergent from the D1 permissive defaults, whose
+     * reconciliation with the gate actions is explicitly scheduled for Ph6 — see
+     * docs/robotics-resurrection.md. This test pins today's behaviour so that decision shows up here as
+     * a deliberate edit, not a silent behaviour change. */
+    public static void carrierUnloadsAtTheStationItLoadedFrom(GameTestHelper helper) {
+        EntityArenaUtil.forceLoadEntityArena(helper);
+        BlockPos pipeRel = new BlockPos(1, 3, 3);
+        BlockPos chestRel = new BlockPos(1, 2, 3);
+        BlockPos robotRel = new BlockPos(3, 4, 3);
+
+        installStation(helper, pipeRel, Direction.UP);
+        helper.setBlock(chestRel, Blocks.CHEST);
+        //? if >=1.21.10 {
+        ChestBlockEntity chest = helper.getBlockEntity(chestRel, ChestBlockEntity.class);
+        //?} else {
+        /*ChestBlockEntity chest = helper.getBlockEntity(chestRel);*/
+        //?}
+        chest.setItem(0, new ItemStack(Items.DIAMOND, 5));
+
+        // One poll drives both halves of the cycle: spawn once the station can actually supply, latch the
+        // moment the robot has loaded, and fire on the first later tick it is empty again — the unload.
+        EntityRobot[] robot = { null };
+        boolean[] sawLoaded = { false };
+        EntityArenaUtil.tickUntil(helper, 380,
+                () -> {
+                    DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
+                    if (station == null || station.getItemInput() == null) {
+                        return false;
+                    }
+                    if (robot[0] == null) {
+                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotCarrierNBT.INSTANCE);
+                        robot[0].getBattery().addPower(SEEDED_CHARGE, false);
+                        return false;
+                    }
+                    if (robot[0].containsItems()) {
+                        sawLoaded[0] = true;
+                        return false;
+                    }
+                    return sawLoaded[0];
+                },
+                () -> {
+                    DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
+                    helper.assertTrue(robot[0].getDockingStation() == station,
+                            "the unload must happen at the station the carrier is already docked at — the "
+                                    + "search's docked-station early-exit is the whole behaviour under test");
+                    // Still snapped to the face centre: the carrier never flew anywhere between loading and
+                    // unloading (a docked robot is re-snapped to its station's face centre every tick).
+                    Vec3 faceCentre = Vec3.atCenterOf(helper.absolutePos(pipeRel)).add(0, 0.5, 0);
+                    helper.assertTrue(robot[0].position().distanceToSqr(faceCentre) < 2.25,
+                            "the carrier must not move between loading and unloading: robot at "
+                                    + robot[0].position() + " but station face at " + faceCentre);
+                    robot[0].discard();
+                    helper.succeed();
+                },
+                "the carrier never completed a load -> unload cycle at its supply station");
+    }
+
+    // ---------- recharge E2E (AIRobotMain ladder) ----------
+
+    /** The recharge leg of the {@code AIRobotMain} ladder, end to end: a robot below
+     *  {@code SAFETY_POWER} autonomously finds the kinesis-pipe station, flies to it, docks, and its
+     *  battery climbs back past the threshold. The rig mirrors
+     *  {@code RobotStationPluggableTester.testKinesisPipeChargesDockedRobot} (creative engine at full
+     *  output -> wood kinesis -> stone kinesis, station on the top pipe), but here the robot docks
+     *  ITSELF — the pluggable test hand-docks a fixture robot, so nothing else exercises
+     *  {@code AIRobotRecharge}'s search -> goto -> dock chain against a live power network. Runs in its
+     *  own environment: the station search is global, and the default batch contains another powered
+     *  station (that very rig's) the robot could legitimately prefer. */
+    public static void lowPowerRobotRechargesAtPoweredStation(GameTestHelper helper) {
+        EntityArenaUtil.forceLoadEntityArena(helper);
+        BlockPos redstoneRel = new BlockPos(1, 1, 6);
+        BlockPos engineRel = new BlockPos(1, 2, 6);
+        BlockPos woodPipeRel = new BlockPos(1, 3, 6);
+        BlockPos stonePipeRel = new BlockPos(1, 4, 6);
+        BlockPos robotRel = new BlockPos(3, 4, 6);
+
+        if (BCCoreBlocks.ENGINE_CREATIVE == null) {
+            throw new IllegalStateException(
+                    "ENGINE_CREATIVE not registered — test JVM was launched without -Dbuildcraft.dev=true. "
+                            + "Check build.gradle gameTestServer run config.");
+        }
+
+        // Engine -> WOOD kinesis -> stone kinesis -> station. The wood pipe is load-bearing, not
+        // decoration: only wood/diaWood kinesis pipes accept power from an engine, so an engine feeding
+        // the stone pipe directly would transfer nothing at all.
+        TilePipeHolder stonePipe = placePowerPipe(helper, stonePipeRel, BCTransportItems.PIPE_STONE_POWER.get());
+        TilePipeHolder woodPipe = placePowerPipe(helper, woodPipeRel, BCTransportItems.PIPE_WOOD_POWER.get());
+        stonePipe.replacePluggable(Direction.WEST,
+                new RobotStationPluggable(BCRoboticsPlugs.robotStation, stonePipe, Direction.WEST));
+
+        BlockState engineState = BCCoreBlocks.ENGINE_CREATIVE.get().defaultBlockState()
+                .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP);
+        helper.setBlock(engineRel, engineState);
+        helper.setBlock(redstoneRel, Blocks.REDSTONE_BLOCK);
+
+        //? if >=1.21.10 {
+        TileEngineCreative engine = helper.getBlockEntity(engineRel, TileEngineCreative.class);
+        //?} else {
+        /*TileEngineCreative engine = helper.getBlockEntity(engineRel);*/
+        //?}
+        engine.currentOutputIndex = TileEngineCreative.OUTPUTS.length - 1; // 256 MJ/t
+
+        // Same reason as PipeFlowPowerTester: setBlock + onPlacedBy skips the neighbour-changed cascade a
+        // real placement triggers, so connections are never computed without this.
+        woodPipe.getPipe().markForUpdate();
+        stonePipe.getPipe().markForUpdate();
+
+        EntityRobot[] robot = { null };
+        EntityArenaUtil.tickUntil(helper, 380,
+                () -> {
+                    DockingStationPipe station = stationAt(helper, stonePipeRel, Direction.WEST);
+                    if (station == null) {
+                        return false;
+                    }
+                    if (robot[0] == null) {
+                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                        // Below SAFETY_POWER so the ladder preempts into AIRobotRecharge on the first
+                        // cycle; comfortably above SHUTDOWN_POWER so the robot stays alive.
+                        robot[0].getBattery().addPower(1000L * MjAPI.MJ, false);
+                        return false;
+                    }
+                    return robot[0].getDockingStation() == station
+                            && robot[0].getBattery().getStored() > IRobotAccess.SAFETY_POWER;
+                },
+                () -> {
+                    helper.assertTrue(robot[0].getBattery().getStored() > IRobotAccess.SAFETY_POWER,
+                            "a robot docked at the powered station must charge past SAFETY_POWER — the "
+                                    + "only power source in the arena is the kinesis rig");
+                    robot[0].discard();
+                    helper.succeed();
+                },
+                "a robot below SAFETY_POWER never docked at the powered station and recharged past it");
     }
 }

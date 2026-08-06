@@ -770,6 +770,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_docked_and_filtered_damage_does_nothing", () -> buildcraft.robotics.entity.EntityRobotTester::dockedAndFilteredDamageDoesNothing);
         reg.accept("buildcraftunofficial:robot_inventory_in_place_mutation_syncs", () -> buildcraft.robotics.entity.EntityRobotTester::inPlaceInventoryMutationPropagatesToSynchedData);
         reg.accept("buildcraftunofficial:robot_charge_readable_and_simulate_inert", () -> buildcraft.robotics.entity.EntityRobotTester::dockedRobotChargeIsReadableAndSimulateIsInert);
+        reg.accept("buildcraftunofficial:robot_transactor_insert_conserves_items", () -> buildcraft.robotics.entity.EntityRobotTester::transactorInsertConservesItemsAcrossSimulateAndCommit);
+        reg.accept("buildcraftunofficial:robot_shutdown_keeps_current_motion", () -> buildcraft.robotics.entity.EntityRobotTester::shutdownFallKeepsCurrentHorizontalMotion);
+        reg.accept("buildcraftunofficial:robot_fetch_item_removed_target_guard", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemRemovedTargetIsNotPicked);
+        reg.accept("buildcraftunofficial:robot_fetch_item_partial_fit_targets", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemPartialFitStillTargets);
+        reg.accept("buildcraftunofficial:robot_fetch_item_target_locks", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemTargetLocksDedupeAndRelease);
 
         // Robotics Ph3 — ItemRobot.useOn: the only survival path a robot enters the world by. Free-station
         // placement end to end (face-centre position, takeAsMain + dock, charge carried over, item consumed),
@@ -796,5 +801,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_carrier_loads_from_supply_chest", () -> buildcraft.robotics.boards.PickerCarrierTester::carrierRobotLoadsFromSupplyChest);
         reg.accept("buildcraftunofficial:robot_supply_station_needs_wooden_pipe", () -> buildcraft.robotics.boards.PickerCarrierTester::supplyStationNeedsAWoodenPipePointedAtIt);
         reg.accept("buildcraftunofficial:robot_unload_dead_end_station", () -> buildcraft.robotics.boards.PickerCarrierTester::unloadStationDoesNotNeedAnOppositeFaceConnection);
+        // The carrier's unload half (pinned to the upstream docked-station early-exit: it unloads back at
+        // the station it loaded from) and the AIRobotMain ladder's recharge leg against a live kinesis rig.
+        reg.accept("buildcraftunofficial:robot_carrier_unloads_at_loaded_station", () -> buildcraft.robotics.boards.PickerCarrierTester::carrierUnloadsAtTheStationItLoadedFrom);
+        reg.accept("buildcraftunofficial:robot_low_power_recharges_at_powered_station", () -> buildcraft.robotics.boards.PickerCarrierTester::lowPowerRobotRechargesAtPoweredStation);
     }
 }

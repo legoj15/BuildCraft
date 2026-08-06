@@ -8,6 +8,7 @@ package buildcraft.robotics.ai;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.robots.AIRobot;
@@ -47,6 +48,55 @@ public class AIRobotGotoBlockTest {
 
         Assertions.assertNull(parent.ended,
                 "a robot NOT on the target must not terminate in start() — the journey happens in update()");
+    }
+
+    @Test
+    public void midSearchSaveRestoreRestartsTheSearchInsteadOfCrashing() {
+        // Saved while the A* search was still running: writeSelfToNBT only records "path" once a path
+        // EXISTS, so this NBT has no path key. The restore must start a fresh search, not try to resume a
+        // path that was never written.
+        robot.setPosition(new Vec3(0.5, 4.5, 0.5));
+
+        AIRobotGotoBlock writer = new AIRobotGotoBlock(robot, 30, 5, 30);
+        CompoundTag nbt = new CompoundTag();
+        writer.writeSelfToNBT(nbt);
+        Assertions.assertFalse(nbt.contains("path"), "fixture: a mid-search save has no path to restore");
+
+        AIRobotGotoBlock reader = new AIRobotGotoBlock(robot);
+        reader.loadSelfFromNBT(nbt);
+
+        RecordingParent parent = new RecordingParent(robot);
+        parent.startDelegateAI(reader);
+
+        Assertions.assertDoesNotThrow(reader::update,
+                "a mid-search restore has no path to resume — the first update must start a fresh search, "
+                        + "not dereference the path that was never written");
+        Assertions.assertNull(parent.ended,
+                "the fresh search is still running — nothing may terminate on the first tick");
+    }
+
+    @Test
+    public void aSearchThatExhaustsItsExpansionBudgetFailsInsteadOfSearchingForever() {
+        // 7.1.x ran this search on a background thread bounded to 50 × PATH_ITERATIONS expansions; the
+        // synchronous port must keep that hard cap or a robot asked to cross an inexhaustible search space
+        // iterates 50 expansions a tick, every tick, forever.
+        robot.setPosition(new Vec3(0.5, 4.5, 0.5));
+
+        AIRobotGotoBlock gotoBlock = new AIRobotGotoBlock(robot, 30, 5, 30);
+        gotoBlock.maxTotalExpansions = 0; // no expansions granted: the first search tick hits the cap
+
+        RecordingParent parent = new RecordingParent(robot);
+        parent.startDelegateAI(gotoBlock);
+
+        gotoBlock.update(); // constructs the PathFinding; no expansions yet
+        Assertions.assertNull(parent.ended, "construction tick: the search has only just begun");
+
+        // The cap check must fire BEFORE iterate() — an over-budget search may not expand even once more.
+        // (With the mock's null level, any real expansion would NPE inside SoftBlockAccess, so reaching the
+        // assertions below at all proves iterate was never called.)
+        gotoBlock.update();
+        Assertions.assertSame(gotoBlock, parent.ended, "an over-budget search must give up");
+        Assertions.assertFalse(gotoBlock.success(), "giving up is a failure, not a silent success");
     }
 
     /** Records the delegate that terminated, so {@code start()}'s short-circuit is observable. */

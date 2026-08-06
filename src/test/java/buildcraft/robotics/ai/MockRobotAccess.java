@@ -158,104 +158,115 @@ class MockRobotAccess implements IRobotAccess {
 
     // -- registry / identity --
 
-    /** A registry stub: no stations, no resolved station, no resources — enough for a search AI to unwind
-     *  instead of null-dereferencing. */
+    private IRobotRegistry registry = new InertRobotRegistry();
+
+    /** Swap the registry stub — a search-AI test lights up exactly the methods it drives by subclassing
+     *  {@link InertRobotRegistry}. */
+    void setRegistry(IRobotRegistry registry) {
+        this.registry = registry;
+    }
+
     @Override
     public IRobotRegistry getRegistry() {
-        return new IRobotRegistry() {
-            @Override
-            public Collection<DockingStation> getStations() {
-                return Collections.emptyList();
-            }
+        return registry;
+    }
 
-            @Override
-            public DockingStation getStation(BlockPos pos, Direction side) {
-                return null;
-            }
+    /** A registry stub: no stations, no resolved station, no resources — enough for a search AI to unwind
+     *  instead of null-dereferencing. Named (not anonymous) so a test can subclass it and override just the
+     *  one or two methods its scenario exercises. */
+    static class InertRobotRegistry implements IRobotRegistry {
+        @Override
+        public Collection<DockingStation> getStations() {
+            return Collections.emptyList();
+        }
 
-            @Override
-            public void registerRobot(EntityRobotBase robot) {
-            }
+        @Override
+        public DockingStation getStation(BlockPos pos, Direction side) {
+            return null;
+        }
 
-            @Override
-            public void killRobot(EntityRobotBase robot) {
-            }
+        @Override
+        public void registerRobot(EntityRobotBase robot) {
+        }
 
-            @Override
-            public void unloadRobot(EntityRobotBase robot) {
-            }
+        @Override
+        public void killRobot(EntityRobotBase robot) {
+        }
 
-            @Override
-            public EntityRobotBase getLoadedRobot(long id) {
-                return null;
-            }
+        @Override
+        public void unloadRobot(EntityRobotBase robot) {
+        }
 
-            @Override
-            public boolean isTaken(ResourceId resourceId) {
-                return false;
-            }
+        @Override
+        public EntityRobotBase getLoadedRobot(long id) {
+            return null;
+        }
 
-            @Override
-            public long robotIdTaking(ResourceId resourceId) {
-                return EntityRobotBase.NULL_ROBOT_ID;
-            }
+        @Override
+        public boolean isTaken(ResourceId resourceId) {
+            return false;
+        }
 
-            @Override
-            public EntityRobotBase robotTaking(ResourceId resourceId) {
-                return null;
-            }
+        @Override
+        public long robotIdTaking(ResourceId resourceId) {
+            return EntityRobotBase.NULL_ROBOT_ID;
+        }
 
-            @Override
-            public boolean take(ResourceId resourceId, EntityRobotBase robot) {
-                return false;
-            }
+        @Override
+        public EntityRobotBase robotTaking(ResourceId resourceId) {
+            return null;
+        }
 
-            @Override
-            public boolean take(ResourceId resourceId, long robotId) {
-                return false;
-            }
+        @Override
+        public boolean take(ResourceId resourceId, EntityRobotBase robot) {
+            return false;
+        }
 
-            @Override
-            public void release(ResourceId resourceId) {
-            }
+        @Override
+        public boolean take(ResourceId resourceId, long robotId) {
+            return false;
+        }
 
-            @Override
-            public void releaseResources(EntityRobotBase robot) {
-            }
+        @Override
+        public void release(ResourceId resourceId) {
+        }
 
-            @Override
-            public void registerStation(DockingStation station) {
-            }
+        @Override
+        public void releaseResources(EntityRobotBase robot) {
+        }
 
-            @Override
-            public void removeStation(DockingStation station) {
-            }
+        @Override
+        public void registerStation(DockingStation station) {
+        }
 
-            @Override
-            public void take(DockingStation station, long robotId) {
-            }
+        @Override
+        public void removeStation(DockingStation station) {
+        }
 
-            @Override
-            public void release(DockingStation station, long robotId) {
-            }
+        @Override
+        public void take(DockingStation station, long robotId) {
+        }
 
-            @Override
-            public void writeToNbt(net.minecraft.nbt.CompoundTag nbt) {
-            }
+        @Override
+        public void release(DockingStation station, long robotId) {
+        }
 
-            @Override
-            public void readFromNbt(net.minecraft.nbt.CompoundTag nbt) {
-            }
+        @Override
+        public void writeToNbt(net.minecraft.nbt.CompoundTag nbt) {
+        }
 
-            @Override
-            public void registryMarkDirty() {
-            }
+        @Override
+        public void readFromNbt(net.minecraft.nbt.CompoundTag nbt) {
+        }
 
-            @Override
-            public long getNextRobotId() {
-                return 1;
-            }
-        };
+        @Override
+        public void registryMarkDirty() {
+        }
+
+        @Override
+        public long getNextRobotId() {
+            return 1;
+        }
     }
 
     @Override

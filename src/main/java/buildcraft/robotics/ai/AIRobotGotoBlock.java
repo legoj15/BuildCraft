@@ -35,6 +35,14 @@ public class AIRobotGotoBlock extends AIRobotGoto {
     private BlockPos lastBlockInPath;
     private boolean loadedFromNBT;
 
+    /** Hard cap on total search expansions — 7.1.x ran this search on a background thread bounded to
+     *  {@code new IterableAlgorithmRunner(pathSearch, 50)} rounds of {@link PathFinding#PATH_ITERATIONS}
+     *  each; the synchronous port spreads those same expansions across ticks and must keep the same total
+     *  bound, or a robot asked to cross an inexhaustible search space searches 50 expansions a tick
+     *  forever. Package-private so tests can shrink it. */
+    int maxTotalExpansions = 50 * PathFinding.PATH_ITERATIONS;
+    private int expansions;
+
     public AIRobotGotoBlock(IRobotAccess iRobot) {
         super(iRobot);
     }
@@ -103,10 +111,14 @@ public class AIRobotGotoBlock extends AIRobotGoto {
                 prevDistance = robot.getDistance(nextX, nextY, nextZ);
             }
         } else {
-            // pathSearch != null, path == null — the search is running.
-            pathSearch.iterate(50);
+            // pathSearch != null, path == null — the search is running. The budget check comes FIRST: an
+            // over-budget search must not expand even once more before giving up.
+            if (expansions < maxTotalExpansions) {
+                pathSearch.iterate(50);
+                expansions += 50;
+            }
 
-            if (pathSearch.isDone()) {
+            if (pathSearch.isDone() || expansions >= maxTotalExpansions) {
                 path = pathSearch.getResult();
 
                 if (path.size() == 0) {
@@ -207,6 +219,9 @@ public class AIRobotGotoBlock extends AIRobotGoto {
             }
         }
 
-        loadedFromNBT = true;
+        // A path is only resumable when one was actually written: a mid-search save has no "path" key, and
+        // the first update must fall through to the fresh-search branch below rather than dereference the
+        // path that was never restored.
+        loadedFromNBT = path != null;
     }
 }

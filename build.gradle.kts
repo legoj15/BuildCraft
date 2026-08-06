@@ -490,7 +490,7 @@ tasks.jar {
     // which are MIT rather than MPL, and the MIT terms require the notice to be "included in all copies
     // or substantial portions of the Software" — a jar with none was a distribution the licence did not
     // permit. LICENSE.API is the text those ~70 api files already point at by name. LICENSE.MMPL covers the
-    // 37 files carried over from 1.7.10/1.12.2 whose headers cite mod-buildcraft.com: MMPL has no
+    // 38 files carried over from 1.7.10/1.12.2 whose headers cite mod-buildcraft.com: MMPL has no
     // notice-inclusion clause of its own, but a jar that names a licence it does not carry is a jar nobody
     // offline can read the terms of. NOTICE.md is the map from file to licence.
     from(rootProject.file("LICENSE")) { into("META-INF") }

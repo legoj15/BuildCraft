@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 
-/** {@link AIRobotSleep} idles at its station for the 7.1.x 20-second timer (60*20 ticks) and then wakes itself.
+/** {@link AIRobotSleep} idles at its station for the 7.1.x 60-second timer (60*20 ticks) and then wakes itself.
  *  Termination is observed through a recording parent (the {@code preempt} wake-up statement is deliberately a
  *  Ph6 no-op, so the timer is the only thing that wakes it). */
 public class AIRobotSleepTest {
@@ -19,7 +19,7 @@ public class AIRobotSleepTest {
     private final MockRobotAccess robot = new MockRobotAccess();
 
     @Test
-    public void wakesItselfAfterTwentySeconds() {
+    public void wakesItselfAfterSixtySeconds() {
         AIRobot parent = new RecordingParent(robot);
         AIRobotSleep sleep = new AIRobotSleep(robot);
         parent.startDelegateAI(sleep); // sleep.start() is empty, so the parent holds it cleanly
@@ -29,7 +29,7 @@ public class AIRobotSleepTest {
             sleep.update();
         }
         Assertions.assertSame(sleep, ((RecordingParent) parent).ended,
-                "the 20s timer wakes the sleeping robot");
+                "the 60s timer wakes the sleeping robot");
 
         // And it does NOT wake early — one fewer tick and it is still asleep.
         AIRobot parent2 = new RecordingParent(robot);
@@ -39,7 +39,7 @@ public class AIRobotSleepTest {
             sleep2.update();
         }
         Assertions.assertNull(((RecordingParent) parent2).ended,
-                "one tick short of 20s it is still asleep");
+                "one tick short of 60s it is still asleep");
     }
 
     /** Records the delegate that ended, so termination is observable. */

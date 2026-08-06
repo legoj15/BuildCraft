@@ -21,7 +21,7 @@ Last audited: 2026-08-06
 
 ## 🆕 New Features (version 2026.2)
 
-- Bring robots back — Picker/Carrier boards, board item and the full test suite are in; still the in-client visual check — [plan](docs/robotics-resurrection.md)
+- Bring robots back — Picker/Carrier MVP is in; next is the rest of the board catalog and the gate actions — [plan](docs/robotics-resurrection.md)
 - Fuel heat changes engine output; the route to a Nether start — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - Oil spawns in the Nether — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - A Pump on top of a Mining Well or Quarry drains the fluid blocking the dig — [notes](docs/todo-details.md#pump-on-top-of-miners)

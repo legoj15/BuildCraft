@@ -87,6 +87,10 @@ public class AIRobotMainTest {
         // Shutdown is skipped because the station provides power; the recharge branch wins instead (and fails
         // here only because the mock registry has nowhere to recharge from).
         Assertions.assertNull(main.getDelegateAI(), "a flat robot ON power recharges, not shuts down");
+        // Without this the test is tautological: deleting the recharge branch leaves the delegate null too.
+        // The armed cooldown proves the recharge branch genuinely fired and unwound.
+        Assertions.assertEquals(120, rechargeCooldown(main),
+                "the recharge branch fired (and its failure armed the cooldown)");
     }
 
     /** Reads the private {@code rechargeCooldown} field. */

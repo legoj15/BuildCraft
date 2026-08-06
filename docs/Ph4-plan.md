@@ -244,6 +244,12 @@ Assets: board item models/textures (`items/board_*.json` per `getItemModelLocati
 moved in Ph3 for the robot skins); **no new recipes** (see D5 — obtainability is Ph7); lang keys for
 `buildcraft.boardRobotPicker` / `buildcraft.boardRobotCarrier` (+ `.desc`).
 
+> **As-built nit (2026-08-06):** the per-board `items/board_*.json` split was NOT shipped — the board
+> item has a single shared model/icon (`items/redstone_board.json` + `textures/item/redstone_board.png`)
+> for every board, and nothing in main code calls `getItemModelLocation()`. The per-board item identity
+> is a dead API until Ph5's catalog makes it worth wiring (each board its own icon, as 7.1.x had) — or it
+> should be dropped then. Noted in robotics-resurrection.md's Ph5 section.
+
 Modified:
 - `api/robots/DockingStation.java` (D1 policy methods), `api/robots/IRobotAccess.java` (D2 `getTransactor()`
   + D7 `getDistance(x,y,z)` default), `api/robots/AIRobot.java` (writeToNbt null-guard fix),

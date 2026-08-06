@@ -1343,10 +1343,12 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         pushStack(INV.get(slot), inv[slot]);
     }
 
-    /** The transactor the load/unload/fetch AIs insert and extract through (D2). It is a thin adapter over the
-     *  SAME {@link #inv} array the slot accessors already serve, so an AI mutating a stack it was handed stays
-     *  live in the inventory — that is the 7.1.x contract {@link #setInventoryStack} documents. One instance
-     *  per robot. */
+    /** The transactor the load/unload/fetch AIs insert and extract through (D2): a thin adapter over the
+     *  SAME {@link #inv} array the slot accessors already serve, one instance per robot. The two write
+     *  paths differ deliberately — {@link #setInventoryStack} stores the caller's own instance (7.1.x
+     *  live-instance semantics for AIs that keep mutating a stack they were handed), while the transactor
+     *  copies: {@link AbstractInvItemTransactor} dry-runs with the very reference it then commits, so the
+     *  offered stack may never be mutated, let alone stored live. */
     private final IItemTransactor transactor = new RobotTransactor();
 
     @Override
@@ -1356,29 +1358,30 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
 
     /** {@link AbstractInvItemTransactor} over {@link #inv}. Standard per-slot merge on insert and a plain
      *  filter+count on extract; {@code setInventoryStack} pushes the mutated slot to clients on every real
-     *  change. */
+     *  change. {@code insert} never mutates the stack it is handed — accepted and leftover counts travel in
+     *  copies, so a simulated call leaves both the caller's stack and the inventory untouched, and the
+     *  base class's simulate-then-commit chain in {@code insertAllAtOnce} stays exact. */
     private class RobotTransactor extends AbstractInvItemTransactor {
 
         @Override
         protected ItemStack insert(int slot, @Nonnull ItemStack stack, boolean simulate) {
             ItemStack current = inv[slot];
             if (current.isEmpty()) {
-                int max = Math.min(stack.getCount(), stack.getMaxStackSize());
-                ItemStack split = stack.split(max);
+                int accepted = Math.min(stack.getCount(), stack.getMaxStackSize());
                 if (!simulate) {
-                    setInventoryStack(slot, split);
+                    setInventoryStack(slot, stack.copyWithCount(accepted));
                 }
-                return stack;
+                return stack.copyWithCount(stack.getCount() - accepted);
             }
             if (StackUtil.canMerge(current, stack)) {
                 int amount = Math.min(stack.getCount(), current.getMaxStackSize() - current.getCount());
                 if (amount > 0) {
-                    ItemStack merged = current.copy();
-                    merged.grow(amount);
-                    stack.shrink(amount);
                     if (!simulate) {
+                        ItemStack merged = current.copy();
+                        merged.grow(amount);
                         setInventoryStack(slot, merged);
                     }
+                    return stack.copyWithCount(stack.getCount() - amount);
                 }
             }
             return stack;

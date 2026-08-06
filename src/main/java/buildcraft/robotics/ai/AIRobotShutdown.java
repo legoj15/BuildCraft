@@ -48,13 +48,21 @@ public class AIRobotShutdown extends AIRobot {
     public void update() {
         if (skip == 0) {
             if (!isBlocked(-0.075f)) {
-                robot.setDeltaMovement(new Vec3(motionX, -0.075f, motionZ));
+                // Pin only the fall — 7.1.x set motionY alone and let the horizontal components ride
+                // whatever physics produced. Re-applying the constructor-captured X/Z every unblocked
+                // tick would resurrect drift that a wall or water already spent.
+                Vec3 motion = robot.getDeltaMovement();
+                robot.setDeltaMovement(new Vec3(motion.x, -0.075f, motion.z));
             } else {
-                // Parked on a surface: stop falling. Once horizontal motion is spent too, hold for 20 ticks
-                // (7.1.x nudged the robot up out of a block here; modern IRobotAccess has no setPos, so the
-                // robot simply rests where it landed).
+                // Landed: stop. 7.1.x nudged the robot up out of the block first; modern IRobotAccess has
+                // no setPos, so the robot simply rests where it landed. The two-step stays: park for 20
+                // ticks only once horizontal motion is already spent — if it is still live, kill it and
+                // re-evaluate next tick rather than freezing the robot mid-slide.
+                Vec3 motion = robot.getDeltaMovement();
                 robot.setDeltaMovement(Vec3.ZERO);
-                skip = 20;
+                if (motion.x == 0 && motion.z == 0) {
+                    skip = 20;
+                }
             }
         } else {
             skip--;

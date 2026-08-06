@@ -39,6 +39,8 @@ import buildcraft.robotics.BCRoboticsItems;
 import buildcraft.robotics.BCRoboticsPlugs;
 import buildcraft.robotics.DockingStationPipe;
 import buildcraft.robotics.RobotStationPluggable;
+import buildcraft.robotics.ai.AIRobotShutdown;
+import buildcraft.robotics.boards.BoardRobotPickerNBT;
 import buildcraft.robotics.item.ItemRobot;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
@@ -67,11 +69,18 @@ import buildcraft.transport.tile.TilePipeHolder;
  *     and {@link EntityArenaUtil#tickUntilThen} where a second phase has to follow the first by a fixed
  *     number of ticks.</li>
  * <li>Every relative position stays inside the arena's grid cell — with the {@code minecraft:empty} structure
- *     the framework spaces arenas 6 blocks apart in X and 8 in Z, so anything beyond that lands in a
+ *     the framework spaces arenas 6 blocks apart in X and 7 in Z, so anything beyond that lands in a
  *     neighbouring test's arena, which is neither cleared between runs nor safe from being written over in the
  *     same tick.</li>
  * <li>All phases are scheduled from the top of the test, never from inside another scheduled runnable —
  *     {@code GameTestInfo} runs its callbacks while iterating the very map {@code runAfterDelay} writes to.</li>
+ * <li>Everything a test ADDS to the world it also DISCARDS before succeeding. The framework's pass-time
+ *     cleanup only discards entities inside the structure's own bounds +1, which for {@code minecraft:empty}
+ *     is a 3x3x3 box at the arena corner — every robot here sits further out and so SURVIVES its own test's
+ *     success. {@code clearOnBatch} then hands the same coordinates to the next batch's tests, where the
+ *     leaked robot (empty board, flat battery, still docked to a long-cleared station) lands inside another
+ *     test's entity query and fails it. This is not hypothetical: it is exactly how
+ *     {@code robot_item_places_docked_robot} kept finding "2 robots" on tick 1.</li>
  * </ul>
  */
 public class EntityRobotTester {
@@ -162,6 +171,8 @@ public class EntityRobotTester {
                     helper.assertTrue(a.getRegistry() == registry,
                             "getRegistry() must resolve this level's RobotRegistry — every AI, station claim "
                                     + "and resource reservation goes through it");
+                    a.discard();
+                    b.discard();
                     helper.succeed();
                 },
                 "a robot added to the world must register itself with the RobotRegistry on its first tick "
@@ -191,6 +202,7 @@ public class EntityRobotTester {
             helper.assertTrue(robot.position().distanceToSqr(spawnedAt) < 1.0E-6,
                     "an idle robot with no AI must not drift or fall: expected " + spawnedAt
                             + " but was " + robot.position());
+            robot.discard();
             helper.succeed();
         }, "the robot never ticked, so the 60-tick idle window never even started");
     }
@@ -276,6 +288,7 @@ public class EntityRobotTester {
                     "the station the robot is docked at must be saved under 'currentStation'");
             helper.assertTrue(NBTUtilBC.getByte(current, "side", (byte) -1) == (byte) Direction.DOWN.ordinal(),
                     "the docked station's mounting face must be saved as a side byte");
+            robot.discard();
             helper.succeed();
         }, "both stations must register and the robot must tick before the save can be set up");
     }
@@ -319,9 +332,11 @@ public class EntityRobotTester {
      *  is what makes a robot visually sit on its station instead of drifting off it. */
     public static void dockedRobotSnapsToStationFaceCentre(GameTestHelper helper) {
         EntityArenaUtil.forceLoadEntityArena(helper);
-        BlockPos pipeRel = new BlockPos(5, 2, 7);
+        // z=6, not the old z=7: grid rows are spaced 7 apart for the empty structure, so z=7 is already
+        // the next row's first block — the pipe and robot sat inside a neighbouring test's arena.
+        BlockPos pipeRel = new BlockPos(5, 2, 6);
         installStation(helper, pipeRel, Direction.UP);
-        EntityRobot robot = addRobot(helper, new BlockPos(3, 4, 7));
+        EntityRobot robot = addRobot(helper, new BlockPos(3, 4, 6));
 
         EntityArenaUtil.tickUntilThen(helper, 60,
                 () -> stationAt(helper, pipeRel, Direction.UP) != null && hasTicked(robot),
@@ -339,6 +354,7 @@ public class EntityRobotTester {
                             + " but was " + robot.position());
             helper.assertTrue(robot.getDeltaMovement().lengthSqr() < 1.0E-9,
                     "a docked robot's motion must be zeroed, or it fights the snap every tick");
+            robot.discard();
             helper.succeed();
         }, "the station never registered, or the robot never ticked");
     }
@@ -375,20 +391,32 @@ public class EntityRobotTester {
             helper.assertTrue(robot.getHurtTime() == 0,
                     "the hurt flash must decay back to 0 (one per tick from 10), or the robot stays red "
                             + "forever");
+            robot.discard();
             helper.succeed();
         }, "the robot never ticked, so it could never have been hit in the first place");
     }
 
-    /** A hit the battery cannot cover converts the robot into items: the charged robot item plus its cargo
-     *  drop, the station reservation is released and the registry forgets it. Also pins the boundary — 7.1.x
-     *  used {@code stored - debit > 0}, so a robot holding EXACTLY the debit is destroyed, not left at zero. */
+    /** A hit the battery cannot cover converts the robot into items: the robot item drops carrying its
+     *  charge AND ITS BOARD (a dead picker must drop a picker robot), the cargo spills, the station
+     *  reservation is released and the registry forgets it. Also pins the boundary — 7.1.x used
+     *  {@code stored - debit > 0}, so a robot holding EXACTLY the debit is destroyed, not left at zero. */
     public static void batteryExhaustedHitConvertsToItems(GameTestHelper helper) {
         EntityArenaUtil.forceLoadEntityArena(helper);
         ServerLevel level = helper.getLevel();
         BlockPos pipeRel = new BlockPos(5, 2, 2);
         BlockPos robotRel = new BlockPos(5, 3, 2);
         installStation(helper, pipeRel, Direction.UP);
-        EntityRobot robot = addRobot(helper, robotRel);
+        // Boarded, like every robot that exists through real gameplay — a bare entity could never pin
+        // that the dropped item carries the board. Seeding the battery BEFORE the first tick keeps the
+        // AIRobotMain ladder off the AIRobotShutdown branch (power > 0); at this charge it lands on
+        // AIRobotRecharge instead, whose search finds no station it can use here and fails into its
+        // 120-tick cooldown while the robot hovers at spawn. The exact-death boundary itself is pinned
+        // in the next phase, at the moment of the hit.
+        EntityRobot robot = new EntityRobot(helper.getLevel(), BoardRobotPickerNBT.INSTANCE);
+        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
+        robot.setPos(pos.x, pos.y, pos.z);
+        robot.getBattery().addPower(DAMAGE_DEBIT_PER_POINT, false);
+        helper.getLevel().addFreshEntity(robot);
         long[] robotId = { EntityRobotBase.NULL_ROBOT_ID };
 
         EntityArenaUtil.tickUntilThen(helper, 60,
@@ -401,9 +429,12 @@ public class EntityRobotTester {
             robotId[0] = robot.getRobotId();
 
             robot.setInventoryStack(0, new ItemStack(Items.DIAMOND, 2));
-            // Exactly the debit for a single damage point: 'stored - debit > 0' is strictly greater, so
-            // landing on precisely zero still destroys the robot. Preserved from 7.1.x deliberately.
-            robot.getBattery().addPower(DAMAGE_DEBIT_PER_POINT, false);
+            // Re-pin EXACTLY the debit at the moment of the hit: the boarded robot's AI burns a trickle
+            // between spawn and this phase (measured: 0.3 MJ over the registration wait), so the
+            // construction-time seed alone no longer lands on the boundary. 'stored - debit > 0' is
+            // strictly greater, so landing on precisely zero still destroys the robot — preserved from
+            // 7.1.x deliberately.
+            robot.getBattery().setStored(DAMAGE_DEBIT_PER_POINT);
 
             Player attacker = helper.makeMockPlayer(GameType.SURVIVAL);
             EntityArenaUtil.hurt(level, robot, level.damageSources().playerAttack(attacker), 1.0F);
@@ -432,12 +463,23 @@ public class EntityRobotTester {
             }
             helper.assertTrue(!robotDrop.isEmpty(),
                     "converting to items must drop the robot item itself, carrying its board and charge");
+            helper.assertTrue(BoardRobotPickerNBT.ID.equals(ItemRobot.getBoardId(robotDrop)),
+                    "the dropped robot item must carry the robot's board — a picker that dies must drop "
+                            + "a PICKER robot, not an unboarded one: got " + ItemRobot.getBoardId(robotDrop));
             helper.assertTrue(ItemRobot.getEnergy(robotDrop) == DAMAGE_DEBIT_PER_POINT,
                     "the dropped robot item must carry the charge the robot died with (the fatal hit is "
                             + "never debited): expected " + DAMAGE_DEBIT_PER_POINT + " got "
                             + ItemRobot.getEnergy(robotDrop));
             helper.assertTrue(cargoDropped,
                     "the four transfer slots must spill when the robot converts to items");
+            // The drops are outside the framework's cleanup bounds — discard exactly what this test made
+            // (filtered, because the query radius can reach into the neighbouring arena's cell).
+            for (ItemEntity entity : drops) {
+                ItemStack stack = entity.getItem();
+                if (stack.getItem() == BCRoboticsItems.ROBOT.get() || stack.getItem() == Items.DIAMOND) {
+                    entity.discard();
+                }
+            }
             helper.succeed();
         }, "the station never registered, or the robot never ticked");
     }
@@ -510,6 +552,9 @@ public class EntityRobotTester {
                             + "docked/mob/falling-block exemptions above prove nothing");
             helper.assertTrue(airborne.getBattery().getStored() == charge - 4L * DAMAGE_DEBIT_PER_POINT,
                     "control: the player hit must debit 4 x 260 MJ");
+            docked.discard();
+            airborne.discard();
+            mob.discard();
             helper.succeed();
         }, "the station never registered, or one of the two robots never ticked");
     }
@@ -554,6 +599,7 @@ public class EntityRobotTester {
             helper.assertFalse(robot.getEntityData().isDirty(),
                     "re-pushing an UNCHANGED stack must not dirty the accessor — an unconditional copy() "
                             + "every tick re-sends every slot at 20 Hz");
+            robot.discard();
             helper.succeed();
         }, "the robot never ticked");
     }
@@ -619,7 +665,89 @@ public class EntityRobotTester {
                     "the synched energy accessor carries WHOLE MJ (0.." + (EntityRobotBase.MAX_POWER / MjAPI.MJ)
                             + ") and must track the battery, or the renderer's charge overlay never fills: "
                             + "expected " + expectedMj + " got " + robot.getEnergyMj());
+            robot.discard();
             helper.succeed();
         }, "the station never registered, or the robot never ticked");
+    }
+
+    /** {@code RobotTransactor.insert} serves the load/unload AIs' dry-run-then-commit flow, so two halves
+     *  of the {@link buildcraft.lib.inventory.AbstractInvItemTransactor} contract are load-bearing: a
+     *  simulated insert must not mutate the caller's stack OR the inventory, and a commit must deliver
+     *  exactly what the simulate pass previewed. The first cut failed both — {@code stack.split(...)} and
+     *  {@code stack.shrink(...)} ran before {@code simulate} was consulted, so an all-or-none insert that
+     *  previewed "fully accepted" then committed the ALREADY-SHRUNK stack and silently deleted the items.
+     *  Driven synchronously on an unadded robot: the transactor is a plain adapter over the slot array and
+     *  needs no ticking. */
+    public static void transactorInsertConservesItemsAcrossSimulateAndCommit(GameTestHelper helper) {
+        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
+        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(new BlockPos(5, 4, 1)));
+        robot.setPos(pos.x, pos.y, pos.z);
+
+        // -- empty-slot path: simulate is inert --
+        ItemStack offered = new ItemStack(Items.DIAMOND, 10);
+        ItemStack leftover = robot.getTransactor().insert(offered, false, true);
+        helper.assertTrue(offered.getCount() == 10,
+                "a SIMULATED insert must not mutate the caller's stack — the unload AI dry-runs with the "
+                        + "very stack it then inserts for real, so a mutating dry-run loses the probed items");
+        helper.assertTrue(leftover.isEmpty(), "10 diamonds into an empty robot: nothing left over");
+        helper.assertTrue(robot.getInventoryStack(0).isEmpty(),
+                "a SIMULATED insert must not change the inventory");
+
+        // -- merge path, spanning a partial merge into a fresh slot: simulate is inert --
+        robot.setInventoryStack(0, new ItemStack(Items.DIAMOND, 60));
+        ItemStack offered2 = new ItemStack(Items.DIAMOND, 10);
+        ItemStack leftover2 = robot.getTransactor().insert(offered2, false, true);
+        helper.assertTrue(offered2.getCount() == 10,
+                "a SIMULATED merge must not mutate the caller's stack either");
+        helper.assertTrue(leftover2.isEmpty(),
+                "4 merge into slot 0 and 6 into the next empty slot: nothing left over");
+        helper.assertTrue(robot.getInventoryStack(0).getCount() == 60
+                        && robot.getInventoryStack(1).isEmpty(),
+                "a SIMULATED merge must not change the inventory");
+
+        // -- the real commit delivers exactly what the dry-run previewed --
+        ItemStack leftover3 = robot.getTransactor().insert(new ItemStack(Items.DIAMOND, 10), false, false);
+        helper.assertTrue(leftover3.isEmpty(), "the commit accepts what the dry-run accepted");
+        helper.assertTrue(robot.getInventoryStack(0).getCount() == 64
+                        && robot.getInventoryStack(1).getCount() == 6,
+                "commit: slot 0 tops up to 64 and the remaining 6 land in slot 1");
+
+        // -- all-or-none: the internal simulate-then-commit chain must conserve the items --
+        ItemStack leftover4 = robot.getTransactor().insert(new ItemStack(Items.DIAMOND, 20), true, false);
+        helper.assertTrue(leftover4.isEmpty(), "20 diamonds fit (slot 1 has 58 free): all-or-none accepts");
+        helper.assertTrue(robot.getInventoryStack(0).getCount() == 64
+                        && robot.getInventoryStack(1).getCount() == 26,
+                "all-or-none must deliver the previewed items — a simulate pass that mutates the original "
+                        + "stack leaves the commit pass nothing to insert, deleting the cargo while "
+                        + "reporting full acceptance");
+        helper.succeed();
+    }
+
+    // ---------- shutdown ----------
+
+    /** {@code AIRobotShutdown} re-imposes only the FALL each tick, never the horizontal motion it captured
+     *  at construction — 7.1.x pinned {@code motionY} alone and let physics spend the drift. The first port
+     *  re-applied the captured X/Z every unblocked tick, so a robot whose drift had already died (it clipped
+     *  a wall mid-fall) started sliding again. Driven synchronously on an unadded robot: the AI reads motion
+     *  and the collision set, neither of which needs a ticking entity, and the void arena below guarantees
+     *  the unblocked branch. */
+    public static void shutdownFallKeepsCurrentHorizontalMotion(GameTestHelper helper) {
+        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
+        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(new BlockPos(2, 5, 3)));
+        robot.setPos(pos.x, pos.y, pos.z);
+
+        robot.setDeltaMovement(new Vec3(0.5, 0, 0));
+        AIRobotShutdown ai = new AIRobotShutdown(robot); // captures the pre-shutdown drift, as 7.1.x did
+        ai.start(); // now falling with (0.5, -0.075, 0)
+
+        // Mid-fall the drift dies — a wall, a collision, anything that kills X without stopping the fall.
+        robot.setDeltaMovement(new Vec3(0, -0.075, 0));
+        ai.update();
+
+        helper.assertTrue(robot.getDeltaMovement().x == 0,
+                "a shut-down robot must fall with its CURRENT horizontal motion — re-imposing the velocity "
+                        + "captured at construction resurrects drift that physics already spent");
+        helper.assertTrue(robot.getDeltaMovement().y < 0, "the fall itself must continue");
+        helper.succeed();
     }
 }

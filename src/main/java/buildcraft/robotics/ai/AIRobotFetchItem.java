@@ -54,16 +54,19 @@ public class AIRobotFetchItem extends AIRobot {
         if (target == null) {
             scanForItem();
         } else {
+            if (target.isRemoved()) {
+                // preempt() already terminated this AI this same tick; a same-tick update() must not pick
+                // from the removed entity's stale stack — that would duplicate items the world (a player,
+                // a hopper, another robot) already took. Simply stay out of the way.
+                return;
+            }
             pickTime++;
 
             if (pickTime > 5) {
                 ItemStack entityStack = target.getItem();
-                ItemStack copy = entityStack.copy();
-                ItemStack overflow = robot.getTransactor().insert(copy, false, false);
-                // The transactor MUTATES the stack it is handed (shrinks it to the leftover), so the taken
-                // count must come from the untouched original minus the leftover — reading copy after the
-                // insert would yield 0 and leave the drop intact while the robot's inventory grew (item
-                // duplication: the same drop re-fetched forever).
+                // The transactor never mutates the offered stack and returns the leftover, so taken =
+                // offered minus leftover is exact — no defensive copy needed.
+                ItemStack overflow = robot.getTransactor().insert(entityStack, false, false);
                 int taken = entityStack.getCount() - overflow.getCount();
 
                 entityStack.shrink(taken);
@@ -132,8 +135,11 @@ public class AIRobotFetchItem extends AIRobot {
                 continue;
             }
 
-            // The item must fit in the robot's four slots (dry-run; copy so the scan never drains the drop).
-            if (!robot.getTransactor().insert(stack.copy(), false, true).isEmpty()) {
+            // The drop must offer the robot at least something (dry-run on a copy — the scan never drains
+            // it). 7.1.x accepted any drop the robot could PARTIALLY absorb (inject(...) > 0) and took what
+            // fit, leaving the remainder; demanding a full fit would strand overflow drops forever.
+            ItemStack leftover = robot.getTransactor().insert(stack.copy(), false, true);
+            if (leftover.getCount() >= stack.getCount()) {
                 continue;
             }
 

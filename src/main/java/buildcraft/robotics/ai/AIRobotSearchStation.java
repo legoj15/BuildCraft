@@ -8,6 +8,8 @@
  */
 package buildcraft.robotics.ai;
 
+import java.util.ArrayList;
+
 import buildcraft.api.core.IZone;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
@@ -48,7 +50,11 @@ public class AIRobotSearchStation extends AIRobot {
         double potentialStationDistance = Float.MAX_VALUE;
         DockingStation potentialStation = null;
 
-        for (DockingStation station : robot.getRegistry().getStations()) {
+        // Iterate a SNAPSHOT: getStations() is the live values view of the registry's station map, and a
+        // DockingStationPipe whose pipe has gone away deregisters itself from inside isInitialized()
+        // (getHolder() → removeStation) — removing from a map while iterating its values is a
+        // ConcurrentModificationException, which the AI cycle would swallow as a silently failed search.
+        for (DockingStation station : new ArrayList<>(robot.getRegistry().getStations())) {
             if (!station.isInitialized()) {
                 continue;
             }

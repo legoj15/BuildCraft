@@ -40,7 +40,9 @@ import buildcraft.robotics.BCRoboticsItems;
 @SuppressWarnings("deprecation")
 public class ItemRedstoneBoard extends Item {
 
-    /** The board id sub-compound, keyed as 7.1.x did. */
+    /** The board id sub-compound, keyed after 7.1.x's {@code ItemRobot} blob ({board:{id:...}}) — 7.1.x's
+     *  standalone board item wrote the id at the blob root instead, but matching the robot's layout keeps one
+     *  read path for both items. */
     public static final String TAG_BOARD = "board";
 
     /** The board sub-compound's own id key, written by {@code RedstoneBoardNBT.createBoard}. */

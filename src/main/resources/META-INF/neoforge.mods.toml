@@ -1,7 +1,7 @@
 modLoader="javafml"
 loaderVersion="[2,]"
 # Single-valued by design, and it names the licence covering the overwhelming majority of the jar. The jar
-# also carries MIT (most of buildcraft.api) and MMPL-1.0.1 (37 files carried over from 1.7.10/1.12.2) — see
+# also carries MIT (most of buildcraft.api) and MMPL-1.0.1 (38 files carried over from 1.7.10/1.12.2) — see
 # META-INF/NOTICE.md, shipped alongside all three licence texts, for the file-to-licence map. Deliberately
 # NOT an SPDX "AND" expression: FML displays this string rather than parsing it, but that is a display-side
 # observation and a required loader field is not the place to test an assumption.

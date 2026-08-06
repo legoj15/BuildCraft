@@ -6,7 +6,7 @@ remain, or should it say MPL instead?"* — **it remains.** Player-facing summar
 
 ## The verdict
 
-Keep the MMPL headers exactly as they are on all 37 files. Do not change them to MPL, and do not rewrite a
+Keep the MMPL headers exactly as they are on all 38 files. Do not change them to MPL, and do not rewrite a
 file in order to shed one. What was genuinely broken was the *packaging* around them, not the attribution:
 the files pointed at a licence text the repo did not carry, the jar shipped MPL and MIT but not MMPL, and
 nothing anywhere stated that the jar is a three-licence artefact. Those are fixed.
@@ -102,6 +102,14 @@ suite — see the guard gap below.
 nothing catches it. Closing that properly needs a maintained "this file came from upstream path X"
 manifest, which does not exist. Until then it is convention only — worth knowing before the next batch of
 files is ported.
+
+Second instance, caught the day after this doc was written: `core/properties/WorldPropertyIsSoft.java` —
+a javadoc-acknowledged 7.1.x port — shipped with the **api-package MIT boilerplate cloned onto it** (the
+exact reflex the CLAUDE.md rule forbids), so it carried *a* notice and passed every check while claiming
+the wrong licence. The Ph4 final review's fidelity lens found it by diffing every ported file's header
+against its actual upstream source. It now carries the verbatim MMPL block and is NOTICE-listed (38
+files). Wrong-header files are strictly harder to catch than headerless ones: nothing about an MIT claim
+in `buildcraft/core/` looks mechanically unusual.
 
 ## Residual risk
 

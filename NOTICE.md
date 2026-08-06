@@ -9,7 +9,7 @@ This project ships code under three licences. Which one applies to a given file 
   header, so other mods can compile against the API freely. Seven files that live in the
   `buildcraft.api` packages are *not* MIT — they are in the MMPL list below. The package is genuinely
   mixed; the header is authoritative, never the directory.
-- **37 files carried over from BuildCraft for Minecraft 1.7.10 / 1.12.2** — Minecraft Mod Public
+- **38 files carried over from BuildCraft for Minecraft 1.7.10 / 1.12.2** — Minecraft Mod Public
   License 1.0.1, see [LICENSE.MMPL](LICENSE.MMPL). Each one states this in its own header.
 
 Upstream BuildCraft has never relicensed these files away from MMPL — every upstream branch, up to and
@@ -24,7 +24,7 @@ carried-over code:
 - `src/main/java/buildcraft/api/robots/DockingStation.java`
 - `src/main/java/buildcraft/robotics/item/ItemRedstoneBoard.java`
 
-The remaining 35 carry the upstream notice alone:
+The remaining 36 carry the upstream notice alone:
 
 - `src/main/java/buildcraft/api/core/IFluidFilter.java`
 - `src/main/java/buildcraft/api/core/IStackFilter.java`
@@ -38,6 +38,7 @@ The remaining 35 carry the upstream notice alone:
 - `src/main/java/buildcraft/builders/snapshot/pattern/PatternFrame.java`
 - `src/main/java/buildcraft/builders/snapshot/pattern/PatternPyramid.java`
 - `src/main/java/buildcraft/builders/snapshot/pattern/PatternStairs.java`
+- `src/main/java/buildcraft/core/properties/WorldPropertyIsSoft.java`
 - `src/main/java/buildcraft/robotics/IStationFilter.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotFetchItem.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotGoto.java`

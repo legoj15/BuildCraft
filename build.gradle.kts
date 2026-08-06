@@ -381,6 +381,15 @@ neoForge {
             // race-sensitive to a bounded battery filling up between ticks.
             systemProperty("buildcraft.dev", "true")
             gameDirectory = project.file("run-gameTestServer")
+            // Optional test filter: `./gradlew :26.2:runGameTestServer -PbcTests=buildcraftunofficial:robot_*`
+            // runs only the matching tests instead of the whole suite (a ResourceSelectorArgument glob —
+            // `namespace:pattern`, `*`/`?` wildcards). Inert without the property: empty selection = run all.
+            // The `--tests` selector parses against the TEST_INSTANCE registry, which exists only on
+            // 1.21.10+ — 1.21.1's server Main rejects the option outright, so the arg is gated off there.
+            if (project.hasProperty("bcTests") && stonecutter.eval(stonecutter.current.version, ">=1.21.10")) {
+                programArguments.add("--tests")
+                programArguments.add(project.property("bcTests").toString())
+            }
         }
     }
 

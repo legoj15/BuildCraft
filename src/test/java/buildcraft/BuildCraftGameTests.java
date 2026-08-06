@@ -785,5 +785,14 @@ public class BuildCraftGameTests {
         // surviving as "no board", and the charge staying a long past the int ceiling. A game test rather
         // than JUnit because the plain test JVM cannot construct an ItemStack at all.
         reg.accept("buildcraftunofficial:robot_item_component_pins", () -> buildcraft.robotics.item.ItemRobotComponentTester::robotItemComponentPins);
+
+        // Robotics Ph4 — the picker/carrier boards driven against a LIVE EntityRobot whose AIRobotMain tree
+        // actually cycles every tick: a registry-completeness sweep (every registered board create()s against
+        // a live robot and resolves back to its own handler), the picker autonomously flying to and picking up
+        // a dropped item, and the carrier autonomously finding a supply station and loading the chest's
+        // contents. The E2Es start the robot UNLINKED to prove the boards need no home station to act.
+        reg.accept("buildcraftunofficial:robot_boards_every_registered_self_resolves", () -> buildcraft.robotics.boards.PickerCarrierTester::everyRegisteredBoardSelfResolves);
+        reg.accept("buildcraftunofficial:robot_picker_picks_up_dropped_item", () -> buildcraft.robotics.boards.PickerCarrierTester::pickerRobotPicksUpDroppedItem);
+        reg.accept("buildcraftunofficial:robot_carrier_loads_from_supply_chest", () -> buildcraft.robotics.boards.PickerCarrierTester::carrierRobotLoadsFromSupplyChest);
     }
 }

@@ -36,13 +36,23 @@ public class AIRobotGotoStation extends AIRobot {
     public AIRobotGotoStation(IRobotAccess iRobot, DockingStation station) {
         this(iRobot);
 
-        stationIndex = station.getPos();
-        stationSide = station.side();
+        if (station != null) {
+            stationIndex = station.getPos();
+            stationSide = station.side();
+        }
         setSuccess(false);
     }
 
     @Override
     public void start() {
+        // A stationless robot (summoned, or a board whose linked station vanished) must fail the move
+        // rather than NPE on a null station — {@code AIRobotGotoSleep} hands getLinkedStation() straight
+        // here. 7.1.x assumed every robot has a main station; that assumption no longer holds.
+        if (stationIndex == null) {
+            setSuccess(false);
+            terminate();
+            return;
+        }
         DockingStation station = robot.getRegistry().getStation(stationIndex, stationSide);
 
         if (station == null) {

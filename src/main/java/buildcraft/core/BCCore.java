@@ -11,6 +11,9 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -37,6 +40,7 @@ import buildcraft.lib.net.MessageDebugResponse;
 import buildcraft.lib.net.MessageMarker;
 import buildcraft.core.marker.PathCache;
 import buildcraft.core.marker.VolumeCache;
+import buildcraft.core.properties.WorldPropertyIsSoft;
 import buildcraft.lib.BCLibItems;
 import buildcraft.lib.item.ItemGuide;
 
@@ -248,6 +252,25 @@ public class BCCore {
 
         // Initialize the default crop handler for the CropManager API
         buildcraft.api.crops.CropManager.setDefaultHandler(buildcraft.lib.crops.CropHandlerPlantable.INSTANCE);
+
+        // The "soft" world property the robotics pathfinder queries via BuildCraftAPI.isSoftBlock. 7.1.x
+        // registered this in BuildCraftCore's preinit; the port kept the API lookup but dropped the
+        // registration, so the first robot pathfind NPE'd on the null "soft" property. Mirror upstream:
+        // fluids and plantables wholesale (1.21.1's plant umbrella is BushBlock; 1.21.10+ widened it to
+        // VegetationBlock), plus snow/vine/fire, and the property itself.
+        for (Block block : BuiltInRegistries.BLOCK) {
+            //? if >=1.21.10 {
+            if (block instanceof LiquidBlock || block instanceof net.minecraft.world.level.block.VegetationBlock) {
+            //?} else {
+            /*if (block instanceof LiquidBlock || block instanceof net.minecraft.world.level.block.BushBlock) {*/
+            //?}
+                buildcraft.api.core.BuildCraftAPI.softBlocks.add(block);
+            }
+        }
+        buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.SNOW);
+        buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.VINE);
+        buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.FIRE);
+        buildcraft.api.core.BuildCraftAPI.registerWorldProperty("soft", new WorldPropertyIsSoft());
 
         MarkerCache.registerCache(VolumeCache.INSTANCE);
         MarkerCache.registerCache(PathCache.INSTANCE);

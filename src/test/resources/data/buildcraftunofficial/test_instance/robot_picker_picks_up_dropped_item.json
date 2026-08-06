@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_picker_picks_up_dropped_item",
+    "environment": "buildcraftunofficial:robot_picker",
+    "structure": "minecraft:empty",
+    "max_ticks": 320,
+    "setup_ticks": 0,
+    "required": true
+}

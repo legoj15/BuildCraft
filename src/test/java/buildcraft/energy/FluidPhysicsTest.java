@@ -18,15 +18,19 @@ import buildcraft.energy.BCEnergyFluids;
 public class FluidPhysicsTest {
 
     public static void testOilBobbing(GameTestHelper helper) {
-        // Crude oil's buoyancy is resolved DIFFERENTLY across the two MC lines, so this test asserts the
-        // correct (and genuinely different) outcome on each:
-        //   * 26.1.x  — isInWater() is purely tag-based. Crude oil joins the minecraft:water fluid tag, so
-        //               the FloatGoal sees water and bobs the pig UP to the surface.
-        //   * 1.21.11 — NeoForge 21.11 gates isInWater() on FluidType.getIsWaterLike(), NOT the tag. Crude
-        //               oil is built isWaterLike(false)/canSwim(false) on purpose (turnOffSplashes in
-        //               BCEnergyFluids — thick crude shouldn't be swimmable), so the pig never counts as in
-        //               water, FloatGoal never engages, and it does NOT bob. That non-float is the correct
-        //               behaviour here, and is what we assert.
+        // Crude oil's buoyancy is resolved DIFFERENTLY across MC lines, so this test asserts the correct
+        // (and genuinely different) outcome on each:
+        //   * 26.1.x only — isInWater() is purely tag-based. Crude oil joins the minecraft:water fluid tag,
+        //               so the FloatGoal sees water and bobs the pig UP to the surface. This is a REGRESSION
+        //               introduced by the 26.1 port dropping vanilla's entity-fluid-interaction patches.
+        //   * everywhere else (1.21.1, 1.21.10, 1.21.11, 26.2+) — isInWater() gates on
+        //               FluidType.getIsWaterLike(), NOT the tag. Crude oil is built isWaterLike(false)/
+        //               canSwim(false) on purpose (turnOffSplashes in BCEnergyFluids — thick crude
+        //               shouldn't be swimmable), so the pig never counts as in water, FloatGoal never
+        //               engages, and it does NOT bob. That non-float is the correct behaviour here, and is
+        //               what we assert. NeoForge PR #3249 (26.2.0.49-beta) re-implemented these patches for
+        //               26.2, closing the gap for that line; a 26.1.x backport (PR #3303) is not yet in our
+        //               pin, so 26.1.2 remains the sole outlier until it lands.
         // Crude oil (not a water-like sibling) is used deliberately: its canSwim(false) keeps the pig out of
         // swim navigation, so the 26.1.x bob is reliable rather than flaky. The deterministic companion
         // crudeOilIsNotWaterLike pins the underlying FluidType flags.
@@ -78,9 +82,13 @@ public class FluidPhysicsTest {
         AABB surface = new AABB(0.5, 2.0, 0.5, 2.5, 4.5, 2.5);
 
         //? if >=26.2 {
-        /*// Tag-based water physics: prove buoyancy — once ticking, the pig leaves the bottom and rises into
-        // the surface region (FloatGoal engages because crude oil joins the minecraft:water fluid tag).
-        helper.succeedWhen(() -> helper.assertEntityPresent(net.minecraft.world.entity.EntityTypes.PIG, surface));
+        /*// FluidType-gated water physics (PR #3249 re-implemented it for this line): crude oil isn't
+        // water-like, so prove the pig did NOT float — after a settle window it remains out of the
+        // surface region (resting on the floor at the bottom).
+        helper.runAtTickTime(100, () -> {
+            helper.assertEntityNotPresent(net.minecraft.world.entity.EntityTypes.PIG, surface);
+            helper.succeed();
+        });
         *///?} elif >=26.1 {
         // Tag-based water physics: prove buoyancy — once ticking, the pig leaves the bottom and rises into
         // the surface region (FloatGoal engages because crude oil joins the minecraft:water fluid tag).
@@ -141,7 +149,7 @@ public class FluidPhysicsTest {
      * Pins crude oil's deliberate non-water-like configuration (the {@code turnOffSplashes} branch in
      * {@link BCEnergyFluids}). Crude oil ("oil") is built with {@code isWaterLike(false)/canSwim(false)}
      * so thick crude doesn't behave like swimmable water, while every refined fluid (heavy/dense/distilled
-     * oil, fuels) stays water-like. This matters on the 1.21.11 line, where NeoForge 21.11 resolves
+     * oil, fuels) stays water-like. This matters on every line except 26.1.x, where NeoForge resolves
      * {@code isInWater()} from {@code FluidType.getIsWaterLike()} rather than the minecraft:water tag — so
      * this flag, not tag membership, decides whether mobs bob/swim. Deterministic; no entity physics.
      */

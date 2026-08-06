@@ -1,10 +1,9 @@
-Last audited: 2026-08-01
+Last audited: 2026-08-06
 
 *One line per item. Background, file pointers, and design notes live in [docs/todo-details.md](docs/todo-details.md) (or a dedicated doc, where linked). Finished items are removed, never checked off.*
 
 ## 🔧 Outstanding work
 
-- Important: Figure out if the 1.7.10 MMPL license attribution should remain, or if it should say MPL instead.
 - Find the 25 game tests that silently skip on Minecraft 1.21.1 — [notes](docs/todo-details.md#skipped-game-tests-on-1211)
 - Fix the last places English text leaks through translations — [list](docs/todo-details.md#translation-follow-ups)
 - Give the heat exchanger a better in-world look — [notes](docs/todo-details.md#heat-exchanger-visual-overhaul)

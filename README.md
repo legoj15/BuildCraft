@@ -119,3 +119,17 @@ Some really good to know information:
    design. (The MJ ⇄ RF conversion config falls back to BuildCraft's own defaults.)
 6. **Mind the toolchain floor.** The 26.1.2 / 1.21.11 jars are Java 25 bytecode; the 1.21.10 / 1.21.1 jars are
    Java 21. Compile with a JDK at least matching the jar you target.
+
+## License
+
+Most of this project is under the Mozilla Public License 2.0 — see [LICENSE](LICENSE).
+
+Most of the `buildcraft.api` package is under the MIT license instead, so other mods can build against it
+freely — see [LICENSE.API](LICENSE.API).
+
+Three dozen files were carried over from the original BuildCraft for Minecraft 1.7.10 and 1.12.2, and those
+stay under the license their original authors released them under, the Minecraft Mod Public License — see
+[LICENSE.MMPL](LICENSE.MMPL).
+
+Every file says in its own header which of the three applies to it, and [NOTICE.md](NOTICE.md) lists them all
+in one place. All four documents ship inside the jar as well, under `META-INF/`.

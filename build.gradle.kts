@@ -454,6 +454,12 @@ tasks.test {
         rootProject.fileTree("src/main/java") { include("**/*.java") },
         rootProject.fileTree("src/test/java") { include("**/*.java") }
     ).withPropertyName("sourceHeaders").withPathSensitivity(PathSensitivity.RELATIVE)
+
+    // Same hole, second door: noticeFileListsEveryMmplFile cross-checks NOTICE.md against those headers,
+    // so NOTICE.md is an input too. Verified empirically — deleting a path from NOTICE.md left `test`
+    // UP-TO-DATE and the guard silent until this line existed.
+    inputs.file(rootProject.file("NOTICE.md"))
+        .withPropertyName("licenceNotice").withPathSensitivity(PathSensitivity.NONE)
 }
 
 tasks.processResources {
@@ -483,9 +489,14 @@ tasks.jar {
     // Ship the licence texts inside the jar. Not cosmetic: the jar carries the buildcraft.api classes,
     // which are MIT rather than MPL, and the MIT terms require the notice to be "included in all copies
     // or substantial portions of the Software" — a jar with none was a distribution the licence did not
-    // permit. LICENSE.API is the text those ~70 api files already point at by name.
+    // permit. LICENSE.API is the text those ~70 api files already point at by name. LICENSE.MMPL covers the
+    // 37 files carried over from 1.7.10/1.12.2 whose headers cite mod-buildcraft.com: MMPL has no
+    // notice-inclusion clause of its own, but a jar that names a licence it does not carry is a jar nobody
+    // offline can read the terms of. NOTICE.md is the map from file to licence.
     from(rootProject.file("LICENSE")) { into("META-INF") }
     from(rootProject.file("LICENSE.API")) { into("META-INF") }
+    from(rootProject.file("LICENSE.MMPL")) { into("META-INF") }
+    from(rootProject.file("NOTICE.md")) { into("META-INF") }
 }
 
 tasks.register<JavaExec>("dumpMethods") {

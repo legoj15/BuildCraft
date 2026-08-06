@@ -76,8 +76,19 @@ public class CopyrightHeaderTester {
 
     private static final Pattern YEAR = Pattern.compile("\\b(19|20)\\d{2}\\b");
 
-    /** How far into a file a copyright notice may appear before we stop looking. */
-    private static final int HEADER_SCAN_LINES = 8;
+    /** The phrase every MMPL notice contains, in both header shapes upstream shipped (the 2011-2015 one
+     *  wraps mid-phrase as "Minecraft Mod Public License 1.0", the 2011-2017 one as "Minecraft Mod Public\n
+     *  * License 1.0"). Matching only these three words survives both wraps. */
+    private static final String MMPL_MARKER = "Minecraft Mod Public";
+
+    /** A source path as NOTICE.md writes them, for the stale-entry half of the cross-check. */
+    private static final Pattern NOTICE_PATH = Pattern.compile("src/(?:main|test)/java/[\\w/]+\\.java");
+
+    /** How far into a file a copyright notice may appear before we stop looking. Wide enough to reach the
+     *  SECOND claim of a mixed header: {@code ItemRedstoneBoard}'s upstream notice runs six lines, putting
+     *  our own line at 9. Verified that no file in the tree carries the word "copyright" on lines 9-14 for
+     *  any other reason, so widening the window cannot pick up unrelated prose. */
+    private static final int HEADER_SCAN_LINES = 14;
 
     /** Strips the comment framing and the trailing licence prose, leaving the bare claim. */
     private static String normalise(String line) {
@@ -121,10 +132,12 @@ public class CopyrightHeaderTester {
                     try {
                         List<String> lines = Files.readAllLines(p, StandardCharsets.UTF_8);
                         int limit = Math.min(HEADER_SCAN_LINES, lines.size());
+                        // EVERY notice line, not just the first: a mixed file carries two, and stopping at
+                        // the first left the second completely unchecked - which is exactly how a
+                        // half-merged second notice would slip through.
                         for (int i = 0; i < limit; i++) {
                             if (lines.get(i).toLowerCase().contains("copyright")) {
                                 found.add(new Header(root.relativize(p), normalise(lines.get(i))));
-                                break;
                             }
                         }
                     } catch (IOException e) {
@@ -177,6 +190,81 @@ public class CopyrightHeaderTester {
                 + " file must use:\n      " + OURS
                 + "\n    If a claim below is genuinely correct, add it to ALLOWED_CLAIMS.\n\n    "
                 + String.join("\n    ", bad));
+    }
+
+    /** NOTICE.md maps files to licences for anyone reading the jar or the repo, and it is the only place
+     *  the three-licence split is stated in one piece. A file whose header says MMPL but which NOTICE.md
+     *  does not list is a file nobody can discover the terms of without grepping the tree - and the
+     *  reverse (a listed file that has since lost its notice) is a stale legal claim. Neither is
+     *  detectable by reading either artefact alone, so pin them to each other.
+     *
+     * <p>This is the guard the 2026-08 licensing verdict identified as missing: {@link #collect} only
+     * validates notices that EXIST, never notices that SHOULD exist, which is how
+     * {@code ItemRedstoneBoard} shipped with upstream's notice dropped and a green test suite. */
+    @Test
+    public void noticeFileListsEveryMmplFile() {
+        Path root = repoRoot();
+        Set<String> inTree = new java.util.TreeSet<>();
+        for (String set : new String[] { "src/main/java", "src/test/java" }) {
+            Path base = root.resolve(set);
+            if (!Files.isDirectory(base)) {
+                continue;
+            }
+            try (Stream<Path> files = Files.walk(base)) {
+                files.filter(p -> p.toString().endsWith(".java")).forEach(p -> {
+                    try {
+                        List<String> lines = Files.readAllLines(p, StandardCharsets.UTF_8);
+                        String head = String.join("\n", lines.subList(0, Math.min(HEADER_SCAN_LINES, lines.size())));
+                        if (head.contains(MMPL_MARKER)) {
+                            inTree.add(root.relativize(p).toString().replace('\\', '/'));
+                        }
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                });
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+        Assertions.assertFalse(inTree.isEmpty(),
+            "walked the tree but found no MMPL-noticed files at all - the marker string must have drifted");
+
+        Path notice = root.resolve("NOTICE.md");
+        Assertions.assertTrue(Files.isRegularFile(notice),
+            "NOTICE.md is missing. The jar ships it; it is what tells a reader which of the three licences"
+                + " covers which file.");
+        String noticeText;
+        try {
+            noticeText = Files.readString(notice, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+
+        List<String> unlisted = new ArrayList<>();
+        for (String path : inTree) {
+            if (!noticeText.contains(path)) {
+                unlisted.add(path);
+            }
+        }
+        // The reverse direction: a path NOTICE.md claims is MMPL but which no longer carries the notice.
+        List<String> stale = new ArrayList<>();
+        Matcher m = NOTICE_PATH.matcher(noticeText);
+        while (m.find()) {
+            String path = m.group();
+            if (!inTree.contains(path)) {
+                stale.add(path);
+            }
+        }
+
+        Assertions.assertTrue(unlisted.isEmpty() && stale.isEmpty(),
+            "NOTICE.md is out of sync with the copyright headers in the tree.\n"
+                + (unlisted.isEmpty() ? ""
+                    : "    Carry an MMPL notice but are NOT listed in NOTICE.md:\n      "
+                        + String.join("\n      ", unlisted) + "\n")
+                + (stale.isEmpty() ? ""
+                    : "    Listed in NOTICE.md but no longer carry an MMPL notice:\n      "
+                        + String.join("\n      ", stale) + "\n")
+                + "    Update NOTICE.md (including the file count in its prose) to match.");
     }
 
     /** A file may not credit this fork and upstream on the SAME line - that is a half-applied edit.

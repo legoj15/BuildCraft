@@ -30,6 +30,7 @@ import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.BCRoboticsPlugs;
 import buildcraft.robotics.DockingStationPipe;
 import buildcraft.robotics.RobotStationPluggable;
+import buildcraft.robotics.ai.AIRobotUnload;
 import buildcraft.robotics.entity.EntityRobot;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
@@ -231,6 +232,48 @@ public class PickerCarrierTester {
                     helper.succeed();
                 },
                 "the wooden supply station never resolved the chest below it");
+    }
+
+    // ---------- unload path (station item output) ----------
+
+    /** A docked robot unloads into its station's pipe even when the pipe has NO connection on the face
+     *  opposite the station — a lone dead-end pipe is a perfectly good unload target. 7.1.x achieved
+     *  this with a synthetic station-side {@code IInjectable} whose {@code canInjectItems} returned true
+     *  unconditionally and which pushed the {@code TravelingItem} straight into the transport; exposing
+     *  the raw {@code PipeFlowItems} instead inherits its {@code canInjectItems} =
+     *  {@code pipe.isConnected(from)}, so with the station on the UP face every unload bails unless
+     *  something happens to be connected to the pipe's DOWN face. That makes the picker's "unloads them
+     *  at a station" silently never happen at any normal dead-end dock — it only works when a connection
+     *  sits exactly opposite the station, which is the geometry the carrier E2E happens to build. */
+    public static void unloadStationDoesNotNeedAnOppositeFaceConnection(GameTestHelper helper) {
+        EntityArenaUtil.forceLoadEntityArena(helper);
+        BlockPos pipeRel = new BlockPos(2, 3, 4);
+        BlockPos robotRel = new BlockPos(2, 4, 4);
+
+        installStationOnPlainPipe(helper, pipeRel, Direction.UP);
+
+        EntityArenaUtil.tickUntil(helper, 120,
+                () -> stationAt(helper, pipeRel, Direction.UP) != null,
+                () -> {
+                    DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
+                    EntityRobot robot = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                    station.takeAsMain(robot);
+                    robot.dock(station);
+                    robot.setInventoryStack(0, new ItemStack(Items.DIAMOND, 7));
+
+                    helper.assertTrue(AIRobotUnload.unload(robot, station, false),
+                            "the unload dry-run must accept a dead-end pipe — a robot docked at a lone "
+                                    + "pipe's station is a valid item source regardless of what the pipe "
+                                    + "connects to (7.1.x's station-side IInjectable never consulted the "
+                                    + "network)");
+                    helper.assertTrue(AIRobotUnload.unload(robot, station, true),
+                            "a docked robot must be able to unload into a dead-end pipe");
+                    helper.assertTrue(robot.getInventoryStack(0).isEmpty(),
+                            "the unload must actually take the cargo, not just report success");
+                    robot.discard();
+                    helper.succeed();
+                },
+                "the station never registered");
     }
 
     // ---------- carrier E2E ----------

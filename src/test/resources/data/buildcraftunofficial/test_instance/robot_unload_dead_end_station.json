@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_unload_dead_end_station",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 140,
+    "setup_ticks": 0,
+    "required": true
+}

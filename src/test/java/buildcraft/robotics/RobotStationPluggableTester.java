@@ -48,7 +48,7 @@ import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
-import buildcraft.transport.pipe.flow.PipeFlowItems;
+import buildcraft.api.transport.IInjectable;
 import buildcraft.transport.tile.TilePipeHolder;
 
 /**
@@ -413,13 +413,20 @@ public class RobotStationPluggableTester {
                     .getRegistry(helper.getLevel()).getStation(absPos, Direction.DOWN);
 
             Object output = station.getItemOutput();
-            helper.assertTrue(output instanceof PipeFlowItems, "an item pipe's flow must be exposed as the station's item output");
+            helper.assertTrue(output instanceof IInjectable,
+                    "an item pipe's station must expose its item output as an IInjectable");
 
-            // insertItemsForce (unlike injectItem) doesn't gate on pipe.isConnected(from) — this lone
-            // pipe has no neighbours to connect to, so this is the right call to smoke-test the wiring
-            // without also standing up a second connected pipe just to satisfy an unrelated gate.
-            PipeFlowItems flow = (PipeFlowItems) output;
-            flow.insertItemsForce(new ItemStack(Items.EMERALD, 4), Direction.DOWN.getOpposite(), null, 0.04);
+            // The output must accept items through injectItem itself, on this LONE pipe with no
+            // neighbours: a docked robot is a valid item source by virtue of being docked, so the
+            // station's injectable must not inherit PipeFlowItems.canInjectItems (= isConnected(from)),
+            // which would refuse everything here. 7.1.x used a synthetic station-side IInjectable whose
+            // canInjectItems returned true unconditionally; if this test fails, AIRobotUnload can never
+            // fire at a dead-end dock.
+            IInjectable injectable = (IInjectable) output;
+            ItemStack leftover = injectable.injectItem(new ItemStack(Items.EMERALD, 4), true,
+                    Direction.DOWN.getOpposite(), null, 0.04);
+            helper.assertTrue(leftover.isEmpty(),
+                    "the station output must accept the whole stack on a lone pipe, left over: " + leftover);
             helper.succeed();
         });
     }

@@ -75,13 +75,45 @@ public class DockingStationPipe extends DockingStation {
         return Collections.emptyList();
     }
 
+    /** 7.1.x's station-side injectable, which the port must synthesize rather than inherit: a robot
+     *  docked at this station is a valid item source BY VIRTUE OF BEING DOCKED, so this
+     *  {@code canInjectItems} never consults the pipe network — 7.1.x returned true unconditionally and
+     *  pushed the {@code TravelingItem} straight into the transport. Exposing the raw
+     *  {@code PipeFlowItems} instead would inherit its {@code canInjectItems} =
+     *  {@code pipe.isConnected(from)}, which refuses everything whenever the pipe has no connection on
+     *  the face opposite the station — i.e. every ordinary dead-end dock, so a picker's "unloads them
+     *  at a station" silently never happened. Injection goes through {@code insertItemsForce}, the
+     *  modern equivalent of 7.1.x's direct {@code PipeTransportItems.injectItem(item, from)}. */
+    private final IInjectable itemOutput = new IInjectable() {
+        @Override
+        public boolean canInjectItems(Direction from) {
+            IPipeHolder h = getHolder();
+            return h != null && h.getPipe() != null && h.getPipe().getFlow() instanceof IFlowItems;
+        }
+
+        @Override
+        public net.minecraft.world.item.ItemStack injectItem(net.minecraft.world.item.ItemStack stack,
+                boolean doAdd, Direction from, net.minecraft.world.item.DyeColor colour, double speed) {
+            IPipeHolder h = getHolder();
+            if (h == null || h.getPipe() == null || !(h.getPipe().getFlow() instanceof IFlowItems flow)) {
+                return stack;
+            }
+            if (doAdd && !stack.isEmpty()) {
+                flow.insertItemsForce(stack.copy(), from, colour, speed);
+            }
+            // Fully accepted, as 7.1.x's wrapper reported stackSize accepted — including on the dry-run,
+            // where the modern leftover-convention answer to "how much would you take" is "all of it".
+            return net.minecraft.world.item.ItemStack.EMPTY;
+        }
+    };
+
     @Override
     public IInjectable getItemOutput() {
         IPipeHolder h = getHolder();
-        if (h == null || h.getPipe() == null) {
+        if (h == null || h.getPipe() == null || !(h.getPipe().getFlow() instanceof IFlowItems)) {
             return null;
         }
-        return h.getPipe().getFlow() instanceof IFlowItems items ? items : null;
+        return itemOutput;
     }
 
     @Override

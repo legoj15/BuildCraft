@@ -115,6 +115,7 @@ public class AIRobotUnload extends AIRobot {
 
     @Override
     public long getPowerCost() {
-        return 10;
+        // 7.1.x charged 10 RF per tick; at the canonical 1 MJ = 10 RF bridge that is 10 * 100_000 micro-MJ.
+        return 1_000_000;
     }
 }

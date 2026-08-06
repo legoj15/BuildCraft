@@ -9,7 +9,9 @@ package buildcraft.robotics;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,6 +86,12 @@ public class BCRobotics {
         // registered by the name its NBT saves, with the 7.1.x legacy class name for old-save migration.
         registerAIsAndBoards();
 
+        // The picker's shared targettedItems set is cleared on every server start — the 7.1.x wiring
+        // (BuildCraftRobotics called BoardRobotPicker.onServerStart from its server-start handler) that the
+        // port originally dropped. Without it, UUIDs leaked by an interrupted fetch (chunk unload mid-fetch
+        // drops the FetchItem without end()) would blacklist their items for the whole JVM session.
+        NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> BoardRobotPicker.onServerStart());
+
         LOGGER.info("BuildCraft Robotics initialized");
     }
 
@@ -96,9 +104,9 @@ public class BCRobotics {
         }
     }
 
-    /** Registers the Ph4 AI tree and the picker/carrier boards. Board costs are 7.1.x's, chosen not derived
-     *  (8000 micro-MJ each, the two green boards); the empty board was already seeded by
-     *  {@code ImplRedstoneBoardRegistry}. */
+    /** Registers the Ph4 AI tree and the picker/carrier boards. Board costs are 7.1.x's 8000 RF each (the two
+     *  green boards), converted to micro-MJ at the canonical 1 MJ = 10 RF bridge (8000 * 100_000); the empty
+     *  board was already seeded by {@code ImplRedstoneBoardRegistry}. */
     private static void registerAIsAndBoards() {
         RobotManager.registerAIRobot(AIRobotMain.class, "aiRobotMain", "buildcraft.core.robots.AIRobotMain");
         RobotManager.registerAIRobot(AIRobotRecharge.class, "aiRobotRecharge", "buildcraft.core.robots.AIRobotRecharge");
@@ -133,7 +141,7 @@ public class BCRobotics {
         RobotManager.registerAIRobot(BoardRobotCarrier.class, "boardRobotCarrier",
                 "buildcraft.core.robots.boards.BoardRobotCarrier");
 
-        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotPickerNBT.INSTANCE, 8000L);
-        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotCarrierNBT.INSTANCE, 8000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotPickerNBT.INSTANCE, 800_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotCarrierNBT.INSTANCE, 800_000_000L);
     }
 }

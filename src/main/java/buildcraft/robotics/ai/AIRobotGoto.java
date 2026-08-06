@@ -49,6 +49,8 @@ public abstract class AIRobotGoto extends AIRobot {
 
     @Override
     public long getPowerCost() {
-        return 3;
+        // 7.1.x charged 3 RF per tick; at the canonical 1 MJ = 10 RF bridge (MjRfConversion) that is
+        // 3 * 100_000 = 300_000 micro-MJ.
+        return 300_000;
     }
 }

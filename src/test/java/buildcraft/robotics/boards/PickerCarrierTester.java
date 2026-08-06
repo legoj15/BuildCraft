@@ -152,6 +152,12 @@ public class PickerCarrierTester {
             helper.assertTrue(robot.position().distanceToSqr(itemPos) < 2.25,
                     "the picker must fly to the dropped item: robot at " + robot.position()
                             + " but item at " + itemPos);
+            // And the drop must be CONSUMED from the world, not left behind: the pick's taken-count used
+            // to read the transactor-mutated stack (always 0), so the robot gained the diamond while the
+            // drop stayed intact and the same item was re-fetched forever — unbounded duplication.
+            helper.assertTrue(item.isRemoved(),
+                    "the picked-up drop must be removed from the world — a surviving item entity means "
+                            + "the pick duplicated the stack instead of consuming it");
             // Remove the robot before the test ends: the picker's 250-block fetch range is inherent to the
             // board, and a robot left alive would keep scanning — and flying toward — items in neighbouring
             // tests' arenas. Discarding it here (and running this test in its own private environment)
@@ -201,6 +207,15 @@ public class PickerCarrierTester {
                     helper.assertTrue(ItemStack.matches(robot[0].getInventoryStack(0),
                             new ItemStack(Items.DIAMOND, 5)),
                             "the carrier must load the diamonds from the supply chest into its inventory");
+                    // Same false-positive guard as the picker test: the load reads the chest from the
+                    // STATION's position, so a regression that docks the robot without flying would load
+                    // fine while the robot sat at its spawn. A genuinely docked robot is snapped to the
+                    // station's face centre every tick.
+                    Vec3 faceCentre = Vec3.atCenterOf(helper.absolutePos(pipeRel)).add(0, 0.5, 0);
+                    helper.assertTrue(robot[0].position().distanceToSqr(faceCentre) < 2.25,
+                            "the carrier must FLY to and dock at the supply station, not load from its "
+                                    + "spawn: robot at " + robot[0].position() + " but station face at "
+                                    + faceCentre);
                     robot[0].discard();
                     helper.succeed();
                 },

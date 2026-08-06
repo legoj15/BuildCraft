@@ -80,6 +80,7 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.ai.AIRobotMain;
 import buildcraft.robotics.ai.AIRobotShutdown;
+import buildcraft.robotics.ai.AIRobotSleep;
 import buildcraft.robotics.item.ItemRobot;
 
 /**
@@ -946,10 +947,16 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     // ── Sleep / charging (Decision 6) ───────────────────────────────────────
 
     /** 7.1.x called this {@code isActive()} and returned true when the robot was ASLEEP — the inverse of its
-     *  name. Renamed here to say what it means. A robot with no AI at all (the whole of Ph3) is not sleeping;
-     *  Ph4 makes this "the active AI is a sleep or shutdown AI". */
+     *  name. Renamed here to say what it means. True when the deepest active AI is a sleep or shutdown AI —
+     *  the Ph4 implementation of the Ph3-stub javadoc, matching 7.1.x's
+     *  {@code mainAI.getActiveAI() instanceof AIRobotSleep || instanceof AIRobotShutdown}. Only ever called
+     *  server-side (the SLEEPING synced flag pushes the result to the client). */
     public boolean isSleeping() {
-        return false;
+        if (mainAI == null) {
+            return false;
+        }
+        AIRobot active = mainAI.getActiveAI();
+        return active instanceof AIRobotSleep || active instanceof AIRobotShutdown;
     }
 
     @Override

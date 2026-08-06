@@ -15,8 +15,8 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 
 /** Undocks a robot and lets it fall to the ground, parking it where it stops. The shutdown entry point —
- *  {@code EntityRobot.shutdown(String)} starts this AI, and on arrival {@code EntityRobot.convertToItems}
- *  turns the robot back into drops. */
+ *  {@code EntityRobot.shutdown(String)} starts this AI. The parked robot stays an entity (7.1.x behaviour
+ *  too); it only converts back into drops when a player hits it with an attack or wrench. */
 public class AIRobotShutdown extends AIRobot {
     private int skip;
     private double motionX;

@@ -55,6 +55,13 @@ public class AIRobotGotoStationAndUnload extends AIRobot {
                 setSuccess(false);
                 terminate();
             }
+        } else if (ai instanceof AIRobotUnload) {
+            // The unload's own outcome decides the composite's — without this branch the default success
+            // (true) was reported even when the robot still carried everything (station output filled
+            // between the search dry-run and the arrival), so the boards re-entered fetch/unload instead
+            // of sleeping. Mirrors the load twin's propagation in AIRobotGotoStationAndLoad.
+            setSuccess(ai.success());
+            terminate();
         }
     }
 }

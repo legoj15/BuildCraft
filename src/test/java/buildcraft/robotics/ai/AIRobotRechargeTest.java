@@ -39,11 +39,22 @@ public class AIRobotRechargeTest {
     }
 
     @Test
-    public void theThresholdIsTheHeadroomNotAHardNumber() {
-        long max = IRobotAccess.MAX_POWER;
-        long headroom = max - max / 200;
-        // 7.1.x used a hard 500 RF; Decision 3's MAX_POWER/200 headroom is different and load-bearing.
-        Assertions.assertNotEquals(500L, headroom, "the headroom is a proportion of the battery, not a constant");
+    public void theThresholdIsExactlyTheBatteryProportion() {
+        // At the current pin MAX_POWER/200 is 50 MJ = 500 RF at the 1 MJ = 10 RF bridge — numerically the
+        // SAME as 7.1.x's hard 500, so the distinction is the derivation, not the number: the proportion
+        // scales if MAX_POWER is ever re-pinned, where a literal would not. Pin the exact threshold
+        // behaviourally (the two tests above only bound it to (MAX_POWER/2, MAX_POWER]).
+        long threshold = IRobotAccess.MAX_POWER - IRobotAccess.MAX_POWER / 200;
+
+        robot.getBattery().setStored(threshold - 1);
+        TrackedRecharge justBelow = new TrackedRecharge(robot);
+        justBelow.update();
+        Assertions.assertFalse(justBelow.ended, "one unit below the threshold keeps charging");
+
+        robot.getBattery().setStored(threshold);
+        TrackedRecharge at = new TrackedRecharge(robot);
+        at.update();
+        Assertions.assertTrue(at.ended, "at the threshold the recharge terminates");
     }
 
     /** Records termination through {@code end()}. */

@@ -254,10 +254,11 @@ public class BCCore {
         buildcraft.api.crops.CropManager.setDefaultHandler(buildcraft.lib.crops.CropHandlerPlantable.INSTANCE);
 
         // The "soft" world property the robotics pathfinder queries via BuildCraftAPI.isSoftBlock. 7.1.x
-        // registered this in BuildCraftCore's preinit; the port kept the API lookup but dropped the
-        // registration, so the first robot pathfind NPE'd on the null "soft" property. Mirror upstream:
-        // fluids and plantables wholesale (1.21.1's plant umbrella is BushBlock; 1.21.10+ widened it to
-        // VegetationBlock), plus snow/vine/fire, and the property itself.
+        // registered this in BuildCraftCore's postInit (FMLPostInitializationEvent); the port kept the API
+        // lookup but dropped the registration, so the first robot pathfind NPE'd on the null "soft" property.
+        // Mirror upstream: fluids and plantables wholesale (1.21.1's plant umbrella is BushBlock; 1.21.10+
+        // widened it to VegetationBlock), plus snow/vine/fire and the cane/chorus the old IPlantable check
+        // covered, and the property itself.
         for (Block block : BuiltInRegistries.BLOCK) {
             //? if >=1.21.10 {
             if (block instanceof LiquidBlock || block instanceof net.minecraft.world.level.block.VegetationBlock) {
@@ -270,6 +271,11 @@ public class BCCore {
         buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.SNOW);
         buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.VINE);
         buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.FIRE);
+        // 1.12.2's IPlantable covered these two; neither is in the BushBlock/VegetationBlock tree on any
+        // node, so they need the explicit listing or robots pathfind around them.
+        buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.SUGAR_CANE);
+        buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.CHORUS_FLOWER);
+        buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.CHORUS_PLANT);
         buildcraft.api.core.BuildCraftAPI.registerWorldProperty("soft", new WorldPropertyIsSoft());
 
         MarkerCache.registerCache(VolumeCache.INSTANCE);

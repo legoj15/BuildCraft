@@ -60,7 +60,11 @@ public class AIRobotFetchItem extends AIRobot {
                 ItemStack entityStack = target.getItem();
                 ItemStack copy = entityStack.copy();
                 ItemStack overflow = robot.getTransactor().insert(copy, false, false);
-                int taken = copy.getCount() - overflow.getCount();
+                // The transactor MUTATES the stack it is handed (shrinks it to the leftover), so the taken
+                // count must come from the untouched original minus the leftover — reading copy after the
+                // insert would yield 0 and leave the drop intact while the robot's inventory grew (item
+                // duplication: the same drop re-fetched forever).
+                int taken = entityStack.getCount() - overflow.getCount();
 
                 entityStack.shrink(taken);
                 if (entityStack.isEmpty()) {
@@ -160,6 +164,7 @@ public class AIRobotFetchItem extends AIRobot {
 
     @Override
     public long getPowerCost() {
-        return 15;
+        // 7.1.x charged 15 RF per tick; at the canonical 1 MJ = 10 RF bridge that is 15 * 100_000 micro-MJ.
+        return 1_500_000;
     }
 }

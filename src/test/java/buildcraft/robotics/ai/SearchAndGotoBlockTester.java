@@ -24,10 +24,12 @@ import buildcraft.robotics.entity.EntityRobot;
  *  ({@code robot.move(MoverType.SELF, delta)}) after each cycle, the way the entity tick would. The arrival
  *  gate is 1.5 — the same radius the picker E2E uses for a reached item — so it passes with the one-cell
  *  margin to spare. This test also pins the double-precision flight targets: the game-test arenas sit at
- *  |z| ≈ 1.4e7, where float's ulp is 1.0 and the +0.5 cell-centre offset would be dropped. The test runs in
- *  a PRIVATE test environment (the manifest's "environment" field): the search scans 64 blocks, and in the
- *  shared minecraft:default world a neighbouring test's leftover oak log — two cells away — is a legal,
- *  closer target than the log this test places, so the flight must be hermetic. */
+ *  |z| ≈ 1.4e7, where float's ulp is 1.0 and the +0.5 cell-centre offset would be dropped. The filter is
+ *  pinned to the log's own position: the PRIVATE test environment (the manifest's "environment" field)
+ *  separates this test from the default-environment tests, but NOT from the sibling
+ *  {@link AIRobotSearchBlock} test — their arenas land one cell (6 blocks) apart in the grid, and each
+ *  places an identical oak log at the same relative (5,2,3). Without the pin, the sibling's log is a legal
+ *  closer target for this test's 64-block search (and vice versa), so the flight would not be hermetic. */
 public class SearchAndGotoBlockTester {
 
     private static final long SEEDED_CHARGE = 5000L * MjAPI.MJ;
@@ -44,8 +46,9 @@ public class SearchAndGotoBlockTester {
         robot.setPos(spawn.x, spawn.y, spawn.z);
         robot.getBattery().addPower(SEEDED_CHARGE, false);
 
+        BlockPos logPos = helper.absolutePos(logRel);
         AIRobotSearchAndGotoBlock ai = new AIRobotSearchAndGotoBlock(robot, false,
-                pos -> level.getBlockState(pos).is(Blocks.OAK_LOG));
+                pos -> level.getBlockState(pos).is(Blocks.OAK_LOG) && pos.equals(logPos));
 
         try {
             // A few search cycles (synchronous pathfinding) + ~40 goto cycles at 0.1 blocks/cycle over 4

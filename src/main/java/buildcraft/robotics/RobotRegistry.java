@@ -94,6 +94,11 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
     private final Map<Long, Set<ResourceId>> resourcesTakenByRobot = new HashMap<>();
     private final Map<Long, Set<StationIndex>> stationsTakenByRobot = new HashMap<>();
 
+    // Runtime-only: block reservations shared by the dimension's concurrent PathFindingSearches. Never
+    // persisted — a save/load cycle re-derives them as the searches resume (7.1.x's static
+    // dimension-keyed table, now per-SavedData-instance since this registry IS the dimension).
+    private final Set<BlockPos> blockReservations = new HashSet<>();
+
     public RobotRegistry(@Nullable ServerLevel level) {
         this.world = level;
     }
@@ -183,6 +188,11 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
     @Override
     public EntityRobotBase getLoadedRobot(long id) {
         return robotsLoaded.get(id);
+    }
+
+    @Override
+    public Set<BlockPos> getBlockReservations() {
+        return blockReservations;
     }
 
     @Override

@@ -14,6 +14,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
+import buildcraft.api.core.IFluidHandlerAdv;
 import buildcraft.api.core.IZone;
 import buildcraft.api.inventory.IItemTransactor;
 import buildcraft.api.mj.MjAPI;
@@ -168,6 +169,18 @@ public interface IRobotAccess {
     boolean hasFreeSlot();
 
     ItemStack receiveItem(BlockEntity tile, ItemStack stack);
+
+    /** The robot's internal fluid tank (the pump board's cargo), exposed as an {@link IFluidHandlerAdv} —
+     *  the fluid twin of {@link #getTransactor()}. {@code EntityRobotBase} implements the interface itself,
+     *  so the concrete robot answers with {@code this}. */
+    IFluidHandlerAdv getFluidHandler();
+
+    /** Melee: attack {@code target} with whatever the robot is holding (the knight/butcher's only way to
+     *  hurt — the robot has no player-grade hit pipeline of its own). 7.1.x reached the same through the
+     *  entity's {@code attackEntityFrom}; the modern damage formula (base + held item's ATTACK_DAMAGE
+     *  modifier + sharpness, with knockback/fire and durability) lives in
+     *  {@link EntityRobotBase#attackTargetEntityWithCurrentItem}. */
+    void attackTargetEntityWithCurrentItem(Entity target);
 
     // ── Pathing hints ──
 

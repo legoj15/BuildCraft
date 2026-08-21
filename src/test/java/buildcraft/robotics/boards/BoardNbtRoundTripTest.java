@@ -42,6 +42,56 @@ public class BoardNbtRoundTripTest extends VanillaSetupBaseTester {
                 "a carrier stack survives a write→read cycle and resolves to the carrier board");
     }
 
+    // Ph5: the eight work boards. Red until the registration commit wires them into the board registry.
+
+    @Test
+    public void lumberjackStackResolvesBackToTheLumberjack() {
+        Assertions.assertSame(BoardRobotLumberjackNBT.INSTANCE, roundTrip(BoardRobotLumberjackNBT.INSTANCE),
+                "a lumberjack stack survives a write→read cycle and resolves to the lumberjack board");
+    }
+
+    @Test
+    public void minerStackResolvesBackToTheMiner() {
+        Assertions.assertSame(BoardRobotMinerNBT.INSTANCE, roundTrip(BoardRobotMinerNBT.INSTANCE),
+                "a miner stack survives a write→read cycle and resolves to the miner board");
+    }
+
+    @Test
+    public void harvesterStackResolvesBackToTheHarvester() {
+        Assertions.assertSame(BoardRobotHarvesterNBT.INSTANCE, roundTrip(BoardRobotHarvesterNBT.INSTANCE),
+                "a harvester stack survives a write→read cycle and resolves to the harvester board");
+    }
+
+    @Test
+    public void planterStackResolvesBackToThePlanter() {
+        Assertions.assertSame(BoardRobotPlanterNBT.INSTANCE, roundTrip(BoardRobotPlanterNBT.INSTANCE),
+                "a planter stack survives a write→read cycle and resolves to the planter board");
+    }
+
+    @Test
+    public void farmerStackResolvesBackToTheFarmer() {
+        Assertions.assertSame(BoardRobotFarmerNBT.INSTANCE, roundTrip(BoardRobotFarmerNBT.INSTANCE),
+                "a farmer stack survives a write→read cycle and resolves to the farmer board");
+    }
+
+    @Test
+    public void pumpStackResolvesBackToThePump() {
+        Assertions.assertSame(BoardRobotPumpNBT.INSTANCE, roundTrip(BoardRobotPumpNBT.INSTANCE),
+                "a pump stack survives a write→read cycle and resolves to the pump board");
+    }
+
+    @Test
+    public void knightStackResolvesBackToTheKnight() {
+        Assertions.assertSame(BoardRobotKnightNBT.INSTANCE, roundTrip(BoardRobotKnightNBT.INSTANCE),
+                "a knight stack survives a write→read cycle and resolves to the knight board");
+    }
+
+    @Test
+    public void butcherStackResolvesBackToTheButcher() {
+        Assertions.assertSame(BoardRobotButcherNBT.INSTANCE, roundTrip(BoardRobotButcherNBT.INSTANCE),
+                "a butcher stack survives a write→read cycle and resolves to the butcher board");
+    }
+
     @Test
     public void bareStackReadsAsTheEmptyBoard() {
         ItemStack bare = new ItemStack(buildcraft.robotics.BCRoboticsItems.REDSTONE_BOARD.get());

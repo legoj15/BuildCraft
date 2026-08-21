@@ -7,6 +7,8 @@ package buildcraft.robotics.ai;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -17,7 +19,18 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+//? if >=1.21.10 {
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
+//?} else {
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+//?}
+
 import buildcraft.api.boards.RedstoneBoardRobot;
+import buildcraft.api.core.IFluidFilter;
+import buildcraft.api.core.IFluidHandlerAdv;
 import buildcraft.api.core.IZone;
 import buildcraft.api.inventory.IItemTransactor;
 import buildcraft.api.mj.MjAPI;
@@ -28,20 +41,46 @@ import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceId;
 
-/** A whole robot, as far as a Ph4 AI test cares: a real {@link MjBattery}, a settable position and docking
- *  station, and a registry stub whose station list is empty (so the search/load AIs unwind without a world).
- *  Everything else returns the inert value an honest test double should. */
-class MockRobotAccess implements IRobotAccess {
+/** A whole robot, as far as an AI test cares: a real {@link MjBattery}, a settable position and docking
+ *  station, a settable held item, a real single-slot fluid tank (Ph5), and a registry stub whose station
+ *  list is empty (so the search/load AIs unwind without a world). Everything else returns the inert value
+ *  an honest test double should. Public (not package-private) because the Ph5 board tests in
+ *  {@code buildcraft.robotics.boards} construct boards against it. */
+public class MockRobotAccess implements IRobotAccess {
 
     private static final long TEST_CAPACITY = 10_000L * MjAPI.MJ;
 
     private final MjBattery battery = new MjBattery(TEST_CAPACITY);
     private Vec3 position = Vec3.ZERO;
     private DockingStation dockingStation;
+    private ItemStack heldItem = ItemStack.EMPTY;
+    private final RobotFluidTank fluidTank = new RobotFluidTank(4000);
 
-    MockRobotAccess() {
+    public MockRobotAccess() {
         battery.addPower(TEST_CAPACITY, false);
     }
+
+    public void setHeldItem(ItemStack stack) {
+        heldItem = stack;
+    }
+
+    //? if >=1.21.10 {
+    void setFluid(FluidResource resource, int amount) {
+        fluidTank.set(0, resource, amount);
+    }
+
+    FluidResource getFluidResource() {
+        return fluidTank.getResource(0);
+    }
+    //?} else {
+    void setFluid(FluidStack stack) {
+        fluidTank.set(0, stack, stack.getAmount());
+    }
+
+    FluidStack getFluidStack() {
+        return fluidTank.getFluidInTank(0);
+    }
+    //?}
 
     void setPosition(Vec3 pos) {
         position = pos;
@@ -103,11 +142,21 @@ class MockRobotAccess implements IRobotAccess {
 
     @Override
     public ItemStack getHeldItem() {
-        return ItemStack.EMPTY;
+        return heldItem;
     }
 
     @Override
     public void setItemInUse(ItemStack stack) {
+        heldItem = stack;
+    }
+
+    @Override
+    public IFluidHandlerAdv getFluidHandler() {
+        return fluidTank;
+    }
+
+    @Override
+    public void attackTargetEntityWithCurrentItem(Entity target) {
     }
 
     @Override
@@ -267,7 +316,49 @@ class MockRobotAccess implements IRobotAccess {
         public long getNextRobotId() {
             return 1;
         }
+
+        @Override
+        public Set<BlockPos> getBlockReservations() {
+            // Mutable: a search AI pathfinds against the set it is given, reserving cells in place.
+            return new HashSet<>();
+        }
     }
+
+    /** The mock robot's fluid tank — a real single-slot tank, forked on the same cliff as
+     *  {@link IFluidHandlerAdv}: the Transfer API on 1.21.10+, the classic {@code IFluidHandler}
+     *  {@code FluidTank} on 1.21.1. */
+    //? if >=1.21.10 {
+    static class RobotFluidTank extends FluidStacksResourceHandler implements IFluidHandlerAdv {
+        RobotFluidTank(int capacity) {
+            super(1, capacity);
+        }
+
+        @Override
+        public int extract(IFluidFilter filter, int maxDrain, TransactionContext tx) {
+            FluidResource res = getResource(0);
+            if (res == null || res.isEmpty() || !filter.matches(res.toStack(getAmountAsInt(0)))) {
+                return 0;
+            }
+            return extract(0, res, maxDrain, tx);
+        }
+    }
+    //?} else {
+    static class RobotFluidTank extends FluidTank implements IFluidHandlerAdv {
+        RobotFluidTank(int capacity) {
+            super(capacity);
+        }
+
+        @Override
+        public int extract(IFluidFilter filter, int maxDrain, boolean simulate) {
+            FluidStack inTank = getFluidInTank(0);
+            if (inTank.isEmpty() || !filter.matches(inTank)) {
+                return 0;
+            }
+            return drain(maxDrain, simulate ? net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE
+                    : net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE).getAmount();
+        }
+    }
+    //?}
 
     @Override
     public long getRobotId() {

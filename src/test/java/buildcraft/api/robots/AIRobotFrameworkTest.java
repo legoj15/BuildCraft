@@ -19,6 +19,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
+import buildcraft.api.core.IFluidHandlerAdv;
 import buildcraft.api.core.IStackFilter;
 import buildcraft.api.core.IZone;
 import buildcraft.api.mj.MjAPI;
@@ -477,6 +478,16 @@ public class AIRobotFrameworkTest {
 
         @Override
         public void setItemInUse(ItemStack stack) {
+        }
+
+        // The Ph5 fluid/attack seams: the framework tests never drive them, so inert answers are honest.
+        @Override
+        public IFluidHandlerAdv getFluidHandler() {
+            return null;
+        }
+
+        @Override
+        public void attackTargetEntityWithCurrentItem(Entity target) {
         }
 
         @Override

@@ -117,6 +117,23 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
 
     public abstract IRobotRegistry getRegistry();
 
+    /** The robot's fluid tank, exposed to the pump board's AIs. The concrete robot implements
+     *  {@link IFluidHandlerAdv} itself, so the answer is {@code this}. */
+    @Override
+    public IFluidHandlerAdv getFluidHandler() {
+        return this;
+    }
+
+    /** Melee with the held item (the knight/butcher's only way to hurt).
+     *
+     *  <p>Red-baseline skeleton: the real damage pipeline (base 1.0 + the held item's ATTACK_DAMAGE
+     *  attribute modifier + sharpness, knockback/fire aspect, {@code MOB_ATTACK} source, durability
+     *  wear) lands in the foundations commit. */
+    @Override
+    public void attackTargetEntityWithCurrentItem(Entity target) {
+        // Red-baseline skeleton — real melee implementation in the foundations commit.
+    }
+
     public abstract void releaseResources();
 
     public abstract ItemStack receiveItem(BlockEntity tile, ItemStack stack);

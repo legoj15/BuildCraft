@@ -40,7 +40,13 @@ import buildcraft.lib.net.MessageDebugResponse;
 import buildcraft.lib.net.MessageMarker;
 import buildcraft.core.marker.PathCache;
 import buildcraft.core.marker.VolumeCache;
+import buildcraft.core.properties.WorldPropertyIsDirt;
+import buildcraft.core.properties.WorldPropertyIsFluidSource;
+import buildcraft.core.properties.WorldPropertyIsHarvestable;
+import buildcraft.core.properties.WorldPropertyIsOre;
+import buildcraft.core.properties.WorldPropertyIsReplaceable;
 import buildcraft.core.properties.WorldPropertyIsSoft;
+import buildcraft.core.properties.WorldPropertyIsWood;
 import buildcraft.lib.BCLibItems;
 import buildcraft.lib.item.ItemGuide;
 
@@ -282,6 +288,20 @@ public class BCCore {
         // cocoa here is parity, not a gap.
         buildcraft.api.core.BuildCraftAPI.softBlocks.add(Blocks.CACTUS);
         buildcraft.api.core.BuildCraftAPI.registerWorldProperty("soft", new WorldPropertyIsSoft());
+
+        // The Ph5 board world properties. Red-baseline stubs (matches() == false) until the foundations
+        // commit lands the real implementations; registering them now keeps the boards' property lookups
+        // non-null so the phase's tests fail on assertions, not on a missing-property NPE. "ore" is one
+        // instance per pickaxe tier, exactly as 7.1.x registered it.
+        buildcraft.api.core.BuildCraftAPI.registerWorldProperty("wood", new WorldPropertyIsWood());
+        buildcraft.api.core.BuildCraftAPI.registerWorldProperty("harvestable", new WorldPropertyIsHarvestable());
+        for (int level = 0; level <= 3; level++) {
+            buildcraft.api.core.BuildCraftAPI.registerWorldProperty("ore@hardness=" + level,
+                    new WorldPropertyIsOre(level));
+        }
+        buildcraft.api.core.BuildCraftAPI.registerWorldProperty("dirt", new WorldPropertyIsDirt());
+        buildcraft.api.core.BuildCraftAPI.registerWorldProperty("replaceable", new WorldPropertyIsReplaceable());
+        buildcraft.api.core.BuildCraftAPI.registerWorldProperty("fluidSource", new WorldPropertyIsFluidSource());
 
         MarkerCache.registerCache(VolumeCache.INSTANCE);
         MarkerCache.registerCache(PathCache.INSTANCE);

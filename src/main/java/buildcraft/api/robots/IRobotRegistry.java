@@ -5,6 +5,7 @@
 package buildcraft.api.robots;
 
 import java.util.Collection;
+import java.util.Set;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.Direction;
@@ -21,6 +22,13 @@ public interface IRobotRegistry {
     void unloadRobot(EntityRobotBase robot);
 
     EntityRobotBase getLoadedRobot(long id);
+
+    /** The dimension's mutable block-reservation set shared by every concurrent
+     *  {@code PathFindingSearch} (a search that finds a target reserves its block here so no second search
+     *  pathfinds to the same target). Runtime-only state — never persisted: a save/load cycle simply
+     *  re-derives reservations as the searches resume. 7.1.x kept the same table as a static
+     *  dimension-keyed map; the modern seam hands the caller its own {@link Set}. */
+    Set<BlockPos> getBlockReservations();
 
     boolean isTaken(ResourceId resourceId);
 

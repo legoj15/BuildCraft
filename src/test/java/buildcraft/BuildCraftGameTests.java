@@ -805,5 +805,13 @@ public class BuildCraftGameTests {
         // the station it loaded from) and the AIRobotMain ladder's recharge leg against a live kinesis rig.
         reg.accept("buildcraftunofficial:robot_carrier_unloads_at_loaded_station", () -> buildcraft.robotics.boards.PickerCarrierTester::carrierUnloadsAtTheStationItLoadedFrom);
         reg.accept("buildcraftunofficial:robot_low_power_recharges_at_powered_station", () -> buildcraft.robotics.boards.PickerCarrierTester::lowPowerRobotRechargesAtPoweredStation);
+
+        // Robotics Ph5 — the board-catalog AIs, driven SYNCHRONOUSLY on unadded robots (search is pure block
+        // computation; the goto leg's delta movement is applied by hand, as the entity tick would): the block
+        // search finding + reserving its target, the composed search-then-fly reaching a solid block, and the
+        // eight work boards resolving from the live registry by id.
+        reg.accept("buildcraftunofficial:robot_search_block_finds_log", () -> buildcraft.robotics.ai.SearchBlockTester::findsTheNearestMatchingBlock);
+        reg.accept("buildcraftunofficial:robot_search_goto_reaches_block", () -> buildcraft.robotics.ai.SearchAndGotoBlockTester::reachesTheFoundBlock);
+        reg.accept("buildcraftunofficial:robot_board_registry_sweep", () -> buildcraft.robotics.boards.BoardRegistrySweepTester::everyPh5BoardResolvesAndRoundTrips);
     }
 }

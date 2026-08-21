@@ -8,6 +8,8 @@ package buildcraft.robotics.ai;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import net.minecraft.core.BlockPos;
+
 import buildcraft.api.mj.MjAPI;
 
 /** Pins the per-leaf power costs (in micro-MJ, the unit {@code AIRobot.getPowerCost} is charged in) and their
@@ -75,5 +77,66 @@ public class AIRobotCostTableTest {
         long gotoCost = new AIRobotGotoBlock(robot).getPowerCost();
         Assertions.assertTrue(fetch > unload && unload > load && load > gotoCost,
                 "FetchItem (1.5M) > Unload (1M) > Load (0.8M) > Goto (0.3M)");
+    }
+
+    // ── Ph5 (the board AIs) ─────────────────────────────────────────────────
+    // Same 1 RF = 100_000 µMJ bridge. 7.1.x's BREAK_ENERGY (160 RF) has no BuilderAPI in the modern tree,
+    // so break/attack hardcode the converted constants.
+
+    @Test
+    public void theSearchAIsCostTwoRf() {
+        Assertions.assertEquals(200_000, new AIRobotSearchBlock(robot).getPowerCost(),
+                "searching for a block is 7.1.x's 2 RF");
+        Assertions.assertEquals(200_000, new AIRobotSearchEntity(robot, e -> true, 250f, null).getPowerCost(),
+                "searching for an entity is 7.1.x's 2 RF");
+    }
+
+    @Test
+    public void breakCostsElevenRf() {
+        Assertions.assertEquals(1_100_000, new AIRobotBreak(robot, BlockPos.ZERO).getPowerCost(),
+                "breaking is 7.1.x's ceil(160*2/30) = 11 RF");
+    }
+
+    @Test
+    public void attackCostsSixteenRf() {
+        Assertions.assertEquals(1_600_000, new AIRobotAttack(robot, null).getPowerCost(),
+                "attacking is 7.1.x's 160*2/20 = 16 RF");
+    }
+
+    @Test
+    public void pumpAndToolUseCostFiveAndEightRf() {
+        Assertions.assertEquals(500_000, new AIRobotPumpBlock(robot, BlockPos.ZERO).getPowerCost(),
+                "pumping a fluid source block is 7.1.x's 5 RF");
+        Assertions.assertEquals(800_000, new AIRobotUseToolOnBlock(robot, BlockPos.ZERO).getPowerCost(),
+                "using a tool on a block is 7.1.x's 8 RF");
+    }
+
+    @Test
+    public void theFluidLoadUnloadAIsCostEightAndTenRf() {
+        Assertions.assertEquals(800_000, new AIRobotLoadFluids(robot, f -> true).getPowerCost(),
+                "loading fluid is 7.1.x's 8 RF");
+        Assertions.assertEquals(1_000_000, new AIRobotUnloadFluids(robot).getPowerCost(),
+                "unloading fluid is 7.1.x's 10 RF");
+    }
+
+    @Test
+    public void thePh5AIsWithoutAnOverrideShareTheDefault() {
+        // 7.1.x gave these no cost override — the default 1 RF (MjAPI.MJ/10) is the faithful pin.
+        Assertions.assertEquals(MjAPI.MJ / 10, new AIRobotHarvest(robot, BlockPos.ZERO).getPowerCost(),
+                "harvesting inherits the default 1 RF");
+        Assertions.assertEquals(MjAPI.MJ / 10, new AIRobotPlant(robot, BlockPos.ZERO).getPowerCost(),
+                "planting inherits the default 1 RF");
+        Assertions.assertEquals(MjAPI.MJ / 10, new AIRobotFetchAndEquipItemStack(robot, s -> true).getPowerCost(),
+                "fetch-and-equip inherits the default 1 RF");
+        Assertions.assertEquals(MjAPI.MJ / 10, new AIRobotSearchAndGotoBlock(robot).getPowerCost(),
+                "search-and-goto inherits the default 1 RF");
+        Assertions.assertEquals(MjAPI.MJ / 10, new AIRobotGotoStationToLoadFluids(robot, f -> true).getPowerCost(),
+                "goto-station-to-load-fluids inherits the default 1 RF");
+        Assertions.assertEquals(MjAPI.MJ / 10, new AIRobotGotoStationToUnloadFluids(robot).getPowerCost(),
+                "goto-station-to-unload-fluids inherits the default 1 RF");
+        Assertions.assertEquals(MjAPI.MJ / 10, new AIRobotGotoStationAndLoadFluids(robot, f -> true).getPowerCost(),
+                "goto-station-and-load-fluids inherits the default 1 RF");
+        Assertions.assertEquals(MjAPI.MJ / 10, new AIRobotGotoStationAndUnloadFluids(robot).getPowerCost(),
+                "goto-station-and-unload-fluids inherits the default 1 RF");
     }
 }

@@ -42,7 +42,7 @@ public class BoardNbtRoundTripTest extends VanillaSetupBaseTester {
                 "a carrier stack survives a write→read cycle and resolves to the carrier board");
     }
 
-    // Ph5: the eight work boards. Red until the registration commit wires them into the board registry.
+    // Ph5: the eight work boards, registered in BCRobotics.
 
     @Test
     public void lumberjackStackResolvesBackToTheLumberjack() {

@@ -182,26 +182,36 @@ Model the NBT classes on the existing `BoardRobotPickerNBT`/`BoardRobotEmptyNBT`
 - Extract the 6 real 7.1.x chip PNGs from `upstream/7.1.x:buildcraft_resources/assets/buildcraftrobotics/textures/items/board/`
   (`blue.png`, `clean.png`, `green.png`, `red.png`, `unknown.png`, `yellow.png`) into
   `src/main/resources/assets/buildcraftunofficial/textures/item/board_<color>.png`.
-- Wire each board NBT's `getItemModelLocation()` to return a per-tier model id, and create per-tier item models
-  (the modern 1.21.4+ two-file structure: `items/<id>.json` → `models/item/<id>.json` → texture). Same-tier boards
-  share a chip, exactly as upstream. Picker/carrier=green, the 7 blue boards=blue, knight=red.
-- **Render path CONFIRMED (2026-08-20)**: the modern item-model system CAN switch per-stack. Use a `minecraft:conditional`
-  item model in `items/redstone_board.json` that branches on the `minecraft:component` property
-  (`ComponentMatches` → `CustomDataPredicate` → `NbtPredicate`), matching the nested `board.id` sub-compound:
+- Per-tier item models in the modern 1.21.4+ two-file structure (`items/<id>.json` → `models/item/<id>.json` →
+  texture). Same-tier boards share a chip, exactly as upstream's BCBoardNBT tier strings: picker/carrier=green,
+  the 7 blue boards=blue, knight=red. `RedstoneBoardNBT.getItemModelLocation()` stays as dead API surface (no
+  consumer on any line; the NBT classes return the board id, not a model id) — the per-stack switching happens
+  entirely in the item model, below.
+- **Render path CONFIRMED (2026-08-20), LANDED (2026-08-21)**: the modern item-model system switches per-stack.
+  `items/redstone_board.json` is a chain of `minecraft:condition` models (the type id is `condition`, not
+  `conditional` — verified against `ItemModels.ID_MAPPER` on all four modern lines) that each branch on the
+  `minecraft:component` property (`ComponentMatches` → `CustomDataPredicate` → `NbtPredicate`), matching the
+  nested `board.id` sub-compound:
   ```json
   { "model": {
-      "type": "minecraft:conditional",
+      "type": "minecraft:condition",
       "property": { "type": "minecraft:component",
-                    "predicate": { "type": "custom_data",
+                    "predicate": { "type": "minecraft:custom_data",
                                    "value": { "board": { "id": "<boardId>" } } } },
       "on_true":  { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_blue" },
-      "on_false": { "type": "minecraft:model", "model": "buildcraftunofficial:item/redstone_board" } } }
+      "on_false": { "type": "minecraft:condition", "...": "next" } } }
   ```
   `createBoard` stamps `board.id` = `getID()` (a namespaced string, e.g. `buildcraftunofficial:boardRobotPicker`), so
-  the `value` partial-match is exactly `{"board": {"id": "<getID()>"}}`. `NbtPredicate` uses `CustomData.matchedBy`
-  (partial NBT compare), so only the `board.id` path needs to match. Chain conditionals for the 3 tiers (green/blue/red)
-  with a final `redstone_board` fallback. The 6 tier textures + `models/item/board_*.json` are already extracted/written
-  (Task 6 groundwork, non-colliding). The conditional rewrite itself waits for the exact board IDs the code port lands.
+  the `value` partial-match is exactly `{"board": {"id": "<getID()>"}}`. `NbtPredicate` is a raw NBT compound
+  compared by `CustomData.matchedBy` (partial match), so only the `board.id` path needs to match — partial
+  (not exact) matching matters because a board item picked up from a broken robot carries its config alongside
+  the id. One condition per board id (there is no OR in the codec), so the chain peels the 10 ids in order —
+  green ×2, blue ×7, red (knight) — then the empty board id → `board_clean` (7.1.x's standalone board item showed
+  the clean chip) and a final `redstone_board` fallback for bare stacks. `minecraft:select` + `minecraft:component`
+  was the flatter alternative (multi-value cases) but matches the whole component by exact equality — rejected for
+  the config-blob reason above. The 1.21.1 node has no item-model system: `items/*.json` is ignored there and every
+  board renders the single `models/item/redstone_board.json` chip (line-inherent, accepted). `board_unknown.png` /
+  `board_yellow.png` stay staged for Ph6+ boards (builder/stripes/delivery are yellow in 7.1.x).
 
 ### J. Lang keys
 

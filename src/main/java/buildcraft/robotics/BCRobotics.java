@@ -19,29 +19,61 @@ import org.slf4j.LoggerFactory;
 import buildcraft.api.boards.RedstoneBoardRegistry;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.core.BCCore;
+import buildcraft.robotics.ai.AIRobotAttack;
+import buildcraft.robotics.ai.AIRobotBreak;
+import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotFetchItem;
 import buildcraft.robotics.ai.AIRobotGoto;
 import buildcraft.robotics.ai.AIRobotGotoBlock;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStation;
 import buildcraft.robotics.ai.AIRobotGotoStationAndLoad;
+import buildcraft.robotics.ai.AIRobotGotoStationAndLoadFluids;
 import buildcraft.robotics.ai.AIRobotGotoStationAndUnload;
+import buildcraft.robotics.ai.AIRobotGotoStationAndUnloadFluids;
 import buildcraft.robotics.ai.AIRobotGotoStationToLoad;
+import buildcraft.robotics.ai.AIRobotGotoStationToLoadFluids;
 import buildcraft.robotics.ai.AIRobotGotoStationToUnload;
+import buildcraft.robotics.ai.AIRobotGotoStationToUnloadFluids;
+import buildcraft.robotics.ai.AIRobotHarvest;
 import buildcraft.robotics.ai.AIRobotLoad;
+import buildcraft.robotics.ai.AIRobotLoadFluids;
 import buildcraft.robotics.ai.AIRobotMain;
+import buildcraft.robotics.ai.AIRobotPlant;
+import buildcraft.robotics.ai.AIRobotPumpBlock;
 import buildcraft.robotics.ai.AIRobotRecharge;
+import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoStation;
+import buildcraft.robotics.ai.AIRobotSearchBlock;
+import buildcraft.robotics.ai.AIRobotSearchEntity;
 import buildcraft.robotics.ai.AIRobotSearchStation;
 import buildcraft.robotics.ai.AIRobotShutdown;
 import buildcraft.robotics.ai.AIRobotSleep;
 import buildcraft.robotics.ai.AIRobotStraightMoveTo;
 import buildcraft.robotics.ai.AIRobotUnload;
+import buildcraft.robotics.ai.AIRobotUnloadFluids;
+import buildcraft.robotics.ai.AIRobotUseToolOnBlock;
+import buildcraft.robotics.boards.BoardRobotButcher;
+import buildcraft.robotics.boards.BoardRobotButcherNBT;
 import buildcraft.robotics.boards.BoardRobotCarrier;
 import buildcraft.robotics.boards.BoardRobotCarrierNBT;
 import buildcraft.robotics.boards.BoardRobotEmpty;
+import buildcraft.robotics.boards.BoardRobotFarmer;
+import buildcraft.robotics.boards.BoardRobotFarmerNBT;
+import buildcraft.robotics.boards.BoardRobotHarvester;
+import buildcraft.robotics.boards.BoardRobotHarvesterNBT;
+import buildcraft.robotics.boards.BoardRobotKnight;
+import buildcraft.robotics.boards.BoardRobotKnightNBT;
+import buildcraft.robotics.boards.BoardRobotLumberjack;
+import buildcraft.robotics.boards.BoardRobotLumberjackNBT;
+import buildcraft.robotics.boards.BoardRobotMiner;
+import buildcraft.robotics.boards.BoardRobotMinerNBT;
 import buildcraft.robotics.boards.BoardRobotPicker;
 import buildcraft.robotics.boards.BoardRobotPickerNBT;
+import buildcraft.robotics.boards.BoardRobotPlanter;
+import buildcraft.robotics.boards.BoardRobotPlanterNBT;
+import buildcraft.robotics.boards.BoardRobotPump;
+import buildcraft.robotics.boards.BoardRobotPumpNBT;
 import buildcraft.transport.BCTransportCreativeTabs;
 
 /**
@@ -104,9 +136,14 @@ public class BCRobotics {
         }
     }
 
-    /** Registers the Ph4 AI tree and the picker/carrier boards. Board costs are 7.1.x's 8000 RF each (the two
-     *  green boards), converted to micro-MJ at the canonical 1 MJ = 10 RF bridge (8000 * 100_000); the empty
-     *  board was already seeded by {@code ImplRedstoneBoardRegistry}. */
+    /** Registers the full AI tree (Ph4 core + Ph5 board catalog) and every robot board class (the Ph5 work
+     *  boards plus Ph4's empty/picker/carrier). Every name and legacy
+     *  class name mirrors 7.1.x's own {@code BuildCraftRobotics} registration list (the legacy names are the
+     *  6.x-era {@code buildcraft.core.robots.*} classes that old-save NBT still records; the three AIs 7.1.x
+     *  itself registered without a legacy name — Harvest, Plant, SearchAndGotoBlock — postdate 6.x). Board
+     *  costs are 7.1.x's, converted to micro-MJ at the canonical 1 RF = 100_000 micro-MJ bridge: green boards
+     *  8000 RF, blue boards 32000 RF, red (knight) 128000 RF. The empty board was already seeded by
+     *  {@code ImplRedstoneBoardRegistry}. */
     private static void registerAIsAndBoards() {
         RobotManager.registerAIRobot(AIRobotMain.class, "aiRobotMain", "buildcraft.core.robots.AIRobotMain");
         RobotManager.registerAIRobot(AIRobotRecharge.class, "aiRobotRecharge", "buildcraft.core.robots.AIRobotRecharge");
@@ -135,13 +172,72 @@ public class BCRobotics {
         RobotManager.registerAIRobot(AIRobotUnload.class, "aiRobotUnload", "buildcraft.core.robots.AIRobotUnload");
         RobotManager.registerAIRobot(AIRobotFetchItem.class, "aiRobotFetchItem", "buildcraft.core.robots.AIRobotFetchItem");
 
+        // Ph5 board-catalog AIs. 7.1.x registered Harvest, Plant, and SearchAndGotoBlock without a legacy
+        // name (post-6.x additions); SearchAndGotoBlock's 7.1.x name keeps its "GoToBlock" capital-T spelling.
+        RobotManager.registerAIRobot(AIRobotSearchBlock.class, "aiRobotSearchBlock",
+                "buildcraft.core.robots.AIRobotSearchBlock");
+        RobotManager.registerAIRobot(AIRobotSearchAndGotoBlock.class, "aiRobotSearchAndGoToBlock");
+        RobotManager.registerAIRobot(AIRobotSearchEntity.class, "aiRobotSearchEntity",
+                "buildcraft.core.robots.AIRobotSearchEntity");
+        RobotManager.registerAIRobot(AIRobotBreak.class, "aiRobotBreak", "buildcraft.core.robots.AIRobotBreak");
+        RobotManager.registerAIRobot(AIRobotAttack.class, "aiRobotAttack", "buildcraft.core.robots.AIRobotAttack");
+        RobotManager.registerAIRobot(AIRobotFetchAndEquipItemStack.class, "aiRobotFetchAndEquipItemStack",
+                "buildcraft.core.robots.AIRobotFetchAndEquipItemStack");
+        RobotManager.registerAIRobot(AIRobotUseToolOnBlock.class, "aiRobotUseToolOnBlock",
+                "buildcraft.core.robots.AIRobotUseToolOnBlock");
+        RobotManager.registerAIRobot(AIRobotHarvest.class, "aiRobotHarvest");
+        RobotManager.registerAIRobot(AIRobotPlant.class, "aiRobotPlant");
+        RobotManager.registerAIRobot(AIRobotPumpBlock.class, "aiRobotPumpBlock",
+                "buildcraft.core.robots.AIRobotPumpBlock");
+        RobotManager.registerAIRobot(AIRobotLoadFluids.class, "aiRobotLoadFluids",
+                "buildcraft.core.robots.AIRobotLoadFluids");
+        RobotManager.registerAIRobot(AIRobotUnloadFluids.class, "aiRobotUnloadFluids",
+                "buildcraft.core.robots.AIRobotUnloadFluids");
+        RobotManager.registerAIRobot(AIRobotGotoStationToLoadFluids.class, "aiRobotGotoStationToLoadFluids",
+                "buildcraft.core.robots.AIRobotGotoStationToLoadFluids");
+        RobotManager.registerAIRobot(AIRobotGotoStationToUnloadFluids.class, "aiRobotGotoStationToUnloadFluids",
+                "buildcraft.core.robots.AIRobotGotoStationToUnloadFluids");
+        RobotManager.registerAIRobot(AIRobotGotoStationAndLoadFluids.class, "aiRobotGotoStationAndLoadFluids",
+                "buildcraft.core.robots.AIRobotGotoStationAndLoadFluids");
+        RobotManager.registerAIRobot(AIRobotGotoStationAndUnloadFluids.class, "aiRobotGotoStationAndUnloadFluids",
+                "buildcraft.core.robots.AIRobotGotoStationAndUnloadFluids");
+
         RobotManager.registerAIRobot(BoardRobotEmpty.class, "boardRobotEmpty");
         RobotManager.registerAIRobot(BoardRobotPicker.class, "boardRobotPicker",
                 "buildcraft.core.robots.boards.BoardRobotPicker");
         RobotManager.registerAIRobot(BoardRobotCarrier.class, "boardRobotCarrier",
                 "buildcraft.core.robots.boards.BoardRobotCarrier");
 
+        // Ph5 work boards (the two abstract 7.1.x bases, GenericSearchBlock/GenericBreakBlock, register
+        // nothing — they are internal composition only).
+        RobotManager.registerAIRobot(BoardRobotLumberjack.class, "boardRobotLumberjack",
+                "buildcraft.core.robots.boards.BoardRobotLumberjack");
+        RobotManager.registerAIRobot(BoardRobotHarvester.class, "boardRobotHarvester",
+                "buildcraft.core.robots.boards.BoardRobotHarvester");
+        RobotManager.registerAIRobot(BoardRobotMiner.class, "boardRobotMiner",
+                "buildcraft.core.robots.boards.BoardRobotMiner");
+        RobotManager.registerAIRobot(BoardRobotPlanter.class, "boardRobotPlanter",
+                "buildcraft.core.robots.boards.BoardRobotPlanter");
+        RobotManager.registerAIRobot(BoardRobotFarmer.class, "boardRobotFarmer",
+                "buildcraft.core.robots.boards.BoardRobotFarmer");
+        RobotManager.registerAIRobot(BoardRobotPump.class, "boardRobotPump",
+                "buildcraft.core.robots.boards.BoardRobotPump");
+        RobotManager.registerAIRobot(BoardRobotKnight.class, "boardRobotKnight",
+                "buildcraft.core.robots.boards.BoardRobotKnight");
+        RobotManager.registerAIRobot(BoardRobotButcher.class, "boardRobotButcher",
+                "buildcraft.core.robots.boards.BoardRobotButcher");
+
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotPickerNBT.INSTANCE, 800_000_000L);
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotCarrierNBT.INSTANCE, 800_000_000L);
+
+        // 7.1.x board costs: the seven blue boards at 32000 RF, the red knight at 128000 RF.
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotLumberjackNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotHarvesterNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotMinerNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotPlanterNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotFarmerNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotPumpNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotButcherNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotKnightNBT.INSTANCE, 12_800_000_000L);
     }
 }

@@ -6,6 +6,7 @@
 package buildcraft.core.properties;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -13,13 +14,11 @@ import buildcraft.api.core.IWorldProperty;
 
 /** The "replaceable" world property: is the position air or otherwise replaceable? Ported from 7.1.x
  *  {@code WorldPropertyIsReplaceable} (null / air / {@code isReplaceable}); the modern equivalent is
- *  {@code state.isAir() || state.canBeReplaced()}. Like the upstream, this returns TRUE for air — the
- *  planter board NEGATES it (a seed wants a solid cell, not a hole). Registered from
+ *  {@code state.isAir() || state.is(minecraft:replaceable)} — the tag is vanilla's own umbrella of
+ *  plant-through blocks (air, water, grass, vines, snow, …). Like the upstream, this returns TRUE for air
+ *  — the planter board NEGATES it (a seed wants a solid cell, not a hole). Registered from
  *  {@code BCCore.preInit} under the key {@code "replaceable"}; the planter board queries it through
- *  {@link #matches(BlockState)}.
- *
- *  <p>Red-baseline skeleton: {@link #matches} returns false until the foundations commit lands the real
- *  implementation.</p> */
+ *  {@link #matches(BlockState)}. */
 public class WorldPropertyIsReplaceable implements IWorldProperty {
     @Override
     public boolean get(Level world, BlockPos pos) {
@@ -29,8 +28,7 @@ public class WorldPropertyIsReplaceable implements IWorldProperty {
     /** The state-only seam: air/replaceable needs no level, so {@link #get} delegates here and the JUnit
      *  predicate sweeps can drive it without a {@link Level}. */
     public boolean matches(BlockState state) {
-        // Red-baseline skeleton — real implementation (isAir || canBeReplaced) in the foundations commit.
-        return false;
+        return state.isAir() || state.is(BlockTags.REPLACEABLE);
     }
 
     @Override

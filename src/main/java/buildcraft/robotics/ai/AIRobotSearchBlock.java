@@ -13,14 +13,20 @@ import java.util.LinkedList;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.Level;
 
 import buildcraft.api.core.IZone;
 import buildcraft.api.core.NbtApiUtil;
+import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.path.BlockScannerExpanding;
+import buildcraft.robotics.path.BlockScannerRandom;
+import buildcraft.robotics.path.BlockScannerZoneRandom;
 import buildcraft.robotics.path.IBlockFilter;
 import buildcraft.robotics.path.PathFindingSearch;
+import buildcraft.robotics.path.SoftBlockAccess;
 
 /** Searches for the nearest block matching {@code pathFound} and reports it as {@link #blockFound} (plus the
  *  approach {@link #path} minus the target cell, for a {@link AIRobotGotoBlock}). Ported from 7.1.x
@@ -28,9 +34,10 @@ import buildcraft.robotics.path.PathFindingSearch;
  *  cube by default, random when {@code random}, zone-biased random when the robot has a work zone) and
  *  the dimension's shared reservation set, so two concurrent searches never converge on the same target.
  *
- *  <p>Red-baseline skeleton: the scanner wiring lands with the 3 {@code BlockScanner} classes in the
- *  foundations commit; until then {@link #start()} does nothing and the inherited {@code update()}
- *  terminates on the first cycle. */
+ *  <p>The {@code PathFindingSearch} is created lazily in {@link #update()} rather than {@code start()}:
+ *  the AI is cycled, not started, by the game tests, and a robot whose search is restored mid-flight
+ *  resumes on its first cycled tick. A search loaded from NBT (the 1-arg constructor) has no scanner
+ *  iterator to resume with — 7.1.x treated a runner-less job as dead, so {@link #update()} aborts it. */
 public class AIRobotSearchBlock extends AIRobot {
 
     public BlockPos blockFound;
@@ -52,17 +59,27 @@ public class AIRobotSearchBlock extends AIRobot {
 
         pathFound = iPathFound;
         zone = iRobot.getZoneToWork();
-        // Scanner iterator selection (expanding / zone-random / random-64) lands in the foundations commit.
-        blockIter = null;
+        // Scanner selection, as 7.1.x: the expanding cube is the default; random gets the zone's own
+        // distribution when the robot has a work zone, else a uniform sphere of radius 64.
+        Level level = iRobot.level();
+        if (!random) {
+            blockIter = new BlockScannerExpanding();
+        } else if (zone != null && level != null) {
+            blockIter = new BlockScannerZoneRandom(iRobot.blockPosition(), level.getRandom(), zone);
+        } else if (level != null) {
+            blockIter = new BlockScannerRandom(level.getRandom(), 64);
+        } else {
+            blockIter = null; // no world to draw randomness from — update() aborts a runner-less job
+        }
         blockFound = null;
         path = null;
         maxDistanceToEnd = iMaxDistanceToEnd;
     }
 
     @Override
-    public void start() {
-        // Red-baseline skeleton — PathFindingSearch(SoftBlockAccess.of(level), robot.blockPosition(),
-        // blockIter, pathFound, maxDistanceToEnd, 96, zone, registry reservations) in the foundations commit.
+    public long getPowerCost() {
+        // 7.1.x: 2 RF, at the 1 RF = 100_000 µMJ bridge.
+        return 2 * MjAPI.MJ;
     }
 
     @Override
@@ -70,12 +87,43 @@ public class AIRobotSearchBlock extends AIRobot {
         return blockFound != null;
     }
 
+    @Override
+    public void update() {
+        if (blockIter == null) {
+            // Loaded from NBT (or built without a world): the scanner iterator is not serialised, so the
+            // search cannot resume — abort, as 7.1.x did for a job with no runner.
+            abort();
+            return;
+        }
+        if (blockScanner == null) {
+            blockScanner = new PathFindingSearch(SoftBlockAccess.of(robot.level()), robot.blockPosition(),
+                    blockIter, pathFound, maxDistanceToEnd, 96, zone,
+                    robot.getRegistry().getBlockReservations());
+        }
+        if (blockScanner.isDone()) {
+            path = blockScanner.getResult();
+            if (path.size() > 0) {
+                // Drop the target cell itself — the robot flies to the cell BEFORE it, not into it.
+                path.removeLast();
+                blockFound = blockScanner.getResultTarget();
+            } else {
+                path = null;
+            }
+            terminate();
+        } else {
+            blockScanner.iterate();
+        }
+    }
+
     /** Reserves the found block in the registry (7.1.x: registry take of a ResourceIdBlock) and drops the
      *  search's own reservation. */
     public boolean takeResource() {
-        // Red-baseline skeleton — registry.take(new ResourceIdBlock(blockFound)) + unreserve() in the
-        // foundations commit.
-        return false;
+        if (blockFound == null) {
+            return false;
+        }
+        boolean taken = robot.getRegistry().take(new ResourceIdBlock(blockFound), robot.getRobotId());
+        unreserve();
+        return taken;
     }
 
     public void unreserve() {

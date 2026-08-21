@@ -6,6 +6,7 @@
 package buildcraft.core.properties;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -13,11 +14,8 @@ import buildcraft.api.core.IWorldProperty;
 
 /** The "wood" world property: is the block at the position a log? Ported from 7.1.x
  *  {@code WorldPropertyIsWood} (ore-dict {@code logWood}); the modern equivalent of the log umbrella is the
- *  {@code minecraft:logs} tag. Registered from {@code BCCore.preInit} under the key {@code "wood"}; the
- *  lumberjack board queries it through {@link #matches(BlockState)}.
- *
- *  <p>Red-baseline skeleton: {@link #matches} returns false until the foundations commit lands the real
- *  implementation.</p> */
+ *  {@code minecraft:logs} tag (logs + stems, on every node). Registered from {@code BCCore.preInit} under the
+ *  key {@code "wood"}; the lumberjack board queries it through {@link #matches(BlockState)}. */
 public class WorldPropertyIsWood implements IWorldProperty {
     @Override
     public boolean get(Level world, BlockPos pos) {
@@ -27,8 +25,7 @@ public class WorldPropertyIsWood implements IWorldProperty {
     /** The state-only seam: the full check needs no level, so {@link #get} delegates here and the JUnit
      *  predicate sweeps can drive it without a {@link Level}. */
     public boolean matches(BlockState state) {
-        // Red-baseline skeleton — real implementation (minecraft:logs tag) in the foundations commit.
-        return false;
+        return state.is(BlockTags.LOGS);
     }
 
     @Override

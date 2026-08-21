@@ -14,18 +14,24 @@ import net.minecraft.nbt.CompoundTag;
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.api.robots.ResourceIdBlock;
 import buildcraft.robotics.path.IBlockFilter;
 
 /** Composes {@link AIRobotSearchBlock} (find) and {@link AIRobotGotoBlock} (fly the found path), reporting
- *  the target through {@link #getBlockFound()} and the registry reservation through the search's
- *  {@code takeResource()}. Ported from 7.1.x {@code AIRobotSearchAndGotoBlock}.
+ *  the target through {@link #getBlockFound()} and the registry reservation through {@link #takeResource()}.
+ *  Ported from 7.1.x {@code AIRobotSearchAndGotoBlock}.
  *
- *  <p>Red-baseline skeleton: the compose-logic lands with the search AI in the foundations commit; until
- *  then the inherited {@code update()} terminates on the first cycle.</p> */
+ *  <p>Like the search it wraps, the composition starts on the first {@link #update()} cycle rather than in
+ *  {@code start()} — the AI is cycled, not started, by the game tests. Once the search finds a block the
+ *  reservation is taken (via the search's {@code takeResource()}), the found block latches into
+ *  {@link #blockFound} (so {@link #success()} stays true while the goto leg flies), and the goto leg is
+ *  started; a failed search, a lost reservation, or a failed goto unwinds the whole AI, releasing the
+ *  reservation on the way down. */
 public class AIRobotSearchAndGotoBlock extends AIRobot {
 
     private BlockPos blockFound;
     private boolean taken;
+    private AIRobotSearchBlock search;
 
     private IBlockFilter filter;
     private boolean random;
@@ -52,16 +58,53 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
         return blockFound;
     }
 
-    /** Reserves the found block (search's {@code takeResource()}); the caller releases it via the registry
-     *  when done. */
+    @Override
+    public void update() {
+        startDelegateAI(new AIRobotSearchBlock(robot, random, filter, maxDistanceToEnd));
+    }
+
+    /** Reserves the found block (the search's {@code takeResource()}); the caller releases it via the
+     *  registry when done. */
     public boolean takeResource() {
-        // Red-baseline skeleton — search.takeResource() + latch in the foundations commit.
-        return false;
+        return search != null && (taken = search.takeResource());
     }
 
     @Override
     public boolean success() {
         return blockFound != null;
+    }
+
+    @Override
+    public void delegateAIEnded(AIRobot ai) {
+        if (ai instanceof AIRobotSearchBlock searchAI) {
+            search = searchAI;
+            if (searchAI.success() && takeResource()) {
+                blockFound = searchAI.blockFound;
+                if (searchAI.path != null && searchAI.path.size() > 0) {
+                    startDelegateAI(new AIRobotGotoBlock(robot, searchAI.path));
+                } else {
+                    // The path was the target cell alone — the robot already stands beside it.
+                    terminate();
+                }
+            } else {
+                terminate();
+            }
+        } else if (ai instanceof AIRobotGotoBlock gotoAI) {
+            if (!gotoAI.success()) {
+                releaseBlockFound();
+            }
+            terminate();
+        } else {
+            terminate();
+        }
+    }
+
+    private void releaseBlockFound() {
+        if (blockFound != null) {
+            robot.getRegistry().release(new ResourceIdBlock(blockFound));
+            blockFound = null;
+            taken = false;
+        }
     }
 
     @Override

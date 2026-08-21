@@ -282,6 +282,20 @@ public abstract class DockingStation {
         return stack -> true;
     }
 
+    /** Whether a docked robot may EXTRACT fluid from this station's fluid input — the fluid twin of
+     *  {@link #canRobotExtractItem}, the pump board's load side. 7.1.x had no fluid gate statements (the
+     *  gate actions were item-only), so the permissive default IS the 7.1.x behaviour; Ph6 may override. */
+    public boolean canRobotExtractFluid() {
+        return true;
+    }
+
+    /** Whether a docked robot may INSERT fluid into this station's fluid output — the fluid twin of
+     *  {@link #canRobotAcceptItem}, the pump board's unload side. As above: no 7.1.x fluid gates, so the
+     *  permissive default is faithful; Ph6 may override. */
+    public boolean canRobotAcceptFluid() {
+        return true;
+    }
+
     public void onChunkUnload() {
 
     }

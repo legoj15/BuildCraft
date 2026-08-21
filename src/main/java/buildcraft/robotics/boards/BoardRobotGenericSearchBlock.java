@@ -10,6 +10,7 @@ package buildcraft.robotics.boards;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
@@ -17,15 +18,19 @@ import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.ai.AIRobotGotoSleep;
+import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
 
 /** The search-board base: each cycle, search for the nearest block matching {@link #isExpectedBlock}
  *  (and not already taken by another robot), remember it as {@code blockFound}, and let the subclass act
  *  on it. Ported from 7.1.x {@code BoardRobotGenericSearchBlock}; the 7.1.x gate filter
- *  ({@code updateFilter}/{@code matchesGateFilter} reading the station's statements) is Ph6, so the
- *  effective block filter is {@code isExpectedBlock && !isTaken} (D1).
+ *  ({@code updateFilter}/{@code matchesGateFilter} reading the station's {@code ActionRobotFilter}
+ *  statements) is Ph6, so the effective block filter is {@code isExpectedBlock && !isTaken} (D1) — when the
+ *  statements land, the filter gains one more conjunct in this single place.
  *
- *  <p>Red-baseline skeleton: the {@code AIRobotSearchAndGotoBlock} wiring lands in the AI step; until
- *  then {@link #update()} inherits the base terminate-on-cycle and no block is ever found.</p> */
+ *  <p>A failed search sends the robot home to sleep ({@code AIRobotGotoSleep}) and the search starts again
+ *  on the next cycle, exactly as 7.1.x. Subclasses act on {@link #blockFound()} in their own
+ *  {@code update()} and only fall through to {@code super.update()} when nothing is found yet. */
 public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
 
     private BlockPos blockFound;
@@ -35,19 +40,27 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
     }
 
     /** The block predicate this board hunts for. Called with the live state of each candidate cell;
-     *  must be pure-state (the search may evaluate it from a background pathfind step). */
+     *  must be pure-state (it is evaluated for every scanned cell, and the state is the only input a
+     *  worldless property check gets). */
     public abstract boolean isExpectedBlock(BlockState state);
 
     @Override
     public void update() {
-        // Red-baseline skeleton — AIRobotSearchAndGotoBlock(robot, false,
-        // pos -> isExpectedBlock(state) && !registry.isTaken(ResourceIdBlock) && gate) in the AI step.
+        Level level = robot.level();
+        startDelegateAI(new AIRobotSearchAndGotoBlock(robot, false,
+                pos -> level != null && isExpectedBlock(level.getBlockState(pos))
+                        && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))));
     }
 
     @Override
     public void delegateAIEnded(AIRobot ai) {
-        // Red-baseline skeleton — SearchAndGotoBlock success -> blockFound, failure -> AIRobotGotoSleep,
-        // in the AI step.
+        if (ai instanceof AIRobotSearchAndGotoBlock searchAndGoto) {
+            if (searchAndGoto.success()) {
+                blockFound = searchAndGoto.getBlockFound();
+            } else {
+                startDelegateAI(new AIRobotGotoSleep(robot));
+            }
+        }
     }
 
     @Override

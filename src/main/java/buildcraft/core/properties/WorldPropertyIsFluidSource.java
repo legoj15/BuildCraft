@@ -13,12 +13,9 @@ import buildcraft.api.core.IWorldProperty;
 
 /** The "fluidSource" world property: is the block at the position a source fluid block? Ported from 7.1.x
  *  {@code WorldPropertyIsFluidSource} (liquid/fluid block with metadata 0 = the source form); the modern
- *  equivalent is a {@code FluidState} that is not its falling/fallback form ({@code !isFallback()}).
- *  Registered from {@code BCCore.preInit} under the key {@code "fluidSource"}; the pump board queries it
- *  through {@link #matches(BlockState)}.
- *
- *  <p>Red-baseline skeleton: {@link #matches} returns false until the foundations commit lands the real
- *  implementation.</p> */
+ *  equivalent is a {@code FluidState} that is {@link net.minecraft.world.level.material.FluidState#isSource
+ *  a source} (standing water/lava, not a flowing/falling form). Registered from {@code BCCore.preInit}
+ *  under the key {@code "fluidSource"}; the pump board queries it through {@link #matches(BlockState)}. */
 public class WorldPropertyIsFluidSource implements IWorldProperty {
     @Override
     public boolean get(Level world, BlockPos pos) {
@@ -28,9 +25,7 @@ public class WorldPropertyIsFluidSource implements IWorldProperty {
     /** The state-only seam: source-ness is a {@code FluidState} property, so {@link #get} delegates here
      *  and the JUnit predicate sweeps can drive it without a {@link Level}. */
     public boolean matches(BlockState state) {
-        // Red-baseline skeleton — real implementation (FluidState && !isFallback) in the foundations
-        // commit.
-        return false;
+        return !state.getFluidState().isEmpty() && state.getFluidState().isSource();
     }
 
     @Override

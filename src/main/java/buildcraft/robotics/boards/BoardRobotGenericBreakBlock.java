@@ -12,14 +12,21 @@ import net.minecraft.world.item.ItemStack;
 
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.robotics.ai.AIRobotBreak;
+import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
+import buildcraft.robotics.ai.AIRobotGotoSleep;
+import buildcraft.robotics.ai.AIRobotGotoStationAndUnload;
 
 /** The break-board base: keep a tool the board knows how to use ({@link #isExpectedTool}) equipped —
  *  fetching one from the station when none is held, unloading a broken one when it wears out — and, once
  *  a block is found, hand it to {@code AIRobotBreak}. Ported from 7.1.x
  *  {@code BoardRobotGenericBreakBlock}.
  *
- *  <p>Red-baseline skeleton: the tool/lifecycle wiring lands in the AI step; until then {@link #update()}
- *  inherits the base terminate-on-cycle.</p> */
+ *  <p>One documented divergence from 7.1.x: the worn-tool check is guarded by {@code isDamageableItem()}.
+ *  7.1.x compared {@code itemDamage >= maxDamage} on whatever was held, and for an undamageable item both
+ *  sides are 0, so a robot holding one (say after a fetch filter let it through) would unload it every
+ *  cycle. The fetch filter keeps 7.1.x's shape — {@code damage < maxDamage && isExpectedTool} — so
+ *  undamageable items are not fetched (0 &lt; 0 is false), exactly as upstream. */
 public abstract class BoardRobotGenericBreakBlock extends BoardRobotGenericSearchBlock {
 
     public BoardRobotGenericBreakBlock(IRobotAccess iRobot) {
@@ -31,14 +38,30 @@ public abstract class BoardRobotGenericBreakBlock extends BoardRobotGenericSearc
 
     @Override
     public final void update() {
-        // Red-baseline skeleton — no tool: AIRobotFetchAndEquipItemStack(damage<max && isExpectedTool);
-        // worn: AIRobotGotoStationAndUnload; blockFound: AIRobotBreak(blockFound); else super.update().
+        ItemStack held = robot.getHeldItem();
+        if (held.isEmpty() && !isExpectedTool(ItemStack.EMPTY)) {
+            startDelegateAI(new AIRobotFetchAndEquipItemStack(robot,
+                    stack -> !stack.isEmpty() && stack.getDamageValue() < stack.getMaxDamage()
+                            && isExpectedTool(stack)));
+        } else if (!held.isEmpty() && held.isDamageableItem()
+                && held.getDamageValue() >= held.getMaxDamage()) {
+            startDelegateAI(new AIRobotGotoStationAndUnload(robot));
+        } else if (blockFound() != null) {
+            startDelegateAI(new AIRobotBreak(robot, blockFound()));
+        } else {
+            super.update();
+        }
     }
 
     @Override
     public void delegateAIEnded(AIRobot ai) {
-        // Red-baseline skeleton — Fetch/Unload failure -> AIRobotGotoSleep; Break -> releaseBlockFound,
-        // in the AI step.
+        if (ai instanceof AIRobotFetchAndEquipItemStack || ai instanceof AIRobotGotoStationAndUnload) {
+            if (!ai.success()) {
+                startDelegateAI(new AIRobotGotoSleep(robot));
+            }
+        } else if (ai instanceof AIRobotBreak) {
+            releaseBlockFound();
+        }
         super.delegateAIEnded(ai);
     }
 }

@@ -4,13 +4,23 @@
  * should be located as "LICENSE.API" in the BuildCraft source code distribution. */
 package buildcraft.api.robots;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.core.IFluidHandlerAdv;
@@ -124,14 +134,92 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
         return this;
     }
 
-    /** Melee with the held item (the knight/butcher's only way to hurt).
+    /** Melee with the held item (the knight/butcher's only way to hurt). Ported from 7.1.x
+     *  {@code EntityRobot.attackEntityWithCurrentItem}: base damage plus the held item's MAINHAND
+     *  {@code ATTACK_DAMAGE} modifier (its three operations applied in order), plus sharpness
+     *  ({@code 0.5 * level + 0.5}), fire aspect ignites the target for {@code 4 * level} seconds, the
+     *  damage source is {@code MOB_ATTACK} attributed to the robot, knockback applies only with the
+     *  enchantment (a manual delta-movement push plus recoil, exactly 7.1.x's arithmetic — the vanilla
+     *  {@code knockback} overloads changed arity across the version cliff, so the push is done by hand),
+     *  and the held item takes one point of durability.
      *
-     *  <p>Red-baseline skeleton: the real damage pipeline (base 1.0 + the held item's ATTACK_DAMAGE
-     *  attribute modifier + sharpness, knockback/fire aspect, {@code MOB_ATTACK} source, durability
-     *  wear) lands in the foundations commit. */
+     *  <p>Two deliberate non-ports: the base is 1.0, not 7.1.x's 2.0 — modern item components already
+     *  carry the weapon's full damage as the attribute modifier, and 7.1.x's 2.0 would sit on top of it;
+     *  and the enchantment pass / looting (7.1.x {@code func_151385_b}/{@code func_151384_a}) is dropped —
+     *  the robot's loot is the target's own.
+     *
+     *  <p>The hurt call is the only version directive in this file: {@code hurtOrSimulate} replaced
+     *  {@code hurt} at 1.21.10. */
     @Override
     public void attackTargetEntityWithCurrentItem(Entity target) {
-        // Red-baseline skeleton — real melee implementation in the foundations commit.
+        if (target == null || target.isRemoved() || !target.isAttackable()
+                || target.skipAttackInteraction(this)) {
+            return;
+        }
+
+        Level level = level();
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return;
+        }
+
+        ItemStack held = getHeldItem();
+
+        float[] damage = {1.0F};
+        held.forEachModifier(EquipmentSlot.MAINHAND, (attribute, modifier) -> {
+            if (attribute.is(Attributes.ATTACK_DAMAGE)) {
+                switch (modifier.operation()) {
+                    case ADD_VALUE -> damage[0] += (float) modifier.amount();
+                    case ADD_MULTIPLIED_BASE -> damage[0] *= (float) modifier.amount();
+                    case ADD_MULTIPLIED_TOTAL -> damage[0] *= (float) (1.0 + modifier.amount());
+                }
+            }
+        });
+        float attackDamage = damage[0];
+
+        int sharpness = 0;
+        int knockback = 0;
+        int fireAspect = 0;
+        ItemEnchantments enchants = held.getEnchantments();
+        for (Holder<Enchantment> enchantment : enchants.keySet()) {
+            if (enchantment.is(Enchantments.SHARPNESS)) {
+                sharpness = enchants.getLevel(enchantment);
+            } else if (enchantment.is(Enchantments.KNOCKBACK)) {
+                knockback = enchants.getLevel(enchantment);
+            } else if (enchantment.is(Enchantments.FIRE_ASPECT)) {
+                fireAspect = enchants.getLevel(enchantment);
+            }
+        }
+
+        if (sharpness > 0) {
+            attackDamage += 0.5F * sharpness + 0.5F;
+        }
+
+        if (attackDamage <= 0) {
+            return;
+        }
+
+        if (fireAspect > 0 && !target.isOnFire()) {
+            target.igniteForSeconds(4.0F * fireAspect);
+        }
+
+        DamageSource source = serverLevel.damageSources().source(DamageTypes.MOB_ATTACK, this);
+        //? if >=1.21.10 {
+        target.hurtOrSimulate(source, attackDamage);
+        //?} else {
+        /*target.hurt(source, attackDamage);*/
+        //?}
+
+        if (knockback > 0) {
+            float yaw = (float) Math.toRadians(getYRot());
+            Vec3 targetMotion = target.getDeltaMovement();
+            target.setDeltaMovement(targetMotion.x - Math.sin(yaw) * knockback * 0.5,
+                    targetMotion.y + 0.1,
+                    targetMotion.z + Math.cos(yaw) * knockback * 0.5);
+            Vec3 robotMotion = getDeltaMovement();
+            setDeltaMovement(robotMotion.x * 0.6, robotMotion.y, robotMotion.z * 0.6);
+        }
+
+        held.hurtAndBreak(1, serverLevel, null, item -> {});
     }
 
     public abstract void releaseResources();

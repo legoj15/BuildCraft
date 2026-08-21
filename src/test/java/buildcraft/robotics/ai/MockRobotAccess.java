@@ -24,8 +24,8 @@ import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 //?} else {
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+/*import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.templates.FluidTank;*/
 //?}
 
 import buildcraft.api.boards.RedstoneBoardRobot;
@@ -73,13 +73,13 @@ public class MockRobotAccess implements IRobotAccess {
         return fluidTank.getResource(0);
     }
     //?} else {
-    void setFluid(FluidStack stack) {
-        fluidTank.set(0, stack, stack.getAmount());
+    /*void setFluid(FluidStack stack) {
+        fluidTank.setFluid(stack);
     }
 
     FluidStack getFluidStack() {
         return fluidTank.getFluidInTank(0);
-    }
+    }*/
     //?}
 
     void setPosition(Vec3 pos) {
@@ -343,7 +343,7 @@ public class MockRobotAccess implements IRobotAccess {
         }
     }
     //?} else {
-    static class RobotFluidTank extends FluidTank implements IFluidHandlerAdv {
+    /*static class RobotFluidTank extends FluidTank implements IFluidHandlerAdv {
         RobotFluidTank(int capacity) {
             super(capacity);
         }
@@ -357,7 +357,7 @@ public class MockRobotAccess implements IRobotAccess {
             return drain(maxDrain, simulate ? net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE
                     : net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE).getAmount();
         }
-    }
+    }*/
     //?}
 
     @Override

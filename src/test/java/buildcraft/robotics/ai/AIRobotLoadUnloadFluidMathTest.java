@@ -19,9 +19,9 @@ import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
 //?} else {
-import net.neoforged.neoforge.fluids.FluidStack;
+/*import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+import net.neoforged.neoforge.fluids.capability.templates.FluidTank;*/
 //?}
 
 import buildcraft.VanillaSetupBaseTester;
@@ -52,13 +52,13 @@ public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
         }
     }
     //?} else {
-    private int robotAmount() {
+    /*private int robotAmount() {
         return ((IFluidHandler) robot.getFluidHandler()).getFluidInTank(0).getAmount();
     }
 
     private void setRobotFluid(int amount) {
         robot.setFluid(amount <= 0 ? FluidStack.EMPTY : new FluidStack(Fluids.WATER, amount));
-    }
+    }*/
     //?}
 
     @Test
@@ -237,7 +237,7 @@ public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
         }
     }
     //?} else {
-    private static final class FluidStation extends DockingStation {
+    /*private static final class FluidStation extends DockingStation {
         private final FluidTank tank;
 
         FluidStation(int capacity) {
@@ -267,6 +267,6 @@ public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
         int getAmount() {
             return tank.getFluidInTank(0).getAmount();
         }
-    }
+    }*/
     //?}
 }

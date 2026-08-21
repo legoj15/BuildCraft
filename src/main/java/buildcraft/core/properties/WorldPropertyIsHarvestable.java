@@ -6,29 +6,31 @@
 package buildcraft.core.properties;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.core.IWorldProperty;
+import buildcraft.api.crops.CropManager;
 
 /** The "harvestable" world property: is the block at the position a crop the
- *  {@link buildcraft.api.crops.CropManager} considers mature? Ported from 7.1.x
- *  {@code WorldPropertyIsHarvestable}. Registered from {@code BCCore.preInit} under the key
- *  {@code "harvestable"}; the harvester board queries it through {@link #matches(BlockState)}.
+ *  {@link CropManager} considers mature? Ported from 7.1.x {@code WorldPropertyIsHarvestable}. Registered
+ *  from {@code BCCore.preInit} under the key {@code "harvestable"}; the harvester board queries it through
+ *  {@link #matches(BlockState)}.
  *
- *  <p>Red-baseline skeleton: {@link #matches} returns false until the foundations commit lands the real
- *  implementation (the state-only crop-maturity check; {@link #get} keeps the full CropManager path with
- *  its block-below neighbours).</p> */
+ *  <p>Two entry points on purpose: {@link #get} keeps the full CropManager path with its block-below
+ *  neighbours (a {@code BushBlock} such as cocoa/sugar cane is mature only when stacked on its own block),
+ *  while the state-only {@link #matches} seam answers with an empty getter — the JUnit sweeps and the
+ *  search-AI filter need no live level. */
 public class WorldPropertyIsHarvestable implements IWorldProperty {
     @Override
     public boolean get(Level world, BlockPos pos) {
-        return matches(world.getBlockState(pos));
+        return CropManager.isMature(world, world.getBlockState(pos), pos);
     }
 
     /** The state-only seam: the JUnit predicate sweeps drive it without a {@link Level}. */
     public boolean matches(BlockState state) {
-        // Red-baseline skeleton — real implementation (CropManager maturity) in the foundations commit.
-        return false;
+        return CropManager.isMature(EmptyBlockGetter.INSTANCE, state, BlockPos.ZERO);
     }
 
     @Override

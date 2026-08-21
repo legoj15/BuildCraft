@@ -813,5 +813,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_search_block_finds_log", () -> buildcraft.robotics.ai.SearchBlockTester::findsTheNearestMatchingBlock);
         reg.accept("buildcraftunofficial:robot_search_goto_reaches_block", () -> buildcraft.robotics.ai.SearchAndGotoBlockTester::reachesTheFoundBlock);
         reg.accept("buildcraftunofficial:robot_board_registry_sweep", () -> buildcraft.robotics.boards.BoardRegistrySweepTester::everyPh5BoardResolvesAndRoundTrips);
+
+        // The tag-backed world properties need a live server (no resource load in the unit JVM — see
+        // WorldPropertySweepTest): wood/harvestable/ore@0..3/dirt/replaceable/fluidSource pinned against
+        // an arena of placed blocks, through the registry the boards query.
+        reg.accept("buildcraftunofficial:world_properties_match", () -> buildcraft.core.properties.WorldPropertyTester::matchTheArenaBlocks);
     }
 }

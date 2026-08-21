@@ -4,7 +4,7 @@ Last audited: 2026-08-21
 
 ## 🔧 Outstanding work
 
-- Find the 25 game tests that silently skip on Minecraft 1.21.1 — [notes](docs/todo-details.md#skipped-game-tests-on-1211)
+- Port the 24 API-cliff-gated game tests to the 1.21.1 node — [plan](docs/todo-details.md#1211-gated-test-port)
 - Fix the last places English text leaks through translations — [list](docs/todo-details.md#translation-follow-ups)
 - Give the heat exchanger a better in-world look — [notes](docs/todo-details.md#heat-exchanger-visual-overhaul)
 - New Filler mode icons (fresh art — see [quick notes](docs/todo-details.md#quick-notes))

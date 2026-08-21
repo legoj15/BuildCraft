@@ -2,7 +2,7 @@
 
 Linked from [todos.md](../todos.md). This is the working plan for porting the robot system; update phase status here as work lands, and delete a phase's section only if the whole program is ever abandoned.
 
-**Status: Ph0 (seams b, c), Ph1, Ph2, Ph3, and Ph4 are complete — the MVP gate is met. Next up: Ph5 — the board catalog.**
+**Status: Ph0 (seams b, c), Ph1, Ph2, Ph3, Ph4, and Ph5 are complete. Next up: Ph6 — Statements.**
 
 ## Overview
 
@@ -87,13 +87,15 @@ One intermittent placement-test flake surfaced across the fix runs and was diagn
 
 _Tests:_ suite 398→411 game tests: board registry sweep, picker fetch E2E (fly-to + consume, no dupe), carrier load E2E (fly-to + dock + load), carrier unload-cycle E2E (pins the D1-emergent loop below), low-power recharge E2E (search → fly → dock → charge past `SAFETY_POWER` against a live kinesis rig), the wooden-pipe supply gate, the dead-end unload regression, the three fetch-targeting pins, and death/drops extended to assert the dropped item's board — plus the Ph3 smoke test converted from an `insertItemsForce` dodge to the real `injectItem` contract. JUnit: `AIRobotMain` preempt ladder, per-leaf cost table, board NBT round-trips, goto-block/search-station/load units. In-client: picker fetch, dock+recharge, skins, board item render, 20-robot idle perf — all on 26.2.
 
-### Ph5 — Board catalog
+### Ph5 — Board catalog (COMPLETE 2026-08-21)
 
-Remaining work/break/harvest AIs + boards (Lumberjack, Harvester, Miner, Planter, Farmer, Pump, Knight, Butcher) + the 2 abstract generic-search/break bases.
+The remaining 16 AIs (search/fetch/load/unload(+fluids), break/harvest/plant/use-tool/attack, work-in-area, goto-station-adjacent, straight-move-to) + 8 boards (Lumberjack, Harvester, Miner, Planter, Farmer, Pump, Knight, Butcher) + the 2 abstract generic-search/break bases, each registered by name with an NBT round-trip, ported from `upstream/7.1.x:common/`; 7 world properties (soft, wood, harvestable, ore@hardness=0–3, dirt, replaceable, fluidSource) against the live `BuildCraftAPI` registry, plus `CropManager.setDefaultHandler(CropHandlerPlantable)`. 13 of the 16 AIs keep 7.1.x's legacy `buildcraft.core.robots.*` names (Harvest/Plant/SearchAndGotoBlock are post-6.x); costs re-pinned at the µMJ bridge (blue boards 3_200_000_000, knight 12_800_000_000).
 
-**Resolve the dead per-board item identity.** `RedstoneBoardNBT.getItemModelLocation()` has no consumer: every board item shares the single `redstone_board` model/icon (Ph4 shipped one texture, not the planned per-board `items/board_*.json` split). With ~8 more boards landing here, either wire per-board item models/icons (7.1.x had one per board — otherwise the creative tab is a row of identical chips) or delete the API method.
+The dead per-board item identity was resolved by keeping the single chip texture and using the 1.21.4+ item-model system: `items/redstone_board.json` is a 10-link `minecraft:condition` chain (the type id is `condition`, not `conditional`; `minecraft:select` was rejected — exact-equality only) over `custom_data.board.id` with a partial NBT match resolving each board's icon. The 1.21.1 node has no item-model system and keeps the single chip — line-inherent, not a gap.
 
-_Tests:_ flat per-board predicate sweep (`isExpectedTool`/`isExpectedBlock` etc.); board `writeSelfToNBT`/`loadSelfFromNBT` round-trips; `AIRobotLoad`/`Unload`(`+Fluids`) move-math (conservation + qty cap); `SearchBlock`/`SearchAndGoto*` orchestration; Miner harvest-level clamp + ore key.
+Step-5 debugging surfaced three real defects, all pinned (`398114a17`): the ported 3-arg `AIRobotSearchAndGotoBlock` defaulted `maxDistanceToEnd` to 64 where 7.1.x used 0 (a positive radius ends the pathfind at the first soft cell in range → a two-cell stub path → the goto leg never flies); `AIRobotGoto`'s movement targets were float, and the 26.x world (±3e7) has float's ulp at 1.0 past |8.4M|, so the +0.5 cell-centre offset was dropped at game-test arena coordinates (now double; NBT stays float); and the search tests were not hermetic — the search scans 64 blocks, so a neighbouring test's leftover oak log (two cells away) was a legal, closer target (both now run in private `test_environment`s). The world-properties test had a test-world bug of its own: vegetation blocks re-validate canSurvive whenever a neighbour changes, and the dark bedrock-floored arena turned the crops to air before the read (the test now lays farmland/soul sand/dirt under the plants plus a glowstone — wheat needs light ≥ 8). The `AIRobot` no-terminated-flag re-cycle (`cycle()` re-runs `update()` after `terminate()`) is faithful to 7.1.x and required by production (`EntityRobot.tick` cycles `mainAI` forever; boards never self-terminate) — deliberately not changed.
+
+_Tests:_ 411→415 game tests: the live-server world-property sweep (FML-JUnit performs no resource load, so tag-backed properties can never resolve there — and the wheat pin pins the soil+light the arena needs to keep crops alive), search-finds-log, and the search-and-goto flight (parks one cell short of the log; the 1.5 gate is the picker-E2E radius); JUnit: `BoardPredicateSweepTest`, `BoardNbtRoundTripTest`, `MinerHarvestLevelTest`, `AIRobotLoadUnloadFluidMathTest`, `AIRobotCostTableTest` over all 16 AIs, `WorldPropertySweepTest`. In-client (McDevBridge): the 8 board icons + creative tab on 26.2; boards present with the single chip on 1.21.1.
 
 ### Ph6 — Statements
 

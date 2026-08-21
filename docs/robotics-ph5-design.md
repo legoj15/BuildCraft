@@ -195,12 +195,19 @@ Model the NBT classes on the existing `BoardRobotPickerNBT`/`BoardRobotEmptyNBT`
   ```json
   { "model": {
       "type": "minecraft:condition",
-      "property": { "type": "minecraft:component",
-                    "predicate": { "type": "minecraft:custom_data",
-                                   "value": { "board": { "id": "<boardId>" } } } },
+      "property": "minecraft:component",
+      "predicate": "minecraft:custom_data",
+      "value": { "board": { "id": "<boardId>" } },
       "on_true":  { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_blue" },
       "on_false": { "type": "minecraft:condition", "...": "next" } } }
   ```
+  The property/predicate fields are **flat strings, not nested objects**: the codec chain is
+  `dispatchMap` (`ConditionalItemModelProperties` → `DataComponentPredicate.singleCodec`) → `KeyDispatchCodec`,
+  whose decode runs the target codec against the *same* MapLike (verified in DFU 10.0.21 bytecode) — the type ids
+  are bare string fields (`"property": "minecraft:component"`, `"predicate": "minecraft:custom_data"`) with the
+  payload fields (`value`) at the same level. A nested `"property": {"type": ...}` form fails `fieldOf`'s string
+  read and the whole model fails to load (this exact defect shipped in `33fb40c45` and was caught in-client; the
+  flat form is what renders — see the landed chain in `items/redstone_board.json`).
   `createBoard` stamps `board.id` = `getID()` (a namespaced string, e.g. `buildcraftunofficial:boardRobotPicker`), so
   the `value` partial-match is exactly `{"board": {"id": "<getID()>"}}`. `NbtPredicate` is a raw NBT compound
   compared by `CustomData.matchedBy` (partial match), so only the `board.id` path needs to match — partial

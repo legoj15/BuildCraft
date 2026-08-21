@@ -17,11 +17,17 @@ import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.entity.EntityRobot;
 
 /** Ph5 game test for {@link AIRobotSearchAndGotoBlock}: the composed search-then-fly, driven SYNCHRONOUSLY
- *  on an unadded robot. The goto leg moves the robot by writing its delta movement every cycle (exactly as
- *  {@code AIRobotGoto} does for the entity tick to apply), so the test applies the same delta by hand —
- *  {@code robot.move(MovementType.SELF, delta)} — after each cycle. The log is solid, so the robot stops at
- *  its face rather than in its cell: the arrival gate is the same 1.5-block radius the picker E2E uses for a
- *  reached item. Red until the AI step lands the real search-then-goto logic. */
+ *  on an unadded robot. The search reports its real approach path (7.1.x's board-facing default,
+ *  {@code maxDistanceToEnd = 0}: the pathfind ends on the target cell, and the target cell itself is
+ *  dropped), and the goto leg flies the robot down it cell by cell — the robot parks one cell short of the
+ *  log, exactly 1.0 from its centre. The test applies the delta the AI writes by hand
+ *  ({@code robot.move(MoverType.SELF, delta)}) after each cycle, the way the entity tick would. The arrival
+ *  gate is 1.5 — the same radius the picker E2E uses for a reached item — so it passes with the one-cell
+ *  margin to spare. This test also pins the double-precision flight targets: the game-test arenas sit at
+ *  |z| ≈ 1.4e7, where float's ulp is 1.0 and the +0.5 cell-centre offset would be dropped. The test runs in
+ *  a PRIVATE test environment (the manifest's "environment" field): the search scans 64 blocks, and in the
+ *  shared minecraft:default world a neighbouring test's leftover oak log — two cells away — is a legal,
+ *  closer target than the log this test places, so the flight must be hermetic. */
 public class SearchAndGotoBlockTester {
 
     private static final long SEEDED_CHARGE = 5000L * MjAPI.MJ;
@@ -42,7 +48,8 @@ public class SearchAndGotoBlockTester {
                 pos -> level.getBlockState(pos).is(Blocks.OAK_LOG));
 
         try {
-            // Search cycles (synchronous pathfinding) + ~40 goto cycles at 0.1 blocks/cycle over 4 blocks.
+            // A few search cycles (synchronous pathfinding) + ~40 goto cycles at 0.1 blocks/cycle over 4
+            // blocks — 2000 is generous headroom, not a prediction.
             for (int i = 0; i < 2000 && robot.position().distanceToSqr(logCenter) >= 2.25; i++) {
                 ai.cycle();
                 robot.move(MoverType.SELF, robot.getDeltaMovement());

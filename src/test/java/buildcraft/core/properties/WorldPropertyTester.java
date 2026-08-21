@@ -27,6 +27,21 @@ public class WorldPropertyTester {
         Level level = helper.getLevel();
 
         // One layer, x 0..5 / z 0..2 — inside the arena cell on every node.
+        //
+        // Soil and light go down FIRST, because vegetation blocks are not static: they re-validate
+        // canSurvive whenever a neighbouring block changes (VegetationBlock.updateShape), and a
+        // failing check turns them to air on the spot. Game-test arenas sit underground in the dark,
+        // so wheat needs farmland below (farmland is in minecraft:supports_vegetation, satisfying
+        // CropBlock's soil check) AND a light level of 8 or more (CropBlock's own
+        // hasSufficientLight), nether wart needs soul sand (its mayPlaceOn), and short grass a
+        // natural substrate (minecraft:supports_vegetation). Without all of that the crops below are
+        // air by the time the pins read them, and the assertFalse pins pass for the wrong reason.
+        helper.setBlock(new BlockPos(3, -1, 1), Blocks.FARMLAND);
+        helper.setBlock(new BlockPos(4, -1, 1), Blocks.FARMLAND);
+        helper.setBlock(new BlockPos(5, -1, 1), Blocks.SOUL_SAND);
+        helper.setBlock(new BlockPos(0, -1, 2), Blocks.DIRT);
+        helper.setBlock(new BlockPos(3, 1, 1), Blocks.GLOWSTONE);
+
         helper.setBlock(rel(0, 0), Blocks.OAK_LOG);
         helper.setBlock(rel(1, 0), Blocks.CRIMSON_STEM);
         helper.setBlock(rel(2, 0), Blocks.STONE);

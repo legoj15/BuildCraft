@@ -17,14 +17,17 @@ import buildcraft.api.robots.IRobotAccess;
  *  when the move is done. */
 public abstract class AIRobotGoto extends AIRobot {
 
-    protected float nextX, nextY, nextZ;
+    // Double, not float: the 26.x world is ±30M blocks, and float's ulp is already 1.0 past |8.4M| — a
+    // cell-centre offset of +0.5 is silently dropped at that scale and the robot aims half a block off
+    // (the game-test arenas sit at |z| ≈ 1.4e7, where this bit the search-and-goto flight).
+    protected double nextX, nextY, nextZ;
     protected double dirX, dirY, dirZ;
 
     public AIRobotGoto(IRobotAccess iRobot) {
         super(iRobot);
     }
 
-    protected void setDestination(IRobotAccess robot, float x, float y, float z) {
+    protected void setDestination(IRobotAccess robot, double x, double y, double z) {
         nextX = x;
         nextY = y;
         nextZ = z;
@@ -45,7 +48,7 @@ public abstract class AIRobotGoto extends AIRobot {
             dirZ = 0;
         }
 
-        robot.setDeltaMovement(new net.minecraft.world.phys.Vec3(dirX / 10F, dirY / 10F, dirZ / 10F));
+        robot.setDeltaMovement(new net.minecraft.world.phys.Vec3(dirX / 10D, dirY / 10D, dirZ / 10D));
     }
 
     @Override

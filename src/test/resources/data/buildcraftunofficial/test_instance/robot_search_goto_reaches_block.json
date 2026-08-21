@@ -1,7 +1,7 @@
 {
     "type": "minecraft:function",
     "function": "buildcraftunofficial:robot_search_goto_reaches_block",
-    "environment": "minecraft:default",
+    "environment": "buildcraftunofficial:robot_search_goto",
     "structure": "minecraft:empty",
     "max_ticks": 20,
     "setup_ticks": 0,

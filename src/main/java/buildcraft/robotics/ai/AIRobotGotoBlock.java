@@ -30,7 +30,7 @@ public class AIRobotGotoBlock extends AIRobotGoto {
     private PathFinding pathSearch;
     private LinkedList<BlockPos> path;
     private double prevDistance = Double.MAX_VALUE;
-    private float finalX, finalY, finalZ;
+    private double finalX, finalY, finalZ;
     private double maxDistance = 0;
     private BlockPos lastBlockInPath;
     private boolean loadedFromNBT;
@@ -154,7 +154,7 @@ public class AIRobotGotoBlock extends AIRobotGoto {
             prevDistance = Double.MAX_VALUE;
 
             if (isFirst || SoftBlockAccess.of(robot.level()).isSoft(next)) {
-                setDestination(robot, next.getX() + 0.5F, next.getY() + 0.5F, next.getZ() + 0.5F);
+                setDestination(robot, next.getX() + 0.5, next.getY() + 0.5, next.getZ() + 0.5);
                 robot.aimItemAt(next);
             } else {
                 // Path invalid! (a chunk reshaped, a wall moved in the way) — give up and stop.
@@ -183,9 +183,9 @@ public class AIRobotGotoBlock extends AIRobotGoto {
     public void writeSelfToNBT(CompoundTag nbt) {
         super.writeSelfToNBT(nbt);
 
-        nbt.putFloat("finalX", finalX);
-        nbt.putFloat("finalY", finalY);
-        nbt.putFloat("finalZ", finalZ);
+        nbt.putFloat("finalX", (float) finalX);
+        nbt.putFloat("finalY", (float) finalY);
+        nbt.putFloat("finalZ", (float) finalZ);
         nbt.putDouble("maxDistance", maxDistance);
 
         if (path != null) {

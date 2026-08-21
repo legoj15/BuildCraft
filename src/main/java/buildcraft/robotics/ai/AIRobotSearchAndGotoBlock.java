@@ -42,7 +42,11 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
     }
 
     public AIRobotSearchAndGotoBlock(IRobotAccess iRobot, boolean iRandom, IBlockFilter iFilter) {
-        this(iRobot, iRandom, iFilter, 64);
+        // 7.1.x's board-facing default is 0, not a radius: with maxDistanceToEnd == 0 the search's
+        // PathFinding only ends ON the target cell, so the reported path is the real approach path (minus
+        // the target cell, which AIRobotSearchBlock drops). Any positive radius ends the pathfind at the
+        // first soft cell in range — a two-cell stub — and the goto leg then flies the robot nowhere.
+        this(iRobot, iRandom, iFilter, 0);
     }
 
     public AIRobotSearchAndGotoBlock(IRobotAccess iRobot, boolean iRandom, IBlockFilter iFilter,

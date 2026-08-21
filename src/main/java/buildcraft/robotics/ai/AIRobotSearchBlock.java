@@ -17,7 +17,6 @@ import net.minecraft.world.level.Level;
 
 import buildcraft.api.core.IZone;
 import buildcraft.api.core.NbtApiUtil;
-import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.ResourceIdBlock;
@@ -78,8 +77,9 @@ public class AIRobotSearchBlock extends AIRobot {
 
     @Override
     public long getPowerCost() {
-        // 7.1.x: 2 RF, at the 1 RF = 100_000 µMJ bridge.
-        return 2 * MjAPI.MJ;
+        // Ph5 cost table: 2 RF per tick, at the 1 RF = 100_000 micro-MJ bridge; 7.1.x left this AI on
+        // the base default cost (no getPowerCost override in the 7.1.x source).
+        return 200_000;
     }
 
     @Override

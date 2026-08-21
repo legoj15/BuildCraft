@@ -10,14 +10,13 @@ package buildcraft.robotics.ai;
 
 import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.robots.AIRobot;
+import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.robotics.IStationFilter;
 
-/** Finds a station whose fluid input can supply a fluid matching {@code filter} and docks the robot there,
- *  leaving it docked (the caller runs {@link AIRobotLoadFluids}). Ported from 7.1.x
- *  {@code AIRobotGotoStationToLoadFluids} (the fluid twin of the Ph4 {@code AIRobotGotoStationToLoad}).
- *
- *  <p>Red-baseline skeleton: the fluid-station search lands in the fluid step; until then the inherited
- *  {@code update()} terminates on the first cycle.</p> */
+/** Finds a station the robot can LOAD a filter-matching fluid from, and flies to it.
+ *  {@link AIRobotLoadFluids#load} as a dry-run predicate makes only a station with a live, compatible
+ *  supply a candidate. Ported from 7.1.x {@code AIRobotGotoStationToLoadFluids}. */
 public class AIRobotGotoStationToLoadFluids extends AIRobot {
 
     private IFluidFilter filter;
@@ -26,9 +25,30 @@ public class AIRobotGotoStationToLoadFluids extends AIRobot {
         super(iRobot);
     }
 
-    public AIRobotGotoStationToLoadFluids(IRobotAccess iRobot, IFluidFilter iFilter) {
+    public AIRobotGotoStationToLoadFluids(IRobotAccess iRobot, IFluidFilter filter) {
         this(iRobot);
 
-        filter = iFilter;
+        this.filter = filter;
+    }
+
+    @Override
+    public void update() {
+        startDelegateAI(new AIRobotSearchAndGotoStation(robot, new StationFilter(), robot.getZoneToLoadUnload()));
+    }
+
+    @Override
+    public void delegateAIEnded(AIRobot ai) {
+        if (ai instanceof AIRobotSearchAndGotoStation) {
+            setSuccess(ai.success());
+            terminate();
+        }
+    }
+
+    private class StationFilter implements IStationFilter {
+
+        @Override
+        public boolean matches(DockingStation station) {
+            return AIRobotLoadFluids.load(robot, station, filter, false) > 0;
+        }
     }
 }

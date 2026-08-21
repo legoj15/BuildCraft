@@ -11,20 +11,29 @@ package buildcraft.robotics.boards;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
+import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.core.NbtApiUtil;
+import buildcraft.api.crops.CropManager;
+import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
+import buildcraft.robotics.ai.AIRobotGotoSleep;
+import buildcraft.robotics.ai.AIRobotPlant;
+import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
+import buildcraft.robotics.path.IBlockFilter;
 
 /** The planter: keeps a seed equipped (fetching one from the station when none is held), searches for
  *  a spot that is not {@code "replaceable"} and can sustain the planted seed, then plants it with
  *  {@code AIRobotPlant}. Ported from 7.1.x {@code BoardRobotPlanter} (the 7.1.x gate filter is Ph6,
  *  so the effective block filter is {@code !replaceable && canSustainPlant && !isTaken} — D1).
  *
- *  <p>Red-baseline skeleton: the seed predicate and the search/plant wiring land in the AI step; until
- *  then {@link #update()} inherits the base terminate-on-cycle.</p> */
+ *  <p>7.1.x searched with {@code maxDistanceToEnd = 1} (the path may end on any soft block within one of
+ *  the target) — kept: the planter does not need to stand on the exact cell before the seed spot. */
 public class BoardRobotPlanter extends RedstoneBoardRobot {
 
     private BlockPos blockFound;
@@ -38,10 +47,43 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
         return BoardRobotPlanterNBT.INSTANCE;
     }
 
-    /** The seed predicate — {@code CropManager.isSeed} in the AI step. */
+    /** The seed predicate: anything {@link CropManager#isSeed} recognises (class-based, so it works in
+     *  the unit-test JVM where data tags do not resolve). */
     public boolean matchesSeed(ItemStack stack) {
-        // Red-baseline skeleton.
-        return false;
+        return CropManager.isSeed(stack);
+    }
+
+    @Override
+    public void update() {
+        if (robot.getHeldItem().isEmpty()) {
+            startDelegateAI(new AIRobotFetchAndEquipItemStack(robot, this::matchesSeed));
+        } else {
+            Level level = robot.level();
+            ItemStack seed = robot.getHeldItem();
+            IBlockFilter blockFilter = pos -> level != null
+                    && !BuildCraftAPI.getWorldProperty("replaceable").get(level, pos)
+                    && CropManager.canSustainPlant(level, seed, pos)
+                    && !robot.getRegistry().isTaken(new ResourceIdBlock(pos));
+            startDelegateAI(new AIRobotSearchAndGotoBlock(robot, true, blockFilter, 1));
+        }
+    }
+
+    @Override
+    public void delegateAIEnded(AIRobot ai) {
+        if (ai instanceof AIRobotSearchAndGotoBlock searchAndGoto) {
+            if (searchAndGoto.success()) {
+                blockFound = searchAndGoto.getBlockFound();
+                startDelegateAI(new AIRobotPlant(robot, blockFound));
+            } else {
+                startDelegateAI(new AIRobotGotoSleep(robot));
+            }
+        } else if (ai instanceof AIRobotPlant) {
+            releaseBlockFound();
+        } else if (ai instanceof AIRobotFetchAndEquipItemStack) {
+            if (!ai.success()) {
+                startDelegateAI(new AIRobotGotoSleep(robot));
+            }
+        }
     }
 
     @Override

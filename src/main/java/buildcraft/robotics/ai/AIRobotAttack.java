@@ -8,6 +8,8 @@
  */
 package buildcraft.robotics.ai;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 
 import buildcraft.api.robots.AIRobot;
@@ -19,10 +21,11 @@ import buildcraft.api.robots.IRobotAccess;
  *  range skips the goto and starts swinging immediately, and a failed goto reports the target as
  *  unreachable before terminating. Ported from 7.1.x {@code AIRobotAttack}.
  *
- *  <p>Red-baseline skeleton: the attack timing lands with the combat step (and the real
- *  {@code attackTargetEntityWithCurrentItem} in the foundations commit); until then the inherited
- *  {@code update()} terminates on the first cycle.</p> */
+ *  <p>No NBT: the target is a live entity reference 7.1.x never serialised either, so a robot killed
+ *  mid-attack restarts its board from scratch (the board re-searches for a target). */
 public class AIRobotAttack extends AIRobot {
+
+    private static final float ATTACK_RANGE = 2.0F;
 
     private Entity target;
     private int delay = 10;
@@ -35,5 +38,62 @@ public class AIRobotAttack extends AIRobot {
         super(iRobot);
 
         target = iTarget;
+    }
+
+    @Override
+    public void preempt(AIRobot ai) {
+        if (ai instanceof AIRobotGotoBlock) {
+            // The target may have moved since the goto started; if it is in range now, skip the rest of
+            // the flight and start swinging immediately.
+            if (target != null && !target.isRemoved()
+                    && robot.position().distanceTo(target.position()) <= ATTACK_RANGE) {
+                abortDelegateAI();
+                robot.setItemActive(true);
+            }
+        }
+    }
+
+    @Override
+    public void update() {
+        if (target == null || target.isRemoved()) {
+            terminate();
+            return;
+        }
+
+        if (robot.position().distanceTo(target.position()) > ATTACK_RANGE) {
+            startDelegateAI(new AIRobotGotoBlock(robot,
+                    Mth.floor(target.getX()), Mth.floor(target.getY()), Mth.floor(target.getZ())));
+            robot.setItemActive(false);
+            return;
+        }
+
+        delay++;
+        if (delay > 20) {
+            delay = 0;
+            robot.attackTargetEntityWithCurrentItem(target);
+            robot.aimItemAt(new BlockPos(
+                    Mth.floor(target.getX()), Mth.floor(target.getY()), Mth.floor(target.getZ())));
+        }
+    }
+
+    @Override
+    public void end() {
+        robot.setItemActive(false);
+    }
+
+    @Override
+    public void delegateAIEnded(AIRobot ai) {
+        if (ai instanceof AIRobotGotoBlock) {
+            if (!ai.success()) {
+                robot.unreachableEntityDetected(target);
+            }
+            terminate();
+        }
+    }
+
+    @Override
+    public long getPowerCost() {
+        // 7.1.x charged BREAK_ENERGY * 2 / 20 = 16 RF; at the 1 RF = 100_000 micro-MJ bridge.
+        return 1_600_000;
     }
 }

@@ -9,18 +9,37 @@
 package buildcraft.robotics.ai;
 
 import buildcraft.api.robots.AIRobot;
+import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.robotics.IStationFilter;
 
-/** Finds a station whose fluid output accepts the robot's tank fluid and docks the robot there, leaving it
- *  docked (the caller runs {@link AIRobotUnloadFluids}). Ported from 7.1.x
- *  {@code AIRobotGotoStationToUnloadFluids} (the fluid twin of the Ph4
- *  {@code AIRobotGotoStationToUnload}).
- *
- *  <p>Red-baseline skeleton: the fluid-station search lands in the fluid step; until then the inherited
- *  {@code update()} terminates on the first cycle.</p> */
+/** Finds a station the robot can UNLOAD its carried fluid into, and flies to it.
+ *  {@link AIRobotUnloadFluids#unload} as a dry-run predicate makes only a station with room for the
+ *  carried fluid a candidate. Ported from 7.1.x {@code AIRobotGotoStationToUnloadFluids}. */
 public class AIRobotGotoStationToUnloadFluids extends AIRobot {
 
     public AIRobotGotoStationToUnloadFluids(IRobotAccess iRobot) {
         super(iRobot);
+    }
+
+    @Override
+    public void start() {
+        startDelegateAI(new AIRobotSearchAndGotoStation(robot, new StationFilter(), robot.getZoneToLoadUnload()));
+    }
+
+    @Override
+    public void delegateAIEnded(AIRobot ai) {
+        if (ai instanceof AIRobotSearchAndGotoStation) {
+            setSuccess(ai.success());
+            terminate();
+        }
+    }
+
+    private class StationFilter implements IStationFilter {
+
+        @Override
+        public boolean matches(DockingStation station) {
+            return AIRobotUnloadFluids.unload(robot, station, false) > 0;
+        }
     }
 }

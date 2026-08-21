@@ -16,11 +16,9 @@ import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.core.properties.WorldPropertyIsWood;
 
-/** The lumberjack: breaks log blocks ({@code "wood"} world property) with an axe. Ported from 7.1.x
+/** The lumberjack: breaks log blocks (the {@code "wood"} world property) with an axe. Ported from 7.1.x
  *  {@code BoardRobotLumberjack} (7.1.x's tool check was the {@code "axe"} tool class; the modern
- *  equivalent is {@code instanceof AxeItem}).
- *
- *  <p>Red-baseline skeleton: the predicates answer false until the AI step lands the real logic.</p> */
+ *  equivalent is {@link RobotToolPredicates#isAxe}). */
 public class BoardRobotLumberjack extends BoardRobotGenericBreakBlock {
 
     public BoardRobotLumberjack(IRobotAccess iRobot) {
@@ -34,14 +32,11 @@ public class BoardRobotLumberjack extends BoardRobotGenericBreakBlock {
 
     @Override
     public boolean isExpectedTool(ItemStack stack) {
-        // Red-baseline skeleton — an axe (AxeItem) in the AI step.
-        return false;
+        return RobotToolPredicates.isAxe(stack);
     }
 
     @Override
     public boolean isExpectedBlock(BlockState state) {
-        // The "wood" world property (registered by BCCore; the skeleton answers false until the
-        // foundations commit).
         return ((WorldPropertyIsWood) BuildCraftAPI.getWorldProperty("wood")).matches(state);
     }
 }

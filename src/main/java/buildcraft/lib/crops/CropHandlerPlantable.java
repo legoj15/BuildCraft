@@ -33,9 +33,12 @@ import net.minecraft.world.phys.Vec3;
 import buildcraft.api.crops.ICropHandler;
 
 /** Default crop handler that knows about vanilla and common modded crops.
- *  In 1.21.11, IPlantable was removed. Instead we check if the item is a
- *  BlockItem whose block extends BushBlock (covers crops, flowers, saplings,
- *  mushrooms, etc.) or if the item's useOn produces a crop placement. */
+ *  IPlantable is gone from modern MC, so {@link #isSeed} checks whether the item is a BlockItem
+ *  whose block is a plant. The plant umbrella is {@code BushBlock} below 26.1 and
+ *  {@code VegetationBlock} on the 26.x line — Mojang re-homed CropBlock &amp; co. off BushBlock
+ *  when they introduced VegetationBlock, so the umbrella class differs per line. Seed items are
+ *  BlockItems on every line (ItemNameBlockItem on 1.21.x, custom-named block items on 26.x), so
+ *  wheat &amp; co. resolve through the same path. */
 public enum CropHandlerPlantable implements ICropHandler {
     INSTANCE;
 
@@ -43,11 +46,18 @@ public enum CropHandlerPlantable implements ICropHandler {
     public boolean isSeed(ItemStack stack) {
         if (stack.getItem() instanceof BlockItem blockItem) {
             Block block = blockItem.getBlock();
-            // BushBlock covers CropBlock, FlowerBlock, SaplingBlock, MushroomBlock, etc.
-            // Exclude sugar cane since it's not a typical "seed" for planting purposes
-            if (block instanceof BushBlock && block != Blocks.SUGAR_CANE) {
+            // The plant umbrella covers CropBlock, FlowerBlock, SaplingBlock, MushroomBlock, etc.
+            // Sugar cane extends Block directly (never a plant) — it is CropHandlerReeds territory.
+            //? if >=26.1 {
+            if (block instanceof net.minecraft.world.level.block.VegetationBlock
+                    && block != Blocks.SUGAR_CANE) {
                 return true;
             }
+            //?} else {
+            /*if (block instanceof BushBlock && block != Blocks.SUGAR_CANE) {
+                return true;
+            }*/
+            //?}
         }
         return false;
     }

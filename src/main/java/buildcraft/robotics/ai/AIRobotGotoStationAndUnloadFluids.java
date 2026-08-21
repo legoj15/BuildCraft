@@ -11,15 +11,34 @@ package buildcraft.robotics.ai;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 
-/** Composes {@link AIRobotGotoStationToUnloadFluids} (find + dock) and {@link AIRobotUnloadFluids} (empty
- *  the tank). Ported from 7.1.x {@code AIRobotGotoStationAndUnloadFluids} (the fluid twin of the Ph4
- *  {@code AIRobotGotoStationAndUnload}). The pump board uses it to offload a full tank.
- *
- *  <p>Red-baseline skeleton: the compose-logic lands in the fluid step; until then the inherited
- *  {@code update()} terminates on the first cycle.</p> */
+/** Goes to the nearest unloadable station and empties the robot's tank through
+ *  {@link AIRobotUnloadFluids}. Ported from 7.1.x {@code AIRobotGotoStationAndUnloadFluids}. */
 public class AIRobotGotoStationAndUnloadFluids extends AIRobot {
 
     public AIRobotGotoStationAndUnloadFluids(IRobotAccess iRobot) {
         super(iRobot);
+    }
+
+    @Override
+    public void start() {
+        startDelegateAI(new AIRobotGotoStationToUnloadFluids(robot));
+    }
+
+    @Override
+    public void delegateAIEnded(AIRobot ai) {
+        if (ai instanceof AIRobotGotoStationToUnloadFluids) {
+            if (ai.success()) {
+                startDelegateAI(new AIRobotUnloadFluids(robot));
+            } else {
+                setSuccess(false);
+                terminate();
+            }
+        } else if (ai instanceof AIRobotUnloadFluids) {
+            // The unload's own outcome decides the composite's — without this branch the default success
+            // (true) was reported even when the robot still carried everything (station output filled
+            // between the search dry-run and the arrival). Mirrors AIRobotGotoStationAndUnload.
+            setSuccess(ai.success());
+            terminate();
+        }
     }
 }

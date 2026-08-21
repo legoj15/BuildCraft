@@ -12,12 +12,9 @@ import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 
-/** Composes {@link AIRobotGotoStationToLoadFluids} (find + dock) and {@link AIRobotLoadFluids} (fill the
- *  tank) for a fluid matching {@code filter}. Ported from 7.1.x {@code AIRobotGotoStationAndLoadFluids}
- *  (the fluid twin of the Ph4 {@code AIRobotGotoStationAndLoad}).
- *
- *  <p>Red-baseline skeleton: the compose-logic lands in the fluid step; until then the inherited
- *  {@code update()} terminates on the first cycle.</p> */
+/** {@link AIRobotGotoStationToLoadFluids} then {@link AIRobotLoadFluids}: go to a loadable station and
+ *  actually fill the robot's tank with filter-matching fluid, bucket by bucket. Ported from 7.1.x
+ *  {@code AIRobotGotoStationAndLoadFluids}. */
 public class AIRobotGotoStationAndLoadFluids extends AIRobot {
 
     private IFluidFilter filter;
@@ -26,9 +23,31 @@ public class AIRobotGotoStationAndLoadFluids extends AIRobot {
         super(iRobot);
     }
 
-    public AIRobotGotoStationAndLoadFluids(IRobotAccess iRobot, IFluidFilter iFilter) {
+    public AIRobotGotoStationAndLoadFluids(IRobotAccess iRobot, IFluidFilter filter) {
         this(iRobot);
 
-        filter = iFilter;
+        this.filter = filter;
+    }
+
+    @Override
+    public void start() {
+        startDelegateAI(new AIRobotGotoStationToLoadFluids(robot, filter));
+    }
+
+    @Override
+    public void delegateAIEnded(AIRobot ai) {
+        if (ai instanceof AIRobotGotoStationToLoadFluids) {
+            if (filter != null && ai.success()) {
+                startDelegateAI(new AIRobotLoadFluids(robot, filter));
+            } else {
+                setSuccess(false);
+                terminate();
+            }
+        } else if (ai instanceof AIRobotLoadFluids) {
+            // The load's own outcome decides the composite's — the item twin (AIRobotGotoStationAndLoad)
+            // propagates it the same way.
+            setSuccess(ai.success());
+            terminate();
+        }
     }
 }

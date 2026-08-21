@@ -10,31 +10,42 @@ import org.junit.jupiter.api.Test;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CropBlock;
 
 import buildcraft.VanillaSetupBaseTester;
 import buildcraft.robotics.ai.MockRobotAccess;
 
 /** The pure-state tool/block predicates of the Ph5 work boards, driven without a Level. Every predicate
- *  is the board's identity — which tool it carries and what it hunts — so each is pinned directly. Red
- *  until the AI step lands the real logic (the skeleton predicates answer false). */
+ *  is the board's identity — which tool it carries and what it hunts — so each is pinned directly.
+ *  Where a predicate's state side needs a data tag to resolve (the "wood" property), the unit JVM cannot
+ *  pin it — the FML-JUnit environment does no resource load — and that side is pinned by the
+ *  {@code world_properties_match} game test instead. */
 public class BoardPredicateSweepTest extends VanillaSetupBaseTester {
 
     private final MockRobotAccess robot = new MockRobotAccess();
 
     @Test
-    public void theLumberjackCarriesAnAxeAndHuntsLogs() {
+    public void theLumberjackCarriesAnAxe() {
         BoardRobotLumberjack lumberjack = new BoardRobotLumberjack(robot);
 
         Assertions.assertTrue(lumberjack.isExpectedTool(new ItemStack(Items.WOODEN_AXE)),
                 "an axe is the lumberjack's tool");
         Assertions.assertFalse(lumberjack.isExpectedTool(new ItemStack(Items.DIAMOND_PICKAXE)),
                 "a pickaxe is not an axe");
-        Assertions.assertTrue(lumberjack.isExpectedBlock(
-                net.minecraft.world.level.block.Blocks.OAK_LOG.defaultBlockState()),
-                "an oak log is the lumberjack's quarry");
-        Assertions.assertFalse(lumberjack.isExpectedBlock(
-                net.minecraft.world.level.block.Blocks.STONE.defaultBlockState()),
-                "stone is not wood");
+        // The block side (isExpectedBlock on a log) is tag-backed and pinned by the
+        // world_properties_match game test, not here.
+    }
+
+    @Test
+    public void theHarvesterHuntsMatureCrops() {
+        BoardRobotHarvester harvester = new BoardRobotHarvester(robot);
+
+        Assertions.assertTrue(harvester.isExpectedBlock(
+                Blocks.WHEAT.defaultBlockState().setValue(CropBlock.AGE, 7)),
+                "a fully-grown wheat crop is harvestable");
+        Assertions.assertFalse(harvester.isExpectedBlock(Blocks.STONE.defaultBlockState()),
+                "stone is not a crop");
     }
 
     @Test

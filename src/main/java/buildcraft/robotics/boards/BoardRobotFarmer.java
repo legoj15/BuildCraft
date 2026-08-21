@@ -11,20 +11,29 @@ package buildcraft.robotics.boards;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
+import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.core.NbtApiUtil;
+import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
+import buildcraft.robotics.ai.AIRobotGotoSleep;
+import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
+import buildcraft.robotics.ai.AIRobotUseToolOnBlock;
+import buildcraft.robotics.path.IBlockFilter;
 
 /** The farmer: keeps a hoe equipped (fetching one from the station when none is held), searches for
- *  tilled-able {@code "dirt"} with air above it, then tills it with {@code AIRobotUseToolOnBlock}.
- *  Ported from 7.1.x {@code BoardRobotFarmer} (7.1.x's tool check was {@code ItemHoe}; the modern
- *  equivalent is {@code instanceof HoeItem}).
+ *  {@code "dirt"} with air above it, then tills it with {@code AIRobotUseToolOnBlock}. Ported from
+ *  7.1.x {@code BoardRobotFarmer} (7.1.x's tool check was {@code ItemHoe}; the modern equivalent is
+ *  {@link RobotToolPredicates#isHoe}).
  *
- *  <p>Red-baseline skeleton: the hoe predicate and the search/till wiring land in the AI step; until
- *  then {@link #update()} inherits the base terminate-on-cycle.</p> */
+ *  <p>One divergence from 7.1.x: the fetch filter additionally refuses a WORN hoe
+ *  ({@code damage >= maxDamage}) — 7.1.x would fetch a broken hoe and then spin forever, since a broken
+ *  tool's failed till keeps the (damageable) item in the hand. Same guard the break-board base carries. */
 public class BoardRobotFarmer extends RedstoneBoardRobot {
 
     private BlockPos blockFound;
@@ -38,10 +47,43 @@ public class BoardRobotFarmer extends RedstoneBoardRobot {
         return BoardRobotFarmerNBT.INSTANCE;
     }
 
-    /** The hoe predicate — {@code instanceof HoeItem} in the AI step. */
+    /** The hoe predicate: vanilla hoes by identity plus anything the {@code c:tools/hoe} tag admits. */
     public boolean isExpectedHoe(ItemStack stack) {
-        // Red-baseline skeleton.
-        return false;
+        return RobotToolPredicates.isHoe(stack);
+    }
+
+    @Override
+    public void update() {
+        if (robot.getHeldItem().isEmpty()) {
+            startDelegateAI(new AIRobotFetchAndEquipItemStack(robot,
+                    stack -> !stack.isEmpty() && stack.getDamageValue() < stack.getMaxDamage()
+                            && isExpectedHoe(stack)));
+        } else {
+            Level level = robot.level();
+            IBlockFilter blockFilter = pos -> level != null
+                    && BuildCraftAPI.getWorldProperty("dirt").get(level, pos)
+                    && level.getBlockState(pos.above()).isAir()
+                    && !robot.getRegistry().isTaken(new ResourceIdBlock(pos));
+            startDelegateAI(new AIRobotSearchAndGotoBlock(robot, false, blockFilter));
+        }
+    }
+
+    @Override
+    public void delegateAIEnded(AIRobot ai) {
+        if (ai instanceof AIRobotSearchAndGotoBlock searchAndGoto) {
+            if (searchAndGoto.success()) {
+                blockFound = searchAndGoto.getBlockFound();
+                startDelegateAI(new AIRobotUseToolOnBlock(robot, blockFound));
+            } else {
+                startDelegateAI(new AIRobotGotoSleep(robot));
+            }
+        } else if (ai instanceof AIRobotFetchAndEquipItemStack) {
+            if (!ai.success()) {
+                startDelegateAI(new AIRobotGotoSleep(robot));
+            }
+        } else if (ai instanceof AIRobotUseToolOnBlock) {
+            releaseBlockFound();
+        }
     }
 
     @Override

@@ -12,15 +12,19 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.core.BuildCraftAPI;
+import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.core.properties.WorldPropertyIsHarvestable;
+import buildcraft.robotics.ai.AIRobotHarvest;
 
-/** The harvester: finds fully-grown crops ({@code "harvestable"} world property) and harvests them
+/** The harvester: finds fully-grown crops (the {@code "harvestable"} world property) and harvests them
  *  with {@code AIRobotHarvest} (no tool needed — the hand is the tool). Ported from 7.1.x
  *  {@code BoardRobotHarvester}.
  *
- *  <p>Red-baseline skeleton: the {@code AIRobotHarvest} wiring lands in the AI step; until then
- *  {@link #update()} inherits the base terminate-on-cycle and the property answers false.</p> */
+ *  <p>The reservation is released UNCONDITIONALLY after the harvest AI, success or not — 7.1.x's
+ *  {@code releaseBlockFound(boolean)} took the flag but ignored it (its TODO to blacklist failed blocks
+ *  was never implemented), and the 7.1.x harvest AI's odd success semantics (it never terminates on
+ *  success, so it reports false even when it harvested) made the flag meaningless anyway. */
 public class BoardRobotHarvester extends BoardRobotGenericSearchBlock {
 
     public BoardRobotHarvester(IRobotAccess iRobot) {
@@ -34,8 +38,23 @@ public class BoardRobotHarvester extends BoardRobotGenericSearchBlock {
 
     @Override
     public boolean isExpectedBlock(BlockState state) {
-        // The "harvestable" world property (registered by BCCore; the skeleton property answers false
-        // until the foundations commit).
         return ((WorldPropertyIsHarvestable) BuildCraftAPI.getWorldProperty("harvestable")).matches(state);
+    }
+
+    @Override
+    public void update() {
+        if (blockFound() != null) {
+            startDelegateAI(new AIRobotHarvest(robot, blockFound()));
+        } else {
+            super.update();
+        }
+    }
+
+    @Override
+    public void delegateAIEnded(AIRobot ai) {
+        if (ai instanceof AIRobotHarvest) {
+            releaseBlockFound();
+        }
+        super.delegateAIEnded(ai);
     }
 }

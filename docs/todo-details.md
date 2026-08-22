@@ -4,21 +4,7 @@ Agent-facing background for the one-line bullets in [todos.md](../todos.md). Eac
 
 ## 1.21.1 gated-test port
 
-All 24 `//? if >=1.21.10`-gated game tests are faithfully implementable on 1.21.1 (1 PORTABLE_VERBATIM, 23 REWRITABLE, 0 IMPOSSIBLE). The old "25 silently-skipping tests" premise was wrong — the gap is exactly 24 gates + 1 vanilla builtin (`always_pass`, modern-registry-only), and the counts close exactly at doc time (396 regs − 24 gated = 372 reported) and today (414 − 24 = 390/390 pass; modern 415/415). The reflective `addReflectively` path registers every test faithfully; nothing was ever silently dropped.
-
-Cross-cutting moves (serve many rewrites):
-- **`BCFluidTank` facade** (`fill`/`drain`/`setFluidStack`/`getAmountMb`/`isTankEmpty` + simulate/`FluidAction`) is the mapping behind 15 of 23 rewrites — heat_exchanger (6), distiller tank (4), tank_manager (5). Modern `insertInternal(int, FluidResource, int, tx)` overloads exist in production only to exercise the modern path; the neutral facade is the 1.21.1 target.
-- **Class-level un-gates free whole groups**: heat_exchanger (1 class → 7), distiller (1 → 7), flood_gate (1 → 4), tank_manager (1 file → 5). No per-test splitting anywhere.
-- **Recurring directive pairs**: `getBlockEntity` 1-arg/2-arg (distiller 4 + flood_gate 4), `InteractionResult`↔`ItemInteractionResult` (distiller 1 + flood_gate 3), `Identifier.parse`↔`ResourceLocation.parse` — same idiom as the ungated `WrenchTagTester`.
-- **One production fix**: `heat_exchanger_slot_caps_at_max_stack_size` needs `ItemHandlerSimple.getSlotLimit`→`slotCapacity` on 1.21.1 (one line; modern unaffected) — also closes a real 1.21.1 UX gap (64-bucket stack the auto-fill loop can't place).
-
-Weaker-guarantee caveats (document, don't silently weaken):
-- **tank_manager**: modern no-slot `ResourceHandler.insert`/`extract` accumulate across slots in one call; the 1.21.1 classic composite returns at the first matching slot — pin the weaker cross-call property (ordered routing/drain, conservation, SIMULATE non-mutation), which still catches a LIFO reorder.
-- **gate_display**: partially redundant — the underlying regression is covered by ungated `guide_modifier_recipe_renders_correct_input_variant` + `basic_gate_appears_as_input_in_modifier_recipes`; the default-components half is vacuous on 1.21.1 (no `PatchedDataComponentMap`). Unique value = input-side GOLD stack identity.
-- **distiller_output_reports_capacity_at_rest**: pins the readout contract, not the original regression (the capacity≤0 bug lived only in the Transfer-API branch).
-- Fix the stale comment at `BuildCraftGameTests.java:454-460` ("written entirely against the NeoForge Transfer API") — FloodGateTester has no fluid API at all.
-
-Order: flood_gate + distiller first (cheapest, highest verbatim ratio), then heat_exchanger (ships the production fix), tank_manager + gate_display last (weaker/partial).
+19 of the 24 gated tests now run on 1.21.1 (flood_gate 4, distiller 7, heat_exchanger 7, gate_display 1) — shipped with the `ItemHandlerSimple.getSlotLimit` fix; see git history for the per-group design. Remaining: **tank_manager** (5 tests). The modern no-slot `ResourceHandler.insert`/`extract` accumulate across slots in one call; the 1.21.1 classic composite returns at the first matching slot — port to the weaker cross-call property (ordered routing/drain, conservation, SIMULATE non-mutation), which still catches a LIFO reorder.
 
 ## Translation follow-ups
 

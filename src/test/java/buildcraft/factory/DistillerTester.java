@@ -4,7 +4,6 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
 package buildcraft.factory;
-//? if >=1.21.10 {
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -18,8 +17,14 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.fluids.FluidStack;
+
+//? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
+//?} else {
+/*// 1.21.1: no Transfer API — the version-neutral BCFluidTank surface (fill/drain/
+// setFluidStack/getAmountMb/extractInternal/insertInternal) stands in.*/
+//?}
 
 import buildcraft.core.BCCoreItems;
 import buildcraft.factory.block.BlockDistiller;
@@ -86,10 +91,10 @@ public class DistillerTester {
         BlockPos absPos = helper.absolutePos(pos);
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(absPos), Direction.UP, absPos, false);
 
-        InteractionResult result = invokeUseItemOn(block, wrench, state, helper, absPos,
+        Object result = invokeUseItemOn(block, wrench, state, helper, absPos,
                 helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL), hit);
 
-        assertTrue(result == InteractionResult.PASS,
+        assertTrue(isPass(result),
                 "useItemOn with a wrench must return PASS so the wrench's useOn handles rotation, got " + result);
         assertTrue(helper.getBlockState(pos).getValue(BlockDistiller.FACING) == Direction.NORTH,
                 "useItemOn should not have rotated the block on its own");
@@ -101,8 +106,12 @@ public class DistillerTester {
      * {@code useItemOn} is {@code protected} on {@code BlockBehaviour}. Reflection here
      * is the simplest way to drive it from test code without standing up a real player
      * interaction sequence.
+     * <p>
+     * Returns {@code Object} because {@code useItemOn}'s result type differs across the
+     * cliff — {@code InteractionResult} on 26.x, {@code ItemInteractionResult} on 1.21.1 —
+     * so the per-node {@link #isPass} predicate interprets it.
      */
-    private static InteractionResult invokeUseItemOn(BlockDistiller block, ItemStack stack,
+    private static Object invokeUseItemOn(BlockDistiller block, ItemStack stack,
             BlockState state, GameTestHelper helper, BlockPos absPos,
             net.minecraft.world.entity.player.Player player, BlockHitResult hit) {
         try {
@@ -112,11 +121,21 @@ public class DistillerTester {
                             BlockPos.class, net.minecraft.world.entity.player.Player.class,
                             InteractionHand.class, BlockHitResult.class);
             m.setAccessible(true);
-            return (InteractionResult) m.invoke(block, stack, state, helper.getLevel(), absPos, player,
+            return m.invoke(block, stack, state, helper.getLevel(), absPos, player,
                     InteractionHand.MAIN_HAND, hit);
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException("Failed to invoke useItemOn reflectively", e);
         }
+    }
+
+    /** True for "unconsumed, pass to the next handler" — 26.x {@code PASS} vs 1.21.1
+     *  {@code SKIP_DEFAULT_BLOCK_INTERACTION} (BlockUtil.itemUsePass maps both). */
+    private static boolean isPass(Object result) {
+        //? if >=1.21.10 {
+        return result == InteractionResult.PASS;
+        //?} else {
+        /*return result == net.minecraft.world.ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;*/
+        //?}
     }
 
     // --- Tank gating regression tests ---
@@ -139,6 +158,7 @@ public class DistillerTester {
     public static void testInputTankRejectsNonDistillableInsert(GameTestHelper helper) {
         BlockPos pos = new BlockPos(2, 2, 2);
         helper.setBlock(pos, BCFactoryBlocks.DISTILLER.get());
+        //? if >=1.21.10 {
         TileDistiller_BC8 distiller = helper.getBlockEntity(pos, TileDistiller_BC8.class);
         FluidResource lava = FluidResource.of(new FluidStack(Fluids.LAVA, 1000));
         try (Transaction tx = Transaction.openRoot()) {
@@ -149,6 +169,15 @@ public class DistillerTester {
         }
         assertTrue(distiller.getTankIn().getAmountAsLong(0) == 0,
                 "InputTank should still be empty after a rejected insert");
+        //?} else {
+        /*TileDistiller_BC8 distiller = helper.getBlockEntity(pos);
+        FluidStack lava = new FluidStack(Fluids.LAVA, 1000);
+        int inserted = distiller.getTankIn().fill(0, lava, false);
+        assertTrue(inserted == 0,
+                "InputTank must reject a non-distillable insert via isValid, got " + inserted);
+        assertTrue(distiller.getTankIn().getAmountMb(0) == 0,
+                "InputTank should still be empty after a rejected insert");*/
+        //?}
         helper.succeed();
     }
 
@@ -162,6 +191,7 @@ public class DistillerTester {
     public static void testInputTankBlocksExternalExtract(GameTestHelper helper) {
         BlockPos pos = new BlockPos(2, 2, 2);
         helper.setBlock(pos, BCFactoryBlocks.DISTILLER.get());
+        //? if >=1.21.10 {
         TileDistiller_BC8 distiller = helper.getBlockEntity(pos, TileDistiller_BC8.class);
 
         // Bypass the isValid filter the same way NBT load does: write directly with set().
@@ -186,7 +216,25 @@ public class DistillerTester {
         }
         assertTrue(distiller.getTankIn().getAmountAsLong(0) == 0,
                 "InputTank should be empty after extractInternal");
+        //?} else {
+        /*TileDistiller_BC8 distiller = helper.getBlockEntity(pos);
+        // Bypass the isValid filter the same way NBT load does: write directly with setFluidStack.
+        FluidStack water = new FluidStack(Fluids.WATER, 1000);
+        distiller.getTankIn().setFluidStack(0, water);
 
+        FluidStack drained = distiller.getTankIn().drain(0, 1000, false);
+        assertTrue(drained.isEmpty(),
+                "InputTank must reject external extract, got " + drained);
+        assertTrue(distiller.getTankIn().getAmountMb(0) == 1000,
+                "InputTank should still be full after a rejected extract, got " + distiller.getTankIn().getAmountMb(0));
+
+        // The recipe loop must still be able to drain it. Without this, distillation halts.
+        FluidStack internal = distiller.getTankIn().extractInternal(1000, false);
+        assertTrue(internal.getAmount() == 1000,
+                "InputTank.extractInternal must drain the full amount, got " + internal.getAmount());
+        assertTrue(distiller.getTankIn().getAmountMb(0) == 0,
+                "InputTank should be empty after extractInternal");*/
+        //?}
         helper.succeed();
     }
 
@@ -199,6 +247,7 @@ public class DistillerTester {
     public static void testOutputTanksRejectExternalInsertButAcceptInternal(GameTestHelper helper) {
         BlockPos pos = new BlockPos(2, 2, 2);
         helper.setBlock(pos, BCFactoryBlocks.DISTILLER.get());
+        //? if >=1.21.10 {
         TileDistiller_BC8 distiller = helper.getBlockEntity(pos, TileDistiller_BC8.class);
         FluidResource water = FluidResource.of(new FluidStack(Fluids.WATER, 500));
 
@@ -230,6 +279,30 @@ public class DistillerTester {
                 tx.commit();
             }
         }
+        //?} else {
+        /*TileDistiller_BC8 distiller = helper.getBlockEntity(pos);
+        FluidStack water = new FluidStack(Fluids.WATER, 500);
+
+        for (TileDistiller_BC8.OutputTank tank : new TileDistiller_BC8.OutputTank[] {
+                distiller.getTankGasOut(), distiller.getTankLiquidOut() }) {
+            int inserted = tank.fill(0, water, false);
+            assertTrue(inserted == 0,
+                    "OutputTank external insert must return 0, got " + inserted);
+            assertTrue(tank.getAmountMb(0) == 0,
+                    "OutputTank should still be empty after rejected external insert");
+
+            int internal = tank.insertInternal(water, false);
+            assertTrue(internal == 500,
+                    "OutputTank.insertInternal must accept full amount, got " + internal);
+            assertTrue(tank.getAmountMb(0) == 500,
+                    "OutputTank should hold 500mb after internal insert, got " + tank.getAmountMb(0));
+
+            // Internal flag must reset so a follow-up external insert is still rejected.
+            int after = tank.fill(0, water, false);
+            assertTrue(after == 0,
+                    "OutputTank external insert after insertInternal must still return 0, got " + after);
+        }*/
+        //?}
         helper.succeed();
     }
 
@@ -249,7 +322,11 @@ public class DistillerTester {
     public static void testOutputTankReportsCapacityAtRest(GameTestHelper helper) {
         BlockPos pos = new BlockPos(2, 2, 2);
         helper.setBlock(pos, BCFactoryBlocks.DISTILLER.get());
+        //? if >=1.21.10 {
         TileDistiller_BC8 distiller = helper.getBlockEntity(pos, TileDistiller_BC8.class);
+        //?} else {
+        /*TileDistiller_BC8 distiller = helper.getBlockEntity(pos);*/
+        //?}
 
         for (TileDistiller_BC8.OutputTank tank : new TileDistiller_BC8.OutputTank[] {
                 distiller.getTankGasOut(), distiller.getTankLiquidOut() }) {
@@ -258,11 +335,15 @@ public class DistillerTester {
                     "Empty OutputTank must report its 4000mb capacity, got " + tank.getCapacityMb(0));
 
             // Fill it the way the craft loop does, then read capacity at rest — not mid-insert.
+            //? if >=1.21.10 {
             FluidResource water = FluidResource.of(new FluidStack(Fluids.WATER, 500));
             try (Transaction tx = Transaction.openRoot()) {
                 tank.insertInternal(0, water, 500, tx);
                 tx.commit();
             }
+            //?} else {
+            /*tank.insertInternal(new FluidStack(Fluids.WATER, 500), false);*/
+            //?}
             assertTrue(tank.getAmountMb(0) == 500,
                     "OutputTank should hold 500mb after internal insert, got " + tank.getAmountMb(0));
             // The regression: a non-empty guarded output tank must still report full capacity, not 0,
@@ -313,4 +394,3 @@ public class DistillerTester {
         helper.succeed();
     }
 }
-//?}

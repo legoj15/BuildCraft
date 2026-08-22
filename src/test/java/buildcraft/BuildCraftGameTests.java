@@ -452,13 +452,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pipe_schematic_rotates_pluggable_faces", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesPluggableFaces);
 
         // Heat Exchanger fluid filtering (heatant on START, coolant on END; output drain-only).
-        // NOTE: this and the other fluid testers gated >=1.21.10 below (DistillerTester,
-        // FloodGateTester, TankManagerTester) are MODERN-ONLY — they're written entirely against the
-        // NeoForge Transfer API (FluidResource / FluidStacksResourceHandler / Transaction.openRoot),
-        // which is absent on 1.21.1, so their methods don't compile there. Running them on 1.21.1
-        // needs a rewrite to the classic IFluidHandler / BCFluidTank facade. Deferred — it's test
-        // coverage only: the production fluid tiles already use the facade and pass in-game on 1.21.1.
-        //? if >=1.21.10 {
+        // The 1.21.1 branches stand on the version-neutral BCFluidTank / tile-tank surface —
+        // see the per-test `//? if >=1.21.10` gates in HeatExchangerTester.
         reg.accept("buildcraftunofficial:heat_exchanger_output_rejects_external_insert", () -> buildcraft.factory.HeatExchangerTester::testOutputTankRejectsExternalInsert);
         reg.accept("buildcraftunofficial:heat_exchanger_output_accepts_internal_insert", () -> buildcraft.factory.HeatExchangerTester::testOutputTankAcceptsInternalInsert);
         reg.accept("buildcraftunofficial:heat_exchanger_internal_flag_resets", () -> buildcraft.factory.HeatExchangerTester::testOutputTankInternalFlagResetsAfterCall);
@@ -466,13 +461,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:heat_exchanger_atomic_craft_rolls_back", () -> buildcraft.factory.HeatExchangerTester::testAtomicCraftRollsBackOnUndersizedFill);
         reg.accept("buildcraftunofficial:heat_exchanger_tank_clears_on_empty_load", () -> buildcraft.factory.HeatExchangerTester::testTankClearsWhenLoadedFromEmptySave);
         reg.accept("buildcraftunofficial:heat_exchanger_slot_caps_at_max_stack_size", () -> buildcraft.factory.HeatExchangerTester::testItemHandlerRespectsConfiguredMaxStackSize);
-        //?}
 
         // Distiller wrench rotation (1.12.2 parity)
-        //? if >=1.21.10 {
         reg.accept("buildcraftunofficial:distiller_wrench_rotates_clockwise", () -> buildcraft.factory.DistillerTester::testWrenchRotatesClockwise);
         reg.accept("buildcraftunofficial:distiller_wrench_passes_through_use_item_on", () -> buildcraft.factory.DistillerTester::testWrenchPassesThroughUseItemOn);
-        //?}
 
         // Wrench rotation of vanilla blocks (1.12.2 parity — see VanillaRotationHandlers)
         reg.accept("buildcraftunofficial:vanilla_rotation_furnace", () -> buildcraft.lib.block.VanillaRotationTester::testFurnaceCyclesHorizontally);
@@ -492,12 +484,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:vanilla_rotation_wrench_crouch_gate", () -> buildcraft.lib.block.VanillaRotationTester::testWrenchOnItemUseFirstCrouchGate);
 
         // Flood gate wrench toggle (advancement-granting useItemOn path)
-        //? if >=1.21.10 {
         reg.accept("buildcraftunofficial:flood_gate_wrench_toggles_side", () -> buildcraft.factory.FloodGateTester::testWrenchTogglesSide);
         reg.accept("buildcraftunofficial:flood_gate_wrench_on_top_face_falls_through", () -> buildcraft.factory.FloodGateTester::testWrenchOnTopFaceFallsThrough);
         reg.accept("buildcraftunofficial:flood_gate_non_wrench_falls_through", () -> buildcraft.factory.FloodGateTester::testNonWrenchItemFallsThrough);
         reg.accept("buildcraftunofficial:flood_gate_flooding_the_world_advancement", () -> buildcraft.factory.FloodGateTester::testFloodingTheWorldAdvancement);
-        //?}
 
         // Filler building_for_the_future advancement (LOOP-mode completion + setControlMode re-arm)
         reg.accept("buildcraftunofficial:filler_building_for_the_future_advancement", () -> buildcraft.builders.FillerAdvancementTester::testBuildingForTheFutureAdvancement);
@@ -529,13 +519,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pump_probe_solid_obstruction", () -> buildcraft.factory.PumpSpringProbeTester::testSolidObstructionStopsProbe);
 
         // Distiller tank gating (1.12.2 setFilter / setCanDrain / setCanFill parity)
-        //? if >=1.21.10 {
         reg.accept("buildcraftunofficial:distiller_input_rejects_non_distillable", () -> buildcraft.factory.DistillerTester::testInputTankRejectsNonDistillableInsert);
         reg.accept("buildcraftunofficial:distiller_input_blocks_external_extract", () -> buildcraft.factory.DistillerTester::testInputTankBlocksExternalExtract);
         reg.accept("buildcraftunofficial:distiller_output_rejects_external_insert", () -> buildcraft.factory.DistillerTester::testOutputTanksRejectExternalInsertButAcceptInternal);
         reg.accept("buildcraftunofficial:distiller_output_reports_capacity_at_rest", () -> buildcraft.factory.DistillerTester::testOutputTankReportsCapacityAtRest);
         reg.accept("buildcraftunofficial:distiller_heating_and_distilling_advancement", () -> buildcraft.factory.DistillerTester::testHeatingAndDistillingAdvancement);
-        //?}
 
         // Advancements (fine_riches + sticky_dipping JSON shape, oil_fluids tag content, predicate sanity)
         reg.accept("buildcraftunofficial:advancement_fine_riches_loaded", () -> buildcraft.energy.AdvancementTester::testFineRichesAdvancementLoaded);
@@ -621,10 +609,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:gate_modifier_recipe_rejects_wrong_material", () -> buildcraft.silicon.GateRecipeVariantTester::testGoldLapisRecipeRejectsIronPlainGate);
         reg.accept("buildcraftunofficial:gate_modifier_recipe_rejects_already_modified", () -> buildcraft.silicon.GateRecipeVariantTester::testGoldLapisRecipeRejectsAlreadyModifiedGate);
         reg.accept("buildcraftunofficial:gate_modifier_recipe_rejects_wrong_logic", () -> buildcraft.silicon.GateRecipeVariantTester::testOrLogicRecipeRejectsAndLogicGate);
-        //? if >=1.21.10 {
-        // SlotDisplay recipe-display API is 1.21.5+; this test is inapplicable on 1.21.1 (not registered there).
+        // SlotDisplay recipe-display API is 1.21.5+; the 1.21.1 display channel is
+        // Ingredient.getItems() — see the per-test gate in GateRecipeVariantTester.
         reg.accept("buildcraftunofficial:gate_modifier_recipe_display_preserves_variant", () -> buildcraft.silicon.GateRecipeVariantTester::testGoldLapisRecipeDisplayPreservesGoldVariant);
-        //?}
         reg.accept("buildcraftunofficial:basic_gate_recipe_emitted_by_collector", () -> buildcraft.silicon.GateRecipeVariantTester::testBasicGateRecipeExistsAndCollectorEmitsIt);
         // JEI U/R lookup simulation — walks the collected entries with the same subtype key
         // (GateVariant.getVariantName) the JEI subtype interpreter uses. If U on a Basic Gate

@@ -68,8 +68,8 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
     public final NonNullList<ItemStack> stacks;
 
     private int firstUsed = Integer.MAX_VALUE;
-    /** Per-slot capacity reported by {@link #getCapacityAsLong} and consulted by
-     * {@link buildcraft.lib.gui.slot.SlotBase#getMaxStackSize} when vanilla decides
+    /** Per-slot capacity reported by {@link #getCapacityAsLong} and {@link #getSlotLimit},
+     * consulted by {@link buildcraft.lib.gui.slot.SlotBase#getMaxStackSize} when vanilla decides
      * how many items a click or shift-click may deposit. Defaults to 64; the
      * {@code (size, maxStackSize)} constructor lowers it for tiles like the heat
      * exchanger that want true single-bucket slots. Without this the slot widget
@@ -188,7 +188,9 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
     }
 
     public int getSlotLimit(int slot) {
-        return 64; // Default legacy behavior
+        // Per-slot capacity, not a hardcoded 64 — 1.21.1's SlotBase.getMaxStackSize reads this,
+        // so a flat 64 would let clicks drop full stacks into 1-bucket slots (heat exchanger).
+        return slotCapacity;
     }
 
     // Classic IItemHandler contract method (required on 1.21.1; harmless extra public method on modern nodes).

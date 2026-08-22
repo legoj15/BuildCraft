@@ -4,7 +4,6 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
 package buildcraft.factory;
-//? if >=1.21.10 {
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -20,6 +19,7 @@ import net.minecraft.world.phys.Vec3;
 import buildcraft.core.BCCoreItems;
 import buildcraft.factory.block.BlockFloodGate;
 import buildcraft.factory.tile.TileFloodGate;
+import buildcraft.lib.misc.GameProfileUtil;
 
 /**
  * Regression coverage for the flood gate's wrench-toggle path.
@@ -44,7 +44,11 @@ public class FloodGateTester {
     public static void testWrenchTogglesSide(GameTestHelper helper) {
         BlockPos pos = new BlockPos(2, 2, 2);
         helper.setBlock(pos, BCFactoryBlocks.FLOOD_GATE.get());
+        //? if >=1.21.10 {
         TileFloodGate floodGate = helper.getBlockEntity(pos, TileFloodGate.class);
+        //?} else {
+        /*TileFloodGate floodGate = helper.getBlockEntity(pos);*/
+        //?}
         BlockFloodGate block = (BlockFloodGate) BCFactoryBlocks.FLOOD_GATE.get();
         ItemStack wrench = new ItemStack(BCCoreItems.WRENCH.get());
         BlockPos absPos = helper.absolutePos(pos);
@@ -56,10 +60,10 @@ public class FloodGateTester {
                 "Blockstate NORTH should start true");
 
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(absPos), Direction.NORTH, absPos, false);
-        InteractionResult result = invokeUseItemOn(block, wrench, helper.getBlockState(pos),
+        Object result = invokeUseItemOn(block, wrench, helper.getBlockState(pos),
                 helper, absPos, helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL), hit);
 
-        assertTrue(result == InteractionResult.SUCCESS,
+        assertTrue(isSuccess(result),
                 "useItemOn with a wrench on a togglable side must return SUCCESS, got " + result);
         assertTrue(!floodGate.openSides.contains(Direction.NORTH),
                 "openSides should no longer contain NORTH after wrench toggle");
@@ -68,9 +72,9 @@ public class FloodGateTester {
 
         // Toggling again puts it back.
         BlockHitResult hit2 = new BlockHitResult(Vec3.atCenterOf(absPos), Direction.NORTH, absPos, false);
-        InteractionResult result2 = invokeUseItemOn(block, wrench, helper.getBlockState(pos),
+        Object result2 = invokeUseItemOn(block, wrench, helper.getBlockState(pos),
                 helper, absPos, helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL), hit2);
-        assertTrue(result2 == InteractionResult.SUCCESS, "Second toggle should also return SUCCESS");
+        assertTrue(isSuccess(result2), "Second toggle should also return SUCCESS");
         assertTrue(floodGate.openSides.contains(Direction.NORTH),
                 "openSides should contain NORTH again after second toggle");
 
@@ -86,7 +90,11 @@ public class FloodGateTester {
     public static void testWrenchOnTopFaceFallsThrough(GameTestHelper helper) {
         BlockPos pos = new BlockPos(2, 2, 2);
         helper.setBlock(pos, BCFactoryBlocks.FLOOD_GATE.get());
+        //? if >=1.21.10 {
         TileFloodGate floodGate = helper.getBlockEntity(pos, TileFloodGate.class);
+        //?} else {
+        /*TileFloodGate floodGate = helper.getBlockEntity(pos);*/
+        //?}
         BlockFloodGate block = (BlockFloodGate) BCFactoryBlocks.FLOOD_GATE.get();
         ItemStack wrench = new ItemStack(BCCoreItems.WRENCH.get());
         BlockPos absPos = helper.absolutePos(pos);
@@ -94,11 +102,11 @@ public class FloodGateTester {
         var sidesBefore = java.util.EnumSet.copyOf(floodGate.openSides);
 
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(absPos), Direction.UP, absPos, false);
-        InteractionResult result = invokeUseItemOn(block, wrench, helper.getBlockState(pos),
+        Object result = invokeUseItemOn(block, wrench, helper.getBlockState(pos),
                 helper, absPos, helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL), hit);
 
-        assertTrue(result == InteractionResult.TRY_WITH_EMPTY_HAND,
-                "useItemOn on UP face must fall through with TRY_WITH_EMPTY_HAND, got " + result);
+        assertTrue(isFallThrough(result),
+                "useItemOn on UP face must fall through to the default block interaction, got " + result);
         assertTrue(floodGate.openSides.equals(sidesBefore),
                 "openSides must be unchanged after UP click");
 
@@ -113,7 +121,11 @@ public class FloodGateTester {
     public static void testNonWrenchItemFallsThrough(GameTestHelper helper) {
         BlockPos pos = new BlockPos(2, 2, 2);
         helper.setBlock(pos, BCFactoryBlocks.FLOOD_GATE.get());
+        //? if >=1.21.10 {
         TileFloodGate floodGate = helper.getBlockEntity(pos, TileFloodGate.class);
+        //?} else {
+        /*TileFloodGate floodGate = helper.getBlockEntity(pos);*/
+        //?}
         BlockFloodGate block = (BlockFloodGate) BCFactoryBlocks.FLOOD_GATE.get();
         ItemStack stick = new ItemStack(Items.STICK);
         BlockPos absPos = helper.absolutePos(pos);
@@ -121,11 +133,11 @@ public class FloodGateTester {
         var sidesBefore = java.util.EnumSet.copyOf(floodGate.openSides);
 
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(absPos), Direction.NORTH, absPos, false);
-        InteractionResult result = invokeUseItemOn(block, stick, helper.getBlockState(pos),
+        Object result = invokeUseItemOn(block, stick, helper.getBlockState(pos),
                 helper, absPos, helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL), hit);
 
-        assertTrue(result == InteractionResult.TRY_WITH_EMPTY_HAND,
-                "useItemOn with a non-wrench must return TRY_WITH_EMPTY_HAND, got " + result);
+        assertTrue(isFallThrough(result),
+                "useItemOn with a non-wrench must fall through to the default block interaction, got " + result);
         assertTrue(floodGate.openSides.equals(sidesBefore),
                 "openSides must be unchanged when clicked with a non-wrench item");
 
@@ -136,8 +148,12 @@ public class FloodGateTester {
      * {@code useItemOn} is {@code protected} on {@code BlockBehaviour}. Reflection here
      * is the simplest way to drive it from test code without standing up a real player
      * interaction sequence — same pattern as {@link DistillerTester#testWrenchPassesThroughUseItemOn}.
+     * <p>
+     * Returns {@code Object} because {@code useItemOn}'s result type differs across the
+     * cliff — {@code InteractionResult} on 26.x, {@code ItemInteractionResult} on 1.21.1 —
+     * so the per-node predicates ({@link #isSuccess} / {@link #isFallThrough}) interpret it.
      */
-    private static InteractionResult invokeUseItemOn(BlockFloodGate block, ItemStack stack,
+    private static Object invokeUseItemOn(BlockFloodGate block, ItemStack stack,
             BlockState state, GameTestHelper helper, BlockPos absPos,
             net.minecraft.world.entity.player.Player player, BlockHitResult hit) {
         try {
@@ -147,11 +163,31 @@ public class FloodGateTester {
                             BlockPos.class, net.minecraft.world.entity.player.Player.class,
                             InteractionHand.class, BlockHitResult.class);
             m.setAccessible(true);
-            return (InteractionResult) m.invoke(block, stack, state, helper.getLevel(), absPos, player,
+            return m.invoke(block, stack, state, helper.getLevel(), absPos, player,
                     InteractionHand.MAIN_HAND, hit);
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException("Failed to invoke useItemOn reflectively", e);
         }
+    }
+
+    /** True when the interaction consumed the item — {@code InteractionResult.SUCCESS} on both nodes. */
+    private static boolean isSuccess(Object result) {
+        //? if >=1.21.10 {
+        return result == InteractionResult.SUCCESS;
+        //?} else {
+        /*return result == net.minecraft.world.ItemInteractionResult.SUCCESS;*/
+        //?}
+    }
+
+    /** True for "fall through to the default block interaction" — 26.x {@code TRY_WITH_EMPTY_HAND}
+     *  vs 1.21.1 {@code PASS_TO_DEFAULT_BLOCK_INTERACTION} (BlockUtil.itemUseTryWithEmptyHand maps
+     *  both). */
+    private static boolean isFallThrough(Object result) {
+        //? if >=1.21.10 {
+        return result == InteractionResult.TRY_WITH_EMPTY_HAND;
+        //?} else {
+        /*return result == net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;*/
+        //?}
     }
 
     /**
@@ -178,20 +214,29 @@ public class FloodGateTester {
         // (b) Owner tracking — onPlacedBy records the placer, saveAdditional persists it.
         BlockPos pos = new BlockPos(2, 2, 2);
         helper.setBlock(pos, BCFactoryBlocks.FLOOD_GATE.get());
+        //? if >=1.21.10 {
         TileFloodGate gate = helper.getBlockEntity(pos, TileFloodGate.class);
+        //?} else {
+        /*TileFloodGate gate = helper.getBlockEntity(pos);*/
+        //?}
         net.minecraft.world.entity.player.Player placer =
                 helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
 
         gate.onPlacedBy(placer);
         assertTrue(gate.getOwner() != null, "onPlacedBy must record the placer as owner");
-        assertTrue(gate.getOwner().id().equals(placer.getGameProfile().id()),
+        assertTrue(GameProfileUtil.getId(gate.getOwner()).equals(GameProfileUtil.getId(placer.getGameProfile())),
                 "recorded owner UUID must match the placing player");
 
         net.minecraft.nbt.CompoundTag saved = gate.saveCustomOnly(helper.getLevel().registryAccess());
-        assertTrue(saved.getString("ownerUUID").orElse("").equals(placer.getGameProfile().id().toString()),
+        String ownerUuid = GameProfileUtil.getId(placer.getGameProfile()).toString();
+        //? if >=1.21.10 {
+        assertTrue(saved.getString("ownerUUID").orElse("").equals(ownerUuid),
                 "owner UUID must be persisted to NBT by saveAdditional");
+        //?} else {
+        /*assertTrue(saved.getString("ownerUUID").equals(ownerUuid),
+                "owner UUID must be persisted to NBT by saveAdditional");*/
+        //?}
 
         helper.succeed();
     }
 }
-//?}

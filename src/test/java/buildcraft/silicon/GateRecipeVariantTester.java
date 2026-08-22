@@ -104,19 +104,23 @@ public final class GateRecipeVariantTester {
      * {@link net.minecraft.world.item.crafting.display.SlotDisplay#resolveForStacks}) which had the
      * same shape of bug — it enumerated raw items and dropped the variant data. Pins that the
      * display path now surfaces the right variant for the Gold + Lapis recipe input.
+     * <p>
+     * On 1.21.1 (no SlotDisplay API) the equivalent channel is {@code Ingredient.getItems()},
+     * which preserves the CUSTOM_DATA gate CompoundTag on each enumerated stack — the same
+     * enumeration {@code AssemblyRecipeCollector} / {@code CraftingUtil} /
+     * {@code GuideAssemblyRecipes} use on that node.
      */
     public static void testGoldLapisRecipeDisplayPreservesGoldVariant(GameTestHelper helper) {
-        //? if >=1.21.10 {
         AssemblyRecipe recipe = recipe("gate-modifier-AND-GOLD-LAPIS");
-        net.minecraft.util.context.ContextMap ctx = new net.minecraft.util.context.ContextMap.Builder()
-            .create(net.minecraft.world.item.crafting.display.SlotDisplayContext.CONTEXT);
-
         ItemStack goldPlain = gate(EnumGateLogic.AND, EnumGateMaterial.GOLD, EnumGateModifier.NO_MODIFIER);
         // Slot 0 is the input gate ingredient (lapis is slot 1).
         buildcraft.api.recipes.IngredientStack gateInput =
             recipe.getInputsFor(BCSiliconItems.PLUG_GATE.get().getStack(
                 new GateVariant(EnumGateLogic.AND, EnumGateMaterial.GOLD, EnumGateModifier.LAPIS)))
                 .iterator().next();
+        //? if >=1.21.10 {
+        net.minecraft.util.context.ContextMap ctx = new net.minecraft.util.context.ContextMap.Builder()
+            .create(net.minecraft.world.item.crafting.display.SlotDisplayContext.CONTEXT);
 
         java.util.List<ItemStack> displayed = gateInput.ingredient.display().resolveForStacks(ctx);
         if (displayed.isEmpty()) {
@@ -144,13 +148,28 @@ public final class GateRecipeVariantTester {
                 + "JEI would lose recipe lookup on the gate. canonical patch="
                 + goldPlain.getComponentsPatch() + " displayed patch=" + first.getComponentsPatch());
         }
-        helper.succeed();
         //?} else {
-        /*// SlotDisplay system (net.minecraft.world.item.crafting.display.* + net.minecraft.util.context.*)
-        // does not exist pre-1.21.5; this deferred game test is compile-only on the 1.21.1 node.
-        helper.fail("testGoldLapisRecipeDisplayPreservesGoldVariant is not supported on MC 1.21.1 "
-            + "(SlotDisplay API absent); should not be invoked on this node");*/
+        /*// 1.21.1: the display channel is Ingredient.getItems() — it preserves the CUSTOM_DATA
+        // gate CompoundTag on each enumerated stack, so the variant must survive the round-trip.
+        ItemStack[] displayed = gateInput.ingredient.getItems();
+        if (displayed.length == 0) {
+            helper.fail("Gold + Lapis input ingredient resolved to no display stacks");
+        }
+        ItemStack first = displayed[0];
+        GateVariant displayedVar = new GateVariant(buildcraft.lib.misc.NBTUtilBC.getCompound(
+            buildcraft.lib.misc.NBTUtilBC.getItemData(first), "gate"));
+        if (displayedVar.material != EnumGateMaterial.GOLD) {
+            helper.fail("Display path lost the GOLD variant; got " + displayedVar.getVariantName()
+                + " — JEI would render the Gold+Lapis recipe with the wrong input gate");
+        }
+        // Stack identity, not just subtype identity — the JEI recipe-lookup-by-focused-stack
+        // contract on 1.21.1. getItems() must surface the canonical stack, patch included.
+        if (!ItemStack.matches(goldPlain, first)) {
+            helper.fail("Display stack is not ItemStack-equals to the canonical Gold AND (plain); "
+                + "JEI would lose recipe lookup on the gate");
+        }*/
         //?}
+        helper.succeed();
     }
 
     /**

@@ -28,14 +28,22 @@ public class AIRobotGotoStation extends AIRobot {
 
     private BlockPos stationIndex;
     private Direction stationSide;
+    private boolean takeAsMain;
 
     public AIRobotGotoStation(IRobotAccess iRobot) {
         super(iRobot);
     }
 
     public AIRobotGotoStation(IRobotAccess iRobot, DockingStation station) {
+        this(iRobot, station, false);
+    }
+
+    /** takeAsMain reserves the station as the robot's main station, used when a gate's goto-station
+     *  action (Ph6) redirects a docked robot to another station. */
+    public AIRobotGotoStation(IRobotAccess iRobot, DockingStation station, boolean takeAsMain) {
         this(iRobot);
 
+        this.takeAsMain = takeAsMain;
         if (station != null) {
             stationIndex = station.getPos();
             stationSide = station.side();
@@ -63,7 +71,7 @@ public class AIRobotGotoStation extends AIRobot {
         } else {
             // take() needs the concrete entity; a live GotoStation only ever drives a real robot, so the cast
             // is safe. Abstracting take() onto IRobotAccess would leak entity lifecycle into the AI surface.
-            if (station.take((EntityRobotBase) robot)) {
+            if (takeAsMain ? station.takeAsMain((EntityRobotBase) robot) : station.take((EntityRobotBase) robot)) {
                 startDelegateAI(new AIRobotGotoBlock(robot,
                         stationIndex.getX() + stationSide.getStepX(),
                         stationIndex.getY() + stationSide.getStepY(),

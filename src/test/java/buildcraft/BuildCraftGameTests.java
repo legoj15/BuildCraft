@@ -801,6 +801,14 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_search_goto_reaches_block", () -> buildcraft.robotics.ai.SearchAndGotoBlockTester::reachesTheFoundBlock);
         reg.accept("buildcraftunofficial:robot_board_registry_sweep", () -> buildcraft.robotics.boards.BoardRegistrySweepTester::everyPh5BoardResolvesAndRoundTrips);
 
+        // Robotics Ph6 — the gate statements against a LIVE pipe holder + PluggableGate with a real robot:
+        // the sleep trigger + wakeup action preempting a sleeping picker (observed through the fetch the
+        // wake triggers), the D1 pin — the forbid-robot action refusing a carrier's unload through the live
+        // station's getActiveActions() aggregation — and the goto-station action redirecting a docked robot.
+        reg.accept("buildcraftunofficial:robot_gate_sleep_wakeup", () -> buildcraft.robotics.statements.RobotGateTester::sleepTriggerAndWakeupPreemptsPicker);
+        reg.accept("buildcraftunofficial:robot_station_forbid_robot", () -> buildcraft.robotics.statements.RobotGateTester::forbidRobotActionRefusesUnloadAtStation);
+        reg.accept("buildcraftunofficial:robot_goto_station_action", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionRedirectsDockedRobot);
+
         // The tag-backed world properties need a live server (no resource load in the unit JVM — see
         // WorldPropertySweepTest): wood/harvestable/ore@0..3/dirt/replaceable/fluidSource pinned against
         // an arena of placed blocks, through the registry the boards query.

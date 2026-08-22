@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_gate_sleep_wakeup",
+    "environment": "buildcraftunofficial:robot_gate",
+    "structure": "minecraft:empty",
+    "max_ticks": 460,
+    "setup_ticks": 0,
+    "required": true
+}

@@ -9,7 +9,7 @@ This project ships code under three licences. Which one applies to a given file 
   header, so other mods can compile against the API freely. Seven files that live in the
   `buildcraft.api` packages are *not* MIT — they are in the MMPL list below. The package is genuinely
   mixed; the header is authoritative, never the directory.
-- **65 files carried over from BuildCraft for Minecraft 1.7.10 / 1.12.2** — Minecraft Mod Public
+- **85 files carried over from BuildCraft for Minecraft 1.7.10 / 1.12.2** — Minecraft Mod Public
   License 1.0.1, see [LICENSE.MMPL](LICENSE.MMPL). Each one states this in its own header.
 
 Upstream BuildCraft has never relicensed these files away from MMPL — every upstream branch, up to and
@@ -24,7 +24,7 @@ carried-over code:
 - `src/main/java/buildcraft/api/robots/DockingStation.java`
 - `src/main/java/buildcraft/robotics/item/ItemRedstoneBoard.java`
 
-The remaining 63 carry the upstream notice alone:
+The remaining 83 carry the upstream notice alone:
 
 - `src/main/java/buildcraft/api/core/IFluidFilter.java`
 - `src/main/java/buildcraft/api/core/IStackFilter.java`
@@ -39,6 +39,8 @@ The remaining 63 carry the upstream notice alone:
 - `src/main/java/buildcraft/builders/snapshot/pattern/PatternPyramid.java`
 - `src/main/java/buildcraft/builders/snapshot/pattern/PatternStairs.java`
 - `src/main/java/buildcraft/core/properties/WorldPropertyIsSoft.java`
+- `src/main/java/buildcraft/lib/inventory/filter/ArrayStackOrListFilter.java`
+- `src/main/java/buildcraft/lib/inventory/filter/StatementParameterStackFilter.java`
 - `src/main/java/buildcraft/robotics/IEntityFilter.java`
 - `src/main/java/buildcraft/robotics/IStationFilter.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotAttack.java`
@@ -89,6 +91,24 @@ The remaining 63 carry the upstream notice alone:
 - `src/main/java/buildcraft/robotics/boards/BoardRobotPump.java`
 - `src/main/java/buildcraft/robotics/entity/EntityRobot.java`
 - `src/main/java/buildcraft/robotics/item/ItemRobot.java`
+- `src/main/java/buildcraft/robotics/statements/ActionRobotFilter.java`
+- `src/main/java/buildcraft/robotics/statements/ActionRobotFilterTool.java`
+- `src/main/java/buildcraft/robotics/statements/ActionRobotGotoStation.java`
+- `src/main/java/buildcraft/robotics/statements/ActionRobotWakeUp.java`
+- `src/main/java/buildcraft/robotics/statements/ActionRobotWorkInArea.java`
+- `src/main/java/buildcraft/robotics/statements/ActionStationAcceptFluids.java`
+- `src/main/java/buildcraft/robotics/statements/ActionStationAcceptItems.java`
+- `src/main/java/buildcraft/robotics/statements/ActionStationForbidRobot.java`
+- `src/main/java/buildcraft/robotics/statements/ActionStationInputItems.java`
+- `src/main/java/buildcraft/robotics/statements/ActionStationProvideFluids.java`
+- `src/main/java/buildcraft/robotics/statements/ActionStationProvideItems.java`
+- `src/main/java/buildcraft/robotics/statements/ActionStationRequestItems.java`
+- `src/main/java/buildcraft/robotics/statements/ActionStationRequestItemsMachine.java`
+- `src/main/java/buildcraft/robotics/statements/RobotsActionProvider.java`
+- `src/main/java/buildcraft/robotics/statements/RobotsTriggerProvider.java`
+- `src/main/java/buildcraft/robotics/statements/TriggerRobotInStation.java`
+- `src/main/java/buildcraft/robotics/statements/TriggerRobotLinked.java`
+- `src/main/java/buildcraft/robotics/statements/TriggerRobotSleep.java`
 
 This list is not maintained by hand: `CopyrightHeaderTester.noticeFileListsEveryMmplFile` fails the
 build if it drifts from the headers actually present in the tree.

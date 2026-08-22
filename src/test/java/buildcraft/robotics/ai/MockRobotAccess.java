@@ -440,9 +440,15 @@ public class MockRobotAccess implements IRobotAccess {
 
     // -- board / motion --
 
+    private RedstoneBoardRobot board;
+
+    public void setBoard(RedstoneBoardRobot board) {
+        this.board = board;
+    }
+
     @Override
     public RedstoneBoardRobot getBoard() {
-        return null;
+        return board;
     }
 
     @Override

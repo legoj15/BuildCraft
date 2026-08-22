@@ -97,6 +97,10 @@ public class BCRobotics {
         // PipeApi.pluggableRegistry is set — see BCRoboticsPlugs).
         BCRoboticsPlugs.preInit();
 
+        // Ph6: the robot/station statement catalog (triggers, actions, parameters, providers). The
+        // statements self-register into StatementManager; this wires the providers into the gate UI.
+        BCRoboticsStatements.preInit();
+
         // Register all deferred registries
         BCRoboticsBlocks.init(modEventBus);
         BCRoboticsItems.init(modEventBus);

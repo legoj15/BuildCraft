@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_station_forbid_robot",
+    "environment": "buildcraftunofficial:robot_gate",
+    "structure": "minecraft:empty",
+    "max_ticks": 340,
+    "setup_ticks": 0,
+    "required": true
+}

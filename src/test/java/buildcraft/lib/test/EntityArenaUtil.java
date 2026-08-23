@@ -34,7 +34,7 @@ import buildcraft.api.core.IFluidHandlerAdv;
  * <li><b>Un-ticked entities.</b> The framework force-loads the chunk(s) of the test STRUCTURE only. An entity
  *     spawned at a relative position can land in a neighbouring chunk that is <em>not</em> force-loaded, and an
  *     entity in an unloaded chunk never ticks — the test then observes a frozen entity and flakes roughly one run
- *     in ten. {@link #forceLoadEntityArena} is the 3x3 chunk force-load that fixes it (the framework unforces
+ *     in ten. {@link #forceLoadEntityArena} is the 5x5 chunk force-load that fixes it (the framework unforces
  *     everything it recorded at batch end, so this self-cleans). <b>Force-loading is necessary but NOT
  *     sufficient — see {@link #forceLoadEntityArena} for the timing rule that goes with it.</b></li>
  * <li><b>Waiting for something then doing more work.</b> {@code GameTestHelper.succeedWhen} polls, but it also
@@ -55,17 +55,27 @@ public final class EntityArenaUtil {
 
     private EntityArenaUtil() {}
 
-    /** Force-loads the 3x3 chunk block centred on the arena origin, so entities anywhere in a small arena
+    /** Force-loads the 5x5 chunk block centred on the arena origin, so entities anywhere in a small arena
      *  actually tick. See the class javadoc for why this is not optional.
      *
+     * <p><b>5x5, not 3x3:</b> a chunk becomes {@code ENTITY_TICKING} — the status that actually makes
+     * entities tick — only once all 25 chunks in its radius-2 neighbourhood are {@code FULL}
+     * ({@code ChunkMap.prepareEntityTickingChunk} waits on {@code getChunkRangeFuture(chunk, 2, FULL)}).
+     * The old 3x3 force left the entity chunk's ring-2 at whatever level the arena's own loading happened to
+     * give it: level 33 (allowed, but queued behind the arena's own generation, so entities froze for ~100
+     * ticks while it caught up) or level 34 ({@code SPAWN} — generation disallowed, so the promotion
+     * resolved to {@code UNLOADED} and the entity never ticked at all: the ~1-in-10 flake of
+     * {@code robot_picker_picks_up_dropped_item}). Forcing the whole 5x5 pins every dependency at level 31
+     * with a FULL allowance, so the promotion completes in a tick or two.
+     *
      * <p><b>Necessary but not sufficient — never assert on a fixed tick after calling this.</b>
-     * {@code ServerLevel.setChunkForced} adds a {@code FORCED} ticket and blocks until the chunk is FULL, but
-     * the promotion of that chunk to {@code BLOCK_TICKING}/{@code ENTITY_TICKING} — which is what actually
-     * makes block entities and entities tick — is applied later, by the chunk source's own update pass. The
-     * first tick on which an arena's contents really tick was measured on the 26.1.2 node across 10 runs at
-     * <b>1, 1, 3, 1, 2, 1, 1, 2, 1, 1</b>: it varies per run, because {@code GameTestServer} drops the whole
-     * test grid at a random world position each run and so a given test's blocks land inside the arena's own
-     * chunk on some runs and in a neighbouring one on others. There is no upper bound to rely on.
+     * {@code ServerLevel.setChunkForced} queues the chunk's generation rather than completing it
+     * synchronously; the promotion to {@code BLOCK_TICKING}/{@code ENTITY_TICKING} — which is what actually
+     * makes block entities and entities tick — is applied a tick or two later, by the chunk source's own
+     * update pass. With the old 3x3 force the first ticking tick was measured on the 26.1.2 node across 10
+     * runs at <b>1, 1, 3, 1, 2, 1, 1, 2, 1, 1</b>; with the 5x5 it is 1 in every run (measured 20/20 on
+     * 26.1.2), because no dependency is ever left at a disallowed level. But the arena still drops at a
+     * random world position each run, so there is no upper bound to rely on.
      *
      * <p>So a {@code runAfterDelay(N)} that expects something to have ticked by tick N is a coin flip whose
      * losing side is a confusing assertion failure (or an NPE on state that was never built). Gate on the
@@ -78,16 +88,25 @@ public final class EntityArenaUtil {
         forceLoadEntityArena(gth, BlockPos.ZERO);
     }
 
-    /** Force-loads the 3x3 chunk block centred on {@code relPos}'s chunk. 3x3 rather than 1x1 because the
-     *  framework can drop a test's origin at any chunk alignment, so the arena straddles a chunk border about
-     *  as often as not. */
+    /** Force-loads the 5x5 chunk block centred on {@code relPos}'s chunk. 5x5 rather than 1x1 or 3x3 for two
+     *  reasons: the framework can drop a test's origin at any chunk alignment, so the arena straddles a chunk
+     *  border about as often as not; and an entity's chunk only starts ticking once its whole 5x5
+     *  neighbourhood is {@code FULL} (see {@link #forceLoadEntityArena(GameTestHelper)}), so the force must
+     *  cover that neighbourhood. Pass the entity's own relative position — not the arena origin — when the
+     *  entity can sit near the arena's far edge. */
     public static void forceLoadEntityArena(GameTestHelper gth, BlockPos relPos) {
         BlockPos abs = gth.absolutePos(relPos);
         int chunkX = abs.getX() >> 4;
         int chunkZ = abs.getZ() >> 4;
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                gth.getLevel().setChunkForced(chunkX + dx, chunkZ + dz, true);
+        // Ring-2 first, centre last: every dependency of the centre chunk's ENTITY_TICKING promotion (the
+        // full 5x5 at FULL) must be queued before the centre's own promotion runs.
+        for (int r = 2; r >= 0; r--) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) == r) {
+                        gth.getLevel().setChunkForced(chunkX + dx, chunkZ + dz, true);
+                    }
+                }
             }
         }
     }

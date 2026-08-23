@@ -6,9 +6,12 @@
  */
 package buildcraft.robotics;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 import net.minecraft.core.Direction;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 //? if >=1.21.10 {
@@ -19,7 +22,10 @@ import net.neoforged.neoforge.transfer.fluid.FluidResource;
 //?}
 
 import buildcraft.api.core.EnumPipePart;
+import buildcraft.api.core.IFluidFilter;
+import buildcraft.api.core.IStackFilter;
 import buildcraft.api.robots.DockingStation;
+import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.api.transport.IInjectable;
@@ -27,7 +33,17 @@ import buildcraft.api.transport.pipe.IFlowFluid;
 import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IFlowPower;
 import buildcraft.api.transport.pipe.IPipeHolder;
+import buildcraft.lib.inventory.filter.ArrayStackOrListFilter;
+import buildcraft.lib.inventory.filter.PassThroughStackFilter;
 import buildcraft.lib.misc.CapUtil;
+import buildcraft.robotics.statements.ActionRobotFilter;
+import buildcraft.robotics.statements.ActionRobotFilterTool;
+import buildcraft.robotics.statements.ActionStationAcceptFluids;
+import buildcraft.robotics.statements.ActionStationAcceptItems;
+import buildcraft.robotics.statements.ActionStationForbidRobot;
+import buildcraft.robotics.statements.ActionStationProvideFluids;
+import buildcraft.robotics.statements.ActionStationProvideItems;
+import buildcraft.silicon.plug.PluggableGate;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourWood;
 
 import org.jspecify.annotations.Nullable;
@@ -38,8 +54,10 @@ import org.jspecify.annotations.Nullable;
  * output for a docked robot to unload cargo into, and re-resolves its {@link IPipeHolder} lazily since
  * the pluggable (and therefore the holder reference) is rebuilt on every world/chunk load.
  *
- * <p>Gate-triggered station actions ({@code getActiveActions}) are Ph6 (statements port) — no gate query
- * plumbing exists yet, so this always reports no active actions.
+ * <p>Ph6 wires the gate actions: {@link #getActiveActions()} aggregates every {@link PluggableGate}'s
+ * resolved actions across the pipe's six faces (7.1.x's {@code ActionIterator} over the pipe's gates),
+ * and the D1 policy methods consult them — so a station refuses item/fluid interaction unless its gates
+ * hold the matching provide/accept actions, exactly as 7.1.x refused gateless stations.
  */
 public class DockingStationPipe extends DockingStation {
 
@@ -72,7 +90,20 @@ public class DockingStationPipe extends DockingStation {
 
     @Override
     public Iterable<StatementSlot> getActiveActions() {
-        return Collections.emptyList();
+        IPipeHolder h = getHolder();
+        if (h == null || h.getPipe() == null) {
+            return Collections.emptyList();
+        }
+        // 7.1.x's ActionIterator flattened every gate on the pipe (one per face); the modern holder
+        // exposes the same per-side pluggables, so a fresh snapshot per call is the honest equivalent
+        // (each consumer iterates once, and the gates' lists re-resolve every tick anyway).
+        List<StatementSlot> actions = new ArrayList<>();
+        for (Direction dir : Direction.values()) {
+            if (h.getPluggable(dir) instanceof PluggableGate gate) {
+                actions.addAll(gate.logic.getActiveActions());
+            }
+        }
+        return actions;
     }
 
     /** 7.1.x's station-side injectable, which the port must synthesize rather than inherit: a robot
@@ -203,6 +234,51 @@ public class DockingStationPipe extends DockingStation {
     // derived from this server-side SavedData and appears in neither the pluggable's NBT nor its
     // update tag.
     // RobotStationPluggable.onTick() now detects the transition and pushes a single state byte.
+
+    // ── D1 station-policy overrides (Ph6) ─────────────────────────────────
+    // The base class keeps permissive defaults as the GATELESS contract for non-pipe stations and test
+    // doubles; this pipe-backed station implements 7.1.x's real gate semantics, where an action class
+    // with no matching active statement refuses (7.1.x ActionRobotFilter: actionFound=false with no
+    // actions), and an action with an empty filter set passes everything.
+
+    @Override
+    public boolean canRobotExtractItem(ItemStack stack) {
+        return ActionRobotFilter.canInteractWithItem(this,
+                new ArrayStackOrListFilter(stack), ActionStationProvideItems.class)
+                && ActionStationProvideItems.canExtractItem(this, stack);
+    }
+
+    @Override
+    public boolean canRobotAcceptItem(ItemStack stack) {
+        return ActionRobotFilter.canInteractWithItem(this,
+                new ArrayStackOrListFilter(stack), ActionStationAcceptItems.class);
+    }
+
+    @Override
+    public boolean isRobotForbidden(IRobotAccess robot) {
+        return ActionStationForbidRobot.isForbidden(robot, this);
+    }
+
+    @Override
+    public IStackFilter getRobotItemFilter() {
+        IStackFilter filter = ActionRobotFilter.getGateFilter(this);
+        if (filter instanceof PassThroughStackFilter) {
+            // No work-filter set — fall back to the tool filter (7.1.x ActionRobotFilterTool), which is
+            // itself pass-through when unset: a robot fetches anything a gate doesn't restrict.
+            filter = ActionRobotFilterTool.getGateFilter(this);
+        }
+        return filter;
+    }
+
+    @Override
+    public boolean canRobotExtractFluid(IFluidFilter filter) {
+        return ActionRobotFilter.canInteractWithFluid(this, filter, ActionStationProvideFluids.class);
+    }
+
+    @Override
+    public boolean canRobotAcceptFluid(IFluidFilter filter) {
+        return ActionRobotFilter.canInteractWithFluid(this, filter, ActionStationAcceptFluids.class);
+    }
 
     @Override
     public void onChunkUnload() {

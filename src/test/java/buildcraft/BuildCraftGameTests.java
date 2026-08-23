@@ -788,9 +788,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_carrier_loads_from_supply_chest", () -> buildcraft.robotics.boards.PickerCarrierTester::carrierRobotLoadsFromSupplyChest);
         reg.accept("buildcraftunofficial:robot_supply_station_needs_wooden_pipe", () -> buildcraft.robotics.boards.PickerCarrierTester::supplyStationNeedsAWoodenPipePointedAtIt);
         reg.accept("buildcraftunofficial:robot_unload_dead_end_station", () -> buildcraft.robotics.boards.PickerCarrierTester::unloadStationDoesNotNeedAnOppositeFaceConnection);
-        // The carrier's unload half (pinned to the upstream docked-station early-exit: it unloads back at
-        // the station it loaded from) and the AIRobotMain ladder's recharge leg against a live kinesis rig.
-        reg.accept("buildcraftunofficial:robot_carrier_unloads_at_loaded_station", () -> buildcraft.robotics.boards.PickerCarrierTester::carrierUnloadsAtTheStationItLoadedFrom);
+        // The carrier's Ph4 unload-loop pin (robot_carrier_unloads_at_loaded_station) was REMOVED at Ph6 —
+        // the D1 reconciliation gave the station the 7.1.x refuse-by-default accept policy, which killed
+        // the permissive loop; robot_station_forbid_robot below is its replacement. Remaining here: the
+        // AIRobotMain ladder's recharge leg against a live kinesis rig.
         reg.accept("buildcraftunofficial:robot_low_power_recharges_at_powered_station", () -> buildcraft.robotics.boards.PickerCarrierTester::lowPowerRobotRechargesAtPoweredStation);
 
         // Robotics Ph5 — the board-catalog AIs, driven SYNCHRONOUSLY on unadded robots (search is pure block

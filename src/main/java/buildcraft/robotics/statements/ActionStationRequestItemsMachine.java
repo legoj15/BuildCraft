@@ -24,7 +24,7 @@ public class ActionStationRequestItemsMachine extends BCStatement implements IAc
 
     @Override
     public String getDescription() {
-        return LocaleUtil.localize("gate.action.station.machine_request");
+        return LocaleUtil.localize("gate.action.station.provide_machine_request");
     }
 
     @Override

@@ -62,7 +62,7 @@ public class AIRobotUnloadFluids extends AIRobot {
      *  simulates (false) or executes (true); returns the mB moved (0 = nothing possible). The pump's
      *  station search dry-runs this. */
     public static int unload(IRobotAccess robot, @Nullable DockingStation station, boolean doUnload) {
-        if (station == null || !station.canRobotAcceptFluid()) {
+        if (station == null) {
             return 0;
         }
 
@@ -74,6 +74,11 @@ public class AIRobotUnloadFluids extends AIRobot {
         }
         int carried = robotTank.getAmountAsInt(0);
         if (carried <= 0) {
+            return 0;
+        }
+        // 7.1.x gated the unload on ActionRobotFilter.canInteractWithFluid(station,
+        // SimpleFluidFilter(carried), ActionStationAcceptFluids.class) — the D1 policy takes the filter.
+        if (!station.canRobotAcceptFluid(stack -> FluidStack.isSameFluid(stack, resource.toStack(1)))) {
             return 0;
         }
         ResourceHandler<FluidResource> output = station.getFluidOutput();
@@ -99,6 +104,9 @@ public class AIRobotUnloadFluids extends AIRobot {
         /*IFluidHandlerAdv robotTank = robot.getFluidHandler();
         FluidStack carriedStack = robotTank.getFluidInTank(0);
         if (carriedStack.isEmpty()) {
+            return 0;
+        }
+        if (!station.canRobotAcceptFluid(stack -> FluidStack.isSameFluid(stack, carriedStack))) {
             return 0;
         }
         IFluidHandler output = station.getFluidOutput();

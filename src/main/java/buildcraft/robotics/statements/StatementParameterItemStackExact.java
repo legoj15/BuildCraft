@@ -15,6 +15,7 @@ import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementMouseClick;
+import buildcraft.lib.misc.StackUtil;
 
 /** An exact-stack statement parameter used by the request-items actions: the stack is decremented by
  *  one slot per click until the machine's available slots run out. */
@@ -57,12 +58,39 @@ public class StatementParameterItemStackExact implements IStatementParameter {
         return stack;
     }
 
+    /** 7.1.x slot-stepping on a copy: left/right ±1 (±16 with shift), clamped to what
+     *  {@code availableSlots} can hold; an over-stepped count returns {@link ItemStack#EMPTY}. */
+    private ItemStack step(ItemStack base, StatementMouseClick mouseClick) {
+        ItemStack stepped = base.copy();
+        if (mouseClick.getButton() == 0) {
+            stepped.setCount(stepped.getCount() + (mouseClick.isShift() ? 16 : 1));
+            int maxSize = availableSlots < 0 ? 64 : Math.min(64, stepped.getMaxStackSize() * availableSlots);
+            if (stepped.getCount() > maxSize) {
+                stepped.setCount(maxSize);
+            }
+        } else {
+            stepped.setCount(stepped.getCount() - (mouseClick.isShift() ? 16 : 1));
+            if (stepped.getCount() <= 0) {
+                return ItemStack.EMPTY;
+            }
+        }
+        return stepped;
+    }
+
     @Override
     public StatementParameterItemStackExact onClick(
             IStatementContainer source, IStatement stmt, ItemStack clickedStack, StatementMouseClick mouseClick) {
-        // Red-baseline degenerate: no count mutation yet. Ph6-green implements the upstream ±1/±16
-        // slot-stepping against availableSlots, functionally.
-        return this;
+        if (clickedStack.isEmpty()) {
+            if (stack.isEmpty()) {
+                return this;
+            }
+            return new StatementParameterItemStackExact(step(stack, mouseClick), availableSlots);
+        }
+        if (!stack.isEmpty() && StackUtil.isMatchingItem(stack, clickedStack)) {
+            return new StatementParameterItemStackExact(step(stack, mouseClick), availableSlots);
+        }
+        // A different item clicked: adopt it (7.1.x copies the clicked stack as-is).
+        return new StatementParameterItemStackExact(clickedStack.copy(), availableSlots);
     }
 
     @Override

@@ -17,7 +17,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 //? if >=26.2 {
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 //?}
 
 import buildcraft.VanillaSetupBaseTester;
@@ -41,12 +42,15 @@ public class RoboticsProvidersTest extends VanillaSetupBaseTester {
         private final DockingStation station;
 
         StationTile(DockingStation station) {
-            // Any type serves — the tile is a bare station seam for the providers.
+            // Any type serves — the tile is a bare station seam for the providers. The block state MUST
+            // match the type: the BlockEntity ctor validates it against the type's valid blocks on 26.x.
+            // 26.2 deleted the static BlockEntityType fields, and a hand-built type's intrusive holder
+            // needs an unfrozen registry — so 26.2 takes the CHEST type from the built-in registry.
             //? if >=26.2 {
-            /*super(new BlockEntityType<>(ChestBlockEntity::new, Blocks.CHEST),
-                    BlockPos.ZERO, Blocks.AIR.defaultBlockState());*/
+            /*super(BuiltInRegistries.BLOCK_ENTITY_TYPE.getValue(Identifier.withDefaultNamespace("chest")),
+                    BlockPos.ZERO, Blocks.CHEST.defaultBlockState());*/
             //?} else {
-            super(BlockEntityType.CHEST, BlockPos.ZERO, Blocks.AIR.defaultBlockState());
+            super(BlockEntityType.CHEST, BlockPos.ZERO, Blocks.CHEST.defaultBlockState());
             //?}
             this.station = station;
         }

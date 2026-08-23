@@ -34,9 +34,10 @@ import buildcraft.api.crops.ICropHandler;
 
 /** Default crop handler that knows about vanilla and common modded crops.
  *  IPlantable is gone from modern MC, so {@link #isSeed} checks whether the item is a BlockItem
- *  whose block is a plant. The plant umbrella is {@code BushBlock} below 26.1 and
- *  {@code VegetationBlock} on the 26.x line — Mojang re-homed CropBlock &amp; co. off BushBlock
- *  when they introduced VegetationBlock, so the umbrella class differs per line. Seed items are
+ *  whose block is a plant. The plant umbrella is {@code BushBlock} below 1.21.10 and
+ *  {@code VegetationBlock} from 1.21.10 on — Mojang re-homed CropBlock &amp; co. off BushBlock at
+ *  1.21.10 (BushBlock survived as a VegetationBlock subclass, which is why it still imports on
+ *  the 26.x line), so the umbrella class differs per line. Seed items are
  *  BlockItems on every line (ItemNameBlockItem on 1.21.x, custom-named block items on 26.x), so
  *  wheat &amp; co. resolve through the same path. */
 public enum CropHandlerPlantable implements ICropHandler {
@@ -48,7 +49,7 @@ public enum CropHandlerPlantable implements ICropHandler {
             Block block = blockItem.getBlock();
             // The plant umbrella covers CropBlock, FlowerBlock, SaplingBlock, MushroomBlock, etc.
             // Sugar cane extends Block directly (never a plant) — it is CropHandlerReeds territory.
-            //? if >=26.1 {
+            //? if >=1.21.10 {
             if (block instanceof net.minecraft.world.level.block.VegetationBlock
                     && block != Blocks.SUGAR_CANE) {
                 return true;

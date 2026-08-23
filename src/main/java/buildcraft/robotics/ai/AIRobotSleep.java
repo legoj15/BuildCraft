@@ -8,14 +8,19 @@
  */
 package buildcraft.robotics.ai;
 
+import javax.annotation.Nullable;
+
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.AIRobot;
+import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.api.statements.StatementSlot;
+import buildcraft.robotics.statements.ActionRobotWakeUp;
 
 /** Idles the robot at its station for 60 seconds ({@code SLEEPING_TIME} = 60*20 ticks, the 7.1.x value),
  *  drawing a token 0.1 RF per tick. 7.1.x woke early on an {@code ActionRobotWakeUp} statement from the
- *  station's gates; those statements are Ph6, so in Ph4 the timer alone wakes it (the {@code preempt}
- *  wake-up check is a deliberate no-op). */
+ *  station's gates; the Ph6 {@code preempt} check terminates the sleep when the linked station's active
+ *  actions hold one. */
 public class AIRobotSleep extends AIRobot {
 
     private static final int SLEEPING_TIME = 60 * 20;
@@ -27,8 +32,17 @@ public class AIRobotSleep extends AIRobot {
 
     @Override
     public void preempt(AIRobot ai) {
-        // Ph6: wake early if the station holds an ActionRobotWakeUp statement. No statements exist yet, so
-        // nothing can wake a sleeping robot except the timer in update().
+        // 7.1.x's preempt had no null guard; a docking station can be null mid-search, and the
+        // linked-station read is the only dereference, so the guard is free.
+        DockingStation station = robot.getDockingStation();
+        if (station == null) {
+            return;
+        }
+        for (StatementSlot s : station.getActiveActions()) {
+            if (s.statement instanceof ActionRobotWakeUp) {
+                terminate();
+            }
+        }
     }
 
     @Override

@@ -2,7 +2,7 @@
 
 Linked from [todos.md](../todos.md). This is the working plan for porting the robot system; update phase status here as work lands, and delete a phase's section only if the whole program is ever abandoned.
 
-**Status: Ph0 (seams b, c), Ph1, Ph2, Ph3, Ph4, and Ph5 are complete. Next up: Ph6 — Statements.**
+**Status: Ph0 (seams b, c), Ph1, Ph2, Ph3, Ph4, Ph5, and Ph6 are complete. Next up: Ph7 — Programming Table.**
 
 ## Overview
 
@@ -97,13 +97,11 @@ Step-5 debugging surfaced three real defects, all pinned (`398114a17`): the port
 
 _Tests:_ 411→415 game tests: the live-server world-property sweep (FML-JUnit performs no resource load, so tag-backed properties can never resolve there — and the wheat pin pins the soil+light the arena needs to keep crops alive), search-finds-log, and the search-and-goto flight (parks one cell short of the log; the 1.5 gate is the picker-E2E radius); JUnit: `BoardPredicateSweepTest`, `BoardNbtRoundTripTest`, `MinerHarvestLevelTest`, `AIRobotLoadUnloadFluidMathTest`, `AIRobotCostTableTest` over all 16 AIs, `WorldPropertySweepTest`. In-client (McDevBridge): the 8 board icons + creative tab on 26.2; boards present with the single chip on 1.21.1.
 
-### Ph6 — Statements
+### Ph6 — Statements (COMPLETE 2026-08-22)
 
-Port the 22 robot/station triggers+actions + the 2 parameter widgets (board-picker, zone-selector; atlas via `SpriteHolderRegistry`); wire the orphan `gate.action.robot.*` / `gate.trigger.robot.*` lang strings.
+All 22 robot/station triggers+actions and the 2 parameter widgets (board-picker, zone-selector) ported, lang-wired and registered (full design: [robotics-ph6-design.md](robotics-ph6-design.md)); `DockingStationPipe` overrides the four permissive Ph4 policy defaults with 7.1.x gate semantics (the D1 decision: the *gate side* owns every default). A station with no gate now refuses robot item/fluid transfers exactly as 7.1.x did — which kills the Ph4 carrier loop (load→unload-at-feet→sleep→reload); the old `robot_carrier_unloads_at_loaded_station` pin is replaced by the live-forbid `robot_station_forbid_robot` pin. `AIRobotSearchStation` skips gate-forbidden stations verbatim.
 
-**Reconcile the D1 defaults when the gate actions land.** Ph4's `DockingStation` policy defaults are permissive (`canRobotAcceptItem`/`canRobotExtractItem` true, `isRobotForbidden` false) where 7.1.x's gateless defaults *refused* interaction (`ActionRobotFilter.canInteractWithItem` → false with no gate actions; `ActionStationProvideItems.canExtractItem` → true is the exception). The observable consequence at Ph4: a Carrier at an isolated station that is both its supply and its only unload target loops load→unload-at-feet→sleep→reload (observed in-client on 26.2; pinned by `robot_carrier_unloads_at_loaded_station`), because `AIRobotSearchStation.start` short-circuits to the already-docked station when the filter matches it (verbatim 7.1.x) and the permissive accept-default lets the unload succeed. 7.1.x never exhibited it because the refuse-default made the same-station unload predicate fail. Decide per-policy which side of the gate-action port owns the default — and when that decision lands, update the pinning test; do not let the permissive default survive silently into a world with gates.
-
-_Tests:_ static filter predicates (`canInteractWithItem`/`canExtractItem`/`getGateFilter`) as JUnit if mockable, else GameTest (verify `StatementSlot`/`DockingStation` are constructible without a `Level` first); blanket statement+param registration & serialization sweep; `ActionRobotWorkInArea.getArea`; trigger / robot-param GameTests once a docked entity exists.
+_Tests:_ 7 JUnit classes (filter truth tables, provide-items extract, forbid matching + invert, work-area math, blanket registration/serialization sweep, param widgets, provider discovery) + 3 gate GameTests (sleep+wakeup through a live `PluggableGate`, the forbid refusal through the live station, the goto-station redirect).
 
 ### Ph7 — Programming Table
 
@@ -115,7 +113,7 @@ _Tests:_ board crafting-cost tiers (8k/32k/128k/512k — distinct from per-tick 
 
 `StackRequest`, Requester block (`IRequestProvider`), Delivery robot. Largest from-scratch server-side dependency. The reservation backend is **already done** (`RobotRegistry.take/release/isTaken` + `ResourceIdRequest` landed in Ph0/Ph2) — what is still stubbed is the *discovery* half: `DockingStation.getRequestProvider()` returns null and `DockingStationPipe` does not override it, so 7.1.x's six-neighbour scan of the host pipe (which is what finds an adjacent Requester) does not exist; `getFluidInput()` is likewise unoverridden (`getItemInput()` landed in Ph4 with the wooden-pipe-facing-a-chest supply rule).
 
-**Hard-blocked on Ph6, not merely ordered after it:** 7.1.x's load/unload AIs require an *active* `Provide Items`/`Accept Items` gate action, and `DockingStationPipe.getActiveActions()` currently returns an empty list — a Ph8 built before Ph6 is untestable end to end.
+**Unblocked by Ph6 (2026-08-22):** 7.1.x's load/unload AIs require an *active* `Provide Items`/`Accept Items` gate action, and `DockingStationPipe.getActiveActions()` now returns the live gate's actions — a Ph8 built before Ph6 would have been untestable end to end.
 
 Two 7.1.x behaviours to decide rather than inherit: `getRequestProvider()` never returning null (it falls back to the station itself, which makes the `Request Needed Items` gate action appear on every station and 7.1.x then never reads it), and the ghost-slot input method (hold exactly N items to request N) — main already has a first-class phantom-slot framework in `BCContainerSupport`, so a real quantity control is available if wanted.
 

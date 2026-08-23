@@ -18,14 +18,32 @@ import buildcraft.api.statements.IActionInternal;
 import buildcraft.api.statements.IActionInternalSided;
 import buildcraft.api.statements.IActionProvider;
 import buildcraft.api.statements.IStatementContainer;
+import buildcraft.robotics.BCRoboticsStatements;
+import buildcraft.robotics.RobotUtils;
 
 public enum RobotsActionProvider implements IActionProvider {
     INSTANCE;
 
-    /** Red-baseline degenerate: no actions are exposed yet. Ph6-green adds the fourteen robot/station
-     *  actions (filters, goto/wakeup/work-area, station input/provide/request/forbid). */
+    /** The fourteen robot/station actions, offered only to containers whose tile hosts a station
+     *  (7.1.x verbatim: gated on {@code RobotUtils.getStations(...)} being non-empty). */
     @Override
     public void addInternalActions(Collection<IActionInternal> actions, IStatementContainer container) {
+        if (!RobotUtils.getStations(container.getTile()).isEmpty()) {
+            actions.add(BCRoboticsStatements.ACTION_ROBOT_GOTO_STATION);
+            actions.add(BCRoboticsStatements.ACTION_ROBOT_WORK_IN_AREA);
+            actions.add(BCRoboticsStatements.ACTION_ROBOT_LOAD_UNLOAD_AREA);
+            actions.add(BCRoboticsStatements.ACTION_ROBOT_WAKE_UP);
+            actions.add(BCRoboticsStatements.ACTION_ROBOT_FILTER);
+            actions.add(BCRoboticsStatements.ACTION_ROBOT_FILTER_TOOL);
+            actions.add(BCRoboticsStatements.ACTION_STATION_FORBID_ROBOT);
+            actions.add(BCRoboticsStatements.ACTION_STATION_FORCE_ROBOT);
+            actions.add(BCRoboticsStatements.ACTION_STATION_REQUEST_ITEMS);
+            actions.add(BCRoboticsStatements.ACTION_STATION_ACCEPT_ITEMS);
+            actions.add(BCRoboticsStatements.ACTION_STATION_PROVIDE_ITEMS);
+            actions.add(BCRoboticsStatements.ACTION_STATION_PROVIDE_FLUIDS);
+            actions.add(BCRoboticsStatements.ACTION_STATION_ACCEPT_FLUIDS);
+            actions.add(BCRoboticsStatements.ACTION_STATION_MACHINE_REQUEST);
+        }
     }
 
     @Override

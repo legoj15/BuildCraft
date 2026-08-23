@@ -78,7 +78,7 @@ public class AIRobotLoadFluids extends AIRobot {
      *  tank. {@code doLoad} simulates (false) or executes (true); returns the mB moved (0 = nothing
      *  possible). The pump's station search dry-runs this. */
     public static int load(IRobotAccess robot, @Nullable DockingStation station, IFluidFilter filter, boolean doLoad) {
-        if (station == null || !station.canRobotExtractFluid()) {
+        if (station == null || !station.canRobotExtractFluid(filter)) {
             return 0;
         }
 

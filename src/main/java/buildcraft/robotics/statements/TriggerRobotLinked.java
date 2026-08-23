@@ -8,6 +8,7 @@
  */
 package buildcraft.robotics.statements;
 
+import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.ITriggerInternal;
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
@@ -15,6 +16,7 @@ import buildcraft.core.statements.BCStatement;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.robotics.BCRoboticsSprites;
+import buildcraft.robotics.RobotUtils;
 
 public class TriggerRobotLinked extends BCStatement implements ITriggerInternal {
 
@@ -35,14 +37,15 @@ public class TriggerRobotLinked extends BCStatement implements ITriggerInternal 
         return reserved ? BCRoboticsSprites.TRIGGER_ROBOT_RESERVED : BCRoboticsSprites.TRIGGER_ROBOT_LINKED;
     }
 
-    /** Red-baseline degenerate: no robot is reported docked yet. Ph6-green checks whether the station
-     *  is taken by a robot (reserved) or merely linked. */
-    public static boolean isTriggerActive(boolean reserved, buildcraft.api.robots.DockingStation station) {
-        return false;
-    }
-
+    /** True when a robot is docked at one of the gate's pipe's stations; the reserved variant fires only
+     *  when the dock is the robot's MAIN station (7.1.x verbatim). */
     @Override
     public boolean isTriggerActive(IStatementContainer source, IStatementParameter[] parameters) {
-        return isTriggerActive(reserved, null);
+        for (DockingStation station : RobotUtils.getStations(source.getTile())) {
+            if (station.isTaken() && (reserved || station.isMainStation())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

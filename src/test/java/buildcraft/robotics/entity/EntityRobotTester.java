@@ -148,7 +148,7 @@ public class EntityRobotTester {
     /** A robot added to the world registers itself with the per-level {@link IRobotRegistry} on its first
      *  tick, is handed a unique non-sentinel id, and can find its own registry again. */
     public static void robotSpawnRegistersWithUniqueId(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
+        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(5, 2, 1));
         ServerLevel level = helper.getLevel();
         IRobotRegistry registry = RobotManager.registryProvider.getRegistry(level);
 
@@ -182,8 +182,8 @@ public class EntityRobotTester {
     /** A robot is world-persistent: it saves with its chunk and, unlike a {@code Mob}, has no despawn path at
      *  all — it is still alive, still registered and still exactly where it was left after a long idle. */
     public static void robotPersistsAndDoesNotDespawn(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
         BlockPos relPos = new BlockPos(5, 4, 1);
+        EntityArenaUtil.forceLoadEntityArena(helper, relPos);
         EntityRobot robot = addRobot(helper, relPos);
         Vec3 spawnedAt = Vec3.atCenterOf(helper.absolutePos(relPos));
 
@@ -213,12 +213,14 @@ public class EntityRobotTester {
      *  long, the four transfer slots, the tank, the held item and both station records (7.1.x key names,
      *  modern {@code pos} int[3] + side-byte bodies). */
     public static void robotNbtRoundTripPreservesState(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
         ServerLevel level = helper.getLevel();
         BlockPos mainRel = new BlockPos(5, 2, 3);
         BlockPos dockRel = new BlockPos(5, 2, 5);
         installStation(helper, mainRel, Direction.UP);
         installStation(helper, dockRel, Direction.DOWN);
+        // Centre on the robot's chunk (5, 3, 4), not the arena origin — the robot only ticks once its
+        // whole 5x5 neighbourhood is FULL, and it can land in the arena's second chunk column.
+        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(5, 3, 4));
         EntityRobot robot = addRobot(helper, new BlockPos(5, 3, 4));
 
         EntityArenaUtil.tickUntil(helper, 40,
@@ -331,11 +333,11 @@ public class EntityRobotTester {
     /** A docked robot is pinned to its station's face centre and has its motion zeroed every tick — that snap
      *  is what makes a robot visually sit on its station instead of drifting off it. */
     public static void dockedRobotSnapsToStationFaceCentre(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
         // z=6, not the old z=7: grid rows are spaced 7 apart for the empty structure, so z=7 is already
         // the next row's first block — the pipe and robot sat inside a neighbouring test's arena.
         BlockPos pipeRel = new BlockPos(5, 2, 6);
         installStation(helper, pipeRel, Direction.UP);
+        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(3, 4, 6));
         EntityRobot robot = addRobot(helper, new BlockPos(3, 4, 6));
 
         EntityArenaUtil.tickUntilThen(helper, 60,
@@ -364,7 +366,7 @@ public class EntityRobotTester {
     /** A hit an undocked robot can pay for debits its battery by {@code 260 MJ} per damage point and raises
      *  the synched hurt flash, which then decays. */
     public static void damageDebitsBatteryAndSetsHurtTime(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
+        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(3, 2, 6));
         ServerLevel level = helper.getLevel();
         EntityRobot robot = addRobot(helper, new BlockPos(3, 2, 6));
 
@@ -401,10 +403,10 @@ public class EntityRobotTester {
      *  reservation is released and the registry forgets it. Also pins the boundary — 7.1.x used
      *  {@code stored - debit > 0}, so a robot holding EXACTLY the debit is destroyed, not left at zero. */
     public static void batteryExhaustedHitConvertsToItems(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
         ServerLevel level = helper.getLevel();
         BlockPos pipeRel = new BlockPos(5, 2, 2);
         BlockPos robotRel = new BlockPos(5, 3, 2);
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
         installStation(helper, pipeRel, Direction.UP);
         // Boarded, like every robot that exists through real gameplay — a bare entity could never pin
         // that the dropped item carries the board. Seeding the battery BEFORE the first tick keeps the
@@ -487,10 +489,11 @@ public class EntityRobotTester {
     /** A docked robot is invulnerable, and mob / falling-block damage never touches a robot at all — a robot
      *  parked on a station is machinery, not prey. */
     public static void dockedAndFilteredDamageDoesNothing(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
         ServerLevel level = helper.getLevel();
         BlockPos pipeRel = new BlockPos(5, 2, 4);
         installStation(helper, pipeRel, Direction.UP);
+        // Both robots sit in the arena's second chunk column; centre on their chunk.
+        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(5, 3, 4));
         EntityRobot docked = addRobot(helper, new BlockPos(5, 3, 4));
         EntityRobot airborne = addRobot(helper, new BlockPos(3, 3, 4));
 
@@ -568,7 +571,7 @@ public class EntityRobotTester {
      *  test: a real change must go dirty, and an unchanged re-push must NOT (or the robot re-sends five
      *  stacks at 20 Hz forever). */
     public static void inPlaceInventoryMutationPropagatesToSynchedData(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
+        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(5, 4, 3));
         EntityRobot robot = addRobot(helper, new BlockPos(5, 4, 3));
 
         // One scheduled block, no ticks in between: a tick could dirty an unrelated accessor (ENERGY_MJ,
@@ -618,9 +621,9 @@ public class EntityRobotTester {
      *  pipe behaviour and the pulsar pluggable) would otherwise pin every robot next to a pipe as "charging"
      *  forever, whether or not a single MJ ever arrived. */
     public static void dockedRobotChargeIsReadableAndSimulateIsInert(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
         BlockPos pipeRel = new BlockPos(5, 4, 5);
         installStation(helper, pipeRel, Direction.UP);
+        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(5, 5, 5));
         EntityRobot robot = addRobot(helper, new BlockPos(5, 5, 5));
         long delivered = 1200L * MjAPI.MJ;
 

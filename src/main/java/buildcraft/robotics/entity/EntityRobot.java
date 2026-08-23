@@ -67,6 +67,7 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.RobotManager;
+import buildcraft.api.statements.StatementSlot;
 import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.lib.inventory.AbstractInvItemTransactor;
@@ -82,6 +83,7 @@ import buildcraft.robotics.ai.AIRobotMain;
 import buildcraft.robotics.ai.AIRobotShutdown;
 import buildcraft.robotics.ai.AIRobotSleep;
 import buildcraft.robotics.item.ItemRobot;
+import buildcraft.robotics.statements.ActionRobotWorkInArea;
 
 /**
  * The robot. Ported from 7.1.x {@code buildcraft.robotics.EntityRobot}, rebased onto bare {@code Entity} and
@@ -1304,16 +1306,37 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
 
     // ── Zones (Ph6) ─────────────────────────────────────────────────────────
 
-    /** Ph6 — the zone comes off the linked station's {@code ActionRobotWorkInArea} statements, which need the
-     *  statement/gate wiring that phase brings. */
+    /** The zone the linked station's {@code ActionRobotWorkInArea} WORK statements name (7.1.x verbatim:
+     *  first matching statement wins), or null with no zone statement active. */
     @Override
     public IZone getZoneToWork() {
-        return null;
+        return getZone(ActionRobotWorkInArea.AreaType.WORK);
     }
 
-    /** Ph6 — see {@link #getZoneToWork()}. */
+    /** The zone the linked station's LOAD_UNLOAD statements name, falling back to the work zone when none
+     *  (7.1.x verbatim). */
     @Override
     public IZone getZoneToLoadUnload() {
+        IZone zone = getZone(ActionRobotWorkInArea.AreaType.LOAD_UNLOAD);
+        if (zone == null) {
+            zone = getZoneToWork();
+        }
+        return zone;
+    }
+
+    private IZone getZone(ActionRobotWorkInArea.AreaType areaType) {
+        DockingStation station = getLinkedStation();
+        if (station != null) {
+            for (StatementSlot s : station.getActiveActions()) {
+                if (s.statement instanceof ActionRobotWorkInArea
+                        && ((ActionRobotWorkInArea) s.statement).getAreaType() == areaType) {
+                    IZone zone = ActionRobotWorkInArea.getArea(this, s);
+                    if (zone != null) {
+                        return zone;
+                    }
+                }
+            }
+        }
         return null;
     }
 

@@ -8,7 +8,7 @@
  */
 package buildcraft.robotics.statements;
 
-import buildcraft.api.robots.IRobotAccess;
+import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.ITriggerInternal;
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
@@ -16,6 +16,8 @@ import buildcraft.core.statements.BCStatement;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.robotics.BCRoboticsSprites;
+import buildcraft.robotics.RobotUtils;
+import buildcraft.robotics.entity.EntityRobot;
 
 public class TriggerRobotSleep extends BCStatement implements ITriggerInternal {
 
@@ -33,14 +35,15 @@ public class TriggerRobotSleep extends BCStatement implements ITriggerInternal {
         return BCRoboticsSprites.TRIGGER_ROBOT_SLEEP;
     }
 
-    /** Red-baseline degenerate: no robot is reported sleeping yet. Ph6-green checks
-     *  {@code robot.isSleeping()} on the robot docked at the gate's station. */
-    public static boolean isTriggerActive(IRobotAccess robot) {
-        return false;
-    }
-
+    /** True when the robot docked at one of the gate's pipe's stations is sleeping (7.1.x's {@code
+     *  isActive()} renamed — main's {@code isSleeping()} is the modern name). */
     @Override
     public boolean isTriggerActive(IStatementContainer source, IStatementParameter[] parameters) {
-        return isTriggerActive(null);
+        for (DockingStation station : RobotUtils.getStations(source.getTile())) {
+            if (station.robotTaking() instanceof EntityRobot robot && robot.isSleeping()) {
+                return true;
+            }
+        }
+        return false;
     }
 }

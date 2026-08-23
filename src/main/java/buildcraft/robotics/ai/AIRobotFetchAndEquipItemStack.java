@@ -22,8 +22,8 @@ import buildcraft.lib.inventory.InventoryWrapper;
  *  from the station's item input. Ported from 7.1.x {@code AIRobotFetchAndEquipItemStack} (7.1.x reached
  *  the same through {@code AIRobotLoad.takeSingle} on the station input; the modern equivalent extracts one
  *  matching stack through the station's input transactor and then
- *  {@code robot.setItemInUse}). The 7.1.x gate-tool filter ({@code ActionRobotFilterTool}) is Ph6, so the
- *  effective filter is just {@code filter} (D1).
+ *  {@code robot.setItemInUse}). The board hands the merged work/tool gate filter in as {@code filter}; the
+ *  station's {@code canRobotExtractItem} policy (D1, gate-semantics at Ph6) gates each candidate stack.
  *
  *  <p>The move to the station reuses the Ph4 {@link AIRobotGotoStationToLoad} with quantity 1 — its
  *  station search dry-runs {@link AIRobotLoad#load} with the same filter, so only a station that can
@@ -92,7 +92,7 @@ public class AIRobotFetchAndEquipItemStack extends AIRobot {
         }
 
         // One real extract of up to a stack (the 7.1.x takeSingle doLoad=true); a refused stack goes
-        // straight back — the permissive canRobotExtractItem policy (D1) stands in for the Ph6 gates.
+        // straight back — the canRobotExtractItem policy (D1, gate-semantics at Ph6) decides.
         IItemTransactor inputTransactor = new InventoryWrapper(input);
         ItemStack possible = inputTransactor.extract(filter, 1, 64, false);
         if (possible.isEmpty()) {

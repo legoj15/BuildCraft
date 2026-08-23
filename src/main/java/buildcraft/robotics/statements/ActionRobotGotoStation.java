@@ -13,6 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import buildcraft.api.items.IMapLocation;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotRegistry;
+import buildcraft.api.robots.RobotManager;
 import buildcraft.api.statements.IActionInternal;
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
@@ -21,6 +22,9 @@ import buildcraft.core.statements.BCStatement;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.robotics.BCRoboticsSprites;
+import buildcraft.robotics.RobotUtils;
+import buildcraft.robotics.ai.AIRobotGotoStation;
+import buildcraft.robotics.entity.EntityRobot;
 
 public class ActionRobotGotoStation extends BCStatement implements IActionInternal {
 
@@ -38,10 +42,22 @@ public class ActionRobotGotoStation extends BCStatement implements IActionIntern
         return BCRoboticsSprites.ACTION_ROBOT_GOTO_STATION;
     }
 
-    /** Red-baseline degenerate: the docked-robot redirect is Ph6-green work (it flies the robot via
-     *  {@code AIRobotGotoStation} with the takeAsMain flag). */
+    /** Redirects every docked, non-preempted robot on the gate's pipe to the station the map-location
+     *  parameter names, taking it as MAIN (7.1.x verbatim — no break: every docked robot is redirected). */
     @Override
     public void actionActivate(IStatementContainer container, IStatementParameter[] parameters) {
+        if (parameters == null || parameters.length < 1 || parameters[0] == null) {
+            return;
+        }
+        for (DockingStation station : RobotUtils.getStations(container.getTile())) {
+            if (station.robotTaking() instanceof EntityRobot robot && robot.getOverridingAI() == null) {
+                IRobotRegistry registry = RobotManager.registryProvider.getRegistry(robot.level());
+                DockingStation newStation = getStation((StatementParameterItemStack) parameters[0], registry);
+                if (newStation != null) {
+                    robot.overrideAI(new AIRobotGotoStation(robot, newStation, true));
+                }
+            }
+        }
     }
 
     /** The station a {@code StatementParameterItemStack} map-location param points at, or null. */

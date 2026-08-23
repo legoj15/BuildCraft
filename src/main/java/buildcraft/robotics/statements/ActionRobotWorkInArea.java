@@ -8,6 +8,11 @@
  */
 package buildcraft.robotics.statements;
 
+import net.minecraft.world.item.ItemStack;
+
+import buildcraft.api.core.IZone;
+import buildcraft.api.items.IMapLocation;
+import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.statements.IActionInternal;
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
@@ -63,10 +68,22 @@ public class ActionRobotWorkInArea extends BCStatement implements IActionInterna
         return areaType.getIcon();
     }
 
-    /** Red-baseline degenerate: no zone is handed out yet. Ph6-green resolves the area from a
-     *  WORK/LOAD_UNLOAD action slot's map-location parameter (SPOT box or ZONE plan). */
-    public static buildcraft.api.core.IZone getArea(buildcraft.api.robots.IRobotAccess robot, StatementSlot slot) {
-        return null;
+    /** The zone a WORK/LOAD_UNLOAD action slot's map-location parameter names (SPOT box or ZONE plan),
+     *  or null when the parameter is empty or not a map. */
+    public static IZone getArea(IRobotAccess robot, StatementSlot slot) {
+        if (slot == null || slot.parameters.length < 1 || slot.parameters[0] == null) {
+            return null;
+        }
+        ItemStack stack = slot.parameters[0].getItemStack();
+        if (stack.isEmpty() || !(stack.getItem() instanceof IMapLocation map)) {
+            return null;
+        }
+        return map.getZone(stack);
+    }
+
+    /** Which area kind this statement names — {@link EntityRobot} reads it to pick work vs load/unload. */
+    public AreaType getAreaType() {
+        return areaType;
     }
 
     @Override

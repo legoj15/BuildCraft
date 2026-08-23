@@ -12,8 +12,10 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 
 /** {@link AIRobotSleep} idles at its station for the 7.1.x 60-second timer (60*20 ticks) and then wakes itself.
- *  Termination is observed through a recording parent (the {@code preempt} wake-up statement is deliberately a
- *  Ph6 no-op, so the timer is the only thing that wakes it). */
+ *  Termination is observed through a recording parent. The Ph6 {@code preempt} wake-up path (a station gate
+ *  holding {@code ActionRobotWakeUp}) is covered by the game test
+ *  {@code RobotGateTester.sleepTriggerAndWakeupPreemptsPicker} — here the mock has no station, so the
+ *  timer is the only thing that wakes it. */
 public class AIRobotSleepTest {
 
     private final MockRobotAccess robot = new MockRobotAccess();

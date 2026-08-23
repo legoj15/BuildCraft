@@ -18,14 +18,22 @@ import buildcraft.api.statements.ITriggerInternal;
 import buildcraft.api.statements.ITriggerInternalSided;
 import buildcraft.api.statements.ITriggerProvider;
 import buildcraft.api.statements.IStatementContainer;
+import buildcraft.robotics.BCRoboticsStatements;
+import buildcraft.robotics.RobotUtils;
 
 public enum RobotsTriggerProvider implements ITriggerProvider {
     INSTANCE;
 
-    /** Red-baseline degenerate: no triggers are exposed yet. Ph6-green adds the four robot triggers
-     *  (sleep / in-station / linked / reserved). */
+    /** The four robot triggers, offered only to containers whose tile hosts a station (7.1.x verbatim:
+     *  gated on {@code RobotUtils.getStations(...)} being non-empty). */
     @Override
     public void addInternalTriggers(Collection<ITriggerInternal> triggers, IStatementContainer container) {
+        if (!RobotUtils.getStations(container.getTile()).isEmpty()) {
+            triggers.add(BCRoboticsStatements.TRIGGER_ROBOT_SLEEP);
+            triggers.add(BCRoboticsStatements.TRIGGER_ROBOT_IN_STATION);
+            triggers.add(BCRoboticsStatements.TRIGGER_ROBOT_LINKED);
+            triggers.add(BCRoboticsStatements.TRIGGER_ROBOT_RESERVED);
+        }
     }
 
     @Override

@@ -15,8 +15,11 @@ import buildcraft.api.statements.IActionInternal;
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementParameterItemStack;
+import buildcraft.api.statements.StatementSlot;
 import buildcraft.core.statements.BCStatement;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
+import buildcraft.lib.inventory.filter.ArrayStackOrListFilter;
+import buildcraft.lib.inventory.filter.StatementParameterStackFilter;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.robotics.BCRoboticsSprites;
 
@@ -46,9 +49,17 @@ public class ActionStationProvideItems extends BCStatement implements IActionInt
         return new StatementParameterItemStack();
     }
 
-    /** Red-baseline degenerate: without any filtered provide action, anything is extractable. Ph6-green
-     *  checks the active provide-items actions' parameters against {@code stack}. */
+    /** Whether {@code stack} may be extracted: refused only when a filtered provide-items action is
+     *  active and the stack is not what it offers — permissive with no (or unfiltered) provide actions. */
     public static boolean canExtractItem(DockingStation station, ItemStack stack) {
+        for (StatementSlot s : station.getActiveActions()) {
+            if (s.statement instanceof ActionStationProvideItems) {
+                StatementParameterStackFilter param = new StatementParameterStackFilter(s.parameters);
+                if (param.hasFilter() && !param.matches(new ArrayStackOrListFilter(stack))) {
+                    return false;
+                }
+            }
+        }
         return true;
     }
 

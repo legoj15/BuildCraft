@@ -21,6 +21,7 @@ import net.minecraft.world.phys.Vec3;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
+import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.RobotManager;
 
 import buildcraft.core.BCCoreItems;
@@ -148,84 +149,93 @@ public class RobotGateTester {
      *  it was asleep. The wake is observable ONLY through the fetch: a preempted sleep is re-entered within
      *  the same tick (the board's GotoSleep fallback), so {@code isSleeping()} polls would never see it. */
     public static void sleepTriggerAndWakeupPreemptsPicker(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
         BlockPos pipeRel = new BlockPos(1, 3, 2);
         BlockPos robotRel = new BlockPos(3, 4, 2);
         BlockPos itemRel = new BlockPos(3, 4, 2);
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
 
         TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP);
 
         EntityRobot[] robot = { null };
         boolean[] docked = { false };
-        EntityArenaUtil.tickUntil(helper, 200,
+        int[] phase = { 0 }; // 0: station registered, 1: dock + sleep, 2: gate + drop, then fetch
+        // ONE flat tickUntil scheduled from the test body. Nested tickUntils are forbidden: runAfterDelay
+        // inserts into GameTestInfo's runAtTickTimeMap immediately, and inserting from inside a scheduled
+        // runnable can rehash the map mid-iteration (GameTestInfo.tickInternal iterates it) and NPE the
+        // iterator — the framework javadoc itself warns against scheduling from inside a runnable. Each
+        // phase transition happens on the tick its guard first passes, and returns false so `then` never
+        // fires before the side effects land.
+        EntityArenaUtil.tickUntil(helper, 400,
                 () -> {
-                    DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-                    if (station == null) {
-                        return false;
-                    }
-                    if (robot[0] == null) {
+                    if (phase[0] == 0) {
+                        if (stationAt(helper, pipeRel, Direction.UP) == null) {
+                            return false;
+                        }
+                        phase[0] = 1;
                         robot[0] = addBoardRobot(helper, robotRel, BoardRobotPickerNBT.INSTANCE);
                         robot[0].getBattery().addPower(SEEDED_CHARGE, false);
                         return false;
                     }
-                    if (!docked[0]) {
-                        // Hand-dock and force the sleep: deterministic, and the override keeps the board
-                        // from scanning before the gate exists.
-                        station.takeAsMain(robot[0]);
-                        robot[0].dock(station);
-                        robot[0].overrideAI(new AIRobotSleep(robot[0]));
-                        docked[0] = true;
+                    if (phase[0] == 1) {
+                        if (!docked[0]) {
+                            // Hand-dock and force the sleep: deterministic, and the override keeps the board
+                            // from scanning before the gate exists.
+                            DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
+                            station.takeAsMain(robot[0]);
+                            robot[0].dock(station);
+                            robot[0].overrideAI(new AIRobotSleep(robot[0]));
+                            docked[0] = true;
+                            return false;
+                        }
+                        if (!robot[0].isSleeping()) {
+                            return false;
+                        }
+                        // Asleep: resolve the gate and drop the diamond only NOW, so the sleeping robot
+                        // never saw it before the wake.
+                        phase[0] = 2;
+                        DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
+                        helper.assertTrue(robot[0].getDockingStation() == station,
+                                "the picker must be docked at the station before the gate resolves");
+                        PluggableGate gate = addGate(tile, Direction.WEST, BASIC_GATE);
+                        gate.logic.statements[0].trigger.set(
+                                TriggerWrapper.wrap(BCRoboticsStatements.TRIGGER_ROBOT_SLEEP, null));
+                        gate.logic.statements[0].action.set(
+                                ActionWrapper.wrap(BCRoboticsStatements.ACTION_ROBOT_WAKE_UP, null));
+                        // Resolve synchronously, AFTER the robot is asleep — no wake/awake race.
+                        gate.logic.resolveActions();
+                        helper.assertTrue(gate.logic.triggerOn[0],
+                                "the sleep trigger must fire while a robot sleeps at the station");
+                        dropItem(helper, itemRel, new ItemStack(Items.DIAMOND));
                         return false;
                     }
-                    return robot[0].isSleeping();
+                    return robot[0].containsItems();
                 },
                 () -> {
-                    DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-                    helper.assertTrue(robot[0].getDockingStation() == station,
-                            "the picker must be docked at the station before the gate resolves");
-
-                    PluggableGate gate = addGate(tile, Direction.WEST, BASIC_GATE);
-                    gate.logic.statements[0].trigger.set(
-                            TriggerWrapper.wrap(BCRoboticsStatements.TRIGGER_ROBOT_SLEEP, null));
-                    gate.logic.statements[0].action.set(
-                            ActionWrapper.wrap(BCRoboticsStatements.ACTION_ROBOT_WAKE_UP, null));
-                    // Resolve synchronously, AFTER the robot is asleep — no wake/awake race.
-                    gate.logic.resolveActions();
-                    helper.assertTrue(gate.logic.triggerOn[0],
-                            "the sleep trigger must fire while a robot sleeps at the station");
-
-                    // A diamond the woken picker can find: dropped only now, so a sleeping robot never saw it.
-                    dropItem(helper, itemRel, new ItemStack(Items.DIAMOND));
-
-                    EntityArenaUtil.tickUntil(helper, 200,
-                            robot[0]::containsItems,
-                            () -> {
-                                helper.assertTrue(ItemStack.matches(robot[0].getInventoryStack(0),
-                                        new ItemStack(Items.DIAMOND, 1)),
-                                        "the woken picker must fetch the dropped diamond — the wakeup action "
-                                                + "preempted the sleep and the board re-scanned");
-                                robot[0].discard();
-                                helper.succeed();
-                            },
-                            "the wakeup action never woke the sleeping picker (or it woke and re-slept without "
-                                    + "re-scanning)");
+                    helper.assertTrue(ItemStack.matches(robot[0].getInventoryStack(0),
+                            new ItemStack(Items.DIAMOND, 1)),
+                            "the woken picker must fetch the dropped diamond — the wakeup action "
+                                    + "preempted the sleep and the board re-scanned");
+                    robot[0].discard();
+                    helper.succeed();
                 },
-                "the picker never fell asleep at the station");
+                "the picker never fell asleep at the station (or the wakeup never made it fetch)");
     }
 
     // ---------- forbid robot (the D1 pin) ----------
 
-    /** A carrier at a supply station whose gate carries the forbid-robot action naming the carrier's board:
-     *  the D1 pin. The unload is refused at the forbidden station — visible through the LIVE station's
-     *  {@code getActiveActions()} aggregation, the seam the JUnit predicate tests never reach. This is what
-     *  kills the Ph4 permissive loop ({@code carrierUnloadsAtTheStationItLoadedFrom}): once
-     *  {@code DockingStationPipe.getActiveActions()} exposes the gate's forbid action, the carrier loads,
-     *  refuses to unload, and sleeps with its cargo instead of cycling load -> unload -> load. */
+    /** A carrier with cargo near a station whose gate carries the forbid-robot action naming the carrier's
+     *  board: the D1 pin, asserted honestly against 7.1.x semantics. 7.1.x's {@code AIRobotSearchStation}
+     *  SKIPS forbidden stations, so the carrier never docks at it at all — it sleeps with its cargo, and a
+     *  dry-run unload through the LIVE station's {@code getActiveActions()} aggregation refuses. This is
+     *  what kills the Ph4 permissive loop ({@code carrierUnloadsAtTheStationItLoadedFrom}): once
+     *  {@code DockingStationPipe.getActiveActions()} exposes the gate's forbid action, the unload is refused
+     *  (and the search no longer even proposes the station), so the carrier sleeps with its cargo instead of
+     *  cycling load -> unload -> load. */
     public static void forbidRobotActionRefusesUnloadAtStation(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
         BlockPos pipeRel = new BlockPos(1, 3, 3);
         BlockPos chestRel = new BlockPos(1, 2, 3);
         BlockPos robotRel = new BlockPos(3, 4, 3);
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
 
         TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP);
         helper.setBlock(chestRel, Blocks.CHEST);
@@ -244,34 +254,42 @@ public class RobotGateTester {
                 ItemRobot.createRobotStack(BoardRobotCarrierNBT.INSTANCE.getID(), 0)));
 
         EntityRobot[] robot = { null };
-        EntityArenaUtil.tickUntil(helper, 300,
+        int[] phase = { 0 }; // 0: station registered, 1: spawn + seed, then settle
+        // One flat tickUntil (see sleepTriggerAndWakeupPreemptsPicker for the no-nested-scheduling rule).
+        EntityArenaUtil.tickUntil(helper, 420,
                 () -> {
-                    DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-                    if (station == null) {
-                        return false;
-                    }
-                    if (robot[0] == null) {
+                    if (phase[0] == 0) {
+                        if (stationAt(helper, pipeRel, Direction.UP) == null) {
+                            return false;
+                        }
+                        phase[0] = 1;
+                        // Seed the carrier with the chest's diamonds: it goes straight to the unload search,
+                        // which must skip the forbidden station.
                         robot[0] = addBoardRobot(helper, robotRel, BoardRobotCarrierNBT.INSTANCE);
                         robot[0].getBattery().addPower(SEEDED_CHARGE, false);
+                        robot[0].setInventoryStack(0, new ItemStack(Items.DIAMOND, 5));
                         return false;
                     }
-                    return robot[0].containsItems();
+                    // The robot settles into sleep when the search excludes the ONLY station; a dock would
+                    // also settle it — and is the D1 regression this test exists to catch.
+                    return robot[0].isSleeping() || robot[0].getDockingStation() != null;
                 },
                 () -> {
                     DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-                    helper.assertTrue(robot[0].getDockingStation() == station,
-                            "the carrier must be docked at the supply station it loaded from");
+                    helper.assertTrue(robot[0].getDockingStation() == null,
+                            "the carrier must never dock at the gate-forbidden station — 7.1.x "
+                                    + "search skips stations the forbid action names");
                     helper.assertFalse(AIRobotUnload.unload(robot[0], station, false),
-                            "the gate-forbidden station must refuse the carrier's unload — the forbid action "
-                                    + "names this robot's board, and the refusal flows through the station's "
-                                    + "live getActiveActions()");
+                            "the gate-forbidden station must refuse the carrier's unload — the "
+                                    + "forbid action names this robot's board, and the refusal "
+                                    + "flows through the station's live getActiveActions()");
                     helper.assertTrue(ItemStack.matches(robot[0].getInventoryStack(0),
                             new ItemStack(Items.DIAMOND, 5)),
                             "the refused unload must leave the cargo in the robot");
                     robot[0].discard();
                     helper.succeed();
                 },
-                "the carrier never loaded the chest's diamonds at the forbidden station");
+                "the carrier neither docked at the forbidden station nor settled into sleep");
     }
 
     // ---------- goto station action ----------
@@ -299,34 +317,49 @@ public class RobotGateTester {
                 new StatementParameterMapLocation(spotMap(helper, pipeBRel, Direction.UP)));
 
         EntityRobot[] robot = { null };
-        EntityArenaUtil.tickUntil(helper, 200,
-                () -> stationAt(helper, pipeARel, Direction.UP) != null
-                        && stationAt(helper, pipeBRel, Direction.UP) != null,
+        DockingStationPipe[] stationB = { null };
+        int[] phase = { 0 }; // 0: both stations, 1: robot id + dock + resolve, then docked at B
+        // One flat tickUntil (see sleepTriggerAndWakeupPreemptsPicker for the no-nested-scheduling rule).
+        EntityArenaUtil.tickUntil(helper, 420,
                 () -> {
-                    DockingStationPipe stationA = stationAt(helper, pipeARel, Direction.UP);
-                    DockingStationPipe stationB = stationAt(helper, pipeBRel, Direction.UP);
+                    if (phase[0] == 0) {
+                        if (stationAt(helper, pipeARel, Direction.UP) == null
+                                || stationAt(helper, pipeBRel, Direction.UP) == null) {
+                            return false;
+                        }
+                        phase[0] = 1;
+                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                        robot[0].getBattery().addPower(SEEDED_CHARGE, false);
+                        return false;
+                    }
+                    if (phase[0] == 1) {
+                        // Wait for the FIRST tick: registerRobot assigns the robot's id then, and takeAsMain
+                        // must record a real id or robotTaking() resolves null (NULL_ROBOT_ID) and the
+                        // in-station trigger cannot fire. The empty board's load search finds no gateless
+                        // station anyway, so the redirect still beats it.
+                        if (robot[0].getRobotId() == EntityRobotBase.NULL_ROBOT_ID) {
+                            return false;
+                        }
+                        phase[0] = 2;
+                        DockingStationPipe stationA = stationAt(helper, pipeARel, Direction.UP);
+                        stationB[0] = stationAt(helper, pipeBRel, Direction.UP);
+                        stationA.takeAsMain(robot[0]);
+                        robot[0].dock(stationA);
 
-                    // Spawn, dock and resolve synchronously, before the robot's first tick: the action must
-                    // hand it the redirect before the empty board parks it.
-                    robot[0] = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
-                    robot[0].getBattery().addPower(SEEDED_CHARGE, false);
-                    stationA.takeAsMain(robot[0]);
-                    robot[0].dock(stationA);
-
-                    gate.logic.resolveActions();
-                    helper.assertTrue(gate.logic.triggerOn[0],
-                            "the in-station trigger must fire while the robot is docked at station A");
-                    helper.assertTrue(robot[0].getOverridingAI() != null,
-                            "the goto action must hand the docked robot a redirect to station B");
-
-                    EntityArenaUtil.tickUntil(helper, 200,
-                            () -> robot[0].getDockingStation() == stationB,
-                            () -> {
-                                robot[0].discard();
-                                helper.succeed();
-                            },
-                            "the redirected robot never docked at station B");
+                        gate.logic.resolveActions();
+                        helper.assertTrue(gate.logic.triggerOn[0],
+                                "the in-station trigger must fire while the robot is docked at "
+                                        + "station A");
+                        helper.assertTrue(robot[0].getOverridingAI() != null,
+                                "the goto action must hand the docked robot a redirect to station B");
+                        return false;
+                    }
+                    return robot[0].getDockingStation() == stationB[0];
                 },
-                "the two stations never registered");
+                () -> {
+                    robot[0].discard();
+                    helper.succeed();
+                },
+                "the redirected robot never docked at station B");
     }
 }

@@ -16,6 +16,8 @@ import buildcraft.core.statements.BCStatement;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.robotics.BCRoboticsSprites;
+import buildcraft.robotics.RobotUtils;
+import buildcraft.robotics.entity.EntityRobot;
 
 public class TriggerRobotInStation extends BCStatement implements ITriggerInternal {
 
@@ -25,7 +27,8 @@ public class TriggerRobotInStation extends BCStatement implements ITriggerIntern
 
     @Override
     public String getDescription() {
-        return LocaleUtil.localize("gate.trigger.robot.in_station");
+        // The dotted key is 7.1.x verbatim (and matches en_us.json) — not a typo for in_station.
+        return LocaleUtil.localize("gate.trigger.robot.in.station");
     }
 
     @Override
@@ -33,14 +36,20 @@ public class TriggerRobotInStation extends BCStatement implements ITriggerIntern
         return BCRoboticsSprites.TRIGGER_ROBOT_IN_STATION;
     }
 
-    /** Red-baseline degenerate: no robot is reported docked yet. Ph6-green checks the station's
-     *  robot occupancy against the gate. */
-    public static boolean isTriggerActive(DockingStation station) {
-        return false;
-    }
-
+    /** True when a robot docked at one of the gate's pipe's stations matches (7.1.x verbatim): the
+     *  docked robot must be actually linked to the station, and an optional board parameter must match. */
     @Override
     public boolean isTriggerActive(IStatementContainer source, IStatementParameter[] parameters) {
-        return isTriggerActive(null);
+        for (DockingStation station : RobotUtils.getStations(source.getTile())) {
+            if (station.robotTaking() instanceof EntityRobot robot && robot.getDockingStation() == station) {
+                if (parameters.length > 0 && parameters[0] != null
+                        && !parameters[0].getItemStack().isEmpty()
+                        && !StatementParameterRobot.matches(parameters[0], robot)) {
+                    continue;
+                }
+                return true;
+            }
+        }
+        return false;
     }
 }

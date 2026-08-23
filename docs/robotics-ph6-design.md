@@ -184,6 +184,14 @@ Ported files keep their upstream headers verbatim (MMPL); `NOTICE.md` gains them
 upstream header decides its licence (7.1.x api/ is MIT territory — check the file's own notice at
 port time, never assume from the directory). `CopyrightHeaderTester` re-validates both directions.
 
+**Headerless ported files** — `StatementParameterItemStackExact` (7.1.x
+`common/buildcraft/core/statements/`) and `StatementParameterMapLocation` (7.1.x
+`common/buildcraft/robotics/statements/`) ship bare upstream and are ported bare, so they silently
+inherit the root MPL-2.0 default. They CANNOT be recorded in NOTICE.md: its list is machine-validated
+both ways, and `CopyrightHeaderTester.noticeFileListsEveryMmplFile` treats any listed path without an
+MMPL notice as a stale legal claim (CLAUDE.md's "record headerless ports in NOTICE.md" predates that
+reverse check and no longer applies to them). This paragraph is their provenance record.
+
 ## Out of scope
 
 `StateStationProvideItems`/`StateStationRequestItems` (7.1.x gate-state display helper) — the modern

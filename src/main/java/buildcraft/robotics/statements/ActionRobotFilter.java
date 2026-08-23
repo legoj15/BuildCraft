@@ -11,8 +11,11 @@ package buildcraft.robotics.statements;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidUtil;
 import net.minecraft.world.item.ItemStack;
 
+import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IStackFilter;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.IActionInternal;
@@ -88,9 +91,37 @@ public class ActionRobotFilter extends BCStatement implements IActionInternal {
         }
     }
 
-    /** Red-baseline degenerate: no gate actions exist yet, so no action may be treated as interacting. Ph6
-     *  lands the real action-slot scan behind this. */
+    /** Whether any active {@code actionClass} action interacts with {@code filter} (7.1.x verbatim): the
+     *  action's parameters are stacked into a filter, and an action with no filter set passes everything. */
     public static boolean canInteractWithItem(DockingStation station, IStackFilter filter, Class<?> actionClass) {
+        for (StatementSlot s : station.getActiveActions()) {
+            if (actionClass.isAssignableFrom(s.statement.getClass())) {
+                StatementParameterStackFilter param = new StatementParameterStackFilter(s.parameters);
+                if (!param.hasFilter() || param.matches(filter)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** The fluid twin of {@link #canInteractWithItem}: an action with no filter set passes every fluid,
+     *  otherwise one of its parameter stacks must contain a fluid matching {@code filter}. */
+    public static boolean canInteractWithFluid(DockingStation station, IFluidFilter filter, Class<?> actionClass) {
+        for (StatementSlot s : station.getActiveActions()) {
+            if (actionClass.isAssignableFrom(s.statement.getClass())) {
+                StatementParameterStackFilter param = new StatementParameterStackFilter(s.parameters);
+                if (!param.hasFilter()) {
+                    return true;
+                }
+                for (ItemStack stack : param.getStacks()) {
+                    FluidStack fluid = FluidUtil.getFluidContained(stack).orElse(FluidStack.EMPTY);
+                    if (!fluid.isEmpty() && filter.matches(fluid)) {
+                        return true;
+                    }
+                }
+            }
+        }
         return false;
     }
 

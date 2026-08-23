@@ -667,7 +667,7 @@
     "gate.action.station.drop_items_in_pipe": "将物品传送到管道",
     "gate.action.station.forbid_robot": "禁用机器人",
     "gate.action.station.force_robot": "强制机器人",
-    "gate.action.station.povide_fluids": "提供流体",
+    "gate.action.station.provide_fluids": "提供流体",
     "gate.action.station.provide_items": "提供物品",
     "gate.action.station.provide_machine_request": "请求所需物品",
     "gate.action.station.request_items": "请求物品",

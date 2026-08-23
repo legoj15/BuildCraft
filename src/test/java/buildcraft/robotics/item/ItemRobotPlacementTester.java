@@ -156,8 +156,9 @@ public class ItemRobotPlacementTester {
     /** The happy path: a charged robot stack used on a free station spawns exactly one robot, links AND docks
      *  it at the face centre with the stack's charge intact, and consumes the item. */
     public static void robotItemPlacesDockedRobotOnFreeStation(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
         BlockPos pipeRel = new BlockPos(3, 2, 1);
+        // Centre on the pipe: the station and the robot placed on it both sit in this chunk.
+        EntityArenaUtil.forceLoadEntityArena(helper, pipeRel);
         installStation(helper, pipeRel, Direction.UP);
 
         whenStationRegistered(helper, pipeRel, () -> {
@@ -217,12 +218,14 @@ public class ItemRobotPlacementTester {
     /** A station already claimed by another robot refuses the placement outright: no second robot, and the
      *  player keeps the item. */
     public static void robotItemRejectedWhenStationAlreadyTaken(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
         BlockPos pipeRel = new BlockPos(3, 2, 3);
         installStation(helper, pipeRel, Direction.UP);
 
+        BlockPos squatterRel = new BlockPos(3, 4, 3);
+        // Centre on the squatter's chunk — it is the entity that must actually tick and get an id.
+        EntityArenaUtil.forceLoadEntityArena(helper, squatterRel);
         EntityRobot squatter = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
-        Vec3 squatterPos = Vec3.atCenterOf(helper.absolutePos(new BlockPos(3, 4, 3)));
+        Vec3 squatterPos = Vec3.atCenterOf(helper.absolutePos(squatterRel));
         squatter.setPos(squatterPos.x, squatterPos.y, squatterPos.z);
         helper.getLevel().addFreshEntity(squatter);
 
@@ -264,8 +267,8 @@ public class ItemRobotPlacementTester {
      *  trace: no robot, a free station and the item still in hand. Asserting the listener actually fired is
      *  what stops this passing vacuously against a {@code useOn} that does nothing at all. */
     public static void robotItemPlacementIsCancellableViaRobotEventPlace(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
         BlockPos pipeRel = new BlockPos(3, 2, 5);
+        EntityArenaUtil.forceLoadEntityArena(helper, pipeRel);
         installStation(helper, pipeRel, Direction.UP);
 
         whenStationRegistered(helper, pipeRel, () -> {
@@ -309,10 +312,10 @@ public class ItemRobotPlacementTester {
      *  7.1.x refused exactly this case; Ph3 has no other board, so keeping that guard would make the item
      *  permanently unplaceable. An empty-board robot places, docks and idles: that is the Ph3 MVP. */
     public static void emptyBoardRobotStillPlaces(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
         // z=6, not the old z=7: with the empty structure the grid rows are spaced 7 apart, so z=7 is
         // already the NEXT row's first block — the pipe physically sat in a neighbour's arena.
         BlockPos pipeRel = new BlockPos(4, 2, 6);
+        EntityArenaUtil.forceLoadEntityArena(helper, pipeRel);
         installStation(helper, pipeRel, Direction.UP);
 
         whenStationRegistered(helper, pipeRel, () -> {

@@ -8,8 +8,6 @@
  */
 package buildcraft.robotics.statements;
 
-import buildcraft.api.core.IFluidFilter;
-import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.IActionInternal;
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
@@ -28,7 +26,8 @@ public class ActionStationProvideFluids extends BCStatement implements IActionIn
 
     @Override
     public String getDescription() {
-        return LocaleUtil.localize("gate.action.station.povide_fluids");
+        // The 7.1.x povide_fluids typo is fixed here; en_us.json carries the corrected key.
+        return LocaleUtil.localize("gate.action.station.provide_fluids");
     }
 
     @Override
@@ -44,12 +43,6 @@ public class ActionStationProvideFluids extends BCStatement implements IActionIn
     @Override
     public IStatementParameter createParameter(int index) {
         return new StatementParameterItemStack();
-    }
-
-    /** Red-baseline degenerate: no fluid is accepted yet. Ph6-green checks the active provide-fluids
-     *  actions' parameters against the fluid carried by {@code stack}. */
-    public static boolean canInteractWithFluid(DockingStation station, IFluidFilter filter, Class<?> actionClass) {
-        return false;
     }
 
     @Override

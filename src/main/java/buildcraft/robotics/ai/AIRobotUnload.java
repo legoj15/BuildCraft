@@ -16,10 +16,11 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.transport.IInjectable;
 
-/** Pushes the robot's cargo out through the docked station's item output. The station's permissive
- *  {@code canRobotAcceptItem} policy (D1) gates each stack where {@code ActionRobotFilter} did. Modern
- *  {@code IInjectable.injectItem} returns the leftover {@code ItemStack} (7.1.x returned an int), so the
- *  count actually accepted is {@code stack.getCount() - leftover.getCount()}. */
+/** Pushes the robot's cargo out through the docked station's item output. The station's
+ *  {@code canRobotAcceptItem} policy (D1) gates each stack where {@code ActionRobotFilter} did — Ph6 gave
+ *  {@code DockingStationPipe} the 7.1.x gate semantics, so a gateless station refuses (accept-items action
+ *  required). Modern {@code IInjectable.injectItem} returns the leftover {@code ItemStack} (7.1.x returned
+ *  an int), so the count actually accepted is {@code stack.getCount() - leftover.getCount()}. */
 public class AIRobotUnload extends AIRobot {
 
     private int waitedCycles = 0;

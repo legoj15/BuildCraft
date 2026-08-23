@@ -26,17 +26,28 @@ import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.RobotManager;
+import buildcraft.api.statements.IStatement;
 
 import buildcraft.core.BCCoreBlocks;
+import buildcraft.core.BCCoreStatements;
 import buildcraft.core.tile.TileEngineCreative;
+import buildcraft.lib.statement.ActionWrapper;
+import buildcraft.lib.statement.TriggerWrapper;
 import buildcraft.lib.test.EntityArenaUtil;
 
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.BCRoboticsPlugs;
+import buildcraft.robotics.BCRoboticsStatements;
 import buildcraft.robotics.DockingStationPipe;
 import buildcraft.robotics.RobotStationPluggable;
 import buildcraft.robotics.ai.AIRobotUnload;
 import buildcraft.robotics.entity.EntityRobot;
+import buildcraft.silicon.BCSiliconPlugs;
+import buildcraft.silicon.gate.EnumGateLogic;
+import buildcraft.silicon.gate.EnumGateMaterial;
+import buildcraft.silicon.gate.EnumGateModifier;
+import buildcraft.silicon.gate.GateVariant;
+import buildcraft.silicon.plug.PluggableGate;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.tile.TilePipeHolder;
@@ -77,9 +88,26 @@ public class PickerCarrierTester {
         return tile;
     }
 
-    private static void installStation(GameTestHelper helper, BlockPos relPos, Direction side) {
+    private static TilePipeHolder installStation(GameTestHelper helper, BlockPos relPos, Direction side) {
         TilePipeHolder tile = placeItemPipe(helper, relPos);
         tile.replacePluggable(side, new RobotStationPluggable(BCRoboticsPlugs.robotStation, tile, side));
+        return tile;
+    }
+
+    /** The 1-slot, param-less gate. */
+    private static final GateVariant BASIC_GATE =
+            new GateVariant(EnumGateLogic.AND, EnumGateMaterial.CLAY_BRICK, EnumGateModifier.NO_MODIFIER);
+
+    /** An always-on gate whose single slot carries {@code action} with no parameters — the D1 way to make
+     *  a station's provide/accept policy pass EVERYTHING (7.1.x: an action with an empty filter set
+     *  matches anything). Resolved synchronously, before the robot's first search, so the action is
+     *  active the moment the station registers. */
+    private static void addAlwaysOnGate(TilePipeHolder tile, Direction side, IStatement action) {
+        PluggableGate gate = new PluggableGate(BCSiliconPlugs.gate, tile, side, BASIC_GATE);
+        gate.logic.statements[0].trigger.set(TriggerWrapper.wrap(BCCoreStatements.TRIGGER_TRUE, null));
+        gate.logic.statements[0].action.set(ActionWrapper.wrap(action, null));
+        tile.replacePluggable(side, gate);
+        gate.logic.resolveActions();
     }
 
     private static TilePipeHolder placePowerPipe(GameTestHelper helper, BlockPos relPos,
@@ -96,7 +124,7 @@ public class PickerCarrierTester {
 
     /** As {@link #installStation} but on a plain COBBLESTONE item pipe — an ordinary transport pipe with no
      *  extraction ability, used to pin that such a pipe is not a supply station. */
-    private static void installStationOnPlainPipe(GameTestHelper helper, BlockPos relPos, Direction side) {
+    private static TilePipeHolder installStationOnPlainPipe(GameTestHelper helper, BlockPos relPos, Direction side) {
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
         //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
@@ -105,6 +133,7 @@ public class PickerCarrierTester {
         //?}
         tile.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get()));
         tile.replacePluggable(side, new RobotStationPluggable(BCRoboticsPlugs.robotStation, tile, side));
+        return tile;
     }
 
     /** The registered station for a pipe face, or null while {@code RobotStationPluggable.onTick()} has not
@@ -159,10 +188,12 @@ public class PickerCarrierTester {
      *  picks it up into a transfer slot. Exercises the whole fetch loop in a live world: scan -> GotoBlock
      *  (undock + fly) -> transactor insert. */
     public static void pickerRobotPicksUpDroppedItem(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
         ServerLevel level = helper.getLevel();
         BlockPos robotRel = new BlockPos(3, 4, 2);
         BlockPos itemRel = new BlockPos(5, 4, 2);
+        // Centre the force-load on the ROBOT's chunk, not the arena origin: the robot only ticks once its
+        // whole 5x5 neighbourhood is FULL, and with a 3x3 force that ring-2 stayed at the arena's own level.
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
 
         EntityRobot robot = addBoardRobot(helper, robotRel, BoardRobotPickerNBT.INSTANCE);
         robot.getBattery().addPower(SEEDED_CHARGE, false);
@@ -175,7 +206,7 @@ public class PickerCarrierTester {
         item.setNoGravity(true);
         level.addFreshEntity(item);
 
-        EntityArenaUtil.tickUntil(helper, 240, robot::containsItems, () -> {
+        EntityArenaUtil.tickUntil(helper, 240, () -> robot.containsItems(), () -> {
             helper.assertTrue(ItemStack.matches(robot.getInventoryStack(0), new ItemStack(Items.DIAMOND, 1)),
                     "the picker must pick up the dropped diamond into a transfer slot");
             // The robot must have FLOWN to the item (pathfinding + delta-movement), not teleported it in:
@@ -262,13 +293,18 @@ public class PickerCarrierTester {
      *  {@code pipe.isConnected(from)}, so with the station on the UP face every unload bails unless
      *  something happens to be connected to the pipe's DOWN face. That makes the picker's "unloads them
      *  at a station" silently never happen at any normal dead-end dock — it only works when a connection
-     *  sits exactly opposite the station, which is the geometry the carrier E2E happens to build. */
+     *  sits exactly opposite the station, which is the geometry the carrier E2E happens to build.
+     *
+     * <p>Ph6 (D1): the unload additionally needs the station's gate to hold an accept-items action — the
+     *  policy refuses a gateless station exactly as 7.1.x did — so the rig carries an always-on,
+     *  unfiltered {@code ActionStationAcceptItems} gate, which passes everything. */
     public static void unloadStationDoesNotNeedAnOppositeFaceConnection(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
         BlockPos pipeRel = new BlockPos(2, 3, 4);
         BlockPos robotRel = new BlockPos(2, 4, 4);
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
 
-        installStationOnPlainPipe(helper, pipeRel, Direction.UP);
+        TilePipeHolder tile = installStationOnPlainPipe(helper, pipeRel, Direction.UP);
+        addAlwaysOnGate(tile, Direction.WEST, BCRoboticsStatements.ACTION_STATION_ACCEPT_ITEMS);
 
         EntityArenaUtil.tickUntil(helper, 120,
                 () -> stationAt(helper, pipeRel, Direction.UP) != null,
@@ -298,15 +334,20 @@ public class PickerCarrierTester {
 
     /** A charged carrier with no home station must autonomously find a loadable supply station and pull the
      *  chest's contents into its own inventory. Exercises search -> goto (fly + dock) -> {@code AIRobotLoad}
-     *  from {@code DockingStationPipe.getItemInput} (D6). */
+     *  from {@code DockingStationPipe.getItemInput} (D6).
+     *
+     *  <p>Ph6 (D1): the station's gate must hold an unfiltered provide-items action or the policy refuses
+     *  the load (gateless stations refuse, as in 7.1.x) — so the rig carries an always-on, unfiltered
+     *  {@code ActionStationProvideItems} gate, which passes everything. */
     public static void carrierRobotLoadsFromSupplyChest(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
         BlockPos pipeRel = new BlockPos(2, 3, 4);
         // One cell below the pipe: the station's input is on side().getOpposite() = DOWN for an UP face.
         BlockPos chestRel = new BlockPos(2, 2, 4);
         BlockPos robotRel = new BlockPos(4, 3, 4);
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
 
-        installStation(helper, pipeRel, Direction.UP);
+        TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP);
+        addAlwaysOnGate(tile, Direction.WEST, BCRoboticsStatements.ACTION_STATION_PROVIDE_ITEMS);
         helper.setBlock(chestRel, Blocks.CHEST);
         //? if >=1.21.10 {
         ChestBlockEntity chest = helper.getBlockEntity(chestRel, ChestBlockEntity.class);
@@ -349,73 +390,11 @@ public class PickerCarrierTester {
                 "the carrier robot never loaded the diamonds from the supply chest");
     }
 
-    /** The unload half of the carrier loop, pinned against the behaviour the D1 permissive station
-     *  defaults produce today: a carrier that has just loaded is docked at its supply station, and that
-     *  station's {@code getItemOutput()} accepts everything regardless of pipe (the station-side
-     *  injectable never consults the pipe network — see {@link DockingStationPipe}), and the D1
-     *  {@code canRobotAcceptItem} default is true — so {@code AIRobotSearchStation}'s docked-station
-     *  early-exit (itself verbatim 7.1.x and 8.0.x) hands the unload right back to the SAME station.
-     *  The cargo goes back into the pipe it was pulled from and the cycle repeats: a carrier never
-     *  flies its cargo to a second station on its own.
-     *
-     * <p>7.1.x did NOT exhibit this loop: its gateless per-slot default REFUSED the unload
-     * ({@code ActionRobotFilter.canInteractWithItem} -> false with no gate actions), so a gateless
-     * carrier simply slept with its cargo. The loop is emergent from the D1 permissive defaults, whose
-     * reconciliation with the gate actions is explicitly scheduled for Ph6 — see
-     * docs/robotics-resurrection.md. This test pins today's behaviour so that decision shows up here as
-     * a deliberate edit, not a silent behaviour change. */
-    public static void carrierUnloadsAtTheStationItLoadedFrom(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
-        BlockPos pipeRel = new BlockPos(1, 3, 3);
-        BlockPos chestRel = new BlockPos(1, 2, 3);
-        BlockPos robotRel = new BlockPos(3, 4, 3);
-
-        installStation(helper, pipeRel, Direction.UP);
-        helper.setBlock(chestRel, Blocks.CHEST);
-        //? if >=1.21.10 {
-        ChestBlockEntity chest = helper.getBlockEntity(chestRel, ChestBlockEntity.class);
-        //?} else {
-        /*ChestBlockEntity chest = helper.getBlockEntity(chestRel);*/
-        //?}
-        chest.setItem(0, new ItemStack(Items.DIAMOND, 5));
-
-        // One poll drives both halves of the cycle: spawn once the station can actually supply, latch the
-        // moment the robot has loaded, and fire on the first later tick it is empty again — the unload.
-        EntityRobot[] robot = { null };
-        boolean[] sawLoaded = { false };
-        EntityArenaUtil.tickUntil(helper, 380,
-                () -> {
-                    DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-                    if (station == null || station.getItemInput() == null) {
-                        return false;
-                    }
-                    if (robot[0] == null) {
-                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotCarrierNBT.INSTANCE);
-                        robot[0].getBattery().addPower(SEEDED_CHARGE, false);
-                        return false;
-                    }
-                    if (robot[0].containsItems()) {
-                        sawLoaded[0] = true;
-                        return false;
-                    }
-                    return sawLoaded[0];
-                },
-                () -> {
-                    DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-                    helper.assertTrue(robot[0].getDockingStation() == station,
-                            "the unload must happen at the station the carrier is already docked at — the "
-                                    + "search's docked-station early-exit is the whole behaviour under test");
-                    // Still snapped to the face centre: the carrier never flew anywhere between loading and
-                    // unloading (a docked robot is re-snapped to its station's face centre every tick).
-                    Vec3 faceCentre = Vec3.atCenterOf(helper.absolutePos(pipeRel)).add(0, 0.5, 0);
-                    helper.assertTrue(robot[0].position().distanceToSqr(faceCentre) < 2.25,
-                            "the carrier must not move between loading and unloading: robot at "
-                                    + robot[0].position() + " but station face at " + faceCentre);
-                    robot[0].discard();
-                    helper.succeed();
-                },
-                "the carrier never completed a load -> unload cycle at its supply station");
-    }
+    // The Ph4 permissive-loop pin (carrierUnloadsAtTheStationItLoadedFrom) is GONE: the D1 reconciliation
+    // gave DockingStationPipe the 7.1.x refuse-by-default accept policy, so a gateless carrier can no
+    // longer unload at its supply station and loop load -> unload -> load forever. The replacement pin is
+    // RobotGateTester.forbidRobotActionRefusesUnloadAtStation (a gate-forbidden station refusing the
+    // unload, observed through the live getActiveActions() aggregation).
 
     // ---------- recharge E2E (AIRobotMain ladder) ----------
 
@@ -429,12 +408,12 @@ public class PickerCarrierTester {
      *  own environment: the station search is global, and the default batch contains another powered
      *  station (that very rig's) the robot could legitimately prefer. */
     public static void lowPowerRobotRechargesAtPoweredStation(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
         BlockPos redstoneRel = new BlockPos(1, 1, 6);
         BlockPos engineRel = new BlockPos(1, 2, 6);
         BlockPos woodPipeRel = new BlockPos(1, 3, 6);
         BlockPos stonePipeRel = new BlockPos(1, 4, 6);
         BlockPos robotRel = new BlockPos(3, 4, 6);
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
 
         if (BCCoreBlocks.ENGINE_CREATIVE == null) {
             throw new IllegalStateException(

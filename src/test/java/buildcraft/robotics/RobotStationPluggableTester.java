@@ -86,7 +86,7 @@ import buildcraft.transport.tile.TilePipeHolder;
 public class RobotStationPluggableTester {
 
     private static TilePipeHolder placeItemPipe(GameTestHelper helper, BlockPos relPos) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
+        EntityArenaUtil.forceLoadEntityArena(helper, relPos);
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
         //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
@@ -124,7 +124,7 @@ public class RobotStationPluggableTester {
     }
 
     private static TilePipeHolder placePowerPipe(GameTestHelper helper, BlockPos relPos, net.minecraft.world.item.Item pipeItem) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
+        EntityArenaUtil.forceLoadEntityArena(helper, relPos);
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
         //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);

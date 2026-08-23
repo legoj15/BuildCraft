@@ -23,8 +23,10 @@ import buildcraft.lib.misc.StackUtil;
  *  {@code InventoryIterator}/{@code ITransactor} scan becomes a D2 {@code IItemTransactor} exchange — the
  *  station input {@code Container} is wrapped, matching stacks are {@code extract}ed up to the quantity, and
  *  the robot's transactor {@code insert}s them; {@code doLoad} maps to {@code simulate}. The station's
- *  permissive {@code canRobotExtractItem} policy (D1) gates each stack, exactly where
- *  {@code ActionStationProvideItems} did. */
+ *  {@code canRobotExtractItem} policy (D1) gates each stack, exactly where 7.1.x's
+ *  {@code ActionStationProvideItems} + {@code ActionRobotFilter} chain did — Ph6 gave
+ *  {@code DockingStationPipe} the 7.1.x gate semantics, so a gateless station refuses (provide-items
+ *  action required). */
 public class AIRobotLoad extends AIRobot {
 
     public static final int ANY_QUANTITY = -1;

@@ -13,6 +13,7 @@ import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.statements.IActionInternal;
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
+import buildcraft.api.statements.StatementSlot;
 import buildcraft.core.statements.BCStatement;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.misc.LocaleUtil;
@@ -52,9 +53,26 @@ public class ActionStationForbidRobot extends BCStatement implements IActionInte
         return new StatementParameterRobot();
     }
 
-    /** Red-baseline degenerate: no robot is forbidden yet. Ph6-green scans the active forbid/force
-     *  actions and matches their board parameters against {@code robot.getBoard().getNBTHandler().getID()}. */
+    /** Whether {@code robot} is forbidden at {@code station} (7.1.x verbatim): any active forbid/force
+     *  action whose {@code invert ^ any-parameter-matches} is true. */
     public static boolean isForbidden(IRobotAccess robot, DockingStation station) {
+        for (StatementSlot s : station.getActiveActions()) {
+            if (s.statement instanceof ActionStationForbidRobot forbid) {
+                if (forbid.invert ^ isForbiddenSlot(s, robot)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Whether any parameter of {@code s} matches {@code robot} (board id match, or a wearable). */
+    private static boolean isForbiddenSlot(StatementSlot s, IRobotAccess robot) {
+        for (IStatementParameter p : s.parameters) {
+            if (p != null && StatementParameterRobot.matches(p, robot)) {
+                return true;
+            }
+        }
         return false;
     }
 

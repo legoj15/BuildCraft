@@ -15,6 +15,9 @@ public class BCSiliconConfig {
 
     public static ModConfigSpec.EnumValue<LaserTargetingMode> laserTargetingBehavior;
 
+    /** See {@link #buildGeneral} for the full semantics. */
+    public static ModConfigSpec.BooleanValue disableFacadeGeneration;
+
     /**
      * How a Laser searches for nearby tables (Assembly / Integration / Advanced Crafting) to power.
      * <ul>
@@ -37,5 +40,17 @@ public class BCSiliconConfig {
                         "Box allows lasers to reach anywhere within 5 blocks from the front or sides of the laser. (Legacy 7.1.x Behavior)"
                 )
                 .defineEnum("laserTargetingBehavior", LaserTargetingMode.LOS_CONE);
+        disableFacadeGeneration = builder
+                .comment(
+                        "Completely disables BuildCraft's automatic facade generation: no block-registry enumeration",
+                        "scan at startup, no generated facade assembly recipes, no facade variants in the creative",
+                        "tab, no facade entries in JEI, and no client-side facade texture deduplication scan. Intended",
+                        "for players who use another (universal) facades mod.",
+                        "The facade item and plug itself stay registered so worlds and inventories containing them",
+                        "remain safe, and facades that were already placed keep their appearance. In multiplayer,",
+                        "COMMON configs are not synced — set this on the server and on clients separately. Like other",
+                        "load-time toggles this takes effect on the next launch or world load."
+                )
+                .define("disableFacadeGeneration", false);
     }
 }

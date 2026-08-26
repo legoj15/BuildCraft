@@ -171,6 +171,9 @@ public class BCSilicon {
             // ensureInitialized is needed for the multiplayer-client case (ServerAboutToStartEvent
             // only fires on the integrated server; a connected client gets no other init trigger).
             FacadeStateManager.ensureInitialized();
+            if (FacadeStateManager.isFacadeGenerationDisabled()) {
+                return; // no generated variants and nothing to dedup; the tab itself stays registered (empty)
+            }
             if (FMLEnvironment.getDist() == Dist.CLIENT) {
                 // Primary dedup trigger is BCSiliconClient.GameBus.onClientLoggingIn (deterministic,
                 // off the JEI first-screen-open critical path). This call is the F3+T safety net:

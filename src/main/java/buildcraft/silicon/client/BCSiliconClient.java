@@ -182,6 +182,9 @@ public class BCSiliconClient {
      * new textures. In the steady state this is a no-op.
      */
     public static void runDeferredDedup() {
+        if (FacadeStateManager.isFacadeGenerationDisabled()) {
+            return;
+        }
         if (cachedBlockStateModels != null) {
             FacadeDeduplicator.deduplicateVisuallyIdentical(cachedBlockStateModels);
             cachedBlockStateModels = null; // release reference

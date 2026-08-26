@@ -49,9 +49,13 @@ import buildcraft.api.facades.IFacadePhasedState;
 import buildcraft.api.facades.IFacadeRegistry;
 import buildcraft.api.facades.IFacadeState;
 
+import buildcraft.core.BCUnifiedConfig;
+
 import buildcraft.lib.misc.ItemStackKey;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.PacketBufferBC;
+
+import buildcraft.silicon.BCSiliconConfig;
 
 public enum FacadeStateManager implements IFacadeRegistry {
     INSTANCE;
@@ -85,6 +89,12 @@ public enum FacadeStateManager implements IFacadeRegistry {
 
     private static volatile boolean initialized = false;
 
+    /** Init-time latch of {@link #isFacadeGenerationDisabled()}: the toggle state this JVM's
+     *  snapshots were derived under. Read by {@link #createFallbackInfo} so that mid-session
+     *  config flips (the config screen writes COMMON values live, without a restart prompt)
+     *  stay inert on the read path until the next init. */
+    private static volatile boolean generationDisabled = false;
+
     private static final Map<Block, String> disabledBlocks = new HashMap<>();
     private static final Map<BlockState, ItemStack> customBlocks = new HashMap<>();
 
@@ -97,6 +107,25 @@ public enum FacadeStateManager implements IFacadeRegistry {
     /** Returns true if {@link #init()} has been called successfully at least once. */
     public static boolean isInitialized() {
         return initialized;
+    }
+
+    /** Returns true when the {@code general.disableFacadeGeneration} config toggle is set: all
+     *  automatic facade derivation (the block-registry enumeration scan, the generated assembly
+     *  recipes, the creative-tab variants, the JEI entries and the client texture-dedup scan) must
+     *  be suppressed, while the facade item, plug and API surface stay live for world safety. */
+    public static boolean isFacadeGenerationDisabled() {
+        // Guard against the spec not being loaded yet, matching RfEnabledCondition: the toggle
+        // defaults to "generation enabled" in that case.
+        if (!BCUnifiedConfig.SPEC.isLoaded()) {
+            return false;
+        }
+        return BCSiliconConfig.disableFacadeGeneration.get();
+    }
+
+    /** Test hook: clears the once-per-JVM guard so the next {@link #ensureInitialized()} re-reads the
+     *  config and re-derives the published snapshots under it. Production code never calls this. */
+    public static void resetForTest() {
+        initialized = false;
     }
 
     /** Ensures that {@link #init()} has been called at least once.
@@ -171,8 +200,22 @@ public enum FacadeStateManager implements IFacadeRegistry {
             return;
         }
         defaultState = new FacadeBlockStateInfo(Blocks.AIR.defaultBlockState(), ItemStack.EMPTY, ImmutableSet.of());
+        generationDisabled = isFacadeGenerationDisabled();
         if (FacadeAPI.facadeItem == null) {
             previewState = defaultState;
+            return;
+        }
+        if (generationDisabled) {
+            // Issue #29: no enumeration scan, no derivation. Republish the EMPTY seed snapshots
+            // (a re-init after a populated run must clear them), mark initialized so this is
+            // once-only, and stop before the scan. defaultState/previewState stay assigned so
+            // facade read paths keep working.
+            validFacadeStates = Collections.unmodifiableSortedMap(new TreeMap<>(blockStateComparator()));
+            stackFacades = Map.of();
+            stackRedirects = Map.of();
+            previewState = defaultState;
+            initialized = true;
+            BCLog.logger.info("[silicon.facade] Facade generation disabled by config - skipping enumeration scan");
             return;
         }
 
@@ -342,6 +385,22 @@ public enum FacadeStateManager implements IFacadeRegistry {
             BCLog.logger.warn("[silicon.facade] Skipping " + block
                 + " as something about it threw an exception! ", e);
         }
+    }
+
+    /** Read-path fallback for a saved facade state that is not in {@link #validFacadeStates}.
+     *  While generation is disabled the map is empty BY DESIGN rather than because the state is
+     *  invalid — reconstruct an ad-hoc info so pre-existing facades keep their identity instead of
+     *  collapsing to (and, on the next chunk save, being permanently persisted as) the air
+     *  default. While generation is enabled the historical behavior stands: unknown states
+     *  collapse to {@link #defaultState}. Keyed on the {@link #generationDisabled} latch, not the
+     *  live config, so this always matches the state the maps were actually built under. */
+    static FacadeBlockStateInfo createFallbackInfo(BlockState state) {
+        if (!generationDisabled) {
+            return defaultState;
+        }
+        Item item = state.getBlock().asItem();
+        ItemStack requiredStack = item == Items.AIR ? ItemStack.EMPTY : new ItemStack(item);
+        return new FacadeBlockStateInfo(state, requiredStack, ImmutableSet.of());
     }
 
     // IFacadeRegistry

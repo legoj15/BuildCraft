@@ -42,7 +42,7 @@ public class FacadePhasedState implements IFacadePhasedState {
                     buildcraft.lib.misc.RegistryUtilBC.blockLookup(), NBTUtilBC.getCompound(nbt, "state"));
                 stateInfo = FacadeStateManager.validFacadeStates.get(blockState);
                 if (stateInfo == null) {
-                    stateInfo = FacadeStateManager.defaultState;
+                    stateInfo = FacadeStateManager.createFallbackInfo(blockState);
                 }
             } catch (Throwable t) {
                 throw new RuntimeException("Failed badly when reading a facade state!", t);
@@ -75,7 +75,7 @@ public class FacadePhasedState implements IFacadePhasedState {
         DyeColor colour = hasColour ? buf.readEnumValue(DyeColor.class) : null;
         FacadeBlockStateInfo info = FacadeStateManager.validFacadeStates.get(state);
         if (info == null) {
-            info = FacadeStateManager.defaultState;
+            info = FacadeStateManager.createFallbackInfo(state);
         }
         return new FacadePhasedState(info, colour);
     }

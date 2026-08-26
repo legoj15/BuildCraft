@@ -507,6 +507,7 @@
     "buildcraftunofficial.configuration.colorBlindMode": "色盲模式",
     "buildcraftunofficial.configuration.decimalSeparator": "小数分隔符",
     "buildcraftunofficial.configuration.dimensionListMode": "维系列表模式",
+    "buildcraftunofficial.configuration.disableFacadeGeneration": "禁用伪装板生成",
     "buildcraftunofficial.configuration.disableRfPipe": "禁用 RF 管道",
     "buildcraftunofficial.configuration.display": "显示",
     "buildcraftunofficial.configuration.enableOilGeneration": "启用石油生成",

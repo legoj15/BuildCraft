@@ -98,3 +98,4 @@ _gametest-*.log
 # Maintainer-only local deploy harness (build + push jar to the test client and Server1, restart
 # the GUI server in the interactive desktop session). Machine-specific paths; not for VCS.
 /deploy/
+.mcp.json

@@ -2,10 +2,6 @@
 
 Agent-facing background for the one-line bullets in [todos.md](../todos.md). Each section is linked from its bullet. **When a bullet ships, delete its section here in the same change.** Sections mirror the todos order.
 
-## 1.21.1 gated-test port
-
-19 of the 24 gated tests now run on 1.21.1 (flood_gate 4, distiller 7, heat_exchanger 7, gate_display 1) — shipped with the `ItemHandlerSimple.getSlotLimit` fix; see git history for the per-group design. Remaining: **tank_manager** (5 tests). The modern no-slot `ResourceHandler.insert`/`extract` accumulate across slots in one call; the 1.21.1 classic composite returns at the first matching slot — port to the weaker cross-call property (ordered routing/drain, conservation, SIMULATE non-mutation), which still catches a LIFO reorder.
-
 ## Translation follow-ups
 
 Follow-ups from the 2026-07-21 lang sweep (which moved ~20 hardcoded player-facing strings onto lang keys). These were found in passing and left alone. All are "English leaks through no matter how complete a translation is":

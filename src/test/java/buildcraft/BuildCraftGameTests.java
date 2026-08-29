@@ -677,15 +677,15 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:mj_battery_machines_expose_fe_autoconvert", () -> buildcraft.factory.MachinePipeConnectivityTester::testMjBatteryMachinesExposeFeWhenAutoconvertEnabled);
         reg.accept("buildcraftunofficial:mj_battery_machines_hide_fe_mj_only", () -> buildcraft.factory.MachinePipeConnectivityTester::testMjBatteryMachinesHideFeUnderMjOnly);
 
-        // Tank bookkeeping — composite ResourceHandler<FluidResource> capacity-respect
-        // and cross-slot spillover (modelled on TileBuilder.tankManager's per-slot delegate).
-        //? if >=1.21.10 {
+        // Tank bookkeeping — composite tank capacity-respect and cross-slot spillover
+        // (modelled on TileBuilder.tankManager's per-slot delegate; on 1.21.1 the classic
+        // composite returns at the first matching slot, so those bodies pin the weaker
+        // cross-call properties — ordered routing/drain, conservation, SIMULATE non-mutation).
         reg.accept("buildcraftunofficial:tank_single_capacity", () -> buildcraft.lib.fluid.TankManagerTester::testSingleTankCapacityRespect);
         reg.accept("buildcraftunofficial:tank_single_extract_returns_only_held", () -> buildcraft.lib.fluid.TankManagerTester::testSingleTankExtractReturnsOnlyWhatExists);
         reg.accept("buildcraftunofficial:tank_composite_insert_spillover", () -> buildcraft.lib.fluid.TankManagerTester::testCompositeInsertSpillsAcrossSlots);
         reg.accept("buildcraftunofficial:tank_composite_extract_spillover", () -> buildcraft.lib.fluid.TankManagerTester::testCompositeExtractDrainsAcrossSlots);
         reg.accept("buildcraftunofficial:tank_composite_insert_rolls_back", () -> buildcraft.lib.fluid.TankManagerTester::testCompositeInsertRollsBackOnAbort);
-        //?}
 
         // Wire system signaling — pins out the gatesChanged reset behavior so the
         // "recompute every tick" bodge can't slip back in.

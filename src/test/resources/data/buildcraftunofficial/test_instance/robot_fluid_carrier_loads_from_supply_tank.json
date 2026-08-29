@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_fluid_carrier_loads_from_supply_tank",
+    "environment": "buildcraftunofficial:robot_fluid_carrier",
+    "structure": "minecraft:empty",
+    "max_ticks": 360,
+    "setup_ticks": 0,
+    "required": true
+}

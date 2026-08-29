@@ -810,6 +810,12 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_station_forbid_robot", () -> buildcraft.robotics.statements.RobotGateTester::forbidRobotActionRefusesUnloadAtStation);
         reg.accept("buildcraftunofficial:robot_goto_station_action", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionRedirectsDockedRobot);
 
+        // Fluid carrier board — the fluid twin of the Ph4 carrier pins: the wooden-FLUID-pipe supply
+        // discovery (7.1.x's getFluidInput, the load half the board's loop needs) and the carrier itself
+        // autonomously finding the supply station and pulling the tank's bucket into its own tank.
+        reg.accept("buildcraftunofficial:robot_fluid_supply_station_needs_wooden_fluid_pipe", () -> buildcraft.robotics.boards.FluidCarrierTester::fluidSupplyStationNeedsAWoodenFluidPipe);
+        reg.accept("buildcraftunofficial:robot_fluid_carrier_loads_from_supply_tank", () -> buildcraft.robotics.boards.FluidCarrierTester::fluidCarrierLoadsFromSupplyTank);
+
         // The tag-backed world properties need a live server (no resource load in the unit JVM — see
         // WorldPropertySweepTest): wood/harvestable/ore@0..3/dirt/replaceable/fluidSource pinned against
         // an arena of placed blocks, through the registry the boards query.

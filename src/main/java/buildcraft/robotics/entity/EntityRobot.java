@@ -1521,9 +1521,28 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     // Single 4000 mB tank behind the IFluidHandlerAdv fork (Transfer API >=1.21.10, classic IFluidHandler on
     // 1.21.1). The tank is single-fluid: once it holds something, only more of the same goes in.
     //
-    // The Transfer API's transaction contract is deliberately not honoured (changes commit immediately rather
-    // than on commit) — that is the established shape everywhere else in this codebase, PipeFlowFluids
-    // included, because BuildCraft manages its own state and has no snapshot to roll back to.
+    // Unlike the pipe flows (whose state re-normalises every tick, so nothing rolls back), the tank HONOURS
+    // the transaction contract: the load/unload AIs' dry-runs insert/extract under an uncommitted
+    // Transaction and rely on an abort leaving both sides untouched (AIRobotLoadFluids.load's simulate
+    // contract — and the station searches dry-run those on every candidate, so a committing fork really
+    // filled the robot's tank or spilled its cargo one bucket per station scanned).
+
+    //? if >=1.21.10 {
+    /** A copy, never the live stack — {@code fillTank}/{@code drainTank} mutate a non-empty tank in place
+     *  ({@code setAmount}), so a snapshot aliasing the field would revert to the mutated state. */
+    private final net.neoforged.neoforge.transfer.transaction.SnapshotJournal<net.neoforged.neoforge.fluids.FluidStack> tankJournal =
+            new net.neoforged.neoforge.transfer.transaction.SnapshotJournal<>() {
+                @Override
+                protected net.neoforged.neoforge.fluids.FluidStack createSnapshot() {
+                    return tank.copy();
+                }
+
+                @Override
+                protected void revertToSnapshot(net.neoforged.neoforge.fluids.FluidStack snapshot) {
+                    tank = snapshot;
+                }
+            };
+    //?}
 
     /** @return how much of {@code resource} the tank can take, applying it when {@code execute}. */
     private int fillTank(FluidStack resource, boolean execute) {
@@ -1598,7 +1617,15 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     @Override
     public int insert(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource, int amount,
                       net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
-        return index == 0 ? fillTank(resource.toStack(amount), true) : 0;
+        if (index != 0) {
+            return 0;
+        }
+        int accepted = fillTank(resource.toStack(amount), false);
+        if (accepted > 0) {
+            tankJournal.updateSnapshots(transaction);
+            fillTank(resource.toStack(accepted), true);
+        }
+        return accepted;
     }
 
     @Override
@@ -1607,7 +1634,12 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         if (index != 0 || tank.isEmpty() || !FluidStack.isSameFluidSameComponents(tank, resource.toStack(1))) {
             return 0;
         }
-        return drainTank(amount, true);
+        int drained = drainTank(amount, false);
+        if (drained > 0) {
+            tankJournal.updateSnapshots(transaction);
+            drainTank(drained, true);
+        }
+        return drained;
     }
 
     @Override
@@ -1616,7 +1648,12 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         if (tank.isEmpty() || !filter.matches(tank)) {
             return 0;
         }
-        return drainTank(maxDrain, true);
+        int drained = drainTank(maxDrain, false);
+        if (drained > 0) {
+            tankJournal.updateSnapshots(tx);
+            drainTank(drained, true);
+        }
+        return drained;
     }
     //?} else {
     /*@Override

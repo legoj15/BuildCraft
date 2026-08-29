@@ -42,6 +42,14 @@ public class BoardNbtRoundTripTest extends VanillaSetupBaseTester {
                 "a carrier stack survives a write→read cycle and resolves to the carrier board");
     }
 
+    @Test
+    public void fluidCarrierStackResolvesBackToTheFluidCarrier() {
+        RedstoneBoardNBT<?> resolved = roundTrip(BoardRobotFluidCarrierNBT.INSTANCE);
+
+        Assertions.assertSame(BoardRobotFluidCarrierNBT.INSTANCE, resolved,
+                "a fluid-carrier stack survives a write→read cycle and resolves to the fluid carrier board");
+    }
+
     // Ph5: the eight work boards, registered in BCRobotics.
 
     @Test

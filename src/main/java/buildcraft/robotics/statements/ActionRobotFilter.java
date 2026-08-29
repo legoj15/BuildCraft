@@ -10,7 +10,10 @@ package buildcraft.robotics.statements;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
+import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.FluidUtil;
 import net.minecraft.world.item.ItemStack;
@@ -89,6 +92,27 @@ public class ActionRobotFilter extends BCStatement implements IActionInternal {
         } else {
             return new ArrayStackOrListFilter(stacks.toArray(new ItemStack[0]));
         }
+    }
+
+    /** The fluid twin of {@link #getGateFilter} (7.1.x {@code ActionRobotFilter.getGateFluidFilter} +
+     *  {@code ArrayFluidFilter}): the work-filter action's parameter stacks read as the fluids they carry —
+     *  a bucket of water filters for water. No filter set passes every fluid; a filter with no
+     *  fluid-carrying stack matches nothing (the carrier would never load), exactly as 7.1.x's array
+     *  filter over fluidless stacks did. */
+    public static IFluidFilter getGateFluidFilter(DockingStation station) {
+        Collection<ItemStack> stacks = getGateFilterStacks(station);
+
+        if (stacks.size() == 0) {
+            return fluid -> fluid != null && !fluid.isEmpty();
+        }
+        Set<Fluid> fluids = new HashSet<>();
+        for (ItemStack stack : stacks) {
+            FluidStack contained = FluidUtil.getFluidContained(stack).orElse(FluidStack.EMPTY);
+            if (!contained.isEmpty()) {
+                fluids.add(contained.getFluid());
+            }
+        }
+        return fluid -> fluid != null && !fluid.isEmpty() && fluids.contains(fluid.getFluid());
     }
 
     /** Whether any active {@code actionClass} action interacts with {@code filter} (7.1.x verbatim): the

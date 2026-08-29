@@ -60,6 +60,8 @@ import buildcraft.robotics.boards.BoardRobotCarrierNBT;
 import buildcraft.robotics.boards.BoardRobotEmpty;
 import buildcraft.robotics.boards.BoardRobotFarmer;
 import buildcraft.robotics.boards.BoardRobotFarmerNBT;
+import buildcraft.robotics.boards.BoardRobotFluidCarrier;
+import buildcraft.robotics.boards.BoardRobotFluidCarrierNBT;
 import buildcraft.robotics.boards.BoardRobotHarvester;
 import buildcraft.robotics.boards.BoardRobotHarvesterNBT;
 import buildcraft.robotics.boards.BoardRobotKnight;
@@ -211,6 +213,8 @@ public class BCRobotics {
                 "buildcraft.core.robots.boards.BoardRobotPicker");
         RobotManager.registerAIRobot(BoardRobotCarrier.class, "boardRobotCarrier",
                 "buildcraft.core.robots.boards.BoardRobotCarrier");
+        RobotManager.registerAIRobot(BoardRobotFluidCarrier.class, "boardRobotFluidCarrier",
+                "buildcraft.core.robots.boards.BoardRobotFluidCarrier");
 
         // Ph5 work boards (the two abstract 7.1.x bases, GenericSearchBlock/GenericBreakBlock, register
         // nothing — they are internal composition only).
@@ -233,6 +237,8 @@ public class BCRobotics {
 
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotPickerNBT.INSTANCE, 800_000_000L);
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotCarrierNBT.INSTANCE, 800_000_000L);
+        // The fluid carrier sits in 7.1.x's green tier beside the item carrier (8000 RF, chosen not derived).
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotFluidCarrierNBT.INSTANCE, 800_000_000L);
 
         // 7.1.x board costs: the seven blue boards at 32000 RF, the red knight at 128000 RF.
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotLumberjackNBT.INSTANCE, 3_200_000_000L);

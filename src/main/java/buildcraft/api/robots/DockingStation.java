@@ -283,6 +283,14 @@ public abstract class DockingStation {
         return stack -> true;
     }
 
+    /** The fluid twin of {@link #getRobotItemFilter} — which fluid this station is willing to trade
+     *  (7.1.x: {@code ActionRobotFilter.getGateFluidFilter}, the fluid carrier board's load filter). The
+     *  permissive default is the GATELESS contract; {@code DockingStationPipe} overrides it to read the
+     *  real gate actions. */
+    public IFluidFilter getRobotFluidFilter() {
+        return fluid -> fluid != null && !fluid.isEmpty();
+    }
+
     /** Whether a docked robot may EXTRACT fluid matching {@code filter} from this station's fluid input
      *  — the fluid twin of {@link #canRobotExtractItem}, the pump board's load side. 7.1.x gated this on
      *  {@code ActionRobotFilter.canInteractWithFluid(station, filter, ActionStationProvideFluids.class)};

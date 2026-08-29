@@ -216,6 +216,47 @@ public class DockingStationPipe extends DockingStation {
         return EnumPipePart.CENTER;
     }
 
+    //? if >=1.21.10 {
+    @Override
+    public ResourceHandler<FluidResource> getFluidInput() {
+    //?} else {
+    /*@Override
+    public IFluidHandler getFluidInput() {
+    *///?}
+        Direction facing = fluidExtractionFacing();
+        if (facing == null) {
+            return null;
+        }
+        // The fluid source this station's pipe draws from: the block one cell out along the WOODEN FLUID
+        // pipe's own extraction face (resolved through the neighbour's block capability, with the
+        // blocking-pluggable checks the item input's BlockEntity read doesn't need). A docked robot LOADS
+        // fluid from here — 7.1.x's getFluidInput, which the fluid carrier board's load leg needs.
+        return getHolder().getCapabilityFromPipe(facing, CapUtil.CAP_FLUIDS);
+    }
+
+    @Override
+    public EnumPipePart getFluidInputSide() {
+        // The face of the TANK the pipe touches — the opposite of the direction searched, exactly as the
+        // item input side (7.1.x returned the same opposite).
+        Direction facing = fluidExtractionFacing();
+        return facing == null ? EnumPipePart.CENTER : EnumPipePart.fromFacing(facing.getOpposite());
+    }
+
+    /** The fluid twin of {@link #extractionFacing}: the extraction face of the wooden FLUID pipe hosting
+     *  this station, or null if the pipe is not a fluid pipe, is not a wooden (extraction) pipe, or
+     *  currently faces nothing. 7.1.x gated its {@code getFluidInput} on
+     *  {@code getPipe() instanceof PipeFluidsWood}; {@link PipeBehaviourWood} is the shared behaviour of
+     *  both the wood and diamond-wood fluid pipes here, so the filtered pipe qualifies exactly as 7.1.x's
+     *  {@code PipeFluidsEmerald extends PipeFluidsWood} did — and an ITEM pipe never qualifies, keeping
+     *  the item and fluid supply discoveries independent. */
+    private @Nullable Direction fluidExtractionFacing() {
+        IPipeHolder h = getHolder();
+        if (h == null || h.getPipe() == null || !(h.getPipe().getFlow() instanceof IFlowFluid)) {
+            return null;
+        }
+        return h.getPipe().getBehaviour() instanceof PipeBehaviourWood wood ? wood.getCurrentDir() : null;
+    }
+
     @Override
     public boolean providesPower() {
         IPipeHolder h = getHolder();
@@ -268,6 +309,13 @@ public class DockingStationPipe extends DockingStation {
             filter = ActionRobotFilterTool.getGateFilter(this);
         }
         return filter;
+    }
+
+    @Override
+    public IFluidFilter getRobotFluidFilter() {
+        // No tool-filter twin exists on the fluid side (7.1.x's Filter Tool was item-only), so this is
+        // the work filter alone — pass-through when the gate sets no filter.
+        return ActionRobotFilter.getGateFluidFilter(this);
     }
 
     @Override

@@ -269,6 +269,8 @@
     "buildcraft.boardRobotPicker.desc": "Picks up dropped items within 250 blocks and carries them to a station",
     "buildcraft.boardRobotCarrier": "Carrier Board",
     "buildcraft.boardRobotCarrier.desc": "Loads cargo from a supply station and carries it to another",
+    "buildcraft.boardRobotFluidCarrier": "Tank Board",
+    "buildcraft.boardRobotFluidCarrier.desc": "Moves fluids between tanks",
     "buildcraft.boardRobotLumberjack": "Lumberjack Board",
     "buildcraft.boardRobotLumberjack.desc": "Breaks logs",
     "buildcraft.boardRobotHarvester": "Harvester Board",

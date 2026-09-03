@@ -811,6 +811,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_gate_sleep_wakeup", () -> buildcraft.robotics.statements.RobotGateTester::sleepTriggerAndWakeupPreemptsPicker);
         reg.accept("buildcraftunofficial:robot_station_forbid_robot", () -> buildcraft.robotics.statements.RobotGateTester::forbidRobotActionRefusesUnloadAtStation);
         reg.accept("buildcraftunofficial:robot_goto_station_action", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionRedirectsDockedRobot);
+        reg.accept("buildcraftunofficial:robot_goto_station_action_no_param", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionWithNoParameterTargetsItsOwnStation);
 
         // Fluid carrier board — the fluid twin of the Ph4 carrier pins: the wooden-FLUID-pipe supply
         // discovery (7.1.x's getFluidInput, the load half the board's loop needs) and the carrier itself

@@ -12,7 +12,12 @@ issueTrackerURL="https://github.com/legoj15/BuildCraft/issues"
 modId="buildcraftunofficial"
 version="${mod_version}"
 displayName="BuildCraft (Unofficial)"
+# logo.png is 1120x180, a banner. NeoForge 26.2 renamed logoFile -> bannerFile (square icons: iconFile)
+# and shows a dev-only "deprecated logoFile" loading-warning screen when ONLY logoFile is set; keeping
+# both keys is the multi-version form its warning handler explicitly recognises (LogoFileWarningsHandler),
+# and the pre-26.2 nodes ignore the key they do not know. Keep both until every node reads bannerFile.
 logoFile="logo.png"
+bannerFile="logo.png"
 credits="Created by SpaceToad"
 authors="SpaceToad, BuildCraft Team, legoj15 (1.21.1+ port)"
 description='''

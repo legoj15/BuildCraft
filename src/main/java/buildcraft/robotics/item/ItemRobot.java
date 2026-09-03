@@ -238,7 +238,33 @@ public class ItemRobot extends Item {
         Consumer<Component> tooltip = tooltipList::add;
         super.appendHoverText(stack, context, tooltipList, flag);*/
     //?}
-        tooltip.accept(chargeLine(getEnergy(stack)));
+        tooltipLines(stack, flag.isAdvanced()).forEach(tooltip);
+    }
+
+    /** The hover text this item contributes, as data. Node-neutral (the three {@code appendHoverText}
+     *  signatures all funnel through here) and therefore unit-testable.
+     *
+     *  <p>7.1.x listed the BOARD's own description above the charge readout, which is what tells a shelf
+     *  of robots apart; a blank robot got nothing at all. Kept, except that the port's charge line stays
+     *  for a blank robot too — up there an empty-board robot could not be placed, so it could never hold
+     *  charge; here it can. */
+    public static java.util.List<Component> tooltipLines(ItemStack stack, boolean advanced) {
+        java.util.List<Component> lines = new java.util.ArrayList<>();
+
+        RedstoneBoardRobotNBT board = getRobotBoard(stack);
+        RedstoneBoardRegistry registry = RedstoneBoardRegistry.instance;
+        if (board != null && registry != null && board != registry.getEmptyRobotBoard()) {
+            // The board API predates Components and writes plain strings; each is pushed as a literal so
+            // it renders like any other tooltip line (the boards translate their own text).
+            java.util.List<String> boardLines = new java.util.ArrayList<>();
+            board.addInformation(stack, null, boardLines, advanced);
+            for (String line : boardLines) {
+                lines.add(Component.literal(line));
+            }
+        }
+
+        lines.add(chargeLine(getEnergy(stack)));
+        return lines;
     }
 
     /** 7.1.x's charge readout, on honest lang keys. Unlike 7.1.x this is shown for the empty board too — up

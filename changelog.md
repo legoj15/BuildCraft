@@ -1,4 +1,5 @@
 ###### Changes since 2026.2.0-br2:
+- A robot station no longer haunts the spot where its pipe used to be. If a pipe was removed by anything other than a player's hand — a command, a piston, an explosion, another mod's tool — the station stayed registered, so robots kept flying to a station floating in mid-air.
 - Robots can unload fluid at an ordinary station again. A Pump or Tank robot could only empty its tank into a pipe that happened to have something connected to the face directly opposite the station, so at a normal dead-end dock the unload silently never happened.
 - A "Go to Station" gate action with no destination set now sends the docked robot to the gate's own station, as it did in classic BuildCraft, instead of doing nothing at all.
 - A programmed robot's tooltip now names its program and describes what it does, above the charge readout — a shelf of robots used to be indistinguishable. Blank robots still show only their charge.

@@ -729,6 +729,7 @@ public class BuildCraftGameTests {
         // handoff gated on actually-docked (not merely reserved), and an item-pipe handoff smoke test.
         reg.accept("buildcraftunofficial:robot_station_placement_registers", () -> buildcraft.robotics.RobotStationPluggableTester::testPlacingRobotStationRegistersInRobotRegistry);
         reg.accept("buildcraftunofficial:robot_station_removal_deregisters", () -> buildcraft.robotics.RobotStationPluggableTester::testRemovingPipeDeregistersStation);
+        reg.accept("buildcraftunofficial:robot_station_nonplayer_removal_deregisters", () -> buildcraft.robotics.RobotStationPluggableTester::nonPlayerPipeRemovalDeregistersStation);
         reg.accept("buildcraftunofficial:robot_station_robotutils_discovery", () -> buildcraft.robotics.RobotStationPluggableTester::testRobotUtilsDiscoversStationThroughPipeHolder);
         reg.accept("buildcraftunofficial:robot_station_release_frees_for_reclaim", () -> buildcraft.robotics.RobotStationPluggableTester::testReleaseFreesStationForReclaim);
         reg.accept("buildcraftunofficial:robot_station_render_state_transitions", () -> buildcraft.robotics.RobotStationPluggableTester::testRenderStateTransitionsAvailableReservedLinked);

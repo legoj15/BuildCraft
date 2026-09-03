@@ -144,8 +144,38 @@ the per-client port+token). Rig: wooden item pipe + Robot Station on its UP face
 
 ## Fix batches
 
-- **Batch 1 (Opus, this worktree, tests first):** B1, B5, B6, B8, B9, B11. Status: running at the time of writing.
-- **Batch 2 (Opus, tests first):** B2, B3, B4, B7, B10, B12, B14. Status: to launch after batch 1 lands.
+Both batches were Opus implementors working tests-first (red baseline shown, then green); the orchestrator only
+merged and re-verified. Every fix carries a plain-English `changelog.md` bullet.
+
+- **Batch 1 (this worktree, 7 commits `ce363d3e6`…`f23935eb3`+`a892fab7a`):** B1 fluid null guards (both directive
+  branches); B5 Provide-Items ANY restored verbatim (with the "unfiltered next to filtered-miss still refuses" 7.1.x
+  quirk pinned); B6 pump gate fluid filter (`BoardRobotPumpFilterTest`); B8 sleep polls the linked station; B9
+  cactus/sugar-cane maturity + no flower harvesting — which surfaced that the harvester's search answered
+  `isExpectedBlock(BlockState)` through an `EmptyBlockGetter`, so a neighbour-aware `isExpectedBlock(BlockGetter,
+  BlockPos)` seam was added and overridden by the harvester; B11 two-cell approach for home links (trade-off: a link now
+  needs two clear cells in front of the station — 7.1.x's own rule; revert `f23935eb3` if it ever bites). Unit suites
+  green on 26.2 / 26.1.2 / 1.21.1, compile green on all five nodes, 419/419 game tests on 26.2.
+- **Batch 2 (isolated worktree, 9 commits, merged as `b3947b0ac`):** B2 gate item-stack params read the held stack
+  (`StatementParameterItemStackTest`); B3 Knight targets `Enemy` (game test with a live slime); B4 equip takes exactly
+  one item; B7 gate Filter / Filter Tool wired into `BoardRobotGenericSearchBlock` (`updateFilter`/`matchesGateFilter`,
+  `BoardGateFilterTest`), the fetch AI and the Planter's seed fetch; B10 robot tooltip shows the board line
+  (node-neutral `tooltipLines`); B12 unparameterised Goto Station redocks at the gate's own station; B14 turned out
+  RED — the pipe's per-face fluid handler is gated on `isConnected(face)`, so Pump/Tank robots could never unload at a
+  dead-end dock: `PipeFlowFluids.insertFluidForce` + `getStationOutput(face)`, transaction-honouring so the unload
+  dry-run per candidate station does not mint fluid; B16a ghost stations — `TilePipeHolder.detachPluggables()` from the
+  non-player removal paths (`preRemoveSideEffects` ≥1.21.10 / `BlockPipeHolder#onRemove` below) plus the 7.1.x
+  take/takeAsMain guard (asked of the world, not `getHolder()`, which also reads "gone" for a live pipe with a
+  transiently-null pipe and stranded robots in two flight tests); B16b home-station loss — `setMainStation` keeps the
+  saved coordinates across `setMainStation(null)` (a robot that LOST a home shuts down; one that never had one still
+  idles, the deliberate port choice), `RobotRegistry.removeStation` undocks the docked robot. Game tests 419→424,
+  5/5 consecutive clean runs; unit suite green.
+- **Merge conflicts:** `changelog.md` (both bullet sets kept) and `BoardRobotGenericSearchBlock.update()` — the search
+  predicate now reads `isExpectedBlock(level, pos) && matchesGateFilter(state) && !isTaken`, i.e. both batches' conjuncts.
+- **Noted by the implementors, not changed:** `AIRobotGotoStation.start()` short-circuits on `station ==
+  getDockingStation()` alone (7.1.x also required `== linkedStation`) — no practical difference because
+  `takeAsMain` early-returns for an already-taken station on both sides; a pre-existing ~1-in-10 chunk-ticking flake in
+  `robot_gate_sleep_wakeup` / `robot_fluid_carrier_loads_from_supply_tank` (timeouts inside their `tickUntil` budget,
+  the `EntityArenaUtil` javadoc rate) — a hardening candidate, not caused by these changes.
 
 ## Follow-ups
 

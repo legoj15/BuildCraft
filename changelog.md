@@ -1,4 +1,5 @@
 ###### Changes since 2026.2.0-br2:
+- Robots can unload fluid at an ordinary station again. A Pump or Tank robot could only empty its tank into a pipe that happened to have something connected to the face directly opposite the station, so at a normal dead-end dock the unload silently never happened.
 - A "Go to Station" gate action with no destination set now sends the docked robot to the gate's own station, as it did in classic BuildCraft, instead of doing nothing at all.
 - A programmed robot's tooltip now names its program and describes what it does, above the charge readout — a shelf of robots used to be indistinguishable. Blank robots still show only their charge.
 - The "Filter" and "Filter Tool" gate actions now actually steer the work robots. A Filter on a robot's home station narrows what its Lumberjack, Miner or Harvester will go looking for and which seed its Planter will fetch; a Filter Tool says which tool any robot may pick up. A station with no filter set still lets its robots do anything, as before, and the gate can be re-parameterised while robots are working.

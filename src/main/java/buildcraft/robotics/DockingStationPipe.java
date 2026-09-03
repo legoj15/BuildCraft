@@ -45,6 +45,7 @@ import buildcraft.robotics.statements.ActionStationProvideFluids;
 import buildcraft.robotics.statements.ActionStationProvideItems;
 import buildcraft.silicon.plug.PluggableGate;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourWood;
+import buildcraft.transport.pipe.flow.PipeFlowFluids;
 
 import org.jspecify.annotations.Nullable;
 
@@ -205,10 +206,19 @@ public class DockingStationPipe extends DockingStation {
     public IFluidHandler getFluidOutput() {
     *///?}
         IPipeHolder h = getHolder();
-        if (h == null || h.getPipe() == null || !(h.getPipe().getFlow() instanceof IFlowFluid)) {
+        if (h == null || h.getPipe() == null
+                || !(h.getPipe().getFlow() instanceof PipeFlowFluids flow)) {
             return null;
         }
-        return h.getPipe().getFlow().getCapability(CapUtil.CAP_FLUIDS, side().getOpposite());
+        // NOT the pipe's per-face CAP_FLUIDS handler, for the same reason the item output above is not
+        // the raw PipeFlowItems: that handler's insert is gated on pipe.isConnected(face), so with the
+        // station on the UP face every unload bailed unless something happened to be connected to the
+        // pipe's DOWN face — i.e. every ordinary dead-end dock, which made a Pump or Tank robot's
+        // "unloads at a station" silently never happen. A robot docked here is a valid fluid source by
+        // virtue of being docked; getStationOutput is the force path, and unlike the pipe's own
+        // capability it honours the transaction, so the unload AIs' per-station dry runs stay
+        // observational.
+        return flow.getStationOutput(side().getOpposite());
     }
 
     @Override

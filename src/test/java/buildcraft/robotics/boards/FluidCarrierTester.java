@@ -35,7 +35,9 @@ import buildcraft.robotics.BCRoboticsPlugs;
 import buildcraft.robotics.BCRoboticsStatements;
 import buildcraft.robotics.DockingStationPipe;
 import buildcraft.robotics.RobotStationPluggable;
+import buildcraft.robotics.ai.AIRobotUnloadFluids;
 import buildcraft.robotics.entity.EntityRobot;
+import buildcraft.transport.pipe.flow.PipeFlowFluids;
 import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.gate.EnumGateLogic;
 import buildcraft.silicon.gate.EnumGateMaterial;
@@ -135,6 +137,18 @@ public class FluidCarrierTester {
         //?} else {
         /*// 1.21.1 has no Transfer API; BCFluidTank exposes a version-neutral fill(slot, stack, simulate).
         tank.tank.fill(0, stack, false);*/
+        //?}
+    }
+
+    /** Seeds the robot's own 4000 mB tank directly (the E2E fills it through the load path instead). */
+    private static void fillRobotTank(EntityRobot robot, FluidStack stack) {
+        //? if >=1.21.10 {
+        try (Transaction tx = Transaction.open(null)) {
+            robot.getFluidHandler().insert(0, FluidResource.of(stack), stack.getAmount(), tx);
+            tx.commit();
+        }
+        //?} else {
+        /*robot.getFluidHandler().fill(stack, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);*/
         //?}
     }
 
@@ -251,5 +265,67 @@ public class FluidCarrierTester {
                     helper.succeed();
                 },
                 "the fluid carrier robot never loaded the water from the supply tank");
+    }
+
+    // ---------- dead-end unload (the fluid twin of the item unload pin) ----------
+
+    /** The fluid unload must NOT require the pipe to have a connection on the face opposite the station —
+     *  a lone dead-end fluid pipe is a perfectly good unload target, exactly as the item side already
+     *  guarantees ({@code PickerCarrierTester.unloadStationDoesNotNeedAnOppositeFaceConnection}).
+     *
+     *  <p>The item side needed a synthetic station-side {@code IInjectable} to get there, because the raw
+     *  {@code PipeFlowItems.canInjectItems} is {@code pipe.isConnected(from)}. The fluid side reaches the
+     *  pipe's per-face {@code Section} instead, which has no such gate — this test is the pin that says so
+     *  and keeps it that way.
+     *
+     *  <p>Ph6 (D1): a gateless station refuses, so the rig carries an always-on, unfiltered
+     *  {@code ActionStationAcceptFluids} gate. */
+    public static void fluidUnloadStationDoesNotNeedAnOppositeFaceConnection(GameTestHelper helper) {
+        BlockPos pipeRel = new BlockPos(2, 3, 4);
+        BlockPos robotRel = new BlockPos(2, 4, 4);
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+
+        // A plain cobblestone FLUID pipe with nothing at all around it: no tank, no neighbouring pipe, and
+        // in particular nothing on the DOWN face opposite the station.
+        TilePipeHolder tile = installFluidStation(helper, pipeRel, BCTransportItems.PIPE_COBBLE_FLUID.get(),
+                Direction.UP);
+        addAlwaysOnGate(tile, Direction.WEST, BCRoboticsStatements.ACTION_STATION_ACCEPT_FLUIDS);
+
+        EntityArenaUtil.tickUntil(helper, 140,
+                () -> stationAt(helper, pipeRel, Direction.UP) != null,
+                () -> {
+                    DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
+                    EntityRobot robot = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                    station.takeAsMain(robot);
+                    robot.dock(station);
+                    fillRobotTank(robot, new FluidStack(Fluids.WATER, 1000));
+                    helper.assertTrue(carriedBy(robot) == 1000, "precondition: the robot carries a bucket");
+
+                    helper.assertTrue(station.getFluidOutput() != null,
+                            "a station on a fluid pipe must expose a fluid output at a dead end — with no "
+                                    + "output there is nowhere for a pump or tank robot to unload");
+
+                    int dryRun = AIRobotUnloadFluids.unload(robot, station, false);
+                    helper.assertTrue(dryRun > 0,
+                            "the unload dry-run must accept a dead-end fluid pipe (the station search "
+                                    + "uses it to decide whether a station is worth flying to)");
+                    helper.assertTrue(carriedBy(robot) == 1000,
+                            "a dry run must move nothing");
+
+                    int moved = AIRobotUnloadFluids.unload(robot, station, true);
+                    helper.assertTrue(moved > 0,
+                            "a docked robot must be able to unload fluid into a dead-end pipe");
+                    helper.assertTrue(carriedBy(robot) == 1000 - moved,
+                            "the unload must actually drain the robot's tank, not just report success: "
+                                    + "moved " + moved + " but the robot still holds " + carriedBy(robot));
+
+                    PipeFlowFluids flow = (PipeFlowFluids) tile.getPipe().getFlow();
+                    helper.assertTrue(flow.doesContainFluid(),
+                            "the fluid must have landed in the pipe");
+
+                    robot.discard();
+                    helper.succeed();
+                },
+                "the station never registered");
     }
 }

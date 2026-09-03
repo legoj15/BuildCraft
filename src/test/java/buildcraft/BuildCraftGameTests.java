@@ -818,6 +818,7 @@ public class BuildCraftGameTests {
         // autonomously finding the supply station and pulling the tank's bucket into its own tank.
         reg.accept("buildcraftunofficial:robot_fluid_supply_station_needs_wooden_fluid_pipe", () -> buildcraft.robotics.boards.FluidCarrierTester::fluidSupplyStationNeedsAWoodenFluidPipe);
         reg.accept("buildcraftunofficial:robot_fluid_carrier_loads_from_supply_tank", () -> buildcraft.robotics.boards.FluidCarrierTester::fluidCarrierLoadsFromSupplyTank);
+        reg.accept("buildcraftunofficial:robot_fluid_unload_dead_end_station", () -> buildcraft.robotics.boards.FluidCarrierTester::fluidUnloadStationDoesNotNeedAnOppositeFaceConnection);
 
         // The tag-backed world properties need a live server (no resource load in the unit JVM — see
         // WorldPropertySweepTest): wood/harvestable/ore@0..3/dirt/replaceable/fluidSource pinned against

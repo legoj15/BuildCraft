@@ -83,7 +83,14 @@ public class AIRobotLoadFluids extends AIRobot {
         }
 
         //? if >=1.21.10 {
+        // A station whose pipe has no wooden-fluid-pipe extraction face has NO fluid input, even when a
+        // Provide Fluids gate action makes canRobotExtractFluid say yes — 7.1.x guarded exactly this with
+        // `if (handler == null) return 0;`. Without it every fluid-loading robot's station search (which
+        // dry-runs this) throws on the server thread.
         ResourceHandler<FluidResource> input = station.getFluidInput();
+        if (input == null) {
+            return 0;
+        }
         FluidResource resource = input.getResource(0);
         if (resource.isEmpty()) {
             return 0;
@@ -116,6 +123,9 @@ public class AIRobotLoadFluids extends AIRobot {
         }
         //?} else {
         /*IFluidHandler input = station.getFluidInput();
+        if (input == null) {
+            return 0;
+        }
         FluidStack inTank = input.getFluidInTank(0);
         if (inTank.isEmpty()) {
             return 0;

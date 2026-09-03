@@ -7,6 +7,7 @@ package buildcraft.robotics.ai;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -25,8 +26,14 @@ import net.neoforged.neoforge.fluids.capability.templates.FluidTank;*/
 //?}
 
 import buildcraft.VanillaSetupBaseTester;
+import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.robots.DockingStation;
+import buildcraft.api.statements.IStatement;
+import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementSlot;
+import buildcraft.robotics.statements.ActionRobotFilter;
+import buildcraft.robotics.statements.ActionStationAcceptFluids;
+import buildcraft.robotics.statements.ActionStationProvideFluids;
 
 /** The pump board's fluid math: {@link AIRobotLoadFluids#load} and {@link AIRobotUnloadFluids#unload}
  *  moved through a real single-slot station tank against the mock robot's real single-slot tank. Pins the
@@ -194,6 +201,71 @@ public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
 
         Assertions.assertEquals(0, unloaded, "an empty robot has nothing to give");
         Assertions.assertEquals(0, station.getAmount());
+    }
+
+    // ── a station that PASSES the gate policy but has no fluid handler ──────
+    // A Provide/Accept Fluids gate action makes canRobotExtractFluid/canRobotAcceptFluid say yes, but a
+    // station whose pipe has no wooden-fluid-pipe extraction face still hands back a null handler.
+    // 7.1.x guarded that with `if (handler == null) return 0;`.
+
+    @Test
+    public void loadReturnsZeroWhenTheStationHasNoFluidInput() {
+        HandlerlessStation station = new HandlerlessStation(new ActionStationProvideFluids());
+
+        Assertions.assertTrue(station.canRobotExtractFluid(f -> true),
+                "the fixture must actually pass the gate policy — otherwise the null handler is never reached");
+
+        int loaded = Assertions.assertTimeoutPreemptively(Duration.ofSeconds(2),
+                () -> AIRobotLoadFluids.load(robot, station, f -> true, true));
+
+        Assertions.assertEquals(0, loaded, "a Provide Fluids gate on a station with no fluid input loads nothing");
+        Assertions.assertEquals(0, robotAmount(), "…and the robot's tank is untouched");
+    }
+
+    @Test
+    public void unloadReturnsZeroWhenTheStationHasNoFluidOutput() {
+        HandlerlessStation station = new HandlerlessStation(new ActionStationAcceptFluids());
+        setRobotFluid(BUCKET);
+
+        Assertions.assertTrue(station.canRobotAcceptFluid(f -> true),
+                "the fixture must actually pass the gate policy — otherwise the null handler is never reached");
+
+        int unloaded = Assertions.assertTimeoutPreemptively(Duration.ofSeconds(2),
+                () -> AIRobotUnloadFluids.unload(robot, station, true));
+
+        Assertions.assertEquals(0, unloaded, "an Accept Fluids gate on a station with no fluid output unloads nothing");
+        Assertions.assertEquals(BUCKET, robotAmount(), "…and the robot keeps its fluid");
+    }
+
+    /** A station carrying one always-on, parameter-less fluid gate action — so the D1 policy passes
+     *  exactly as {@code DockingStationPipe} would — but with the base class's null
+     *  {@code getFluidInput}/{@code getFluidOutput}, which is what a pipe with no wooden-fluid extraction
+     *  face really returns. */
+    private static final class HandlerlessStation extends DockingStation {
+        private final List<StatementSlot> slots;
+
+        HandlerlessStation(IStatement action) {
+            super();
+            StatementSlot slot = new StatementSlot();
+            slot.statement = action;
+            slot.parameters = new IStatementParameter[0];
+            slots = List.of(slot);
+        }
+
+        @Override
+        public Iterable<StatementSlot> getActiveActions() {
+            return slots;
+        }
+
+        @Override
+        public boolean canRobotExtractFluid(IFluidFilter filter) {
+            return ActionRobotFilter.canInteractWithFluid(this, filter, ActionStationProvideFluids.class);
+        }
+
+        @Override
+        public boolean canRobotAcceptFluid(IFluidFilter filter) {
+            return ActionRobotFilter.canInteractWithFluid(this, filter, ActionStationAcceptFluids.class);
+        }
     }
 
     // ── the station test double ─────────────────────────────────────────────

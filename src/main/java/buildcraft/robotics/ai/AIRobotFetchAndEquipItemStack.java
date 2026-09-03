@@ -17,6 +17,8 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.lib.inventory.InventoryWrapper;
+import buildcraft.lib.inventory.filter.AggregateFilter;
+import buildcraft.robotics.statements.ActionRobotFilterTool;
 
 /** Docks at the robot's station and equips, in the robot's hands, one stack matching {@code filter} taken
  *  from the station's item input. Ported from 7.1.x {@code AIRobotFetchAndEquipItemStack} (7.1.x reached
@@ -39,10 +41,17 @@ public class AIRobotFetchAndEquipItemStack extends AIRobot {
         super(iRobot);
     }
 
+    /** The board's own tool/work predicate, AND-ed with the linked station's gate "Filter Tool" action
+     *  (7.1.x verbatim: {@code new AggregateFilter(ActionRobotFilterTool.getGateFilter(getLinkedStation()),
+     *  iFilter)}). An unset Filter Tool — or no linked station at all — is pass-through, so the board's
+     *  predicate stands alone. A null {@code iFilter} still leaves the filter null: the update loop's
+     *  hard-abort path depends on that. */
     public AIRobotFetchAndEquipItemStack(IRobotAccess iRobot, IStackFilter iFilter) {
         super(iRobot);
 
-        filter = iFilter;
+        filter = iFilter == null
+                ? null
+                : new AggregateFilter(ActionRobotFilterTool.getGateFilter(iRobot.getLinkedStation()), iFilter);
     }
 
     @Override

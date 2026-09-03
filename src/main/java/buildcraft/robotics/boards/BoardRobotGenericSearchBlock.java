@@ -8,25 +8,33 @@
  */
 package buildcraft.robotics.boards;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
+import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.ResourceIdBlock;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
+import buildcraft.robotics.statements.ActionRobotFilter;
 
 /** The search-board base: each cycle, search for the nearest block matching {@link #isExpectedBlock}
  *  (and not already taken by another robot), remember it as {@code blockFound}, and let the subclass act
- *  on it. Ported from 7.1.x {@code BoardRobotGenericSearchBlock}; the 7.1.x gate filter
- *  ({@code updateFilter}/{@code matchesGateFilter} reading the station's {@code ActionRobotFilter}
- *  statements) is Ph6, so the effective block filter is {@code isExpectedBlock && !isTaken} (D1) — when the
- *  statements land, the filter gains one more conjunct in this single place.
+ *  on it. Ported from 7.1.x {@code BoardRobotGenericSearchBlock}: the effective block filter is
+ *  {@code isExpectedBlock && matchesGateFilter && !isTaken}, where the middle conjunct is the linked
+ *  station's gate "Filter" action ({@link #updateFilter()} / {@link #matchesGateFilter}) — a station with
+ *  no Filter action, or one whose Filter names no block, restricts nothing.
  *
  *  <p>A failed search sends the robot home to sleep ({@code AIRobotGotoSleep}) and the search starts again
  *  on the next cycle, exactly as 7.1.x. Subclasses act on {@link #blockFound()} in their own
@@ -34,6 +42,12 @@ import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
 public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
 
     private BlockPos blockFound;
+
+    /** The blocks the linked station's gate "Filter" action names, refreshed every {@link #update()}.
+     *  Empty means "no restriction" (7.1.x: {@code blockFilter.size() == 0} passed everything). Replaced
+     *  wholesale rather than mutated in place, so the search predicate can never observe a half-built
+     *  set — 7.1.x's own comment warned that this predicate may be evaluated off the tick thread. */
+    private volatile Set<Block> gateBlockFilter = Set.of();
 
     public BoardRobotGenericSearchBlock(IRobotAccess iRobot) {
         super(iRobot);
@@ -46,10 +60,48 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
 
     @Override
     public void update() {
+        updateFilter();
+
         Level level = robot.level();
         startDelegateAI(new AIRobotSearchAndGotoBlock(robot, false,
-                pos -> level != null && isExpectedBlock(level.getBlockState(pos))
+                pos -> level != null && isSearchTarget(level.getBlockState(pos))
                         && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))));
+    }
+
+    /** The state-only half of the search predicate: the board's own block test AND the gate's Filter
+     *  action. Kept as one method so the two conjuncts cannot drift apart — {@link #update()} adds only
+     *  the registry-reservation check on top. */
+    protected final boolean isSearchTarget(BlockState state) {
+        return isExpectedBlock(state) && matchesGateFilter(state);
+    }
+
+    /** Re-reads the linked station's gate "Filter" actions (7.1.x {@code updateFilter}, called at the top
+     *  of every {@code update()} so a gate re-parameterised while robots are running takes effect on the
+     *  next cycle). Only BLOCK items contribute — 7.1.x collected {@code ItemBlock} parameters alone, so
+     *  a Filter holding nothing placeable leaves the search unrestricted. An unlinked robot keeps an
+     *  empty filter, i.e. no restriction. */
+    public final void updateFilter() {
+        DockingStation station = robot.getLinkedStation();
+        if (station == null) {
+            gateBlockFilter = Set.of();
+            return;
+        }
+
+        Set<Block> blocks = new HashSet<>();
+        for (ItemStack stack : ActionRobotFilter.getGateFilterStacks(station)) {
+            if (stack.getItem() instanceof BlockItem blockItem) {
+                blocks.add(blockItem.getBlock());
+            }
+        }
+        gateBlockFilter = blocks.isEmpty() ? Set.of() : Set.copyOf(blocks);
+    }
+
+    /** Whether {@code state} is one of the blocks the gate's Filter action named. 7.1.x compared block +
+     *  metadata; metadata is gone, and its 1.7.10 job — telling oak from birch — is now block identity,
+     *  so identity is the faithful equivalent. */
+    protected boolean matchesGateFilter(BlockState state) {
+        Set<Block> filter = gateBlockFilter;
+        return filter.isEmpty() || filter.contains(state.getBlock());
     }
 
     @Override

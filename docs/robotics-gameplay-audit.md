@@ -43,8 +43,10 @@ Two legs, run together:
 - 26.2 dev client: an unfocused window re-pauses the integrated server every frame (`Minecraft.pauseIfInactive`
   + `pauseOnLostFocus`), so `time query gametime` never advanced and robots never moved; the worktree run dir
   carries `pauseOnLostFocus:false` in `options.txt`.
-- 1.7.10 `/give … {id:"buildcraft:boardRobotPicker"}`: the board id did not survive the era's JSON→NBT parser
-  (the item came back with the empty board) — see the in-game log for the workaround status.
+- 1.7.10 `/give … {id:"buildcraft:boardRobotPicker"}` yields a blank robot: the robot item keeps its board under a
+  `board` sub-compound (`{board:{id:…},energy:…}`); `/summon Item` needs NUMERIC item ids there; the era's left-click
+  path is dead while the auto-reopening in-game menu is up (`/setblock air` stands in for player breaks). All in the
+  `reference_bc71_reference_client` memory note.
 
 ## Findings
 
@@ -134,10 +136,10 @@ the per-client port+token). Rig: wooden item pipe + Robot Station on its UP face
 |---|---|---|---|---|
 | V1 | Place a Picker robot on a gateless station | robot with a blank board (see NBT note) → nothing spawns, item kept | picker robot spawns docked at (3.5, 5.0, 0.5), `linkedStation`+`currentStation` = the pipe's UP face, battery 9,998 MJ | placement matches (blank-board refusal is the 7.1.x rule the port skips — DESIGN) |
 | V2 | Drop 4 cobblestone 7 blocks from the docked picker | pending (needs a programmed robot) | no reaction for the first ~50 s (the search-fail sleep, 1200 ticks), then fetched during the sleep boundary, returned, docked with the 4 cobblestone aboard; battery 9,889 MJ; gateless station refuses unload so it parks with cargo | fetch loop works gateless (refutes the filter claim) |
-| V3 | Remove the docked robot's home station (26.2: station pluggable broken by the player; also `setblock air` under it) | pending — see the 1.7.10 row below | robot stays parked at the old dock, `mainAI` keeps running the board, `linkedStation` tag gone but `currentStation` still set; `setblock air` even leaves the station registered (ghost) | port does NOT shut down on home-station loss (7.1.x rule §1.4) — B16, fix batch 2 |
+| V3 | Remove the docked robot's home station (26.2: station pluggable broken by the player; also `setblock air` under it; 1.7.10: `setblock air` on the host pipe) | robot drops to the ground within a tick (rests at y+0.25 on the grass, motionless for 16 s+ = shut down); a sneak-wrench then recovers it | robot stays parked at the old dock, `mainAI` keeps running the board, `linkedStation` tag gone but `currentStation` still set; `setblock air` even leaves the station registered (ghost) | port does NOT shut down on home-station loss (7.1.x rule §1.4) — B16, fix batch 2 |
 | V2b | Drop an item while the picker sleeps docked | reacts at ~47 s (rest of the 60 s sleep), fetches at 51 s, redocks at 53 s | same class: fetched at the sleep boundary (≤60 s) | parity |
-| V4 | Low-battery robot (1,000 MJ) placed on an item-pipe station, a wooden kinesis station 3 blocks away fed by a redstone-powered creative engine | pending | flew to the kinesis station within 2 s, docked, charged 1,387→3,739 MJ in 30 s (~42 RF/t); with the engine unpowered it docked and waited | recharge E2E works |
-| V5 | Sneak + wrench a docked robot | robot vanishes; the robot ITEM is dropped into the world (7.1.x `convertToItems` drops an entity item; nothing lands in the inventory) | robot converts straight into the player's inventory: `robot[custom_data={board:{id:picker},energy:10000000000L}]` — board and charge preserved | behaviour differs only in where the item goes (inventory vs ground) — DESIGN, port is friendlier |
+| V4 | Low-battery robot (1,000 MJ) placed on an item-pipe station, a wooden kinesis station 3 blocks away fed by a redstone-powered creative engine | not run (7.1.x rule is code-verified: recharge below 20,000 RF at any `providesPower()` station, to MAX−500) | flew to the kinesis station within 2 s, docked, charged 1,387→3,739 MJ in 30 s (~42 RF/t); with the engine unpowered it docked and waited | recharge E2E works |
+| V5 | Sneak + wrench a robot (1.7.10: the shut-down one on the ground; 26.2: the docked charging one) | robot vanishes; the robot ITEM is dropped into the world at its feet (nothing lands in the inventory) | robot converts straight into the player's inventory: `robot[custom_data={board:{id:picker},energy:10000000000L}]` — board and charge preserved | behaviour differs only in where the item goes (inventory vs ground) — DESIGN, port is friendlier |
 
 ## Fix batches
 

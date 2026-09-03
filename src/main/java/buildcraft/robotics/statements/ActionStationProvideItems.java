@@ -49,18 +49,30 @@ public class ActionStationProvideItems extends BCStatement implements IActionInt
         return new StatementParameterItemStack();
     }
 
-    /** Whether {@code stack} may be extracted: refused only when a filtered provide-items action is
-     *  active and the stack is not what it offers — permissive with no (or unfiltered) provide actions. */
+    /** Whether {@code stack} may be extracted (7.1.x semantics, verbatim): the station supplies the UNION
+     *  of what its filtered provide-items actions offer — the first filtered action that matches wins — and
+     *  is permissive only when NO active provide-items action carries a filter at all.
+     *
+     *  <p>Two consequences worth spelling out, both 7.1.x's: two actions filtered on different items make
+     *  the station supply both (requiring every filtered action to match would make it supply nothing), and
+     *  an UNFILTERED action standing next to a filtered one does not make the station permissive — it never
+     *  returns true on its own, and the filtered one has already set {@code hasFilter}. */
     public static boolean canExtractItem(DockingStation station, ItemStack stack) {
+        boolean hasFilter = false;
+
         for (StatementSlot s : station.getActiveActions()) {
             if (s.statement instanceof ActionStationProvideItems) {
                 StatementParameterStackFilter param = new StatementParameterStackFilter(s.parameters);
-                if (param.hasFilter() && !param.matches(new ArrayStackOrListFilter(stack))) {
-                    return false;
+                if (param.hasFilter()) {
+                    hasFilter = true;
+                    if (param.matches(new ArrayStackOrListFilter(stack))) {
+                        return true;
+                    }
                 }
             }
         }
-        return true;
+
+        return !hasFilter;
     }
 
     @Override

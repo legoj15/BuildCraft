@@ -1,4 +1,5 @@
 ###### Changes since 2026.2.0-br2:
+- A sleeping robot now obeys the Wake Up gate action on its own home station, wherever it happens to be parked. It previously only listened to the station it was sitting at, so a Wake Up gate at home did nothing once the robot had wandered off.
 - The Pump robot now respects the work filter on its home station: put a lava bucket in a Filter gate action and the robot only pumps lava instead of grabbing the nearest water pool. With no filter set it still pumps any fluid source it finds.
 - Robot stations with more than one Provide Items gate action work again: a station offering, say, dirt from one action and stone from another handed out nothing at all, because every filtered action had to agree. Now the station supplies whatever any of its filtered Provide Items actions offers.
 - Fixed a server crash: a Provide Fluids (or Accept Fluids) gate on a robot station that had no wooden fluid pipe feeding it would crash the server as soon as any fluid-carrying robot looked for somewhere to load. Such a station is now simply skipped.

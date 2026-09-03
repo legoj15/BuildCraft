@@ -32,9 +32,13 @@ public class AIRobotSleep extends AIRobot {
 
     @Override
     public void preempt(AIRobot ai) {
-        // 7.1.x's preempt had no null guard; a docking station can be null mid-search, and the
-        // linked-station read is the only dereference, so the guard is free.
-        DockingStation station = robot.getDockingStation();
+        // The LINKED (home) station, not the station the robot happens to be docked at — 7.1.x polled
+        // robot.getLinkedStation(), so a robot sleeping away from home still obeys its own home gate.
+        //
+        // 7.1.x had no null guard and simply NPE'd on a stationless robot, which the cycle() catch turned
+        // into an abort — i.e. an accidental wake-up. A stationless robot has no gate to obey at all, so
+        // the honest reading is "keep sleeping" and let the 60-second timer wake it.
+        DockingStation station = robot.getLinkedStation();
         if (station == null) {
             return;
         }

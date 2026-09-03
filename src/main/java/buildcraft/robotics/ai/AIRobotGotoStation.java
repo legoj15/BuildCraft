@@ -51,6 +51,17 @@ public class AIRobotGotoStation extends AIRobot {
         setSuccess(false);
     }
 
+    /** The cell the robot pathfinds to before its final straight move onto the dock: one cell out along
+     *  the station's face for a plain visit, TWO for a take-as-main link.
+     *
+     *  <p>7.1.x split these across two classes — {@code AIRobotGotoStation} flew to {@code station + side},
+     *  {@code AIRobotGoAndLinkToDock} (the take-as-main equivalent) to {@code station + side*2}. Merging
+     *  them behind the {@code takeAsMain} flag lost the second cell of run-up; it is restored here. The
+     *  trade-off is 7.1.x's own: a link needs two cells of clear air in front of the station, not one. */
+    static BlockPos approachCell(BlockPos stationPos, Direction side, boolean takeAsMain) {
+        return stationPos.relative(side, takeAsMain ? 2 : 1);
+    }
+
     @Override
     public void start() {
         // A stationless robot (summoned, or a board whose linked station vanished) must fail the move
@@ -72,10 +83,9 @@ public class AIRobotGotoStation extends AIRobot {
             // take() needs the concrete entity; a live GotoStation only ever drives a real robot, so the cast
             // is safe. Abstracting take() onto IRobotAccess would leak entity lifecycle into the AI surface.
             if (takeAsMain ? station.takeAsMain((EntityRobotBase) robot) : station.take((EntityRobotBase) robot)) {
+                BlockPos approach = approachCell(stationIndex, stationSide, takeAsMain);
                 startDelegateAI(new AIRobotGotoBlock(robot,
-                        stationIndex.getX() + stationSide.getStepX(),
-                        stationIndex.getY() + stationSide.getStepY(),
-                        stationIndex.getZ() + stationSide.getStepZ()));
+                        approach.getX(), approach.getY(), approach.getZ()));
             } else {
                 terminate();
             }

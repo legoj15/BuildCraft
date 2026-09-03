@@ -58,8 +58,13 @@ public class ActionRobotFilterTool extends BCStatement implements IActionInterna
         return new StatementParameterItemStack();
     }
 
+    /** Null-safe: a robot with no linked station (mid-flight, or one that lost its home) simply has no
+     *  gate telling it which tool to carry, which reads as "no restriction". */
     public static Collection<ItemStack> getGateFilterStacks(DockingStation station) {
         ArrayList<ItemStack> result = new ArrayList<>();
+        if (station == null) {
+            return result;
+        }
 
         for (StatementSlot slot : station.getActiveActions()) {
             if (slot.statement instanceof ActionRobotFilterTool) {

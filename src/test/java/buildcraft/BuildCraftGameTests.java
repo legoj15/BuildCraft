@@ -729,6 +729,7 @@ public class BuildCraftGameTests {
         // handoff gated on actually-docked (not merely reserved), and an item-pipe handoff smoke test.
         reg.accept("buildcraftunofficial:robot_station_placement_registers", () -> buildcraft.robotics.RobotStationPluggableTester::testPlacingRobotStationRegistersInRobotRegistry);
         reg.accept("buildcraftunofficial:robot_station_removal_deregisters", () -> buildcraft.robotics.RobotStationPluggableTester::testRemovingPipeDeregistersStation);
+        reg.accept("buildcraftunofficial:robot_station_nonplayer_removal_deregisters", () -> buildcraft.robotics.RobotStationPluggableTester::nonPlayerPipeRemovalDeregistersStation);
         reg.accept("buildcraftunofficial:robot_station_robotutils_discovery", () -> buildcraft.robotics.RobotStationPluggableTester::testRobotUtilsDiscoversStationThroughPipeHolder);
         reg.accept("buildcraftunofficial:robot_station_release_frees_for_reclaim", () -> buildcraft.robotics.RobotStationPluggableTester::testReleaseFreesStationForReclaim);
         reg.accept("buildcraftunofficial:robot_station_render_state_transitions", () -> buildcraft.robotics.RobotStationPluggableTester::testRenderStateTransitionsAvailableReservedLinked);
@@ -759,6 +760,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_charge_readable_and_simulate_inert", () -> buildcraft.robotics.entity.EntityRobotTester::dockedRobotChargeIsReadableAndSimulateIsInert);
         reg.accept("buildcraftunofficial:robot_transactor_insert_conserves_items", () -> buildcraft.robotics.entity.EntityRobotTester::transactorInsertConservesItemsAcrossSimulateAndCommit);
         reg.accept("buildcraftunofficial:robot_shutdown_keeps_current_motion", () -> buildcraft.robotics.entity.EntityRobotTester::shutdownFallKeepsCurrentHorizontalMotion);
+        reg.accept("buildcraftunofficial:robot_home_station_loss_shuts_down", () -> buildcraft.robotics.entity.EntityRobotTester::losingTheHomeStationShutsTheRobotDown);
         reg.accept("buildcraftunofficial:robot_fetch_item_removed_target_guard", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemRemovedTargetIsNotPicked);
         reg.accept("buildcraftunofficial:robot_fetch_item_partial_fit_targets", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemPartialFitStillTargets);
         reg.accept("buildcraftunofficial:robot_fetch_item_target_locks", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemTargetLocksDedupeAndRelease);
@@ -801,6 +803,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_search_block_finds_log", () -> buildcraft.robotics.ai.SearchBlockTester::findsTheNearestMatchingBlock);
         reg.accept("buildcraftunofficial:robot_search_goto_reaches_block", () -> buildcraft.robotics.ai.SearchAndGotoBlockTester::reachesTheFoundBlock);
         reg.accept("buildcraftunofficial:robot_board_registry_sweep", () -> buildcraft.robotics.boards.BoardRegistrySweepTester::everyPh5BoardResolvesAndRoundTrips);
+        // The combat boards' entity predicates against REAL entities (no unit test can build one).
+        reg.accept("buildcraftunofficial:robot_knight_targets_hostiles", () -> buildcraft.robotics.boards.BoardTargetPredicateTester::knightTargetsEveryHostile);
 
         // Robotics Ph6 — the gate statements against a LIVE pipe holder + PluggableGate with a real robot:
         // the sleep trigger + wakeup action preempting a sleeping picker (observed through the fetch the
@@ -809,12 +813,14 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_gate_sleep_wakeup", () -> buildcraft.robotics.statements.RobotGateTester::sleepTriggerAndWakeupPreemptsPicker);
         reg.accept("buildcraftunofficial:robot_station_forbid_robot", () -> buildcraft.robotics.statements.RobotGateTester::forbidRobotActionRefusesUnloadAtStation);
         reg.accept("buildcraftunofficial:robot_goto_station_action", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionRedirectsDockedRobot);
+        reg.accept("buildcraftunofficial:robot_goto_station_action_no_param", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionWithNoParameterTargetsItsOwnStation);
 
         // Fluid carrier board — the fluid twin of the Ph4 carrier pins: the wooden-FLUID-pipe supply
         // discovery (7.1.x's getFluidInput, the load half the board's loop needs) and the carrier itself
         // autonomously finding the supply station and pulling the tank's bucket into its own tank.
         reg.accept("buildcraftunofficial:robot_fluid_supply_station_needs_wooden_fluid_pipe", () -> buildcraft.robotics.boards.FluidCarrierTester::fluidSupplyStationNeedsAWoodenFluidPipe);
         reg.accept("buildcraftunofficial:robot_fluid_carrier_loads_from_supply_tank", () -> buildcraft.robotics.boards.FluidCarrierTester::fluidCarrierLoadsFromSupplyTank);
+        reg.accept("buildcraftunofficial:robot_fluid_unload_dead_end_station", () -> buildcraft.robotics.boards.FluidCarrierTester::fluidUnloadStationDoesNotNeedAnOppositeFaceConnection);
 
         // The tag-backed world properties need a live server (no resource load in the unit JVM — see
         // WorldPropertySweepTest): wood/harvestable/ore@0..3/dirt/replaceable/fluidSource pinned against

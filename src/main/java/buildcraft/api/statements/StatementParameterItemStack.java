@@ -73,16 +73,20 @@ public class StatementParameterItemStack implements IStatementParameter {
         return stack;
     }
 
+    /** 7.1.x verbatim, in the immutable-return style the port uses: the stack the player is HOLDING
+     *  becomes the parameter, as a count-1 copy; an empty hand clears it. Reading {@code clickedStack}
+     *  is the whole point of this widget — an earlier port copied {@code this.stack} instead, so a
+     *  plain item-stack parameter (Filter, Filter Tool, Provide/Accept Items, Provide/Accept Fluids,
+     *  Goto Station …) could be neither set nor cleared from the gate GUI. */
     @Override
     public StatementParameterItemStack onClick(
             IStatementContainer source, IStatement stmt, ItemStack clickedStack, StatementMouseClick mouseClick) {
-        if (stack.isEmpty()) {
+        if (clickedStack == null || clickedStack.isEmpty()) {
             return EMPTY;
-        } else {
-            ItemStack newStack = stack.copy();
-            newStack.setCount(1);
-            return new StatementParameterItemStack(newStack);
         }
+        ItemStack newStack = clickedStack.copy();
+        newStack.setCount(1);
+        return new StatementParameterItemStack(newStack);
     }
 
     @Override

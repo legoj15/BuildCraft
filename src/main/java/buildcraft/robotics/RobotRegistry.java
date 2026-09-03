@@ -339,6 +339,13 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
         StationIndex index = new StationIndex(station);
         if (stations.containsKey(index)) {
             if (station.robotTaking() != null) {
+                // A robot must never be left pointing at a station that no longer exists. The main-station
+                // branch below only clears the LINK, so without this a robot docked at its own main station
+                // kept `dockingStation` referencing the deleted station — observed in-game on 26.2 as a
+                // robot still "docked" at an air block.
+                if (station.robotTaking().getDockingStation() == station) {
+                    station.robotTaking().undock();
+                }
                 if (!station.isMainStation()) {
                     station.robotTaking().undock();
                 } else {

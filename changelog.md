@@ -1,6 +1,6 @@
 ###### Changes since 2026.2.0-br2:
 - A robot sent to claim a new home station now lines up two blocks out before slotting in, as it used to, instead of stopping right against the station.
-- The Harvester robot cuts cactus and sugar cane again (it takes the upper segments and leaves the base rooted), and it no longer mows down flowers — a lone poppy or dandelion was never a crop in classic BuildCraft, and planted flower beds are now safe from it.
+- The Harvester robot finds and cuts cactus and sugar cane again (it takes the upper segments and leaves the base rooted), and it no longer mows down flowers — a lone poppy or dandelion was never a crop in classic BuildCraft, and planted flower beds are now safe from it.
 - A sleeping robot now obeys the Wake Up gate action on its own home station, wherever it happens to be parked. It previously only listened to the station it was sitting at, so a Wake Up gate at home did nothing once the robot had wandered off.
 - The Pump robot now respects the work filter on its home station: put a lava bucket in a Filter gate action and the robot only pumps lava instead of grabbing the nearest water pool. With no filter set it still pumps any fluid source it finds.
 - Robot stations with more than one Provide Items gate action work again: a station offering, say, dirt from one action and stone from another handed out nothing at all, because every filtered action had to agree. Now the station supplies whatever any of its filtered Provide Items actions offers.

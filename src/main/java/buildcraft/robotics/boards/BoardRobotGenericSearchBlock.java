@@ -10,6 +10,7 @@ package buildcraft.robotics.boards;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -44,11 +45,20 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
      *  worldless property check gets). */
     public abstract boolean isExpectedBlock(BlockState state);
 
+    /** The neighbour-aware seam the search actually calls. It defaults to the pure-state predicate, which
+     *  is right for every board whose property is a function of the candidate state alone (logs, ores,
+     *  dirt). A board whose property genuinely reads the surrounding blocks — the harvester, whose
+     *  stacking crops are only ripe relative to the block below — overrides this; answering such a
+     *  property from the state alone silently reports "no" forever. */
+    public boolean isExpectedBlock(BlockGetter access, BlockPos pos) {
+        return isExpectedBlock(access.getBlockState(pos));
+    }
+
     @Override
     public void update() {
         Level level = robot.level();
         startDelegateAI(new AIRobotSearchAndGotoBlock(robot, false,
-                pos -> level != null && isExpectedBlock(level.getBlockState(pos))
+                pos -> level != null && isExpectedBlock(level, pos)
                         && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))));
     }
 

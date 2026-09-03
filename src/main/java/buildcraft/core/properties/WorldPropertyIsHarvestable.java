@@ -6,6 +6,7 @@
 package buildcraft.core.properties;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -18,17 +19,25 @@ import buildcraft.api.crops.CropManager;
  *  from {@code BCCore.preInit} under the key {@code "harvestable"}; the harvester board queries it through
  *  {@link #matches(BlockState)}.
  *
- *  <p>Two entry points on purpose: {@link #get} keeps the full CropManager path with its block-below
- *  neighbours (a {@code BushBlock} such as cocoa/sugar cane is mature only when stacked on its own block),
- *  while the state-only {@link #matches} seam answers with an empty getter — the JUnit sweeps and the
- *  search-AI filter need no live level. */
+ *  <p>Three entry points on purpose. {@link #get} and {@link #matches(BlockGetter, BlockPos)} keep the
+ *  full CropManager path with its block-below neighbours — a stacking plant (cactus, sugar cane, cocoa) is
+ *  mature only when it stands on its own kind, so the neighbour read is load-bearing and anything that
+ *  drops it silently reports "never ripe" for those crops. The state-only {@link #matches(BlockState)} seam
+ *  answers with an EMPTY getter, which is fine for crops whose ripeness is a function of their own state
+ *  (wheat's age, nether wart's age) and is what the JUnit sweeps use; it must NOT be the search filter. */
 public class WorldPropertyIsHarvestable implements IWorldProperty {
     @Override
     public boolean get(Level world, BlockPos pos) {
-        return CropManager.isMature(world, world.getBlockState(pos), pos);
+        return matches(world, pos);
     }
 
-    /** The state-only seam: the JUnit predicate sweeps drive it without a {@link Level}. */
+    /** The neighbour-aware seam: the crop AND whatever it is standing on. */
+    public boolean matches(BlockGetter access, BlockPos pos) {
+        return CropManager.isMature(access, access.getBlockState(pos), pos);
+    }
+
+    /** The state-only seam: the JUnit predicate sweeps drive it without a {@link Level}. Blind to the
+     *  block below, so stacking crops never match through it. */
     public boolean matches(BlockState state) {
         return CropManager.isMature(EmptyBlockGetter.INSTANCE, state, BlockPos.ZERO);
     }

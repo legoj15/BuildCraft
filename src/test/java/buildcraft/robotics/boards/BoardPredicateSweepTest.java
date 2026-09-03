@@ -8,12 +8,15 @@ package buildcraft.robotics.boards;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.VanillaSetupBaseTester;
+import buildcraft.lib.test.StackedBlockGetter;
 import buildcraft.robotics.ai.MockRobotAccess;
 
 /** The pure-state tool/block predicates of the Ph5 work boards, driven without a Level. Every predicate
@@ -46,6 +49,41 @@ public class BoardPredicateSweepTest extends VanillaSetupBaseTester {
                 "a fully-grown wheat crop is harvestable");
         Assertions.assertFalse(harvester.isExpectedBlock(Blocks.STONE.defaultBlockState()),
                 "stone is not a crop");
+    }
+
+    /** The stacking crops — cactus, sugar cane — are only "mature" relative to the block BELOW them, so
+     *  the harvester's search has to read the neighbour, not just the candidate state. Driving the
+     *  pure-state seam with an empty getter (which is what the board did) can never see them. */
+    @Test
+    public void theHarvesterFindsStackedCactusAndCane() {
+        BoardRobotHarvester harvester = new BoardRobotHarvester(robot);
+        BlockPos pos = new BlockPos(0, 64, 0);
+
+        Assertions.assertTrue(harvester.isExpectedBlock(
+                new StackedBlockGetter(pos, Blocks.CACTUS.defaultBlockState(),
+                        Blocks.CACTUS.defaultBlockState()), pos),
+                "a cactus segment standing on another cactus is a crop the harvester hunts");
+        Assertions.assertFalse(harvester.isExpectedBlock(
+                new StackedBlockGetter(pos, Blocks.CACTUS.defaultBlockState(),
+                        Blocks.SAND.defaultBlockState()), pos),
+                "the rooted base segment is not");
+        Assertions.assertTrue(harvester.isExpectedBlock(
+                new StackedBlockGetter(pos, Blocks.SUGAR_CANE.defaultBlockState(),
+                        Blocks.SUGAR_CANE.defaultBlockState()), pos),
+                "stacked sugar cane likewise");
+    }
+
+    /** The neighbour-aware seam must stay a superset of the pure-state one for every other board — the
+     *  default implementation just reads the candidate state. */
+    @Test
+    public void theNeighbourAwareSeamDefaultsToThePureStatePredicate() {
+        BoardRobotMiner miner = new BoardRobotMiner(robot);
+        BlockPos pos = new BlockPos(0, 64, 0);
+        BlockState stone = Blocks.STONE.defaultBlockState();
+
+        Assertions.assertEquals(miner.isExpectedBlock(stone),
+                miner.isExpectedBlock(new StackedBlockGetter(pos, stone, stone), pos),
+                "a board that does not override the seam must answer identically either way");
     }
 
     @Test

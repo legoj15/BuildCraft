@@ -9,14 +9,12 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.FluidState;
 
 import buildcraft.VanillaSetupBaseTester;
+import buildcraft.lib.test.StackedBlockGetter;
 
 /** {@link CropHandlerPlantable#isMature} — what the Harvester robot is willing to cut down. Pins the
  *  7.1.x rule set:
@@ -34,7 +32,7 @@ public class CropHandlerPlantableTest extends VanillaSetupBaseTester {
     private static final BlockPos POS = new BlockPos(0, 64, 0);
 
     private static boolean mature(BlockState here, BlockState below) {
-        return CropHandlerPlantable.INSTANCE.isMature(new StackedBlockGetter(here, below), here, POS);
+        return CropHandlerPlantable.INSTANCE.isMature(new StackedBlockGetter(POS, here, below), here, POS);
     }
 
     @Test
@@ -90,52 +88,4 @@ public class CropHandlerPlantableTest extends VanillaSetupBaseTester {
         Assertions.assertFalse(mature(Blocks.STONE.defaultBlockState(), dirt), "stone is not a crop");
     }
 
-    /** A two-cell {@link BlockGetter}: the crop and whatever stands directly under it, everything else air.
-     *
-     *  <p>The {@code LevelHeightAccessor} getter name cliffed at 1.21.10 ({@code getMinBuildHeight} →
-     *  {@code getMinY}), so BOTH are declared without {@code @Override}: on each node the abstract one is
-     *  implemented and the other is just an unused extra method. That keeps this shared test free of
-     *  Stonecutter directives. */
-    private static final class StackedBlockGetter implements BlockGetter {
-        private final BlockState here;
-        private final BlockState below;
-
-        StackedBlockGetter(BlockState here, BlockState below) {
-            this.here = here;
-            this.below = below;
-        }
-
-        @Override
-        public BlockEntity getBlockEntity(BlockPos pos) {
-            return null;
-        }
-
-        @Override
-        public BlockState getBlockState(BlockPos pos) {
-            if (POS.equals(pos)) {
-                return here;
-            }
-            if (POS.below().equals(pos)) {
-                return below;
-            }
-            return Blocks.AIR.defaultBlockState();
-        }
-
-        @Override
-        public FluidState getFluidState(BlockPos pos) {
-            return getBlockState(pos).getFluidState();
-        }
-
-        public int getHeight() {
-            return 384;
-        }
-
-        public int getMinBuildHeight() {
-            return -64;
-        }
-
-        public int getMinY() {
-            return -64;
-        }
-    }
 }

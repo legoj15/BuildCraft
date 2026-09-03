@@ -80,8 +80,9 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
                         && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))));
     }
 
-    /** The state-only half of the search predicate: the board's own block test AND the gate's Filter
-     *  action. Kept as one method so the two conjuncts cannot drift apart — {@link #update()} adds only
+    /** The state-only form of the search predicate: the board's own block test AND the gate's Filter
+     *  action. {@link #update()} uses the same two conjuncts, but answers the block test through the
+     *  neighbour-aware {@link #isExpectedBlock(BlockGetter, BlockPos)} overload (stacking crops) and adds
      *  the registry-reservation check on top. */
     protected final boolean isSearchTarget(BlockState state) {
         return isExpectedBlock(state) && matchesGateFilter(state);

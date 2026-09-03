@@ -91,10 +91,13 @@ public class AIRobotFetchAndEquipItemStack extends AIRobot {
             return false;
         }
 
-        // One real extract of up to a stack (the 7.1.x takeSingle doLoad=true); a refused stack goes
-        // straight back — the canRobotExtractItem policy (D1, gate-semantics at Ph6) decides.
+        // One real extract of EXACTLY ONE item (7.1.x takeSingle: decreaseStackInSlot(1) with
+        // doTake=true); a refused stack goes straight back — the canRobotExtractItem policy (D1,
+        // gate-semantics at Ph6) decides. The count matters downstream: AIRobotPlant plants a single
+        // seed and drops the remainder of the hand on the ground, so equipping a full stack made a
+        // planter fed from a seed chest spill 63 seeds every cycle.
         IItemTransactor inputTransactor = new InventoryWrapper(input);
-        ItemStack possible = inputTransactor.extract(filter, 1, 64, false);
+        ItemStack possible = inputTransactor.extract(filter, 1, 1, false);
         if (possible.isEmpty()) {
             return false;
         }

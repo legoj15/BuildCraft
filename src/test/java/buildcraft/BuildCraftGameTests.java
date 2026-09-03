@@ -801,6 +801,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_search_block_finds_log", () -> buildcraft.robotics.ai.SearchBlockTester::findsTheNearestMatchingBlock);
         reg.accept("buildcraftunofficial:robot_search_goto_reaches_block", () -> buildcraft.robotics.ai.SearchAndGotoBlockTester::reachesTheFoundBlock);
         reg.accept("buildcraftunofficial:robot_board_registry_sweep", () -> buildcraft.robotics.boards.BoardRegistrySweepTester::everyPh5BoardResolvesAndRoundTrips);
+        // The combat boards' entity predicates against REAL entities (no unit test can build one).
+        reg.accept("buildcraftunofficial:robot_knight_targets_hostiles", () -> buildcraft.robotics.boards.BoardTargetPredicateTester::knightTargetsEveryHostile);
 
         // Robotics Ph6 — the gate statements against a LIVE pipe holder + PluggableGate with a real robot:
         // the sleep trigger + wakeup action preempting a sleeping picker (observed through the fetch the

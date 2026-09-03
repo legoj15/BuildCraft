@@ -760,6 +760,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_charge_readable_and_simulate_inert", () -> buildcraft.robotics.entity.EntityRobotTester::dockedRobotChargeIsReadableAndSimulateIsInert);
         reg.accept("buildcraftunofficial:robot_transactor_insert_conserves_items", () -> buildcraft.robotics.entity.EntityRobotTester::transactorInsertConservesItemsAcrossSimulateAndCommit);
         reg.accept("buildcraftunofficial:robot_shutdown_keeps_current_motion", () -> buildcraft.robotics.entity.EntityRobotTester::shutdownFallKeepsCurrentHorizontalMotion);
+        reg.accept("buildcraftunofficial:robot_home_station_loss_shuts_down", () -> buildcraft.robotics.entity.EntityRobotTester::losingTheHomeStationShutsTheRobotDown);
         reg.accept("buildcraftunofficial:robot_fetch_item_removed_target_guard", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemRemovedTargetIsNotPicked);
         reg.accept("buildcraftunofficial:robot_fetch_item_partial_fit_targets", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemPartialFitStillTargets);
         reg.accept("buildcraftunofficial:robot_fetch_item_target_locks", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemTargetLocksDedupeAndRelease);

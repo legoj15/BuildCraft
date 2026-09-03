@@ -1,4 +1,5 @@
 ###### Changes since 2026.2.0-br2:
+- A robot that loses its home station now shuts down and drops to the ground, the way it always did in classic BuildCraft — pick it back up with a sneak-click of a wrench. Previously it carried on working with no home at all, still reporting itself docked at a station that had been destroyed. Robots that never had a home station (spawned by command) still simply idle.
 - A robot station no longer haunts the spot where its pipe used to be. If a pipe was removed by anything other than a player's hand — a command, a piston, an explosion, another mod's tool — the station stayed registered, so robots kept flying to a station floating in mid-air.
 - Robots can unload fluid at an ordinary station again. A Pump or Tank robot could only empty its tank into a pipe that happened to have something connected to the face directly opposite the station, so at a normal dead-end dock the unload silently never happened.
 - A "Go to Station" gate action with no destination set now sends the docked robot to the gate's own station, as it did in classic BuildCraft, instead of doing nothing at all.

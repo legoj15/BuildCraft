@@ -1,4 +1,4 @@
-Last audited: 2026-08-22
+Last audited: 2026-09-03
 
 *One line per item. Background, file pointers, and design notes live in [docs/todo-details.md](docs/todo-details.md) (or a dedicated doc, where linked). Finished items are removed, never checked off.*
 
@@ -17,6 +17,11 @@ Last audited: 2026-08-22
 - Delete dead render-event leftovers — [notes](docs/todo-details.md#dead-addsectiongeometryevent-remnants)
 - Move off a fluid helper NeoForge is about to remove — [notes](docs/todo-details.md#deprecated-fluidutil-helper)
 - Turn on Gradle's configuration cache for faster builds — [notes](docs/todo-details.md#gradle-configuration-cache)
+- Robots: the Planter can't plant sugar cane yet — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
+- Robots: exhaust should be the classic red smoke, not a white puff — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
+- Robots: gate menus list every station action on every pipe kind — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
+- Robots: decide blank-robot placement and blank stack sizes vs 1.7.10 — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
+- Robots: close the untested behaviours the audit listed — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
 
 ## 🆕 New Features (version 2026.2)
 

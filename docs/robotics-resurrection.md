@@ -4,6 +4,8 @@ Linked from [todos.md](../todos.md). This is the working plan for porting the ro
 
 **Status: Ph0 (seams b, c), Ph1, Ph2, Ph3, Ph4, Ph5, and Ph6 are complete. Next up: Ph7 — Programming Table.**
 
+**2026-09-03 gameplay audit** against the live 7.1.27 reference client (record: [robotics-gameplay-audit.md](robotics-gameplay-audit.md)): numeric parity complete; 16 deviations fixed tests-first, the remaining ones listed there as follow-ups/decisions.
+
 ## Overview
 
 Port the robot system from `upstream/7.1.x:common/buildcraft/robotics/` (1.7.10, 121 files / ~13.4k LOC) onto main's BC8 architecture, against the already-present orphaned `api/robots` + `api/boards` contract. No *working* modern port exists anywhere (robots were dropped at the 1.7.10→BC8 cliff; every BC8 port 1.11.2→1.20.1 carries the same Zone-Planner-only stub) — this is logic translation, not a lift.

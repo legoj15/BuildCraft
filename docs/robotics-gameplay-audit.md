@@ -148,4 +148,34 @@ the per-client port+token). Rig: wooden item pipe + Robot Station on its UP face
 
 ## Follow-ups
 
-_(what goes to todos.md — written at the end)_
+Tracked as one-liners in todos.md; the detail lives here.
+
+- **Planter cannot plant sugar cane.** `CropHandlerReeds` is an empty enum stub and is never registered;
+  `CropHandlerPlantable.isSeed` explicitly excludes `Blocks.SUGAR_CANE` "for CropHandlerReeds". 7.1.x's reeds
+  handler made the reed item a seed and planted it on sand/dirt next to water. Genuine missing port (found by
+  batch 1 while fixing cactus maturity).
+- **Exhaust particle.** 7.1.x drew a red, size-scaled, lifetime-scaled smoke puff (`EntityRobotEnergyParticle`,
+  bigger for costlier AIs) and scaled its rate with the particle setting (100/400/1600); the port emits a fixed
+  vanilla white CLOUD. The most visible robot effect — worth a small custom particle.
+- **Action-provider gating.** `RobotsActionProvider` offers all 14 station/robot actions on any station-bearing
+  pipe; 7.1.x offered Provide/Accept Items only on item pipes with a wooden input, Accept/Provide Fluids only on
+  fluid pipes, Request Needed Items only with a request provider. Menu clutter, not behaviour.
+- **Decisions to make (7.1.x did the opposite, the port chose deliberately):** blank-board robots place and
+  idle (7.1.x refused — verified on 1.7.10); blank robots/boards stack to 1 (7.1.x 16); sneak-wrench puts the
+  robot item in the inventory (7.1.x dropped it on the ground); `/setblock`-style removal of a station now
+  handled by batch 2's guard. `RobotUtils.getNextBoard` wraps instead of stopping at the end (widget, dead code today).
+- **`StatementParameterRobot` accepts only robot stacks**; 7.1.x also took a List (match robots by list) or a
+  wearable. Lists exist in the port; wearables are Ph9.
+- **`boards.blacklist` config** (7.1.x let servers hide boards) not ported. Only if asked for.
+- **`AIRobotDisposeItems`** (spill undeliverable cargo) is unported — belongs with the Delivery board (Ph8).
+- **Approach cell for home links is ×2 again (batch 1, fix 6):** a home-station link now needs two clear cells in
+  front of the station, exactly 7.1.x's constraint; plain visits stay at ×1. Revert `f23935eb3` if that ever bites.
+- **Untested behaviours the slices listed** (the strongest candidates): `AIRobotBreak` progress/durability/drops;
+  `AIRobotAttack` cadence + damage; harvest/plant/use-tool action layer; station policy overrides
+  (`canRobotExtractItem` & co.) with a gateless negative case; two-robot reservation exclusivity; `AIRobotSearchEntity`;
+  the goto-station chain and straight-move arrival; charging-latch rules; `removeStation`/`killRobot`/`unloadRobot`
+  registry paths; board `writeSelfToNBT` round-trips; robot item tooltip; creative sub-items; the fluid-side gate
+  filter helpers. Batch 1/2 added tests for everything they touched; the rest is a coverage sweep.
+- **Reference-client wishes for McDevBridge:** port `/screenclick` to the 1.12.2 module; an `/entitydata`-style read
+  for 1.7.10 entities (only position/health is visible today, so robot battery/cargo on the reference side had to be
+  inferred from behaviour); `pauseOnLostFocus:false` default in the legacy run dirs.

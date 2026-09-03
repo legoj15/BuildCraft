@@ -71,6 +71,7 @@ adjudicated), **DESIGN** (real difference, but a deliberate or defensible port d
 | B12 | LOW | statements | "Goto Station" with an empty map parameter: 7.1.x re-took the robot's current station as MAIN (redock); port returns early and does nothing. | FIXING (batch 2) |
 | B13 | LOW | statements | `StatementParameterRobot` ignores non-robot clicks; 7.1.x also accepted a List or wearable stack into Forbid/Force Robot. | OPEN (Lists exist in the port; wearables are Ph9) |
 | B14 | LOW | station | Fluid output is the pipe's sided capability on the face opposite the station; the item output was made dead-end-proof (`insertItemsForce`) after the same shape refused unconnected faces. `PipeFlowFluids.getCapability` behaviour at a dead-end dock decides — needs a red-first game test. | FIXING (batch 2: test first) |
+| B16 | MED | entity | Home-station loss no longer shuts the robot down (7.1.x re-resolved the linked station every tick and called `shutdown("no docking station")`; port only checks the unresolved-after-load case) and `removeStation` leaves a main-station robot holding a dead `dockingStation`; `setblock air` under a station leaves it registered. Reproduced in-game on 26.2 (V3). | FIXING (batch 2, added) |
 | B15 | LOW | render | Energy exhaust is a vanilla white CLOUD; 7.1.x drew a red, size-scaled smoke puff (`EntityRobotEnergyParticle`) and scaled its rate with the particle setting. Cosmetic but the most visible robot effect. | OPEN — follow-up |
 
 ### Refuted claims (kept so nobody re-reports them)
@@ -133,7 +134,10 @@ the per-client port+token). Rig: wooden item pipe + Robot Station on its UP face
 |---|---|---|---|---|
 | V1 | Place a Picker robot on a gateless station | robot with a blank board (see NBT note) → nothing spawns, item kept | picker robot spawns docked at (3.5, 5.0, 0.5), `linkedStation`+`currentStation` = the pipe's UP face, battery 9,998 MJ | placement matches (blank-board refusal is the 7.1.x rule the port skips — DESIGN) |
 | V2 | Drop 4 cobblestone 7 blocks from the docked picker | pending (needs a programmed robot) | no reaction for the first ~50 s (the search-fail sleep, 1200 ticks), then fetched during the sleep boundary, returned, docked with the 4 cobblestone aboard; battery 9,889 MJ; gateless station refuses unload so it parks with cargo | fetch loop works gateless (refutes the filter claim) |
-| V3 | Break the home pipe under the docked robot | pending | see below | |
+| V3 | Remove the docked robot's home station (26.2: station pluggable broken by the player; also `setblock air` under it) | pending — see the 1.7.10 row below | robot stays parked at the old dock, `mainAI` keeps running the board, `linkedStation` tag gone but `currentStation` still set; `setblock air` even leaves the station registered (ghost) | port does NOT shut down on home-station loss (7.1.x rule §1.4) — B16, fix batch 2 |
+| V2b | Drop an item while the picker sleeps docked | reacts at ~47 s (rest of the 60 s sleep), fetches at 51 s, redocks at 53 s | same class: fetched at the sleep boundary (≤60 s) | parity |
+| V4 | Low-battery robot (1,000 MJ) placed on an item-pipe station, a wooden kinesis station 3 blocks away fed by a redstone-powered creative engine | pending | flew to the kinesis station within 2 s, docked, charged 1,387→3,739 MJ in 30 s (~42 RF/t); with the engine unpowered it docked and waited | recharge E2E works |
+| V5 | Sneak + wrench a docked robot | robot vanishes; the robot ITEM is dropped into the world (7.1.x `convertToItems` drops an entity item; nothing lands in the inventory) | robot converts straight into the player's inventory: `robot[custom_data={board:{id:picker},energy:10000000000L}]` — board and charge preserved | behaviour differs only in where the item goes (inventory vs ground) — DESIGN, port is friendlier |
 
 ## Fix batches
 

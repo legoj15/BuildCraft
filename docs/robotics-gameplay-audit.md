@@ -193,10 +193,32 @@ Tracked as one-liners in todos.md; the detail lives here.
 - **Action-provider gating.** `RobotsActionProvider` offers all 14 station/robot actions on any station-bearing
   pipe; 7.1.x offered Provide/Accept Items only on item pipes with a wooden input, Accept/Provide Fluids only on
   fluid pipes, Request Needed Items only with a request provider. Menu clutter, not behaviour.
-- **Decisions to make (7.1.x did the opposite, the port chose deliberately):** blank-board robots place and
-  idle (7.1.x refused — verified on 1.7.10); blank robots/boards stack to 1 (7.1.x 16); sneak-wrench puts the
-  robot item in the inventory (7.1.x dropped it on the ground); `/setblock`-style removal of a station now
-  handled by batch 2's guard. `RobotUtils.getNextBoard` wraps instead of stopping at the end (widget, dead code today).
+- **Decided 2026-09-03 (user):** see "Decided: blank robots and boards" below. Still open from the same list:
+  sneak-wrench puts the robot item in the inventory (7.1.x dropped it on the ground) — keep the port's
+  friendlier behaviour unless asked; `RobotUtils.getNextBoard` wraps instead of stopping at the end (widget,
+  dead code today).
+
+### Decided: blank robots and boards
+
+User decision, 2026-09-03 — implement in a follow-up session, tests first:
+
+1. **A blank (empty-board) robot refuses placement on a station, as 1.7.x did** (verified on 1.7.10: right-click
+   spawns nothing, the item is kept). Port today: `ItemRobot.useOn` has no empty-board guard and
+   `ItemRobotPlacementTester.emptyBoardRobotStillPlaces` pins the opposite — flip that test into the refusal pin.
+   7.1.x's `ItemRobot.onItemUse` returned before any spawn when `getRobotNBT(stack) == getEmptyRobotBoard()`.
+2. **Better UX than 1.7.x's silent refusal: show a "Not programmed" message.** Suggested shape: an action-bar
+   (overlay) message, not a chat line, sent from the server side of `useOn` when the guard trips; new lang key
+   (e.g. `buildcraft.robot.not_programmed`) in `en_us.json` AND `zh_cn.json` (the translation-leak sweep watches
+   both); return `InteractionResult` consume/fail so the hand does not swing a placement that never happens.
+3. **Blank robots and blank boards stack to 16 again; programmed ones stay at 1** — 7.1.x
+   `ItemRobot.getItemStackLimit` / `ItemRedstoneBoard.getItemStackLimit` returned `boardNBT != empty ? 1 : 16`.
+   Port today: both items are `stacksTo(1)` in `BCRoboticsItems`. Modern items have no per-stack limit
+   override; the way to get "16 unless programmed" is `stacksTo(16)` on the item plus a `MAX_STACK_SIZE`
+   component of 1 written onto every programmed stack (the same CUSTOM_DATA write path that stores the board in
+   `ItemRobot.createStack` / `ItemRedstoneBoard.createStack`), and the placement/board code must keep working with
+   stacks of blanks (consume one). Tests: blank stacks merge to 16, a programmed stack reports max 1, a blank
+   stack of 16 loses exactly one on a successful placement.
+
 - **`StatementParameterRobot` accepts only robot stacks**; 7.1.x also took a List (match robots by list) or a
   wearable. Lists exist in the port; wearables are Ph9.
 - **`boards.blacklist` config** (7.1.x let servers hide boards) not ported. Only if asked for.

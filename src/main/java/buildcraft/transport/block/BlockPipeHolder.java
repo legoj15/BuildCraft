@@ -892,7 +892,8 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         //? if >=1.21.10 {
         return super.getCloneItemStack(level, pos, state, includeData, player);
         //?} else {
-        /*return super.getCloneItemStack(level, pos, state);*/
+        /*// Fallback rides the NeoForge IBlockExtension default (5-arg) — deprecation-clean.
+        return super.getCloneItemStack(state, target, level, pos, player);*/
         //?}
     }
 

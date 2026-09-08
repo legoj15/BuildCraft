@@ -52,7 +52,7 @@ import buildcraft.silicon.client.model.plug.PlugGateBaker;
 //? if >=1.21.10 {
 public class GateItemModel implements ItemModel {
 //?} else {
-/*public class GateItemModel implements net.minecraft.client.resources.model.BakedModel {*/
+/*public class GateItemModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {*/
 //?}
 
     /**
@@ -195,7 +195,9 @@ public class GateItemModel implements ItemModel {
 
     @Override
     public List<BakedQuad> getQuads(net.minecraft.world.level.block.state.BlockState s,
-            net.minecraft.core.Direction side, net.minecraft.util.RandomSource rand) {
+            net.minecraft.core.Direction side, net.minecraft.util.RandomSource rand,
+            net.neoforged.neoforge.client.model.data.ModelData extraData,
+            net.minecraft.client.renderer.RenderType renderType) {
         return List.of();
     }
 
@@ -220,13 +222,10 @@ public class GateItemModel implements ItemModel {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
-        return net.minecraft.client.Minecraft.getInstance().getModelManager().getMissingModel().getParticleIcon();
-    }
-
-    @Override
-    public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
-        return net.minecraft.client.renderer.block.model.ItemTransforms.NO_TRANSFORMS;
+        return net.minecraft.client.Minecraft.getInstance().getModelManager().getMissingModel()
+                .getParticleIcon(net.neoforged.neoforge.client.model.data.ModelData.EMPTY);
     }*/
     //?}
 }

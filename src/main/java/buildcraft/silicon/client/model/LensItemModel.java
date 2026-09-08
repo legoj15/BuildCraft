@@ -57,7 +57,7 @@ import buildcraft.silicon.item.ItemPluggableLens;
 //? if >=1.21.10 {
 public class LensItemModel implements ItemModel {
 //?} else {
-/*public class LensItemModel implements net.minecraft.client.resources.model.BakedModel {*/
+/*public class LensItemModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {*/
 //?}
 
     /** Inner identity for the lens itself: colour + isFilter. */
@@ -256,7 +256,9 @@ public class LensItemModel implements ItemModel {
 
     @Override
     public List<BakedQuad> getQuads(@Nullable net.minecraft.world.level.block.state.BlockState s,
-            @Nullable Direction side, net.minecraft.util.RandomSource rand) {
+            @Nullable Direction side, net.minecraft.util.RandomSource rand,
+            net.neoforged.neoforge.client.model.data.ModelData extraData,
+            net.minecraft.client.renderer.RenderType renderType) {
         return List.of();
     }
 
@@ -281,13 +283,10 @@ public class LensItemModel implements ItemModel {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
-        return net.minecraft.client.Minecraft.getInstance().getModelManager().getMissingModel().getParticleIcon();
-    }
-
-    @Override
-    public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
-        return net.minecraft.client.renderer.block.model.ItemTransforms.NO_TRANSFORMS;
+        return net.minecraft.client.Minecraft.getInstance().getModelManager().getMissingModel()
+                .getParticleIcon(net.neoforged.neoforge.client.model.data.ModelData.EMPTY);
     }*/
     //?}
 }

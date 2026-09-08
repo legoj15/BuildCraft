@@ -64,8 +64,10 @@ public class BCLibClient {
         });
         //?} else {
         /*modEventBus.addListener(net.neoforged.neoforge.client.event.RegisterSpriteSourceTypesEvent.class, event -> {
-            DyeReplaceSpriteSource.TYPE = event.register(DyeReplaceSpriteSource.ID, DyeReplaceSpriteSource.MAP_CODEC);
-            FluidLerpSpriteSource.TYPE = event.register(FluidLerpSpriteSource.ID, FluidLerpSpriteSource.MAP_CODEC);
+            DyeReplaceSpriteSource.TYPE = new net.minecraft.client.renderer.texture.atlas.SpriteSourceType(DyeReplaceSpriteSource.MAP_CODEC);
+            event.register(DyeReplaceSpriteSource.ID, DyeReplaceSpriteSource.TYPE);
+            FluidLerpSpriteSource.TYPE = new net.minecraft.client.renderer.texture.atlas.SpriteSourceType(FluidLerpSpriteSource.MAP_CODEC);
+            event.register(FluidLerpSpriteSource.ID, FluidLerpSpriteSource.TYPE);
         });*/
         //?}
 

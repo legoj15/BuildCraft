@@ -109,6 +109,10 @@ public class BCEnergyJeiPlugin implements IModPlugin {
      * ({@code stack.getBurnTime(null, fuelValues)}). Empty when no level is loaded — JEI builds
      * its runtime in-world, so in practice this is populated.
      */
+    // getFuel() is 1.21.1-only and Neo-deprecated (its javadoc points at the per-item getBurnTime),
+    // but it is the ONLY fuel-map enumeration on that line — FuelValues/fuelItems() arrive at 1.21.10
+    // and the >=1.21.10 branch below already uses them. Behavior preserved exactly; warning suppressed.
+    @SuppressWarnings("deprecation")
     private static List<StirlingFuelJei> collectStirlingFuels() {
         List<StirlingFuelJei> out = new ArrayList<>();
         //? if >=1.21.10 {

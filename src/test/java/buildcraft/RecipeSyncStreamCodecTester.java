@@ -11,6 +11,8 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 
+import net.neoforged.neoforge.network.connection.ConnectionType;
+
 import buildcraft.silicon.recipe.FacadeSwapRecipe;
 import buildcraft.transport.recipe.DyedPipeRecipe;
 import buildcraft.transport.recipe.PipePaintRecipe;
@@ -36,7 +38,7 @@ public class RecipeSyncStreamCodecTester {
     private static <T> void assertRoundTrips(GameTestHelper helper,
             StreamCodec<RegistryFriendlyByteBuf, T> codec, T fresh, String id) {
         RegistryFriendlyByteBuf buf =
-                new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess());
+                new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess(), ConnectionType.NEOFORGE);
         try {
             // The value handed to the codec is a brand-new instance, exactly as the datapack loader
             // produces — and deliberately NOT the instance the codec was built around. Pre-fix this

@@ -74,7 +74,7 @@ public final class FluidShardTintSource implements ItemTintSource {
                 .getAtlasManager().getAtlasOrThrow(AtlasIds.BLOCKS);
         //?} else {
         /*TextureAtlas atlas = Minecraft.getInstance()
-                .getModelManager().getAtlas(TextureAtlas.LOCATION_BLOCKS);*/
+                .getModelManager().getAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS);*/
         //?}
         TextureAtlasSprite sprite = atlas.getSprite(stillTex);
         return averageSpriteColor(sprite);

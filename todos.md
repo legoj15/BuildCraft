@@ -1,4 +1,4 @@
-Last audited: 2026-08-22
+Last audited: 2026-09-08
 
 *One line per item. Background, file pointers, and design notes live in [docs/todo-details.md](docs/todo-details.md) (or a dedicated doc, where linked). Finished items are removed, never checked off.*
 
@@ -16,6 +16,8 @@ Last audited: 2026-08-22
 - Stop creating a fresh fake player for every machine permission check — [notes](docs/todo-details.md#fake-player-churn)
 - Delete dead render-event leftovers — [notes](docs/todo-details.md#dead-addsectiongeometryevent-remnants)
 - Move off a fluid helper NeoForge is about to remove — [notes](docs/todo-details.md#deprecated-fluidutil-helper)
+- Sweep the remaining deprecated LOCATION_BLOCKS render sites onto one shared atlas-id constant — [notes](docs/todo-details.md#blocks-atlas-id-constant)
+- Triage the other nodes' deprecation backlog the way 1.21.1's just was (26.2: 43, 26.1.2: ~35, 1.21.10/11: 31 each) — [notes](docs/todo-details.md#cross-node-deprecation-backlog)
 - Turn on Gradle's configuration cache for faster builds — [notes](docs/todo-details.md#gradle-configuration-cache)
 
 ## 🆕 New Features (version 2026.2)

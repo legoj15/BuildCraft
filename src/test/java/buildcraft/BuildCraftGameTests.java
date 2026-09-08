@@ -12,24 +12,16 @@ import net.minecraft.core.registries.Registries;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.minecraft.core.Registry;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.neoforged.bus.api.IEventBus;
 import java.util.function.Consumer;
 import net.minecraft.resources.ResourceKey;
 
 import buildcraft.integration.pipes.PipeRoutingTest;
 
-// The bus the @SubscribeEvent registrar methods below land on. On 1.21.10+ the FML annotation
-// auto-detects the bus from each method's event type (no `bus` element exists), so a bare
-// annotation routes onRegister(RegisterEvent) to the mod bus correctly. On 1.21.1 (FML loader
-// 4.0.x) the annotation still carries `bus()` defaulting to Bus.GAME — and onRegisterGameTests
-// takes RegisterGameTestsEvent, an IModBusEvent — so it MUST declare bus = Bus.MOD or FML rejects
-// the mod-bus event on the common bus at load. Split per branch: referencing EventBusSubscriber.Bus
-// on 1.21.10+ would not even compile (the enum was removed).
-//? if >=1.21.10 {
+// Bare @EventBusSubscriber on every node: FML auto-detects each method's bus from the event type
+// (RegisterEvent on >=1.21.10; RegisterGameTestsEvent on 1.21.1 — both IModBusEvent). The 1.21.1
+// loader still has the legacy bus() element but is pinned past the build that ignores it at
+// runtime, so the element is simply omitted; 1.21.1 game-test count parity is verified per run.
 @EventBusSubscriber(modid = "buildcraftunofficial")
-//?} else {
-/*@EventBusSubscriber(modid = "buildcraftunofficial", bus = EventBusSubscriber.Bus.MOD)*/
-//?}
 public class BuildCraftGameTests {
 
     // Game-test registration. 1.21.5+ uses the dynamic Registries.TEST_FUNCTION registry + JSON

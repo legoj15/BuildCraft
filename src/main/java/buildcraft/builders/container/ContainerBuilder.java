@@ -24,6 +24,7 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.neoforged.neoforge.network.connection.ConnectionType;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.enums.EnumSnapshotType;
@@ -205,7 +206,7 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
         // needs a registry-aware buffer, so wrap the plain payload buffer with the level's RegistryAccess.
         var registries = tile.getLevel().registryAccess();
         sendMessage(NET_DISPLAY_LIST, buf -> {
-            RegistryFriendlyByteBuf rbuf = new RegistryFriendlyByteBuf(buf, registries);
+            RegistryFriendlyByteBuf rbuf = new RegistryFriendlyByteBuf(buf, registries, ConnectionType.NEOFORGE);
             rbuf.writeVarInt(snap.size());
             for (ItemStack stack : snap) {
                 ItemStack.OPTIONAL_STREAM_CODEC.encode(rbuf, stack);
@@ -269,7 +270,7 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
             return;
         }
         if (id == NET_DISPLAY_LIST && isClient) {
-            RegistryFriendlyByteBuf rbuf = new RegistryFriendlyByteBuf(buffer, ctx.player().level().registryAccess());
+            RegistryFriendlyByteBuf rbuf = new RegistryFriendlyByteBuf(buffer, ctx.player().level().registryAccess(), ConnectionType.NEOFORGE);
             int count = rbuf.readVarInt();
             List<ItemStack> newList = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {

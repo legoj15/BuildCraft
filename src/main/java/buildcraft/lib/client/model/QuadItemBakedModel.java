@@ -18,13 +18,14 @@ package buildcraft.lib.client.model;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.ItemOverrides;
-import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+
+import net.neoforged.neoforge.client.model.IDynamicBakedModel;
+import net.neoforged.neoforge.client.model.data.ModelData;
 
 // Leaf BakedModel wrapping a fixed list of pre-baked item quads for 1.21.1's classic
 // item-render path (ItemRenderer -> getRenderPasses -> getRenderTypes -> getQuads).
@@ -35,7 +36,7 @@ import net.minecraft.world.level.block.state.BlockState;
 // quads (so getTransforms() is NO_TRANSFORMS here), and one RenderType sheet covers all
 // quads: cutoutBlockSheet() for opaque geometry, translucentItemSheet() when a coloured
 // translucent overlay is present (alpha-255 cutout quads stay opaque on that sheet).
-public final class QuadItemBakedModel implements BakedModel {
+public final class QuadItemBakedModel implements IDynamicBakedModel {
     private final List<BakedQuad> quads;
     private final TextureAtlasSprite particle;
     private final boolean gui3d;
@@ -49,7 +50,8 @@ public final class QuadItemBakedModel implements BakedModel {
     }
 
     @Override
-    public List<BakedQuad> getQuads(BlockState state, Direction side, RandomSource rand) {
+    public List<BakedQuad> getQuads(BlockState state, Direction side, RandomSource rand, ModelData extraData,
+            RenderType renderType) {
         // Item quads are emitted only on the general (null-side) pass.
         return side == null ? quads : List.of();
     }
@@ -80,13 +82,9 @@ public final class QuadItemBakedModel implements BakedModel {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public TextureAtlasSprite getParticleIcon() {
         return particle;
-    }
-
-    @Override
-    public ItemTransforms getTransforms() {
-        return ItemTransforms.NO_TRANSFORMS;
     }
 
     @Override

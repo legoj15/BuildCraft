@@ -166,7 +166,7 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
 
         float[] damage = {1.0F};
         held.forEachModifier(EquipmentSlot.MAINHAND, (attribute, modifier) -> {
-            if (attribute.is(Attributes.ATTACK_DAMAGE)) {
+            if (attribute.unwrapKey().equals(Attributes.ATTACK_DAMAGE.unwrapKey())) {
                 switch (modifier.operation()) {
                     case ADD_VALUE -> damage[0] += (float) modifier.amount();
                     case ADD_MULTIPLIED_BASE -> damage[0] *= (float) modifier.amount();
@@ -179,7 +179,7 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
         int sharpness = 0;
         int knockback = 0;
         int fireAspect = 0;
-        ItemEnchantments enchants = held.getEnchantments();
+        ItemEnchantments enchants = held.getTagEnchantments();
         for (Holder<Enchantment> enchantment : enchants.keySet()) {
             if (enchantment.is(Enchantments.SHARPNESS)) {
                 sharpness = enchants.getLevel(enchantment);

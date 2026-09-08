@@ -53,7 +53,7 @@ import buildcraft.silicon.plug.FacadePhasedState;
 //? if >=1.21.10 {
 public class FacadeItemModel implements ItemModel {
 //?} else {
-/*public class FacadeItemModel implements net.minecraft.client.resources.model.BakedModel {*/
+/*public class FacadeItemModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {*/
 //?}
 
     // Cache for hand/3rd-person rendering (EAST facing, includes plug connector)
@@ -179,7 +179,9 @@ public class FacadeItemModel implements ItemModel {
 
     @Override
     public List<BakedQuad> getQuads(net.minecraft.world.level.block.state.BlockState s,
-            @Nullable Direction side, net.minecraft.util.RandomSource rand) {
+            @Nullable Direction side, net.minecraft.util.RandomSource rand,
+            net.neoforged.neoforge.client.model.data.ModelData extraData,
+            net.minecraft.client.renderer.RenderType renderType) {
         return List.of();
     }
 
@@ -204,13 +206,10 @@ public class FacadeItemModel implements ItemModel {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
-        return net.minecraft.client.Minecraft.getInstance().getModelManager().getMissingModel().getParticleIcon();
-    }
-
-    @Override
-    public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
-        return net.minecraft.client.renderer.block.model.ItemTransforms.NO_TRANSFORMS;
+        return net.minecraft.client.Minecraft.getInstance().getModelManager().getMissingModel()
+                .getParticleIcon(net.neoforged.neoforge.client.model.data.ModelData.EMPTY);
     }*/
     //?}
 }

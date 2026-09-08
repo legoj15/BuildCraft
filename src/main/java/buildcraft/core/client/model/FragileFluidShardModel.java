@@ -70,8 +70,8 @@ public class FragileFluidShardModel implements IDynamicBakedModel {
     @Override public boolean isGui3d() { return vanilla.isGui3d(); }
     @Override public boolean usesBlockLight() { return vanilla.usesBlockLight(); }
     @Override public boolean isCustomRenderer() { return false; }
-    @Override public TextureAtlasSprite getParticleIcon() { return vanilla.getParticleIcon(); }
-    @Override public ItemTransforms getTransforms() { return vanilla.getTransforms(); }
+    @Override @SuppressWarnings("deprecation") public TextureAtlasSprite getParticleIcon() { return vanilla.getParticleIcon(ModelData.EMPTY); }
+    @Override @SuppressWarnings("deprecation") public ItemTransforms getTransforms() { return vanilla.getTransforms(); }
     @Override public ItemOverrides getOverrides() { return overrides; }
 
     @Override
@@ -131,8 +131,8 @@ public class FragileFluidShardModel implements IDynamicBakedModel {
         @Override public boolean isGui3d() { return resolved.isGui3d(); }
         @Override public boolean usesBlockLight() { return resolved.usesBlockLight(); }
         @Override public boolean isCustomRenderer() { return false; }
-        @Override public TextureAtlasSprite getParticleIcon() { return resolved.getParticleIcon(); }
-        @Override public ItemTransforms getTransforms() { return resolved.getTransforms(); }
+        @Override @SuppressWarnings("deprecation") public TextureAtlasSprite getParticleIcon() { return resolved.getParticleIcon(ModelData.EMPTY); }
+        @Override @SuppressWarnings("deprecation") public ItemTransforms getTransforms() { return resolved.getTransforms(); }
         @Override public ItemOverrides getOverrides() { return ItemOverrides.EMPTY; }
     }
 }*/

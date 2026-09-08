@@ -15,6 +15,7 @@ Last audited: 2026-09-08
 - Collapse duplicate fluid textures on the atlas (low value) — [notes](docs/todo-details.md#fluid-atlas-de-duplication)
 - Stop creating a fresh fake player for every machine permission check — [notes](docs/todo-details.md#fake-player-churn)
 - Delete dead render-event leftovers — [notes](docs/todo-details.md#dead-addsectiongeometryevent-remnants)
+- Delete the four dead empty creative-tab listeners — [notes](docs/todo-details.md#dead-empty-creative-tab-listeners)
 - Move off a fluid helper NeoForge is about to remove — [notes](docs/todo-details.md#deprecated-fluidutil-helper)
 - Sweep the remaining deprecated LOCATION_BLOCKS render sites onto one shared atlas-id constant — [notes](docs/todo-details.md#blocks-atlas-id-constant)
 - Triage the other nodes' deprecation backlog the way 1.21.1's just was (26.2: 43, 26.1.2: ~35, 1.21.10/11: 31 each) — [notes](docs/todo-details.md#cross-node-deprecation-backlog)

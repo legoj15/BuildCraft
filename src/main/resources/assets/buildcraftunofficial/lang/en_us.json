@@ -290,6 +290,7 @@
     "tip.charge.charged": "Charged",
     "tip.charge.fullcharge": "Full Charge",
     "tip.charge.nocharge": "No Charge",
+    "itemGroup.buildcraft.robots": "BuildCraft Robots",
     "itemGroup.buildcraft.plugs": "BuildCraft Pluggables",
     "tip.pipe.structure": "Support pipe",
     "tip.pipe.wood_item": "Extraction pipe",

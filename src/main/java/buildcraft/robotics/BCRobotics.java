@@ -10,9 +10,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
-import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,7 +74,6 @@ import buildcraft.robotics.boards.BoardRobotPlanter;
 import buildcraft.robotics.boards.BoardRobotPlanterNBT;
 import buildcraft.robotics.boards.BoardRobotPump;
 import buildcraft.robotics.boards.BoardRobotPumpNBT;
-import buildcraft.transport.BCTransportCreativeTabs;
 
 /**
  * BuildCraft Robotics initializer. No longer a separate @Mod — called from BCCore.
@@ -109,16 +106,12 @@ public class BCRobotics {
         BCRoboticsBlockEntities.init(modEventBus);
         BCRoboticsEntities.init(modEventBus);
         BCRoboticsMenuTypes.init(modEventBus);
+        BCRoboticsCreativeTabs.init(modEventBus);
 
         // Register client-side extensions on the mod event bus
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
             buildcraft.robotics.client.BCRoboticsClient.initClient(modEventBus);
         }
-
-        // Register creative tab
-        modEventBus.addListener((BuildCreativeModeTabContentsEvent event) -> {
-            addCreativeTabItems(event);
-        });
 
         // Ph4: the AI tree + the first two real boards. Each AI (and board, which is itself an AIRobot) is
         // registered by the name its NBT saves, with the 7.1.x legacy class name for old-save migration.
@@ -131,15 +124,6 @@ public class BCRobotics {
         NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> BoardRobotPicker.onServerStart());
 
         LOGGER.info("BuildCraft Robotics initialized");
-    }
-
-    private static void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
-        // BuildCreativeModeTabContentsEvent fires once PER TAB — without this guard the Robot Station
-        // is injected into every tab in the game, vanilla ones included. It's a pipe pluggable, so it
-        // belongs in the Pluggables tab beside the blocker and power adaptor.
-        if (event.getTabKey() == BCTransportCreativeTabs.PLUGS_TAB_KEY) {
-            event.accept(BCRoboticsItems.ROBOT_STATION.get());
-        }
     }
 
     /** Registers the full AI tree (Ph4 core + Ph5 board catalog) and every robot board class (the Ph5 work

@@ -30,7 +30,7 @@ stands. Every claim below was read out of source, not from memory or wikis.
 4. **Insert the board into the robot** at the **Integration Table** — 50,000 RF, preserves charge,
    consumes the board. Re-programming = wrench the robot back to an item, integrate again. No
    hot-swap on a deployed robot.
-5. **Craft a Docking Station** — 2 iron + Gold Chipset — and attach it to any pipe face. It is a
+5. **Craft a Docking Station** — 3 iron + Gold Chipset — and attach it to any pipe face. It is a
    **pipe pluggable**, not a block.
 6. **Right-click the station** with the robot item. The robot spawns docked, and that station
    becomes its permanent home ("linked").
@@ -158,7 +158,7 @@ port, not as working code.
 | System | Status |
 |---|---|
 | Zone Planner + Map Location | **In**, improved: live 3D map viewport (BC8-style camera), both with survival recipes (since 2026.2.0-br1) |
-| Docking Station | **In** — pipe pluggable, pedestal model, available/reserved/linked states, MJ charge handoff, recipe (3 iron + gold chipset — 1.7.10 used 2 iron) |
+| Docking Station | **In** — pipe pluggable, pedestal model, available/reserved/linked states, MJ charge handoff, recipe (3 iron + gold chipset — identical in 1.7.10) |
 | EntityRobot + ItemRobot | **In** — bare `Entity` (not LivingEntity), damage-drains-battery, death drops robot+board+cargo, charge tooltip, both renderer generations |
 | Boards | **11 of 17**: Empty, Picker, Carrier, Tank/FluidCarrier (Ph4) + Lumberjack, Harvester, Miner, Planter, Farmer, Pump, Butcher, Knight (Ph5). Missing: Delivery, Bomber, Stripes, Shovelman, Leaf Cutter, Builder |
 | AI framework | **In** — 34 AIs, NBT round-trips, reservations, recharge/sleep/shutdown ladder |

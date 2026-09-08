@@ -291,6 +291,34 @@ fun generateOldItemModels1211(itemsDir: File, modelsItemDir: File) {
                 if (!outFile.exists()) {
                     val model = linkedMapOf<String, Any?>("loader" to "neoforge:fluid_container")
                     spec.forEach { (k, v) -> if (k != "type") model[k] = v }
+                    // The classic loader takes its item transforms from THIS json's "display" block
+                    // (26.x sources them from item/generated itself instead) — absent, every
+                    // fluid_container item rendered at raw 16x16 scale when held/dropped/worn.
+                    // Stamp the standard flat-item display, verbatim from vanilla item/generated
+                    // on this line, unless the source carries its own.
+                    if (!model.containsKey("display")) {
+                        model["display"] = linkedMapOf(
+                            "ground" to linkedMapOf(
+                                "rotation" to listOf(0, 0, 0), "translation" to listOf(0, 2, 0),
+                                "scale" to listOf(0.5, 0.5, 0.5)
+                            ),
+                            "head" to linkedMapOf(
+                                "rotation" to listOf(0, 180, 0), "translation" to listOf(0, 13, 7),
+                                "scale" to listOf(1, 1, 1)
+                            ),
+                            "thirdperson_righthand" to linkedMapOf(
+                                "rotation" to listOf(0, 0, 0), "translation" to listOf(0, 3, 1),
+                                "scale" to listOf(0.55, 0.55, 0.55)
+                            ),
+                            "firstperson_righthand" to linkedMapOf(
+                                "rotation" to listOf(0, -90, 25), "translation" to listOf(1.13, 3.2, 1.13),
+                                "scale" to listOf(0.68, 0.68, 0.68)
+                            ),
+                            "fixed" to linkedMapOf(
+                                "rotation" to listOf(0, 180, 0), "scale" to listOf(1, 1, 1)
+                            )
+                        )
+                    }
                     write(outFile, model)
                 }
             }

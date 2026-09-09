@@ -17,8 +17,7 @@ import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.robots.IRobotAccess;
 
 /** The {@link BoardRobotHarvester} factory + descriptor, mirroring {@link BoardRobotPickerNBT}. The
- *  board id, item model location and robot-skin texture all key off the board id so each board gets
- *  its own identity. */
+ *  board id and robot-skin texture key off the board id so each board gets its own identity. */
 public class BoardRobotHarvesterNBT extends RedstoneBoardRobotNBT {
 
     public static final BoardRobotHarvesterNBT INSTANCE = new BoardRobotHarvesterNBT();
@@ -44,11 +43,6 @@ public class BoardRobotHarvesterNBT extends RedstoneBoardRobotNBT {
     @Override
     public String getDisplayName() {
         return Component.translatable("buildcraft.boardRobotHarvester").getString();
-    }
-
-    @Override
-    public String getItemModelLocation() {
-        return ID;
     }
 
     @Override

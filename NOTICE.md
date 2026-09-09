@@ -16,6 +16,19 @@ Upstream BuildCraft has never relicensed these files away from MMPL — every up
 including `master`, still ships MMPL as its root licence — so this fork does not either. The root
 MPL-2.0 grant does not override a file's own header.
 
+## Asset provenance
+
+Textures carry no copyright header, so upstream lineage is recorded here instead:
+
+- `src/main/resources/assets/buildcraftunofficial/textures/item/board_blue|green|red|clean.png` are
+  verbatim copies of 7.1.x's `buildcraft_resources/assets/buildcraftrobotics/textures/items/board/`
+  textures of the same names — upstream art ported unchanged (they arrived labelled as new Ph5 work;
+  the git blob hashes say otherwise).
+- `src/main/resources/assets/buildcraftunofficial/textures/item/robot_<kind>.png` — and the base
+  `textures/item/robot.png` — are byte-copies of the in-tree `textures/entity/robot_<kind>.png` skins —
+  themselves byte-identical to upstream 7.1.x/8.0.x art — duplicated only because entity textures are
+  bound whole-file while item icons need to sit on the stitched item atlas.
+
 ## Files under the Minecraft Mod Public License 1.0.1
 
 Two of them carry **two** notices, upstream's first, because they are original work built on top of

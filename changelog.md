@@ -1,4 +1,6 @@
 ###### Changes since 2026.2.0-br2:
+- Every robot in the "BuildCraft Robots" tab wears its own colour again: each ready-made robot shows the per-kind skin it wears in the world (blue picker, red knight, and so on) instead of all stacks drawing as the same white chassis, and the empty board's clean chip is distinct again. On Minecraft 1.21.1 the redstone boards also show their tier colours (green/blue/red/clean) like they already do on the newer Minecraft versions.
+
 - The Robot Station is called "Docking Station" again, matching classic BuildCraft. Only the name changed — the item, its recipe, and existing worlds are unaffected.
 - Robots have their own creative tab again, like classic BuildCraft: "BuildCraft Robots" holds the zone planner, every ready-made robot, the robot station, and every redstone board — the robot station no longer hides in the Pluggables tab.
 - Minecraft 1.21.1: fragile fluid shards and all BuildCraft buckets (oil and fuel variants) were drawn far too large whenever held, dropped, worn, or shown in an item frame — they now render at the standard item size like they do on the other Minecraft versions.

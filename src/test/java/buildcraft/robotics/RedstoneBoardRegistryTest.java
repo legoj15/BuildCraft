@@ -91,11 +91,6 @@ public class RedstoneBoardRegistryTest {
         public IRedstoneBoard<Object> create(CompoundTag nbt, Object object) {
             return null;
         }
-
-        @Override
-        public String getItemModelLocation() {
-            return id;
-        }
     }
 
     /** Trivial concrete empty-robot board used purely as the unknown-id fallback target. */
@@ -112,11 +107,6 @@ public class RedstoneBoardRegistryTest {
         @Override
         public String getDisplayName() {
             return "Empty";
-        }
-
-        @Override
-        public String getItemModelLocation() {
-            return getID();
         }
 
         @Override

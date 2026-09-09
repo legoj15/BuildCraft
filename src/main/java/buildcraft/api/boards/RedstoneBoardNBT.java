@@ -25,8 +25,6 @@ public abstract class RedstoneBoardNBT<T> {
 
     public abstract IRedstoneBoard<T> create(CompoundTag nbt, T object);
 
-    public abstract String getItemModelLocation();
-
     public void createBoard(CompoundTag nbt) {
         nbt.putString("id", getID());
     }

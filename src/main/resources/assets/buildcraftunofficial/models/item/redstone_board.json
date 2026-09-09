@@ -1,6 +1,13 @@
 {
+    "__comment": "1.21.1-only tier-colour dispatch (item definitions do not exist on that line; newer nodes select models/item/board_<tier>.json through items/redstone_board.json): the buildcraftunofficial:board property (RoboticsBoardItemProperties) returns 1 + the tier's index in RoboticsItemVariants.BOARD_TIER_ORDER. Predicates must stay ASCENDING - 1.21.1 bakes the list reversed and returns the first entry at or below the stack's value. Values are per-tier and shared by the kinds of that tier, exactly as in 7.1.x. Pinned to RoboticsItemVariants by RoboticsItemIconCoverageTester.",
     "parent": "minecraft:item/generated",
     "textures": {
         "layer0": "buildcraftunofficial:item/redstone_board"
-    }
+    },
+    "overrides": [
+        { "predicate": { "buildcraftunofficial:board": 1.0 }, "model": "buildcraftunofficial:item/board_clean" },
+        { "predicate": { "buildcraftunofficial:board": 2.0 }, "model": "buildcraftunofficial:item/board_green" },
+        { "predicate": { "buildcraftunofficial:board": 3.0 }, "model": "buildcraftunofficial:item/board_blue" },
+        { "predicate": { "buildcraftunofficial:board": 4.0 }, "model": "buildcraftunofficial:item/board_red" }
+    ]
 }

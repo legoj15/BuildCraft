@@ -56,11 +56,6 @@ public class BoardRobotEmptyNBT extends RedstoneBoardRobotNBT {
     }
 
     @Override
-    public String getItemModelLocation() {
-        return ID;
-    }
-
-    @Override
     public RedstoneBoardRobot create(IRobotAccess robot) {
         return new BoardRobotEmpty(robot);
     }

@@ -55,6 +55,16 @@ public class BCRoboticsClient {
         event.registerEntityRenderer(BCRoboticsEntities.ROBOT.get(), RenderRobot::new);
     }
 
+    // 1.21.1-only: registers the buildcraftunofficial:board item property that drives the per-board
+    // robot and board icons through classic model overrides. On the newer nodes the items/*.json
+    // condition chains do the same job and no registration is needed — see RoboticsBoardItemProperties.
+    //? if <1.21.10 {
+    /*@SubscribeEvent
+    public static void onClientSetup(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
+        event.enqueueWork(buildcraft.robotics.client.model.RoboticsBoardItemProperties::register);
+    }*/
+    //?}
+
     /**
      * Registers the PictureInPicture renderer that paints the Zone Planner's terrain map into an
      * offscreen texture. Without it, the {@code ZoneMapPipRenderState} the GUI submits each frame is

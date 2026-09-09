@@ -45,11 +45,6 @@ public class BoardRobotCarrierNBT extends RedstoneBoardRobotNBT {
     }
 
     @Override
-    public String getItemModelLocation() {
-        return ID;
-    }
-
-    @Override
     public RedstoneBoardRobot create(IRobotAccess robot) {
         return new BoardRobotCarrier(robot);
     }

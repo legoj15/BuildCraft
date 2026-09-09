@@ -20,6 +20,9 @@ Last audited: 2026-09-08
 - Sweep the remaining deprecated LOCATION_BLOCKS render sites onto one shared atlas-id constant — [notes](docs/todo-details.md#blocks-atlas-id-constant)
 - Triage the other nodes' deprecation backlog the way 1.21.1's just was (26.2: 43, 26.1.2: ~35, 1.21.10/11: 31 each) — [notes](docs/todo-details.md#cross-node-deprecation-backlog)
 - Turn on Gradle's configuration cache for faster builds — [notes](docs/todo-details.md#gradle-configuration-cache)
+- Fix redstone engines leaking RF into FE machines when MJ→RF autoconvert is on (upstream fixed this 2026-05) — [notes](docs/todo-details.md#redstone-engine-rf-leak)
+- Check robots can be named (7.2.x had it; probably free via vanilla name tags) — [notes](docs/todo-details.md#robot-naming-parity)
+- Sweep the 51 upstream 7.1.20–7.1.27 fixes that never reached any 8.0.x branch — [notes](docs/todo-details.md#upstream-71x-tail-sweep)
 
 ## 🆕 New Features (version 2026.2)
 
